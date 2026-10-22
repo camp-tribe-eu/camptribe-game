@@ -8,9 +8,10 @@
 // * кожна випущена версія лишається фікстурою в tests/saves/ назавжди.
 import { stateHash } from './hash';
 import type { SimState } from './sim';
+import { REJECT_CODES } from './state';
 
 export const SAVE_FORMAT = 'camplife-save';
-export const SAVE_VERSION = 1;
+export const SAVE_VERSION = 2;
 
 export interface SaveFile {
   readonly format: typeof SAVE_FORMAT;
@@ -29,8 +30,14 @@ export type LoadResult =
   | { readonly ok: true; readonly sim: SimState; readonly fromVersion: number }
   | { readonly ok: false; readonly code: LoadCode; readonly detail: string };
 
-/** Міграції: MIGRATIONS[v] переводить сейв версії v у v+1. Поки що v1 — перша й поточна. */
-export const MIGRATIONS: Readonly<Record<number, (sim: unknown) => unknown>> = {};
+/** Міграції: MIGRATIONS[v] переводить сейв версії v у v+1. Кожна — чиста й не губить жодного поля. */
+export const MIGRATIONS: Readonly<Record<number, (sim: unknown) => unknown>> = {
+  // v1 → v2 (GAME-29): з'явились персонаж і квести. Старий сейв — гра до створення персонажа.
+  1: (sim) => {
+    const s = sim as { game: Record<string, unknown> };
+    return { ...s, game: { ...s.game, schemaVersion: 2, player: null, quests: {}, campaignEnded: false } };
+  },
+};
 
 export function toSave(sim: SimState): SaveFile {
   return { format: SAVE_FORMAT, schemaVersion: SAVE_VERSION, checksum: stateHash(sim), accountId: null, sim };
@@ -46,11 +53,15 @@ function shapeError(sim: unknown): string | null {
   if (!isObj(sim)) return 'sim is not an object';
   const { game, clock, rng, finds } = sim;
   if (!isObj(game) || !isObj(clock) || !Array.isArray(rng) || !isInt(finds)) return 'missing game/clock/rng/finds';
-  if (game.schemaVersion !== 1 || !isInt(game.moneyCents) || !isInt(game.seq)) return 'game: version, money or seq';
+  if (game.schemaVersion !== 2 || !isInt(game.moneyCents) || !isInt(game.seq)) return 'game: version, money or seq';
   if (!isObj(game.inventory) || !Array.isArray(game.grants) || !isObj(game.processed)) return 'game: inventory, grants or processed';
   if (Object.values(game.inventory).some((q) => !isInt(q, 1))) return 'game: inventory quantity';
   if (game.grants.some((g) => typeof g !== 'string')) return 'game: grant ids';
-  if (Object.values(game.processed).some((r) => !isObj(r) || typeof r.ok !== 'boolean' || typeof r.fp !== 'string')) return 'game: processed records';
+  if (Object.values(game.processed).some((r) => !isObj(r) || typeof r.ok !== 'boolean' || typeof r.fp !== 'string' || (!r.ok && !(REJECT_CODES as readonly unknown[]).includes(r.code)))) return 'game: processed records';
+  if (typeof game.campaignEnded !== 'boolean' || !isObj(game.quests)) return 'game: quests';
+  if (Object.values(game.quests).some((q) => !isObj(q) || !['active', 'completed', 'declined'].includes(q.status as string) || !Array.isArray(q.done) || q.done.some((o) => typeof o !== 'string'))) return 'game: quest progress';
+  const p = game.player;
+  if (p !== null && (!isObj(p) || typeof p.profileId !== 'string' || typeof p.transportId !== 'string' || typeof p.animalId !== 'string' || !(p.locationId === null || typeof p.locationId === 'string'))) return 'game: player';
   if (!isInt(clock.minutes) || typeof clock.accMs !== 'number' || typeof clock.paused !== 'boolean') return 'clock';
   if (rng.length !== 4 || rng.some((w) => !isInt(w) || (w as number) > 0xffff_ffff)) return 'rng';
   return null;

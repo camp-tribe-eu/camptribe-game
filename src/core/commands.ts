@@ -4,8 +4,12 @@
 
 import type { CoreDefs } from './defs';
 import type { CommandRecord, GameState, RejectCode } from './state';
+import { applyStory, type StoryCommand, type StoryDraft } from './story';
+
+export type { StoryCommand } from './story';
 
 export type Command =
+  | StoryCommand
   | { readonly type: 'BuyItem'; readonly commandId: string; readonly itemId: string }
   | { readonly type: 'SellItem'; readonly commandId: string; readonly itemId: string }
   | { readonly type: 'Interact'; readonly commandId: string; readonly targetId: string };
@@ -36,7 +40,7 @@ export interface Safeguards {
 
 const SAFE: Safeguards = { commandId: true, grantId: true, rollback: true };
 
-type Draft = { moneyCents: number; inventory: Record<string, number>; grants: string[]; events: GameEvent[] };
+type Draft = StoryDraft;
 
 const isCents = (n: unknown): n is number => typeof n === 'number' && Number.isSafeInteger(n) && n >= 0;
 
@@ -45,8 +49,10 @@ const isCents = (n: unknown): n is number => typeof n === 'number' && Number.isS
 // якого ніхто не купував (рецензія PR #13).
 // Формат той самий, що у валідатора контенту (scripts/validator/checks.mjs): `префікс.слово[-.слово]*`.
 export const CONTENT_ID = /^[a-z]+\.[a-z0-9]+(?:[.-][a-z0-9]+)*$/;
-// commandId генерує місток; та сама безпечна абетка, без ключів прототипу.
-const COMMAND_ID = /^[A-Za-z0-9][A-Za-z0-9_.:-]{0,63}$/;
+// commandId генерує місток; та сама безпечна абетка, без ключів прототипу. Перший символ — літера:
+// чисто числові ключі JS ставить у об'єкті першими, і обрізання `processed` викинуло б свіжий запис
+// раніше старих — повтор застосувався б удруге (рецензія GAME-33).
+const COMMAND_ID = /^[A-Za-z][A-Za-z0-9_.:-]{0,63}$/;
 const RESERVED = new Set(['__proto__', 'constructor', 'prototype', 'toString', 'valueOf', 'hasOwnProperty']);
 
 export const isContentId = (s: unknown): s is string => typeof s === 'string' && CONTENT_ID.test(s);
@@ -125,6 +131,13 @@ function apply(cmd: Command, d: Draft, defs: CoreDefs, guard: Safeguards): Rejec
       });
       return null;
     }
+    case 'CreateCharacter':
+    case 'Visit':
+    case 'Talk':
+    case 'Pickup':
+    case 'CompleteQuest':
+    case 'DeclineQuest':
+      return applyStory(cmd, d, defs.story, isContentId);
     default:
       return 'INVALID_COMMAND';
   }
@@ -160,7 +173,10 @@ export function dispatch(state: GameState, cmd: Command, defs: CoreDefs, guard: 
       : { ok: false, state, code: seen.code ?? 'INVALID_COMMAND', repeated: true, events: [] };
   }
 
-  const draft: Draft = { moneyCents: state.moneyCents, inventory: { ...state.inventory }, grants: [...state.grants], events: [] };
+  const draft: Draft = {
+    moneyCents: state.moneyCents, inventory: { ...state.inventory }, grants: [...state.grants], events: [],
+    player: state.player, quests: state.quests, campaignEnded: state.campaignEnded,
+  };
   const code = apply(cmd, draft, defs, guard);
   const record: CommandRecord = code ? { ok: false, code, fp } : { ok: true, fp };
   const processed = remember(state.processed, cmd.commandId, record);

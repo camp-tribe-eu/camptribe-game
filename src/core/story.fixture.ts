@@ -1,0 +1,78 @@
+// Мінімальний сюжет для тестів ядра (GAME-29): кожна гілка семантики — тут один раз.
+import { dispatch, type Command } from './commands';
+import type { CoreDefs } from './defs';
+import { initialState, type GameState } from './state';
+
+export const STORY_DEFS: CoreDefs = {
+  items: {},
+  interactions: {},
+  story: {
+    start: 'q.start',
+    profiles: { 'profile.a': { transports: ['transport.car', 'transport.bike'] }, 'profile.b': { transports: ['transport.car'] }, 'profile.any': {} },
+    transports: ['transport.car', 'transport.bike'],
+    animals: { 'animal.dog': { transports: ['transport.car'] } },
+    locations: {
+      'loc.home': { items: ['item.wood'] },
+      'loc.shop': { unlockedBy: 'q.start', items: ['item.gold'] },
+      'loc.dogpark': { when: { animals: ['animal.dog'] }, items: [] },
+    },
+    npcs: { 'npc.ann': { locationId: 'loc.shop', unlockedBy: 'q.start' }, 'npc.bob': { locationId: 'loc.home', unlockedBy: 'q.start' } },
+    quests: {
+      'q.start': {
+        optional: false, end: false, locationId: 'loc.home',
+        objectives: [{ id: 'look-around', kind: 'visit', target: 'loc.home', required: true }],
+        transitions: [
+          { on: 'complete', to: 'q.mid', choice: false },
+          { on: 'complete', to: 'q.side', choice: true },  // умова лише на квесті-цілі (when переходу — у q.mid → q.bonus)
+        ],
+      },
+      'q.mid': {
+        optional: false, end: false,
+        objectives: [
+          { id: 'meet-ann', kind: 'talk', target: 'npc.ann', required: true },
+          { id: 'wood', kind: 'collect', target: 'item.wood', required: true },
+          { id: 'dog-walk', kind: 'visit', target: 'loc.dogpark', required: true, when: { animals: ['animal.dog'] } },
+        ],
+        transitions: [
+          { on: 'complete', to: 'q.end', choice: false },
+          { on: 'complete', to: 'q.gate', choice: true },
+          { on: 'complete', to: 'q.bonus', choice: true, when: { animals: ['animal.dog'] } }, // умова лише на переході
+        ],
+      },
+      'q.side': {
+        optional: true, end: false, when: { transports: ['transport.bike'] },
+        objectives: [{ id: 'ride', kind: 'visit', target: 'loc.shop', required: true }],
+        transitions: [{ on: 'complete', to: 'q.mid', choice: false }, { on: 'decline', to: 'q.mid', choice: false }],
+        reward: { grantId: 'rw.side', moneyCents: 500, items: [{ itemId: 'item.map', qty: 1 }] },
+      },
+      'q.gate': {
+        optional: false, end: true, requires: { quests: ['q.mid'], items: ['item.gold'] },
+        objectives: [], transitions: [],
+      },
+      'q.end': {
+        optional: false, end: true, objectives: [], transitions: [],
+        reward: { grantId: 'rw.end', moneyCents: 1_000, items: [] },
+      },
+      'q.bonus': { optional: false, end: true, objectives: [], transitions: [] },
+      'q.stuck': { optional: false, end: false, objectives: [], transitions: [] },
+    },
+  },
+};
+
+/** Команда без commandId (розподільно по варіантах — звичайний Omit злипає об'єднання). */
+export type Step = Command extends infer C ? (C extends Command ? Omit<C, 'commandId'> : never) : never;
+
+let n = 0;
+/** Прогнати команди; кожна мусить пройти — інакше тест падає з назвою кроку. */
+export function play(cmds: readonly Step[], from: GameState = initialState(0), defs: CoreDefs = STORY_DEFS): GameState {
+  let s = from;
+  for (const c of cmds) {
+    const r = dispatch(s, { ...c, commandId: `t${n++}` } as Command, defs);
+    if (!r.ok) throw new Error(`${c.type} ${JSON.stringify(c)} → ${r.code}`);
+    s = r.state;
+  }
+  return s;
+}
+
+export const BIKER = { type: 'CreateCharacter', profileId: 'profile.a', transportId: 'transport.bike' } as const;
+export const DRIVER = { type: 'CreateCharacter', profileId: 'profile.b', transportId: 'transport.car' } as const;

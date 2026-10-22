@@ -8,8 +8,25 @@ export interface CommandRecord {
   readonly fp: string;
 }
 
+/** Персонаж (DC-042): вибір на старті й місце в світі — локація, не пікселі. */
+export interface PlayerState {
+  readonly profileId: string;
+  readonly transportId: string;
+  /** `animal.none` — без тварини (як у валідаторі). */
+  readonly animalId: string;
+  readonly locationId: string | null;
+}
+
+export type QuestStatus = 'active' | 'completed' | 'declined';
+
+/** Стан квесту (DC-050): статус і виконані цілі `visit`/`talk`. Цілі `collect` рахуються з інвентаря. */
+export interface QuestProgress {
+  readonly status: QuestStatus;
+  readonly done: readonly string[];
+}
+
 export interface GameState {
-  readonly schemaVersion: 1;
+  readonly schemaVersion: 2;
   /** Баланс у центах EUR (CR-040). */
   readonly moneyCents: number;
   /** id предмета → кількість, лише додатні. */
@@ -23,6 +40,12 @@ export interface GameState {
    * після завантаження сейву id не повторюється (рецензія TL PR #13: лічильник сцени скидався в 0).
    */
   readonly seq: number;
+  /** null — персонажа ще не створено (GAME-29). */
+  readonly player: PlayerState | null;
+  /** id квесту → стан. Квести, яких тут немає, ще не відкривались. */
+  readonly quests: Readonly<Record<string, QuestProgress>>;
+  /** Завершено етап із `end: true` (кінець розділу). */
+  readonly campaignEnded: boolean;
 }
 
 export const REJECT_CODES = [
@@ -35,10 +58,22 @@ export const REJECT_CODES = [
   'UNKNOWN_ITEM',
   'UNKNOWN_TARGET',
   'NOT_FOR_SALE',
+  // GAME-29 · квести й світ
+  'NO_CHARACTER',
+  'CHARACTER_EXISTS',
+  'INVALID_CHOICE',
+  'LOCKED',
+  'NOT_HERE',
+  'ITEM_ALREADY_HELD',
+  'QUEST_NOT_ACTIVE',
+  'QUEST_OBJECTIVES_OPEN',
+  'QUEST_REQUIRES_UNMET',
+  'QUEST_NOT_OPTIONAL',
+  'QUEST_NO_EXIT',
 ] as const;
 
 export type RejectCode = (typeof REJECT_CODES)[number];
 
 export function initialState(moneyCents = 0): GameState {
-  return { schemaVersion: 1, moneyCents, inventory: {}, grants: [], processed: {}, seq: 0 };
+  return { schemaVersion: 2, moneyCents, inventory: {}, grants: [], processed: {}, seq: 0, player: null, quests: {}, campaignEnded: false };
 }

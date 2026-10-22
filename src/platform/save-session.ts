@@ -31,15 +31,22 @@ export function createSaveSession(bridge: SessionBridge, store: SessionStore) {
     autosave(): void {
       if (ready) void store.write(serialize(bridge.state));
     },
-    /** Явне «Зберегти»: пише завжди — гравець бачить і хоче саме цей стан. */
-    save: (): Promise<boolean> => store.write(serialize(bridge.state)),
+    /**
+     * Явне «Зберегти»: пише завжди — гравець бачить і хоче саме цей стан. Тож стартове читання
+     * після цього вже не замінює гру старим сейвом (рецензія: інакше свіжий запис витіснив би справжній).
+     */
+    save(): Promise<boolean> {
+      ready = true;
+      return store.write(serialize(bridge.state));
+    },
     /** Старт: підхопити перший цілий сейв (main, інакше prev), якщо гра ще не почалась. */
     async start(): Promise<void> {
       const candidates = await store.read();
       if (!ready && bridge.sent === 0) {
         for (const json of candidates) {
           const r = fromSave(json);
-          if (r.ok) { bridge.load(r.sim); bridge.setPaused(false); break; }
+          // Пауза — як зараз в інтерфейсі (меню могли відкрити, поки читали), а не як у сейві.
+          if (r.ok) { const paused = bridge.state.clock.paused; bridge.load(r.sim); bridge.setPaused(paused); break; }
         }
       }
       ready = true;

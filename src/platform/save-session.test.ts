@@ -76,4 +76,22 @@ describe('сесія сейвів: старт і гонки (GAME-33)', () => {
     expect(await s.adopt(serialize(savedSim(false)))).toBe('unsaved');
     expect(b.state.clock.paused).toBe(true);        // діалог паузи відкритий
   });
+
+  it('меню паузи відкрили, поки читали сейв — після завантаження годинник лишається на паузі', async () => {
+    const b = fakeBridge(); const st = fakeStore([serialize(savedSim(false))]);
+    const s = createSaveSession(b, st); const p = s.start();
+    b.setPaused(true);
+    st.release(); await p;
+    expect(b.state.finds).toBe(5);
+    expect(b.state.clock.paused).toBe(true);
+  });
+
+  it('явне «Зберегти» до кінця читання — стартовий сейв уже не замінює гру', async () => {
+    const b = fakeBridge(); const st = fakeStore([serialize(savedSim(false))]);
+    const s = createSaveSession(b, st); const p = s.start();
+    await s.save();
+    st.release(); await p;
+    expect(b.state.finds).toBe(0);
+    expect(st.writes).toHaveLength(1);
+  });
 });

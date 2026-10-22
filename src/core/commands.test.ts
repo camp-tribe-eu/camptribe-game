@@ -5,6 +5,7 @@ import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
 import { dispatch, PROCESSED_LIMIT, type Command, type Safeguards } from './commands';
 import type { CoreDefs } from './defs';
+import { BIKER, DRIVER, play, STORY_DEFS } from './story.fixture';
 import { initialState, REJECT_CODES, type GameState, type RejectCode } from './state';
 
 const SEED = 20261022;
@@ -173,6 +174,18 @@ describe('коди відмов: кожен код із реєстру має т
     ['UNKNOWN_ITEM', s, { type: 'BuyItem', commandId: 'c5', itemId: 'item.ghost' }, DEFS],
     ['UNKNOWN_TARGET', s, { type: 'Interact', commandId: 'c6', targetId: 'obj.ghost' }, DEFS],
     ['NOT_FOR_SALE', s, { type: 'BuyItem', commandId: 'c7', itemId: 'item.map' }, DEFS],
+    // GAME-29 · сюжет (STORY_DEFS — src/core/story.fixture.ts)
+    ['NO_CHARACTER', s, { type: 'Visit', commandId: 's1', locationId: 'loc.home' }, STORY_DEFS],
+    ['CHARACTER_EXISTS', play([DRIVER]), { ...DRIVER, commandId: 's2' }, STORY_DEFS],
+    ['INVALID_CHOICE', s, { ...DRIVER, transportId: 'transport.bike', commandId: 's3' }, STORY_DEFS],
+    ['LOCKED', play([DRIVER]), { type: 'Visit', commandId: 's4', locationId: 'loc.shop' }, STORY_DEFS],
+    ['NOT_HERE', play([DRIVER, { type: 'Visit', locationId: 'loc.home' }, { type: 'CompleteQuest', questId: 'q.start' }]), { type: 'Talk', commandId: 's5', npcId: 'npc.ann' }, STORY_DEFS],
+    ['ITEM_ALREADY_HELD', play([DRIVER, { type: 'Pickup', itemId: 'item.wood' }]), { type: 'Pickup', commandId: 's6', itemId: 'item.wood' }, STORY_DEFS],
+    ['QUEST_NOT_ACTIVE', play([DRIVER]), { type: 'CompleteQuest', commandId: 's7', questId: 'q.mid' }, STORY_DEFS],
+    ['QUEST_OBJECTIVES_OPEN', play([DRIVER]), { type: 'CompleteQuest', commandId: 's8', questId: 'q.start' }, STORY_DEFS],
+    ['QUEST_REQUIRES_UNMET', play([DRIVER, { type: 'Visit', locationId: 'loc.home' }, { type: 'Pickup', itemId: 'item.wood' }, { type: 'CompleteQuest', questId: 'q.start' }, { type: 'Visit', locationId: 'loc.shop' }, { type: 'Talk', npcId: 'npc.ann' }]), { type: 'CompleteQuest', commandId: 's9', questId: 'q.mid', to: 'q.gate' }, STORY_DEFS],
+    ['QUEST_NOT_OPTIONAL', play([DRIVER]), { type: 'DeclineQuest', commandId: 's10', questId: 'q.start' }, STORY_DEFS],
+    ['QUEST_NO_EXIT', { ...play([BIKER]), quests: { 'q.stuck': { status: 'active', done: [] } } }, { type: 'CompleteQuest', commandId: 's11', questId: 'q.stuck' }, STORY_DEFS],
   ];
 
   it('кожен код реєстру покрито рівно одним прикладом', () => {
@@ -279,4 +292,9 @@ describe('processed обмежений (GAME-33: сейв і код віднов
     // свіжий повтор досі впізнається
     expect(dispatch(st, { type: 'SellItem', commandId: `c${PROCESSED_LIMIT * 2 - 1}`, itemId: 'item.tent' }, DEFS).repeated).toBe(true);
   });
+});
+
+it('чисто числовий commandId — INVALID_COMMAND (рецензія GAME-33: JS ставить такі ключі першими й обрізання викинуло б свіжий запис)', () => {
+  expect(dispatch(initialState(1000), { type: 'BuyItem', commandId: '7', itemId: 'item.lamp' }, DEFS)).toMatchObject({ ok: false, code: 'INVALID_COMMAND' });
+  expect(dispatch(initialState(1000), { type: 'BuyItem', commandId: 'c7', itemId: 'item.lamp' }, DEFS).ok).toBe(true);
 });

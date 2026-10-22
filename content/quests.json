@@ -44,7 +44,7 @@
       { "on": "complete", "to": "ST-005" },
       { "on": "decline", "to": "ST-005", "choiceKey": "q.elise-bike-area.decline" }
     ],
-    "reward": { "grantId": "rw.q-elise-bike-area", "money": 5 }
+    "reward": { "grantId": "rw.q-elise-bike-area", "money": 500 }
   },
   {
     "id": "ST-005", "titleKey": "q.st-005", "optional": false, "end": true, "giverId": "npc.elise", "locationId": "loc.camp.lake",
@@ -54,6 +54,6 @@
       { "id": "gather-firewood", "textKey": "q.st-005.o3", "kind": "collect", "target": "item.firewood", "required": true }
     ],
     "transitions": [],
-    "reward": { "grantId": "rw.st-005", "money": 10 }
+    "reward": { "grantId": "rw.st-005", "money": 1000 }
   }
 ]

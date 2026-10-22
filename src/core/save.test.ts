@@ -1,13 +1,16 @@
 // GAME-33 · формат сейву: вічні фікстури, коди відмов, повний цикл.
 import { describe, expect, it } from 'vitest';
 import v1 from '../../tests/saves/v1.json';
+import v2 from '../../tests/saves/v2.json';
+import { V2_STORY } from './save-v2.fixture';
+import { STORY_DEFS } from './story.fixture';
 import { DEFS, LOG, SEED } from './determinism.fixture';
 import { stateHash } from './hash';
 import { LOAD_CODES, SAVE_VERSION, fromSave, serialize, type LoadCode } from './save';
-import { newSim, run } from './sim';
+import { newSim, run, type Input } from './sim';
 
 /** Кожна випущена версія сейву — фікстура назавжди (TD-007). Нову версію додати сюди. */
-const FIXTURES: Record<number, unknown> = { 1: v1 };
+const FIXTURES: Record<number, unknown> = { 1: v1, 2: v2 };
 
 describe('вічні фікстури сейвів (TD-007)', () => {
   it('є фікстура для кожної версії від 1 до поточної', () => {
@@ -29,6 +32,19 @@ describe('вічні фікстури сейвів (TD-007)', () => {
     const live = run(newSim(SEED, 10_000), LOG.slice(0, 600), { defs: DEFS });
     const r = fromSave(JSON.stringify(v1));
     expect(r.ok && stateHash(r.sim)).toBe(stateHash(live));
+  });
+});
+
+describe('v2 (GAME-29): персонаж і квести', () => {
+  it('фікстура v2 — той самий стан, що й живий прогін із сюжетом', () => {
+    const live = run(run(newSim(SEED, 10_000), LOG.slice(0, 600), { defs: DEFS }), V2_STORY as Input[], { defs: STORY_DEFS });
+    const r = fromSave(JSON.stringify(v2));
+    expect(r.ok && stateHash(r.sim)).toBe(stateHash(live));
+    expect(r.ok && Object.keys(r.sim.game.quests).length).toBe(3);   // фікстура справді несе квести
+  });
+  it('v1 після міграції: персонажа ще нема, квестів нема, розділ не завершено', () => {
+    const r = fromSave(JSON.stringify(v1));
+    expect(r.ok && { p: r.sim.game.player, q: r.sim.game.quests, e: r.sim.game.campaignEnded, v: r.sim.game.schemaVersion }).toEqual({ p: null, q: {}, e: false, v: 2 });
   });
 });
 
@@ -72,6 +88,9 @@ describe('коди відмов завантаження: кожен має зл
   for (const [what, patch] of [
     ['grant не рядок', (c: typeof good) => { c.sim.game.grants = [42]; }],
     ['запис processed без fp', (c: typeof good) => { c.sim.game.processed = { c0: { ok: true } }; }],
+    ['відмова в processed із кодом не з реєстру', (c: typeof good) => { c.sim.game.processed = { c0: { ok: false, fp: 'x', code: 42 } }; }],
+    ['квест з невідомим статусом', (c: typeof good) => { c.sim.game.quests = { 'ST-001': { status: 'won', done: [] } }; }],
+    ['персонаж без транспорту', (c: typeof good) => { c.sim.game.player = { profileId: 'profile.a', animalId: 'animal.none', locationId: null }; }],
     ['запис processed — null (без перевірки об\'єкта — виняток, а не код)', (c: typeof good) => { c.sim.game.processed = { c0: null }; }],
   ] as const) {
     it(`SAVE_SHAPE: ${what}`, () => {
