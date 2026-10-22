@@ -4,6 +4,8 @@
 export interface CommandRecord {
   readonly ok: boolean;
   readonly code?: RejectCode;
+  /** Відбиток вмісту команди: той самий commandId з іншим вмістом → COMMAND_ID_REUSED. */
+  readonly fp: string;
 }
 
 export interface GameState {
@@ -24,6 +26,7 @@ export const REJECT_CODES = [
   'INSUFFICIENT_FUNDS',
   'ITEM_NOT_OWNED',
   'GRANT_ALREADY_GIVEN',
+  'COMMAND_ID_REUSED',
 ] as const;
 
 export type RejectCode = (typeof REJECT_CODES)[number];

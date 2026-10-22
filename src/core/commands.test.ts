@@ -11,7 +11,7 @@ const SAFE: Safeguards = { commandId: true, grantId: true, rollback: true };
 
 const itemId = fc.constantFrom('item.tent', 'item.stove', 'item.lamp');
 const cents = fc.integer({ min: 0, max: 50_000 });
-const cmdId = fc.string({ minLength: 1, maxLength: 6 });
+const cmdId = fc.stringMatching(/^[a-z0-9]{1,6}$/);
 
 const command: fc.Arbitrary<Command> = fc.oneof(
   fc.record({ type: fc.constant('BuyItem' as const), commandId: cmdId, itemId, priceCents: cents }),
@@ -63,7 +63,36 @@ const rejectIsAtomic = (g: Safeguards) =>
     return bytes({ ...r.state, processed: {} }) === bytes({ ...s0, processed: {} });
   });
 
+/** Модель: що МАЄ зробити успішна команда. Ловить шину, яка «успішно» нічого не зробила. */
+const effectMatchesModel = fc.property(reachableState, command, (s0, cmd) => {
+  const r = dispatch(s0, cmd);
+  if (!r.ok || r.repeated) return true;
+  const qty = (s: GameState, id: string): number => (Object.hasOwn(s.inventory, id) ? (s.inventory[id] ?? 0) : 0);
+  switch (cmd.type) {
+    case 'BuyItem':
+      return r.state.moneyCents === s0.moneyCents - cmd.priceCents && qty(r.state, cmd.itemId) === qty(s0, cmd.itemId) + 1;
+    case 'SellItem':
+      return r.state.moneyCents === s0.moneyCents + cmd.priceCents && qty(r.state, cmd.itemId) === qty(s0, cmd.itemId) - 1;
+    case 'GrantReward': {
+      const added = new Map<string, number>();
+      for (const it of cmd.items ?? []) added.set(it.itemId, (added.get(it.itemId) ?? 0) + it.qty);
+      return r.state.moneyCents === s0.moneyCents + cmd.moneyCents
+        && [...added].every(([id, n]) => qty(r.state, id) === qty(s0, id) + n)
+        && r.state.grants.includes(cmd.grantId);
+    }
+  }
+});
+
 describe('командна шина (GAME-12)', () => {
+  it('властивість: успішна команда змінює гроші й інвентар рівно на очікуване', () => {
+    expect(holds(effectMatchesModel)).toBe(true);
+  });
+
+  it('властивість: інвентар завжди лише з додатних цілих, гроші — безпечне ціле ≥ 0', () => {
+    expect(holds(fc.property(reachableState, (s) => Number.isSafeInteger(s.moneyCents) && s.moneyCents >= 0
+      && Object.values(s.inventory).every((q) => Number.isSafeInteger(q) && q > 0)))).toBe(true);
+  });
+
   it('властивість: повтор команди з тим самим commandId не змінює стан', () => {
     expect(holds(replayIsNoop(SAFE))).toBe(true);
   });
@@ -97,6 +126,7 @@ describe('командна шина (GAME-12)', () => {
 
 describe('коди відмов: кожен код із реєстру має тест, на якому він повертається', () => {
   const s = initialState(1000);
+  const reused = dispatch(s, { type: 'BuyItem', commandId: 'u1', itemId: 'item.tent', priceCents: 1 });
   const cases: [RejectCode, GameState, Command][] = [
     ['INVALID_COMMAND', s, { type: 'BuyItem', commandId: 'c1', itemId: '', priceCents: 1 }],
     ['INVALID_AMOUNT', s, { type: 'BuyItem', commandId: 'c2', itemId: 'item.tent', priceCents: 1.5 }],
@@ -107,6 +137,7 @@ describe('коди відмов: кожен код із реєстру має т
       dispatch(s, { type: 'GrantReward', commandId: 'g1', grantId: 'rw.x', moneyCents: 5 }).state,
       { type: 'GrantReward', commandId: 'g2', grantId: 'rw.x', moneyCents: 5 },
     ],
+    ['COMMAND_ID_REUSED', reused.state, { type: 'BuyItem', commandId: 'u1', itemId: 'item.lamp', priceCents: 2 }],
   ];
 
   it('кожен код реєстру покрито рівно одним прикладом', () => {
@@ -121,6 +152,39 @@ describe('коди відмов: кожен код із реєстру має т
       expect(r.state.moneyCents).toBe(state.moneyCents);
     });
   }
+
+  it('COMMAND_ID_REUSED: той самий commandId з іншим вмістом — відмова, а не кешований успіх', () => {
+    const r = dispatch(reused.state, { type: 'BuyItem', commandId: 'u1', itemId: 'item.lamp', priceCents: 2 });
+    expect(r).toMatchObject({ ok: false, code: 'COMMAND_ID_REUSED', repeated: true });
+    expect(r.state).toBe(reused.state);
+  });
+
+  it('ключі прототипу як id не створюють предметів і грошей (рецензія PR #13)', () => {
+    for (const itemId of ['toString', 'constructor', '__proto__', 'hasOwnProperty']) {
+      const sell = dispatch(initialState(0), { type: 'SellItem', commandId: 'p1', itemId, priceCents: 100_000 });
+      expect(sell).toMatchObject({ ok: false, code: 'INVALID_COMMAND' });
+      expect(sell.state.moneyCents).toBe(0);
+      const buy = dispatch(initialState(500), { type: 'BuyItem', commandId: 'p2', itemId, priceCents: 1 });
+      expect(buy).toMatchObject({ ok: false, code: 'INVALID_COMMAND' });
+    }
+    expect(dispatch(s, { type: 'BuyItem', commandId: 'constructor', itemId: 'item.tent', priceCents: 1 }))
+      .toMatchObject({ ok: false, code: 'INVALID_COMMAND', repeated: false });
+  });
+
+  it('від’ємні суми й нульова кількість — INVALID_AMOUNT', () => {
+    expect(dispatch(s, { type: 'BuyItem', commandId: 'n1', itemId: 'item.tent', priceCents: -500 })).toMatchObject({ code: 'INVALID_AMOUNT' });
+    expect(dispatch(s, { type: 'SellItem', commandId: 'n2', itemId: 'item.tent', priceCents: -1 })).toMatchObject({ code: 'INVALID_AMOUNT' });
+    expect(dispatch(s, { type: 'GrantReward', commandId: 'n3', grantId: 'rw.n', moneyCents: -1 })).toMatchObject({ code: 'INVALID_AMOUNT' });
+    expect(dispatch(s, { type: 'GrantReward', commandId: 'n4', grantId: 'rw.n', moneyCents: 0, items: [{ itemId: 'item.tent', qty: 0 }] }))
+      .toMatchObject({ code: 'INVALID_AMOUNT' });
+  });
+
+  it('переповнення суми грошей — INVALID_AMOUNT, стан не псується', () => {
+    const rich = initialState(Number.MAX_SAFE_INTEGER);
+    const r = dispatch(rich, { type: 'GrantReward', commandId: 'o1', grantId: 'rw.o', moneyCents: Number.MAX_SAFE_INTEGER });
+    expect(r).toMatchObject({ ok: false, code: 'INVALID_AMOUNT' });
+    expect(r.state.moneyCents).toBe(Number.MAX_SAFE_INTEGER);
+  });
 
   it('повтор відмовленої команди повертає ту саму відмову, а не новий результат', () => {
     const cmd: Command = { type: 'BuyItem', commandId: 'r1', itemId: 'item.tent', priceCents: 5000 };
