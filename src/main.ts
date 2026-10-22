@@ -1,10 +1,42 @@
-// Точка входу браузера. Поки що — лише рядок збірки; сцена з'явиться після спайку Phaser 4 (GAME-14).
+// Точка входу браузера: сцена світу (GAME-24) + дотикові кнопки (GAME-69) + рядок збірки.
+import Phaser from 'phaser';
 import { buildLabel } from './core/build-info';
+import { newInput, type Action } from './view/world/actions';
+import { createBridge } from './view/world/bridge';
+import { WorldScene, type WorldProbe } from './view/world/scene';
+import { mountTouchControls } from './view/world/touch';
 
 const app = document.querySelector<HTMLElement>('#app');
-if (app) {
-  const label = document.createElement('p');
-  label.className = 'build';
-  label.textContent = buildLabel(__GAME_VERSION__, __GAME_COMMIT__);
-  app.append(label);
-}
+if (!app) throw new Error('#app відсутній');
+
+const probe: WorldProbe = { ready: false, playerX: 0, playerY: 0, nearObject: null, commandsSent: 0, cameraScrollX: 0, cameraScrollY: 0 };
+const bridge = createBridge(20261022);
+const input = newInput();
+// Тестовий хук Playwright: стан для перевірок, без доступу на запис до ядра.
+(window as unknown as { __game: { probe: WorldProbe; bridge: typeof bridge } }).__game = { probe, bridge };
+
+const stage = document.createElement('div');
+stage.id = 'stage';
+app.append(stage);
+
+// ?hideTouch=interact — лише для негативного контролю e2e: прихована кнопка мусить ламати прохід.
+const hidden = (new URLSearchParams(location.search).get('hideTouch') ?? '').split(',').filter(Boolean) as Action[];
+mountTouchControls(app, input, hidden);
+
+const label = document.createElement('p');
+label.className = 'build';
+label.textContent = buildLabel(__GAME_VERSION__, __GAME_COMMIT__);
+app.append(label);
+
+new Phaser.Game({
+  type: Phaser.AUTO,
+  parent: stage,
+  width: 240,
+  height: 160,
+  pixelArt: true,
+  backgroundColor: '#000000',
+  render: { preserveDrawingBuffer: true },
+  scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_BOTH },
+  physics: { default: 'arcade', arcade: { debug: false } },
+  scene: [new WorldScene(bridge, input, probe)],
+});

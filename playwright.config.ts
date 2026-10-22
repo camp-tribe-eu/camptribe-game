@@ -16,7 +16,7 @@ export default defineConfig({
   },
   webServer: {
     command: 'npx vite build && npx vite preview --port 4173 --strictPort --host 127.0.0.1',
-    url: 'http://127.0.0.1:4173/spike.html',
+    url: 'http://127.0.0.1:4173/',
     timeout: 120_000,
     reuseExistingServer: false,
   },
