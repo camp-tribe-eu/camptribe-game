@@ -4,10 +4,14 @@
 
 import { checkSchema } from './schema.mjs';
 import { FACT_KINDS } from './codes.mjs';
+import { checkCombos, NO_ANIMAL } from './combos.mjs';
 
 const I = (code, where, msg) => ({ code, where, msg });
 
 const ID_PATTERNS = {
+  profiles: /^profile\.[a-z0-9]+(?:[.-][a-z0-9]+)*$/,
+  transports: /^transport\.[a-z0-9]+(?:[.-][a-z0-9]+)*$/,
+  animals: /^animal\.[a-z0-9]+(?:[.-][a-z0-9]+)*$/,
   items: /^item\.[a-z0-9]+(?:[.-][a-z0-9]+)*$/,
   npcs: /^npc\.[a-z0-9]+(?:[.-][a-z0-9]+)*$/,
   locations: /^loc\.[a-z0-9]+(?:[.-][a-z0-9]+)*$/,
@@ -18,6 +22,9 @@ const ID_PATTERNS = {
 const GRANT_ID = /^rw\.[a-z0-9]+(?:[.-][a-z0-9]+)*$/;
 const OBJECTIVE_ID = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const TARGET_TYPE = { talk: 'npcs', visit: 'locations', collect: 'items', deliver: 'items' };
+const WHEN_TYPE = { profiles: 'profiles', transports: 'transports', animals: 'animals' };
+// Перевірки, що проганяються окремо для кожної комбінації профіль × транспорт × тварина.
+const PER_COMBO = ['objective-completable', 'cycle-exit', 'main-gate', 'path-to-end', 'optional-decline', 'branch-next'];
 
 // ---------- індекс і граф ----------
 
@@ -109,6 +116,7 @@ export const CHECKS = [
       for (const [t, re] of Object.entries(ID_PATTERNS)) {
         for (const e of c.content[t] ?? []) if (!re.test(e.id)) out.push(I('ID_FORMAT', `${t}:${e.id}`, `id не відповідає ${re}`));
       }
+      for (const a of c.content.animals ?? []) if (a.id === NO_ANIMAL) out.push(I('ID_FORMAT', `animals:${a.id}`, `${NO_ANIMAL} зарезервовано за «без тварини»`));
       for (const q of c.content.quests ?? []) for (const o of q.objectives) {
         if (!OBJECTIVE_ID.test(o.id)) out.push(I('ID_FORMAT', `${q.id}/${o.id}`, `id цілі не відповідає ${OBJECTIVE_ID}`));
       }
@@ -138,6 +146,11 @@ export const CHECKS = [
       const { by } = c.ix;
       const ref = (t, id, where) => { if (id !== undefined && !by[t].has(id)) out.push(I('REF_MISSING', where, `${t} «${id}» не існує`)); };
       ref('quests', c.content.meta.start, 'meta.start');
+      for (const [where, w] of whens(c.content)) {
+        for (const [dim, t] of Object.entries(WHEN_TYPE)) {
+          for (const id of w[dim] ?? []) if (!(dim === 'animals' && id === NO_ANIMAL)) ref(t, id, `${where}.when.${dim}`);
+        }
+      }
       for (const n of by.npcs.values()) {
         ref('locations', n.locationId, `${n.id}.locationId`);
         ref('quests', n.unlockedBy, `${n.id}.unlockedBy`);
@@ -262,7 +275,7 @@ export const CHECKS = [
       const keys = new Map();
       const add = (k, where) => { if (k !== undefined) keys.set(k, where); };
       const ct = c.content;
-      for (const t of ['items', 'npcs', 'locations']) (ct[t] ?? []).forEach((e) => add(e.nameKey, e.id));
+      for (const t of ['profiles', 'transports', 'animals', 'items', 'npcs', 'locations']) (ct[t] ?? []).forEach((e) => add(e.nameKey, e.id));
       for (const q of ct.quests ?? []) {
         add(q.titleKey, q.id);
         q.objectives.forEach((o) => add(o.textKey, `${q.id}/${o.id}`));
@@ -341,7 +354,24 @@ export const CHECKS = [
         .map((q) => I('BRANCH_NO_NEXT', q.id, 'не кінець і не має наступного етапу'));
     },
   },
+  {
+    id: 'combos',
+    run(c) { // @check:combos
+      return checkCombos(c.content, { buildIndex, checks: CHECKS.filter((k) => PER_COMBO.includes(k.id)), today: c.today });
+    },
+  },
 ];
+
+function whens(content) {
+  const out = [];
+  for (const t of ['npcs', 'locations']) for (const e of content[t] ?? []) if (e.when) out.push([e.id, e.when]);
+  for (const q of content.quests ?? []) {
+    if (q.when) out.push([q.id, q.when]);
+    for (const o of q.objectives) if (o.when) out.push([`${q.id}/${o.id}`, o.when]);
+    q.transitions.forEach((t, i) => t.when && out.push([`${q.id}.transitions[${i}]`, t.when]));
+  }
+  return out;
+}
 
 function rewards(content) {
   const out = [];
@@ -364,6 +394,10 @@ export function validate(content, { today }) {
   if (issues.length) return issues;
   try { ctx.ix = buildIndex(content); }
   catch (e) { return [I('INTERNAL_ERROR', 'buildIndex', e.message)]; }
-  for (const chk of rest) issues.push(...runOne(chk));
+  for (const chk of rest) if (chk.id !== 'combos') issues.push(...runOne(chk));
+  // Комбінації — лише на контенті, чистому в цілому: на зламаних посиланнях вони дублюють і
+  // затуляють першопричину. Ціна: дефект комбінації видно після виправлення загального.
+  const combos = rest.find((chk) => chk.id === 'combos');
+  if (issues.length === 0) issues.push(...runOne(combos));
   return issues;
 }

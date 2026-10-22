@@ -15,6 +15,7 @@ import { fileURLToPath } from 'node:url';
 import { loadContent } from './validator/load.mjs';
 import { validate } from './validator/checks.mjs';
 import { selfTest } from './validator/self-test.mjs';
+import { enumerateCombos } from './validator/combos.mjs';
 
 const args = process.argv.slice(2);
 const flag = (f) => args.includes(f);
@@ -39,7 +40,7 @@ const issues = loaded.issues.length ? loaded.issues : validate(loaded.content, {
 if (issues.length === 0) {
   const c = loaded.content;
   const n = (k) => (c[k] ?? []).length;
-  console.log(`PASS · квестів ${n('quests')}, предметів ${n('items')}, NPC ${n('npcs')}, локацій ${n('locations')}, подій ${n('events')}, фактів ${n('facts')}, мов ${c.meta.locales.length}`);
+  console.log(`PASS · квестів ${n('quests')}, предметів ${n('items')}, NPC ${n('npcs')}, локацій ${n('locations')}, подій ${n('events')}, фактів ${n('facts')}, мов ${c.meta.locales.length} · профілів ${n('profiles')}, транспортів ${n('transports')}, тварин ${n('animals')} → комбінацій перевірено ${enumerateCombos(c).length}`);
   process.exit(0);
 }
 for (const i of issues) console.log(`::error::${i.code} · ${i.where} · ${i.msg}`);

@@ -35,6 +35,11 @@ export const CODES = {
   OPTIONAL_NO_DECLINE:  { check: 'optional-decline', spec: '§3 відмова від необов\u2019язкового вузла лишає шлях уперед' },
   BRANCH_NO_NEXT:       { check: 'branch-next', spec: '§3 кожна гілка має наступний етап або кінець' },
 
+  // комбінації профіль × транспорт × тварина
+  COMBO_NO_START:             { check: 'combos', spec: '§3 кожен вузол досяжний — у кожній комбінації стану гравця' },
+  COMBO_TARGETED_UNREACHABLE: { check: 'combos', spec: '§3 вузол, адресований комбінації, у ній досяжний' },
+  COMBO_DEAD_CONTENT:         { check: 'combos', spec: '§3 кожен вузол досяжний хоча б в одній комбінації' },
+
   // перевірка, що впала сама, — теж червоне, а не зелене
   INTERNAL_ERROR:       { check: 'runner', spec: 'перевірка, що впала, не сміє виглядати як пройдена' },
 };
