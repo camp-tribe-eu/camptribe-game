@@ -7,7 +7,7 @@
 Source: the Universal LPC Spritesheet Character Generator on raw.githubusercontent.com (reachable
 from a session; opengameart.org is not). For every layer in LAYERS:
   * spritesheets/<path>/walk.png -> assets/characters/<path>/walk.png, bytes unchanged;
-  * the generator's CREDITS.csv row for <path>/walk.png -> a row of assets/CREDITS.csv.
+  * the generator's CREDITS.csv row for <path>/walk.png -> a row of assets/CREDITS.csv (modified = no).
 Rows of assets/CREDITS.csv that are not under characters/ are kept as they are.
 
 Licence choice: the generator offers several licences per layer; we take the most permissive one
@@ -27,7 +27,7 @@ RAW = f'https://raw.githubusercontent.com/{REPO}/master'
 HOME = f'https://github.com/{REPO}'
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 CREDITS = os.path.join(ROOT, 'assets', 'CREDITS.csv')
-HEADER = ['file', 'authors', 'licence', 'licences_offered', 'source_urls', 'origin', 'notes']
+HEADER = ['file', 'authors', 'licence', 'licences_offered', 'source_urls', 'origin', 'notes', 'modified']
 
 # The 17 layers of the art spike (research/art-spike/compose_chars.py, OD-013).
 LAYERS = [
@@ -97,12 +97,17 @@ def main(argv=None):
             'source_urls': ' '.join(urls),
             'origin': f'{RAW}/spritesheets/{name}',
             'notes': notes,
+            'modified': 'no',  # bytes are copied unchanged
         })
 
     kept = []
     if os.path.exists(CREDITS):
         with open(CREDITS, encoding='utf-8', newline='') as f:
             kept = [r for r in csv.DictReader(f) if not r['file'].startswith('characters/')]
+    for r in kept:
+        if not (r.get('modified') or '').strip():
+            print(f"import: ERROR — kept row {r['file']} has no 'modified' value (no / description of changes)", file=sys.stderr)
+            return 1
     with open(CREDITS, 'w', encoding='utf-8', newline='') as f:
         w = csv.DictWriter(f, fieldnames=HEADER, lineterminator='\n')
         w.writeheader()

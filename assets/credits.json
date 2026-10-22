@@ -570,7 +570,8 @@
         "https://gitlab.com/vagabondgame/lpc-characters",
         "https://opengameart.org/content/lpc-male-jumping-animation-by-durrani",
         "https://opengameart.org/content/lpc-runcycle-and-diagonal-walkcycle"
-      ]
+      ],
+      "modified": "no"
     },
     {
       "file": "characters/body/bodies/male/walk.png",
@@ -597,7 +598,8 @@
         "https://opengameart.org/content/lpc-runcycle-for-male-muscular-and-pregnant-character-bases-with-modular-heads",
         "https://opengameart.org/content/lpc-jump-expanded",
         "https://opengameart.org/content/lpc-character-bases"
-      ]
+      ],
+      "modified": "no"
     },
     {
       "file": "characters/body/bodies/teen/walk.png",
@@ -626,7 +628,8 @@
         "https://gitlab.com/vagabondgame/lpc-characters",
         "https://opengameart.org/content/lpc-male-jumping-animation-by-durrani",
         "https://opengameart.org/content/lpc-jump-expanded"
-      ]
+      ],
+      "modified": "no"
     },
     {
       "file": "characters/feet/shoes/basic/male/walk.png",
@@ -640,7 +643,8 @@
         "https://opengameart.org/content/lpc-medieval-fantasy-character-sprites",
         "http://opengameart.org/content/lpc-clothing-updates",
         "https://opengameart.org/content/lpc-expanded-socks-shoes"
-      ]
+      ],
+      "modified": "no"
     },
     {
       "file": "characters/feet/shoes/basic/thin/walk.png",
@@ -654,7 +658,8 @@
         "https://opengameart.org/content/lpc-medieval-fantasy-character-sprites",
         "http://opengameart.org/content/lpc-clothing-updates",
         "https://opengameart.org/content/lpc-expanded-socks-shoes"
-      ]
+      ],
+      "modified": "no"
     },
     {
       "file": "characters/hair/messy1/adult/walk.png",
@@ -666,7 +671,8 @@
       "sources": [
         "https://opengameart.org/content/liberated-pixel-cup-lpc-base-assets-sprites-map-tiles",
         "https://opengameart.org/content/lpc-expanded-hair"
-      ]
+      ],
+      "modified": "no"
     },
     {
       "file": "characters/hair/plain/adult/walk.png",
@@ -680,7 +686,8 @@
         "https://opengameart.org/content/liberated-pixel-cup-lpc-base-assets-sprites-map-tiles",
         "https://opengameart.org/content/ponytail-and-plain-hairstyles",
         "https://opengameart.org/content/lpc-expanded-hair"
-      ]
+      ],
+      "modified": "no"
     },
     {
       "file": "characters/hair/ponytail/adult/bg/walk.png",
@@ -692,7 +699,8 @@
       "sources": [
         "https://opengameart.org/content/liberated-pixel-cup-lpc-base-assets-sprites-map-tiles",
         "https://opengameart.org/content/lpc-expanded-hair"
-      ]
+      ],
+      "modified": "no"
     },
     {
       "file": "characters/hair/ponytail/adult/fg/walk.png",
@@ -704,7 +712,8 @@
       "sources": [
         "https://opengameart.org/content/liberated-pixel-cup-lpc-base-assets-sprites-map-tiles",
         "https://opengameart.org/content/lpc-expanded-hair"
-      ]
+      ],
+      "modified": "no"
     },
     {
       "file": "characters/head/heads/human/female/walk.png",
@@ -717,7 +726,8 @@
       "sources": [
         "https://opengameart.org/content/",
         "https://opengameart.org/content/lpc-character-bases"
-      ]
+      ],
+      "modified": "no"
     },
     {
       "file": "characters/head/heads/human/male/walk.png",
@@ -730,7 +740,8 @@
       "sources": [
         "https://opengameart.org/content/liberated-pixel-cup-lpc-base-assets-sprites-map-tiles",
         "https://opengameart.org/content/lpc-character-bases"
-      ]
+      ],
+      "modified": "no"
     },
     {
       "file": "characters/head/heads/human/male_small/walk.png",
@@ -741,7 +752,8 @@
       "licence": "OGA-BY 3.0",
       "sources": [
         "https://github.com/LiberatedPixelCup/Universal-LPC-Spritesheet-Character-Generator"
-      ]
+      ],
+      "modified": "no"
     },
     {
       "file": "characters/legs/pants/male/walk.png",
@@ -758,7 +770,8 @@
         "https://opengameart.org/content/liberated-pixel-cup-lpc-base-assets-sprites-map-tiles",
         "https://opengameart.org/content/lpc-medieval-fantasy-character-sprites",
         "https://opengameart.org/content/lpc-expanded-pants"
-      ]
+      ],
+      "modified": "no"
     },
     {
       "file": "characters/legs/pants/thin/walk.png",
@@ -777,7 +790,8 @@
         "https://opengameart.org/content/lpc-medieval-fantasy-character-sprites",
         "http://opengameart.org/content/lpc-clothing-updates",
         "https://opengameart.org/content/lpc-expanded-pants"
-      ]
+      ],
+      "modified": "no"
     },
     {
       "file": "characters/torso/clothes/longsleeve/longsleeve/female/walk.png",
@@ -796,7 +810,8 @@
         "https://github.com/ElizaWy/LPC/tree/main/Characters/Clothing",
         "https://opengameart.org/content/lpc-expanded-sit-run-jump-more",
         "https://opengameart.org/content/lpc-expanded-simple-shirts"
-      ]
+      ],
+      "modified": "no"
     },
     {
       "file": "characters/torso/clothes/longsleeve/longsleeve/male/walk.png",
@@ -812,7 +827,8 @@
         "https://github.com/ElizaWy/LPC/tree/main/Characters/Clothing",
         "https://opengameart.org/content/lpc-expanded-sit-run-jump-more",
         "https://opengameart.org/content/lpc-expanded-simple-shirts"
-      ]
+      ],
+      "modified": "no"
     },
     {
       "file": "characters/torso/clothes/longsleeve/longsleeve/teen/walk.png",
@@ -832,7 +848,8 @@
         "https://github.com/ElizaWy/LPC/tree/main/Characters/Clothing",
         "https://opengameart.org/content/lpc-expanded-sit-run-jump-more",
         "https://opengameart.org/content/lpc-expanded-simple-shirts"
-      ]
+      ],
+      "modified": "no"
     },
     {
       "file": "tiles/base_out_atlas.png",
@@ -851,7 +868,8 @@
       "licence": "CC-BY-SA 3.0",
       "sources": [
         "https://opengameart.org/content/lpc-tile-atlas"
-      ]
+      ],
+      "modified": "no"
     },
     {
       "file": "tiles/terrain_atlas.png",
@@ -870,7 +888,8 @@
       "licence": "CC-BY-SA 3.0",
       "sources": [
         "https://opengameart.org/content/lpc-tile-atlas"
-      ]
+      ],
+      "modified": "no"
     }
   ]
 }
