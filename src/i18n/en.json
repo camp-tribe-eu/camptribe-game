@@ -5,5 +5,13 @@
   "ui.textSize": "Text size",
   "ui.language": "Language",
   "ui.pause": "Pause",
-  "ui.reset": "Reset"
+  "ui.reset": "Reset",
+  "ui.save": "Save",
+  "ui.saved": "Saved",
+  "ui.saveFailed": "Could not save",
+  "ui.exportCode": "Restore code",
+  "ui.importCode": "Restore from code",
+  "ui.apply": "Restore",
+  "ui.importOk": "Game restored",
+  "ui.importBad": "This code does not fit — check it was copied in full"
 }

@@ -30,6 +30,10 @@
       .ui-overlay fieldset { border: 1px solid #e8e6e355; border-radius: 8px; display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; max-width: min(92vw, 640px); }
       .ui-btn { font-family: inherit; font-size: 0.75rem; max-width: 92vw; white-space: normal; min-width: 52px; min-height: 48px; padding: 8px 16px; border-radius: 10px; border: 2px solid #e8e6e3aa;
         background: #2a2f35; color: #e8e6e3; font-size: 1rem; }
+      .ui-overlay, .ui-overlay * { box-sizing: border-box; }
+      .ui-code { width: 100%; max-width: 560px; font: 0.7rem monospace; background: #111; color: #e8e6e3; border: 1px solid #e8e6e355; border-radius: 6px; padding: 6px; }
+      .ui-status { margin: 4px 0 0; width: 100%; font-size: 0.75rem; }
+      .ui-overlay { overflow-y: auto; }
       .ui-btn[aria-pressed="true"] { background: #4f7a3a; }
       /* Ховати дотикові кнопки лише там, де немає жодного дотикового вказівника (any-pointer):
          сенсорний ноутбук має pointer: fine, але any-pointer: coarse — кнопки лишаються. */

@@ -9,6 +9,9 @@ export function Shell({ port, langOverride }: { port: UiPort; langOverride?: Any
   const [paused, setPaused] = useState(false);
   const [settings, setSettings] = useState<Settings>(() => loadSettings());
   const resumeRef = useRef<HTMLButtonElement>(null);
+  const [status, setStatus] = useState<Key | null>(null);
+  const [codeOut, setCodeOut] = useState('');
+  const [codeIn, setCodeIn] = useState('');
   const lang: AnyLang = langOverride ?? settings.language;
   const t = (key: Key): string => tr(lang, key);
 
@@ -56,6 +59,20 @@ export function Shell({ port, langOverride }: { port: UiPort; langOverride?: Any
               <button type="button" class="ui-btn" data-ui={`lang-${l}`} aria-pressed={settings.language === l}
                 onClick={() => setSettings({ ...settings, language: l })}>{l.toUpperCase()}</button>
             ))}
+          </fieldset>
+          <fieldset>
+            <legend>{t('ui.save')}</legend>
+            <button type="button" class="ui-btn" data-ui="save"
+              onClick={() => { void port.save().then((ok) => setStatus(ok ? 'ui.saved' : 'ui.saveFailed')); }}>{t('ui.save')}</button>
+            <button type="button" class="ui-btn" data-ui="code-export"
+              onClick={() => { void port.exportCode().then(setCodeOut); }}>{t('ui.exportCode')}</button>
+            {codeOut && <textarea class="ui-code" data-ui="code-out" readOnly rows={3} aria-label={t('ui.exportCode')} value={codeOut}
+              onFocus={(e) => (e.currentTarget as HTMLTextAreaElement).select()} />}
+            <textarea class="ui-code" data-ui="code-in" rows={3} aria-label={t('ui.importCode')} placeholder={t('ui.importCode')}
+              value={codeIn} onInput={(e) => setCodeIn((e.currentTarget as HTMLTextAreaElement).value)} />
+            <button type="button" class="ui-btn" data-ui="code-apply"
+              onClick={() => { void port.importCode(codeIn).then((ok) => setStatus(ok ? 'ui.importOk' : 'ui.importBad')); }}>{t('ui.apply')}</button>
+            {status && <p class="ui-status" data-ui="status" role="status">{t(status)}</p>}
           </fieldset>
           <button type="button" class="ui-btn" data-ui="reset" onClick={() => setSettings(DEFAULT_SETTINGS)}>{t('ui.reset')}</button>
         </div>

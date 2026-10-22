@@ -1,0 +1,118 @@
+{
+ "format": "camplife-save",
+ "schemaVersion": 1,
+ "checksum": "037a7b64",
+ "accountId": null,
+ "sim": {
+  "game": {
+   "schemaVersion": 1,
+   "moneyCents": 7050,
+   "inventory": {
+    "item.tent": 14
+   },
+   "grants": [
+    "rw.spot-0",
+    "rw.spot-1",
+    "rw.spot-2",
+    "rw.spot-3",
+    "rw.spot-4"
+   ],
+   "processed": {
+    "g0": {
+     "ok": true,
+     "fp": "592fd5da"
+    },
+    "b0": {
+     "ok": true,
+     "fp": "eb1dc982"
+    },
+    "b41": {
+     "ok": true,
+     "fp": "78bd2bc5"
+    },
+    "b82": {
+     "ok": true,
+     "fp": "292fdf7a"
+    },
+    "g97": {
+     "ok": true,
+     "fp": "2614ab22"
+    },
+    "b123": {
+     "ok": true,
+     "fp": "920a8f66"
+    },
+    "b164": {
+     "ok": true,
+     "fp": "6d0d95fd"
+    },
+    "g194": {
+     "ok": true,
+     "fp": "48390e90"
+    },
+    "b205": {
+     "ok": true,
+     "fp": "0eee8285"
+    },
+    "b246": {
+     "ok": true,
+     "fp": "0b9af142"
+    },
+    "b287": {
+     "ok": true,
+     "fp": "44700efb"
+    },
+    "g291": {
+     "ok": true,
+     "fp": "7a8f9ae5"
+    },
+    "b328": {
+     "ok": true,
+     "fp": "223c3ddb"
+    },
+    "b369": {
+     "ok": true,
+     "fp": "c2cce97a"
+    },
+    "g388": {
+     "ok": true,
+     "fp": "41c63f0a"
+    },
+    "b410": {
+     "ok": true,
+     "fp": "756fbcb1"
+    },
+    "b451": {
+     "ok": true,
+     "fp": "5b0045d0"
+    },
+    "g485": {
+     "ok": false,
+     "code": "GRANT_ALREADY_GIVEN",
+     "fp": "8c9a0aa1"
+    },
+    "b492": {
+     "ok": true,
+     "fp": "36e90ae7"
+    },
+    "b533": {
+     "ok": true,
+     "fp": "aeb2c845"
+    }
+   },
+   "seq": 20
+  },
+  "clock": {
+   "minutes": 1247,
+   "accMs": 702,
+   "paused": false
+  },
+  "rng": [
+   1958489568,
+   3832993678,
+   1917599617,
+   2937056887
+  ],
+  "finds": 9
+ }
+}

@@ -17,6 +17,8 @@ export interface WorldProbe {
   cameraScrollX: number;
   cameraScrollY: number;
   clockMinutes: number;
+  /** Стартове завантаження сейву завершено (є він чи ні). */
+  saveLoaded: boolean;
 }
 
 export class WorldScene extends Phaser.Scene {

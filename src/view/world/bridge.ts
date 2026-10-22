@@ -18,6 +18,8 @@ export interface Bridge {
   /** Реальний час кадру → ігровий годинник ядра (фіксований крок, GAME-13). */
   frame(realMs: number): void;
   setPaused(paused: boolean): void;
+  /** Замінити стан завантаженим сейвом (вже перевіреним ядром, fromSave). */
+  load(sim: SimState): void;
 }
 
 export function createBridge(seed: number, defs: CoreDefs): Bridge {
@@ -36,6 +38,9 @@ export function createBridge(seed: number, defs: CoreDefs): Bridge {
     },
     setPaused(paused) {
       state = step(state, { kind: paused ? 'pause' : 'resume' }, { defs });
+    },
+    load(sim) {
+      state = sim;
     },
   };
 }
