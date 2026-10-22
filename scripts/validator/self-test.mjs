@@ -41,13 +41,39 @@ export function selfTest() {
   report(inv.length === 0, 'інвентар перевірок і кодів узгоджений', inv.join('; '));
 
   // 2. Приклади в пам'яті: точний збіг множини кодів.
-  for (const f of FIXTURES) {
+  // count — скільки знахідок саме цього коду; стереже від дублів, яких множина кодів не бачить.
+  const countMismatch = (f, issues) => {
+    if (!f.count) return null;
+    const n = issues.filter((i) => i.code === f.count.code).length;
+    return n === f.count.n ? null : `${f.count.code}: очікував ${f.count.n}, отримав ${n}`;
+  };
+  // Сама звірка кількості теж мусить уміти почервоніти: і на «замало», і на «забагато».
+  const one = [{ code: 'X' }];
+  const cm = [countMismatch({ count: { code: 'X', n: 0 } }, one), countMismatch({ count: { code: 'X', n: 2 } }, one), countMismatch({ count: { code: 'X', n: 1 } }, one)];
+  report(cm[0] !== null && cm[1] !== null && cm[2] === null, 'звірка count червоніє на більше й менше, мовчить на рівне', JSON.stringify(cm));
+
+  const judge = (f) => {
     const c = f.base === 'combo' ? comboBaseline() : baseline();
     f.patch(c);
-    const got = codeSet(validate(c, { today: TODAY }));
+    const issues = validate(c, { today: TODAY });
+    const got = codeSet(issues);
     const want = [...f.expect].sort();
+    const bad = [];
+    if (!isDeepStrictEqual(got, want)) bad.push(`очікував [${want.join(', ')}], отримав [${got.join(', ')}]`);
+    const cmis = countMismatch(f, issues);
+    if (cmis) bad.push(cmis);
+    return { got, want, bad };
+  };
+  // Цикл прикладів справді звіряє count: той самий приклад із хибною кількістю мусить упасти.
+  const withCount = FIXTURES.find((f) => f.count);
+  const wrong = (d) => judge({ ...withCount, count: { ...withCount.count, n: withCount.count.n + d } }).bad.length > 0;
+  report(!!withCount && wrong(+1) && wrong(-1),
+    'приклад із хибним count падає — і на «замало», і на «забагато»', 'оцінка прикладу не звіряє count в обидва боки');
+
+  for (const f of FIXTURES) {
+    const { got, want, bad } = judge(f);
     got.forEach((x) => want.includes(x) && covered.add(x));
-    report(isDeepStrictEqual(got, want), f.name, `очікував [${want.join(', ')}], отримав [${got.join(', ')}]`);
+    report(bad.length === 0, f.name, bad.join('; '));
   }
 
   // 3. Файлові приклади для завантажувача.
@@ -75,7 +101,7 @@ export function selfTest() {
   report(uncovered.length === 0, 'кожен код має зламаний приклад, на якому він спрацював', `без доказу: ${uncovered.join(', ')}`);
 
   // 5. Звірка числа прогонів із базою: набір, що обірвався, не сміє виглядати як пройдений.
-  const expected = 1 + FIXTURES.length + FILE_FIXTURES.length + 1;
+  const expected = 1 + 2 + FIXTURES.length + FILE_FIXTURES.length + 1; // інвентар, 2 звірки count, приклади, покриття
   const before = ran;
   report(before === expected, `до звірки виконано ${before} кроків із ${expected} очікуваних`, 'набір обірвався або пропустив приклади');
 

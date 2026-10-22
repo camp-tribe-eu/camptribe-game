@@ -20,9 +20,11 @@ const reward = obj({ grantId: req(str), items: arr(obj({ item: req(str), qty: re
 
 export const SCHEMAS = {
   meta: obj({ start: req(str), locales: req(arr(str)) }),
-  profiles: obj({ id: req(str), nameKey: req(str) }),
+  // transports — з якими транспортами сумісний запис; немає поля — з усіма. Несумісні комбінації
+  // не перебираються: гравець не може їх обрати, тож тупик у них — не тупик (закон 5).
+  profiles: obj({ id: req(str), nameKey: req(str), transports: ids }),
   transports: obj({ id: req(str), nameKey: req(str) }),
-  animals: obj({ id: req(str), nameKey: req(str) }),
+  animals: obj({ id: req(str), nameKey: req(str), transports: ids }),
   items: obj({ id: req(str), nameKey: req(str) }),
   npcs: obj({ id: req(str), nameKey: req(str), locationId: req(str), unlockedBy: str, sells: arr(str), when }),
   locations: obj({ id: req(str), nameKey: req(str), unlockedBy: str, items: arr(str), when }),
