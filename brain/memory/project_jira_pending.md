@@ -21,9 +21,10 @@ JQL: `project = GAME AND text ~ "валідатор контенту"`. Якщо
 3. Порожнеча не зелена — без `content/` і без прапорця: `CONTENT_MISSING`, exit 1; з
    `--allow-missing-content`: `NOT RUN … Це не PASS`, exit 0.
 4. CI на кожну зміну — check-runs `content` і `scan` = success на голові PR #4 і на `main`.
-5. 🔴 **Падіння блокує злиття — НЕ доведено.** Ruleset `main`: `required_approving_review_count: 0`,
-   правила `required_status_checks` немає (GET `/rulesets/<id>`). Класичного захисту гілки немає (404).
-   Червоний CI зараз злиттю не заважає. Закривати пункт можна лише після дії власника.
+5. Падіння блокує злиття — правило є: ruleset 25642609 оновлено 22.10.2026 15:42 UTC,
+   `required_status_checks: [content, scan]`, integration_id 15368 (= app `github-actions`, той самий,
+   що звітує check-runs на `main`). 🔴 Ще не почервоніло: доведено буде, коли PR із червоною
+   перевіркою покаже заблоковане злиття. `required_approving_review_count` досі 0.
 6. Рецензент — PR #4 має 0 рецензій (GET `/pulls/4/reviews` → порожньо).
 
 ## Картка 2 — «Схема профілів, транспорту й тварин; досяжність для кожної комбінації»
