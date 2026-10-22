@@ -119,7 +119,12 @@ Actions secrets і скажи точну назву змінної.
 
 1. `git log --oneline | head` — репозиторій склонований і історія на місці?
 2. `ls brain/Передача/` — п'ять файлів передачі?
-3. `curl -s -o /dev/null -w '%{http_code}' https://fal.run/` — мережа назовні працює?
+3. `ls .github/workflows/art.yml` — шлях до генерації арту на місці? 🔴 **Не curl до `fal.run`.**
+   Мережева політика веб-сесії не пускає до fal **навмисно**: `CONNECT tunnel failed, response
+   403`, curl exit 56, код `000` — це очікувана відповідь, а не збій середовища, і в `bridge/inbox/`
+   її не пишуть. Ключ живе тільки в Actions secrets, тож генерація йде лише через `art.yml`
+   (запит у `art/requests/` → Actions → **art** → **Run workflow**). Живість fal доводить
+   зелений прогін `art.yml`, а не сесія. Збій — це відсутній `art.yml`, або його прогін червоний.
 4. `node --version && npm --version` — є чим збирати?
 5. чи бачиш Jira через MCP — якщо ні, власник має підключити конектор Atlassian у цьому акаунті.
 
