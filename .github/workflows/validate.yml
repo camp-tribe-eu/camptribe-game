@@ -1,12 +1,14 @@
 name: validate
 # Перший код проєкту — валідатор контенту й перевірник графа квестів, а НЕ сцена Phaser.
-# Специфікація й критерії приймання: brain/Передача/05-pershyi-kod.md
-# Формат контенту й перелік перевірок: docs/CONTENT-VALIDATOR.md
+# Специфікація: brain/Передача/05-pershyi-kod.md; формат: docs/CONTENT-VALIDATOR.md.
 #
-# Три кроки, і кожен блокує злиття:
-#   1. самотест — кожна перевірка червоніє на своєму зламаному прикладі;
-#   2. мутації  — якщо вимкнути будь-яку перевірку, самотест це помічає;
-#   3. контент  — реальний content/ гри.
+# 🔴 Одна команда: CI запускає рівно те, що й локальна перевірка — `npm run validate`
+# (рецензія TL PR #13: розбіжність локального й CI — закон 3). Усередині — для кожного сторожа
+# самотест, мутації й справжній прогін: контент, правила, мапи, ресурси й ліцензії, локалізація,
+# палітра, гліфи шрифту.
+#
+# 🔴 --allow-missing-content: поки теки content/ немає, крок пише NOT RUN, а не PASS. ПРИБРАТИ
+# прапорець у тому ж PR, що додає перший файл content/ (GAME-35).
 on:
   pull_request:
   push:
@@ -18,41 +20,14 @@ permissions:
 jobs:
   content:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
-
       - uses: actions/setup-node@v4
-        with: { node-version: '24' }
-
-      - name: Самотест — валідатор мусить уміти почервоніти
-        run: node scripts/validate-content.mjs --self-test
-
-      - name: Мутації — самотест мусить помітити вимкнену перевірку
-        run: node scripts/mutate-validator.mjs
-
-      # 🔴 --allow-missing-content: поки теки content/ немає, крок пише NOT RUN з попередженням,
-      # а не PASS. ПРИБРАТИ прапорець у тому ж PR, що додає перший файл content/ — після цього
-      # зникнення теки має бути червоним.
-      - name: Валідація контенту
-        run: node scripts/validate-content.mjs --allow-missing-content
-
-      - name: Правила — самотест і docs/ (GAME-20)
-        run: node scripts/check-rules.mjs --self-test && node scripts/check-rules.mjs
-
-      # GAME-23 · мапи Tiled: самотест, мутації, справжні мапи з maps/ (без --allow-missing-maps: maps/ уже є).
-      - name: Мапи — самотест, мутації, maps/
-        run: |
-          node scripts/maps/validate-maps.mjs --self-test
-          node scripts/maps/mutate.mjs
-          node scripts/maps/validate-maps.mjs
-
-      # GAME-22 · сторож палітри LPC (OD-013). Pillow — тієї ж версії, що й у локальній перевірці.
+        with: { node-version: '24', cache: npm }
       - uses: actions/setup-python@v5
         with: { python-version: '3.12' }
-      - name: Палітра — самотест, звірка палітри з джерелами, перевірка assets/
-        run: |
-          pip install --quiet pillow==12.3.0
-          python3 scripts/palette/self_test.py
-          python3 scripts/palette/extract.py --check
-          # 🔴 --allow-missing прибрати в тому ж PR, що додасть першу теку assets/ (інакше сторож не червоніє).
-          python3 scripts/palette/check.py --allow-missing
+      - run: pip install --quiet -r scripts/requirements.txt
+      - run: npm ci --no-audit --no-fund
+      - name: Усі сторожі — самотести, мутації, справжні прогони
+        run: npm run validate
