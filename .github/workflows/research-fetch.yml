@@ -1,0 +1,67 @@
+name: research-fetch
+# Мережа сесії чату Гри закрита для kenney.nl, Steam, itch.io. Runner GitHub — ні.
+# Цей workflow забирає референси для ОГЛЯДУ й кладе їх у тимчасовий артефакт (3 дні).
+# 🔴 Нічого не комітить: чужі скриншоти не мають потрапити в публічний репозиторій.
+# Запуск: зміна research/fetch.txt у пуші. Рядок файлу: `назва<TAB>URL`
+#   kenney:<slug>   — сторінка kenney.nl/assets/<slug>, качає zip першоджерела
+#   steam:<appid>   — скриншоти гри зі Steam store API
+#   url             — будь-який файл як є
+on:
+  push:
+    paths: ['research/fetch.txt']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Забрати
+        run: |
+          set -uo pipefail
+          mkdir -p out
+          fail=0
+          while IFS=$'\t' read -r name src; do
+            [ -z "${name:-}" ] && continue
+            case "$name" in \#*) continue;; esac
+            d="out/$name"; mkdir -p "$d"
+            case "$src" in
+              kenney:*)
+                slug="${src#kenney:}"
+                page=$(curl -sfL "https://kenney.nl/assets/$slug") || { echo "::error::$name: сторінка $slug недоступна"; fail=1; continue; }
+                printf '%s' "$page" | grep -oiE 'Creative Commons[^<"]{0,40}' | head -3 > "$d/license-on-page.txt"
+                zip=$(printf '%s' "$page" | grep -oE 'https://kenney\.nl/media/[^"]+\.zip' | head -1)
+                [ -z "$zip" ] && { echo "::error::$name: zip не знайдено на сторінці"; fail=1; continue; }
+                echo "$zip" > "$d/source-url.txt"
+                curl -sfL "$zip" -o "$d/pack.zip" && unzip -q "$d/pack.zip" -d "$d/pack" && rm "$d/pack.zip"
+                ;;
+              steam:*)
+                id="${src#steam:}"
+                curl -sf "https://store.steampowered.com/api/appdetails?appids=$id&l=english" -o "$d/appdetails.json" || { echo "::error::$name: steam api"; fail=1; continue; }
+                python3 - "$d" "$id" <<'PY'
+          import json,sys,urllib.request
+          d,i=sys.argv[1],sys.argv[2]
+          j=json.load(open(f"{d}/appdetails.json"))[i]["data"]
+          open(f"{d}/about.txt","w").write(j.get("short_description","")+"\n\n"+j.get("detailed_description",""))
+          for n,s in enumerate(j.get("screenshots",[])[:8]):
+              urllib.request.urlretrieve(s["path_full"],f"{d}/shot{n:02}.jpg")
+          PY
+                ;;
+              *)
+                curl -sfL "$src" -o "$d/$(basename "${src%%\?*}")" || { echo "::error::$name: $src"; fail=1; }
+                ;;
+            esac
+            echo "$name: $(find "$d" -type f | wc -l) файлів"
+          done < research/fetch.txt
+          # Порожній артефакт — не успіх (закон 4).
+          [ "$(find out -type f | wc -l)" -gt 0 ] || { echo "::error::нічого не забрано"; exit 1; }
+          exit $fail
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: research
+          path: out
+          retention-days: 3
