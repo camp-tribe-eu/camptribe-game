@@ -31,4 +31,4 @@
 ## Своє
 - [Jira: картки, що чекають на конектор](project_jira_pending.md) — тексти й докази; ID переходів ще не відомі
 - [Спершу спробуй сам, потім питай: час Юрія не безкінечний](feedback_check_before_asking.md)
-- [Черга Jira і стан PR #10 на наступну сесію](project_jira_queue.md)
+- [Черга Jira](project_jira_queue.md) і [тексти карток S03–S09](jira_cards_S03_S09.md) — що заведено, що лишилось, чому лише в режимі Auto
