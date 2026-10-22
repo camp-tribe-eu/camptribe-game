@@ -20,13 +20,13 @@ const DEFS: CoreDefs = {
   },
   interactions: {
     'obj.campfire': { grantId: 'rw.warmth', moneyCents: 0 },
-    'obj.lost_wallet': { grantId: 'rw.finder', moneyCents: 2_000, items: [{ itemId: 'item.map', qty: 1 }] },
+    'obj.lost-wallet': { grantId: 'rw.finder', moneyCents: 2_000, items: [{ itemId: 'item.map', qty: 1 }] },
     'obj.ranger': { grantId: 'rw.ranger', moneyCents: 500 },
   },
 };
 
 const itemId = fc.constantFrom('item.tent', 'item.stove', 'item.lamp', 'item.map', 'item.ghost');
-const targetId = fc.constantFrom('obj.campfire', 'obj.lost_wallet', 'obj.ranger', 'obj.ghost');
+const targetId = fc.constantFrom('obj.campfire', 'obj.lost-wallet', 'obj.ranger', 'obj.ghost');
 const cmdId = fc.stringMatching(/^[a-z0-9]{1,6}$/);
 
 const command: fc.Arbitrary<Command> = fc.oneof(
@@ -58,7 +58,7 @@ const grantOnce = (g: Safeguards) =>
     const uniq = [...new Set(ids.map((id) => `grant-once:${id}`))];
     let s = s0;
     const before = s0.grants.includes('rw.finder');
-    for (const id of uniq) s = dispatch(s, { type: 'Interact', commandId: id, targetId: 'obj.lost_wallet' }, DEFS, g).state;
+    for (const id of uniq) s = dispatch(s, { type: 'Interact', commandId: id, targetId: 'obj.lost-wallet' }, DEFS, g).state;
     // Об'єкт «використано» кілька разів (різні commandId) — нагорода рівно раз, а якщо вже була — жодного.
     const expected = before ? s0.moneyCents : s0.moneyCents + 2_000;
     return s.moneyCents === expected && s.grants.filter((x) => x === 'rw.finder').length === 1;
@@ -198,13 +198,13 @@ describe('коди відмов: кожен код із реєстру має т
   it('від\u2019ємні суми в каталозі — INVALID_AMOUNT (зламаний каталог не дарує гроші)', () => {
     const neg: CoreDefs = {
       items: { 'item.neg': { buyCents: -500, sellCents: -1 } },
-      interactions: { 'obj.neg': { grantId: 'rw.neg', moneyCents: -1 }, 'obj.zero_qty': { grantId: 'rw.z', moneyCents: 0, items: [{ itemId: 'item.neg', qty: 0 }] } },
+      interactions: { 'obj.neg': { grantId: 'rw.neg', moneyCents: -1 }, 'obj.zero-qty': { grantId: 'rw.z', moneyCents: 0, items: [{ itemId: 'item.neg', qty: 0 }] } },
     };
     const rich = { ...initialState(1000), inventory: { 'item.neg': 1 } };
     expect(dispatch(rich, { type: 'BuyItem', commandId: 'n1', itemId: 'item.neg' }, neg)).toMatchObject({ code: 'INVALID_AMOUNT' });
     expect(dispatch(rich, { type: 'SellItem', commandId: 'n2', itemId: 'item.neg' }, neg)).toMatchObject({ code: 'INVALID_AMOUNT' });
     expect(dispatch(rich, { type: 'Interact', commandId: 'n3', targetId: 'obj.neg' }, neg)).toMatchObject({ code: 'INVALID_AMOUNT' });
-    expect(dispatch(rich, { type: 'Interact', commandId: 'n4', targetId: 'obj.zero_qty' }, neg)).toMatchObject({ code: 'INVALID_AMOUNT' });
+    expect(dispatch(rich, { type: 'Interact', commandId: 'n4', targetId: 'obj.zero-qty' }, neg)).toMatchObject({ code: 'INVALID_AMOUNT' });
   });
 
   it('переповнення суми грошей — INVALID_AMOUNT, стан не псується', () => {

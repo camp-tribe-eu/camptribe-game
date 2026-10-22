@@ -9,6 +9,6 @@ export const SLICE_DEFS: CoreDefs = {
     'item.lantern': { buyCents: 1_999, sellCents: 800 },
   },
   interactions: {
-    'obj.campfire': { grantId: 'rw.campfire_warmth', moneyCents: 0 },
+    'obj.campfire': { grantId: 'rw.campfire-warmth', moneyCents: 0 },
   },
 };

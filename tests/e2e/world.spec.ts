@@ -57,7 +57,7 @@ async function touchFlow(page: Page): Promise<number> {
   if (!(await holdTouch(page, 'interact', () => true, 100))) return 0;
   await page.waitForTimeout(100);
   // Команда мусить дійти до ядра: нагорода записана рівно раз (рецензія PR #13).
-  if ((await grants(page)).filter((g) => g === 'rw.campfire_warmth').length !== 1) return -1;
+  if ((await grants(page)).filter((g) => g === 'rw.campfire-warmth').length !== 1) return -1;
   return (await probe(page)).commandsSent;
 }
 
@@ -104,7 +104,7 @@ test.describe('клавіатура (десктоп)', () => {
     await page.keyboard.press('KeyE');
     await page.waitForTimeout(100);
     expect((await probe(page)).commandsSent).toBe(2);            // друга свідома взаємодія — друга команда…
-    expect((await grants(page)).filter((g) => g === 'rw.campfire_warmth')).toHaveLength(1); // …але нагорода рівно одна
+    expect((await grants(page)).filter((g) => g === 'rw.campfire-warmth')).toHaveLength(1); // …але нагорода рівно одна
   });
 
   test('далеко від об’єкта дія не надсилає команд', async ({ page }) => {

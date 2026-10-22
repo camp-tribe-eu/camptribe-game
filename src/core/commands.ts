@@ -43,12 +43,13 @@ const isCents = (n: unknown): n is number => typeof n === 'number' && Number.isS
 // id контенту — `префікс.назва` (DATA_CONTRACTS §1). Регулярний вираз заодно відсікає ключі
 // прототипу (`toString`, `constructor`, `__proto__`): з ними звичайний об'єкт «має» предмет,
 // якого ніхто не купував (рецензія PR #13).
-const CONTENT_ID = /^[a-z][a-z0-9_]*(\.[a-z0-9_]+)+$/;
+// Формат той самий, що у валідатора контенту (scripts/validator/checks.mjs): `префікс.слово[-.слово]*`.
+export const CONTENT_ID = /^[a-z]+\.[a-z0-9]+(?:[.-][a-z0-9]+)*$/;
 // commandId генерує місток; та сама безпечна абетка, без ключів прототипу.
 const COMMAND_ID = /^[A-Za-z0-9][A-Za-z0-9_.:-]{0,63}$/;
 const RESERVED = new Set(['__proto__', 'constructor', 'prototype', 'toString', 'valueOf', 'hasOwnProperty']);
 
-const isContentId = (s: unknown): s is string => typeof s === 'string' && CONTENT_ID.test(s);
+export const isContentId = (s: unknown): s is string => typeof s === 'string' && CONTENT_ID.test(s);
 const isCommandId = (s: unknown): s is string => typeof s === 'string' && COMMAND_ID.test(s) && !RESERVED.has(s);
 const own = <T>(o: Readonly<Record<string, T>>, k: string): T | undefined => (Object.hasOwn(o, k) ? o[k] : undefined);
 
