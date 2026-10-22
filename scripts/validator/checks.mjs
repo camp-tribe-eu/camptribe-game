@@ -18,7 +18,9 @@ const ID_PATTERNS = {
   quests: /^(?:ST-\d{3}|q\.[a-z0-9]+(?:[.-][a-z0-9]+)*)$/,
   events: /^ev\.[a-z0-9]+(?:[.-][a-z0-9]+)*$/,
   facts: /^fact\.[a-z0-9]+(?:[.-][a-z0-9]+)*$/,
+  dialogues: /^dlg\.[a-z0-9]+(?:[.-][a-z0-9]+)*$/,
 };
+const FLAG_ID = /^f\.[a-z0-9]+(?:[.-][a-z0-9]+)*$/;
 const GRANT_ID = /^rw\.[a-z0-9]+(?:[.-][a-z0-9]+)*$/;
 const OBJECTIVE_ID = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const TARGET_TYPE = { talk: 'npcs', visit: 'locations', collect: 'items', deliver: 'items' };
@@ -120,6 +122,10 @@ export const CHECKS = [
       for (const q of c.content.quests ?? []) for (const o of q.objectives) {
         if (!OBJECTIVE_ID.test(o.id)) out.push(I('ID_FORMAT', `${q.id}/${o.id}`, `id цілі не відповідає ${OBJECTIVE_ID}`));
       }
+      for (const d of c.content.dialogues ?? []) for (const n of d.nodes) {
+        if (!OBJECTIVE_ID.test(n.id)) out.push(I('ID_FORMAT', `${d.id}/${n.id}`, `id вузла не відповідає ${OBJECTIVE_ID}`));
+      }
+      for (const [where, f] of flagUses(c.content)) if (!FLAG_ID.test(f)) out.push(I('ID_FORMAT', where, `прапорець «${f}» не відповідає ${FLAG_ID}`));
       for (const [where, rw] of rewards(c.content)) {
         if (!GRANT_ID.test(rw.grantId)) out.push(I('ID_FORMAT', where, `grantId не відповідає ${GRANT_ID}`));
       }
@@ -136,6 +142,7 @@ export const CHECKS = [
       };
       for (const t of Object.keys(ID_PATTERNS)) dup((c.content[t] ?? []).map((e) => e.id), t);
       for (const q of c.content.quests ?? []) dup(q.objectives.map((o) => o.id), `${q.id}.objectives`);
+      for (const d of c.content.dialogues ?? []) dup(d.nodes.map((n) => n.id), `${d.id}.nodes`);
       return out;
     },
   },
@@ -286,6 +293,10 @@ export const CHECKS = [
       }
       (ct.events ?? []).forEach((e) => add(e.titleKey, e.id));
       (ct.facts ?? []).forEach((f) => add(f.claimKey, f.id));
+      for (const d of ct.dialogues ?? []) for (const n of d.nodes) {
+        add(n.textKey, `${d.id}/${n.id}`);
+        (n.choices ?? []).forEach((ch, i) => add(ch.textKey, `${d.id}/${n.id}.choices[${i}]`));
+      }
       if (ct.meta.locales.length === 0) out.push(I('LOCALE_MISSING', 'meta.locales', 'не задано жодної мови'));
       for (const lang of ct.meta.locales) {
         const table = ct.locales?.[lang];
@@ -357,6 +368,90 @@ export const CHECKS = [
         .map((q) => I('BRANCH_NO_NEXT', q.id, 'не кінець і не має наступного етапу'));
     },
   },
+  // ---------- діалоги (GAME-28) ----------
+  {
+    id: 'dialogue-refs',
+    run(c) { // @check:dialogue-refs
+      const out = [];
+      const { by } = c.ix;
+      const miss = (where, msg) => out.push(I('DIALOGUE_REF_MISSING', where, msg));
+      for (const d of c.content.dialogues ?? []) {
+        const nodes = new Set(d.nodes.map((n) => n.id));
+        if (!by.npcs.has(d.npcId)) miss(`${d.id}.npcId`, `NPC «${d.npcId}» не існує`);
+        if (!nodes.has(d.start)) miss(`${d.id}.start`, `вузла «${d.start}» немає`);
+        for (const n of d.nodes) {
+          if (n.next !== undefined && !nodes.has(n.next)) miss(`${d.id}/${n.id}.next`, `вузла «${n.next}» немає`);
+          (n.choices ?? []).forEach((ch, i) => { if (!nodes.has(ch.next)) miss(`${d.id}/${n.id}.choices[${i}].next`, `вузла «${ch.next}» немає`); });
+        }
+      }
+      for (const [where, leaf] of condLeavesAll(c.content)) {
+        if (leaf.quest !== undefined && !by.quests.has(leaf.quest)) miss(where, `квесту «${leaf.quest}» не існує`);
+        if (leaf.transport !== undefined && !by.transports.has(leaf.transport)) miss(where, `транспорту «${leaf.transport}» не існує`);
+      }
+      for (const [where, e] of dialogueEffects(c.content)) {
+        if (e.startQuest !== undefined && !by.quests.has(e.startQuest)) miss(where, `квесту «${e.startQuest}» не існує`);
+        const co = e.completeObjective;
+        if (co && !by.quests.has(co.quest)) miss(where, `квесту «${co.quest}» не існує`);
+        else if (co && !by.quests.get(co.quest).objectives.some((o) => o.id === co.objective)) miss(where, `у квесті «${co.quest}» немає цілі «${co.objective}»`);
+      }
+      return out;
+    },
+  },
+  {
+    id: 'dialogue-reachable',
+    run(c) { // @check:dialogue-reachable
+      const out = [];
+      for (const d of c.content.dialogues ?? []) {
+        const nodes = new Map(d.nodes.map((n) => [n.id, n]));
+        if (!nodes.has(d.start)) continue; // першопричину вже назвав DIALOGUE_REF_MISSING
+        const seen = new Set([d.start]);
+        const stack = [d.start];
+        while (stack.length) {
+          for (const v of exits(nodes.get(stack.pop()), false)) if (nodes.has(v) && !seen.has(v)) { seen.add(v); stack.push(v); }
+        }
+        for (const n of d.nodes) if (!seen.has(n.id)) out.push(I('DIALOGUE_NODE_UNREACHABLE', `${d.id}/${n.id}`, `вузол недосяжний зі старту «${d.start}»`));
+      }
+      return out;
+    },
+  },
+  {
+    id: 'dialogue-dead-end',
+    run(c) { // @check:dialogue-dead-end
+      // Вихід гарантований лише безумовними переходами: умовний вибір може не показатись,
+      // і гравець застрягне в розмові. Ціна хибного спрацювання — додати безумовний вибір
+      // навіть там, де умови взаємовиключні й покривають усе (flag / notFlag).
+      const out = [];
+      for (const d of c.content.dialogues ?? []) {
+        const rev = new Map(d.nodes.map((n) => [n.id, []]));
+        for (const n of d.nodes) for (const v of exits(n, true)) if (rev.has(v)) rev.get(v).push(n.id);
+        const ok = new Set(d.nodes.filter((n) => n.end === true).map((n) => n.id));
+        const stack = [...ok];
+        while (stack.length) for (const u of rev.get(stack.pop())) if (!ok.has(u)) { ok.add(u); stack.push(u); }
+        for (const n of d.nodes) {
+          if (ok.has(n.id)) continue;
+          const why = exits(n, false).length === 0 ? 'вузол без виходу і не end'
+            : exits(n, true).length === 0 ? 'усі виходи умовні — гравець може застрягти'
+              : 'безумовні виходи не ведуть до жодного end';
+          out.push(I('DIALOGUE_DEAD_END', `${d.id}/${n.id}`, why));
+        }
+      }
+      return out;
+    },
+  },
+  {
+    id: 'dialogue-flags',
+    run(c) { // @check:dialogue-flags
+      // Прапорці ставлять лише ефекти setFlag у діалогах: у quests.json ефектів на прапорці
+      // поки немає. З'являться — додай їх у множину set.
+      const set = new Set(dialogueEffects(c.content).filter(([, e]) => e.setFlag !== undefined).map(([, e]) => e.setFlag));
+      const out = [];
+      for (const [where, leaf] of condLeavesAll(c.content)) {
+        const f = leaf.flag !== undefined ? leaf.flag : leaf.notFlag;
+        if (f !== undefined && !set.has(f)) out.push(I('DIALOGUE_FLAG_NEVER_SET', where, `умова читає прапорець «${f}», який жоден ефект не ставить`));
+      }
+      return out;
+    },
+  },
   {
     id: 'combo-options',
     run(c) { // @check:combo-options
@@ -380,6 +475,43 @@ function whens(content) {
     for (const o of q.objectives) if (o.when) out.push([`${q.id}/${o.id}`, o.when, q.when]);
     q.transitions.forEach((t, i) => t.when && out.push([`${q.id}.transitions[${i}]`, t.when, q.when, 'transition']));
   }
+  return out;
+}
+
+// Виходи вузла діалогу. onlyUnconditional — лише ті, що доступні завжди (next або вибір без when).
+function exits(n, onlyUnconditional) {
+  const out = n.next !== undefined ? [n.next] : [];
+  for (const ch of n.choices ?? []) if (!onlyUnconditional || !ch.when) out.push(ch.next);
+  return out;
+}
+
+function condLeaves(cond, out = []) {
+  if (cond.all) cond.all.forEach((x) => condLeaves(x, out));
+  else if (cond.any) cond.any.forEach((x) => condLeaves(x, out));
+  else out.push(cond);
+  return out;
+}
+
+function condLeavesAll(content) {
+  const out = [];
+  for (const d of content.dialogues ?? []) for (const n of d.nodes) {
+    (n.choices ?? []).forEach((ch, i) => { if (ch.when) for (const leaf of condLeaves(ch.when)) out.push([`${d.id}/${n.id}.choices[${i}].when`, leaf]); });
+  }
+  return out;
+}
+
+function dialogueEffects(content) {
+  const out = [];
+  for (const d of content.dialogues ?? []) for (const n of d.nodes) {
+    (n.choices ?? []).forEach((ch, i) => (ch.effects ?? []).forEach((e) => out.push([`${d.id}/${n.id}.choices[${i}].effects`, e])));
+  }
+  return out;
+}
+
+function flagUses(content) {
+  const out = [];
+  for (const [where, leaf] of condLeavesAll(content)) { const f = leaf.flag ?? leaf.notFlag; if (f !== undefined) out.push([where, f]); }
+  for (const [where, e] of dialogueEffects(content)) if (e.setFlag !== undefined) out.push([where, e.setFlag]);
   return out;
 }
 

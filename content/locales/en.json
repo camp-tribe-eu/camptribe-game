@@ -32,5 +32,12 @@
   "q.st-005.o1": "Say hello to Elise at reception: she'll show you your pitch.",
   "q.st-005.o2": "Pitch your tent at your spot by the lake.",
   "q.st-005.o3": "Gather some firewood for the evening.",
-  "ev.neighbours-firewood": "Your campsite neighbours had firewood to spare and shared some with you."
+  "ev.neighbours-firewood": "Your campsite neighbours had firewood to spare and shared some with you.",
+  "dlg.elise-greeting.hello": "Hi! I'm Elise, I look after everything here by the lake. Glad to see you!",
+  "dlg.elise-greeting.hello.c1": "Where can I leave the bike?",
+  "dlg.elise-greeting.hello.c2": "Thanks! Where's a good spot for the tent?",
+  "dlg.elise-greeting.bike": "All the way here by bike? Respect! It'll stay dry and safe under the shelter by my cabin.",
+  "dlg.elise-greeting.spot": "By the pines: it's quiet there, and in the morning you can see the lake from your tent.",
+  "dlg.elise-greeting.spot.c1": "Perfect, thank you!",
+  "dlg.elise-greeting.bye": "Have a lovely evening! If you need anything, I'm in the cabin with the green door."
 }

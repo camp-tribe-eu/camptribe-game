@@ -49,6 +49,16 @@ const mutations = [
   { name: 'when без жодної дозволеної комбінації пропускається', file: COMBOS_FILE, from: "if (!all.some((k) => matches(w, k) && matches(parent, k))) out.push", to: 'if (false) out.push' },
   { name: 'умова квесту не успадковується ціллю', file: COMBOS_FILE, from: '&& matches(parent, k)', to: '' },
   { name: 'combo-options біжить і на брудному контенті', file: CHECKS_FILE, from: "const LATE = ['combo-options', 'combos'];", to: "const LATE = ['combos'];" },
+  // діалоги (GAME-28)
+  { name: '[діалог] умовний вибір рахується як гарантований вихід', file: CHECKS_FILE, from: 'if (!onlyUnconditional || !ch.when) out.push', to: 'out.push' },
+  { name: '[діалог] умови всередині any не перевіряються', file: CHECKS_FILE, from: 'else if (cond.any) cond.any.forEach((x) => condLeaves(x, out));', to: 'else if (cond.any) {}' },
+  { name: '[діалог] notFlag не перевіряється на прапорці', file: CHECKS_FILE, from: 'leaf.flag !== undefined ? leaf.flag : leaf.notFlag', to: 'leaf.flag' },
+  { name: '[діалог] ефекти completeObjective не звіряються з цілями', file: CHECKS_FILE, from: '.objectives.some((o) => o.id === co.objective)', to: '.objectives.some(() => true)' },
+  { name: '[діалог] ключі реплік не йдуть у перевірку локалізації', file: CHECKS_FILE, from: 'add(n.textKey, `${d.id}/${n.id}`);', to: '' },
+  { name: '[діалог] union приймає два дискримінатори', file: 'validator/schema.mjs', from: 'if (keys.length !== 1) {', to: 'if (keys.length === 0) {' },
+  { name: '[діалог] вузол може мати і next, і choices', file: 'validator/schema.mjs', from: 'if (ways > 1) out.push', to: 'if (ways > 3) out.push' },
+  { name: '[діалог] тека dialogue/ не читається', file: 'validator/load.mjs', from: 'if (v !== undefined) content.dialogues.push(v);', to: '' },
+  { name: '[діалог] недосяжність не рахує старт', file: CHECKS_FILE, from: 'const seen = new Set([d.start]);', to: 'const seen = new Set();' },
   { name: 'посилання transports не перевіряються', file: CHECKS_FILE, from: "ref('transports', id, `${e.id}.transports`)", to: '0' },
 ];
 

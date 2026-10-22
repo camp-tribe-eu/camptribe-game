@@ -17,6 +17,8 @@ function writeBaseline(dir, override = {}) {
   writeFileSync(join(dir, 'meta.json'), JSON.stringify(c.meta));
   for (const k of COLLECTIONS) if (c[k] !== undefined) writeFileSync(join(dir, `${k}.json`), JSON.stringify(c[k]));
   for (const [lang, t] of Object.entries(c.locales)) writeFileSync(join(dir, 'locales', `${lang}.json`), JSON.stringify(t));
+  mkdirSync(join(dir, 'dialogue'));
+  for (const d of c.dialogues ?? []) writeFileSync(join(dir, 'dialogue', `${d.id.replace(/^dlg\./, '')}.json`), JSON.stringify(d));
   for (const [name, text] of Object.entries(override)) writeFileSync(join(dir, name), text);
 }
 

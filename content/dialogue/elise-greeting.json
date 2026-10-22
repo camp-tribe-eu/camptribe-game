@@ -1,0 +1,22 @@
+{
+  "id": "dlg.elise-greeting",
+  "npcId": "npc.elise",
+  "start": "hello",
+  "nodes": [
+    {
+      "id": "hello", "speaker": "npc", "textKey": "dlg.elise-greeting.hello",
+      "choices": [
+        { "textKey": "dlg.elise-greeting.hello.c1", "next": "bike", "when": { "transport": "transport.bike" }, "effects": [{ "setFlag": "f.elise-met" }] },
+        { "textKey": "dlg.elise-greeting.hello.c2", "next": "spot", "effects": [{ "setFlag": "f.elise-met" }] }
+      ]
+    },
+    { "id": "bike", "speaker": "npc", "textKey": "dlg.elise-greeting.bike", "next": "spot" },
+    {
+      "id": "spot", "speaker": "npc", "textKey": "dlg.elise-greeting.spot",
+      "choices": [
+        { "textKey": "dlg.elise-greeting.spot.c1", "next": "bye" }
+      ]
+    },
+    { "id": "bye", "speaker": "npc", "textKey": "dlg.elise-greeting.bye", "end": true }
+  ]
+}

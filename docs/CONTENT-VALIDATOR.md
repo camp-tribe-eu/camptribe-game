@@ -24,11 +24,50 @@ node scripts/mutate-validator.mjs               # довести, що само�
 | `events.json` | події: `repeatable`, `reward` | `ev.назва` |
 | `facts.json` | зовнішні факти: `source`, `checkedAt` (РРРР-ММ-ДД), `kind` | `fact.назва` |
 | `locales/<мова>.json` | ключ → переклад | — |
+| `dialogue/<назва>.json` | один діалог-граф на файл (розділ «Діалоги») | `dlg.назва` |
 
 Нагорода — `{ grantId: "rw.назва", items, money, once }`. `grantId` унікальний на весь контент.
 
 Схеми строгі: невідоме поле — помилка. Так у **визначення** не потрапляє **стан проходження**
 (`completed`, `progress`, `visited`…), і одруківка в назві поля не проходить мовчки.
+
+## Діалоги (GAME-28)
+
+Діалог — власний JSON-граф (TD-005), по файлу на діалог у `content/dialogue/`. Завантажувач
+складає їх у `content.dialogues`; не-JSON у теці — `CONTENT_UNKNOWN_FILE`, зламаний JSON —
+`CONTENT_PARSE`. Справжній зразок — `content/dialogue/elise-greeting.json`.
+
+```
+Dialogue  = { id: "dlg.<назва>", npcId: "npc.…", start: "<вузол>", nodes: Node[≥1] }
+Node      = { id: "<a-z0-9->", speaker: "npc"|"player", textKey,
+              рівно одне з: end: true | next: "<вузол>" | choices: Choice[≥1] }
+Choice    = { textKey, next: "<вузол>", when?: Cond, effects?: Effect[] }
+Cond      = { flag: "f.…" } | { notFlag: "f.…" } | { quest: "<id квесту>", status: "active"|"completed" }
+          | { transport: "transport.…" } | { all: Cond[≥1] } | { any: Cond[≥1] }
+Effect    = { setFlag: "f.…" } | { startQuest: "<id квесту>" } | { completeObjective: { quest, objective } }
+```
+
+Умова й ефект — типізовані об'єкти (TD-006) рівно з одним ключем-дискримінатором; рядок
+`"car && x"`, два ключі разом чи невідомий ключ — `SCHEMA_INVALID`. Семантика для рушія: `when`
+приховує вибір, якщо умова хибна; `effects` виконуються по черзі під час вибору; `end` закриває
+розмову; `next` — продовження без вибору гравця.
+
+Перевірки:
+* `dialogue-refs` → `DIALOGUE_REF_MISSING`: `npcId`, `start`, усі `next`, квест і транспорт в умовах
+  (зокрема вкладених), квест в `startQuest`, квест і ціль у `completeObjective`.
+* `dialogue-reachable` → `DIALOGUE_NODE_UNREACHABLE`: обхід від `start` за `next` і **всіма** виборами
+  (умовними теж). Якщо `start` не існує — мовчить, першопричину вже назвав `DIALOGUE_REF_MISSING`.
+* `dialogue-dead-end` → `DIALOGUE_DEAD_END`: з кожного вузла має бути шлях до `end` лише
+  **безумовними** виходами (`next` або вибір без `when`). Ловить вузол без виходу, вузол лише з
+  умовними виборами і петлю без `end`. **Ціна хибного спрацювання (закон 5):** взаємовиключні
+  умови, що разом покривають усе (`flag` / `notFlag`), валідатор не доводить — автор додає
+  безумовний вибір. Це дешевше, ніж гравець, що застряг у розмові.
+* `dialogue-flags` → `DIALOGUE_FLAG_NEVER_SET`: кожен `flag`/`notFlag` (зокрема всередині `all`/`any`)
+  мусить ставитись хоча б одним `setFlag` у будь-якому діалозі. Квести прапорців поки не
+  ставлять (у схемі квестів немає ефектів) — з'являться, додати їх у множину.
+* Наявні перевірки розширено: `id-format` (`dlg.…`, id вузла, прапорець `f.…` — без `_`),
+  `id-unique` (id діалогу, id вузла в діалозі), `locale-keys` (`textKey` вузлів і виборів →
+  `LOCALE_MISSING`).
 
 ## Комбінації: профіль × транспорт × тварина
 
@@ -92,6 +131,10 @@ node scripts/mutate-validator.mjs               # довести, що само�
 | `requires-deadlock` | `REQUIRES_CYCLE` | §3 немає взаємного блокування |
 | `optional-decline` | `OPTIONAL_NO_DECLINE` | §3 відмова лишає шлях уперед |
 | `branch-next` | `BRANCH_NO_NEXT` | §3 кожна гілка має наступний етап або кінець |
+| `dialogue-refs` | `DIALOGUE_REF_MISSING` | §2 посилання діалогу ведуть на існуючі записи |
+| `dialogue-reachable` | `DIALOGUE_NODE_UNREACHABLE` | §3 кожен вузол діалогу досяжний |
+| `dialogue-dead-end` | `DIALOGUE_DEAD_END` | §3 з кожного вузла діалогу є безумовний шлях до кінця |
+| `dialogue-flags` | `DIALOGUE_FLAG_NEVER_SET` | §2 умова не читає прапорець, який ніщо не ставить |
 | `combo-options` | `COMBO_OPTION_UNUSABLE`, `WHEN_UNSATISFIABLE` | §1 кожен транспорт можна обрати; §3 кожна умова `when` (разом з умовою свого квесту; для переходу — ще й квесту-цілі) відповідає хоча б одній дозволеній комбінації |
 | `combos` | `COMBO_NO_START`, `COMBO_TARGETED_UNREACHABLE`, `COMBO_DEAD_CONTENT` + коди шести перевірок вище для кожної комбінації | §3 у кожному стані гравця, «48 сімей × 12 профілів × 3 транспорти × тварини» |
 | завантажувач | `CONTENT_MISSING`, `CONTENT_PARSE`, `CONTENT_EMPTY`, `CONTENT_UNKNOWN_FILE` | закон 4: порожнеча — не зелене |
@@ -138,6 +181,10 @@ node scripts/mutate-validator.mjs               # довести, що само�
 * **Умови на стан світу** (пройдені квести, гроші, погода) — `when` знає лише стан гравця.
 * **Умови на стан світу на переходах.** Перехід знає лише стан гравця (`when`); цикл із виходом, умова якого ніколи не
   справджується, пройде як коректний.
+* **Діалоги в комбінаціях.** Умова `transport` у діалозі не звіряється з комбінаціями: вибір
+  лише для транспорту, яким не їде жоден профіль, валідатор не помітить (але безумовний вихід
+  поруч усе одно обов'язковий, тож softlock це не дає). Чи ставиться прапорець **раніше**, ніж
+  читається, — не перевіряється: лише те, що його ставить хоч щось.
 * **Ідемпотентність команд** (контракт з 05-pershyi-kod.md) — це ядро гри, не контент.
 * **Повторне завершення квесту в циклі** видасть його нагороду знову; `reward-once` стереже лише
   дублікати `grantId` і повторювані події.
