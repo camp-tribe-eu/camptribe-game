@@ -13,6 +13,27 @@ export interface SimState {
   readonly rng: RngState;
   /** Скільки разів за кроки вільного руху випала дрібна знахідка — приклад системи, що споживає RNG. */
   readonly finds: number;
+  /** Журнал подорожі (GAME-32): пишеться сам, по запису на кожну прийняту НОВУ команду з переліку. */
+  readonly journal: readonly JournalEntry[];
+}
+
+/** Запис журналу: коли (ігрова хвилина), що (тип команди), з чим (id цілі) і яка команда спричинила. */
+export interface JournalEntry {
+  readonly at: number;
+  readonly commandId: string;
+  readonly type: JournalType;
+  readonly ref: string | null;
+}
+
+/** Команди, що потрапляють у журнал. Розмова, вибір реплік і «далі» — ні: це не події подорожі. */
+export const JOURNAL_TYPES = ['CreateCharacter', 'Visit', 'Pickup', 'BuyItem', 'SellItem', 'Interact', 'CompleteQuest', 'DeclineQuest'] as const;
+export type JournalType = (typeof JOURNAL_TYPES)[number];
+const isJournal = (t: string): t is JournalType => (JOURNAL_TYPES as readonly string[]).includes(t);
+
+function refOf(c: Command): string | null {
+  const r = c as unknown as Record<string, unknown>;
+  const v = r.questId ?? r.locationId ?? r.itemId ?? r.targetId ?? r.profileId;
+  return typeof v === 'string' ? v : null;
 }
 
 export type Input =
@@ -37,7 +58,7 @@ export const findsSystem: System = (s, steps) => {
 };
 
 export function newSim(seed: number, moneyCents = 0): SimState {
-  return { game: initialState(moneyCents), clock: newClock(), rng: seedRng(seed), finds: 0 };
+  return { game: initialState(moneyCents), clock: newClock(), rng: seedRng(seed), finds: 0, journal: [] };
 }
 
 /** Контекст кроку: незмінний каталог визначень і системи. У сейв не потрапляє. */
@@ -53,8 +74,13 @@ export function step(s: SimState, input: Input, ctx: StepCtx = {}): SimState {
       const t = tick(s.clock, input.realMs);
       return systems.reduce((acc, sys) => sys(acc, t.steps), { ...s, clock: t.clock });
     }
-    case 'command':
-      return { ...s, game: dispatch(s.game, input.command, ctx.defs ?? EMPTY_DEFS).state };
+    case 'command': {
+      const r = dispatch(s.game, input.command, ctx.defs ?? EMPTY_DEFS);
+      // Рівно один запис на прийняту нову команду з переліку; відмова й повтор commandId — нуль.
+      if (!r.ok || r.repeated || !isJournal(input.command.type)) return { ...s, game: r.state };
+      const entry: JournalEntry = { at: s.clock.minutes, commandId: input.command.commandId, type: input.command.type, ref: refOf(input.command) };
+      return { ...s, game: r.state, journal: [...s.journal, entry] };
+    }
     case 'advance':
       return { ...s, clock: advance(s.clock, input.minutes) };
     case 'pause':

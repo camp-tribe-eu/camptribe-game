@@ -32,7 +32,9 @@ describe('вічні фікстури сейвів (TD-007)', () => {
   it('фікстура v1 — той самий стан, що й детермінований прогін (сейв нічого не губить)', () => {
     const live = run(newSim(SEED, 10_000), LOG.slice(0, 600), { defs: DEFS });
     const r = fromSave(JSON.stringify(v1));
-    expect(r.ok && stateHash(r.sim)).toBe(stateHash(live));
+    // Журналу у v1 не було (GAME-32): міграція дає порожній — історію не вигадуємо. Решта — побайтно.
+    expect(r.ok && r.sim.journal).toEqual([]);
+    expect(r.ok && stateHash({ ...r.sim, journal: null })).toBe(stateHash({ ...live, journal: null }));
   });
 });
 

@@ -41,7 +41,7 @@ export const MIGRATIONS: Readonly<Record<number, (sim: unknown) => unknown>> = {
   // v1 → v2 (GAME-29): з'явились персонаж і квести. Старий сейв — гра до створення персонажа.
   1: (sim) => {
     const s = sim as { game: Record<string, unknown> };
-    return { ...s, game: { ...s.game, schemaVersion: 2, player: null, quests: {}, campaignEnded: false, flags: [], dialogue: null } };
+    return { ...s, journal: [], game: { ...s.game, schemaVersion: 2, player: null, quests: {}, campaignEnded: false, flags: [], dialogue: null } };
   },
 };
 
@@ -57,8 +57,9 @@ const isInt = (v: unknown, min = 0): boolean => typeof v === 'number' && Number.
 /** Мінімальна перевірка форми поточної версії: решту гарантує контрольна сума. */
 function shapeError(sim: unknown): string | null {
   if (!isObj(sim)) return 'sim is not an object';
-  const { game, clock, rng, finds } = sim;
+  const { game, clock, rng, finds, journal } = sim;
   if (!isObj(game) || !isObj(clock) || !Array.isArray(rng) || !isInt(finds)) return 'missing game/clock/rng/finds';
+  if (!Array.isArray(journal) || journal.some((e) => !isObj(e) || !isInt(e.at) || typeof e.commandId !== 'string' || typeof e.type !== 'string' || !(e.ref === null || typeof e.ref === 'string'))) return 'journal';
   if (game.schemaVersion !== 2 || !isInt(game.moneyCents) || !isInt(game.seq)) return 'game: version, money or seq';
   if (!isObj(game.inventory) || !Array.isArray(game.grants) || !isObj(game.processed)) return 'game: inventory, grants or processed';
   if (Object.values(game.inventory).some((q) => !isInt(q, 1))) return 'game: inventory quantity';

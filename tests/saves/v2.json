@@ -1,8 +1,9 @@
 {
  "format": "camplife-save",
  "schemaVersion": 2,
- "checksum": "e7b85beb",
+ "checksum": "5457fbcc",
  "accountId": null,
+ "contentRev": null,
  "sim": {
   "game": {
    "schemaVersion": 2,
@@ -182,6 +183,158 @@
    1917599617,
    2937056887
   ],
-  "finds": 9
+  "finds": 9,
+  "journal": [
+   {
+    "at": 0,
+    "commandId": "g0",
+    "type": "Interact",
+    "ref": "obj.spot-0"
+   },
+   {
+    "at": 0,
+    "commandId": "b0",
+    "type": "BuyItem",
+    "ref": "item.tent"
+   },
+   {
+    "at": 500,
+    "commandId": "b41",
+    "type": "BuyItem",
+    "ref": "item.tent"
+   },
+   {
+    "at": 520,
+    "commandId": "b82",
+    "type": "BuyItem",
+    "ref": "item.tent"
+   },
+   {
+    "at": 529,
+    "commandId": "g97",
+    "type": "Interact",
+    "ref": "obj.spot-2"
+   },
+   {
+    "at": 541,
+    "commandId": "b123",
+    "type": "BuyItem",
+    "ref": "item.tent"
+   },
+   {
+    "at": 562,
+    "commandId": "b164",
+    "type": "BuyItem",
+    "ref": "item.tent"
+   },
+   {
+    "at": 578,
+    "commandId": "g194",
+    "type": "Interact",
+    "ref": "obj.spot-4"
+   },
+   {
+    "at": 583,
+    "commandId": "b205",
+    "type": "BuyItem",
+    "ref": "item.tent"
+   },
+   {
+    "at": 603,
+    "commandId": "b246",
+    "type": "BuyItem",
+    "ref": "item.tent"
+   },
+   {
+    "at": 624,
+    "commandId": "b287",
+    "type": "BuyItem",
+    "ref": "item.tent"
+   },
+   {
+    "at": 626,
+    "commandId": "g291",
+    "type": "Interact",
+    "ref": "obj.spot-1"
+   },
+   {
+    "at": 644,
+    "commandId": "b328",
+    "type": "BuyItem",
+    "ref": "item.tent"
+   },
+   {
+    "at": 665,
+    "commandId": "b369",
+    "type": "BuyItem",
+    "ref": "item.tent"
+   },
+   {
+    "at": 675,
+    "commandId": "g388",
+    "type": "Interact",
+    "ref": "obj.spot-3"
+   },
+   {
+    "at": 686,
+    "commandId": "b410",
+    "type": "BuyItem",
+    "ref": "item.tent"
+   },
+   {
+    "at": 707,
+    "commandId": "b451",
+    "type": "BuyItem",
+    "ref": "item.tent"
+   },
+   {
+    "at": 727,
+    "commandId": "b492",
+    "type": "BuyItem",
+    "ref": "item.tent"
+   },
+   {
+    "at": 1227,
+    "commandId": "b533",
+    "type": "BuyItem",
+    "ref": "item.tent"
+   },
+   {
+    "at": 1247,
+    "commandId": "v2a",
+    "type": "CreateCharacter",
+    "ref": "profile.a"
+   },
+   {
+    "at": 1247,
+    "commandId": "v2b",
+    "type": "Visit",
+    "ref": "loc.home"
+   },
+   {
+    "at": 1247,
+    "commandId": "v2c",
+    "type": "CompleteQuest",
+    "ref": "q.start"
+   },
+   {
+    "at": 1247,
+    "commandId": "v2d",
+    "type": "Visit",
+    "ref": "loc.shop"
+   },
+   {
+    "at": 1247,
+    "commandId": "v2e",
+    "type": "CompleteQuest",
+    "ref": "q.side"
+   },
+   {
+    "at": 1247,
+    "commandId": "v2f",
+    "type": "Pickup",
+    "ref": "item.gold"
+   }
+  ]
  }
 }
