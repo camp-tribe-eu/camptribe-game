@@ -8,7 +8,7 @@ async function openPause(page: Page, query: string): Promise<void> {
   await expect(page.locator('[data-ui="pause"]')).toBeVisible();
 }
 
-/** Елементи, у яких вміст ширший/вищий за видиму область, або які вилазять за край екрана. */
+/** Елементи, у яких вміст ширший за видиму область, або які вилазять за правий/лівий край екрана (висоту не міряємо: діалог прокручується). */
 const overflowing = (page: Page): Promise<string[]> => page.evaluate(() => {
   const out: string[] = [];
   const vw = window.innerWidth;

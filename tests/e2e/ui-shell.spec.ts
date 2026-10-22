@@ -25,6 +25,8 @@ test('ігровий годинник іде, поки гра не на пауз
 
 test('Escape відкриває паузу; ігровий годинник ядра на паузі не просувається; Escape — продовжити', async ({ page }) => {
   await open(page);
+  const corePaused = (): Promise<boolean> => page.evaluate(() => (window as unknown as { __game: { read: () => { clock: { paused: boolean } } } }).__game.read().clock.paused);
+  expect(await corePaused()).toBe(false);                     // до Escape — не на паузі, інакше «true» нижче нічого не доводить
   await page.keyboard.press('Escape');
   await expect(page.locator('[data-ui="pause"]')).toBeVisible();
   // Ядро саме знає про паузу, а не лише сцена перестала слати кадри (звірка GAME-25: мутація

@@ -7,7 +7,7 @@
 // з випадковими купівлями, продажами й відмовами.
 import { dispatch, nextCommandId, type Command } from '../core/commands';
 import type { CoreDefs } from '../core/defs';
-import { stateHash } from '../core/hash';
+import { canonical } from '../core/hash';
 import { nextInt, seedRng, type RngState } from '../core/rng';
 import { initialState, type GameState } from '../core/state';
 import { moves, type Move } from './moves';
@@ -28,12 +28,19 @@ export interface BotRun {
   readonly seed: number;
   readonly variant: Variant;
   readonly steps: number;
+  /**
+   * Покупки ДО першої нагороди — доказ, що вісь «гроші» змінює поведінку: без стартових грошей їх 0
+   * (нагороди квестів теж дають гроші, тож «покупок взагалі» для цього замало).
+   */
+  readonly purchases: number;
   readonly verdict: Verdict;
   /** Для тупика — стан, з якого кінець недосяжний (квести, локація, інвентар). */
   readonly stuck?: Pick<GameState, 'quests' | 'player' | 'inventory' | 'flags' | 'dialogue'>;
 }
 
-const key = (s: GameState): string => stateHash({ ...s, processed: null, seq: null });
+// Повний канонічний JSON, а не 32-бітний stateHash (рецензія GAME-37): зіткнення при рості контенту
+// (~25 % на 50 тис. станів) сховало б справжній тупик за чужим «true» у пам'яті — зелене, що не червоніє.
+const key = (s: GameState): string => canonical({ ...s, processed: null, seq: null });
 
 /** Пам'ять «з цього стану кінець досяжний?» між прогонами — тисячі прогонів лишаються дешевими. */
 export type EndMemo = Map<string, boolean>;
@@ -76,24 +83,31 @@ export function runBot(defs: CoreDefs, variant: Variant, seed: number, memo: End
     type: 'CreateCharacter', commandId: 'b0', profileId: variant.profile, transportId: variant.transport,
     ...(variant.animal === 'animal.none' ? {} : { animalId: variant.animal }),
   }, defs);
-  if (!created.ok) return { seed, variant, steps: 0, verdict: 'softlock', stuck: { quests: {}, player: null, inventory: {}, flags: [], dialogue: null } };
+  if (!created.ok) return { seed, variant, steps: 0, purchases: 0, verdict: 'softlock', stuck: { quests: {}, player: null, inventory: {}, flags: [], dialogue: null } };
   let s = created.state;
   let steps = 0;
+  let purchases = 0;
+  const isChoice = (m: Move): boolean => {
+    if ((m.type !== 'CompleteQuest' && m.type !== 'DeclineQuest') || m.to === undefined) return false;
+    const on = m.type === 'CompleteQuest' ? 'complete' : 'decline';   // рецензія: шукати перехід саме цього виду
+    return !!defs.story?.quests[m.questId]?.transitions.find((t) => t.on === on && t.to === m.to)?.choice;
+  };
   for (; steps < opts.maxSteps && !s.campaignEnded; steps++) {
     const options = moves(s, defs)
       // Ставлення до бічної гілки: «skip» не бере переходів-виборів (лише шлях за замовчуванням).
-      .filter((m) => !(variant.side === 'skip' && m.type === 'CompleteQuest' && m.to !== undefined && defs.story?.quests[m.questId]?.transitions.find((t) => t.to === m.to)?.choice))
-      .map((m) => tryMove(s, m, defs)).filter((n): n is GameState => n !== null);
+      .filter((m) => !(variant.side === 'skip' && isChoice(m)))
+      .map((m) => ({ m, n: tryMove(s, m, defs) })).filter((o): o is { m: Move; n: GameState } => o.n !== null);
     if (options.length === 0) break;
     const p = pick(rng, options);
     rng = p.rng;
-    s = p.value;
+    if (p.value.m.type === 'BuyItem' && s.grants.length === 0) purchases++;
+    s = p.value.n;
   }
-  if (s.campaignEnded) return { seed, variant, steps, verdict: 'ended' };
+  if (s.campaignEnded) return { seed, variant, steps, purchases, verdict: 'ended' };
   const reach = endReachable(s, defs, memo, opts.cap);
-  if (reach === true) return { seed, variant, steps, verdict: 'end-reachable' };
+  if (reach === true) return { seed, variant, steps, purchases, verdict: 'end-reachable' };
   return {
-    seed, variant, steps, verdict: reach === false ? 'softlock' : 'unknown',
+    seed, variant, steps, purchases, verdict: reach === false ? 'softlock' : 'unknown',
     stuck: { quests: s.quests, player: s.player, inventory: s.inventory, flags: s.flags, dialogue: s.dialogue },
   };
 }

@@ -1,7 +1,8 @@
 // Відбиток стану для тестів детермінізму й реплеїв: FNV-1a 32 над канонічним JSON
 // (ключі об'єктів відсортовано, тож порядок вставки не впливає).
 
-function canonical(v: unknown): string {
+/** Канонічний JSON (ключі відсортовано) — повний ключ стану там, де 32-бітний відбиток міг би зіткнутись. */
+export function canonical(v: unknown): string {
   if (Array.isArray(v)) return `[${v.map(canonical).join(',')}]`;
   if (v && typeof v === 'object') {
     const o = v as Record<string, unknown>;
