@@ -27,6 +27,9 @@ test('Escape відкриває паузу; ігровий годинник яд
   await open(page);
   await page.keyboard.press('Escape');
   await expect(page.locator('[data-ui="pause"]')).toBeVisible();
+  // Ядро саме знає про паузу, а не лише сцена перестала слати кадри (звірка GAME-25: мутація
+  // «прибрати bridge.setPaused» виживала, бо зупинена сцена ховала її).
+  expect(await page.evaluate(() => (window as unknown as { __game: { read: () => { clock: { paused: boolean } } } }).__game.read().clock.paused)).toBe(true);
   const m0 = await coreMinutes(page);
   const p0 = await probe(page);
   await page.keyboard.down('ArrowDown');
