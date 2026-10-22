@@ -290,6 +290,11 @@ export const FIXTURES = [
     c.animals[0].transports = [T_CAR];
     q(c, 'q.dog-walk').when = { animals: [DOG], transports: [T_BIKE] };
   } },
+  { base: 'combo', name: '[сумісн.] ціль мертвого квесту не дублює його звіт', expect: ['COMBO_DEAD_CONTENT', 'WHEN_UNSATISFIABLE'], count: { code: 'WHEN_UNSATISFIABLE', n: 1 }, patch(c) {
+    c.animals[0].transports = [T_CAR];
+    q(c, 'q.dog-walk').when = { animals: [DOG], transports: [T_BIKE] };
+    q(c, 'q.dog-walk').objectives[0].when = { profiles: [P_A] };
+  } },
   { base: 'combo', name: '[сумісн.] нездійсненний when не ховає тупик старту для іншого профілю', expect: ['WHEN_UNSATISFIABLE', 'COMBO_NO_START'], patch(c) {
     c.profiles[0].transports = [T_CAR];
     c.npcs[1].when = { profiles: [P_A], transports: [T_BIKE] };

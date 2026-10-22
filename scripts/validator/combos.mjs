@@ -60,6 +60,7 @@ export function checkOptions(content, whens) {
   }
   for (const [where, w, parent, kind] of whens) {
     if (kind === 'transition') continue;
+    if (parent && dead([parent])) continue; // мертвий квест уже звітує сам — його цілі не дублюють
     if (!all.some((k) => matches(w, k) && matches(parent, k))) out.push(I('WHEN_UNSATISFIABLE', `${where}.when`, `умові не відповідає жодна з ${all.length} дозволених комбінацій`));
   }
   return out;
