@@ -382,6 +382,15 @@ export const FIXTURES = [
 
   // ---- комбінації профіль × транспорт × тварина (синтетичні профілі) ----
   { base: 'combo', name: '[комб.] еталон із профілями, транспортом і собакою коректний', expect: [], patch() {} },
+  // ---- GAME-42 (TD-006): умови-об'єкти на ПЕРЕХОДАХ квестів, не лише в діалогах ----
+  { base: 'combo', name: '[умова] when переходу рядком', expect: ['SCHEMA_INVALID'], patch(c) { dogEntry(c).when = 'animals == dog'; } },
+  { base: 'combo', name: '[умова] when квесту на неіснуючу тварину', expect: ['REF_MISSING'], patch(c) { q(c, 'q.dog-walk').when = { animals: ['animal.fixture-cat'] }; } },
+  { base: 'combo', name: '[умова] when переходу на неіснуючий транспорт', expect: ['REF_MISSING'], patch(c) { dogEntry(c).when = { transports: ['transport.fixture-boat'] }; } },
+  { base: 'combo', name: '[умова] основний шлях лише для кемпера з собакою — решта комбінацій без фіналу', expect: ['BRANCH_NO_NEXT', 'NO_PATH_TO_END'], patch(c) {
+    c.transports.push({ id: 'transport.fixture-camper', nameKey: 'transport.fixture-camper' });
+    for (const lang of c.meta.locales) c.locales[lang]['transport.fixture-camper'] = `[${lang}] camper`;
+    q(c, 'ST-002').transitions[0].when = { transports: ['transport.fixture-camper'], animals: [DOG] };
+  } },
   { base: 'combo', name: '[комб.] квест без when, досяжний лише з собакою, без собаки не перевіряється', expect: [], patch(c) {
     const d = q(c, 'q.dog-walk');
     delete d.when;

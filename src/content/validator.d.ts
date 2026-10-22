@@ -8,3 +8,6 @@ declare module '*/validator/combos.mjs' {
 declare module '*/validator/checks.mjs' {
   export function buildIndex(content: unknown): { reachable: Set<string> };
 }
+declare module '*/validator/combos.mjs' {
+  export function matches(when: unknown, k: { profile: string | null; transport: string | null; animal: string }): boolean;
+}
