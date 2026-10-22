@@ -1,0 +1,39 @@
+{
+  "permissions": {
+    "allow": [
+      "mcp__Atlassian",
+      "mcp__Atlassian_MCP",
+      "mcp__github",
+      "mcp__claude-code-remote",
+      "Read",
+      "Edit",
+      "Write",
+      "Glob",
+      "Grep",
+      "Bash(git:*)",
+      "Bash(node:*)",
+      "Bash(npm:*)",
+      "Bash(npx:*)",
+      "Bash(python3:*)",
+      "Bash(cat:*)",
+      "Bash(ls:*)",
+      "Bash(grep:*)",
+      "Bash(sed:*)",
+      "Bash(find:*)",
+      "Bash(head:*)",
+      "Bash(wc:*)",
+      "Bash(diff:*)",
+      "Bash(mkdir:*)",
+      "Bash(curl:*)"
+    ],
+    "deny": [
+      "Bash(git push --force:*)",
+      "Bash(git push -f:*)",
+      "Bash(git reset --hard:*)",
+      "Bash(git filter-branch:*)",
+      "mcp__github__delete_file",
+      "mcp__github__create_repository",
+      "mcp__github__fork_repository"
+    ]
+  }
+}
