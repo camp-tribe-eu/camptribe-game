@@ -3,6 +3,7 @@
 
 import { advance, newClock, pause, resume, tick, type GameClock } from './clock';
 import { dispatch, type Command } from './commands';
+import { EMPTY_DEFS, type CoreDefs } from './defs';
 import { nextInt, seedRng, type RngState } from './rng';
 import { initialState, type GameState } from './state';
 
@@ -39,14 +40,21 @@ export function newSim(seed: number, moneyCents = 0): SimState {
   return { game: initialState(moneyCents), clock: newClock(), rng: seedRng(seed), finds: 0 };
 }
 
-export function step(s: SimState, input: Input, systems: readonly System[] = [findsSystem]): SimState {
+/** Контекст кроку: незмінний каталог визначень і системи. У сейв не потрапляє. */
+export interface StepCtx {
+  readonly defs?: CoreDefs;
+  readonly systems?: readonly System[];
+}
+
+export function step(s: SimState, input: Input, ctx: StepCtx = {}): SimState {
+  const systems = ctx.systems ?? [findsSystem];
   switch (input.kind) {
     case 'frame': {
       const t = tick(s.clock, input.realMs);
       return systems.reduce((acc, sys) => sys(acc, t.steps), { ...s, clock: t.clock });
     }
     case 'command':
-      return { ...s, game: dispatch(s.game, input.command).state };
+      return { ...s, game: dispatch(s.game, input.command, ctx.defs ?? EMPTY_DEFS).state };
     case 'advance':
       return { ...s, clock: advance(s.clock, input.minutes) };
     case 'pause':
@@ -56,5 +64,5 @@ export function step(s: SimState, input: Input, systems: readonly System[] = [fi
   }
 }
 
-export const run = (s: SimState, log: readonly Input[], systems?: readonly System[]): SimState =>
-  log.reduce((acc, i) => step(acc, i, systems), s);
+export const run = (s: SimState, log: readonly Input[], ctx: StepCtx = {}): SimState =>
+  log.reduce((acc, i) => step(acc, i, ctx), s);

@@ -22,7 +22,6 @@ export interface WorldProbe {
 export class WorldScene extends Phaser.Scene {
   private player!: Phaser.Types.Physics.Arcade.SpriteWithDynamicBody;
   private readonly gate = createActionGate();
-  private interactions = 0;
   private campfire!: Phaser.GameObjects.Image;
 
   constructor(private readonly bridge: Bridge, private readonly controls: InputState, private readonly probe: WorldProbe) {
@@ -91,8 +90,7 @@ export class WorldScene extends Phaser.Scene {
     const dist = Phaser.Math.Distance.Between(this.player.x, this.player.y, this.campfire.x, this.campfire.y);
     const near = dist <= INTERACT_RANGE ? 'obj.campfire' : null;
     if (this.gate(held.has('interact'), time) && near) {
-      this.interactions++;
-      this.bridge.send({ type: 'GrantReward', commandId: `interact.${near}.${this.interactions}`, grantId: 'rw.campfire_warmth', moneyCents: 0 });
+      this.bridge.send({ type: 'Interact', targetId: near });
     }
 
     Object.assign(this.probe, {

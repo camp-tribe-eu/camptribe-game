@@ -4,6 +4,7 @@ import { render, h } from 'preact';
 import { Shell } from './ui/Shell';
 import { buildLabel } from './core/build-info';
 import { newInput, type Action } from './view/world/actions';
+import { SLICE_DEFS } from './content/slice-defs';
 import { createBridge } from './view/world/bridge';
 import { WorldScene, type WorldProbe } from './view/world/scene';
 import { mountTouchControls } from './view/world/touch';
@@ -12,7 +13,7 @@ const app = document.querySelector<HTMLElement>('#app');
 if (!app) throw new Error('#app is missing');
 
 const probe: WorldProbe = { ready: false, playerX: 0, playerY: 0, nearObject: null, commandsSent: 0, cameraScrollX: 0, cameraScrollY: 0, clockMinutes: 0 };
-const bridge = createBridge(20261022);
+const bridge = createBridge(20261022, SLICE_DEFS);
 const input = newInput();
 // Тестовий хук Playwright: лише ЧИТАННЯ — знімок стану копією, місток назовні не віддається
 // (рецензія PR #13: раніше скрипт сторінки міг надіслати команду в ядро).

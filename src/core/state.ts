@@ -18,6 +18,11 @@ export interface GameState {
   readonly grants: readonly string[];
   /** Оброблені `commandId` і їхній результат: повтор повертає той самий результат. */
   readonly processed: Readonly<Record<string, CommandRecord>>;
+  /**
+   * Лічильник нових (не повторних) команд. Місток будує з нього наступний `commandId`, тож
+   * після завантаження сейву id не повторюється (рецензія TL PR #13: лічильник сцени скидався в 0).
+   */
+  readonly seq: number;
 }
 
 export const REJECT_CODES = [
@@ -27,10 +32,13 @@ export const REJECT_CODES = [
   'ITEM_NOT_OWNED',
   'GRANT_ALREADY_GIVEN',
   'COMMAND_ID_REUSED',
+  'UNKNOWN_ITEM',
+  'UNKNOWN_TARGET',
+  'NOT_FOR_SALE',
 ] as const;
 
 export type RejectCode = (typeof REJECT_CODES)[number];
 
 export function initialState(moneyCents = 0): GameState {
-  return { schemaVersion: 1, moneyCents, inventory: {}, grants: [], processed: {} };
+  return { schemaVersion: 1, moneyCents, inventory: {}, grants: [], processed: {}, seq: 0 };
 }

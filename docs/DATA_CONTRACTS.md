@@ -53,7 +53,7 @@
 |---|---|---|---|---|
 | DC-040 | `save.meta` | `saveId`, `schemaVersion`, `createdAt` (ігровий час), `accountId: null` | GDD Core Rules §4; OD-008 | ACCEPTED |
 | DC-041 | `save.clock` | ігровий календар і час, зерно RNG | CR-034 | ACCEPTED |
-| DC-042 | `save.player` | профіль, зовнішність (шари), позиція, локація | GAME-76 | ACCEPTED |
+| DC-042 | `save.player` | профіль, зовнішність (шари), `locationId` і `spawnId` — **не пікселі**: позиція в пікселях живе в сцені (ARCHITECTURE §3.1); реплей відтворює команди, а не рух (TL PR #13). Ще не реалізовано | GAME-76; GAME-33 | PROPOSED |
 | DC-043 | `save.household` | члени, тварина (без операції видалення) | CR-017 | ACCEPTED |
 | DC-044 | `save.inventory` | предмети зі станом, екіпіроване й склад | GAME-73 | ACCEPTED |
 | DC-045 | `save.money` | баланс у центах + журнал транзакцій (кожен запис — `commandId`) | CR-040…043 | ACCEPTED |
@@ -75,5 +75,6 @@
 | id | правило | джерело | статус |
 |---|---|---|---|
 | DC-060 | Відмова завжди має машинний `code`; людський текст — ключ локалізації `reject.<code>`, який UI бере з коду (ядро текстів не знає). Реалізовано: `src/core/commands.ts` (GAME-12) | CR-032 | ACCEPTED |
-| DC-061 | Подія-факт має `type`, ігровий час, `commandId`-причину. Ще не реалізовано: шина GAME-12 повертає стан без `events[]`; додається разом із першою системою, що їх споживає (журнал подорожі, GAME-32) | GDD Core Rules §5 | PROPOSED |
+| DC-061 | Успішна команда повертає події-факти `events[]` (`ItemPurchased`, `ItemSold`, `RewardGranted`) з `commandId`-причиною; відмова й повтор — `[]`. Реалізовано: `src/core/commands.ts` (TL PR #13). Ігровий час у події — з появою журналу (GAME-32) | GDD Core Rules §5 | ACCEPTED |
 | DC-062 | Той самий `commandId` з іншим вмістом — відмова `COMMAND_ID_REUSED`, а не кешований результат (відбиток вмісту в `processed`) | рецензія PR #13 | ACCEPTED |
+| DC-063 | Команда — **намір** (`BuyItem{itemId}`, `SellItem{itemId}`, `Interact{targetId}`), не ефект: ціни й нагороди ядро бере лише з каталогу `CoreDefs` (CR-041); команди «видати нагороду» назовні немає. `commandId` видає місток із `seq` стану, тож після завантаження сейву id не повторюється. Реалізовано: `src/core/{commands,defs,state}.ts`, `src/view/world/bridge.ts` | рецензія TL PR #13 | ACCEPTED |
