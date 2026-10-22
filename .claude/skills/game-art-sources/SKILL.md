@@ -56,6 +56,17 @@ LPC-персонажі: титри по шарах — у `CREDITS.csv` гене
 вибирає рядки для кожного використаного шару. Кількість рядків має дорівнювати кількості
 шарів, інакше червоне.
 
+Сторож (`scripts/assets/check-assets.mjs`) звіряє `licences_offered` кожного шару з випискою
+першоджерела `research/art-spike/CREDITS-lpc-characters.csv` (`CREDITS_UPSTREAM_MISMATCH`).
+
+Колонка **`modified`** у `CREDITS.csv`: `no` — файл байт у байт як у джерелі; інакше — опис
+змін (≥ 8 символів), бо CC-BY-SA вимагає їх назвати. Змінений файл під CC-BY-SA лишається
+CC-BY-SA (`CREDITS_SA_RELICENSED`).
+
+**`public/`** не має рядків титрів, тож туди можна лише CC0 або OFL (текст ліцензії поруч у
+`public/`). Усе, що вимагає атрибуції, — лише в `assets/` (`PUBLIC_NEEDS_CREDITS`). Кожен медіафайл
+у `public/` має рядок у `docs/LICENSE_REGISTER.md` (`PUBLIC_NO_REGISTER_ROW`).
+
 🔴 **Агрегатор не ліцензує.** Ліцензію цитуємо зі сторінки автора, а не з чужого репозиторію,
 що «зібрав усе».
 

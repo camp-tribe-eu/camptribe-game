@@ -42,7 +42,12 @@ const node = obj({
 
 const reward = obj({ grantId: req(str), items: arr(obj({ item: req(str), qty: req(int1) })), money: int0, once: bool });
 
+// content/dialogue/<назва>.json — один діалог на файл; завантажувач складає їх у content.dialogues.
+// У SCHEMAS як `dialogues` (DC-011), але НЕ в COLLECTIONS: це тека файлів, а не один <колекція>.json.
+export const DIALOGUE_SCHEMA = obj({ id: req(str), npcId: req(str), start: req(str), nodes: req({ t: 'array', of: node, min: 1 }) });
+
 export const SCHEMAS = {
+  dialogues: DIALOGUE_SCHEMA,
   meta: obj({ start: req(str), locales: req(arr(str)) }),
   // transports — з якими транспортами сумісний запис; немає поля — з усіма. Несумісні комбінації
   // не перебираються: гравець не може їх обрати, тож тупик у них — не тупик (закон 5).
@@ -69,10 +74,6 @@ export const SCHEMAS = {
   facts: obj({ id: req(str), claimKey: req(str), source: str, checkedAt: str, kind: str }),
 };
 
-// content/dialogue/<назва>.json — один діалог на файл; завантажувач складає їх у content.dialogues.
-// Навмисно поза SCHEMAS: scripts/check-rules.mjs вимагає рядок DC-0xx у docs/DATA_CONTRACTS.md для
-// кожного ключа SCHEMAS, а цей рядок ще не додано (GAME-28 не чіпає docs/DATA_CONTRACTS.md).
-export const DIALOGUE_SCHEMA = obj({ id: req(str), npcId: req(str), start: req(str), nodes: req({ t: 'array', of: node, min: 1 }) });
 
 export const COLLECTIONS = ['profiles', 'transports', 'animals', 'items', 'npcs', 'locations', 'quests', 'events', 'facts'];
 
