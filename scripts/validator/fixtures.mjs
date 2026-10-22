@@ -77,6 +77,32 @@ export function baseline() {
 }
 
 const q = (c, id) => c.quests.find((x) => x.id === id);
+
+// Еталон комбінаторики: ДВА СИНТЕТИЧНІ профілі, не профілі гри (реальний перелік із 12 ще не
+// передано, вигадувати його заборонено). 2 профілі × 2 транспорти × (без тварини | собака) = 8.
+// Додано гілку лише для власника собаки, що повертається в основний сюжет.
+const P_A = 'profile.fixture-a', P_B = 'profile.fixture-b';
+const T_CAR = 'transport.fixture-car', T_BIKE = 'transport.fixture-bike';
+const DOG = 'animal.fixture-dog';
+const COMBO_KEYS = [P_A, P_B, T_CAR, T_BIKE, DOG, 'loc.dog-park', 'q.dog-walk', 'q.dog-walk.o1'];
+
+export function comboBaseline() {
+  const c = baseline();
+  c.profiles = [P_A, P_B].map((id) => ({ id, nameKey: id }));
+  c.transports = [T_CAR, T_BIKE].map((id) => ({ id, nameKey: id }));
+  c.animals = [{ id: DOG, nameKey: DOG }];
+  c.locations.push({ id: 'loc.dog-park', nameKey: 'loc.dog-park', when: { animals: [DOG] } });
+  c.quests.push({
+    id: 'q.dog-walk', titleKey: 'q.dog-walk', optional: true, when: { animals: [DOG] },
+    objectives: [{ id: 'visit-park', textKey: 'q.dog-walk.o1', kind: 'visit', target: 'loc.dog-park', required: true }],
+    transitions: [{ on: 'complete', to: 'ST-004' }, { on: 'decline', to: 'ST-004' }],
+    reward: { grantId: 'rw.dog-walk', money: 2 },
+  });
+  q(c, 'ST-002').transitions.push({ on: 'complete', to: 'q.dog-walk', choiceKey: 'q.dog-walk', when: { animals: [DOG] } });
+  for (const lang of c.meta.locales) for (const k of COMBO_KEYS) c.locales[lang][k] = `[${lang}] ${k}`;
+  return c;
+}
+const dogEntry = (c) => q(c, 'ST-002').transitions[1];
 const ticketFromOptional = (c) => {
   c.items.push({ id: 'item.ticket', nameKey: 'item.ticket' });
   q(c, 'ST-003').reward.items = [{ item: 'item.ticket', qty: 1 }];
@@ -172,6 +198,38 @@ export const FIXTURES = [
     q(c, 'ST-002').transitions.push({ on: 'complete', to: 'ST-005', choiceKey: 'q.st-002' });
   } },
   { name: 'фінал втратив позначку кінця', expect: ['BRANCH_NO_NEXT', 'NO_PATH_TO_END'], patch(c) { q(c, 'ST-004').end = false; } },
+
+  // ---- комбінації профіль × транспорт × тварина (синтетичні профілі) ----
+  { base: 'combo', name: '[комб.] еталон із профілями, транспортом і собакою коректний', expect: [], patch() {} },
+  { base: 'combo', name: '[комб.] квест без when, досяжний лише з собакою, без собаки не перевіряється', expect: [], patch(c) {
+    const d = q(c, 'q.dog-walk');
+    delete d.when;
+    d.transitions.forEach((t) => { t.when = { animals: [DOG] }; });
+  } },
+  { base: 'combo', name: '[комб.] when посилається на неіснуючий профіль', expect: ['REF_MISSING'], patch(c) { q(c, 'q.dog-walk').when = { profiles: ['profile.ghost'] }; } },
+  { base: 'combo', name: '[комб.] порожній список у when', expect: ['SCHEMA_INVALID'], patch(c) { q(c, 'q.dog-walk').when = { animals: [] }; } },
+  { base: 'combo', name: '[комб.] animal.none оголошено як тварину', expect: ['ID_FORMAT'], patch(c) { c.animals.push({ id: 'animal.none', nameKey: DOG }); } },
+  { base: 'combo', name: '[комб.] стартовий етап лише для одного профілю', expect: ['COMBO_NO_START'], patch(c) { q(c, 'ST-001').when = { profiles: [P_A] }; } },
+  { base: 'combo', name: '[комб.] єдиний загальний перехід лише для велосипеда', expect: ['BRANCH_NO_NEXT', 'NO_PATH_TO_END'], patch(c) {
+    q(c, 'ST-002').transitions[0].when = { transports: [T_BIKE] };
+  } },
+  { base: 'combo', name: '[комб.] обов’язкова ціль у локації лише для собаки', expect: ['OBJECTIVE_UNCOMPLETABLE'], patch(c) {
+    q(c, 'ST-004').objectives.push({ id: 'visit-park', textKey: 'q.st-004.o1', kind: 'visit', target: 'loc.dog-park', required: true });
+  } },
+  { base: 'combo', name: '[комб.] відмова лише для одного профілю', expect: ['OPTIONAL_NO_DECLINE'], patch(c) { q(c, 'ST-003').transitions[1].when = { profiles: [P_A] }; } },
+  { base: 'combo', name: '[комб.] предмет основного сюжету продають лише велосипедистам', expect: ['MAIN_GATE_NOT_GUARANTEED'], patch(c) {
+    c.npcs[1].when = { transports: [T_BIKE] };
+    q(c, 'ST-004').requires.items = ['item.gift'];
+  } },
+  { base: 'combo', name: '[комб.] цикл, вихід із якого є лише в одного профілю', expect: ['CYCLE_NO_EXIT', 'NO_PATH_TO_END', 'OPTIONAL_NO_DECLINE'], patch(c) {
+    q(c, 'ST-003').transitions = [{ on: 'complete', to: 'ST-002' }, { on: 'decline', to: 'ST-004', when: { profiles: [P_A] } }];
+  } },
+  { base: 'combo', name: '[комб.] квест для собаки досяжний лише в одного профілю', expect: ['COMBO_TARGETED_UNREACHABLE'], patch(c) {
+    dogEntry(c).when = { animals: [DOG], profiles: [P_A] };
+  } },
+  { base: 'combo', name: '[комб.] квест для собаки, а вхід у нього лише без тварини', expect: ['COMBO_DEAD_CONTENT', 'COMBO_TARGETED_UNREACHABLE'], patch(c) {
+    dogEntry(c).when = { animals: ['animal.none'] };
+  } },
 ];
 
 // Файлові приклади для завантажувача: files → вміст теки content/ (null — теки немає).

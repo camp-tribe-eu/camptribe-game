@@ -7,7 +7,7 @@ import { CODES } from './codes.mjs';
 import { CHECKS, validate } from './checks.mjs';
 import { loadContent } from './load.mjs';
 import { COLLECTIONS } from './schema.mjs';
-import { baseline, FIXTURES, FILE_FIXTURES, TODAY } from './fixtures.mjs';
+import { baseline, comboBaseline, FIXTURES, FILE_FIXTURES, TODAY } from './fixtures.mjs';
 
 const codeSet = (issues) => [...new Set(issues.map((i) => i.code))].sort();
 
@@ -15,7 +15,7 @@ function writeBaseline(dir, override = {}) {
   const c = baseline();
   mkdirSync(join(dir, 'locales'), { recursive: true });
   writeFileSync(join(dir, 'meta.json'), JSON.stringify(c.meta));
-  for (const k of COLLECTIONS) writeFileSync(join(dir, `${k}.json`), JSON.stringify(c[k]));
+  for (const k of COLLECTIONS) if (c[k] !== undefined) writeFileSync(join(dir, `${k}.json`), JSON.stringify(c[k]));
   for (const [lang, t] of Object.entries(c.locales)) writeFileSync(join(dir, 'locales', `${lang}.json`), JSON.stringify(t));
   for (const [name, text] of Object.entries(override)) writeFileSync(join(dir, name), text);
 }
@@ -42,7 +42,7 @@ export function selfTest() {
 
   // 2. Приклади в пам'яті: точний збіг множини кодів.
   for (const f of FIXTURES) {
-    const c = baseline();
+    const c = f.base === 'combo' ? comboBaseline() : baseline();
     f.patch(c);
     const got = codeSet(validate(c, { today: TODAY }));
     const want = [...f.expect].sort();

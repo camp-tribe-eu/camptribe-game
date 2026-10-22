@@ -10,23 +10,31 @@ const arr = (of) => ({ t: 'array', of });
 const obj = (fields) => ({ t: 'object', fields });
 const en = (...values) => ({ t: 'string', enum: values });
 const req = (s) => ({ ...s, required: true });
+const ids = { t: 'array', of: str, min: 1 };
+
+// Умова на стан гравця: усі названі виміри мусять збігтися, всередині виміру — будь-який зі списку.
+// Порожній список заборонено: «нікому» — це одруківка, а не намір. Семантика: scripts/validator/combos.mjs.
+const when = obj({ profiles: ids, transports: ids, animals: ids });
 
 const reward = obj({ grantId: req(str), items: arr(obj({ item: req(str), qty: req(int1) })), money: int0, once: bool });
 
 export const SCHEMAS = {
   meta: obj({ start: req(str), locales: req(arr(str)) }),
+  profiles: obj({ id: req(str), nameKey: req(str) }),
+  transports: obj({ id: req(str), nameKey: req(str) }),
+  animals: obj({ id: req(str), nameKey: req(str) }),
   items: obj({ id: req(str), nameKey: req(str) }),
-  npcs: obj({ id: req(str), nameKey: req(str), locationId: req(str), unlockedBy: str, sells: arr(str) }),
-  locations: obj({ id: req(str), nameKey: req(str), unlockedBy: str, items: arr(str) }),
+  npcs: obj({ id: req(str), nameKey: req(str), locationId: req(str), unlockedBy: str, sells: arr(str), when }),
+  locations: obj({ id: req(str), nameKey: req(str), unlockedBy: str, items: arr(str), when }),
   quests: obj({
     id: req(str), titleKey: req(str), optional: req(bool), end: bool,
-    giverId: str, locationId: str,
+    giverId: str, locationId: str, when,
     requires: obj({ quests: arr(str), items: arr(str) }),
     objectives: req(arr(obj({
       id: req(str), textKey: req(str), kind: req(en('talk', 'visit', 'collect', 'deliver')),
-      target: req(str), npcId: str, required: req(bool),
+      target: req(str), npcId: str, required: req(bool), when,
     }))),
-    transitions: req(arr(obj({ on: req(en('complete', 'decline')), to: req(str), choiceKey: str }))),
+    transitions: req(arr(obj({ on: req(en('complete', 'decline')), to: req(str), choiceKey: str, when }))),
     reward,
   }),
   events: obj({ id: req(str), titleKey: req(str), locationId: str, repeatable: req(bool), reward }),
@@ -35,14 +43,14 @@ export const SCHEMAS = {
   facts: obj({ id: req(str), claimKey: req(str), source: str, checkedAt: str, kind: str }),
 };
 
-export const COLLECTIONS = ['items', 'npcs', 'locations', 'quests', 'events', 'facts'];
+export const COLLECTIONS = ['profiles', 'transports', 'animals', 'items', 'npcs', 'locations', 'quests', 'events', 'facts'];
 
 function typeOk(s, v) {
   switch (s.t) {
     case 'string': return typeof v === 'string' && (!s.enum || s.enum.includes(v));
     case 'boolean': return typeof v === 'boolean';
     case 'int': return Number.isInteger(v) && v >= (s.min ?? -Infinity);
-    case 'array': return Array.isArray(v);
+    case 'array': return Array.isArray(v) && v.length >= (s.min ?? 0);
     case 'object': return v !== null && typeof v === 'object' && !Array.isArray(v);
     default: return false;
   }
@@ -50,7 +58,7 @@ function typeOk(s, v) {
 
 function walk(s, v, where, out) {
   if (!typeOk(s, v)) {
-    const want = s.enum ? `одне з ${s.enum.join('|')}` : s.t + (s.min != null ? ` >= ${s.min}` : '');
+    const want = s.enum ? `одне з ${s.enum.join('|')}` : s.t + (s.min != null ? (s.t === 'array' ? ` довжини >= ${s.min}` : ` >= ${s.min}`) : '');
     out.push({ code: 'SCHEMA_INVALID', where, msg: `очікується ${want}, отримано ${JSON.stringify(v)}` });
     return;
   }

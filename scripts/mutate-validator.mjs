@@ -16,6 +16,7 @@ import { CHECKS } from './validator/checks.mjs';
 
 const scripts = dirname(fileURLToPath(import.meta.url));
 const CHECKS_FILE = 'validator/checks.mjs';
+const COMBOS_FILE = 'validator/combos.mjs';
 
 // 1. Вимкнення кожної перевірки цілком. 2. Точкові мутації логіки, де помилка найдорожча.
 const mutations = [
@@ -28,6 +29,12 @@ const mutations = [
   { name: 'схемні помилки не зупиняють змістові перевірки', file: CHECKS_FILE, from: 'if (issues.length) return issues;', to: '' },
   { name: 'NOT_RUN видається як OK', file: 'validator/load.mjs', from: "return { status: 'NOT_RUN'", to: "return { status: 'OK'" },
   { name: 'порожній контент вважається нормою', file: 'validator/load.mjs', from: '|| content.quests.length === 0', to: '' },
+  { name: 'комбінації запускаються й на брудному контенті', file: CHECKS_FILE, from: 'if (issues.length === 0) issues.push(...runOne(combos));', to: 'issues.push(...runOne(combos));' },
+  { name: 'when на переходах ігнорується', file: COMBOS_FILE, from: 'matches(t.when, k) && ids.has(t.to)', to: 'ids.has(t.to)' },
+  { name: 'NPC і локації поза комбінацією доступні', file: COMBOS_FILE, from: ': { ...strip(e), unlockedBy: NEVER }', to: ': strip(e)' },
+  { name: 'перебирається лише перша комбінація', file: COMBOS_FILE, from: 'for (const k of all) {', to: 'for (const k of all.slice(0, 1)) {' },
+  { name: 'комбінації без тварини пропущено', file: COMBOS_FILE, from: '[NO_ANIMAL, ...ids(\'animals\')]', to: 'ids(\'animals\')' },
+  { name: 'недосяжні в комбінації квести не відсікаються', file: COMBOS_FILE, from: '(!keep || keep.has(q.id))', to: 'true' },
 ];
 
 function selfTestIn(dir) {
