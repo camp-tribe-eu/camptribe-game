@@ -12,3 +12,5 @@ node_modules/
 # 🔴 Варіант В (рішення власника 22.10.2026): джерело лишається ЛОКАЛЬНО
 brain/Передача/Джерело/
 dist/
+test-results/
+playwright-report/

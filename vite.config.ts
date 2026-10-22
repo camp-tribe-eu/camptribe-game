@@ -13,6 +13,8 @@ function commitSha(): string {
 
 export default defineConfig({
   base: './',
+  // Друга сторінка — спайк Phaser 4 (GAME-14); у грі не з'являється.
+  build: { rollupOptions: { input: { main: 'index.html', spike: 'spike.html' } } },
   define: {
     __GAME_VERSION__: JSON.stringify(pkg.version),
     __GAME_COMMIT__: JSON.stringify(commitSha()),
