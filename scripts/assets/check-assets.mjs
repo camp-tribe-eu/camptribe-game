@@ -1,7 +1,14 @@
 #!/usr/bin/env node
 // Сторож графіки й ліцензій (GAME-21): кожен PNG в assets/ має рядок у реєстрі ліцензій і рядок
 // у титрах, кожен рядок титрів — наявний файл і дозволену ліцензію, а assets/credits.json
-// згенеровано саме з assets/CREDITS.csv.
+// згенеровано саме з assets/CREDITS.csv. Далі:
+//  * титри шарів персонажів (characters/…) звірено із закріпленою випискою першоджерела
+//    research/art-spike/CREDITS-lpc-characters.csv: «licences_offered» і автори мусять збігтися;
+//  * public/ — те, що реально їде в білд: кожен медіафайл там (PNG, шрифт, звук, інша картинка)
+//    має рядок реєстру; ліцензія, що вимагає титрів (BY), у public/ не допускається — такий файл
+//    живе в assets/ з рядком титрів; ліцензія, що вимагає тексту поруч (OFL, «атрибуція: так»),
+//    мусить мати цей текст у public/;
+//  * колонка modified: `no` або опис змін; змінений файл під обов'язковим CC-BY-SA лишається CC-BY-SA.
 //
 //   node scripts/assets/check-assets.mjs              — перевірити assets/
 //   node scripts/assets/check-assets.mjs --write-json — перегенерувати assets/credits.json
@@ -11,9 +18,10 @@
 // Без залежностей. Порожня assets/ — помилка, а не зелене (закон 4).
 //
 // Зв'язок файл -> рядок реєстру (docs/LICENSE_REGISTER.md): у клітинці «де використано» рядка
-// ART-NNN кожен шлях у `бектиках`, що починається з `assets/`, — або точний файл, або тека, якщо
-// закінчується на `/` (тоді рядок покриває все під нею). Кожен PNG мусить потрапити рівно в один
-// рядок; кожен такий шлях мусить покривати хоч один файл (інакше рядок застарів).
+// XXX-NNN (ART-, FONT-, SND-…) кожен шлях у `бектиках`, що починається з `assets/` або `public/`, —
+// або точний файл, або тека, якщо закінчується на `/` (тоді рядок покриває все під нею). Кожен
+// відстежуваний файл мусить потрапити рівно в один рядок; кожен такий шлях мусить покривати хоч
+// один відстежуваний файл (інакше рядок застарів).
 
 import { readFileSync, writeFileSync, readdirSync, existsSync, statSync, mkdtempSync, rmSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
@@ -26,9 +34,14 @@ const ASSETS = 'assets';
 const REGISTER = 'docs/LICENSE_REGISTER.md';
 const CREDITS = 'assets/CREDITS.csv';
 const JSON_OUT = 'assets/credits.json';
+const PUBLIC = 'public';
+const UPSTREAM = 'research/art-spike/CREDITS-lpc-characters.csv';
 const META_FILES = new Set(['CREDITS.csv', 'credits.json']);
+// Медіа в public/, яке мусить мати рядок реєстру. Решта (мапи .tmj, тексти ліцензій) — не медіа.
+const PUBLIC_MEDIA = /\.(png|jpe?g|gif|webp|avif|svg|ico|ttf|otf|woff2?|ogg|oga|opus|mp3|wav|flac|m4a|aac|mp4|webm)$/i;
 
-export const HEADER = ['file', 'authors', 'licence', 'licences_offered', 'source_urls', 'origin', 'notes'];
+export const HEADER = ['file', 'authors', 'licence', 'licences_offered', 'source_urls', 'origin', 'notes', 'modified'];
+export const UPSTREAM_HEADER = ['filename', 'notes', 'authors', 'licenses', 'urls'];
 
 // Ліцензії, які можна ОБРАТИ для графіки (скіл game-art-sources §3). GPL — лише коли нема іншого,
 // тож обрана GPL — червоне: рішення про неї приймає людина, і тоді список розширюється тут.
@@ -49,6 +62,8 @@ export const CODES = [
   'REGISTER_PATH_UNUSED', 'REGISTER_NO_SOURCE', 'REGISTER_LICENCE_MISMATCH', 'CREDITS_BAD_HEADER',
   'ASSET_NO_CREDITS_ROW', 'CREDITS_FILE_MISSING', 'CREDITS_DUPLICATE', 'CREDITS_NO_AUTHOR', 'CREDITS_NO_SOURCE',
   'LICENCE_NOT_OFFERED', 'LICENCE_NOT_ALLOWED', 'LICENCE_NOT_MOST_PERMISSIVE', 'CREDITS_JSON_STALE',
+  'CREDITS_UPSTREAM_MISSING', 'CREDITS_UPSTREAM_MISMATCH', 'CREDITS_MODIFIED_UNDESCRIBED', 'CREDITS_SA_RELICENSED',
+  'PUBLIC_EMPTY', 'PUBLIC_NO_REGISTER_ROW', 'PUBLIC_NEEDS_CREDITS',
 ];
 
 // RFC 4180: лапки, коми й переноси всередині лапок.
@@ -79,7 +94,7 @@ function creditsRows(csvText) {
     rows: body.map((cells, i) => {
       const r = Object.fromEntries(HEADER.map((h, j) => [h, (cells[j] ?? '').trim()]));
       return {
-        line: i + 2, file: r.file, licence: r.licence, notes: r.notes, origin: r.origin,
+        line: i + 2, file: r.file, licence: r.licence, notes: r.notes, origin: r.origin, modified: r.modified,
         authors: splitList(r.authors, ';'), offered: splitList(r.licences_offered, '|'),
         sources: splitList(r.source_urls, /\s+/),
       };
@@ -87,16 +102,35 @@ function creditsRows(csvText) {
   };
 }
 
+// Шляхи — від кореня репозиторію (`assets/…`, `public/…`).
 function registerRows(md) {
   const out = [];
+  const ticks = (cell) => [...(cell ?? '').matchAll(/`((?:assets|public)\/[^`]*)`/g)].map((m) => m[1]);
   for (const line of md.split('\n')) {
-    if (!/^\|\s*ART-\d{3}\s*\|/.test(line)) continue;
+    if (!/^\|\s*[A-Z]+-\d{3}\s*\|/.test(line)) continue;
     const cells = line.replace(/^\|/, '').replace(/\|\s*$/, '').split('|').map((c) => c.trim());
-    const paths = [...(cells[6] ?? '').matchAll(/`(assets\/[^`]*)`/g)].map((m) => m[1].slice(ASSETS.length + 1));
-    out.push({ id: cells[0], source: cells[2] ?? '', licence: cells[3] ?? '', paths });
+    out.push({
+      id: cells[0], source: cells[2] ?? '', licence: cells[3] ?? '', attribution: cells[4] ?? '',
+      attrFiles: ticks(cells[4]), paths: ticks(cells[6]),
+    });
   }
   return out;
 }
+
+// Закріплена виписка CREDITS.csv генератора LPC: filename -> { authors[], offered[] }.
+export function upstreamRows(csvText) {
+  const map = new Map();
+  if (!csvText) return map;
+  const [head, ...body] = parseCsv(csvText);
+  if (!head || head.map((h) => h.trim()).join(',') !== UPSTREAM_HEADER.join(',')) return map;
+  for (const cells of body) {
+    const r = Object.fromEntries(UPSTREAM_HEADER.map((h, j) => [h, (cells[j] ?? '').trim()]));
+    map.set(r.filename, { authors: splitList(r.authors, ','), offered: splitList(r.licenses, ',') });
+  }
+  return map;
+}
+
+const sameSet = (a, b) => [...new Set(a)].sort().join('\n') === [...new Set(b)].sort().join('\n');
 
 const covers = (p, f) => (p.endsWith('/') ? f.startsWith(p) : f === p);
 
@@ -125,13 +159,14 @@ export function buildJson(rows) {
     licences: Object.fromEntries(used.map((l) => [l, LICENCES[l] ?? { url: null, drm_ok: false }])),
     authors: [...by.values()].sort((a, b) => a.name.localeCompare(b.name, 'en'))
       .map((e) => ({ name: e.name, files: sorted(e.files), licences: sorted(e.licences), sources: sorted(e.sources) })),
-    files: rows.map((r) => ({ file: r.file, authors: [...new Set(r.authors.map(canon))], licence: r.licence, sources: r.sources }))
+    files: rows.map((r) => ({ file: r.file, authors: [...new Set(r.authors.map(canon))], licence: r.licence, sources: r.sources, modified: r.modified }))
       .sort((a, b) => (a.file < b.file ? -1 : 1)),
   }, null, 2) + '\n';
 }
 
-// input: { files: шляхи всередині assets/ (усі файли), register, credits, json }
-export function check({ files, register, credits, json }) {
+// input: { files: шляхи всередині assets/ (усі файли), publicFiles: шляхи всередині public/ (усі файли),
+//          register, credits, json, upstream: текст закріпленої виписки першоджерела (або null) }
+export function check({ files, publicFiles, register, credits, json, upstream }) {
   const out = [];
   const add = (code, where, msg) => out.push({ code, where, msg });
   const pngs = files.filter((f) => /\.png$/i.test(f));
@@ -142,22 +177,44 @@ export function check({ files, register, credits, json }) {
     if (!/\.png$/i.test(f) && !META_FILES.has(f)) add('ASSET_UNKNOWN_FILE', f, 'не PNG і не титри: сторож такий файл не перевіряє');
   }
 
+  const pub = publicFiles ?? [];
+  const pubMedia = pub.filter((f) => PUBLIC_MEDIA.test(f)).map((f) => `${PUBLIC}/${f}`);
+  // @check:PUBLIC_EMPTY
+  if (pubMedia.length === 0) add('PUBLIC_EMPTY', PUBLIC, 'жодного медіафайлу в public/ — обхід зламався або тека переїхала');
+  // Відстежувані файли, від кореня: PNG з assets/ і медіа з public/.
+  const tracked = [...pngs.map((f) => `${ASSETS}/${f}`), ...pubMedia];
+
   const reg = registerRows(register);
   // @check:REGISTER_EMPTY
-  if (reg.length === 0) add('REGISTER_EMPTY', REGISTER, 'жодного рядка ART-NNN — розбір зламався');
+  if (reg.length === 0) add('REGISTER_EMPTY', REGISTER, 'жодного рядка XXX-NNN — розбір зламався');
   const rowOf = new Map();
-  for (const f of pngs) {
-    const hits = reg.filter((r) => r.paths.some((p) => covers(p, f)));
+  for (const t of tracked) {
+    const hits = reg.filter((r) => r.paths.some((p) => covers(p, t)));
+    const inAssets = t.startsWith(`${ASSETS}/`);
+    const f = inAssets ? t.slice(ASSETS.length + 1) : t;
     // @check:ASSET_NO_REGISTER_ROW
-    if (hits.length === 0) add('ASSET_NO_REGISTER_ROW', f, `немає рядка в ${REGISTER}`);
+    if (inAssets && hits.length === 0) add('ASSET_NO_REGISTER_ROW', f, `немає рядка в ${REGISTER}`);
+    // @check:PUBLIC_NO_REGISTER_ROW
+    if (!inAssets && hits.length === 0) add('PUBLIC_NO_REGISTER_ROW', t, `їде в білд, а рядка в ${REGISTER} немає`);
     // @check:ASSET_REGISTER_AMBIGUOUS
     if (hits.length > 1) add('ASSET_REGISTER_AMBIGUOUS', f, hits.map((r) => r.id).join(', '));
     if (hits.length) rowOf.set(f, hits[0]);
   }
+  for (const t of pubMedia) {
+    const r = rowOf.get(t);
+    if (!r) continue;
+    const needsText = /^так/i.test(r.attribution) || /Open Font License|\bOFL\b/i.test(r.licence);
+    const shipped = r.attrFiles.some((a) => a.startsWith(`${PUBLIC}/`) && pub.includes(a.slice(PUBLIC.length + 1)));
+    const why = /\b(OGA-BY|CC-BY|BY-SA|Attribution)\b/i.test(r.licence)
+      ? `${r.id}: ліцензія вимагає титрів — файлу місце в assets/ з рядком у ${CREDITS}`
+      : needsText && !shipped ? `${r.id}: ліцензія вимагає тексту поруч — у клітинці «атрибуція» має бути \`public/…\`, що існує` : '';
+    // @check:PUBLIC_NEEDS_CREDITS
+    if (why) add('PUBLIC_NEEDS_CREDITS', t, why);
+  }
   for (const r of reg) {
     for (const p of r.paths) {
       // @check:REGISTER_PATH_UNUSED
-      if (!pngs.some((f) => covers(p, f))) add('REGISTER_PATH_UNUSED', `${r.id} assets/${p}`, 'шлях не покриває жодного файлу');
+      if (!tracked.some((t) => covers(p, t))) add('REGISTER_PATH_UNUSED', `${r.id} ${p}`, 'шлях не покриває жодного відстежуваного файлу');
     }
     // @check:REGISTER_NO_SOURCE
     if (r.paths.length && !/https?:\/\/\S+/.test(r.source)) add('REGISTER_NO_SOURCE', r.id, 'немає посилання на сторінку першоджерела');
@@ -167,6 +224,7 @@ export function check({ files, register, credits, json }) {
   // @check:CREDITS_BAD_HEADER
   if (!cr.ok) add('CREDITS_BAD_HEADER', CREDITS, `заголовок [${cr.head.join(',')}], очікується [${HEADER.join(',')}]`);
   const rows = cr.ok ? cr.rows : [];
+  const up = upstreamRows(upstream);
   const seen = new Set();
   for (const r of rows) {
     const at = `${CREDITS}:${r.line} ${r.file}`;
@@ -189,6 +247,28 @@ export function check({ files, register, credits, json }) {
     const reg1 = rowOf.get(r.file);
     // @check:REGISTER_LICENCE_MISMATCH
     if (reg1 && !reg1.licence.includes(r.licence)) add('REGISTER_LICENCE_MISMATCH', at, `${reg1.id} не цитує «${r.licence}»`);
+
+    if (r.file.startsWith('characters/')) {
+      const u = up.get(r.file.slice('characters/'.length));
+      // @check:CREDITS_UPSTREAM_MISSING
+      if (!u) add('CREDITS_UPSTREAM_MISSING', at, `у закріпленій виписці ${UPSTREAM} немає рядка — звірити нема з чим`);
+      const diff = !u ? [] : [
+        sameSet(u.offered, r.offered) ? '' : `licences_offered [${r.offered.join(' | ')}] ≠ першоджерело [${u.offered.join(' | ')}]`,
+        sameSet(u.authors, r.authors) ? '' : `автори [${r.authors.join('; ')}] ≠ першоджерело [${u.authors.join('; ')}]`,
+      ].filter(Boolean);
+      // @check:CREDITS_UPSTREAM_MISMATCH
+      if (diff.length) add('CREDITS_UPSTREAM_MISMATCH', at, diff.join('; '));
+    }
+
+    const mod = r.modified ?? '';
+    // @check:CREDITS_MODIFIED_UNDESCRIBED
+    if (mod !== 'no' && (mod.length < 8 || /^(yes|так|modified|змінено)$/i.test(mod))) add('CREDITS_MODIFIED_UNDESCRIBED', at, `modified = «${mod}»: має бути \`no\` або опис змін (≥ 8 знаків)`);
+    // ShareAlike зобов'язує, коли найм'якша з запропонованих (у титрах або в реєстрі) — CC-BY-SA.
+    const softer = (l) => ['CC0', 'OGA-BY', 'CC-BY'].includes(family(l) ?? '');
+    const saOffered = r.offered.some((o) => family(o) === 'CC-BY-SA') && !r.offered.some(softer);
+    const saRegister = !!reg1 && /CC-BY-SA/.test(reg1.licence) && !/\b(CC0|OGA-BY|CC-BY)(?!-SA)\b/.test(reg1.licence);
+    // @check:CREDITS_SA_RELICENSED
+    if (mod !== 'no' && (saOffered || saRegister) && family(r.licence) !== 'CC-BY-SA') add('CREDITS_SA_RELICENSED', at, `змінений твір під CC-BY-SA лишається CC-BY-SA, а не «${r.licence}»`);
   }
   for (const f of pngs) {
     // @check:ASSET_NO_CREDITS_ROW
@@ -209,52 +289,94 @@ function walk(dir) {
 
 function load(root = ROOT) {
   const read = (p) => (existsSync(join(root, p)) ? readFileSync(join(root, p), 'utf8') : null);
-  return { files: walk(join(root, ASSETS)), register: read(REGISTER) ?? '', credits: read(CREDITS) ?? '', json: read(JSON_OUT) };
+  return {
+    files: walk(join(root, ASSETS)), publicFiles: walk(join(root, PUBLIC)),
+    register: read(REGISTER) ?? '', credits: read(CREDITS) ?? '', json: read(JSON_OUT), upstream: read(UPSTREAM),
+  };
 }
 
 function selfTest() {
   const real = load();
-  // Синтетичний еталон: два файли, два рядки реєстру (тека і точний файл), титри, json.
+  // Синтетичний еталон: тайли (тека), герой (файл), шар персонажа зі звіркою з першоджерелом,
+  // картинка CC0 і шрифт OFL у public/ з текстом ліцензії поруч.
   const reg = [
     '| ID | ресурс | джерело | ліцензія (дослівно) | атрибуція | перевірено | де використано |',
     '|---|---|---|---|---|---|---|',
     '| ART-101 | tiles | https://example.org/tiles | "CC-BY-SA 3.0", "GPL 3.0" | так | 22.10.2026 | `assets/t/` |',
     '| ART-102 | hero | https://example.org/hero | "OGA-BY 3.0" або "CC-BY-SA 3.0" | так | 22.10.2026 | `assets/c/hero.png` |',
+    '| ART-103 | layers | https://example.org/gen | "OGA-BY 3.0", "CC-BY-SA 3.0", "GPL 3.0" | так | 22.10.2026 | `assets/characters/` |',
+    '| ART-104 | sheet | https://example.org/sheet | "Creative Commons CC0" | ні | 22.10.2026 | `public/s/k.png` — спайк |',
+    '| FONT-101 | font | https://example.org/font | "SIL Open Font License, Version 1.1" | так — текст поруч: `public/f/OFL.txt` | 22.10.2026 | `public/f/F.ttf` |',
   ].join('\n');
   const csvOf = (rows) => [HEADER.join(','), ...rows].join('\n') + '\n';
-  const T = 't/a.png,Ann; Bob,CC-BY-SA 3.0,CC-BY-SA 3.0 | GPL 3.0,https://example.org/tiles,o,n';
-  const H = 'c/hero.png,"Cid, Jr.; Bob",OGA-BY 3.0,OGA-BY 3.0 | CC-BY-SA 3.0,https://example.org/hero,o,n';
-  const files = ['CREDITS.csv', 'c/hero.png', 'credits.json', 't/a.png'];
+  const T = 't/a.png,Ann; Bob,CC-BY-SA 3.0,CC-BY-SA 3.0 | GPL 3.0,https://example.org/tiles,o,n,no';
+  const H = 'c/hero.png,"Cid, Jr.; Bob",OGA-BY 3.0,OGA-BY 3.0 | CC-BY-SA 3.0,https://example.org/hero,o,n,no';
+  const C = 'characters/hair/x/walk.png,Ann; Eve,CC-BY-SA 3.0,CC-BY-SA 3.0 | GPL 3.0,https://example.org/hair,o,n,no';
+  const UP = 'filename,notes,authors,licenses,urls\nhair/x/walk.png,n,"Ann,Eve","CC-BY-SA 3.0,GPL 3.0",https://example.org/hair\n';
+  const files = ['CREDITS.csv', 'c/hero.png', 'characters/hair/x/walk.png', 'credits.json', 't/a.png'];
+  const publicFiles = ['f/F.ttf', 'f/OFL.txt', 's/k.png', 's/map.tmj'];
   const mk = (rows, over = {}) => {
     const credits = csvOf(rows);
     const cr = creditsRows(credits);
-    return { files, register: reg, credits, json: cr.ok ? buildJson(cr.rows) : '', ...over };
+    return { files, publicFiles, register: reg, credits, json: cr.ok ? buildJson(cr.rows) : '', upstream: UP, ...over };
   };
-  const base = mk([T, H]);
-  const swap = (from, to) => mk([T, H.replace(from, to)]);
+  const base = mk([T, H, C]);
+  const swap = (from, to) => mk([T, H.replace(from, to), C]);
+  const swapT = (from, to) => mk([T.replace(from, to), H, C]);
+  const swapC = (from, to) => mk([T, H, C.replace(from, to)]);
+  // Справжні дані з підробкою: hair/messy1 першоджерело пропонує лише CC-BY-SA 3.0 | GPL 3.0.
+  const realForged = (() => {
+    const credits = real.credits.split('\n').map((l) => (l.startsWith('characters/hair/messy1/')
+      ? l.replace(',CC-BY-SA 3.0,CC-BY-SA 3.0 | GPL 3.0,', ',OGA-BY 3.0,OGA-BY 3.0 | CC-BY-SA 3.0 | GPL 3.0,') : l)).join('\n');
+    const cr = creditsRows(credits);
+    return { ...real, credits, json: cr.ok ? buildJson(cr.rows) : '' };
+  })();
   const cases = [
     ['позитивний контроль: синтетичний еталон', base, ''],
-    ['позитивний контроль: справжні assets/', real, ''],
+    ['позитивний контроль: справжні assets/ і public/', real, ''],
+    ['справжні дані: підроблено «licences_offered» шару hair/messy1 (OGA-BY замість лише CC-BY-SA)', realForged, 'CREDITS_UPSTREAM_MISMATCH'],
     ['порожня assets/', { ...base, files: ['CREDITS.csv', 'credits.json'] }, 'ASSETS_EMPTY,CREDITS_FILE_MISSING,REGISTER_PATH_UNUSED'],
     ['не-PNG картинка в assets/', { ...base, files: [...files, 't/b.webp'] }, 'ASSET_UNKNOWN_FILE'],
-    ['реєстр не розібрано', { ...base, register: '' }, 'ASSET_NO_REGISTER_ROW,REGISTER_EMPTY'],
-    ['PNG без рядка реєстру (мутація картки)', mk([T, H, 'x/new.png,Dan,CC0,CC0,https://e.org,o,n'], { files: [...files, 'x/new.png'] }), 'ASSET_NO_REGISTER_ROW'],
+    ['реєстр не розібрано', { ...base, register: '' }, 'ASSET_NO_REGISTER_ROW,PUBLIC_NO_REGISTER_ROW,REGISTER_EMPTY'],
+    ['PNG без рядка реєстру (мутація картки)', mk([T, H, C, 'x/new.png,Dan,CC0,CC0,https://e.org,o,n,no'], { files: [...files, 'x/new.png'] }), 'ASSET_NO_REGISTER_ROW'],
     ['.PNG великими теж перевіряється', { ...base, files: [...files, 'x/BIG.PNG'] }, 'ASSET_NO_CREDITS_ROW,ASSET_NO_REGISTER_ROW'],
     ['файл у двох рядках реєстру', { ...base, register: reg.replace('`assets/c/hero.png`', '`assets/c/hero.png` `assets/t/a.png`') }, 'ASSET_REGISTER_AMBIGUOUS'],
     ['рядок реєстру на зниклий файл', { ...base, register: reg.replace('`assets/t/`', '`assets/t/` `assets/gone.png`') }, 'REGISTER_PATH_UNUSED'],
     ['рядок реєстру без посилання', { ...base, register: reg.replace('https://example.org/tiles', 'OGA, сторінка') }, 'REGISTER_NO_SOURCE'],
     ['реєстр не цитує обрану ліцензію', { ...base, register: reg.replace('"OGA-BY 3.0" або ', '') }, 'REGISTER_LICENCE_MISMATCH'],
     ['зламаний заголовок титрів', { ...base, credits: base.credits.replace('licences_offered', 'licenses') }, 'CREDITS_BAD_HEADER'],
-    ['PNG без рядка титрів', mk([T]), 'ASSET_NO_CREDITS_ROW'],
-    ['рядок титрів на неіснуючий файл', mk([T, H, 't/ghost.png,Ann,CC-BY-SA 3.0,CC-BY-SA 3.0,https://example.org/tiles,o,n']), 'CREDITS_FILE_MISSING'],
-    ['два рядки на один файл', mk([T, H, T]), 'CREDITS_DUPLICATE'],
+    ['титри без колонки modified', { ...base, credits: base.credits.replace(',modified\n', '\n') }, 'CREDITS_BAD_HEADER'],
+    ['PNG без рядка титрів', mk([T, C]), 'ASSET_NO_CREDITS_ROW'],
+    ['рядок титрів на неіснуючий файл', mk([T, H, C, 't/ghost.png,Ann,CC-BY-SA 3.0,CC-BY-SA 3.0,https://example.org/tiles,o,n,no']), 'CREDITS_FILE_MISSING'],
+    ['два рядки на один файл', mk([T, H, C, T]), 'CREDITS_DUPLICATE'],
     ['без автора', swap('"Cid, Jr.; Bob"', ' ; '), 'CREDITS_NO_AUTHOR'],
     ['без посилання на джерело', swap('https://example.org/hero', 'example.org/hero'), 'CREDITS_NO_SOURCE'],
     ['обрана ліцензія не з запропонованих', swap(',OGA-BY 3.0,OGA-BY', ',CC0,OGA-BY'), 'LICENCE_NOT_OFFERED,REGISTER_LICENCE_MISMATCH'],
-    ['обрано GPL (не дозволено)', mk([T.replace('CC-BY-SA 3.0,CC-BY-SA 3.0 | GPL 3.0', 'GPL 3.0,GPL 3.0'), H], { register: reg.replace('"GPL 3.0"', 'GPL 3.0') }), 'LICENCE_NOT_ALLOWED'],
+    ['обрано GPL (не дозволено)', mk([T.replace('CC-BY-SA 3.0,CC-BY-SA 3.0 | GPL 3.0', 'GPL 3.0,GPL 3.0'), H, C], { register: reg.replace('"GPL 3.0"', 'GPL 3.0') }), 'LICENCE_NOT_ALLOWED'],
     ['обрано не найм\'якшу', swap(',OGA-BY 3.0,OGA-BY', ',CC-BY-SA 3.0,OGA-BY'), 'LICENCE_NOT_MOST_PERMISSIVE'],
     ['credits.json застарів', { ...base, json: base.json.replace('Ann', 'Anna') }, 'CREDITS_JSON_STALE'],
     ['credits.json відсутній', { ...base, json: null }, 'CREDITS_JSON_STALE'],
+    // 1. звірка шарів персонажів із закріпленою випискою першоджерела
+    ['шар: підроблено запропоновані ліцензії й обрано OGA-BY', swapC('CC-BY-SA 3.0,CC-BY-SA 3.0 | GPL 3.0', 'OGA-BY 3.0,OGA-BY 3.0 | CC-BY-SA 3.0 | GPL 3.0'), 'CREDITS_UPSTREAM_MISMATCH'],
+    ['шар: підмінено автора', swapC('Ann; Eve', 'Ann; Mallory'), 'CREDITS_UPSTREAM_MISMATCH'],
+    ['шар: загублено автора', swapC('Ann; Eve', 'Ann'), 'CREDITS_UPSTREAM_MISMATCH'],
+    ['шар: у виписці немає рядка', { ...base, upstream: 'filename,notes,authors,licenses,urls\nhair/y/walk.png,n,Ann,CC0,https://e.org\n' }, 'CREDITS_UPSTREAM_MISSING'],
+    ['шар: виписки немає взагалі', { ...base, upstream: null }, 'CREDITS_UPSTREAM_MISSING'],
+    ['шар: зламаний заголовок виписки', { ...base, upstream: UP.replace('licenses', 'license') }, 'CREDITS_UPSTREAM_MISSING'],
+    // 2. public/ — те, що їде в білд
+    ['public/: PNG без рядка реєстру', { ...base, publicFiles: [...publicFiles, 's/new.png'] }, 'PUBLIC_NO_REGISTER_ROW'],
+    ['public/: шрифт .woff2 без рядка реєстру', { ...base, publicFiles: [...publicFiles, 'f/G.woff2'] }, 'PUBLIC_NO_REGISTER_ROW'],
+    ['public/: звук .ogg без рядка реєстру', { ...base, publicFiles: [...publicFiles, 'sfx/step.ogg'] }, 'PUBLIC_NO_REGISTER_ROW'],
+    ['public/: жодного медіа', { ...base, publicFiles: ['s/map.tmj'] }, 'PUBLIC_EMPTY,REGISTER_PATH_UNUSED'],
+    ['public/: ліцензія з атрибуцією (CC-BY) без титрів', { ...base, register: reg.replace('"Creative Commons CC0" | ні', '"CC-BY 4.0" | так') }, 'PUBLIC_NEEDS_CREDITS'],
+    ['public/: OFL без тексту ліцензії поруч', { ...base, publicFiles: publicFiles.filter((f) => f !== 'f/OFL.txt') }, 'PUBLIC_NEEDS_CREDITS'],
+    ['public/: OFL, а клітинка «атрибуція» не називає текст', { ...base, register: reg.replace('так — текст поруч: `public/f/OFL.txt`', 'так') }, 'PUBLIC_NEEDS_CREDITS'],
+    // 3. змінені файли
+    ['позитивний контроль: змінений CC-BY-SA тайл з описом лишився CC-BY-SA', swapT(',o,n,no', ',o,n,recoloured grass to palette'), ''],
+    ['modified порожній', swapT(',o,n,no', ',o,n,'), 'CREDITS_MODIFIED_UNDESCRIBED'],
+    ['modified = «yes» без опису', swapT(',o,n,no', ',o,n,yes'), 'CREDITS_MODIFIED_UNDESCRIBED'],
+    ['змінений CC-BY-SA тайл переліцензовано в CC0 (і підроблено запропоновані)', swapT('CC-BY-SA 3.0,CC-BY-SA 3.0 | GPL 3.0,https://example.org/tiles,o,n,no', 'CC0,CC0,https://example.org/tiles,o,n,recoloured grass to palette'), 'CREDITS_SA_RELICENSED,REGISTER_LICENCE_MISMATCH'],
+    ['змінений CC-BY-SA тайл: до запропонованих дописано CC0 — реєстр каже, що SA обов\'язкова', swapT('CC-BY-SA 3.0,CC-BY-SA 3.0 | GPL 3.0,https://example.org/tiles,o,n,no', 'CC0,CC-BY-SA 3.0 | GPL 3.0 | CC0,https://example.org/tiles,o,n,recoloured grass to palette'), 'CREDITS_SA_RELICENSED,REGISTER_LICENCE_MISMATCH'],
   ];
   const codesOf = (inp) => [...new Set(check(inp).map((f) => f.code))].sort().join(',');
   let failed = 0;
@@ -269,7 +391,7 @@ function selfTest() {
   // Склейка псевдонімів і групування — те, що побачить екран титрів.
   const j = JSON.parse(base.json);
   const names = j.authors.map((a) => a.name).join('|');
-  const groupOk = names === 'Ann|Bob|Cid, Jr.' && j.authors[1].files.length === 2;
+  const groupOk = names === 'Ann|Bob|Cid, Jr.|Eve' && j.authors[1].files.length === 2;
   const alias = JSON.parse(buildJson(creditsRows(csvOf(['t/a.png,Eliza Wyatt (ElizaWy),CC0,CC0,https://e.org,o,n', 'c/hero.png,ElizaWy,CC0,CC0,https://e.org,o,n'])).rows));
   const aliasOk = alias.authors.length === 1 && alias.authors[0].files.length === 2;
   for (const [ok, name] of [[groupOk, `автори згруповані й відсортовані (${names})`], [aliasOk, 'псевдонім злито з повним іменем']]) {
