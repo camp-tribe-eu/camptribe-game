@@ -441,13 +441,87 @@ export const CHECKS = [
   {
     id: 'dialogue-flags',
     run(c) { // @check:dialogue-flags
+      // Прапорець «ставиться», лише якщо його сетер може спрацювати. Нерухома точка: спершу ефекти
+      // виборів без when; далі — ефекти умовного вибору, коли його умова здійсненна за вже
+      // відомих прапорців. notFlag, quest і transport вважаються здійсненними (стан квесту й
+      // транспорт стереже інше), окрім notFlag, що суперечить flag у тому самому all.
       // Прапорці ставлять лише ефекти setFlag у діалогах: у quests.json ефектів на прапорці
-      // поки немає. З'являться — додай їх у множину set.
-      const set = new Set(dialogueEffects(c.content).filter(([, e]) => e.setFlag !== undefined).map(([, e]) => e.setFlag));
+      // поки немає. З'являться — додай їх у початкову множину.
+      const set = new Set();
+      const choices = dialogueChoices(c.content);
+      for (let grew = true; grew;) {
+        grew = false;
+        for (const [, ch] of choices) {
+          if (ch.when && !satisfiable(ch.when, set)) continue;
+          for (const e of ch.effects ?? []) if (e.setFlag !== undefined && !set.has(e.setFlag)) { set.add(e.setFlag); grew = true; }
+        }
+      }
       const out = [];
       for (const [where, leaf] of condLeavesAll(c.content)) {
         const f = leaf.flag !== undefined ? leaf.flag : leaf.notFlag;
-        if (f !== undefined && !set.has(f)) out.push(I('DIALOGUE_FLAG_NEVER_SET', where, `умова читає прапорець «${f}», який жоден ефект не ставить`));
+        if (f !== undefined && !set.has(f)) out.push(I('DIALOGUE_FLAG_NEVER_SET', where, `умова читає прапорець «${f}», який жоден здійсненний ефект не ставить`));
+      }
+      for (const [where, ch] of choices) {
+        if (!ch.when) continue;
+        for (const f of contradictions(ch.when)) out.push(I('DIALOGUE_COND_CONTRADICTION', `${where}.when`, `all вимагає водночас flag і notFlag «${f}» — вибір не покажеться ніколи`));
+      }
+      return out;
+    },
+  },
+  {
+    id: 'dialogue-npc-unique',
+    run(c) { // @check:dialogue-npc-unique
+      // Один діалог на NPC: рушій запускає діалог за npcId, і двом кандидатам немає правила вибору.
+      const out = [];
+      const seen = new Map();
+      for (const d of c.content.dialogues ?? []) {
+        if (seen.has(d.npcId)) out.push(I('DIALOGUE_NPC_DUPLICATE', `${d.id}.npcId`, `NPC «${d.npcId}» уже має діалог «${seen.get(d.npcId)}»`));
+        else seen.set(d.npcId, d.id);
+      }
+      return out;
+    },
+  },
+  {
+    id: 'dialogue-objective-kind',
+    run(c) { // @check:dialogue-objective-kind
+      // Розмова закриває лише ціль «поговорити» з тим самим NPC. visit/collect/deliver закриває
+      // сам світ (локація, предмет), а розмова з іншим NPC — обхід цілі.
+      const out = [];
+      const { by } = c.ix;
+      for (const [where, ch, d] of dialogueChoices(c.content)) {
+        for (const e of ch.effects ?? []) {
+          const co = e.completeObjective;
+          const o = co && by.quests.get(co.quest)?.objectives.find((x) => x.id === co.objective);
+          if (!o) continue; // відсутній квест чи ціль уже назвав DIALOGUE_REF_MISSING
+          if (o.kind !== 'talk') out.push(I('DIALOGUE_OBJECTIVE_KIND', `${where}.effects`, `ціль «${co.quest}/${co.objective}» має kind «${o.kind}», а розмова закриває лише talk`));
+          // Неіснуючого NPC цілі чи діалогу вже назвали REF_MISSING / DIALOGUE_REF_MISSING — лише першопричина.
+          else if (o.target !== d.npcId && by.npcs.has(o.target) && by.npcs.has(d.npcId)) out.push(I('DIALOGUE_OBJECTIVE_KIND', `${where}.effects`, `ціль «${co.quest}/${co.objective}» — розмова з «${o.target}», а цей діалог належить «${d.npcId}»`));
+        }
+      }
+      return out;
+    },
+  },
+  {
+    id: 'dialogue-quest-gate',
+    run(c) { // @check:dialogue-quest-gate
+      // startQuest не сміє обійти requires.quests квесту-цілі. Кожну вимогу r має гарантувати або
+      // сам вибір (when містить {quest:r, status:'completed'} як кон'юнкт), або доступність NPC:
+      // на КОЖНОМУ етапі, де NPC доступний (npcAvail), завершення r гарантоване (guaranteed).
+      const out = [];
+      const { by, reachable, guaranteed, npcAvail } = c.ix;
+      for (const [where, ch, d] of dialogueChoices(c.content)) {
+        const npc = by.npcs.get(d.npcId);
+        if (!npc) continue; // відсутнього NPC уже назвав DIALOGUE_REF_MISSING
+        const stages = [...reachable].filter((q) => npcAvail(npc, q));
+        for (const e of ch.effects ?? []) {
+          const target = e.startQuest !== undefined ? by.quests.get(e.startQuest) : undefined;
+          if (!target) continue;
+          for (const r of target.requires?.quests ?? []) {
+            if (ch.when && conjuncts(ch.when).some((x) => x.quest === r && x.status === 'completed')) continue;
+            const open = stages.filter((q) => !guaranteed.get(q).has(r));
+            if (open.length) out.push(I('DIALOGUE_QUEST_GATE', `${where}.effects`, `startQuest «${target.id}» вимагає завершеного «${r}», а NPC «${d.npcId}» доступний і там, де воно не гарантоване (${open.sort().join(', ')}); додай when { quest: «${r}», status: completed } або відкривай NPC пізніше`));
+          }
+        }
       }
       return out;
     },
@@ -489,6 +563,46 @@ function condLeaves(cond, out = []) {
   if (cond.all) cond.all.forEach((x) => condLeaves(x, out));
   else if (cond.any) cond.any.forEach((x) => condLeaves(x, out));
   else out.push(cond);
+  return out;
+}
+
+// Кон'юнкти умови: вкладені all розгортаються, решта (лист чи any) — як є.
+function conjuncts(cond) {
+  return cond.all ? cond.all.flatMap(conjuncts) : [cond];
+}
+
+// Прапорці, які all вимагає водночас як flag і як notFlag. Шукає в кожному all (і в any всередині).
+function contradictions(cond, out = new Set()) {
+  if (cond.any) { cond.any.forEach((x) => contradictions(x, out)); return out; }
+  if (!cond.all) return out;
+  const cj = conjuncts(cond);
+  const yes = new Set(cj.filter((x) => x.flag !== undefined).map((x) => x.flag));
+  for (const x of cj) {
+    if (x.notFlag !== undefined && yes.has(x.notFlag)) out.add(x.notFlag);
+    if (x.any) contradictions(x, out);
+  }
+  return out;
+}
+
+// Чи може умова справдитись, якщо поставлені прапорці known (а решта — ні або пізніше).
+function satisfiable(cond, known) {
+  if (cond.any) return cond.any.some((x) => satisfiable(x, known));
+  if (cond.all) {
+    const cj = conjuncts(cond);
+    const yes = new Set(cj.filter((x) => x.flag !== undefined).map((x) => x.flag));
+    if (cj.some((x) => x.notFlag !== undefined && yes.has(x.notFlag))) return false;
+    return cj.every((x) => satisfiable(x, known));
+  }
+  if (cond.flag !== undefined) return known.has(cond.flag);
+  return true; // notFlag, quest, transport
+}
+
+// [where, choice, dialogue] для кожного вибору кожного діалогу.
+function dialogueChoices(content) {
+  const out = [];
+  for (const d of content.dialogues ?? []) for (const n of d.nodes) {
+    (n.choices ?? []).forEach((ch, i) => out.push([`${d.id}/${n.id}.choices[${i}]`, ch, d]));
+  }
   return out;
 }
 
