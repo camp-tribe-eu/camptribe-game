@@ -1,0 +1,6 @@
+[
+  {
+    "id": "ev.neighbours-firewood", "titleKey": "ev.neighbours-firewood", "locationId": "loc.camp.lake", "repeatable": false,
+    "reward": { "grantId": "rw.ev-neighbours-firewood", "items": [{ "item": "item.firewood", "qty": 2 }] }
+  }
+]

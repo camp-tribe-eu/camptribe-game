@@ -1,0 +1,6 @@
+[
+  { "id": "item.tent", "nameKey": "item.tent" },
+  { "id": "item.sleeping-bag", "nameKey": "item.sleeping-bag" },
+  { "id": "item.lantern", "nameKey": "item.lantern" },
+  { "id": "item.firewood", "nameKey": "item.firewood" }
+]

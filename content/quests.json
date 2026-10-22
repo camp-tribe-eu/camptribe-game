@@ -1,0 +1,59 @@
+[
+  {
+    "id": "ST-001", "titleKey": "q.st-001", "optional": false, "locationId": "loc.home",
+    "objectives": [
+      { "id": "free-night", "textKey": "q.st-001.o1", "kind": "visit", "target": "loc.home", "required": true }
+    ],
+    "transitions": [{ "on": "complete", "to": "ST-002" }]
+  },
+  {
+    "id": "ST-002", "titleKey": "q.st-002", "optional": false, "locationId": "loc.home",
+    "objectives": [
+      { "id": "pick-campsite", "textKey": "q.st-002.o1", "kind": "visit", "target": "loc.home", "required": true }
+    ],
+    "transitions": [{ "on": "complete", "to": "ST-003" }]
+  },
+  {
+    "id": "ST-003", "titleKey": "q.st-003", "optional": false, "locationId": "loc.shop",
+    "objectives": [
+      { "id": "visit-shop", "textKey": "q.st-003.o1", "kind": "visit", "target": "loc.shop", "required": true },
+      { "id": "get-tent", "textKey": "q.st-003.o2", "kind": "collect", "target": "item.tent", "required": true },
+      { "id": "get-sleeping-bag", "textKey": "q.st-003.o3", "kind": "collect", "target": "item.sleeping-bag", "required": true },
+      { "id": "get-lantern", "textKey": "q.st-003.o4", "kind": "collect", "target": "item.lantern", "required": false }
+    ],
+    "transitions": [{ "on": "complete", "to": "ST-004" }]
+  },
+  {
+    "id": "ST-004", "titleKey": "q.st-004", "optional": false, "locationId": "loc.road",
+    "requires": { "quests": ["ST-003"], "items": ["item.tent", "item.sleeping-bag"] },
+    "objectives": [
+      { "id": "road-to-lake", "textKey": "q.st-004.o1", "kind": "visit", "target": "loc.road", "required": true }
+    ],
+    "transitions": [
+      { "on": "complete", "to": "ST-005" },
+      { "on": "complete", "to": "q.elise-bike-area", "choiceKey": "q.elise-bike-area.choice", "when": { "transports": ["transport.bike"] } }
+    ]
+  },
+  {
+    "id": "q.elise-bike-area", "titleKey": "q.elise-bike-area", "optional": true, "giverId": "npc.elise", "locationId": "loc.camp.lake",
+    "when": { "transports": ["transport.bike"] },
+    "objectives": [
+      { "id": "talk-elise", "textKey": "q.elise-bike-area.o1", "kind": "talk", "target": "npc.elise", "required": true }
+    ],
+    "transitions": [
+      { "on": "complete", "to": "ST-005" },
+      { "on": "decline", "to": "ST-005", "choiceKey": "q.elise-bike-area.decline" }
+    ],
+    "reward": { "grantId": "rw.q-elise-bike-area", "money": 5 }
+  },
+  {
+    "id": "ST-005", "titleKey": "q.st-005", "optional": false, "end": true, "giverId": "npc.elise", "locationId": "loc.camp.lake",
+    "objectives": [
+      { "id": "meet-elise", "textKey": "q.st-005.o1", "kind": "talk", "target": "npc.elise", "required": true },
+      { "id": "pitch-tent", "textKey": "q.st-005.o2", "kind": "visit", "target": "loc.camp.lake", "required": true },
+      { "id": "gather-firewood", "textKey": "q.st-005.o3", "kind": "collect", "target": "item.firewood", "required": true }
+    ],
+    "transitions": [],
+    "reward": { "grantId": "rw.st-005", "money": 10 }
+  }
+]
