@@ -85,8 +85,8 @@ function mark(st: StoryDefs, d: StoryDraft, p: PlayerState, kind: 'visit' | 'tal
   }
 }
 
-function giveReward(d: StoryDraft, commandId: string, questId: string, r: RewardDef): RejectCode | null {
-  if (d.grants.includes(r.grantId)) return null; // нагорода — рівно раз за grantId (TD-004); квест усе одно завершено
+function giveReward(d: StoryDraft, commandId: string, questId: string, r: RewardDef, guardGrant: boolean): RejectCode | null {
+  if (guardGrant && d.grants.includes(r.grantId)) return null; // нагорода — рівно раз за grantId (TD-004); квест усе одно завершено
   if (!isCents(r.moneyCents)) return 'INVALID_AMOUNT';
   d.moneyCents += r.moneyCents;
   if (!isCents(d.moneyCents)) return 'INVALID_AMOUNT';
@@ -102,7 +102,7 @@ function giveReward(d: StoryDraft, commandId: string, questId: string, r: Reward
 }
 
 /** Завершити або відмовитись: вибрати перехід, перевірити `requires` цілі, відкрити її. */
-function leave(st: StoryDefs, d: StoryDraft, p: PlayerState, cmd: { commandId: string; questId: string; to?: string }, on: 'complete' | 'decline'): RejectCode | null {
+function leave(st: StoryDefs, d: StoryDraft, p: PlayerState, cmd: { commandId: string; questId: string; to?: string }, on: 'complete' | 'decline', guardGrant: boolean): RejectCode | null {
   const q = own(st.quests, cmd.questId);
   if (!q || !matches(q.when, p)) return 'UNKNOWN_TARGET';
   if (own(d.quests, cmd.questId)?.status !== 'active') return 'QUEST_NOT_ACTIVE';
@@ -125,7 +125,7 @@ function leave(st: StoryDefs, d: StoryDraft, p: PlayerState, cmd: { commandId: s
   const prev = own(d.quests, cmd.questId) as QuestProgress;
   d.quests = { ...d.quests, [cmd.questId]: { ...prev, status: on === 'complete' ? 'completed' : 'declined' } };
   if (on === 'complete' && q.reward) {
-    const bad = giveReward(d, cmd.commandId, cmd.questId, q.reward);
+    const bad = giveReward(d, cmd.commandId, cmd.questId, q.reward, guardGrant);
     if (bad) return bad;
   }
   // Завершення квесту-кінця закінчує розділ завжди — і коли далі є перехід (епілог), як у валідатора,
@@ -172,7 +172,8 @@ function runEffect(st: StoryDefs, d: StoryDraft, p: PlayerState, e: EffectDef): 
   return null;
 }
 
-export function applyStory(cmd: StoryCommand, d: StoryDraft, st: StoryDefs | undefined, isId: (s: unknown) => boolean): RejectCode | null {
+/** guardGrant — запобіжник «нагорода рівно раз» (Safeguards.grantId); false — лише в тестах-мутаціях. */
+export function applyStory(cmd: StoryCommand, d: StoryDraft, st: StoryDefs | undefined, isId: (s: unknown) => boolean, guardGrant = true): RejectCode | null {
   if (!st) return 'UNKNOWN_TARGET';
   if (cmd.type === 'CreateCharacter') {
     if (d.player) return 'CHARACTER_EXISTS';
@@ -248,6 +249,6 @@ export function applyStory(cmd: StoryCommand, d: StoryDraft, st: StoryDefs | und
     case 'DeclineQuest':
       if (!isId(cmd.questId) && !/^ST-\d{3}$/.test(cmd.questId)) return 'INVALID_COMMAND';
       if (cmd.to !== undefined && !isId(cmd.to) && !/^ST-\d{3}$/.test(cmd.to)) return 'INVALID_COMMAND';
-      return leave(st, d, p, cmd, cmd.type === 'CompleteQuest' ? 'complete' : 'decline');
+      return leave(st, d, p, cmd, cmd.type === 'CompleteQuest' ? 'complete' : 'decline', guardGrant);
   }
 }

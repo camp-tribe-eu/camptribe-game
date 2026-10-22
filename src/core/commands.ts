@@ -139,7 +139,7 @@ function apply(cmd: Command, d: Draft, defs: CoreDefs, guard: Safeguards): Rejec
     case 'DeclineQuest':
     case 'Choose':
     case 'Continue':
-      return applyStory(cmd, d, defs.story, isContentId);
+      return applyStory(cmd, d, defs.story, isContentId, guard.grantId);
     default:
       return 'INVALID_COMMAND';
   }
