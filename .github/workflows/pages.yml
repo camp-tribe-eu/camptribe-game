@@ -1,0 +1,61 @@
+name: pages
+# GAME-15 (TD-008): кожне злиття в main публікує збірку на GitHub Pages; після публікації окремий крок
+# доводить, що сторінка відповідає 200 і несе повний SHA саме цього коміту (рядок версії в меню).
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      - run: npm run build
+      # Картка: якщо Pages ще не ввімкнено — спроба ввімкнути через API. Відмова (недостатньо прав
+      # GITHUB_TOKEN) лишить у журналі код помилки; тоді вмикає власник за мануалом.
+      - uses: actions/configure-pages@v5
+        with:
+          enablement: true
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    outputs:
+      page_url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
+
+  verify:
+    needs: deploy
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - run: node scripts/pages/verify.mjs --url "${{ needs.deploy.outputs.page_url }}" --sha "${{ github.sha }}"
