@@ -35,6 +35,9 @@ const mutations = [
   { name: 'перебирається лише перша комбінація', file: COMBOS_FILE, from: 'for (const k of all) {', to: 'for (const k of all.slice(0, 1)) {' },
   { name: 'комбінації без тварини пропущено', file: COMBOS_FILE, from: '[NO_ANIMAL, ...ids(\'animals\')]', to: 'ids(\'animals\')' },
   { name: 'недосяжні в комбінації квести не відсікаються', file: COMBOS_FILE, from: '(!keep || keep.has(q.id))', to: 'true' },
+  { name: 'обмеження транспорту профілю ігнорується', file: COMBOS_FILE, from: "if (!allows('profiles', profile, transport)) continue;", to: '' },
+  { name: 'обмеження транспорту тварини ігнорується', file: COMBOS_FILE, from: "if (allows('animals', animal, transport)) out.push", to: 'out.push' },
+  { name: 'посилання transports не перевіряються', file: CHECKS_FILE, from: "ref('transports', id, `${e.id}.transports`)", to: '0' },
 ];
 
 function selfTestIn(dir) {

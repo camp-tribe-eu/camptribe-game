@@ -39,6 +39,7 @@ export const CODES = {
   COMBO_NO_START:             { check: 'combos', spec: '§3 кожен вузол досяжний — у кожній комбінації стану гравця' },
   COMBO_TARGETED_UNREACHABLE: { check: 'combos', spec: '§3 вузол, адресований комбінації, у ній досяжний' },
   COMBO_DEAD_CONTENT:         { check: 'combos', spec: '§3 кожен вузол досяжний хоча б в одній комбінації' },
+  COMBO_OPTION_UNUSABLE:      { check: 'combo-options', spec: '§1 кожен профіль, транспорт і тварину можна обрати хоча б в одній комбінації' },
 
   // перевірка, що впала сама, — теж червоне, а не зелене
   INTERNAL_ERROR:       { check: 'runner', spec: 'перевірка, що впала, не сміє виглядати як пройдена' },

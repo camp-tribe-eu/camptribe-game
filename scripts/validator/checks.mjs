@@ -4,7 +4,7 @@
 
 import { checkSchema } from './schema.mjs';
 import { FACT_KINDS } from './codes.mjs';
-import { checkCombos, NO_ANIMAL } from './combos.mjs';
+import { checkCombos, checkUnusable, NO_ANIMAL } from './combos.mjs';
 
 const I = (code, where, msg) => ({ code, where, msg });
 
@@ -150,6 +150,9 @@ export const CHECKS = [
         for (const [dim, t] of Object.entries(WHEN_TYPE)) {
           for (const id of w[dim] ?? []) if (!(dim === 'animals' && id === NO_ANIMAL)) ref(t, id, `${where}.when.${dim}`);
         }
+      }
+      for (const t of ['profiles', 'animals']) {
+        for (const e of c.content[t] ?? []) for (const id of e.transports ?? []) ref('transports', id, `${e.id}.transports`);
       }
       for (const n of by.npcs.values()) {
         ref('locations', n.locationId, `${n.id}.locationId`);
@@ -352,6 +355,12 @@ export const CHECKS = [
       return [...c.ix.by.quests.values()]
         .filter((q) => !q.end && q.transitions.length === 0)
         .map((q) => I('BRANCH_NO_NEXT', q.id, 'не кінець і не має наступного етапу'));
+    },
+  },
+  {
+    id: 'combo-options',
+    run(c) { // @check:combo-options
+      return checkUnusable(c.content);
     },
   },
   {

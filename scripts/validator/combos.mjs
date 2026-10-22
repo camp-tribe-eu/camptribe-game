@@ -5,6 +5,8 @@
 // Модель (каркас, до підключення реального переліку профілів із bridge/inbox/):
 //   • вимір без жодного запису в контенті не перебирається (одне значення null);
 //   • тварина — щонайбільше одна: animal.none або одна з animals.json;
+//   • профіль і тварина з полем transports дозволяють лише ці транспорти; несумісна комбінація
+//     не перебирається, бо гравець не може її обрати;
 //   • `when` на квесті/цілі/переході прибирає їх із комбінації, що не збігається;
 //     на NPC/локації — робить їх недоступними (unlockedBy, який ніколи не настає),
 //     щоб ціль на них червоніла, а не зникала мовчки.
@@ -18,10 +20,29 @@ const I = (code, where, msg) => ({ code, where, msg });
 export function enumerateCombos(content) {
   const ids = (k) => (content[k] ?? []).map((e) => e.id);
   const orNull = (xs) => (xs.length ? xs : [null]);
+  const allows = (k, id, transport) => {
+    const e = (content[k] ?? []).find((x) => x.id === id);
+    return !e?.transports || transport === null || e.transports.includes(transport);
+  };
   const out = [];
   for (const profile of orNull(ids('profiles'))) {
     for (const transport of orNull(ids('transports'))) {
-      for (const animal of [NO_ANIMAL, ...ids('animals')]) out.push({ profile, transport, animal });
+      if (!allows('profiles', profile, transport)) continue;
+      for (const animal of [NO_ANIMAL, ...ids('animals')]) {
+        if (allows('animals', animal, transport)) out.push({ profile, transport, animal });
+      }
+    }
+  }
+  return out;
+}
+
+// Опція, яку гравець бачить у створенні персонажа, але не може обрати в жодній комбінації.
+export function checkUnusable(content) {
+  const all = enumerateCombos(content);
+  const out = [];
+  for (const [k, dim] of [['profiles', 'profile'], ['transports', 'transport'], ['animals', 'animal']]) {
+    for (const e of content[k] ?? []) {
+      if (!all.some((c) => c[dim] === e.id)) out.push(I('COMBO_OPTION_UNUSABLE', e.id, `не входить у жодну дозволену комбінацію (обмеження transports)`));
     }
   }
   return out;

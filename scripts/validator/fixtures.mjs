@@ -230,6 +230,33 @@ export const FIXTURES = [
   { base: 'combo', name: '[комб.] квест для собаки, а вхід у нього лише без тварини', expect: ['COMBO_DEAD_CONTENT', 'COMBO_TARGETED_UNREACHABLE'], patch(c) {
     dogEntry(c).when = { animals: ['animal.none'] };
   } },
+
+  // ---- сумісність: transports у профілів і тварин ----
+  // Вхід у прогулянку з собакою лише на авто: для велосипеда з собакою квест адресований, але недосяжний.
+  { base: 'combo', name: '[сумісн.] контроль: без обмеження велосипед із собакою — тупик', expect: ['COMBO_TARGETED_UNREACHABLE'], patch(c) {
+    dogEntry(c).when = { animals: [DOG], transports: [T_CAR] };
+  } },
+  { base: 'combo', name: '[сумісн.] собаку возять лише авто — та сама гілка не червоніє', expect: [], patch(c) {
+    dogEntry(c).when = { animals: [DOG], transports: [T_CAR] };
+    c.animals[0].transports = [T_CAR];
+  } },
+  { base: 'combo', name: '[сумісн.] контроль: вхід до собаки лише профілю A, профіль B із собакою — тупик', expect: ['COMBO_TARGETED_UNREACHABLE'], patch(c) {
+    dogEntry(c).when = { animals: [DOG], profiles: [P_A] };
+  } },
+  { base: 'combo', name: '[сумісн.] профіль B їздить лише велосипедом, собака лише авто — та сама гілка не червоніє', expect: [], patch(c) {
+    dogEntry(c).when = { animals: [DOG], profiles: [P_A] };
+    c.animals[0].transports = [T_CAR];
+    c.profiles[1].transports = [T_BIKE];
+  } },
+  { base: 'combo', name: '[сумісн.] транспорт тварини не існує', expect: ['REF_MISSING', 'COMBO_OPTION_UNUSABLE'], patch(c) { c.animals[0].transports = ['transport.ghost']; } },
+  { base: 'combo', name: '[сумісн.] порожній список транспортів профілю', expect: ['SCHEMA_INVALID'], patch(c) { c.profiles[0].transports = []; } },
+  { base: 'combo', name: '[сумісн.] велосипед не дозволено жодному профілю', expect: ['COMBO_OPTION_UNUSABLE'], patch(c) {
+    c.profiles.forEach((p) => { p.transports = [T_CAR]; });
+  } },
+  { base: 'combo', name: '[сумісн.] собаку не везе жоден транспорт, доступний профілям', expect: ['COMBO_OPTION_UNUSABLE'], patch(c) {
+    c.profiles.forEach((p) => { p.transports = [T_BIKE]; });
+    c.animals[0].transports = [T_CAR];
+  } },
 ];
 
 // Файлові приклади для завантажувача: files → вміст теки content/ (null — теки немає).
