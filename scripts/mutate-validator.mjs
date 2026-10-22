@@ -29,7 +29,7 @@ const mutations = [
   { name: 'схемні помилки не зупиняють змістові перевірки', file: CHECKS_FILE, from: 'if (issues.length) return issues;', to: '' },
   { name: 'NOT_RUN видається як OK', file: 'validator/load.mjs', from: "return { status: 'NOT_RUN'", to: "return { status: 'OK'" },
   { name: 'порожній контент вважається нормою', file: 'validator/load.mjs', from: '|| content.quests.length === 0', to: '' },
-  { name: 'комбінації запускаються й на брудному контенті', file: CHECKS_FILE, from: 'if (issues.length === 0) issues.push(...runOne(combos));', to: 'issues.push(...runOne(combos));' },
+  { name: 'комбінації запускаються й на брудному контенті', file: CHECKS_FILE, from: 'for (const id of LATE) if (issues.length === 0) issues.push', to: 'for (const id of LATE) issues.push' },
   { name: 'when на переходах ігнорується', file: COMBOS_FILE, from: 'matches(t.when, k) && ids.has(t.to)', to: 'ids.has(t.to)' },
   { name: 'NPC і локації поза комбінацією доступні', file: COMBOS_FILE, from: ': { ...strip(e), unlockedBy: NEVER }', to: ': strip(e)' },
   { name: 'перебирається лише перша комбінація', file: COMBOS_FILE, from: 'for (const k of all) {', to: 'for (const k of all.slice(0, 1)) {' },
@@ -37,6 +37,9 @@ const mutations = [
   { name: 'недосяжні в комбінації квести не відсікаються', file: COMBOS_FILE, from: '(!keep || keep.has(q.id))', to: 'true' },
   { name: 'обмеження транспорту профілю ігнорується', file: COMBOS_FILE, from: "if (!allows('profiles', profile, transport)) continue;", to: '' },
   { name: 'обмеження транспорту тварини ігнорується', file: COMBOS_FILE, from: "if (allows('animals', animal, transport)) out.push", to: 'out.push' },
+  { name: 'when без жодної дозволеної комбінації пропускається', file: COMBOS_FILE, from: "if (!all.some((k) => matches(w, k) && matches(parent, k))) out.push", to: 'if (false) out.push' },
+  { name: 'умова квесту не успадковується ціллю й переходом', file: COMBOS_FILE, from: '&& matches(parent, k)', to: '' },
+  { name: 'combo-options біжить і на брудному контенті', file: CHECKS_FILE, from: "const LATE = ['combo-options', 'combos'];", to: "const LATE = ['combos'];" },
   { name: 'посилання transports не перевіряються', file: CHECKS_FILE, from: "ref('transports', id, `${e.id}.transports`)", to: '0' },
 ];
 

@@ -248,14 +248,25 @@ export const FIXTURES = [
     c.animals[0].transports = [T_CAR];
     c.profiles[1].transports = [T_BIKE];
   } },
-  { base: 'combo', name: '[сумісн.] транспорт тварини не існує', expect: ['REF_MISSING', 'COMBO_OPTION_UNUSABLE'], patch(c) { c.animals[0].transports = ['transport.ghost']; } },
+  { base: 'combo', name: '[сумісн.] транспорт тварини не існує — лише першопричина, без дубля', expect: ['REF_MISSING'], patch(c) { c.animals[0].transports = ['transport.ghost']; } },
   { base: 'combo', name: '[сумісн.] порожній список транспортів профілю', expect: ['SCHEMA_INVALID'], patch(c) { c.profiles[0].transports = []; } },
   { base: 'combo', name: '[сумісн.] велосипед не дозволено жодному профілю', expect: ['COMBO_OPTION_UNUSABLE'], patch(c) {
     c.profiles.forEach((p) => { p.transports = [T_CAR]; });
   } },
-  { base: 'combo', name: '[сумісн.] собаку не везе жоден транспорт, доступний профілям', expect: ['COMBO_OPTION_UNUSABLE'], patch(c) {
-    c.profiles.forEach((p) => { p.transports = [T_BIKE]; });
+  { base: 'combo', name: '[сумісн.] контроль: перехід лише для собаки на велосипеді, без обмеження — коректний', expect: [], patch(c) {
+    q(c, 'ST-002').transitions.push({ on: 'complete', to: 'q.dog-walk', choiceKey: 'q.dog-walk', when: { animals: [DOG], transports: [T_BIKE] } });
+  } },
+  { base: 'combo', name: '[сумісн.] перехід лише для собаки на велосипеді, а собаку возять лише авто', expect: ['WHEN_UNSATISFIABLE'], patch(c) {
+    q(c, 'ST-002').transitions.push({ on: 'complete', to: 'q.dog-walk', choiceKey: 'q.dog-walk', when: { animals: [DOG], transports: [T_BIKE] } });
     c.animals[0].transports = [T_CAR];
+  } },
+  { base: 'combo', name: '[сумісн.] єдина ціль квесту для собаки — лише на велосипеді, а собаку возять лише авто', expect: ['WHEN_UNSATISFIABLE'], patch(c) {
+    q(c, 'q.dog-walk').objectives[0].when = { transports: [T_BIKE] };
+    c.animals[0].transports = [T_CAR];
+  } },
+  { base: 'combo', name: '[сумісн.] NPC лише для профілю, що не має його транспорту', expect: ['WHEN_UNSATISFIABLE'], patch(c) {
+    c.profiles[0].transports = [T_CAR];
+    c.npcs[1].when = { profiles: [P_A], transports: [T_BIKE] };
   } },
 ];
 

@@ -22,7 +22,7 @@ export function enumerateCombos(content) {
   const orNull = (xs) => (xs.length ? xs : [null]);
   const allows = (k, id, transport) => {
     const e = (content[k] ?? []).find((x) => x.id === id);
-    return !e?.transports || transport === null || e.transports.includes(transport);
+    return !e?.transports || e.transports.includes(transport);
   };
   const out = [];
   for (const profile of orNull(ids('profiles'))) {
@@ -36,14 +36,18 @@ export function enumerateCombos(content) {
   return out;
 }
 
-// Опція, яку гравець бачить у створенні персонажа, але не може обрати в жодній комбінації.
-export function checkUnusable(content) {
+// Лише на чистому контенті (див. validate()). Перевіряється транспорт, а не профіль чи тварина:
+// профіль завжди має хоч одну комбінацію (його список непорожній і веде на існуючі транспорти,
+// а «без тварини» дозволено завжди), а тварина недоступна рівно тоді, коли недоступні всі її
+// транспорти. Перевірка цих вимірів не могла б почервоніти незалежно — це мертвий код (закон 5).
+export function checkOptions(content, whens) {
   const all = enumerateCombos(content);
   const out = [];
-  for (const [k, dim] of [['profiles', 'profile'], ['transports', 'transport'], ['animals', 'animal']]) {
-    for (const e of content[k] ?? []) {
-      if (!all.some((c) => c[dim] === e.id)) out.push(I('COMBO_OPTION_UNUSABLE', e.id, `не входить у жодну дозволену комбінацію (обмеження transports)`));
-    }
+  for (const t of content.transports ?? []) {
+    if (!all.some((k) => k.transport === t.id)) out.push(I('COMBO_OPTION_UNUSABLE', t.id, 'жоден профіль не може ним їхати — і тварини, що їздять лише ним, теж недоступні'));
+  }
+  for (const [where, w, parent] of whens) {
+    if (!all.some((k) => matches(w, k) && matches(parent, k))) out.push(I('WHEN_UNSATISFIABLE', `${where}.when`, `умові не відповідає жодна з ${all.length} дозволених комбінацій`));
   }
   return out;
 }
