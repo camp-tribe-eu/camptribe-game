@@ -53,6 +53,16 @@ export const isContentId = (s: unknown): s is string => typeof s === 'string' &&
 const isCommandId = (s: unknown): s is string => typeof s === 'string' && COMMAND_ID.test(s) && !RESERVED.has(s);
 const own = <T>(o: Readonly<Record<string, T>>, k: string): T | undefined => (Object.hasOwn(o, k) ? o[k] : undefined);
 
+/**
+ * Наступний вільний commandId для `seq`: якщо в processed уже є `c<seq>` (сейв із розбіжністю),
+ * пропускаємо вперед — інакше місток назавжди отримував би повтор (рецензія PR #13).
+ */
+export function nextCommandId(state: GameState): string {
+  let n = state.seq;
+  while (Object.hasOwn(state.processed, `c${n}`)) n++;
+  return `c${n}`;
+}
+
 /** Відбиток команди: той самий commandId з іншим вмістом — помилка UI, а не повтор. */
 function fingerprint(cmd: Command): string {
   const s = JSON.stringify(cmd);
@@ -111,7 +121,7 @@ function apply(cmd: Command, d: Draft, defs: CoreDefs, guard: Safeguards): Rejec
       d.grants.sort();
       d.events.push({
         type: 'RewardGranted', commandId: cmd.commandId, targetId: cmd.targetId,
-        grantId: def.grantId, moneyCents: def.moneyCents, items: def.items ?? [],
+        grantId: def.grantId, moneyCents: def.moneyCents, items: (def.items ?? []).map((i) => ({ ...i })),
       });
       return null;
     }

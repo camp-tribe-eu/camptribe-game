@@ -1,8 +1,8 @@
 // Місток сцена/UI → ядро (TD-001): ні сцена, ні UI не змінюють стан напряму — лише наміри
 // через команди і вхід симуляції (кадр, пауза). commandId видає місток із `seq` стану ядра:
 // після завантаження сейву id не повторюється (рецензія TL PR #13).
-import type { Command } from '../../core/commands';
-import type { CoreDefs } from '../../core/defs';
+import { nextCommandId, type Command } from '../../core/commands';
+import { checkDefs, freezeDefs, type CoreDefs } from '../../core/defs';
 import { newSim, step, type SimState } from '../../core/sim';
 
 /** Команда без commandId — його видає місток. */
@@ -22,7 +22,10 @@ export interface Bridge {
   load(sim: SimState): void;
 }
 
-export function createBridge(seed: number, defs: CoreDefs): Bridge {
+export function createBridge(seed: number, catalog: CoreDefs): Bridge {
+  const problems = checkDefs(catalog);
+  if (problems.length) throw new Error(`catalog is invalid: ${JSON.stringify(problems)}`);
+  const defs = freezeDefs(catalog);
   let state = newSim(seed, 5_000);
   let sent = 0;
   return {
@@ -30,7 +33,7 @@ export function createBridge(seed: number, defs: CoreDefs): Bridge {
     get state() { return state; },
     send(intent) {
       sent++;
-      const command = { ...intent, commandId: `c${state.game.seq}` } as Command;
+      const command = { ...intent, commandId: nextCommandId(state.game) } as Command;
       state = step(state, { kind: 'command', command }, { defs });
     },
     frame(realMs) {

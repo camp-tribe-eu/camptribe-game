@@ -81,12 +81,12 @@ const effectMatchesModel = fc.property(reachableState, command, (s0, cmd) => {
     case 'BuyItem': {
       const price = DEFS.items[cmd.itemId]?.buyCents ?? NaN;
       return r.state.moneyCents === s0.moneyCents - price && qty(r.state, cmd.itemId) === qty(s0, cmd.itemId) + 1
-        && r.events.length === 1 && r.events[0]?.type === 'ItemPurchased';
+        && JSON.stringify(r.events) === JSON.stringify([{ type: 'ItemPurchased', commandId: cmd.commandId, itemId: cmd.itemId, priceCents: price }]);
     }
     case 'SellItem': {
       const price = DEFS.items[cmd.itemId]?.sellCents ?? NaN;
       return r.state.moneyCents === s0.moneyCents + price && qty(r.state, cmd.itemId) === qty(s0, cmd.itemId) - 1
-        && r.events.length === 1 && r.events[0]?.type === 'ItemSold';
+        && JSON.stringify(r.events) === JSON.stringify([{ type: 'ItemSold', commandId: cmd.commandId, itemId: cmd.itemId, priceCents: price }]);
     }
     case 'Interact': {
       const def = DEFS.interactions[cmd.targetId];
@@ -94,7 +94,10 @@ const effectMatchesModel = fc.property(reachableState, command, (s0, cmd) => {
       return r.state.moneyCents === s0.moneyCents + def.moneyCents
         && (def.items ?? []).every(({ itemId: id, qty: n }) => qty(r.state, id) === qty(s0, id) + n)
         && r.state.grants.includes(def.grantId)
-        && r.events.length === 1 && r.events[0]?.type === 'RewardGranted';
+        && JSON.stringify(r.events) === JSON.stringify([{
+          type: 'RewardGranted', commandId: cmd.commandId, targetId: cmd.targetId,
+          grantId: def.grantId, moneyCents: def.moneyCents, items: def.items ?? [],
+        }]);
     }
   }
 });
@@ -205,6 +208,37 @@ describe('коди відмов: кожен код із реєстру має т
     expect(dispatch(rich, { type: 'SellItem', commandId: 'n2', itemId: 'item.neg' }, neg)).toMatchObject({ code: 'INVALID_AMOUNT' });
     expect(dispatch(rich, { type: 'Interact', commandId: 'n3', targetId: 'obj.neg' }, neg)).toMatchObject({ code: 'INVALID_AMOUNT' });
     expect(dispatch(rich, { type: 'Interact', commandId: 'n4', targetId: 'obj.zero-qty' }, neg)).toMatchObject({ code: 'INVALID_AMOUNT' });
+  });
+
+  it('повтор успішної команди позначено repeated: true і без подій', () => {
+    const cmd: Command = { type: 'BuyItem', commandId: 'rp1', itemId: 'item.lamp' };
+    const first = dispatch(s, cmd, DEFS);
+    expect(first).toMatchObject({ ok: true, repeated: false });
+    expect(dispatch(first.state, cmd, DEFS)).toMatchObject({ ok: true, repeated: true, events: [] });
+  });
+
+  it('зламаний запис каталогу взаємодії: невалідний grantId, itemId чи переповнення кількості — відмова', () => {
+    const bad: CoreDefs = { items: {}, interactions: {
+      'obj.bad-grant': { grantId: 'rw_bad', moneyCents: 0 },
+      'obj.bad-item': { grantId: 'rw.ok', moneyCents: 0, items: [{ itemId: 'toString', qty: 1 }] },
+      'obj.big': { grantId: 'rw.big', moneyCents: 0, items: [{ itemId: 'item.lamp', qty: Number.MAX_SAFE_INTEGER }] },
+    } };
+    const st = { ...initialState(0), inventory: { 'item.lamp': 5 } };
+    expect(dispatch(st, { type: 'Interact', commandId: 'b1', targetId: 'obj.bad-grant' }, bad)).toMatchObject({ code: 'INVALID_COMMAND' });
+    expect(dispatch(st, { type: 'Interact', commandId: 'b2', targetId: 'obj.bad-item' }, bad)).toMatchObject({ code: 'INVALID_COMMAND' });
+    expect(dispatch(st, { type: 'Interact', commandId: 'b3', targetId: 'obj.big' }, bad)).toMatchObject({ code: 'INVALID_AMOUNT' });
+  });
+
+  it('продаж, що переповнив би баланс, — INVALID_AMOUNT', () => {
+    const st = { ...initialState(Number.MAX_SAFE_INTEGER), inventory: { 'item.tent': 1 } };
+    expect(dispatch(st, { type: 'SellItem', commandId: 'so1', itemId: 'item.tent' }, DEFS)).toMatchObject({ ok: false, code: 'INVALID_AMOUNT' });
+  });
+
+  it('подія не тримає посилання на каталог: зміна події не змінює каталог', () => {
+    const r = dispatch(initialState(0), { type: 'Interact', commandId: 'ev1', targetId: 'obj.lost-wallet' }, DEFS);
+    const ev = r.events[0];
+    if (ev?.type !== 'RewardGranted') throw new Error('expected RewardGranted');
+    expect(ev.items).not.toBe(DEFS.interactions['obj.lost-wallet']?.items);
   });
 
   it('переповнення суми грошей — INVALID_AMOUNT, стан не псується', () => {
