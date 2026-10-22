@@ -8,11 +8,11 @@ name: research-fetch
 #   url             — будь-який файл як є
 on:
   push:
-    paths: ['research/fetch.txt']
+    paths: ['research/fetch.txt', '.github/workflows/research-fetch.yml']
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   fetch:
@@ -59,6 +59,26 @@ jobs:
           # Порожній артефакт — не успіх (закон 4).
           [ "$(find out -type f | wc -l)" -gt 0 ] || { echo "::error::нічого не забрано"; exit 1; }
           exit $fail
+      # Лише CC0-набори Kenney (ліцензія дозволяє будь-яке поширення): прев'ю комітяться в
+      # research/cc0-previews/, щоб чат міг їх побачити. Чужі скриншоти сюди не потрапляють.
+      - name: Закомітити прев'ю CC0
+        run: |
+          set -euo pipefail
+          mkdir -p research/cc0-previews
+          for d in out/kenney-*; do
+            [ -d "$d/pack" ] || continue
+            n=$(basename "$d")
+            find "$d/pack" -maxdepth 2 -iname '*preview*.png' -o -maxdepth 2 -iname '*sample*.png' | head -3 | while read -r f; do
+              cp "$f" "research/cc0-previews/$n-$(basename "$f")"
+            done
+            find "$d/pack" -maxdepth 3 -iname '*.txt' -ipath '*licen*' | head -1 | xargs -r -I{} cp {} "research/cc0-previews/$n-License.txt"
+          done
+          ls -la research/cc0-previews
+          git config user.name "research-bot"
+          git config user.email "noreply@anthropic.com"
+          git add research/cc0-previews
+          git diff --staged --quiet || git commit -m "research: прев'ю CC0-наборів Kenney для огляду"
+          git push origin HEAD:${GITHUB_REF_NAME}
       - uses: actions/upload-artifact@v4
         if: always()
         with:
