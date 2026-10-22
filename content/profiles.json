@@ -1,0 +1,4 @@
+[
+  { "id": "profile.family-teen", "nameKey": "profile.family-teen", "transports": ["transport.car"] },
+  { "id": "profile.solo-explorer", "nameKey": "profile.solo-explorer", "transports": ["transport.car", "transport.bike"] }
+]

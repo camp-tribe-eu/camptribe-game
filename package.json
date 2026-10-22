@@ -13,7 +13,7 @@
     "lint": "eslint --max-warnings 0 .",
     "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p tsconfig.node.json && tsc --noEmit -p tsconfig.e2e.json",
     "test": "vitest run",
-    "validate": "node scripts/validate-content.mjs --self-test && node scripts/mutate-validator.mjs && node scripts/validate-content.mjs --allow-missing-content && node scripts/check-rules.mjs --self-test && node scripts/check-rules.mjs && node scripts/maps/validate-maps.mjs --self-test && node scripts/maps/mutate.mjs && node scripts/maps/validate-maps.mjs && node scripts/assets/check-assets.mjs --self-test && node scripts/assets/check-assets.mjs --mutate && node scripts/assets/check-assets.mjs && node scripts/i18n/check-i18n.mjs --self-test && node scripts/i18n/check-i18n.mjs && npm run validate:py",
+    "validate": "node scripts/validate-content.mjs --self-test && node scripts/mutate-validator.mjs && node scripts/validate-content.mjs && node scripts/check-rules.mjs --self-test && node scripts/check-rules.mjs && node scripts/maps/validate-maps.mjs --self-test && node scripts/maps/mutate.mjs && node scripts/maps/validate-maps.mjs && node scripts/assets/check-assets.mjs --self-test && node scripts/assets/check-assets.mjs --mutate && node scripts/assets/check-assets.mjs && node scripts/i18n/check-i18n.mjs --self-test && node scripts/i18n/check-i18n.mjs && npm run validate:py",
     "e2e": "playwright test",
     "check": "npm run lint && npm run typecheck && npm run test && npm run build && npm run validate",
     "validate:py": "python3 scripts/palette/self_test.py && python3 scripts/palette/extract.py --check && python3 scripts/palette/check.py assets && python3 scripts/i18n/font_glyphs.py --self-test && python3 scripts/i18n/font_glyphs.py"
