@@ -70,3 +70,11 @@ GAME-17: пункти 1–3 доведено, пункт 4 (реальні пр�
   (рішення про доступ — власника): (а) адміністратор організації UTD знімає заборону
   «Всегда разрешать» для конектора; (б) Jira API-токен у GitHub Actions secrets і
   workflow, що заводить картки з `jira_cards_S03_S09.md` сам, без конектора.
+- **22.10.2026, пізніше (сесія `stoic-gauss`):** власник став адміністратором UTD і ввімкнув
+  у Admin settings → Capabilities → Tool approvals перемикач **Allow "Always allow" for
+  connector tools** («Set by admin», діє на Code cloud sessions; скриншот «Settings updated»).
+  Конектор Atlassian на рівні організації не обмежений (усі 41 інструмент — «Uses default» =
+  Always allow/Ask/Block). Далі власник ставить «Всегда разрешать» у своєму конекторі.
+  **Наступна сесія:** перший `createJiraIssue` (GAME-34, «Реплей-тести журналу команд»).
+  Без картки → завести решту 33, потім «Blocks» і спринт. З карткою → не пробувати більше,
+  перейти на токен у GitHub Actions secrets.
