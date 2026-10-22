@@ -13,6 +13,7 @@ import { buildIndex } from '../../scripts/validator/checks.mjs';
 import { enumerateCombos, project } from '../../scripts/validator/combos.mjs';
 import { GAME_DEFS } from './slice-defs';
 import { CONTENT, STORY, compileStory } from './story';
+import { moves as allMoves, type Move } from './moves';
 import { checkDefs, type CoreDefs } from '../core/defs';
 
 // Справжній каталог гри (зріз + сюжет) — як у містку: купівля, продаж і взаємодії теж серед ходів
@@ -21,31 +22,7 @@ const DEFS: CoreDefs = GAME_DEFS;
 const START_MONEY = 5_000; // як у createBridge
 const NO_ANIMAL = 'animal.none';
 
-/** Усе, що гравець може спробувати; ядро саме відмовить у недоречному. */
-function moves(s: GameState): Omit<Command, 'commandId'>[] {
-  const out: Record<string, unknown>[] = [];
-  for (const id of Object.keys(STORY.locations)) out.push({ type: 'Visit', locationId: id });
-  for (const id of Object.keys(STORY.npcs)) out.push({ type: 'Talk', npcId: id });
-  if (s.dialogue) {
-    const node = STORY.dialogues[s.dialogue.id]?.nodes[s.dialogue.node];
-    (node?.choices ?? []).forEach((_, i) => out.push({ type: 'Choose', choice: i }));
-    out.push({ type: 'Continue' });
-  }
-  for (const l of Object.values(STORY.locations)) for (const id of l.items) out.push({ type: 'Pickup', itemId: id });
-  for (const id of Object.keys(DEFS.items)) {
-    if (!s.inventory[id]) out.push({ type: 'BuyItem', itemId: id }); // лише перший примірник — інакше простір станів нескінченний
-    out.push({ type: 'SellItem', itemId: id });
-  }
-  for (const id of Object.keys(DEFS.interactions)) out.push({ type: 'Interact', targetId: id });
-  for (const [qid, p] of Object.entries(s.quests)) {
-    if (p.status !== 'active') continue;
-    for (const type of ['CompleteQuest', 'DeclineQuest']) {
-      out.push({ type, questId: qid });
-      for (const t of STORY.quests[qid]?.transitions ?? []) out.push({ type, questId: qid, to: t.to });
-    }
-  }
-  return out as Omit<Command, 'commandId'>[];
-}
+const moves = (s: GameState): Move[] => allMoves(s, DEFS);
 
 const key = (s: GameState): string => stateHash({ ...s, processed: null, seq: null });
 
