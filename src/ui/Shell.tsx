@@ -33,10 +33,16 @@ export function Shell({ port, langOverride, credits }: { port: UiPort; langOverr
     if (paused) resumeRef.current?.focus();
   }, [paused]);
 
+  // Зберігаємо одразу в обробнику, а не в ефекті: ефект Preact відкладено до після малювання, і зміна
+  // мови перед закриттям вкладки (чи reload у e2e на CI) губилась — сторінка встигала піти раніше.
+  const update = (next: Settings): void => {
+    setSettings(next);
+    saveSettings(next);
+  };
+
   useEffect(() => {
     document.documentElement.style.fontSize = `${settings.textScale}%`;
     document.documentElement.lang = settings.language;
-    saveSettings(settings);
   }, [settings]);
 
   return (
@@ -50,14 +56,14 @@ export function Shell({ port, langOverride, credits }: { port: UiPort; langOverr
             <legend>{t('ui.textSize')}</legend>
             {([100, 125, 150] as const).map((v) => (
               <button type="button" class="ui-btn" data-ui={`text-${v}`} aria-pressed={settings.textScale === v}
-                onClick={() => setSettings({ ...settings, textScale: v })}>{v}%</button>
+                onClick={() => update({ ...settings, textScale: v })}>{v}%</button>
             ))}
           </fieldset>
           <fieldset>
             <legend>{t('ui.language')}</legend>
             {(['uk', 'en'] as const).map((l) => (
               <button type="button" class="ui-btn" data-ui={`lang-${l}`} aria-pressed={settings.language === l}
-                onClick={() => setSettings({ ...settings, language: l })}>{l.toUpperCase()}</button>
+                onClick={() => update({ ...settings, language: l })}>{l.toUpperCase()}</button>
             ))}
           </fieldset>
           <fieldset>
@@ -74,7 +80,7 @@ export function Shell({ port, langOverride, credits }: { port: UiPort; langOverr
               onClick={() => { void port.importCode(codeIn).then((r) => setStatus(r === 'ok' ? 'ui.importOk' : r === 'bad' ? 'ui.importBad' : 'ui.importUnsaved')); }}>{t('ui.apply')}</button>
             {status && <p class="ui-status" data-ui="status" role="status">{t(status)}</p>}
           </fieldset>
-          <button type="button" class="ui-btn" data-ui="reset" onClick={() => setSettings(DEFAULT_SETTINGS)}>{t('ui.reset')}</button>
+          <button type="button" class="ui-btn" data-ui="reset" onClick={() => update(DEFAULT_SETTINGS)}>{t('ui.reset')}</button>
           {/* Титри обов'язкові (OD-013): автор, джерело, ліцензія і чи змінено — для кожного файлу графіки. */}
           <details class="ui-credits" data-ui="credits">
             <summary class="ui-btn">{t('ui.credits')}</summary>

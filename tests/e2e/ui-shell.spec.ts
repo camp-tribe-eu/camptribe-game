@@ -40,6 +40,17 @@ test('Escape відкриває паузу; ігровий годинник яд
   expect(await coreMinutes(page)).toBeGreaterThanOrEqual(m0 + 2);
 });
 
+test('зміна налаштування записана одразу, у тому самому завданні (не після малювання)', async ({ page }) => {
+  await open(page);
+  await page.keyboard.press('Escape');
+  // click() і читання сховища — в одному синхронному завданні: відкладений ефект сюди не встигне.
+  const stored = await page.evaluate(() => {
+    document.querySelector<HTMLButtonElement>('[data-ui="lang-en"]')?.click();
+    return localStorage.getItem('camplife.settings.v1');
+  });
+  expect(JSON.parse(stored ?? '{}')).toMatchObject({ language: 'en' });
+});
+
 test('налаштування переживають перезавантаження сторінки', async ({ page }) => {
   await open(page);
   await page.keyboard.press('Escape');
@@ -95,6 +106,10 @@ test.describe('рецензія PR #13: клавіатура в діалозі �
     await page.keyboard.up('ArrowRight');
     await page.locator('[data-ui="resume"]').click();
     await expect(page.locator('[data-ui="pause"]')).toBeHidden();
+    // Пауза настає між кроком фізики й підтягуванням спрайта до тіла: перший кадр після продовження
+    // одноразово доводить спрайт на крок (+1.07 px), сам персонаж далі не йде. Міряємо після нього —
+    // інакше на повільному CI x0 знімався до підтягування й тест червонів без дефекту.
+    await page.evaluate(() => new Promise<void>((r) => requestAnimationFrame(() => requestAnimationFrame(() => r()))));
     const x0 = (await probe(page)).playerX;
     await page.waitForTimeout(1000);
     expect((await probe(page)).playerX).toBeCloseTo(x0, 0);
