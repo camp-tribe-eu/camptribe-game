@@ -1,7 +1,9 @@
 // Карта дій гравця (GAME-24, GAME-69): одне джерело для клавіатури й дотику.
 // Тест звіряє: кожна дія з клавіатури має дотиковий елемент, і навпаки.
 
-export const ACTIONS = ['up', 'down', 'left', 'right', 'interact'] as const;
+export const ACTIONS = ['up', 'down', 'left', 'right', 'interact', 'pause'] as const;
+/** Дії сцени. `pause` належить оболонці UI (GAME-25): її кнопку й клавішу обробляє UI, не сцена. */
+export const SCENE_ACTIONS = ['up', 'down', 'left', 'right', 'interact'] as const;
 export type Action = (typeof ACTIONS)[number];
 
 export const KEY_BINDINGS: Readonly<Record<Action, readonly string[]>> = {
@@ -10,6 +12,7 @@ export const KEY_BINDINGS: Readonly<Record<Action, readonly string[]>> = {
   left: ['ArrowLeft', 'KeyA'],
   right: ['ArrowRight', 'KeyD'],
   interact: ['Space', 'KeyE', 'Enter'],
+  pause: ['Escape'],
 };
 
 /** Дотикові елементи: дія → підпис (символ, не текст — тексти лише через локалізацію, GAME-26). */
@@ -19,6 +22,7 @@ export const TOUCH_CONTROLS: Readonly<Record<Action, string>> = {
   left: '◀',
   right: '▶',
   interact: '●',
+  pause: '‖',
 };
 
 /** Мінімальний розмір дотикової цілі, CSS px (OD-009, WCAG 2.5.5). */

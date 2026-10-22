@@ -3,6 +3,8 @@
 import { defineConfig } from '@playwright/test';
 
 const executablePath = process.env.PW_CHROMIUM_PATH;
+// Окремий порт для паралельних прогонів (кілька копій репозиторію на одній машині).
+const port = Number(process.env.PW_PORT ?? 4173);
 
 export default defineConfig({
   testDir: 'tests/e2e',
@@ -10,13 +12,13 @@ export default defineConfig({
   timeout: 60_000,
   reporter: [['list']],
   use: {
-    baseURL: 'http://127.0.0.1:4173',
+    baseURL: `http://127.0.0.1:${port}`,
     deviceScaleFactor: 1,
     ...(executablePath ? { launchOptions: { executablePath } } : {}),
   },
   webServer: {
-    command: 'npx vite build && npx vite preview --port 4173 --strictPort --host 127.0.0.1',
-    url: 'http://127.0.0.1:4173/',
+    command: `npx vite build && npx vite preview --port ${port} --strictPort --host 127.0.0.1`,
+    url: `http://127.0.0.1:${port}/`,
     timeout: 120_000,
     reuseExistingServer: false,
   },

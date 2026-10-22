@@ -29,6 +29,7 @@
     "vitest": "5.0.5"
   },
   "dependencies": {
-    "phaser": "4.2.1"
+    "phaser": "4.2.1",
+    "preact": "11.0.1"
   }
 }

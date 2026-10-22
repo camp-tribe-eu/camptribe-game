@@ -20,6 +20,15 @@
       .touch-left  { left: 12px;  bottom: 76px; }
       .touch-right { left: 132px; bottom: 76px; }
       .touch-interact { right: 20px; bottom: 60px; border-radius: 50%; }
+      .ui-pause-btn { position: absolute; right: 12px; top: 12px; min-width: 52px; min-height: 52px; border-radius: 12px;
+        border: 2px solid #e8e6e3aa; background: #00000066; color: #e8e6e3; font-size: 1.25rem; }
+      .ui-overlay { position: absolute; inset: 0; display: grid; place-content: center; gap: 12px; padding: 16px;
+        background: #000000cc; text-align: center; }
+      .ui-overlay h2 { margin: 0 0 8px; font-size: 1.5rem; }
+      .ui-overlay fieldset { border: 1px solid #e8e6e355; border-radius: 8px; display: flex; gap: 8px; justify-content: center; }
+      .ui-btn { min-width: 52px; min-height: 48px; padding: 0 16px; border-radius: 10px; border: 2px solid #e8e6e3aa;
+        background: #2a2f35; color: #e8e6e3; font-size: 1rem; }
+      .ui-btn[aria-pressed="true"] { background: #4f7a3a; }
       @media (hover: hover) and (pointer: fine) { .touch { display: none; } }
     </style>
   </head>

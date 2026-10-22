@@ -10,6 +10,13 @@ export const CORE_BANNED_GLOBALS = [
   'globalThis', 'self', 'sessionStorage', 'navigator', 'performance', 'crypto', 'Intl', 'process',
   'setTimeout', 'setInterval', 'requestAnimationFrame',
 ];
+// UI → ядро/сцена: заборонено все, крім типів (allowTypeImports).
+export const UI_BANNED_IMPORT_REGEX = [
+  '^(\\./)?(\\.\\./+)+(core|view)(/|$)',
+  '(^|/)src/(core|view)(/|$)',
+  '^@/(core|view)(/|$)',
+  '^phaser(/|$)',
+];
 // Межі шару — від кореня src/: власна підтека ядра ./ui не червоніє (закон 5, ціна хибного спрацювання).
 export const CORE_BANNED_IMPORT_REGEX = [
   '^(phaser|preact)(/|$)',
@@ -39,6 +46,16 @@ export default tseslint.config(
         { selector: 'ImportExpression', message: 'динамічний import() у ядрі заборонено: обходить межу шару (TD-001)' },
         { selector: "Identifier[name='Math']:not(MemberExpression > Identifier.object)", message: 'Math лише як Math.x: псевдонім обходить заборону Math.random (CR-034)' },
       ],
+    },
+  },
+  // GAME-25 · сторож меж UI (TD-003): src/ui читає знімок і просить дії через порт, але не імпортує
+  // значення з ядра, сцени чи містка. Типи (`import type`) дозволені. Самотест: src/guards/ui-boundary.test.ts.
+  {
+    files: ['src/ui/**/*.{ts,tsx,mts,cts,js,jsx,mjs,cjs}'],
+    ignores: ['src/ui/**/*.test.{ts,tsx}'],
+    rules: {
+      '@typescript-eslint/no-restricted-imports': ['error', { patterns: UI_BANNED_IMPORT_REGEX.map((regex) => ({ regex, caseSensitive: false, allowTypeImports: true, message: 'UI не змінює стан ядра й сцени напряму — лише через порт (TD-003)' })) }],
+      'no-restricted-syntax': ['error', { selector: 'ImportExpression', message: 'динамічний import() у UI обходить межу шару (TD-003)' }],
     },
   },
 );

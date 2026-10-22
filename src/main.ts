@@ -1,5 +1,7 @@
 // Точка входу браузера: сцена світу (GAME-24) + дотикові кнопки (GAME-69) + рядок збірки.
 import Phaser from 'phaser';
+import { render, h } from 'preact';
+import { Shell } from './ui/Shell';
 import { buildLabel } from './core/build-info';
 import { newInput, type Action } from './view/world/actions';
 import { createBridge } from './view/world/bridge';
@@ -9,7 +11,7 @@ import { mountTouchControls } from './view/world/touch';
 const app = document.querySelector<HTMLElement>('#app');
 if (!app) throw new Error('#app відсутній');
 
-const probe: WorldProbe = { ready: false, playerX: 0, playerY: 0, nearObject: null, commandsSent: 0, cameraScrollX: 0, cameraScrollY: 0 };
+const probe: WorldProbe = { ready: false, playerX: 0, playerY: 0, nearObject: null, commandsSent: 0, cameraScrollX: 0, cameraScrollY: 0, clockMinutes: 0 };
 const bridge = createBridge(20261022);
 const input = newInput();
 // Тестовий хук Playwright: стан для перевірок, без доступу на запис до ядра.
@@ -28,7 +30,7 @@ label.className = 'build';
 label.textContent = buildLabel(__GAME_VERSION__, __GAME_COMMIT__);
 app.append(label);
 
-new Phaser.Game({
+const game = new Phaser.Game({
   type: Phaser.AUTO,
   parent: stage,
   width: 240,
@@ -40,3 +42,16 @@ new Phaser.Game({
   physics: { default: 'arcade', arcade: { debug: false } },
   scene: [new WorldScene(bridge, input, probe)],
 });
+
+// Оболонка UI (GAME-25): пауза зупиняє і сцену, і ігровий годинник ядра.
+const ui = document.createElement('div');
+ui.id = 'ui';
+app.append(ui);
+render(h(Shell, {
+  port: {
+    setPaused(paused: boolean) {
+      bridge.setPaused(paused);
+      if (paused) game.scene.pause('world'); else game.scene.resume('world');
+    },
+  },
+}), ui);

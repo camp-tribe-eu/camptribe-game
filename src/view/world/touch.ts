@@ -1,10 +1,10 @@
 // Дотикові кнопки над канвою (OD-009). DOM, а не Phaser: розмір у CSS px гарантовано ≥ 44.
-import { ACTIONS, MIN_TOUCH_PX, TOUCH_CONTROLS, press, release, type Action, type InputState } from './actions';
+import { SCENE_ACTIONS, MIN_TOUCH_PX, TOUCH_CONTROLS, press, release, type Action, type InputState } from './actions';
 
 export function mountTouchControls(root: HTMLElement, input: InputState, hidden: readonly Action[] = []): HTMLElement {
   const pad = document.createElement('div');
   pad.className = 'touch';
-  for (const action of ACTIONS) {
+  for (const action of SCENE_ACTIONS) {
     const b = document.createElement('button');
     b.type = 'button';
     b.dataset.touch = action;

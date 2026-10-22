@@ -16,6 +16,7 @@ export interface WorldProbe {
   commandsSent: number;
   cameraScrollX: number;
   cameraScrollY: number;
+  clockMinutes: number;
 }
 
 export class WorldScene extends Phaser.Scene {
@@ -61,6 +62,7 @@ export class WorldScene extends Phaser.Scene {
     const keyboard = this.input.keyboard;
     if (keyboard) {
       for (const [action, codes] of Object.entries(KEY_BINDINGS) as [Action, readonly string[]][]) {
+        if (action === 'pause') continue; // пауза — справа оболонки UI
         for (const code of codes) {
           const key = keyboard.addKey(Phaser.Input.Keyboard.KeyCodes[code.replace(/^Key/, '').replace(/^Arrow/, '').toUpperCase() as keyof typeof Phaser.Input.Keyboard.KeyCodes]);
           key.on('down', () => press(this.controls, action));
@@ -71,7 +73,8 @@ export class WorldScene extends Phaser.Scene {
     this.probe.ready = true;
   }
 
-  override update(time: number): void {
+  override update(time: number, delta: number): void {
+    this.bridge.frame(delta);
     const held = consumeFrame(this.controls);
     const v = moveVector(held);
     this.player.setVelocity(v.x * SPEED, v.y * SPEED);
@@ -90,6 +93,7 @@ export class WorldScene extends Phaser.Scene {
       commandsSent: this.bridge.sent,
       cameraScrollX: this.cameras.main.scrollX,
       cameraScrollY: this.cameras.main.scrollY,
+      clockMinutes: this.bridge.state.clock.minutes,
     });
   }
 }
