@@ -13,5 +13,6 @@
   "ui.importCode": "Restore from code",
   "ui.apply": "Restore",
   "ui.importOk": "Game restored",
-  "ui.importBad": "This code does not fit — check it was copied in full"
+  "ui.importBad": "This code does not fit — check it was copied in full",
+  "ui.importUnsaved": "Game restored, but could not be saved — press Save"
 }

@@ -1,8 +1,11 @@
 // GAME-33 · сейви: IndexedDB, автозбереження, код відновлення, запасний слот.
 import { expect, test, type Page } from '@playwright/test';
 
-interface Probe { ready: boolean; saveLoaded: boolean; playerX: number; nearObject: string | null; commandsSent: number }
-interface Snap { game: { grants: string[]; moneyCents: number; seq: number } }
+interface Probe { ready: boolean; saveLoaded: boolean; playerX: number; nearObject: string | null; commandsSent: number; clockMinutes: number }
+interface Snap { game: { grants: string[]; moneyCents: number; seq: number }; clock: { minutes: number; paused: boolean }; rng: number[]; finds: number }
+/** Усе, крім годинника: годинник іде між знімками законно. */
+const noClock = (s: Snap): Omit<Snap, 'clock'> => ({ game: s.game, rng: s.rng, finds: s.finds });
+const loaded = (page: Page) => page.waitForFunction(() => (window as unknown as { __game?: { probe: Probe } }).__game?.probe.saveLoaded === true);
 const probe = (page: Page): Promise<Probe> => page.evaluate(() => ({ ...(window as unknown as { __game: { probe: Probe } }).__game.probe }));
 const snap = (page: Page): Promise<Snap> => page.evaluate(() => (window as unknown as { __game: { read: () => Snap } }).__game.read());
 
@@ -50,6 +53,40 @@ test.describe('сейви (десктоп)', () => {
     expect((await snap(page)).game.grants).toContain('rw.campfire-warmth');
   });
 
+  test('рецензія PR #13: сейв, записаний на паузі, після перезавантаження не тримає годинник на паузі', async ({ page }) => {
+    await open(page);
+    await page.keyboard.press('Escape');                       // автозбереження з clock.paused:true
+    await page.waitForTimeout(300);
+    await page.reload();
+    await loaded(page);
+    expect((await snap(page)).clock.paused).toBe(false);
+    const m0 = (await probe(page)).clockMinutes;
+    await expect.poll(async () => (await probe(page)).clockMinutes, { timeout: 5000 }).toBeGreaterThan(m0);
+  });
+
+  test('main і prev різні — старт бере main (новіший), а не prev', async ({ page }) => {
+    await open(page);
+    await page.keyboard.press('Escape');                       // main = чистий стан
+    await page.waitForTimeout(300);
+    await page.keyboard.press('Escape');                       // продовжити
+    await warmUp(page);
+    await page.keyboard.press('Escape');                       // main = з нагородою, prev = чистий
+    await page.waitForTimeout(300);
+    const slots = await page.evaluate(() => new Promise<string[]>((resolve) => {
+      const req = indexedDB.open('camplife', 1);
+      req.onsuccess = () => {
+        const st = req.result.transaction('saves').objectStore('saves');
+        const a = st.get('main'); const b = st.get('prev');
+        st.transaction.oncomplete = () => { req.result.close(); resolve([String(a.result), String(b.result)]); };
+      };
+    }));
+    expect(slots[0]).toContain('rw.campfire-warmth');
+    expect(slots[1]).not.toContain('rw.campfire-warmth');      // справді різні — інакше тест сліпий
+    await page.reload();
+    await loaded(page);
+    expect((await snap(page)).game.grants).toContain('rw.campfire-warmth');
+  });
+
   test('зіпсований основний слот — гра бере попередній, а не падає й не стартує з нуля', async ({ page }) => {
     await open(page);
     await warmUp(page);
@@ -91,8 +128,14 @@ test.describe('код відновлення (телефон 390×844)', () => {
     await p2.locator('[data-ui="code-in"]').fill(code);
     await p2.locator('[data-ui="code-apply"]').tap();
     await expect(p2.locator('[data-ui="status"]')).toHaveText(/Гру відновлено|Game restored/);
-    const after = await snap(p2);
-    expect(after.game).toEqual(expect.objectContaining({ grants: before.game.grants, moneyCents: before.game.moneyCents, seq: before.game.seq }));
+    const exported = await snap(page);                                     // стан у мить експорту
+    expect(noClock(await snap(p2))).toEqual(noClock(exported));            // весь стан, не вибрані поля
+    expect((await snap(p2)).clock.minutes).toBe(exported.clock.minutes);   // годинник — на паузі обидва
+    // Імпорт записано у сховище: після перезавантаження стан той самий (рецензія: M4).
+    await p2.reload();
+    await loaded(p2);
+    expect((await snap(p2)).game).toEqual(exported.game);                  // годинник уже йде: rng/finds рухаються законно
+    expect(before.game.grants).toContain('rw.campfire-warmth');
     await fresh.close();
   });
 

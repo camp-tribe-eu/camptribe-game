@@ -6,6 +6,6 @@ export interface UiPort {
   save(): Promise<boolean>;
   /** Код відновлення поточної гри (OD-008). */
   exportCode(): Promise<string>;
-  /** Відновити гру з коду; false — код не підходить. */
-  importCode(code: string): Promise<boolean>;
+  /** Відновити гру з коду: `ok`; `bad` — код не підходить (гра без змін); `unsaved` — відновлено, але не записано в сховище. */
+  importCode(code: string): Promise<'ok' | 'bad' | 'unsaved'>;
 }

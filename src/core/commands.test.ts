@@ -3,7 +3,7 @@
 // Команди — наміри; ціни й нагороди — з каталогу DEFS (рецензія TL PR #13).
 import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
-import { dispatch, type Command, type Safeguards } from './commands';
+import { dispatch, PROCESSED_LIMIT, type Command, type Safeguards } from './commands';
 import type { CoreDefs } from './defs';
 import { initialState, REJECT_CODES, type GameState, type RejectCode } from './state';
 
@@ -264,5 +264,19 @@ describe('коди відмов: кожен код із реєстру має т
   it('вхідний стан не мутується ніколи', () => {
     const frozen = Object.freeze({ ...s, inventory: Object.freeze({}), grants: Object.freeze([]), processed: Object.freeze({}) });
     expect(() => dispatch(frozen, { type: 'BuyItem', commandId: 'f1', itemId: 'item.lamp' }, DEFS)).not.toThrow();
+  });
+});
+
+describe('processed обмежений (GAME-33: сейв і код відновлення не ростуть без меж)', () => {
+  it(`після ${PROCESSED_LIMIT * 2} команд тримає рівно ${PROCESSED_LIMIT} найновіших`, () => {
+    let st = initialState(0);
+    for (let i = 0; i < PROCESSED_LIMIT * 2; i++) st = dispatch(st, { type: 'SellItem', commandId: `c${i}`, itemId: 'item.tent' }, DEFS).state;
+    const ids = Object.keys(st.processed);
+    expect(ids).toHaveLength(PROCESSED_LIMIT);
+    expect(ids[0]).toBe(`c${PROCESSED_LIMIT}`);
+    expect(ids.at(-1)).toBe(`c${PROCESSED_LIMIT * 2 - 1}`);
+    expect(st.seq).toBe(PROCESSED_LIMIT * 2);
+    // свіжий повтор досі впізнається
+    expect(dispatch(st, { type: 'SellItem', commandId: `c${PROCESSED_LIMIT * 2 - 1}`, itemId: 'item.tent' }, DEFS).repeated).toBe(true);
   });
 });

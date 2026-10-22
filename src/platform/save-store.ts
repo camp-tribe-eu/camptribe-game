@@ -46,7 +46,7 @@ export async function readSaves(): Promise<string[]> {
         db.close();
         resolve([main.result, prev.result].filter((x): x is string => typeof x === 'string'));
       };
-      tx.onerror = () => { db.close(); resolve([]); };
+      tx.onerror = tx.onabort = () => { db.close(); resolve([]); };
     });
   } catch {
     return [];

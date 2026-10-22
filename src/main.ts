@@ -5,9 +5,10 @@ import { Shell } from './ui/Shell';
 import { buildLabel } from './core/build-info';
 import { newInput, type Action } from './view/world/actions';
 import { SLICE_DEFS } from './content/slice-defs';
-import { fromSave, serialize } from './core/save';
+import { serialize } from './core/save';
 import { decodeRestoreCode, encodeRestoreCode } from './platform/save-code';
 import { readSaves, writeSave } from './platform/save-store';
+import { createSaveSession } from './platform/save-session';
 import { createBridge } from './view/world/bridge';
 import { WorldScene, type WorldProbe } from './view/world/scene';
 import { mountTouchControls } from './view/world/touch';
@@ -18,6 +19,7 @@ if (!app) throw new Error('#app is missing');
 const probe: WorldProbe = { ready: false, playerX: 0, playerY: 0, nearObject: null, commandsSent: 0, cameraScrollX: 0, cameraScrollY: 0, clockMinutes: 0, saveLoaded: false };
 const bridge = createBridge(20261022, SLICE_DEFS);
 const input = newInput();
+const saves = createSaveSession(bridge, { read: readSaves, write: writeSave });
 // Тестовий хук Playwright: лише ЧИТАННЯ — знімок стану копією, місток назовні не віддається
 // (рецензія PR #13: раніше скрипт сторінки міг надіслати команду в ядро).
 (window as unknown as { __game: { probe: WorldProbe; read: () => unknown } }).__game = {
@@ -60,16 +62,9 @@ const langOverride = new URLSearchParams(location.search).get('lang') === 'pseud
 render(h(Shell, {
   ...(langOverride ? { langOverride } : {}),
   port: {
-    save: () => writeSave(serialize(bridge.state)),
+    save: () => saves.save(),
     exportCode: () => encodeRestoreCode(serialize(bridge.state)),
-    async importCode(code: string) {
-      const json = await decodeRestoreCode(code);
-      const r = json ? fromSave(json) : null;
-      if (!r?.ok) return false;
-      bridge.load(r.sim);
-      await writeSave(json ?? '');
-      return true;
-    },
+    importCode: async (code: string) => saves.adopt(await decodeRestoreCode(code)),
     setPaused(paused: boolean) {
       // Відпускання клавіші під час паузи сцена не бачить — скидаємо введення на межі паузи,
       // інакше клавіша «залипає» і персонаж іде сам (рецензія PR #13).
@@ -77,7 +72,7 @@ render(h(Shell, {
       input.tapped.clear();
       (game.scene.getScene('world') as WorldScene | null)?.haltPlayer();
       bridge.setPaused(paused);
-      if (paused) void writeSave(serialize(bridge.state)); // автозбереження на паузі
+      if (paused) saves.autosave(); // автозбереження на паузі
       if (paused) game.scene.pause('world'); else game.scene.resume('world');
     },
   },
@@ -85,15 +80,9 @@ render(h(Shell, {
 
 // Автозбереження, коли вкладку згортають чи закривають (телефон може вбити її будь-коли).
 document.addEventListener('visibilitychange', () => {
-  if (document.visibilityState === 'hidden') void writeSave(serialize(bridge.state));
+  if (document.visibilityState === 'hidden') saves.autosave();
 });
 
-// Старт: підхопити останній цілий сейв (main, інакше prev). Позиція в пікселях не зберігається
-// (DC-042): після завантаження персонаж з'являється в точці появи.
-void readSaves().then((candidates) => {
-  for (const json of candidates) {
-    const r = fromSave(json);
-    if (r.ok) { bridge.load(r.sim); break; }
-  }
-  probe.saveLoaded = true;
-});
+// Старт: підхопити останній цілий сейв. Позиція в пікселях не зберігається (DC-042):
+// після завантаження персонаж з'являється в точці появи. Правила гонок — у save-session.ts.
+void saves.start().then(() => { probe.saveLoaded = true; });

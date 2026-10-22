@@ -135,8 +135,18 @@ function apply(cmd: Command, d: Draft, defs: CoreDefs, guard: Safeguards): Rejec
  * Відмова повертає новий об'єкт, у якому від вихідного відрізняються лише `processed` і `seq`
  * (запис про відмову — щоб повтор того самого commandId повернув ту саму відмову, DC §4).
  *
- * `processed` росте з кожною командою. Політику обрізання вирішує картка сейвів (GAME-33, OQ-SAVE-001).
+ * `processed` тримає останні PROCESSED_LIMIT записів (GAME-33): інакше сейв і код відновлення ростуть
+ * без меж. Ціна: повтор команди, старшої за 256 нових, уже не впізнається — UI таких не надсилає,
+ * id видає місток із `seq` і не повторює.
  */
+export const PROCESSED_LIMIT = 256;
+
+/** Додати запис і відкинути найстаріші (порядок вставки ключів зберігається й у JSON сейву). */
+function remember(processed: Readonly<Record<string, CommandRecord>>, id: string, rec: CommandRecord): Record<string, CommandRecord> {
+  const entries = [...Object.entries(processed), [id, rec] as const];
+  return Object.fromEntries(entries.slice(Math.max(0, entries.length - PROCESSED_LIMIT)));
+}
+
 export function dispatch(state: GameState, cmd: Command, defs: CoreDefs, guard: Safeguards = SAFE): DispatchResult {
   if (!cmd || typeof cmd !== 'object' || !isCommandId(cmd.commandId)) {
     return { ok: false, state, code: 'INVALID_COMMAND', repeated: false, events: [] };
@@ -153,7 +163,7 @@ export function dispatch(state: GameState, cmd: Command, defs: CoreDefs, guard: 
   const draft: Draft = { moneyCents: state.moneyCents, inventory: { ...state.inventory }, grants: [...state.grants], events: [] };
   const code = apply(cmd, draft, defs, guard);
   const record: CommandRecord = code ? { ok: false, code, fp } : { ok: true, fp };
-  const processed = { ...state.processed, [cmd.commandId]: record };
+  const processed = remember(state.processed, cmd.commandId, record);
   const seq = state.seq + 1;
   const { events, ...changes } = draft;
 

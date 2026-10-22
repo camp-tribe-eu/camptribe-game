@@ -49,6 +49,8 @@ function shapeError(sim: unknown): string | null {
   if (game.schemaVersion !== 1 || !isInt(game.moneyCents) || !isInt(game.seq)) return 'game: version, money or seq';
   if (!isObj(game.inventory) || !Array.isArray(game.grants) || !isObj(game.processed)) return 'game: inventory, grants or processed';
   if (Object.values(game.inventory).some((q) => !isInt(q, 1))) return 'game: inventory quantity';
+  if (game.grants.some((g) => typeof g !== 'string')) return 'game: grant ids';
+  if (Object.values(game.processed).some((r) => !isObj(r) || typeof r.ok !== 'boolean' || typeof r.fp !== 'string')) return 'game: processed records';
   if (!isInt(clock.minutes) || typeof clock.accMs !== 'number' || typeof clock.paused !== 'boolean') return 'clock';
   if (rng.length !== 4 || rng.some((w) => !isInt(w) || (w as number) > 0xffff_ffff)) return 'rng';
   return null;

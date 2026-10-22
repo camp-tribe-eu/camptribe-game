@@ -71,7 +71,7 @@ export function Shell({ port, langOverride }: { port: UiPort; langOverride?: Any
             <textarea class="ui-code" data-ui="code-in" rows={3} aria-label={t('ui.importCode')} placeholder={t('ui.importCode')}
               value={codeIn} onInput={(e) => setCodeIn((e.currentTarget as HTMLTextAreaElement).value)} />
             <button type="button" class="ui-btn" data-ui="code-apply"
-              onClick={() => { void port.importCode(codeIn).then((ok) => setStatus(ok ? 'ui.importOk' : 'ui.importBad')); }}>{t('ui.apply')}</button>
+              onClick={() => { void port.importCode(codeIn).then((r) => setStatus(r === 'ok' ? 'ui.importOk' : r === 'bad' ? 'ui.importBad' : 'ui.importUnsaved')); }}>{t('ui.apply')}</button>
             {status && <p class="ui-status" data-ui="status" role="status">{t(status)}</p>}
           </fieldset>
           <button type="button" class="ui-btn" data-ui="reset" onClick={() => setSettings(DEFAULT_SETTINGS)}>{t('ui.reset')}</button>

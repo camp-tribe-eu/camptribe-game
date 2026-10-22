@@ -68,6 +68,17 @@ describe('коди відмов завантаження: кожен має зл
   it('позитивний контроль: щойно записаний сейв завантажується', () => {
     expect(fromSave(JSON.stringify(good)).ok).toBe(true);
   });
+  // Рецензія GAME-33: форма елементів, не лише контейнерів (контрольну суму підробник перерахує сам).
+  for (const [what, patch] of [
+    ['grant не рядок', (c: typeof good) => { c.sim.game.grants = [42]; }],
+    ['запис processed без fp', (c: typeof good) => { c.sim.game.processed = { c0: { ok: true } }; }],
+    ['запис processed — null (без перевірки об\'єкта — виняток, а не код)', (c: typeof good) => { c.sim.game.processed = { c0: null }; }],
+  ] as const) {
+    it(`SAVE_SHAPE: ${what}`, () => {
+      const r = fromSave(withSim((c) => { patch(c); resum(c); }));
+      expect(r.ok ? 'ok' : r.code).toBe('SAVE_SHAPE');
+    });
+  }
   it('accountId у v1 завжди null (OD-008: без мережі)', () => {
     expect(good.accountId).toBeNull();
   });
