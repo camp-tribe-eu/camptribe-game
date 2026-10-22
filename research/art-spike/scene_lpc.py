@@ -16,7 +16,7 @@ for x in range(W): im.alpha_composite(dirt,(x*T,7*T))
 for y in range(7,H): im.alpha_composite(dirt,(9*T,y*T))
 im.alpha_composite(A.crop((192,352,288,448)),(13*T,1*T))          # ставок
 pine=A.crop((960,0,1024,160)); oak=A.crop((928,896,1024,1024)); bush=A.crop((768,384,864,448))
-objs=[(pine,0,-1),(pine,2,0),(pine,17,-1),(pine,18,2),(pine,0,3),(pine,1,8),(pine,17,8),(oak,4,-1),(oak,11,-1),(bush,3,3),(bush,16,5),(bush,4,10)]
+objs=[(pine,0,-1),(pine,2,0),(pine,17,-1),(pine,18,2),(pine,0,3),(pine,1,8),(pine,17,8),(oak,4,-1),(oak,11,-1),(bush,3,3),(bush,15,5),(bush,4,10)]
 tent2=tent.resize((tent.width*2,tent.height*2),Image.NEAREST)        # 🔴 прогалина: намет LPC-масштабу не знайдено
 chars=[Image.open(f'{CH}/{n}.png').convert('RGBA').crop((0,128,64,192)) for n in ('george','victoria','matthew')]
 layer=[(o,x*T,y*T) for o,x,y in objs]+[(tent2,5*T,4*T),(tent2,9*T,3*T),(fire,7*T+16,5*T),(car,12*T,8*T-8)]
