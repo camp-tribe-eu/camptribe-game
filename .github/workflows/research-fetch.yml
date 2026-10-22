@@ -121,7 +121,9 @@ jobs:
           done
           git config user.name "research-bot"
           git config user.email "noreply@anthropic.com"
-          git add research/packs research/lists research/debug 2>/dev/null || true
+          # Лише наявні теки: git add із неіснуючим шляхом відкидає ВЕСЬ виклик (закон 4 — без || true).
+          for t in research/packs research/lists research/debug; do if [ -d "$t" ]; then git add "$t"; fi; done
+          git status --short | head -40
           git diff --staged --quiet || { git commit -m "research: набори з першоджерел для проби графіки"; git push origin HEAD:${GITHUB_REF_NAME}; }
       - uses: actions/upload-artifact@v4
         if: always()
