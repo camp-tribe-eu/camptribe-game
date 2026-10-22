@@ -2,10 +2,10 @@
 // й екранного читача (TD-003).
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { DEFAULT_SETTINGS, loadSettings, saveSettings, type Settings } from '../platform/settings';
-import type { UiPort } from './port';
+import type { Credits, UiPort } from './port';
 import { t as tr, type AnyLang, type Key } from '../i18n';
 
-export function Shell({ port, langOverride }: { port: UiPort; langOverride?: AnyLang }) {
+export function Shell({ port, langOverride, credits }: { port: UiPort; langOverride?: AnyLang; credits: Credits }) {
   const [paused, setPaused] = useState(false);
   const [settings, setSettings] = useState<Settings>(() => loadSettings());
   const resumeRef = useRef<HTMLButtonElement>(null);
@@ -75,6 +75,29 @@ export function Shell({ port, langOverride }: { port: UiPort; langOverride?: Any
             {status && <p class="ui-status" data-ui="status" role="status">{t(status)}</p>}
           </fieldset>
           <button type="button" class="ui-btn" data-ui="reset" onClick={() => setSettings(DEFAULT_SETTINGS)}>{t('ui.reset')}</button>
+          {/* Титри обов'язкові (OD-013): автор, джерело, ліцензія і чи змінено — для кожного файлу графіки. */}
+          <details class="ui-credits" data-ui="credits">
+            <summary class="ui-btn">{t('ui.credits')}</summary>
+            <p>{t('ui.creditsIntro')}</p>
+            <ul>
+              {credits.files.map((f) => (
+                <li data-credit={f.file} key={f.file}>
+                  <span class="ui-credit-file">{f.file}</span>
+                  <span class="ui-credit-authors">{f.authors.join(', ')}</span>
+                  <span>
+                    {/* Ліцензія без посилання — видно в e2e (кожна має бути посиланням), а не порожній href. */}
+                    {credits.licences[f.licence]
+                      ? <a href={credits.licences[f.licence]?.url ?? ''} target="_blank" rel="noopener noreferrer" data-licence={f.licence}>{f.licence}</a>
+                      : <span data-licence-missing={f.licence}>{f.licence}</span>}
+                    {' · '}
+                    {f.sources.map((src, i) => <>{i > 0 && ', '}<a href={src} target="_blank" rel="noopener noreferrer">{`${t('ui.creditsSource')} ${i + 1}`}</a></>)}
+                    {' · '}
+                    {f.modified === 'no' ? t('ui.creditsUnmodified') : f.modified}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </details>
         </div>
       )}
     </>

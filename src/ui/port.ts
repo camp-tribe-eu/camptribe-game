@@ -9,3 +9,9 @@ export interface UiPort {
   /** Відновити гру з коду: `ok`; `bad` — код не підходить (гра без змін); `unsaved` — відновлено, але не записано в сховище. */
   importCode(code: string): Promise<'ok' | 'bad' | 'unsaved'>;
 }
+
+/** Титри (GAME-21, OD-013): дані з assets/credits.json, який збирає й звіряє сторож ліцензій. */
+export interface Credits {
+  readonly licences: Readonly<Record<string, { readonly url: string }>>;
+  readonly files: readonly { readonly file: string; readonly authors: readonly string[]; readonly licence: string; readonly sources: readonly string[]; readonly modified: string }[];
+}

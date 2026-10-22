@@ -9,6 +9,7 @@ import { serialize } from './core/save';
 import { decodeRestoreCode, encodeRestoreCode } from './platform/save-code';
 import { readSaves, writeSave } from './platform/save-store';
 import { createSaveSession } from './platform/save-session';
+import credits from '../assets/credits.json';
 import { createBridge } from './view/world/bridge';
 import { WorldScene, type WorldProbe } from './view/world/scene';
 import { mountTouchControls } from './view/world/touch';
@@ -61,6 +62,7 @@ app.append(ui);
 const langOverride = new URLSearchParams(location.search).get('lang') === 'pseudo' ? ('pseudo' as const) : undefined;
 render(h(Shell, {
   ...(langOverride ? { langOverride } : {}),
+  credits,
   port: {
     save: () => saves.save(),
     exportCode: () => encodeRestoreCode(serialize(bridge.state)),

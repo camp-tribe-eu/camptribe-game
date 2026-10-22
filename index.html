@@ -35,6 +35,12 @@
       .ui-status { margin: 4px 0 0; width: 100%; font-size: 0.75rem; }
       .ui-overlay { overflow-y: auto; }
       .ui-btn[aria-pressed="true"] { background: #4f7a3a; }
+      .ui-credits { max-width: min(92vw, 640px); font-size: 0.6rem; text-align: left; }
+      .ui-credits summary { list-style: none; display: inline-block; cursor: pointer; }
+      .ui-credits ul { padding-left: 1em; }
+      .ui-credits li { margin: 0 0 10px; display: grid; gap: 2px; }
+      .ui-credits a { color: #9fd38a; }
+      .ui-credit-file { opacity: 0.8; }
       /* Ховати дотикові кнопки лише там, де немає жодного дотикового вказівника (any-pointer):
          сенсорний ноутбук має pointer: fine, але any-pointer: coarse — кнопки лишаються. */
       @media not (any-pointer: coarse) { .touch { display: none; } }

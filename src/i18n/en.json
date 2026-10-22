@@ -14,5 +14,9 @@
   "ui.apply": "Restore",
   "ui.importOk": "Game restored",
   "ui.importBad": "This code does not fit — check it was copied in full",
-  "ui.importUnsaved": "Game restored, but could not be saved — press Save"
+  "ui.importUnsaved": "Game restored, but could not be saved — press Save",
+  "ui.credits": "Credits",
+  "ui.creditsIntro": "Art is from the Liberated Pixel Cup set. Thanks to the authors: every file, who made it, where it comes from and under which licence.",
+  "ui.creditsSource": "source",
+  "ui.creditsUnmodified": "unmodified"
 }
