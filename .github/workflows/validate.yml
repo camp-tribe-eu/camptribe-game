@@ -35,3 +35,6 @@ jobs:
       # зникнення теки має бути червоним.
       - name: Валідація контенту
         run: node scripts/validate-content.mjs --allow-missing-content
+
+      - name: Правила — самотест і docs/ (GAME-20)
+        run: node scripts/check-rules.mjs --self-test && node scripts/check-rules.mjs

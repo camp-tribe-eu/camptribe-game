@@ -1,0 +1,78 @@
+# DATA_CONTRACTS · формати даних гри
+
+Що лежить у `content/` (визначення) і в сейві (стан проходження). Перший — пишуть люди й
+перевіряє валідатор. Другий — пише лише ядро.
+
+🔴 **Виконувана схема — `scripts/validator/schema.mjs` (`SCHEMAS`).** Цей файл її описує.
+Розійшлися — правий код, а файл виправляється. `node scripts/check-rules.mjs` червоніє, якщо
+контракт `DC-…` посилається на колекцію, якої немає в `SCHEMAS`, і навпаки.
+
+Формат рядка: `id` · колекція · що · джерело · статус.
+
+## 1. Визначення (`content/`, строгі схеми, невідоме поле — помилка)
+
+| id | колекція | що | джерело | статус |
+|---|---|---|---|---|
+| DC-001 | `meta` | старт кампанії (`start`) і мови (`locales`) | 05-pershyi-kod.md | ACCEPTED |
+| DC-002 | `profiles` | життєвий профіль: `id`, `nameKey`, `transports` (доступні транспорти) | GDD профілі; GAME-51 | ACCEPTED |
+| DC-003 | `transports` | транспорт: `id`, `nameKey` | GDD; OD-012 | ACCEPTED |
+| DC-004 | `animals` | тварина: `id`, `nameKey`, `transports` — чим можна везти; `animal.none` зарезервовано | GDD; CR-017 | ACCEPTED |
+| DC-005 | `items` | предмет: `id`, `nameKey` | GDD SIMULATION §інвентар | ACCEPTED |
+| DC-006 | `npcs` | NPC: `locationId`, `unlockedBy`, `sells`, `when` | GDD; CR-016 | ACCEPTED |
+| DC-007 | `locations` | локація: `unlockedBy`, `items`, `when` | GDD | ACCEPTED |
+| DC-008 | `quests` | етап: `optional`, `end`, `requires`, `objectives[]`, `transitions[]` (`complete`/`decline`), `reward`, `when` | GDD §12.2 | ACCEPTED |
+| DC-009 | `events` | подія: `repeatable`, `reward`, `locationId` | GDD §12.3 | ACCEPTED |
+| DC-010 | `facts` | зовнішній факт: `source`, `checkedAt` (РРРР-ММ-ДД), `kind` | GDD §12.4; CR-019 | ACCEPTED |
+
+Спільні частини:
+
+* **`when`** — умова на стан гравця: `{ profiles?, transports?, animals? }`. Усі названі виміри
+  мусять збігтися, порожній список заборонено (TD-006).
+* **`reward`** — `{ grantId, items[], money, once }`. `grantId` унікальний на весь контент
+  (TD-004). `money` — цілі центи (CR-040).
+* **id** — стабільний префіксний рядок (`profile.…`, `npc.…`, `ST-001`), ніколи не назва й не
+  індекс.
+
+## 2. Заплановані розширення (кожне — з карткою, до реалізації `PROPOSED`)
+
+| id | колекція / поле | що | картка | статус |
+|---|---|---|---|---|
+| DC-020 | `events.family`, `events.tags`, `events.weight`, `events.choices[]` | сім'я подій, теги `positive`/`neutral`/`negative`/`plan_change`/`eco`, вага, ≥ 2 виходи без втрати прогресу для `negative` | GAME-45 | PROPOSED |
+| DC-021 | `events.trigger`, `events.cooldownDays`, `events.maxPerTrip` | передумова й обмеження повторів | GAME-45 | PROPOSED |
+| DC-022 | `profiles.job`, `profiles.incomeCents`, `profiles.vacationDays`, `profiles.schedule`, `profiles.startSkills`, `profiles.startItems` | профіль як джерело петлі OD-012 | GAME-51, GAME-71 | PROPOSED |
+| DC-023 | `items.tier`, `items.weightG`, `items.volumeL`, `items.priceCents`, `items.resaleCents`, `items.condition` | спорядження з тиром, знос, продаж | GAME-73 | PROPOSED |
+| DC-024 | `vehicles` (нова) | транспорт гравця з техпаспортом: двигун, шини/гальма, електрика, вода, опалення, кузов, житловий модуль; приховані дефекти | GAME-74 | PROPOSED |
+| DC-025 | `skills` (нова) | 8 напрямів, ранги 0–5, крива досвіду | GAME-72 | PROPOSED |
+| DC-026 | `calendar` (нова) | шкільні канікули, свята, сезони | GAME-71 | PROPOSED |
+| DC-027 | `atlasPages` (нова) | шаблони сторінок Атласу за подорожжю й транспортом | GAME-78 | PROPOSED |
+| DC-028 | `dialogues` (нова) | JSON-граф: вузли `id`, `speaker`, `text`, `choices[].next`, умови | TD-005; GAME-42; GAME-70 | PROPOSED |
+
+## 3. Стан проходження (сейв; пише лише ядро)
+
+| id | частина стану | що | джерело | статус |
+|---|---|---|---|---|
+| DC-040 | `save.meta` | `saveId`, `schemaVersion`, `createdAt` (ігровий час), `accountId: null` | GDD Core Rules §4; OD-008 | ACCEPTED |
+| DC-041 | `save.clock` | ігровий календар і час, зерно RNG | CR-034 | ACCEPTED |
+| DC-042 | `save.player` | профіль, зовнішність (шари), позиція, локація | GAME-76 | ACCEPTED |
+| DC-043 | `save.household` | члени, тварина (без операції видалення) | CR-017 | ACCEPTED |
+| DC-044 | `save.inventory` | предмети зі станом, екіпіроване й склад | GAME-73 | ACCEPTED |
+| DC-045 | `save.money` | баланс у центах + журнал транзакцій (кожен запис — `commandId`) | CR-040…043 | ACCEPTED |
+| DC-046 | `save.vehicles` | транспорт гравця й стан вузлів | GAME-74 | ACCEPTED |
+| DC-047 | `save.trip` | маршрут, бронювання, бюджет поїздки | GAME-30, GAME-43 | ACCEPTED |
+| DC-048 | `save.needs`, `save.skills` | потреби, навички, досвід | GAME-72 | ACCEPTED |
+| DC-049 | `save.npcMemory` | структуровані факти пам'яті NPC (`SIMULATION_RULES` SIM-NPC) | GAME-48 | ACCEPTED |
+| DC-050 | `save.quests` | стан кожного квесту: статус, виконані цілі, обрані гілки, ревізія | GDD §12.2 | ACCEPTED |
+| DC-051 | `save.flags`, `save.history` | сюжетні прапорці й історія важливих подій | GDD Core Rules §4 | ACCEPTED |
+| DC-052 | `save.grants` | множина виданих `grantId` — сторож «рівно раз» | TD-004 | ACCEPTED |
+| DC-053 | `save.atlas` | сторінки Атласу | GAME-78 | ACCEPTED |
+
+## 4. Команди (ядро, TD-004)
+
+Кожна команда: `{ type, commandId, payload }` → `{ ok: true, events[] } | { ok: false, code, reason }`.
+Повтор `commandId` повертає попередній результат і стану не змінює. Перелік типів команд
+веде код ядра (`src/core/commands/`), а цей файл фіксує лише конверт.
+
+| id | правило | джерело | статус |
+|---|---|---|---|
+| DC-060 | Відмова завжди має машинний `code` і людський `reason` (ключ локалізації) | CR-032 | ACCEPTED |
+| DC-061 | Подія-факт має `type`, ігровий час, `commandId`-причину | GDD Core Rules §5 | ACCEPTED |

@@ -13,7 +13,7 @@
     "lint": "eslint --max-warnings 0 .",
     "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p tsconfig.node.json",
     "test": "vitest run",
-    "validate": "node scripts/validate-content.mjs --self-test && node scripts/validate-content.mjs --allow-missing-content",
+    "validate": "node scripts/validate-content.mjs --self-test && node scripts/validate-content.mjs --allow-missing-content && node scripts/check-rules.mjs --self-test && node scripts/check-rules.mjs",
     "check": "npm run lint && npm run typecheck && npm run test && npm run build && npm run validate"
   },
   "devDependencies": {
