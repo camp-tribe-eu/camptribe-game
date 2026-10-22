@@ -295,6 +295,10 @@ export const FIXTURES = [
     q(c, 'q.dog-walk').when = { animals: [DOG], transports: [T_BIKE] };
     q(c, 'q.dog-walk').objectives[0].when = { profiles: [P_A] };
   } },
+  { base: 'combo', name: '[сумісн.] дві незалежні мертві умови — дві знахідки, не одна', expect: ['WHEN_UNSATISFIABLE'], count: { code: 'WHEN_UNSATISFIABLE', n: 2 }, patch(c) {
+    c.profiles[0].transports = [T_CAR];
+    for (const id of ['npc.hiker-a', 'npc.hiker-b']) c.npcs.push({ id, nameKey: 'npc.ranger', locationId: 'loc.camp', when: { profiles: [P_A], transports: [T_BIKE] } });
+  } },
   { base: 'combo', name: '[сумісн.] нездійсненний when не ховає тупик старту для іншого профілю', expect: ['WHEN_UNSATISFIABLE', 'COMBO_NO_START'], patch(c) {
     c.profiles[0].transports = [T_CAR];
     c.npcs[1].when = { profiles: [P_A], transports: [T_BIKE] };

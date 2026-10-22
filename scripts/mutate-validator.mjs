@@ -36,6 +36,7 @@ const mutations = [
   { name: 'переходи мертвого квесту дублюють його звіт', file: COMBOS_FILE, from: 'if (deadQuest(q.id) || deadQuest(t.to)) return;', to: '' },
   { name: 'цілі мертвого квесту дублюють його звіт', file: COMBOS_FILE, from: 'if (parent && dead([parent])) continue;', to: '' },
   { name: 'звірка count послаблена до «не менше»', file: 'validator/self-test.mjs', from: 'return n === f.count.n ? null', to: 'return n >= f.count.n ? null' },
+  { name: 'judge схлопує знахідки до однієї на код перед звіркою count', file: 'validator/self-test.mjs', from: 'const cmis = countMismatch(f, issues);', to: 'const cmis = countMismatch(f, [...new Map(issues.map((i) => [i.code, i])).values()]);' },
   { name: 'звірка count вимкнена', file: 'validator/self-test.mjs', from: 'const cmis = countMismatch(f, issues);', to: 'const cmis = null;' },
   { name: 'умова квесту-цілі переходу не враховується', file: COMBOS_FILE, from: 'quests.get(t.to)?.when]', to: ']' },
   { name: 'when на переходах ігнорується', file: COMBOS_FILE, from: 'matches(t.when, k) && ids.has(t.to)', to: 'ids.has(t.to)' },

@@ -66,8 +66,9 @@ export function selfTest() {
   };
   // Цикл прикладів справді звіряє count: той самий приклад із хибною кількістю мусить упасти.
   const withCount = FIXTURES.find((f) => f.count);
-  report(!!withCount && judge({ ...withCount, count: { ...withCount.count, n: withCount.count.n + 1 } }).bad.length > 0,
-    'приклад із хибним count падає', 'оцінка прикладу не звіряє count');
+  const wrong = (d) => judge({ ...withCount, count: { ...withCount.count, n: withCount.count.n + d } }).bad.length > 0;
+  report(!!withCount && wrong(+1) && wrong(-1),
+    'приклад із хибним count падає — і на «замало», і на «забагато»', 'оцінка прикладу не звіряє count в обидва боки');
 
   for (const f of FIXTURES) {
     const { got, want, bad } = judge(f);
