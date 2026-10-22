@@ -111,7 +111,7 @@ jobs:
                 cp "$d/LICENSE-from-page.txt" "$d/SOURCE.txt" "research/packs/$n/"
                 # Лише PNG і текстові ліцензії/титри, без zip і без звуку.
                 # Kenney має 1700 окремих тайлів — беремо лише зведені аркуші.
-                case "$n" in pack-kenney*) filt=( -ipath '*sheet*' -iname '*.png' -o -iname '*licen*' ) ;; *) filt=( -iname '*.png' -o -iname '*licen*' -o -iname '*credit*' -o -iname '*.txt' ) ;; esac
+                case "$n" in pack-kenney*) filt=( \( -ipath '*sheet*' -o -ipath '*tilemap*' \) -iname '*.png' -o -iname '*licen*' ) ;; *) filt=( -iname '*.png' -o -iname '*licen*' -o -iname '*credit*' -o -iname '*.txt' ) ;; esac
                 (cd "$d" && find . -type f \( "${filt[@]}" \) -size -3M) | while read -r f; do
                   mkdir -p "research/packs/$n/$(dirname "$f")"; cp "$d/$f" "research/packs/$n/$f"
                 done ;;
