@@ -39,6 +39,13 @@ jobs:
       - name: Правила — самотест і docs/ (GAME-20)
         run: node scripts/check-rules.mjs --self-test && node scripts/check-rules.mjs
 
+      # GAME-23 · мапи Tiled: самотест, мутації, справжні мапи з maps/ (без --allow-missing-maps: maps/ уже є).
+      - name: Мапи — самотест, мутації, maps/
+        run: |
+          node scripts/maps/validate-maps.mjs --self-test
+          node scripts/maps/mutate.mjs
+          node scripts/maps/validate-maps.mjs
+
       # GAME-22 · сторож палітри LPC (OD-013). Pillow — тієї ж версії, що й у локальній перевірці.
       - uses: actions/setup-python@v5
         with: { python-version: '3.12' }

@@ -13,7 +13,7 @@
     "lint": "eslint --max-warnings 0 .",
     "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p tsconfig.node.json && tsc --noEmit -p tsconfig.e2e.json",
     "test": "vitest run",
-    "validate": "node scripts/validate-content.mjs --self-test && node scripts/validate-content.mjs --allow-missing-content && node scripts/check-rules.mjs --self-test && node scripts/check-rules.mjs",
+    "validate": "node scripts/validate-content.mjs --self-test && node scripts/validate-content.mjs --allow-missing-content && node scripts/check-rules.mjs --self-test && node scripts/check-rules.mjs && node scripts/maps/validate-maps.mjs --self-test && node scripts/maps/validate-maps.mjs",
     "e2e": "playwright test",
     "check": "npm run lint && npm run typecheck && npm run test && npm run build && npm run validate"
   },
