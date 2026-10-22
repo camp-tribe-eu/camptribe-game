@@ -38,6 +38,10 @@ description: "Правила написання контенту CampLife: по�
 
 ## 3. Структура — так читає валідатор
 
+> Частина пунктів нижче — **цільовий** формат (діалоги-графи, `tags`/`family` подій, умови
+> `{ "all": … }`). У схемі валідатора їх **ще немає**: напишеш їх зараз — отримаєш
+> `SCHEMA_UNKNOWN_FIELD`. Що валідатор приймає сьогодні — розділи 7 і 8.
+
 * **Умови — типізовані об'єкти** (TD-006): `{ "all": [{ "transport": "car" }, { "flag": "x" }] }`.
   Ніколи не рядком `"car && x"`.
 * **Діалог — JSON-граф** (TD-005): вузли з `id`, `speaker`, `text.uk`, `text.en`, `choices[]`.
@@ -69,3 +73,105 @@ GDD — приватний (`brain/Передача/00-dzherelo-lezhyt-lokalno.m
 
 Тексти пише Claude: $0, якість вища, ніж у сторонньої LLM. ШІ під час гри не викликається ніколи:
 усе написане наперед і перевірене. FAL — лише на зображення (OD-010, ліміт $10 на v1).
+
+## 7. Формат файлів — шпаргалка під схему
+
+Повний опис — `docs/CONTENT-VALIDATOR.md`, джерело правди — `scripts/validator/schema.mjs` і
+`scripts/validator/checks.mjs`. Перевірка: `node scripts/validate-content.mjs` (або `--dir <тека>`).
+
+**Схема строга.** Поле, якого немає в переліку нижче, — помилка. Ніяких `description`, `notes`,
+`tags`, `completed`, `progress`. Хочеш нове поле — спершу картка на схему, потім контент.
+
+**Файли.** У `content/` лише: `meta.json`, `profiles.json`, `transports.json`, `animals.json`,
+`items.json`, `npcs.json`, `locations.json`, `quests.json`, `events.json`, `facts.json` і тека
+`locales/` з `<мова>.json`. Більше нічого (жодних `README.json`, `quests-draft.json`, `lint/` усередині).
+
+**id — лише малі латинські літери, цифри, `.` і `-`. Підкреслення `_` і великі літери — ніколи.**
+
+| файл | поля (жирні — обов'язкові) | id |
+|---|---|---|
+| `meta.json` | **`start`**, **`locales`** | — |
+| `profiles.json` | **`id`**, **`nameKey`**, `transports` | `profile.family-teen` |
+| `transports.json` | **`id`**, **`nameKey`** | `transport.bike` |
+| `animals.json` | **`id`**, **`nameKey`**, `transports` | `animal.cat` (`animal.none` — зарезервовано) |
+| `items.json` | **`id`**, **`nameKey`** | `item.sleeping-bag` |
+| `npcs.json` | **`id`**, **`nameKey`**, **`locationId`**, `unlockedBy`, `sells`, `when` | `npc.elise` |
+| `locations.json` | **`id`**, **`nameKey`**, `unlockedBy`, `items`, `when` | `loc.camp.lake` |
+| `quests.json` | **`id`**, **`titleKey`**, **`optional`**, **`objectives`**, **`transitions`**, `end`, `giverId`, `locationId`, `when`, `requires`, `reward` | основний `ST-006`, бічний `q.nora-walk` |
+| `events.json` | **`id`**, **`titleKey`**, **`repeatable`**, `locationId`, `reward` | `ev.neighbours-firewood` |
+| `facts.json` | **`id`**, **`claimKey`**, `source`, `checkedAt`, `kind` | `fact.de-quiet-hours` |
+
+* **Ціль квесту:** **`id`** (`pitch-tent` — без крапок, лише `a-z0-9` і `-`), **`textKey`**,
+  **`kind`** (`talk` → `target` NPC; `visit` → локація; `collect` / `deliver` → предмет; `deliver`
+  ще й **`npcId`** отримувача), **`target`**, **`required`**, `when`.
+* **Перехід:** **`on`** — `complete` або `decline`; **`to`** — id наявного квесту; `choiceKey`
+  (текст кнопки вибору — потребує перекладу); `when`.
+* **`requires`:** `{ "quests": [...], "items": [...] }` — що мусить бути до старту квесту.
+* **Нагорода:** `{ "grantId": "rw.<id-квесту-або-події>", "items": [{ "item": "item.x", "qty": 1 }], "money": 5, "once": true }`.
+  `grantId` обов'язковий і **унікальний на весь контент**; `qty` ≥ 1, `money` ≥ 0.
+* **`when`** — умова на стан гравця: `{ "profiles": [...], "transports": [...], "animals": [...] }`.
+  Вимір, якого нема, не обмежує. Порожній список заборонено. `animal.none` — «без тварини».
+* **Ключі тексту** (`nameKey`, `titleKey`, `textKey`, `choiceKey`, `claimKey`) — у КОЖНОМУ файлі
+  `locales/<мова>.json` для кожної мови з `meta.locales` (зараз `uk` і `en`), непорожнім рядком.
+  Конвенція: ключ = id запису (`npc.nora`), ціль — `q.<квест>.o1`, вибір — `q.<квест>.choice`,
+  відмова — `q.<квест>.decline`.
+
+**Шаблон бічного (необов'язкового) квесту** — так зроблено `q.elise-bike-area`:
+
+1. Квест-джерело основного сюжету отримує ще один перехід
+   `{ "on": "complete", "to": "q.x", "choiceKey": "q.x.choice" }` — без нього квест недосяжний.
+2. Бічний квест: `"optional": true`, і два переходи назад в основний сюжет —
+   `{ "on": "complete", "to": "ST-…" }` і `{ "on": "decline", "to": "ST-…", "choiceKey": "q.x.decline" }`.
+3. Усе, що потрібно цілям (NPC, локація, предмет), — існує, відкрите до цього етапу
+   (`unlockedBy` — квест, який гарантовано завершено раніше) і має джерело (`locations[].items`,
+   `npcs[].sells` чи нагорода гарантованого квесту).
+4. Нагорода — власний `grantId` `rw.q-x`. Основний квест ніколи не `requires` бічного.
+5. Тексти — у `uk.json` і `en.json` одночасно: назва, кожна ціль, `choice`, `decline`, нові NPC і предмети.
+
+## 8. Коди валідатора: як не допустити
+
+Один рядок — один код із `scripts/validator/codes.mjs`: що його викликає → як не допустити →
+підказка. Повноту цього розділу стереже `node scripts/skills/check-skill-codes.mjs`: новий код
+у реєстрі без рядка тут — червоне.
+
+**Завантажувач**
+- `CONTENT_MISSING` — немає теки `content/` (або хибний `--dir`). Не допустити: перевіряй ту теку, яку правив; шлях — до теки, не до файлу.
+- `CONTENT_PARSE` — файл не є валідним JSON. Не допустити: без коментарів `//`, без коми після останнього елемента, лише подвійні лапки; прожени файл через `JSON.parse` перед комітом.
+- `CONTENT_EMPTY` — у `quests.json` нема жодного квесту. Не допустити: не очищай `quests.json` і не перейменовуй його; принаймні стартовий `ST-001`.
+- `CONTENT_UNKNOWN_FILE` — у `content/` лежить файл чи тека не з переліку (одруківка `quest.json`, чернетка, `notes.md` у `locales/`). Не допустити: лише імена з розділу 7; чернетки тримай поза `content/`.
+
+**Схема**
+- `SCHEMA_INVALID` — бракує обов'язкового поля, хибний тип або значення не з переліку. Не допустити: звір поля з таблицею розділу 7; `optional`/`required`/`repeatable` — `true`/`false`, не рядок; `kind` лише `talk|visit|collect|deliver`; `on` лише `complete|decline`; у `reward` завжди `grantId`; `"when": { "transports": [] }` — заборонено.
+- `SCHEMA_UNKNOWN_FIELD` — поле, якого нема в схемі (`description`, `tags`, `completed`, `next`, `choices`). Не допустити: лише поля з розділу 7; стан проходження в контент не пишеться ніколи.
+
+**Валідатор контенту**
+- `ID_FORMAT` — id не за шаблоном колекції: `q.nora_walk`, `npc.Nora`, `quest.walk`, ціль `walk.1`, `grantId` без `rw.`. Не допустити: префікс колекції + `a-z0-9` з `.`/`-` (`q.nora-walk`, `rw.q-nora-walk`); id цілі — `a-z0-9` з `-`.
+- `ID_DUPLICATE` — той самий id двічі в колекції або дві цілі з одним id у квесті. Не допустити: перед додаванням шукай id пошуком по `content/`; цілі в квесті називай за дією (`talk-nora`, `walk-shore`).
+- `REF_MISSING` — посилання на запис, якого нема (`target`, `giverId`, `locationId`, `to`, `unlockedBy`, `sells`, `items`, `when`, `npcId`; `deliver` без `npcId`). Не допустити: кожен новий NPC, предмет чи локацію спершу додай у свій файл, потім посилайся; `"target": "item.litter"` вимагає `{ "id": "item.litter", … }` в `items.json`.
+- `OBJECTIVE_UNCOMPLETABLE` — обов'язкова ціль на NPC / локацію / предмет, які на цьому етапі не гарантовано доступні. Не допустити: `unlockedBy` NPC і локації — квест, який завжди завершується ДО цього (для Розділу I біля озера — `ST-004`), предмет має джерело, відкрите до цього етапу; або зроби ціль `"required": false`.
+- `ITEM_UNOBTAINABLE` — квест вимагає предмет (`collect`, `deliver`, `requires.items`), якого ніде не можна взяти. Не допустити: додай джерело — `"items": ["item.litter"]` у локацію, `sells` у NPC або `reward.items` у гарантований квест.
+- `CYCLE_NO_EXIT` — квести переходять по колу, і жоден не веде назовні чи не є `end`. Не допустити: у циклі хоч один перехід назовні; бічний квест повертається в основний сюжет, а не в інший бічний.
+- `MAIN_GATE_NOT_GUARANTEED` — основний квест (`"optional": false`) вимагає бічний квест або предмет, що не гарантований. Не допустити: `requires` основного квесту — лише основні квести на всіх шляхах і предмети з гарантованим джерелом; нагорода бічного квесту — бонус, а не ключ.
+- `REWARD_GRANT_DUPLICATE` — два записи видають нагороду з тим самим `grantId` (копіпаст). Не допустити: `grantId` = `rw.` + id власника: `q.nora-walk` → `"grantId": "rw.q-nora-walk"`.
+- `REWARD_REPEATABLE_UNGUARDED` — подія `"repeatable": true` з нагородою без `"once": true`. Не допустити: у повторюваної події `"reward": { "grantId": "rw.ev-x", "money": 2, "once": true }` — або без нагороди.
+- `LOCALE_MISSING` — ключ тексту без перекладу (або порожній) хоч в одній мові, або в `meta.locales` нема мов / файлу мови. Не допустити: кожен `nameKey`/`titleKey`/`textKey`/`choiceKey`/`claimKey` пиши одразу в `uk.json` і `en.json`; після правки порівняй списки ключів.
+- `FACT_SOURCE_MISSING` — факт без `source`. Не допустити: `"source": "https://…"` першоджерела (закон, офіційний сайт), не «загальновідомо».
+- `FACT_DATE_INVALID` — `checkedAt` не `РРРР-ММ-ДД`, неіснуюча дата чи дата в майбутньому. Не допустити: `"checkedAt": "2026-10-22"` — дата, коли ти справді звірив джерело, не пізніше сьогодні.
+- `FACT_KIND_INVALID` — `kind` не з переліку. Не допустити: лише `regulation`, `geography`, `price`, `schedule`, `culture`.
+
+**Граф квестів**
+- `NODE_UNREACHABLE` — на квест не веде жоден перехід від `meta.start`. Не допустити: кожен новий квест отримує вхідний перехід від уже досяжного квесту (шаблон бічного квесту, крок 1).
+- `NO_PATH_TO_END` — з квесту не дійти до жодного `"end": true`. Не допустити: кожен перехід веде вперед до основного сюжету; бічний квест повертається в `ST-…`, який веде до кінця.
+- `REQUIRES_CYCLE` — квести вимагають один одного в `requires.quests`. Не допустити: `requires` дивиться лише назад по сюжету; ніколи A → B і B → A.
+- `OPTIONAL_NO_DECLINE` — `"optional": true` без переходу `decline`. Не допустити: завжди `{ "on": "decline", "to": "ST-…", "choiceKey": "q.x.decline" }` поруч із `complete`.
+- `BRANCH_NO_NEXT` — квест не `end` і має `"transitions": []`. Не допустити: або хоча б один перехід, або `"end": true` (лише фінал розділу).
+
+**Комбінації профіль × транспорт × тварина**
+- `COMBO_NO_START` — стартовий квест має `when`, що виключає частину гравців. Не допустити: на `meta.start` ніколи не став `when`.
+- `COMBO_TARGETED_UNREACHABLE` — квест адресований комбінації (`when`), але в ній до нього нема шляху (вхідний перехід має іншу умову). Не допустити: `when` вхідного переходу і `when` квесту — однакові, як у `q.elise-bike-area` (`transport.bike` на обох).
+- `COMBO_DEAD_CONTENT` — квест недосяжний у жодній дозволеній комбінації (умови шляху суперечать одна одній). Не допустити: не звужуй `when` уздовж шляху до порожнього перетину; перевір, що є хоч один профіль із таким транспортом і твариною.
+- `COMBO_OPTION_UNUSABLE` — транспортом не може їхати жоден профіль (`profiles[].transports` його не має). Не допустити: новий транспорт додай хоча б одному профілю в `transports` (або профілю без цього поля).
+- `WHEN_UNSATISFIABLE` — умові `when` (разом з умовою квесту, а для переходу — і квесту-цілі) не відповідає жодна дозволена комбінація. Не допустити: не поєднуй несумісне (`animal.cat` з `transport.bike`, якщо кішка їде лише авто; `profile.family-teen` з `transport.bike`); звір із `transports` профілів і тварин.
+
+**Збій самої перевірки**
+- `INTERNAL_ERROR` — перевірка впала на твоїх даних. Не допустити: це не «майже зелене», а червоне; зазвичай дані дивної форми, яку схема ще не ловить — виправ форму і заведи картку, щоб схема ловила це сама.
