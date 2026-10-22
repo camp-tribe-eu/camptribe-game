@@ -19,7 +19,7 @@ export const CORE_BANNED_IMPORT_REGEX = [
 ];
 
 export default tseslint.config(
-  { ignores: ['dist/', 'node_modules/', 'scripts/', 'art/'] },
+  { ignores: ['dist/', 'node_modules/', 'scripts/', 'art/', '.claude/', 'test-results/'] },
   js.configs.recommended,
   ...tseslint.configs.strict,
   {
