@@ -1,7 +1,8 @@
 // Самотест: доводить, що кожна перевірка вміє почервоніти, і що жодна не стріляє по коректному.
 import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { join, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { isDeepStrictEqual } from 'node:util';
 import { CODES } from './codes.mjs';
 import { CHECKS, validate } from './checks.mjs';
@@ -11,7 +12,7 @@ import { baseline, comboBaseline, FIXTURES, FILE_FIXTURES, TODAY } from './fixtu
 
 const codeSet = (issues) => [...new Set(issues.map((i) => i.code))].sort();
 
-function writeBaseline(dir, override = {}) {
+function writeBaseline(dir, override = {}, dirs = []) {
   const c = baseline();
   mkdirSync(join(dir, 'locales'), { recursive: true });
   writeFileSync(join(dir, 'meta.json'), JSON.stringify(c.meta));
@@ -20,6 +21,7 @@ function writeBaseline(dir, override = {}) {
   mkdirSync(join(dir, 'dialogue'));
   for (const d of c.dialogues ?? []) writeFileSync(join(dir, 'dialogue', `${d.id.replace(/^dlg\./, '')}.json`), JSON.stringify(d));
   for (const [name, text] of Object.entries(override)) writeFileSync(join(dir, name), text);
+  for (const name of dirs) mkdirSync(join(dir, name), { recursive: true });
 }
 
 export function selfTest() {
@@ -83,7 +85,7 @@ export function selfTest() {
     const root = mkdtempSync(join(tmpdir(), 'ct-validator-'));
     const dir = join(root, 'content');
     try {
-      if (f.files === 'baseline') { mkdirSync(dir); writeBaseline(dir, f.override); }
+      if (f.files === 'baseline') { mkdirSync(dir); writeBaseline(dir, f.override, f.dirs); }
       const r = loadContent(dir, { allowMissing: !!f.allowMissing });
       const got = codeSet(r.issues);
       const want = [...f.expect].sort();
@@ -114,4 +116,12 @@ export function selfTest() {
     ? `SELF-TEST: PASSED ${ran}/${ran} · зламаних прикладів ${broken}, позитивних контролів ${positive} · перевірок ${CHECKS.length}, кодів ${Object.keys(CODES).length - 1}, кожен доведено`
     : `SELF-TEST: FAILED ${failed} of ${ran}`);
   return { ok: failed === 0, text: lines.join('\n') };
+}
+
+// Запуск напряму (`node scripts/validator/self-test.mjs`) не сміє мовчки вийти з кодом 0 (закон 4):
+// проганяємо той самий самотест, що й `node scripts/validate-content.mjs --self-test`.
+if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+  const r = selfTest();
+  console.log(r.text);
+  process.exit(r.ok ? 0 : 1);
 }

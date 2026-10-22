@@ -8,6 +8,7 @@ export const CODES = {
   CONTENT_PARSE:        { check: 'loader', spec: 'порожній вивід із кодом 0 — збій (закон 4)' },
   CONTENT_EMPTY:        { check: 'loader', spec: 'порожній вивід із кодом 0 — збій (закон 4)' },
   CONTENT_UNKNOWN_FILE: { check: 'loader', spec: 'файл з одруківкою в назві не має тихо ігноруватись' },
+  DIALOGUE_FILE_NAME:   { check: 'loader', spec: 'GAME-28: файл dialogue/<x>.json містить діалог з id dlg.<x>' },
 
   // схеми
   SCHEMA_INVALID:       { check: 'schema', spec: '§1 типізовані схеми' },
@@ -39,7 +40,11 @@ export const CODES = {
   DIALOGUE_REF_MISSING:      { check: 'dialogue-refs', spec: '§2 кожне посилання діалогу (NPC, квест, ціль, транспорт, вузол) веде на існуючий запис' },
   DIALOGUE_NODE_UNREACHABLE: { check: 'dialogue-reachable', spec: '§3 кожен вузол діалогу досяжний зі старту' },
   DIALOGUE_DEAD_END:         { check: 'dialogue-dead-end', spec: '§3 з кожного вузла діалогу є безумовний шлях до end' },
-  DIALOGUE_FLAG_NEVER_SET:   { check: 'dialogue-flags', spec: '§2 умова не читає прапорець, який ніщо не ставить' },
+  DIALOGUE_FLAG_NEVER_SET:   { check: 'dialogue-flags', spec: '§2 умова не читає прапорець, який ніщо досяжне не ставить (сетер за нездійсненною умовою — не сетер)' },
+  DIALOGUE_COND_CONTRADICTION: { check: 'dialogue-flags', spec: '§3 умова all не вимагає водночас flag і notFlag того самого прапорця' },
+  DIALOGUE_QUEST_GATE:       { check: 'dialogue-quest-gate', spec: '§2 startQuest не обходить requires.quests квесту-цілі' },
+  DIALOGUE_OBJECTIVE_KIND:   { check: 'dialogue-objective-kind', spec: '§2 розмова закриває лише ціль talk із цим самим NPC' },
+  DIALOGUE_NPC_DUPLICATE:    { check: 'dialogue-npc-unique', spec: '§2 один діалог на NPC — інакше рушій не знає, який запускати' },
 
   // комбінації профіль × транспорт × тварина
   COMBO_NO_START:             { check: 'combos', spec: '§3 кожен вузол досяжний — у кожній комбінації стану гравця' },

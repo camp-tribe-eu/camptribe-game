@@ -23,7 +23,7 @@ function rangerDialogue() {
     nodes: [
       { id: 'hello', speaker: 'npc', textKey: K('hello'), choices: [
         { textKey: K('hello.c1'), next: 'help', when: { quest: 'ST-001', status: 'completed' },
-          effects: [{ setFlag: 'f.fixture-helped' }, { completeObjective: { quest: 'ST-002', objective: 'visit-forest' } }] },
+          effects: [{ setFlag: 'f.fixture-helped' }, { completeObjective: { quest: 'ST-004', objective: 'talk-ranger' } }] },
         { textKey: K('hello.c2'), next: 'bye', effects: [{ setFlag: 'f.fixture-met' }, { startQuest: 'ST-003' }] },
       ] },
       { id: 'help', speaker: 'npc', textKey: K('help'), choices: [
@@ -136,6 +136,17 @@ const ticketFromOptional = (c) => {
 
 const dlg = (c) => c.dialogues[0];
 const node = (c, id) => dlg(c).nodes.find((n) => n.id === id);
+// Другий діалог — у крамаря: «hi» → «bye» одним безумовним вибором із заданими ефектами.
+const shopDialogue = (effects) => ({
+  id: 'dlg.fixture-shop', npcId: 'npc.shopkeeper', start: 'hi',
+  nodes: [
+    { id: 'hi', speaker: 'npc', textKey: K('hello'), choices: [{ textKey: K('hello.c2'), next: 'bye', effects }] },
+    { id: 'bye', speaker: 'npc', textKey: K('bye'), end: true },
+  ],
+});
+// Ключ, якого прототип Object має сам (`__proto__`): у JS-патчі присвоєння міняє прототип, тож
+// кладемо власну перелічувану властивість — саме таку дає JSON.parse('{"__proto__": …}').
+const ownProto = (o) => Object.defineProperty(o, '__proto__', { value: {}, enumerable: true, configurable: true, writable: true });
 
 export const FIXTURES = [
   // ---- позитивні контролі: перевірки не сміють стріляти по коректному ----
@@ -216,11 +227,12 @@ export const FIXTURES = [
   { name: 'вузол, у який не веде жоден перехід', expect: ['NODE_UNREACHABLE'], patch(c) {
     c.quests.push({ id: 'ST-009', titleKey: 'q.st-004', optional: false, objectives: [], transitions: [{ on: 'complete', to: 'ST-004' }] });
   } },
-  { name: 'два квести вимагають один одного', expect: ['REQUIRES_CYCLE', 'MAIN_GATE_NOT_GUARANTEED'], patch(c) {
+  // DIALOGUE_QUEST_GATE тут — справжня друга знахідка: рейнджер безумовно стартує ST-003, а той тепер чогось вимагає.
+  { name: 'два квести вимагають один одного', expect: ['REQUIRES_CYCLE', 'MAIN_GATE_NOT_GUARANTEED', 'DIALOGUE_QUEST_GATE'], patch(c) {
     q(c, 'ST-003').requires = { quests: ['ST-004'] };
     q(c, 'ST-004').requires.quests.push('ST-003');
   } },
-  { name: 'квест вимагає сам себе', expect: ['REQUIRES_CYCLE'], patch(c) { q(c, 'ST-003').requires = { quests: ['ST-003'] }; } },
+  { name: 'квест вимагає сам себе', expect: ['REQUIRES_CYCLE', 'DIALOGUE_QUEST_GATE'], patch(c) { q(c, 'ST-003').requires = { quests: ['ST-003'] }; } },
   { name: 'необов\u2019язковий квест без відмови', expect: ['OPTIONAL_NO_DECLINE'], patch(c) { q(c, 'ST-003').transitions = [{ on: 'complete', to: 'ST-004' }]; } },
   { name: 'гілка без наступного етапу', expect: ['BRANCH_NO_NEXT', 'NO_PATH_TO_END'], patch(c) {
     c.quests.push({ id: 'ST-005', titleKey: 'q.st-004', optional: false, objectives: [], transitions: [] });
@@ -251,11 +263,67 @@ export const FIXTURES = [
   } },
   { name: '[діалог] notFlag на прапорець, який ніщо не ставить', expect: ['DIALOGUE_FLAG_NEVER_SET'], patch(c) { node(c, 'help').choices[0].when = { notFlag: 'f.fixture-ghost' }; } },
   { name: '[діалог] прапорець ставиться лише в іншому діалозі — коректно', expect: [], patch(c) {
-    const other = rangerDialogue();
-    other.id = 'dlg.fixture-ranger-2';
-    other.nodes[0].choices[1].effects = [{ setFlag: 'f.fixture-elsewhere' }];
-    c.dialogues.push(other);
+    c.dialogues.push(shopDialogue([{ setFlag: 'f.fixture-elsewhere' }]));
     node(c, 'help').choices[0].when = { flag: 'f.fixture-elsewhere' };
+  } },
+  // Нерухома точка прапорців: сетер за нездійсненною умовою — не сетер.
+  { name: '[діалог] прапорець ставить лише вибір, що сам вимагає цей прапорець', expect: ['DIALOGUE_FLAG_NEVER_SET'], count: { code: 'DIALOGUE_FLAG_NEVER_SET', n: 1 }, patch(c) {
+    node(c, 'help').choices.push({ textKey: K('help.c1'), next: 'bye', when: { flag: 'f.fixture-loop' }, effects: [{ setFlag: 'f.fixture-loop' }] });
+  } },
+  // Сетер step2 (hello.c1) стоїть РАНІШЕ за сетер step1 (hello.c2), від якого залежить: один прохід
+  // його пропустить. У грі це друга розмова: перша ставить step1, друга відкриває hello.c1.
+  { name: '[діалог] контроль: ланцюжок сетерів через умовні вибори — коректно', expect: [], patch(c) {
+    node(c, 'hello').choices[0].when = { all: [{ quest: 'ST-001', status: 'completed' }, { flag: 'f.fixture-step1' }] };
+    node(c, 'hello').choices[0].effects.push({ setFlag: 'f.fixture-step2' });
+    node(c, 'hello').choices[1].effects.push({ setFlag: 'f.fixture-step1' });
+    node(c, 'help').choices[0].when = { flag: 'f.fixture-step2' };
+  } },
+  { name: '[діалог] сетер за суперечливою умовою all не рахується', expect: ['DIALOGUE_COND_CONTRADICTION', 'DIALOGUE_FLAG_NEVER_SET'], patch(c) {
+    node(c, 'help').choices.push({ textKey: K('help.c1'), next: 'bye', when: { all: [{ flag: 'f.fixture-met' }, { notFlag: 'f.fixture-met' }] }, effects: [{ setFlag: 'f.fixture-late' }] });
+    node(c, 'help').choices[0].when = { flag: 'f.fixture-late' };
+  } },
+  { name: '[діалог] all вимагає водночас flag і notFlag (у вкладеному all)', expect: ['DIALOGUE_COND_CONTRADICTION'], patch(c) {
+    node(c, 'help').choices[0].when = { all: [{ flag: 'f.fixture-helped' }, { all: [{ notFlag: 'f.fixture-helped' }] }] };
+  } },
+  { name: '[діалог] контроль: flag і notFlag у різних гілках any всередині all — не суперечність', expect: [], patch(c) {
+    node(c, 'help').choices[0].when = { all: [{ flag: 'f.fixture-met' }, { any: [{ flag: 'f.fixture-helped' }, { notFlag: 'f.fixture-helped' }] }] };
+  } },
+  // Один діалог на NPC.
+  { name: '[діалог] два діалоги для одного NPC', expect: ['DIALOGUE_NPC_DUPLICATE'], patch(c) {
+    const d = shopDialogue([]);
+    d.npcId = 'npc.ranger';
+    c.dialogues.push(d);
+  } },
+  // completeObjective — лише talk із тим самим NPC.
+  { name: '[діалог] розмова закриває ціль visit', expect: ['DIALOGUE_OBJECTIVE_KIND'], patch(c) {
+    node(c, 'hello').choices[0].effects[1].completeObjective = { quest: 'ST-002', objective: 'visit-forest' };
+  } },
+  { name: '[діалог] розмова з крамарем закриває ціль «поговорити з рейнджером»', expect: ['DIALOGUE_OBJECTIVE_KIND'], patch(c) {
+    c.dialogues.push(shopDialogue([{ completeObjective: { quest: 'ST-004', objective: 'talk-ranger' } }]));
+  } },
+  // startQuest не обходить requires.quests квесту-цілі.
+  { name: '[діалог] безумовний вибір стартує квест, що вимагає незавершеного', expect: ['DIALOGUE_QUEST_GATE'], patch(c) {
+    node(c, 'hello').choices[1].effects.push({ startQuest: 'ST-004' });
+  } },
+  { name: '[діалог] контроль: when вибору вимагає завершення потрібного квесту — коректно', expect: [], patch(c) {
+    node(c, 'hello').choices[0].when = { all: [{ quest: 'ST-001', status: 'completed' }, { quest: 'ST-002', status: 'completed' }] };
+    node(c, 'hello').choices[0].effects.push({ startQuest: 'ST-004' });
+  } },
+  { name: '[діалог] when вибору з потрібним квестом лише всередині any — не гарантія', expect: ['DIALOGUE_QUEST_GATE'], patch(c) {
+    node(c, 'hello').choices[0].when = { any: [{ quest: 'ST-001', status: 'completed' }, { quest: 'ST-002', status: 'completed' }] };
+    node(c, 'hello').choices[0].effects.push({ startQuest: 'ST-004' });
+  } },
+  { name: '[діалог] when вибору вимагає потрібний квест лише активним — не гарантія', expect: ['DIALOGUE_QUEST_GATE'], patch(c) {
+    node(c, 'hello').choices[0].when = { quest: 'ST-002', status: 'active' };
+    node(c, 'hello').choices[0].effects.push({ startQuest: 'ST-004' });
+  } },
+  { name: '[діалог] контроль: NPC відкривається лише після потрібного квесту — коректно', expect: [], patch(c) {
+    c.npcs[1].unlockedBy = 'ST-002';
+    c.dialogues.push(shopDialogue([{ startQuest: 'ST-004' }]));
+  } },
+  { name: '[діалог] NPC відкривається раніше, ніж завершено потрібний квест', expect: ['DIALOGUE_QUEST_GATE'], patch(c) {
+    c.npcs[1].unlockedBy = 'ST-001';
+    c.dialogues.push(shopDialogue([{ startQuest: 'ST-004' }]));
   } },
   { name: '[діалог] неіснуючий NPC', expect: ['DIALOGUE_REF_MISSING'], patch(c) { dlg(c).npcId = 'npc.ghost'; } },
   { name: '[діалог] умова на неіснуючий квест', expect: ['DIALOGUE_REF_MISSING'], patch(c) { node(c, 'hello').choices[0].when.quest = 'ST-099'; } },
@@ -267,15 +335,30 @@ export const FIXTURES = [
     node(c, 'help').choices.push({ textKey: K('help.c1'), next: 'ghost', when: { flag: 'f.fixture-helped' } });
   } },
   { name: '[діалог] старт на неіснуючий вузол — лише першопричина', expect: ['DIALOGUE_REF_MISSING'], patch(c) { dlg(c).start = 'ghost'; } },
+  // next вузла на неіснуючий вузол: thanks лишається і без шляху до end — це друга, справжня знахідка.
+  { name: '[діалог] next вузла веде на неіснуючий вузол', expect: ['DIALOGUE_REF_MISSING', 'DIALOGUE_DEAD_END'], count: { code: 'DIALOGUE_REF_MISSING', n: 1 }, patch(c) { node(c, 'thanks').next = 'ghost'; } },
+  { name: '[діалог] completeObjective на неіснуючий квест — посилання, а не падіння', expect: ['DIALOGUE_REF_MISSING'], patch(c) {
+    node(c, 'hello').choices[0].effects[1].completeObjective = { quest: 'q.ghost', objective: 'talk-ranger' };
+  } },
   { name: '[діалог] немає перекладу вибору в одній мові', expect: ['LOCALE_MISSING'], patch(c) { delete c.locales.en[K('help.c2')]; } },
   { name: '[діалог] порожній переклад репліки вузла', expect: ['LOCALE_MISSING'], patch(c) { c.locales.uk[K('thanks')] = ''; } },
   { name: '[діалог] умова рядком, а не об’єктом (TD-006)', expect: ['SCHEMA_INVALID'], patch(c) { node(c, 'help').choices[0].when = 'f.fixture-helped && !f.fixture-met'; } },
   { name: '[діалог] умова з двома дискримінаторами', expect: ['SCHEMA_INVALID'], patch(c) { node(c, 'help').choices[0].when = { flag: 'f.fixture-helped', notFlag: 'f.fixture-met' }; } },
   { name: '[діалог] вузол і з next, і з choices', expect: ['SCHEMA_INVALID'], patch(c) { node(c, 'hello').next = 'bye'; } },
   { name: '[діалог] стан проходження у вузлі', expect: ['SCHEMA_UNKNOWN_FIELD'], patch(c) { node(c, 'bye').visited = true; } },
+  { name: '[діалог] діалог без nodes — схема, а не падіння', expect: ['SCHEMA_INVALID'], patch(c) { delete dlg(c).nodes; } },
+  { name: '[схема] прототипний ключ constructor у вузлі', expect: ['SCHEMA_UNKNOWN_FIELD'], patch(c) { node(c, 'bye').constructor = 'x'; } },
+  { name: '[схема] власний ключ __proto__ у вузлі', expect: ['SCHEMA_UNKNOWN_FIELD'], patch(c) { ownProto(node(c, 'bye')); } },
+  { name: '[схема] прототипний ключ constructor в умові', expect: ['SCHEMA_UNKNOWN_FIELD'], patch(c) { node(c, 'help').choices[0].when = { flag: 'f.fixture-helped', constructor: 'x' }; } },
+  { name: '[схема] власний ключ __proto__ в умові', expect: ['SCHEMA_UNKNOWN_FIELD'], patch(c) { node(c, 'help').choices[0].when = ownProto({ flag: 'f.fixture-helped' }); } },
+  { name: '[схема] умова лише з прототипним ключем', expect: ['SCHEMA_INVALID'], patch(c) { node(c, 'help').choices[0].when = { toString: 'f.fixture-helped' }; } },
   { name: '[діалог] прапорець із підкресленням', expect: ['ID_FORMAT'], patch(c) {
     node(c, 'hello').choices[0].effects[0].setFlag = 'f.fixture_helped';
     node(c, 'help').choices[0].when = { flag: 'f.fixture_helped' };
+  } },
+  { name: '[діалог] id вузла з великою літерою', expect: ['ID_FORMAT'], patch(c) {
+    node(c, 'thanks').id = 'Thanks';
+    node(c, 'help').choices[0].next = 'Thanks';
   } },
   { name: '[діалог] id діалогу без префікса dlg.', expect: ['ID_FORMAT'], patch(c) { dlg(c).id = 'ranger-hello'; } },
   { name: '[діалог] два вузли з одним id', expect: ['ID_DUPLICATE'], patch(c) { dlg(c).nodes.push({ ...node(c, 'bye') }); } },
@@ -399,6 +482,8 @@ export const FILE_FIXTURES = [
   { name: 'порожній список квестів', files: 'baseline', override: { 'quests.json': '[]' }, expectStatus: 'ISSUES', expect: ['CONTENT_EMPTY'] },
   { name: 'зламаний JSON діалогу', files: 'baseline', override: { 'dialogue/fixture-ranger.json': '{' }, expectStatus: 'ISSUES', expect: ['CONTENT_PARSE'] },
   { name: 'чернетка не-JSON у dialogue/', files: 'baseline', override: { 'dialogue/notes.md': '# draft' }, expectStatus: 'ISSUES', expect: ['CONTENT_UNKNOWN_FILE'] },
+  { name: 'тека з назвою x.json у dialogue/', files: 'baseline', dirs: ['dialogue/x.json'], expectStatus: 'ISSUES', expect: ['CONTENT_UNKNOWN_FILE'] },
+  { name: 'назва файлу діалогу не збігається з id', files: 'baseline', override: { 'dialogue/shop.json': JSON.stringify(shopDialogue([])) }, expectStatus: 'ISSUES', expect: ['DIALOGUE_FILE_NAME'] },
   { name: 'одруківка в назві файлу', files: 'baseline', override: { 'quest.json': '[]' }, expectStatus: 'ISSUES', expect: ['CONTENT_UNKNOWN_FILE'] },
   { name: 'еталон із диска читається повністю й без втрат', files: 'baseline', expectStatus: 'OK', expect: [], roundTrip: true },
 ];

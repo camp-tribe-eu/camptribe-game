@@ -95,7 +95,8 @@ function walk(s, v, where, out) {
     return;
   }
   if (s.t === 'union') {
-    const keys = Object.keys(v).filter((k) => k in s.variants);
+    // Object.hasOwn, а не `in`: інакше `constructor`/`__proto__` з JSON рахуються за варіант.
+    const keys = Object.keys(v).filter((k) => Object.hasOwn(s.variants, k));
     if (keys.length !== 1) {
       out.push({ code: 'SCHEMA_INVALID', where, msg: `очікується рівно один із ключів ${Object.keys(s.variants).join('|')}, отримано ${JSON.stringify(v)}` });
       return;
@@ -110,7 +111,8 @@ function walk(s, v, where, out) {
       } else walk(fs, v[k], `${where}.${k}`, out);
     }
     for (const k of Object.keys(v)) {
-      if (!(k in s.fields)) out.push({ code: 'SCHEMA_UNKNOWN_FIELD', where: `${where}.${k}`, msg: 'невідоме поле (стан проходження чи одруківка?)' });
+      // Object.hasOwn, а не `in`: прототипні ключі (`constructor`, `__proto__` з JSON) — теж невідомі поля.
+      if (!Object.hasOwn(s.fields, k)) out.push({ code: 'SCHEMA_UNKNOWN_FIELD', where: `${where}.${k}`, msg: 'невідоме поле (стан проходження чи одруківка?)' });
     }
   }
 }
