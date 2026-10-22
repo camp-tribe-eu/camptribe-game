@@ -35,6 +35,12 @@ export const CODES = {
   OPTIONAL_NO_DECLINE:  { check: 'optional-decline', spec: '§3 відмова від необов\u2019язкового вузла лишає шлях уперед' },
   BRANCH_NO_NEXT:       { check: 'branch-next', spec: '§3 кожна гілка має наступний етап або кінець' },
 
+  // діалоги, GAME-28 (TD-005 граф, TD-006 типізовані умови)
+  DIALOGUE_REF_MISSING:      { check: 'dialogue-refs', spec: '§2 кожне посилання діалогу (NPC, квест, ціль, транспорт, вузол) веде на існуючий запис' },
+  DIALOGUE_NODE_UNREACHABLE: { check: 'dialogue-reachable', spec: '§3 кожен вузол діалогу досяжний зі старту' },
+  DIALOGUE_DEAD_END:         { check: 'dialogue-dead-end', spec: '§3 з кожного вузла діалогу є безумовний шлях до end' },
+  DIALOGUE_FLAG_NEVER_SET:   { check: 'dialogue-flags', spec: '§2 умова не читає прапорець, який ніщо не ставить' },
+
   // комбінації профіль × транспорт × тварина
   COMBO_NO_START:             { check: 'combos', spec: '§3 кожен вузол досяжний — у кожній комбінації стану гравця' },
   COMBO_TARGETED_UNREACHABLE: { check: 'combos', spec: '§3 вузол, адресований комбінації, у ній досяжний' },

@@ -16,6 +16,30 @@ const ids = { t: 'array', of: str, min: 1 };
 // Порожній список заборонено: «нікому» — це одруківка, а не намір. Семантика: scripts/validator/combos.mjs.
 const when = obj({ profiles: ids, transports: ids, animals: ids });
 
+// Діалоги (GAME-28, TD-005/TD-006). Умова — типізований об'єкт, ніколи не рядок «car && x».
+// union: об'єкт рівно з ОДНИМ ключем-дискримінатором зі списку варіантів; далі — строга схема варіанта.
+const union = (variants) => ({ t: 'union', variants });
+const cond = union({});
+const conds = { t: 'array', of: cond, min: 1 };
+Object.assign(cond.variants, {
+  flag: obj({ flag: req(str) }),
+  notFlag: obj({ notFlag: req(str) }),
+  quest: obj({ quest: req(str), status: req(en('active', 'completed')) }),
+  transport: obj({ transport: req(str) }),
+  all: obj({ all: req(conds) }),
+  any: obj({ any: req(conds) }),
+});
+const effect = union({
+  setFlag: obj({ setFlag: req(str) }),
+  startQuest: obj({ startQuest: req(str) }),
+  completeObjective: obj({ completeObjective: req(obj({ quest: req(str), objective: req(str) })) }),
+});
+const choice = obj({ textKey: req(str), next: req(str), when: cond, effects: arr(effect) });
+const node = obj({
+  id: req(str), speaker: req(en('npc', 'player')), textKey: req(str),
+  end: bool, next: str, choices: { t: 'array', of: choice, min: 1 },
+});
+
 const reward = obj({ grantId: req(str), items: arr(obj({ item: req(str), qty: req(int1) })), money: int0, once: bool });
 
 export const SCHEMAS = {
@@ -45,6 +69,11 @@ export const SCHEMAS = {
   facts: obj({ id: req(str), claimKey: req(str), source: str, checkedAt: str, kind: str }),
 };
 
+// content/dialogue/<назва>.json — один діалог на файл; завантажувач складає їх у content.dialogues.
+// Навмисно поза SCHEMAS: scripts/check-rules.mjs вимагає рядок DC-0xx у docs/DATA_CONTRACTS.md для
+// кожного ключа SCHEMAS, а цей рядок ще не додано (GAME-28 не чіпає docs/DATA_CONTRACTS.md).
+export const DIALOGUE_SCHEMA = obj({ id: req(str), npcId: req(str), start: req(str), nodes: req({ t: 'array', of: node, min: 1 }) });
+
 export const COLLECTIONS = ['profiles', 'transports', 'animals', 'items', 'npcs', 'locations', 'quests', 'events', 'facts'];
 
 function typeOk(s, v) {
@@ -53,7 +82,7 @@ function typeOk(s, v) {
     case 'boolean': return typeof v === 'boolean';
     case 'int': return Number.isInteger(v) && v >= (s.min ?? -Infinity);
     case 'array': return Array.isArray(v) && v.length >= (s.min ?? 0);
-    case 'object': return v !== null && typeof v === 'object' && !Array.isArray(v);
+    case 'object': case 'union': return v !== null && typeof v === 'object' && !Array.isArray(v);
     default: return false;
   }
 }
@@ -63,6 +92,14 @@ function walk(s, v, where, out) {
     const want = s.enum ? `одне з ${s.enum.join('|')}` : s.t + (s.min != null ? (s.t === 'array' ? ` довжини >= ${s.min}` : ` >= ${s.min}`) : '');
     out.push({ code: 'SCHEMA_INVALID', where, msg: `очікується ${want}, отримано ${JSON.stringify(v)}` });
     return;
+  }
+  if (s.t === 'union') {
+    const keys = Object.keys(v).filter((k) => k in s.variants);
+    if (keys.length !== 1) {
+      out.push({ code: 'SCHEMA_INVALID', where, msg: `очікується рівно один із ключів ${Object.keys(s.variants).join('|')}, отримано ${JSON.stringify(v)}` });
+      return;
+    }
+    return walk(s.variants[keys[0]], v, where, out);
   }
   if (s.t === 'array') v.forEach((x, i) => walk(s.of, x, `${where}[${i}]`, out));
   if (s.t === 'object') {
@@ -80,7 +117,7 @@ function walk(s, v, where, out) {
 export function checkSchema(content) {
   const out = [];
   if (!typeOk({ t: 'object' }, content)) return [{ code: 'SCHEMA_INVALID', where: 'content', msg: 'не об\u2019єкт' }];
-  const known = ['meta', 'locales', ...COLLECTIONS];
+  const known = ['meta', 'locales', 'dialogues', ...COLLECTIONS];
   for (const k of Object.keys(content)) {
     if (!known.includes(k)) out.push({ code: 'SCHEMA_UNKNOWN_FIELD', where: k, msg: 'невідомий розділ контенту' });
   }
@@ -89,6 +126,20 @@ export function checkSchema(content) {
     if (content[c] === undefined) continue;
     if (!Array.isArray(content[c])) { out.push({ code: 'SCHEMA_INVALID', where: c, msg: 'очікується масив' }); continue; }
     content[c].forEach((e, i) => walk(SCHEMAS[c], e, `${c}[${i}]`, out));
+  }
+  if (content.dialogues !== undefined) {
+    if (!Array.isArray(content.dialogues)) out.push({ code: 'SCHEMA_INVALID', where: 'dialogues', msg: 'очікується масив' });
+    else content.dialogues.forEach((d, i) => {
+      const where = `dialogue:${typeof d?.id === 'string' ? d.id : i}`;
+      const before = out.length;
+      walk(DIALOGUE_SCHEMA, d, where, out);
+      if (out.length > before) return;
+      // Вихід вузла — рівно один спосіб: end, next або choices. Два одразу — рушій не знає, що робити.
+      for (const n of d.nodes) {
+        const ways = [n.end === true, n.next !== undefined, n.choices !== undefined].filter(Boolean).length;
+        if (ways > 1) out.push({ code: 'SCHEMA_INVALID', where: `${where}/${n.id}`, msg: 'вузол має більше одного способу виходу: лише одне з end | next | choices' });
+      }
+    });
   }
   const loc = content.locales;
   if (loc !== undefined) {

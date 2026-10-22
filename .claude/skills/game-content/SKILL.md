@@ -83,8 +83,8 @@ GDD — приватний (`brain/Передача/00-dzherelo-lezhyt-lokalno.m
 `tags`, `completed`, `progress`. Хочеш нове поле — спершу картка на схему, потім контент.
 
 **Файли.** У `content/` лише: `meta.json`, `profiles.json`, `transports.json`, `animals.json`,
-`items.json`, `npcs.json`, `locations.json`, `quests.json`, `events.json`, `facts.json` і тека
-`locales/` з `<мова>.json`. Більше нічого (жодних `README.json`, `quests-draft.json`, `lint/` усередині).
+`items.json`, `npcs.json`, `locations.json`, `quests.json`, `events.json`, `facts.json`, тека
+`locales/` з `<мова>.json` і тека `dialogue/` з `<назва>.json` (один діалог на файл). Більше нічого (жодних `README.json`, `quests-draft.json`, `lint/` усередині).
 
 **id — лише малі латинські літери, цифри, `.` і `-`. Підкреслення `_` і великі літери — ніколи.**
 
@@ -116,6 +116,30 @@ GDD — приватний (`brain/Передача/00-dzherelo-lezhyt-lokalno.m
   Конвенція: ключ = id запису (`npc.nora`), ціль — `q.<квест>.o1`, вибір — `q.<квест>.choice`,
   відмова — `q.<квест>.decline`.
 
+**Діалог** — `content/dialogue/<назва>.json`, граф вузлів (TD-005). Зразок — `elise-greeting.json`.
+
+```json
+{ "id": "dlg.elise-greeting", "npcId": "npc.elise", "start": "hello", "nodes": [
+  { "id": "hello", "speaker": "npc", "textKey": "dlg.elise-greeting.hello", "choices": [
+    { "textKey": "dlg.elise-greeting.hello.c1", "next": "bike", "when": { "transport": "transport.bike" }, "effects": [{ "setFlag": "f.elise-met" }] },
+    { "textKey": "dlg.elise-greeting.hello.c2", "next": "spot" } ] },
+  { "id": "bike", "speaker": "npc", "textKey": "dlg.elise-greeting.bike", "next": "spot" },
+  { "id": "bye", "speaker": "npc", "textKey": "dlg.elise-greeting.bye", "end": true } ] }
+```
+
+* Діалог: **`id`** (`dlg.назва`), **`npcId`** (наявний NPC), **`start`** (id вузла), **`nodes`**.
+* Вузол: **`id`** (`a-z0-9` і `-`), **`speaker`** (`npc` | `player`), **`textKey`**, і **рівно одне** з
+  `"end": true` | `"next": "<вузол>"` | `"choices": [...]`.
+* Вибір: **`textKey`**, **`next`**, `when` (умова), `effects` (ефекти).
+* Умова (`when`) — **об'єкт, ніколи рядок** (TD-006), рівно один ключ: `{ "flag": "f.x" }`,
+  `{ "notFlag": "f.x" }`, `{ "quest": "ST-001", "status": "active" | "completed" }`,
+  `{ "transport": "transport.bike" }`, `{ "all": [умови] }`, `{ "any": [умови] }`.
+* Ефект — рівно один ключ: `{ "setFlag": "f.x" }`, `{ "startQuest": "q.x" }`,
+  `{ "completeObjective": { "quest": "ST-003", "objective": "get-tent" } }`.
+* Прапорець — `f.назва`. Читати можна лише прапорець, який десь ставить `setFlag`.
+* З **кожного** вузла має бути шлях до `end` **без умов**: поруч з умовним вибором — завжди
+  безумовний. Ключі: вузол `dlg.<назва>.<вузол>`, вибір `dlg.<назва>.<вузол>.c1`, `.c2`…
+
 **Шаблон бічного (необов'язкового) квесту** — так зроблено `q.elise-bike-area`:
 
 1. Квест-джерело основного сюжету отримує ще один перехід
@@ -138,10 +162,10 @@ GDD — приватний (`brain/Передача/00-dzherelo-lezhyt-lokalno.m
 - `CONTENT_MISSING` — немає теки `content/` (або хибний `--dir`). Не допустити: перевіряй ту теку, яку правив; шлях — до теки, не до файлу.
 - `CONTENT_PARSE` — файл не є валідним JSON. Не допустити: без коментарів `//`, без коми після останнього елемента, лише подвійні лапки; прожени файл через `JSON.parse` перед комітом.
 - `CONTENT_EMPTY` — у `quests.json` нема жодного квесту. Не допустити: не очищай `quests.json` і не перейменовуй його; принаймні стартовий `ST-001`.
-- `CONTENT_UNKNOWN_FILE` — у `content/` лежить файл чи тека не з переліку (одруківка `quest.json`, чернетка, `notes.md` у `locales/`). Не допустити: лише імена з розділу 7; чернетки тримай поза `content/`.
+- `CONTENT_UNKNOWN_FILE` — у `content/` лежить файл чи тека не з переліку (одруківка `quest.json`, чернетка, `notes.md` у `locales/` чи `dialogue/`). Не допустити: лише імена з розділу 7; чернетки тримай поза `content/`.
 
 **Схема**
-- `SCHEMA_INVALID` — бракує обов'язкового поля, хибний тип або значення не з переліку. Не допустити: звір поля з таблицею розділу 7; `optional`/`required`/`repeatable` — `true`/`false`, не рядок; `kind` лише `talk|visit|collect|deliver`; `on` лише `complete|decline`; у `reward` завжди `grantId`; `"when": { "transports": [] }` — заборонено.
+- `SCHEMA_INVALID` — бракує обов'язкового поля, хибний тип або значення не з переліку. Не допустити: звір поля з таблицею розділу 7; `optional`/`required`/`repeatable` — `true`/`false`, не рядок; `kind` лише `talk|visit|collect|deliver`; `on` лише `complete|decline`; у `reward` завжди `grantId`; `"when": { "transports": [] }` — заборонено; умова діалогу — об'єкт рівно з одним ключем, не рядок `"car && x"`; вузол має лише одне з `end`/`next`/`choices`.
 - `SCHEMA_UNKNOWN_FIELD` — поле, якого нема в схемі (`description`, `tags`, `completed`, `next`, `choices`). Не допустити: лише поля з розділу 7; стан проходження в контент не пишеться ніколи.
 
 **Валідатор контенту**
@@ -165,6 +189,12 @@ GDD — приватний (`brain/Передача/00-dzherelo-lezhyt-lokalno.m
 - `REQUIRES_CYCLE` — квести вимагають один одного в `requires.quests`. Не допустити: `requires` дивиться лише назад по сюжету; ніколи A → B і B → A.
 - `OPTIONAL_NO_DECLINE` — `"optional": true` без переходу `decline`. Не допустити: завжди `{ "on": "decline", "to": "ST-…", "choiceKey": "q.x.decline" }` поруч із `complete`.
 - `BRANCH_NO_NEXT` — квест не `end` і має `"transitions": []`. Не допустити: або хоча б один перехід, або `"end": true` (лише фінал розділу).
+
+**Діалоги**
+- `DIALOGUE_REF_MISSING` — діалог посилається на те, чого нема: `npcId`, `start`, `next`, квест чи транспорт в умові, квест чи ціль в ефекті. Не допустити: id вузлів копіюй з цього ж файлу; `completeObjective` — лише id цілі, що є в `objectives` цього квесту; нового NPC спершу додай у `npcs.json`.
+- `DIALOGUE_NODE_UNREACHABLE` — на вузол не веде ні `next`, ні жоден вибір від `start`. Не допустити: кожен новий вузол одразу підключи вибором чи `next` з уже досяжного вузла; непотрібний вузол видали, а не лиши «на потім».
+- `DIALOGUE_DEAD_END` — з вузла не дійти до `"end": true` без умов: немає виходу, усі вибори з `when` або безумовні виходи ходять по колу. Не допустити: поруч з кожним умовним вибором дай безумовний (`"Дякую, піду"`), а кожна гілка закінчується вузлом `"end": true`.
+- `DIALOGUE_FLAG_NEVER_SET` — умова `flag`/`notFlag` (також усередині `all`/`any`) читає прапорець, який жоден `setFlag` не ставить. Не допустити: спершу додай ефект `{ "setFlag": "f.x" }` у вибір, потім умову; звір написання id прапорця дослівно.
 
 **Комбінації профіль × транспорт × тварина**
 - `COMBO_NO_START` — стартовий квест має `when`, що виключає частину гравців. Не допустити: на `meta.start` ніколи не став `when`.
