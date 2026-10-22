@@ -54,4 +54,5 @@ jobs:
           pip install --quiet pillow==12.3.0
           python3 scripts/palette/self_test.py
           python3 scripts/palette/extract.py --check
+          # 🔴 --allow-missing прибрати в тому ж PR, що додасть першу теку assets/ (інакше сторож не червоніє).
           python3 scripts/palette/check.py --allow-missing

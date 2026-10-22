@@ -15,6 +15,16 @@ export const KEY_BINDINGS: Readonly<Record<Action, readonly string[]>> = {
   pause: ['Escape'],
 };
 
+/**
+ * KeyboardEvent.code → keyCode, який чекає Phaser. Явна таблиця замість розбору рядка:
+ * раніше `Escape`/`Digit1` мовчки давали undefined, і клавіша ніколи не спрацьовувала (рецензія PR #13).
+ */
+export const KEY_CODES: Readonly<Record<string, number>> = {
+  ArrowUp: 38, ArrowDown: 40, ArrowLeft: 37, ArrowRight: 39,
+  KeyW: 87, KeyA: 65, KeyS: 83, KeyD: 68, KeyE: 69,
+  Space: 32, Enter: 13, Escape: 27,
+};
+
 /** Дотикові елементи: дія → підпис (символ, не текст — тексти лише через локалізацію, GAME-26). */
 export const TOUCH_CONTROLS: Readonly<Record<Action, string>> = {
   up: '▲',

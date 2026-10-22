@@ -4,7 +4,7 @@ import { expect, test, type Page } from '@playwright/test';
 interface Probe { ready: boolean; clockMinutes: number; playerX: number; playerY: number }
 const probe = (page: Page): Promise<Probe> => page.evaluate(() => ({ ...(window as unknown as { __game: { probe: Probe } }).__game.probe }));
 const coreMinutes = (page: Page): Promise<number> =>
-  page.evaluate(() => (window as unknown as { __game: { bridge: { state: { clock: { minutes: number } } } } }).__game.bridge.state.clock.minutes);
+  page.evaluate(() => ((window as unknown as { __game: { read: () => { clock: { minutes: number } } } }).__game.read()).clock.minutes);
 
 async function open(page: Page): Promise<void> {
   const errors: string[] = [];

@@ -5,7 +5,7 @@ interface Probe { ready: boolean; playerX: number; playerY: number; nearObject: 
 
 const probe = (page: Page): Promise<Probe> => page.evaluate(() => ({ ...(window as unknown as { __game: { probe: Probe } }).__game.probe }));
 const grants = (page: Page): Promise<string[]> =>
-  page.evaluate(() => [...(window as unknown as { __game: { bridge: { state: { game: { grants: string[] } } } } }).__game.bridge.state.game.grants]);
+  page.evaluate(() => ((window as unknown as { __game: { read: () => { game: { grants: string[] } } } }).__game.read()).game.grants);
 
 async function open(page: Page, query = ''): Promise<void> {
   const errors: string[] = [];
@@ -25,15 +25,27 @@ async function holdKey(page: Page, key: string, until: (p: Probe) => boolean, ma
   return probe(page);
 }
 
-/** Утримати дотикову кнопку (pointer-події, як від пальця). false — кнопки не видно, прохід неможливий. */
+/**
+ * Утримати дотикову кнопку СПРАВЖНІМ дотиком: CDP Input.dispatchTouchEvent іде через вхідний конвеєр
+ * браузера з перевіркою влучання — кнопка під іншим елементом чи з pointer-events: none не спрацює.
+ * (Рецензія PR #13: dispatchEvent на кнопці обходив перевірку влучання, тест був сліпим.)
+ * false — кнопки не видно, прохід неможливий.
+ */
 async function holdTouch(page: Page, action: string, until: (p: Probe) => boolean, maxMs = 4000): Promise<boolean> {
   const btn = page.locator(`[data-touch="${action}"]`);
   if (!(await btn.isVisible())) return false;
-  await btn.dispatchEvent('pointerdown');
+  const box = await btn.boundingBox();
+  if (!box) return false;
+  const cdp = await page.context().newCDPSession(page);
+  const point = { x: box.x + box.width / 2, y: box.y + box.height / 2 };
+  await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [point] });
   const start = Date.now();
-  let p = await probe(page);
-  while (!until(p) && Date.now() - start < maxMs) { await page.waitForTimeout(16); p = await probe(page); }
-  await btn.dispatchEvent('pointerup');
+  for (;;) {
+    await page.waitForTimeout(16);
+    if (until(await probe(page)) || Date.now() - start >= maxMs) break;
+  }
+  await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+  await cdp.detach();
   await page.waitForTimeout(50);
   return true;
 }
@@ -44,6 +56,8 @@ async function touchFlow(page: Page): Promise<number> {
   if (!(await holdTouch(page, 'up', (p) => p.nearObject !== null))) return 0;
   if (!(await holdTouch(page, 'interact', () => true, 100))) return 0;
   await page.waitForTimeout(100);
+  // Команда мусить дійти до ядра: нагорода записана рівно раз (рецензія PR #13).
+  if ((await grants(page)).filter((g) => g === 'rw.campfire_warmth').length !== 1) return -1;
   return (await probe(page)).commandsSent;
 }
 
@@ -82,7 +96,8 @@ test.describe('клавіатура (десктоп)', () => {
     const near = await holdKey(page, 'ArrowUp', (p) => p.nearObject !== null);
     expect(near.nearObject).toBe('obj.campfire');
     await page.keyboard.press('Space');
-    await page.keyboard.press('Space');
+    await page.waitForTimeout(120);          // друге натискання — в ІНШОМУ кадрі: засувка не зливає їх,
+    await page.keyboard.press('Space');      // одну команду забезпечує саме відкат 400 мс (рецензія PR #13)
     await page.waitForTimeout(100);
     expect((await probe(page)).commandsSent).toBe(1);
     await page.waitForTimeout(500);

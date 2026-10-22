@@ -40,6 +40,8 @@ MUTATIONS = [
     ('quantize keeps original colours', 'quantize.py',
      'cache[rgb] = nearest(rgb, palette)[0]', 'cache[rgb] = rgb'),
     ('quantize keeps semi-transparent pixels', 'quantize.py', 'ALPHA_THRESHOLD = 128', 'ALPHA_THRESHOLD = 1'),
+    ('walk not recursive', 'check.py', 'for d, _, files in os.walk(root):', 'for d, _, files in [next(os.walk(root))]:'),
+    ('.png match case-sensitive', 'check.py', "if f.lower().endswith('.png'):", "if f.endswith('.png'):"),
     ('extract --check never sees a stale file', 'extract.py', '        if current != text:', '        if False:'),
 ]
 
@@ -101,6 +103,12 @@ def cases(scripts, tmp):
     q = Image.open(f'{tmp}/d2/semi.png').convert('RGBA') if qcode == 0 else None
     got = [q.getpixel((x, 0))[3] for x in range(3)] if q else None
     yield 'quantize: alpha 1 -> 0, 100 -> 0, 200 -> 255', got == [0, 0, 255], f'{qout} alphas={got}'
+
+    # N: sprite only in a nested folder, uppercase .PNG -> must be found and FAIL (рецензія PR #13:
+    #    LPC-спрайти лежать у підтеках; нерекурсивний обхід чи чутливе до регістру .png давали NOT RUN)
+    sprite(f'{tmp}/n/chars/body/WALK.PNG', {(0, 0): FOREIGN})
+    code, out = chk(f'{tmp}/n')
+    yield 'nested folder + uppercase .PNG -> found and FAIL', code == 1 and examples(out) == [(hexc(FOREIGN), '1')], out
 
     # E: tolerance — pixel at distance exactly 2 from GREEN
     sprite(f'{tmp}/e/near.png', {(0, 0): (62, 140, 60)})

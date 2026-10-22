@@ -1,10 +1,14 @@
 import { describe, expect, it } from 'vitest';
-import { ACTIONS, KEY_BINDINGS, TOUCH_CONTROLS, consumeFrame, createActionGate, moveVector, newInput, press, release } from './actions';
+import { ACTIONS, KEY_BINDINGS, KEY_CODES, TOUCH_CONTROLS, consumeFrame, createActionGate, moveVector, newInput, press, release } from './actions';
 
 describe('карта дій (GAME-69)', () => {
   it('кожна дія з клавіатури має дотиковий елемент, і навпаки', () => {
     expect(Object.keys(KEY_BINDINGS).sort()).toEqual([...ACTIONS].sort());
     expect(Object.keys(TOUCH_CONTROLS).sort()).toEqual([...ACTIONS].sort());
+  });
+
+  it('кожна прив’язана клавіша має код у KEY_CODES (інакше Phaser мовчки створить мертву клавішу)', () => {
+    for (const code of Object.values(KEY_BINDINGS).flat()) expect(KEY_CODES[code], code).toBeTypeOf('number');
   });
 
   it('жодна клавіша не прив’язана до двох дій', () => {

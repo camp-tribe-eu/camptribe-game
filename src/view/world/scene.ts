@@ -1,7 +1,7 @@
 // Сцена світу (GAME-24): рух, камера, колізії, взаємодія з об'єктом. Лише відображення:
 // взаємодія надсилає команду в ядро через місток.
 import Phaser from 'phaser';
-import { KEY_BINDINGS, consumeFrame, createActionGate, moveVector, press, release, type Action, type InputState } from './actions';
+import { KEY_BINDINGS, KEY_CODES, consumeFrame, createActionGate, moveVector, press, release, type Action, type InputState } from './actions';
 import type { Bridge } from './bridge';
 
 export const TILE = 16;
@@ -64,7 +64,9 @@ export class WorldScene extends Phaser.Scene {
       for (const [action, codes] of Object.entries(KEY_BINDINGS) as [Action, readonly string[]][]) {
         if (action === 'pause') continue; // пауза — справа оболонки UI
         for (const code of codes) {
-          const key = keyboard.addKey(Phaser.Input.Keyboard.KeyCodes[code.replace(/^Key/, '').replace(/^Arrow/, '').toUpperCase() as keyof typeof Phaser.Input.Keyboard.KeyCodes]);
+          const keyCode = KEY_CODES[code];
+          if (keyCode === undefined) throw new Error(`немає коду клавіші для ${code}`);
+          const key = keyboard.addKey(keyCode);
           key.on('down', () => press(this.controls, action));
           key.on('up', () => release(this.controls, action));
         }

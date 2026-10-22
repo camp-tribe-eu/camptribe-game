@@ -14,8 +14,12 @@ if (!app) throw new Error('#app відсутній');
 const probe: WorldProbe = { ready: false, playerX: 0, playerY: 0, nearObject: null, commandsSent: 0, cameraScrollX: 0, cameraScrollY: 0, clockMinutes: 0 };
 const bridge = createBridge(20261022);
 const input = newInput();
-// Тестовий хук Playwright: стан для перевірок, без доступу на запис до ядра.
-(window as unknown as { __game: { probe: WorldProbe; bridge: typeof bridge } }).__game = { probe, bridge };
+// Тестовий хук Playwright: лише ЧИТАННЯ — знімок стану копією, місток назовні не віддається
+// (рецензія PR #13: раніше скрипт сторінки міг надіслати команду в ядро).
+(window as unknown as { __game: { probe: WorldProbe; read: () => unknown } }).__game = {
+  probe,
+  read: () => JSON.parse(JSON.stringify(bridge.state)) as unknown,
+};
 
 const stage = document.createElement('div');
 stage.id = 'stage';
