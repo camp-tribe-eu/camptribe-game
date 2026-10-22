@@ -16,6 +16,7 @@ const GUARDS = [
   ['node', 'scripts/assets/check-assets.mjs'],
   ['node', 'scripts/i18n/check-i18n.mjs'],
   ['node', 'scripts/skills/check-skill-codes.mjs'],
+  ['node', 'scripts/campsites/check-campsites.mjs'],
   ['python3', 'scripts/i18n/font_glyphs.py'],
 ];
 // Різні форми помилки: схожий на справжній прапорець, зі значенням, опечатка.
