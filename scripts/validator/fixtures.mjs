@@ -186,7 +186,7 @@ export const FIXTURES = [
   } },
 
   // ---- предмет, який неможливо отримати ----
-  { name: 'вимога предмета без жодного джерела', expect: ['ITEM_UNOBTAINABLE', 'TRANSITION_REQUIRES_NOT_READY'], patch(c) {
+  { name: 'вимога предмета без жодного джерела', expect: ['ITEM_UNOBTAINABLE', 'TRANSITION_REQUIRES_NOT_READY', 'DIALOGUE_QUEST_GATE'], patch(c) {
     c.items.push({ id: 'item.key', nameKey: 'item.map' });
     q(c, 'ST-003').requires = { items: ['item.key'] };
   } },
@@ -210,6 +210,14 @@ export const FIXTURES = [
   // ---- рецензія GAME-29: requires цілі ще не виконуваний у мить переходу (main-gate тут зелений) ----
   { name: 'ціль вимагає предмет з локації, яку відчиняє саме джерело переходу', expect: ['TRANSITION_REQUIRES_NOT_READY'], patch(c) {
     q(c, 'ST-002').requires.items = ['item.firewood'];               // дрова в loc.forest, unlockedBy ST-001 = джерело
+  } },
+
+  { name: 'ціль вимагає предмет, який продає NPC, що його відчиняє саме джерело', expect: ['TRANSITION_REQUIRES_NOT_READY'], patch(c) {
+    c.npcs.find((n) => n.id === 'npc.shopkeeper').unlockedBy = 'ST-001';   // подарунок — лише в нього
+    q(c, 'ST-002').requires.items = ['item.gift'];
+  } },
+  { name: 'startQuest квесту, чий предмет у requires ще не можна мати там, де NPC доступний', expect: ['DIALOGUE_QUEST_GATE'], patch(c) {
+    q(c, 'ST-003').requires = { items: ['item.firewood'] };                 // дрова — лише після ST-001, рейнджер — з початку
   } },
 
   // ---- нагорода двічі ----

@@ -194,11 +194,32 @@ describe('діалоги в ядрі (GAME-29, формат DC-011)', () => {
     expect(tryCmd(biker, { type: 'Choose', choice: 1 })).toMatchObject({ ok: false, code: 'CONDITION_FAILED' });
   });
 
-  it('any + startQuest із невиконаним requires — відмова, і прапорці не змінились (відкат)', () => {
+  it('any + startQuest із невиконаним requires — квест не стартує, але розмова йде далі (не пастка)', () => {
     const met = play([DRIVER, ...AT_ANN, ...BYE, { type: 'Talk', npcId: 'npc.ann' }]);
-    const r = tryCmd(met, { type: 'Choose', choice: 4 });                     // q.gate вимагає золото
-    expect(r).toMatchObject({ ok: false, code: 'QUEST_REQUIRES_UNMET' });
-    expect(hashOf(r.state)).toBe(hashOf(met));
+    const r = play([{ type: 'Choose', choice: 4 }], met);                    // q.gate вимагає золото
+    expect(r.quests['q.gate']).toBeUndefined();
+    expect(r.dialogue).toEqual({ id: 'dlg.ann', node: 'bye' });
+  });
+
+  type Mut = { story: { dialogues: Record<string, { nodes: Record<string, { choices?: { next: string; effects: unknown[] }[] }> }> } } & typeof STORY_DEFS;
+  it('рецензія: єдиний вихід зі startQuest, якого не можна (не той транспорт / requires) — гравець не замкнений', () => {
+    for (const target of ['q.side', 'q.secret']) {
+      const defs = structuredClone(STORY_DEFS) as Mut;
+      const hi = defs.story.dialogues['dlg.bob']?.nodes['hi'];
+      if (hi) hi.choices = [{ next: 'bye', effects: [{ startQuest: target }] }];
+      const s = play([DRIVER, ...START, { type: 'Talk', npcId: 'npc.bob' }, { type: 'Choose', choice: 0 }, { type: 'Continue' }, { type: 'Visit', locationId: 'loc.shop' }], undefined, defs);
+      expect(s.quests[target], target).toBeUndefined();
+      expect(s.player?.locationId).toBe('loc.shop');
+    }
+  });
+
+  it('рецензія: сейв із вузлом, якого вже немає, — Visit не блоковано, «далі» прибирає розмову', () => {
+    for (const dialogue of [{ id: 'dlg.bob', node: 'gone' }, { id: 'dlg.removed', node: 'hi' }]) {
+      const s = { ...play([DRIVER, ...START]), dialogue };
+      expect(tryCmd(s, { type: 'Visit', locationId: 'loc.shop' }).ok).toBe(true);
+      expect(play([{ type: 'Continue' }], s).dialogue).toBeNull();
+      expect(tryCmd(s, { type: 'Choose', choice: 0 })).toMatchObject({ ok: false, code: 'NO_DIALOGUE' });
+    }
   });
 
   it('умова quest/status і startQuest: після q.mid Енн відкриває q.secret', () => {
@@ -234,8 +255,7 @@ describe('діалоги в ядрі (GAME-29, формат DC-011)', () => {
     for (const choice of [-1, 99, 1.5]) expect(tryCmd(s, { type: 'Choose', choice })).toMatchObject({ ok: false, code: 'INVALID_CHOICE' });
   });
 
-  it('сейв із діалогом, якого вже немає в контенті, не падає — NO_DIALOGUE', () => {
-    const s = { ...play([DRIVER]), dialogue: { id: 'dlg.ghost', node: 'x' } };
-    expect(tryCmd(s, { type: 'Continue' })).toMatchObject({ ok: false, code: 'NO_DIALOGUE' });
+  it('без розмови «далі» — NO_DIALOGUE', () => {
+    expect(tryCmd(play([DRIVER]), { type: 'Continue' })).toMatchObject({ ok: false, code: 'NO_DIALOGUE' });
   });
 });

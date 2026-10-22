@@ -157,10 +157,13 @@ function runEffect(st: StoryDefs, d: StoryDraft, p: PlayerState, e: EffectDef): 
     return null;
   }
   if ('startQuest' in e) {
+    // Квест, який стартувати не можна (не для цього гравця, requires не виконано), — нічого, а не
+    // відмова: відмова вибору на єдиному виході замкнула б гравця в розмові назавжди (рецензія
+    // GAME-29). Статично такі старти ловить валідатор (DIALOGUE_QUEST_GATE).
     const q = own(st.quests, e.startQuest);
-    if (!q || !matches(q.when, p)) return 'UNKNOWN_TARGET';
+    if (!q || !matches(q.when, p)) return null;
     const req = q.requires;
-    if (req && (req.quests.some((r) => !completed(d, r)) || req.items.some((i) => (own(d.inventory, i) ?? 0) < 1))) return 'QUEST_REQUIRES_UNMET';
+    if (req && (req.quests.some((r) => !completed(d, r)) || req.items.some((i) => (own(d.inventory, i) ?? 0) < 1))) return null;
     const cur = own(d.quests, e.startQuest)?.status;
     if (cur !== 'active' && cur !== 'completed') d.quests = { ...d.quests, [e.startQuest]: { status: 'active', done: [] } };
     return null;
@@ -173,6 +176,14 @@ function runEffect(st: StoryDefs, d: StoryDraft, p: PlayerState, e: EffectDef): 
 }
 
 /** guardGrant — запобіжник «нагорода рівно раз» (Safeguards.grantId); false — лише в тестах-мутаціях. */
+/** Відкритий діалог, що справді є в контенті. Сейв із вузлом, якого вже немає, розмови не тримає. */
+function liveDialogue(st: StoryDefs, d: StoryDraft) {
+  if (!d.dialogue) return null;
+  const dlg = own(st.dialogues, d.dialogue.id);
+  const node = dlg && own(dlg.nodes, d.dialogue.node);
+  return node ? { id: d.dialogue.id, node } : null;
+}
+
 export function applyStory(cmd: StoryCommand, d: StoryDraft, st: StoryDefs | undefined, isId: (s: unknown) => boolean, guardGrant = true): RejectCode | null {
   if (!st) return 'UNKNOWN_TARGET';
   if (cmd.type === 'CreateCharacter') {
@@ -195,7 +206,7 @@ export function applyStory(cmd: StoryCommand, d: StoryDraft, st: StoryDefs | und
   if (!p) return 'NO_CHARACTER';
   switch (cmd.type) {
     case 'Visit': {
-      if (d.dialogue) return 'IN_DIALOGUE';
+      if (liveDialogue(st, d)) return 'IN_DIALOGUE';
       if (!isId(cmd.locationId)) return 'INVALID_COMMAND';
       if (!own(st.locations, cmd.locationId)) return 'UNKNOWN_TARGET';
       if (!locationOpen(st, d, p, cmd.locationId)) return 'LOCKED';
@@ -204,7 +215,7 @@ export function applyStory(cmd: StoryCommand, d: StoryDraft, st: StoryDefs | und
       return null;
     }
     case 'Talk': {
-      if (d.dialogue) return 'IN_DIALOGUE';
+      if (liveDialogue(st, d)) return 'IN_DIALOGUE';
       if (!isId(cmd.npcId)) return 'INVALID_COMMAND';
       const npc = own(st.npcs, cmd.npcId);
       if (!npc) return 'UNKNOWN_TARGET';
@@ -217,13 +228,17 @@ export function applyStory(cmd: StoryCommand, d: StoryDraft, st: StoryDefs | und
     }
     case 'Choose':
     case 'Continue': {
-      if (!d.dialogue) return 'NO_DIALOGUE';
-      const dlg = own(st.dialogues, d.dialogue.id);
-      const node = dlg && own(dlg.nodes, d.dialogue.node);
-      if (!dlg || !node) return 'NO_DIALOGUE'; // сейв із діалогом, якого вже немає в контенті
+      const live = liveDialogue(st, d);
+      if (!live) {
+        // Сейв із вузлом, якого вже немає в контенті (рецензія GAME-29): «далі» прибирає завислу
+        // розмову — інакше гравець застряг би. Без розмови взагалі — звичайна відмова.
+        if (d.dialogue && cmd.type === 'Continue') { d.dialogue = null; return null; }
+        return 'NO_DIALOGUE';
+      }
+      const { node } = live;
       if (cmd.type === 'Continue') {
         if (node.choices) return 'INVALID_CHOICE';
-        d.dialogue = node.next !== undefined ? { id: d.dialogue.id, node: node.next } : null;
+        d.dialogue = node.next !== undefined ? { id: live.id, node: node.next } : null;
         return null;
       }
       const choice = Number.isSafeInteger(cmd.choice) && cmd.choice >= 0 ? node.choices?.[cmd.choice] : undefined;
@@ -233,7 +248,7 @@ export function applyStory(cmd: StoryCommand, d: StoryDraft, st: StoryDefs | und
         const bad = runEffect(st, d, p, e);
         if (bad) return bad;
       }
-      d.dialogue = { id: d.dialogue.id, node: choice.next };
+      d.dialogue = { id: live.id, node: choice.next };
       return null;
     }
     case 'Pickup': {

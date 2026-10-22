@@ -268,6 +268,9 @@ export const CHECKS = [
     // разом із локаціями, які ВІН відкриває. Але ядро перевіряє requires у мить переходу: предмет з
     // локації, що відчиняється завершенням джерела, ще не в руках — перехід відмовить, гравець застряг.
     // Тут — кожен перехід u→t окремо: requires цілі має бути виконуваним, поки u ще активний.
+    // Ціна хибного спрацювання (закон 5): червоніє й вибір, поруч з яким є робочий перехід за
+    // замовчуванням — це не тупик, а кнопка, яку гра запропонує й відмовить. Свідомо: такої кнопки в
+    // грі бути не має; «бонус, якщо пройшов бічний» роби умовою when на переході, а не requires.
     id: 'transition-gate',
     run(c) { // @check:transition-gate
       const out = [];
@@ -541,7 +544,10 @@ export const CHECKS = [
       // сам вибір (when містить {quest:r, status:'completed'} як кон'юнкт), або доступність NPC:
       // на КОЖНОМУ етапі, де NPC доступний (npcAvail), завершення r гарантоване (guaranteed).
       const out = [];
-      const { by, reachable, guaranteed, npcAvail } = c.ix;
+      // Рецензія GAME-29: requires.items теж — інакше ядро не стартує квест, а гравець цього не бачить.
+      // Предмет умовою вибору не виразиш, тож його має гарантувати кожен етап, де NPC доступний.
+      // (Обмеження: when квесту-цілі за комбінацією тут не враховано — dialogue-* не в PER_COMBO.)
+      const { by, reachable, guaranteed, npcAvail, itemGuaranteedAt } = c.ix;
       for (const [where, ch, d] of dialogueChoices(c.content)) {
         const npc = by.npcs.get(d.npcId);
         if (!npc) continue; // відсутнього NPC уже назвав DIALOGUE_REF_MISSING
@@ -553,6 +559,11 @@ export const CHECKS = [
             if (ch.when && conjuncts(ch.when).some((x) => x.quest === r && x.status === 'completed')) continue;
             const open = stages.filter((q) => !guaranteed.get(q).has(r));
             if (open.length) out.push(I('DIALOGUE_QUEST_GATE', `${where}.effects`, `startQuest «${target.id}» вимагає завершеного «${r}», а NPC «${d.npcId}» доступний і там, де воно не гарантоване (${open.sort().join(', ')}); додай when { quest: «${r}», status: completed } або відкривай NPC пізніше`));
+          }
+          for (const it of target.requires?.items ?? []) {
+            if (!by.items.has(it)) continue;
+            const open = stages.filter((q) => !itemGuaranteedAt(it, q));
+            if (open.length) out.push(I('DIALOGUE_QUEST_GATE', `${where}.effects`, `startQuest «${target.id}» вимагає предмет «${it}», а NPC «${d.npcId}» доступний і там, де його ще не можна мати (${open.sort().join(', ')}); відкривай NPC пізніше`));
           }
         }
       }
