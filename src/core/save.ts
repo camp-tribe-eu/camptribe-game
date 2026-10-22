@@ -6,6 +6,7 @@
 // * старіша — ланцюжок міграцій MIGRATIONS[v] → v+1 до поточної;
 // * контрольна сума — над станом у ТІЙ версії, у якій його записано (до міграцій);
 // * кожна випущена версія лишається фікстурою в tests/saves/ назавжди.
+import type { StoryDefs } from './defs';
 import { stateHash } from './hash';
 import type { SimState } from './sim';
 import { REJECT_CODES } from './state';
@@ -20,14 +21,19 @@ export interface SaveFile {
   readonly checksum: string;
   /** Під майбутню прив'язку до акаунта сайту (OD-008). У v1 — завжди null, без мережі. */
   readonly accountId: null;
+  /**
+   * Відбиток сюжету, з яким записано сейв (рецензія TL). Лише для діагностики: сумісне оновлення
+   * контенту сейв НЕ відкидає — відкидає лише посилання на те, чого в контенті вже немає.
+   */
+  readonly contentRev?: string | null;
   readonly sim: SimState;
 }
 
-export const LOAD_CODES = ['SAVE_PARSE', 'SAVE_FORMAT', 'SAVE_VERSION_UNSUPPORTED', 'SAVE_CHECKSUM', 'SAVE_SHAPE'] as const;
+export const LOAD_CODES = ['SAVE_PARSE', 'SAVE_FORMAT', 'SAVE_VERSION_UNSUPPORTED', 'SAVE_CHECKSUM', 'SAVE_SHAPE', 'SAVE_CONTENT_MISMATCH'] as const;
 export type LoadCode = (typeof LOAD_CODES)[number];
 
 export type LoadResult =
-  | { readonly ok: true; readonly sim: SimState; readonly fromVersion: number }
+  | { readonly ok: true; readonly sim: SimState; readonly fromVersion: number; readonly contentRev: string | null }
   | { readonly ok: false; readonly code: LoadCode; readonly detail: string };
 
 /** Міграції: MIGRATIONS[v] переводить сейв версії v у v+1. Кожна — чиста й не губить жодного поля. */
@@ -39,11 +45,11 @@ export const MIGRATIONS: Readonly<Record<number, (sim: unknown) => unknown>> = {
   },
 };
 
-export function toSave(sim: SimState): SaveFile {
-  return { format: SAVE_FORMAT, schemaVersion: SAVE_VERSION, checksum: stateHash(sim), accountId: null, sim };
+export function toSave(sim: SimState, contentRev: string | null = null): SaveFile {
+  return { format: SAVE_FORMAT, schemaVersion: SAVE_VERSION, checksum: stateHash(sim), accountId: null, contentRev, sim };
 }
 
-export const serialize = (sim: SimState): string => JSON.stringify(toSave(sim));
+export const serialize = (sim: SimState, contentRev: string | null = null): string => JSON.stringify(toSave(sim, contentRev));
 
 const isObj = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null && !Array.isArray(v);
 const isInt = (v: unknown, min = 0): boolean => typeof v === 'number' && Number.isSafeInteger(v) && v >= min;
@@ -70,7 +76,25 @@ function shapeError(sim: unknown): string | null {
   return null;
 }
 
-export function fromSave(text: string): LoadResult {
+/**
+ * Посилання сейву, яких у нинішньому сюжеті вже немає (квест прибрали, локацію перейменували):
+ * такий сейв у грі застряг би назавжди (UNKNOWN_TARGET на кожну спробу). Діалог не перевіряється —
+ * зниклий вузол гра відпускає сама (liveDialogue у story.ts).
+ */
+export function danglingRefs(game: SimState['game'], st: StoryDefs): string[] {
+  const out: string[] = [];
+  for (const q of Object.keys(game.quests)) if (!Object.hasOwn(st.quests, q)) out.push(`quest ${q}`);
+  const p = game.player;
+  if (p) {
+    if (!Object.hasOwn(st.profiles, p.profileId)) out.push(`profile ${p.profileId}`);
+    if (!st.transports.includes(p.transportId)) out.push(`transport ${p.transportId}`);
+    if (p.animalId !== 'animal.none' && !Object.hasOwn(st.animals, p.animalId)) out.push(`animal ${p.animalId}`);
+    if (p.locationId !== null && !Object.hasOwn(st.locations, p.locationId)) out.push(`location ${p.locationId}`);
+  }
+  return out;
+}
+
+export function fromSave(text: string, opts: { readonly story?: StoryDefs } = {}): LoadResult {
   let raw: unknown;
   try {
     raw = JSON.parse(text);
@@ -93,5 +117,10 @@ export function fromSave(text: string): LoadResult {
   }
   const bad = shapeError(sim);
   if (bad) return { ok: false, code: 'SAVE_SHAPE', detail: bad };
-  return { ok: true, sim: sim as SimState, fromVersion: version as number };
+  if (opts.story) {
+    const missing = danglingRefs((sim as SimState).game, opts.story);
+    if (missing.length) return { ok: false, code: 'SAVE_CONTENT_MISMATCH', detail: `not in current content: ${missing.join(', ')}` };
+  }
+  const contentRev = typeof raw.contentRev === 'string' ? raw.contentRev : null;
+  return { ok: true, sim: sim as SimState, fromVersion: version as number, contentRev };
 }

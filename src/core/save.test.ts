@@ -6,7 +6,8 @@ import { V2_STORY } from './save-v2.fixture';
 import { STORY_DEFS } from './story.fixture';
 import { DEFS, LOG, SEED } from './determinism.fixture';
 import { stateHash } from './hash';
-import { LOAD_CODES, SAVE_VERSION, fromSave, serialize, type LoadCode } from './save';
+import type { StoryDefs } from './defs';
+import { LOAD_CODES, SAVE_VERSION, danglingRefs, fromSave, serialize, type LoadCode } from './save';
 import { newSim, run, type Input } from './sim';
 
 /** Кожна випущена версія сейву — фікстура назавжди (TD-007). Нову версію додати сюди. */
@@ -70,14 +71,18 @@ describe('коди відмов завантаження: кожен має зл
     ['SAVE_VERSION_UNSUPPORTED', JSON.stringify({ ...good, schemaVersion: SAVE_VERSION + 1 })],
     ['SAVE_CHECKSUM', withSim((c) => { c.sim.game.moneyCents = 999_999_999; })],
     ['SAVE_SHAPE', withSim((c) => { c.sim.game.moneyCents = -5; resum(c); })],
+    ['SAVE_CONTENT_MISMATCH', JSON.stringify(v2)],          // v2-фікстура записана на STORY_DEFS; проти «сюжету без q.side» — зникле посилання
   ];
+  const story = STORY_DEFS.story as StoryDefs;
+  const withoutQuest = (id: string): StoryDefs => ({ ...story, quests: Object.fromEntries(Object.entries(story.quests).filter(([k]) => k !== id)) });
+  const OPTS: Partial<Record<LoadCode, { story: StoryDefs }>> = { SAVE_CONTENT_MISMATCH: { story: withoutQuest('q.side') } };
 
   it('кожен код реєстру покрито прикладом', () => {
     expect(cases.map(([c]) => c).sort()).toEqual([...LOAD_CODES].sort());
   });
   for (const [code, text] of cases) {
     it(`повертає ${code}`, () => {
-      const r = fromSave(text);
+      const r = fromSave(text, OPTS[code] ?? {});
       expect(r.ok ? 'ok' : r.code).toBe(code);
     });
   }
@@ -100,5 +105,30 @@ describe('коди відмов завантаження: кожен має зл
   }
   it('accountId у v1 завжди null (OD-008: без мережі)', () => {
     expect(good.accountId).toBeNull();
+  });
+});
+
+describe('сейв проти нинішнього контенту (рецензія TL: сейв зі зниклим квестом застрягав назавжди)', () => {
+  const story = STORY_DEFS.story as StoryDefs;
+  const live = run(run(newSim(SEED, 10_000), LOG.slice(0, 600), { defs: DEFS }), V2_STORY as Input[], { defs: STORY_DEFS });
+  const json = serialize(live, 'rev-old');
+
+  it('кожен вид зниклого посилання — названо', () => {
+    const drop = <K extends keyof StoryDefs>(k: K, id: string): StoryDefs => ({ ...story, [k]: Object.fromEntries(Object.entries(story[k] as object).filter(([x]) => x !== id)) });
+    expect(danglingRefs(live.game, drop('quests', 'q.mid'))).toEqual(['quest q.mid']);
+    expect(danglingRefs(live.game, drop('profiles', 'profile.a'))).toEqual(['profile profile.a']);
+    expect(danglingRefs(live.game, { ...story, transports: ['transport.car'] })).toEqual(['transport transport.bike']);
+    expect(danglingRefs(live.game, drop('locations', 'loc.shop'))).toEqual(['location loc.shop']);
+    expect(danglingRefs(live.game, story)).toEqual([]);
+  });
+
+  it('позитивний контроль: сумісне оновлення (новий квест, інший відбиток) сейв НЕ відкидає', () => {
+    const grown: StoryDefs = { ...story, quests: { ...story.quests, 'q.new': { optional: true, end: false, objectives: [], transitions: [] } } };
+    const r = fromSave(json, { story: grown });
+    expect(r.ok && r.contentRev).toBe('rev-old');
+  });
+
+  it('без сюжету (як у вічних фікстурах) — перевірка посилань не виконується', () => {
+    expect(fromSave(JSON.stringify(v2)).ok).toBe(true);
   });
 });

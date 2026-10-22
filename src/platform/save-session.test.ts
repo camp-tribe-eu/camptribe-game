@@ -1,6 +1,9 @@
 // Гонки старту сейвів (рецензія PR #13). Сховище — підроблене обіцянками, які тест відпускає сам.
 import { describe, expect, it } from 'vitest';
+import type { StoryDefs } from '../core/defs';
+import { stateHash } from '../core/hash';
 import { serialize } from '../core/save';
+import { STORY_DEFS } from '../core/story.fixture';
 import { newSim, type SimState } from '../core/sim';
 import { createSaveSession, type SessionBridge } from './save-session';
 
@@ -93,5 +96,25 @@ describe('сесія сейвів: старт і гонки (GAME-33)', () => {
     st.release(); await p;
     expect(b.state.finds).toBe(0);
     expect(st.writes).toHaveLength(1);
+  });
+
+  it('сейв під старий контент: не вантажиться, іде в карантин; придатний prev — вантажиться', async () => {
+    const stale = JSON.stringify({ ...JSON.parse(serialize(savedSim(false))), sim: { ...savedSim(false), game: { ...savedSim(false).game, quests: { 'q.gone': { status: 'active', done: [] } } } } });
+    const staleFixed = (() => { const o = JSON.parse(stale); o.checksum = stateHash(o.sim); return JSON.stringify(o); })();
+    const prev = serialize({ ...savedSim(false), finds: 7 });
+    const st = fakeStore([staleFixed, prev]);
+    const quarantined: string[] = [];
+    const b = fakeBridge();
+    const s = createSaveSession(b, { ...st, quarantine: async (j: string) => { quarantined.push(j); return true; } }, { story: STORY_DEFS.story as StoryDefs });
+    const p = s.start(); st.release(); await p;
+    expect(quarantined).toEqual([staleFixed]);
+    expect(b.state.finds).toBe(7);
+  });
+
+  it('пише відбиток контенту в сейв', async () => {
+    const b = fakeBridge(); const st = fakeStore([]);
+    const s = createSaveSession(b, st, { contentRev: 'rev-42' });
+    await s.save();
+    expect(JSON.parse(st.writes[0] ?? '{}').contentRev).toBe('rev-42');
   });
 });

@@ -1,6 +1,7 @@
 // Збирає сюжет для ядра (StoryDefs) з перевіреного content/ (GAME-29). Валідатор доводить
 // досяжність і відсутність тупиків; тут — лише переклад полів у форму ядра. Те, чого ядро ще не
 // вміє (`deliver`, продаж у NPC), не пропускається мовчки: збірка падає з назвою поля (закон 4).
+import { stateHash } from '../core/hash';
 import type { CondDef, DialogueDef, EffectDef, ObjectiveDef, QuestDef, StoryDefs, WhenDef } from '../core/defs';
 import animals from '../../content/animals.json';
 import locations from '../../content/locations.json';
@@ -91,3 +92,5 @@ export const CONTENT: RawContent = {
   dialogues: Object.keys(dialogueFiles).sort().map((k) => dialogueFiles[k] as RawDialogue),
 };
 export const STORY: StoryDefs = compileStory(CONTENT);
+/** Відбиток сюжету для сейву (діагностика сумісності, рецензія TL). */
+export const STORY_REV: string = stateHash(STORY);

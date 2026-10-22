@@ -5,9 +5,10 @@ import { Shell } from './ui/Shell';
 import { buildLabel } from './core/build-info';
 import { newInput, type Action } from './view/world/actions';
 import { GAME_DEFS } from './content/slice-defs';
+import { STORY, STORY_REV } from './content/story';
 import { serialize } from './core/save';
 import { decodeRestoreCode, encodeRestoreCode } from './platform/save-code';
-import { readSaves, writeSave } from './platform/save-store';
+import { readSaves, writeSave, writeStale } from './platform/save-store';
 import { createSaveSession } from './platform/save-session';
 import credits from '../assets/credits.json';
 import { createBridge } from './view/world/bridge';
@@ -20,7 +21,7 @@ if (!app) throw new Error('#app is missing');
 const probe: WorldProbe = { ready: false, playerX: 0, playerY: 0, nearObject: null, commandsSent: 0, cameraScrollX: 0, cameraScrollY: 0, clockMinutes: 0, saveLoaded: false };
 const bridge = createBridge(20261022, GAME_DEFS);
 const input = newInput();
-const saves = createSaveSession(bridge, { read: readSaves, write: writeSave });
+const saves = createSaveSession(bridge, { read: readSaves, write: writeSave, quarantine: writeStale }, { story: STORY, contentRev: STORY_REV });
 // Тестовий хук Playwright: лише ЧИТАННЯ — знімок стану копією, місток назовні не віддається
 // (рецензія PR #13: раніше скрипт сторінки міг надіслати команду в ядро).
 (window as unknown as { __game: { probe: WorldProbe; read: () => unknown } }).__game = {

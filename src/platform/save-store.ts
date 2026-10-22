@@ -52,3 +52,18 @@ export async function readSaves(): Promise<string[]> {
     return [];
   }
 }
+
+/** Карантин: сейв, що не підходить до нинішнього контенту, — окремий ключ, ротація main/prev його не чіпає. */
+export async function writeStale(json: string): Promise<boolean> {
+  try {
+    const db = await open();
+    return await new Promise<boolean>((resolve) => {
+      const tx = db.transaction(STORE, 'readwrite');
+      tx.objectStore(STORE).put(json, 'stale');
+      tx.oncomplete = () => { db.close(); resolve(true); };
+      tx.onerror = tx.onabort = () => { db.close(); resolve(false); };
+    });
+  } catch {
+    return false;
+  }
+}

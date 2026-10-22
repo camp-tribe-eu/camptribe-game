@@ -52,9 +52,9 @@
 
 | id | частина стану | що | джерело | статус |
 |---|---|---|---|---|
-| DC-040 | `save.meta` | `saveId`, `schemaVersion`, `createdAt` (ігровий час), `accountId: null` | GDD Core Rules §4; OD-008 | ACCEPTED |
+| DC-040 | `save.meta` | `format`, `schemaVersion`, `checksum`, `accountId: null`, `contentRev` (відбиток сюжету — лише діагностика). Реалізовано v2: `src/core/save.ts`. `saveId`/`createdAt` — ще ні | GDD Core Rules §4; OD-008; рецензія TL 23.10 | ACCEPTED |
 | DC-041 | `save.clock` | ігровий календар і час, зерно RNG | CR-034 | ACCEPTED |
-| DC-042 | `save.player` | профіль, зовнішність (шари), `locationId` і `spawnId` — **не пікселі**: позиція в пікселях живе в сцені (ARCHITECTURE §3.1); реплей відтворює команди, а не рух (TL PR #13). Ще не реалізовано | GAME-76; GAME-33 | PROPOSED |
+| DC-042 | `save.player` | реалізовано v2 (GAME-29): `profileId`, `transportId`, `animalId`, `locationId` — **не пікселі**: позиція в пікселях живе в сцені (ARCHITECTURE §3.1); реплей відтворює команди, а не рух. Зовнішність (шари) і `spawnId` — ще ні (GAME-76) | GAME-76; GAME-29 | ACCEPTED |
 | DC-043 | `save.household` | члени, тварина (без операції видалення) | CR-017 | ACCEPTED |
 | DC-044 | `save.inventory` | предмети зі станом, екіпіроване й склад | GAME-73 | ACCEPTED |
 | DC-045 | `save.money` | баланс у центах + журнал транзакцій (кожен запис — `commandId`) | CR-040…043 | ACCEPTED |
@@ -62,8 +62,8 @@
 | DC-047 | `save.trip` | маршрут, бронювання, бюджет поїздки | GAME-30, GAME-43 | ACCEPTED |
 | DC-048 | `save.needs`, `save.skills` | потреби, навички, досвід | GAME-72 | ACCEPTED |
 | DC-049 | `save.npcMemory` | структуровані факти пам'яті NPC (`SIMULATION_RULES` SIM-NPC) | GAME-48 | ACCEPTED |
-| DC-050 | `save.quests` | стан кожного квесту: статус, виконані цілі, обрані гілки, ревізія | GDD §12.2 | ACCEPTED |
-| DC-051 | `save.flags`, `save.history` | сюжетні прапорці й історія важливих подій | GDD Core Rules §4 | ACCEPTED |
+| DC-050 | `save.quests` | реалізовано v2: `status` (`active`/`completed`/`declined`) і `done[]` (виконані цілі `visit`/`talk`; `collect` рахується з інвентаря). «Обрані гілки» видно з того, який квест-ціль став активним; окремого поля немає. Ревізія контенту — `contentRev` сейву (DC-040); сейв, що посилається на зниклий квест, профіль, транспорт, тварину чи локацію, не вантажиться (`SAVE_CONTENT_MISMATCH`) і йде в карантин, а не губиться | GDD §12.2; рецензія TL 23.10 | ACCEPTED |
+| DC-051 | `save.flags`, `save.history` | `flags[]` — реалізовано v2 (ставлять лише ефекти діалогів); `dialogue` — відкрита розмова `{id, node}`. `history` — ще ні (події з відкатом, GAME-45, → v3) | GDD Core Rules §4 | ACCEPTED |
 | DC-052 | `save.grants` | множина виданих `grantId` — сторож «рівно раз» | TD-004 | ACCEPTED |
 | DC-053 | `save.atlas` | сторінки Атласу | GAME-78 | ACCEPTED |
 
