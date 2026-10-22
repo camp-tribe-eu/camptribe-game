@@ -1,14 +1,19 @@
 name: validate
-# 🔴 Цей процес навмисно падає, доки не написано валідатор контенту.
-# Рішення чату Сайту 22.10.2026: перший код проєкту — валідатор і перевірник
-# графа квестів, а НЕ сцена Phaser. Обґрунтування:
-# brain/Передача/05-pershyi-kod.md
+# Перший код проєкту — валідатор контенту й перевірник графа квестів, а НЕ сцена Phaser.
+# Специфікація й критерії приймання: brain/Передача/05-pershyi-kod.md
+# Формат контенту й перелік перевірок: docs/CONTENT-VALIDATOR.md
 #
-# Так черговість стає структурною, а не порадою, яку легко обійти.
+# Три кроки, і кожен блокує злиття:
+#   1. самотест — кожна перевірка червоніє на своєму зламаному прикладі;
+#   2. мутації  — якщо вимкнути будь-яку перевірку, самотест це помічає;
+#   3. контент  — реальний content/ гри.
 on:
   pull_request:
   push:
     branches: [main]
+
+permissions:
+  contents: read
 
 jobs:
   content:
@@ -16,21 +21,17 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Чи існує валідатор контенту
-        run: |
-          set -euo pipefail
-          if [ ! -f scripts/validate-content.mjs ]; then
-            echo "::error::scripts/validate-content.mjs ще немає."
-            echo "Перший код проєкту — валідатор контенту й перевірник графа квестів."
-            echo "Специфікація і критерії приймання: brain/Передача/05-pershyi-kod.md"
-            exit 1
-          fi
-
       - uses: actions/setup-node@v4
         with: { node-version: '24' }
 
-      - name: Самотести валідатора — він мусить уміти почервоніти
+      - name: Самотест — валідатор мусить уміти почервоніти
         run: node scripts/validate-content.mjs --self-test
 
+      - name: Мутації — самотест мусить помітити вимкнену перевірку
+        run: node scripts/mutate-validator.mjs
+
+      # 🔴 --allow-missing-content: поки теки content/ немає, крок пише NOT RUN з попередженням,
+      # а не PASS. ПРИБРАТИ прапорець у тому ж PR, що додає перший файл content/ — після цього
+      # зникнення теки має бути червоним.
       - name: Валідація контенту
-        run: node scripts/validate-content.mjs
+        run: node scripts/validate-content.mjs --allow-missing-content

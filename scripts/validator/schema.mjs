@@ -1,0 +1,94 @@
+// Мінімальний строгий валідатор схем без залежностей.
+// Невідоме поле — помилка: так у визначення не просочується стан проходження
+// (completed, progress, visited…) і не живуть одруківки.
+
+const str = { t: 'string' };
+const bool = { t: 'boolean' };
+const int0 = { t: 'int', min: 0 };
+const int1 = { t: 'int', min: 1 };
+const arr = (of) => ({ t: 'array', of });
+const obj = (fields) => ({ t: 'object', fields });
+const en = (...values) => ({ t: 'string', enum: values });
+const req = (s) => ({ ...s, required: true });
+
+const reward = obj({ grantId: req(str), items: arr(obj({ item: req(str), qty: req(int1) })), money: int0, once: bool });
+
+export const SCHEMAS = {
+  meta: obj({ start: req(str), locales: req(arr(str)) }),
+  items: obj({ id: req(str), nameKey: req(str) }),
+  npcs: obj({ id: req(str), nameKey: req(str), locationId: req(str), unlockedBy: str, sells: arr(str) }),
+  locations: obj({ id: req(str), nameKey: req(str), unlockedBy: str, items: arr(str) }),
+  quests: obj({
+    id: req(str), titleKey: req(str), optional: req(bool), end: bool,
+    giverId: str, locationId: str,
+    requires: obj({ quests: arr(str), items: arr(str) }),
+    objectives: req(arr(obj({
+      id: req(str), textKey: req(str), kind: req(en('talk', 'visit', 'collect', 'deliver')),
+      target: req(str), npcId: str, required: req(bool),
+    }))),
+    transitions: req(arr(obj({ on: req(en('complete', 'decline')), to: req(str), choiceKey: str }))),
+    reward,
+  }),
+  events: obj({ id: req(str), titleKey: req(str), locationId: str, repeatable: req(bool), reward }),
+  // source/checkedAt/kind навмисно не required тут: їх стереже перевірка fact-source
+  // власними кодами, щоб відсутнє джерело не ховалось під загальним SCHEMA_INVALID.
+  facts: obj({ id: req(str), claimKey: req(str), source: str, checkedAt: str, kind: str }),
+};
+
+export const COLLECTIONS = ['items', 'npcs', 'locations', 'quests', 'events', 'facts'];
+
+function typeOk(s, v) {
+  switch (s.t) {
+    case 'string': return typeof v === 'string' && (!s.enum || s.enum.includes(v));
+    case 'boolean': return typeof v === 'boolean';
+    case 'int': return Number.isInteger(v) && v >= (s.min ?? -Infinity);
+    case 'array': return Array.isArray(v);
+    case 'object': return v !== null && typeof v === 'object' && !Array.isArray(v);
+    default: return false;
+  }
+}
+
+function walk(s, v, where, out) {
+  if (!typeOk(s, v)) {
+    const want = s.enum ? `одне з ${s.enum.join('|')}` : s.t + (s.min != null ? ` >= ${s.min}` : '');
+    out.push({ code: 'SCHEMA_INVALID', where, msg: `очікується ${want}, отримано ${JSON.stringify(v)}` });
+    return;
+  }
+  if (s.t === 'array') v.forEach((x, i) => walk(s.of, x, `${where}[${i}]`, out));
+  if (s.t === 'object') {
+    for (const [k, fs] of Object.entries(s.fields)) {
+      if (v[k] === undefined) {
+        if (fs.required) out.push({ code: 'SCHEMA_INVALID', where: `${where}.${k}`, msg: 'обов\u2019язкове поле відсутнє' });
+      } else walk(fs, v[k], `${where}.${k}`, out);
+    }
+    for (const k of Object.keys(v)) {
+      if (!(k in s.fields)) out.push({ code: 'SCHEMA_UNKNOWN_FIELD', where: `${where}.${k}`, msg: 'невідоме поле (стан проходження чи одруківка?)' });
+    }
+  }
+}
+
+export function checkSchema(content) {
+  const out = [];
+  if (!typeOk({ t: 'object' }, content)) return [{ code: 'SCHEMA_INVALID', where: 'content', msg: 'не об\u2019єкт' }];
+  const known = ['meta', 'locales', ...COLLECTIONS];
+  for (const k of Object.keys(content)) {
+    if (!known.includes(k)) out.push({ code: 'SCHEMA_UNKNOWN_FIELD', where: k, msg: 'невідомий розділ контенту' });
+  }
+  walk(SCHEMAS.meta, content.meta, 'meta', out);
+  for (const c of COLLECTIONS) {
+    if (content[c] === undefined) continue;
+    if (!Array.isArray(content[c])) { out.push({ code: 'SCHEMA_INVALID', where: c, msg: 'очікується масив' }); continue; }
+    content[c].forEach((e, i) => walk(SCHEMAS[c], e, `${c}[${i}]`, out));
+  }
+  const loc = content.locales;
+  if (loc !== undefined) {
+    if (!typeOk({ t: 'object' }, loc)) out.push({ code: 'SCHEMA_INVALID', where: 'locales', msg: 'очікується об\u2019єкт мова → ключі' });
+    else for (const [lang, table] of Object.entries(loc)) {
+      if (!typeOk({ t: 'object' }, table)) { out.push({ code: 'SCHEMA_INVALID', where: `locales.${lang}`, msg: 'очікується об\u2019єкт ключ → рядок' }); continue; }
+      for (const [k, v] of Object.entries(table)) {
+        if (typeof v !== 'string') out.push({ code: 'SCHEMA_INVALID', where: `locales.${lang}.${k}`, msg: 'переклад має бути рядком' });
+      }
+    }
+  }
+  return out;
+}

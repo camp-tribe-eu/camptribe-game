@@ -1,0 +1,42 @@
+// Реєстр кодів помилок. Кожен код належить рівно одній перевірці (або завантажувачу)
+// і посилається на рядок специфікації brain/Передача/05-pershyi-kod.md.
+// Самотест вимагає, щоб КОЖЕН код тут мав хоча б один зламаний приклад, на якому він спрацьовує.
+
+export const CODES = {
+  // завантажувач
+  CONTENT_MISSING:      { check: 'loader', spec: 'порожній вивід із кодом 0 — збій (закон 4)' },
+  CONTENT_PARSE:        { check: 'loader', spec: 'порожній вивід із кодом 0 — збій (закон 4)' },
+  CONTENT_EMPTY:        { check: 'loader', spec: 'порожній вивід із кодом 0 — збій (закон 4)' },
+  CONTENT_UNKNOWN_FILE: { check: 'loader', spec: 'файл з одруківкою в назві не має тихо ігноруватись' },
+
+  // схеми
+  SCHEMA_INVALID:       { check: 'schema', spec: '§1 типізовані схеми' },
+  SCHEMA_UNKNOWN_FIELD: { check: 'schema', spec: '§1 визначення строго окремо від стану проходження' },
+
+  // валідатор контенту, §2
+  ID_FORMAT:            { check: 'id-format', spec: '§1 стабільний id, не назва і не індекс масиву' },
+  ID_DUPLICATE:         { check: 'id-unique', spec: '§2 унікальність id у межах типу' },
+  REF_MISSING:          { check: 'refs', spec: '§2 кожне посилання веде на існуючий запис' },
+  OBJECTIVE_UNCOMPLETABLE: { check: 'objective-completable', spec: '§2 немає обов\u2019язкової цілі без досяжного шляху завершення' },
+  ITEM_UNOBTAINABLE:    { check: 'item-obtainable', spec: '§2 немає вимоги предмета, який неможливо отримати' },
+  CYCLE_NO_EXIT:        { check: 'cycle-exit', spec: '§2 немає циклу без умови виходу' },
+  MAIN_GATE_NOT_GUARANTEED: { check: 'main-gate', spec: '§2 необов\u2019язкова гілка не блокує основний сюжет' },
+  REWARD_GRANT_DUPLICATE:     { check: 'reward-once', spec: '§2 нагорода не видається двічі за один id' },
+  REWARD_REPEATABLE_UNGUARDED:{ check: 'reward-once', spec: '§2 нагорода не видається двічі за один id' },
+  LOCALE_MISSING:       { check: 'locale-keys', spec: '§2 ключі локалізації існують для кожної мови' },
+  FACT_SOURCE_MISSING:  { check: 'fact-source', spec: '§2 зовнішній факт має джерело' },
+  FACT_DATE_INVALID:    { check: 'fact-source', spec: '§2 зовнішній факт має дату перевірки' },
+  FACT_KIND_INVALID:    { check: 'fact-source', spec: '§2 зовнішній факт має тип' },
+
+  // перевірник графа квестів, §3
+  NODE_UNREACHABLE:     { check: 'reachable', spec: '§3 кожен вузол досяжний зі старту' },
+  NO_PATH_TO_END:       { check: 'path-to-end', spec: '§3 з кожного вузла є шлях до завершення' },
+  REQUIRES_CYCLE:       { check: 'requires-deadlock', spec: '§3 немає взаємного блокування двох квестів' },
+  OPTIONAL_NO_DECLINE:  { check: 'optional-decline', spec: '§3 відмова від необов\u2019язкового вузла лишає шлях уперед' },
+  BRANCH_NO_NEXT:       { check: 'branch-next', spec: '§3 кожна гілка має наступний етап або кінець' },
+
+  // перевірка, що впала сама, — теж червоне, а не зелене
+  INTERNAL_ERROR:       { check: 'runner', spec: 'перевірка, що впала, не сміє виглядати як пройдена' },
+};
+
+export const FACT_KINDS = ['regulation', 'geography', 'price', 'schedule', 'culture'];
