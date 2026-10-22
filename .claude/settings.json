@@ -24,7 +24,17 @@
       "Bash(wc:*)",
       "Bash(diff:*)",
       "Bash(mkdir:*)",
-      "Bash(curl:*)"
+      "Bash(curl:*)",
+      "mcp__Atlassian__*",
+      "mcp__Atlassian_MCP__*",
+      "mcp__github__*",
+      "mcp__claude-code-remote__*",
+      "Agent",
+      "ToolSearch",
+      "Bash(echo:*)",
+      "Bash(tail:*)",
+      "Bash(printf:*)",
+      "Bash(rm -rf /tmp/claude-0/:*)"
     ],
     "deny": [
       "Bash(git push --force:*)",
