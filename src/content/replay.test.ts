@@ -4,7 +4,7 @@
 import { describe, expect, it } from 'vitest';
 import { dispatch } from '../core/commands';
 import type { CoreDefs, StoryDefs } from '../core/defs';
-import { describeInput, replay, type ReplayFile } from '../core/replay';
+import { describeInput, record, replay, type ReplayFile } from '../core/replay';
 import { fromSave } from '../core/save';
 import { findsSystem, newSim, step, type SimState, type System } from '../core/sim';
 import { nextInt } from '../core/rng';
@@ -44,6 +44,7 @@ describe('реплеї журналу (GAME-34)', () => {
     expect(s.game.campaignEnded).toBe(true);
     expect(s.game.grants).toEqual(['rw.campfire-warmth', 'rw.q-elise-bike-area', 'rw.st-005']);
     expect(s.finds).toBeGreaterThan(0);                                                      // RNG справді працював
+    expect(PROLOGUE_BIKE.map((i) => i.kind)).toEqual(expect.arrayContaining(['frame', 'command', 'pause', 'resume', 'advance']));
   });
 });
 
@@ -66,8 +67,12 @@ describe('негативні контролі: зміна формули без 
       return { ...s, rng, finds };
     };
     const r = replay(startOf(file), file, { defs: GAME_DEFS, systems: [tweaked] });
+    // Незалежно: перший індекс, де запис зі зміненою системою розходиться з еталоном (рецензія GAME-34:
+    // «/^frame /» пропускав реплей, що звітує ОСТАННІЙ кадр розбіжності, а не перший).
+    const first = record(startOf(file), file.log, { defs: GAME_DEFS, systems: [tweaked] }).findIndex((h, i) => h !== file.hashes[i]);
+    expect(first).toBeGreaterThanOrEqual(0);
     expect(r.ok).toBe(false);
-    if (!r.ok) expect(describeInput(r.input)).toMatch(/^frame /);
+    if (!r.ok) { expect(r.index).toBe(first); expect(describeInput(r.input)).toMatch(/^frame /); }
     // позитивний контроль: справжня система — зелена
     expect(replay(startOf(file), file, { defs: GAME_DEFS, systems: [findsSystem] }).ok).toBe(true);
   });

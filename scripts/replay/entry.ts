@@ -23,7 +23,7 @@ if (argv.includes('--record')) {
   const out: Record<string, string> = {};
   for (const [path, f] of Object.entries(files)) {
     const s = fromSave(f.save);
-    if (!s.ok) { out[path] = `ERR сейв ${s.code}`; continue; }
+    if (!s.ok) { out[path.replace(/^.*\//, '')] = `ERR сейв ${s.code}`; continue; }
     const r = replay(s.sim, f, ctx);
     out[path.replace(/^.*\//, '')] = r.ok ? r.final : `ERR #${r.index} ${describeInput(r.input)}`;
   }

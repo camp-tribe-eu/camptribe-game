@@ -21,6 +21,7 @@ export const PROLOGUE_BIKE: readonly Input[] = [
   c({ type: 'Pickup', itemId: 'item.tent' }),                                            // відмова (уже в руках) теж у журналі
   c({ type: 'CompleteQuest', questId: 'ST-003' }), ...frames(4),
   c({ type: 'Visit', locationId: 'loc.road' }), ...frames(12, 1000),                     // дорога: хвилини й знахідки
+  { kind: 'pause' }, ...frames(3, 1000), { kind: 'advance', minutes: 30 }, { kind: 'resume' }, // пауза меню, перемотування (рецензія GAME-34)
   c({ type: 'CompleteQuest', questId: 'ST-004', to: 'q.elise-bike-area' }),
   c({ type: 'Visit', locationId: 'loc.camp.lake' }),
   c({ type: 'Talk', npcId: 'npc.elise' }), c({ type: 'Choose', choice: 0 }), c({ type: 'Continue' }), c({ type: 'Choose', choice: 0 }), c({ type: 'Continue' }),
