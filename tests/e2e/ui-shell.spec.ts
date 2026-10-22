@@ -67,3 +67,36 @@ test.describe('дотик: пауза без клавіатури (телефо�
     await expect(page.locator('[data-ui="pause"]')).toBeHidden();
   });
 });
+
+test.describe('рецензія PR #13: клавіатура в діалозі паузи й залиплі клавіші', () => {
+  test.use({ viewport: { width: 1280, height: 800 } });
+
+  test('фокус переходить у діалог; Enter на «Продовжити» знімає паузу', async ({ page }) => {
+    await open(page);
+    await page.keyboard.press('Escape');
+    await expect(page.locator('[data-ui="resume"]')).toBeFocused();
+    await page.keyboard.press('Enter');
+    await expect(page.locator('[data-ui="pause"]')).toBeHidden();
+  });
+
+  test('Space на кнопці розміру тексту працює', async ({ page }) => {
+    await open(page);
+    await page.keyboard.press('Escape');
+    await page.locator('[data-ui="text-125"]').focus();
+    await page.keyboard.press('Space');
+    await expect(page.locator('[data-ui="text-125"]')).toHaveAttribute('aria-pressed', 'true');
+  });
+
+  test('клавіша, відпущена під час паузи, не залипає після продовження', async ({ page }) => {
+    await open(page);
+    await page.keyboard.down('ArrowRight');
+    await page.waitForTimeout(200);
+    await page.keyboard.press('Escape');
+    await page.keyboard.up('ArrowRight');
+    await page.locator('[data-ui="resume"]').click();
+    await expect(page.locator('[data-ui="pause"]')).toBeHidden();
+    const x0 = (await probe(page)).playerX;
+    await page.waitForTimeout(1000);
+    expect((await probe(page)).playerX).toBeCloseTo(x0, 0);
+  });
+});

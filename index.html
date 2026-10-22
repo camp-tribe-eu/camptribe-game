@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <title>CampLife</title>
     <style>
+      /* Піксельний шрифт із повною українською кирилицею (OFL, GAME-26; перевірка — scripts/i18n/font_glyphs.py). */
+      @font-face { font-family: 'CampPixel'; src: url('fonts/PressStart2P-Regular.ttf') format('truetype'); font-display: swap; }
       html, body { margin: 0; height: 100%; background: #1b1f23; color: #e8e6e3; font-family: system-ui, sans-serif; overscroll-behavior: none; }
       #app { position: fixed; inset: 0; touch-action: none; user-select: none; -webkit-user-select: none; }
       #stage { position: absolute; inset: 0; }
@@ -22,11 +24,11 @@
       .touch-interact { right: 20px; bottom: 60px; border-radius: 50%; }
       .ui-pause-btn { position: absolute; right: 12px; top: 12px; min-width: 52px; min-height: 52px; border-radius: 12px;
         border: 2px solid #e8e6e3aa; background: #00000066; color: #e8e6e3; font-size: 1.25rem; }
-      .ui-overlay { position: absolute; inset: 0; display: grid; place-content: center; gap: 12px; padding: 16px;
+      .ui-overlay { position: absolute; inset: 0; display: grid; place-content: center; gap: 12px; padding: 16px; font-family: 'CampPixel', system-ui, sans-serif; line-height: 1.6; overflow-wrap: anywhere;
         background: #000000cc; text-align: center; }
       .ui-overlay h2 { margin: 0 0 8px; font-size: 1.5rem; }
-      .ui-overlay fieldset { border: 1px solid #e8e6e355; border-radius: 8px; display: flex; gap: 8px; justify-content: center; }
-      .ui-btn { min-width: 52px; min-height: 48px; padding: 0 16px; border-radius: 10px; border: 2px solid #e8e6e3aa;
+      .ui-overlay fieldset { border: 1px solid #e8e6e355; border-radius: 8px; display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; max-width: min(92vw, 640px); }
+      .ui-btn { font-family: inherit; font-size: 0.75rem; max-width: 92vw; white-space: normal; min-width: 52px; min-height: 48px; padding: 8px 16px; border-radius: 10px; border: 2px solid #e8e6e3aa;
         background: #2a2f35; color: #e8e6e3; font-size: 1rem; }
       .ui-btn[aria-pressed="true"] { background: #4f7a3a; }
       /* Ховати дотикові кнопки лише там, де немає жодного дотикового вказівника (any-pointer):

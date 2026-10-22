@@ -37,10 +37,10 @@ export class WorldScene extends Phaser.Scene {
   create(): void {
     const map = this.make.tilemap({ key: 'camp' });
     const tiles = map.addTilesetImage('kenney-rpg', 'kenney-rpg', TILE, TILE, 0, 1);
-    if (!tiles) throw new Error('tileset kenney-rpg не завантажився');
+    if (!tiles) throw new Error('tileset kenney-rpg failed to load');
     map.createLayer('ground', tiles);
     const walls = map.createLayer('walls', tiles);
-    if (!walls) throw new Error('шар walls відсутній');
+    if (!walls) throw new Error('layer walls is missing');
     walls.setCollisionByExclusion([-1]);
 
     // Вогнище з аркуша Kenney (кадр 15,8): об'єкт взаємодії.
@@ -65,14 +65,21 @@ export class WorldScene extends Phaser.Scene {
         if (action === 'pause') continue; // пауза — справа оболонки UI
         for (const code of codes) {
           const keyCode = KEY_CODES[code];
-          if (keyCode === undefined) throw new Error(`немає коду клавіші для ${code}`);
-          const key = keyboard.addKey(keyCode);
+          if (keyCode === undefined) throw new Error(`no key code for ${code}`);
+          // enableCapture=false: Phaser не гасить Enter/Space для кнопок DOM (діалог паузи; рецензія PR #13).
+          const key = keyboard.addKey(keyCode, false);
           key.on('down', () => press(this.controls, action));
           key.on('up', () => release(this.controls, action));
         }
       }
     }
     this.probe.ready = true;
+  }
+
+  /** Межа паузи: зупинити тіло, інакше фізика дотягує стару швидкість після продовження (рецензія PR #13). */
+  haltPlayer(): void {
+    this.player.setVelocity(0, 0);
+    this.player.body.reset(this.player.x, this.player.y);
   }
 
   override update(time: number, delta: number): void {

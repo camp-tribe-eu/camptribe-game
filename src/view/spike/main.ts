@@ -27,10 +27,10 @@ class CampScene extends Phaser.Scene {
   create(): void {
     const map = this.make.tilemap({ key: 'camp' });
     const tiles = map.addTilesetImage('kenney-rpg', 'kenney-rpg', TILE, TILE, 0, 1);
-    if (!tiles) throw new Error('tileset kenney-rpg не завантажився');
+    if (!tiles) throw new Error('tileset kenney-rpg failed to load');
     map.createLayer('ground', tiles);
     const walls = map.createLayer('walls', tiles);
-    if (!walls) throw new Error('шар walls відсутній у camp.tmj');
+    if (!walls) throw new Error('layer walls is missing in camp.tmj');
     walls.setCollisionByExclusion([-1]);
 
     const g = this.add.graphics();

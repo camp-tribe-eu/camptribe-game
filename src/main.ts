@@ -9,7 +9,7 @@ import { WorldScene, type WorldProbe } from './view/world/scene';
 import { mountTouchControls } from './view/world/touch';
 
 const app = document.querySelector<HTMLElement>('#app');
-if (!app) throw new Error('#app відсутній');
+if (!app) throw new Error('#app is missing');
 
 const probe: WorldProbe = { ready: false, playerX: 0, playerY: 0, nearObject: null, commandsSent: 0, cameraScrollX: 0, cameraScrollY: 0, clockMinutes: 0 };
 const bridge = createBridge(20261022);
@@ -51,9 +51,17 @@ const game = new Phaser.Game({
 const ui = document.createElement('div');
 ui.id = 'ui';
 app.append(ui);
+// ?lang=pseudo — псевдолокаль для e2e-тесту переповнення (GAME-26).
+const langOverride = new URLSearchParams(location.search).get('lang') === 'pseudo' ? ('pseudo' as const) : undefined;
 render(h(Shell, {
+  ...(langOverride ? { langOverride } : {}),
   port: {
     setPaused(paused: boolean) {
+      // Відпускання клавіші під час паузи сцена не бачить — скидаємо введення на межі паузи,
+      // інакше клавіша «залипає» і персонаж іде сам (рецензія PR #13).
+      input.held.clear();
+      input.tapped.clear();
+      (game.scene.getScene('world') as WorldScene | null)?.haltPlayer();
       bridge.setPaused(paused);
       if (paused) game.scene.pause('world'); else game.scene.resume('world');
     },

@@ -1,14 +1,16 @@
 // Оболонка UI над канвою (GAME-25): пауза й налаштування. Preact, DOM — для кирилиці, масштабу тексту
 // й екранного читача (TD-003).
-import { useEffect, useState } from 'preact/hooks';
+import { useEffect, useRef, useState } from 'preact/hooks';
 import { DEFAULT_SETTINGS, loadSettings, saveSettings, type Settings } from '../platform/settings';
 import type { UiPort } from './port';
-import { STRINGS } from './strings';
+import { t as tr, type AnyLang, type Key } from '../i18n';
 
-export function Shell({ port }: { port: UiPort }) {
+export function Shell({ port, langOverride }: { port: UiPort; langOverride?: AnyLang }) {
   const [paused, setPaused] = useState(false);
   const [settings, setSettings] = useState<Settings>(() => loadSettings());
-  const t = STRINGS[settings.language];
+  const resumeRef = useRef<HTMLButtonElement>(null);
+  const lang: AnyLang = langOverride ?? settings.language;
+  const t = (key: Key): string => tr(lang, key);
 
   const toggle = (next: boolean): void => {
     setPaused(next);
@@ -23,6 +25,11 @@ export function Shell({ port }: { port: UiPort }) {
     return () => window.removeEventListener('keydown', onKey);
   }, [paused]);
 
+  // Фокус — у діалог, щоб клавіатура й екранний читач починали з «Продовжити».
+  useEffect(() => {
+    if (paused) resumeRef.current?.focus();
+  }, [paused]);
+
   useEffect(() => {
     document.documentElement.style.fontSize = `${settings.textScale}%`;
     document.documentElement.lang = settings.language;
@@ -31,26 +38,26 @@ export function Shell({ port }: { port: UiPort }) {
 
   return (
     <>
-      <button type="button" class="ui-pause-btn" data-touch="pause" aria-label={t.pause} onClick={() => toggle(true)}>{'‖'}</button>
+      {!paused && <button type="button" class="ui-pause-btn" data-touch="pause" aria-label={t('ui.pause')} onClick={() => toggle(true)}>{'‖'}</button>}
       {paused && (
-        <div class="ui-overlay" role="dialog" aria-modal="true" aria-label={t.paused} data-ui="pause">
-          <h2>{t.paused}</h2>
-          <button type="button" class="ui-btn" data-ui="resume" onClick={() => toggle(false)}>{t.resume}</button>
+        <div class="ui-overlay" role="dialog" aria-modal="true" aria-label={t('ui.paused')} data-ui="pause">
+          <h2>{t('ui.paused')}</h2>
+          <button type="button" class="ui-btn" data-ui="resume" ref={resumeRef} onClick={() => toggle(false)}>{t('ui.resume')}</button>
           <fieldset>
-            <legend>{t.textSize}</legend>
+            <legend>{t('ui.textSize')}</legend>
             {([100, 125, 150] as const).map((v) => (
               <button type="button" class="ui-btn" data-ui={`text-${v}`} aria-pressed={settings.textScale === v}
                 onClick={() => setSettings({ ...settings, textScale: v })}>{v}%</button>
             ))}
           </fieldset>
           <fieldset>
-            <legend>{t.language}</legend>
+            <legend>{t('ui.language')}</legend>
             {(['uk', 'en'] as const).map((l) => (
               <button type="button" class="ui-btn" data-ui={`lang-${l}`} aria-pressed={settings.language === l}
                 onClick={() => setSettings({ ...settings, language: l })}>{l.toUpperCase()}</button>
             ))}
           </fieldset>
-          <button type="button" class="ui-btn" data-ui="reset" onClick={() => setSettings(DEFAULT_SETTINGS)}>↺</button>
+          <button type="button" class="ui-btn" data-ui="reset" onClick={() => setSettings(DEFAULT_SETTINGS)}>{t('ui.reset')}</button>
         </div>
       )}
     </>
