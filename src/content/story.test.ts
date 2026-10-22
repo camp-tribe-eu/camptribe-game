@@ -11,10 +11,14 @@ import { stateHash } from '../core/hash';
 import { initialState, type GameState } from '../core/state';
 import { buildIndex } from '../../scripts/validator/checks.mjs';
 import { enumerateCombos, project } from '../../scripts/validator/combos.mjs';
+import { GAME_DEFS } from './slice-defs';
 import { CONTENT, STORY, compileStory } from './story';
 import { checkDefs, type CoreDefs } from '../core/defs';
 
-const DEFS: CoreDefs = { items: {}, interactions: {}, story: STORY };
+// Справжній каталог гри (зріз + сюжет) — як у містку: купівля, продаж і взаємодії теж серед ходів
+// (рецензія GAME-29: без них продаж нагороди, що ламає квест, був невидимий).
+const DEFS: CoreDefs = GAME_DEFS;
+const START_MONEY = 5_000; // як у createBridge
 const NO_ANIMAL = 'animal.none';
 
 /** Усе, що гравець може спробувати; ядро саме відмовить у недоречному. */
@@ -22,7 +26,17 @@ function moves(s: GameState): Omit<Command, 'commandId'>[] {
   const out: Record<string, unknown>[] = [];
   for (const id of Object.keys(STORY.locations)) out.push({ type: 'Visit', locationId: id });
   for (const id of Object.keys(STORY.npcs)) out.push({ type: 'Talk', npcId: id });
+  if (s.dialogue) {
+    const node = STORY.dialogues[s.dialogue.id]?.nodes[s.dialogue.node];
+    (node?.choices ?? []).forEach((_, i) => out.push({ type: 'Choose', choice: i }));
+    out.push({ type: 'Continue' });
+  }
   for (const l of Object.values(STORY.locations)) for (const id of l.items) out.push({ type: 'Pickup', itemId: id });
+  for (const id of Object.keys(DEFS.items)) {
+    if (!s.inventory[id]) out.push({ type: 'BuyItem', itemId: id }); // лише перший примірник — інакше простір станів нескінченний
+    out.push({ type: 'SellItem', itemId: id });
+  }
+  for (const id of Object.keys(DEFS.interactions)) out.push({ type: 'Interact', targetId: id });
   for (const [qid, p] of Object.entries(s.quests)) {
     if (p.status !== 'active') continue;
     for (const type of ['CompleteQuest', 'DeclineQuest']) {
@@ -64,7 +78,7 @@ describe('сюжет: ядро ≡ валідатор на справжньом�
   for (const k of combos) {
     const label = `${k.profile} · ${k.transport} · ${k.animal}`;
     it(label, () => {
-      const created = dispatch(initialState(0), {
+      const created = dispatch(initialState(START_MONEY), {
         type: 'CreateCharacter', commandId: 'e0', profileId: k.profile ?? '', transportId: k.transport ?? '',
         ...(k.animal === NO_ANIMAL ? {} : { animalId: k.animal }),
       }, DEFS);
@@ -102,6 +116,16 @@ describe('збірка сюжету з content/ (src/content/story.ts)', () => {
     const q = c.quests[0];
     if (q) q.reward = { grantId: 'rw.x', money: 7, items: [{ item: 'item.tent', qty: 2 }] };
     expect(compileStory(c).quests[q?.id ?? '']?.reward).toEqual({ grantId: 'rw.x', moneyCents: 7, items: [{ itemId: 'item.tent', qty: 2 }] });
+  });
+
+  it('діалоги: умова й ефекти репліки доходять до ядра, файли теки dialogue/ — усі', () => {
+    // Окремий лінивий glob (лише шляхи): збірка не загубила й не перейменувала жодного файлу.
+    const files = Object.keys(import.meta.glob('../../content/dialogue/*.json'));
+    expect(files.length).toBeGreaterThan(0);
+    expect(Object.keys(STORY.dialogues).sort()).toEqual(files.map((f) => `dlg.${f.replace(/^.*\/|\.json$/g, '')}`).sort());
+    const hello = STORY.dialogues['dlg.elise-greeting']?.nodes['hello'];
+    expect(hello?.choices?.[0]).toEqual({ next: 'bike', when: { transport: 'transport.bike' }, effects: [{ setFlag: 'f.elise-met' }] });
+    expect(STORY.dialogues['dlg.elise-greeting']?.nodes['bye']).toEqual({ end: true });
   });
 
   it('те, чого ядро ще не вміє, не проходить мовчки: deliver і продаж у NPC — помилка збірки', () => {

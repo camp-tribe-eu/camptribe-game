@@ -9,7 +9,7 @@
 // * предмет здобувається з `items` локації, де стоїть гравець, або з нагороди квесту;
 // * перехід із `choiceKey` — вибір гравця; без нього — шлях за замовчуванням;
 // * `requires` квесту-цілі перевіряється в мить переходу.
-import type { QuestDef, RewardDef, StoryDefs, WhenDef } from './defs';
+import type { CondDef, EffectDef, QuestDef, RewardDef, StoryDefs, WhenDef } from './defs';
 import type { GameEvent } from './commands';
 import type { PlayerState, QuestProgress, RejectCode } from './state';
 
@@ -21,7 +21,11 @@ export type StoryCommand =
   | { readonly type: 'Talk'; readonly commandId: string; readonly npcId: string }
   | { readonly type: 'Pickup'; readonly commandId: string; readonly itemId: string }
   | { readonly type: 'CompleteQuest'; readonly commandId: string; readonly questId: string; readonly to?: string }
-  | { readonly type: 'DeclineQuest'; readonly commandId: string; readonly questId: string; readonly to?: string };
+  | { readonly type: 'DeclineQuest'; readonly commandId: string; readonly questId: string; readonly to?: string }
+  /** Обрати репліку відкритого діалогу: індекс у `choices` вузла (не серед видимих — UI знає умови). */
+  | { readonly type: 'Choose'; readonly commandId: string; readonly choice: number }
+  /** Далі: вузол із `next` — до наступного, вузол із `end` — закрити розмову. */
+  | { readonly type: 'Continue'; readonly commandId: string };
 
 export interface StoryDraft {
   moneyCents: number;
@@ -31,6 +35,8 @@ export interface StoryDraft {
   player: PlayerState | null;
   quests: Record<string, QuestProgress>;
   campaignEnded: boolean;
+  flags: string[];
+  dialogue: { readonly id: string; readonly node: string } | null;
 }
 
 const own = <T>(o: Readonly<Record<string, T>>, k: string): T | undefined => (Object.hasOwn(o, k) ? o[k] : undefined);
@@ -110,7 +116,8 @@ function leave(st: StoryDefs, d: StoryDraft, p: PlayerState, cmd: { commandId: s
     to = cmd.to;
   } else if (exits.length) {
     to = exits.find((t) => !t.choice)?.to;
-    if (to === undefined) return 'INVALID_CHOICE'; // лише вибори — гравець мусить назвати один
+    // Лише вибори — гравець мусить назвати один; у квесту-кінця «без вибору» означає просто кінець.
+    if (to === undefined && !(on === 'complete' && q.end)) return 'INVALID_CHOICE';
   } else if (!(on === 'complete' && q.end)) {
     return 'QUEST_NO_EXIT'; // тупик: валідатор не мав цього пропустити
   }
@@ -121,16 +128,47 @@ function leave(st: StoryDefs, d: StoryDraft, p: PlayerState, cmd: { commandId: s
     const bad = giveReward(d, cmd.commandId, cmd.questId, q.reward);
     if (bad) return bad;
   }
-  if (to === undefined) {
-    d.campaignEnded = true;
-    return null;
-  }
+  // Завершення квесту-кінця закінчує розділ завжди — і коли далі є перехід (епілог), як у валідатора,
+  // для якого `end` — термінальний вузол (рецензія GAME-29: інакше такий кінець не наставав ніколи).
+  if (on === 'complete' && q.end) d.campaignEnded = true;
+  if (to === undefined) return null;
   const target = own(st.quests, to) as QuestDef;
   const req = target.requires;
   if (req && (req.quests.some((r) => !completed(d, r)) || req.items.some((i) => (own(d.inventory, i) ?? 0) < 1))) return 'QUEST_REQUIRES_UNMET';
   // Повторний вхід (цикл у графі, валідатор його дозволяє за наявності виходу — cycle-exit) знову
   // робить квест активним із чистими цілями; нагорода за grantId однаково не повториться.
   if (own(d.quests, to)?.status !== 'active') d.quests = { ...d.quests, [to]: { status: 'active', done: [] } };
+  return null;
+}
+
+/** Умова діалогу (TD-006). Семантика — як у валідатора (scripts/validator/checks.mjs, GAME-28). */
+export function holds(c: CondDef, d: StoryDraft, p: PlayerState): boolean {
+  if ('flag' in c) return d.flags.includes(c.flag);
+  if ('notFlag' in c) return !d.flags.includes(c.notFlag);
+  if ('quest' in c) return own(d.quests, c.quest)?.status === c.status;
+  if ('transport' in c) return p.transportId === c.transport;
+  if ('all' in c) return c.all.every((x) => holds(x, d, p));
+  return c.any.some((x) => holds(x, d, p));
+}
+
+function runEffect(st: StoryDefs, d: StoryDraft, p: PlayerState, e: EffectDef): RejectCode | null {
+  if ('setFlag' in e) {
+    if (!d.flags.includes(e.setFlag)) d.flags = [...d.flags, e.setFlag].sort();
+    return null;
+  }
+  if ('startQuest' in e) {
+    const q = own(st.quests, e.startQuest);
+    if (!q || !matches(q.when, p)) return 'UNKNOWN_TARGET';
+    const req = q.requires;
+    if (req && (req.quests.some((r) => !completed(d, r)) || req.items.some((i) => (own(d.inventory, i) ?? 0) < 1))) return 'QUEST_REQUIRES_UNMET';
+    const cur = own(d.quests, e.startQuest)?.status;
+    if (cur !== 'active' && cur !== 'completed') d.quests = { ...d.quests, [e.startQuest]: { status: 'active', done: [] } };
+    return null;
+  }
+  // completeObjective: лише в активному квесті (як і позначки Visit/Talk); інакше — нічого.
+  const { quest, objective } = e.completeObjective;
+  const prog = own(d.quests, quest);
+  if (prog?.status === 'active' && !prog.done.includes(objective)) d.quests = { ...d.quests, [quest]: { ...prog, done: [...prog.done, objective].sort() } };
   return null;
 }
 
@@ -156,6 +194,7 @@ export function applyStory(cmd: StoryCommand, d: StoryDraft, st: StoryDefs | und
   if (!p) return 'NO_CHARACTER';
   switch (cmd.type) {
     case 'Visit': {
+      if (d.dialogue) return 'IN_DIALOGUE';
       if (!isId(cmd.locationId)) return 'INVALID_COMMAND';
       if (!own(st.locations, cmd.locationId)) return 'UNKNOWN_TARGET';
       if (!locationOpen(st, d, p, cmd.locationId)) return 'LOCKED';
@@ -164,12 +203,36 @@ export function applyStory(cmd: StoryCommand, d: StoryDraft, st: StoryDefs | und
       return null;
     }
     case 'Talk': {
+      if (d.dialogue) return 'IN_DIALOGUE';
       if (!isId(cmd.npcId)) return 'INVALID_COMMAND';
       const npc = own(st.npcs, cmd.npcId);
       if (!npc) return 'UNKNOWN_TARGET';
       if (!npcOpen(st, d, p, cmd.npcId)) return 'LOCKED';
       if (p.locationId !== npc.locationId) return 'NOT_HERE';
       mark(st, d, p, 'talk', cmd.npcId);
+      const dlg = Object.entries(st.dialogues).find(([, x]) => x.npcId === cmd.npcId);
+      if (dlg) d.dialogue = { id: dlg[0], node: dlg[1].start };
+      return null;
+    }
+    case 'Choose':
+    case 'Continue': {
+      if (!d.dialogue) return 'NO_DIALOGUE';
+      const dlg = own(st.dialogues, d.dialogue.id);
+      const node = dlg && own(dlg.nodes, d.dialogue.node);
+      if (!dlg || !node) return 'NO_DIALOGUE'; // сейв із діалогом, якого вже немає в контенті
+      if (cmd.type === 'Continue') {
+        if (node.choices) return 'INVALID_CHOICE';
+        d.dialogue = node.next !== undefined ? { id: d.dialogue.id, node: node.next } : null;
+        return null;
+      }
+      const choice = Number.isSafeInteger(cmd.choice) && cmd.choice >= 0 ? node.choices?.[cmd.choice] : undefined;
+      if (!choice) return 'INVALID_CHOICE';
+      if (choice.when && !holds(choice.when, d, p)) return 'CONDITION_FAILED';
+      for (const e of choice.effects) {
+        const bad = runEffect(st, d, p, e);
+        if (bad) return bad;
+      }
+      d.dialogue = { id: d.dialogue.id, node: choice.next };
       return null;
     }
     case 'Pickup': {

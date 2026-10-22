@@ -71,7 +71,9 @@ describe('годинник', () => {
 
 describe('негативний контроль: Math.random у системі ядра ламає детермінізм', () => {
   it('два прогони з тим самим зерном розходяться', () => {
-    const leaky: System = (s, steps) => ({ ...findsSystem(s, steps), finds: s.finds + (steps > 0 && Math.random() < 0.5 ? 1 : 0) });
+    // Відбиток усієї послідовності монеток, а не їхньої суми: рівні суми двох прогонів траплялись
+    // (~2 % — тест мерехтів), рівні послідовності з сотень кидків — практично ніколи (2^-n).
+    const leaky: System = (s, steps) => ({ ...findsSystem(s, steps), finds: steps > 0 ? (Math.imul(s.finds, 31) + (Math.random() < 0.5 ? 1 : 2)) >>> 0 : s.finds });
     const a = stateHash(run(newSim(SEED, 10_000), LOG, { defs: DEFS, systems: [leaky] }));
     const b = stateHash(run(newSim(SEED, 10_000), LOG, { defs: DEFS, systems: [leaky] }));
     expect(a).not.toBe(b);

@@ -55,6 +55,29 @@ export const STORY_DEFS: CoreDefs = {
       },
       'q.bonus': { optional: false, end: true, objectives: [], transitions: [] },
       'q.stuck': { optional: false, end: false, objectives: [], transitions: [] },
+      'q.secret': { optional: false, end: false, requires: { quests: ['q.mid'], items: [] }, objectives: [], transitions: [] },
+    },
+    dialogues: {
+      'dlg.ann': {
+        npcId: 'npc.ann', start: 'hi',
+        nodes: {
+          hi: { choices: [
+            { next: 'bike', when: { transport: 'transport.bike' }, effects: [{ setFlag: 'f.biker' }] },
+            { next: 'gossip', when: { all: [{ flag: 'f.met' }, { notFlag: 'f.biker' }] }, effects: [] },
+            { next: 'bye', effects: [{ setFlag: 'f.met' }, { completeObjective: { quest: 'q.mid', objective: 'meet-ann' } }] },
+            { next: 'bye', when: { quest: 'q.mid', status: 'completed' }, effects: [{ startQuest: 'q.secret' }] },
+            { next: 'bye', when: { any: [{ flag: 'f.never' }, { flag: 'f.met' }] }, effects: [{ startQuest: 'q.gate' }] },
+          ] },
+          bike: { next: 'bye' },
+          gossip: { next: 'bye' },
+          bye: { end: true },
+        },
+      },
+      // У Боба немає цілі talk — ціль q.mid закриває лише ефект репліки (completeObjective).
+      'dlg.bob': {
+        npcId: 'npc.bob', start: 'hi',
+        nodes: { hi: { choices: [{ next: 'bye', effects: [{ completeObjective: { quest: 'q.mid', objective: 'meet-ann' } }] }] }, bye: { end: true } },
+      },
     },
   },
 };

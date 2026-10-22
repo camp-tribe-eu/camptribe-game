@@ -26,7 +26,7 @@ const OBJECTIVE_ID = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const TARGET_TYPE = { talk: 'npcs', visit: 'locations', collect: 'items', deliver: 'items' };
 const WHEN_TYPE = { profiles: 'profiles', transports: 'transports', animals: 'animals' };
 // Перевірки, що проганяються окремо для кожної комбінації профіль × транспорт × тварина.
-const PER_COMBO = ['objective-completable', 'cycle-exit', 'main-gate', 'path-to-end', 'optional-decline', 'branch-next'];
+const PER_COMBO = ['objective-completable', 'cycle-exit', 'main-gate', 'transition-gate', 'path-to-end', 'optional-decline', 'branch-next'];
 
 // ---------- індекс і граф ----------
 
@@ -259,6 +259,39 @@ export const CHECKS = [
         for (const i of q.requires?.items ?? []) {
           if (by.items.has(i) && !itemGuaranteedAt(i, qid)) out.push(I('MAIN_GATE_NOT_GUARANTEED', `${q.id}.requires.items`, `основний квест вимагає предмет «${i}», отримання якого не гарантоване`));
         }
+      }
+      return out;
+    },
+  },
+  {
+    // Рецензія GAME-29: main-gate рахує «гарантоване перед входом у ціль», куди входить і квест-джерело
+    // разом із локаціями, які ВІН відкриває. Але ядро перевіряє requires у мить переходу: предмет з
+    // локації, що відчиняється завершенням джерела, ще не в руках — перехід відмовить, гравець застряг.
+    // Тут — кожен перехід u→t окремо: requires цілі має бути виконуваним, поки u ще активний.
+    id: 'transition-gate',
+    run(c) { // @check:transition-gate
+      const out = [];
+      const { by, reachable, guaranteed, avail, npcAvail } = c.ix;
+      for (const uid of reachable) {
+        const u = by.quests.get(uid);
+        u.transitions.forEach((tr, i) => {
+          const t = by.quests.get(tr.to);
+          if (!t?.requires) return;
+          // Що вже точно є в мить переходу: гарантовано завершене перед u, плюс сам u — лише якщо його ЗАВЕРШУЮТЬ.
+          const done = new Set(guaranteed.get(uid));
+          if (tr.on === 'complete') done.add(uid);
+          const where = `${uid}.transitions[${i}]`;
+          for (const r of t.requires.quests ?? []) {
+            if (by.quests.has(r) && !done.has(r)) out.push(I('TRANSITION_REQUIRES_NOT_READY', where, `«${t.id}» вимагає квест «${r}», а в мить переходу з «${uid}» його ще не завершено`));
+          }
+          for (const it of t.requires.items ?? []) {
+            if (!by.items.has(it)) continue;
+            const fromReward = [...done].some((x) => by.quests.get(x)?.reward?.items?.some((ri) => ri.item === it));
+            const fromWorld = [...by.locations.values()].some((l) => l.items?.includes(it) && avail(l, uid))
+              || [...by.npcs.values()].some((n) => n.sells?.includes(it) && npcAvail(n, uid));
+            if (!fromReward && !fromWorld) out.push(I('TRANSITION_REQUIRES_NOT_READY', where, `«${t.id}» вимагає предмет «${it}», якого в мить переходу з «${uid}» ще не можна мати (джерело відкривається пізніше або лише нагородою, якої тут немає)`));
+          }
+        });
       }
       return out;
     },

@@ -183,8 +183,11 @@ describe('коди відмов: кожен код із реєстру має т
     ['ITEM_ALREADY_HELD', play([DRIVER, { type: 'Pickup', itemId: 'item.wood' }]), { type: 'Pickup', commandId: 's6', itemId: 'item.wood' }, STORY_DEFS],
     ['QUEST_NOT_ACTIVE', play([DRIVER]), { type: 'CompleteQuest', commandId: 's7', questId: 'q.mid' }, STORY_DEFS],
     ['QUEST_OBJECTIVES_OPEN', play([DRIVER]), { type: 'CompleteQuest', commandId: 's8', questId: 'q.start' }, STORY_DEFS],
-    ['QUEST_REQUIRES_UNMET', play([DRIVER, { type: 'Visit', locationId: 'loc.home' }, { type: 'Pickup', itemId: 'item.wood' }, { type: 'CompleteQuest', questId: 'q.start' }, { type: 'Visit', locationId: 'loc.shop' }, { type: 'Talk', npcId: 'npc.ann' }]), { type: 'CompleteQuest', commandId: 's9', questId: 'q.mid', to: 'q.gate' }, STORY_DEFS],
+    ['QUEST_REQUIRES_UNMET', play([DRIVER, { type: 'Visit', locationId: 'loc.home' }, { type: 'Pickup', itemId: 'item.wood' }, { type: 'CompleteQuest', questId: 'q.start' }, { type: 'Visit', locationId: 'loc.shop' }, { type: 'Talk', npcId: 'npc.ann' }, { type: 'Choose', choice: 2 }, { type: 'Continue' }]), { type: 'CompleteQuest', commandId: 's9', questId: 'q.mid', to: 'q.gate' }, STORY_DEFS],
     ['QUEST_NOT_OPTIONAL', play([DRIVER]), { type: 'DeclineQuest', commandId: 's10', questId: 'q.start' }, STORY_DEFS],
+    ['IN_DIALOGUE', play([DRIVER, { type: 'Visit', locationId: 'loc.home' }, { type: 'CompleteQuest', questId: 'q.start' }, { type: 'Visit', locationId: 'loc.shop' }, { type: 'Talk', npcId: 'npc.ann' }]), { type: 'Visit', commandId: 's12', locationId: 'loc.home' }, STORY_DEFS],
+    ['NO_DIALOGUE', play([DRIVER]), { type: 'Continue', commandId: 's13' }, STORY_DEFS],
+    ['CONDITION_FAILED', play([DRIVER, { type: 'Visit', locationId: 'loc.home' }, { type: 'CompleteQuest', questId: 'q.start' }, { type: 'Visit', locationId: 'loc.shop' }, { type: 'Talk', npcId: 'npc.ann' }]), { type: 'Choose', commandId: 's14', choice: 0 }, STORY_DEFS],
     ['QUEST_NO_EXIT', { ...play([BIKER]), quests: { 'q.stuck': { status: 'active', done: [] } } }, { type: 'CompleteQuest', commandId: 's11', questId: 'q.stuck' }, STORY_DEFS],
   ];
 

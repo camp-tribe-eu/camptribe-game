@@ -25,6 +25,9 @@ const COMBOS_FILE = 'validator/combos.mjs';
 const mutations = [
   ...CHECKS.map((c) => ({ name: `вимкнено перевірку ${c.id}`, file: CHECKS_FILE, from: `// @check:${c.id}\n`, to: `// @check:${c.id}\n      return [];\n` })),
   { name: 'відмова рахується як завершення', file: CHECKS_FILE, from: "u === X && tr.on === 'complete'", to: 'u === X' },
+  { name: 'transition-gate: джерело зараховано й при відмові', file: CHECKS_FILE, from: "if (tr.on === 'complete') done.add(uid);", to: 'done.add(uid);' },
+  { name: 'transition-gate: локація рахується відкритою на вході в ціль, а не на джерелі', file: CHECKS_FILE, from: 'l.items?.includes(it) && avail(l, uid)', to: 'l.items?.includes(it) && avail(l, tr.to)' },
+  { name: 'transition-gate: перевіряються лише основні цілі', file: CHECKS_FILE, from: "if (!t?.requires) return;", to: "if (!t?.requires || t.optional) return;" },
   { name: 'unlockedBy ігнорується', file: CHECKS_FILE, from: '!ent.unlockedBy || guaranteed', to: 'true || guaranteed' },
   { name: 'нагорода будь-якого квесту вважається гарантованою', file: CHECKS_FILE, from: 'for (const X of guaranteed.get(q)) if (Q.get(X)', to: 'for (const X of Q.keys()) if (Q.get(X)' },
   { name: 'петля на себе не вважається циклом', file: CHECKS_FILE, from: 'comp.length > 1 || next(comp[0]).includes(comp[0])', to: 'comp.length > 1' },

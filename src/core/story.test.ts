@@ -2,11 +2,14 @@
 import { describe, expect, it } from 'vitest';
 import { dispatch, type Command } from './commands';
 import { BIKER, DRIVER, play, STORY_DEFS, type Step } from './story.fixture';
+import { stateHash } from './hash';
 import { initialState, type GameState } from './state';
 
 const tryCmd = (s: GameState, c: Step) => dispatch(s, { ...c, commandId: 'x1' } as Command, STORY_DEFS);
 const START = [{ type: 'Visit', locationId: 'loc.home' }, { type: 'CompleteQuest', questId: 'q.start' }] as const;
-const MID = [{ type: 'Pickup', itemId: 'item.wood' }, { type: 'Visit', locationId: 'loc.shop' }, { type: 'Talk', npcId: 'npc.ann' }] as const;
+// Розмова з Енн відкриває її діалог: «до побачення» (вибір 2) і закрити.
+const BYE = [{ type: 'Choose', choice: 2 }, { type: 'Continue' }] as const;
+const MID = [{ type: 'Pickup', itemId: 'item.wood' }, { type: 'Visit', locationId: 'loc.shop' }, { type: 'Talk', npcId: 'npc.ann' }, ...BYE] as const;
 
 describe('сюжет у ядрі (GAME-29)', () => {
   it('створення персонажа відкриває стартовий квест і ставить у його локацію', () => {
@@ -33,14 +36,14 @@ describe('сюжет у ядрі (GAME-29)', () => {
   });
 
   it('прогрес рахується лише для активних квестів: розмова до відкриття q.mid його не зараховує', () => {
-    const s = play([BIKER, START[0], { type: 'CompleteQuest', questId: 'q.start', to: 'q.side' }, { type: 'Visit', locationId: 'loc.shop' }, { type: 'Talk', npcId: 'npc.ann' }, { type: 'DeclineQuest', questId: 'q.side' }]);
+    const s = play([BIKER, START[0], { type: 'CompleteQuest', questId: 'q.start', to: 'q.side' }, { type: 'Visit', locationId: 'loc.shop' }, { type: 'Talk', npcId: 'npc.ann' }, ...BYE, { type: 'DeclineQuest', questId: 'q.side' }]);
     expect(s.quests['q.side']?.status).toBe('declined');
     expect(s.quests['q.mid']?.done).toEqual([]);
     expect(s.grants).toEqual([]);                                       // відмова — без нагороди
   });
 
   it('collect рахується з інвентаря, а не з позначки', () => {
-    const noWood = play([DRIVER, ...START, MID[1], MID[2]]);
+    const noWood = play([DRIVER, ...START, MID[1], MID[2], ...BYE]);
     expect(tryCmd(noWood, { type: 'CompleteQuest', questId: 'q.mid' })).toMatchObject({ ok: false, code: 'QUEST_OBJECTIVES_OPEN' });
     expect(tryCmd(play([{ type: 'Visit', locationId: 'loc.home' }, MID[0]], noWood), { type: 'CompleteQuest', questId: 'q.mid' }).ok).toBe(true);
   });
@@ -108,7 +111,7 @@ describe('сюжет у ядрі (GAME-29)', () => {
     const end = defs.story.quests['q.end']?.reward;
     if (end) end.grantId = 'rw.side';
     const s = play([BIKER, START[0], { type: 'CompleteQuest', questId: 'q.start', to: 'q.side' }, { type: 'Visit', locationId: 'loc.shop' }, { type: 'CompleteQuest', questId: 'q.side' },
-      { type: 'Visit', locationId: 'loc.home' }, MID[0], MID[1], MID[2], { type: 'CompleteQuest', questId: 'q.mid' }, { type: 'CompleteQuest', questId: 'q.end' }], undefined, defs);
+      { type: 'Visit', locationId: 'loc.home' }, ...MID, { type: 'CompleteQuest', questId: 'q.mid' }, { type: 'CompleteQuest', questId: 'q.end' }], undefined, defs);
     expect(s.moneyCents).toBe(500);
     expect(s.campaignEnded).toBe(true);
   });
@@ -140,5 +143,99 @@ describe('сюжет у ядрі (GAME-29)', () => {
     if (side) side.transitions = [{ on: 'decline', to: 'q.start', choice: false }];
     const s = play([BIKER, START[0], { type: 'CompleteQuest', questId: 'q.start', to: 'q.side' }, { type: 'DeclineQuest', questId: 'q.side' }], undefined, defs);
     expect(s.quests['q.start']).toEqual({ status: 'active', done: [] });
+  });
+
+  it('кінець із переходом (епілог): завершення закінчує розділ — і без вибору, і з вибором', () => {
+    const defs = structuredClone(STORY_DEFS) as Mutable;
+    const end = defs.story.quests['q.end'];
+    if (end) end.transitions = [{ on: 'complete', to: 'q.stuck', choice: true }];
+    const atEnd = play([DRIVER, ...START, ...MID, { type: 'CompleteQuest', questId: 'q.mid' }], undefined, defs);
+    const plain = play([{ type: 'CompleteQuest', questId: 'q.end' }], atEnd, defs);
+    expect(plain.campaignEnded).toBe(true);
+    expect(plain.quests['q.stuck']).toBeUndefined();
+    const epilogue = play([{ type: 'CompleteQuest', questId: 'q.end', to: 'q.stuck' }], atEnd, defs);
+    expect(epilogue.campaignEnded).toBe(true);
+    expect(epilogue.quests['q.stuck']?.status).toBe('active');
+  });
+});
+
+describe('діалоги в ядрі (GAME-29, формат DC-011)', () => {
+  const AT_ANN = [...START, { type: 'Visit', locationId: 'loc.shop' }, { type: 'Talk', npcId: 'npc.ann' }] as const;
+  const hashOf = (s: GameState) => stateHash({ ...s, processed: null, seq: null });
+
+  it('розмова відкриває діалог NPC на стартовому вузлі; «далі» на вузлі з виборами — INVALID_CHOICE', () => {
+    const s = play([DRIVER, ...AT_ANN]);
+    expect(s.dialogue).toEqual({ id: 'dlg.ann', node: 'hi' });
+    expect(tryCmd(s, { type: 'Continue' })).toMatchObject({ ok: false, code: 'INVALID_CHOICE' });
+  });
+
+  it('хибна умова — CONDITION_FAILED, і стан побайтно той самий (хеш до = після)', () => {
+    const s = play([DRIVER, ...AT_ANN]);
+    const r = tryCmd(s, { type: 'Choose', choice: 0 });                       // лише для велосипеда
+    expect(r).toMatchObject({ ok: false, code: 'CONDITION_FAILED' });
+    expect(hashOf(r.state)).toBe(hashOf(s));
+  });
+
+  it('умова transport і ефект setFlag', () => {
+    const s = play([BIKER, ...AT_ANN.slice(0, 1), { type: 'CompleteQuest', questId: 'q.start' }, ...AT_ANN.slice(2), { type: 'Choose', choice: 0 }]);
+    expect(s.flags).toEqual(['f.biker']);
+    expect(s.dialogue).toEqual({ id: 'dlg.ann', node: 'bike' });
+  });
+
+  it('all + notFlag: плітки — лише після знайомства і не велосипедисту', () => {
+    const first = play([DRIVER, ...AT_ANN]);
+    expect(tryCmd(first, { type: 'Choose', choice: 1 })).toMatchObject({ ok: false, code: 'CONDITION_FAILED' });
+    const again = play([...BYE, { type: 'Talk', npcId: 'npc.ann' }], first);
+    expect(again.flags).toEqual(['f.met']);
+    expect(tryCmd(again, { type: 'Choose', choice: 1 }).ok).toBe(true);
+    const biker = play([BIKER, START[0], { type: 'CompleteQuest', questId: 'q.start' }, { type: 'Visit', locationId: 'loc.shop' }, { type: 'Talk', npcId: 'npc.ann' }, { type: 'Choose', choice: 0 }, { type: 'Continue' }, { type: 'Continue' },
+      { type: 'Talk', npcId: 'npc.ann' }, ...BYE, { type: 'Talk', npcId: 'npc.ann' }]);
+    expect(biker.flags).toEqual(['f.biker', 'f.met']);
+    expect(tryCmd(biker, { type: 'Choose', choice: 1 })).toMatchObject({ ok: false, code: 'CONDITION_FAILED' });
+  });
+
+  it('any + startQuest із невиконаним requires — відмова, і прапорці не змінились (відкат)', () => {
+    const met = play([DRIVER, ...AT_ANN, ...BYE, { type: 'Talk', npcId: 'npc.ann' }]);
+    const r = tryCmd(met, { type: 'Choose', choice: 4 });                     // q.gate вимагає золото
+    expect(r).toMatchObject({ ok: false, code: 'QUEST_REQUIRES_UNMET' });
+    expect(hashOf(r.state)).toBe(hashOf(met));
+  });
+
+  it('умова quest/status і startQuest: після q.mid Енн відкриває q.secret', () => {
+    const s = play([DRIVER, ...START, ...MID, { type: 'CompleteQuest', questId: 'q.mid', to: 'q.end' }]);
+    const before = play([{ type: 'Talk', npcId: 'npc.ann' }], s);
+    const after = play([{ type: 'Choose', choice: 3 }], before);
+    expect(after.quests['q.secret']).toEqual({ status: 'active', done: [] });
+    expect(tryCmd(play([DRIVER, ...AT_ANN]), { type: 'Choose', choice: 3 })).toMatchObject({ ok: false, code: 'CONDITION_FAILED' });
+  });
+
+  it('completeObjective закриває ціль лише в активному квесті', () => {
+    const s = play([DRIVER, ...START, { type: 'Talk', npcId: 'npc.bob' }, { type: 'Choose', choice: 0 }]);
+    expect(s.quests['q.mid']?.done).toEqual(['meet-ann']);
+    // q.side (велосипедист) — q.mid ще не відкрито: той самий ефект нічого не робить
+    const side = play([BIKER, START[0], { type: 'CompleteQuest', questId: 'q.start', to: 'q.side' }, { type: 'Talk', npcId: 'npc.bob' }, { type: 'Choose', choice: 0 }]);
+    expect(side.quests['q.mid']).toBeUndefined();
+    // завершений квест ефект теж не чіпає
+    const done = play([DRIVER, ...START, { type: 'Pickup', itemId: 'item.wood' }, { type: 'Talk', npcId: 'npc.bob' }, { type: 'Choose', choice: 0 }, { type: 'Continue' },
+      { type: 'CompleteQuest', questId: 'q.mid' }, { type: 'Talk', npcId: 'npc.bob' }]);
+    expect(done.quests['q.mid']).toEqual({ status: 'completed', done: ['meet-ann'] });
+    const hacked = { ...done, quests: { ...done.quests, 'q.mid': { status: 'completed' as const, done: [] } } };
+    expect(play([{ type: 'Choose', choice: 0 }], hacked).quests['q.mid']?.done).toEqual([]);
+  });
+
+  it('«далі» йде за next, а на end закриває розмову', () => {
+    const s = play([DRIVER, ...AT_ANN, { type: 'Choose', choice: 2 }]);
+    expect(s.dialogue).toEqual({ id: 'dlg.ann', node: 'bye' });
+    expect(play([{ type: 'Continue' }], s).dialogue).toBeNull();
+  });
+
+  it('хибний індекс вибору — INVALID_CHOICE', () => {
+    const s = play([DRIVER, ...AT_ANN]);
+    for (const choice of [-1, 99, 1.5]) expect(tryCmd(s, { type: 'Choose', choice })).toMatchObject({ ok: false, code: 'INVALID_CHOICE' });
+  });
+
+  it('сейв із діалогом, якого вже немає в контенті, не падає — NO_DIALOGUE', () => {
+    const s = { ...play([DRIVER]), dialogue: { id: 'dlg.ghost', node: 'x' } };
+    expect(tryCmd(s, { type: 'Continue' })).toMatchObject({ ok: false, code: 'NO_DIALOGUE' });
   });
 });

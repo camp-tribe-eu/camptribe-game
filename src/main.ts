@@ -4,7 +4,7 @@ import { render, h } from 'preact';
 import { Shell } from './ui/Shell';
 import { buildLabel } from './core/build-info';
 import { newInput, type Action } from './view/world/actions';
-import { SLICE_DEFS } from './content/slice-defs';
+import { GAME_DEFS } from './content/slice-defs';
 import { serialize } from './core/save';
 import { decodeRestoreCode, encodeRestoreCode } from './platform/save-code';
 import { readSaves, writeSave } from './platform/save-store';
@@ -17,7 +17,7 @@ const app = document.querySelector<HTMLElement>('#app');
 if (!app) throw new Error('#app is missing');
 
 const probe: WorldProbe = { ready: false, playerX: 0, playerY: 0, nearObject: null, commandsSent: 0, cameraScrollX: 0, cameraScrollY: 0, clockMinutes: 0, saveLoaded: false };
-const bridge = createBridge(20261022, SLICE_DEFS);
+const bridge = createBridge(20261022, GAME_DEFS);
 const input = newInput();
 const saves = createSaveSession(bridge, { read: readSaves, write: writeSave });
 // Тестовий хук Playwright: лише ЧИТАННЯ — знімок стану копією, місток назовні не віддається

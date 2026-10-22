@@ -35,7 +35,7 @@ export const MIGRATIONS: Readonly<Record<number, (sim: unknown) => unknown>> = {
   // v1 → v2 (GAME-29): з'явились персонаж і квести. Старий сейв — гра до створення персонажа.
   1: (sim) => {
     const s = sim as { game: Record<string, unknown> };
-    return { ...s, game: { ...s.game, schemaVersion: 2, player: null, quests: {}, campaignEnded: false } };
+    return { ...s, game: { ...s.game, schemaVersion: 2, player: null, quests: {}, campaignEnded: false, flags: [], dialogue: null } };
   },
 };
 
@@ -60,6 +60,9 @@ function shapeError(sim: unknown): string | null {
   if (Object.values(game.processed).some((r) => !isObj(r) || typeof r.ok !== 'boolean' || typeof r.fp !== 'string' || (!r.ok && !(REJECT_CODES as readonly unknown[]).includes(r.code)))) return 'game: processed records';
   if (typeof game.campaignEnded !== 'boolean' || !isObj(game.quests)) return 'game: quests';
   if (Object.values(game.quests).some((q) => !isObj(q) || !['active', 'completed', 'declined'].includes(q.status as string) || !Array.isArray(q.done) || q.done.some((o) => typeof o !== 'string'))) return 'game: quest progress';
+  if (!Array.isArray(game.flags) || game.flags.some((f) => typeof f !== 'string')) return 'game: flags';
+  const dl = game.dialogue;
+  if (dl !== null && (!isObj(dl) || typeof dl.id !== 'string' || typeof dl.node !== 'string')) return 'game: dialogue';
   const p = game.player;
   if (p !== null && (!isObj(p) || typeof p.profileId !== 'string' || typeof p.transportId !== 'string' || typeof p.animalId !== 'string' || !(p.locationId === null || typeof p.locationId === 'string'))) return 'game: player';
   if (!isInt(clock.minutes) || typeof clock.accMs !== 'number' || typeof clock.paused !== 'boolean') return 'clock';

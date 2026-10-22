@@ -24,5 +24,6 @@ export const DEFS: CoreDefs = {
 };
 
 /** Відбиток, отриманий першим прогоном і зафіксований. Змінився — детермінізм зламано або змінено правила (тоді — свідомо, в PR). */
-// afbfc991 — GAME-29: стан v2 (player, quests, campaignEnded). Доведено: той самий прогін у формі v1 дає попередній 308ff0a6.
-export const GOLDEN = 'afbfc991';
+// 66227e1b — GAME-29: стан v2 (player, quests, campaignEnded, flags, dialogue). Доведено: той самий
+// прогін у формі v1 (без цих полів, schemaVersion 1) дає попередній 308ff0a6 — змінилась лише форма.
+export const GOLDEN = '66227e1b';

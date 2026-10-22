@@ -56,6 +56,32 @@ export interface QuestDef {
   readonly reward?: RewardDef;
 }
 
+/** Умова діалогу (TD-006, DC-011): об'єкт рівно з одним ключем. */
+export type CondDef =
+  | { readonly flag: string }
+  | { readonly notFlag: string }
+  | { readonly quest: string; readonly status: 'active' | 'completed' }
+  | { readonly transport: string }
+  | { readonly all: readonly CondDef[] }
+  | { readonly any: readonly CondDef[] };
+
+export type EffectDef =
+  | { readonly setFlag: string }
+  | { readonly startQuest: string }
+  | { readonly completeObjective: { readonly quest: string; readonly objective: string } };
+
+export interface DialogueNodeDef {
+  readonly end?: true;
+  readonly next?: string;
+  readonly choices?: readonly { readonly next: string; readonly when?: CondDef; readonly effects: readonly EffectDef[] }[];
+}
+
+export interface DialogueDef {
+  readonly npcId: string;
+  readonly start: string;
+  readonly nodes: Readonly<Record<string, DialogueNodeDef>>;
+}
+
 /** Сюжет розділу (GAME-29): збирається з перевіреного content/ (src/content/story.ts). */
 export interface StoryDefs {
   readonly start: string;
@@ -65,6 +91,8 @@ export interface StoryDefs {
   readonly locations: Readonly<Record<string, { readonly unlockedBy?: string; readonly when?: WhenDef; readonly items: readonly string[] }>>;
   readonly npcs: Readonly<Record<string, { readonly locationId: string; readonly unlockedBy?: string; readonly when?: WhenDef }>>;
   readonly quests: Readonly<Record<string, QuestDef>>;
+  /** Діалоги за id; на NPC — щонайбільше один (валідатор: DIALOGUE_NPC_DUPLICATE). */
+  readonly dialogues: Readonly<Record<string, DialogueDef>>;
 }
 
 export interface CoreDefs {
@@ -76,7 +104,7 @@ export interface CoreDefs {
 
 export const EMPTY_DEFS: CoreDefs = { items: {}, interactions: {} };
 
-export const DEFS_CODES = ['DEFS_BAD_AMOUNT', 'DEFS_RESALE_ABOVE_PRICE', 'DEFS_BAD_ID', 'DEFS_BAD_REF'] as const;
+export const DEFS_CODES = ['DEFS_BAD_AMOUNT', 'DEFS_RESALE_ABOVE_PRICE', 'DEFS_BAD_ID', 'DEFS_BAD_REF', 'DEFS_STORY_ITEM_SELLABLE'] as const;
 export type DefsCode = (typeof DEFS_CODES)[number];
 
 const isCents = (n: unknown): boolean => typeof n === 'number' && Number.isSafeInteger(n) && n >= 0;
@@ -97,7 +125,25 @@ export function checkDefs(defs: CoreDefs): { code: DefsCode; where: string }[] {
     if (!ID.test(id) || !ID.test(d.grantId) || (d.items ?? []).some((i) => !ID.test(i.itemId))) out.push({ code: 'DEFS_BAD_ID', where: id });
     if (!isCents(d.moneyCents) || (d.items ?? []).some((i) => !Number.isSafeInteger(i.qty) || i.qty < 1)) out.push({ code: 'DEFS_BAD_AMOUNT', where: id });
   }
-  if (defs.story) out.push(...checkStory(defs.story));
+  if (defs.story) {
+    out.push(...checkStory(defs.story));
+    // Предмет сюжету (лежить у локації, видається нагородою, потрібен квесту) не викуповується:
+    // інакше продаж нагороди робить квест незавершуваним (нагорода вдруге не видається), а продаж
+    // підібраного — нескінченні гроші: підняв, продав, підняв знову (рецензія GAME-29).
+    const story = storyItems(defs.story);
+    for (const [id, d] of Object.entries(defs.items)) if (d.sellCents !== undefined && story.has(id)) out.push({ code: 'DEFS_STORY_ITEM_SELLABLE', where: id });
+  }
+  return out;
+}
+
+export function storyItems(st: StoryDefs): Set<string> {
+  const out = new Set<string>();
+  for (const l of Object.values(st.locations)) for (const i of l.items) out.add(i);
+  for (const q of Object.values(st.quests)) {
+    for (const i of q.reward?.items ?? []) out.add(i.itemId);
+    for (const i of q.requires?.items ?? []) out.add(i);
+    for (const o of q.objectives) if (o.kind === 'collect') out.add(o.target);
+  }
   return out;
 }
 
@@ -120,6 +166,21 @@ function checkStory(st: StoryDefs): { code: DefsCode; where: string }[] {
     if (q.reward && (!isCents(q.reward.moneyCents) || q.reward.items.some((i) => !Number.isSafeInteger(i.qty) || i.qty < 1))) out.push({ code: 'DEFS_BAD_AMOUNT', where: `${id}.reward` });
   }
   for (const [id, n] of Object.entries(st.npcs)) if (!has(st.locations, n.locationId)) out.push({ code: 'DEFS_BAD_REF', where: `${id}.locationId` });
+  // Одруківка в unlockedBy зачинила б локацію чи NPC назавжди — мовчки.
+  for (const [id, e] of [...Object.entries(st.locations), ...Object.entries(st.npcs)]) if (!has(st.quests, e.unlockedBy)) out.push({ code: 'DEFS_BAD_REF', where: `${id}.unlockedBy` });
+  const npcsWithDialogue = new Set<string>();
+  for (const [id, d] of Object.entries(st.dialogues)) {
+    if (!has(st.npcs, d.npcId) || npcsWithDialogue.has(d.npcId)) out.push({ code: 'DEFS_BAD_REF', where: `${id}.npcId` });
+    npcsWithDialogue.add(d.npcId);
+    if (!has(d.nodes, d.start)) out.push({ code: 'DEFS_BAD_REF', where: `${id}.start` });
+    for (const [nid, n] of Object.entries(d.nodes)) {
+      for (const next of [n.next, ...(n.choices ?? []).map((c) => c.next)]) if (!has(d.nodes, next)) out.push({ code: 'DEFS_BAD_REF', where: `${id}/${nid}→${String(next)}` });
+      for (const e of (n.choices ?? []).flatMap((c) => c.effects)) {
+        const q = 'startQuest' in e ? e.startQuest : 'completeObjective' in e ? e.completeObjective.quest : undefined;
+        if (!has(st.quests, q)) out.push({ code: 'DEFS_BAD_REF', where: `${id}/${nid}: ${String(q)}` });
+      }
+    }
+  }
   return out;
 }
 

@@ -186,7 +186,7 @@ export const FIXTURES = [
   } },
 
   // ---- предмет, який неможливо отримати ----
-  { name: 'вимога предмета без жодного джерела', expect: ['ITEM_UNOBTAINABLE'], patch(c) {
+  { name: 'вимога предмета без жодного джерела', expect: ['ITEM_UNOBTAINABLE', 'TRANSITION_REQUIRES_NOT_READY'], patch(c) {
     c.items.push({ id: 'item.key', nameKey: 'item.map' });
     q(c, 'ST-003').requires = { items: ['item.key'] };
   } },
@@ -201,10 +201,15 @@ export const FIXTURES = [
   } },
 
   // ---- необов'язкова гілка блокує основний сюжет ----
-  { name: 'основний квест вимагає необов\u2019язковий', expect: ['MAIN_GATE_NOT_GUARANTEED'], patch(c) { q(c, 'ST-004').requires.quests.push('ST-003'); } },
-  { name: 'основний квест вимагає предмет лише з необов\u2019язкового', expect: ['MAIN_GATE_NOT_GUARANTEED'], patch(c) {
+  { name: 'основний квест вимагає необов\u2019язковий', expect: ['MAIN_GATE_NOT_GUARANTEED', 'TRANSITION_REQUIRES_NOT_READY'], patch(c) { q(c, 'ST-004').requires.quests.push('ST-003'); } },
+  { name: 'основний квест вимагає предмет лише з необов\u2019язкового', expect: ['MAIN_GATE_NOT_GUARANTEED', 'TRANSITION_REQUIRES_NOT_READY'], patch(c) {
     ticketFromOptional(c);
     q(c, 'ST-004').requires.items = ['item.ticket'];
+  } },
+
+  // ---- рецензія GAME-29: requires цілі ще не виконуваний у мить переходу (main-gate тут зелений) ----
+  { name: 'ціль вимагає предмет з локації, яку відчиняє саме джерело переходу', expect: ['TRANSITION_REQUIRES_NOT_READY'], patch(c) {
+    q(c, 'ST-002').requires.items = ['item.firewood'];               // дрова в loc.forest, unlockedBy ST-001 = джерело
   } },
 
   // ---- нагорода двічі ----
@@ -228,11 +233,11 @@ export const FIXTURES = [
     c.quests.push({ id: 'ST-009', titleKey: 'q.st-004', optional: false, objectives: [], transitions: [{ on: 'complete', to: 'ST-004' }] });
   } },
   // DIALOGUE_QUEST_GATE тут — справжня друга знахідка: рейнджер безумовно стартує ST-003, а той тепер чогось вимагає.
-  { name: 'два квести вимагають один одного', expect: ['REQUIRES_CYCLE', 'MAIN_GATE_NOT_GUARANTEED', 'DIALOGUE_QUEST_GATE'], patch(c) {
+  { name: 'два квести вимагають один одного', expect: ['REQUIRES_CYCLE', 'MAIN_GATE_NOT_GUARANTEED', 'DIALOGUE_QUEST_GATE', 'TRANSITION_REQUIRES_NOT_READY'], patch(c) {
     q(c, 'ST-003').requires = { quests: ['ST-004'] };
     q(c, 'ST-004').requires.quests.push('ST-003');
   } },
-  { name: 'квест вимагає сам себе', expect: ['REQUIRES_CYCLE', 'DIALOGUE_QUEST_GATE'], patch(c) { q(c, 'ST-003').requires = { quests: ['ST-003'] }; } },
+  { name: 'квест вимагає сам себе', expect: ['REQUIRES_CYCLE', 'DIALOGUE_QUEST_GATE', 'TRANSITION_REQUIRES_NOT_READY'], patch(c) { q(c, 'ST-003').requires = { quests: ['ST-003'] }; } },
   { name: 'необов\u2019язковий квест без відмови', expect: ['OPTIONAL_NO_DECLINE'], patch(c) { q(c, 'ST-003').transitions = [{ on: 'complete', to: 'ST-004' }]; } },
   { name: 'гілка без наступного етапу', expect: ['BRANCH_NO_NEXT', 'NO_PATH_TO_END'], patch(c) {
     c.quests.push({ id: 'ST-005', titleKey: 'q.st-004', optional: false, objectives: [], transitions: [] });
@@ -385,7 +390,7 @@ export const FIXTURES = [
     q(c, 'ST-004').objectives.push({ id: 'visit-park', textKey: 'q.st-004.o1', kind: 'visit', target: 'loc.dog-park', required: true });
   } },
   { base: 'combo', name: '[комб.] відмова лише для одного профілю', expect: ['OPTIONAL_NO_DECLINE'], patch(c) { q(c, 'ST-003').transitions[1].when = { profiles: [P_A] }; } },
-  { base: 'combo', name: '[комб.] предмет основного сюжету продають лише велосипедистам', expect: ['MAIN_GATE_NOT_GUARANTEED'], patch(c) {
+  { base: 'combo', name: '[комб.] предмет основного сюжету продають лише велосипедистам', expect: ['MAIN_GATE_NOT_GUARANTEED', 'TRANSITION_REQUIRES_NOT_READY'], patch(c) {
     c.npcs[1].when = { transports: [T_BIKE] };
     q(c, 'ST-004').requires.items = ['item.gift'];
   } },

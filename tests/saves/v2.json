@@ -1,7 +1,7 @@
 {
  "format": "camplife-save",
  "schemaVersion": 2,
- "checksum": "e11dd249",
+ "checksum": "e7b85beb",
  "accountId": null,
  "sim": {
   "game": {
@@ -125,9 +125,17 @@
     "v2f": {
      "ok": true,
      "fp": "3e9b8346"
+    },
+    "v2g": {
+     "ok": true,
+     "fp": "4c526998"
+    },
+    "v2h": {
+     "ok": true,
+     "fp": "34dd31ab"
     }
    },
-   "seq": 26,
+   "seq": 28,
    "player": {
     "profileId": "profile.a",
     "transportId": "transport.bike",
@@ -149,10 +157,19 @@
     },
     "q.mid": {
      "status": "active",
-     "done": []
+     "done": [
+      "meet-ann"
+     ]
     }
    },
-   "campaignEnded": false
+   "campaignEnded": false,
+   "flags": [
+    "f.biker"
+   ],
+   "dialogue": {
+    "id": "dlg.ann",
+    "node": "bike"
+   }
   },
   "clock": {
    "minutes": 1247,

@@ -1,7 +1,7 @@
 // Збирає сюжет для ядра (StoryDefs) з перевіреного content/ (GAME-29). Валідатор доводить
 // досяжність і відсутність тупиків; тут — лише переклад полів у форму ядра. Те, чого ядро ще не
 // вміє (`deliver`, продаж у NPC), не пропускається мовчки: збірка падає з назвою поля (закон 4).
-import type { ObjectiveDef, QuestDef, StoryDefs, WhenDef } from '../core/defs';
+import type { CondDef, DialogueDef, EffectDef, ObjectiveDef, QuestDef, StoryDefs, WhenDef } from '../core/defs';
 import animals from '../../content/animals.json';
 import locations from '../../content/locations.json';
 import meta from '../../content/meta.json';
@@ -18,6 +18,10 @@ interface RawQuest {
   transitions: { on: string; to: string; choiceKey?: string; when?: RawWhen }[];
   reward?: { grantId: string; money?: number; items?: { item: string; qty: number }[]; once?: boolean };
 }
+interface RawDialogue {
+  id: string; npcId: string; start: string;
+  nodes: { id: string; end?: boolean; next?: string; choices?: { next: string; when?: CondDef; effects?: EffectDef[] }[] }[];
+}
 export interface RawContent {
   meta: { start: string };
   profiles: { id: string; transports?: string[] }[];
@@ -26,6 +30,7 @@ export interface RawContent {
   locations: { id: string; unlockedBy?: string; when?: RawWhen; items?: string[] }[];
   npcs: { id: string; locationId: string; unlockedBy?: string; when?: RawWhen; sells?: string[] }[];
   quests: RawQuest[];
+  dialogues: RawDialogue[];
 }
 
 const when = (w: RawWhen | undefined): { when?: WhenDef } => (w ? { when: w } : {});
@@ -33,6 +38,18 @@ const when = (w: RawWhen | undefined): { when?: WhenDef } => (w ? { when: w } : 
 function objective(qid: string, o: RawQuest['objectives'][number]): ObjectiveDef {
   if (o.kind !== 'visit' && o.kind !== 'talk' && o.kind !== 'collect') throw new Error(`story: ${qid}.${o.id}: objective kind "${o.kind}" is not supported by the core yet`);
   return { id: o.id, kind: o.kind, target: o.target, required: o.required, ...when(o.when) };
+}
+
+function dialogue(d: RawDialogue): DialogueDef {
+  return {
+    npcId: d.npcId,
+    start: d.start,
+    nodes: Object.fromEntries(d.nodes.map((n) => [n.id, {
+      ...(n.end === true ? { end: true as const } : {}),
+      ...(n.next !== undefined ? { next: n.next } : {}),
+      ...(n.choices ? { choices: n.choices.map((c) => ({ next: c.next, ...(c.when ? { when: c.when } : {}), effects: c.effects ?? [] })) } : {}),
+    }])),
+  };
 }
 
 function quest(q: RawQuest): QuestDef {
@@ -62,8 +79,15 @@ export function compileStory(c: RawContent): StoryDefs {
     locations: Object.fromEntries(c.locations.map((l) => [l.id, { ...(l.unlockedBy ? { unlockedBy: l.unlockedBy } : {}), ...when(l.when), items: l.items ?? [] }])),
     npcs: Object.fromEntries(c.npcs.map((n) => [n.id, { locationId: n.locationId, ...(n.unlockedBy ? { unlockedBy: n.unlockedBy } : {}), ...when(n.when) }])),
     quests: Object.fromEntries(c.quests.map((q) => [q.id, quest(q)])),
+    dialogues: Object.fromEntries(c.dialogues.map((d) => [d.id, dialogue(d)])),
   };
 }
 
-export const CONTENT: RawContent = { meta, profiles, transports, animals, locations, npcs, quests: quests as RawQuest[] };
+// Тека dialogue/ — один файл на діалог (DC-011); glob, щоб новий файл не треба було реєструвати руками.
+const dialogueFiles = import.meta.glob<RawDialogue>('../../content/dialogue/*.json', { eager: true, import: 'default' });
+
+export const CONTENT: RawContent = {
+  meta, profiles, transports, animals, locations, npcs, quests: quests as RawQuest[],
+  dialogues: Object.keys(dialogueFiles).sort().map((k) => dialogueFiles[k] as RawDialogue),
+};
 export const STORY: StoryDefs = compileStory(CONTENT);

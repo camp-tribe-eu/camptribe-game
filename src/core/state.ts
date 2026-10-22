@@ -46,6 +46,10 @@ export interface GameState {
   readonly quests: Readonly<Record<string, QuestProgress>>;
   /** Завершено етап із `end: true` (кінець розділу). */
   readonly campaignEnded: boolean;
+  /** Сюжетні прапорці (DC-051), відсортовано. Ставлять лише ефекти діалогів. */
+  readonly flags: readonly string[];
+  /** Відкритий діалог і вузол; null — розмови немає. */
+  readonly dialogue: { readonly id: string; readonly node: string } | null;
 }
 
 export const REJECT_CODES = [
@@ -70,10 +74,13 @@ export const REJECT_CODES = [
   'QUEST_REQUIRES_UNMET',
   'QUEST_NOT_OPTIONAL',
   'QUEST_NO_EXIT',
+  'IN_DIALOGUE',
+  'NO_DIALOGUE',
+  'CONDITION_FAILED',
 ] as const;
 
 export type RejectCode = (typeof REJECT_CODES)[number];
 
 export function initialState(moneyCents = 0): GameState {
-  return { schemaVersion: 2, moneyCents, inventory: {}, grants: [], processed: {}, seq: 0, player: null, quests: {}, campaignEnded: false };
+  return { schemaVersion: 2, moneyCents, inventory: {}, grants: [], processed: {}, seq: 0, player: null, quests: {}, campaignEnded: false, flags: [], dialogue: null };
 }

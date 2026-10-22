@@ -22,6 +22,7 @@ export const CODES = {
   ITEM_UNOBTAINABLE:    { check: 'item-obtainable', spec: '§2 немає вимоги предмета, який неможливо отримати' },
   CYCLE_NO_EXIT:        { check: 'cycle-exit', spec: '§2 немає циклу без умови виходу' },
   MAIN_GATE_NOT_GUARANTEED: { check: 'main-gate', spec: '§2 необов\u2019язкова гілка не блокує основний сюжет' },
+  TRANSITION_REQUIRES_NOT_READY: { check: 'transition-gate', spec: '§3 перехід не впирається в requires, які в мить переходу ще неможливо виконати (рецензія GAME-29)' },
   REWARD_GRANT_DUPLICATE:     { check: 'reward-once', spec: '§2 нагорода не видається двічі за один id' },
   REWARD_REPEATABLE_UNGUARDED:{ check: 'reward-once', spec: '§2 нагорода не видається двічі за один id' },
   LOCALE_MISSING:       { check: 'locale-keys', spec: '§2 ключі локалізації існують для кожної мови' },
