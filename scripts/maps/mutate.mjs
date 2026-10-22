@@ -89,6 +89,26 @@ for (const m of mutations) {
   } finally { rmSync(root, { recursive: true, force: true }); }
 }
 
+// Нешкідливий контроль: змінено лише текст повідомлення — мутація МУСИТЬ пережити (див. mutate-validator.mjs).
+{
+  const root = mkdtempSync(join(tmpdir(), 'ct-maps-mut-'));
+  const tmp = join(root, 'maps');
+  try {
+    cpSync(here, tmp, { recursive: true });
+    cpSync(join(here, '..', 'lib'), join(root, 'lib'), { recursive: true });
+    const path = join(tmp, C);
+    const text = readFileSync(path, 'utf8');
+    const from = "out.push(I('MAP_STRUCTURE', 'мапа', msg))";
+    if (text.split(from).length - 1 !== 1) fails.push('контроль: рядок не знайдено рівно раз');
+    else {
+      writeFileSync(path, text.replace(from, "out.push(I('MAP_STRUCTURE', 'мапа ', msg))"));
+      const r = selfTestIn(tmp);
+      if (r.code === 0) console.log('пережила  [контроль, так і треба] текст місця MAP_STRUCTURE');
+      else fails.push('контроль: нешкідливу мутацію «спіймано» — харнес червоний без дефекту');
+    }
+  } finally { rmSync(root, { recursive: true, force: true }); }
+}
+
 for (const f of fails) console.log(`ПЕРЕЖИЛА  ${f}`);
 console.log(`\nMUTATION: ${fails.length === 0 ? 'PASSED' : 'FAILED'} · спіймано ${caught} із ${mutations.length} (перевірок ${CHECKS.length}, точкових ${mutations.length - CHECKS.length})`);
 process.exit(fails.length === 0 ? 0 : 1);

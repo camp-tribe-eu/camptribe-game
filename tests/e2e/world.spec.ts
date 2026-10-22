@@ -75,6 +75,25 @@ test.describe('клавіатура (десктоп)', () => {
     expect(Math.abs(p1.playerX - p0.playerX)).toBeLessThan(1);
   });
 
+  // Звірка GAME-24 (23.10): раніше перевірялась лише ArrowDown. Кожна стрілка 0,4 с — коротше, ніж до
+  // стін від точки появи; зсув уздовж своєї осі > 10 px у правильний бік, по іншій — < 1 px.
+  test('кожна з чотирьох стрілок — у свій бік і лише по своїй осі', async ({ page }) => {
+    await open(page);
+    const dirs = [['ArrowDown', 'y', 1], ['ArrowUp', 'y', -1], ['ArrowLeft', 'x', -1], ['ArrowRight', 'x', 1]] as const;
+    for (const [key, axis, sign] of dirs) {
+      const a = await probe(page);
+      await page.keyboard.down(key);
+      await page.waitForTimeout(400);
+      await page.keyboard.up(key);
+      await page.waitForTimeout(100);
+      const b = await probe(page);
+      const along = axis === 'y' ? b.playerY - a.playerY : b.playerX - a.playerX;
+      const across = axis === 'y' ? b.playerX - a.playerX : b.playerY - a.playerY;
+      expect(along * sign, key).toBeGreaterThan(10);
+      expect(Math.abs(across), key).toBeLessThan(1);
+    }
+  });
+
   test('60+ кадрів поштовху в стіну — персонаж лишається по цей бік', async ({ page }) => {
     await open(page);
     const p = await holdKey(page, 'ArrowRight', () => false, 2500);

@@ -130,6 +130,26 @@ for (const m of mutations) {
   } finally { rmSync(tmp, { recursive: true, force: true }); }
 }
 
+// Нешкідливий контроль (закон 1, звірка GAME-17/18): змінено лише текст повідомлення — коди ті самі,
+// тож мутація МУСИТЬ пережити. Якщо її «спіймано», харнес червоніє сам по собі й 100 % нічого не варті.
+const HARMLESS = [
+  { name: 'текст повідомлення WHEN_UNSATISFIABLE', file: 'validator/combos.mjs', from: 'умові не відповідає жодна з', to: 'умові не відповідає ні одна з' },
+];
+let survived = 0;
+for (const m of HARMLESS) {
+  const tmp = mkdtempSync(join(tmpdir(), 'ct-mut-'));
+  try {
+    cpSync(scripts, tmp, { recursive: true });
+    const path = join(tmp, m.file);
+    const text = readFileSync(path, 'utf8');
+    if (text.split(m.from).length - 1 !== 1) { fails.push(`контроль «${m.name}»: рядок не знайдено рівно раз`); continue; }
+    writeFileSync(path, text.replace(m.from, m.to));
+    const r = selfTestIn(tmp);
+    if (r.code === 0) { survived++; console.log(`пережила  [контроль, так і треба] ${m.name}`); }
+    else fails.push(`контроль «${m.name}»: нешкідливу мутацію «спіймано» — харнес червоний без дефекту`);
+  } finally { rmSync(tmp, { recursive: true, force: true }); }
+}
+
 for (const f of fails) console.log(`ПЕРЕЖИЛА  ${f}`);
-console.log(`\nMUTATION: ${fails.length === 0 ? 'PASSED' : 'FAILED'} · спіймано ${caught} із ${mutations.length} (перевірок ${CHECKS.length}, точкових ${mutations.length - CHECKS.length})`);
+console.log(`\nMUTATION: ${fails.length === 0 ? 'PASSED' : 'FAILED'} · спіймано ${caught} із ${mutations.length} (перевірок ${CHECKS.length}, точкових ${mutations.length - CHECKS.length}) · нешкідливий контроль пережив: ${survived} із ${HARMLESS.length}`);
 process.exit(fails.length === 0 ? 0 : 1);
