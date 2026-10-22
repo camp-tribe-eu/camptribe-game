@@ -1,0 +1,488 @@
+{
+ "save": "{\"format\":\"camplife-save\",\"schemaVersion\":2,\"checksum\":\"da989689\",\"accountId\":null,\"sim\":{\"game\":{\"schemaVersion\":2,\"moneyCents\":5000,\"inventory\":{},\"grants\":[],\"processed\":{},\"seq\":0,\"player\":null,\"quests\":{},\"campaignEnded\":false,\"flags\":[],\"dialogue\":null},\"clock\":{\"minutes\":0,\"accMs\":0,\"paused\":false},\"rng\":[1543898532,3145044889,884541190,2926669267],\"finds\":0}}",
+ "log": [
+  {
+   "kind": "frame",
+   "realMs": 250
+  },
+  {
+   "kind": "frame",
+   "realMs": 250
+  },
+  {
+   "kind": "frame",
+   "realMs": 250
+  },
+  {
+   "kind": "frame",
+   "realMs": 250
+  },
+  {
+   "kind": "frame",
+   "realMs": 250
+  },
+  {
+   "kind": "frame",
+   "realMs": 250
+  },
+  {
+   "kind": "frame",
+   "realMs": 250
+  },
+  {
+   "kind": "frame",
+   "realMs": 250
+  },
+  {
+   "kind": "command",
+   "command": {
+    "type": "CreateCharacter",
+    "profileId": "profile.solo-explorer",
+    "transportId": "transport.bike",
+    "commandId": "r0"
+   }
+  },
+  {
+   "kind": "command",
+   "command": {
+    "type": "Visit",
+    "locationId": "loc.home",
+    "commandId": "r1"
+   }
+  },
+  {
+   "kind": "command",
+   "command": {
+    "type": "CompleteQuest",
+    "questId": "ST-001",
+    "commandId": "r2"
+   }
+  },
+  {
+   "kind": "frame",
+   "realMs": 250
+  },
+  {
+   "kind": "frame",
+   "realMs": 250
+  },
+  {
+   "kind": "frame",
+   "realMs": 250
+  },
+  {
+   "kind": "frame",
+   "realMs": 250
+  },
+  {
+   "kind": "command",
+   "command": {
+    "type": "Visit",
+    "locationId": "loc.home",
+    "commandId": "r3"
+   }
+  },
+  {
+   "kind": "command",
+   "command": {
+    "type": "CompleteQuest",
+    "questId": "ST-002",
+    "commandId": "r4"
+   }
+  },
+  {
+   "kind": "command",
+   "command": {
+    "type": "Visit",
+    "locationId": "loc.shop",
+    "commandId": "r5"
+   }
+  },
+  {
+   "kind": "frame",
+   "realMs": 250
+  },
+  {
+   "kind": "frame",
+   "realMs": 250
+  },
+  {
+   "kind": "frame",
+   "realMs": 250
+  },
+  {
+   "kind": "frame",
+   "realMs": 250
+  },
+  {
+   "kind": "frame",
+   "realMs": 250
+  },
+  {
+   "kind": "frame",
+   "realMs": 250
+  },
+  {
+   "kind": "command",
+   "command": {
+    "type": "Pickup",
+    "itemId": "item.tent",
+    "commandId": "r6"
+   }
+  },
+  {
+   "kind": "command",
+   "command": {
+    "type": "Pickup",
+    "itemId": "item.sleeping-bag",
+    "commandId": "r7"
+   }
+  },
+  {
+   "kind": "command",
+   "command": {
+    "type": "BuyItem",
+    "itemId": "item.firewood",
+    "commandId": "r8"
+   }
+  },
+  {
+   "kind": "command",
+   "command": {
+    "type": "Pickup",
+    "itemId": "item.tent",
+    "commandId": "r9"
+   }
+  },
+  {
+   "kind": "command",
+   "command": {
+    "type": "CompleteQuest",
+    "questId": "ST-003",
+    "commandId": "r10"
+   }
+  },
+  {
+   "kind": "frame",
+   "realMs": 250
+  },
+  {
+   "kind": "frame",
+   "realMs": 250
+  },
+  {
+   "kind": "frame",
+   "realMs": 250
+  },
+  {
+   "kind": "frame",
+   "realMs": 250
+  },
+  {
+   "kind": "command",
+   "command": {
+    "type": "Visit",
+    "locationId": "loc.road",
+    "commandId": "r11"
+   }
+  },
+  {
+   "kind": "frame",
+   "realMs": 1000
+  },
+  {
+   "kind": "frame",
+   "realMs": 1000
+  },
+  {
+   "kind": "frame",
+   "realMs": 1000
+  },
+  {
+   "kind": "frame",
+   "realMs": 1000
+  },
+  {
+   "kind": "frame",
+   "realMs": 1000
+  },
+  {
+   "kind": "frame",
+   "realMs": 1000
+  },
+  {
+   "kind": "frame",
+   "realMs": 1000
+  },
+  {
+   "kind": "frame",
+   "realMs": 1000
+  },
+  {
+   "kind": "frame",
+   "realMs": 1000
+  },
+  {
+   "kind": "frame",
+   "realMs": 1000
+  },
+  {
+   "kind": "frame",
+   "realMs": 1000
+  },
+  {
+   "kind": "frame",
+   "realMs": 1000
+  },
+  {
+   "kind": "command",
+   "command": {
+    "type": "CompleteQuest",
+    "questId": "ST-004",
+    "to": "q.elise-bike-area",
+    "commandId": "r12"
+   }
+  },
+  {
+   "kind": "command",
+   "command": {
+    "type": "Visit",
+    "locationId": "loc.camp.lake",
+    "commandId": "r13"
+   }
+  },
+  {
+   "kind": "command",
+   "command": {
+    "type": "Talk",
+    "npcId": "npc.elise",
+    "commandId": "r14"
+   }
+  },
+  {
+   "kind": "command",
+   "command": {
+    "type": "Choose",
+    "choice": 0,
+    "commandId": "r15"
+   }
+  },
+  {
+   "kind": "command",
+   "command": {
+    "type": "Continue",
+    "commandId": "r16"
+   }
+  },
+  {
+   "kind": "command",
+   "command": {
+    "type": "Choose",
+    "choice": 0,
+    "commandId": "r17"
+   }
+  },
+  {
+   "kind": "command",
+   "command": {
+    "type": "Continue",
+    "commandId": "r18"
+   }
+  },
+  {
+   "kind": "command",
+   "command": {
+    "type": "CompleteQuest",
+    "questId": "q.elise-bike-area",
+    "commandId": "r19"
+   }
+  },
+  {
+   "kind": "frame",
+   "realMs": 250
+  },
+  {
+   "kind": "frame",
+   "realMs": 250
+  },
+  {
+   "kind": "frame",
+   "realMs": 250
+  },
+  {
+   "kind": "frame",
+   "realMs": 250
+  },
+  {
+   "kind": "command",
+   "command": {
+    "type": "Interact",
+    "targetId": "obj.campfire",
+    "commandId": "r20"
+   }
+  },
+  {
+   "kind": "command",
+   "command": {
+    "type": "Talk",
+    "npcId": "npc.elise",
+    "commandId": "r21"
+   }
+  },
+  {
+   "kind": "command",
+   "command": {
+    "type": "Choose",
+    "choice": 1,
+    "commandId": "r22"
+   }
+  },
+  {
+   "kind": "command",
+   "command": {
+    "type": "Choose",
+    "choice": 0,
+    "commandId": "r23"
+   }
+  },
+  {
+   "kind": "command",
+   "command": {
+    "type": "Continue",
+    "commandId": "r24"
+   }
+  },
+  {
+   "kind": "command",
+   "command": {
+    "type": "Visit",
+    "locationId": "loc.camp.lake",
+    "commandId": "r25"
+   }
+  },
+  {
+   "kind": "command",
+   "command": {
+    "type": "Pickup",
+    "itemId": "item.firewood",
+    "commandId": "r26"
+   }
+  },
+  {
+   "kind": "command",
+   "command": {
+    "type": "CompleteQuest",
+    "questId": "ST-005",
+    "commandId": "r27"
+   }
+  },
+  {
+   "kind": "frame",
+   "realMs": 250
+  },
+  {
+   "kind": "frame",
+   "realMs": 250
+  },
+  {
+   "kind": "frame",
+   "realMs": 250
+  },
+  {
+   "kind": "frame",
+   "realMs": 250
+  },
+  {
+   "kind": "frame",
+   "realMs": 250
+  },
+  {
+   "kind": "frame",
+   "realMs": 250
+  },
+  {
+   "kind": "frame",
+   "realMs": 250
+  },
+  {
+   "kind": "frame",
+   "realMs": 250
+  }
+ ],
+ "hashes": [
+  "82e44c12",
+  "bff3a6ee",
+  "a525e9f9",
+  "da04fabc",
+  "010351b9",
+  "801ca6dd",
+  "badf5f6c",
+  "990789d5",
+  "63f6484c",
+  "5d23c10b",
+  "dc294695",
+  "245b5468",
+  "a12befbc",
+  "0264ba45",
+  "d90beeee",
+  "0ddaed24",
+  "48d0e19d",
+  "e4ffa960",
+  "16f1b237",
+  "1b40dd3b",
+  "63fa1370",
+  "ce447cf0",
+  "08d13d9f",
+  "f6083903",
+  "55cf1a3a",
+  "07c147e6",
+  "0b26c13e",
+  "5f0a90ac",
+  "5a92c49b",
+  "ab930d54",
+  "e08db272",
+  "d4b26789",
+  "05193a05",
+  "3cd72115",
+  "c9b10cd7",
+  "1574ff68",
+  "c89bdab9",
+  "d2a6dbd0",
+  "2b2ae12a",
+  "f8fa4475",
+  "714e8ff8",
+  "fb953730",
+  "0b69e265",
+  "3f084932",
+  "fdafd1bd",
+  "525eab14",
+  "1b0e132d",
+  "151c548a",
+  "9256c271",
+  "5cb82082",
+  "94b101fa",
+  "a77d95cf",
+  "7da1ace1",
+  "751cc2d0",
+  "d620d9e3",
+  "0a6fc996",
+  "a901c601",
+  "e22545ed",
+  "712214fd",
+  "a421434d",
+  "69e3258a",
+  "e213bc54",
+  "bd12c402",
+  "5cc34927",
+  "c3d28456",
+  "53be9759",
+  "e60949e2",
+  "ce1a0943",
+  "05fcb58a",
+  "8b2750fe",
+  "5972c633",
+  "b4cad870",
+  "4bc76b7f",
+  "01e05033"
+ ]
+}
