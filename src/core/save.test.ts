@@ -122,6 +122,12 @@ describe('сейв проти нинішнього контенту (рецен�
     expect(danglingRefs(live.game, { ...story, transports: ['transport.car'] })).toEqual(['transport transport.bike']);
     expect(danglingRefs(live.game, drop('locations', 'loc.shop'))).toEqual(['location loc.shop']);
     expect(danglingRefs(live.game, story)).toEqual([]);
+    // квест є, але вже не для цього гравця (велосипедист, q.side тепер лише для авто)
+    const sideCar: StoryDefs = { ...story, quests: { ...story.quests, 'q.side': { ...(story.quests['q.side'] as StoryDefs['quests'][string]), when: { transports: ['transport.car'] } } } };
+    const sideActive = { ...live.game, quests: { ...live.game.quests, 'q.side': { status: 'active' as const, done: [] } } };
+    expect(danglingRefs(sideActive, sideCar)).toEqual(['quest q.side (when)']);
+    // пара, яку контент більше не дозволяє: profile.a тепер лише авто
+    expect(danglingRefs(live.game, { ...story, profiles: { ...story.profiles, 'profile.a': { transports: ['transport.car'] } } })).toEqual(['profile profile.a × transport.bike']);
   });
 
   it('позитивний контроль: сумісне оновлення (новий квест, інший відбиток) сейв НЕ відкидає', () => {

@@ -51,7 +51,7 @@ function tryMove(s: GameState, m: Move, defs: CoreDefs): GameState | null {
 }
 
 /** Обмежений пошук у ширину до campaignEnded. undefined — ліміт вичерпано (чесне «не знаю»). */
-function endReachable(start: GameState, defs: CoreDefs, memo: EndMemo, cap: number): boolean | undefined {
+export function endReachable(start: GameState, defs: CoreDefs, memo: EndMemo, cap: number): boolean | undefined {
   const k0 = key(start);
   const known = memo.get(k0);
   if (known !== undefined) return known;

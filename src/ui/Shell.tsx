@@ -12,6 +12,7 @@ export function Shell({ port, langOverride, credits }: { port: UiPort; langOverr
   const [status, setStatus] = useState<Key | null>(null);
   const [codeOut, setCodeOut] = useState('');
   const [codeIn, setCodeIn] = useState('');
+  const [staleCode, setStaleCode] = useState<string | null>(null);
   const lang: AnyLang = langOverride ?? settings.language;
   const t = (key: Key): string => tr(lang, key);
 
@@ -31,6 +32,8 @@ export function Shell({ port, langOverride, credits }: { port: UiPort; langOverr
   // Фокус — у діалог, щоб клавіатура й екранний читач починали з «Продовжити».
   useEffect(() => {
     if (paused) resumeRef.current?.focus();
+    // Відкладений застарілий сейв — питаємо при кожному відкритті меню (старт міг завершитись пізніше).
+    if (paused) void port.staleCode().then(setStaleCode);
   }, [paused]);
 
   // Зберігаємо одразу в обробнику, а не в ефекті: ефект Preact відкладено до після малювання, і зміна
@@ -66,6 +69,13 @@ export function Shell({ port, langOverride, credits }: { port: UiPort; langOverr
                 onClick={() => update({ ...settings, language: l })}>{l.toUpperCase()}</button>
             ))}
           </fieldset>
+          {staleCode && (
+            <p class="ui-status" data-ui="stale" role="status">
+              {t('ui.staleSave')}
+              <textarea class="ui-code" data-ui="stale-code" readOnly rows={3} aria-label={t('ui.staleSave')} value={staleCode}
+                onFocus={(e) => (e.currentTarget as HTMLTextAreaElement).select()} />
+            </p>
+          )}
           <fieldset>
             <legend>{t('ui.save')}</legend>
             <button type="button" class="ui-btn" data-ui="save"
@@ -77,7 +87,7 @@ export function Shell({ port, langOverride, credits }: { port: UiPort; langOverr
             <textarea class="ui-code" data-ui="code-in" rows={3} aria-label={t('ui.importCode')} placeholder={t('ui.importCode')}
               value={codeIn} onInput={(e) => setCodeIn((e.currentTarget as HTMLTextAreaElement).value)} />
             <button type="button" class="ui-btn" data-ui="code-apply"
-              onClick={() => { void port.importCode(codeIn).then((r) => setStatus(r === 'ok' ? 'ui.importOk' : r === 'bad' ? 'ui.importBad' : 'ui.importUnsaved')); }}>{t('ui.apply')}</button>
+              onClick={() => { void port.importCode(codeIn).then((r) => setStatus(({ ok: 'ui.importOk', bad: 'ui.importBad', outdated: 'ui.importOutdated', unsaved: 'ui.importUnsaved' } as const)[r])); }}>{t('ui.apply')}</button>
             {status && <p class="ui-status" data-ui="status" role="status">{t(status)}</p>}
           </fieldset>
           <button type="button" class="ui-btn" data-ui="reset" onClick={() => update(DEFAULT_SETTINGS)}>{t('ui.reset')}</button>

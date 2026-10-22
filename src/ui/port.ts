@@ -6,8 +6,13 @@ export interface UiPort {
   save(): Promise<boolean>;
   /** Код відновлення поточної гри (OD-008). */
   exportCode(): Promise<string>;
-  /** Відновити гру з коду: `ok`; `bad` — код не підходить (гра без змін); `unsaved` — відновлено, але не записано в сховище. */
-  importCode(code: string): Promise<'ok' | 'bad' | 'unsaved'>;
+  /**
+   * Відновити гру з коду: `ok`; `bad` — код пошкоджений (гра без змін); `outdated` — код цілий, але від
+   * старішої версії гри (гра без змін); `unsaved` — відновлено, але не записано в сховище.
+   */
+  importCode(code: string): Promise<'ok' | 'bad' | 'outdated' | 'unsaved'>;
+  /** Код відновлення сейву, відкладеного на старті як застарілий; null — такого немає. */
+  staleCode(): Promise<string | null>;
 }
 
 /** Титри (GAME-21, OD-013): дані з assets/credits.json, який збирає й звіряє сторож ліцензій. */

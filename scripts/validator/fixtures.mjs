@@ -384,6 +384,10 @@ export const FIXTURES = [
   { base: 'combo', name: '[комб.] еталон із профілями, транспортом і собакою коректний', expect: [], patch() {} },
   // ---- GAME-42 (TD-006): умови-об'єкти на ПЕРЕХОДАХ квестів, не лише в діалогах ----
   { base: 'combo', name: '[умова] when переходу рядком', expect: ['SCHEMA_INVALID'], patch(c) { dogEntry(c).when = 'animals == dog'; } },
+  { base: 'combo', name: '[умова] when самого квесту рядком', expect: ['SCHEMA_INVALID'], patch(c) { q(c, 'q.dog-walk').when = 'dog'; } },
+  { base: 'combo', name: '[умова] when цілі рядком', expect: ['SCHEMA_INVALID'], patch(c) { q(c, 'q.dog-walk').objectives[0].when = 'dog'; } },
+  { base: 'combo', name: '[умова] when локації рядком', expect: ['SCHEMA_INVALID'], patch(c) { c.locations.find((l) => l.id === 'loc.dog-park').when = 'dog'; } },
+  { base: 'combo', name: '[умова] when NPC рядком', expect: ['SCHEMA_INVALID'], patch(c) { c.npcs[0].when = 'car'; } },
   { base: 'combo', name: '[умова] when квесту на неіснуючу тварину', expect: ['REF_MISSING'], patch(c) { q(c, 'q.dog-walk').when = { animals: ['animal.fixture-cat'] }; } },
   { base: 'combo', name: '[умова] when переходу на неіснуючий транспорт', expect: ['REF_MISSING'], patch(c) { dogEntry(c).when = { transports: ['transport.fixture-boat'] }; } },
   { base: 'combo', name: '[умова] основний шлях лише для кемпера з собакою — решта комбінацій без фіналу', expect: ['BRANCH_NO_NEXT', 'NO_PATH_TO_END'], patch(c) {

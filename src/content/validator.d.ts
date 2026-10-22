@@ -4,10 +4,8 @@ declare module '*/validator/combos.mjs' {
   export interface Combo { profile: string | null; transport: string | null; animal: string }
   export function enumerateCombos(content: unknown): Combo[];
   export function project(content: unknown, k: Combo, keep?: Set<string>): unknown;
+  export function matches(when: unknown, k: Combo): boolean;
 }
 declare module '*/validator/checks.mjs' {
   export function buildIndex(content: unknown): { reachable: Set<string> };
-}
-declare module '*/validator/combos.mjs' {
-  export function matches(when: unknown, k: { profile: string | null; transport: string | null; animal: string }): boolean;
 }

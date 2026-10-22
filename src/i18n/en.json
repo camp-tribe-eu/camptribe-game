@@ -18,5 +18,7 @@
   "ui.credits": "Credits",
   "ui.creditsIntro": "Art is from the Liberated Pixel Cup set. Thanks to the authors: every file, who made it, where it comes from and under which licence.",
   "ui.creditsSource": "source",
-  "ui.creditsUnmodified": "unmodified"
+  "ui.creditsUnmodified": "unmodified",
+  "ui.importOutdated": "This code is from an older version of the game whose story has changed, so it cannot be continued. Keep the code — a later update may pick it up.",
+  "ui.staleSave": "A save from an older version of the game was set aside (the story changed). Here is its code — keep it so it is not lost:"
 }

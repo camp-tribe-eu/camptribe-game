@@ -1,5 +1,6 @@
 // GAME-33 · сейви: IndexedDB, автозбереження, код відновлення, запасний слот.
 import { expect, test, type Page } from '@playwright/test';
+import { stateHash } from '../../src/core/hash';
 
 interface Probe { ready: boolean; saveLoaded: boolean; playerX: number; nearObject: string | null; commandsSent: number; clockMinutes: number }
 interface Snap { game: { grants: string[]; moneyCents: number; seq: number }; clock: { minutes: number; paused: boolean }; rng: number[]; finds: number }
@@ -104,6 +105,51 @@ test.describe('сейви (десктоп)', () => {
     await page.reload();
     await page.waitForFunction(() => (window as unknown as { __game?: { probe: Probe } }).__game?.probe.saveLoaded === true);
     expect((await snap(page)).game.grants).toContain('rw.campfire-warmth');
+  });
+});
+
+test.describe('сейв від старішої версії контенту (рецензія сейвів 23.10)', () => {
+  test.use({ viewport: { width: 1280, height: 800 } });
+
+  test('застарілий main: гра не вантажить його й не застрягає, у меню — повідомлення й код; копія в карантині', async ({ page }) => {
+    await open(page);
+    // Справжній сейв нинішньої гри, але з активним квестом, якого в контенті немає (як після оновлення).
+    const sim = (await page.evaluate(() => (window as unknown as { __game: { read: () => unknown } }).__game.read())) as { game: Record<string, unknown> };
+    const stale = { ...sim, game: { ...sim.game, player: { profileId: 'profile.solo-explorer', transportId: 'transport.bike', animalId: 'animal.none', locationId: 'loc.home' }, quests: { 'q.removed-in-update': { status: 'active', done: [] } } } };
+    const file = JSON.stringify({ format: 'camplife-save', schemaVersion: 2, checksum: stateHash(stale), accountId: null, contentRev: 'old', sim: stale });
+    await page.evaluate((json) => new Promise<void>((resolve) => {
+      const req = indexedDB.open('camplife', 1);
+      req.onsuccess = () => { const tx = req.result.transaction('saves', 'readwrite'); tx.objectStore('saves').put(json, 'main'); tx.oncomplete = () => { req.result.close(); resolve(); }; };
+    }), file);
+    await page.reload();
+    await loaded(page);
+    expect((await snap(page)).game.grants).toEqual([]);                       // нова гра, а не застряглий сейв
+    await page.keyboard.press('Escape');
+    await expect(page.locator('[data-ui="stale"]')).toContainText(/старішої версії|older version/);
+    await expect(page.locator('[data-ui="stale-code"]')).toHaveValue(/^CL1\./);
+    const keys = await page.evaluate(() => new Promise<string[]>((resolve) => {
+      const req = indexedDB.open('camplife', 1);
+      req.onsuccess = () => { const r = req.result.transaction('saves').objectStore('saves').getAllKeys(); r.onsuccess = () => { req.result.close(); resolve(r.result.map(String)); }; };
+    }));
+    expect(keys.some((k) => k.startsWith('stale:'))).toBe(true);
+  });
+
+  test('імпорт коду від старішої версії — окреме пояснення, а не «скопійовано не повністю»', async ({ page }) => {
+    await open(page);
+    const sim = (await page.evaluate(() => (window as unknown as { __game: { read: () => unknown } }).__game.read())) as { game: Record<string, unknown> };
+    const stale = { ...sim, game: { ...sim.game, player: { profileId: 'profile.gone', transportId: 'transport.car', animalId: 'animal.none', locationId: null } } };
+    const file = JSON.stringify({ format: 'camplife-save', schemaVersion: 2, checksum: stateHash(stale), accountId: null, sim: stale });
+    const code = await page.evaluate(async (json) => {
+      const bytes = new TextEncoder().encode(json);
+      const cs = new CompressionStream('deflate-raw');
+      const out = await new Response(new Blob([bytes]).stream().pipeThrough(cs)).arrayBuffer();
+      let bin = ''; for (const b of new Uint8Array(out)) bin += String.fromCharCode(b);
+      return `CL1.${btoa(bin).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')}`;
+    }, file);
+    await page.keyboard.press('Escape');
+    await page.locator('[data-ui="code-in"]').fill(code);
+    await page.locator('[data-ui="code-apply"]').click();
+    await expect(page.locator('[data-ui="status"]')).toHaveText(/старішої версії|older version/);
   });
 });
 

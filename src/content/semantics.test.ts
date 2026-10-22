@@ -20,15 +20,39 @@ const when: fc.Arbitrary<WhenDef | undefined> = fc.option(
 );
 const player = fc.record({ profileId: fc.constantFrom(...P), transportId: fc.constantFrom(...T), animalId: fc.constantFrom(...A) });
 
+// Простір скінченний: усі непорожні підмножини кожного виміру або «немає ключа» × усі гравці —
+// перебираємо ПОВНІСТЮ, а не вибіркою (рецензія GAME-42: 2000 випадків покривали ~14 %).
+const subsets = (xs: string[]): (string[] | undefined)[] => [undefined, ...Array.from({ length: (1 << xs.length) - 1 }, (_, m) => xs.filter((_, i) => ((m + 1) >> i) & 1))];
+const ALL_WHENS: (WhenDef | undefined)[] = [undefined];
+for (const profiles of subsets(P)) for (const transports of subsets(T)) for (const animals of subsets(A)) {
+  ALL_WHENS.push(Object.fromEntries(Object.entries({ profiles, transports, animals }).filter(([, v]) => v !== undefined)) as WhenDef);
+}
+const ALL_PLAYERS = P.flatMap((profileId) => T.flatMap((transportId) => A.map((animalId) => ({ profileId, transportId, animalId }))));
+
 describe('семантика when: валідатор ≡ ядро', () => {
-  it('на довільних умовах і гравцях обидві реалізації відповідають однаково (fast-check, 2000 випадків)', () => {
-    fc.assert(fc.property(when, player, (w, p) => {
+  it(`повний перебір: ${ALL_WHENS.length} умов × ${ALL_PLAYERS.length} гравців — обидві реалізації відповідають однаково`, () => {
+    let checked = 0;
+    for (const w of ALL_WHENS) for (const p of ALL_PLAYERS) {
       const core = coreMatches(w, { ...p, locationId: null } as PlayerState);
       const val = validatorMatches(w, { profile: p.profileId, transport: p.transportId, animal: p.animalId });
-      expect(core).toBe(val);
-    }), { seed: 20261023, numRuns: 2000 });
+      if (core !== val) throw new Error(`розбіжність: when=${JSON.stringify(w)} гравець=${JSON.stringify(p)} ядро=${core} валідатор=${val}`);
+      checked++;
+    }
+    expect(checked).toBe(ALL_WHENS.length * ALL_PLAYERS.length);
+    expect(ALL_WHENS.length).toBe(8 * 8 * 8 + 1);   // 7 непорожніх підмножин + «немає ключа», по кожному виміру; + без when
   });
 
+  it('ключ присутній, але undefined — як відсутній (обидві сторони)', () => {
+    const p = ALL_PLAYERS[0] as (typeof ALL_PLAYERS)[number];
+    const w = { animals: undefined } as unknown as WhenDef;
+    expect(coreMatches(w, { ...p, locationId: null } as PlayerState)).toBe(validatorMatches(w, { profile: p.profileId, transport: p.transportId, animal: p.animalId }));
+  });
+
+  it('fast-check (зерно 20261023) — на випадок, якщо перелік вимірів розшириться без оновлення перебору', () => {
+    fc.assert(fc.property(when, player, (w, p) => {
+      expect(coreMatches(w, { ...p, locationId: null } as PlayerState)).toBe(validatorMatches(w, { profile: p.profileId, transport: p.transportId, animal: p.animalId }));
+    }), { seed: 20261023, numRuns: 500 });
+  });
   it('позитивний контроль: генератор справді дає і збіги, і незбіги', () => {
     const out = fc.sample(fc.tuple(when, player), { seed: 1, numRuns: 500 }).map(([w, p]) => coreMatches(w, { ...p, locationId: null } as PlayerState));
     expect(out).toContain(true);

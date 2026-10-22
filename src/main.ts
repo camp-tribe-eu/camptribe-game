@@ -6,7 +6,7 @@ import { buildLabel } from './core/build-info';
 import { newInput, type Action } from './view/world/actions';
 import { GAME_DEFS } from './content/slice-defs';
 import { STORY, STORY_REV } from './content/story';
-import { serialize } from './core/save';
+import { saveViable } from './content/viability';
 import { decodeRestoreCode, encodeRestoreCode } from './platform/save-code';
 import { readSaves, writeSave, writeStale } from './platform/save-store';
 import { createSaveSession } from './platform/save-session';
@@ -21,7 +21,7 @@ if (!app) throw new Error('#app is missing');
 const probe: WorldProbe = { ready: false, playerX: 0, playerY: 0, nearObject: null, commandsSent: 0, cameraScrollX: 0, cameraScrollY: 0, clockMinutes: 0, saveLoaded: false };
 const bridge = createBridge(20261022, GAME_DEFS);
 const input = newInput();
-const saves = createSaveSession(bridge, { read: readSaves, write: writeSave, quarantine: writeStale }, { story: STORY, contentRev: STORY_REV });
+const saves = createSaveSession(bridge, { read: readSaves, write: writeSave, quarantine: writeStale }, { story: STORY, contentRev: STORY_REV, viable: (g) => saveViable(g, GAME_DEFS) });
 // Тестовий хук Playwright: лише ЧИТАННЯ — знімок стану копією, місток назовні не віддається
 // (рецензія PR #13: раніше скрипт сторінки міг надіслати команду в ядро).
 (window as unknown as { __game: { probe: WorldProbe; read: () => unknown } }).__game = {
@@ -66,7 +66,8 @@ render(h(Shell, {
   credits,
   port: {
     save: () => saves.save(),
-    exportCode: () => encodeRestoreCode(serialize(bridge.state)),
+    exportCode: () => encodeRestoreCode(saves.exportJson()),
+    staleCode: () => (saves.stale ? encodeRestoreCode(saves.stale) : Promise.resolve(null)),
     importCode: async (code: string) => saves.adopt(await decodeRestoreCode(code)),
     setPaused(paused: boolean) {
       // Відпускання клавіші під час паузи сцена не бачить — скидаємо введення на межі паузи,

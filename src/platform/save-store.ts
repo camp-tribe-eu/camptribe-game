@@ -53,13 +53,18 @@ export async function readSaves(): Promise<string[]> {
   }
 }
 
+/** Ключ карантину: окремий на кожен сейв (за контрольною сумою) — новий відкладений не витирає старого. */
+export function staleKey(json: string): string {
+  try { const c = (JSON.parse(json) as { checksum?: unknown }).checksum; return `stale:${typeof c === 'string' ? c : 'unknown'}`; } catch { return 'stale:unparsed'; }
+}
+
 /** Карантин: сейв, що не підходить до нинішнього контенту, — окремий ключ, ротація main/prev його не чіпає. */
 export async function writeStale(json: string): Promise<boolean> {
   try {
     const db = await open();
     return await new Promise<boolean>((resolve) => {
       const tx = db.transaction(STORE, 'readwrite');
-      tx.objectStore(STORE).put(json, 'stale');
+      tx.objectStore(STORE).put(json, staleKey(json));
       tx.oncomplete = () => { db.close(); resolve(true); };
       tx.onerror = tx.onabort = () => { db.close(); resolve(false); };
     });

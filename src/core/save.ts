@@ -7,6 +7,7 @@
 // * контрольна сума — над станом у ТІЙ версії, у якій його записано (до міграцій);
 // * кожна випущена версія лишається фікстурою в tests/saves/ назавжди.
 import type { StoryDefs } from './defs';
+import { matches } from './story';
 import { stateHash } from './hash';
 import type { SimState } from './sim';
 import { REJECT_CODES } from './state';
@@ -84,12 +85,22 @@ function shapeError(sim: unknown): string | null {
  */
 export function danglingRefs(game: SimState['game'], st: StoryDefs): string[] {
   const out: string[] = [];
-  for (const q of Object.keys(game.quests)) if (!Object.hasOwn(st.quests, q)) out.push(`quest ${q}`);
   const p = game.player;
+  for (const [q, prog] of Object.entries(game.quests)) {
+    const def = Object.hasOwn(st.quests, q) ? st.quests[q] : undefined;
+    if (!def) out.push(`quest ${q}`);
+    // Квест є, але вже не для цього гравця: кожна спроба — UNKNOWN_TARGET (рецензія сейвів).
+    else if (p && prog.status === 'active' && !matches(def.when, p)) out.push(`quest ${q} (when)`);
+  }
   if (p) {
-    if (!Object.hasOwn(st.profiles, p.profileId)) out.push(`profile ${p.profileId}`);
+    const profile = Object.hasOwn(st.profiles, p.profileId) ? st.profiles[p.profileId] : undefined;
+    const animal = p.animalId === 'animal.none' ? {} : Object.hasOwn(st.animals, p.animalId) ? st.animals[p.animalId] : undefined;
+    if (!profile) out.push(`profile ${p.profileId}`);
     if (!st.transports.includes(p.transportId)) out.push(`transport ${p.transportId}`);
-    if (p.animalId !== 'animal.none' && !Object.hasOwn(st.animals, p.animalId)) out.push(`animal ${p.animalId}`);
+    if (!animal) out.push(`animal ${p.animalId}`);
+    // Пара, яку контент більше не дозволяє: валідатор доводить лише дозволені комбінації.
+    if (profile?.transports && !profile.transports.includes(p.transportId)) out.push(`profile ${p.profileId} × ${p.transportId}`);
+    if (animal?.transports && !animal.transports.includes(p.transportId)) out.push(`animal ${p.animalId} × ${p.transportId}`);
     if (p.locationId !== null && !Object.hasOwn(st.locations, p.locationId)) out.push(`location ${p.locationId}`);
   }
   return out;
