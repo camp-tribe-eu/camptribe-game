@@ -12,9 +12,94 @@
       "path": "research/packs/pack-lpc-atlas/base_out_atlas.png",
       "sha256": "81a37fefd8d5e1ce72e6b82a51f494aaf3324ec526c10bb8c2cbd30afa7d943e",
       "colors": 130
+    },
+    {
+      "path": "assets/characters/body/bodies/female/walk.png",
+      "sha256": "594cb64a032d06d560f23b17f77b572e2dc8ba61df490cfca43f15316c85cfcf",
+      "colors": 6
+    },
+    {
+      "path": "assets/characters/body/bodies/male/walk.png",
+      "sha256": "1e0e8f0c11ba5f4f7b3d4439fc416802b4227da2fe146c13de3de254d9f87f77",
+      "colors": 6
+    },
+    {
+      "path": "assets/characters/body/bodies/teen/walk.png",
+      "sha256": "822b2ac63b6a648233b5878277bee5fcc331acce26d1d8ec24800fdafe3a4a34",
+      "colors": 6
+    },
+    {
+      "path": "assets/characters/feet/shoes/basic/male/walk.png",
+      "sha256": "f544c6f65a3d87f08d8449e87a4f889bd1bc1bf6d714066ef5c30ab2bdafab46",
+      "colors": 6
+    },
+    {
+      "path": "assets/characters/feet/shoes/basic/thin/walk.png",
+      "sha256": "b8cb7d702e03637a9207b3544a20909a287e1bde93b4208a6544a0b2b9d3c12a",
+      "colors": 6
+    },
+    {
+      "path": "assets/characters/hair/messy1/adult/walk.png",
+      "sha256": "a3f389578b71cabf457a8f1e617e232ce8104c2f1371f44fafe947d5070d7fca",
+      "colors": 6
+    },
+    {
+      "path": "assets/characters/hair/plain/adult/walk.png",
+      "sha256": "4198b372f7381b7d12e516ddc69818dd50132224d1e6d8825f3dd920b0995b28",
+      "colors": 7
+    },
+    {
+      "path": "assets/characters/hair/ponytail/adult/bg/walk.png",
+      "sha256": "227756cbc31ce8a0f8ee64705610d5213cbc8a373f71de7128fe8534f782f41d",
+      "colors": 2
+    },
+    {
+      "path": "assets/characters/hair/ponytail/adult/fg/walk.png",
+      "sha256": "60034a16cedd173b1d8191da4987aeeb4648a534c0f58cd00e10a2d45606ae2b",
+      "colors": 6
+    },
+    {
+      "path": "assets/characters/head/heads/human/female/walk.png",
+      "sha256": "7ac84c09c9e126e5fd0b648c180901e24ddb116c7965cd3db6f2f653947b90bd",
+      "colors": 10
+    },
+    {
+      "path": "assets/characters/head/heads/human/male/walk.png",
+      "sha256": "7e863954dc8c3c748d0727415c39888106bdd3779beb2e3b18011a3a9ef3e53c",
+      "colors": 10
+    },
+    {
+      "path": "assets/characters/head/heads/human/male_small/walk.png",
+      "sha256": "9e26fe5566e14c9caa8526145c326d16300552811460c2d4a0a4376e3c8bf544",
+      "colors": 10
+    },
+    {
+      "path": "assets/characters/legs/pants/male/walk.png",
+      "sha256": "2de5a3247743ffa37febdf3464cc0a83e79f64d1028aed410832ee29bea850b6",
+      "colors": 5
+    },
+    {
+      "path": "assets/characters/legs/pants/thin/walk.png",
+      "sha256": "064ffc33544e67bd13c574fd8b18a82a51e25d77e628f5eeccbc76a8860b2f83",
+      "colors": 6
+    },
+    {
+      "path": "assets/characters/torso/clothes/longsleeve/longsleeve/female/walk.png",
+      "sha256": "6833ea1facfa45d07356a3b85ac022742db916f677c0a20474719aad61a13bc8",
+      "colors": 6
+    },
+    {
+      "path": "assets/characters/torso/clothes/longsleeve/longsleeve/male/walk.png",
+      "sha256": "8b1c79d535d7a233371c9398ca51b196aa8fdf06117bd0eafd7fbcbf438d711b",
+      "colors": 5
+    },
+    {
+      "path": "assets/characters/torso/clothes/longsleeve/longsleeve/teen/walk.png",
+      "sha256": "62a06dc179d65251402f11f6db12ed0092235dafa1df6bb84f73d8319e2049e1",
+      "colors": 6
     }
   ],
-  "count": 498,
+  "count": 519,
   "colors": [
     "#000000",
     "#001d21",
@@ -95,6 +180,7 @@
     "#1a742b",
     "#1a793a",
     "#1b6332",
+    "#1c131e",
     "#1c2222",
     "#1d121c",
     "#1d131e",
@@ -112,16 +198,21 @@
     "#241619",
     "#24280a",
     "#257c37",
+    "#260d14",
     "#266f33",
+    "#271920",
     "#271d27",
     "#27232a",
+    "#281820",
     "#283d26",
     "#285c39",
     "#286e19",
     "#29330d",
     "#294010",
     "#294832",
+    "#2a1722",
     "#2a3034",
+    "#2a3c49",
     "#2a6d38",
     "#2b1c1d",
     "#2b8235",
@@ -253,10 +344,12 @@
     "#56232e",
     "#563f2e",
     "#564e53",
+    "#5686ae",
     "#569f3c",
     "#573726",
     "#578748",
     "#57a03d",
+    "#57cee4",
     "#581b12",
     "#58a13e",
     "#58a23f",
@@ -306,6 +399,7 @@
     "#692d23",
     "#694767",
     "#695b57",
+    "#6a1108",
     "#6a1300",
     "#6a8d8e",
     "#6a9150",
@@ -392,11 +486,13 @@
     "#94613a",
     "#946645",
     "#94b874",
+    "#958080",
     "#95db9b",
     "#963c24",
     "#975830",
     "#979691",
     "#986c48",
+    "#99423c",
     "#995137",
     "#996b4a",
     "#99b096",
@@ -410,6 +506,7 @@
     "#a16e48",
     "#a17c50",
     "#a36e40",
+    "#a42600",
     "#a62510",
     "#a67d3b",
     "#a94301",
@@ -442,6 +539,7 @@
     "#baffbf",
     "#bdc6a8",
     "#be9051",
+    "#bf4000",
     "#bf4b4b",
     "#c09646",
     "#c0aa76",
@@ -460,6 +558,7 @@
     "#cb2323",
     "#cba554",
     "#cbe39e",
+    "#cc8665",
     "#ccbd7b",
     "#d1bd19",
     "#d1be19",
@@ -484,7 +583,9 @@
     "#e39181",
     "#e3c654",
     "#e43c3c",
+    "#e4a47c",
     "#e4b875",
+    "#e55600",
     "#e5e6c7",
     "#e7c8a9",
     "#e7d35f",
@@ -497,6 +598,7 @@
     "#f0eaa2",
     "#f1d11f",
     "#f2b8d2",
+    "#f2f7f8",
     "#f3ed42",
     "#f4d7c0",
     "#f4ee43",
@@ -507,12 +609,16 @@
     "#f6f045",
     "#f8a4c0",
     "#f8e2ee",
+    "#f9d5ba",
+    "#faece7",
     "#fbbdbd",
     "#fbcde6",
     "#fbce7b",
     "#fd97a5",
     "#ff5442",
     "#ff7b3a",
-    "#ffa749"
+    "#ff8a00",
+    "#ffa749",
+    "#ffffff"
   ]
 }

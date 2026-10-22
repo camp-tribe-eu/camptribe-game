@@ -22,6 +22,26 @@ from check import opaque_colours, rgb_to_hex  # noqa: E402
 DEFAULT_SOURCES = [
     'research/packs/pack-lpc-atlas/terrain_atlas.png',
     'research/packs/pack-lpc-atlas/base_out_atlas.png',
+    # GAME-21: the 17 LPC character-generator walk layers in assets/characters/ are part of the
+    # chosen base (OD-013), so they are palette sources too. Listed one by one, never globbed:
+    # a new sprite dropped into assets/characters/ must not silently widen the palette.
+    'assets/characters/body/bodies/female/walk.png',
+    'assets/characters/body/bodies/male/walk.png',
+    'assets/characters/body/bodies/teen/walk.png',
+    'assets/characters/feet/shoes/basic/male/walk.png',
+    'assets/characters/feet/shoes/basic/thin/walk.png',
+    'assets/characters/hair/messy1/adult/walk.png',
+    'assets/characters/hair/plain/adult/walk.png',
+    'assets/characters/hair/ponytail/adult/bg/walk.png',
+    'assets/characters/hair/ponytail/adult/fg/walk.png',
+    'assets/characters/head/heads/human/female/walk.png',
+    'assets/characters/head/heads/human/male/walk.png',
+    'assets/characters/head/heads/human/male_small/walk.png',
+    'assets/characters/legs/pants/male/walk.png',
+    'assets/characters/legs/pants/thin/walk.png',
+    'assets/characters/torso/clothes/longsleeve/longsleeve/female/walk.png',
+    'assets/characters/torso/clothes/longsleeve/longsleeve/male/walk.png',
+    'assets/characters/torso/clothes/longsleeve/longsleeve/teen/walk.png',
 ]
 
 
