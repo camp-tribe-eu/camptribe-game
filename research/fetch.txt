@@ -1,9 +1,7 @@
-pack-kenney-rpg	kenney:roguelike-rpg-pack
-pack-kenney-city	kenney:roguelike-modern-city
 pack-lpc-atlas	oga:lpc-tile-atlas
-pack-lpc-atlas2	oga:lpc-tile-atlas2
 pack-lpc-base	oga:liberated-pixel-cup-lpc-base-assets-sprites-map-tiles
-list-lpc-tent	ogasearch:lpc tent
-list-lpc-camp	ogasearch:lpc camp
-list-lpc-car	ogasearch:lpc car
-list-lpc-modern	ogasearch:lpc modern
+pack-lpc-terrains	oga:lpc-terrains
+pack-lpc-tent	oga:tent-3
+pack-lpc-village	oga:lpc-medieval-village-decorations
+pack-lpc-campfire	oga:camp-fire-animation-for-rpgs-finished
+pack-lpc-car	oga:lpc-modern-car-additions
