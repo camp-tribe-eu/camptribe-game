@@ -5,6 +5,8 @@
 // Модель (каркас, до підключення реального переліку профілів із bridge/inbox/):
 //   • вимір без жодного запису в контенті не перебирається (одне значення null);
 //   • тварина — щонайбільше одна: animal.none або одна з animals.json;
+//   • профіль і тварина з полем transports дозволяють лише ці транспорти; несумісна комбінація
+//     не перебирається, бо гравець не може її обрати;
 //   • `when` на квесті/цілі/переході прибирає їх із комбінації, що не збігається;
 //     на NPC/локації — робить їх недоступними (unlockedBy, який ніколи не настає),
 //     щоб ціль на них червоніла, а не зникала мовчки.
@@ -18,11 +20,48 @@ const I = (code, where, msg) => ({ code, where, msg });
 export function enumerateCombos(content) {
   const ids = (k) => (content[k] ?? []).map((e) => e.id);
   const orNull = (xs) => (xs.length ? xs : [null]);
+  const allows = (k, id, transport) => {
+    const e = (content[k] ?? []).find((x) => x.id === id);
+    return !e?.transports || e.transports.includes(transport);
+  };
   const out = [];
   for (const profile of orNull(ids('profiles'))) {
     for (const transport of orNull(ids('transports'))) {
-      for (const animal of [NO_ANIMAL, ...ids('animals')]) out.push({ profile, transport, animal });
+      if (!allows('profiles', profile, transport)) continue;
+      for (const animal of [NO_ANIMAL, ...ids('animals')]) {
+        if (allows('animals', animal, transport)) out.push({ profile, transport, animal });
+      }
     }
+  }
+  return out;
+}
+
+// Лише на чистому контенті (див. validate()). Перевіряється транспорт, а не профіль чи тварина:
+// профіль завжди має хоч одну комбінацію (його список непорожній і веде на існуючі транспорти,
+// а «без тварини» дозволено завжди), а тварина недоступна рівно тоді, коли недоступні всі її
+// транспорти. Перевірка цих вимірів не могла б почервоніти незалежно — це мертвий код (закон 5).
+export function checkOptions(content, whens) {
+  const all = enumerateCombos(content);
+  const out = [];
+  for (const t of content.transports ?? []) {
+    if (!all.some((k) => k.transport === t.id)) out.push(I('COMBO_OPTION_UNUSABLE', t.id, 'жоден профіль не може ним їхати — і тварини, що їздять лише ним, теж недоступні'));
+  }
+  const dead = (conds) => !all.some((k) => conds.every((w) => matches(w, k)));
+  // Перехід живий лише там, де збігаються умови квесту-джерела, самого переходу й квесту-цілі.
+  // Квест із мертвою власною умовою звітує сам (нижче, через whens); його переходи не дублюють.
+  const quests = new Map((content.quests ?? []).map((q) => [q.id, q]));
+  const deadQuest = (id) => { const w = quests.get(id)?.when; return !!w && dead([w]); };
+  for (const q of content.quests ?? []) {
+    q.transitions.forEach((t, i) => {
+      if (deadQuest(q.id) || deadQuest(t.to)) return;
+      const conds = [q.when, t.when, quests.get(t.to)?.when];
+      if (conds.some(Boolean) && dead(conds)) out.push(I('WHEN_UNSATISFIABLE', `${q.id}.transitions[${i}]`, `умовам джерела, переходу й цілі разом не відповідає жодна з ${all.length} дозволених комбінацій`));
+    });
+  }
+  for (const [where, w, parent, kind] of whens) {
+    if (kind === 'transition') continue;
+    if (parent && dead([parent])) continue; // мертвий квест уже звітує сам — його цілі не дублюють
+    if (!all.some((k) => matches(w, k) && matches(parent, k))) out.push(I('WHEN_UNSATISFIABLE', `${where}.when`, `умові не відповідає жодна з ${all.length} дозволених комбінацій`));
   }
   return out;
 }
