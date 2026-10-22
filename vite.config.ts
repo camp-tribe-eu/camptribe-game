@@ -19,5 +19,7 @@ export default defineConfig({
   },
   test: {
     include: ['src/**/*.test.ts'],
+    // Кожен файл тестів — окремий процес: детермінізм GAME-13 звіряється між процесами.
+    pool: 'forks',
   },
 });
