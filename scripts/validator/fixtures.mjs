@@ -227,7 +227,7 @@ export const FIXTURES = [
   { base: 'combo', name: '[комб.] квест для собаки досяжний лише в одного профілю', expect: ['COMBO_TARGETED_UNREACHABLE'], patch(c) {
     dogEntry(c).when = { animals: [DOG], profiles: [P_A] };
   } },
-  { base: 'combo', name: '[комб.] квест для собаки, а вхід у нього лише без тварини', expect: ['COMBO_DEAD_CONTENT', 'COMBO_TARGETED_UNREACHABLE'], patch(c) {
+  { base: 'combo', name: '[комб.] квест для собаки, а вхід у нього лише без тварини', expect: ['COMBO_DEAD_CONTENT', 'COMBO_TARGETED_UNREACHABLE', 'WHEN_UNSATISFIABLE'], patch(c) {
     dogEntry(c).when = { animals: ['animal.none'] };
   } },
 
@@ -267,6 +267,18 @@ export const FIXTURES = [
   { base: 'combo', name: '[сумісн.] NPC лише для профілю, що не має його транспорту', expect: ['WHEN_UNSATISFIABLE'], patch(c) {
     c.profiles[0].transports = [T_CAR];
     c.npcs[1].when = { profiles: [P_A], transports: [T_BIKE] };
+  } },
+  { base: 'combo', name: '[сумісн.] перехід лише для велосипеда веде у квест для собаки, а собаку возять лише авто', expect: ['COMBO_DEAD_CONTENT', 'COMBO_TARGETED_UNREACHABLE', 'WHEN_UNSATISFIABLE'], patch(c) {
+    dogEntry(c).when = { transports: [T_BIKE] };
+    c.animals[0].transports = [T_CAR];
+  } },
+  { base: 'combo', name: '[сумісн.] контроль: той самий перехід без обмеження собаки — тупик для авто, але перехід живий', expect: ['COMBO_TARGETED_UNREACHABLE'], patch(c) {
+    dogEntry(c).when = { transports: [T_BIKE] };
+  } },
+  { base: 'combo', name: '[сумісн.] нездійсненний when не ховає тупик старту для іншого профілю', expect: ['WHEN_UNSATISFIABLE', 'COMBO_NO_START'], patch(c) {
+    c.profiles[0].transports = [T_CAR];
+    c.npcs[1].when = { profiles: [P_A], transports: [T_BIKE] };
+    q(c, 'ST-001').when = { profiles: [P_A] };
   } },
 ];
 

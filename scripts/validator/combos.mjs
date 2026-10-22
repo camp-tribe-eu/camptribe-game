@@ -46,7 +46,17 @@ export function checkOptions(content, whens) {
   for (const t of content.transports ?? []) {
     if (!all.some((k) => k.transport === t.id)) out.push(I('COMBO_OPTION_UNUSABLE', t.id, 'жоден профіль не може ним їхати — і тварини, що їздять лише ним, теж недоступні'));
   }
-  for (const [where, w, parent] of whens) {
+  const dead = (conds) => !all.some((k) => conds.every((w) => matches(w, k)));
+  // Перехід живий лише там, де збігаються умови квесту-джерела, самого переходу й квесту-цілі.
+  const quests = new Map((content.quests ?? []).map((q) => [q.id, q]));
+  for (const q of content.quests ?? []) {
+    q.transitions.forEach((t, i) => {
+      const conds = [q.when, t.when, quests.get(t.to)?.when];
+      if (conds.some(Boolean) && dead(conds)) out.push(I('WHEN_UNSATISFIABLE', `${q.id}.transitions[${i}]`, `умовам джерела, переходу й цілі разом не відповідає жодна з ${all.length} дозволених комбінацій`));
+    });
+  }
+  for (const [where, w, parent, kind] of whens) {
+    if (kind === 'transition') continue;
     if (!all.some((k) => matches(w, k) && matches(parent, k))) out.push(I('WHEN_UNSATISFIABLE', `${where}.when`, `умові не відповідає жодна з ${all.length} дозволених комбінацій`));
   }
   return out;
