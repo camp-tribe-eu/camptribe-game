@@ -40,7 +40,7 @@ export const CODES = {
   COMBO_TARGETED_UNREACHABLE: { check: 'combos', spec: '§3 вузол, адресований комбінації, у ній досяжний' },
   COMBO_DEAD_CONTENT:         { check: 'combos', spec: '§3 кожен вузол досяжний хоча б в одній комбінації' },
   COMBO_OPTION_UNUSABLE:      { check: 'combo-options', spec: '§1 кожен транспорт можна обрати хоча б в одній комбінації' },
-  WHEN_UNSATISFIABLE:         { check: 'combo-options', spec: '§3 умова when відповідає хоча б одній дозволеній комбінації, інакше вузол мертвий' },
+  WHEN_UNSATISFIABLE:         { check: 'combo-options', spec: '§3 умова when (з умовами свого квесту, а для переходу — і квесту-цілі) відповідає хоча б одній дозволеній комбінації' },
 
   // перевірка, що впала сама, — теж червоне, а не зелене
   INTERNAL_ERROR:       { check: 'runner', spec: 'перевірка, що впала, не сміє виглядати як пройдена' },

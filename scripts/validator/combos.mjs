@@ -48,9 +48,12 @@ export function checkOptions(content, whens) {
   }
   const dead = (conds) => !all.some((k) => conds.every((w) => matches(w, k)));
   // Перехід живий лише там, де збігаються умови квесту-джерела, самого переходу й квесту-цілі.
+  // Квест із мертвою власною умовою звітує сам (нижче, через whens); його переходи не дублюють.
   const quests = new Map((content.quests ?? []).map((q) => [q.id, q]));
+  const deadQuest = (id) => { const w = quests.get(id)?.when; return !!w && dead([w]); };
   for (const q of content.quests ?? []) {
     q.transitions.forEach((t, i) => {
+      if (deadQuest(q.id) || deadQuest(t.to)) return;
       const conds = [q.when, t.when, quests.get(t.to)?.when];
       if (conds.some(Boolean) && dead(conds)) out.push(I('WHEN_UNSATISFIABLE', `${q.id}.transitions[${i}]`, `умовам джерела, переходу й цілі разом не відповідає жодна з ${all.length} дозволених комбінацій`));
     });

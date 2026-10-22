@@ -47,7 +47,10 @@ export function selfTest() {
     const got = codeSet(validate(c, { today: TODAY }));
     const want = [...f.expect].sort();
     got.forEach((x) => want.includes(x) && covered.add(x));
-    report(isDeepStrictEqual(got, want), f.name, `очікував [${want.join(', ')}], отримав [${got.join(', ')}]`);
+    // count — скільки знахідок саме цього коду; стереже від дублів, яких множина кодів не бачить.
+    const n = f.count && validate(c, { today: TODAY }).filter((i) => i.code === f.count.code).length;
+    const countOk = !f.count || n === f.count.n;
+    report(isDeepStrictEqual(got, want) && countOk, f.name, countOk ? `очікував [${want.join(', ')}], отримав [${got.join(', ')}]` : `${f.count.code}: очікував ${f.count.n}, отримав ${n}`);
   }
 
   // 3. Файлові приклади для завантажувача.

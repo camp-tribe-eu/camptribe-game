@@ -31,6 +31,9 @@ const mutations = [
   { name: 'порожній контент вважається нормою', file: 'validator/load.mjs', from: '|| content.quests.length === 0', to: '' },
   { name: 'комбінації запускаються й на брудному контенті', file: CHECKS_FILE, from: 'for (const id of LATE) if (clean) issues.push', to: 'for (const id of LATE) issues.push' },
   { name: 'пізні перевірки знову ховають одна одну', file: CHECKS_FILE, from: 'for (const id of LATE) if (clean)', to: 'for (const id of LATE) if (issues.length === 0)' },
+  { name: 'умова квесту-джерела переходу не враховується', file: COMBOS_FILE, from: 'const conds = [q.when, t.when,', to: 'const conds = [t.when,' },
+  { name: 'переходи без власного when не перевіряються', file: COMBOS_FILE, from: 'if (conds.some(Boolean) && dead(conds))', to: 'if (t.when && dead(conds))' },
+  { name: 'переходи мертвого квесту дублюють його звіт', file: COMBOS_FILE, from: 'if (deadQuest(q.id) || deadQuest(t.to)) return;', to: '' },
   { name: 'умова квесту-цілі переходу не враховується', file: COMBOS_FILE, from: 'quests.get(t.to)?.when]', to: ']' },
   { name: 'when на переходах ігнорується', file: COMBOS_FILE, from: 'matches(t.when, k) && ids.has(t.to)', to: 'ids.has(t.to)' },
   { name: 'NPC і локації поза комбінацією доступні', file: COMBOS_FILE, from: ': { ...strip(e), unlockedBy: NEVER }', to: ': strip(e)' },
@@ -40,7 +43,7 @@ const mutations = [
   { name: 'обмеження транспорту профілю ігнорується', file: COMBOS_FILE, from: "if (!allows('profiles', profile, transport)) continue;", to: '' },
   { name: 'обмеження транспорту тварини ігнорується', file: COMBOS_FILE, from: "if (allows('animals', animal, transport)) out.push", to: 'out.push' },
   { name: 'when без жодної дозволеної комбінації пропускається', file: COMBOS_FILE, from: "if (!all.some((k) => matches(w, k) && matches(parent, k))) out.push", to: 'if (false) out.push' },
-  { name: 'умова квесту не успадковується ціллю й переходом', file: COMBOS_FILE, from: '&& matches(parent, k)', to: '' },
+  { name: 'умова квесту не успадковується ціллю', file: COMBOS_FILE, from: '&& matches(parent, k)', to: '' },
   { name: 'combo-options біжить і на брудному контенті', file: CHECKS_FILE, from: "const LATE = ['combo-options', 'combos'];", to: "const LATE = ['combos'];" },
   { name: 'посилання transports не перевіряються', file: CHECKS_FILE, from: "ref('transports', id, `${e.id}.transports`)", to: '0' },
 ];

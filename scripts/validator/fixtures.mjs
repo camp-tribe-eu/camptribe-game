@@ -275,6 +275,21 @@ export const FIXTURES = [
   { base: 'combo', name: '[сумісн.] контроль: той самий перехід без обмеження собаки — тупик для авто, але перехід живий', expect: ['COMBO_TARGETED_UNREACHABLE'], patch(c) {
     dogEntry(c).when = { transports: [T_BIKE] };
   } },
+  // Квест лише для велосипеда, у який можна потрапити і з прогулянки з собакою — перехід без власного when.
+  { base: 'combo', name: '[сумісн.] перехід без when із квесту для собаки у квест для велосипеда, а собаку возять лише авто', expect: ['WHEN_UNSATISFIABLE'], count: { code: 'WHEN_UNSATISFIABLE', n: 1 }, patch(c) {
+    c.animals[0].transports = [T_CAR];
+    c.quests.push({
+      id: 'q.bike-loop', titleKey: 'q.st-003', optional: true, when: { transports: [T_BIKE] },
+      objectives: [{ id: 'visit-lake', textKey: 'q.st-003.o1', kind: 'visit', target: 'loc.lake', required: true }],
+      transitions: [{ on: 'complete', to: 'ST-004' }, { on: 'decline', to: 'ST-004' }],
+    });
+    q(c, 'ST-002').transitions.push({ on: 'complete', to: 'q.bike-loop', choiceKey: 'q.st-003', when: { transports: [T_BIKE] } });
+    q(c, 'q.dog-walk').transitions.push({ on: 'complete', to: 'q.bike-loop' });
+  } },
+  { base: 'combo', name: '[сумісн.] мертва умова квесту звітує один раз, а не з кожного його переходу', expect: ['COMBO_DEAD_CONTENT', 'WHEN_UNSATISFIABLE'], count: { code: 'WHEN_UNSATISFIABLE', n: 1 }, patch(c) {
+    c.animals[0].transports = [T_CAR];
+    q(c, 'q.dog-walk').when = { animals: [DOG], transports: [T_BIKE] };
+  } },
   { base: 'combo', name: '[сумісн.] нездійсненний when не ховає тупик старту для іншого профілю', expect: ['WHEN_UNSATISFIABLE', 'COMBO_NO_START'], patch(c) {
     c.profiles[0].transports = [T_CAR];
     c.npcs[1].when = { profiles: [P_A], transports: [T_BIKE] };
