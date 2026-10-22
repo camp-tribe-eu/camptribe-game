@@ -13,6 +13,9 @@ import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { spawnSync } from 'node:child_process';
 import { CHECKS } from './checks.mjs';
+import { cli } from '../lib/cli.mjs';
+
+cli();
 
 const here = dirname(fileURLToPath(import.meta.url));
 const C = 'checks.mjs';
@@ -67,9 +70,12 @@ if (JSON.stringify(markers) !== JSON.stringify(registry)) {
 let caught = 0;
 const fails = [];
 for (const m of mutations) {
-  const tmp = mkdtempSync(join(tmpdir(), 'ct-maps-mut-'));
+  const root = mkdtempSync(join(tmpdir(), 'ct-maps-mut-'));
+  // Копія зберігає сусідню scripts/lib/ (спільний суворий розбір аргументів), інакше мутант падає як модуль.
+  const tmp = join(root, 'maps');
   try {
     cpSync(here, tmp, { recursive: true });
+    cpSync(join(here, '..', 'lib'), join(root, 'lib'), { recursive: true });
     const path = join(tmp, m.file);
     const text = readFileSync(path, 'utf8');
     const hits = text.split(m.from).length - 1;
@@ -80,7 +86,7 @@ for (const m of mutations) {
     const asSelfTest = /SELF-TEST: FAILED \d+ of \d+/.test(r.out);
     if (r.code !== 0 && asSelfTest) { caught++; console.log(`спіймано  ${m.name}`); }
     else fails.push(`${m.name}: ${r.code === 0 ? 'самотест ЗЕЛЕНИЙ — мутація пережила' : 'самотест не дійшов до вердикту (впав як модуль)'}`);
-  } finally { rmSync(tmp, { recursive: true, force: true }); }
+  } finally { rmSync(root, { recursive: true, force: true }); }
 }
 
 for (const f of fails) console.log(`ПЕРЕЖИЛА  ${f}`);

@@ -24,10 +24,11 @@
 // один відстежуваний файл (інакше рядок застарів).
 
 import { readFileSync, writeFileSync, readdirSync, existsSync, statSync, mkdtempSync, rmSync } from 'node:fs';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import { dirname, join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { spawnSync } from 'node:child_process';
+import { cli } from '../lib/cli.mjs';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
 const ASSETS = 'assets';
@@ -424,7 +425,9 @@ function mutate() {
     // Копія лежить у тимчасовій теці, тож ROOT у ній підставляється явно: вона бачить ті самі assets/ і docs/.
     for (const code of CODES) {
       const re = new RegExp(`(// @check:${code}\\n)(\\s*)`);
-      const text = src.replace(re, '$1$2if (false) ').replace("const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..', '..');", `const ROOT = ${JSON.stringify(ROOT)};`);
+      const text = src.replace(re, '$1$2if (false) ').replace("const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..', '..');", `const ROOT = ${JSON.stringify(ROOT)};`)
+        // Мутант лежить сам у тимчасовій теці: відносний імпорт спільного розбору аргументів зламався б.
+        .replace("from '../lib/cli.mjs'", `from ${JSON.stringify(pathToFileURL(join(ROOT, 'scripts', 'lib', 'cli.mjs')).href)}`);
       const path = join(tmp, `mut-${code}.mjs`);
       writeFileSync(path, text);
       const r = spawnSync(process.execPath, [path, '--self-test'], { encoding: 'utf8' });
@@ -439,6 +442,7 @@ function mutate() {
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
+  cli({ flags: ['self-test', 'mutate', 'write-json'] });
   const argv = process.argv.slice(2);
   if (argv.includes('--self-test')) process.exit(selfTest());
   if (argv.includes('--mutate')) process.exit(mutate());

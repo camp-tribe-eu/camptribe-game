@@ -13,6 +13,7 @@
 import { readFileSync } from 'node:fs';
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { cli } from '../lib/cli.mjs';
 
 const SECTION = /^##\s+(?:\d+\.\s*)?Коди валідатора: як не допустити\s*$/;
 const RULE_MARK = 'Не допустити:';
@@ -76,6 +77,7 @@ export function selfTest(opts = {}) {
 
 const isMain = process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url);
 if (isMain) {
+  cli({ flags: ['self-test', 'mutate'] });
   const args = process.argv.slice(2);
   if (args.includes('--self-test')) {
     const r = selfTest();

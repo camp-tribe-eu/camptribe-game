@@ -13,6 +13,9 @@ import { join, dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { spawnSync } from 'node:child_process';
 import { CHECKS } from './validator/checks.mjs';
+import { cli } from './lib/cli.mjs';
+
+cli();
 
 const scripts = dirname(fileURLToPath(import.meta.url));
 const CHECKS_FILE = 'validator/checks.mjs';

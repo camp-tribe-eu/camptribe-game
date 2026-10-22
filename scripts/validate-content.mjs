@@ -16,10 +16,11 @@ import { loadContent } from './validator/load.mjs';
 import { validate } from './validator/checks.mjs';
 import { selfTest } from './validator/self-test.mjs';
 import { enumerateCombos } from './validator/combos.mjs';
+import { cli } from './lib/cli.mjs';
 
-const args = process.argv.slice(2);
-const flag = (f) => args.includes(f);
-const opt = (f) => { const i = args.indexOf(f); return i >= 0 ? args[i + 1] : undefined; };
+const args = cli({ flags: ['self-test', 'allow-missing-content'], options: ['dir'] });
+const flag = (f) => args[f.slice(2)] === true;
+const opt = (f) => args[f.slice(2)];
 
 if (flag('--self-test')) {
   const r = selfTest();

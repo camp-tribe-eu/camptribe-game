@@ -10,6 +10,7 @@ import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { join, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import ts from 'typescript';
+import { cli } from '../lib/cli.mjs';
 
 const ROOT = join(fileURLToPath(new URL('.', import.meta.url)), '..', '..');
 const CYR = /[Ѐ-ӿ]/;
@@ -151,6 +152,7 @@ function selfTest() {
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
+  cli({ flags: ['self-test'] });
   if (process.argv.includes('--self-test')) process.exit(selfTest());
   const { files, locales } = load();
   const found = check(files, locales);

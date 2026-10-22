@@ -8,6 +8,7 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import { SCHEMAS } from './validator/schema.mjs';
+import { cli } from './lib/cli.mjs';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 
@@ -116,6 +117,7 @@ function selfTest() {
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
+  cli({ flags: ['self-test'] });
   if (process.argv.includes('--self-test')) process.exit(selfTest());
   const found = check(load(), Object.keys(SCHEMAS));
   for (const f of found) console.log(`${f.code} ${f.where}: ${f.msg}`);

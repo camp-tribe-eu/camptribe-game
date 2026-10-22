@@ -106,6 +106,9 @@ GDD — приватний (`brain/Передача/00-dzherelo-lezhyt-lokalno.m
 * **Ціль квесту:** **`id`** (`pitch-tent` — без крапок, лише `a-z0-9` і `-`), **`textKey`**,
   **`kind`** (`talk` → `target` NPC; `visit` → локація; `collect` / `deliver` → предмет; `deliver`
   ще й **`npcId`** отримувача), **`target`**, **`required`**, `when`.
+  🔴 **`deliver` і `sells` у NPC валідатор приймає, але ядро гри ще не виконує** (GAME-29): збірка
+  сюжету впаде (`src/content/story.ts`, тест `npm test`). Поки що замість `deliver` — `collect` +
+  `talk` з отримувачем; замість `sells` — `items` локації.
 * **Перехід:** **`on`** — `complete` або `decline`; **`to`** — id наявного квесту; `choiceKey`
   (текст кнопки вибору — потребує перекладу); `when`.
 * **`requires`:** `{ "quests": [...], "items": [...] }` — що мусить бути до старту квесту.

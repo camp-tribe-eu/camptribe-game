@@ -17,6 +17,8 @@ import { fileURLToPath } from 'node:url';
 import { isDeepStrictEqual } from 'node:util';
 import { CODES, CHECKS, validateMap, loadMaps, summarize } from './checks.mjs';
 import { baseline, FIXTURES, FILE_FIXTURES } from './fixtures.mjs';
+import { cli } from '../lib/cli.mjs';
+
 
 const codeSet = (issues) => [...new Set(issues.map((i) => i.code))].sort();
 
@@ -119,9 +121,9 @@ export function selfTest() {
 
 // ---------- CLI ----------
 
-const args = process.argv.slice(2);
-const flag = (f) => args.includes(f);
-const opt = (f) => { const i = args.indexOf(f); return i >= 0 ? args[i + 1] : undefined; };
+const args = cli({ flags: ['self-test', 'allow-missing-maps'], options: ['dir'] });
+const flag = (f) => args[f.slice(2)] === true;
+const opt = (f) => args[f.slice(2)];
 
 if (flag('--self-test')) {
   const r = selfTest();

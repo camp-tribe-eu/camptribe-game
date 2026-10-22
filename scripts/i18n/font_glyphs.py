@@ -124,6 +124,11 @@ def self_test():
 
 
 if __name__ == '__main__':
+    # Суворо (закон 4): незнайомий прапорець — вихід 2, а не «шрифт за назвою --щось».
+    unknown = [a for a in sys.argv[1:] if a.startswith('-') and a != '--self-test']
+    if unknown or len(sys.argv) > 2:
+        print(f'::error::CLI_UNKNOWN_ARG · {sys.argv[1:]} · дозволено: --self-test або один шлях до шрифту')
+        sys.exit(2)
     if '--self-test' in sys.argv:
         sys.exit(self_test())
     sys.exit(report(sys.argv[1] if len(sys.argv) > 1 else DEFAULT))
