@@ -90,7 +90,7 @@ export function Shell({ port, langOverride, credits }: { port: UiPort; langOverr
                 <li data-credit={f.file} key={f.file}>
                   <span class="ui-credit-file">{f.file}</span>
                   <span class="ui-credit-authors">{f.authors.join(', ')}</span>
-                  <span>
+                  <span class="ui-credit-links">
                     {/* Ліцензія без посилання — видно в e2e (кожна має бути посиланням), а не порожній href. */}
                     {credits.licences[f.licence]
                       ? <a href={credits.licences[f.licence]?.url ?? ''} target="_blank" rel="noopener noreferrer" data-licence={f.licence}>{f.licence}</a>

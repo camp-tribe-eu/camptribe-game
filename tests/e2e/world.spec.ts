@@ -157,6 +157,20 @@ for (const vp of VIEWPORTS) {
       for (const b of boxes) { expect(b.w, b.a).toBeGreaterThanOrEqual(44); expect(b.h, b.a).toBeGreaterThanOrEqual(44); }
     });
 
+    // Звірка GAME-69 #3: міряємо й ціні паузи та титрів, а не лише кнопки сцени. Посилання титрів
+    // були 10 px заввишки — знайдено цим тестом.
+    test('кожна ціль діалогу паузи й титрів ≥ 44×44 CSS px', async ({ page }) => {
+      await open(page);
+      await page.locator('[data-touch="pause"]').tap();
+      await page.locator('[data-ui="credits"] summary').tap();
+      const small = await page.evaluate(() => [...document.querySelectorAll<HTMLElement>('[data-ui="pause"] :is(button, summary, a, textarea, input)')]
+        .map((e) => ({ e: `${e.tagName}[${e.dataset.ui ?? e.textContent?.slice(0, 16) ?? ''}]`, r: e.getBoundingClientRect() }))
+        .filter(({ r }) => r.width < 44 || r.height < 44).map(({ e, r }) => `${e} ${Math.round(r.width)}×${Math.round(r.height)}`));
+      const total = await page.locator('[data-ui="pause"] :is(button, summary, a, textarea, input)').count();
+      expect(total).toBeGreaterThan(20);                            // титри справді відкриті
+      expect(small).toEqual([]);
+    });
+
     test('негативний контроль: прихована кнопка взаємодії — прохід дотиком неможливий', async ({ page }) => {
       await open(page, '?hideTouch=interact');
       expect(await touchFlow(page)).toBe(0);
@@ -178,5 +192,25 @@ test.describe('поворот екрана (телефон)', () => {
     expect(after.playerX).toBeCloseTo(before.playerX, 0);
     expect(after.playerY).toBeCloseTo(before.playerY, 0);
     expect(after.commandsSent).toBe(before.commandsSent);
+  });
+  // Звірка GAME-69 #4: справжній поворот через CDP — змінюється screen.orientation і приходить подія,
+  // а не лише розмір вікна. Плюс сцена після повороту ще слухається (не лише «не загубила стан»).
+  test('справжній поворот (подія orientation) — стан на місці, керування працює', async ({ page }) => {
+    await open(page);
+    await page.evaluate(() => {
+      (window as unknown as { __rot: number }).__rot = 0;
+      screen.orientation.addEventListener('change', () => { (window as unknown as { __rot: number }).__rot++; });
+    });
+    await holdTouch(page, 'down', (p) => p.playerY > 110);
+    const before = await probe(page);
+    const cdp = await page.context().newCDPSession(page);
+    await cdp.send('Emulation.setDeviceMetricsOverride', { width: 844, height: 390, deviceScaleFactor: 3, mobile: true, screenOrientation: { type: 'landscapePrimary', angle: 90 } });
+    await page.waitForTimeout(400);
+    expect(await page.evaluate(() => ({ type: screen.orientation.type, fired: (window as unknown as { __rot: number }).__rot }))).toEqual({ type: 'landscape-primary', fired: 1 });
+    const after = await probe(page);
+    expect(after.playerX).toBeCloseTo(before.playerX, 0);
+    expect(after.playerY).toBeCloseTo(before.playerY, 0);
+    expect(after.commandsSent).toBe(before.commandsSent);
+    expect(await holdTouch(page, 'up', (p) => p.playerY < after.playerY - 5)).toBe(true);
   });
 });
