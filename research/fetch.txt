@@ -1,5 +1,9 @@
-kenney-rpg	kenney:roguelike-rpg-pack
-kenney-chars	kenney:roguelike-characters
-kenney-city	kenney:roguelike-modern-city
-kenney-indoor	kenney:roguelike-indoors
-emberville	steam:2295170
+pack-kenney-rpg	kenney:roguelike-rpg-pack
+pack-kenney-city	kenney:roguelike-modern-city
+pack-lpc-atlas	oga:lpc-tile-atlas
+pack-lpc-atlas2	oga:lpc-tile-atlas2
+pack-lpc-base	oga:liberated-pixel-cup-lpc-base-assets-sprites-map-tiles
+list-lpc-tent	ogasearch:lpc tent
+list-lpc-camp	ogasearch:lpc camp
+list-lpc-car	ogasearch:lpc car
+list-lpc-modern	ogasearch:lpc modern

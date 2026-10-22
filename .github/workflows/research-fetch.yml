@@ -1,11 +1,13 @@
 name: research-fetch
-# Мережа сесії чату Гри закрита для kenney.nl, Steam, itch.io. Runner GitHub — ні.
-# Цей workflow забирає референси для ОГЛЯДУ й кладе їх у тимчасовий артефакт (3 дні).
-# 🔴 Нічого не комітить: чужі скриншоти не мають потрапити в публічний репозиторій.
-# Запуск: зміна research/fetch.txt у пуші. Рядок файлу: `назва<TAB>URL`
-#   kenney:<slug>   — сторінка kenney.nl/assets/<slug>, качає zip першоджерела
-#   steam:<appid>   — скриншоти гри зі Steam store API
-#   url             — будь-який файл як є
+# Мережа сесії чату Гри закрита для kenney.nl, opengameart.org, Steam, itch.io. Runner GitHub — ні.
+# Цей workflow забирає матеріали з ПЕРШОДЖЕРЕЛ для огляду й проб.
+# Запуск: зміна research/fetch.txt у пуші. Рядок файлу: `назва<TAB>джерело`
+#   kenney:<slug>       — сторінка kenney.nl/assets/<slug>, zip першоджерела (CC0)
+#   oga:<slug>          — сторінка opengameart.org/content/<slug>: ліцензія з цієї сторінки + усі файли з неї
+#   ogasearch:<слова>   — лише список знайдених сторінок OGA (назва, посилання) у list.txt
+#   url                 — будь-який файл як є
+# 🔴 Комітиться в research/packs/<назва>/ ЛИШЕ те, у чого назва починається з `pack-`, і ЛИШЕ разом
+#    із ліцензією, процитованою зі сторінки першоджерела. Чужі скриншоти ігор (steam:) не комітяться ніколи.
 on:
   push:
     paths: ['research/fetch.txt', '.github/workflows/research-fetch.yml']
@@ -32,11 +34,38 @@ jobs:
               kenney:*)
                 slug="${src#kenney:}"
                 page=$(curl -sfL "https://kenney.nl/assets/$slug") || { echo "::error::$name: сторінка $slug недоступна"; fail=1; continue; }
-                printf '%s' "$page" | grep -oiE 'Creative Commons[^<"]{0,40}' | head -3 > "$d/license-on-page.txt"
+                printf '%s' "$page" | grep -oiE 'Creative Commons[^<"]{0,40}' | head -3 > "$d/LICENSE-from-page.txt"
                 zip=$(printf '%s' "$page" | grep -oE 'https://kenney\.nl/media/[^"]+\.zip' | head -1)
                 [ -z "$zip" ] && { echo "::error::$name: zip не знайдено на сторінці"; fail=1; continue; }
-                echo "$zip" > "$d/source-url.txt"
+                echo "$zip" > "$d/SOURCE.txt"
                 curl -sfL "$zip" -o "$d/pack.zip" && unzip -q "$d/pack.zip" -d "$d/pack" && rm "$d/pack.zip"
+                ;;
+              oga:*)
+                slug="${src#oga:}"
+                url="https://opengameart.org/content/$slug"
+                curl -sfL "$url" -o "$d/page.html" || { echo "::error::$name: $url недоступна"; fail=1; continue; }
+                echo "$url" > "$d/SOURCE.txt"
+                # Ліцензія — дослівно з блоку License(s) сторінки першоджерела.
+                python3 - "$d/page.html" > "$d/LICENSE-from-page.txt" <<'PY'
+          import re,sys,html
+          t=open(sys.argv[1],encoding='utf-8',errors='replace').read()
+          m=re.search(r'License\(s\):(.*?)</div>\s*</div>',t,re.S)
+          lic=re.findall(r'href="(https?://[^"]*(?:creativecommons|gnu|opengameart)[^"]*license[^"]*|https?://creativecommons[^"]*)"[^>]*>([^<]*)',m.group(1) if m else '')
+          print('\n'.join(f'{n.strip()} | {u}' for u,n in lic) or 'NOT FOUND')
+          a=re.search(r'field-name-author-submitter.*?<a[^>]*>([^<]+)</a>',t,re.S)
+          print('Submitted by:', html.unescape(a.group(1)) if a else 'NOT FOUND')
+          for f in re.findall(r'href="(https://opengameart\.org/sites/default/files/[^"]+)"',t):
+              print('FILE', f)
+          PY
+                grep '^FILE ' "$d/LICENSE-from-page.txt" | cut -d' ' -f2 | sort -u | head -12 | while read -r f; do
+                  curl -sfL "$f" -o "$d/$(basename "$f")" || echo "::warning::$name: не скачано $f"
+                done
+                for z in "$d"/*.zip; do [ -f "$z" ] && unzip -q -o "$z" -d "$d/pack" && rm "$z"; done
+                ;;
+              ogasearch:*)
+                q="${src#ogasearch:}"
+                curl -sfL "https://opengameart.org/art-search-advanced?keys=$(printf '%s' "$q" | sed 's/ /+/g')&field_art_type_tid%5B%5D=9&sort_by=count&sort_order=DESC" -o "$d/search.html" || { fail=1; continue; }
+                grep -oE 'href="/content/[^"]+"[^>]*>[^<]+' "$d/search.html" | sed -E 's#href="(/content/[^"]+)"[^>]*>#\1\t#' | sort -u | head -40 > "$d/list.txt"
                 ;;
               steam:*)
                 id="${src#steam:}"
@@ -56,29 +85,36 @@ jobs:
             esac
             echo "$name: $(find "$d" -type f | wc -l) файлів"
           done < research/fetch.txt
-          # Порожній артефакт — не успіх (закон 4).
+          # Порожньо — не успіх (закон 4).
           [ "$(find out -type f | wc -l)" -gt 0 ] || { echo "::error::нічого не забрано"; exit 1; }
           exit $fail
-      # Лише CC0-набори Kenney (ліцензія дозволяє будь-яке поширення): прев'ю комітяться в
-      # research/cc0-previews/, щоб чат міг їх побачити. Чужі скриншоти сюди не потрапляють.
-      - name: Закомітити прев'ю CC0
+      - name: Закомітити дозволене
+        if: always()
         run: |
           set -euo pipefail
-          mkdir -p research/cc0-previews
-          for d in out/kenney-*; do
-            [ -d "$d/pack" ] || continue
+          for d in out/pack-* out/list-*; do
+            [ -d "$d" ] || continue
             n=$(basename "$d")
-            find "$d/pack" -maxdepth 2 -iname '*preview*.png' -o -maxdepth 2 -iname '*sample*.png' | head -3 | while read -r f; do
-              cp "$f" "research/cc0-previews/$n-$(basename "$f")"
-            done
-            find "$d/pack" -maxdepth 3 -iname '*.txt' -ipath '*licen*' | head -1 | xargs -r -I{} cp {} "research/cc0-previews/$n-License.txt"
+            case "$n" in
+              pack-*)
+                # Без ліцензії, процитованої з першоджерела, не комітимо (aggregator-does-not-license).
+                [ -s "$d/LICENSE-from-page.txt" ] && ! grep -q '^NOT FOUND' "$d/LICENSE-from-page.txt" || { echo "::warning::$n: ліцензію не знайдено — не комічу"; continue; }
+                mkdir -p "research/packs/$n"
+                cp "$d/LICENSE-from-page.txt" "$d/SOURCE.txt" "research/packs/$n/"
+                # Лише PNG і текстові ліцензії/титри, без zip і без звуку.
+                # Kenney має 1700 окремих тайлів — беремо лише зведені аркуші.
+                case "$n" in pack-kenney*) filt=( -ipath '*sheet*' -iname '*.png' -o -iname '*licen*' ) ;; *) filt=( -iname '*.png' -o -iname '*licen*' -o -iname '*credit*' -o -iname '*.txt' ) ;; esac
+                (cd "$d" && find . -type f \( "${filt[@]}" \) -size -3M) | while read -r f; do
+                  mkdir -p "research/packs/$n/$(dirname "$f")"; cp "$d/$f" "research/packs/$n/$f"
+                done ;;
+              list-*)
+                mkdir -p research/lists; cp "$d/list.txt" "research/lists/$n.txt" ;;
+            esac
           done
-          ls -la research/cc0-previews
           git config user.name "research-bot"
           git config user.email "noreply@anthropic.com"
-          git add research/cc0-previews
-          git diff --staged --quiet || git commit -m "research: прев'ю CC0-наборів Kenney для огляду"
-          git push origin HEAD:${GITHUB_REF_NAME}
+          git add research/packs research/lists 2>/dev/null || true
+          git diff --staged --quiet || { git commit -m "research: набори з першоджерел для проби графіки"; git push origin HEAD:${GITHUB_REF_NAME}; }
       - uses: actions/upload-artifact@v4
         if: always()
         with:
