@@ -1,0 +1,45 @@
+name: art
+# Генерація зображень так, щоб ключ FAL не потрапляв ні в чат, ні в репозиторій.
+# Кладеш JSON у art/requests/, запускаєш вручну, результат комітиться в art/out/.
+on:
+  workflow_dispatch:
+    inputs:
+      request:
+        description: 'Файл запиту в art/requests/ (напр. grass-tile.json)'
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.12' }
+
+      - run: pip install --quiet pillow numpy
+
+      - name: Перевірити, що ключ заданий
+        env:
+          FAL_KEY: ${{ secrets.FAL_KEY }}
+        run: |
+          if [ -z "${FAL_KEY:-}" ]; then
+            echo "::error::Секрет FAL_KEY не заданий. Settings -> Secrets and variables -> Actions."
+            exit 1
+          fi
+          echo "Ключ є (значення не друкую)."
+
+      - name: Згенерувати
+        env:
+          FAL_KEY: ${{ secrets.FAL_KEY }}
+        run: python3 scripts/art-generate.py "art/requests/${{ inputs.request }}"
+
+      - name: Закомітити результат
+        run: |
+          git config user.name "art-bot"
+          git config user.email "noreply@anthropic.com"
+          git add art/out
+          git diff --staged --quiet || git commit -m "art: ${{ inputs.request }}"
+          git push

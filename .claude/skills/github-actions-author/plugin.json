@@ -1,0 +1,12 @@
+{
+  "name": "github-actions-author",
+  "version": "1.0.0",
+  "description": "Author and harden GitHub Actions workflows with secure triggers, permissions, and docs-backed guidance.",
+  "author": {
+    "name": "Ship Shit Dev",
+    "email": "hello@shipshit.dev",
+    "url": "https://github.com/shipshitdev"
+  },
+  "license": "MIT",
+  "skills": "."
+}

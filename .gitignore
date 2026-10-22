@@ -1,3 +1,10 @@
 .DS_Store
-_spilne/
-Передача/Джерело/*.pdf
+
+# 🔴 захист від витоку — ніколи не комітити
+.env
+.env.*
+*.key
+*.pem
+secrets.env
+art/out/
+node_modules/

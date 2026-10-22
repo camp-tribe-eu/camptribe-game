@@ -1,0 +1,12 @@
+{
+  "endpoint": "fal-ai/flux/schnell",
+  "tile": true,
+  "tile_size": 32,
+  "colors": 16,
+  "payload": {
+    "prompt": "top-down 32x32 pixel art grass tile, seamless tileable texture, 16-bit SNES style, limited palette of four green shades, visible grass blade clusters, flat even lighting, no border, no shadow",
+    "image_size": "square_hd",
+    "num_images": 1,
+    "num_inference_steps": 4
+  }
+}

@@ -1,0 +1,36 @@
+name: validate
+# 🔴 Цей процес навмисно падає, доки не написано валідатор контенту.
+# Рішення чату Сайту 22.10.2026: перший код проєкту — валідатор і перевірник
+# графа квестів, а НЕ сцена Phaser. Обґрунтування:
+# brain/Передача/05-pershyi-kod.md
+#
+# Так черговість стає структурною, а не порадою, яку легко обійти.
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  content:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Чи існує валідатор контенту
+        run: |
+          set -euo pipefail
+          if [ ! -f scripts/validate-content.mjs ]; then
+            echo "::error::scripts/validate-content.mjs ще немає."
+            echo "Перший код проєкту — валідатор контенту й перевірник графа квестів."
+            echo "Специфікація і критерії приймання: brain/Передача/05-pershyi-kod.md"
+            exit 1
+          fi
+
+      - uses: actions/setup-node@v4
+        with: { node-version: '24' }
+
+      - name: Самотести валідатора — він мусить уміти почервоніти
+        run: node scripts/validate-content.mjs --self-test
+
+      - name: Валідація контенту
+        run: node scripts/validate-content.mjs
