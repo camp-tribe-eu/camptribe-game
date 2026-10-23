@@ -89,11 +89,11 @@ export const STORY_DEFS: CoreDefs = {
 export type Step = Command extends infer C ? (C extends Command ? Omit<C, 'commandId'> : never) : never;
 
 let n = 0;
-/** Прогнати команди; кожна мусить пройти — інакше тест падає з назвою кроку. */
+/** Прогнати команди; кожна мусить пройти — інакше тест падає з назвою кроку. «Сьогодні» для календаря — день 0. */
 export function play(cmds: readonly Step[], from: GameState = initialState(0), defs: CoreDefs = STORY_DEFS): GameState {
   let s = from;
   for (const c of cmds) {
-    const r = dispatch(s, { ...c, commandId: `t${n++}` } as Command, defs);
+    const r = dispatch(s, { ...c, commandId: `t${n++}` } as Command, defs, undefined, 0);
     if (!r.ok) throw new Error(`${c.type} ${JSON.stringify(c)} → ${r.code}`);
     s = r.state;
   }

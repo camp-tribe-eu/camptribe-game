@@ -1,18 +1,20 @@
 // GAME-71 · календар життя в ядрі: дата з годинника, зарплата, відпустки, школа. Каталог — LIFE_DEFS (story.fixture),
 // не content/: числа тут свідомо інші, ніж у контенті (водій має 10 днів відпустки), і тести від смаку власника не залежать.
 import fc from 'fast-check';
+import v1 from '../../tests/saves/v1.json';
 import { describe, expect, it } from 'vitest';
 import { dispatch, type Command } from './commands';
 import type { CoreDefs } from './defs';
 import {
-  civilFromDays, dateOf, daysFromCivil, dayKind, payroll, paydayDay, vacationUsed, weekdayOf, yearOf,
+  civilFromDays, dateOf, daysFromCivil, dayKind, payroll, paydayDay, vacationUsed, weekdayOf,
   type LifeDefs,
 } from './life';
-import { payCaseArb, payrollViolation, utcDate, type Stepper } from '../content/life-oracle.test.helpers';
+import { payCaseArb, payrollViolation, utcDate, type PayCoverage, type Stepper } from '../content/life-oracle.test.helpers';
 import { fromSave, serialize } from './save';
+import { stateHash } from './hash';
 import { newSim, step, type SimState } from './sim';
 import { initialState, type GameState } from './state';
-import { BIKER, DRIVER, LIFE_DEFS, play } from './story.fixture';
+import { BIKER, DRIVER, LIFE_DEFS, play, ROAD_DEFS } from './story.fixture';
 import { DAY_MINUTES, dayOf } from './weather';
 
 const LIFE = LIFE_DEFS.life as LifeDefs;
@@ -21,6 +23,12 @@ const ctx = { defs: LIFE_DEFS };
 /** Той самий каталог без календаря життя. */
 const NO_LIFE = Object.fromEntries(Object.entries(LIFE_DEFS).filter(([k]) => k !== 'life')) as CoreDefs;
 const real: Stepper = (s, i) => step(s, i, ctx);
+/**
+ * Той самий календар на каталозі з дорогами (GAME-31): Visit перемотує годинник усередині команди. Крамницю відкрито
+ * без квесту — щоб поїздки дім ↔ крамниця були з першого кроку (сюжет тут ні до чого).
+ */
+const ROAD_STORY = ROAD_DEFS.story as NonNullable<CoreDefs['story']>;
+const LIFE_ROAD_DEFS: CoreDefs = { ...ROAD_DEFS, life: LIFE, story: { ...ROAD_STORY, locations: { ...ROAD_STORY.locations, 'loc.shop': { items: ['item.gold'] } } } };
 
 describe('дата з годинника (SIM-TIME-008): цілочисельний григоріанський календар = Date', () => {
   it('30 років щодня: дата й день тижня збігаються з Date (UTC); високосні 2028, 2032 і невисокосний 2100', () => {
@@ -65,6 +73,31 @@ describe('Спосіб перевірки №1 · зарплата приход�
 
   it('fast-check, 1 000 випадкових станів: кожен крок приносить рівно (зарплата − рахунки) × перетнуті дні виплати', () => {
     fc.assert(fc.property(payCaseArb(who), (c) => payrollViolation(LIFE_DEFS, c, real) === null), { numRuns: 1000, seed: 71 });
+  });
+
+  // Рецензія GAME-71: справжній шлях годинника — кадр, що САМ перетинає північ дня виплати, і дорога (Visit) через неї.
+  // Каталог із дорогами (ROAD_DEFS) + той самий календар; покриття кожного шляху — числом, не «зелено порожньо».
+  it('fast-check, 1 000 станів із дорогами: кадр через північ і дорога через північ платять у той самий крок', () => {
+    const roadCtx = { defs: LIFE_ROAD_DEFS };
+    const seen: PayCoverage = { frame: 0, command: 0, advance: 0 };
+    fc.assert(fc.property(payCaseArb(who, ['loc.home', 'loc.shop', 'loc.dogpark']), (c) => payrollViolation(LIFE_ROAD_DEFS, c, (s, i) => step(s, i, roadCtx), seen) === null), { numRuns: 1000, seed: 71 });
+    console.info(`GAME-71 оракул (ядро, дороги): кроків із виплатою — кадр ${seen.frame}, команда ${seen.command}, перемотування ${seen.advance}`);
+    expect(seen.frame).toBeGreaterThan(20);
+    expect(seen.command).toBeGreaterThan(20);
+    expect(seen.advance).toBeGreaterThan(20);
+  });
+
+  it('детерміновано: о 23:59 напередодні 25 червня кадр на 2 хв платить; поїздка, що виїхала о 23:55, платить по приїзді', () => {
+    const roadCtx = { defs: LIFE_ROAD_DEFS };
+    const frameCase = { profile: 'profile.a', transport: 'transport.bike', preMinutes: 0, inputs: [{ kind: 'eve', before: 1 }, { kind: 'frame', realMs: 120_000 }] } as const;
+    const fseen: PayCoverage = { frame: 0, command: 0, advance: 0 };
+    expect(payrollViolation(LIFE_ROAD_DEFS, frameCase, (s, i) => step(s, i, roadCtx), fseen)).toBeNull();
+    expect(fseen).toEqual({ frame: 1, command: 0, advance: 0 });
+    // велосипедист (водій має зарплату = рахункам, чисто 0): дім → крамниця через собачий парк, 30 хв
+    const tripCase = { profile: 'profile.a', transport: 'transport.bike', preMinutes: 0, inputs: [{ kind: 'command', command: { type: 'Visit', commandId: 'v0', locationId: 'loc.home' } }, { kind: 'eve', before: 5 }, { kind: 'command', command: { type: 'Visit', commandId: 'v1', locationId: 'loc.shop' } }] } as const;
+    const seen: PayCoverage = { frame: 0, command: 0, advance: 0 };
+    expect(payrollViolation(LIFE_ROAD_DEFS, tripCase, (s, i) => step(s, i, roadCtx), seen)).toBeNull();
+    expect(seen).toEqual({ frame: 0, command: 1, advance: 0 });
   });
 
   it('негативний контроль: подвійна виплата того самого дня — перевірник червоніє (і називає крок)', () => {
@@ -114,6 +147,25 @@ describe('Спосіб перевірки №1 · зарплата приход�
     expect(s.game.moneyCents).toBe(0);
     s = step(s, { kind: 'advance', minutes: 30 * DAY_MINUTES }, ctx);   // 25 вересня — перша виплата персонажу
     expect(s.game.moneyCents).toBe(70_000);
+  });
+
+  // Рецензія GAME-71: стан, що прийшов НЕ з кроку (старий сейв v1, мігрований без календаря), уже минув дні виплати,
+  // а лічильник — 0. Перша команда — CreateCharacter: без catch-up ДО dispatch персонаж отримав би 3 виплати заднім числом.
+  it('старий сейв (v1 через міграцію) на дні 100 + CreateCharacter — зарплата заднім числом не приходить', () => {
+    const old = structuredClone(v1) as { checksum: string; sim: { clock: { minutes: number } } };
+    old.sim.clock.minutes = 100 * DAY_MINUTES + 7;
+    old.checksum = stateHash(old.sim);
+    const r = fromSave(JSON.stringify(old));
+    if (!r.ok) throw new Error(r.code);
+    expect(r.sim.game.life.paydays).toBe(0);                       // міграція без календаря: лічильник ще не знає дат
+    const money = r.sim.game.moneyCents;
+    const s = step(r.sim, { kind: 'command', command: { ...BIKER, commandId: 'late-c' } }, ctx);
+    expect(s.game.processed['late-c']?.ok).toBe(true);
+    expect(s.game.moneyCents).toBe(money);                          // без виправлення: money + 210 000 (3 × 70 000)
+    expect(s.game.life.paydays).toBe(3);
+    // і той самий стан, складений руками (newSim з годинником на дні 100), — так само
+    const bare: SimState = { ...newSim(1), clock: { minutes: 100 * DAY_MINUTES, accMs: 0, paused: false } };
+    expect(step(bare, { kind: 'command', command: { ...BIKER, commandId: 'c' } }, ctx).game.moneyCents).toBe(0);
   });
 
   it('без календаря (defs.life немає) — ні грошей, ні лічильника: старі журнали відтворюються як були', () => {
@@ -170,27 +222,90 @@ describe('Спосіб перевірки №3 · відпустка — N дн�
     expect(hol.ok && hol.state.life.leave[0]?.vacation).toBe(0);
   });
 
-  it('fast-check: за будь-якої послідовності бронювань і скасувань використано ≤ N за кожен рік, відпустки без перетинів, сейв вантажиться', () => {
-    const op = fc.oneof(
-      fc.record({ kind: fc.constant('book' as const), from: fc.integer({ min: 0, max: 900 }), days: fc.integer({ min: 0, max: 35 }), override: fc.boolean() }),
-      fc.record({ kind: fc.constant('cancel' as const), from: fc.integer({ min: 0, max: 900 }) }),
-      fc.record({ kind: fc.constant('wait' as const), days: fc.integer({ min: 0, max: 120 }) }),
-    );
-    fc.assert(fc.property(fc.constantFrom(BIKER, DRIVER), fc.array(op, { maxLength: 40 }), (who, ops) => {
-      let s: SimState = step(newSim(3), { kind: 'command', command: { ...who, commandId: 'c' } }, ctx);
-      let k = 0;
-      for (const o of ops) {
-        if (o.kind === 'wait') s = step(s, { kind: 'advance', minutes: o.days * DAY_MINUTES }, ctx);
-        else if (o.kind === 'book') s = step(s, { kind: 'command', command: { type: 'BookLeave', commandId: `o${k++}`, from: o.from, days: o.days, schoolOverride: o.override } }, ctx);
-        else s = step(s, { kind: 'command', command: { type: 'CancelLeave', commandId: `o${k++}`, from: o.from } }, ctx);
-        const job = LIFE.jobs[who.profileId];
-        const years = new Set(s.game.life.leave.map((e) => yearOf(CAL, e.from)));
-        for (const y of years) if (vacationUsed(CAL, s.game.life, y) > (job?.vacationDays ?? 0)) return false;
-        const L = s.game.life.leave;
-        if (L.some((e, i) => i > 0 && e.from < (L[i - 1]?.from ?? 0) + (L[i - 1]?.days ?? 0))) return false;
-      }
-      return fromSave(serialize(s)).ok;
-    }), { numRuns: 300, seed: 71 });
+  // Рецензія GAME-71: лічильник — ПОЗА станом. Прийняті бронювання (за processed) і прийняті скасування рахуються тут, дні
+  // відпустки кожного — оракулом на Date (будній і не свято), рік — рік дня початку (так вирішено, див. SIM-LIFE-003).
+  // Стан ядра для перевірки ліміту не читається: «забута» стара відпустка (обрізання life.leave) не сховається.
+  const workday = (day: number): boolean => {
+    const dt = utcDate(CAL.start, day);
+    const md = `${String(dt.getUTCMonth() + 1).padStart(2, '0')}-${String(dt.getUTCDate()).padStart(2, '0')}`;
+    return dt.getUTCDay() !== 0 && dt.getUTCDay() !== 6 && !CAL.publicHolidays.includes(md);
+  };
+  // `ahead` — день початку відносно «сьогодні» (а не абсолютний): інакше після кількох «чекати» майже кожне бронювання
+  // падало б у минуле, і сценарій «відпустка скінчилась — бронюю далі в тому ж році» траплявся б рідко.
+  type Op = { kind: 'book'; ahead: number; days: number; override: boolean } | { kind: 'cancel'; ahead: number } | { kind: 'wait'; days: number };
+  const vacationExceeded = (who: typeof BIKER | typeof DRIVER, ops: readonly Op[], defs: CoreDefs = LIFE_DEFS): string | null => {
+    const c = { defs };
+    const n = (defs.life as LifeDefs).jobs[who.profileId]?.vacationDays ?? 0;
+    let s: SimState = step(newSim(3), { kind: 'command', command: { ...who, commandId: 'c' } }, c);
+    const booked = new Map<number, { year: number; vac: number }>();
+    let k = 0;
+    for (const o of ops) {
+      const id = `o${k++}`;
+      if (o.kind === 'wait') { s = step(s, { kind: 'advance', minutes: o.days * DAY_MINUTES }, c); continue; }
+      const from = dayOf(s.clock) + o.ahead;
+      s = step(s, { kind: 'command', command: o.kind === 'book' ? { type: 'BookLeave', commandId: id, from, days: o.days, schoolOverride: o.override } : { type: 'CancelLeave', commandId: id, from } }, c);
+      if (!s.game.processed[id]?.ok) continue;
+      if (o.kind === 'cancel') booked.delete(from);
+      else booked.set(from, { year: utcDate(CAL.start, from).getUTCFullYear(), vac: Array.from({ length: o.days }, (_, i) => from + i).filter(workday).length });
+      const perYear = new Map<number, number>();
+      for (const { year, vac } of booked.values()) perYear.set(year, (perYear.get(year) ?? 0) + vac);
+      for (const [year, used] of perYear) if (used > n) return `${id}: ${year} — ${used} днів відпустки прийнято, ліміт ${n}`;
+      const L = s.game.life.leave;
+      if (L.some((e, i) => i > 0 && e.from < (L[i - 1]?.from ?? 0) + (L[i - 1]?.days ?? 0))) return `${id}: перетин відпусток`;
+    }
+    return fromSave(serialize(s)).ok ? null : 'сейв не вантажиться';
+  };
+  const opArb = fc.oneof(
+    // Здебільшого близько й коротко (так ліміт вичерпується за кілька кроків), інколи — далеко, довго й через межі.
+    fc.record({ kind: fc.constant('book' as const), ahead: fc.oneof(fc.integer({ min: -3, max: 40 }), fc.integer({ min: -3, max: 400 })), days: fc.oneof(fc.integer({ min: 1, max: 6 }), fc.integer({ min: 0, max: 35 })), override: fc.boolean() }),
+    fc.record({ kind: fc.constant('cancel' as const), ahead: fc.integer({ min: -3, max: 40 }) }),
+    fc.record({ kind: fc.constant('wait' as const), days: fc.oneof(fc.integer({ min: 0, max: 20 }), fc.integer({ min: 0, max: 120 })) }),
+  );
+
+  it('fast-check: прийнятих днів відпустки (лічильник поза станом) ≤ N за кожен рік; відпустки без перетинів; сейв вантажиться', () => {
+    fc.assert(fc.property(fc.constantFrom(BIKER, DRIVER), fc.array(opArb, { maxLength: 40 }), (who, ops) => vacationExceeded(who, ops) === null), { numRuns: 5000, seed: 71 });
+  });
+
+  it('детерміновано: відпустка, що скінчилась, у тому самому році лімітом лишається — і після іншого прийнятого бронювання', () => {
+    // Водій: 7–18 червня 2027 — 10 робочих (усі). День 30 (1 липня): вихідні 10–11 липня (0 днів) — прийнято;
+    // тоді пн 12 липня — VACATION_EXHAUSTED. Обрізання «старих» відпусток при прийнятті не сміє забути червневу.
+    const ops: Op[] = [{ kind: 'book', ahead: 6, days: 12, override: false }, { kind: 'wait', days: 30 }, { kind: 'book', ahead: 9, days: 2, override: false }, { kind: 'book', ahead: 11, days: 1, override: false }];
+    expect(vacationExceeded(DRIVER, ops)).toBeNull();
+    let s: SimState = step(newSim(3), { kind: 'command', command: { ...DRIVER, commandId: 'c' } }, ctx);
+    s = step(s, { kind: 'command', command: { type: 'BookLeave', commandId: 'a', from: 6, days: 12 } }, ctx);
+    s = step(s, { kind: 'advance', minutes: 30 * DAY_MINUTES }, ctx);
+    s = step(s, { kind: 'command', command: { type: 'BookLeave', commandId: 'b', from: 39, days: 2 } }, ctx);
+    expect(s.game.processed.b?.ok).toBe(true);
+    s = step(s, { kind: 'command', command: { type: 'BookLeave', commandId: 'd', from: 41, days: 1 } }, ctx);
+    expect(s.game.processed.d).toMatchObject({ ok: false, code: 'VACATION_EXHAUSTED' });
+  });
+});
+
+describe('межі (рецензія GAME-71): кожна порівнялка має тест рівно на межі й на крок за нею', () => {
+  // Водій без школяра й з річним лімітом, щоб межу різала саме перевірка, яку тестуємо, а не ліміт відпустки.
+  const roomy: CoreDefs = { ...LIFE_DEFS, life: { ...LIFE, jobs: { ...LIFE.jobs, 'profile.b': { salaryCents: 1, billsCents: 0, vacationDays: 366 } } } };
+  const driver = withChar(DRIVER, roomy);
+
+  it('старт рівно в день виплати: перша виплата — того ж дня (день 0), а не через місяць', () => {
+    const onPayday = { ...CAL, start: '2027-06-25' };
+    expect(paydayDay(onPayday, 0)).toBe(0);
+    expect(dateOf(onPayday, paydayDay(onPayday, 1))).toEqual({ y: 2027, m: 7, d: 25 });
+  });
+
+  it(`довжина: рівно maxLeaveDays (${CAL.maxLeaveDays}) — так; на день більше — INVALID_AMOUNT`, () => {
+    expect(book(driver, 10, CAL.maxLeaveDays, 0, {}, roomy).ok).toBe(true);
+    const over = book(driver, 10, CAL.maxLeaveDays + 1, 0, {}, roomy);
+    expect(over.ok ? 'ok' : over.code).toBe('INVALID_AMOUNT');
+  });
+
+  it(`наперед: рівно сьогодні + bookAheadDays (${CAL.bookAheadDays}) — так; на день далі — LEAVE_DATE; сьогодні — так, учора — LEAVE_DATE`, () => {
+    const today = 10;
+    expect(book(driver, today + CAL.bookAheadDays, 1, today, {}, roomy).ok).toBe(true);
+    const far = book(driver, today + CAL.bookAheadDays + 1, 1, today, {}, roomy);
+    expect(far.ok ? 'ok' : far.code).toBe('LEAVE_DATE');
+    expect(book(driver, today, 1, today, {}, roomy).ok).toBe(true);
+    const past = book(driver, today - 1, 1, today, {}, roomy);
+    expect(past.ok ? 'ok' : past.code).toBe('LEAVE_DATE');
   });
 });
 

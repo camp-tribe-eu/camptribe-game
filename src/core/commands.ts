@@ -91,7 +91,7 @@ function fingerprint(cmd: Command): string {
   return h.toString(16).padStart(8, '0');
 }
 
-function apply(cmd: Command, d: Draft, defs: CoreDefs, guard: Safeguards, today: number): RejectCode | null {
+function apply(cmd: Command, d: Draft, defs: CoreDefs, guard: Safeguards, today: number | undefined): RejectCode | null {
   switch (cmd.type) {
     case 'BuyItem': {
       if (!isContentId(cmd.itemId)) return 'INVALID_COMMAND';
@@ -180,12 +180,14 @@ function apply(cmd: Command, d: Draft, defs: CoreDefs, guard: Safeguards, today:
       return null;
     }
     case 'BookLeave': {
+      if (today === undefined) return 'INVALID_COMMAND';   // без годинника «сьогодні» невідоме — не бронюємо проти дня 0
       const r = bookLeave(d, { from: cmd.from, days: cmd.days, ...(cmd.schoolOverride !== undefined ? { schoolOverride: cmd.schoolOverride } : {}) }, defs.life, today);
       if ('code' in r) return r.code;
       d.life = r.life;
       return null;
     }
     case 'CancelLeave': {
+      if (today === undefined) return 'INVALID_COMMAND';
       if (typeof cmd.from !== 'number' || !Number.isSafeInteger(cmd.from)) return 'INVALID_AMOUNT';
       const r = cancelLeave(d, cmd.from, defs.life, today);
       if ('code' in r) return r.code;
@@ -261,9 +263,10 @@ function remember(processed: Readonly<Record<string, CommandRecord>>, id: string
 
 /**
  * `today` — день гри (⌊хвилини / 1440⌋), який знає лише симуляція: його читають тільки BookLeave/CancelLeave (GAME-71).
- * Повний перебір і бот кличуть dispatch без годинника (день 0) — команд календаря в їхніх ходах немає (moves.ts).
+ * Повний перебір і бот кличуть dispatch без годинника — команд календаря в їхніх ходах немає (moves.ts). Без `today`
+ * BookLeave/CancelLeave — INVALID_COMMAND (рецензія GAME-71): мовчазний «день 0» дозволив би бронювати в минулому.
  */
-export function dispatch(state: GameState, cmd: Command, defs: CoreDefs, guard: Safeguards = SAFE, today = 0): DispatchResult {
+export function dispatch(state: GameState, cmd: Command, defs: CoreDefs, guard: Safeguards = SAFE, today?: number): DispatchResult {
   if (!cmd || typeof cmd !== 'object' || !isCommandId(cmd.commandId)) {
     return { ok: false, state, code: 'INVALID_COMMAND', repeated: false, events: [] };
   }

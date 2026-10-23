@@ -29,7 +29,7 @@ export interface QuestProgress {
 }
 
 export interface GameState {
-  readonly schemaVersion: 2;
+  readonly schemaVersion: 3;
   /** Баланс у центах EUR (CR-040). */
   readonly moneyCents: number;
   /** id предмета → кількість, лише додатні. */
@@ -124,5 +124,5 @@ export const REJECT_CODES = [
 export type RejectCode = (typeof REJECT_CODES)[number];
 
 export function initialState(moneyCents = 0): GameState {
-  return { schemaVersion: 2, moneyCents, inventory: {}, grants: [], processed: {}, seq: 0, player: null, quests: {}, campaignEnded: false, flags: [], npcMemory: {}, skills: zeroSkills(), practice: {}, gear: {}, life: { paydays: 0, leave: [] }, dialogue: null };
+  return { schemaVersion: 3, moneyCents, inventory: {}, grants: [], processed: {}, seq: 0, player: null, quests: {}, campaignEnded: false, flags: [], npcMemory: {}, skills: zeroSkills(), practice: {}, gear: {}, life: { paydays: 0, leave: [] }, dialogue: null };
 }

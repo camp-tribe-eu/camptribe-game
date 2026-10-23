@@ -2,17 +2,19 @@
 import { describe, expect, it } from 'vitest';
 import v1 from '../../tests/saves/v1.json';
 import v2 from '../../tests/saves/v2.json';
-import { V2_STORY } from './save-v2.fixture';
-import { STORY_DEFS } from './story.fixture';
+import v3 from '../../tests/saves/v3.json';
+import { V2_STORY, V3_LIFE } from './save-v2.fixture';
+import { LIFE_DEFS, STORY_DEFS } from './story.fixture';
 import { DEFS, LOG, SEED } from './determinism.fixture';
 import { stateHash } from './hash';
 import type { StoryDefs } from './defs';
 import { LOAD_CODES, SAVE_VERSION, danglingRefs, fromSave, serialize, type LoadCode } from './save';
-import { newSim, run, type Input } from './sim';
+import { newSim, run, step, type Input } from './sim';
+import { paydayDay, paydaysThrough } from './life';
 import { zeroSkills } from './skills';
 
 /** Кожна випущена версія сейву — фікстура назавжди (TD-007). Нову версію додати сюди. */
-const FIXTURES: Record<number, unknown> = { 1: v1, 2: v2 };
+const FIXTURES: Record<number, unknown> = { 1: v1, 2: v2, 3: v3 };
 
 describe('вічні фікстури сейвів (TD-007)', () => {
   it('є фікстура для кожної версії від 1 до поточної', () => {
@@ -26,6 +28,10 @@ describe('вічні фікстури сейвів (TD-007)', () => {
       if (r.ok) {
         expect(r.fromVersion).toBe(Number(v));
         expect(r.sim.game.seq).toBeGreaterThan(0);
+        // round-trip уже в поточній версії: той самий стан
+        const again = fromSave(serialize(r.sim));
+        expect(again.ok && again.fromVersion).toBe(SAVE_VERSION);
+        expect(again.ok && stateHash(again.sim)).toBe(stateHash(r.sim));
       }
     });
   }
@@ -51,7 +57,7 @@ describe('v2 (GAME-29): персонаж і квести', () => {
   });
   it('v1 після міграції: персонажа ще нема, квестів нема, розділ не завершено', () => {
     const r = fromSave(JSON.stringify(v1));
-    expect(r.ok && { p: r.sim.game.player, q: r.sim.game.quests, e: r.sim.game.campaignEnded, v: r.sim.game.schemaVersion }).toEqual({ p: null, q: {}, e: false, v: 2 });
+    expect(r.ok && { p: r.sim.game.player, q: r.sim.game.quests, e: r.sim.game.campaignEnded, v: r.sim.game.schemaVersion }).toEqual({ p: null, q: {}, e: false, v: 3 });
   });
   it('v1 після міграції: навички — вісім нулів, практики немає (GAME-72)', () => {
     const r = fromSave(JSON.stringify(v1));
@@ -66,6 +72,62 @@ describe('v2 (GAME-29): персонаж і квести', () => {
   it('v1 після міграції: NPC нічого не пам\'ятають (GAME-48)', () => {
     const r = fromSave(JSON.stringify(v1));
     expect(r.ok && r.sim.game.npcMemory).toEqual({});
+  });
+});
+
+describe('v3 (GAME-71): календар життя; v2 вийшов до гравців без `life` — лише міграція', () => {
+  const LIFE = LIFE_DEFS.life as NonNullable<typeof LIFE_DEFS.life>;
+  it('фікстура v2 — РІВНО та, що на main (опублікована гра): поля life у ній немає', () => {
+    expect(Object.hasOwn((v2 as { sim: { game: object } }).sim.game, 'life')).toBe(false);
+    expect((v2 as { checksum: string }).checksum).toBe('fe089db9');
+  });
+  it('v2 → v3: відпусток немає; без календаря лічильник 0, з календарем — дні виплати до сейву зараховано без грошей', () => {
+    const bare = fromSave(JSON.stringify(v2));
+    expect(bare.ok && bare.sim.game.life).toEqual({ paydays: 0, leave: [] });
+    expect(bare.ok && bare.sim.game.schemaVersion).toBe(3);
+    // Той самий v2, але годинник на дні 100 (9 вересня 2027): 25.06, 25.07, 25.08 уже минули.
+    const late = structuredClone(v2) as { checksum: string; sim: { clock: { minutes: number } } };
+    late.sim.clock.minutes = 100 * 1440 + 7;
+    late.checksum = stateHash(late.sim);
+    const r = fromSave(JSON.stringify(late), { life: LIFE });
+    expect(r.ok && r.sim.game.life).toEqual({ paydays: 3, leave: [] });
+    if (!r.ok) return;
+    // і перший крок гри з календарем не платить за ці три дні заднім числом; наступна виплата 25.09 — платить
+    const money = r.sim.game.moneyCents;
+    const a = step(r.sim, { kind: 'advance', minutes: 0 }, { defs: LIFE_DEFS });
+    expect(a.game.moneyCents).toBe(money);
+    expect(step(a, { kind: 'advance', minutes: 16 * 1440 }, { defs: LIFE_DEFS }).game.moneyCents).toBe(money + 70_000);
+  });
+  it('негативний контроль: та сама міграція без календаря — і перший крок із календарем платить 3 пропущені виплати', () => {
+    const late = structuredClone(v2) as { checksum: string; sim: { clock: { minutes: number } } };
+    late.sim.clock.minutes = 100 * 1440 + 7;
+    late.checksum = stateHash(late.sim);
+    const r = fromSave(JSON.stringify(late));
+    if (!r.ok) throw new Error(r.code);
+    expect(step(r.sim, { kind: 'advance', minutes: 0 }, { defs: LIFE_DEFS }).game.moneyCents - r.sim.game.moneyCents).toBe(3 * 70_000);
+  });
+  it('фікстура v2 (main) завантажується, і serialize → fromSave дає той самий стан (round-trip уже у v3)', () => {
+    const r = fromSave(JSON.stringify(v2), { life: LIFE });
+    if (!r.ok) throw new Error(r.code);
+    const again = fromSave(serialize(r.sim), { life: LIFE });
+    expect(again.ok && again.fromVersion).toBe(3);
+    expect(again.ok && stateHash(again.sim)).toBe(stateHash(r.sim));
+  });
+  it('фікстура v3 — той самий стан, що й живий прогін (сюжет + календар): виплата й відпустка в ній є', () => {
+    const live = run(run(run(newSim(SEED, 10_000), LOG.slice(0, 600), { defs: DEFS }), V2_STORY as Input[], { defs: LIFE_DEFS }), V3_LIFE as Input[], { defs: LIFE_DEFS });
+    const r = fromSave(JSON.stringify(v3), { life: LIFE });
+    expect(r.ok && r.fromVersion).toBe(3);
+    expect(r.ok && stateHash(r.sim)).toBe(stateHash(live));
+    expect(r.ok && r.sim.game.life).toEqual({ paydays: 1, leave: [{ from: 40, days: 3, vacation: 2 }] });
+  });
+  it('paydaysThrough (закрита формула) = кількість paydayDay ≤ дня, 20 років щодня; і старт після дня виплати', () => {
+    for (const cal of [LIFE.calendar, { ...LIFE.calendar, start: '2027-06-26' }, { ...LIFE.calendar, start: '2027-06-25' }]) {
+      let k = 0;
+      for (let d = 0; d < 366 * 20; d++) {
+        while (paydayDay(cal, k) <= d) k++;
+        if (paydaysThrough(cal, d) !== k) expect({ start: cal.start, d, got: paydaysThrough(cal, d) }).toEqual({ start: cal.start, d, got: k });
+      }
+    }
   });
 });
 

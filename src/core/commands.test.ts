@@ -215,13 +215,34 @@ describe('коди відмов: кожен код із реєстру має т
 
   for (const [code, state, cmd, defs] of cases) {
     it(`повертає ${code}`, () => {
-      const r = dispatch(state, cmd, defs);
+      const r = dispatch(state, cmd, defs, undefined, 0);
       expect(r.ok).toBe(false);
       expect(r.ok ? null : r.code).toBe(code);
       expect(r.state.moneyCents).toBe(state.moneyCents);
       expect(r.events).toEqual([]);
     });
   }
+
+  // Рецензія GAME-71: дзеркальна межа перетину — наявна відпустка починається в ОСТАННІЙ день нової. Наявна — з дня 10
+  // (пт 11 червня), 2 дні. Нова [5, 11) — дні 5…10, останній = перший день наявної → LEAVE_OVERLAP; нова [4, 10) — встик, можна.
+  it('LEAVE_OVERLAP: наявна відпустка починається в останній день нової — перетин; на день раніше — встик, можна', () => {
+    const s = play([DRIVER, { type: 'BookLeave', from: 10, days: 2 }], initialState(0), LIFE_DEFS);
+    const over = dispatch(s, { type: 'BookLeave', commandId: 'mo1', from: 5, days: 6 }, LIFE_DEFS, undefined, 0);
+    expect(over.ok ? 'ok' : over.code).toBe('LEAVE_OVERLAP');
+    expect(dispatch(s, { type: 'BookLeave', commandId: 'mo2', from: 4, days: 6 }, LIFE_DEFS, undefined, 0).ok).toBe(true);
+  });
+
+  // Рецензія GAME-71: dispatch без «сьогодні» не бронює й не скасовує проти мовчазного дня 0; решта команд — як були.
+  it('без today: BookLeave і CancelLeave — INVALID_COMMAND; з today — прийнято; інші команди без today не змінились', () => {
+    const s = play([DRIVER, { type: 'BookLeave', from: 6, days: 2 }], initialState(0), LIFE_DEFS);
+    for (const cmd of [{ type: 'BookLeave', commandId: 'nt1', from: 20, days: 1 }, { type: 'CancelLeave', commandId: 'nt2', from: 6 }] as Command[]) {
+      const r = dispatch(s, cmd, LIFE_DEFS);
+      expect(r.ok ? 'ok' : r.code).toBe('INVALID_COMMAND');
+      expect(r.state.life).toEqual(s.life);
+      expect(dispatch(s, cmd, LIFE_DEFS, undefined, 0).ok).toBe(true);
+    }
+    expect(dispatch(s, { type: 'Visit', commandId: 'nt3', locationId: 'loc.home' }, LIFE_DEFS).ok).toBe(true);
+  });
 
   it('ключі прототипу як id не створюють предметів і грошей (рецензія PR #13)', () => {
     for (const id of ['toString', 'constructor', '__proto__', 'hasOwnProperty']) {

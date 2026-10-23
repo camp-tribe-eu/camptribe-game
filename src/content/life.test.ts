@@ -15,7 +15,7 @@ import { loadContent } from '../../scripts/validator/load.mjs';
 import { LIFE } from './life';
 import { moves, progressKey } from './moves';
 import { runYearBot, type YearReport } from './life-bot';
-import { payCaseArb, payrollViolation } from './life-oracle.test.helpers';
+import { payCaseArb, payrollViolation, type PayCoverage } from './life-oracle.test.helpers';
 import { GAME_DEFS } from './slice-defs';
 import { CONTENT } from './story';
 
@@ -39,8 +39,14 @@ describe('контент календаря (DC-022, DC-026)', () => {
 });
 
 describe('№1 · зарплата кожного профілю — у визначений день, рівно раз (fast-check, 1 000 випадкових станів)', () => {
-  it('кожен крок приносить рівно (зарплата − рахунки) × перетнуті дні виплати; до персонажа — нічого', () => {
-    fc.assert(fc.property(payCaseArb(WHO), (c) => payrollViolation(GAME_DEFS, c, (s, i) => step(s, i, { defs: GAME_DEFS })) === null), { numRuns: 1000, seed: 2071 });
+  // Поїздки тут не перетинають північ: локації контенту відкриває сюжет (квести), а випадковий журнал його не проходить —
+  // шлях «дорога через день виплати» доводить ядро на каталозі з дорогами (src/core/life.test.ts), з числом покриття.
+  it('кожен крок приносить рівно (зарплата − рахунки) × перетнуті дні виплати; до персонажа — нічого; кадр через північ — теж', () => {
+    const seen: PayCoverage = { frame: 0, command: 0, advance: 0 };
+    fc.assert(fc.property(payCaseArb(WHO), (c) => payrollViolation(GAME_DEFS, c, (s, i) => step(s, i, { defs: GAME_DEFS }), seen) === null), { numRuns: 1000, seed: 2071 });
+    console.info(`GAME-71 оракул (контент): кроків із виплатою — кадр ${seen.frame}, команда ${seen.command}, перемотування ${seen.advance}`);
+    expect(seen.frame).toBeGreaterThan(20);
+    expect(seen.advance).toBeGreaterThan(20);
   });
 
   it('негативний контроль: подвійна виплата (той самий день платить двічі) — червоне', () => {

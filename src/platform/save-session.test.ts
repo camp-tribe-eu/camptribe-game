@@ -3,7 +3,9 @@ import { describe, expect, it } from 'vitest';
 import type { StoryDefs } from '../core/defs';
 import { stateHash } from '../core/hash';
 import { serialize } from '../core/save';
-import { STORY_DEFS } from '../core/story.fixture';
+import { LIFE_DEFS, STORY_DEFS } from '../core/story.fixture';
+import type { LifeDefs } from '../core/life';
+import v2 from '../../tests/saves/v2.json';
 import { newSim, type SimState } from '../core/sim';
 import { createSaveSession, type SessionBridge } from './save-session';
 import { staleKey } from './save-store';
@@ -257,5 +259,24 @@ describe('сесія сейвів: старт і гонки (GAME-33)', () => {
     expect(st.writes).toHaveLength(0);
     await s.save();                                 // явне «Зберегти» — рішення гравця
     expect(st.writes).toHaveLength(1);
+  });
+});
+
+describe('міграція v2 → v3 у сесії (рецензія GAME-71): календар доходить до fromSave', () => {
+  // Сейв v2 з опублікованої гри (main): поля life немає, годинник на дні 100 — три дні виплати вже минули.
+  const late = (() => {
+    const o = structuredClone(v2) as { checksum: string; sim: { clock: { minutes: number } } };
+    o.sim.clock.minutes = 100 * 1440;
+    o.checksum = stateHash(o.sim);
+    return JSON.stringify(o);
+  })();
+  it('з календарем: минулі дні виплати зараховано без грошей (paydays 3); без календаря — 0 (контроль)', async () => {
+    const b = fakeBridge();
+    const s = createSaveSession(b, { read: async () => [], write: async () => true }, { life: LIFE_DEFS.life as LifeDefs });
+    expect(await s.adopt(late)).toBe('ok');
+    expect(b.state.game.life).toEqual({ paydays: 3, leave: [] });
+    const b2 = fakeBridge();
+    expect(await createSaveSession(b2, { read: async () => [], write: async () => true }).adopt(late)).toBe('ok');
+    expect(b2.state.game.life.paydays).toBe(0);
   });
 });
