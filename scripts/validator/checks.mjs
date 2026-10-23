@@ -3,7 +3,7 @@
 // Не прибирай і не дублюй маркери — мутаційний прогін звіряє їх із реєстром CHECKS.
 
 import { checkSchema } from './schema.mjs';
-import { FACT_KINDS } from './codes.mjs';
+import { FACT_KINDS, FACT_STALE_DAYS, isWarning } from './codes.mjs';
 import { checkCombos, checkOptions, enumerateCombos, NO_ANIMAL } from './combos.mjs';
 
 const I = (code, where, msg) => ({ code, where, msg });
@@ -365,6 +365,22 @@ export const CHECKS = [
         if (!valid) out.push(I('FACT_DATE_INVALID', f.id, `дата перевірки «${d}» не є датою РРРР-ММ-ДД`));
         else if (d > c.today) out.push(I('FACT_DATE_INVALID', f.id, `дата перевірки ${d} у майбутньому (сьогодні ${c.today})`));
         if (!FACT_KINDS.includes(f.kind)) out.push(I('FACT_KIND_INVALID', f.id, `тип «${f.kind}» не з ${FACT_KINDS.join('|')}`));
+      }
+      return out;
+    },
+  },
+  {
+    // GAME-56: давно не звірений факт — попередження (FACT_STALE має severity 'warning').
+    // Зламану, порожню чи майбутню дату вже звітує fact-source; тут лише давність.
+    id: 'fact-stale',
+    run(c) { // @check:fact-stale
+      const out = [];
+      const now = Date.parse(`${c.today}T00:00:00Z`);
+      for (const f of c.content.facts ?? []) {
+        const then = typeof f.checkedAt === 'string' ? Date.parse(`${f.checkedAt}T00:00:00Z`) : NaN;
+        if (Number.isNaN(then)) continue;
+        const age = Math.round((now - then) / 86_400_000);
+        if (age > FACT_STALE_DAYS) out.push(I('FACT_STALE', f.id, `факт звірено ${age} дн. тому (поріг ${FACT_STALE_DAYS}) — перезвір джерело й онови checkedAt`));
       }
       return out;
     },
@@ -842,7 +858,8 @@ export function validate(content, { today }) {
   // Комбінації — лише на контенті, чистому в цілому: на зламаних посиланнях вони дублюють і
   // затуляють першопричину. Ціна: дефект комбінації видно після виправлення загального.
   // Обидві пізні перевірки біжать разом: знахідка однієї не ховає знахідку іншої.
-  const clean = issues.length === 0;
+  // Попередження (GAME-56) не бруднять контент: застарілий факт не вимикає перевірку комбінацій.
+  const clean = issues.every((i) => isWarning(i.code));
   for (const id of LATE) if (clean) issues.push(...runOne(rest.find((chk) => chk.id === id)));
   return issues;
 }

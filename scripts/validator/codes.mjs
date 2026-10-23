@@ -37,6 +37,8 @@ export const CODES = {
   FACT_SOURCE_MISSING:  { check: 'fact-source', spec: '§2 зовнішній факт має джерело' },
   FACT_DATE_INVALID:    { check: 'fact-source', spec: '§2 зовнішній факт має дату перевірки' },
   FACT_KIND_INVALID:    { check: 'fact-source', spec: '§2 зовнішній факт має тип' },
+  // GAME-56: давність — попередження, не помилка (severity: 'warning' — запуск не червоніє).
+  FACT_STALE:           { check: 'fact-stale', spec: 'GAME-56: факт, звірений понад FACT_STALE_DAYS днів тому, треба перезвірити', severity: 'warning' },
 
   // перевірник графа квестів, §3
   NODE_UNREACHABLE:     { check: 'reachable', spec: '§3 кожен вузол досяжний зі старту' },
@@ -68,3 +70,9 @@ export const CODES = {
 };
 
 export const FACT_KINDS = ['regulation', 'geography', 'price', 'schedule', 'culture'];
+
+// GAME-56: факт, звірений понад рік тому, — попередження. Чому 365, див. docs/CONTENT-VALIDATOR.md.
+export const FACT_STALE_DAYS = 365;
+
+// Попередження друкується як ::warning:: і не робить код виходу ненульовим; решта кодів — помилки.
+export const isWarning = (code) => CODES[code]?.severity === 'warning';

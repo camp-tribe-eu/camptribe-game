@@ -1,0 +1,7 @@
+[
+  { "id": "fact.nl-no-wild-camping", "claimKey": "fact.nl-no-wild-camping", "source": "https://www.natuurmonumenten.nl/kamperen", "checkedAt": "2026-10-23", "kind": "regulation" },
+  { "id": "fact.nl-signboard-rules", "claimKey": "fact.nl-signboard-rules", "source": "https://www.natuurmonumenten.nl/natuurgebieden/gebiedsregels", "checkedAt": "2026-10-23", "kind": "regulation" },
+  { "id": "fact.nl-sbb-pole-camping-closed", "claimKey": "fact.nl-sbb-pole-camping-closed", "source": "https://www.staatsbosbeheer.nl/wat-we-doen/nieuws/2020/05/sluiten-paalkampeerterreinen", "checkedAt": "2026-10-23", "kind": "regulation" },
+  { "id": "fact.be-vl-bivouac-zone", "claimKey": "fact.be-vl-bivouac-zone", "source": "https://natuurenbos.be/activiteiten/bivakzone", "checkedAt": "2026-10-23", "kind": "regulation" },
+  { "id": "fact.be-vl-fire-in-nature", "claimKey": "fact.be-vl-fire-in-nature", "source": "https://natuurenbos.be/een-kampvuur-maken-mag-dat", "checkedAt": "2026-10-23", "kind": "regulation" }
+]

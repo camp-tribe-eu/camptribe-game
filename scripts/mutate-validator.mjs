@@ -114,6 +114,11 @@ const mutations = [
   { name: '[пам’ять] формат id факту не перевіряється', file: CHECKS_FILE, from: 'if (!MEMORY_ID.test(f)) out.push', to: 'if (false) out.push' },
   { name: '[пам’ять] схема не знає ефекту remember', file: 'validator/schema.mjs', from: '  remember: obj({ remember: req(str) }),\n', to: '' },
   { name: 'посилання transports не перевіряються', file: CHECKS_FILE, from: "ref('transports', id, `${e.id}.transports`)", to: '0' },
+  // GAME-56: давність факту — попередження, не помилка
+  { name: '[факт] поріг давності включно (>= замість >)', file: CHECKS_FILE, from: 'if (age > FACT_STALE_DAYS)', to: 'if (age >= FACT_STALE_DAYS)' },
+  { name: '[факт] попередження рахується помилкою', file: 'validator/codes.mjs', from: "CODES[code]?.severity === 'warning'", to: 'false' },
+  { name: '[факт] попередження бруднить контент і вимикає комбінації', file: CHECKS_FILE, from: 'const clean = issues.every((i) => isWarning(i.code));', to: 'const clean = issues.length === 0;' },
+  { name: '[факт] вердикт: код виходу не залежить від помилок', file: 'validator/verdict.mjs', from: 'exitCode: errors.length ? 1 : 0', to: 'exitCode: 0' },
 ];
 
 function selfTestIn(dir) {

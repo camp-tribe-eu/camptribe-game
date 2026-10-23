@@ -258,6 +258,10 @@ export const FIXTURES = [
   { name: 'факт із датою в майбутньому', expect: ['FACT_DATE_INVALID'], patch(c) { c.facts[0].checkedAt = '2999-01-01'; } },
   { name: 'факт без дати', expect: ['FACT_DATE_INVALID'], patch(c) { delete c.facts[0].checkedAt; } },
   { name: 'факт без типу', expect: ['FACT_KIND_INVALID'], patch(c) { c.facts[0].kind = 'rumour'; } },
+  // GAME-56: давність факту. TODAY = 2026-10-22, поріг 365 днів; межа перевірена з обох боків.
+  { name: 'факт звірено рівно 365 днів тому — ще не застарів', expect: [], patch(c) { c.facts[0].checkedAt = '2025-10-22'; } },
+  { name: 'факт звірено 366 днів тому — попередження FACT_STALE', expect: ['FACT_STALE'], count: { code: 'FACT_STALE', n: 1 }, patch(c) { c.facts[0].checkedAt = '2025-10-21'; } },
+  { name: 'факт без джерела й застарілий — помилка й попередження разом', expect: ['FACT_SOURCE_MISSING', 'FACT_STALE'], patch(c) { delete c.facts[0].source; c.facts[0].checkedAt = '2020-01-01'; } },
 
   // ---- граф квестів ----
   { name: 'вузол, у який не веде жоден перехід', expect: ['NODE_UNREACHABLE'], patch(c) {
@@ -469,6 +473,13 @@ export const FIXTURES = [
   { base: 'combo', name: '[дороги] дорога в саму себе', expect: ['ROAD_SELF_LOOP'], patch(c) { c.roads.push({ id: 'road.camp-camp', from: 'loc.camp', to: 'loc.camp', twoWay: true, ways: [{ transport: T_CAR, minutes: 1, cents: 0 }] }); } },
   { base: 'combo', name: '[дороги] стартовий квест без місця', expect: ['ROAD_NO_HOME'], patch(c) { delete q(c, 'ST-001').locationId; } },
   { base: 'combo', name: '[дороги] транспорт, якого не дозволяє жоден профіль: лише COMBO_OPTION_UNUSABLE, без вимоги доріг', expect: ['COMBO_OPTION_UNUSABLE'], patch(c) {
+    c.transports.push({ id: 'transport.fixture-boat', nameKey: 'transport.fixture-boat' });
+    for (const lang of c.meta.locales) c.locales[lang]['transport.fixture-boat'] = `[${lang}] boat`;
+    for (const p of c.profiles) p.transports = [T_CAR, T_BIKE];
+  } },
+  // GAME-56: попередження не бруднить контент — пізня перевірка комбінацій усе одно біжить і червоніє.
+  { base: 'combo', name: '[факт] застарілий факт не вимикає перевірку комбінацій', expect: ['FACT_STALE', 'COMBO_OPTION_UNUSABLE'], patch(c) {
+    c.facts[0].checkedAt = '2024-01-01';
     c.transports.push({ id: 'transport.fixture-boat', nameKey: 'transport.fixture-boat' });
     for (const lang of c.meta.locales) c.locales[lang]['transport.fixture-boat'] = `[${lang}] boat`;
     for (const p of c.profiles) p.transports = [T_CAR, T_BIKE];

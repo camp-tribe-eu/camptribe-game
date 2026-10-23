@@ -7,6 +7,7 @@ import { isDeepStrictEqual } from 'node:util';
 import { CODES } from './codes.mjs';
 import { CHECKS, validate } from './checks.mjs';
 import { loadContent } from './load.mjs';
+import { verdict } from './verdict.mjs';
 import { COLLECTIONS } from './schema.mjs';
 import { baseline, comboBaseline, FIXTURES, FILE_FIXTURES, TODAY } from './fixtures.mjs';
 
@@ -100,12 +101,24 @@ export function selfTest() {
     } finally { rmSync(root, { recursive: true, force: true }); }
   }
 
+  // 3a. Код виходу (GAME-56): попередження не валить запуск, помилка валить — і разом із попередженням теж.
+  {
+    const run = (patch) => { const c = baseline(); patch(c); return verdict(validate(c, { today: TODAY })); };
+    const stale = run((c) => { c.facts[0].checkedAt = '2025-10-21'; });
+    const both = run((c) => { c.facts[0].checkedAt = '2025-10-21'; delete c.facts[0].source; });
+    const fine = run(() => {});
+    const got = [stale.exitCode, stale.warnings.length, both.exitCode, both.errors.length, fine.exitCode];
+    report(isDeepStrictEqual(got, [0, 1, 1, 1, 0]),
+      'код виходу: попередження → 0, помилка з попередженням → 1, чисто → 0',
+      `[код, попереджень] застарілий ${got.slice(0, 2)}; [код, помилок] без джерела ${got.slice(2, 4)}; чистий ${got[4]}`);
+  }
+
   // 4. Покриття: кожен код (крім INTERNAL_ERROR) хоч раз спрацював там, де його чекали.
   const uncovered = Object.keys(CODES).filter((c) => c !== 'INTERNAL_ERROR' && !covered.has(c));
   report(uncovered.length === 0, 'кожен код має зламаний приклад, на якому він спрацював', `без доказу: ${uncovered.join(', ')}`);
 
   // 5. Звірка числа прогонів із базою: набір, що обірвався, не сміє виглядати як пройдений.
-  const expected = 1 + 2 + FIXTURES.length + FILE_FIXTURES.length + 1; // інвентар, 2 звірки count, приклади, покриття
+  const expected = 1 + 2 + FIXTURES.length + FILE_FIXTURES.length + 1 + 1; // інвентар, 2 звірки count, приклади, код виходу, покриття
   const before = ran;
   report(before === expected, `до звірки виконано ${before} кроків із ${expected} очікуваних`, 'набір обірвався або пропустив приклади');
 
