@@ -87,7 +87,11 @@ jobs:
                 # GAME-56: звірка факту зі сторінкою першоджерела — видимий текст у лог (цитата для checkedAt),
                 # у репозиторій нічого не комітиться. Порожній текст — збій, а не «нічого не сказано» (закон 4).
                 url="${src#page:}"
-                curl -sfL -A 'Mozilla/5.0 (camptribe-game research-fetch)' "$url" -o "$d/page.html" || { echo "::error::$name: $url недоступна"; fail=1; continue; }
+                code=$(curl -sL -A 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0 Safari/537.36' \
+                  -H 'Accept: text/html,application/xhtml+xml' -H 'Accept-Language: nl,en;q=0.8' \
+                  -w '%{http_code}' "$url" -o "$d/page.html") || code=000
+                echo "$name: HTTP $code, $(wc -c < "$d/page.html" 2>/dev/null || echo 0) байт"
+                [ "$code" = 200 ] || { echo "::error::$name: $url → HTTP $code"; fail=1; continue; }
                 echo "$url" > "$d/SOURCE.txt"
                 python3 - "$d/page.html" > "$d/text.txt" <<'PY'
           import re,sys,html
@@ -98,7 +102,8 @@ jobs:
           lines=[re.sub(r'[ \t\u00a0]+',' ',l).strip() for l in t.split('\n')]
           print('\n'.join(l for l in lines if len(l)>2))
           PY
-                [ -s "$d/text.txt" ] || { echo "::error::$name: текст сторінки порожній"; fail=1; continue; }
+                # Порожнє тіло дає файл з одного переносу рядка — -s його пропускав (sha256 e3b0c442… у прогоні 39896865650).
+                grep -q '[[:alnum:]]' "$d/text.txt" || { echo "::error::$name: текст сторінки порожній"; fail=1; continue; }
                 echo "::group::$name · $url · sha256 $(sha256sum "$d/page.html" | cut -c1-16) · $(date -u +%F)"
                 head -c 12000 "$d/text.txt"; echo
                 echo "::endgroup::"
