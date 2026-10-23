@@ -6,14 +6,16 @@
     {
       "id": "hello", "speaker": "npc", "textKey": "dlg.elise-greeting.hello",
       "choices": [
-        { "textKey": "dlg.elise-greeting.hello.c1", "next": "bike", "when": { "all": [{ "transport": "transport.bike" }, { "notRemembers": "m.came-by-bike" }, { "notFlag": "f.elise-met" }] }, "effects": [{ "setFlag": "f.elise-met" }, { "remember": "m.came-by-bike" }] },
+        { "textKey": "dlg.elise-greeting.hello.c1", "next": "bike", "when": { "all": [{ "transport": "transport.bike" }, { "notRemembers": "m.came-by-bike" }, { "notFlag": "f.elise-met" }] }, "effects": [{ "setFlag": "f.elise-met" }, { "remember": "m.came-by-bike" }, { "completeObjective": { "quest": "q.elise-bike-area", "objective": "talk-elise" } }] },
         { "textKey": "dlg.elise-greeting.hello.c2", "next": "intro", "when": { "notFlag": "f.elise-met" }, "effects": [{ "setFlag": "f.elise-met" }] },
         { "textKey": "dlg.elise-greeting.hello.c3", "next": "shelter", "when": { "remembers": "m.came-by-bike" } },
         { "textKey": "dlg.elise-greeting.hello.c4", "next": "spot", "when": { "flag": "f.elise-met" } },
-        { "textKey": "dlg.elise-greeting.hello.c5", "next": "bye" }
+        { "textKey": "dlg.elise-greeting.hello.c5", "next": "bye" },
+        { "textKey": "dlg.elise-greeting.hello.c6", "next": "bike-late", "when": { "all": [{ "transport": "transport.bike" }, { "quest": "q.elise-bike-area", "status": "active" }, { "notRemembers": "m.came-by-bike" }, { "flag": "f.elise-met" }] }, "effects": [{ "remember": "m.came-by-bike" }, { "completeObjective": { "quest": "q.elise-bike-area", "objective": "talk-elise" } }] }
       ]
     },
     { "id": "bike", "speaker": "npc", "textKey": "dlg.elise-greeting.bike", "next": "intro" },
+    { "id": "bike-late", "speaker": "npc", "textKey": "dlg.elise-greeting.bike", "next": "spot" },
     { "id": "intro", "speaker": "npc", "textKey": "dlg.elise-greeting.intro", "next": "spot" },
     { "id": "shelter", "speaker": "npc", "textKey": "dlg.elise-greeting.shelter", "next": "bye" },
     {

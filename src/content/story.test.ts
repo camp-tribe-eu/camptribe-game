@@ -147,7 +147,7 @@ describe('збірка сюжету з content/ (src/content/story.ts)', () => {
     expect(files.length).toBeGreaterThan(0);
     expect(Object.keys(STORY.dialogues).sort()).toEqual(files.map((f) => `dlg.${f.replace(/^.*\/|\.json$/g, '')}`).sort());
     const hello = STORY.dialogues['dlg.elise-greeting']?.nodes['hello'];
-    expect(hello?.choices?.[0]).toEqual({ next: 'bike', when: { all: [{ transport: 'transport.bike' }, { notRemembers: 'm.came-by-bike' }, { notFlag: 'f.elise-met' }] }, effects: [{ setFlag: 'f.elise-met' }, { remember: 'm.came-by-bike' }] });
+    expect(hello?.choices?.[0]).toEqual({ next: 'bike', when: { all: [{ transport: 'transport.bike' }, { notRemembers: 'm.came-by-bike' }, { notFlag: 'f.elise-met' }] }, effects: [{ setFlag: 'f.elise-met' }, { remember: 'm.came-by-bike' }, { completeObjective: { quest: 'q.elise-bike-area', objective: 'talk-elise' } }] }); // GAME-87: велозону закриває лише ця відповідь
     // GAME-84 №5: «знайомство» — лише тому, хто ще не знайомий; прапорець/пам'ять доходять до ядра як є
     expect(hello?.choices?.[1]).toEqual({ next: 'intro', when: { notFlag: 'f.elise-met' }, effects: [{ setFlag: 'f.elise-met' }] });
     expect(hello?.choices?.[3]).toEqual({ next: 'spot', when: { flag: 'f.elise-met' }, effects: [] });

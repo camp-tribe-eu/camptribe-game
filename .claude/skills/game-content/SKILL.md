@@ -104,7 +104,7 @@ GDD — приватний (`brain/Передача/00-dzherelo-lezhyt-lokalno.m
 | `facts.json` | **`id`**, **`claimKey`**, `source`, `checkedAt`, `kind` | `fact.de-quiet-hours` |
 
 * **Ціль квесту:** **`id`** (`pitch-tent` — без крапок, лише `a-z0-9` і `-`), **`textKey`**,
-  **`kind`** (`talk` → `target` NPC; `visit` → локація; `collect` / `deliver` → предмет; `deliver`
+  **`kind`** (`talk` → `target` NPC, `byDialogue: true` — не зараховувати саму розмову, лише репліку з `completeObjective`; `visit` → локація; `collect` / `deliver` → предмет; `deliver`
   ще й **`npcId`** отримувача), **`target`**, **`required`**, `when`.
   ⚠️ **Ціль `visit` зараховується одразу, якщо гравець уже стоїть у `target`** у мить, коли квест
   стає активним (GAME-84, `markHere` у `src/core/story.ts`; позначає всі активні квести). Тож «повернись
@@ -233,6 +233,9 @@ GDD — приватний (`brain/Передача/00-dzherelo-lezhyt-lokalno.m
 - `MEMORY_NEVER_SET` — умова `remembers`/`notRemembers` (також усередині `all`/`any`) читає факт, який жоден здійсненний `remember` у розмові з ЦИМ САМИМ NPC не ставить: сетера немає, він в іншого NPC, у події в дорозі або за умовою, що сама вимагає цей факт. Не допустити: спершу дай відповіді в діалозі цього NPC ефект `{ "remember": "m.x" }` (без `when` або з умовою, здійсненною без `m.x`), потім умову; звір id факту дослівно.
 - `DIALOGUE_QUEST_GATE` — ефект `startQuest` стартує квест, чиї `requires.quests` не гарантовано завершені там, де NPC доступний (напр. фінальний квест прямо з привітання). Не допустити: додай у `when` вибору `{ "quest": "<вимога>", "status": "completed" }` (сам або в `all`, не в `any`), або відкривай NPC (`unlockedBy`) лише після цього квесту.
 - `DIALOGUE_OBJECTIVE_KIND` — `completeObjective` закриває ціль не типу `talk` або `talk` з іншим NPC, ніж власник діалогу. Не допустити: розмовою закривай лише ціль `"kind": "talk"`, чий `target` дорівнює `npcId` цього діалогу; `visit`/`collect`/`deliver` закриває світ, а не репліка.
+- `OBJECTIVE_BY_DIALOGUE_KIND` — `"byDialogue": true` на цілі не типу `talk`. Не допустити: прапорець лише для `talk`; `visit`/`collect` закриває світ.
+- `OBJECTIVE_BY_DIALOGUE_OPEN` — ціль `byDialogue` без жодної репліки з `completeObjective` на неї: розмова її не зараховує, тож вона недосяжна. Не допустити: додай `completeObjective` у вибір потрібної гілки.
+- `OBJECTIVE_BY_DIALOGUE_ALWAYS` — `completeObjective` цілі `byDialogue` лежить на кожному шляху діалогу до кінця: це знову «будь-яка розмова». Не допустити: став ефект лише на вибір потрібної гілки, лишай шлях до `end` повз нього (GAME-87: «Нова велозона» — лише гілка про велосипед).
 - `DIALOGUE_NPC_DUPLICATE` — два діалоги з однаковим `npcId`; рушій не знає, який запускати. Не допустити: один файл діалогу на NPC; нова тема розмови — нові вузли й умовні вибори в наявному діалозі.
 - `DIALOGUE_FILE_NAME` — `id` діалогу не збігається з назвою файлу (`dialogue/elise-greeting.json` мусить мати `"id": "dlg.elise-greeting"`). Не допустити: перейменовуєш діалог — перейменуй і файл, і `id` разом; назву файлу бери з `id` без префікса `dlg.`.
 
