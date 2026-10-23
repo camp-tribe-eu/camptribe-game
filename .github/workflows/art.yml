@@ -40,6 +40,11 @@ jobs:
         run: |
           git config user.name "art-bot"
           git config user.email "noreply@anthropic.com"
-          git add art/out
-          git diff --staged --quiet || git commit -m "art: ${{ inputs.request }}"
-          git push
+          # art/out/ у .gitignore (щоб локальні проби не потрапляли випадково) — workflow додає його свідомо, -f.
+          # Перший прогін (39900103148) згенерував, але впав тут: «paths are ignored».
+          git add -f art/out
+          git diff --staged --quiet && { echo "::error::нічого не згенеровано — коміту немає"; exit 1; }
+          git commit -m "art: ${{ inputs.request }}"
+          # Гілку могли посунути, поки йшла генерація.
+          git pull --rebase origin "${GITHUB_REF_NAME}"
+          git push origin "HEAD:${GITHUB_REF_NAME}"
