@@ -76,8 +76,17 @@ export interface DialogueNodeDef {
   readonly choices?: readonly { readonly next: string; readonly when?: CondDef; readonly effects: readonly EffectDef[] }[];
 }
 
+/** Подія в дорозі (GAME-31): діалог без NPC, що відкривається сам — з шансом, після приїзду в одну з локацій `at`. */
+export interface EventTriggerDef {
+  readonly at: readonly string[];
+  /** Відсоток 1…100. Лише 100 — «гарантовано»: доказ «тупиків немає» не покладається на везіння (SIM-EV-003). */
+  readonly chance: number;
+}
+
+/** Діалог має рівно одного «власника»: NPC (розмова) або trigger (подія в дорозі). */
 export interface DialogueDef {
-  readonly npcId: string;
+  readonly npcId?: string;
+  readonly trigger?: EventTriggerDef;
   readonly start: string;
   readonly nodes: Readonly<Record<string, DialogueNodeDef>>;
 }
@@ -186,8 +195,15 @@ function checkStory(st: StoryDefs): { code: DefsCode; where: string }[] {
   }
   const npcsWithDialogue = new Set<string>();
   for (const [id, d] of Object.entries(st.dialogues)) {
-    if (!has(st.npcs, d.npcId) || npcsWithDialogue.has(d.npcId)) out.push({ code: 'DEFS_BAD_REF', where: `${id}.npcId` });
-    npcsWithDialogue.add(d.npcId);
+    if ((d.npcId === undefined) === (d.trigger === undefined)) out.push({ code: 'DEFS_BAD_REF', where: `${id}: exactly one of npcId or trigger` });
+    if (d.npcId !== undefined) {
+      if (!has(st.npcs, d.npcId) || npcsWithDialogue.has(d.npcId)) out.push({ code: 'DEFS_BAD_REF', where: `${id}.npcId` });
+      npcsWithDialogue.add(d.npcId);
+    }
+    if (d.trigger) {
+      if (d.trigger.at.length === 0 || d.trigger.at.some((l) => !has(st.locations, l))) out.push({ code: 'DEFS_BAD_REF', where: `${id}.trigger.at` });
+      if (!Number.isSafeInteger(d.trigger.chance) || d.trigger.chance < 1 || d.trigger.chance > 100) out.push({ code: 'DEFS_BAD_AMOUNT', where: `${id}.trigger.chance` });
+    }
     if (!has(d.nodes, d.start)) out.push({ code: 'DEFS_BAD_REF', where: `${id}.start` });
     for (const [nid, n] of Object.entries(d.nodes)) {
       for (const next of [n.next, ...(n.choices ?? []).map((c) => c.next)]) if (!has(d.nodes, next)) out.push({ code: 'DEFS_BAD_REF', where: `${id}/${nid}→${String(next)}` });

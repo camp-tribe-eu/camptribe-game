@@ -25,7 +25,12 @@ export type StoryCommand =
   /** Обрати репліку відкритого діалогу: індекс у `choices` вузла (не серед видимих — UI знає умови). */
   | { readonly type: 'Choose'; readonly commandId: string; readonly choice: number }
   /** Далі: вузол із `next` — до наступного, вузол із `end` — закрити розмову. */
-  | { readonly type: 'Continue'; readonly commandId: string };
+  | { readonly type: 'Continue'; readonly commandId: string }
+  /**
+   * Подія в дорозі (GAME-31): відкрити діалог-подію. Шле її НЕ гравець, а симуляція після приїзду (кидок
+   * RNG у sim.step); ядро лише перевіряє, що подія доречна. Повний перебір має її серед можливих ходів.
+   */
+  | { readonly type: 'RoadEvent'; readonly commandId: string; readonly eventId: string };
 
 export interface StoryDraft {
   moneyCents: number;
@@ -107,6 +112,19 @@ export function route(st: StoryDefs, from: string | null, to: string, transport:
       if (!old || cand.minutes < old.minutes || (cand.minutes === old.minutes && cand.cents < old.cents)) best.set(to, cand);
     }
   }
+}
+
+/** Прапорець «подія вже була» — подія в дорозі трапляється раз; вміст може читати його в умовах (notFlag). */
+export const eventSeenFlag = (eventId: string): string => `f.seen-${eventId.replace(/^dlg\./, '')}`;
+
+/** Чи може подія відкритись зараз: гравець є, розмови немає, він у локації з `at`, події ще не було. */
+export function eventEligible(st: StoryDefs, d: { readonly player: PlayerState | null; readonly flags: readonly string[]; readonly dialogue: StoryDraft['dialogue'] }, eventId: string): boolean {
+  const ev = own(st.dialogues, eventId);
+  const p = d.player;
+  if (!ev?.trigger || !p || p.locationId === null) return false;
+  const open = d.dialogue ? own(st.dialogues, d.dialogue.id) : undefined;
+  if (d.dialogue && open && own(open.nodes, d.dialogue.node)) return false; // жива розмова (зависла — не заважає, як у liveDialogue)
+  return ev.trigger.at.includes(p.locationId) && !d.flags.includes(eventSeenFlag(eventId));
 }
 
 /** Цілі квесту, що існують для цього гравця. */
@@ -276,6 +294,16 @@ export function applyStory(cmd: StoryCommand, d: StoryDraft, st: StoryDefs | und
       mark(st, d, p, 'talk', cmd.npcId);
       const dlg = Object.entries(st.dialogues).find(([, x]) => x.npcId === cmd.npcId);
       if (dlg) d.dialogue = { id: dlg[0], node: dlg[1].start };
+      return null;
+    }
+    case 'RoadEvent': {
+      if (!isId(cmd.eventId)) return 'INVALID_COMMAND';
+      const ev = own(st.dialogues, cmd.eventId);
+      if (!ev?.trigger) return 'UNKNOWN_TARGET';
+      if (liveDialogue(st, d)) return 'IN_DIALOGUE';
+      if (!eventEligible(st, d, cmd.eventId)) return 'CONDITION_FAILED';
+      d.flags = [...d.flags, eventSeenFlag(cmd.eventId)].sort();
+      d.dialogue = { id: cmd.eventId, node: ev.start };
       return null;
     }
     case 'Choose':

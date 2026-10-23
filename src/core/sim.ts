@@ -5,7 +5,7 @@ import { advance, newClock, pause, resume, tick, type GameClock } from './clock'
 import { dispatch, type Command } from './commands';
 import { EMPTY_DEFS, type CoreDefs } from './defs';
 import { canonical } from './hash';
-import { route } from './story';
+import { eventEligible, route } from './story';
 import { nextInt, seedRng, type RngState } from './rng';
 import { initialState, type GameState } from './state';
 
@@ -28,7 +28,7 @@ export interface JournalEntry {
 }
 
 /** Команди, що потрапляють у журнал. Розмова, вибір реплік і «далі» — ні: це не події подорожі. */
-export const JOURNAL_TYPES = ['CreateCharacter', 'Visit', 'Pickup', 'BuyItem', 'SellItem', 'Interact', 'CompleteQuest', 'DeclineQuest'] as const;
+export const JOURNAL_TYPES = ['CreateCharacter', 'Visit', 'Pickup', 'BuyItem', 'SellItem', 'Interact', 'CompleteQuest', 'DeclineQuest', 'RoadEvent'] as const;
 export type JournalType = (typeof JOURNAL_TYPES)[number];
 export const isJournalType = (t: unknown): t is JournalType => (JOURNAL_TYPES as readonly unknown[]).includes(t);
 
@@ -45,7 +45,7 @@ export const changedGame = (a: GameState, b: GameState): boolean =>
 
 function refOf(c: Command): string | null {
   const r = c as unknown as Record<string, unknown>;
-  const v = r.questId ?? r.locationId ?? r.itemId ?? r.targetId ?? r.profileId;
+  const v = r.questId ?? r.locationId ?? r.itemId ?? r.targetId ?? r.profileId ?? r.eventId;
   return typeof v === 'string' ? v : null;
 }
 
@@ -59,6 +59,24 @@ function travelMinutes(before: GameState, r: ReturnType<typeof dispatch>, defs: 
   const to = r.ok ? r.state.player?.locationId ?? null : null;
   if (!st || !r.ok || r.repeated || to === null || from === to || !before.player) return 0;
   return route(st, from, to, before.player.transportId)?.minutes ?? 0;
+}
+
+/**
+ * Подія в дорозі (GAME-31): після приїзду — один кидок RNG стану серед подій, доречних тут (eventEligible),
+ * за накопиченим шансом. Випала — ядро отримує команду RoadEvent з id `<id приїзду>.ev`: похідна від журналу
+ * входів, тож реплей і сейв відтворюються без нових полів стану. Кандидатів немає — кидка немає.
+ */
+function roadEvent(s: SimState, visitId: string, ctx: StepCtx): SimState {
+  const st = ctx.defs?.story;
+  if (!st) return s;
+  const candidates = Object.keys(st.dialogues).sort().filter((id) => eventEligible(st, s.game, id));
+  if (candidates.length === 0) return s;
+  const roll = nextInt(s.rng, 100);
+  let acc = 0;
+  const hit = candidates.find((id) => (acc += st.dialogues[id]?.trigger?.chance ?? 0) > roll.value);
+  const rolled: SimState = { ...s, rng: roll.state };
+  if (!hit) return rolled;
+  return step(rolled, { kind: 'command', command: { type: 'RoadEvent', commandId: `${visitId}.ev`, eventId: hit } }, ctx);
 }
 
 export type Input =
@@ -105,9 +123,12 @@ export function step(s: SimState, input: Input, ctx: StepCtx = {}): SimState {
       if (travelled > 0) s = { ...s, clock: advance(s.clock, travelled) };
       // Рівно один запис на прийняту нову команду з переліку, що щось змінила в грі. Відмова, повтор
       // commandId і «порожня» дія (прийти туди, де стоїш; вдруге погрітись біля вогнища) — нуль.
-      if (!r.ok || r.repeated || !isJournalType(input.command.type) || !changedGame(s.game, r.state)) return { ...s, game: r.state };
-      const entry: JournalEntry = { at: s.clock.minutes - travelled, commandId: input.command.commandId, type: input.command.type, ref: refOf(input.command) };
-      return { ...s, game: r.state, journal: [...s.journal, entry].slice(-JOURNAL_LIMIT) };
+      let next: SimState = { ...s, game: r.state };
+      if (r.ok && !r.repeated && isJournalType(input.command.type) && changedGame(s.game, r.state)) {
+        const entry: JournalEntry = { at: s.clock.minutes - travelled, commandId: input.command.commandId, type: input.command.type, ref: refOf(input.command) };
+        next = { ...next, journal: [...s.journal, entry].slice(-JOURNAL_LIMIT) };
+      }
+      return travelled > 0 ? roadEvent(next, input.command.commandId, ctx) : next;
     }
     case 'advance':
       return { ...s, clock: advance(s.clock, input.minutes) };

@@ -60,5 +60,6 @@
   "touch.left": "Left",
   "touch.right": "Right",
   "touch.interact": "Act",
-  "ui.minutes": "min"
+  "ui.minutes": "min",
+  "jr.RoadEvent": "On the road"
 }

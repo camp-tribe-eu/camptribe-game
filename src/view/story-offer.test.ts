@@ -30,9 +30,13 @@ function create(intent: Move): GameState {
 }
 
 /** Взаємодії сцени (об'єкт поруч на мапі) — гравець може зробити їх будь-коли, навіть посеред розмови. */
-const sceneMoves = (s: GameState): { move: Move; next: GameState }[] => Object.keys(DEFS.interactions).flatMap((targetId) => {
-  const r = dispatch(s, { type: 'Interact', targetId, commandId: `i${s.seq}` } as Command, DEFS);
-  return r.ok ? [{ move: { type: 'Interact', targetId } as Move, next: r.state }] : [];
+const sceneMoves = (s: GameState): { move: Move; next: GameState }[] => [
+  ...Object.keys(DEFS.interactions).map((targetId) => ({ type: 'Interact', targetId }) as Move),
+  // Подія в дорозі — хід симуляції (GAME-31): у стан після неї заходимо, але кінець має бути досяжний меню.
+  ...Object.entries(DEFS.story?.dialogues ?? {}).filter(([, d]) => d.trigger).map(([eventId]) => ({ type: 'RoadEvent', eventId }) as Move),
+].flatMap((move) => {
+  const r = dispatch(s, { ...move, commandId: `i${s.seq}` } as Command, DEFS);
+  return r.ok ? [{ move, next: r.state }] : [];
 });
 
 /**

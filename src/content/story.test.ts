@@ -13,7 +13,7 @@ import { buildIndex } from '../../scripts/validator/checks.mjs';
 import { enumerateCombos, project } from '../../scripts/validator/combos.mjs';
 import { GAME_DEFS } from './slice-defs';
 import { CONTENT, STORY, compileStory } from './story';
-import { moves as allMoves, type Move } from './moves';
+import { isLuckMove, moves as allMoves, type Move } from './moves';
 import { checkDefs, type CoreDefs } from '../core/defs';
 import { route } from '../core/story';
 
@@ -38,7 +38,7 @@ function explore(first: GameState) {
       const r = dispatch(s, { ...m, commandId: nextCommandId(s) } as Command, DEFS);
       if (!r.ok) continue;
       const nk = key(r.state);
-      edges.get(k)?.add(nk);
+      if (!isLuckMove(m, DEFS)) edges.get(k)?.add(nk);   // у стан після везіння заходимо, але шлях до кінця — без нього
       if (!seen.has(nk)) { seen.set(nk, r.state); queue.push(r.state); }
     }
     if (seen.size > 200_000) throw new Error('простір станів вибухнув — тест не доводить нічого');

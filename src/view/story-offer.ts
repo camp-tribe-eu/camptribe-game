@@ -100,7 +100,7 @@ export function menuMoves(s: GameState, defs: CoreDefs): { move: Move; next: Gam
   const seen = new Set<string>();
   const out: { move: Move; next: GameState }[] = [];
   for (const m of moves(s, defs)) {
-    if (m.type === 'Interact') continue;
+    if (m.type === 'Interact' || m.type === 'RoadEvent') continue; // справа сцени й симуляції, не меню
     if (talking && m.type !== 'Choose' && m.type !== 'Continue') continue;
     const next = tryMove(s, m, defs);
     if (!next) continue;

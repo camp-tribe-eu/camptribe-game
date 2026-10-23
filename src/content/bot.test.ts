@@ -3,7 +3,9 @@ import { beforeAll, describe, expect, it } from 'vitest';
 import type { CoreDefs } from '../core/defs';
 import { nextInt, seedRng } from '../core/rng';
 import { enumerateCombos } from '../../scripts/validator/combos.mjs';
-import { runBot, uncoveredPairs, variantsFor, type BotRun, type EndMemo, type Variant } from './bot';
+import { endReachable, runBot, uncoveredPairs, variantsFor, type BotRun, type EndMemo, type Variant } from './bot';
+import { dispatch } from '../core/commands';
+import { initialState } from '../core/state';
 import { GAME_DEFS } from './slice-defs';
 import { CONTENT, compileStory } from './story';
 
@@ -81,5 +83,40 @@ describe('навмисно зламаний квест (вимкнений пе�
 
   it('виправлений (справжній) контент — тупиків 0 (той самий запуск зеленіє)', () => {
     expect(campaign(GAME_DEFS, 300, SEED).filter((r) => r.verdict === 'softlock')).toEqual([]);
+  });
+});
+
+// GAME-31 · SIM-EV-003: кінець розділу не сміє триматись на везінні. Подія з шансом < 100 — хід середовища:
+// у стан після неї пошук заходить, але «кінець досяжний» без неї. Гарантована (100) — рахується.
+describe('кінець без удачі (SIM-EV-003)', () => {
+  const luckOnly = (chance: number): CoreDefs => ({
+    items: {}, interactions: {},
+    story: {
+      start: 'q.end', profiles: { 'profile.a': {} }, transports: ['transport.bike'], animals: {},
+      locations: { 'loc.a': { items: [] }, 'loc.b': { items: [] } },
+      npcs: { 'npc.far': { locationId: 'loc.b', unlockedBy: 'q.never' } },
+      quests: {
+        'q.end': { optional: false, end: true, locationId: 'loc.a', objectives: [{ id: 'luck', kind: 'talk', target: 'npc.far', required: true }], transitions: [] },
+        'q.never': { optional: false, end: false, objectives: [{ id: 'x', kind: 'visit', target: 'loc.a', required: true }], transitions: [] },
+      },
+      dialogues: {
+        'dlg.ev-luck': { trigger: { at: ['loc.b'], chance }, start: 'n', nodes: { n: { choices: [{ next: 'e', effects: [{ completeObjective: { quest: 'q.end', objective: 'luck' } }] }] }, e: { end: true } } },
+      },
+      roads: [
+        { from: 'loc.a', to: 'loc.b', ways: { 'transport.bike': { minutes: 5, cents: 0 } } },
+        { from: 'loc.b', to: 'loc.a', ways: { 'transport.bike': { minutes: 5, cents: 0 } } },
+      ],
+    },
+  });
+  const start = (defs: CoreDefs) => {
+    const r = dispatch(initialState(0), { type: 'CreateCharacter', commandId: 'c0', profileId: 'profile.a', transportId: 'transport.bike' }, defs);
+    if (!r.ok) throw new Error(r.code);
+    return r.state;
+  };
+  it('кінець лише через подію з шансом 50 % — недосяжний (червоне, як і має бути)', () => {
+    expect(endReachable(start(luckOnly(50)), luckOnly(50), new Map(), 10_000)).toBe(false);
+  });
+  it('позитивний контроль: та сама подія гарантована (100 %) — кінець досяжний', () => {
+    expect(endReachable(start(luckOnly(100)), luckOnly(100), new Map(), 10_000)).toBe(true);
   });
 });

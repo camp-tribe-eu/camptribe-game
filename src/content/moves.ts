@@ -11,6 +11,8 @@ export function moves(s: GameState, defs: CoreDefs): Move[] {
   const out: Record<string, unknown>[] = [];
   for (const id of Object.keys(st.locations)) out.push({ type: 'Visit', locationId: id });
   for (const id of Object.keys(st.npcs)) out.push({ type: 'Talk', npcId: id });
+  // Подія в дорозі — хід СЕРЕДОВИЩА (кидок симуляції), а не гравця: перебір бачить і «сталась», і «ні».
+  for (const [id, d] of Object.entries(st.dialogues)) if (d.trigger) out.push({ type: 'RoadEvent', eventId: id });
   if (s.dialogue) {
     const node = st.dialogues[s.dialogue.id]?.nodes[s.dialogue.node];
     (node?.choices ?? []).forEach((_, i) => out.push({ type: 'Choose', choice: i }));
@@ -30,4 +32,12 @@ export function moves(s: GameState, defs: CoreDefs): Move[] {
     }
   }
   return out as Move[];
+}
+
+/**
+ * Хід, що залежить від везіння (SIM-EV-003): подія в дорозі з шансом < 100. Перебір проходить і в стани
+ * після неї, але шлях до кінця розділу не сміє на неї покладатись — кінець мусить бути досяжним без удачі.
+ */
+export function isLuckMove(m: Move, defs: CoreDefs): boolean {
+  return m.type === 'RoadEvent' && (defs.story?.dialogues[m.eventId]?.trigger?.chance ?? 0) < 100;
 }

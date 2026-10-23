@@ -60,5 +60,6 @@
   "touch.left": "Ліворуч",
   "touch.right": "Праворуч",
   "touch.interact": "Дія",
-  "ui.minutes": "хв"
+  "ui.minutes": "хв",
+  "jr.RoadEvent": "Подія в дорозі"
 }

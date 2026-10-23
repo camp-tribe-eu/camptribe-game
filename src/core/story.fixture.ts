@@ -117,3 +117,18 @@ export const ROAD_DEFS: CoreDefs = {
     ],
   },
 };
+
+/** Дороги + подія в дорозі (GAME-31): у крамниці з шансом 50 % — «дощ», одна відповідь, кінець. */
+export const EVENT_DEFS: CoreDefs = {
+  ...ROAD_DEFS,
+  story: {
+    ...(ROAD_DEFS.story as NonNullable<CoreDefs['story']>),
+    dialogues: {
+      ...(ROAD_DEFS.story as NonNullable<CoreDefs['story']>).dialogues,
+      'dlg.ev-rain': {
+        trigger: { at: ['loc.shop'], chance: 50 }, start: 'rain',
+        nodes: { rain: { choices: [{ next: 'bye', effects: [{ setFlag: 'f.wet' }] }] }, bye: { end: true } },
+      },
+    },
+  },
+};
