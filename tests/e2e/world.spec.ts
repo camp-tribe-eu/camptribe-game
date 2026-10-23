@@ -25,20 +25,29 @@ async function holdKey(page: Page, key: string, until: (p: Probe) => boolean, ma
   return probe(page);
 }
 
+/** Куди відвести ручку джойстика від центру (CSS px; радіус основи 68, мертва зона 17) — по одному вектору на напрямок. */
+const STICK_OFFSETS: Readonly<Record<string, [number, number]>> = {
+  up: [0, -50], down: [0, 50], left: [-50, 0], right: [50, 0],
+  'up-left': [-36, -36], 'up-right': [36, -36], 'down-left': [-36, 36], 'down-right': [36, 36],
+};
+
 /**
- * Утримати дотикову кнопку СПРАВЖНІМ дотиком: CDP Input.dispatchTouchEvent іде через вхідний конвеєр
- * браузера з перевіркою влучання — кнопка під іншим елементом чи з pointer-events: none не спрацює.
+ * Утримати дотиковий елемент СПРАВЖНІМ дотиком: CDP Input.dispatchTouchEvent іде через вхідний конвеєр
+ * браузера з перевіркою влучання — елемент під іншим чи з pointer-events: none не спрацює.
  * (Рецензія PR #13: dispatchEvent на кнопці обходив перевірку влучання, тест був сліпим.)
- * false — кнопки не видно, прохід неможливий.
+ * `action`: 'interact' — кругла кнопка дії; будь-який із STICK_OFFSETS — дотик у центр джойстика й відведення ручки (GAME-91).
+ * false — елемента не видно, прохід неможливий.
  */
 async function holdTouch(page: Page, action: string, until: (p: Probe) => boolean, maxMs = 4000): Promise<boolean> {
-  const btn = page.locator(`[data-touch="${action}"]`);
+  const offset = STICK_OFFSETS[action];
+  const btn = page.locator(offset ? '[data-touch="stick"]' : `[data-touch="${action}"]`);
   if (!(await btn.isVisible())) return false;
   const box = await btn.boundingBox();
   if (!box) return false;
   const cdp = await page.context().newCDPSession(page);
-  const point = { x: box.x + box.width / 2, y: box.y + box.height / 2 };
-  await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [point] });
+  const center = { x: box.x + box.width / 2, y: box.y + box.height / 2 };
+  await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [center] });
+  if (offset) await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x: center.x + offset[0], y: center.y + offset[1] }] });
   const start = Date.now();
   for (;;) {
     await page.waitForTimeout(16);
@@ -64,7 +73,8 @@ async function touchFlow(page: Page): Promise<number> {
 test.describe('клавіатура (десктоп)', () => {
   test.use({ viewport: { width: 1280, height: 800 } });
 
-  test('стрілка 1 с зсуває персонажа в очікуваному напрямку', async ({ page }) => {
+  // GAME-91: замість фіксованої секунди — очікування за зондом (під навантаженням кадри ідуть повільніше, і 1 с давала хибну червоність).
+  test('стрілка вниз зсуває персонажа в очікуваному напрямку', async ({ page }) => {
     await open(page);
     const p0 = await probe(page);
     // Тримаємо, доки не пройде 30 px (≈0,5 с при 64 px/с), а не рівно 1 с: на завантаженому CI кадри стартують
@@ -155,7 +165,7 @@ for (const vp of VIEWPORTS) {
       await open(page);
       const boxes = await page.locator('[data-touch]').evaluateAll((els) =>
         els.map((e) => { const r = e.getBoundingClientRect(); return { a: (e as HTMLElement).dataset.touch, w: r.width, h: r.height }; }));
-      expect(boxes).toHaveLength(7); // 5 дій сцени + пауза й «Подорож» оболонки UI
+      expect(boxes.map((b) => b.a).sort()).toEqual(['interact', 'pause', 'stick', 'story']); // джойстик + дія сцени, пауза й «Подорож» оболонки UI
       for (const b of boxes) { expect(b.w, b.a).toBeGreaterThanOrEqual(44); expect(b.h, b.a).toBeGreaterThanOrEqual(44); }
     });
 
@@ -175,7 +185,7 @@ for (const vp of VIEWPORTS) {
 
     // Звірка GAME-69 #1 «…і діалог»: персонаж біля озера (кроки меню — дотиком), до Елізи — дотиковими
     // стрілками, розмова — дотиком по відповідях, до кінця розмови.
-    test('діалог дотиком: дійти до Елізи, заговорити, відповісти до кінця розмови', async ({ page }) => {
+    test('пролог дотиком до кінця розділу: джойстик, кнопка дії й тапи по панелі (дійти до Елізи, розмова, кінець)', async ({ page }) => {
       await open(page);
       await page.locator('[data-touch="story"]').tap();
       const story = page.locator('[data-ui="story"]');
@@ -213,10 +223,25 @@ for (const vp of VIEWPORTS) {
       const g = await page.evaluate(() => (window as unknown as { __game: { read: () => { game: { dialogue: unknown; flags: string[] } } } }).__game.read().game);
       expect(g.dialogue).toBeNull();
       expect(g.flags).toContain('f.elise-met');                               // ефект відповіді дійшов до ядра
+      // GAME-91: далі — до кінця розділу тим самим дотиком (панель подорожі: лише тапи), без клавіатури й без миші.
+      const tapAct = async (kind: string, key = ''): Promise<void> => {
+        await story.locator(`[data-act="${kind}"]${key ? `[data-key="${key}"]` : ''}`).tap();
+        await page.waitForTimeout(400);   // GAME-80: панель глуха ~350 мс після дії
+      };
+      await tapAct('pickup', 'item.firewood');
+      await tapAct('complete', 'q.st-005');
+      await expect(story.locator('[data-ui="ended"]')).toBeVisible();
+      expect((await page.evaluate(() => (window as unknown as { __game: { read: () => { game: { campaignEnded: boolean } } } }).__game.read().game.campaignEnded))).toBe(true);
     });
 
     test('негативний контроль: прихована кнопка взаємодії — прохід дотиком неможливий', async ({ page }) => {
       await open(page, '?hideTouch=interact');
+      expect(await touchFlow(page)).toBe(0);
+    });
+
+    // GAME-91: без джойстика пішки не дійти — прохід дотиком неможливий (нема чим рухати персонажа).
+    test('негативний контроль: прихований джойстик — прохід дотиком неможливий', async ({ page }) => {
+      await open(page, '?hideTouch=stick');
       expect(await touchFlow(page)).toBe(0);
     });
   });
@@ -228,10 +253,10 @@ test.describe('підписи дотикових кнопок мовою гра�
   test('aria-label кнопок сцени — з словника, і змінюється разом із мовою', async ({ page }) => {
     await open(page);
     const labels = (): Promise<(string | null)[]> => page.locator('.touch [data-touch]').evaluateAll((els) => els.map((e) => e.getAttribute('aria-label')));
-    expect(await labels()).toEqual(['Вгору', 'Вниз', 'Ліворуч', 'Праворуч', 'Дія']);
+    expect(await labels()).toEqual(['Джойстик: рух', 'Дія']);
     await page.locator('[data-touch="pause"]').tap();
     await page.locator('[data-ui="lang-en"]').tap();
-    await expect.poll(labels).toEqual(['Up', 'Down', 'Left', 'Right', 'Act']);   // ефект Preact — після малювання
+    await expect.poll(labels).toEqual(['Joystick: move', 'Act']);   // ефект Preact — після малювання
   });
 });
 

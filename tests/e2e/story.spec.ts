@@ -316,14 +316,15 @@ test('кінець розділу видно поза ☰: підказка в H
   await expect(hint).toContainText('Кінець Прологу');
   await expect(hint).toContainText('☰');
   await expect(page.locator('[data-touch="story"]')).toHaveAttribute('data-hint', 'yes');
-  // Мапа лишається придатною: утримана стрілка зсуває персонажа.
+  // Мапа лишається придатною: відведений убік джойстик зсуває персонажа.
   const x0 = (await page.evaluate(() => (window as unknown as { __game: { probe: { playerX: number; playerY: number } } }).__game.probe)).playerX;
   const y0 = (await page.evaluate(() => (window as unknown as { __game: { probe: { playerX: number; playerY: number } } }).__game.probe)).playerY;
-  const btn = page.locator('[data-touch="right"]');
-  const box = await btn.boundingBox();
-  if (!box) throw new Error('кнопки «вправо» немає');
+  const stick = page.locator('[data-touch="stick"]');
+  const box = await stick.boundingBox();
+  if (!box) throw new Error('джойстика немає');
   await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
   await page.mouse.down();
+  await page.mouse.move(box.x + box.width / 2 + 50, box.y + box.height / 2, { steps: 4 });   // ручка вправо (GAME-91)
   await page.waitForTimeout(600);
   await page.mouse.up();
   const p1 = await page.evaluate(() => (window as unknown as { __game: { probe: { playerX: number; playerY: number } } }).__game.probe);

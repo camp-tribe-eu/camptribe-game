@@ -1,9 +1,9 @@
-// Точка входу браузера: сцена світу (GAME-24) + дотикові кнопки (GAME-69) + рядок збірки.
+// Точка входу браузера: сцена світу (GAME-24) + дотикові елементи (GAME-69, джойстик GAME-91).
 import Phaser from 'phaser';
 import { render, h } from 'preact';
 import { Shell } from './ui/Shell';
 import { buildLabel } from './core/build-info';
-import { newInput, type Action } from './view/world/actions';
+import { newInput } from './view/world/actions';
 import { GAME_DEFS } from './content/slice-defs';
 import { STORY, STORY_REV } from './content/story';
 import { saveViable } from './content/viability';
@@ -70,14 +70,9 @@ stage.tabIndex = -1;
 stage.setAttribute('role', 'application');
 app.append(stage);
 
-// ?hideTouch=interact — лише для негативного контролю e2e (лише в збірці --mode e2e): прихована кнопка мусить ламати прохід.
-const hidden = switches.hideTouch as Action[];
+// ?hideTouch=stick|interact — лише для негативного контролю e2e (лише в збірці --mode e2e): прихована кнопка мусить ламати прохід.
+const hidden = switches.hideTouch;
 mountTouchControls(app, input, hidden);
-
-const label = document.createElement('p');
-label.className = 'build';
-label.textContent = buildLabel(__GAME_VERSION__, __GAME_COMMIT__);
-stage.append(label);   // у полі гри, а не над HUD (GAME-83): підпис збірки не перекриває смугу HUD
 
 const frame0 = frameSize(stage.clientWidth, stage.clientHeight);
 
@@ -109,6 +104,7 @@ app.append(ui);
 // ?lang=pseudo — псевдолокаль для e2e-тесту переповнення (GAME-26).
 const langOverride = new URLSearchParams(location.search).get('lang') === 'pseudo' ? ('pseudo' as const) : undefined;
 render(h(Shell, {
+  build: buildLabel(__GAME_VERSION__, __GAME_COMMIT__),   // GAME-91: підпис збірки — у меню паузи, не на екрані гри
   ...(langOverride ? { langOverride } : {}),
   credits,
   port: {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { ACTIONS, KEY_BINDINGS, KEY_CODES, TOUCH_CONTROLS, consumeFrame, createActionGate, moveVector, newInput, press, release } from './actions';
+import { ACTIONS, KEY_BINDINGS, KEY_CODES, TOUCH_CONTROLS, consumeFrame, createActionGate, moveVector, newInput, press, release, stickActions } from './actions';
 
 describe('карта дій (GAME-69)', () => {
   it('кожна дія з клавіатури має дотиковий елемент, і навпаки', () => {
@@ -55,5 +55,23 @@ describe('засувка натискань (дефект, знайдений e2
     release(input, 'interact');
     expect(consumeFrame(input).has('interact')).toBe(true);
     expect(consumeFrame(input).has('interact')).toBe(false);
+  });
+});
+
+describe('джойстик → напрямки (GAME-91)', () => {
+  const R = 60;
+  it('вісім напрямків: кожен кут із центру сектора дає свій набір дій', () => {
+    const want: [number, number, string][] = [
+      [50, 0, 'right'], [35, 35, 'down+right'], [0, 50, 'down'], [-35, 35, 'down+left'],
+      [-50, 0, 'left'], [-35, -35, 'left+up'], [0, -50, 'up'], [35, -35, 'right+up'],
+    ];
+    for (const [dx, dy, label] of want) expect([...stickActions(dx, dy, R)].sort().join('+'), label).toBe(label);
+  });
+  it('мертва зона й нульовий радіус — нічого не утримується', () => {
+    expect(stickActions(5, 5, R).size).toBe(0);
+    expect(stickActions(50, 0, 0).size).toBe(0);
+  });
+  it('майже вісь (до 22,5°) — одна дія, а не діагональ', () => {
+    expect([...stickActions(50, 10, R)]).toEqual(['right']);
   });
 });

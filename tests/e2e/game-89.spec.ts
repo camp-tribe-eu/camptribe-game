@@ -66,8 +66,8 @@ for (const scale of [100, 200] as const) {
       return {
         stage: box(document.querySelector('#stage') as Element),
         canvas: box(canvas),
-        hud: box(document.querySelector('.ui-hud') as Element),
-        touch: [...document.querySelectorAll('.touch button')].map(box),
+        header: box(document.querySelector('.ui-header') as Element),
+        touch: [...document.querySelectorAll('.touch > *')].map(box),
         buffer: { w: canvas.width, h: canvas.height },
         scroll: { x: document.documentElement.scrollWidth - innerWidth, y: document.documentElement.scrollHeight - innerHeight },
       };
@@ -81,12 +81,12 @@ for (const scale of [100, 200] as const) {
     // Видима пропорція = пропорція буфера кадру: канву не розтягнуто й не обрізано CSS.
     expect(Math.abs(m.canvas.width / m.canvas.height - m.buffer.w / m.buffer.h)).toBeLessThan(0.01);
     // Широка по ширині поля (FIT по ширині), а не смужка серед порожнечі.
-    expect(m.canvas.width).toBeGreaterThanOrEqual(m.stage.width - eps);
-    // Над мапою — одразу HUD, без смуги: верх канви = верх поля = низ HUD.
+    expect(m.canvas.width).toBeGreaterThanOrEqual(m.stage.width * 0.98);   // GAME-91: ціле k ріже кадр до floor(w / k) — до k px недобору, не смужка
+    // Над мапою — одразу шапка, без смуги: верх канви = верх поля = низ шапки.
     expect(m.canvas.top - m.stage.top).toBeLessThanOrEqual(eps);
-    expect(Math.abs(m.stage.top - m.hud.bottom)).toBeLessThanOrEqual(eps);
-    // Дотикові кнопки не лежать на мапі й не виходять за екран; сторінка не прокручується убік.
-    for (const b of m.touch) { expect(b.top).toBeGreaterThanOrEqual(m.canvas.bottom - eps); expect(b.right).toBeLessThanOrEqual(390 + eps); }
+    expect(Math.abs(m.stage.top - m.header.bottom)).toBeLessThanOrEqual(eps);
+    // GAME-91: дотикові елементи лежать НА мапі (напівпрозорі), у межах екрана; сторінка не прокручується убік.
+    for (const b of m.touch) { expect(b.left).toBeGreaterThanOrEqual(-eps); expect(b.right).toBeLessThanOrEqual(390 + eps); expect(b.bottom).toBeLessThanOrEqual(m.canvas.bottom + eps); }
     expect(m.scroll.x).toBeLessThanOrEqual(0);
   });
 }
