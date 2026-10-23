@@ -2,7 +2,7 @@
 // розмова з Елізою, журнал — до кінця розділу. Кожна дія — справжній клік по кнопці, команда йде в ядро.
 import { readFileSync } from 'node:fs';
 import ts from 'typescript';
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test, type Browser, type Page } from '@playwright/test';
 
 interface Core { game: { campaignEnded: boolean; grants: string[]; player: { transportId: string } | null }; clock: { paused: boolean; minutes: number }; journal: { type: string }[] }
 const core = (page: Page): Promise<Core> => page.evaluate(() => (window as unknown as { __game: { read: () => Core } }).__game.read());
@@ -117,19 +117,45 @@ test('дорога (GAME-31): кнопка показує час у дорозі
   expect((await core(page)).clock.minutes).toBe(m0 + 25);           // дорога — одним кроком
 });
 
-test('подія в дорозі (GAME-31): трапляється на дорозі, читається, відповідь — у ядрі й у журналі', async ({ page }) => {
-  // Кидок залежить від кадрів, прожитих до відкриття екрана, тож перезавантажуємо, доки подія не трапиться:
-  // шанс 50 %, 12 спроб — промах ≈ 0,02 %.
-  let fired = false;
-  for (let attempt = 0; attempt < 12 && !fired; attempt++) {
-    await open(page);
-    await panel(page).locator('[data-act="create"]', { hasText: 'Велосипед' }).first().click();
-    for (const [k, key] of [['visit', 'loc.home'], ['complete', 'q.st-001'], ['visit', 'loc.home'], ['complete', 'q.st-002'], ['visit', 'loc.shop'],
-      ['pickup', 'item.tent'], ['pickup', 'item.sleeping-bag'], ['complete', 'q.st-003']] as const) await act(page, k, key);
-    await panel(page).locator('[data-act="visit"][data-key="loc.road"]').click();
-    fired = await panel(page).locator('[data-ui="dialogue"]').isVisible({ timeout: 400 }).catch(() => false);
+/**
+ * До дороги з даним зерном у ЧИСТОМУ контексті браузера: інакше автозбереження попередньої спроби (пауза під час
+ * відкриття екрана) вантажиться з її RNG, і всі спроби кидають однаково (рецензія eb12626: 6 перезавантажень —
+ * той самий стан RNG). Повертає сторінку і чи трапилась подія.
+ */
+async function toRoad(browser: Browser, seed: number): Promise<{ page: Page; fired: boolean; close: () => Promise<void> }> {
+  const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true });
+  const page = await ctx.newPage();
+  await open(page, `?seed=${seed}`);
+  await panel(page).locator('[data-act="create"]', { hasText: 'Велосипед' }).first().click();
+  for (const [k, key] of [['visit', 'loc.home'], ['complete', 'q.st-001'], ['visit', 'loc.home'], ['complete', 'q.st-002'], ['visit', 'loc.shop'],
+    ['pickup', 'item.tent'], ['pickup', 'item.sleeping-bag'], ['complete', 'q.st-003']] as const) await act(page, k, key);
+  await panel(page).locator('[data-act="visit"][data-key="loc.road"]').click();
+  const fired = await panel(page).locator('[data-ui="dialogue"]').isVisible({ timeout: 400 }).catch(() => false);
+  return { page, fired, close: () => ctx.close() };
+}
+
+test('подія в дорозі не трапилась — дорога триває: жодної розмови, далі звичайні дії', async ({ browser }) => {
+  for (let seed = 1; seed <= 16; seed++) {
+    const r = await toRoad(browser, seed);
+    if (!r.fired) {
+      await expect(panel(r.page).locator('[data-act="complete"][data-key="q.st-004"]')).toBeVisible();
+      expect((await core(r.page)).journal.at(-1)?.type).toBe('Visit');
+      await r.close();
+      return;
+    }
+    await r.close();
   }
-  expect(fired).toBe(true);
+  throw new Error('за 16 зерен подія трапилась щоразу — шанс 50 % так не поводиться');
+});
+
+test('подія в дорозі (GAME-31): трапляється на дорозі, читається, відповідь — у ядрі й у журналі', async ({ browser }) => {
+  // Шанс 50 %, різні зерна, кожне — у чистому контексті.
+  let page: Page | null = null;
+  for (let seed = 1; seed <= 16 && !page; seed++) {
+    const r = await toRoad(browser, seed);
+    if (r.fired) page = r.page; else await r.close();
+  }
+  if (!page) throw new Error('за 16 зерен подія не трапилась жодного разу — шанс 50 % так не поводиться');
   await expect(panel(page).locator('[data-ui="dialogue"] h3')).toHaveText('Яблука біля дороги');
   await expect(panel(page).locator('[data-ui="actions"]')).toHaveCount(0);                // у події — лише відповіді
   await panel(page).locator('[data-key="dlg.road-apples.box.c1"]').click();

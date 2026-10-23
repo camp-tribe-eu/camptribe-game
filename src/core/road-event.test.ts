@@ -45,10 +45,17 @@ describe('кидок у симуляції після приїзду', () => {
     expect(fired.some(Boolean)).toBe(true);
     expect(fired.some((x) => !x)).toBe(true);
   });
-  it('випала — у журналі «Подія в дорозі» одразу після приїзду; id команди — похідний від приїзду', () => {
+  it('випала — у журналі «Подія в дорозі» одразу після приїзду; id команди — з лічильника ядра', () => {
     const seed = Array.from({ length: 40 }, (_, i) => i + 1).find((x) => go(x).game.dialogue?.id === 'dlg.ev-rain') as number;
     const s = go(seed);
-    expect(s.journal.slice(-2).map((e) => [e.type, e.ref, e.commandId])).toEqual([['Visit', 'loc.shop', 'a3'], ['RoadEvent', 'dlg.ev-rain', 'a3.ev']]);
+    expect(s.journal.slice(-2).map((e) => [e.type, e.ref, e.commandId])).toEqual([['Visit', 'loc.shop', 'a3'], ['RoadEvent', 'dlg.ev-rain', 'ev4']]);
+  });
+  it('довгий id приїзду (63 знаки) не губить подію: id події не з нього', () => {
+    const long = 'v'.repeat(63);
+    const log = LOG.map((i, k) => (k === 3 && i.kind === 'command' ? { kind: 'command', command: { ...i.command, commandId: long } } : i)) as Input[];
+    const seeds = Array.from({ length: 40 }, (_, i) => i + 1).filter((x) => go(x).game.dialogue?.id === 'dlg.ev-rain');
+    expect(seeds.length).toBeGreaterThan(0);
+    for (const x of seeds) expect(go(x, EVENT_DEFS, log).game.dialogue?.id).toBe('dlg.ev-rain');
   });
   it('кидок споживає RNG стану (інакше дві події поспіль діставали б той самий кидок)', () => {
     expect(stateHash(go(5).rng)).not.toBe(stateHash(run(newSim(5, 0), LOG.slice(0, 3), { defs: EVENT_DEFS }).rng));

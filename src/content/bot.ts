@@ -60,7 +60,7 @@ export function endReachable(start: GameState, defs: CoreDefs, memo: EndMemo, ca
   for (let s = queue.shift(); s; s = queue.shift()) {
     if (s.campaignEnded || memo.get(key(s)) === true) { memo.set(k0, true); return true; }
     for (const m of moves(s, defs)) {
-      if (isLuckMove(m, defs)) continue; // кінець — без удачі (SIM-EV-003); у випадкову прогулянку подія входить
+      if (isLuckMove(m)) continue; // кінець — без удачі (SIM-EV-003); у випадкову прогулянку подія входить
       const n = tryMove(s, m, defs);
       if (!n) continue;
       const k = key(n);

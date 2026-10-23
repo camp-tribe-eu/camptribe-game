@@ -63,10 +63,10 @@ function travelMinutes(before: GameState, r: ReturnType<typeof dispatch>, defs: 
 
 /**
  * Подія в дорозі (GAME-31): після приїзду — один кидок RNG стану серед подій, доречних тут (eventEligible),
- * за накопиченим шансом. Випала — ядро отримує команду RoadEvent з id `<id приїзду>.ev`: похідна від журналу
+ * за накопиченим шансом. Випала — ядро отримує команду RoadEvent з id `ev<seq>`: похідна від журналу
  * входів, тож реплей і сейв відтворюються без нових полів стану. Кандидатів немає — кидка немає.
  */
-function roadEvent(s: SimState, visitId: string, ctx: StepCtx): SimState {
+function roadEvent(s: SimState, ctx: StepCtx): SimState {
   const st = ctx.defs?.story;
   if (!st) return s;
   const candidates = Object.keys(st.dialogues).sort().filter((id) => eventEligible(st, s.game, id));
@@ -76,7 +76,9 @@ function roadEvent(s: SimState, visitId: string, ctx: StepCtx): SimState {
   const hit = candidates.find((id) => (acc += st.dialogues[id]?.trigger?.chance ?? 0) > roll.value);
   const rolled: SimState = { ...s, rng: roll.state };
   if (!hit) return rolled;
-  return step(rolled, { kind: 'command', command: { type: 'RoadEvent', commandId: `${visitId}.ev`, eventId: hit } }, ctx);
+  // id — з лічильника нових команд ядра: унікальний і завжди коротший за межу COMMAND_ID (рецензія:
+  // «<id приїзду>.ev» переростав 64 знаки й міг збігтися з чужим id).
+  return step(rolled, { kind: 'command', command: { type: 'RoadEvent', commandId: `ev${s.game.seq}`, eventId: hit } }, ctx);
 }
 
 export type Input =
@@ -128,7 +130,7 @@ export function step(s: SimState, input: Input, ctx: StepCtx = {}): SimState {
         const entry: JournalEntry = { at: s.clock.minutes - travelled, commandId: input.command.commandId, type: input.command.type, ref: refOf(input.command) };
         next = { ...next, journal: [...s.journal, entry].slice(-JOURNAL_LIMIT) };
       }
-      return travelled > 0 ? roadEvent(next, input.command.commandId, ctx) : next;
+      return travelled > 0 ? roadEvent(next, ctx) : next;
     }
     case 'advance':
       return { ...s, clock: advance(s.clock, input.minutes) };

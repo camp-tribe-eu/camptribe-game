@@ -22,7 +22,7 @@ const app = document.querySelector<HTMLElement>('#app');
 if (!app) throw new Error('#app is missing');
 
 const probe: WorldProbe = { ready: false, playerX: 0, playerY: 0, nearObject: null, commandsSent: 0, cameraScrollX: 0, cameraScrollY: 0, clockMinutes: 0, saveLoaded: false, cameraLerp: [0, 0] };
-const bridge = createBridge(20261022, GAME_DEFS);
+const bridge = createBridge(testSwitches(location.search, import.meta.env.MODE).seed ?? 20261022, GAME_DEFS);
 const input = newInput();
 // Екран подорожі (GAME-32): знімок сюжету з поточного стану; дію шукаємо в СВІЖОМУ знімку за id —
 // якщо стан тим часом змінився і дії вже немає, нічого не надсилаємо.

@@ -38,7 +38,7 @@ function explore(first: GameState) {
       const r = dispatch(s, { ...m, commandId: nextCommandId(s) } as Command, DEFS);
       if (!r.ok) continue;
       const nk = key(r.state);
-      if (!isLuckMove(m, DEFS)) edges.get(k)?.add(nk);   // у стан після везіння заходимо, але шлях до кінця — без нього
+      if (!isLuckMove(m)) edges.get(k)?.add(nk);   // у стан після везіння заходимо, але шлях до кінця — без нього
       if (!seen.has(nk)) { seen.set(nk, r.state); queue.push(r.state); }
     }
     if (seen.size > 200_000) throw new Error('простір станів вибухнув — тест не доводить нічого');
