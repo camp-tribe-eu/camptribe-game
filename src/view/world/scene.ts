@@ -6,7 +6,7 @@
 // GAME-93: графіка LPC (OD-013) — тайли 32 px, персонаж із шарів (ходьба 9 кадрів × 4 напрямки), анімоване вогнище,
 // 3/4-глибина: верхівки дерев і дах намету малюються над персонажем, коли той стоїть ПОЗАД об'єктом (див. `bands`).
 import Phaser from 'phaser';
-import { KEY_BINDINGS, KEY_CODES, consumeFrame, createActionGate, moveVector, press, release, type Action, type InputState } from './actions';
+import { KEY_BINDINGS, KEY_CODES, TAP_MAX_MOVE, TAP_MAX_MS, actionTarget, consumeFrame, createActionGate, moveVector, press, release, tapHitsSpot, type Action, type ActionTarget, type InputState } from './actions';
 import type { Bridge } from './bridge';
 import type { WorldArt } from './art';
 import { COLS, FRAME, frameIndex, type Dir } from './character';
@@ -33,6 +33,8 @@ export interface WorldProbe {
   playerX: number;
   playerY: number;
   nearObject: string | null;
+  /** GAME-95: рід найближчої цілі в зоні дії — для кнопки дії (talk / fire / object) і e2e. */
+  nearKind: ActionTarget | null;
   commandsSent: number;
   cameraScrollX: number;
   cameraScrollY: number;
@@ -67,6 +69,8 @@ export class WorldScene extends Phaser.Scene {
   private last = { x: 0, y: 0 };
   private fpsFrames = 0;
   private fpsStart = -1;
+  /** Тап по канві (GAME-95): світова точка, чекає на кадр update, де її звіряють із цілями в зоні дії. */
+  private tap: { x: number; y: number } | null = null;
 
   /** art — графіка, декодована до старту гри (loadWorldArt); onNpc — гравець заговорив із NPC на мапі (розмову веде екран подорожі). */
   constructor(private readonly bridge: Bridge, private readonly controls: InputState, private readonly probe: WorldProbe, private readonly art: WorldArt, private readonly onNpc: (npcId: string) => void = () => {}) {
@@ -158,6 +162,12 @@ export class WorldScene extends Phaser.Scene {
         }
       }
     }
+    // Тап по об'єкту на канві = та сама взаємодія, що й кнопка дії (GAME-95). Не тап (рух пальця, довга пауза) — ігноруємо.
+    this.input.on('pointerup', (p: Phaser.Input.Pointer) => {
+      if (p.getDistance() > TAP_MAX_MOVE || p.getDuration() > TAP_MAX_MS) return;
+      const w = this.cameras.main.getWorldPoint(p.x, p.y);
+      this.tap = { x: w.x, y: w.y };
+    });
     this.last = { x: this.player.x, y: this.player.y };
     // Зонд має правдиві значення вже в момент ready, а не після першого update.
     Object.assign(this.probe, { playerX: this.player.x, playerY: this.player.y, playerFrame: frameIndex(this.facing, 0), playerDir: this.facing, playerMoving: false, playerDepth: this.player.y });
@@ -248,9 +258,14 @@ export class WorldScene extends Phaser.Scene {
       if (d <= best) { best = d; spot = s; }
     }
     const near = spot?.name ?? null;
-    if (this.gate(held.has('interact'), time) && spot) {
-      if (spot.kind === 'npc') this.onNpc(spot.name);
-      else this.bridge.send({ type: 'Interact', targetId: spot.name });
+    // Тап: лише по цілі, що в зоні дії. Поза зоною нічого (без прокладання шляху, GAME-95).
+    const tapped = this.tap;
+    this.tap = null;
+    const tapSpot = tapped ? this.spots.find((s) => Phaser.Math.Distance.Between(this.player.x, this.player.y, s.x, s.y) <= INTERACT_RANGE && tapHitsSpot(s, tapped)) ?? null : null;
+    const target = tapSpot ?? spot;
+    if (this.gate(held.has('interact') || tapSpot !== null, time) && target) {
+      if (target.kind === 'npc') this.onNpc(target.name);
+      else this.bridge.send({ type: 'Interact', targetId: target.name });
     }
 
     const box = this.player.getBounds();
@@ -265,6 +280,7 @@ export class WorldScene extends Phaser.Scene {
       playerX: this.player.x,
       playerY: this.player.y,
       nearObject: near,
+      nearKind: spot ? actionTarget(spot.kind, spot.name) : null,
       commandsSent: this.bridge.sent,
       cameraScrollX: this.cameras.main.scrollX,
       cameraScrollY: this.cameras.main.scrollY,

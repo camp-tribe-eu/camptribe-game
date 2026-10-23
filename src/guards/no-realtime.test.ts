@@ -31,6 +31,7 @@ const TIMER_PROPS = new Set(['delayedCall', 'addEvent', 'tweens', 'timeline', 't
  */
 const ALLOW: Readonly<Record<string, Readonly<Record<string, { count: number; why: string }>>>> = {
   'src/ui/Shell.tsx': {
+    setTimeout: { count: 1, why: 'GAME-95: тост-підказка першого запуску сам зникає з екрана (TOAST_MS) — це лише гасіння підказки: жодна дія не зникає й не спрацьовує, ☰ лишається підсвіченою, hintSeen не чіпається' },
     requestAnimationFrame: { count: 1, why: 'повернути фокус на #stage після закриття екрана подорожі — керування фокусом, не рішення й не строк' },
   },
 };
@@ -140,7 +141,13 @@ describe('жодного таймера реального часу на дія�
   });
 
   it('негативний контроль: застарілий виняток (знахідки в коді вже немає) — червоніє', () => {
-    expect(verdict(hits.filter((h) => h.file !== 'src/ui/Shell.tsx'))).toEqual(['src/ui/Shell.tsx requestAnimationFrame: у переліку 1, у коді 0']);
+    expect(verdict(hits.filter((h) => !(h.file === 'src/ui/Shell.tsx' && h.name === 'requestAnimationFrame')))).toEqual(['src/ui/Shell.tsx requestAnimationFrame: у переліку 1, у коді 0']);
+  });
+
+  it('негативний контроль (GAME-95): другий setTimeout у Shell.tsx — понад перелік, червоніє', () => {
+    const shell = SOURCES.get('src/ui/Shell.tsx') ?? '';
+    const more = realtimeHits('src/ui/Shell.tsx', `${shell}\nexport const again = (): number => setTimeout(() => {}, 1);\n`);
+    expect(verdict([...hits.filter((h) => h.file !== 'src/ui/Shell.tsx'), ...more])).toEqual(['src/ui/Shell.tsx setTimeout: у переліку 1, у коді 2']);
   });
 
   it('позитивний контроль: коментар, рядок і тип Date — не знахідки (без хибного спрацювання)', () => {
@@ -150,6 +157,6 @@ describe('жодного таймера реального часу на дія�
   });
 
   it(`файлів у скануванні: ${files.length}; знахідок у коді: ${hits.length} (усі — в переліку)`, () => {
-    expect(hits.map((h) => `${h.file}|${h.name}`)).toEqual(['src/ui/Shell.tsx|requestAnimationFrame']);
+    expect(hits.map((h) => `${h.file}|${h.name}`)).toEqual(['src/ui/Shell.tsx|setTimeout', 'src/ui/Shell.tsx|requestAnimationFrame']);
   });
 });

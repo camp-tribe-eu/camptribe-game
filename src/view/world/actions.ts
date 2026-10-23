@@ -105,3 +105,28 @@ export function consumeFrame(input: InputState): Set<Action> {
   input.tapped.clear();
   return frame;
 }
+
+/** Частка ширини екрана ліворуч, де дотик викликає плаваючий джойстик (GAME-95). */
+export const FLOAT_ZONE = 0.4;
+
+/** Рід цілі для кнопки дії: розмова, вогнище, інший об'єкт (GAME-95). */
+export type ActionTarget = 'talk' | 'fire' | 'object';
+
+export function actionTarget(kind: 'trigger' | 'npc', name: string): ActionTarget {
+  if (kind === 'npc') return 'talk';
+  return name === 'obj.campfire' ? 'fire' : 'object';
+}
+
+/** Тап по об'єкту: точка об'єкта — його ноги; спрайт стоїть над нею (до 56 px вгору) і трохи ширший за 2×TAP_HALF_W. */
+const TAP_HALF_W = 24;
+const TAP_UP = 56;
+const TAP_DOWN = 8;
+/** Дотик — тап, а не жест: зсув не більший за TAP_MAX_MOVE px і коротший за TAP_MAX_MS. */
+export const TAP_MAX_MOVE = 10;
+export const TAP_MAX_MS = 500;
+
+export function tapHitsSpot(spot: { x: number; y: number }, tap: { x: number; y: number }): boolean {
+  const dx = tap.x - spot.x;
+  const dy = tap.y - spot.y;
+  return Math.abs(dx) <= TAP_HALF_W && dy >= -TAP_UP && dy <= TAP_DOWN;
+}
