@@ -48,6 +48,8 @@ describe('Еліза пам\'ятає, як ти приїхав (GAME-48)', () =
     expect(told.npcMemory).toEqual({ 'npc.elise': ['m.came-by-bike'] });
     const second = play([{ type: 'Continue' }, { type: 'Choose', choice: 0 }, { type: 'Continue' }, { type: 'Talk', npcId: 'npc.elise' }], told);
     expect(second.dialogue).toEqual({ id: DLG, node: 'hello' });
+    // Удруге «де лишити велосипед?» не питають — вона вже пам'ятає (рецензія GAME-48).
+    expect(tryMove(second, { type: 'Choose', choice: C1_BIKE })).toMatchObject({ ok: false, code: 'CONDITION_FAILED' });
     const asked = play([{ type: 'Choose', choice: C3_SHELTER }], second);
     expect(asked.dialogue).toEqual({ id: DLG, node: 'shelter' });
     // Вихід із нової гілки безумовний: shelter → bye → кінець розмови.

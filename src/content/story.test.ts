@@ -110,7 +110,7 @@ describe('збірка сюжету з content/ (src/content/story.ts)', () => {
     expect(files.length).toBeGreaterThan(0);
     expect(Object.keys(STORY.dialogues).sort()).toEqual(files.map((f) => `dlg.${f.replace(/^.*\/|\.json$/g, '')}`).sort());
     const hello = STORY.dialogues['dlg.elise-greeting']?.nodes['hello'];
-    expect(hello?.choices?.[0]).toEqual({ next: 'bike', when: { transport: 'transport.bike' }, effects: [{ setFlag: 'f.elise-met' }, { remember: 'm.came-by-bike' }] });
+    expect(hello?.choices?.[0]).toEqual({ next: 'bike', when: { all: [{ transport: 'transport.bike' }, { notRemembers: 'm.came-by-bike' }] }, effects: [{ setFlag: 'f.elise-met' }, { remember: 'm.came-by-bike' }] });
     // GAME-48: умова на пам'ять доходить до ядра як є
     expect(hello?.choices?.[2]).toEqual({ next: 'shelter', when: { remembers: 'm.came-by-bike' }, effects: [] });
     expect(STORY.dialogues['dlg.elise-greeting']?.nodes['bye']).toEqual({ end: true });

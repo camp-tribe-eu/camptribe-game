@@ -87,7 +87,8 @@ function shapeError(sim: unknown): string | null {
 /**
  * Посилання сейву, яких у нинішньому сюжеті вже немає (квест прибрали, локацію перейменували):
  * такий сейв у грі застряг би назавжди (UNKNOWN_TARGET на кожну спробу). Діалог не перевіряється —
- * зниклий вузол гра відпускає сама (liveDialogue у story.ts).
+ * зниклий вузол гра відпускає сама (liveDialogue у story.ts). Пам'ять NPC (npcMemory) теж свідомо не перевіряється:
+ * її лише читають умови, тож факт зниклого NPC просто ніколи не збігається й гравця не замикає.
  */
 export function danglingRefs(game: SimState['game'], st: StoryDefs): string[] {
   const out: string[] = [];
