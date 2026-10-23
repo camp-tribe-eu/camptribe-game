@@ -58,7 +58,7 @@ jobs:
       - name: Замок — функція з сіллю й хешем (пароля в ній немає)
         run: |
           set -euo pipefail
-          [ "${#PREVIEW_PASSWORD}" -ge 10 ] || { echo "::error::PREVIEW_PASSWORD коротший за 10 символів"; exit 1; }
+          [ "${#PREVIEW_PASSWORD}" -ge 16 ] || { echo "::error::PREVIEW_PASSWORD коротший за 16 символів (рецензія PR #25: SHA-256 без повільного KDF)"; exit 1; }
           mkdir -p functions
           node --input-type=module -e "
             import { readFileSync, writeFileSync } from 'node:fs';
@@ -80,6 +80,17 @@ jobs:
           echo "$out" | tail -3
           if [ $code -ne 0 ] && ! grep -qi 'already exists' <<<"$out"; then echo "::error::не вдалося створити проєкт Pages"; exit 1; fi
 
+      - name: Старі публікації — видалити (рецензія PR #25: на них може не бути замка)
+        run: |
+          set -euo pipefail
+          api="https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/pages/projects/$PROJECT/deployments"
+          ids=$(curl -sS --max-time 30 -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" "$api?per_page=100" | jq -r '.result // [] | .[].id')
+          for id in $ids; do
+            curl -sS --max-time 30 -X DELETE -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" "$api/$id?force=true" | jq -e '.success' >/dev/null \
+              && echo "видалено $id" || { echo "::error::не вдалося видалити публікацію $id"; exit 1; }
+          done
+          echo "старих публікацій: $(wc -w <<<"$ids")"
+
       - name: Публікація preview
         run: npx --yes "$WRANGLER" pages deploy dist --project-name="$PROJECT" --branch="$BRANCH" --commit-hash="$GITHUB_SHA" --commit-dirty=true
 
@@ -88,7 +99,7 @@ jobs:
           set -uo pipefail
           url="https://$BRANCH.$PROJECT.pages.dev/"
           # «гра видна» = 200 і в HTML є <script src> зі збірки
-          game() { local code; code=$(curl -s -o /tmp/p.html -w '%{http_code}' "$@"); echo "$code"; [ "$code" = 200 ] && grep -q '<script[^>]*src=' /tmp/p.html; }
+          game() { local code; code=$(curl -s --max-time 20 -o /tmp/p.html -w '%{http_code}' "$@"); echo "$code"; [ "$code" = 200 ] && grep -q '<script[^>]*src=' /tmp/p.html; }
           ok=0
           for i in 1 2 3 4 5 6 7 8; do
             c1=$(game "$url"; true); c1=${c1%%$'\n'*}
@@ -98,6 +109,26 @@ jobs:
             echo "спроба $i: з паролем гри ще не видно (без пароля: HTTP $c1), чекаю"; sleep 15
           done
           [ $ok = 1 ] || { echo "::error::з правильним паролем гра не відкривається — публікація не вдалася"; exit 1; }
-          code=$(curl -s -o /dev/null -w '%{http_code}' "$url"); [ "$code" = 401 ] || { echo "::error::без пароля очікував 401, а маю $code"; exit 1; }
+          code=$(curl -s --max-time 20 -o /dev/null -w '%{http_code}' "$url"); [ "$code" = 401 ] || { echo "::error::без пароля очікував 401, а маю $code"; exit 1; }
+          # Файли збірки теж за замком (рецензія PR #25): бандл беремо з HTML, отриманого з паролем, і просимо без пароля.
+          curl -s --max-time 20 -u "$PREVIEW_USER:$PREVIEW_PASSWORD" -o /tmp/auth.html "$url"
+          asset=$(grep -o '<script[^>]*src="[^"]*"' /tmp/auth.html | head -1 | sed 's/.*src="\([^"]*\)"/\1/; s#^\./##; s#^/##')
+          [ -n "$asset" ] || { echo "::error::у HTML немає бандла — нема що перевіряти"; exit 1; }
+          for path in "$asset" /favicon.ico /robots.txt; do
+            c=$(curl -s --max-time 20 -o /dev/null -w '%{http_code}' "https://$BRANCH.$PROJECT.pages.dev/${path#/}")
+            [ "$c" = 401 ] || { echo "::error::$path без пароля віддає HTTP $c (очікував 401)"; exit 1; }
+            echo "$path без пароля → 401"
+          done
+          c=$(curl -s --max-time 20 -o /dev/null -w '%{http_code}' -u "$PREVIEW_USER:$PREVIEW_PASSWORD" "https://$BRANCH.$PROJECT.pages.dev/$asset")
+          [ "$c" = 200 ] || { echo "::error::бандл з паролем: HTTP $c (очікував 200)"; exit 1; }
           if game "https://$PROJECT.pages.dev/" >/dev/null; then echo "::error::гола адреса проєкту віддає гру"; exit 1; fi
           echo "PREVIEW: OK · $url — логін $PREVIEW_USER і пароль із секрету PREVIEW_PASSWORD"
+
+      - name: Перевірка не пройшла — прибрати публікацію (рецензія PR #25)
+        if: failure()
+        run: |
+          set -uo pipefail
+          api="https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/pages/projects/$PROJECT/deployments"
+          for id in $(curl -sS --max-time 30 -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" "$api?per_page=100" | jq -r '.result // [] | .[].id'); do
+            curl -sS --max-time 30 -X DELETE -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" "$api/$id?force=true" >/dev/null && echo "видалено $id"
+          done

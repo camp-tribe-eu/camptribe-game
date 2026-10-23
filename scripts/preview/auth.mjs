@@ -21,7 +21,7 @@ function same(a, b) {
 
 /** Заголовок Authorization → чи пускати. Будь-яка зламана форма — ні. */
 export async function allowed(header, salt, hash) {
-  if (typeof header !== 'string' || !header.startsWith('Basic ')) return false;
+  if (typeof header !== 'string' || !/^basic /i.test(header)) return false;
   let plain;
   // atob дає байти; браузери шлють логін і пароль у UTF-8 (charset="UTF-8" у виклику), тож кирилиця теж працює.
   try { plain = new TextDecoder('utf-8', { fatal: true }).decode(Uint8Array.from(atob(header.slice(6).trim()), (c) => c.charCodeAt(0))); } catch { return false; }
