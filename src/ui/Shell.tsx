@@ -53,7 +53,8 @@ export function Shell({ port, langOverride, credits }: { port: UiPort; langOverr
   // Розмова з NPC на мапі відкриває екран подорожі (якщо не відкрите меню паузи).
   useEffect(() => port.onOpenStory(() => { if (!paused && !storyOpen) story(true); }), [paused, storyOpen]);
 
-  useEffect(() => {
+  // useLayoutEffect: слухач Escape має бачити confirmNew до наступного кадру (інакше швидкий Escape закривав паузу).
+  useLayoutEffect(() => {
     const onKey = (e: KeyboardEvent): void => {
       if (e.code !== 'Escape') return;
       e.preventDefault();
@@ -148,8 +149,11 @@ export function Shell({ port, langOverride, credits }: { port: UiPort; langOverr
               onClick={() => { void port.importCode(codeIn).then((r) => setStatus(({ ok: 'ui.importOk', bad: 'ui.importBad', outdated: 'ui.importOutdated', newer: 'ui.importNewer', unsaved: 'ui.importUnsaved' } as const)[r])); }}>{t('ui.apply')}</button>
             {status && <p class="ui-status" data-ui="status" role="status">{t(status)}</p>}
           </fieldset>
-          <button type="button" class="ui-btn" data-ui="new-game" onClick={() => setConfirmNew(true)}>{t('ui.newGame')}</button>
-          <button type="button" class="ui-btn" data-ui="reset" onClick={() => update(DEFAULT_SETTINGS)}>{t('ui.reset')}</button>
+          <fieldset>
+            <legend>{t('ui.gameMenu')}</legend>
+            <button type="button" class="ui-btn" data-ui="new-game" onClick={() => setConfirmNew(true)}>{t('ui.newGame')}</button>
+            <button type="button" class="ui-btn" data-ui="reset" onClick={() => update(DEFAULT_SETTINGS)}>{t('ui.reset')}</button>
+          </fieldset>
           {/* Титри обов'язкові (OD-013): автор, джерело, ліцензія і чи змінено — для кожного файлу графіки. */}
           <details class="ui-credits" data-ui="credits">
             <summary class="ui-btn">{t('ui.credits')}</summary>
