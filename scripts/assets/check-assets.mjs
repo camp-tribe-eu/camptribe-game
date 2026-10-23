@@ -172,8 +172,8 @@ export function buildJson(rows) {
 
 // input: { files: шляхи всередині assets/ (усі файли), publicFiles: шляхи всередині public/ (усі файли),
 //          register, credits, json, upstream: текст закріпленої виписки першоджерела (або null),
-//          pins: текст assets/licence-pins.json (або null — закріплень немає), evidence: наявні шляхи доказів }
-export function check({ files, publicFiles, register, credits, json, upstream, pins = null, evidence = [] }) {
+//          pins: текст assets/licence-pins.json (або null — закріплень немає), evidence: { шлях доказу в research/: його текст } }
+export function check({ files, publicFiles, register, credits, json, upstream, pins = null, evidence = {} }) {
   const out = [];
   const add = (code, where, msg) => out.push({ code, where, msg });
   let pin = {};
@@ -262,7 +262,8 @@ export function check({ files, publicFiles, register, credits, json, upstream, p
     // @check:LICENCE_PIN_MISMATCH
     if (pr && pr.licence !== r.licence) add('LICENCE_PIN_MISMATCH', at, `закріплено «${pr.licence}», а в титрах «${r.licence}»`);
     // @check:LICENCE_PIN_NO_EVIDENCE
-    if (pr && !(typeof pr.evidence === 'string' && evidence.includes(pr.evidence))) add('LICENCE_PIN_NO_EVIDENCE', at, `закріплення без наявного доказу (${pr.evidence ?? 'не вказано'})`);
+    // Доказ має існувати в research/ І називати сам закріплений файл (рецензія PR #38: інакше годився б будь-який файл).
+    if (pr && !(typeof pr.evidence === 'string' && Object.hasOwn(evidence, pr.evidence) && evidence[pr.evidence].includes(r.file))) add('LICENCE_PIN_NO_EVIDENCE', at, `доказ відсутній або не називає файл (${pr.evidence ?? 'не вказано'})`);
     const pinned = !!pr && pr.licence === r.licence;
     // @check:LICENCE_NOT_MOST_PERMISSIVE
     if (!pinned && family(r.licence) && RANK.indexOf(family(r.licence)) > best) add('LICENCE_NOT_MOST_PERMISSIVE', at, `є м'якша: ${RANK[best]}`);
@@ -318,7 +319,7 @@ function load(root = ROOT) {
   return {
     files: walk(join(root, ASSETS)), publicFiles: walk(join(root, PUBLIC)),
     register: read(REGISTER) ?? '', credits: read(CREDITS) ?? '', json: read(JSON_OUT), upstream: read(UPSTREAM),
-    pins: read(PINS), evidence: walk(join(root, 'research')).map((p) => `research/${p}`),
+    pins: read(PINS), evidence: Object.fromEntries(walk(join(root, 'research')).filter((p) => /\.(md|txt)$/.test(p)).map((p) => [`research/${p}`, read(`research/${p}`)])),
   };
 }
 
@@ -349,6 +350,7 @@ function selfTest() {
   };
   const base = mk([T, H, C]);
   const EV = 'research/lpc-licences-evidence.md';
+  const EVT = { [EV]: '| c/hero.png | OGA-BY 3.0 | CC-BY-SA 3.0 | сторінка не дає OGA-BY |' };
   const PIN = (licence) => JSON.stringify({ pins: { 'c/hero.png': { licence, evidence: EV } } });
   const swap = (from, to) => mk([T, H.replace(from, to), C]);
   const swapT = (from, to) => mk([T.replace(from, to), H, C]);
@@ -384,10 +386,11 @@ function selfTest() {
     ['обрано GPL (не дозволено)', mk([T.replace('CC-BY-SA 3.0,CC-BY-SA 3.0 | GPL 3.0', 'GPL 3.0,GPL 3.0'), H, C], { register: reg.replace('"GPL 3.0"', 'GPL 3.0') }), 'LICENCE_NOT_ALLOWED'],
     ['обрано не найм\'якшу', swap(',OGA-BY 3.0,OGA-BY', ',CC-BY-SA 3.0,OGA-BY'), 'LICENCE_NOT_MOST_PERMISSIVE'],
     // 4. закріплення ліцензії: сторінки першоджерела не дають «найм'якшої з генератора»
-    ['позитивний контроль: закріплено CC-BY-SA 3.0 з наявним доказом — «не найм\'якша» не спрацьовує', { ...swap(',OGA-BY 3.0,OGA-BY', ',CC-BY-SA 3.0,OGA-BY'), pins: PIN('CC-BY-SA 3.0'), evidence: [EV] }, ''],
-    ['закріплення не збігається з титрами', { ...base, pins: PIN('CC-BY-SA 3.0'), evidence: [EV] }, 'LICENCE_PIN_MISMATCH'],
-    ['закріплення без наявного доказу', { ...swap(',OGA-BY 3.0,OGA-BY', ',CC-BY-SA 3.0,OGA-BY'), pins: PIN('CC-BY-SA 3.0'), evidence: [] }, 'LICENCE_PIN_NO_EVIDENCE'],
-    ['закріплення на файл без рядка титрів', { ...base, pins: JSON.stringify({ pins: { 'c/ghost.png': { licence: 'CC0', evidence: EV } } }), evidence: [EV] }, 'LICENCE_PIN_UNUSED'],
+    ['позитивний контроль: закріплено CC-BY-SA 3.0 з наявним доказом — «не найм\'якша» не спрацьовує', { ...swap(',OGA-BY 3.0,OGA-BY', ',CC-BY-SA 3.0,OGA-BY'), pins: PIN('CC-BY-SA 3.0'), evidence: EVT }, ''],
+    ['закріплення не збігається з титрами', { ...base, pins: PIN('CC-BY-SA 3.0'), evidence: EVT }, 'LICENCE_PIN_MISMATCH'],
+    ['закріплення без наявного доказу', { ...swap(',OGA-BY 3.0,OGA-BY', ',CC-BY-SA 3.0,OGA-BY'), pins: PIN('CC-BY-SA 3.0'), evidence: {} }, 'LICENCE_PIN_NO_EVIDENCE'],
+    ['доказ існує, але не називає закріплений файл', { ...swap(',OGA-BY 3.0,OGA-BY', ',CC-BY-SA 3.0,OGA-BY'), pins: PIN('CC-BY-SA 3.0'), evidence: { [EV]: 'інший файл' } }, 'LICENCE_PIN_NO_EVIDENCE'],
+    ['закріплення на файл без рядка титрів', { ...base, pins: JSON.stringify({ pins: { 'c/ghost.png': { licence: 'CC0', evidence: EV } } }), evidence: EVT }, 'LICENCE_PIN_UNUSED'],
     ['зламаний файл закріплень', { ...base, pins: '{"pins": [' }, 'LICENCE_PINS_BAD'],
     ['credits.json застарів', { ...base, json: base.json.replace('Ann', 'Anna') }, 'CREDITS_JSON_STALE'],
     ['credits.json відсутній', { ...base, json: null }, 'CREDITS_JSON_STALE'],
