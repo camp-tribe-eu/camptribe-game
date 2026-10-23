@@ -62,7 +62,9 @@ test.describe('сейви (десктоп)', () => {
     await loaded(page);
     expect((await snap(page)).clock.paused).toBe(false);
     const m0 = (await probe(page)).clockMinutes;
-    await expect.poll(async () => (await probe(page)).clockMinutes, { timeout: 5000 }).toBeGreaterThan(m0);
+    // 15 с, не 5: під паралельним e2e кадр великої сцени LPC (GAME-93) довшає, Phaser згладжує дельту, і хвилина гри
+    // набігає повільніше за реальну (рецензія PR #36). Годинник на паузі не зрушить ніколи — тож тест не слабшає.
+    await expect.poll(async () => (await probe(page)).clockMinutes, { timeout: 15_000 }).toBeGreaterThan(m0);
   });
 
   test('main і prev різні — старт бере main (новіший), а не prev', async ({ page }) => {
