@@ -16,7 +16,7 @@ interface RawWhen { profiles?: string[]; transports?: string[]; animals?: string
 interface RawQuest {
   id: string; optional: boolean; end?: boolean; locationId?: string; when?: RawWhen;
   requires?: { quests?: string[]; items?: string[] };
-  objectives: { id: string; kind: string; target: string; required: boolean; when?: RawWhen }[];
+  objectives: { id: string; kind: string; target: string; required: boolean; byDialogue?: boolean; when?: RawWhen }[];
   transitions: { on: string; to: string; choiceKey?: string; when?: RawWhen }[];
   reward?: { grantId: string; money?: number; items?: { item: string; qty: number }[]; once?: boolean };
 }
@@ -40,7 +40,7 @@ const when = (w: RawWhen | undefined): { when?: WhenDef } => (w ? { when: w } : 
 
 function objective(qid: string, o: RawQuest['objectives'][number]): ObjectiveDef {
   if (o.kind !== 'visit' && o.kind !== 'talk' && o.kind !== 'collect') throw new Error(`story: ${qid}.${o.id}: objective kind "${o.kind}" is not supported by the core yet`);
-  return { id: o.id, kind: o.kind, target: o.target, required: o.required, ...when(o.when) };
+  return { id: o.id, kind: o.kind, target: o.target, required: o.required, ...(o.byDialogue === true ? { byDialogue: true } : {}), ...when(o.when) };
 }
 
 function dialogue(d: RawDialogue): DialogueDef {

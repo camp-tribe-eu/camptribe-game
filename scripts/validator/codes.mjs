@@ -67,6 +67,9 @@ export const CODES = {
   DIALOGUE_COND_CONTRADICTION: { check: 'dialogue-flags', spec: '§3 умова all не вимагає водночас flag і notFlag того самого прапорця (чи remembers і notRemembers того самого факту)' },
   MEMORY_NEVER_SET:          { check: 'dialogue-memory', spec: 'GAME-48: умова не читає факт пам\u2019яті, який жоден здійсненний remember у розмові з ЦИМ NPC не ставить' },
   DIALOGUE_QUEST_GATE:       { check: 'dialogue-quest-gate', spec: '§2 startQuest не обходить requires.quests квесту-цілі' },
+  OBJECTIVE_BY_DIALOGUE_KIND:   { check: 'dialogue-objective-gate', spec: 'GAME-87: byDialogue — лише для цілі talk' },
+  OBJECTIVE_BY_DIALOGUE_OPEN:   { check: 'dialogue-objective-gate', spec: 'GAME-87: ціль byDialogue мусить мати репліку, що її закриває' },
+  OBJECTIVE_BY_DIALOGUE_ALWAYS: { check: 'dialogue-objective-gate', spec: 'GAME-87: репліка-закривач не лежить на кожному шляху діалогу (інакше це будь-яка розмова)' },
   DIALOGUE_OBJECTIVE_KIND:   { check: 'dialogue-objective-kind', spec: '§2 розмова закриває лише ціль talk із цим самим NPC' },
   DIALOGUE_NPC_DUPLICATE:    { check: 'dialogue-npc-unique', spec: '§2 один діалог на NPC — інакше рушій не знає, який запускати' },
 

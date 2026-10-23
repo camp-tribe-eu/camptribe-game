@@ -192,7 +192,7 @@ function mark(st: StoryDefs, d: StoryDraft, p: PlayerState, kind: 'visit' | 'tal
     if (prog.status !== 'active') continue;
     const q = own(st.quests, qid);
     if (!q) continue;
-    const hits = objectivesFor(q, p).filter((o) => o.kind === kind && o.target === target && !prog.done.includes(o.id)).map((o) => o.id);
+    const hits = objectivesFor(q, p).filter((o) => o.kind === kind && o.target === target && o.byDialogue !== true && !prog.done.includes(o.id)).map((o) => o.id);
     if (hits.length) d.quests = { ...d.quests, [qid]: { ...prog, done: [...prog.done, ...hits].sort() } };
   }
 }

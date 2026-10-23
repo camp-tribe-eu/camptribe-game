@@ -39,7 +39,7 @@
     "id": "q.elise-bike-area", "titleKey": "q.elise-bike-area", "optional": true, "giverId": "npc.elise", "locationId": "loc.camp.lake",
     "when": { "transports": ["transport.bike"] },
     "objectives": [
-      { "id": "talk-elise", "textKey": "q.elise-bike-area.o1", "kind": "talk", "target": "npc.elise", "required": true }
+      { "id": "talk-elise", "textKey": "q.elise-bike-area.o1", "kind": "talk", "target": "npc.elise", "required": true, "byDialogue": true }
     ],
     "transitions": [
       { "on": "complete", "to": "ST-005" },

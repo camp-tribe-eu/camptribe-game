@@ -55,6 +55,8 @@ export interface ObjectiveDef {
   readonly kind: 'visit' | 'talk' | 'collect';
   readonly target: string;
   readonly required: boolean;
+  /** GAME-87: ціль `talk` закриває лише репліка (`completeObjective`), а не будь-яка розмова з NPC. */
+  readonly byDialogue?: boolean;
   readonly when?: WhenDef;
 }
 

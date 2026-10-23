@@ -734,6 +734,41 @@ export const CHECKS = [
     },
   },
   {
+    id: 'dialogue-objective-gate',
+    run(c) { // @check:dialogue-objective-gate
+      // GAME-87: ціль `byDialogue` не зараховується від самої розмови з NPC — лише від репліки з
+      // completeObjective. Тож (1) така ціль — лише talk; (2) репліка, що її закриває, мусить існувати;
+      // (3) репліка не може лежати на КОЖНОМУ шляху діалогу до кінця: це була б та сама «будь-яка
+      // розмова», тільки в обхід — гравець, що не питав про головне, теж отримав би нагороду.
+      const out = [];
+      const choices = dialogueChoices(c.content);
+      for (const q of c.content.quests ?? []) for (const o of q.objectives) {
+        if (o.byDialogue !== true) continue;
+        const at = `${q.id}.${o.id}`;
+        if (o.kind !== 'talk') { out.push(I('OBJECTIVE_BY_DIALOGUE_KIND', at, `byDialogue лише для talk, а ціль має kind «${o.kind}»`)); continue; }
+        const closes = (ch) => (ch.effects ?? []).some((e) => e.completeObjective?.quest === q.id && e.completeObjective.objective === o.id);
+        const closing = choices.filter(([, ch]) => closes(ch));
+        if (!closing.length) { out.push(I('OBJECTIVE_BY_DIALOGUE_OPEN', at, 'жодна репліка не закриває ціль byDialogue — вона недосяжна (розмова її не зараховує)')); continue; }
+        for (const d of new Set(closing.map(([, , dd]) => dd))) {
+          const nodes = new Map(d.nodes.map((n) => [n.id, n]));
+          if (!nodes.has(d.start)) continue; // першопричину вже назвав DIALOGUE_REF_MISSING
+          // Шляхи, що ОБМИНАЮТЬ закривальні репліки: якщо до `end` так не дійти — закривають усі.
+          const visited = new Set([d.start]);
+          const stack = [d.start];
+          let free = false;
+          while (stack.length && !free) {
+            const n = nodes.get(stack.pop());
+            if (n.end === true) { free = true; break; }
+            const next = [...(n.next !== undefined ? [n.next] : []), ...(n.choices ?? []).filter((ch) => !closes(ch)).map((ch) => ch.next)];
+            for (const v of next) if (nodes.has(v) && !visited.has(v)) { visited.add(v); stack.push(v); }
+          }
+          if (!free) out.push(I('OBJECTIVE_BY_DIALOGUE_ALWAYS', `${d.id}`, `ціль «${at}» закривається на кожному шляху діалогу до кінця — це та сама будь-яка розмова; закривай лише в потрібній гілці`));
+        }
+      }
+      return out;
+    },
+  },
+  {
     id: 'dialogue-quest-gate',
     run(c) { // @check:dialogue-quest-gate
       // startQuest не сміє обійти requires.quests квесту-цілі. Кожну вимогу r має гарантувати або

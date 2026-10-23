@@ -420,6 +420,20 @@ export const FIXTURES = [
   { name: '[діалог] розмова з крамарем закриває ціль «поговорити з рейнджером»', expect: ['DIALOGUE_OBJECTIVE_KIND'], patch(c) {
     c.dialogues.push(shopDialogue([{ completeObjective: { quest: 'ST-004', objective: 'talk-ranger' } }]));
   } },
+  // GAME-87: ціль byDialogue — лише репліка, і не на кожному шляху.
+  { name: '[діалог] byDialogue на цілі visit', expect: ['OBJECTIVE_BY_DIALOGUE_KIND'], patch(c) {
+    c.quests.find((q) => q.id === 'ST-002').objectives[0].byDialogue = true;
+  } },
+  { name: '[діалог] ціль byDialogue без репліки, що її закриває', expect: ['OBJECTIVE_BY_DIALOGUE_OPEN'], patch(c) {
+    c.quests.find((q) => q.id === 'ST-004').objectives[0].byDialogue = true;
+    node(c, 'hello').choices[0].effects.splice(1, 1); // прибрати completeObjective — лишився лише setFlag
+  } },
+  { name: '[діалог] ціль byDialogue закрита на кожному шляху (обхід «будь-якої розмови»)', expect: ['OBJECTIVE_BY_DIALOGUE_ALWAYS'], patch(c) {
+    c.quests.find((q) => q.id === 'ST-004').objectives[0].byDialogue = true;
+    const close = { completeObjective: { quest: 'ST-004', objective: 'talk-ranger' } };
+    node(c, 'hello').choices[0].effects.push(close);
+    node(c, 'hello').choices[1].effects.push(close);
+  } },
   // startQuest не обходить requires.quests квесту-цілі.
   { name: '[діалог] безумовний вибір стартує квест, що вимагає незавершеного', expect: ['DIALOGUE_QUEST_GATE'], patch(c) {
     node(c, 'hello').choices[1].effects.push({ startQuest: 'ST-004' });
