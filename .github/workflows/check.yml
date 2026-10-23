@@ -38,6 +38,10 @@ jobs:
   e2e:
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    # GAME-85: браузер і системні бібліотеки — уже в офіційному образі. `playwright install --with-deps` тягнув apt
+    # і з'їдав 10 хв із 20 ліміту job. Тег образу = версія @playwright/test у package.json (оновлювати разом).
+    container:
+      image: mcr.microsoft.com/playwright:v1.64.1-noble
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -45,7 +49,14 @@ jobs:
           node-version: '24'
           cache: npm
       - run: npm ci --no-audit --no-fund
-      - run: npx playwright install --with-deps chromium
+      # Сторож розбіжності: якщо @playwright/test оновили, а образ ні, — браузера потрібної ревізії в образі немає.
+      # Червоніємо тут із причиною, а не таймаутом у тестах (закон 4).
+      - name: Браузер образу відповідає @playwright/test
+        # Справжній запуск headless (той самий бінарник, що й у тестах — headless shell), а не перевірка шляху.
+        run: >-
+          node -e "require('playwright-core').chromium.launch().then(b => b.close())
+          .then(() => console.log('OK: headless Chromium запускається'))
+          .catch(e => { console.log('::error::Браузер образу не запускається — тег образу в check.yml не збігається з @playwright/test ' + require('@playwright/test/package.json').version + ': ' + e.message.split('\\n')[0]); process.exit(1); })"
       - run: npm run e2e
       - uses: actions/upload-artifact@v4
         if: always()

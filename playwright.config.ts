@@ -1,5 +1,5 @@
 // e2e у справжньому браузері. Локально в хмарній сесії — передвстановлений Chromium через
-// PW_CHROMIUM_PATH (його збірка старша за ту, що чекає Playwright); у CI — `npx playwright install`.
+// PW_CHROMIUM_PATH (його збірка старша за ту, що чекає Playwright); у CI — офіційний образ Playwright (check.yml, GAME-85).
 import { defineConfig } from '@playwright/test';
 
 const executablePath = process.env.PW_CHROMIUM_PATH;
