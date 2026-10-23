@@ -23,7 +23,7 @@ export function loadContent(dir, { allowMissing = false } = {}) {
   for (const name of readdirSync(dir).sort()) {
     const p = join(dir, name);
     if (statSync(p).isDirectory()) {
-      if (name !== 'locales') issues.push(I('CONTENT_UNKNOWN_FILE', name, 'невідома тека в content/'));
+      if (name !== 'locales' && name !== 'dialogue') issues.push(I('CONTENT_UNKNOWN_FILE', name, 'невідома тека в content/'));
       continue;
     }
     if (!name.endsWith('.json')) continue;
@@ -38,6 +38,21 @@ export function loadContent(dir, { allowMissing = false } = {}) {
       if (!name.endsWith('.json')) { issues.push(I('CONTENT_UNKNOWN_FILE', `locales/${name}`, 'у locales/ очікуються лише <мова>.json')); continue; }
       const v = read(join(locDir, name), `locales/${name}`);
       if (v !== undefined) content.locales[name.slice(0, -5)] = v;
+    }
+  }
+  // content/dialogue/<назва>.json — по одному діалогу на файл (GAME-28).
+  const dlgDir = join(dir, 'dialogue');
+  if (existsSync(dlgDir)) {
+    content.dialogues = [];
+    for (const name of readdirSync(dlgDir).sort()) {
+      if (!name.endsWith('.json') || statSync(join(dlgDir, name)).isDirectory()) { issues.push(I('CONTENT_UNKNOWN_FILE', `dialogue/${name}`, 'у dialogue/ очікуються лише <назва>.json')); continue; }
+      const v = read(join(dlgDir, name), `dialogue/${name}`);
+      if (v === undefined) continue;
+      // dialogue/<x>.json ⇒ id «dlg.<x>»: файл знаходиться за id, а id — за файлом. Нерядковий id
+      // тут не судимо: його форму назве схема.
+      const want = `dlg.${name.slice(0, -5)}`;
+      if (typeof v?.id === 'string' && v.id !== want) issues.push(I('DIALOGUE_FILE_NAME', `dialogue/${name}`, `id «${v.id}» не збігається з назвою файлу: очікується «${want}»`));
+      content.dialogues.push(v);
     }
   }
   if (!issues.some((i) => i.code === 'CONTENT_PARSE') && (!Array.isArray(content.quests) || content.quests.length === 0)) {

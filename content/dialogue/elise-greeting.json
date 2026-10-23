@@ -1,0 +1,24 @@
+{
+  "id": "dlg.elise-greeting",
+  "npcId": "npc.elise",
+  "start": "hello",
+  "nodes": [
+    {
+      "id": "hello", "speaker": "npc", "textKey": "dlg.elise-greeting.hello",
+      "choices": [
+        { "textKey": "dlg.elise-greeting.hello.c1", "next": "bike", "when": { "all": [{ "transport": "transport.bike" }, { "notRemembers": "m.came-by-bike" }] }, "effects": [{ "setFlag": "f.elise-met" }, { "remember": "m.came-by-bike" }] },
+        { "textKey": "dlg.elise-greeting.hello.c2", "next": "spot", "effects": [{ "setFlag": "f.elise-met" }] },
+        { "textKey": "dlg.elise-greeting.hello.c3", "next": "shelter", "when": { "remembers": "m.came-by-bike" } }
+      ]
+    },
+    { "id": "bike", "speaker": "npc", "textKey": "dlg.elise-greeting.bike", "next": "spot" },
+    { "id": "shelter", "speaker": "npc", "textKey": "dlg.elise-greeting.shelter", "next": "bye" },
+    {
+      "id": "spot", "speaker": "npc", "textKey": "dlg.elise-greeting.spot",
+      "choices": [
+        { "textKey": "dlg.elise-greeting.spot.c1", "next": "bye" }
+      ]
+    },
+    { "id": "bye", "speaker": "npc", "textKey": "dlg.elise-greeting.bye", "end": true }
+  ]
+}

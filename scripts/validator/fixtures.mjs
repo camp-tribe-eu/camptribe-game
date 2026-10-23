@@ -9,7 +9,32 @@ const LOCALE_KEYS = [
   'q.st-001', 'q.st-001.o1', 'q.st-002', 'q.st-002.o1', 'q.st-002.o2', 'q.st-002.o3',
   'q.st-003', 'q.st-003.o1', 'q.st-003.o2', 'q.st-004', 'q.st-004.o1',
   'ev.rain', 'ev.lost-dog', 'fact.fixture-campfire',
+  ...['hello', 'hello.c1', 'hello.c2', 'help', 'help.c1', 'help.c2', 'thanks', 'bye'].map((k) => `dlg.fixture-ranger.${k}`),
 ];
+
+// Діалог-еталон: умовні гілки на квест, прапорці (вкладені all/any, notFlag) і ефекти.
+// hello: [ST-001 completed] → help | [без умови] → bye
+// help:  [f.fixture-helped ∧ (¬f.fixture-met ∨ f.fixture-helped)] → thanks | [без умови] → bye
+// thanks → bye (end)
+const K = (k) => `dlg.fixture-ranger.${k}`;
+function rangerDialogue() {
+  return {
+    id: 'dlg.fixture-ranger', npcId: 'npc.ranger', start: 'hello',
+    nodes: [
+      { id: 'hello', speaker: 'npc', textKey: K('hello'), choices: [
+        { textKey: K('hello.c1'), next: 'help', when: { quest: 'ST-001', status: 'completed' },
+          effects: [{ setFlag: 'f.fixture-helped' }, { completeObjective: { quest: 'ST-004', objective: 'talk-ranger' } }] },
+        { textKey: K('hello.c2'), next: 'bye', effects: [{ setFlag: 'f.fixture-met' }, { startQuest: 'ST-003' }] },
+      ] },
+      { id: 'help', speaker: 'npc', textKey: K('help'), choices: [
+        { textKey: K('help.c1'), next: 'thanks', when: { all: [{ flag: 'f.fixture-helped' }, { any: [{ notFlag: 'f.fixture-met' }, { flag: 'f.fixture-helped' }] }] } },
+        { textKey: K('help.c2'), next: 'bye' },
+      ] },
+      { id: 'thanks', speaker: 'player', textKey: K('thanks'), next: 'bye' },
+      { id: 'bye', speaker: 'npc', textKey: K('bye'), end: true },
+    ],
+  };
+}
 
 export const TODAY = '2026-10-22';
 
@@ -69,6 +94,7 @@ export function baseline() {
     facts: [
       { id: 'fact.fixture-campfire', claimKey: 'fact.fixture-campfire', source: 'https://example.org/fixture-only', checkedAt: '2026-10-01', kind: 'regulation' },
     ],
+    dialogues: [rangerDialogue()],
     locales: {
       uk: Object.fromEntries(LOCALE_KEYS.map((k) => [k, `[uk] ${k}`])),
       en: Object.fromEntries(LOCALE_KEYS.map((k) => [k, `[en] ${k}`])),
@@ -77,6 +103,20 @@ export function baseline() {
 }
 
 const q = (c, id) => c.quests.find((x) => x.id === id);
+
+// Подія в дорозі (GAME-31): діалог без NPC, відкривається сам у лісі з шансом 50 %.
+const EV = (k) => `dlg.fixture-rain.${k}`;
+function withRoadEvent(c) {
+  c.dialogues.push({
+    id: 'dlg.fixture-rain', trigger: { at: ['loc.forest'], chance: 50, titleKey: EV('title') }, start: 'rain',
+    nodes: [
+      { id: 'rain', speaker: 'player', textKey: EV('rain'), choices: [{ textKey: EV('rain.c1'), next: 'bye', effects: [{ setFlag: 'f.fixture-wet' }] }] },
+      { id: 'bye', speaker: 'player', textKey: EV('bye'), end: true },
+    ],
+  });
+  for (const lang of c.meta.locales) for (const k of ['title', 'rain', 'rain.c1', 'bye']) c.locales[lang][EV(k)] = `[${lang}] ${k}`;
+  return c.dialogues[c.dialogues.length - 1];
+}
 
 // Еталон комбінаторики: ДВА СИНТЕТИЧНІ профілі, не профілі гри (реальний перелік із 12 ще не
 // передано, вигадувати його заборонено). 2 профілі × 2 транспорти × (без тварини | собака) = 8.
@@ -99,6 +139,15 @@ export function comboBaseline() {
     reward: { grantId: 'rw.dog-walk', money: 2 },
   });
   q(c, 'ST-002').transitions.push({ on: 'complete', to: 'q.dog-walk', choiceKey: 'q.dog-walk', when: { animals: [DOG] } });
+  // Дороги (GAME-31): від табору до кожного місця й назад, обома транспортами.
+  // Безкоштовні (SIM-TRAVEL-003): платну дорогу без доходу валідатор не пропускає. Старт — у таборі (ROAD_NO_HOME).
+  const both = (minutes) => [{ transport: T_CAR, minutes, cents: 0 }, { transport: T_BIKE, minutes: minutes * 3, cents: 0 }];
+  q(c, 'ST-001').locationId = 'loc.camp';
+  c.roads = [
+    { id: 'road.camp-forest', from: 'loc.camp', to: 'loc.forest', twoWay: true, ways: both(10) },
+    { id: 'road.camp-lake', from: 'loc.camp', to: 'loc.lake', twoWay: true, ways: both(20) },
+    { id: 'road.camp-dog-park', from: 'loc.camp', to: 'loc.dog-park', twoWay: true, ways: both(5) },
+  ];
   for (const lang of c.meta.locales) for (const k of COMBO_KEYS) c.locales[lang][k] = `[${lang}] ${k}`;
   return c;
 }
@@ -107,6 +156,33 @@ const ticketFromOptional = (c) => {
   c.items.push({ id: 'item.ticket', nameKey: 'item.ticket' });
   q(c, 'ST-003').reward.items = [{ item: 'item.ticket', qty: 1 }];
 };
+
+const dlg = (c) => c.dialogues[0];
+const node = (c, id) => dlg(c).nodes.find((n) => n.id === id);
+// Другий діалог — у крамаря: «hi» → «bye» одним безумовним вибором із заданими ефектами.
+const shopDialogue = (effects) => ({
+  id: 'dlg.fixture-shop', npcId: 'npc.shopkeeper', start: 'hi',
+  nodes: [
+    { id: 'hi', speaker: 'npc', textKey: K('hello'), choices: [{ textKey: K('hello.c2'), next: 'bye', effects }] },
+    { id: 'bye', speaker: 'npc', textKey: K('bye'), end: true },
+  ],
+});
+// Ключ, якого прототип Object має сам (`__proto__`): у JS-патчі присвоєння міняє прототип, тож
+// кладемо власну перелічувану властивість — саме таку дає JSON.parse('{"__proto__": …}').
+const ownProto = (o) => Object.defineProperty(o, '__proto__', { value: {}, enumerable: true, configurable: true, writable: true });
+
+// GAME-73: картка спорядження. Три намети — справжній компроміс: дешевий важкий, легкий дорогий, великий для сім'ї.
+const tentCard = (id, stats) => ({ id, nameKey: id, kind: 'tent', tier: 1, weightG: 4000, volumeL: 18, waterproofMm: 1500, comfortC: 10, sleeps: 3, priceCents: 5000, resaleCents: 1500, ...stats });
+function withGear(c, items) {
+  c.items.push(...items);
+  for (const lang of c.meta.locales) for (const i of items) c.locales[lang][i.nameKey] = `[${lang}] ${i.id}`;
+}
+const tents = () => [
+  tentCard('item.fixture-tent-cheap', {}),
+  tentCard('item.fixture-tent-light', { tier: 2, weightG: 1100, volumeL: 3, waterproofMm: 3000, comfortC: 5, sleeps: 1, priceCents: 25000, resaleCents: 11000 }),
+  // Сімейний виграє ЛИШЕ місцями — так контроль доводить, що місця справді рахуються.
+  tentCard('item.fixture-tent-family', { tier: 3, weightG: 14000, volumeL: 60, sleeps: 5, priceCents: 40000, resaleCents: 16000 }),
+];
 
 export const FIXTURES = [
   // ---- позитивні контролі: перевірки не сміють стріляти по коректному ----
@@ -146,7 +222,7 @@ export const FIXTURES = [
   } },
 
   // ---- предмет, який неможливо отримати ----
-  { name: 'вимога предмета без жодного джерела', expect: ['ITEM_UNOBTAINABLE'], patch(c) {
+  { name: 'вимога предмета без жодного джерела', expect: ['ITEM_UNOBTAINABLE', 'TRANSITION_REQUIRES_NOT_READY', 'DIALOGUE_QUEST_GATE'], patch(c) {
     c.items.push({ id: 'item.key', nameKey: 'item.map' });
     q(c, 'ST-003').requires = { items: ['item.key'] };
   } },
@@ -161,10 +237,23 @@ export const FIXTURES = [
   } },
 
   // ---- необов'язкова гілка блокує основний сюжет ----
-  { name: 'основний квест вимагає необов\u2019язковий', expect: ['MAIN_GATE_NOT_GUARANTEED'], patch(c) { q(c, 'ST-004').requires.quests.push('ST-003'); } },
-  { name: 'основний квест вимагає предмет лише з необов\u2019язкового', expect: ['MAIN_GATE_NOT_GUARANTEED'], patch(c) {
+  { name: 'основний квест вимагає необов\u2019язковий', expect: ['MAIN_GATE_NOT_GUARANTEED', 'TRANSITION_REQUIRES_NOT_READY'], patch(c) { q(c, 'ST-004').requires.quests.push('ST-003'); } },
+  { name: 'основний квест вимагає предмет лише з необов\u2019язкового', expect: ['MAIN_GATE_NOT_GUARANTEED', 'TRANSITION_REQUIRES_NOT_READY'], patch(c) {
     ticketFromOptional(c);
     q(c, 'ST-004').requires.items = ['item.ticket'];
+  } },
+
+  // ---- рецензія GAME-29: requires цілі ще не виконуваний у мить переходу (main-gate тут зелений) ----
+  { name: 'ціль вимагає предмет з локації, яку відчиняє саме джерело переходу', expect: ['TRANSITION_REQUIRES_NOT_READY'], patch(c) {
+    q(c, 'ST-002').requires.items = ['item.firewood'];               // дрова в loc.forest, unlockedBy ST-001 = джерело
+  } },
+
+  { name: 'ціль вимагає предмет, який продає NPC, що його відчиняє саме джерело', expect: ['TRANSITION_REQUIRES_NOT_READY'], patch(c) {
+    c.npcs.find((n) => n.id === 'npc.shopkeeper').unlockedBy = 'ST-001';   // подарунок — лише в нього
+    q(c, 'ST-002').requires.items = ['item.gift'];
+  } },
+  { name: 'startQuest квесту, чий предмет у requires ще не можна мати там, де NPC доступний', expect: ['DIALOGUE_QUEST_GATE'], patch(c) {
+    q(c, 'ST-003').requires = { items: ['item.firewood'] };                 // дрова — лише після ST-001, рейнджер — з початку
   } },
 
   // ---- нагорода двічі ----
@@ -182,16 +271,21 @@ export const FIXTURES = [
   { name: 'факт із датою в майбутньому', expect: ['FACT_DATE_INVALID'], patch(c) { c.facts[0].checkedAt = '2999-01-01'; } },
   { name: 'факт без дати', expect: ['FACT_DATE_INVALID'], patch(c) { delete c.facts[0].checkedAt; } },
   { name: 'факт без типу', expect: ['FACT_KIND_INVALID'], patch(c) { c.facts[0].kind = 'rumour'; } },
+  // GAME-56: давність факту. TODAY = 2026-10-22, поріг 365 днів; межа перевірена з обох боків.
+  { name: 'факт звірено рівно 365 днів тому — ще не застарів', expect: [], patch(c) { c.facts[0].checkedAt = '2025-10-22'; } },
+  { name: 'факт звірено 366 днів тому — попередження FACT_STALE', expect: ['FACT_STALE'], count: { code: 'FACT_STALE', n: 1 }, patch(c) { c.facts[0].checkedAt = '2025-10-21'; } },
+  { name: 'факт без джерела й застарілий — помилка й попередження разом', expect: ['FACT_SOURCE_MISSING', 'FACT_STALE'], patch(c) { delete c.facts[0].source; c.facts[0].checkedAt = '2020-01-01'; } },
 
   // ---- граф квестів ----
   { name: 'вузол, у який не веде жоден перехід', expect: ['NODE_UNREACHABLE'], patch(c) {
     c.quests.push({ id: 'ST-009', titleKey: 'q.st-004', optional: false, objectives: [], transitions: [{ on: 'complete', to: 'ST-004' }] });
   } },
-  { name: 'два квести вимагають один одного', expect: ['REQUIRES_CYCLE', 'MAIN_GATE_NOT_GUARANTEED'], patch(c) {
+  // DIALOGUE_QUEST_GATE тут — справжня друга знахідка: рейнджер безумовно стартує ST-003, а той тепер чогось вимагає.
+  { name: 'два квести вимагають один одного', expect: ['REQUIRES_CYCLE', 'MAIN_GATE_NOT_GUARANTEED', 'DIALOGUE_QUEST_GATE', 'TRANSITION_REQUIRES_NOT_READY'], patch(c) {
     q(c, 'ST-003').requires = { quests: ['ST-004'] };
     q(c, 'ST-004').requires.quests.push('ST-003');
   } },
-  { name: 'квест вимагає сам себе', expect: ['REQUIRES_CYCLE'], patch(c) { q(c, 'ST-003').requires = { quests: ['ST-003'] }; } },
+  { name: 'квест вимагає сам себе', expect: ['REQUIRES_CYCLE', 'DIALOGUE_QUEST_GATE', 'TRANSITION_REQUIRES_NOT_READY'], patch(c) { q(c, 'ST-003').requires = { quests: ['ST-003'] }; } },
   { name: 'необов\u2019язковий квест без відмови', expect: ['OPTIONAL_NO_DECLINE'], patch(c) { q(c, 'ST-003').transitions = [{ on: 'complete', to: 'ST-004' }]; } },
   { name: 'гілка без наступного етапу', expect: ['BRANCH_NO_NEXT', 'NO_PATH_TO_END'], patch(c) {
     c.quests.push({ id: 'ST-005', titleKey: 'q.st-004', optional: false, objectives: [], transitions: [] });
@@ -199,8 +293,271 @@ export const FIXTURES = [
   } },
   { name: 'фінал втратив позначку кінця', expect: ['BRANCH_NO_NEXT', 'NO_PATH_TO_END'], patch(c) { q(c, 'ST-004').end = false; } },
 
+  // ---- діалоги (GAME-28) ----
+  { name: '[діалог] контроль: умовні гілки без безумовної альтернативи, але з fallback — коректно', expect: [], patch(c) {
+    delete node(c, 'thanks').next;
+    node(c, 'thanks').choices = [
+      { textKey: K('help.c1'), next: 'bye', when: { notFlag: 'f.fixture-met' } },
+      { textKey: K('help.c2'), next: 'bye' },
+    ];
+  } },
+  { name: '[діалог] вузол, на який не веде жоден вибір', expect: ['DIALOGUE_NODE_UNREACHABLE'], patch(c) {
+    dlg(c).nodes.push({ id: 'orphan', speaker: 'npc', textKey: K('bye'), end: true });
+  } },
+  { name: '[діалог] вузол без виходу і не end', expect: ['DIALOGUE_DEAD_END'], patch(c) { delete node(c, 'thanks').next; } },
+  { name: '[діалог] усі виходи вузла умовні', expect: ['DIALOGUE_DEAD_END'], patch(c) { node(c, 'help').choices[1].when = { flag: 'f.fixture-met' }; } },
+  { name: '[діалог] петля без жодного end', expect: ['DIALOGUE_DEAD_END'], count: { code: 'DIALOGUE_DEAD_END', n: 4 }, patch(c) {
+    delete node(c, 'bye').end;
+    node(c, 'bye').next = 'hello';
+  } },
+  { name: '[діалог] умова на прапорець, який ніщо не ставить', expect: ['DIALOGUE_FLAG_NEVER_SET'], patch(c) { node(c, 'help').choices[0].when = { flag: 'f.fixture-ghost' }; } },
+  { name: '[діалог] неіснуючий прапорець усередині any', expect: ['DIALOGUE_FLAG_NEVER_SET'], patch(c) {
+    node(c, 'help').choices[0].when.all[1].any.push({ flag: 'f.fixture-ghost' });
+  } },
+  { name: '[діалог] notFlag на прапорець, який ніщо не ставить', expect: ['DIALOGUE_FLAG_NEVER_SET'], patch(c) { node(c, 'help').choices[0].when = { notFlag: 'f.fixture-ghost' }; } },
+  { name: '[діалог] прапорець ставиться лише в іншому діалозі — коректно', expect: [], patch(c) {
+    c.dialogues.push(shopDialogue([{ setFlag: 'f.fixture-elsewhere' }]));
+    node(c, 'help').choices[0].when = { flag: 'f.fixture-elsewhere' };
+  } },
+  // Нерухома точка прапорців: сетер за нездійсненною умовою — не сетер.
+  { name: '[діалог] прапорець ставить лише вибір, що сам вимагає цей прапорець', expect: ['DIALOGUE_FLAG_NEVER_SET'], count: { code: 'DIALOGUE_FLAG_NEVER_SET', n: 1 }, patch(c) {
+    node(c, 'help').choices.push({ textKey: K('help.c1'), next: 'bye', when: { flag: 'f.fixture-loop' }, effects: [{ setFlag: 'f.fixture-loop' }] });
+  } },
+  // Сетер step2 (hello.c1) стоїть РАНІШЕ за сетер step1 (hello.c2), від якого залежить: один прохід
+  // його пропустить. У грі це друга розмова: перша ставить step1, друга відкриває hello.c1.
+  { name: '[діалог] контроль: ланцюжок сетерів через умовні вибори — коректно', expect: [], patch(c) {
+    node(c, 'hello').choices[0].when = { all: [{ quest: 'ST-001', status: 'completed' }, { flag: 'f.fixture-step1' }] };
+    node(c, 'hello').choices[0].effects.push({ setFlag: 'f.fixture-step2' });
+    node(c, 'hello').choices[1].effects.push({ setFlag: 'f.fixture-step1' });
+    node(c, 'help').choices[0].when = { flag: 'f.fixture-step2' };
+  } },
+  { name: '[діалог] сетер за суперечливою умовою all не рахується', expect: ['DIALOGUE_COND_CONTRADICTION', 'DIALOGUE_FLAG_NEVER_SET'], patch(c) {
+    node(c, 'help').choices.push({ textKey: K('help.c1'), next: 'bye', when: { all: [{ flag: 'f.fixture-met' }, { notFlag: 'f.fixture-met' }] }, effects: [{ setFlag: 'f.fixture-late' }] });
+    node(c, 'help').choices[0].when = { flag: 'f.fixture-late' };
+  } },
+  { name: '[діалог] all вимагає водночас flag і notFlag (у вкладеному all)', expect: ['DIALOGUE_COND_CONTRADICTION'], patch(c) {
+    node(c, 'help').choices[0].when = { all: [{ flag: 'f.fixture-helped' }, { all: [{ notFlag: 'f.fixture-helped' }] }] };
+  } },
+  { name: '[діалог] контроль: flag і notFlag у різних гілках any всередині all — не суперечність', expect: [], patch(c) {
+    node(c, 'help').choices[0].when = { all: [{ flag: 'f.fixture-met' }, { any: [{ flag: 'f.fixture-helped' }, { notFlag: 'f.fixture-helped' }] }] };
+  } },
+  { name: '[діалог] контроль: суперечність лише в одній гілці any — вибір живий через іншу (звірка з ядром)', expect: [], patch(c) {
+    node(c, 'help').choices[0].when = { all: [{ any: [{ all: [{ flag: 'f.fixture-met' }, { notFlag: 'f.fixture-met' }] }, { flag: 'f.fixture-helped' }] }] };
+  } },
+  { name: '[діалог] суперечність у КОЖНІЙ гілці any — вибір не покажеться ніколи', expect: ['DIALOGUE_COND_CONTRADICTION'], patch(c) {
+    node(c, 'help').choices[0].when = { any: [{ all: [{ flag: 'f.fixture-met' }, { notFlag: 'f.fixture-met' }] }, { all: [{ flag: 'f.fixture-helped' }, { notFlag: 'f.fixture-helped' }] }] };
+  } },
+  // Пам'ять NPC (GAME-48): remember у розмові з NPC → remembers/notRemembers у розмові з ТИМ САМИМ NPC.
+  { name: '[пам’ять] контроль: рейнджер запам’ятовує й згадує в наступній розмові — коректно', expect: [], patch(c) {
+    node(c, 'hello').choices[1].effects.push({ remember: 'm.fixture-met' });
+    node(c, 'help').choices.push({ textKey: K('help.c1'), next: 'bye', when: { remembers: 'm.fixture-met' } });
+    node(c, 'help').choices.push({ textKey: K('help.c2'), next: 'bye', when: { notRemembers: 'm.fixture-met' } });
+  } },
+  { name: '[пам’ять] умова на факт, який ніхто не запам’ятовує', expect: ['MEMORY_NEVER_SET'], patch(c) { node(c, 'help').choices[0].when = { remembers: 'm.fixture-ghost' }; } },
+  { name: '[пам’ять] notRemembers на факт, який ніхто не запам’ятовує', expect: ['MEMORY_NEVER_SET'], patch(c) { node(c, 'help').choices[0].when = { notRemembers: 'm.fixture-ghost' }; } },
+  { name: '[пам’ять] неіснуючий факт усередині any', expect: ['MEMORY_NEVER_SET'], patch(c) {
+    node(c, 'help').choices[0].when.all[1].any.push({ remembers: 'm.fixture-ghost' });
+  } },
+  { name: '[пам’ять] факт запам’ятав крамар — рейнджер його не знає', expect: ['MEMORY_NEVER_SET'], count: { code: 'MEMORY_NEVER_SET', n: 1 }, patch(c) {
+    c.dialogues.push(shopDialogue([{ remember: 'm.fixture-met' }]));
+    node(c, 'help').choices[0].when = { remembers: 'm.fixture-met' };
+  } },
+  { name: '[пам’ять] факт запам’ятовує лише вибір, що сам його вимагає', expect: ['MEMORY_NEVER_SET'], count: { code: 'MEMORY_NEVER_SET', n: 1 }, patch(c) {
+    node(c, 'help').choices.push({ textKey: K('help.c1'), next: 'bye', when: { remembers: 'm.fixture-loop' }, effects: [{ remember: 'm.fixture-loop' }] });
+  } },
+  // Ланцюжок, де пам'ять у другому проході росте САМА (прапорці вже ні): один прохід її загубив би.
+  // hello.c2 → s1; help.c0 [s1] → s2; hello.new [s2] → s3 (другий прохід); hello.c1 [s3] → s4 (третій).
+  { name: '[пам’ять] контроль: ланцюжок запам’ятовувань через три розмови — коректно', expect: [], patch(c) {
+    const hello = node(c, 'hello');
+    hello.choices[1].effects.push({ remember: 'm.fixture-s1' });
+    hello.choices.push({ textKey: K('hello.c2'), next: 'bye', when: { remembers: 'm.fixture-s2' }, effects: [{ remember: 'm.fixture-s3' }] });
+    hello.choices[0].when = { all: [{ quest: 'ST-001', status: 'completed' }, { remembers: 'm.fixture-s3' }] };
+    hello.choices[0].effects.push({ remember: 'm.fixture-s4' });
+    node(c, 'help').choices[0].when = { remembers: 'm.fixture-s1' };
+    node(c, 'help').choices[0].effects = [{ remember: 'm.fixture-s2' }];
+    node(c, 'help').choices.push({ textKey: K('help.c1'), next: 'bye', when: { remembers: 'm.fixture-s4' } });
+  } },
+  { name: '[пам’ять] all вимагає водночас remembers і notRemembers', expect: ['DIALOGUE_COND_CONTRADICTION'], patch(c) {
+    node(c, 'hello').choices[1].effects.push({ remember: 'm.fixture-met' });
+    node(c, 'help').choices[0].when = { all: [{ flag: 'f.fixture-helped' }, { all: [{ remembers: 'm.fixture-met' }, { notRemembers: 'm.fixture-met' }] }] };
+  } },
+  { name: '[пам’ять] контроль: суперечність лише в одній гілці any, інша гілка — живий факт', expect: [], patch(c) {
+    node(c, 'hello').choices[1].effects.push({ remember: 'm.fixture-met' }, { remember: 'm.fixture-asked' });
+    node(c, 'help').choices[0].when = { any: [{ all: [{ remembers: 'm.fixture-met' }, { notRemembers: 'm.fixture-met' }] }, { remembers: 'm.fixture-asked' }] };
+  } },
+  { name: '[пам’ять] id факту не за форматом', expect: ['ID_FORMAT'], patch(c) { node(c, 'hello').choices[1].effects.push({ remember: 'm.fixture_met' }); } },
+  { name: '[пам’ять] ефект remember — не рядок', expect: ['SCHEMA_INVALID'], patch(c) { node(c, 'hello').choices[1].effects.push({ remember: 7 }); } },
+  { name: '[пам’ять] умова з двома дискримінаторами remembers і notRemembers', expect: ['SCHEMA_INVALID'], patch(c) { node(c, 'help').choices[0].when = { remembers: 'm.x', notRemembers: 'm.x' }; } },
+  { base: 'combo', name: '[пам’ять] подія в дорозі запам’ятовує й читає — NPC немає, пам’яті теж', expect: ['EVENT_EFFECT_UNSUPPORTED', 'MEMORY_NEVER_SET'], patch(c) {
+    const d = withRoadEvent(c);
+    d.nodes[0].choices[0].effects.push({ remember: 'm.fixture-wet' });
+    d.nodes[0].choices.push({ textKey: EV('rain.c1'), next: 'bye', when: { remembers: 'm.fixture-wet' } });
+  } },
+  // Один діалог на NPC.
+  { name: '[діалог] два діалоги для одного NPC', expect: ['DIALOGUE_NPC_DUPLICATE'], patch(c) {
+    const d = shopDialogue([]);
+    d.npcId = 'npc.ranger';
+    c.dialogues.push(d);
+  } },
+  // completeObjective — лише talk із тим самим NPC.
+  { name: '[діалог] розмова закриває ціль visit', expect: ['DIALOGUE_OBJECTIVE_KIND'], patch(c) {
+    node(c, 'hello').choices[0].effects[1].completeObjective = { quest: 'ST-002', objective: 'visit-forest' };
+  } },
+  { name: '[діалог] розмова з крамарем закриває ціль «поговорити з рейнджером»', expect: ['DIALOGUE_OBJECTIVE_KIND'], patch(c) {
+    c.dialogues.push(shopDialogue([{ completeObjective: { quest: 'ST-004', objective: 'talk-ranger' } }]));
+  } },
+  // startQuest не обходить requires.quests квесту-цілі.
+  { name: '[діалог] безумовний вибір стартує квест, що вимагає незавершеного', expect: ['DIALOGUE_QUEST_GATE'], patch(c) {
+    node(c, 'hello').choices[1].effects.push({ startQuest: 'ST-004' });
+  } },
+  { name: '[діалог] контроль: when вибору вимагає завершення потрібного квесту — коректно', expect: [], patch(c) {
+    node(c, 'hello').choices[0].when = { all: [{ quest: 'ST-001', status: 'completed' }, { quest: 'ST-002', status: 'completed' }] };
+    node(c, 'hello').choices[0].effects.push({ startQuest: 'ST-004' });
+  } },
+  { name: '[діалог] when вибору з потрібним квестом лише всередині any — не гарантія', expect: ['DIALOGUE_QUEST_GATE'], patch(c) {
+    node(c, 'hello').choices[0].when = { any: [{ quest: 'ST-001', status: 'completed' }, { quest: 'ST-002', status: 'completed' }] };
+    node(c, 'hello').choices[0].effects.push({ startQuest: 'ST-004' });
+  } },
+  { name: '[діалог] when вибору вимагає потрібний квест лише активним — не гарантія', expect: ['DIALOGUE_QUEST_GATE'], patch(c) {
+    node(c, 'hello').choices[0].when = { quest: 'ST-002', status: 'active' };
+    node(c, 'hello').choices[0].effects.push({ startQuest: 'ST-004' });
+  } },
+  { name: '[діалог] контроль: NPC відкривається лише після потрібного квесту — коректно', expect: [], patch(c) {
+    c.npcs[1].unlockedBy = 'ST-002';
+    c.dialogues.push(shopDialogue([{ startQuest: 'ST-004' }]));
+  } },
+  { name: '[діалог] NPC відкривається раніше, ніж завершено потрібний квест', expect: ['DIALOGUE_QUEST_GATE'], patch(c) {
+    c.npcs[1].unlockedBy = 'ST-001';
+    c.dialogues.push(shopDialogue([{ startQuest: 'ST-004' }]));
+  } },
+  { name: '[діалог] неіснуючий NPC', expect: ['DIALOGUE_REF_MISSING'], patch(c) { dlg(c).npcId = 'npc.ghost'; } },
+  { name: '[діалог] умова на неіснуючий квест', expect: ['DIALOGUE_REF_MISSING'], patch(c) { node(c, 'hello').choices[0].when.quest = 'ST-099'; } },
+  { name: '[діалог] ефект на неіснуючий квест і неіснуючу ціль', expect: ['DIALOGUE_REF_MISSING'], count: { code: 'DIALOGUE_REF_MISSING', n: 2 }, patch(c) {
+    node(c, 'hello').choices[1].effects[1].startQuest = 'q.ghost';
+    node(c, 'hello').choices[0].effects[1].completeObjective.objective = 'ghost-step';
+  } },
+  { name: '[діалог] умовний вибір веде на неіснуючий вузол', expect: ['DIALOGUE_REF_MISSING'], patch(c) {
+    node(c, 'help').choices.push({ textKey: K('help.c1'), next: 'ghost', when: { flag: 'f.fixture-helped' } });
+  } },
+  { name: '[діалог] старт на неіснуючий вузол — лише першопричина', expect: ['DIALOGUE_REF_MISSING'], patch(c) { dlg(c).start = 'ghost'; } },
+  // next вузла на неіснуючий вузол: thanks лишається і без шляху до end — це друга, справжня знахідка.
+  { name: '[діалог] next вузла веде на неіснуючий вузол', expect: ['DIALOGUE_REF_MISSING', 'DIALOGUE_DEAD_END'], count: { code: 'DIALOGUE_REF_MISSING', n: 1 }, patch(c) { node(c, 'thanks').next = 'ghost'; } },
+  { name: '[діалог] completeObjective на неіснуючий квест — посилання, а не падіння', expect: ['DIALOGUE_REF_MISSING'], patch(c) {
+    node(c, 'hello').choices[0].effects[1].completeObjective = { quest: 'q.ghost', objective: 'talk-ranger' };
+  } },
+  { name: '[діалог] немає перекладу вибору в одній мові', expect: ['LOCALE_MISSING'], patch(c) { delete c.locales.en[K('help.c2')]; } },
+  { name: '[діалог] порожній переклад репліки вузла', expect: ['LOCALE_MISSING'], patch(c) { c.locales.uk[K('thanks')] = ''; } },
+  { name: '[діалог] умова рядком, а не об’єктом (TD-006)', expect: ['SCHEMA_INVALID'], patch(c) { node(c, 'help').choices[0].when = 'f.fixture-helped && !f.fixture-met'; } },
+  { name: '[діалог] умова з двома дискримінаторами', expect: ['SCHEMA_INVALID'], patch(c) { node(c, 'help').choices[0].when = { flag: 'f.fixture-helped', notFlag: 'f.fixture-met' }; } },
+  { name: '[діалог] вузол і з next, і з choices', expect: ['SCHEMA_INVALID'], patch(c) { node(c, 'hello').next = 'bye'; } },
+  { name: '[діалог] стан проходження у вузлі', expect: ['SCHEMA_UNKNOWN_FIELD'], patch(c) { node(c, 'bye').visited = true; } },
+  { name: '[діалог] діалог без nodes — схема, а не падіння', expect: ['SCHEMA_INVALID'], patch(c) { delete dlg(c).nodes; } },
+  { name: '[схема] прототипний ключ constructor у вузлі', expect: ['SCHEMA_UNKNOWN_FIELD'], patch(c) { node(c, 'bye').constructor = 'x'; } },
+  { name: '[схема] власний ключ __proto__ у вузлі', expect: ['SCHEMA_UNKNOWN_FIELD'], patch(c) { ownProto(node(c, 'bye')); } },
+  { name: '[схема] прототипний ключ constructor в умові', expect: ['SCHEMA_UNKNOWN_FIELD'], patch(c) { node(c, 'help').choices[0].when = { flag: 'f.fixture-helped', constructor: 'x' }; } },
+  { name: '[схема] власний ключ __proto__ в умові', expect: ['SCHEMA_UNKNOWN_FIELD'], patch(c) { node(c, 'help').choices[0].when = ownProto({ flag: 'f.fixture-helped' }); } },
+  { name: '[схема] умова лише з прототипним ключем', expect: ['SCHEMA_INVALID'], patch(c) { node(c, 'help').choices[0].when = { toString: 'f.fixture-helped' }; } },
+  { name: '[діалог] прапорець із підкресленням', expect: ['ID_FORMAT'], patch(c) {
+    node(c, 'hello').choices[0].effects[0].setFlag = 'f.fixture_helped';
+    node(c, 'help').choices[0].when = { flag: 'f.fixture_helped' };
+  } },
+  { name: '[діалог] id вузла з великою літерою', expect: ['ID_FORMAT'], patch(c) {
+    node(c, 'thanks').id = 'Thanks';
+    node(c, 'help').choices[0].next = 'Thanks';
+  } },
+  { name: '[діалог] id діалогу без префікса dlg.', expect: ['ID_FORMAT'], patch(c) { dlg(c).id = 'ranger-hello'; } },
+  { name: '[діалог] два вузли з одним id', expect: ['ID_DUPLICATE'], patch(c) { dlg(c).nodes.push({ ...node(c, 'bye') }); } },
+  { base: 'combo', name: '[діалог] умова на транспорт — коректно', expect: [], patch(c) {
+    node(c, 'help').choices[0].when = { any: [{ transport: 'transport.fixture-bike' }, { flag: 'f.fixture-helped' }] };
+  } },
+  { base: 'combo', name: '[діалог] умова на неіснуючий транспорт', expect: ['DIALOGUE_REF_MISSING'], patch(c) { node(c, 'help').choices[0].when = { transport: 'transport.ghost' }; } },
+
   // ---- комбінації профіль × транспорт × тварина (синтетичні профілі) ----
   { base: 'combo', name: '[комб.] еталон із профілями, транспортом і собакою коректний', expect: [], patch() {} },
+  // ---- GAME-42 (TD-006): умови-об'єкти на ПЕРЕХОДАХ квестів, не лише в діалогах ----
+  // Дороги (GAME-31).
+  { base: 'combo', name: '[дороги] ізольований вузол — до озера жодної дороги', expect: ['ROAD_UNREACHABLE'], patch(c) { c.roads = c.roads.filter((r) => r.id !== 'road.camp-lake'); } },
+  { base: 'combo', name: '[дороги] дорога лише туди — з озера не повернутись', expect: ['ROAD_NO_RETURN'], patch(c) { c.roads.find((r) => r.id === 'road.camp-lake').twoWay = false; } },
+  { base: 'combo', name: '[дороги] до озера лише автом — велосипедом не доїхати', expect: ['ROAD_UNREACHABLE'], patch(c) { const r = c.roads.find((x) => x.id === 'road.camp-lake'); r.ways = r.ways.filter((w) => w.transport === T_CAR); } },
+  { base: 'combo', name: '[дороги] те саме ребро двічі', expect: ['ROAD_DUPLICATE'], patch(c) { c.roads.push({ id: 'road.camp-forest-2', from: 'loc.forest', to: 'loc.camp', ways: [{ transport: T_CAR, minutes: 1, cents: 0 }] }); } },
+  { base: 'combo', name: '[дороги] контроль: до озера лише крізь замкнений ліс — проїхати можна', expect: [], patch(c) { const r = c.roads.find((x) => x.id === 'road.camp-lake'); r.from = 'loc.forest'; } },
+  { base: 'combo', name: '[дороги] неіснуючий транспорт і локація', expect: ['REF_MISSING'], patch(c) { c.roads[0].ways.push({ transport: 'transport.ghost', minutes: 1, cents: 0 }); c.roads.push({ id: 'road.camp-ghost', from: 'loc.camp', to: 'loc.ghost', ways: [{ transport: T_CAR, minutes: 1, cents: 0 }] }); } },
+  { base: 'combo', name: '[дороги] платна дорога без економіки', expect: ['ROAD_PAID_NO_ECONOMY'], patch(c) { c.roads[1].ways[0].cents = 300; } },
+  { base: 'combo', name: '[дороги] дорога в саму себе', expect: ['ROAD_SELF_LOOP'], patch(c) { c.roads.push({ id: 'road.camp-camp', from: 'loc.camp', to: 'loc.camp', twoWay: true, ways: [{ transport: T_CAR, minutes: 1, cents: 0 }] }); } },
+  { base: 'combo', name: '[дороги] стартовий квест без місця', expect: ['ROAD_NO_HOME'], patch(c) { delete q(c, 'ST-001').locationId; } },
+  // GAME-72: небезпека дороги — ціле 0…3.
+  { base: 'combo', name: '[дороги] контроль: небезпечна дорога (risk 3) — коректно', expect: [], patch(c) { c.roads[1].ways[1].risk = 3; c.roads[0].ways[0].risk = 0; } },
+  { base: 'combo', name: '[дороги] небезпека поза 0…3', expect: ['SCHEMA_INVALID'], count: { code: 'SCHEMA_INVALID', n: 1 }, patch(c) { c.roads[1].ways[1].risk = 4; } },
+  // GAME-72: стартові навички професії.
+  { base: 'combo', name: '[навички] контроль: старт професії з відомих навичок — коректно', expect: [], patch(c) {
+    c.profiles[0].startSkills = [{ skill: 'skill.camping', rank: 2 }, { skill: 'skill.mechanics', rank: 5 }];
+    c.profiles[1].startSkills = [{ skill: 'skill.cooking', rank: 0 }];
+  } },
+  { base: 'combo', name: '[навички] невідома навичка', expect: ['SKILL_UNKNOWN'], count: { code: 'SKILL_UNKNOWN', n: 1 }, patch(c) { c.profiles[0].startSkills = [{ skill: 'skill.camping', rank: 2 }, { skill: 'skill.swimming', rank: 1 }]; } },
+  { base: 'combo', name: '[навички] навичка двічі в одному профілі', expect: ['SKILL_DUPLICATE'], count: { code: 'SKILL_DUPLICATE', n: 1 }, patch(c) { c.profiles[0].startSkills = [{ skill: 'skill.camping', rank: 2 }, { skill: 'skill.camping', rank: 3 }]; } },
+  { base: 'combo', name: '[навички] контроль: та сама навичка у двох профілях — не дубль', expect: [], patch(c) { c.profiles[0].startSkills = [{ skill: 'skill.camping', rank: 2 }]; c.profiles[1].startSkills = [{ skill: 'skill.camping', rank: 1 }]; } },
+  { base: 'combo', name: '[навички] ранг 6 — поза 0…5', expect: ['SCHEMA_INVALID'], count: { code: 'SCHEMA_INVALID', n: 1 }, patch(c) { c.profiles[0].startSkills = [{ skill: 'skill.camping', rank: 6 }]; } },
+  { base: 'combo', name: '[навички] порожній startSkills', expect: ['SCHEMA_INVALID'], patch(c) { c.profiles[0].startSkills = []; } },
+  // GAME-73: спорядження.
+  { name: '[спорядження] контроль: три намети-компроміси — коректно', expect: [], patch(c) { withGear(c, tents()); } },
+  { name: '[спорядження] контроль: викуп дорівнює ціні — межа дозволена', expect: [], patch(c) { const t = tents(); t[0].resaleCents = t[0].priceCents; withGear(c, t); } },
+  { name: '[спорядження] контроль: спальник кращий за намет у всьому — інший вид, не домінування', expect: [], patch(c) {
+    withGear(c, [...tents(), { ...tentCard('item.fixture-bag', {}), kind: 'sleeping-bag', weightG: 900, volumeL: 3, waterproofMm: 5000, comfortC: -5, sleeps: 5, priceCents: 1000, resaleCents: 100 }]);
+  } },
+  { name: '[спорядження] немає ціни викупу', expect: ['GEAR_FIELD_MISSING'], count: { code: 'GEAR_FIELD_MISSING', n: 1 }, patch(c) { const t = tents(); delete t[1].resaleCents; withGear(c, t); } },
+  { name: '[спорядження] немає ваги', expect: ['GEAR_FIELD_MISSING'], count: { code: 'GEAR_FIELD_MISSING', n: 1 }, patch(c) { const t = tents(); delete t[2].weightG; withGear(c, t); } },
+  { name: '[спорядження] є ціна, але немає виду', expect: ['GEAR_FIELD_MISSING'], count: { code: 'GEAR_FIELD_MISSING', n: 1 }, patch(c) { const t = tents(); delete t[0].kind; withGear(c, t); } },
+  { name: '[спорядження] викуп дорожчий за купівлю', expect: ['GEAR_RESALE_ABOVE_PRICE'], count: { code: 'GEAR_RESALE_ABOVE_PRICE', n: 1 }, patch(c) { const t = tents(); t[1].resaleCents = t[1].priceCents + 1; withGear(c, t); } },
+  { name: '[спорядження] намет, не кращий ні в чому за інший', expect: ['GEAR_DOMINATED'], count: { code: 'GEAR_DOMINATED', n: 1 }, patch(c) {
+    withGear(c, [...tents(), tentCard('item.fixture-tent-worse', { weightG: 4500, priceCents: 5000 })]);
+  } },
+  { name: '[спорядження] точна копія іншого намету під новим id — одна знахідка, на копії', expect: ['GEAR_DOMINATED'], count: { code: 'GEAR_DOMINATED', n: 1 }, patch(c) {
+    const t = tents(); withGear(c, [...t, { ...t[1], id: 'item.fixture-tent-copy', nameKey: 'item.fixture-tent-copy' }]);
+    for (const lang of c.meta.locales) c.locales[lang]['item.fixture-tent-copy'] = `[${lang}] copy`;
+  } },
+  { name: '[спорядження] тир поза 1…3', expect: ['SCHEMA_INVALID'], count: { code: 'SCHEMA_INVALID', n: 1 }, patch(c) { const t = tents(); t[2].tier = 4; withGear(c, t); } },
+  { name: '[спорядження] вигаданий вид', expect: ['SCHEMA_INVALID'], count: { code: 'SCHEMA_INVALID', n: 1 }, patch(c) { const t = tents(); t[0].kind = 'hammock'; withGear(c, t); } },
+  { base: 'combo', name: '[дороги] транспорт, якого не дозволяє жоден профіль: лише COMBO_OPTION_UNUSABLE, без вимоги доріг', expect: ['COMBO_OPTION_UNUSABLE'], patch(c) {
+    c.transports.push({ id: 'transport.fixture-boat', nameKey: 'transport.fixture-boat' });
+    for (const lang of c.meta.locales) c.locales[lang]['transport.fixture-boat'] = `[${lang}] boat`;
+    for (const p of c.profiles) p.transports = [T_CAR, T_BIKE];
+  } },
+  // GAME-56: попередження не бруднить контент — пізня перевірка комбінацій усе одно біжить і червоніє.
+  { base: 'combo', name: '[факт] застарілий факт не вимикає перевірку комбінацій', expect: ['FACT_STALE', 'COMBO_OPTION_UNUSABLE'], patch(c) {
+    c.facts[0].checkedAt = '2024-01-01';
+    c.transports.push({ id: 'transport.fixture-boat', nameKey: 'transport.fixture-boat' });
+    for (const lang of c.meta.locales) c.locales[lang]['transport.fixture-boat'] = `[${lang}] boat`;
+    for (const p of c.profiles) p.transports = [T_CAR, T_BIKE];
+  } },
+  // Події в дорозі (GAME-31).
+  { base: 'combo', name: '[подія] контроль: подія в дорозі з прапорцем і умова на «подія була» — коректно', expect: [], patch(c) {
+    withRoadEvent(c);
+    node(c, 'help').choices.push({ textKey: K('help.c2'), next: 'bye', when: { notFlag: 'f.seen-fixture-rain' } });
+  } },
+  { base: 'combo', name: '[подія] діалог без власника (ні NPC, ні trigger)', expect: ['DIALOGUE_OWNER'], patch(c) { delete dlg(c).npcId; } },
+  { base: 'combo', name: '[подія] діалог і з NPC, і з trigger', expect: ['DIALOGUE_OWNER'], patch(c) { withRoadEvent(c).npcId = 'npc.shopkeeper'; } },
+  { base: 'combo', name: '[подія] подія стартує квест — сюжет на везінні', expect: ['EVENT_EFFECT_UNSUPPORTED'], patch(c) { withRoadEvent(c).nodes[0].choices[0].effects.push({ startQuest: 'ST-003' }); } },
+  { base: 'combo', name: '[подія] у неіснуючій локації', expect: ['DIALOGUE_REF_MISSING'], patch(c) { withRoadEvent(c).trigger.at = ['loc.ghost']; } },
+  { base: 'combo', name: '[подія] шанс 101 %', expect: ['SCHEMA_INVALID'], patch(c) { withRoadEvent(c).trigger.chance = 101; } },
+  { base: 'combo', name: '[подія] без виходу — червоніє тими самими перевірками діалогів', expect: ['DIALOGUE_DEAD_END', 'DIALOGUE_NODE_UNREACHABLE'], patch(c) {
+    const d = withRoadEvent(c);
+    d.nodes[0].choices[0].next = 'rain';
+  } },
+  { base: 'combo', name: '[дороги] id не за форматом', expect: ['ID_FORMAT'], patch(c) { c.roads[0].id = 'camp-forest'; } },
+  { base: 'combo', name: '[дороги] дорога за 0 хвилин', expect: ['SCHEMA_INVALID'], patch(c) { c.roads[0].ways[0].minutes = 0; } },
+  { base: 'combo', name: '[умова] when переходу рядком', expect: ['SCHEMA_INVALID'], patch(c) { dogEntry(c).when = 'animals == dog'; } },
+  { base: 'combo', name: '[умова] when самого квесту рядком', expect: ['SCHEMA_INVALID'], patch(c) { q(c, 'q.dog-walk').when = 'dog'; } },
+  { base: 'combo', name: '[умова] when цілі рядком', expect: ['SCHEMA_INVALID'], patch(c) { q(c, 'q.dog-walk').objectives[0].when = 'dog'; } },
+  { base: 'combo', name: '[умова] when локації рядком', expect: ['SCHEMA_INVALID'], patch(c) { c.locations.find((l) => l.id === 'loc.dog-park').when = 'dog'; } },
+  { base: 'combo', name: '[умова] when NPC рядком', expect: ['SCHEMA_INVALID'], patch(c) { c.npcs[0].when = 'car'; } },
+  { base: 'combo', name: '[умова] when квесту на неіснуючу тварину', expect: ['REF_MISSING'], patch(c) { q(c, 'q.dog-walk').when = { animals: ['animal.fixture-cat'] }; } },
+  { base: 'combo', name: '[умова] when переходу на неіснуючий транспорт', expect: ['REF_MISSING'], patch(c) { dogEntry(c).when = { transports: ['transport.fixture-boat'] }; } },
+  { base: 'combo', name: '[умова] основний шлях лише для кемпера з собакою — решта комбінацій без фіналу', expect: ['BRANCH_NO_NEXT', 'NO_PATH_TO_END'], patch(c) {
+    c.transports.push({ id: 'transport.fixture-camper', nameKey: 'transport.fixture-camper' });
+    for (const lang of c.meta.locales) c.locales[lang]['transport.fixture-camper'] = `[${lang}] camper`;
+    for (const r of c.roads) r.ways.push({ transport: 'transport.fixture-camper', minutes: 30, cents: 0 }); // кемпер теж їздить дорогами
+    q(c, 'ST-002').transitions[0].when = { transports: ['transport.fixture-camper'], animals: [DOG] };
+  } },
   { base: 'combo', name: '[комб.] квест без when, досяжний лише з собакою, без собаки не перевіряється', expect: [], patch(c) {
     const d = q(c, 'q.dog-walk');
     delete d.when;
@@ -217,7 +574,7 @@ export const FIXTURES = [
     q(c, 'ST-004').objectives.push({ id: 'visit-park', textKey: 'q.st-004.o1', kind: 'visit', target: 'loc.dog-park', required: true });
   } },
   { base: 'combo', name: '[комб.] відмова лише для одного профілю', expect: ['OPTIONAL_NO_DECLINE'], patch(c) { q(c, 'ST-003').transitions[1].when = { profiles: [P_A] }; } },
-  { base: 'combo', name: '[комб.] предмет основного сюжету продають лише велосипедистам', expect: ['MAIN_GATE_NOT_GUARANTEED'], patch(c) {
+  { base: 'combo', name: '[комб.] предмет основного сюжету продають лише велосипедистам', expect: ['MAIN_GATE_NOT_GUARANTEED', 'TRANSITION_REQUIRES_NOT_READY'], patch(c) {
     c.npcs[1].when = { transports: [T_BIKE] };
     q(c, 'ST-004').requires.items = ['item.gift'];
   } },
@@ -312,6 +669,10 @@ export const FILE_FIXTURES = [
   { name: 'теки немає, але явно дозволено → NOT_RUN, а не OK', files: null, allowMissing: true, expectStatus: 'NOT_RUN', expect: [] },
   { name: 'зламаний JSON', files: 'baseline', override: { 'quests.json': '[{' }, expectStatus: 'ISSUES', expect: ['CONTENT_PARSE'] },
   { name: 'порожній список квестів', files: 'baseline', override: { 'quests.json': '[]' }, expectStatus: 'ISSUES', expect: ['CONTENT_EMPTY'] },
+  { name: 'зламаний JSON діалогу', files: 'baseline', override: { 'dialogue/fixture-ranger.json': '{' }, expectStatus: 'ISSUES', expect: ['CONTENT_PARSE'] },
+  { name: 'чернетка не-JSON у dialogue/', files: 'baseline', override: { 'dialogue/notes.md': '# draft' }, expectStatus: 'ISSUES', expect: ['CONTENT_UNKNOWN_FILE'] },
+  { name: 'тека з назвою x.json у dialogue/', files: 'baseline', dirs: ['dialogue/x.json'], expectStatus: 'ISSUES', expect: ['CONTENT_UNKNOWN_FILE'] },
+  { name: 'назва файлу діалогу не збігається з id', files: 'baseline', override: { 'dialogue/shop.json': JSON.stringify(shopDialogue([])) }, expectStatus: 'ISSUES', expect: ['DIALOGUE_FILE_NAME'] },
   { name: 'одруківка в назві файлу', files: 'baseline', override: { 'quest.json': '[]' }, expectStatus: 'ISSUES', expect: ['CONTENT_UNKNOWN_FILE'] },
   { name: 'еталон із диска читається повністю й без втрат', files: 'baseline', expectStatus: 'OK', expect: [], roundTrip: true },
 ];

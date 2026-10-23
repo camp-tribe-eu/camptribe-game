@@ -1,0 +1,12 @@
+GPL 3.0 | http://www.gnu.org/licenses/gpl-3.0.html
+CC-BY-SA 3.0 | http://creativecommons.org/licenses/by-sa/3.0/
+Submitted by: Blue Moon Bear
+FILE https://opengameart.org/sites/default/files/css/css_xE-rWrJf-fncB6ztZfd2huxqgxu4WO-qwma6Xer30m4.css
+FILE https://opengameart.org/sites/default/files/css/css_ff3tJc71Z402cxcrQprs7GRkOQJuOqgs2LWeSWIHHR0.css
+FILE https://opengameart.org/sites/default/files/css/css_tEtvFGhnOc-KHD4tmmzYBpkDNcsr2D2Ep4vHodgpeO0.css
+FILE https://opengameart.org/sites/default/files/css/css_6NcQOcblGY28_iJd_khUiH7LvkXsK2NzkKjV006jQ5I.css
+FILE https://opengameart.org/sites/default/files/ex1_2.png
+FILE https://opengameart.org/sites/default/files/carsskorpios.amcpacer_0.png
+FILE https://opengameart.org/sites/default/files/carsskorpiosall_1.png
+FILE https://opengameart.org/sites/default/files/carsskorpios.amcpacer.png
+FILE https://opengameart.org/sites/default/files/carsskorpiosall_2.png

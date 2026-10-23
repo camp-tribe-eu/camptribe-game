@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="uk">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <title>CampLife</title>
+    <style>
+      /* Піксельний шрифт із повною українською кирилицею (OFL, GAME-26; перевірка — scripts/i18n/font_glyphs.py). */
+      @font-face { font-family: 'CampPixel'; src: url('fonts/PressStart2P-Regular.ttf') format('truetype'); font-display: swap; }
+      html, body { margin: 0; height: 100%; background: #1b1f23; color: #e8e6e3; font-family: system-ui, sans-serif; overscroll-behavior: none; }
+      #app { position: fixed; inset: 0; touch-action: none; user-select: none; -webkit-user-select: none; }
+      #stage { position: absolute; inset: 0; }
+      #stage canvas { image-rendering: pixelated; }
+      /* Підпис збірки лежить просто на канві: власне тло, інакше на світлому пікселі гри контраст ≈ 1,1:1 (GAME-39). */
+      .build { position: absolute; left: 8px; top: 4px; margin: 0; padding: 2px 6px; border-radius: 4px; font-size: 0.75rem;
+        color: #e8e6e3; background: #000000b3; pointer-events: none; }
+      /* Під відкритим діалогом підпис однаково затемнений — ховаємо, щоб його тло не плутало обчислення контрасту тексту діалогу. */
+      #app:has([role="dialog"]) .build { visibility: hidden; }
+      .touch { position: absolute; inset: auto 0 0 0; height: 0; }
+      .touch button {
+        position: absolute; border: 2px solid #e8e6e3aa; border-radius: 12px; background: #00000066;
+        color: #e8e6e3; font-size: 1.25rem; padding: 0; touch-action: none;
+      }
+      .touch-up    { left: 72px;  bottom: 136px; }
+      .touch-down  { left: 72px;  bottom: 16px; }
+      .touch-left  { left: 12px;  bottom: 76px; }
+      .touch-right { left: 132px; bottom: 76px; }
+      .touch-interact { right: 20px; bottom: 60px; border-radius: 50%; }
+      .ui-pause-btn { position: absolute; right: 12px; top: 12px; min-width: 52px; min-height: 52px; border-radius: 12px;
+        border: 2px solid #e8e6e3aa; background: #00000066; color: #e8e6e3; font-size: 1.25rem; }
+      /* safe center (GAME-39): діалог, вищий за екран (титри, текст 200 %), притискається до верху, а не
+         вилазить за нього — інакше «Продовжити» лишалась вище за межу прокрутки. start — для браузерів без safe. */
+      .ui-overlay { position: absolute; inset: 0; display: grid; place-content: start center; place-content: safe center; gap: 12px; padding: 16px; font-family: 'CampPixel', system-ui, sans-serif; line-height: 1.6; overflow-wrap: anywhere;
+        background: #000000cc; text-align: center; }
+      .ui-story-btn { position: absolute; right: 76px; top: 12px; min-width: 52px; min-height: 52px; border-radius: 12px;
+        border: 2px solid #e8e6e3aa; background: #00000066; color: #e8e6e3; font-size: 1.25rem; }
+      .ui-story { place-content: start center; }
+      .ui-story h3 { margin: 0 0 4px; font-size: 0.9rem; }
+      .ui-quest, .ui-dialogue { max-width: min(92vw, 640px); text-align: left; font-size: 0.75rem; }
+      .ui-quest ul { margin: 0; padding-left: 0; list-style: none; }
+      .ui-quest li[data-done="yes"] { opacity: 0.7; }
+      .ui-dialogue { border: 1px solid #e8e6e355; border-radius: 8px; padding: 8px 12px; background: #2a2f35; }
+      .ui-answers { display: grid; gap: 8px; }
+      .ui-journal { max-width: min(92vw, 640px); font-size: 0.7rem; text-align: left; }
+      .ui-journal summary { list-style: none; display: inline-block; cursor: pointer; }
+      .ui-overlay h2 { margin: 0 0 8px; font-size: 1.5rem; }
+      .ui-overlay fieldset { border: 1px solid #e8e6e355; border-radius: 8px; display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; max-width: min(92vw, 640px); }
+      .ui-btn { font-family: inherit; font-size: 0.75rem; max-width: 92vw; white-space: normal; min-width: 52px; min-height: 48px; padding: 8px 16px; border-radius: 10px; border: 2px solid #e8e6e3aa;
+        background: #2a2f35; color: #e8e6e3; font-size: 1rem; }
+      .ui-overlay, .ui-overlay * { box-sizing: border-box; }
+      .ui-code { width: 100%; max-width: 560px; font: 0.7rem monospace; background: #111; color: #e8e6e3; border: 1px solid #e8e6e355; border-radius: 6px; padding: 6px; }
+      .ui-status { margin: 4px 0 0; width: 100%; font-size: 0.75rem; }
+      .ui-overlay { overflow-y: auto; }
+      /* Натиснута кнопка: #386228 дає 5.7:1 зі світлим текстом (було #4f7a3a — 4.0:1, axe color-contrast, GAME-39). */
+      .ui-btn[aria-pressed="true"] { background: #386228; }
+      .ui-credits { max-width: min(92vw, 640px); font-size: 0.6rem; text-align: left; }
+      .ui-credits summary { list-style: none; display: inline-block; cursor: pointer; }
+      .ui-credits ul { padding-left: 1em; }
+      .ui-credits li { margin: 0 0 10px; display: grid; gap: 2px; }
+      .ui-credits a { color: #9fd38a; display: inline-flex; align-items: center; min-height: 44px; min-width: 44px; padding: 0 6px; }
+      .ui-credit-links { display: flex; flex-wrap: wrap; align-items: center; gap: 0 4px; }
+      .ui-credit-file { opacity: 0.8; }
+      /* Ховати дотикові кнопки лише там, де немає жодного дотикового вказівника (any-pointer):
+         сенсорний ноутбук має pointer: fine, але any-pointer: coarse — кнопки лишаються. */
+      @media not (any-pointer: coarse) { .touch { display: none; } }
+      /* GAME-39 #3: гравець попросив менше руху — жодних анімацій і переходів в інтерфейсі, навіть доданих пізніше
+         чи вписаних у style (!important перебиває інлайн). Перевірка — tests/e2e/a11y.spec.ts. */
+      @media (prefers-reduced-motion: reduce) {
+        *, *::before, *::after {
+          animation-duration: 0s !important; animation-delay: 0s !important; animation-iteration-count: 1 !important;
+          transition-duration: 0s !important; transition-delay: 0s !important; scroll-behavior: auto !important;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main id="app"></main>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

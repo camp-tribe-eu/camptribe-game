@@ -1,0 +1,17 @@
+CC-BY-SA 4.0 | http://creativecommons.org/licenses/by-sa/4.0/
+CC-BY-SA 3.0 | http://creativecommons.org/licenses/by-sa/3.0/
+Submitted by: bluecarrot16
+FILE https://opengameart.org/sites/default/files/css/css_xE-rWrJf-fncB6ztZfd2huxqgxu4WO-qwma6Xer30m4.css
+FILE https://opengameart.org/sites/default/files/css/css_ff3tJc71Z402cxcrQprs7GRkOQJuOqgs2LWeSWIHHR0.css
+FILE https://opengameart.org/sites/default/files/css/css_tEtvFGhnOc-KHD4tmmzYBpkDNcsr2D2Ep4vHodgpeO0.css
+FILE https://opengameart.org/sites/default/files/css/css_6NcQOcblGY28_iJd_khUiH7LvkXsK2NzkKjV006jQ5I.css
+FILE https://opengameart.org/sites/default/files/preview-squares_0.png
+FILE https://opengameart.org/sites/default/files/preview-bog.png
+FILE https://opengameart.org/sites/default/files/preview-desert-river.png
+FILE https://opengameart.org/sites/default/files/preview-forest.png
+FILE https://opengameart.org/sites/default/files/preview-mountain-rock.png
+FILE https://opengameart.org/sites/default/files/preview-river-delta.png
+FILE https://opengameart.org/sites/default/files/preview-snow-ice-1.png
+FILE https://opengameart.org/sites/default/files/preview-snow-ice-2.png
+FILE https://opengameart.org/sites/default/files/preview-village.png
+FILE https://opengameart.org/sites/default/files/lpc-terrains.zip

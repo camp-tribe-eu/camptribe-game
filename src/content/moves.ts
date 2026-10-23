@@ -1,0 +1,63 @@
+// Усі дії, які гравець може спробувати в стані, — спільні для повного перебору (story.test) і
+// бота (bot.ts). Ядро саме відмовить у недоречному; тут лише перелік спроб.
+import type { Command } from '../core/commands';
+import type { CoreDefs, StoryDefs } from '../core/defs';
+import { canonical } from '../core/hash';
+import type { GameState } from '../core/state';
+
+export type Move = Command extends infer C ? (C extends Command ? Omit<C, 'commandId'> : never) : never;
+
+export function moves(s: GameState, defs: CoreDefs): Move[] {
+  const st = defs.story as StoryDefs;
+  const out: Record<string, unknown>[] = [];
+  for (const id of Object.keys(st.locations)) out.push({ type: 'Visit', locationId: id });
+  for (const id of Object.keys(st.npcs)) out.push({ type: 'Talk', npcId: id });
+  // Подія в дорозі — хід СЕРЕДОВИЩА (кидок симуляції), а не гравця: перебір бачить і «сталась», і «ні».
+  for (const [id, d] of Object.entries(st.dialogues)) if (d.trigger) out.push({ type: 'RoadEvent', eventId: id });
+  if (s.dialogue) {
+    const node = st.dialogues[s.dialogue.id]?.nodes[s.dialogue.node];
+    (node?.choices ?? []).forEach((_, i) => out.push({ type: 'Choose', choice: i }));
+    out.push({ type: 'Continue' });
+  }
+  for (const l of Object.values(st.locations)) for (const id of l.items) out.push({ type: 'Pickup', itemId: id });
+  for (const id of Object.keys(defs.items)) {
+    if (!s.inventory[id]) out.push({ type: 'BuyItem', itemId: id }); // лише перший примірник — інакше простір станів нескінченний
+    out.push({ type: 'SellItem', itemId: id });
+  }
+  for (const id of Object.keys(defs.interactions)) out.push({ type: 'Interact', targetId: id });
+  // Висушити (GAME-73) — лише те, що мокре: інакше кожен стан мав би ще вісім заздалегідь марних спроб. Намокає спорядження
+  // лише в дорозі симуляції (sim.step), тож у повному переборі ядра (без погоди) цих ходів немає — їх доводить gear.test.
+  for (const [id, g] of Object.entries(s.gear)) if (g.wet) out.push({ type: 'DryGear', itemId: id });
+  // Ремонт (GAME-72) читає навички. Поки в контенті ремонтів немає, цих ходів немає; з'являться — перевірка
+  // «навички не змінюють жодного ходу» (story.test) почервоніє, і progressKey доведеться переглянути.
+  for (const id of Object.keys(defs.repairs ?? {})) out.push({ type: 'Repair', targetId: id });
+  for (const [qid, p] of Object.entries(s.quests)) {
+    if (p.status !== 'active') continue;
+    for (const type of ['CompleteQuest', 'DeclineQuest']) {
+      out.push({ type, questId: qid });
+      for (const t of st.quests[qid]?.transitions ?? []) out.push({ type, questId: qid, to: t.to });
+    }
+  }
+  return out as Move[];
+}
+
+/**
+ * Ключ стану для перебору й меню: без лічильників команд і без навичок (GAME-72). Навички й практика
+ * ростуть майже від кожної дії — з ними однакові за сюжетом стани множились би без кінця (перебір вибухнув би).
+ * Чесно лише доти, доки жоден хід moves() не залежить від навичок: це доводить story.test
+ * («навички не змінюють жодного ходу») на кожному досяжному стані — інакше зелене тут нічого не доводить.
+ */
+/** Поля, яких не бачить ключ перебору. Єдине джерело і для progressView, і для сторожа витоку в story.test. */
+export const PROGRESS_IGNORED = ['processed', 'seq', 'skills', 'practice'] as const satisfies readonly (keyof GameState)[];
+export const progressView = (s: GameState): object => ({ ...s, ...Object.fromEntries(PROGRESS_IGNORED.map((k) => [k, null])) });
+export const progressKey = (s: GameState): string => canonical(progressView(s));
+
+/**
+ * Хід, що залежить від везіння (SIM-EV-003): КОЖНА подія в дорозі. Симуляція кидає лише після дороги з
+ * хвилинами (не на першому приїзді, не в сюжеті без доріг) і ділить шанс між кількома подіями місця, тож
+ * навіть «chance: 100» не гарантована (рецензія eb12626). Перебір заходить у стани після неї, але шлях до
+ * кінця розділу на неї не покладається.
+ */
+export function isLuckMove(m: Move): boolean {
+  return m.type === 'RoadEvent';
+}

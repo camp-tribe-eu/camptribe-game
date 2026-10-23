@@ -1,0 +1,55 @@
+name: check
+# GAME-10: одна команда якості на кожен PR — lint + typecheck + test + build + validate-content.
+# Матриця: мінімальна підтримувана Node (engines) і поточна LTS — інакше мінімум ніколи не тестується.
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: check-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        node: ['22.13.0', '24']
+    name: check (node ${{ matrix.node }})
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+          cache: npm
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.12' }
+      - run: pip install --quiet -r scripts/requirements.txt
+      - run: npm ci --no-audit --no-fund
+      - run: npm run check
+
+  # GAME-14: e2e у справжньому браузері (спайк Phaser 4). Скриншот сцени — артефакт CI.
+  e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      - run: npx playwright install --with-deps chromium
+      - run: npm run e2e
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: e2e-results
+          path: test-results
+          retention-days: 7

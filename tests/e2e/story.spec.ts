@@ -1,0 +1,343 @@
+// GAME-32 / GAME-36 · пролог проходиться в браузері через екран «Подорож»: вибір персонажа, квести,
+// розмова з Елізою, журнал — до кінця розділу. Кожна дія — справжній клік по кнопці, команда йде в ядро.
+import { readFileSync } from 'node:fs';
+import ts from 'typescript';
+import { expect, test, type Browser, type Page } from '@playwright/test';
+
+interface Core { game: { campaignEnded: boolean; grants: string[]; player: { transportId: string } | null }; clock: { paused: boolean; minutes: number }; journal: { type: string }[] }
+const core = (page: Page): Promise<Core> => page.evaluate(() => (window as unknown as { __game: { read: () => Core } }).__game.read());
+
+async function open(page: Page, query = ''): Promise<string[]> {
+  const errors: string[] = [];
+  page.on('pageerror', (e) => errors.push(e.message));
+  await page.goto(`/${query}`);
+  await page.waitForFunction(() => (window as unknown as { __game?: { probe: { ready: boolean; saveLoaded: boolean } } }).__game?.probe.saveLoaded === true, null, { timeout: 30_000 });
+  await page.locator('[data-touch="story"]').click();
+  await expect(page.locator('[data-ui="story"]')).toBeVisible();
+  return errors;
+}
+
+const panel = (page: Page) => page.locator('[data-ui="story"]');
+/** Один крок проходу — лише клік. Немає кнопки — падіння з назвою кроку (GAME-36, негативний контроль). */
+async function act(page: Page, kind: string, key = '', timeout = 5_000): Promise<void> {
+  try {
+    await panel(page).locator(`[data-act="${kind}"][data-key="${key}"]`).click({ timeout });
+  } catch {
+    throw new Error(`крок «${kind} ${key}»: кнопки немає на екрані подорожі`);
+  }
+  // На дорозі з шансом 50 % трапляється подія (GAME-31; кидок залежить від прожитих кадрів) — відповідаємо, як гравець.
+  if (kind === 'visit' && key === 'loc.road') {
+    const answer = panel(page).locator('[data-key="dlg.road-apples.box.c2"]');
+    if (await answer.isVisible({ timeout: 400 }).catch(() => false)) {
+      await answer.click();
+      await panel(page).locator('[data-act="continue"]').click();
+    }
+  }
+}
+
+/** Пролог велосипедистом із бічним квестом Елізи. Порядок — як гравець читає завдання. */
+// ПРОХІД-START — між цими позначками лише кліки й клавіші, без тестового хука гри (перевіряє тест нижче).
+async function playBikeProlog(page: Page): Promise<void> {
+  await panel(page).locator('[data-act="create"]', { hasText: 'Велосипед' }).first().click();
+  await act(page, 'visit', 'loc.home');
+  await act(page, 'complete', 'q.st-001');
+  await act(page, 'visit', 'loc.home');
+  await act(page, 'complete', 'q.st-002');
+  await act(page, 'visit', 'loc.shop');
+  await act(page, 'pickup', 'item.tent');
+  await act(page, 'pickup', 'item.sleeping-bag');
+  await act(page, 'complete', 'q.st-003');
+  await act(page, 'visit', 'loc.road');
+  await act(page, 'complete', 'q.elise-bike-area.choice');
+  await act(page, 'visit', 'loc.camp.lake');
+  await act(page, 'talk', 'npc.elise');
+  await expect(panel(page).locator('[data-ui="dialogue"]')).toBeVisible();
+  await expect(panel(page).locator('[data-ui="actions"]')).toHaveCount(0);   // у розмові — лише відповіді
+  await act(page, 'choose', 'dlg.elise-greeting.hello.c1');
+  await act(page, 'continue');
+  await act(page, 'choose', 'dlg.elise-greeting.spot.c1');
+  await act(page, 'continue');
+  await act(page, 'complete', 'q.elise-bike-area');
+  await act(page, 'talk', 'npc.elise');
+  await act(page, 'choose', 'dlg.elise-greeting.hello.c2');
+  await act(page, 'choose', 'dlg.elise-greeting.spot.c1');
+  await act(page, 'continue');
+  await act(page, 'visit', 'loc.camp.lake');
+  await act(page, 'pickup', 'item.firewood');
+  await act(page, 'complete', 'q.st-005');
+}
+// ПРОХІД-END
+
+test.use({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true });
+
+test('пролог від вибору персонажа до кінця розділу — кліками, кожна дія доходить до ядра', async ({ page }) => {
+  const errors = await open(page);
+  await expect(panel(page).locator('[data-ui="create"]')).toBeVisible();
+  expect((await core(page)).game.player).toBeNull();
+  await playBikeProlog(page);
+  await expect(panel(page).locator('[data-ui="ended"]')).toBeVisible();
+  const c = await core(page);
+  expect(c.game.campaignEnded).toBe(true);
+  expect(c.game.player?.transportId).toBe('transport.bike');
+  expect(c.game.grants).toEqual(expect.arrayContaining(['rw.q-elise-bike-area', 'rw.st-005']));
+  // Журнал на екрані = журнал ядра, запис у запис.
+  await panel(page).locator('[data-ui="journal"] summary').click();
+  expect(await panel(page).locator('[data-ui="journal"] li').evaluateAll((els) => els.map((e) => (e as HTMLElement).dataset.type)))
+    .toEqual(c.journal.map((e) => e.type));
+  expect(c.journal.length).toBeGreaterThan(15);
+  expect(await panel(page).textContent()).not.toContain('⟦');      // жодного ключа без тексту
+  expect(errors).toEqual([]);
+});
+
+test('на екрані подорожі світ на паузі; Escape і «Назад до мапи» закривають його й пускають час', async ({ page }) => {
+  await open(page);
+  expect((await core(page)).clock.paused).toBe(true);
+  const m0 = (await core(page)).clock.minutes;
+  await page.waitForTimeout(1500);
+  expect((await core(page)).clock.minutes).toBe(m0);
+  await page.keyboard.press('Escape');
+  await expect(panel(page)).toHaveCount(0);
+  expect((await core(page)).clock.paused).toBe(false);
+  await page.locator('[data-touch="story"]').click();
+  await page.locator('[data-ui="story-close"]').click();
+  await expect(panel(page)).toHaveCount(0);
+  await expect(page.locator('[data-ui="pause"]')).toHaveCount(0);   // не плутається з меню паузи
+});
+
+// Погода дня (GAME-46): зерно 2 — день 0 сонячний, зерно 10 — дощовий (weatherOf, src/core/weather.ts).
+// Дощ сповільнює велосипед ×1.5 угору (SIM-WX-007): дім → крамниця 25 хв → 38 хв, і годинник іде саме на них.
+for (const [seed, weather, label, minutes] of [[2, 'sunny', 'сонячно', 25], [10, 'rain', 'дощ', 38]] as const) {
+  test(`дорога (GAME-31) у погоду «${weather}» (GAME-46): у шапці погода дня, кнопка показує час, годинник рухається саме на нього`, async ({ browser }) => {
+    const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true });
+    const page = await ctx.newPage();
+    await open(page, `?seed=${seed}`);
+    await panel(page).locator('[data-act="create"]', { hasText: 'Велосипед' }).first().click();
+    const where = panel(page).locator('[data-ui="where"]');
+    await expect(where).toHaveAttribute('data-weather', weather);
+    await expect(where).toContainText(`Погода: ${label}`);
+    for (const [k, key] of [['visit', 'loc.home'], ['complete', 'q.st-001'], ['visit', 'loc.home'], ['complete', 'q.st-002']] as const) await act(page, k, key);
+    const shop = panel(page).locator('[data-act="visit"][data-key="loc.shop"]');
+    await expect(shop).toContainText(`${minutes} хв`);                // велосипедом дім → крамниця
+    const m0 = (await core(page)).clock.minutes;
+    await page.waitForTimeout(1500);                                    // стоїмо в меню — час стоїть
+    expect((await core(page)).clock.minutes).toBe(m0);
+    await shop.click();
+    expect((await core(page)).clock.minutes).toBe(m0 + minutes);      // дорога — одним кроком
+    await ctx.close();
+  });
+}
+
+/**
+ * До дороги з даним зерном у ЧИСТОМУ контексті браузера: інакше автозбереження попередньої спроби (пауза під час
+ * відкриття екрана) вантажиться з її RNG, і всі спроби кидають однаково (рецензія eb12626: 6 перезавантажень —
+ * той самий стан RNG). Повертає сторінку і чи трапилась подія.
+ */
+async function toRoad(browser: Browser, seed: number): Promise<{ page: Page; fired: boolean; close: () => Promise<void> }> {
+  const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true });
+  const page = await ctx.newPage();
+  await open(page, `?seed=${seed}`);
+  await panel(page).locator('[data-act="create"]', { hasText: 'Велосипед' }).first().click();
+  for (const [k, key] of [['visit', 'loc.home'], ['complete', 'q.st-001'], ['visit', 'loc.home'], ['complete', 'q.st-002'], ['visit', 'loc.shop'],
+    ['pickup', 'item.tent'], ['pickup', 'item.sleeping-bag'], ['complete', 'q.st-003']] as const) await act(page, k, key);
+  await panel(page).locator('[data-act="visit"][data-key="loc.road"]').click();
+  const fired = await panel(page).locator('[data-ui="dialogue"]').isVisible({ timeout: 400 }).catch(() => false);
+  return { page, fired, close: () => ctx.close() };
+}
+
+test('подія в дорозі не трапилась — дорога триває: жодної розмови, далі звичайні дії', async ({ browser }) => {
+  for (let seed = 1; seed <= 16; seed++) {
+    const r = await toRoad(browser, seed);
+    if (!r.fired) {
+      await expect(panel(r.page).locator('[data-act="complete"][data-key="q.st-004"]')).toBeVisible();
+      expect((await core(r.page)).journal.at(-1)?.type).toBe('Visit');
+      await r.close();
+      return;
+    }
+    await r.close();
+  }
+  throw new Error('за 16 зерен подія трапилась щоразу — шанс 50 % так не поводиться');
+});
+
+test('подія в дорозі (GAME-31): трапляється на дорозі, читається, відповідь — у ядрі й у журналі', async ({ browser }) => {
+  // Шанс 50 %, різні зерна, кожне — у чистому контексті.
+  let page: Page | null = null;
+  for (let seed = 1; seed <= 16 && !page; seed++) {
+    const r = await toRoad(browser, seed);
+    if (r.fired) page = r.page; else await r.close();
+  }
+  if (!page) throw new Error('за 16 зерен подія не трапилась жодного разу — шанс 50 % так не поводиться');
+  await expect(panel(page).locator('[data-ui="dialogue"] h3')).toHaveText('Яблука біля дороги');
+  await expect(panel(page).locator('[data-ui="actions"]')).toHaveCount(0);                // у події — лише відповіді
+  await panel(page).locator('[data-key="dlg.road-apples.box.c1"]').click();
+  await panel(page).locator('[data-act="continue"]').click();
+  await expect(panel(page).locator('[data-ui="dialogue"]')).toHaveCount(0);
+  const c = await core(page) as unknown as { game: { flags: string[] }; journal: { type: string; ref: string | null }[] };
+  expect(c.game.flags).toEqual(expect.arrayContaining(['f.road-apple', 'f.seen-road-apples']));
+  expect(c.journal.slice(-2).map((e) => e.type)).toEqual(['Visit', 'RoadEvent']);
+  await panel(page).locator('[data-ui="journal"] summary').click();
+  await expect(panel(page).locator('[data-ui="journal"] li').last()).toContainText('Яблука біля дороги');
+});
+
+test('автівкою — без бічного квесту й без відповіді про велосипед, і так само до кінця розділу', async ({ page }) => {
+  await open(page);
+  await panel(page).locator('[data-act="create"]', { hasText: 'Авто' }).first().click();
+  for (const [k, key] of [['visit', 'loc.home'], ['complete', 'q.st-001'], ['visit', 'loc.home'], ['complete', 'q.st-002'], ['visit', 'loc.shop'],
+    ['pickup', 'item.tent'], ['pickup', 'item.sleeping-bag'], ['complete', 'q.st-003'], ['visit', 'loc.road']] as const) await act(page, k, key);
+  await expect(panel(page).locator('[data-key="q.elise-bike-area.choice"]')).toHaveCount(0);
+  await act(page, 'complete', 'q.st-004');
+  await act(page, 'visit', 'loc.camp.lake');
+  await act(page, 'talk', 'npc.elise');
+  await expect(panel(page).locator('[data-key="dlg.elise-greeting.hello.c2"]')).toBeVisible();   // позитивний контроль
+  await expect(panel(page).locator('[data-key="dlg.elise-greeting.hello.c1"]')).toHaveCount(0);
+  await act(page, 'choose', 'dlg.elise-greeting.hello.c2');
+  await act(page, 'choose', 'dlg.elise-greeting.spot.c1');
+  await act(page, 'continue');
+  // «Поставити намет» зарахувалось ще на прибутті (ST-005 уже був активний): повторне «Піти» — порожнє, його немає.
+  await expect(panel(page).locator('[data-act="visit"][data-key="loc.camp.lake"]')).toHaveCount(0);
+  await act(page, 'pickup', 'item.firewood');
+  await act(page, 'complete', 'q.st-005');
+  await expect(panel(page).locator('[data-ui="ended"]')).toBeVisible();
+  const c = await core(page);
+  expect(c.game.campaignEnded).toBe(true);
+  expect(c.game.grants).not.toContain('rw.q-elise-bike-area');
+  expect(await panel(page).textContent()).not.toContain('⟦');
+});
+
+test('затиснутий Enter не пробігає кроки: одне натискання — одна дія', async ({ page }) => {
+  await open(page);
+  await panel(page).locator('[data-act="create"]').first().focus();
+  // Повторний down тієї самої клавіші Playwright шле з repeat: true — як автоповтор затиснутої клавіші.
+  for (let i = 0; i < 4; i++) { await page.keyboard.down('Enter'); await page.waitForTimeout(30); }
+  await page.keyboard.up('Enter');
+  await page.waitForTimeout(50);
+  expect((await core(page)).journal.length).toBe(1);   // лише «Початок подорожі»
+});
+
+test('після закриття екрана подорожі фокус на полі гри з підписом: Space — дія сцени, а не кнопка ☰', async ({ page }) => {
+  await open(page);
+  await page.locator('[data-ui="story-close"]').click();
+  await page.waitForTimeout(50);
+  expect(await page.evaluate(() => ({ id: document.activeElement?.id, label: document.activeElement?.getAttribute('aria-label') })))
+    .toEqual({ id: 'stage', label: expect.stringMatching(/стрілки|arrows/) });
+  await page.keyboard.press('Space');                       // далеко від об'єктів: нічого не відкривається
+  await page.waitForTimeout(100);
+  await expect(panel(page)).toHaveCount(0);
+});
+
+test('сейв після прологу: перезавантаження — і кінець розділу на місці', async ({ page }) => {
+  await open(page);
+  await playBikeProlog(page);
+  await page.locator('[data-ui="story-close"]').click();
+  await page.locator('[data-touch="pause"]').click();
+  await page.locator('[data-ui="save"]').click();
+  await expect(page.locator('[data-ui="status"]')).toBeVisible();
+  await page.reload();
+  await open(page);
+  await expect(panel(page).locator('[data-ui="ended"]')).toBeVisible();
+});
+
+test('кожна ціль екрана подорожі ≥ 44×44 CSS px і нічого не вилазить за екран (псевдолокаль)', async ({ page }) => {
+  await open(page, '?lang=pseudo');
+  await panel(page).locator('[data-act="create"]').first().click();
+  await act(page, 'visit', 'loc.home');
+  await panel(page).locator('[data-ui="journal"] summary').click();
+  const bad = await page.evaluate(() => {
+    const out: string[] = [];
+    const vw = window.innerWidth;
+    for (const el of document.querySelectorAll<HTMLElement>('[data-ui="story"] *')) {
+      const r = el.getBoundingClientRect();
+      if (el.scrollWidth > el.clientWidth + 1 || r.left < -1 || r.right > vw + 1) out.push(`overflow ${el.tagName}.${el.className}`);
+      if (el.matches('button, summary') && (r.width < 44 || r.height < 44)) out.push(`small ${el.tagName}[${el.dataset.act ?? el.dataset.ui ?? ''}] ${Math.round(r.width)}×${Math.round(r.height)}`);
+    }
+    return out;
+  });
+  expect(await panel(page).locator('button').count()).toBeGreaterThan(3);
+  expect(bad).toEqual([]);
+});
+
+test('негативний контроль: прихована кнопка «Завершити» — прохід червоніє з назвою кроку', async ({ page }) => {
+  await open(page, '?hideAct=complete');
+  await expect(panel(page).locator('[data-act="create"]').first()).toBeVisible();  // екран живий, сховано лише «Завершити»
+  await expect(playBikeProlog(page)).rejects.toThrow('крок «complete q.st-001»');
+});
+
+test('прохід керується лише кліками й клавішами: без приватного API гри та без імпортів ядра', () => {
+  const src = readFileSync(new URL(import.meta.url), 'utf8');
+  const sf = ts.createSourceFile('story.spec.ts', src, ts.ScriptTarget.Latest, true);
+  const imports = sf.statements.filter(ts.isImportDeclaration).map((d) => (d.moduleSpecifier as ts.StringLiteral).text);
+  expect(imports.sort()).toEqual(['@playwright/test', 'node:fs', 'typescript']);
+  expect(src).not.toMatch(/\brequire\s*\(|\bimport\s*\(/);                       // і жодних динамічних імпортів
+  // Під перевіркою — сам прохід і помічники, якими він ходить (panel, act): за синтаксичним деревом
+  // (рецензія: регулярні вирази обходились шаблоном `${…}` і «//» усередині рядка).
+  const FLOW = ['panel', 'act', 'playBikeProlog'];
+  const roots: ts.Node[] = [];
+  ts.forEachChild(sf, (n) => {
+    if (ts.isFunctionDeclaration(n) && n.name && FLOW.includes(n.name.text)) roots.push(n);
+    if (ts.isVariableStatement(n)) for (const d of n.declarationList.declarations) if (ts.isIdentifier(d.name) && FLOW.includes(d.name.text)) roots.push(d);
+  });
+  expect(roots.length).toBe(FLOW.length);
+  const ALLOWED = new Set(['playBikeProlog', 'act', 'panel', 'locator', 'first', 'click', 'tap', 'press', 'down', 'up', 'expect', 'toBeVisible', 'toHaveCount', 'Error', 'isVisible', 'catch']);
+  const called: string[] = [];
+  const bad: string[] = [];
+  const walk = (n: ts.Node): void => {
+    if (ts.isCallExpression(n) || ts.isNewExpression(n)) {
+      const e = n.expression;
+      const optional = ts.isCallExpression(n) && !!n.questionDotToken;
+      if (ts.isIdentifier(e) && !optional) called.push(e.text);
+      else if (ts.isPropertyAccessExpression(e) && !e.questionDotToken && !optional) called.push(e.name.text);
+      else bad.push(e.getText(sf));                                        // page['evaluate'](…), x?.(…), (f)(…)
+    }
+    if (ts.isIdentifier(n) && /^(__game|bridge|dispatch|localStorage|indexedDB|sessionStorage)$/.test(n.text)) bad.push(n.text);
+    ts.forEachChild(n, walk);
+  };
+  roots.forEach(walk);
+  expect(bad).toEqual([]);
+  expect(called.length).toBeGreaterThan(20);
+  expect([...new Set(called.filter((c) => !ALLOWED.has(c)))]).toEqual([]);
+});
+
+// GAME-32 · Еліза стоїть на мапі кемпінгу: до неї доходять пішки й заговорюють клавішею дії.
+interface Probe { playerX: number; playerY: number; nearObject: string | null }
+const probe = (page: Page): Promise<Probe> => page.evaluate(() => ({ ...(window as unknown as { __game: { probe: Probe } }).__game.probe }));
+async function walk(page: Page, key: string, until: (p: Probe) => boolean): Promise<Probe> {
+  await page.keyboard.down(key);
+  const start = Date.now();
+  let p = await probe(page);
+  while (!until(p) && Date.now() - start < 5_000) { await page.waitForTimeout(16); p = await probe(page); }
+  await page.keyboard.up(key);
+  await page.waitForTimeout(50);
+  return probe(page);
+}
+async function walkToElise(page: Page): Promise<void> {
+  await walk(page, 'ArrowLeft', (p) => p.playerX <= 44);
+  const p = await walk(page, 'ArrowDown', (q) => q.nearObject === 'npc.elise');
+  expect(p.nearObject).toBe('npc.elise');
+}
+
+test.describe('Еліза на мапі (клавіатура)', () => {
+  test.use({ viewport: { width: 1280, height: 800 }, hasTouch: false, isMobile: false });
+
+  test('у кемпінгу: дійти пішки, натиснути дію — відкривається розмова з нею', async ({ page }) => {
+    await open(page);
+    await panel(page).locator('[data-act="create"]', { hasText: 'Велосипед' }).first().click();
+    for (const [k, key] of [['visit', 'loc.home'], ['complete', 'q.st-001'], ['visit', 'loc.home'], ['complete', 'q.st-002'], ['visit', 'loc.shop'],
+      ['pickup', 'item.tent'], ['pickup', 'item.sleeping-bag'], ['complete', 'q.st-003'], ['visit', 'loc.road'], ['complete', 'q.st-004'], ['visit', 'loc.camp.lake']] as const) await act(page, k, key);
+    await page.locator('[data-ui="story-close"]').click();
+    await walkToElise(page);
+    await page.keyboard.press('Space');
+    await expect(panel(page).locator('[data-ui="dialogue"]')).toBeVisible();
+    await expect(panel(page).locator('[data-ui="line"]')).toContainText('Еліза');
+    expect((await core(page) as unknown as { game: { dialogue: { id: string } | null } }).game.dialogue?.id).toBe('dlg.elise-greeting');
+  });
+
+  test('ще вдома: Еліза на мапі є, але ядро розмову не приймає — екран подорожі без розмови', async ({ page }) => {
+    await open(page);
+    await panel(page).locator('[data-act="create"]').first().click();
+    await page.locator('[data-ui="story-close"]').click();
+    await walkToElise(page);
+    await page.keyboard.press('Space');
+    await expect(panel(page)).toBeVisible();
+    await expect(panel(page).locator('[data-ui="dialogue"]')).toHaveCount(0);
+    expect((await core(page) as unknown as { game: { dialogue: unknown } }).game.dialogue).toBeNull();
+  });
+});

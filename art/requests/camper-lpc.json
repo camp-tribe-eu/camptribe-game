@@ -1,0 +1,11 @@
+{
+  "endpoint": "fal-ai/flux/schnell",
+  "tile": false,
+  "payload": {
+    "prompt": "pixel art game sprite of a small white and beige camper van motorhome, three-quarter top-down view as in 16-bit RPG games, side and roof visible, facing right, light from the top-left, dark 1-pixel outline, limited palette, Liberated Pixel Cup style, single vehicle centered, isolated on a solid flat pure magenta background, no ground, no shadow, no text",
+    "image_size": "landscape_4_3",
+    "num_images": 1,
+    "num_inference_steps": 4,
+    "seed": 20261023
+  }
+}

@@ -31,3 +31,4 @@
 ## Своє
 - [Jira: картки, що чекають на конектор](project_jira_pending.md) — тексти й докази; ID переходів ще не відомі
 - [Спершу спробуй сам, потім питай: час Юрія не безкінечний](feedback_check_before_asking.md)
+- [Черга Jira](project_jira_queue.md) — усі 67 карток заведено, 79 «Blocks» ([граф](jira_blocks_graph.tsv)), S01 у спринті; як писати в Jira

@@ -1,16 +1,21 @@
 name: validate
 # Перший код проєкту — валідатор контенту й перевірник графа квестів, а НЕ сцена Phaser.
-# Специфікація й критерії приймання: brain/Передача/05-pershyi-kod.md
-# Формат контенту й перелік перевірок: docs/CONTENT-VALIDATOR.md
+# Специфікація: brain/Передача/05-pershyi-kod.md; формат: docs/CONTENT-VALIDATOR.md.
 #
-# Три кроки, і кожен блокує злиття:
-#   1. самотест — кожна перевірка червоніє на своєму зламаному прикладі;
-#   2. мутації  — якщо вимкнути будь-яку перевірку, самотест це помічає;
-#   3. контент  — реальний content/ гри.
+# 🔴 Одна команда: CI запускає рівно те, що й локальна перевірка — `npm run validate`
+# (рецензія TL PR #13: розбіжність локального й CI — закон 3). Усередині — для кожного сторожа
+# самотест, мутації й справжній прогін: контент, правила, мапи, ресурси й ліцензії, локалізація,
+# палітра, гліфи шрифту.
+#
+# 🔴 Контент перевіряється без поблажок: теки content/ немає → CONTENT_MISSING, код 1 (закони 1 і 4).
+# Прапорець, що пропускав відсутню теку, прибрано разом із першим content/ (GAME-35). Не повертати.
 on:
   pull_request:
   push:
     branches: [main]
+  # GAME-56: факт старіє з календарем, а не з пушем — щотижня перевіряємо давність (лише на main).
+  schedule:
+    - cron: '17 6 * * 1'
 
 permissions:
   contents: read
@@ -18,20 +23,28 @@ permissions:
 jobs:
   content:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: '24', cache: npm }
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.12' }
+      - run: pip install --quiet -r scripts/requirements.txt
+      - run: npm ci --no-audit --no-fund
+      - name: Усі сторожі — самотести, мутації, справжні прогони
+        run: npm run validate
 
+  # Щотижнева звірка давності фактів (рецензія GAME-56). На PR попередження FACT_STALE лише жовте
+  # в Annotations; тут воно червоне, щоб розкладний прогін упав і GitHub надіслав лист. PR не блокує.
+  facts-fresh:
+    if: github.event_name == 'schedule'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with: { node-version: '24' }
+      - name: Давність фактів (попередження → червоне)
+        run: node scripts/validate-content.mjs --fail-on-warnings
 
-      - name: Самотест — валідатор мусить уміти почервоніти
-        run: node scripts/validate-content.mjs --self-test
-
-      - name: Мутації — самотест мусить помітити вимкнену перевірку
-        run: node scripts/mutate-validator.mjs
-
-      # 🔴 --allow-missing-content: поки теки content/ немає, крок пише NOT RUN з попередженням,
-      # а не PASS. ПРИБРАТИ прапорець у тому ж PR, що додає перший файл content/ — після цього
-      # зникнення теки має бути червоним.
-      - name: Валідація контенту
-        run: node scripts/validate-content.mjs --allow-missing-content

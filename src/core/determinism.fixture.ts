@@ -1,0 +1,37 @@
+// Спільний журнал для тестів детермінізму (GAME-13). Не тест — фікстура.
+import type { CoreDefs } from './defs';
+import type { Input } from './sim';
+
+export const SEED = 20261022;
+
+/** Журнал на ~2 ігрові доби: кадри різної довжини, команди, пауза меню, довгі дії. */
+export const LOG: readonly Input[] = (() => {
+  const log: Input[] = [];
+  for (let i = 0; i < 3000; i++) {
+    log.push({ kind: 'frame', realMs: 16 + ((i * 7) % 40) * 25 });
+    if (i % 97 === 0) log.push({ kind: 'command', command: { type: 'Interact', commandId: `g${i}`, targetId: `obj.spot-${i % 5}` } });
+    if (i % 41 === 0) log.push({ kind: 'command', command: { type: 'BuyItem', commandId: `b${i}`, itemId: 'item.tent' } });
+    if (i % 300 === 0) log.push({ kind: 'pause' }, { kind: 'frame', realMs: 5000 }, { kind: 'resume' });
+    if (i % 500 === 0) log.push({ kind: 'advance', minutes: 480 });
+  }
+  return log;
+})();
+
+/** Каталог для журналу: 5 точок з одноразовою нагородою, намет за 3 €. */
+export const DEFS: CoreDefs = {
+  items: { 'item.tent': { buyCents: 300 } },
+  interactions: Object.fromEntries([0, 1, 2, 3, 4].map((n) => [`obj.spot-${n}`, { grantId: `rw.spot-${n}`, moneyCents: 250 }])),
+};
+
+/** Відбиток, отриманий першим прогоном і зафіксований. Змінився — детермінізм зламано або змінено правила (тоді — свідомо, в PR). */
+// a7633934 — GAME-32: журнал подорожі в SimState (42 записи). Доведено: той самий прогін без журналу
+// дає попередній 66227e1b (а той у формі v1 — 308ff0a6) — змінилась лише форма, не поведінка.
+// 4cb5409a — GAME-46: зерно світу (worldSeed) у SimState. Доведено: той самий прогін без worldSeed дає
+// попередній a7633934 — у цього журналу немає доріг, тож погода тут нічого не сповільнює; змінилась лише форма.
+// ad4b40b4 — GAME-48: пам'ять NPC (npcMemory) у GameState. Доведено: той самий прогін без npcMemory дає
+// попередній 4cb5409a — у журналі немає розмов, пам'ять лишається {}; змінилась лише форма.
+// fd47bdef — GAME-72: навички (skills, practice) у GameState. Доведено: той самий прогін без цих двох полів
+// дає попередній ad4b40b4 — персонажа в журналі немає, вчитись нікому: нулі й {}; змінилась лише форма.
+// 4d816f96 — GAME-73: стан спорядження (gear) у GameState. Доведено: той самий прогін без gear дає попередній fd47bdef —
+// у каталозі журналу намет без картки спорядження й доріг немає: нічого не намокає, gear лишається {}; змінилась лише форма.
+export const GOLDEN = '4d816f96';

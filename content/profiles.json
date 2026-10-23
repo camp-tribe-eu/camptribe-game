@@ -1,0 +1,6 @@
+[
+  { "id": "profile.family-teen", "nameKey": "profile.family-teen", "transports": ["transport.car"],
+    "startSkills": [{ "skill": "skill.planning", "rank": 2 }, { "skill": "skill.cooking", "rank": 2 }, { "skill": "skill.finance", "rank": 1 }, { "skill": "skill.communication", "rank": 1 }] },
+  { "id": "profile.solo-explorer", "nameKey": "profile.solo-explorer", "transports": ["transport.car", "transport.bike"],
+    "startSkills": [{ "skill": "skill.camping", "rank": 2 }, { "skill": "skill.endurance", "rank": 2 }, { "skill": "skill.planning", "rank": 1 }, { "skill": "skill.mechanics", "rank": 1 }] }
+]

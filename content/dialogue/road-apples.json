@@ -1,0 +1,16 @@
+{
+  "id": "dlg.road-apples",
+  "trigger": { "at": ["loc.road"], "chance": 50, "titleKey": "dlg.road-apples.title" },
+  "start": "box",
+  "nodes": [
+    {
+      "id": "box", "speaker": "player", "textKey": "dlg.road-apples.box",
+      "choices": [
+        { "textKey": "dlg.road-apples.box.c1", "next": "crunch", "effects": [{ "setFlag": "f.road-apple" }] },
+        { "textKey": "dlg.road-apples.box.c2", "next": "wave" }
+      ]
+    },
+    { "id": "crunch", "speaker": "player", "textKey": "dlg.road-apples.crunch", "end": true },
+    { "id": "wave", "speaker": "player", "textKey": "dlg.road-apples.wave", "end": true }
+  ]
+}
