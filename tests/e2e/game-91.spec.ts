@@ -145,6 +145,16 @@ test.describe('джойстик', () => {
       const a = await probe(page);
       let knob = '';
       await drag(page, dx, dy, 350, async () => { knob = await page.locator('.touch-knob').evaluate((e) => (e as HTMLElement).style.transform); });
+      // Відпускання дійшло (data-held порожній) і персонаж став: кадр сцени гасить швидкість не миттєво, а під
+      // навантаженням CI кадр довший (PR #39: фіксована пауза ловила ще 15 px руху). Залиплий джойстик не дасть
+      // порожнього data-held — тест червоніє на ньому, а не на позиції (персонаж міг би стати й у стіні).
+      await expect(page.locator('[data-touch="stick"]'), `${name}: відпущено`).toHaveAttribute('data-held', '');
+      await expect.poll(async () => {
+        const y1 = await probe(page);
+        await page.waitForTimeout(150);
+        const y2 = await probe(page);
+        return Math.abs(y2.playerX - y1.playerX) + Math.abs(y2.playerY - y1.playerY);
+      }, { timeout: 3000 }).toBeLessThan(0.5);
       const b = await probe(page);
       const mx = b.playerX - a.playerX;
       const my = b.playerY - a.playerY;
