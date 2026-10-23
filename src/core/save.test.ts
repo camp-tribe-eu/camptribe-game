@@ -123,6 +123,7 @@ describe('v3 (GAME-71): календар життя; v2 вийшов до гра
     expect(r.ok && r.fromVersion).toBe(3);
     // Журнал — як у v2 вище (GAME-84 №1): старий запис «Visit loc.home» удома нове ядро не пише; решта стану збігається.
     expect(r.ok && stateHash({ ...r.sim, journal: null })).toBe(stateHash({ ...live, journal: null }));
+    expect(r.ok && r.sim.journal.length).toBe(live.journal.length + 1);   // рівно один старий запис, як у v2 (рецензія PR #21)
     expect(r.ok && r.sim.journal.filter((e) => !(e.type === 'Visit' && e.ref === 'loc.home'))).toEqual(live.journal);
     expect(r.ok && r.sim.game.life).toEqual({ paydays: 1, leave: [{ from: 40, days: 3, vacation: 2 }] });
   });
