@@ -49,7 +49,14 @@ export interface WorldProbe {
   playerDepth: number;
   coveredTiles: number;
   behindTiles: number;
+  /** GAME-97 (лише для e2e): кадрів за секунду — середнє за останнє повне вікно ~3 с; 0, доки перше вікно не закрилось. */
+  fps: number;
+  /** Скільки вікон fps уже закрито (тест чекає на нове вікно, а не читає застаріле число). */
+  fpsWindows: number;
 }
+
+/** Вікно вимірювання fps, мс. */
+const FPS_WINDOW_MS = 3000;
 
 export class WorldScene extends Phaser.Scene {
   private player!: Phaser.Types.Physics.Arcade.SpriteWithDynamicBody;
@@ -58,6 +65,8 @@ export class WorldScene extends Phaser.Scene {
   private bands: Band[] = [];
   private facing: Dir = 'down';
   private last = { x: 0, y: 0 };
+  private fpsFrames = 0;
+  private fpsStart = -1;
 
   /** art — графіка, декодована до старту гри (loadWorldArt); onNpc — гравець заговорив із NPC на мапі (розмову веде екран подорожі). */
   constructor(private readonly bridge: Bridge, private readonly controls: InputState, private readonly probe: WorldProbe, private readonly art: WorldArt, private readonly onNpc: (npcId: string) => void = () => {}) {
@@ -92,11 +101,16 @@ export class WorldScene extends Phaser.Scene {
       if (!layer || !(layer instanceof Phaser.Tilemaps.TilemapLayer)) throw new Error(`layer ${name} is missing`);
       return layer;
     };
-    need('ground').setDepth(DEPTH.ground);
-    need('decor').setDepth(DEPTH.decor);
+    const ground = need('ground').setDepth(DEPTH.ground);
+    const decor = need('decor').setDepth(DEPTH.decor);
     const walls = need('walls').setDepth(DEPTH.walls);
     walls.setCollisionByExclusion([-1]);
     this.bands = this.makeBands(map, tilesets);
+    // GAME-97: шари мапи статичні, а кожен тайловий шар у Phaser 4 коштує дорого (під SwiftShader JS кадру — 0,4 мс, а тайлові шари — ≈ 7 з 10 мс
+    // GPU-часу; під навантаженням паралельного e2e гра падала до 8 fps). Тому земля, декор і стіни один раз запікаються в одну текстуру. Шар `walls`
+    // лишається лише як дані колізій (невидимий). Смуги `above` НЕ запікаємо: вони розріджені (34 тайли), а повнокадрова картинка коштувала б дорожче за тайли.
+    this.bake('bake-base', map, [ground, decor, walls]).setDepth(DEPTH.ground);
+    for (const layer of [ground, decor, walls]) layer.setVisible(false);
 
     const objects = map.getObjectLayer('objects')?.objects ?? [];
     const typeOf = (o: Phaser.Types.Tilemaps.TiledObject): string => String(o.type || (o as { class?: string }).class || '');
@@ -181,6 +195,15 @@ export class WorldScene extends Phaser.Scene {
     });
   }
 
+  /** Запекти шари мапи (у заданому порядку) в одну статичну картинку на всю мапу: піксель у піксель те, що малювали б самі шари. */
+  private bake(key: string, map: Phaser.Tilemaps.Tilemap, layers: Phaser.Tilemaps.TilemapLayer[]): Phaser.GameObjects.Image {
+    const tex = this.textures.addDynamicTexture(key, map.widthInPixels, map.heightInPixels);
+    if (!tex) throw new Error(`bake texture ${key} failed`);
+    tex.draw(layers);
+    tex.render();
+    return this.add.image(0, 0, key).setOrigin(0, 0);
+  }
+
   /** Межа паузи: зупинити тіло, інакше фізика дотягує стару швидкість після продовження (рецензія PR #13). */
   haltPlayer(): void {
     if (!this.player) return;
@@ -188,8 +211,21 @@ export class WorldScene extends Phaser.Scene {
     this.player.body.reset(this.player.x, this.player.y);
   }
 
+  /** Лічильник кадрів для probe.fps: дешево (два числа), без виділення пам'яті на кадр. */
+  private countFps(time: number): void {
+    if (this.fpsStart < 0) this.fpsStart = time;
+    this.fpsFrames++;
+    const span = time - this.fpsStart;
+    if (span < FPS_WINDOW_MS) return;
+    this.probe.fps = (this.fpsFrames * 1000) / span;
+    this.probe.fpsWindows++;
+    this.fpsFrames = 0;
+    this.fpsStart = time;
+  }
+
   override update(time: number, delta: number): void {
     this.bridge.frame(delta);
+    this.countFps(time);
     if (!this.player) return;   // update може випередити create лише в першому кадрі завантаження
     const held = consumeFrame(this.controls);
     const v = moveVector(held);
