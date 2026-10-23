@@ -5,9 +5,9 @@
 //  3) вибір персонажа на екрані = комбінації, які дозволяє валідатор.
 // Негативні контролі: меню без «завершити квест» і без відповідей у розмові мусить почервоніти.
 import { describe, expect, it } from 'vitest';
-import { dispatch, type Command } from '../core/commands';
+import { dispatch, nextCommandId, type Command } from '../core/commands';
 import type { CoreDefs } from '../core/defs';
-import { newSim } from '../core/sim';
+import { newSim, step, type SimState } from '../core/sim';
 import type { GameState } from '../core/state';
 import { enumerateCombos } from '../../scripts/validator/combos.mjs';
 import { GAME_DEFS } from '../content/slice-defs';
@@ -29,8 +29,17 @@ function create(intent: Move): GameState {
   return r.state;
 }
 
-/** Стани, з яких через меню кінця не досягти (порожньо — тупиків немає), і скільки станів усього. */
-function deadEnds(first: GameState, menu: Menu): { states: number; ended: number; stuck: GameState[] } {
+/** Взаємодії сцени (об'єкт поруч на мапі) — гравець може зробити їх будь-коли, навіть посеред розмови. */
+const sceneMoves = (s: GameState): { move: Move; next: GameState }[] => Object.keys(DEFS.interactions).flatMap((targetId) => {
+  const r = dispatch(s, { type: 'Interact', targetId, commandId: `i${s.seq}` } as Command, DEFS);
+  return r.ok ? [{ move: { type: 'Interact', targetId } as Move, next: r.state }] : [];
+});
+
+/**
+ * Стани, з яких через меню кінця не досягти (порожньо — тупиків немає), і скільки станів усього.
+ * Досяжне — меню ПЛЮС сцена (рецензія: Interact можливий будь-коли); кінець має бути досяжний меню.
+ */
+function deadEnds(first: GameState, menu: Menu, scene: Menu = sceneMoves): { states: number; ended: number; stuck: GameState[] } {
   const seen = new Map<string, GameState>([[outcomeKey(first), first]]);
   const back = new Map<string, string[]>();
   const queue = [first];
@@ -39,6 +48,10 @@ function deadEnds(first: GameState, menu: Menu): { states: number; ended: number
     for (const { next } of menu(s)) {
       const nk = outcomeKey(next);
       back.set(nk, [...(back.get(nk) ?? []), k]);
+      if (!seen.has(nk)) { seen.set(nk, next); queue.push(next); }
+    }
+    for (const { next } of scene(s)) {          // лише досяжність, не шлях до кінця
+      const nk = outcomeKey(next);
       if (!seen.has(nk)) { seen.set(nk, next); queue.push(next); }
     }
     if (seen.size > 100_000) throw new Error('простір станів вибухнув — тест не доводить нічого');
@@ -80,6 +93,13 @@ describe('меню сюжету: з кожного стану, досяжног�
     expect(r.stuck.length).toBeGreaterThan(0);
   });
 
+  it('сцена справді додає стани (інакше «меню + сцена» нічого не доводить)', () => {
+    const first = choices[0];
+    if (!first) throw new Error('no characters');
+    const g = create(first.intent);
+    expect(deadEnds(g, realMenu).states).toBeGreaterThan(deadEnds(g, realMenu, () => []).states);
+  });
+
   it('негативний контроль: розмова без відповідей (лише «далі») — застрягає в діалозі', () => {
     const first = choices[0];
     if (!first) throw new Error('no characters');
@@ -93,10 +113,11 @@ describe('тексти меню: кожен ключ існує в обох мо
 
   it('кожен показаний ключ — у uk і en, у кожному стані меню', () => {
     const missing = new Set<string>();
+    let journals = 0;
     for (const { intent, offer } of choices) {
       for (const k of [offer.profileKey, offer.transportKey, offer.animalKey]) if (k !== null && !has(k)) missing.add(k);
       // Обхід станів меню з журналом — щоб перевірити й записи журналу.
-      let frontier = [{ ...newSim(1, 5_000), game: create(intent) }];
+      let frontier: SimState[] = [step(newSim(1, 5_000), { kind: 'command', command: { ...intent, commandId: 'c0' } as Command }, { defs: DEFS })];
       const seen = new Set<string>();
       while (frontier.length) {
         const next: typeof frontier = [];
@@ -104,17 +125,20 @@ describe('тексти меню: кожен ключ існує в обох мо
           const k = outcomeKey(sim.game);
           if (seen.has(k)) continue;
           seen.add(k);
+          journals = Math.max(journals, sim.journal.length);
           const o = storyOffer(sim, DEFS).offer;
           const keys = [o.locationKey, ...o.quests.flatMap((q) => [q.key, ...q.objectives.map((x) => x.key)]), ...o.inventory.map((i) => i.key),
-            ...(o.dialogue ? [o.dialogue.key, o.dialogue.speakerKey] : []),
+            ...(o.dialogue ? [o.dialogue.key, ...(o.dialogue.speakerKey === null ? [] : [o.dialogue.speakerKey])] : []),
+            ...o.journal.flatMap((e) => (e.key === null ? [] : [e.key])),
             ...[...o.actions, ...(o.dialogue?.answers ?? [])].filter((a) => a.kind !== 'continue').map((a) => a.key)];
           for (const key of keys) if (!has(key)) missing.add(String(key));
-          for (const { next: g } of realMenu(sim.game)) next.push({ ...sim, game: g });
+          for (const { move } of realMenu(sim.game)) next.push(step(sim, { kind: 'command', command: { ...move, commandId: nextCommandId(sim.game) } as Command }, { defs: DEFS }));
         }
         frontier = next;
       }
       expect(seen.size).toBeGreaterThan(10);
     }
+    expect(journals).toBeGreaterThan(5);            // журнал справді наповнювався — його ключі перевірено
     expect([...missing].sort()).toEqual([]);
   });
 
@@ -166,5 +190,23 @@ describe('storyOffer: знімок для UI', () => {
     const g = create((choices[0] as { intent: Move }).intent);
     const keys = realMenu(g).map((o) => outcomeKey(o.next));
     expect(new Set(keys).size).toBe(keys.length);
+    // Удома, коли ціль «озирнись удома» вже виконана: «Піти: Дім» нічого не змінює — його немає.
+    const home = realMenu(g).find((o) => o.move.type === 'Visit' && o.move.locationId === 'loc.home')?.next;
+    if (!home) throw new Error('visit home expected right after creation (it ticks ST-001)');
+    const there = dispatch(home, { type: 'Visit', locationId: 'loc.home', commandId: 'zz' } as Command, DEFS);
+    expect(there.ok).toBe(true);                    // ядро таку дію приймає — фільтр саме в меню
+    expect(realMenu(home).some((o) => o.move.type === 'Visit' && o.move.locationId === 'loc.home')).toBe(false);
+  });
+
+  it('у розмові id відповіді прив\'язаний до вузла: той самий номер відповіді в іншому вузлі — інший id', () => {
+    const bike = choices.find(({ intent }) => (intent as { transportId: string }).transportId === 'transport.bike');
+    if (!bike) throw new Error('need bike');
+    const g = create(bike.intent);
+    const a = { ...g, dialogue: { id: 'dlg.elise-greeting', node: 'hello' } };
+    const b = { ...g, dialogue: { id: 'dlg.elise-greeting', node: 'spot' } };
+    const idA = storyOffer({ ...newSim(1), game: a }, DEFS).offer.dialogue?.answers[0]?.id;
+    const idB = storyOffer({ ...newSim(1), game: b }, DEFS).offer.dialogue?.answers[0]?.id;
+    expect(idA).toBeDefined();
+    expect(idA).not.toBe(idB);
   });
 });

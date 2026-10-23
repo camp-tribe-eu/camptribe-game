@@ -1,5 +1,6 @@
 // Екран подорожі (GAME-32): вибір персонажа, завдання, розмова, дії й журнал. Лише показує знімок
 // сюжету й просить дію за id — що це за команда, знає шар view (src/view/story-offer.ts).
+import type { ComponentChildren } from 'preact';
 import { useEffect, useRef } from 'preact/hooks';
 import { ct } from '../i18n/content';
 import type { AnyLang, Key } from '../i18n';
@@ -20,10 +21,10 @@ export function money(lang: AnyLang, cents: number): string {
   return new Intl.NumberFormat(lang === 'uk' ? 'uk-UA' : 'en-IE', { style: 'currency', currency: 'EUR' }).format(cents / 100);
 }
 
-export function StoryPanel({ offer, lang, t, act, close }: { offer: StoryOffer; lang: AnyLang; t: (k: Key) => string; act: (id: string) => void; close: () => void }) {
+export function StoryPanel({ offer, lang, t, act, close, children }: { offer: StoryOffer; lang: AnyLang; t: (k: Key) => string; act: (id: string) => void; close: () => void; children?: ComponentChildren }) {
   const root = useRef<HTMLDivElement>(null);
   // Фокус — на першу дію після кожної зміни: клавіатура й екранний читач не губляться.
-  useEffect(() => { root.current?.querySelector<HTMLButtonElement>('button')?.focus(); }, [offer]);
+  useEffect(() => { root.current?.querySelector<HTMLButtonElement>('button[data-act]')?.focus(); }, [offer]);
 
   const label = (a: OfferAction): string => {
     if (a.kind === 'continue') return t('ui.continue');
@@ -36,8 +37,11 @@ export function StoryPanel({ offer, lang, t, act, close }: { offer: StoryOffer; 
   );
 
   return (
-    <div ref={root} class="ui-overlay ui-story" role="dialog" aria-modal="true" aria-label={t('ui.story')} data-ui="story">
+    // Затиснутий Enter/Space (автоповтор) не «пробігає» кроки: фокус після кожної дії стрибає на нову першу
+    // кнопку, і повтор клавіші влучав би вже в неї (рецензія GAME-32). Свідомі натискання — без затримки.
+    <div ref={root} onKeyDown={(e) => { if (e.repeat && (e.key === 'Enter' || e.key === ' ')) e.preventDefault(); }} class="ui-overlay ui-story" role="dialog" aria-modal="true" aria-label={t('ui.story')} data-ui="story">
       <h2>{t('ui.story')}</h2>
+      {children}
       {offer.stage === 'create' && (
         <fieldset data-ui="create">
           <legend>{t('ui.createTitle')}</legend>

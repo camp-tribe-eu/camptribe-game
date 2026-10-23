@@ -87,7 +87,7 @@ test('на екрані подорожі світ на паузі; Escape і «�
   await expect(page.locator('[data-ui="pause"]')).toHaveCount(0);   // не плутається з меню паузи
 });
 
-test('автівкою відповіді про велосипед немає, а бічного квесту — серед виборів', async ({ page }) => {
+test('автівкою — без бічного квесту й без відповіді про велосипед, і так само до кінця розділу', async ({ page }) => {
   await open(page);
   await panel(page).locator('[data-act="create"]', { hasText: 'Авто' }).first().click();
   for (const [k, key] of [['visit', 'loc.home'], ['complete', 'q.st-001'], ['visit', 'loc.home'], ['complete', 'q.st-002'], ['visit', 'loc.shop'],
@@ -98,6 +98,34 @@ test('автівкою відповіді про велосипед немає, 
   await act(page, 'talk', 'npc.elise');
   await expect(panel(page).locator('[data-key="dlg.elise-greeting.hello.c2"]')).toBeVisible();   // позитивний контроль
   await expect(panel(page).locator('[data-key="dlg.elise-greeting.hello.c1"]')).toHaveCount(0);
+  await act(page, 'choose', 'dlg.elise-greeting.hello.c2');
+  await act(page, 'choose', 'dlg.elise-greeting.spot.c1');
+  await act(page, 'continue');
+  // «Поставити намет» зарахувалось ще на прибутті (ST-005 уже був активний): повторне «Піти» — порожнє, його немає.
+  await expect(panel(page).locator('[data-act="visit"][data-key="loc.camp.lake"]')).toHaveCount(0);
+  await act(page, 'pickup', 'item.firewood');
+  await act(page, 'complete', 'q.st-005');
+  await expect(panel(page).locator('[data-ui="ended"]')).toBeVisible();
+  const c = await core(page);
+  expect(c.game.campaignEnded).toBe(true);
+  expect(c.game.grants).not.toContain('rw.q-elise-bike-area');
+  expect(await panel(page).textContent()).not.toContain('⟦');
+});
+
+test('затиснутий Enter не пробігає кроки: одне натискання — одна дія', async ({ page }) => {
+  await open(page);
+  await panel(page).locator('[data-act="create"]').first().focus();
+  // Повторний down тієї самої клавіші Playwright шле з repeat: true — як автоповтор затиснутої клавіші.
+  for (let i = 0; i < 4; i++) { await page.keyboard.down('Enter'); await page.waitForTimeout(30); }
+  await page.keyboard.up('Enter');
+  await page.waitForTimeout(50);
+  expect((await core(page)).journal.length).toBe(1);   // лише «Початок подорожі»
+});
+
+test('закриття екрана подорожі повертає фокус на ☰', async ({ page }) => {
+  await open(page);
+  await page.locator('[data-ui="story-close"]').click();
+  await expect(page.locator('[data-touch="story"]')).toBeFocused();
 });
 
 test('сейв після прологу: перезавантаження — і кінець розділу на місці', async ({ page }) => {

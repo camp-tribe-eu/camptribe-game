@@ -9,7 +9,7 @@
 import type { StoryDefs } from './defs';
 import { matches } from './story';
 import { stateHash } from './hash';
-import type { SimState } from './sim';
+import { isJournalType, type SimState } from './sim';
 import { REJECT_CODES } from './state';
 
 export const SAVE_FORMAT = 'camplife-save';
@@ -60,7 +60,7 @@ function shapeError(sim: unknown): string | null {
   if (!isObj(sim)) return 'sim is not an object';
   const { game, clock, rng, finds, journal } = sim;
   if (!isObj(game) || !isObj(clock) || !Array.isArray(rng) || !isInt(finds)) return 'missing game/clock/rng/finds';
-  if (!Array.isArray(journal) || journal.some((e) => !isObj(e) || !isInt(e.at) || typeof e.commandId !== 'string' || typeof e.type !== 'string' || !(e.ref === null || typeof e.ref === 'string'))) return 'journal';
+  if (!Array.isArray(journal) || journal.some((e) => !isObj(e) || !isInt(e.at) || typeof e.commandId !== 'string' || !isJournalType(e.type) || !(e.ref === null || typeof e.ref === 'string'))) return 'journal';
   if (game.schemaVersion !== 2 || !isInt(game.moneyCents) || !isInt(game.seq)) return 'game: version, money or seq';
   if (!isObj(game.inventory) || !Array.isArray(game.grants) || !isObj(game.processed)) return 'game: inventory, grants or processed';
   if (Object.values(game.inventory).some((q) => !isInt(q, 1))) return 'game: inventory quantity';

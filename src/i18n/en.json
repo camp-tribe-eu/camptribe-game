@@ -20,7 +20,7 @@
   "ui.creditsSource": "source",
   "ui.creditsUnmodified": "unmodified",
   "ui.importOutdated": "This code is from an older version of the game whose story has changed, so it cannot be continued. Keep the code — a later update may pick it up.",
-  "ui.staleSave": "A save from an older version of the game was set aside (the story changed). Here is its code — keep it so it is not lost:",
+  "ui.staleSave": "A save this version of the game cannot continue was set aside (its story or game version differs). Here is its code — keep it so it is not lost:",
   "ui.story": "Journey",
   "ui.storyClose": "Back to the map",
   "ui.createTitle": "Who is setting off?",
@@ -49,7 +49,9 @@
   "jr.Pickup": "Taken",
   "jr.BuyItem": "Bought",
   "jr.SellItem": "Sold",
-  "jr.Interact": "By the campfire",
+  "jr.Interact": "A moment on the road",
   "jr.CompleteQuest": "Done",
-  "jr.DeclineQuest": "Set aside"
+  "jr.DeclineQuest": "Set aside",
+  "ui.importNewer": "This code is from a newer version of the game. Reload the page (to get the new version) and try again.",
+  "ui.staleDismiss": "I kept the code — hide"
 }

@@ -125,13 +125,36 @@ test.describe('сейв від старішої версії контенту (�
     await loaded(page);
     expect((await snap(page)).game.grants).toEqual([]);                       // нова гра, а не застряглий сейв
     await page.keyboard.press('Escape');
-    await expect(page.locator('[data-ui="stale"]')).toContainText(/старішої версії|older version/);
+    await expect(page.locator('[data-ui="stale"]')).toContainText(/не може продовжити|cannot continue/);
     await expect(page.locator('[data-ui="stale-code"]')).toHaveValue(/^CL1\./);
     const keys = await page.evaluate(() => new Promise<string[]>((resolve) => {
       const req = indexedDB.open('camplife', 1);
       req.onsuccess = () => { const r = req.result.transaction('saves').objectStore('saves').getAllKeys(); r.onsuccess = () => { req.result.close(); resolve(r.result.map(String)); }; };
     }));
     expect(keys.some((k) => k.startsWith('stale:'))).toBe(true);
+
+    // Рецензія (друге коло): після автозбереження застарілий сейв іде з main/prev — а повідомлення лишається
+    // і в наступній сесії, доки гравець сам його не сховає.
+    await page.keyboard.press('Escape');                                     // продовжити
+    await page.keyboard.press('Escape');                                     // знову пауза → автозбереження
+    await page.keyboard.press('Escape');
+    await page.waitForTimeout(300);
+    await page.reload();
+    await loaded(page);
+    await page.locator('[data-touch="story"]').click();
+    await expect(page.locator('[data-ui="story"] [data-ui="stale"]')).toBeVisible();   // і на екрані подорожі
+    await page.locator('[data-ui="stale-dismiss"]').click();
+    await expect(page.locator('[data-ui="stale"]')).toHaveCount(0);
+    await page.reload();
+    await loaded(page);
+    await page.keyboard.press('Escape');
+    await expect(page.locator('[data-ui="pause"]')).toBeVisible();
+    await expect(page.locator('[data-ui="stale"]')).toHaveCount(0);
+    const after = await page.evaluate(() => new Promise<string[]>((resolve) => {
+      const req = indexedDB.open('camplife', 1);
+      req.onsuccess = () => { const r = req.result.transaction('saves').objectStore('saves').getAllKeys(); r.onsuccess = () => { req.result.close(); resolve(r.result.map(String)); }; };
+    }));
+    expect(after.some((k) => k.startsWith('stale:'))).toBe(false);
   });
 
   test('імпорт коду від старішої версії — окреме пояснення, а не «скопійовано не повністю»', async ({ page }) => {

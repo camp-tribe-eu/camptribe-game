@@ -26,9 +26,12 @@ export function Shell({ port, langOverride, credits }: { port: UiPort; langOverr
     setPaused(next);
     port.setPaused(next);
   };
+  const storyBtn = useRef<HTMLButtonElement>(null);
   const story = (open: boolean): void => {
     setStoryOpen(open);
-    if (open) setOffer(port.story());
+    // Фокус повертається на ☰ (рецензія: інакше клавіатура й читач губились на <body>).
+    if (!open) requestAnimationFrame(() => storyBtn.current?.focus());
+    if (open) { setOffer(port.story()); void port.staleCode().then(setStaleCode); }
     port.setPaused(open);
   };
 
@@ -61,11 +64,22 @@ export function Shell({ port, langOverride, credits }: { port: UiPort; langOverr
     document.documentElement.lang = settings.language;
   }, [settings]);
 
+  // Відкладений сейв: і в меню паузи, і на екрані подорожі (туди гравець іде першим), доки не сховає.
+  const staleNotice = staleCode && (
+    <p class="ui-status" data-ui="stale" role="status">
+      {t('ui.staleSave')}
+      <textarea class="ui-code" data-ui="stale-code" readOnly rows={3} aria-label={t('ui.staleSave')} value={staleCode}
+        onFocus={(e) => (e.currentTarget as HTMLTextAreaElement).select()} />
+      <button type="button" class="ui-btn" data-ui="stale-dismiss"
+        onClick={() => { void port.dismissStale().then((ok) => { if (ok) setStaleCode(null); else setStatus('ui.saveFailed'); }); }}>{t('ui.staleDismiss')}</button>
+    </p>
+  );
+
   return (
     <>
       {!paused && !storyOpen && <button type="button" class="ui-pause-btn" data-touch="pause" aria-label={t('ui.pause')} onClick={() => toggle(true)}>{'‖'}</button>}
-      {!paused && !storyOpen && <button type="button" class="ui-story-btn" data-touch="story" aria-label={t('ui.story')} onClick={() => story(true)}>{'☰'}</button>}
-      {storyOpen && <StoryPanel offer={offer} lang={lang} t={t} act={(id) => port.act(id)} close={() => story(false)} />}
+      {!paused && !storyOpen && <button type="button" class="ui-story-btn" ref={storyBtn} data-touch="story" aria-label={t('ui.story')} onClick={() => story(true)}>{'☰'}</button>}
+      {storyOpen && <StoryPanel offer={offer} lang={lang} t={t} act={(id) => port.act(id)} close={() => story(false)}>{staleNotice}</StoryPanel>}
       {paused && (
         <div class="ui-overlay" role="dialog" aria-modal="true" aria-label={t('ui.paused')} data-ui="pause">
           <h2>{t('ui.paused')}</h2>
@@ -84,13 +98,7 @@ export function Shell({ port, langOverride, credits }: { port: UiPort; langOverr
                 onClick={() => update({ ...settings, language: l })}>{l.toUpperCase()}</button>
             ))}
           </fieldset>
-          {staleCode && (
-            <p class="ui-status" data-ui="stale" role="status">
-              {t('ui.staleSave')}
-              <textarea class="ui-code" data-ui="stale-code" readOnly rows={3} aria-label={t('ui.staleSave')} value={staleCode}
-                onFocus={(e) => (e.currentTarget as HTMLTextAreaElement).select()} />
-            </p>
-          )}
+          {staleNotice}
           <fieldset>
             <legend>{t('ui.save')}</legend>
             <button type="button" class="ui-btn" data-ui="save"
@@ -102,7 +110,7 @@ export function Shell({ port, langOverride, credits }: { port: UiPort; langOverr
             <textarea class="ui-code" data-ui="code-in" rows={3} aria-label={t('ui.importCode')} placeholder={t('ui.importCode')}
               value={codeIn} onInput={(e) => setCodeIn((e.currentTarget as HTMLTextAreaElement).value)} />
             <button type="button" class="ui-btn" data-ui="code-apply"
-              onClick={() => { void port.importCode(codeIn).then((r) => setStatus(({ ok: 'ui.importOk', bad: 'ui.importBad', outdated: 'ui.importOutdated', unsaved: 'ui.importUnsaved' } as const)[r])); }}>{t('ui.apply')}</button>
+              onClick={() => { void port.importCode(codeIn).then((r) => setStatus(({ ok: 'ui.importOk', bad: 'ui.importBad', outdated: 'ui.importOutdated', newer: 'ui.importNewer', unsaved: 'ui.importUnsaved' } as const)[r])); }}>{t('ui.apply')}</button>
             {status && <p class="ui-status" data-ui="status" role="status">{t(status)}</p>}
           </fieldset>
           <button type="button" class="ui-btn" data-ui="reset" onClick={() => update(DEFAULT_SETTINGS)}>{t('ui.reset')}</button>

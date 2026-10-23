@@ -7,7 +7,8 @@
 // * під час розмови показано лише відповіді й «далі» — інші дії чекають кінця розмови;
 // * Interact — справа сцени (об'єкт поруч на мапі), не меню;
 // * дві спроби, що ведуть в один і той самий стан (завершити квест без вибору й тим самим переходом),
-//   показуються одним рядком.
+//   показуються одним рядком;
+// * дія, що не змінює нічого (прийти туди, де вже стоїш), не показується.
 import { dispatch, nextCommandId, type Command } from '../core/commands';
 import type { CoreDefs, StoryDefs } from '../core/defs';
 import { canonical } from '../core/hash';
@@ -47,8 +48,13 @@ const tryMove = (s: GameState, m: Move | Omit<Command, 'commandId'>, defs: CoreD
   return r.ok ? r.state : null;
 };
 
-/** id дії — сама спроба канонічним рядком: стабільний між кадрами, тож клік не влучить у чужу дію. */
-const idOf = (m: unknown): string => canonical(m);
+/**
+ * id дії — сама спроба канонічним рядком: стабільний між кадрами, тож клік не влучить у чужу дію.
+ * Відповідь у розмові ще й прив'язана до вузла (рецензія: «відповідь 0» є в кожному вузлі — без
+ * цього затиснутий Enter проходив би розмову сам).
+ */
+const idOf = (m: Move, s: GameState): string =>
+  canonical(m.type === 'Choose' || m.type === 'Continue' ? { ...m, at: s.dialogue } : m);
 
 function describe(m: Move, defs: CoreDefs, s: GameState): Omit<OfferAction, 'id'> {
   switch (m.type) {
@@ -75,12 +81,18 @@ function describe(m: Move, defs: CoreDefs, s: GameState): Omit<OfferAction, 'id'
   }
 }
 
+const refOf = (m: Move): string => {
+  const r = m as unknown as Record<string, unknown>;
+  return String(r.questId ?? r.locationId ?? r.itemId ?? r.npcId ?? '');
+};
+
 /** Наміри для меню: показані дії → їхні команди (без commandId — його дає місток). */
 export interface Offered { readonly offer: StoryOffer; readonly intents: ReadonlyMap<string, Move> }
 
 /** Спроби, які меню пропонує в стані: прийняті ядром, без Interact, у розмові — лише розмова, без дублів наслідку. */
 export function menuMoves(s: GameState, defs: CoreDefs): { move: Move; next: GameState }[] {
   const talking = s.dialogue !== null;
+  const here = outcomeKey(s);
   const seen = new Set<string>();
   const out: { move: Move; next: GameState }[] = [];
   for (const m of moves(s, defs)) {
@@ -88,7 +100,10 @@ export function menuMoves(s: GameState, defs: CoreDefs): { move: Move; next: Gam
     if (talking && m.type !== 'Choose' && m.type !== 'Continue') continue;
     const next = tryMove(s, m, defs);
     if (!next) continue;
-    const k = outcomeKey(next);
+    const outcome = outcomeKey(next);
+    if (outcome === here) continue; // дія, що нічого не змінює (прийти туди, де стоїш), — не пропонуємо
+    // Дубль — лише той самий наслідок ТІЄЇ САМОЇ дії (з переходом і без): інакше різні записи журналу злилися б.
+    const k = `${m.type}|${refOf(m)}|${outcome}`;
     if (seen.has(k)) continue;
     seen.add(k);
     out.push({ move: m, next });
@@ -106,7 +121,7 @@ export function characterChoices(defs: CoreDefs): { offer: OfferCharacter; inten
     for (const animalId of [NO_ANIMAL, ...Object.keys(st.animals)]) {
       const intent = { type: 'CreateCharacter', profileId, transportId, ...(animalId === NO_ANIMAL ? {} : { animalId }) } as Move;
       if (!tryMove(blank, intent, defs)) continue;
-      out.push({ intent, offer: { id: idOf(intent), profileKey: nameKey(profileId) ?? profileId, transportKey: nameKey(transportId) ?? transportId, animalKey: animalId === NO_ANIMAL ? null : nameKey(animalId) ?? animalId } });
+      out.push({ intent, offer: { id: idOf(intent, blank), profileKey: nameKey(profileId) ?? profileId, transportKey: nameKey(transportId) ?? transportId, animalKey: animalId === NO_ANIMAL ? null : nameKey(animalId) ?? animalId } });
     }
   }
   return out;
@@ -142,7 +157,7 @@ export function storyOffer(sim: SimState, defs: CoreDefs): Offered {
 
   const offered: OfferAction[] = [];
   for (const { move } of menuMoves(s, defs)) {
-    const a: OfferAction = { id: idOf(move), ...describe(move, defs, s) };
+    const a: OfferAction = { id: idOf(move, s), ...describe(move, defs, s) };
     intents.set(a.id, move);
     offered.push(a);
   }

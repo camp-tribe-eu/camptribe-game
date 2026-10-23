@@ -72,3 +72,41 @@ export async function writeStale(json: string): Promise<boolean> {
     return false;
   }
 }
+
+/** Усі відкладені сейви (ключі `stale:*`), щоб повідомлення не зникало після першої сесії. */
+export async function readStale(): Promise<string[]> {
+  try {
+    const db = await open();
+    return await new Promise<string[]>((resolve) => {
+      const tx = db.transaction(STORE, 'readonly');
+      const store = tx.objectStore(STORE);
+      const out: string[] = [];
+      const cur = store.openCursor();
+      cur.onsuccess = () => {
+        const c = cur.result;
+        if (!c) return;
+        if (typeof c.key === 'string' && c.key.startsWith('stale:') && typeof c.value === 'string') out.push(c.value);
+        c.continue();
+      };
+      tx.oncomplete = () => { db.close(); resolve(out); };
+      tx.onerror = tx.onabort = () => { db.close(); resolve([]); };
+    });
+  } catch {
+    return [];
+  }
+}
+
+/** Прибрати відкладений сейв (гравець бачив код і сховав повідомлення). */
+export async function dismissStale(json: string): Promise<boolean> {
+  try {
+    const db = await open();
+    return await new Promise<boolean>((resolve) => {
+      const tx = db.transaction(STORE, 'readwrite');
+      tx.objectStore(STORE).delete(staleKey(json));
+      tx.oncomplete = () => { db.close(); resolve(true); };
+      tx.onerror = tx.onabort = () => { db.close(); resolve(false); };
+    });
+  } catch {
+    return false;
+  }
+}

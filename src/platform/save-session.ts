@@ -12,8 +12,13 @@
 // * карантин не чекається всередині циклу: інакше гравець устигав діяти, а prev усе одно вантажився;
 // * якщо карантин не записався — автозбереження стоїть (явне «Зберегти» працює), щоб ротація
 //   main/prev не витерла єдину копію.
+// Рецензія 23.10 (друге коло):
+// * карантин видно й у наступних сесіях (readStale), доки гравець сам не сховає повідомлення;
+// * сейв від НОВІШОЇ версії гри (стара збірка з кешу) теж відкладається, а не губиться ротацією;
+// * той самий контент (contentRev збігся) — пошук досяжності кінця не запускається: тупика від зміни
+//   контенту бути не може, а пошук коштує сотні мс на старті.
 import type { StoryDefs } from '../core/defs';
-import { fromSave, serialize } from '../core/save';
+import { SAVE_VERSION, fromSave, serialize } from '../core/save';
 import type { SimState } from '../core/sim';
 import type { GameState } from '../core/state';
 
@@ -29,6 +34,10 @@ export interface SessionStore {
   write(json: string): Promise<boolean>;
   /** Відкласти сейв, що не підходить до нинішнього контенту: ротація main/prev його не чіпає. */
   quarantine?(json: string): Promise<boolean>;
+  /** Усі відкладені сейви (і з минулих сесій). */
+  readStale?(): Promise<string[]>;
+  /** Прибрати відкладений сейв — лише на прохання гравця, коли код уже показано. */
+  dismissStale?(json: string): Promise<boolean>;
 }
 
 export interface SessionContent {
@@ -38,29 +47,52 @@ export interface SessionContent {
   readonly viable?: (game: GameState) => boolean | undefined;
 }
 
-export type ImportResult = 'ok' | 'bad' | 'outdated' | 'unsaved';
+export type ImportResult = 'ok' | 'bad' | 'outdated' | 'newer' | 'unsaved';
 
-type Verdict = { ok: true; sim: SimState } | { ok: false; outdated: boolean };
+/** keep — цілий сейв, який не можна вантажити зараз, але не можна й губити. */
+type Verdict = { ok: true; sim: SimState } | { ok: false; keep: 'outdated' | 'newer' | null };
+
+/** Сейв від новішої версії гри: формат наш, версія схеми більша за нашу. */
+function isNewer(json: string): boolean {
+  try { const v = (JSON.parse(json) as { schemaVersion?: unknown }).schemaVersion; return typeof v === 'number' && v > SAVE_VERSION; } catch { return false; }
+}
 
 export function createSaveSession(bridge: SessionBridge, store: SessionStore, content: SessionContent = {}) {
   let ready = false;
   let holdAutosave = false;
   let staleJson: string | null = null;
+  /** Відкладені сейви для повідомлення: цієї сесії першим, далі з минулих. */
+  let stales: string[] = [];
+  let quarantined: Promise<unknown> = Promise.resolve();
   const opts = content.story ? { story: content.story } : {};
   const write = (): Promise<boolean> => store.write(serialize(bridge.state, content.contentRev ?? null));
 
   /** Сейв придатний для нинішнього контенту? outdated — цілий, але під старий контент. */
   const judge = (json: string): Verdict => {
     const r = fromSave(json, opts);
-    if (!r.ok) return { ok: false, outdated: r.code === 'SAVE_CONTENT_MISMATCH' };
-    if (content.viable?.(r.sim.game) === false) return { ok: false, outdated: true };
+    if (!r.ok) {
+      if (r.code === 'SAVE_CONTENT_MISMATCH') return { ok: false, keep: 'outdated' };
+      if (r.code === 'SAVE_VERSION_UNSUPPORTED' && isNewer(json)) return { ok: false, keep: 'newer' };
+      return { ok: false, keep: null };
+    }
+    const sameContent = content.contentRev != null && r.contentRev === content.contentRev;
+    if (!sameContent && content.viable?.(r.sim.game) === false) return { ok: false, keep: 'outdated' };
     return { ok: true, sim: r.sim };
   };
 
   return {
     get ready() { return ready; },
     /** Сейв, відкладений на старті як застарілий (для повідомлення й коду відновлення). */
-    get stale(): string | null { return staleJson; },
+    get stale(): string | null { return stales[0] ?? null; },
+    /** Сховати повідомлення про відкладений сейв: гравець код уже бачив. Копію в сховищі прибираємо. */
+    async dismissStale(): Promise<boolean> {
+      const json = stales[0];
+      if (json === undefined) return true;
+      await quarantined; // інакше запис карантину, що ще йде, повернув би щойно прибране
+      const ok = store.dismissStale ? await store.dismissStale(json) : true;
+      if (ok) stales = stales.filter((x) => x !== json);
+      return ok;
+    },
     /** Автозбереження (пауза, згорнута вкладка). До кінця старту — нічого; і поки карантин не вдався. */
     autosave(): void {
       if (ready && !holdAutosave) void write();
@@ -84,7 +116,7 @@ export function createSaveSession(bridge: SessionBridge, store: SessionStore, co
         const v = judge(json);
         if (v.ok) { pick = v.sim; break; }
         // Лише перший застарілий: main завжди новіший за prev.
-        if (v.outdated && staleJson === null) staleJson = json;
+        if (v.keep && staleJson === null) staleJson = json;
       }
       // Повторна перевірка прямо перед завантаженням: гравець міг устигнути діяти (рецензія).
       if (pick && !ready && bridge.sent === 0) {
@@ -93,17 +125,24 @@ export function createSaveSession(bridge: SessionBridge, store: SessionStore, co
         bridge.setPaused(paused);
       }
       ready = true;
-      if (staleJson !== null && store.quarantine) {
+      if (staleJson !== null) {
         const json = staleJson;
+        stales = [json];
         holdAutosave = true; // до підтвердження запису карантину ротація не сміє витерти копію
-        void store.quarantine(json).then((ok) => { if (ok) holdAutosave = false; });
+        // Без сховища карантину автозбереження так і стоїть: явне «Зберегти» — рішення гравця.
+        if (store.quarantine) quarantined = store.quarantine(json).then((ok) => { if (ok) holdAutosave = false; });
+      }
+      // Відкладені в минулих сесіях — після завантаження, щоб читання не відкривало гонку.
+      if (store.readStale) {
+        const old = await store.readStale();
+        stales = [...stales, ...old.filter((x) => !stales.includes(x))];
       }
     },
     /** Імпорт: стан із сейву, годинник на паузі (діалог відкритий), одразу в сховище. */
     async adopt(json: string | null): Promise<ImportResult> {
       if (!json) return 'bad';
       const v = judge(json);
-      if (!v.ok) return v.outdated ? 'outdated' : 'bad';
+      if (!v.ok) return v.keep ?? 'bad';
       bridge.load(v.sim);
       bridge.setPaused(true);
       ready = true;

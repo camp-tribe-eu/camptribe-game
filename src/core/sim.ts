@@ -4,6 +4,7 @@
 import { advance, newClock, pause, resume, tick, type GameClock } from './clock';
 import { dispatch, type Command } from './commands';
 import { EMPTY_DEFS, type CoreDefs } from './defs';
+import { canonical } from './hash';
 import { nextInt, seedRng, type RngState } from './rng';
 import { initialState, type GameState } from './state';
 
@@ -28,7 +29,18 @@ export interface JournalEntry {
 /** Команди, що потрапляють у журнал. Розмова, вибір реплік і «далі» — ні: це не події подорожі. */
 export const JOURNAL_TYPES = ['CreateCharacter', 'Visit', 'Pickup', 'BuyItem', 'SellItem', 'Interact', 'CompleteQuest', 'DeclineQuest'] as const;
 export type JournalType = (typeof JOURNAL_TYPES)[number];
-const isJournal = (t: string): t is JournalType => (JOURNAL_TYPES as readonly string[]).includes(t);
+export const isJournalType = (t: unknown): t is JournalType => (JOURNAL_TYPES as readonly unknown[]).includes(t);
+
+/**
+ * Скільки останніх записів журнал тримає (рецензія GAME-32): без межі «пінг-понг» між локаціями
+ * роздував би сейв і код відновлення без кінця — 5 тис. записів ≈ 38 тис. знаків коду. 500 записів —
+ * це кілька розділів подорожі, а код лишається в межах кількох тисяч знаків.
+ */
+export const JOURNAL_LIMIT = 500;
+
+/** Чи змінила команда гру: без лічильників команд (вони ростуть від кожної прийнятої команди). */
+export const changedGame = (a: GameState, b: GameState): boolean =>
+  canonical({ ...a, processed: null, seq: null }) !== canonical({ ...b, processed: null, seq: null });
 
 function refOf(c: Command): string | null {
   const r = c as unknown as Record<string, unknown>;
@@ -76,10 +88,11 @@ export function step(s: SimState, input: Input, ctx: StepCtx = {}): SimState {
     }
     case 'command': {
       const r = dispatch(s.game, input.command, ctx.defs ?? EMPTY_DEFS);
-      // Рівно один запис на прийняту нову команду з переліку; відмова й повтор commandId — нуль.
-      if (!r.ok || r.repeated || !isJournal(input.command.type)) return { ...s, game: r.state };
+      // Рівно один запис на прийняту нову команду з переліку, що щось змінила в грі. Відмова, повтор
+      // commandId і «порожня» дія (прийти туди, де стоїш; вдруге погрітись біля вогнища) — нуль.
+      if (!r.ok || r.repeated || !isJournalType(input.command.type) || !changedGame(s.game, r.state)) return { ...s, game: r.state };
       const entry: JournalEntry = { at: s.clock.minutes, commandId: input.command.commandId, type: input.command.type, ref: refOf(input.command) };
-      return { ...s, game: r.state, journal: [...s.journal, entry] };
+      return { ...s, game: r.state, journal: [...s.journal, entry].slice(-JOURNAL_LIMIT) };
     }
     case 'advance':
       return { ...s, clock: advance(s.clock, input.minutes) };

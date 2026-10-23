@@ -195,4 +195,67 @@ describe('сесія сейвів: старт і гонки (GAME-33)', () => {
     expect(staleKey(STALE)).not.toBe(staleKey(serialize(savedSim(false))));
     expect(staleKey(STALE)).toMatch(/^stale:[0-9a-f]{8}$/);
   });
+
+  // ---- рецензія 23.10, друге коло ----
+  const NEWER = (() => { const o = JSON.parse(serialize(savedSim(false))); o.schemaVersion = 99; return JSON.stringify(o); })();
+
+  it('сейв від НОВІШОЇ версії гри: не вантажиться, відкладається, імпорт — «newer»', async () => {
+    const st = fakeStore([NEWER]);
+    const quarantined: string[] = [];
+    const b = fakeBridge();
+    const s = createSaveSession(b, { ...st, quarantine: async (j: string) => { quarantined.push(j); return true; } });
+    const p = s.start(); st.release(); await p;
+    expect(b.state.finds).toBe(0);
+    expect(quarantined).toEqual([NEWER]);
+    expect(s.stale).toBe(NEWER);
+    expect(await s.adopt(NEWER)).toBe('newer');
+    // позитивний контроль: справді зламаний — «bad», не «newer»
+    expect(await s.adopt(NEWER.replace('"schemaVersion":99', '"schemaVersion":"x"'))).toBe('bad');
+  });
+
+  it('той самий контент (contentRev збігся) — пошук досяжності не запускається; інший — запускається', async () => {
+    let calls = 0;
+    const viable = (): boolean => { calls++; return true; };
+    const same = serialize(savedSim(false), 'rev-1');
+    const s = createSaveSession(fakeBridge(), { read: async () => [], write: async () => true }, { contentRev: 'rev-1', viable });
+    expect(await s.adopt(same)).toBe('ok');
+    expect(calls).toBe(0);
+    expect(await s.adopt(serialize(savedSim(false), 'rev-0'))).toBe('ok');
+    expect(calls).toBe(1);
+    expect(await s.adopt(serialize(savedSim(false), null))).toBe('ok');     // старий сейв без відбитка — теж перевіряємо
+    expect(calls).toBe(2);
+  });
+
+  it('відкладені в минулих сесіях — видно й зараз; «сховати» прибирає зі сховища, і лише після запису карантину', async () => {
+    const OLD = staleOf({ quests: { 'q.older': { status: 'active', done: [] } } });
+    const st = fakeStore([STALE]);
+    let releaseQ!: (v: boolean) => void;
+    const order: string[] = [];
+    const s = createSaveSession(fakeBridge(), {
+      ...st,
+      quarantine: (j: string) => new Promise<boolean>((r) => { releaseQ = (v) => { order.push(`q:${j === STALE}`); r(v); }; }),
+      readStale: async () => [OLD, STALE],
+      dismissStale: async (j: string) => { order.push(`d:${j === STALE}`); return true; },
+    }, { story: STORY_DEFS.story as StoryDefs });
+    const p = s.start(); st.release(); await p;
+    expect(s.stale).toBe(STALE);                    // цієї сесії — першим, без дубля
+    const d = s.dismissStale();
+    await new Promise((r) => setTimeout(r, 0));
+    expect(order).toEqual([]);                      // чекає запису карантину
+    releaseQ(true); expect(await d).toBe(true);
+    expect(order).toEqual(['q:true', 'd:true']);
+    expect(s.stale).toBe(OLD);                      // далі — з минулої сесії
+    await s.dismissStale();
+    expect(s.stale).toBeNull();
+  });
+
+  it('без сховища карантину автозбереження стоїть (ротація не витре єдину копію)', async () => {
+    const st = fakeStore([STALE]);
+    const s = createSaveSession(fakeBridge(), st, { story: STORY_DEFS.story as StoryDefs });
+    const p = s.start(); st.release(); await p;
+    s.autosave();
+    expect(st.writes).toHaveLength(0);
+    await s.save();                                 // явне «Зберегти» — рішення гравця
+    expect(st.writes).toHaveLength(1);
+  });
 });

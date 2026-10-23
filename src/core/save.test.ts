@@ -64,7 +64,7 @@ describe('повний цикл', () => {
 });
 
 describe('коди відмов завантаження: кожен має зламаний приклад', () => {
-  const good = JSON.parse(serialize(newSim(SEED, 10_000))) as Record<string, unknown> & { sim: { game: Record<string, unknown> } };
+  const good = JSON.parse(serialize(newSim(SEED, 10_000))) as Record<string, unknown> & { sim: { game: Record<string, unknown>; journal: unknown } };
   const withSim = (patch: (s: typeof good) => void): string => { const c = structuredClone(good); patch(c); return JSON.stringify(c); };
   const resum = (c: typeof good): void => { c.checksum = stateHash(c.sim); };
   const cases: [LoadCode, string][] = [
@@ -99,6 +99,7 @@ describe('коди відмов завантаження: кожен має зл
     ['квест з невідомим статусом', (c: typeof good) => { c.sim.game.quests = { 'ST-001': { status: 'won', done: [] } }; }],
     ['персонаж без транспорту', (c: typeof good) => { c.sim.game.player = { profileId: 'profile.a', animalId: 'animal.none', locationId: null }; }],
     ['запис processed — null (без перевірки об\'єкта — виняток, а не код)', (c: typeof good) => { c.sim.game.processed = { c0: null }; }],
+    ['запис журналу невідомого типу (рецензія GAME-32)', (c: typeof good) => { c.sim.journal = [{ at: 0, commandId: 'c0', type: 'Teleport', ref: null }]; }],
   ] as const) {
     it(`SAVE_SHAPE: ${what}`, () => {
       const r = fromSave(withSim((c) => { patch(c); resum(c); }));
