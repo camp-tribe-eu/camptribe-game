@@ -1,3 +1,5 @@
-fact-be-vl-bivouac-zone	page:https://natuurenbos.be/activiteiten/bivakzone
-fact-be-vl-fire-in-nature	page:https://natuurenbos.be/een-kampvuur-maken-mag-dat
-fact-be-vl-fire-vlaanderen	page:https://www.vlaanderen.be/vuur-maken-in-of-bij-een-natuurgebied
+# GAME-56: сторінки фактів content/facts.json — перезвірка (цитати в research/facts-evidence.md).
+# Фламандські natuurenbos.be не додавати: HTTP 202, перевірка на бота (прогін 39897247127).
+fact-nl-no-wild-camping	page:https://www.natuurmonumenten.nl/kamperen
+fact-nl-signboard-rules	page:https://www.natuurmonumenten.nl/natuurgebieden/gebiedsregels
+fact-nl-sbb-pole-camping-closed	page:https://www.staatsbosbeheer.nl/wat-we-doen/nieuws/2020/05/sluiten-paalkampeerterreinen

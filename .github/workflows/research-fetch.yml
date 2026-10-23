@@ -105,7 +105,10 @@ jobs:
                 # Порожнє тіло дає файл з одного переносу рядка — -s його пропускав (sha256 e3b0c442… у прогоні 39896865650).
                 grep -q '[[:alnum:]]' "$d/text.txt" || { echo "::error::$name: текст сторінки порожній"; fail=1; continue; }
                 echo "::group::$name · $url · sha256 $(sha256sum "$d/page.html" | cut -c1-16) · $(date -u +%F)"
+                # Чужий текст не сміє стати командою Actions (рядок «::error::…» зі сторінки) — рецензія GAME-56.
+                tok="stop-$(openssl rand -hex 12)"; echo "::stop-commands::$tok"
                 head -c 12000 "$d/text.txt"; echo
+                echo "::$tok::"
                 echo "::endgroup::"
                 ;;
               *)
