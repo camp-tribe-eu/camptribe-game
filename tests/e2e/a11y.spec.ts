@@ -88,7 +88,7 @@ async function seriousViolations(page: Page, { scroll = true }: { scroll?: boole
     }
     await page.setViewportSize(vp);
   }
-  await backdrop?.evaluate((el) => el.remove());
+  await backdrop?.evaluate((el) => (el as Element).remove());
   for (const [sel, why] of unmeasured) if (!measured.has(sel) && !UNMEASURED_OK[sel]) found.add(`color-contrast (не зміряно: ${why}): ${sel}`);
   return [...found];
 }
