@@ -273,6 +273,30 @@ describe('автозбереження після дії (GAME-86)', () => {
     expect(st.writes[2]).toBe(serialize(b.state, null));   // записаний стан дорівнює ігровому
   });
 
+  it('той самий стан удруге не пишеться (F5: visibilitychange + pagehide), тож prev лишається запасною копією; явне «Зберегти» — пише', async () => {
+    const b = fakeBridge(); const st = fakeStore([]);
+    const s = createSaveSession(b, st); const p = s.start(); st.release(); await p;
+    b.sent = 1; b.load({ ...b.state, finds: 1 }); s.autosave();
+    s.autosave(); s.autosave();                       // без змін — жодного дубля
+    expect(st.writes).toHaveLength(1);
+    b.sent = 2; b.load({ ...b.state, finds: 2 }); s.autosave();
+    expect(st.writes).toHaveLength(2);                // нова дія — новий запис
+    await s.save();
+    expect(st.writes).toHaveLength(3);                // рішення гравця — завжди
+  });
+
+  it('невдалий запис не вважається записаним: наступне автозбереження того самого стану пробує знову', async () => {
+    const b = fakeBridge(); const base = fakeStore([]);
+    let fail = true;
+    const st = { ...base, write: async (j: string) => (fail ? false : base.write(j)) };
+    const s = createSaveSession(b, st); const p = s.start(); base.release(); await p;
+    b.sent = 1; b.load({ ...b.state, finds: 1 }); s.autosave();
+    await Promise.resolve(); await Promise.resolve();
+    fail = false; s.autosave();
+    await Promise.resolve();
+    expect(base.writes).toHaveLength(1);
+  });
+
   it('дія до кінця читання: нічого не пишеться до ready, стартовий сейв не затирає дію, і дія потім доходить до сховища', async () => {
     const b = fakeBridge(); const st = fakeStore([serialize(savedSim(false))]);
     const s = createSaveSession(b, st); const p = s.start();

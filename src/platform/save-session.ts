@@ -71,7 +71,16 @@ export function createSaveSession(bridge: SessionBridge, store: SessionStore, co
   let stales: string[] = [];
   let quarantined: Promise<unknown> = Promise.resolve();
   const opts = { ...(content.story ? { story: content.story } : {}), ...(content.life ? { life: content.life } : {}) };
-  const write = (): Promise<boolean> => store.write(serialize(bridge.state, content.contentRev ?? null));
+  /** Останній відданий у сховище текст. Ротація main → prev на кожен запис: дубль (F5 шле visibilitychange і pagehide
+   *  підряд) зробив би prev точною копією main саме тоді, коли запасна копія потрібна (рецензія PR #24). */
+  let lastJson: string | null = null;
+  const write = (): Promise<boolean> => {
+    const json = serialize(bridge.state, content.contentRev ?? null);
+    lastJson = json;
+    return store.write(json).then((ok) => { if (!ok && lastJson === json) lastJson = null; return ok; });
+  };
+  /** Автозбереження: той самий стан, що вже записаний, — не пишемо вдруге. Явне «Зберегти» пише завжди. */
+  const autoWrite = (): void => { if (serialize(bridge.state, content.contentRev ?? null) !== lastJson) void write(); };
 
   /** Сейв придатний для нинішнього контенту? outdated — цілий, але під старий контент. */
   const judge = (json: string): Verdict => {
@@ -101,7 +110,7 @@ export function createSaveSession(bridge: SessionBridge, store: SessionStore, co
     },
     /** Автозбереження (пауза, згорнута вкладка). До кінця старту — нічого; і поки карантин не вдався. */
     autosave(): void {
-      if (ready && !holdAutosave) { pending = false; void write(); } else pending = true;
+      if (ready && !holdAutosave) { pending = false; autoWrite(); } else pending = true;
     },
     /**
      * Явне «Зберегти»: пише завжди — гравець бачить і хоче саме цей стан. Тож стартове читання
@@ -133,7 +142,7 @@ export function createSaveSession(bridge: SessionBridge, store: SessionStore, co
       ready = true;
       // Гравець діяв, поки читали: його дію автозбереження відкинуло, а стартовий сейв її не замінив —
       // дописуємо тепер, коли можна (GAME-86). Без дій (sent 0) нічого не пишемо: це лишень пауза.
-      const flush = (): void => { if (pending && bridge.sent > 0 && ready && !holdAutosave) { pending = false; void write(); } };
+      const flush = (): void => { if (pending && bridge.sent > 0 && ready && !holdAutosave) { pending = false; autoWrite(); } };
       if (staleJson !== null) {
         const json = staleJson;
         stales = [json];
