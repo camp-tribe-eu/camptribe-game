@@ -3,13 +3,15 @@
 
 export interface Settings {
   /** Масштаб тексту інтерфейсу, %. */
-  readonly textScale: 100 | 125 | 150;
+  readonly textScale: 100 | 125 | 150 | 200;
   readonly language: 'uk' | 'en';
 }
 
 export const DEFAULT_SETTINGS: Settings = { textScale: 100, language: 'uk' };
 const KEY = 'camplife.settings.v1';
-const SCALES = [100, 125, 150] as const;
+// 200 % — WCAG 1.4.4 (GAME-39): текст удвічі без обрізання й без втрати функцій.
+export const TEXT_SCALES = [100, 125, 150, 200] as const;
+const SCALES = TEXT_SCALES;
 
 export function loadSettings(storage: Pick<Storage, 'getItem'> | undefined = safeStorage()): Settings {
   try {

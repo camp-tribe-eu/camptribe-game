@@ -12,6 +12,13 @@ describe('налаштування (GAME-25)', () => {
     expect(saveSettings({ textScale: 150, language: 'en' }, s)).toBe(true);
     expect(loadSettings(s)).toEqual({ textScale: 150, language: 'en' });
   });
+  it('200 % (GAME-39) зберігається й читається; 175 — чуже значення, типове', () => {
+    const s = mem();
+    saveSettings({ textScale: 200, language: 'uk' }, s);
+    expect(loadSettings(s).textScale).toBe(200);
+    s.setItem('camplife.settings.v1', JSON.stringify({ textScale: 175, language: 'uk' }));
+    expect(loadSettings(s).textScale).toBe(DEFAULT_SETTINGS.textScale);
+  });
   it('зіпсований запис або чуже значення — типові, без винятку', () => {
     const s = mem();
     s.setItem('camplife.settings.v1', '{not json');

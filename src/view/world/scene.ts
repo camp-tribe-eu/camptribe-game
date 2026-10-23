@@ -25,6 +25,8 @@ export interface WorldProbe {
   clockMinutes: number;
   /** Стартове завантаження сейву завершено (є він чи ні). */
   saveLoaded: boolean;
+  /** lerp камери [x, y], прочитаний з живої камери: 1 — миттєвий слід, без плавного «доїзду» (GAME-39 #3). */
+  cameraLerp: [number, number];
 }
 
 export class WorldScene extends Phaser.Scene {
@@ -78,8 +80,11 @@ export class WorldScene extends Phaser.Scene {
     this.physics.add.collider(this.player, walls);
 
     this.cameras.main.setBounds(0, 0, map.widthInPixels, map.heightInPixels);
-    this.cameras.main.startFollow(this.player, true);
+    // lerp 1, 1 — камера стоїть на персонажі в тому ж кадрі, без згладженого «доїзду». Тож руху, який
+    // треба гасити за prefers-reduced-motion, тут немає (GAME-39 #3); e2e читає lerp з живої камери.
+    this.cameras.main.startFollow(this.player, true, 1, 1);
     this.cameras.main.roundPixels = true;
+    this.probe.cameraLerp = [this.cameras.main.lerp.x, this.cameras.main.lerp.y];
 
     const keyboard = this.input.keyboard;
     if (keyboard) {

@@ -24,7 +24,9 @@
       .touch-interact { right: 20px; bottom: 60px; border-radius: 50%; }
       .ui-pause-btn { position: absolute; right: 12px; top: 12px; min-width: 52px; min-height: 52px; border-radius: 12px;
         border: 2px solid #e8e6e3aa; background: #00000066; color: #e8e6e3; font-size: 1.25rem; }
-      .ui-overlay { position: absolute; inset: 0; display: grid; place-content: center; gap: 12px; padding: 16px; font-family: 'CampPixel', system-ui, sans-serif; line-height: 1.6; overflow-wrap: anywhere;
+      /* safe center (GAME-39): діалог, вищий за екран (титри, текст 200 %), притискається до верху, а не
+         вилазить за нього — інакше «Продовжити» лишалась вище за межу прокрутки. start — для браузерів без safe. */
+      .ui-overlay { position: absolute; inset: 0; display: grid; place-content: start center; place-content: safe center; gap: 12px; padding: 16px; font-family: 'CampPixel', system-ui, sans-serif; line-height: 1.6; overflow-wrap: anywhere;
         background: #000000cc; text-align: center; }
       .ui-story-btn { position: absolute; right: 76px; top: 12px; min-width: 52px; min-height: 52px; border-radius: 12px;
         border: 2px solid #e8e6e3aa; background: #00000066; color: #e8e6e3; font-size: 1.25rem; }
@@ -45,7 +47,8 @@
       .ui-code { width: 100%; max-width: 560px; font: 0.7rem monospace; background: #111; color: #e8e6e3; border: 1px solid #e8e6e355; border-radius: 6px; padding: 6px; }
       .ui-status { margin: 4px 0 0; width: 100%; font-size: 0.75rem; }
       .ui-overlay { overflow-y: auto; }
-      .ui-btn[aria-pressed="true"] { background: #4f7a3a; }
+      /* Натиснута кнопка: #386228 дає 5.7:1 зі світлим текстом (було #4f7a3a — 4.0:1, axe color-contrast, GAME-39). */
+      .ui-btn[aria-pressed="true"] { background: #386228; }
       .ui-credits { max-width: min(92vw, 640px); font-size: 0.6rem; text-align: left; }
       .ui-credits summary { list-style: none; display: inline-block; cursor: pointer; }
       .ui-credits ul { padding-left: 1em; }
@@ -56,6 +59,14 @@
       /* Ховати дотикові кнопки лише там, де немає жодного дотикового вказівника (any-pointer):
          сенсорний ноутбук має pointer: fine, але any-pointer: coarse — кнопки лишаються. */
       @media not (any-pointer: coarse) { .touch { display: none; } }
+      /* GAME-39 #3: гравець попросив менше руху — жодних анімацій і переходів в інтерфейсі, навіть доданих пізніше
+         чи вписаних у style (!important перебиває інлайн). Перевірка — tests/e2e/a11y.spec.ts. */
+      @media (prefers-reduced-motion: reduce) {
+        *, *::before, *::after {
+          animation-duration: 0s !important; animation-delay: 0s !important; animation-iteration-count: 1 !important;
+          transition-duration: 0s !important; transition-delay: 0s !important; scroll-behavior: auto !important;
+        }
+      }
     </style>
   </head>
   <body>

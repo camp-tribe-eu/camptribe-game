@@ -1,7 +1,7 @@
 // Оболонка UI над канвою (GAME-25): пауза й налаштування. Preact, DOM — для кирилиці, масштабу тексту
 // й екранного читача (TD-003).
 import { useEffect, useLayoutEffect, useRef, useState } from 'preact/hooks';
-import { DEFAULT_SETTINGS, loadSettings, saveSettings, type Settings } from '../platform/settings';
+import { DEFAULT_SETTINGS, TEXT_SCALES, loadSettings, saveSettings, type Settings } from '../platform/settings';
 import type { Credits, UiPort } from './port';
 import { t as tr, type AnyLang, type Key } from '../i18n';
 import { StoryPanel } from './StoryPanel';
@@ -97,7 +97,7 @@ export function Shell({ port, langOverride, credits }: { port: UiPort; langOverr
           <button type="button" class="ui-btn" data-ui="resume" ref={resumeRef} onClick={() => toggle(false)}>{t('ui.resume')}</button>
           <fieldset>
             <legend>{t('ui.textSize')}</legend>
-            {([100, 125, 150] as const).map((v) => (
+            {TEXT_SCALES.map((v) => (
               <button type="button" class="ui-btn" data-ui={`text-${v}`} aria-pressed={settings.textScale === v}
                 onClick={() => update({ ...settings, textScale: v })}>{v}%</button>
             ))}
