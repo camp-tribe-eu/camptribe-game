@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { STEP_MS } from '../../core/clock';
 import { nextCommandId } from '../../core/commands';
 import type { CoreDefs } from '../../core/defs';
+import { todayWeather } from '../../core/sim';
 import { SLICE_DEFS } from '../../content/slice-defs';
 import { MAX_FRAME_MS, createBridge } from './bridge';
 
@@ -57,5 +58,26 @@ describe('місток', () => {
 
   it('каталог зрізу гри — цілий', () => {
     expect(() => createBridge(1, SLICE_DEFS)).not.toThrow();
+  });
+  // GAME-89 №2: раніше кожна нова гра мала той самий сід (20261022), і погода першого дня була завжди однакова.
+  it('нова гра бере свіжий сід, він лежить у worldSeed (тобто в сейві), а початкова гра свій сід зберігає', () => {
+    const seeds = [10, 4_000_000_000, 2];
+    let n = 0;
+    const b = createBridge(20261022, DEFS, undefined, () => seeds[n++] as number);
+    expect(b.state.worldSeed).toBe(20261022);
+    b.restart();
+    expect(b.state.worldSeed).toBe(10);
+    expect(JSON.parse(JSON.stringify(b.state)).worldSeed).toBe(10);   // потрапляє в серіалізований стан
+    b.restart();
+    expect(b.state.worldSeed).toBe(4_000_000_000);
+    expect(todayWeather({ worldSeed: 20261022, clock: b.state.clock })).toBe('rain');   // причина дефекту: старий єдиний сід = дощ у день 1
+    // Погода дня 1 справді залежить від сіду: на цих сідах не всюди та сама.
+    expect(new Set(seeds.map((s) => todayWeather({ worldSeed: s, clock: b.state.clock }))).size).toBeGreaterThan(1);
+  });
+
+  it('без джерела свіжого сіду (тести, ?seed) нова гра тримає сід — відтворюваність не втрачено', () => {
+    const b = createBridge(42, DEFS);
+    b.restart();
+    expect(b.state.worldSeed).toBe(42);
   });
 });

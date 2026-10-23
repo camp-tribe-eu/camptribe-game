@@ -18,4 +18,10 @@ describe('перемикачі e2e (рецензія GAME-36)', () => {
     expect(testSwitches('?noAutosave=0', 'e2e').noAutosave).toBeUndefined();
     expect(testSwitches('?noAutosave=1', 'production').noAutosave).toBeUndefined();
   });
+
+  it('freshSeed: лише в e2e і лише =1 (GAME-89 №2)', () => {
+    expect(testSwitches('?freshSeed=1', 'e2e').freshSeed).toBe(true);
+    expect(testSwitches('?freshSeed=0', 'e2e').freshSeed).toBeUndefined();
+    expect(testSwitches('?freshSeed=1', 'production').freshSeed).toBeUndefined();
+  });
 });

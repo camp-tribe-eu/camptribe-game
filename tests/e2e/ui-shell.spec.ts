@@ -42,8 +42,9 @@ test('Escape відкриває паузу; ігровий годинник яд
   expect((await probe(page)).playerY).toBe(p0.playerY);
   await page.keyboard.press('Escape');
   await expect(page.locator('[data-ui="pause"]')).toBeHidden();
-  await page.waitForTimeout(2500);
-  expect(await coreMinutes(page)).toBeGreaterThanOrEqual(m0 + 2);
+  // GAME-89: так само, як у сусідньому тесті (PR #24) — чекаємо події «годинник пішов», а не фіксованих 2,5 с: під навантаженням
+  // повного прогону кадрів мало, і хвилини не встигали набігти. Годинник, що стоїть після Escape, усе одно червоний (межа 10 с).
+  await expect.poll(() => coreMinutes(page), { timeout: 10_000 }).toBeGreaterThanOrEqual(m0 + 2);
 });
 
 test('зміна налаштування записана одразу, у тому самому завданні (не після малювання)', async ({ page }) => {
