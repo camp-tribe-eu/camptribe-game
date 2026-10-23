@@ -61,6 +61,39 @@ export function npcOpen(st: StoryDefs, d: StoryDraft, p: PlayerState, id: string
   return !!npc && matches(npc.when, p) && completed(d, npc.unlockedBy) && locationOpen(st, d, p, npc.locationId);
 }
 
+/**
+ * Найкоротша (за часом) дорога між локаціями для транспорту (GAME-31): хвилини й гроші. Крізь замкнену
+ * локацію проїхати можна — зупинитись ні (так само рахує валідатор, перевірка `roads`). Доріг у сюжеті
+ * немає — перехід миттєвий і безкоштовний; на місці чи ще ніде (null) — теж. null — дороги немає.
+ */
+export function route(st: StoryDefs, from: string | null, to: string, transport: string): { minutes: number; cents: number } | null {
+  const roads = st.roads ?? [];
+  if (roads.length === 0 || from === null || from === to) return { minutes: 0, cents: 0 };
+  // Дейкстра на кількох вузлах: перебором, детерміновано (рівні за часом — дешевший, далі — за id).
+  const best = new Map<string, { minutes: number; cents: number }>([[from, { minutes: 0, cents: 0 }]]);
+  const done = new Set<string>();
+  for (;;) {
+    let cur: string | null = null;
+    for (const [k, v] of best) {
+      if (done.has(k)) continue;
+      const c = cur === null ? undefined : best.get(cur);
+      if (!c || v.minutes < c.minutes || (v.minutes === c.minutes && (v.cents < c.cents || (v.cents === c.cents && k < (cur as string))))) cur = k;
+    }
+    if (cur === null) return null;
+    if (cur === to) return best.get(cur) ?? null;
+    done.add(cur);
+    const here = best.get(cur) as { minutes: number; cents: number };
+    for (const r of roads) {
+      if (r.from !== cur) continue;
+      const w = own(r.ways, transport);
+      if (!w) continue;
+      const cand = { minutes: here.minutes + w.minutes, cents: here.cents + w.cents };
+      const old = best.get(r.to);
+      if (!old || cand.minutes < old.minutes || (cand.minutes === old.minutes && cand.cents < old.cents)) best.set(r.to, cand);
+    }
+  }
+}
+
 /** Цілі квесту, що існують для цього гравця. */
 const objectivesFor = (q: QuestDef, p: PlayerState) => q.objectives.filter((o) => matches(o.when, p));
 
@@ -210,6 +243,10 @@ export function applyStory(cmd: StoryCommand, d: StoryDraft, st: StoryDefs | und
       if (!isId(cmd.locationId)) return 'INVALID_COMMAND';
       if (!own(st.locations, cmd.locationId)) return 'UNKNOWN_TARGET';
       if (!locationOpen(st, d, p, cmd.locationId)) return 'LOCKED';
+      const way = route(st, p.locationId, cmd.locationId, p.transportId);
+      if (!way) return 'NO_ROUTE';
+      if (d.moneyCents < way.cents) return 'INSUFFICIENT_FUNDS';
+      d.moneyCents -= way.cents;
       d.player = { ...p, locationId: cmd.locationId };
       mark(st, d, d.player, 'visit', cmd.locationId);
       return null;

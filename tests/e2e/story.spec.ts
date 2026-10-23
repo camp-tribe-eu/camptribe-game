@@ -95,6 +95,19 @@ test('на екрані подорожі світ на паузі; Escape і «�
   await expect(page.locator('[data-ui="pause"]')).toHaveCount(0);   // не плутається з меню паузи
 });
 
+test('дорога (GAME-31): кнопка показує час у дорозі, і годинник рухається саме на нього — лише дією', async ({ page }) => {
+  await open(page);
+  await panel(page).locator('[data-act="create"]', { hasText: 'Велосипед' }).first().click();
+  for (const [k, key] of [['visit', 'loc.home'], ['complete', 'q.st-001'], ['visit', 'loc.home'], ['complete', 'q.st-002']] as const) await act(page, k, key);
+  const shop = panel(page).locator('[data-act="visit"][data-key="loc.shop"]');
+  await expect(shop).toContainText('25 хв');                       // велосипедом дім → крамниця
+  const m0 = (await core(page)).clock.minutes;
+  await page.waitForTimeout(1500);                                    // стоїмо в меню — час стоїть
+  expect((await core(page)).clock.minutes).toBe(m0);
+  await shop.click();
+  expect((await core(page)).clock.minutes).toBe(m0 + 25);           // дорога — одним кроком
+});
+
 test('автівкою — без бічного квесту й без відповіді про велосипед, і так само до кінця розділу', async ({ page }) => {
   await open(page);
   await panel(page).locator('[data-act="create"]', { hasText: 'Авто' }).first().click();

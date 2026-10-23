@@ -59,5 +59,6 @@
   "touch.down": "Down",
   "touch.left": "Left",
   "touch.right": "Right",
-  "touch.interact": "Act"
+  "touch.interact": "Act",
+  "ui.minutes": "min"
 }

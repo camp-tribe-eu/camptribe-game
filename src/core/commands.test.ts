@@ -5,7 +5,7 @@ import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
 import { dispatch, PROCESSED_LIMIT, type Command, type Safeguards } from './commands';
 import type { CoreDefs } from './defs';
-import { BIKER, DRIVER, play, STORY_DEFS } from './story.fixture';
+import { BIKER, DRIVER, play, ROAD_DEFS, STORY_DEFS } from './story.fixture';
 import { initialState, REJECT_CODES, type GameState, type RejectCode } from './state';
 
 const SEED = 20261022;
@@ -188,6 +188,8 @@ describe('коди відмов: кожен код із реєстру має т
     ['IN_DIALOGUE', play([DRIVER, { type: 'Visit', locationId: 'loc.home' }, { type: 'CompleteQuest', questId: 'q.start' }, { type: 'Visit', locationId: 'loc.shop' }, { type: 'Talk', npcId: 'npc.ann' }]), { type: 'Visit', commandId: 's12', locationId: 'loc.home' }, STORY_DEFS],
     ['NO_DIALOGUE', play([DRIVER]), { type: 'Continue', commandId: 's13' }, STORY_DEFS],
     ['CONDITION_FAILED', play([DRIVER, { type: 'Visit', locationId: 'loc.home' }, { type: 'CompleteQuest', questId: 'q.start' }, { type: 'Visit', locationId: 'loc.shop' }, { type: 'Talk', npcId: 'npc.ann' }]), { type: 'Choose', commandId: 's14', choice: 0 }, STORY_DEFS],
+    // GAME-31 · дороги: у ROAD_DEFS з крамниці додому — лише автом; велосипедист у крамниці не має дороги назад.
+    ['NO_ROUTE', play([BIKER, { type: 'Visit', locationId: 'loc.home' }, { type: 'CompleteQuest', questId: 'q.start' }, { type: 'Visit', locationId: 'loc.shop' }], initialState(0), ROAD_DEFS), { type: 'Visit', commandId: 's15', locationId: 'loc.home' }, ROAD_DEFS],
     ['QUEST_NO_EXIT', { ...play([BIKER]), quests: { 'q.stuck': { status: 'active', done: [] } } }, { type: 'CompleteQuest', commandId: 's11', questId: 'q.stuck' }, STORY_DEFS],
   ];
 

@@ -77,6 +77,8 @@ export const REJECT_CODES = [
   'IN_DIALOGUE',
   'NO_DIALOGUE',
   'CONDITION_FAILED',
+  // GAME-31 · дороги
+  'NO_ROUTE',
 ] as const;
 
 export type RejectCode = (typeof REJECT_CODES)[number];

@@ -82,6 +82,13 @@ export interface DialogueDef {
   readonly nodes: Readonly<Record<string, DialogueNodeDef>>;
 }
 
+/** Дорога (GAME-31): одне ребро в один бік; ways — транспорт → час і гроші. Немає транспорту — ним не їдуть. */
+export interface RoadDef {
+  readonly from: string;
+  readonly to: string;
+  readonly ways: Readonly<Record<string, { readonly minutes: number; readonly cents: number }>>;
+}
+
 /** Сюжет розділу (GAME-29): збирається з перевіреного content/ (src/content/story.ts). */
 export interface StoryDefs {
   readonly start: string;
@@ -93,6 +100,8 @@ export interface StoryDefs {
   readonly quests: Readonly<Record<string, QuestDef>>;
   /** Діалоги за id; на NPC — щонайбільше один (валідатор: DIALOGUE_NPC_DUPLICATE). */
   readonly dialogues: Readonly<Record<string, DialogueDef>>;
+  /** Дороги між локаціями (GAME-31). Немає або порожньо — моделі подорожі немає: перехід миттєвий і безкоштовний. */
+  readonly roads?: readonly RoadDef[];
 }
 
 export interface CoreDefs {
@@ -168,6 +177,13 @@ function checkStory(st: StoryDefs): { code: DefsCode; where: string }[] {
   for (const [id, n] of Object.entries(st.npcs)) if (!has(st.locations, n.locationId)) out.push({ code: 'DEFS_BAD_REF', where: `${id}.locationId` });
   // Одруківка в unlockedBy зачинила б локацію чи NPC назавжди — мовчки.
   for (const [id, e] of [...Object.entries(st.locations), ...Object.entries(st.npcs)]) if (!has(st.quests, e.unlockedBy)) out.push({ code: 'DEFS_BAD_REF', where: `${id}.unlockedBy` });
+  for (const [i, r] of (st.roads ?? []).entries()) {
+    if (!has(st.locations, r.from) || !has(st.locations, r.to)) out.push({ code: 'DEFS_BAD_REF', where: `roads[${i}]` });
+    for (const [t, w] of Object.entries(r.ways)) {
+      if (!st.transports.includes(t)) out.push({ code: 'DEFS_BAD_REF', where: `roads[${i}].${t}` });
+      if (!isCents(w.cents) || !Number.isSafeInteger(w.minutes) || w.minutes < 1) out.push({ code: 'DEFS_BAD_AMOUNT', where: `roads[${i}].${t}` });
+    }
+  }
   const npcsWithDialogue = new Set<string>();
   for (const [id, d] of Object.entries(st.dialogues)) {
     if (!has(st.npcs, d.npcId) || npcsWithDialogue.has(d.npcId)) out.push({ code: 'DEFS_BAD_REF', where: `${id}.npcId` });

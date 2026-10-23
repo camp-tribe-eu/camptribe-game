@@ -1,0 +1,10 @@
+[
+  { "id": "road.home-shop", "from": "loc.home", "to": "loc.shop", "twoWay": true,
+    "ways": [{ "transport": "transport.car", "minutes": 15, "cents": 0 }, { "transport": "transport.bike", "minutes": 25, "cents": 0 }] },
+  { "id": "road.home-road", "from": "loc.home", "to": "loc.road", "twoWay": true,
+    "ways": [{ "transport": "transport.car", "minutes": 10, "cents": 0 }, { "transport": "transport.bike", "minutes": 15, "cents": 0 }] },
+  { "id": "road.shop-road", "from": "loc.shop", "to": "loc.road", "twoWay": true,
+    "ways": [{ "transport": "transport.car", "minutes": 10, "cents": 0 }, { "transport": "transport.bike", "minutes": 15, "cents": 0 }] },
+  { "id": "road.road-lake", "from": "loc.road", "to": "loc.camp.lake", "twoWay": true,
+    "ways": [{ "transport": "transport.car", "minutes": 45, "cents": 0 }, { "transport": "transport.bike", "minutes": 120, "cents": 0 }] }
+]

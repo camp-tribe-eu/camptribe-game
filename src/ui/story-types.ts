@@ -7,6 +7,8 @@ export interface OfferAction {
   readonly kind: 'visit' | 'talk' | 'pickup' | 'buy' | 'sell' | 'complete' | 'decline' | 'choose' | 'continue';
   readonly key: string | null;
   readonly priceCents?: number;
+  /** Скільки хвилин займе дорога (GAME-31); немає — дія на місці. */
+  readonly minutes?: number;
 }
 
 export interface OfferCharacter {

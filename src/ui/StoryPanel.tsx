@@ -29,8 +29,11 @@ export function StoryPanel({ offer, lang, t, act, close, children }: { offer: St
   const label = (a: OfferAction): string => {
     if (a.kind === 'continue') return t('ui.continue');
     if (a.kind === 'choose') return ct(lang, a.key);
-    const price = a.priceCents !== undefined && (a.kind === 'buy' || a.kind === 'sell') ? ` (${money(lang, a.priceCents)})` : '';
-    return `${t(ACT[a.kind])} ${ct(lang, a.key)}${price}`;
+    const extras = [
+      ...(a.minutes !== undefined ? [`${a.minutes} ${t('ui.minutes')}`] : []),
+      ...(a.priceCents !== undefined ? [money(lang, a.priceCents)] : []),
+    ];
+    return `${t(ACT[a.kind])} ${ct(lang, a.key)}${extras.length ? ` (${extras.join(', ')})` : ''}`;
   };
   const button = (a: OfferAction) => (
     <button type="button" class="ui-btn" key={a.id} data-act={a.kind} data-key={a.key ?? ''} onClick={() => act(a.id)}>{label(a)}</button>

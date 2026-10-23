@@ -9,6 +9,7 @@ import meta from '../../content/meta.json';
 import npcs from '../../content/npcs.json';
 import profiles from '../../content/profiles.json';
 import quests from '../../content/quests.json';
+import roads from '../../content/roads.json';
 import transports from '../../content/transports.json';
 
 interface RawWhen { profiles?: string[]; transports?: string[]; animals?: string[] }
@@ -32,6 +33,7 @@ export interface RawContent {
   npcs: { id: string; locationId: string; unlockedBy?: string; when?: RawWhen; sells?: string[] }[];
   quests: RawQuest[];
   dialogues: RawDialogue[];
+  roads?: { id: string; from: string; to: string; twoWay?: boolean; ways: { transport: string; minutes: number; cents: number }[] }[];
 }
 
 const when = (w: RawWhen | undefined): { when?: WhenDef } => (w ? { when: w } : {});
@@ -81,6 +83,10 @@ export function compileStory(c: RawContent): StoryDefs {
     npcs: Object.fromEntries(c.npcs.map((n) => [n.id, { locationId: n.locationId, ...(n.unlockedBy ? { unlockedBy: n.unlockedBy } : {}), ...when(n.when) }])),
     quests: Object.fromEntries(c.quests.map((q) => [q.id, quest(q)])),
     dialogues: Object.fromEntries(c.dialogues.map((d) => [d.id, dialogue(d)])),
+    roads: (c.roads ?? []).flatMap((r) => {
+      const ways = Object.fromEntries(r.ways.map((w) => [w.transport, { minutes: w.minutes, cents: w.cents }]));
+      return r.twoWay ? [{ from: r.from, to: r.to, ways }, { from: r.to, to: r.from, ways }] : [{ from: r.from, to: r.to, ways }];
+    }),
   };
 }
 
@@ -88,7 +94,7 @@ export function compileStory(c: RawContent): StoryDefs {
 const dialogueFiles = import.meta.glob<RawDialogue>('../../content/dialogue/*.json', { eager: true, import: 'default' });
 
 export const CONTENT: RawContent = {
-  meta, profiles, transports, animals, locations, npcs, quests: quests as RawQuest[],
+  meta, profiles, transports, animals, locations, npcs, quests: quests as RawQuest[], roads,
   dialogues: Object.keys(dialogueFiles).sort().map((k) => dialogueFiles[k] as RawDialogue),
 };
 export const STORY: StoryDefs = compileStory(CONTENT);

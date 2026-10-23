@@ -14,7 +14,7 @@ import type { CoreDefs, StoryDefs } from '../core/defs';
 import { canonical } from '../core/hash';
 import type { SimState } from '../core/sim';
 import { initialState, type GameState } from '../core/state';
-import { matches } from '../core/story';
+import { matches, route } from '../core/story';
 import { CONTENT } from '../content/story';
 import { moves, type Move } from '../content/moves';
 import items from '../../content/items.json';
@@ -58,7 +58,11 @@ const idOf = (m: Move, s: GameState): string =>
 
 function describe(m: Move, defs: CoreDefs, s: GameState): Omit<OfferAction, 'id'> {
   switch (m.type) {
-    case 'Visit': return { kind: 'visit', key: nameKey(m.locationId) };
+    case 'Visit': {
+      // Ціна дороги для гравця (GAME-31): хвилини й гроші найкоротшого шляху його транспортом.
+      const way = s.player && defs.story ? route(defs.story, s.player.locationId, m.locationId, s.player.transportId) : null;
+      return { kind: 'visit', key: nameKey(m.locationId), ...(way && way.minutes > 0 ? { minutes: way.minutes } : {}), ...(way && way.cents > 0 ? { priceCents: way.cents } : {}) };
+    }
     case 'Talk': return { kind: 'talk', key: nameKey(m.npcId) };
     case 'Pickup': return { kind: 'pickup', key: nameKey(m.itemId) };
     case 'BuyItem': return { kind: 'buy', key: nameKey(m.itemId), priceCents: defs.items[m.itemId]?.buyCents ?? 0 };

@@ -5,6 +5,7 @@ import { advance, newClock, pause, resume, tick, type GameClock } from './clock'
 import { dispatch, type Command } from './commands';
 import { EMPTY_DEFS, type CoreDefs } from './defs';
 import { canonical } from './hash';
+import { route } from './story';
 import { nextInt, seedRng, type RngState } from './rng';
 import { initialState, type GameState } from './state';
 
@@ -48,6 +49,18 @@ function refOf(c: Command): string | null {
   return typeof v === 'string' ? v : null;
 }
 
+/**
+ * Дорога перемотує ігровий час одним кроком (SIM-TIME-004, GAME-31): прийнята НОВА команда Visit, що
+ * змінила локацію, — хвилини найкоротшої дороги транспорту гравця. Запис журналу бере час ДО дороги.
+ */
+function travelMinutes(before: GameState, r: ReturnType<typeof dispatch>, defs: CoreDefs | undefined): number {
+  const st = defs?.story;
+  const from = before.player?.locationId ?? null;
+  const to = r.ok ? r.state.player?.locationId ?? null : null;
+  if (!st || !r.ok || r.repeated || to === null || from === to || !before.player) return 0;
+  return route(st, from, to, before.player.transportId)?.minutes ?? 0;
+}
+
 export type Input =
   | { readonly kind: 'frame'; readonly realMs: number }
   | { readonly kind: 'command'; readonly command: Command }
@@ -88,10 +101,12 @@ export function step(s: SimState, input: Input, ctx: StepCtx = {}): SimState {
     }
     case 'command': {
       const r = dispatch(s.game, input.command, ctx.defs ?? EMPTY_DEFS);
+      const travelled = travelMinutes(s.game, r, ctx.defs);
+      if (travelled > 0) s = { ...s, clock: advance(s.clock, travelled) };
       // Рівно один запис на прийняту нову команду з переліку, що щось змінила в грі. Відмова, повтор
       // commandId і «порожня» дія (прийти туди, де стоїш; вдруге погрітись біля вогнища) — нуль.
       if (!r.ok || r.repeated || !isJournalType(input.command.type) || !changedGame(s.game, r.state)) return { ...s, game: r.state };
-      const entry: JournalEntry = { at: s.clock.minutes, commandId: input.command.commandId, type: input.command.type, ref: refOf(input.command) };
+      const entry: JournalEntry = { at: s.clock.minutes - travelled, commandId: input.command.commandId, type: input.command.type, ref: refOf(input.command) };
       return { ...s, game: r.state, journal: [...s.journal, entry].slice(-JOURNAL_LIMIT) };
     }
     case 'advance':

@@ -125,6 +125,13 @@ export function comboBaseline() {
     reward: { grantId: 'rw.dog-walk', money: 2 },
   });
   q(c, 'ST-002').transitions.push({ on: 'complete', to: 'q.dog-walk', choiceKey: 'q.dog-walk', when: { animals: [DOG] } });
+  // Дороги (GAME-31): від табору до кожного місця й назад, обома транспортами.
+  const both = (minutes, cents) => [{ transport: T_CAR, minutes, cents }, { transport: T_BIKE, minutes: minutes * 3, cents: 0 }];
+  c.roads = [
+    { id: 'road.camp-forest', from: 'loc.camp', to: 'loc.forest', twoWay: true, ways: both(10, 100) },
+    { id: 'road.camp-lake', from: 'loc.camp', to: 'loc.lake', twoWay: true, ways: both(20, 200) },
+    { id: 'road.camp-dog-park', from: 'loc.camp', to: 'loc.dog-park', twoWay: true, ways: both(5, 50) },
+  ];
   for (const lang of c.meta.locales) for (const k of COMBO_KEYS) c.locales[lang][k] = `[${lang}] ${k}`;
   return c;
 }
@@ -389,6 +396,15 @@ export const FIXTURES = [
   // ---- комбінації профіль × транспорт × тварина (синтетичні профілі) ----
   { base: 'combo', name: '[комб.] еталон із профілями, транспортом і собакою коректний', expect: [], patch() {} },
   // ---- GAME-42 (TD-006): умови-об'єкти на ПЕРЕХОДАХ квестів, не лише в діалогах ----
+  // Дороги (GAME-31).
+  { base: 'combo', name: '[дороги] ізольований вузол — до озера жодної дороги', expect: ['ROAD_UNREACHABLE'], patch(c) { c.roads = c.roads.filter((r) => r.id !== 'road.camp-lake'); } },
+  { base: 'combo', name: '[дороги] дорога лише туди — з озера не повернутись', expect: ['ROAD_NO_RETURN'], patch(c) { c.roads.find((r) => r.id === 'road.camp-lake').twoWay = false; } },
+  { base: 'combo', name: '[дороги] до озера лише автом — велосипедом не доїхати', expect: ['ROAD_UNREACHABLE'], patch(c) { const r = c.roads.find((x) => x.id === 'road.camp-lake'); r.ways = r.ways.filter((w) => w.transport === T_CAR); } },
+  { base: 'combo', name: '[дороги] те саме ребро двічі', expect: ['ROAD_DUPLICATE'], patch(c) { c.roads.push({ id: 'road.camp-forest-2', from: 'loc.forest', to: 'loc.camp', ways: [{ transport: T_CAR, minutes: 1, cents: 0 }] }); } },
+  { base: 'combo', name: '[дороги] контроль: до озера лише крізь замкнений ліс — проїхати можна', expect: [], patch(c) { const r = c.roads.find((x) => x.id === 'road.camp-lake'); r.from = 'loc.forest'; } },
+  { base: 'combo', name: '[дороги] неіснуючий транспорт і локація', expect: ['REF_MISSING'], patch(c) { c.roads[0].ways.push({ transport: 'transport.ghost', minutes: 1, cents: 0 }); c.roads.push({ id: 'road.camp-ghost', from: 'loc.camp', to: 'loc.ghost', ways: [{ transport: T_CAR, minutes: 1, cents: 0 }] }); } },
+  { base: 'combo', name: '[дороги] id не за форматом', expect: ['ID_FORMAT'], patch(c) { c.roads[0].id = 'camp-forest'; } },
+  { base: 'combo', name: '[дороги] дорога за 0 хвилин', expect: ['SCHEMA_INVALID'], patch(c) { c.roads[0].ways[0].minutes = 0; } },
   { base: 'combo', name: '[умова] when переходу рядком', expect: ['SCHEMA_INVALID'], patch(c) { dogEntry(c).when = 'animals == dog'; } },
   { base: 'combo', name: '[умова] when самого квесту рядком', expect: ['SCHEMA_INVALID'], patch(c) { q(c, 'q.dog-walk').when = 'dog'; } },
   { base: 'combo', name: '[умова] when цілі рядком', expect: ['SCHEMA_INVALID'], patch(c) { q(c, 'q.dog-walk').objectives[0].when = 'dog'; } },
@@ -399,6 +415,7 @@ export const FIXTURES = [
   { base: 'combo', name: '[умова] основний шлях лише для кемпера з собакою — решта комбінацій без фіналу', expect: ['BRANCH_NO_NEXT', 'NO_PATH_TO_END'], patch(c) {
     c.transports.push({ id: 'transport.fixture-camper', nameKey: 'transport.fixture-camper' });
     for (const lang of c.meta.locales) c.locales[lang]['transport.fixture-camper'] = `[${lang}] camper`;
+    for (const r of c.roads) r.ways.push({ transport: 'transport.fixture-camper', minutes: 30, cents: 300 }); // кемпер теж їздить дорогами
     q(c, 'ST-002').transitions[0].when = { transports: ['transport.fixture-camper'], animals: [DOG] };
   } },
   { base: 'combo', name: '[комб.] квест без when, досяжний лише з собакою, без собаки не перевіряється', expect: [], patch(c) {

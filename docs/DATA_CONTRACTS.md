@@ -22,6 +22,7 @@
 | DC-007 | `locations` | локація: `unlockedBy`, `items`, `when` | GDD | ACCEPTED |
 | DC-008 | `quests` | етап: `optional`, `end`, `requires`, `objectives[]`, `transitions[]` (`complete`/`decline`), `reward` (`money` — **центи**, CR-040; `items[].item`), `when`. Ядро виконує: `src/core/story.ts` (GAME-29); `deliver` ще не підтримано — збірка сюжету падає, а не мовчить | GDD §12.2; GAME-29 | ACCEPTED |
 | DC-009 | `events` | подія: `repeatable`, `reward`, `locationId` | GDD §12.3 | ACCEPTED |
+| DC-012 | `roads` | дорога між локаціями: `from`, `to`, `twoWay`, `ways[]` — `transport`, `minutes` (≥ 1), `cents` (≥ 0). Граф кожного транспорту сильно зв'язний (валідатор `roads`) | GAME-31 | ACCEPTED |
 | DC-010 | `facts` | зовнішній факт: `source`, `checkedAt` (РРРР-ММ-ДД), `kind` | GDD §12.4; CR-019 | ACCEPTED |
 | DC-011 | `dialogues` | діалог (`content/dialogue/<назва>.json`, один на файл): `npcId`, `start`, `nodes[]` — вузол із `speaker`, `textKey` і рівно одним виходом `end` / `next` / `choices`; вибір — `when` (умова) і `effects` (`setFlag`, `startQuest`, `completeObjective`). Кожен вузол досяжний і має безумовний шлях до `end` | GAME-28 | ACCEPTED |
 

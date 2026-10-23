@@ -15,6 +15,7 @@ import { GAME_DEFS } from './slice-defs';
 import { CONTENT, STORY, compileStory } from './story';
 import { moves as allMoves, type Move } from './moves';
 import { checkDefs, type CoreDefs } from '../core/defs';
+import { route } from '../core/story';
 
 // Справжній каталог гри (зріз + сюжет) — як у містку: купівля, продаж і взаємодії теж серед ходів
 // (рецензія GAME-29: без них продаж нагороди, що ламає квест, був невидимий).
@@ -118,5 +119,25 @@ describe('збірка сюжету з content/ (src/content/story.ts)', () => {
 
   it('каталог сюжету цілий для ядра (checkDefs)', () => {
     expect(checkDefs(DEFS)).toEqual([]);
+  });
+});
+
+describe('дороги справжнього контенту: ядро ≡ валідатор (GAME-31)', () => {
+  it('доріг більше нуля, і ядро знаходить дорогу між КОЖНОЮ парою локацій для кожного транспорту', () => {
+    expect(STORY.roads?.length ?? 0).toBeGreaterThan(0);
+    const locs = Object.keys(STORY.locations);
+    let pairs = 0;
+    for (const t of STORY.transports) for (const a of locs) for (const b of locs) {
+      expect(route(STORY, a, b, t), `${t}: ${a} → ${b}`).not.toBeNull();
+      pairs++;
+    }
+    expect(pairs).toBe(STORY.transports.length * locs.length * locs.length);
+  });
+
+  it('негативний контроль: без дороги до озера велосипедом — ядро теж не доїде', () => {
+    const c = structuredClone(CONTENT);
+    const r = c.roads?.find((x) => x.to === 'loc.camp.lake');
+    if (r) r.ways = r.ways.filter((w) => w.transport !== 'transport.bike');
+    expect(route(compileStory(c), 'loc.home', 'loc.camp.lake', 'transport.bike')).toBeNull();
   });
 });

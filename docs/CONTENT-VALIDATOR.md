@@ -21,6 +21,7 @@ node scripts/mutate-validator.mjs               # довести, що само�
 | `items.json` | предмети | `item.назва` |
 | `npcs.json` | NPC: `locationId`, `unlockedBy`, `sells` | `npc.назва` |
 | `locations.json` | локації: `unlockedBy`, `items` | `loc.назва` |
+| `roads.json` | дороги між локаціями: `from`, `to`, `twoWay`, `ways[]` (транспорт, хвилини, центи); перевірка `roads`: кожна локація досяжна від дому й назад для кожного транспорту (`ROAD_UNREACHABLE`, `ROAD_NO_RETURN`), одне ребро на пару в кожен бік (`ROAD_DUPLICATE`) | `road.назва` |
 | `events.json` | події: `repeatable`, `reward` | `ev.назва` |
 | `facts.json` | зовнішні факти: `source`, `checkedAt` (РРРР-ММ-ДД), `kind` | `fact.назва` |
 | `locales/<мова>.json` | ключ → переклад | — |

@@ -19,6 +19,7 @@ const ID_PATTERNS = {
   events: /^ev\.[a-z0-9]+(?:[.-][a-z0-9]+)*$/,
   facts: /^fact\.[a-z0-9]+(?:[.-][a-z0-9]+)*$/,
   dialogues: /^dlg\.[a-z0-9]+(?:[.-][a-z0-9]+)*$/,
+  roads: /^road\.[a-z0-9]+(?:[.-][a-z0-9]+)*$/,
 };
 const FLAG_ID = /^f\.[a-z0-9]+(?:[.-][a-z0-9]+)*$/;
 const GRANT_ID = /^rw\.[a-z0-9]+(?:[.-][a-z0-9]+)*$/;
@@ -185,6 +186,11 @@ export const CHECKS = [
         q.transitions.forEach((tr) => ref('quests', tr.to, `${q.id}.transitions`));
       }
       for (const e of by.events.values()) ref('locations', e.locationId, `${e.id}.locationId`);
+      for (const r of by.roads.values()) {
+        ref('locations', r.from, `${r.id}.from`);
+        ref('locations', r.to, `${r.id}.to`);
+        r.ways.forEach((w, i) => ref('transports', w.transport, `${r.id}.ways[${i}].transport`));
+      }
       for (const [where, rw] of rewards(c.content)) (rw.items ?? []).forEach((i) => ref('items', i.item, where));
       return out;
     },
@@ -405,6 +411,55 @@ export const CHECKS = [
     },
   },
   // ---------- діалоги (GAME-28) ----------
+  {
+    id: 'roads',
+    run(c) { // @check:roads
+      // GAME-31. Рух між локаціями — найкоротшою дорогою для транспорту гравця (src/core/story.ts, route).
+      // Крізь замкнену локацію проїхати можна (зупинитись — ні), тож замки тут не рахуються: досить, щоб
+      // граф доріг кожного транспорту був сильно зв'язним. Доріг немає зовсім — моделі подорожі ще немає.
+      const roads = c.content.roads ?? [];
+      if (roads.length === 0) return [];
+      const out = [];
+      const locs = (c.content.locations ?? []).map((l) => l.id);
+      const known = new Set(locs);
+      const seenPair = new Set();
+      for (const r of roads) for (const [a, b] of r.twoWay ? [[r.from, r.to], [r.to, r.from]] : [[r.from, r.to]]) {
+        const k = `${a}>${b}`;
+        if (seenPair.has(k)) out.push(I('ROAD_DUPLICATE', r.id, `ребро ${a} → ${b} уже задано іншою дорогою`));
+        seenPair.add(k);
+      }
+      const startQuest = (c.content.quests ?? []).find((q) => q.id === c.content.meta.start);
+      const home = startQuest?.locationId ?? locs[0];
+      if (home === undefined || !known.has(home)) return out;
+      const transports = (c.content.transports ?? []).map((t) => t.id);
+      for (const tr of transports.length ? transports : [null]) {
+        const next = new Map(locs.map((l) => [l, []]));
+        const prev = new Map(locs.map((l) => [l, []]));
+        for (const r of roads) {
+          if (tr !== null && !r.ways.some((w) => w.transport === tr)) continue;
+          for (const [a, b] of r.twoWay ? [[r.from, r.to], [r.to, r.from]] : [[r.from, r.to]]) {
+            if (!known.has(a) || !known.has(b)) continue; // першопричину назвав REF_MISSING
+            next.get(a).push(b);
+            prev.get(b).push(a);
+          }
+        }
+        const closure = (adj) => {
+          const seen = new Set([home]);
+          const stack = [home];
+          for (let v = stack.pop(); v !== undefined; v = stack.pop()) for (const u of adj.get(v) ?? []) if (!seen.has(u)) { seen.add(u); stack.push(u); }
+          return seen;
+        };
+        const there = closure(next);
+        const back = closure(prev);
+        const how = tr === null ? '' : ` (${tr})`;
+        for (const l of locs) {
+          if (!there.has(l)) out.push(I('ROAD_UNREACHABLE', l, `від «${home}» дорогами не доїхати${how}`));
+          else if (!back.has(l)) out.push(I('ROAD_NO_RETURN', l, `звідси дорогами не повернутись до «${home}»${how}`));
+        }
+      }
+      return out;
+    },
+  },
   {
     id: 'dialogue-refs',
     run(c) { // @check:dialogue-refs

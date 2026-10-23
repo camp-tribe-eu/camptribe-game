@@ -81,6 +81,10 @@ const mutations = [
   { name: '[діалог] суперечливий all вважається здійсненним', file: CHECKS_FILE, from: 'if (cj.some((x) => x.notFlag !== undefined && yes.has(x.notFlag))) return false;', to: '' },
   { name: '[діалог] суперечність flag/notFlag не звітується', file: CHECKS_FILE, from: 'for (const f of contradictions(ch.when)) out.push', to: 'for (const f of []) out.push' },
   { name: '[діалог] вкладений all не розгортається', file: CHECKS_FILE, from: 'return cond.all ? cond.all.flatMap(conjuncts) : [cond];', to: 'return cond.all ? cond.all : [cond];' },
+  { name: '[дороги] twoWay не дає ребра назад', file: CHECKS_FILE, from: 'for (const [a, b] of r.twoWay ? [[r.from, r.to], [r.to, r.from]] : [[r.from, r.to]]) {\n            if (!known.has(a)', to: 'for (const [a, b] of [[r.from, r.to]]) {\n            if (!known.has(a)' },
+  { name: '[дороги] транспорт ребра не враховується', file: CHECKS_FILE, from: "if (tr !== null && !r.ways.some((w) => w.transport === tr)) continue;", to: 'if (false) continue;' },
+  { name: '[дороги] шлях назад рахується по ребрах туди', file: CHECKS_FILE, from: 'const back = closure(prev);', to: 'const back = closure(next);' },
+  { name: '[дороги] дубль ребра не звітується', file: CHECKS_FILE, from: "if (seenPair.has(k)) out.push(I('ROAD_DUPLICATE'", to: "if (false) out.push(I('ROAD_DUPLICATE'" },
   // Семантика «гілки any — не кон'юнкти» тепер у satisfiable (contradictions лише називає прапорці мертвої умови).
   { name: '[діалог] гілки any всередині all рахуються кон\u2019юнктами', file: CHECKS_FILE, from: '    const cj = conjuncts(cond);\n    const yes = new Set(cj.filter((x) => x.flag !== undefined).map((x) => x.flag));\n    if (cj.some(', to: '    const cj = condLeaves(cond);\n    const yes = new Set(cj.filter((x) => x.flag !== undefined).map((x) => x.flag));\n    if (cj.some(' },
   { name: '[діалог] суперечність в одній гілці any звітується, хоч інша гілка жива', file: CHECKS_FILE, from: 'return satisfiable(cond, every) ? new Set() : conflicts(cond);', to: 'return conflicts(cond);' },

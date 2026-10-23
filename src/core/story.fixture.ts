@@ -99,3 +99,21 @@ export function play(cmds: readonly Step[], from: GameState = initialState(0), d
 
 export const BIKER = { type: 'CreateCharacter', profileId: 'profile.a', transportId: 'transport.bike' } as const;
 export const DRIVER = { type: 'CreateCharacter', profileId: 'profile.b', transportId: 'transport.car' } as const;
+
+/**
+ * Той самий сюжет із дорогами (GAME-31): дім ↔ крамниця напряму лише автом (10 хв, 3 €); велосипедом —
+ * через собачий парк (замкнений для гравця без собаки, але проїхати крізь нього можна): 15 + 15 хв, 0 €.
+ */
+const way = (minutes: number, cents: number) => ({ minutes, cents });
+export const ROAD_DEFS: CoreDefs = {
+  ...STORY_DEFS,
+  story: {
+    ...(STORY_DEFS.story as NonNullable<CoreDefs['story']>),
+    roads: [
+      { from: 'loc.home', to: 'loc.shop', ways: { 'transport.car': way(10, 300) } },
+      { from: 'loc.shop', to: 'loc.home', ways: { 'transport.car': way(10, 300) } },
+      { from: 'loc.home', to: 'loc.dogpark', ways: { 'transport.bike': way(15, 0), 'transport.car': way(5, 100) } },
+      { from: 'loc.dogpark', to: 'loc.shop', ways: { 'transport.bike': way(15, 0), 'transport.car': way(5, 100) } },
+    ],
+  },
+};

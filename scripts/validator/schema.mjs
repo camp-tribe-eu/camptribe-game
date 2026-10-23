@@ -69,13 +69,19 @@ export const SCHEMAS = {
     reward,
   }),
   events: obj({ id: req(str), titleKey: req(str), locationId: str, repeatable: req(bool), reward }),
+  // Дороги (GAME-31): ребро між двома локаціями; ways — якими транспортами і скільки це коштує часу й грошей.
+  // Транспорту немає в ways — цим ребром він не їде. twoWay — те саме ребро і назад.
+  roads: obj({
+    id: req(str), from: req(str), to: req(str), twoWay: bool,
+    ways: req({ t: 'array', of: obj({ transport: req(str), minutes: req(int1), cents: req(int0) }), min: 1 }),
+  }),
   // source/checkedAt/kind навмисно не required тут: їх стереже перевірка fact-source
   // власними кодами, щоб відсутнє джерело не ховалось під загальним SCHEMA_INVALID.
   facts: obj({ id: req(str), claimKey: req(str), source: str, checkedAt: str, kind: str }),
 };
 
 
-export const COLLECTIONS = ['profiles', 'transports', 'animals', 'items', 'npcs', 'locations', 'quests', 'events', 'facts'];
+export const COLLECTIONS = ['profiles', 'transports', 'animals', 'items', 'npcs', 'locations', 'quests', 'events', 'facts', 'roads'];
 
 function typeOk(s, v) {
   switch (s.t) {

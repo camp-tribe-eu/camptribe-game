@@ -41,7 +41,7 @@ const issues = loaded.issues.length ? loaded.issues : validate(loaded.content, {
 if (issues.length === 0) {
   const c = loaded.content;
   const n = (k) => (c[k] ?? []).length;
-  console.log(`PASS · квестів ${n('quests')}, предметів ${n('items')}, NPC ${n('npcs')}, локацій ${n('locations')}, подій ${n('events')}, фактів ${n('facts')}, діалогів ${n('dialogues')} (вузлів ${(c.dialogues ?? []).reduce((s, d) => s + d.nodes.length, 0)}), мов ${c.meta.locales.length} · профілів ${n('profiles')}, транспортів ${n('transports')}, тварин ${n('animals')} → комбінацій перевірено ${enumerateCombos(c).length}`);
+  console.log(`PASS · квестів ${n('quests')}, предметів ${n('items')}, NPC ${n('npcs')}, локацій ${n('locations')}, подій ${n('events')}, фактів ${n('facts')}, доріг ${n('roads')}, діалогів ${n('dialogues')} (вузлів ${(c.dialogues ?? []).reduce((s, d) => s + d.nodes.length, 0)}), мов ${c.meta.locales.length} · профілів ${n('profiles')}, транспортів ${n('transports')}, тварин ${n('animals')} → комбінацій перевірено ${enumerateCombos(c).length}`);
   process.exit(0);
 }
 for (const i of issues) console.log(`::error::${i.code} · ${i.where} · ${i.msg}`);

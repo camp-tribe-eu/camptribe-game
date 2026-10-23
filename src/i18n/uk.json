@@ -59,5 +59,6 @@
   "touch.down": "Вниз",
   "touch.left": "Ліворуч",
   "touch.right": "Праворуч",
-  "touch.interact": "Дія"
+  "touch.interact": "Дія",
+  "ui.minutes": "хв"
 }
