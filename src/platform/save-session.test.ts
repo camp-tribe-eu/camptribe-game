@@ -23,6 +23,7 @@ function fakeBridge(): SessionBridge & { sent: number; paused: boolean | null } 
     sent: 0, paused: null,
     get state() { return state; },
     load(sim) { state = sim; },
+    restart() { state = newSim(SEED, 1000); this.sent = 0; },
     setPaused(p) { this.paused = p; state = { ...state, clock: { ...state.clock, paused: p } }; },
   };
 }
@@ -259,6 +260,43 @@ describe('сесія сейвів: старт і гонки (GAME-33)', () => {
     expect(st.writes).toHaveLength(0);
     await s.save();                                 // явне «Зберегти» — рішення гравця
     expect(st.writes).toHaveLength(1);
+  });
+});
+
+describe('нова гра (GAME-82)', () => {
+  it('стирає стару гру, пише чисту в сховище на паузі; наступний старт підхоплює нову, а не стару', async () => {
+    const b = fakeBridge(); const st = fakeStore([serialize(savedSim(false))]);
+    const s = createSaveSession(b, st); const p = s.start(); st.release(); await p;
+    expect(b.state.finds).toBe(5);                  // позитивний контроль: стара гра була завантажена
+    expect(await s.newGame()).toBe(true);
+    expect(b.state.finds).toBe(0);
+    expect(b.state.game.moneyCents).toBe(1000);
+    expect(b.state.game.player).toBeNull();
+    expect(b.state.journal).toEqual([]);
+    expect(b.state.clock.paused).toBe(true);
+    expect(st.writes).toHaveLength(1);
+    // «Перезавантаження»: сховище тепер віддає main = нова гра, prev = стара.
+    const b2 = fakeBridge(); const st2 = fakeStore([st.writes[0] as string, serialize(savedSim(false))]);
+    const s2 = createSaveSession(b2, st2); const p2 = s2.start(); st2.release(); await p2;
+    expect(b2.state.finds).toBe(0);
+    expect(b2.state.game.moneyCents).toBe(1000);
+    expect(s2.stale).toBeNull();                    // нова гра не потрапляє в карантин
+  });
+
+  it('автозбереження після нової гри живе, навіть якщо старт іще не закінчився (гра не губиться)', async () => {
+    const b = fakeBridge(); const st = fakeStore([serialize(savedSim(false))]);
+    const s = createSaveSession(b, st); const p = s.start();
+    expect(await s.newGame()).toBe(true);
+    st.release(); await p;
+    expect(b.state.finds).toBe(0);                  // стартове читання не воскрешає стару гру
+  });
+
+  it('збій запису: false (UI скаже), але стан у пам\'яті вже новий', async () => {
+    const b = fakeBridge();
+    const s = createSaveSession(b, { read: async () => [], write: async () => false });
+    b.load(savedSim(false));
+    expect(await s.newGame()).toBe(false);
+    expect(b.state.finds).toBe(0);
   });
 });
 

@@ -27,6 +27,7 @@ export interface SessionBridge {
   readonly state: SimState;
   readonly sent: number;
   load(sim: SimState): void;
+  restart(): void;
   setPaused(paused: boolean): void;
 }
 
@@ -140,6 +141,18 @@ export function createSaveSession(bridge: SessionBridge, store: SessionStore, co
         const old = await store.readStale();
         stales = [...stales, ...old.filter((x) => !stales.includes(x))];
       }
+    },
+    /**
+     * Нова гра (GAME-82): чистий стан, годинник на паузі (діалог відкритий), одразу в сховище. Той самий шлях
+     * запису, що в adopt: main стає новою грою, а стара лишається лише як prev — запасний слот на випадок
+     * зіпсованого main, не «воскресіння» (start бере main першим). Карантин не чіпаємо.
+     */
+    async newGame(): Promise<boolean> {
+      bridge.restart();
+      bridge.setPaused(true);
+      ready = true;
+      holdAutosave = false;
+      return write();
     },
     /** Імпорт: стан із сейву, годинник на паузі (діалог відкритий), одразу в сховище. */
     async adopt(json: string | null): Promise<ImportResult> {
