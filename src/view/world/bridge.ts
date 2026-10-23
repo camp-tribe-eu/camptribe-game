@@ -26,7 +26,7 @@ export interface Bridge {
 
 const START_MONEY_CENTS = 5_000;
 
-export function createBridge(seed: number, catalog: CoreDefs): Bridge {
+export function createBridge(seed: number, catalog: CoreDefs, afterSend?: () => void): Bridge {
   const problems = checkDefs(catalog);
   if (problems.length) throw new Error(`catalog is invalid: ${JSON.stringify(problems)}`);
   const defs = freezeDefs(catalog);
@@ -39,6 +39,7 @@ export function createBridge(seed: number, catalog: CoreDefs): Bridge {
       sent++;
       const command = { ...intent, commandId: nextCommandId(state.game) } as Command;
       state = step(state, { kind: 'command', command }, { defs });
+      afterSend?.();   // GAME-86: стан змінила команда — автозбереження (не кожен кадр)
     },
     frame(realMs) {
       state = step(state, { kind: 'frame', realMs: Math.min(realMs, MAX_FRAME_MS) }, { defs });

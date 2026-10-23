@@ -23,7 +23,8 @@ const app = document.querySelector<HTMLElement>('#app');
 if (!app) throw new Error('#app is missing');
 
 const probe: WorldProbe = { ready: false, playerX: 0, playerY: 0, nearObject: null, commandsSent: 0, cameraScrollX: 0, cameraScrollY: 0, clockMinutes: 0, saveLoaded: false, cameraLerp: [0, 0] };
-const bridge = createBridge(testSwitches(location.search, import.meta.env.MODE).seed ?? 20261022, GAME_DEFS);
+// GAME-86: кожна команда ядру (дія екрана, розмова, взаємодія на мапі) → автозбереження одразу, а не лише на паузі.
+const bridge = createBridge(testSwitches(location.search, import.meta.env.MODE).seed ?? 20261022, GAME_DEFS, () => { if (!switches.noAutosave) saves.autosave(); });
 const input = newInput();
 // Екран подорожі (GAME-32): знімок сюжету з поточного стану; дію шукаємо в СВІЖОМУ знімку за id —
 // якщо стан тим часом змінився і дії вже немає, нічого не надсилаємо.
@@ -157,6 +158,8 @@ game.events.on(Phaser.Core.Events.POST_STEP, () => {
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'hidden') saves.autosave();
 });
+// Закриття/перезавантаження: Chromium не завжди дає visibilitychange, тож pagehide — остання нагода (GAME-86).
+window.addEventListener('pagehide', () => saves.autosave());
 
 // Старт: підхопити останній цілий сейв. Позиція в пікселях не зберігається (DC-042):
 // після завантаження персонаж з'являється в точці появи. Правила гонок — у save-session.ts.
