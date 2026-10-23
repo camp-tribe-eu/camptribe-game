@@ -13,8 +13,11 @@ import type { CoreDefs } from '../../core/defs';
 import { GAME_DEFS } from '../../content/slice-defs';
 
 interface TiledObject { name: string; type?: string; class?: string; point?: boolean; gid?: number }
-interface TiledLayer { name: string; type: string; objects?: TiledObject[]; properties?: { name: string; value: unknown }[]; offsetx?: number; offsety?: number; layers?: TiledLayer[] }
-interface TiledMap { properties?: { name: string; value: unknown }[]; layers: TiledLayer[]; tilesets?: { tiles?: { properties?: { name: string }[] }[] }[] }
+interface TiledLayer {
+  name: string; type: string; objects?: TiledObject[]; properties?: { name: string; value: unknown }[];
+  offsetx?: number; offsety?: number; parallaxx?: number; parallaxy?: number; visible?: boolean; opacity?: number; data?: number[]; layers?: TiledLayer[];
+}
+interface TiledMap { properties?: { name: string; value: unknown }[]; layers: TiledLayer[]; tilesets?: { name?: string; tiles?: { properties?: { name: string }[] }[] }[] }
 
 /**
  * Формат мапи, який сцена читає ТАК САМО, як валідатор мап (рецензія ea1e98e: чотири правки мапи
@@ -27,17 +30,27 @@ interface TiledMap { properties?: { name: string; value: unknown }[]; layers: Ti
  */
 export function gameMapFormatProblems(map: TiledMap): string[] {
   const out: string[] = [];
-  const flat = (ls: TiledLayer[]): TiledLayer[] => ls.flatMap((l) => [l, ...flat(l.layers ?? [])]);
-  const layers = flat(map.layers);
+  // Групи шарів — ні: Phaser називає вкладений шар «група/walls» і додає зсув групи (друге коло рецензії).
+  if (map.layers.some((l) => l.type === 'group')) out.push('групи шарів: сцена шукає walls і objects на верхньому рівні');
+  const layers = map.layers;
+  // Зсув і паралакс будь-якого шару: Phaser зсуває сітку колізій (ParseTileLayers: x = offsetx), валідатор — ні.
+  for (const l of layers) {
+    if ((l.offsetx ?? 0) !== 0 || (l.offsety ?? 0) !== 0) out.push(`шар ${l.name}: зсув offsetx/offsety — валідатор його не знає`);
+    if ((l.parallaxx ?? 1) !== 1 || (l.parallaxy ?? 1) !== 1) out.push(`шар ${l.name}: паралакс — сцена й валідатор бачать різні місця`);
+  }
+  // Один тайлсет kenney-rpg: сцена реєструє лише його — тайли іншого не малюються, але стіни з них колізять.
+  if (map.tilesets?.length !== 1 || map.tilesets[0]?.name !== 'kenney-rpg') out.push('потрібен рівно один тайлсет kenney-rpg (лише його реєструє сцена)');
+  // Біти gid понад три прапорці віддзеркалення: валідатор їх знімає, Phaser (0x10000000) — ні.
+  for (const l of layers) if ((l.data ?? []).some((g) => (g & 0x10000000) !== 0)) out.push(`шар ${l.name}: gid з бітом 0x10000000 — Phaser такий тайл не малює`);
   const collides = (l: TiledLayer): boolean => l.properties?.some((p) => p.name === 'collides' && p.value === true) ?? false;
   const walls = layers.filter((l) => l.name === 'walls');
   if (walls.length !== 1 || walls[0]?.type !== 'tilelayer' || !collides(walls[0])) out.push('потрібен рівно один тайловий шар walls з collides=true');
+  if (walls[0] && (walls[0].visible === false || walls[0].opacity === 0)) out.push('шар walls невидимий — стіни колізять, але їх не видно');
   for (const l of layers) if (l.name !== 'walls' && collides(l)) out.push(`шар ${l.name} має collides, але сцена блокує лише walls`);
   if (map.tilesets?.some((t) => t.tiles?.some((x) => x.properties?.some((p) => p.name === 'collides')))) out.push('collides на тайлі тайлсета: сцена його не читає');
   const groups = layers.filter((l) => l.type === 'objectgroup');
   if (groups.length !== 1 || groups[0]?.name !== 'objects') out.push('потрібен рівно один шар об\'єктів objects');
   for (const g of groups) {
-    if ((g.offsetx ?? 0) !== 0 || (g.offsety ?? 0) !== 0) out.push(`шар ${g.name}: зсув offsetx/offsety — валідатор його не знає`);
     for (const o of g.objects ?? []) {
       if (!o.type) out.push(`${o.name}: тип у class без type — Phaser 4 його не копіює, сцена об'єкта не побачить`);
       if (o.point !== true || o.gid !== undefined) out.push(`${o.name}: не точка — сцена й валідатор беруть різні точки прив'язки`);
@@ -102,6 +115,12 @@ describe('мапа сцени ↔ контент (GAME-32)', () => {
       ['прямокутник замість точки', (m) => { const o = objs(m)[0]; if (o) o.point = false; }, 'не точка'],
       ['зсув шару об\'єктів', (m) => { const g = m.layers.find((l) => l.name === 'objects'); if (g) g.offsetx = 56; }, 'зсув'],
       ['другий шар з collides', (m) => { m.layers.push({ name: 'rocks', type: 'tilelayer', properties: [{ name: 'collides', value: true }] }); }, 'rocks'],
+      ['зсув шару walls (стіна наїжджає на точку появи)', (m) => { const w = m.layers.find((l) => l.name === 'walls'); if (w) w.offsetx = -64; }, 'walls: зсув'],
+      ['паралакс шару walls', (m) => { const w = m.layers.find((l) => l.name === 'walls'); if (w) w.parallaxx = 0.5; }, 'паралакс'],
+      ['walls у групі шарів', (m) => { const w = m.layers.find((l) => l.name === 'walls'); if (w) { m.layers = m.layers.filter((l) => l !== w); m.layers.push({ name: 'g', type: 'group', layers: [w] }); } }, 'групи'],
+      ['другий тайлсет', (m) => { m.tilesets?.push({ name: 'other' }); }, 'тайлсет'],
+      ['gid із бітом 0x10000000', (m) => { const w = m.layers.find((l) => l.name === 'walls'); if (w?.data) w.data[0] = (w.data[0] ?? 0) | 0x10000000; }, '0x10000000'],
+      ['невидимі стіни', (m) => { const w = m.layers.find((l) => l.name === 'walls'); if (w) w.visible = false; }, 'невидимий'],
     ];
     for (const [what, patch, mark] of cases) {
       const m = structuredClone(base);

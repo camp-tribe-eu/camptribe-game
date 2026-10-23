@@ -56,6 +56,8 @@ const stage = document.createElement('div');
 stage.id = 'stage';
 // Ціль фокуса після закриття екрана подорожі (рецензія: <body> губив місце читача). Не в порядку Tab.
 stage.tabIndex = -1;
+// role потрібна, щоб aria-label читався: загальному <div> ARIA ім'я не дозволяє (рецензія).
+stage.setAttribute('role', 'application');
 app.append(stage);
 
 // ?hideTouch=interact — лише для негативного контролю e2e (лише в збірці --mode e2e): прихована кнопка мусить ламати прохід.

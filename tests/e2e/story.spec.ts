@@ -182,13 +182,18 @@ test('прохід керується лише кліками й клавіша�
   const src = readFileSync(new URL(import.meta.url), 'utf8');
   const imports = [...src.matchAll(/^import .* from '([^']+)';$/gm)].map((m) => m[1]);
   expect(imports.sort()).toEqual(['@playwright/test', 'node:fs']);
-  const flow = src.slice(src.indexOf('// ПРОХІД-START'), src.indexOf('// ПРОХІД-END'));
+  // Під перевіркою — сам прохід і помічники, якими він ходить (panel, act), а не лише текст між позначками.
+  const flow = src.slice(src.indexOf('const panel ='), src.indexOf('// ПРОХІД-END'));
   expect(flow.length).toBeGreaterThan(500);                                      // позначки на місці, прохід між ними
   expect(flow).not.toMatch(/__game|evaluate\(|dispatch|bridge/);
   // Список дозволених викликів (рецензія: заборонні слова обходились через $eval, waitForFunction,
   // addInitScript, localStorage чи помічник, оголошений поза позначками).
-  const ALLOWED = new Set(['playBikeProlog', 'act', 'panel', 'locator', 'first', 'click', 'tap', 'press', 'down', 'up', 'expect', 'toBeVisible', 'toHaveCount']);
-  const called = [...flow.replace(/\/\/.*$/gm, '').replace(/'[^']*'/g, "''").matchAll(/\b([A-Za-z_$][\w$]*)\s*\(/g)].map((m) => m[1] ?? '');
+  const ALLOWED = new Set(['playBikeProlog', 'act', 'panel', 'locator', 'first', 'click', 'tap', 'press', 'down', 'up', 'expect', 'toBeVisible', 'toHaveCount',
+    'Promise', 'Error', 'async', 'function', 'catch']);
+  const code = flow.replace(/\/\/.*$/gm, '').replace(/\/\*\*[\s\S]*?\*\//g, '').replace(/'[^']*'|`[^`]*`/g, "''");
+  // Виклик через дужки чи ?. — page['evaluate'](…), page.$eval?.(…) — не має імені для списку: заборонено.
+  expect(code).not.toMatch(/\]\s*\(|\?\.\s*\(/);
+  const called = [...code.matchAll(/\b([A-Za-z_$][\w$]*)\s*\(/g)].map((m) => m[1] ?? '');
   expect(called.length).toBeGreaterThan(20);
   expect([...new Set(called.filter((c) => !ALLOWED.has(c)))]).toEqual([]);
   expect(src.slice(src.indexOf('async function act('), src.indexOf('// ПРОХІД-START'))).not.toMatch(/__game|evaluate\(/);
