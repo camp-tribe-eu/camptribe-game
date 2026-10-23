@@ -33,7 +33,8 @@ async function newPage(browser: Browser, vp: Vp, scale: 100 | 200, opts: { hintS
   return page;
 }
 
-const PHONES: Vp[] = [{ width: 390, height: 844 }, { width: 375, height: 667 }, { width: 360, height: 800 }, { width: 412, height: 915 }];
+// 320×568 — найвужчий живий телефон (iPhone SE 1): рецензія PR #35 — раніше лише арифметикою.
+const PHONES: Vp[] = [{ width: 320, height: 568 }, { width: 390, height: 844 }, { width: 375, height: 667 }, { width: 360, height: 800 }, { width: 412, height: 915 }];
 const CONTROLS = { 'ширма ☰': '[data-touch="story"]', 'пауза ‖': '[data-touch="pause"]', 'джойстик': '[data-touch="stick"]', 'кнопка дії': '[data-touch="interact"]' } as const;
 
 for (const vp of PHONES) {
