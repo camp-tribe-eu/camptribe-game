@@ -131,6 +131,14 @@ test.describe('axe-core: 0 порушень serious/critical на кожному
     expect(errors).toEqual([]);
   });
 
+  test('підпис збірки на канві читається й над найсвітлішим пікселем гри (білий під канвою)', async ({ page }) => {
+    await openGame(page);
+    await page.addStyleTag({ content: WORST_BACKDROP });
+    const r = await new AxeBuilder({ page }).include('.build').withRules(['color-contrast']).analyze();
+    expect(r.violations.map((v) => v.id)).toEqual([]);
+    expect(r.passes.map((v) => v.id)).toContain('color-contrast');   // справді зміряно, а не «не вдалося»
+  });
+
   test('діалог паузи з відкритими титрами', async ({ page }) => {
     await openGame(page);
     await openPause(page);
