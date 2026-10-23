@@ -153,7 +153,7 @@ for (const vp of VIEWPORTS) {
       await open(page);
       const boxes = await page.locator('[data-touch]').evaluateAll((els) =>
         els.map((e) => { const r = e.getBoundingClientRect(); return { a: (e as HTMLElement).dataset.touch, w: r.width, h: r.height }; }));
-      expect(boxes).toHaveLength(6); // 5 дій сцени + пауза оболонки UI
+      expect(boxes).toHaveLength(7); // 5 дій сцени + пауза й «Подорож» оболонки UI
       for (const b of boxes) { expect(b.w, b.a).toBeGreaterThanOrEqual(44); expect(b.h, b.a).toBeGreaterThanOrEqual(44); }
     });
 

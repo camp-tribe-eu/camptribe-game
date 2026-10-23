@@ -4,6 +4,8 @@ import { useEffect, useRef, useState } from 'preact/hooks';
 import { DEFAULT_SETTINGS, loadSettings, saveSettings, type Settings } from '../platform/settings';
 import type { Credits, UiPort } from './port';
 import { t as tr, type AnyLang, type Key } from '../i18n';
+import { StoryPanel } from './StoryPanel';
+import type { StoryOffer } from './story-types';
 
 export function Shell({ port, langOverride, credits }: { port: UiPort; langOverride?: AnyLang; credits: Credits }) {
   const [paused, setPaused] = useState(false);
@@ -13,6 +15,10 @@ export function Shell({ port, langOverride, credits }: { port: UiPort; langOverr
   const [codeOut, setCodeOut] = useState('');
   const [codeIn, setCodeIn] = useState('');
   const [staleCode, setStaleCode] = useState<string | null>(null);
+  // Екран подорожі (GAME-32): поки відкритий, світ на паузі — як і в меню паузи.
+  const [storyOpen, setStoryOpen] = useState(false);
+  const [offer, setOffer] = useState<StoryOffer>(() => port.story());
+  useEffect(() => port.onStory(() => setOffer(port.story())), []);
   const lang: AnyLang = langOverride ?? settings.language;
   const t = (key: Key): string => tr(lang, key);
 
@@ -20,14 +26,21 @@ export function Shell({ port, langOverride, credits }: { port: UiPort; langOverr
     setPaused(next);
     port.setPaused(next);
   };
+  const story = (open: boolean): void => {
+    setStoryOpen(open);
+    if (open) setOffer(port.story());
+    port.setPaused(open);
+  };
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent): void => {
-      if (e.code === 'Escape') { e.preventDefault(); toggle(!paused); }
+      if (e.code !== 'Escape') return;
+      e.preventDefault();
+      if (storyOpen) story(false); else toggle(!paused);
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [paused]);
+  }, [paused, storyOpen]);
 
   // Фокус — у діалог, щоб клавіатура й екранний читач починали з «Продовжити».
   useEffect(() => {
@@ -50,7 +63,9 @@ export function Shell({ port, langOverride, credits }: { port: UiPort; langOverr
 
   return (
     <>
-      {!paused && <button type="button" class="ui-pause-btn" data-touch="pause" aria-label={t('ui.pause')} onClick={() => toggle(true)}>{'‖'}</button>}
+      {!paused && !storyOpen && <button type="button" class="ui-pause-btn" data-touch="pause" aria-label={t('ui.pause')} onClick={() => toggle(true)}>{'‖'}</button>}
+      {!paused && !storyOpen && <button type="button" class="ui-story-btn" data-touch="story" aria-label={t('ui.story')} onClick={() => story(true)}>{'☰'}</button>}
+      {storyOpen && <StoryPanel offer={offer} lang={lang} t={t} act={(id) => port.act(id)} close={() => story(false)} />}
       {paused && (
         <div class="ui-overlay" role="dialog" aria-modal="true" aria-label={t('ui.paused')} data-ui="pause">
           <h2>{t('ui.paused')}</h2>

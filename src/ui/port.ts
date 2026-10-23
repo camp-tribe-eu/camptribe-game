@@ -1,5 +1,7 @@
 // Порт UI → гра. UI отримує лише цей інтерфейс: просить дії, але не має доступу на запис
 // до стану ядра (TD-003, сторож — eslint.config.js, блок GAME-25).
+import type { StoryOffer } from './story-types';
+
 export interface UiPort {
   setPaused(paused: boolean): void;
   /** Записати сейв у сховище браузера (GAME-33). */
@@ -13,6 +15,12 @@ export interface UiPort {
   importCode(code: string): Promise<'ok' | 'bad' | 'outdated' | 'unsaved'>;
   /** Код відновлення сейву, відкладеного на старті як застарілий; null — такого немає. */
   staleCode(): Promise<string | null>;
+  /** Знімок сюжету для екрана подорожі (GAME-32). */
+  story(): StoryOffer;
+  /** Попросити дію зі знімка за її id. Дії, якої вже немає в нинішньому стані, не буде (без помилки). */
+  act(id: string): void;
+  /** Підписка на зміни сюжету; повертає відписку. */
+  onStory(listener: () => void): () => void;
 }
 
 /** Титри (GAME-21, OD-013): дані з assets/credits.json, який збирає й звіряє сторож ліцензій. */

@@ -14,6 +14,7 @@ import credits from '../assets/credits.json';
 import { createBridge } from './view/world/bridge';
 import { WorldScene, type WorldProbe } from './view/world/scene';
 import { mountTouchControls } from './view/world/touch';
+import { storyOffer } from './view/story-offer';
 
 const app = document.querySelector<HTMLElement>('#app');
 if (!app) throw new Error('#app is missing');
@@ -21,6 +22,10 @@ if (!app) throw new Error('#app is missing');
 const probe: WorldProbe = { ready: false, playerX: 0, playerY: 0, nearObject: null, commandsSent: 0, cameraScrollX: 0, cameraScrollY: 0, clockMinutes: 0, saveLoaded: false };
 const bridge = createBridge(20261022, GAME_DEFS);
 const input = newInput();
+// Екран подорожі (GAME-32): знімок сюжету з поточного стану; дію шукаємо в СВІЖОМУ знімку за id —
+// якщо стан тим часом змінився і дії вже немає, нічого не надсилаємо.
+const storyListeners = new Set<() => void>();
+const storyChanged = (): void => { for (const l of storyListeners) l(); };
 const saves = createSaveSession(bridge, { read: readSaves, write: writeSave, quarantine: writeStale }, { story: STORY, contentRev: STORY_REV, viable: (g) => saveViable(g, GAME_DEFS) });
 // Тестовий хук Playwright: лише ЧИТАННЯ — знімок стану копією, місток назовні не віддається
 // (рецензія PR #13: раніше скрипт сторінки міг надіслати команду в ядро).
@@ -68,7 +73,22 @@ render(h(Shell, {
     save: () => saves.save(),
     exportCode: () => encodeRestoreCode(saves.exportJson()),
     staleCode: () => (saves.stale ? encodeRestoreCode(saves.stale) : Promise.resolve(null)),
-    importCode: async (code: string) => saves.adopt(await decodeRestoreCode(code)),
+    importCode: async (code: string) => {
+      const r = await saves.adopt(await decodeRestoreCode(code));
+      storyChanged();
+      return r;
+    },
+    story: () => storyOffer(bridge.state, GAME_DEFS).offer,
+    act(id: string) {
+      const intent = storyOffer(bridge.state, GAME_DEFS).intents.get(id);
+      if (!intent) return;
+      bridge.send(intent);
+      storyChanged();
+    },
+    onStory(listener: () => void) {
+      storyListeners.add(listener);
+      return () => { storyListeners.delete(listener); };
+    },
     setPaused(paused: boolean) {
       // Відпускання клавіші під час паузи сцена не бачить — скидаємо введення на межі паузи,
       // інакше клавіша «залипає» і персонаж іде сам (рецензія PR #13).
@@ -89,4 +109,4 @@ document.addEventListener('visibilitychange', () => {
 
 // Старт: підхопити останній цілий сейв. Позиція в пікселях не зберігається (DC-042):
 // після завантаження персонаж з'являється в точці появи. Правила гонок — у save-session.ts.
-void saves.start().then(() => { probe.saveLoaded = true; });
+void saves.start().then(() => { probe.saveLoaded = true; storyChanged(); });
