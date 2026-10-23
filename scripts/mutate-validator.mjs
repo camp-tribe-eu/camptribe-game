@@ -128,6 +128,7 @@ const mutations = [
   { name: '[спорядження] предмет без виду не вважається спорядженням', file: CHECKS_FILE, from: "(i) => i.kind !== undefined || GEAR_FIELDS.some((f) => i[f] !== undefined)", to: '(i) => i.kind !== undefined' },
   { name: '[спорядження] викуп дорожчий за купівлю пропускається', file: CHECKS_FILE, from: 'if (i.resaleCents > i.priceCents) out.push', to: 'if (false) out.push' },
   { name: '[спорядження] викуп, рівний ціні, — помилка (межа зсунута)', file: CHECKS_FILE, from: 'if (i.resaleCents > i.priceCents) out.push', to: 'if (i.resaleCents >= i.priceCents) out.push' },
+  { name: '[спорядження] точна копія не вважається домінуванням', file: CHECKS_FILE, from: '(!same(x, a) || complete.indexOf(x) < complete.indexOf(a))', to: '!same(x, a)' },
   { name: '[спорядження] домінування не звітується', file: CHECKS_FILE, from: "if (b) out.push(I('GEAR_DOMINATED'", to: "if (false) out.push(I('GEAR_DOMINATED'" },
   { name: '[спорядження] домінування між різними видами', file: CHECKS_FILE, from: 'x !== a && x.kind === a.kind && notWorse(x, a)', to: 'x !== a && notWorse(x, a)' },
   { name: '[спорядження] місця не рахуються (сімейний намет «гірший» за дешевий)', file: CHECKS_FILE, from: '&& b.comfortC <= a.comfortC && b.sleeps >= a.sleeps && b.priceCents <= a.priceCents;', to: '&& b.comfortC <= a.comfortC && b.priceCents <= a.priceCents;' },

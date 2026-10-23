@@ -129,7 +129,10 @@ describe('тексти меню: кожен ключ існує в обох мо
     for (const { intent, offer } of choices) {
       for (const k of [offer.profileKey, offer.transportKey, offer.animalKey]) if (k !== null && !has(k)) missing.add(k);
       // Обхід станів меню з журналом — щоб перевірити й записи журналу.
-      let frontier: SimState[] = [step(newSim(1, 5_000), { kind: 'command', command: { ...intent, commandId: 'c0' } as Command }, { defs: DEFS })];
+      // Погоду закріплено (рецензія 14117b9): ключ стану бачить спорядження, а дощ на дні виїзду множить стани
+      // (стан × мокре на кожну річ). Сухе й мокре меню (DryGear) перевіряє src/view/gear-offer.test.ts.
+      const ctx = { defs: DEFS, weather: { of: () => 'sunny' as const } };
+      let frontier: SimState[] = [step(newSim(1, 5_000), { kind: 'command', command: { ...intent, commandId: 'c0' } as Command }, ctx)];
       const seen = new Set<string>();
       while (frontier.length) {
         const next: typeof frontier = [];
@@ -144,9 +147,10 @@ describe('тексти меню: кожен ключ існує в обох мо
             ...o.journal.flatMap((e) => (e.key === null ? [] : [e.key])),
             ...[...o.actions, ...(o.dialogue?.answers ?? [])].filter((a) => a.kind !== 'continue').map((a) => a.key)];
           for (const key of keys) if (!has(key)) missing.add(String(key));
-          for (const { move } of realMenu(sim.game)) next.push(step(sim, { kind: 'command', command: { ...move, commandId: nextCommandId(sim.game) } as Command }, { defs: DEFS }));
+          for (const { move } of realMenu(sim.game)) next.push(step(sim, { kind: 'command', command: { ...move, commandId: nextCommandId(sim.game) } as Command }, ctx));
         }
         frontier = next;
+        if (seen.size > 50_000) throw new Error(`меню вибухнуло: ${seen.size} станів — тест більше нічого не доводить`);
       }
       expect(seen.size).toBeGreaterThan(10);
     }

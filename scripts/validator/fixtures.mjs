@@ -511,6 +511,10 @@ export const FIXTURES = [
   { name: '[спорядження] намет, не кращий ні в чому за інший', expect: ['GEAR_DOMINATED'], count: { code: 'GEAR_DOMINATED', n: 1 }, patch(c) {
     withGear(c, [...tents(), tentCard('item.fixture-tent-worse', { weightG: 4500, priceCents: 5000 })]);
   } },
+  { name: '[спорядження] точна копія іншого намету під новим id — одна знахідка, на копії', expect: ['GEAR_DOMINATED'], count: { code: 'GEAR_DOMINATED', n: 1 }, patch(c) {
+    const t = tents(); withGear(c, [...t, { ...t[1], id: 'item.fixture-tent-copy', nameKey: 'item.fixture-tent-copy' }]);
+    for (const lang of c.meta.locales) c.locales[lang]['item.fixture-tent-copy'] = `[${lang}] copy`;
+  } },
   { name: '[спорядження] тир поза 1…3', expect: ['SCHEMA_INVALID'], count: { code: 'SCHEMA_INVALID', n: 1 }, patch(c) { const t = tents(); t[2].tier = 4; withGear(c, t); } },
   { name: '[спорядження] вигаданий вид', expect: ['SCHEMA_INVALID'], count: { code: 'SCHEMA_INVALID', n: 1 }, patch(c) { const t = tents(); t[0].kind = 'hammock'; withGear(c, t); } },
   { base: 'combo', name: '[дороги] транспорт, якого не дозволяє жоден профіль: лише COMBO_OPTION_UNUSABLE, без вимоги доріг', expect: ['COMBO_OPTION_UNUSABLE'], patch(c) {

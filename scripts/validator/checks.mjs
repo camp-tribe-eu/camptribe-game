@@ -235,7 +235,8 @@ export const CHECKS = [
       const same = (b, a) => b.weightG === a.weightG && b.volumeL === a.volumeL && b.waterproofMm === a.waterproofMm
         && b.comfortC === a.comfortC && b.sleeps === a.sleeps && b.priceCents === a.priceCents;
       for (const a of complete) {
-        const b = complete.find((x) => x !== a && x.kind === a.kind && notWorse(x, a) && !same(x, a));
+        // Точна копія теж без своєї ситуації (рецензія 14117b9) — звітуємо пізнішу з пари, щоб знахідка була одна.
+        const b = complete.find((x) => x !== a && x.kind === a.kind && notWorse(x, a) && (!same(x, a) || complete.indexOf(x) < complete.indexOf(a)));
         if (b) out.push(I('GEAR_DOMINATED', a.id, `«${b.id}» не гірший ні в чому — у «${a.id}» немає своєї ситуації (SIM-INV-005)`));
       }
       return out;

@@ -53,6 +53,23 @@ describe('SIM-GEAR-002/003: мокре й невисушене зношуєть�
     expect(gearOf(s.game.gear, 'item.bag-a')).toEqual({ condition: CONDITION_MAX - WET_WEAR, wet: true });
   });
 
+  // Рецензія 14117b9 (M1): усі дороги вище — на початку дня, тож «погода виїзду» і «погода приїзду» збігались.
+  // Дорога через північ розводить їх: мочить лише дощ дня ВИЇЗДУ (SIM-WX-007).
+  const overMidnight = (days: readonly Weather[]): SimState => {
+    const c = ctxOf(days);
+    const s0 = started(c);
+    const late = step(s0, { kind: 'advance', minutes: DAY - 5 - (s0.clock.minutes % DAY) }, c);
+    const s = step(late, cmd({ type: 'Visit', locationId: 'loc.shop' }), c);
+    expect([Math.floor(late.clock.minutes / DAY), Math.floor(s.clock.minutes / DAY)]).toEqual([0, 1]);   // справді через північ
+    return s;
+  };
+  it('через північ: виїзд у дощ, приїзд у сонце — мокре', () => {
+    expect(gearOf(overMidnight(['rain', 'sunny']).game.gear, 'item.tent-a')).toEqual({ condition: 100, wet: true });
+  });
+  it('через північ: виїзд у сонце, приїзд у дощ — сухе', () => {
+    expect(overMidnight(['sunny', 'rain']).game.gear).toEqual({});
+  });
+
   it('сонце щодня — жодного зносу, gear лишається {} (звичайного зносу v1 немає)', () => {
     const sunny = ctxOf([]);
     const s = runAll(started(sunny), [...trip('loc.shop'), ...trip('loc.home'), ...trip('loc.shop')], sunny);
@@ -224,4 +241,11 @@ describe('стан спорядження в сейві (SIM-GEAR-006)', () => {
       expect(r.ok ? 'ok' : `${r.code}: ${r.detail}`).toBe('SAVE_SHAPE: game: gear');
     });
   }
+});
+
+describe('SIM-GEAR-004: виплата округлюється вниз (рецензія 14117b9, M6)', () => {
+  it('викуп 10,01 € за стану 33 → 3,30 €, а не 3,31', () => {
+    expect(salePrice(1001, 33)).toBe(330);
+    expect(salePrice(999, 1)).toBe(9);
+  });
 });

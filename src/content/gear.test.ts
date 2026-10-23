@@ -100,3 +100,14 @@ describe('каталог у грі (GAME_DEFS)', () => {
     expect(START_MONEY + rewards).toBeLessThan(cheapestTier2);
   });
 });
+
+describe('спорядження в сюжеті — свідомий перелік (рецензія 14117b9, пастка для GAME-60)', () => {
+  // Річ сюжету (нагорода, requires, collect, лежить у локації) тихо втрачає ціни купівлі й викупу (compileGear).
+  // Нагорода-спорядження, яке гравець уже має, дала б другий примірник — а SIM-GEAR-001 каже «один на модель».
+  // Тож кожна нова така річ мусить бути рішенням, а не випадком: цей тест червоніє і змушує його ухвалити.
+  it('ціни стираються лише в стартових намету й спальника Прологу', () => {
+    const story = storyItems(STORY);
+    const stripped = RAW_ITEMS.filter((i) => typeof (i as { tier?: unknown }).tier === 'number' && story.has(i.id)).map((i) => i.id).sort();
+    expect(stripped).toEqual(['item.sleeping-bag', 'item.tent']);
+  });
+});
