@@ -209,6 +209,7 @@ export const FIXTURES = [
 
   // ---- схеми ----
   { name: 'неправильний тип поля', expect: ['SCHEMA_INVALID'], patch(c) { q(c, 'ST-002').objectives = 'visit forest'; } },
+  { name: 'sheltered локації — не булеве', expect: ['SCHEMA_INVALID'], patch(c) { c.locations[0].sheltered = 'yes'; } },
   { name: 'відсутнє обов\u2019язкове поле', expect: ['SCHEMA_INVALID'], patch(c) { delete q(c, 'ST-001').optional; } },
   { name: 'невідомий тип цілі', expect: ['SCHEMA_INVALID'], patch(c) { q(c, 'ST-001').objectives[0].kind = 'chat'; } },
   { name: 'стан проходження у визначенні', expect: ['SCHEMA_UNKNOWN_FIELD'], patch(c) { q(c, 'ST-001').completed = false; } },

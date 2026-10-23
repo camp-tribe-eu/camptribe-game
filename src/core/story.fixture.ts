@@ -1,6 +1,8 @@
 // Мінімальний сюжет для тестів ядра (GAME-29): кожна гілка семантики — тут один раз.
 import { dispatch, type Command } from './commands';
-import type { CoreDefs, ItemDef } from './defs';
+import type { CoreDefs, ItemDef, StoryDefs } from './defs';
+
+type StoryLoc = StoryDefs['locations'][string];
 import { initialState, type GameState } from './state';
 
 export const STORY_DEFS: CoreDefs = {
@@ -214,7 +216,11 @@ export const GEAR_DEFS: CoreDefs = {
     'item.gold': { buyCents: 900, sellCents: 400 },
   }),
   interactions: {},
-  story: ROAD_DEFS.story as NonNullable<CoreDefs['story']>,
+  // Дім — під дахом (GAME-88): тут сушити можна й у дощ; крамниця просто неба.
+  story: (() => {
+    const st = ROAD_DEFS.story as NonNullable<CoreDefs['story']>;
+    return { ...st, locations: { ...st.locations, 'loc.home': { ...(st.locations['loc.home'] as StoryLoc), sheltered: true } } };
+  })(),
 };
 
 /**

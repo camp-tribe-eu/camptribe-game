@@ -7,6 +7,7 @@ import { dispatch, PROCESSED_LIMIT, type Command, type Safeguards } from './comm
 import type { CoreDefs } from './defs';
 import { BIKER, DRIVER, GEAR_DEFS, LIFE_DEFS, MECHANIC, NOVICE, play, ROAD_DEFS, SHOP_DEFS, SKILL_DEFS, STORY_DEFS } from './story.fixture';
 import { initialState, REJECT_CODES, type GameState, type RejectCode } from './state';
+import type { Weather } from './weather';
 
 const SEED = 20261022;
 const RUNS = 1000;
@@ -164,7 +165,7 @@ describe('коди відмов: кожен код із реєстру має т
   const reused = dispatch(s, { type: 'BuyItem', commandId: 'u1', itemId: 'item.lamp' }, DEFS);
   const granted = dispatch(s, { type: 'Interact', commandId: 'g1', targetId: 'obj.ranger' }, DEFS);
   const brokenDefs: CoreDefs = { items: { 'item.bad': { buyCents: 1.5 } }, interactions: {} };
-  const cases: [RejectCode, GameState, Command, CoreDefs][] = [
+  const cases: [RejectCode, GameState, Command, CoreDefs, Weather?][] = [
     ['INVALID_COMMAND', s, { type: 'BuyItem', commandId: 'c1', itemId: '' }, DEFS],
     ['INVALID_AMOUNT', s, { type: 'BuyItem', commandId: 'c2', itemId: 'item.bad' }, brokenDefs],
     ['INSUFFICIENT_FUNDS', s, { type: 'BuyItem', commandId: 'c3', itemId: 'item.tent' }, DEFS],
@@ -202,6 +203,8 @@ describe('коди відмов: кожен код із реєстру має т
     // GAME-73 · спорядження: дрова — ціль активного q.mid (останній примірник); сухий намет сушити нічого.
     ['ITEM_QUEST_LOCKED', play([DRIVER, { type: 'Visit', locationId: 'loc.home' }, { type: 'Pickup', itemId: 'item.wood' }, { type: 'CompleteQuest', questId: 'q.start' }], initialState(0), GEAR_DEFS), { type: 'SellItem', commandId: 's20', itemId: 'item.wood' }, GEAR_DEFS],
     ['NOT_WET', play([DRIVER, { type: 'BuyItem', itemId: 'item.tent-a' }], initialState(10_000), GEAR_DEFS), { type: 'DryGear', commandId: 's21', itemId: 'item.tent-a' }, GEAR_DEFS],
+    // GAME-88 · мокрий намет у крамниці (просто неба), дощ — сушити марно.
+    ['CANNOT_DRY_HERE', ((g) => ({ ...g, player: g.player && { ...g.player, locationId: 'loc.shop' }, gear: { 'item.tent-a': { condition: 90, wet: true } } }))(play([DRIVER, { type: 'BuyItem', itemId: 'item.tent-a' }], initialState(10_000), GEAR_DEFS)), { type: 'DryGear', commandId: 's28', itemId: 'item.tent-a' }, GEAR_DEFS, 'rain'],
     // GAME-71 · календар життя (LIFE_DEFS: день 0 — вівторок 2027-06-01; день 6 — понеділок). Водій має 10 днів відпустки:
     // 7–18 червня — рівно 10 робочих; велосипедист — зі школярем, 5–13 червня — шкільні дні.
     ['VACATION_EXHAUSTED', play([DRIVER, { type: 'BookLeave', from: 6, days: 12 }], initialState(0), LIFE_DEFS), { type: 'BookLeave', commandId: 's22', from: 20, days: 1 }, LIFE_DEFS],
@@ -216,9 +219,9 @@ describe('коди відмов: кожен код із реєстру має т
     expect(cases.map(([c]) => c).sort()).toEqual([...REJECT_CODES].sort());
   });
 
-  for (const [code, state, cmd, defs] of cases) {
+  for (const [code, state, cmd, defs, weather] of cases) {
     it(`повертає ${code}`, () => {
-      const r = dispatch(state, cmd, defs, undefined, 0);
+      const r = dispatch(state, cmd, defs, undefined, 0, weather);
       expect(r.ok).toBe(false);
       expect(r.ok ? null : r.code).toBe(code);
       expect(r.state.moneyCents).toBe(state.moneyCents);

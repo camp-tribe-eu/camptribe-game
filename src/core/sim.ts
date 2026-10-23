@@ -162,7 +162,7 @@ export function step(s: SimState, input: Input, ctx: StepCtx = {}): SimState {
       // рухає годинник, платить сам. Але стан, який прийшов не з кроку (старий сейв, тест), міг минути дні виплати:
       // якщо перша команда — CreateCharacter, без цього кроку зарплата за час до персонажа прийшла б йому заднім числом.
       s = paid(s, ctx);
-      const r = dispatch(s.game, input.command, ctx.defs ?? EMPTY_DEFS, undefined, dayOf(s.clock));
+      const r = dispatch(s.game, input.command, ctx.defs ?? EMPTY_DEFS, undefined, dayOf(s.clock), todayWeather(s, ctx));
       const travelled = travelMinutes(s, r, ctx);
       // Спорядження в дорозі (GAME-73, SIM-GEAR-002/003): погода дня ВИЇЗДУ, як і для хвилин дороги (SIM-WX-007).
       const tripWeather = travelled > 0 ? todayWeather(s, ctx) : null;

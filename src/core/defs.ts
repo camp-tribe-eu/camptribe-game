@@ -146,7 +146,8 @@ export interface StoryDefs {
   readonly profiles: Readonly<Record<string, { readonly transports?: readonly string[]; readonly startSkills?: Readonly<Record<string, number>> }>>;
   readonly transports: readonly string[];
   readonly animals: Readonly<Record<string, { readonly transports?: readonly string[] }>>;
-  readonly locations: Readonly<Record<string, { readonly unlockedBy?: string; readonly when?: WhenDef; readonly items: readonly string[] }>>;
+  /** `sheltered` (GAME-88): дім чи кемпінг — під дахом або при наметі; тут спорядження можна сушити й у дощ. Немає поля — просто неба. */
+  readonly locations: Readonly<Record<string, { readonly unlockedBy?: string; readonly when?: WhenDef; readonly items: readonly string[]; readonly sheltered?: boolean }>>;
   readonly npcs: Readonly<Record<string, { readonly locationId: string; readonly unlockedBy?: string; readonly when?: WhenDef }>>;
   readonly quests: Readonly<Record<string, QuestDef>>;
   /** Діалоги за id; на NPC — щонайбільше один (валідатор: DIALOGUE_NPC_DUPLICATE). */

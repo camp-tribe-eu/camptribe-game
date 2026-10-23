@@ -94,7 +94,9 @@ describe('SIM-GEAR-002/003: мокре й невисушене зношуєть�
           if (wet) wetTrips++;
           wet = wet || p.rain;
           s = runAll(s, trip(i % 2 ? 'loc.home' : 'loc.shop'), c);
-          if (p.dry && wet) { s = step(s, cmd({ type: 'DryGear', itemId: 'item.tent-a' }), c); wet = false; }
+          // Дорога закінчилась добою пізніше (trip → advance DAY): сушимо в погоду НАСТУПНОГО дня. GAME-88: у дощ — лише вдома (під дахом).
+          const canDry = !(plan[i + 1]?.rain ?? false) || i % 2 === 1;
+          if (p.dry && wet && canDry) { s = step(s, cmd({ type: 'DryGear', itemId: 'item.tent-a' }), c); wet = false; }
         });
         expect(gearOf(s.game.gear, 'item.tent-a')).toEqual({ condition: Math.max(0, CONDITION_MAX - WET_WEAR * wetTrips), wet });
       },
@@ -136,6 +138,69 @@ describe('DryGear (SIM-GEAR-005)', () => {
   it('спорядження — один примірник моделі: друга купівля — ITEM_ALREADY_HELD, гроші ті самі', () => {
     const g = started(ctx).game;
     expect(dispatch(g, { type: 'BuyItem', commandId: 'd6', itemId: 'item.tent-a' }, GEAR_DEFS)).toMatchObject({ ok: false, code: 'ITEM_ALREADY_HELD', state: { moneyCents: g.moneyCents } });
+  });
+});
+
+describe('GAME-88: у дощ просто неба сушити не можна (CANNOT_DRY_HERE)', () => {
+  const rain = ctxOf(['rain', 'rain', 'rain']);
+  /** Мокрий стан у крамниці (просто неба): дорога в дощ мочить усе спорядження. */
+  const atShop = (): SimState => runAll(started(rain), [cmd({ type: 'Visit', locationId: 'loc.shop' })], rain);
+  const dry = (s: SimState, itemId: string, c: StepCtx): SimState => step(s, cmd({ type: 'DryGear', itemId }), c);
+
+  it('крамниця, дощ: DryGear відхилено кодом, стан спорядження не змінився', () => {
+    const s = atShop();
+    expect(gearOf(s.game.gear, 'item.tent-a')).toEqual({ condition: 100, wet: true });
+    const r = dispatch(s.game, { type: 'DryGear', commandId: 'r1', itemId: 'item.tent-a' }, GEAR_DEFS, undefined, 0, 'rain');
+    expect(r).toMatchObject({ ok: false, code: 'CANNOT_DRY_HERE' });
+    expect(gearOf(r.state.gear, 'item.tent-a')).toEqual({ condition: 100, wet: true });
+    // те саме через симуляцію: погоду дня бере вона
+    expect(gearOf(dry(s, 'item.tent-a', rain).game.gear, 'item.tent-a').wet).toBe(true);
+  });
+  it('дорога (loc.road) теж просто неба — так само відмова', () => {
+    const s = atShop();
+    const g = { ...s.game, player: s.game.player && { ...s.game.player, locationId: 'loc.dogpark' } };
+    expect(dispatch(g, { type: 'DryGear', commandId: 'r2', itemId: 'item.tent-a' }, GEAR_DEFS, undefined, 0, 'rain')).toMatchObject({ ok: false, code: 'CANNOT_DRY_HERE' });
+  });
+  it('дім (під дахом) у дощ — сушити можна; без дощу просто неба — теж можна (як було)', () => {
+    const wet = atShop();
+    const home = { ...wet.game, player: wet.game.player && { ...wet.game.player, locationId: 'loc.home' } };
+    expect(dispatch(home, { type: 'DryGear', commandId: 'r3', itemId: 'item.tent-a' }, GEAR_DEFS, undefined, 0, 'rain')).toMatchObject({ ok: true });
+    for (const w of ['sunny', 'cloudy'] as const) {
+      expect(dispatch(wet.game, { type: 'DryGear', commandId: `r4${w}`, itemId: 'item.tent-a' }, GEAR_DEFS, undefined, 0, w)).toMatchObject({ ok: true });
+    }
+  });
+  it('без погоди (перебір, бот) дощу немає — поведінка ядра як до GAME-88', () => {
+    expect(dispatch(atShop().game, { type: 'DryGear', commandId: 'r5', itemId: 'item.tent-a' }, GEAR_DEFS)).toMatchObject({ ok: true });
+  });
+
+  // Властивість: щодня дощ; довільний порядок дорога в крамницю / додому, сушити намет/спальник. Модель: стан міняють
+  // лише дорога (мокре втрачає WET_WEAR і лишається мокрим; усе мокне) і сушіння ПІД ДАХОМ. Сушіння просто неба — нічого.
+  it('властивість: у дощ жодний порядок дій не знижує стан через сушіння і не дає «втекти» від зносу просто неба', () => {
+    const ITEMS = ['item.tent-a', 'item.bag-a'] as const;
+    const actions = fc.array(fc.oneof(
+      fc.constantFrom('loc.shop', 'loc.home').map((to) => ({ t: 'go' as const, to })),
+      fc.constantFrom(...ITEMS).map((item) => ({ t: 'dry' as const, item })),
+    ), { minLength: 1, maxLength: 24 });
+    fc.assert(fc.property(actions, (acts) => {
+      let s = started(rain);
+      let at = 'loc.home';
+      const model: Record<string, { condition: number; wet: boolean }> = Object.fromEntries(ITEMS.map((i) => [i, { condition: 100, wet: false }]));
+      for (const a of acts) {
+        const before = ITEMS.map((i) => gearOf(s.game.gear, i).condition);
+        if (a.t === 'go') {
+          s = step(s, cmd({ type: 'Visit', locationId: a.to }), rain);
+          if (a.to !== at) for (const m of Object.values(model)) { if (m.wet) m.condition = Math.max(0, m.condition - WET_WEAR); m.wet = true; }
+          at = a.to;
+        } else {
+          s = dry(s, a.item, rain);
+          const m = model[a.item] as { condition: number; wet: boolean };
+          if (at === 'loc.home' && m.wet) m.wet = false;
+          // сушіння саме по собі стану не знижує
+          expect(gearOf(s.game.gear, a.item).condition).toBe(before[ITEMS.indexOf(a.item)]);
+        }
+        for (const i of ITEMS) expect(gearOf(s.game.gear, i)).toEqual(model[i]);
+      }
+    }), { numRuns: 200 });
   });
 });
 

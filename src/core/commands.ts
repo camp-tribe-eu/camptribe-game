@@ -7,6 +7,7 @@ import type { CommandRecord, GameState, RejectCode } from './state';
 import { practise, rankOf, type SkillId } from './skills';
 import { gearOf, pruneGear, sellPriceOf } from './gear';
 import { bookLeave, cancelLeave } from './life';
+import type { Weather } from './weather';
 import { applyStory, questNeedsItem, type StoryCommand, type StoryDraft } from './story';
 
 export type { StoryCommand } from './story';
@@ -91,7 +92,7 @@ function fingerprint(cmd: Command): string {
   return h.toString(16).padStart(8, '0');
 }
 
-function apply(cmd: Command, d: Draft, defs: CoreDefs, guard: Safeguards, today: number | undefined): RejectCode | null {
+function apply(cmd: Command, d: Draft, defs: CoreDefs, guard: Safeguards, today: number | undefined, weather: Weather | undefined): RejectCode | null {
   switch (cmd.type) {
     case 'BuyItem': {
       if (!isContentId(cmd.itemId)) return 'INVALID_COMMAND';
@@ -178,6 +179,8 @@ function apply(cmd: Command, d: Draft, defs: CoreDefs, guard: Safeguards, today:
       if ((own(d.inventory, cmd.itemId) ?? 0) < 1) return 'ITEM_NOT_OWNED';
       const g = gearOf(d.gear, cmd.itemId);
       if (!def.gear || !g.wet) return 'NOT_WET';
+      // GAME-88: у дощ просто неба сушити марно — висушене б одразу намокло. Погоду знає лише симуляція; без неї (перебір, бот) дощу немає.
+      if (weather === 'rain' && !own(defs.story?.locations ?? {}, d.player?.locationId ?? '')?.sheltered) return 'CANNOT_DRY_HERE';
       d.gear = { ...d.gear, [cmd.itemId]: { condition: g.condition, wet: false } };
       return null;
     }
@@ -265,10 +268,11 @@ function remember(processed: Readonly<Record<string, CommandRecord>>, id: string
 
 /**
  * `today` — день гри (⌊хвилини / 1440⌋), який знає лише симуляція: його читають тільки BookLeave/CancelLeave (GAME-71).
+ * `weather` (GAME-88) — погода дня, теж лише від симуляції: у дощ DryGear просто неба — CANNOT_DRY_HERE. Без неї дощу немає.
  * Повний перебір і бот кличуть dispatch без годинника — команд календаря в їхніх ходах немає (moves.ts). Без `today`
  * BookLeave/CancelLeave — INVALID_COMMAND (рецензія GAME-71): мовчазний «день 0» дозволив би бронювати в минулому.
  */
-export function dispatch(state: GameState, cmd: Command, defs: CoreDefs, guard: Safeguards = SAFE, today?: number): DispatchResult {
+export function dispatch(state: GameState, cmd: Command, defs: CoreDefs, guard: Safeguards = SAFE, today?: number, weather?: Weather): DispatchResult {
   if (!cmd || typeof cmd !== 'object' || !isCommandId(cmd.commandId)) {
     return { ok: false, state, code: 'INVALID_COMMAND', repeated: false, events: [] };
   }
@@ -286,7 +290,7 @@ export function dispatch(state: GameState, cmd: Command, defs: CoreDefs, guard: 
     player: state.player, quests: state.quests, campaignEnded: state.campaignEnded, flags: [...state.flags], npcMemory: state.npcMemory,
     skills: state.skills, practice: state.practice, gear: state.gear, life: state.life, dialogue: state.dialogue,
   };
-  const code = apply(cmd, draft, defs, guard, today);
+  const code = apply(cmd, draft, defs, guard, today, weather);
   // Стан спорядження — лише для того, що в руках (продали останній — запис зникає), і лише відхилення від нового.
   if (!code) draft.gear = pruneGear(draft.gear, draft.inventory);
   if (!code) practiseAfter(cmd, state, draft, defs);
