@@ -125,8 +125,8 @@ export function Shell({ port, langOverride, credits, build }: { port: UiPort; la
         <button type="button" class="ui-story-btn" data-hint={showHint || offer.stage === 'ended' ? 'yes' : undefined} data-touch="story" aria-label={t('ui.story')} onClick={() => story(true)}>{'☰'}</button>
         <div class="ui-hud" data-ui="hud" role="group" aria-label={t('ui.hud')}>
           <span data-ui="hud-place">{offer.locationKey ? ct(lang, offer.locationKey) : t('ui.noPlace')}</span>
-          <span data-ui="hud-time">{`${t('ui.day')} ${offer.day}, ${hh}:${mm}`}</span>
-          <span data-ui="hud-money">{money(lang, offer.moneyCents)}</span>
+          <span class="ui-hud-line"><span data-ui="hud-time">{`${t('ui.day')} ${offer.day}, ${hh}:${mm}`}</span>{' · '}<span data-ui="hud-money">{money(lang, offer.moneyCents)}</span></span>
+          {/* GAME-92: підказка — окремий рядок знизу; місце й «день · гроші» над нею не рухаються (див. .ui-hint в index.html). */}
           {showHint && <span class="ui-hint" data-ui="hint" role="status">{t('ui.hint')}</span>}
           {/* GAME-89 №6: кампанія завершена — мапа лишається живою (можна ходити), але про кінець видно й поза ☰. */}
           {offer.stage === 'ended' && <span class="ui-hint" data-ui="ended-hint" role="status">{t('ui.endedHint')}</span>}
