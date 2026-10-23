@@ -1,5 +1,8 @@
 // Сцена світу (GAME-24): рух, камера, колізії, взаємодія з об'єктом. Лише відображення:
 // взаємодія надсилає команду в ядро через місток.
+// GAME-32: мапа — maps/camp-lake.tmj під валідатором мап (npm run validate, --dir public/maps).
+// Точку появи, тригери й NPC сцена бере з шару `objects` цієї мапи — тобто саме ті координати, для
+// яких валідатор довів досяжність пішки (а не числа, вписані в код окремо від мапи).
 import Phaser from 'phaser';
 import { KEY_BINDINGS, KEY_CODES, consumeFrame, createActionGate, moveVector, press, release, type Action, type InputState } from './actions';
 import type { Bridge } from './bridge';
@@ -7,6 +10,9 @@ import type { Bridge } from './bridge';
 export const TILE = 16;
 export const SPEED = 64; // px/с — 4 тайли за секунду
 const INTERACT_RANGE = TILE * 1.5;
+
+/** Об'єкт мапи, з яким можна взаємодіяти: тригер (Interact у ядро) чи NPC (розмова). */
+interface Spot { readonly name: string; readonly kind: 'trigger' | 'npc'; readonly x: number; readonly y: number }
 
 export interface WorldProbe {
   ready: boolean;
@@ -24,14 +30,15 @@ export interface WorldProbe {
 export class WorldScene extends Phaser.Scene {
   private player!: Phaser.Types.Physics.Arcade.SpriteWithDynamicBody;
   private readonly gate = createActionGate();
-  private campfire!: Phaser.GameObjects.Image;
+  private spots: Spot[] = [];
 
-  constructor(private readonly bridge: Bridge, private readonly controls: InputState, private readonly probe: WorldProbe) {
+  /** onNpc — гравець заговорив із NPC на мапі (розмову веде екран подорожі). */
+  constructor(private readonly bridge: Bridge, private readonly controls: InputState, private readonly probe: WorldProbe, private readonly onNpc: (npcId: string) => void = () => {}) {
     super('world');
   }
 
   preload(): void {
-    this.load.tilemapTiledJSON('camp', 'spike/camp.tmj');
+    this.load.tilemapTiledJSON('camp', 'maps/camp-lake.tmj');
     this.load.spritesheet('kenney-rpg', 'spike/kenney-rpg.png', { frameWidth: TILE, frameHeight: TILE, spacing: 1 });
   }
 
@@ -44,14 +51,28 @@ export class WorldScene extends Phaser.Scene {
     if (!walls) throw new Error('layer walls is missing');
     walls.setCollisionByExclusion([-1]);
 
-    // Вогнище з аркуша Kenney (кадр 15,8): об'єкт взаємодії.
-    this.campfire = this.add.image(3 * TILE + 8, 4 * TILE + 8, 'kenney-rpg', 8 * 57 + 15);
+    const objects = map.getObjectLayer('objects')?.objects ?? [];
+    const typeOf = (o: Phaser.Types.Tilemaps.TiledObject): string => String(o.type || (o as { class?: string }).class || '');
+    const spawn = objects.find((o) => typeOf(o) === 'spawn');
+    if (!spawn) throw new Error('maps/camp-lake.tmj: no spawn in layer objects');
+    this.spots = objects.filter((o) => typeOf(o) === 'trigger' || typeOf(o) === 'npc')
+      .map((o) => ({ name: o.name, kind: typeOf(o) as Spot['kind'], x: o.x ?? 0, y: o.y ?? 0 }));
 
-    const g = this.add.graphics();
-    g.fillStyle(0xd94f30).fillRect(0, 0, 12, 12);
-    g.generateTexture('player', 12, 12);
-    g.destroy();
-    this.player = this.physics.add.sprite(6 * TILE + 8, 5 * TILE + 8, 'player');
+    const square = (key: string, color: number): void => {
+      const g = this.add.graphics();
+      g.fillStyle(color).fillRect(0, 0, 12, 12);
+      g.generateTexture(key, 12, 12);
+      g.destroy();
+    };
+    square('player', 0xd94f30);
+    square('npc', 0x4f7a3a); // сірий прототип (S01–S02): NPC — квадрат, доки немає спрайта LPC
+    for (const s of this.spots) {
+      // Вогнище з аркуша Kenney (кадр 15,8); інші тригери поки без картинки.
+      if (s.kind === 'npc') this.add.image(s.x, s.y, 'npc');
+      else if (s.name === 'obj.campfire') this.add.image(s.x, s.y, 'kenney-rpg', 8 * 57 + 15);
+    }
+
+    this.player = this.physics.add.sprite(spawn.x ?? 0, spawn.y ?? 0, 'player');
     this.player.setCollideWorldBounds(true);
     this.physics.world.setBounds(0, 0, map.widthInPixels, map.heightInPixels);
     this.physics.add.collider(this.player, walls);
@@ -89,10 +110,16 @@ export class WorldScene extends Phaser.Scene {
     const v = moveVector(held);
     this.player.setVelocity(v.x * SPEED, v.y * SPEED);
 
-    const dist = Phaser.Math.Distance.Between(this.player.x, this.player.y, this.campfire.x, this.campfire.y);
-    const near = dist <= INTERACT_RANGE ? 'obj.campfire' : null;
-    if (this.gate(held.has('interact'), time) && near) {
-      this.bridge.send({ type: 'Interact', targetId: near });
+    let spot: Spot | null = null;
+    let best = INTERACT_RANGE;
+    for (const s of this.spots) {
+      const d = Phaser.Math.Distance.Between(this.player.x, this.player.y, s.x, s.y);
+      if (d <= best) { best = d; spot = s; }
+    }
+    const near = spot?.name ?? null;
+    if (this.gate(held.has('interact'), time) && spot) {
+      if (spot.kind === 'npc') this.onNpc(spot.name);
+      else this.bridge.send({ type: 'Interact', targetId: spot.name });
     }
 
     Object.assign(this.probe, {

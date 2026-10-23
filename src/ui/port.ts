@@ -23,6 +23,8 @@ export interface UiPort {
   act(id: string): void;
   /** Підписка на зміни сюжету; повертає відписку. */
   onStory(listener: () => void): () => void;
+  /** Гра просить відкрити екран подорожі (розмова з NPC на мапі); повертає відписку. */
+  onOpenStory(listener: () => void): () => void;
 }
 
 /** Титри (GAME-21, OD-013): дані з assets/credits.json, який збирає й звіряє сторож ліцензій. */

@@ -34,6 +34,14 @@ const shown = (o: StoryOffer): StoryOffer => (hiddenActs.length === 0 ? o : {
 });
 const storyListeners = new Set<() => void>();
 const storyChanged = (): void => { for (const l of storyListeners) l(); };
+const openListeners = new Set<() => void>();
+/** Розмова з NPC на мапі: команда в ядро (ядро саме відмовить, якщо гравець не тут), і екран подорожі —
+ *  там видно розмову або те, чого бракує (немає персонажа, не та локація). */
+const talkOnMap = (npcId: string): void => {
+  bridge.send({ type: 'Talk', npcId });
+  storyChanged();
+  for (const l of openListeners) l();
+};
 const saves = createSaveSession(bridge, { read: readSaves, write: writeSave, quarantine: writeStale, readStale, dismissStale }, { story: STORY, contentRev: STORY_REV, viable: (g) => saveViable(g, GAME_DEFS) });
 // Тестовий хук Playwright: лише ЧИТАННЯ — знімок стану копією, місток назовні не віддається
 // (рецензія PR #13: раніше скрипт сторінки міг надіслати команду в ядро).
@@ -65,7 +73,7 @@ const game = new Phaser.Game({
   render: { preserveDrawingBuffer: true },
   scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_BOTH },
   physics: { default: 'arcade', arcade: { debug: false } },
-  scene: [new WorldScene(bridge, input, probe)],
+  scene: [new WorldScene(bridge, input, probe, talkOnMap)],
 });
 
 // Оболонка UI (GAME-25): пауза зупиняє і сцену, і ігровий годинник ядра.
@@ -97,6 +105,10 @@ render(h(Shell, {
     onStory(listener: () => void) {
       storyListeners.add(listener);
       return () => { storyListeners.delete(listener); };
+    },
+    onOpenStory(listener: () => void) {
+      openListeners.add(listener);
+      return () => { openListeners.delete(listener); };
     },
     setPaused(paused: boolean) {
       // Відпускання клавіші під час паузи сцена не бачить — скидаємо введення на межі паузи,

@@ -130,10 +130,14 @@ test('затиснутий Enter не пробігає кроки: одне на
   expect((await core(page)).journal.length).toBe(1);   // лише «Початок подорожі»
 });
 
-test('закриття екрана подорожі повертає фокус на ☰', async ({ page }) => {
+test('після закриття екрана подорожі фокус у грі: Space — дія сцени, а не кнопка ☰', async ({ page }) => {
   await open(page);
   await page.locator('[data-ui="story-close"]').click();
-  await expect(page.locator('[data-touch="story"]')).toBeFocused();
+  await page.waitForTimeout(50);
+  expect(await page.evaluate(() => document.activeElement === document.body)).toBe(true);
+  await page.keyboard.press('Space');                       // далеко від об'єктів: нічого не відкривається
+  await page.waitForTimeout(100);
+  await expect(panel(page)).toHaveCount(0);
 });
 
 test('сейв після прологу: перезавантаження — і кінець розділу на місці', async ({ page }) => {
@@ -181,4 +185,50 @@ test('прохід керується лише кліками й клавіша�
   expect(flow.length).toBeGreaterThan(500);                                      // позначки на місці, прохід між ними
   expect(flow).not.toMatch(/__game|evaluate\(|dispatch|bridge/);
   expect(src.slice(src.indexOf('async function act('), src.indexOf('// ПРОХІД-START'))).not.toMatch(/__game|evaluate\(/);
+});
+
+// GAME-32 · Еліза стоїть на мапі кемпінгу: до неї доходять пішки й заговорюють клавішею дії.
+interface Probe { playerX: number; playerY: number; nearObject: string | null }
+const probe = (page: Page): Promise<Probe> => page.evaluate(() => ({ ...(window as unknown as { __game: { probe: Probe } }).__game.probe }));
+async function walk(page: Page, key: string, until: (p: Probe) => boolean): Promise<Probe> {
+  await page.keyboard.down(key);
+  const start = Date.now();
+  let p = await probe(page);
+  while (!until(p) && Date.now() - start < 5_000) { await page.waitForTimeout(16); p = await probe(page); }
+  await page.keyboard.up(key);
+  await page.waitForTimeout(50);
+  return probe(page);
+}
+async function walkToElise(page: Page): Promise<void> {
+  await walk(page, 'ArrowLeft', (p) => p.playerX <= 44);
+  const p = await walk(page, 'ArrowDown', (q) => q.nearObject === 'npc.elise');
+  expect(p.nearObject).toBe('npc.elise');
+}
+
+test.describe('Еліза на мапі (клавіатура)', () => {
+  test.use({ viewport: { width: 1280, height: 800 }, hasTouch: false, isMobile: false });
+
+  test('у кемпінгу: дійти пішки, натиснути дію — відкривається розмова з нею', async ({ page }) => {
+    await open(page);
+    await panel(page).locator('[data-act="create"]', { hasText: 'Велосипед' }).first().click();
+    for (const [k, key] of [['visit', 'loc.home'], ['complete', 'q.st-001'], ['visit', 'loc.home'], ['complete', 'q.st-002'], ['visit', 'loc.shop'],
+      ['pickup', 'item.tent'], ['pickup', 'item.sleeping-bag'], ['complete', 'q.st-003'], ['visit', 'loc.road'], ['complete', 'q.st-004'], ['visit', 'loc.camp.lake']] as const) await act(page, k, key);
+    await page.locator('[data-ui="story-close"]').click();
+    await walkToElise(page);
+    await page.keyboard.press('Space');
+    await expect(panel(page).locator('[data-ui="dialogue"]')).toBeVisible();
+    await expect(panel(page).locator('[data-ui="line"]')).toContainText('Еліза');
+    expect((await core(page) as unknown as { game: { dialogue: { id: string } | null } }).game.dialogue?.id).toBe('dlg.elise-greeting');
+  });
+
+  test('ще вдома: Еліза на мапі є, але ядро розмову не приймає — екран подорожі без розмови', async ({ page }) => {
+    await open(page);
+    await panel(page).locator('[data-act="create"]').first().click();
+    await page.locator('[data-ui="story-close"]').click();
+    await walkToElise(page);
+    await page.keyboard.press('Space');
+    await expect(panel(page)).toBeVisible();
+    await expect(panel(page).locator('[data-ui="dialogue"]')).toHaveCount(0);
+    expect((await core(page) as unknown as { game: { dialogue: unknown } }).game.dialogue).toBeNull();
+  });
 });

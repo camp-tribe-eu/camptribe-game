@@ -26,14 +26,17 @@ export function Shell({ port, langOverride, credits }: { port: UiPort; langOverr
     setPaused(next);
     port.setPaused(next);
   };
-  const storyBtn = useRef<HTMLButtonElement>(null);
   const story = (open: boolean): void => {
     setStoryOpen(open);
-    // Фокус повертається на ☰ (рецензія: інакше клавіатура й читач губились на <body>).
-    if (!open) requestAnimationFrame(() => storyBtn.current?.focus());
+    // Фокус повертається грі, а не на ☰: Space — клавіша дії в сцені, і сфокусована ☰ перехоплювала б
+    // її (знайдено e2e розмови з Елізою на мапі). ☰ лишається досяжною Tab.
+    if (!open) requestAnimationFrame(() => (document.activeElement as HTMLElement | null)?.blur());
     if (open) { setOffer(port.story()); void port.staleCode().then(setStaleCode); }
     port.setPaused(open);
   };
+
+  // Розмова з NPC на мапі відкриває екран подорожі (якщо не відкрите меню паузи).
+  useEffect(() => port.onOpenStory(() => { if (!paused && !storyOpen) story(true); }), [paused, storyOpen]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent): void => {
@@ -78,7 +81,7 @@ export function Shell({ port, langOverride, credits }: { port: UiPort; langOverr
   return (
     <>
       {!paused && !storyOpen && <button type="button" class="ui-pause-btn" data-touch="pause" aria-label={t('ui.pause')} onClick={() => toggle(true)}>{'‖'}</button>}
-      {!paused && !storyOpen && <button type="button" class="ui-story-btn" ref={storyBtn} data-touch="story" aria-label={t('ui.story')} onClick={() => story(true)}>{'☰'}</button>}
+      {!paused && !storyOpen && <button type="button" class="ui-story-btn" data-touch="story" aria-label={t('ui.story')} onClick={() => story(true)}>{'☰'}</button>}
       {storyOpen && <StoryPanel offer={offer} lang={lang} t={t} act={(id) => port.act(id)} close={() => story(false)}>{staleNotice}</StoryPanel>}
       {paused && (
         <div class="ui-overlay" role="dialog" aria-modal="true" aria-label={t('ui.paused')} data-ui="pause">
