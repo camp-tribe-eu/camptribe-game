@@ -13,8 +13,8 @@ import { buildIndex } from '../../scripts/validator/checks.mjs';
 import { enumerateCombos, project } from '../../scripts/validator/combos.mjs';
 import { GAME_DEFS } from './slice-defs';
 import { CONTENT, STORY, compileStory } from './story';
-import { isLuckMove, moves as allMoves, progressView, type Move } from './moves';
-import { RANK_XP, SKILL_IDS } from '../core/skills';
+import { PROGRESS_IGNORED, isLuckMove, moves as allMoves, progressView, type Move } from './moves';
+import { RANK_XP, SKILL_IDS, zeroSkills } from '../core/skills';
 import { checkDefs, type CoreDefs } from '../core/defs';
 import { route } from '../core/story';
 
@@ -36,13 +36,16 @@ const key = (s: GameState): string => stateHash(progressView(s));
 /** Той самий стан, але з навичками на рангах 5 і без практики — контроль «навички не змінюють жодного ходу». */
 const MAXED = Object.fromEntries(SKILL_IDS.map((id) => [id, RANK_XP[5] as number]));
 const maxed = (s: GameState): GameState => ({ ...s, skills: MAXED, practice: {} });
+/** І з нулями: стан, до якого перебір дійшов першим, міг уже мати поріг, якого інший шлях до того ж ключа не має (рецензія fbd9c56). */
+const zeroed = (s: GameState): GameState => ({ ...s, skills: zeroSkills(), practice: {} });
 
 /**
  * Ті самі сюжетні поля (усе, крім лічильників команд і навичок — як progressView). Дешевше за повний key:
  * поля, яких хід не торкався, — той самий об'єкт в обох станах, і їх не серіалізуємо.
  */
+const IGNORED: ReadonlySet<string> = new Set(PROGRESS_IGNORED);
 const sameProgress = (a: GameState, b: GameState): boolean => (Object.keys(a) as (keyof GameState)[])
-  .every((k) => k === 'processed' || k === 'seq' || k === 'skills' || k === 'practice' || a[k] === b[k] || canonical(a[k]) === canonical(b[k]))
+  .every((k) => IGNORED.has(k) || a[k] === b[k] || canonical(a[k]) === canonical(b[k]))
   && Object.keys(a).length === Object.keys(b).length;
 
 /** Розбіжності «той самий хід, інші навички — інший сюжетний наслідок». Порожньо — проєкція key чесна. */
@@ -59,9 +62,11 @@ function explore(first: GameState, leaks: SkillLeak[] = []) {
       const r = dispatch(s, { ...m, commandId: nextCommandId(s) } as Command, DEFS);
       // GAME-72: key не бачить навичок — це чесно, лише якщо навички не змінюють ні рішення ядра, ні сюжетного
       // наслідку жодного ходу. Перевірка на КОЖНОМУ стані й ході перебору, а не на вибірці.
-      const r2 = dispatch(maxed(s), { ...m, commandId: nextCommandId(s) } as Command, DEFS);
-      const same = r.ok && r2.ok ? sameProgress(r.state, r2.state) : !r.ok && !r2.ok && r.code === r2.code;
-      if (!same && leaks.length < 5) leaks.push({ move: m, base: r.ok ? 'ok' : r.code, maxed: r2.ok ? 'ok' : r2.code });
+      for (const variant of [maxed, zeroed]) {
+        const r2 = dispatch(variant(s), { ...m, commandId: nextCommandId(s) } as Command, DEFS);
+        const same = r.ok && r2.ok ? sameProgress(r.state, r2.state) : !r.ok && !r2.ok && r.code === r2.code;
+        if (!same && leaks.length < 5) leaks.push({ move: m, base: r.ok ? 'ok' : r.code, maxed: `${variant.name}:${r2.ok ? 'ok' : r2.code}` });
+      }
       if (!r.ok) continue;
       const nk = key(r.state);
       if (!isLuckMove(m)) edges.get(k)?.add(nk);   // у стан після везіння заходимо, але шлях до кінця — без нього
@@ -192,5 +197,20 @@ describe('дороги справжнього контенту: ядро ≡ в�
     const r = c.roads?.find((x) => x.to === 'loc.camp.lake');
     if (r) r.ways = r.ways.filter((w) => w.transport !== 'transport.bike');
     expect(route(compileStory(c), 'loc.home', 'loc.camp.lake', 'transport.bike')).toBeNull();
+  });
+});
+
+describe('ключ перебору ховає рівно лічильники й навички (рецензія fbd9c56)', () => {
+  // Сторож витоку вище доводить чесність ключа лише для полів, які він сам пропускає. Якщо progressView почне
+  // ховати ще щось (прапорці, пам'ять NPC), сторож цього не побачить — тож список закріплено тут.
+  it('PROGRESS_IGNORED — саме processed, seq, skills, practice', () => {
+    expect([...PROGRESS_IGNORED].sort()).toEqual(['practice', 'processed', 'seq', 'skills']);
+  });
+  it('progressView обнуляє саме PROGRESS_IGNORED, решта полів стану — без змін', () => {
+    const s = initialState(START_MONEY);
+    const v = progressView(s) as Record<string, unknown>;
+    expect(Object.keys(v).sort()).toEqual(Object.keys(s).sort());
+    const hidden = Object.keys(s).filter((k) => v[k] !== (s as unknown as Record<string, unknown>)[k]).sort();
+    expect(hidden).toEqual([...PROGRESS_IGNORED].sort());
   });
 });

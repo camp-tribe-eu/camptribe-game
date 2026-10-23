@@ -151,6 +151,8 @@ describe('Спосіб перевірки 2: навичка не робить н
   it('небезпечна дорога існує: автом дім → крамниця — 3, велосипедом через парк — 2 (максимум ребер)', () => {
     expect(routeRisk(STORY, 'loc.home', 'loc.shop', 'transport.car')).toBe(3);
     expect(routeRisk(STORY, 'loc.home', 'loc.shop', 'transport.bike')).toBe(2);
+    // Найризикованіша ділянка першою (2, потім 1): «остання ділянка» дала б 1 (рецензія fbd9c56).
+    expect(routeRisk(STORY, 'loc.shop', 'loc.home', 'transport.bike')).toBe(2);
     expect(routeRisk(STORY, 'loc.home', 'loc.home', 'transport.car')).toBe(0);
   });
 

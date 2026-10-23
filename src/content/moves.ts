@@ -44,7 +44,9 @@ export function moves(s: GameState, defs: CoreDefs): Move[] {
  * Чесно лише доти, доки жоден хід moves() не залежить від навичок: це доводить story.test
  * («навички не змінюють жодного ходу») на кожному досяжному стані — інакше зелене тут нічого не доводить.
  */
-export const progressView = (s: GameState): object => ({ ...s, processed: null, seq: null, skills: null, practice: null });
+/** Поля, яких не бачить ключ перебору. Єдине джерело і для progressView, і для сторожа витоку в story.test. */
+export const PROGRESS_IGNORED = ['processed', 'seq', 'skills', 'practice'] as const satisfies readonly (keyof GameState)[];
+export const progressView = (s: GameState): object => ({ ...s, ...Object.fromEntries(PROGRESS_IGNORED.map((k) => [k, null])) });
 export const progressKey = (s: GameState): string => canonical(progressView(s));
 
 /**
