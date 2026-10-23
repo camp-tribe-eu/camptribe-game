@@ -50,6 +50,18 @@ const sameProgress = (a: GameState, b: GameState): boolean => (Object.keys(a) as
 
 /** Розбіжності «той самий хід, інші навички — інший сюжетний наслідок». Порожньо — проєкція key чесна. */
 type SkillLeak = { move: Move; base: string; maxed: string };
+const SKILL_VARIANTS = [maxed, zeroed];
+
+/** Той самий хід із кожним варіантом навичок: сюжетний наслідок мусить збігтися з базовим `r`. */
+function leaksOf(s: GameState, m: Move, r: ReturnType<typeof dispatch>, run: typeof dispatch): SkillLeak[] {
+  const out: SkillLeak[] = [];
+  for (const variant of SKILL_VARIANTS) {
+    const r2 = run(variant(s), { ...m, commandId: nextCommandId(s) } as Command, DEFS);
+    const same = r.ok && r2.ok ? sameProgress(r.state, r2.state) : !r.ok && !r2.ok && r.code === r2.code;
+    if (!same) out.push({ move: m, base: r.ok ? 'ok' : r.code, maxed: `${variant.name}:${r2.ok ? 'ok' : r2.code}` });
+  }
+  return out;
+}
 
 function explore(first: GameState, leaks: SkillLeak[] = []) {
   const seen = new Map<string, GameState>([[key(first), first]]);
@@ -62,11 +74,7 @@ function explore(first: GameState, leaks: SkillLeak[] = []) {
       const r = dispatch(s, { ...m, commandId: nextCommandId(s) } as Command, DEFS);
       // GAME-72: key не бачить навичок — це чесно, лише якщо навички не змінюють ні рішення ядра, ні сюжетного
       // наслідку жодного ходу. Перевірка на КОЖНОМУ стані й ході перебору, а не на вибірці.
-      for (const variant of [maxed, zeroed]) {
-        const r2 = dispatch(variant(s), { ...m, commandId: nextCommandId(s) } as Command, DEFS);
-        const same = r.ok && r2.ok ? sameProgress(r.state, r2.state) : !r.ok && !r2.ok && r.code === r2.code;
-        if (!same && leaks.length < 5) leaks.push({ move: m, base: r.ok ? 'ok' : r.code, maxed: `${variant.name}:${r2.ok ? 'ok' : r2.code}` });
-      }
+      for (const l of leaksOf(s, m, r, dispatch)) if (leaks.length < 5) leaks.push(l);
       if (!r.ok) continue;
       const nk = key(r.state);
       if (!isLuckMove(m)) edges.get(k)?.add(nk);   // у стан після везіння заходимо, але шлях до кінця — без нього
@@ -212,5 +220,30 @@ describe('ключ перебору ховає рівно лічильники �
     expect(Object.keys(v).sort()).toEqual(Object.keys(s).sort());
     const hidden = Object.keys(s).filter((k) => v[k] !== (s as unknown as Record<string, unknown>)[k]).sort();
     expect(hidden).toEqual([...PROGRESS_IGNORED].sort());
+  });
+});
+
+describe('сторож витоку навичок уміє почервоніти (рецензія 3c4bc9f)', () => {
+  // Підставне ядро з порогами, яких у справжньому немає: без цих контролів обидва варіанти можна тихо прибрати.
+  const created = dispatch(initialState(START_MONEY), { type: 'CreateCharacter', commandId: 'e0', profileId: 'profile.solo-explorer', transportId: 'transport.bike' }, DEFS);
+  const s = created.ok ? created.state : initialState(START_MONEY);
+  const m: Move = { type: 'Visit', locationId: 'loc.home' };   // перший хід Прологу
+  const r = dispatch(s, { ...m, commandId: nextCommandId(s) } as Command, DEFS);
+  const T1 = RANK_XP[1] as number, T5 = RANK_XP[5] as number;
+  const gated = (need: (xp: number) => boolean): typeof dispatch => (st, cmd, defs) =>
+    need(st.skills['skill.planning'] ?? 0) ? dispatch(st, cmd, defs) : { ok: false, code: 'CONDITION_FAILED' } as ReturnType<typeof dispatch>;
+  it('старт має планування між порогами (інакше контролі нижче нічого не доводять)', () => {
+    expect(r.ok).toBe(true);
+    expect(s.skills['skill.planning']).toBeGreaterThanOrEqual(T1);
+    expect(s.skills['skill.planning']).toBeLessThan(T5);
+  });
+  it('поріг, який видно лише з нулями (планування ≥ 10), — витік через zeroed', () => {
+    expect(leaksOf(s, m, r, gated((xp) => xp >= T1)).map((l) => l.maxed)).toEqual(['zeroed:CONDITION_FAILED']);
+  });
+  it('поріг, який видно лише на рангу 5 (планування < 150), — витік через maxed', () => {
+    expect(leaksOf(s, m, r, gated((xp) => xp < T5)).map((l) => l.maxed)).toEqual(['maxed:CONDITION_FAILED']);
+  });
+  it('справжнє ядро — витоків немає', () => {
+    expect(leaksOf(s, m, r, dispatch)).toEqual([]);
   });
 });
