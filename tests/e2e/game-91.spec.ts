@@ -172,7 +172,16 @@ test.describe('джойстик', () => {
     await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2 + 50, { steps: 4 });
     await page.waitForTimeout(400);
     await page.mouse.up();
-    await page.waitForTimeout(100);   // кадр сцени гасить швидкість не миттєво
+    await expect(page.locator('[data-touch="stick"]')).toHaveAttribute('data-held', '');
+    // Кадр сцени гасить швидкість не миттєво, а під паралельним e2e кадр великої сцени LPC довший (PR #36: фіксовані
+    // 100 мс не встигали). Тож чекаємо, поки позиція стане (два заміри через 150 мс збіглися). Залиплий джойстик не
+    // стане ніколи. Але в стіні персонаж теж «стає», тому сторож відпускання — data-held: мутація «pointerup не
+    // відпускає» червоніє на ньому, а не на позиції (перевірено).
+    await expect.poll(async () => {
+      const y1 = (await probe(page)).playerY;
+      await page.waitForTimeout(150);
+      return Math.abs((await probe(page)).playerY - y1);
+    }, { timeout: 3000 }).toBeLessThan(0.5);
     const b = await probe(page);
     expect(b.playerY - a.playerY).toBeGreaterThan(8);
     await page.waitForTimeout(250);
