@@ -19,8 +19,9 @@ test.use({ viewport: { width: 1280, height: 800 } });
 test('ігровий годинник іде, поки гра не на паузі (інакше тест паузи нічого не доводить)', async ({ page }) => {
   await open(page);
   const m0 = await coreMinutes(page);
-  await page.waitForTimeout(2500);
-  expect(await coreMinutes(page)).toBeGreaterThanOrEqual(m0 + 2);
+  // Крок годинника — 1 с (STEP_MS): два кроки за фіксовані 2,5 с лишали 0,5 с запасу й червоніли під навантаженням CI
+  // (PR #24). Чекаємо саме події «годинник пройшов 2 хв», з межею 10 с: годинник, що стоїть, так само червоний.
+  await expect.poll(() => coreMinutes(page), { timeout: 10_000 }).toBeGreaterThanOrEqual(m0 + 2);
 });
 
 test('Escape відкриває паузу; ігровий годинник ядра на паузі не просувається; Escape — продовжити', async ({ page }) => {

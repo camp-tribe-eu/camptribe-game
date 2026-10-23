@@ -64,12 +64,23 @@ function isNewer(json: string): boolean {
 export function createSaveSession(bridge: SessionBridge, store: SessionStore, content: SessionContent = {}) {
   let ready = false;
   let holdAutosave = false;
+  /** Автозбереження просили, поки воно стояло (до кінця читання чи поки карантин не записано) — не губимо дію гравця (GAME-86). */
+  let pending = false;
   let staleJson: string | null = null;
   /** Відкладені сейви для повідомлення: цієї сесії першим, далі з минулих. */
   let stales: string[] = [];
   let quarantined: Promise<unknown> = Promise.resolve();
   const opts = { ...(content.story ? { story: content.story } : {}), ...(content.life ? { life: content.life } : {}) };
-  const write = (): Promise<boolean> => store.write(serialize(bridge.state, content.contentRev ?? null));
+  /** Останній відданий у сховище текст. Ротація main → prev на кожен запис: дубль (F5 шле visibilitychange і pagehide
+   *  підряд) зробив би prev точною копією main саме тоді, коли запасна копія потрібна (рецензія PR #24). */
+  let lastJson: string | null = null;
+  const write = (): Promise<boolean> => {
+    const json = serialize(bridge.state, content.contentRev ?? null);
+    lastJson = json;
+    return store.write(json).then((ok) => { if (!ok && lastJson === json) lastJson = null; return ok; });
+  };
+  /** Автозбереження: той самий стан, що вже записаний, — не пишемо вдруге. Явне «Зберегти» пише завжди. */
+  const autoWrite = (): void => { if (serialize(bridge.state, content.contentRev ?? null) !== lastJson) void write(); };
 
   /** Сейв придатний для нинішнього контенту? outdated — цілий, але під старий контент. */
   const judge = (json: string): Verdict => {
@@ -99,7 +110,7 @@ export function createSaveSession(bridge: SessionBridge, store: SessionStore, co
     },
     /** Автозбереження (пауза, згорнута вкладка). До кінця старту — нічого; і поки карантин не вдався. */
     autosave(): void {
-      if (ready && !holdAutosave) void write();
+      if (ready && !holdAutosave) { pending = false; autoWrite(); } else pending = true;
     },
     /**
      * Явне «Зберегти»: пише завжди — гравець бачить і хоче саме цей стан. Тож стартове читання
@@ -129,13 +140,16 @@ export function createSaveSession(bridge: SessionBridge, store: SessionStore, co
         bridge.setPaused(paused);
       }
       ready = true;
+      // Гравець діяв, поки читали: його дію автозбереження відкинуло, а стартовий сейв її не замінив —
+      // дописуємо тепер, коли можна (GAME-86). Без дій (sent 0) нічого не пишемо: це лишень пауза.
+      const flush = (): void => { if (pending && bridge.sent > 0 && ready && !holdAutosave) { pending = false; autoWrite(); } };
       if (staleJson !== null) {
         const json = staleJson;
         stales = [json];
         holdAutosave = true; // до підтвердження запису карантину ротація не сміє витерти копію
         // Без сховища карантину автозбереження так і стоїть: явне «Зберегти» — рішення гравця.
-        if (store.quarantine) quarantined = store.quarantine(json).then((ok) => { if (ok) holdAutosave = false; });
-      }
+        if (store.quarantine) quarantined = store.quarantine(json).then((ok) => { if (ok) { holdAutosave = false; flush(); } });
+      } else flush();
       // Відкладені в минулих сесіях — після завантаження, щоб читання не відкривало гонку.
       if (store.readStale) {
         const old = await store.readStale();

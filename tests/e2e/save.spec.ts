@@ -70,8 +70,7 @@ test.describe('сейви (десктоп)', () => {
     await page.keyboard.press('Escape');                       // main = чистий стан
     await page.waitForTimeout(300);
     await page.keyboard.press('Escape');                       // продовжити
-    await warmUp(page);
-    await page.keyboard.press('Escape');                       // main = з нагородою, prev = чистий
+    await warmUp(page);                                        // GAME-86: дія сама пише — main = з нагородою, prev = чистий
     await page.waitForTimeout(300);
     const slots = await page.evaluate(() => new Promise<string[]>((resolve) => {
       const req = indexedDB.open('camplife', 1);
