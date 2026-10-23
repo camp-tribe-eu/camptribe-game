@@ -134,6 +134,18 @@ const mutations = [
   { name: '[спорядження] місця не рахуються (сімейний намет «гірший» за дешевий)', file: CHECKS_FILE, from: '&& b.comfortC <= a.comfortC && b.sleeps >= a.sleeps && b.priceCents <= a.priceCents;', to: '&& b.comfortC <= a.comfortC && b.priceCents <= a.priceCents;' },
   { name: '[спорядження] схема не знає ваги', file: 'validator/schema.mjs', from: 'weightG: int1, volumeL: int1,', to: 'volumeL: int1,' },
   { name: '[спорядження] схема не обмежує тир згори', file: 'validator/schema.mjs', from: "tier: { t: 'int', min: 1, max: 3 }", to: "tier: { t: 'int', min: 1 }" },
+  // календар життя (GAME-71)
+  { name: '[календар] школяр без календаря не звітується', file: CHECKS_FILE, from: 'if (p.job || p.childInSchool) out.push', to: 'if (p.job) out.push' },
+  { name: '[календар] 02-29 вважається датою щороку', file: CHECKS_FILE, from: 'const DIM = [31, 28, 31,', to: 'const DIM = [31, 29, 31,' },
+  { name: '[календар] старт не перевіряється', file: CHECKS_FILE, from: "if (!isIsoDay(cal.start)) out.push", to: 'if (false) out.push' },
+  { name: '[календар] межа канікул не перевіряється', file: CHECKS_FILE, from: "const bad = ['from', 'to'].filter((k) => !mdOk(r[k]));", to: 'const bad = [];' },
+  { name: '[календар] канікули через Новий рік не розгортаються', file: CHECKS_FILE, from: ': x >= n(r.from) || x <= n(r.to));', to: ': false);' },
+  { name: '[календар] останній день канікул не входить (перетин в один день пропущено)', file: CHECKS_FILE, from: 'n(r.from) <= x && x <= n(r.to)', to: 'n(r.from) <= x && x < n(r.to)' },
+  { name: '[календар] свято двічі не звітується', file: CHECKS_FILE, from: "if (seen.has(h)) out.push", to: 'if (false) out.push' },
+  { name: '[календар] рахунки, рівні зарплаті, — помилка (межа зсунута)', file: CHECKS_FILE, from: 'p.job.billsCents > p.job.salaryCents', to: 'p.job.billsCents >= p.job.salaryCents' },
+  { name: '[календар] схема не обмежує день виплати згори', file: 'validator/schema.mjs', from: "payday: req({ t: 'int', min: 1, max: 28 })", to: "payday: req({ t: 'int', min: 1 })" },
+  { name: '[календар] завантажувач не знає calendar.json', file: 'validator/load.mjs', from: "'meta.json', 'calendar.json',", to: "'meta.json'," },
+  { name: '[календар] схема не перевіряє календар', file: 'validator/schema.mjs', from: "if (content.calendar !== undefined) walk(", to: 'if (false) walk(' },
   // GAME-56: давність факту — попередження, не помилка
   { name: '[факт] поріг давності включно (>= замість >)', file: CHECKS_FILE, from: 'if (age > FACT_STALE_DAYS)', to: 'if (age >= FACT_STALE_DAYS)' },
   { name: '[факт] попередження рахується помилкою', file: 'validator/codes.mjs', from: "CODES[code]?.severity === 'warning'", to: 'false' },

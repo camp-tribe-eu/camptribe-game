@@ -47,9 +47,11 @@ export const MIGRATIONS: Readonly<Record<number, (sim: unknown) => unknown>> = {
   // GAME-48: пам'ять NPC. До персонажа розмов не було — NPC нічого не пам'ятають.
   // GAME-72: навички. До персонажа вчитись нікому — усі вісім напрямів 0, практики немає.
   // GAME-73: стан спорядження. Доріг у v1 не було — нічого не намокло й не зносилось: {} (усе нове й сухе).
+  // GAME-71: календар життя. До персонажа зарплати немає, відпусток ніхто не бронював: { paydays: 0, leave: [] }.
+  // Якщо годинник v1 уже минув день виплати, перший же крок симуляції лише пересуне лічильник (персонажа в v1 немає — без грошей).
   1: (sim) => {
     const s = sim as { game: Record<string, unknown> };
-    return { ...s, journal: [], worldSeed: 0, game: { ...s.game, schemaVersion: 2, player: null, quests: {}, campaignEnded: false, flags: [], npcMemory: {}, skills: zeroSkills(), practice: {}, gear: {}, dialogue: null } };
+    return { ...s, journal: [], worldSeed: 0, game: { ...s.game, schemaVersion: 2, player: null, quests: {}, campaignEnded: false, flags: [], npcMemory: {}, skills: zeroSkills(), practice: {}, gear: {}, life: { paydays: 0, leave: [] }, dialogue: null } };
   },
 };
 
@@ -85,6 +87,12 @@ function shapeError(sim: unknown): string | null {
   // Спорядження (GAME-73): запис — лише для предмета в інвентарі й лише відхилення від нового сухого (так пише ядро).
   if (!isObj(game.gear) || Object.entries(game.gear).some(([id, g]) => !isObj(g) || !isInt(g.condition) || (g.condition as number) > CONDITION_MAX || typeof g.wet !== 'boolean'
     || (g.condition === CONDITION_MAX && !g.wet) || !isInt((game.inventory as Record<string, unknown>)[id], 1))) return 'game: gear';
+  // Календар життя (GAME-71): лічильник виплат — ціле ≥ 0; відпустки — цілі дні, відсортовані за початком і без перетинів
+  // (так пише лише ядро), витрачені дні відпустки не більші за довжину.
+  const life = game.life;
+  if (!isObj(life) || !isInt(life.paydays) || !Array.isArray(life.leave) || life.leave.some((e, i) => !isObj(e) || !isInt(e.from) || !isInt(e.days, 1)
+    || !isInt(e.vacation) || (e.vacation as number) > (e.days as number)
+    || (i > 0 && (e.from as number) < ((life.leave as Record<string, number>[])[i - 1]?.from ?? 0) + ((life.leave as Record<string, number>[])[i - 1]?.days ?? 0)))) return 'game: life';
   const dl = game.dialogue;
   if (dl !== null && (!isObj(dl) || typeof dl.id !== 'string' || typeof dl.node !== 'string')) return 'game: dialogue';
   const p = game.player;

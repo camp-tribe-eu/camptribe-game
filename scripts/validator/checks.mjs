@@ -243,6 +243,49 @@ export const CHECKS = [
     },
   },
   {
+    id: 'calendar',
+    run(c) { // @check:calendar
+      // GAME-71: календар життя. Неіснуюча дата мовчки не збіглася б із жодним днем (свято, якого ніколи немає),
+      // а перетин канікул робив би їхні межі неоднозначними.
+      const out = [];
+      const cal = c.content.calendar;
+      const profiles = c.content.profiles ?? [];
+      for (const p of profiles) {
+        if (p.job && p.job.billsCents > p.job.salaryCents) out.push(I('JOB_BILLS_EXCEED_SALARY', `${p.id}.job`, `рахунки ${p.job.billsCents} > зарплати ${p.job.salaryCents} центів`));
+      }
+      if (!cal) {
+        for (const p of profiles) if (p.job || p.childInSchool) out.push(I('CALENDAR_MISSING', p.id, 'профіль працює чи має школяра, а content/calendar.json немає'));
+        return out;
+      }
+      // Місяць-день, що є в КОЖНОМУ році (тому без 02-29): лютий — 28.
+      const DIM = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+      const mdOk = (s) => typeof s === 'string' && /^\d{2}-\d{2}$/.test(s) && +s.slice(0, 2) >= 1 && +s.slice(0, 2) <= 12 && +s.slice(3) >= 1 && +s.slice(3) <= DIM[+s.slice(0, 2) - 1];
+      if (!isIsoDay(cal.start)) out.push(I('CALENDAR_BAD_DATE', 'calendar.start', `не справжня дата YYYY-MM-DD: ${JSON.stringify(cal.start)}`));
+      cal.publicHolidays.forEach((h, i) => { if (!mdOk(h)) out.push(I('CALENDAR_BAD_DATE', `calendar.publicHolidays[${i}]`, `не справжня дата MM-DD: ${JSON.stringify(h)}`)); });
+      const ranges = [];
+      cal.schoolHolidays.forEach((r, i) => {
+        const bad = ['from', 'to'].filter((k) => !mdOk(r[k]));
+        for (const k of bad) out.push(I('CALENDAR_BAD_DATE', `calendar.schoolHolidays[${i}].${k}`, `не справжня дата MM-DD: ${JSON.stringify(r[k])}`));
+        if (!bad.length) ranges.push([i, r]);
+      });
+      // Перетин: день року (365 днів, MMDD), який покривають двоє канікул; from > to — канікули через Новий рік.
+      const n = (s) => +s.slice(0, 2) * 100 + +s.slice(3);
+      const covers = (r, x) => (n(r.from) <= n(r.to) ? n(r.from) <= x && x <= n(r.to) : x >= n(r.from) || x <= n(r.to));
+      const days = DIM.flatMap((len, m) => Array.from({ length: len }, (_, d) => (m + 1) * 100 + d + 1));
+      for (let a = 0; a < ranges.length; a++) for (let b = a + 1; b < ranges.length; b++) {
+        const [ia, ra] = ranges[a];
+        const [ib, rb] = ranges[b];
+        if (days.some((x) => covers(ra, x) && covers(rb, x))) out.push(I('CALENDAR_RANGE_OVERLAP', `calendar.schoolHolidays[${ib}]`, `перетинається з schoolHolidays[${ia}]`));
+      }
+      const seen = new Set();
+      cal.publicHolidays.forEach((h, i) => {
+        if (seen.has(h)) out.push(I('CALENDAR_RANGE_OVERLAP', `calendar.publicHolidays[${i}]`, `свято ${h} уже записане`));
+        seen.add(h);
+      });
+      return out;
+    },
+  },
+  {
     id: 'objective-completable',
     run(c) { // @check:objective-completable
       const out = [];

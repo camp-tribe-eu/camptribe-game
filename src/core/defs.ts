@@ -2,6 +2,7 @@
 // ніколи з команди. Команда несе НАМІР (`Interact{targetId}`, `BuyItem{itemId}`), а не ЕФЕКТ.
 // Каталог збирається з перевіреного content/ (валідатор) — ядро його не змінює.
 import { isSkillId, MAX_RANK, type SkillId } from './skills';
+import type { LifeDefs } from './life';
 
 export interface ItemDef {
   /** Ціна купівлі, центи; немає — предмет не продається. */
@@ -158,6 +159,11 @@ export interface CoreDefs {
   readonly repairs?: Readonly<Record<string, RepairDef>>;
   /** Немає — команди сюжету відмовляють (UNKNOWN_TARGET), решта працює. */
   readonly story?: StoryDefs;
+  /**
+   * Календар життя (GAME-71): календар, робота профілів, школярі. Немає — зарплати немає, BookLeave/CancelLeave —
+   * UNKNOWN_TARGET. Збирається з content/calendar.json і content/profiles.json (src/content/life.ts).
+   */
+  readonly life?: LifeDefs;
 }
 
 export const EMPTY_DEFS: CoreDefs = { items: {}, interactions: {} };

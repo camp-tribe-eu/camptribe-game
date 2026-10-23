@@ -41,6 +41,11 @@ export const CODES = {
   GEAR_FIELD_MISSING:   { check: 'gear', spec: 'GAME-73: предмет спорядження (kind) має всі поля: tier, weightG, volumeL, waterproofMm, comfortC, sleeps, priceCents, resaleCents' },
   GEAR_RESALE_ABOVE_PRICE: { check: 'gear', spec: 'SIM-INV-004: викуп уживаного (resaleCents) не дорожчий за купівлю (priceCents) — інакше купи-продай дає гроші з нічого' },
   GEAR_DOMINATED:       { check: 'gear', spec: 'SIM-INV-005: річ корисна у своїй ситуації — немає іншої речі того ж виду, не гіршої ні в чому (вага, об’єм, вологостійкість, тепло, місця, ціна)' },
+  // GAME-71: календар життя — справжні дати, канікули без перетинів, календар є, коли профіль працює чи має школяра.
+  CALENDAR_MISSING:     { check: 'calendar', spec: 'GAME-71: профіль із роботою (job) чи школярем (childInSchool) потребує content/calendar.json — без нього ні зарплати, ні канікул' },
+  CALENDAR_BAD_DATE:    { check: 'calendar', spec: 'GAME-71: start — справжня дата YYYY-MM-DD; свята й межі канікул — справжні MM-DD, що є щороку (не 02-30 і не 02-29)' },
+  CALENDAR_RANGE_OVERLAP: { check: 'calendar', spec: 'GAME-71: канікули не перетинаються, свято не записане двічі — інакше межі канікул неоднозначні' },
+  JOB_BILLS_EXCEED_SALARY: { check: 'calendar', spec: 'GAME-71, SIM-LIFE-008: рахунки профілю (billsCents) не більші за зарплату (salaryCents) — інакше робота веде в мінус, а гравця карають за сам час' },
   FACT_SOURCE_MISSING:  { check: 'fact-source', spec: '§2 зовнішній факт має джерело' },
   FACT_DATE_INVALID:    { check: 'fact-source', spec: '§2 зовнішній факт має дату перевірки' },
   FACT_KIND_INVALID:    { check: 'fact-source', spec: '§2 зовнішній факт має тип' },

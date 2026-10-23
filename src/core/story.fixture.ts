@@ -194,3 +194,24 @@ export const GEAR_DEFS: CoreDefs = {
   interactions: {},
   story: ROAD_DEFS.story as NonNullable<CoreDefs['story']>,
 };
+
+/**
+ * Календар життя (GAME-71): той самий сюжет; день 0 — вівторок 2027-06-01, виплата 25-го. profile.a (велосипедист) —
+ * зі школярем, profile.b (водій) — без; обидва працюють, водій має лише 10 днів відпустки (щоб вичерпати за дві відпустки);
+ * profile.any не працює. Свідомо НЕ content/calendar.json: тести ядра не залежать від смаку власника в контенті.
+ */
+export const LIFE_DEFS: CoreDefs = {
+  ...STORY_DEFS,
+  life: {
+    calendar: {
+      start: '2027-06-01', payday: 25, longTripDays: 4, maxLeaveDays: 31, bookAheadDays: 366,
+      publicHolidays: ['01-01', '05-01', '12-25', '12-26'],
+      schoolHolidays: [{ from: '07-01', to: '08-31' }, { from: '12-23', to: '01-06' }],
+    },
+    jobs: {
+      'profile.a': { salaryCents: 250_000, billsCents: 180_000, vacationDays: 25 },
+      'profile.b': { salaryCents: 300_000, billsCents: 300_000, vacationDays: 10 },
+    },
+    schoolProfiles: ['profile.a'],
+  },
+};

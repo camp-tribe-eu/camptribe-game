@@ -5,7 +5,7 @@ import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
 import { dispatch, PROCESSED_LIMIT, type Command, type Safeguards } from './commands';
 import type { CoreDefs } from './defs';
-import { BIKER, DRIVER, GEAR_DEFS, MECHANIC, NOVICE, play, ROAD_DEFS, SKILL_DEFS, STORY_DEFS } from './story.fixture';
+import { BIKER, DRIVER, GEAR_DEFS, LIFE_DEFS, MECHANIC, NOVICE, play, ROAD_DEFS, SKILL_DEFS, STORY_DEFS } from './story.fixture';
 import { initialState, REJECT_CODES, type GameState, type RejectCode } from './state';
 
 const SEED = 20261022;
@@ -199,6 +199,14 @@ describe('коди відмов: кожен код із реєстру має т
     // GAME-73 · спорядження: дрова — ціль активного q.mid (останній примірник); сухий намет сушити нічого.
     ['ITEM_QUEST_LOCKED', play([DRIVER, { type: 'Visit', locationId: 'loc.home' }, { type: 'Pickup', itemId: 'item.wood' }, { type: 'CompleteQuest', questId: 'q.start' }], initialState(0), GEAR_DEFS), { type: 'SellItem', commandId: 's20', itemId: 'item.wood' }, GEAR_DEFS],
     ['NOT_WET', play([DRIVER, { type: 'BuyItem', itemId: 'item.tent-a' }], initialState(10_000), GEAR_DEFS), { type: 'DryGear', commandId: 's21', itemId: 'item.tent-a' }, GEAR_DEFS],
+    // GAME-71 · календар життя (LIFE_DEFS: день 0 — вівторок 2027-06-01; день 6 — понеділок). Водій має 10 днів відпустки:
+    // 7–18 червня — рівно 10 робочих; велосипедист — зі школярем, 5–13 червня — шкільні дні.
+    ['VACATION_EXHAUSTED', play([DRIVER, { type: 'BookLeave', from: 6, days: 12 }], initialState(0), LIFE_DEFS), { type: 'BookLeave', commandId: 's22', from: 20, days: 1 }, LIFE_DEFS],
+    ['SCHOOL_TERM', play([BIKER], initialState(0), LIFE_DEFS), { type: 'BookLeave', commandId: 's23', from: 4, days: 9 }, LIFE_DEFS],
+    ['LEAVE_OVERLAP', play([DRIVER, { type: 'BookLeave', from: 6, days: 12 }], initialState(0), LIFE_DEFS), { type: 'BookLeave', commandId: 's24', from: 17, days: 2 }, LIFE_DEFS],
+    ['LEAVE_DATE', play([DRIVER], initialState(0), LIFE_DEFS), { type: 'BookLeave', commandId: 's25', from: -1, days: 2 }, LIFE_DEFS],
+    ['LEAVE_NOT_FOUND', play([DRIVER, { type: 'BookLeave', from: 6, days: 2 }], initialState(0), LIFE_DEFS), { type: 'CancelLeave', commandId: 's26', from: 7 }, LIFE_DEFS],
+    ['LEAVE_STARTED', play([DRIVER, { type: 'BookLeave', from: 0, days: 2 }], initialState(0), LIFE_DEFS), { type: 'CancelLeave', commandId: 's27', from: 0 }, LIFE_DEFS],
   ];
 
   it('кожен код реєстру покрито рівно одним прикладом', () => {

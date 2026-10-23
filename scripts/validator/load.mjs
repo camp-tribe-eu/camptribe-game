@@ -6,7 +6,8 @@ import { readFileSync, readdirSync, existsSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { COLLECTIONS } from './schema.mjs';
 
-const KNOWN = new Set(['meta.json', ...COLLECTIONS.map((c) => `${c}.json`)]);
+// calendar.json (GAME-71) — один об'єкт, як meta.json, а не колекція.
+const KNOWN = new Set(['meta.json', 'calendar.json', ...COLLECTIONS.map((c) => `${c}.json`)]);
 const I = (code, where, msg) => ({ code, where, msg });
 
 export function loadContent(dir, { allowMissing = false } = {}) {
