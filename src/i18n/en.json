@@ -42,6 +42,7 @@
   "act.pickup": "Take:",
   "act.buy": "Buy:",
   "act.sell": "Sell:",
+  "act.dry": "Dry:",
   "act.complete": "Finish:",
   "act.decline": "Decline:",
   "jr.CreateCharacter": "Journey begins",

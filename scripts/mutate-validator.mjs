@@ -122,6 +122,17 @@ const mutations = [
   { name: '[навички] схема не обмежує ранг згори', file: 'validator/schema.mjs', from: "rank: req({ t: 'int', min: 0, max: 5 })", to: "rank: req({ t: 'int', min: 0 })" },
   { name: '[дороги] схема не обмежує небезпеку згори', file: 'validator/schema.mjs', from: "risk: { t: 'int', min: 0, max: 3 }", to: "risk: { t: 'int', min: 0 }" },
   { name: '[дороги] схема не знає небезпеки', file: 'validator/schema.mjs', from: ", risk: { t: 'int', min: 0, max: 3 } }), min: 1 }),", to: ' }), min: 1 }),' },
+  // спорядження (GAME-73)
+  { name: '[спорядження] відсутнє поле не звітується', file: CHECKS_FILE, from: "if (missing.length) { out.push(I('GEAR_FIELD_MISSING'", to: "if (missing.length) { (I('GEAR_FIELD_MISSING'" },
+  { name: '[спорядження] реєстр полів забув ціну викупу', file: 'validator/codes.mjs', from: "'priceCents', 'resaleCents'];", to: "'priceCents'];" },
+  { name: '[спорядження] предмет без виду не вважається спорядженням', file: CHECKS_FILE, from: "(i) => i.kind !== undefined || GEAR_FIELDS.some((f) => i[f] !== undefined)", to: '(i) => i.kind !== undefined' },
+  { name: '[спорядження] викуп дорожчий за купівлю пропускається', file: CHECKS_FILE, from: 'if (i.resaleCents > i.priceCents) out.push', to: 'if (false) out.push' },
+  { name: '[спорядження] викуп, рівний ціні, — помилка (межа зсунута)', file: CHECKS_FILE, from: 'if (i.resaleCents > i.priceCents) out.push', to: 'if (i.resaleCents >= i.priceCents) out.push' },
+  { name: '[спорядження] домінування не звітується', file: CHECKS_FILE, from: "if (b) out.push(I('GEAR_DOMINATED'", to: "if (false) out.push(I('GEAR_DOMINATED'" },
+  { name: '[спорядження] домінування між різними видами', file: CHECKS_FILE, from: 'x !== a && x.kind === a.kind && notWorse(x, a)', to: 'x !== a && notWorse(x, a)' },
+  { name: '[спорядження] місця не рахуються (сімейний намет «гірший» за дешевий)', file: CHECKS_FILE, from: '&& b.comfortC <= a.comfortC && b.sleeps >= a.sleeps && b.priceCents <= a.priceCents;', to: '&& b.comfortC <= a.comfortC && b.priceCents <= a.priceCents;' },
+  { name: '[спорядження] схема не знає ваги', file: 'validator/schema.mjs', from: 'weightG: int1, volumeL: int1,', to: 'volumeL: int1,' },
+  { name: '[спорядження] схема не обмежує тир згори', file: 'validator/schema.mjs', from: "tier: { t: 'int', min: 1, max: 3 }", to: "tier: { t: 'int', min: 1 }" },
   // GAME-56: давність факту — попередження, не помилка
   { name: '[факт] поріг давності включно (>= замість >)', file: CHECKS_FILE, from: 'if (age > FACT_STALE_DAYS)', to: 'if (age >= FACT_STALE_DAYS)' },
   { name: '[факт] попередження рахується помилкою', file: 'validator/codes.mjs', from: "CODES[code]?.severity === 'warning'", to: 'false' },

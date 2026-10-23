@@ -25,6 +25,9 @@ export function moves(s: GameState, defs: CoreDefs): Move[] {
     out.push({ type: 'SellItem', itemId: id });
   }
   for (const id of Object.keys(defs.interactions)) out.push({ type: 'Interact', targetId: id });
+  // Висушити (GAME-73) — лише те, що мокре: інакше кожен стан мав би ще вісім заздалегідь марних спроб. Намокає спорядження
+  // лише в дорозі симуляції (sim.step), тож у повному переборі ядра (без погоди) цих ходів немає — їх доводить gear.test.
+  for (const [id, g] of Object.entries(s.gear)) if (g.wet) out.push({ type: 'DryGear', itemId: id });
   // Ремонт (GAME-72) читає навички. Поки в контенті ремонтів немає, цих ходів немає; з'являться — перевірка
   // «навички не змінюють жодного ходу» (story.test) почервоніє, і progressKey доведеться переглянути.
   for (const id of Object.keys(defs.repairs ?? {})) out.push({ type: 'Repair', targetId: id });

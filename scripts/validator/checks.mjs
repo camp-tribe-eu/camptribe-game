@@ -3,7 +3,7 @@
 // Не прибирай і не дублюй маркери — мутаційний прогін звіряє їх із реєстром CHECKS.
 
 import { checkSchema } from './schema.mjs';
-import { FACT_KINDS, FACT_STALE_DAYS, isWarning, SKILL_IDS } from './codes.mjs';
+import { FACT_KINDS, FACT_STALE_DAYS, GEAR_FIELDS, isWarning, SKILL_IDS } from './codes.mjs';
 import { checkCombos, checkOptions, enumerateCombos, NO_ANIMAL } from './combos.mjs';
 
 const I = (code, where, msg) => ({ code, where, msg });
@@ -210,6 +210,33 @@ export const CHECKS = [
           if (seen.has(s.skill)) out.push(I('SKILL_DUPLICATE', `${p.id}.startSkills[${i}]`, `навичка «${s.skill}» вже задана`));
           seen.add(s.skill);
         });
+      }
+      return out;
+    },
+  },
+  {
+    id: 'gear',
+    run(c) { // @check:gear
+      // GAME-73: спорядження. Предмет із kind або з будь-яким полем картки — спорядження, і картка мусить бути повною:
+      // забута вага чи ціна мовчки дала б «безкоштовний невагомий намет».
+      const out = [];
+      const gear = (c.content.items ?? []).filter((i) => i.kind !== undefined || GEAR_FIELDS.some((f) => i[f] !== undefined));
+      const complete = [];
+      for (const i of gear) {
+        const missing = ['kind', ...GEAR_FIELDS].filter((f) => i[f] === undefined);
+        if (missing.length) { out.push(I('GEAR_FIELD_MISSING', i.id, `бракує полів: ${missing.join(', ')}`)); continue; }
+        if (i.resaleCents > i.priceCents) out.push(I('GEAR_RESALE_ABOVE_PRICE', i.id, `викуп ${i.resaleCents} > ціни ${i.priceCents} центів`));
+        complete.push(i);
+      }
+      // SIM-INV-005: b «не гірший ні в чому» за a — легший чи такий самий, не більший, не менш вологостійкий, не холодніший,
+      // не менший на місця, не дорожчий — і хоч в одному кращий. Тоді a нікому не потрібна: це не тир, а помилка.
+      const notWorse = (b, a) => b.weightG <= a.weightG && b.volumeL <= a.volumeL && b.waterproofMm >= a.waterproofMm
+        && b.comfortC <= a.comfortC && b.sleeps >= a.sleeps && b.priceCents <= a.priceCents;
+      const same = (b, a) => b.weightG === a.weightG && b.volumeL === a.volumeL && b.waterproofMm === a.waterproofMm
+        && b.comfortC === a.comfortC && b.sleeps === a.sleeps && b.priceCents === a.priceCents;
+      for (const a of complete) {
+        const b = complete.find((x) => x !== a && x.kind === a.kind && notWorse(x, a) && !same(x, a));
+        if (b) out.push(I('GEAR_DOMINATED', a.id, `«${b.id}» не гірший ні в чому — у «${a.id}» немає своєї ситуації (SIM-INV-005)`));
       }
       return out;
     },

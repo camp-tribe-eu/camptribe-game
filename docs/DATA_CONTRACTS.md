@@ -42,7 +42,7 @@
 | DC-020 | `events.family`, `events.tags`, `events.weight`, `events.choices[]` | сім'я подій, теги `positive`/`neutral`/`negative`/`plan_change`/`eco`, вага, ≥ 2 виходи без втрати прогресу для `negative` | GAME-45 | PROPOSED |
 | DC-021 | `events.trigger`, `events.cooldownDays`, `events.maxPerTrip` | передумова й обмеження повторів | GAME-45 | PROPOSED |
 | DC-022 | `profiles.job`, `profiles.incomeCents`, `profiles.vacationDays`, `profiles.schedule`, `profiles.startSkills`, `profiles.startItems` | профіль як джерело петлі OD-012. `startSkills` — реалізовано (GAME-72): `[{ "skill": "skill.camping", "rank": 2 }]`, ранг 0–5, id — один із восьми (`SKILL_UNKNOWN`, `SKILL_DUPLICATE`) | GAME-51, GAME-71, GAME-72 | PROPOSED |
-| DC-023 | `items.tier`, `items.weightG`, `items.volumeL`, `items.priceCents`, `items.resaleCents`, `items.condition` | спорядження з тиром, знос, продаж | GAME-73 | PROPOSED |
+| DC-023 | `items.kind`, `items.tier`, `items.weightG`, `items.volumeL`, `items.waterproofMm`, `items.comfortC`, `items.sleeps`, `items.priceCents`, `items.resaleCents` | спорядження з тиром. Реалізовано v1 (GAME-73): `kind` — `tent`/`sleeping-bag`; предмет із `kind` чи будь-яким полем картки мусить мати всі (`GEAR_FIELD_MISSING`), викуп ≤ ціни (`GEAR_RESALE_ABOVE_PRICE`), немає речі того ж виду, не гіршої ні в чому (`GEAR_DOMINATED`). Стан — не в картці, а в сейві (DC-044). Ціни дров і ліхтаря ще в `src/content/slice-defs.ts` | GAME-73 | PROPOSED |
 | DC-024 | `vehicles` (нова) | транспорт гравця з техпаспортом: двигун, шини/гальма, електрика, вода, опалення, кузов, житловий модуль; приховані дефекти | GAME-74 | PROPOSED |
 | DC-025 | `skills` (нова) | 8 напрямів, ранги 0–5, крива досвіду. Реалізовано GAME-72 без окремого файлу: вісім id фіксовано в коді (`src/core/skills.ts` і валідатор `codes.mjs`, звірка в `semantics.test.ts`), крива — SIM-SKL-005…007 | GAME-72 | PROPOSED |
 | DC-026 | `calendar` (нова) | шкільні канікули, свята, сезони | GAME-71 | PROPOSED |
@@ -57,7 +57,7 @@
 | DC-041 | `save.clock` | ігровий календар і час, зерно RNG | CR-034 | ACCEPTED |
 | DC-042 | `save.player` | реалізовано v2 (GAME-29): `profileId`, `transportId`, `animalId`, `locationId` — **не пікселі**: позиція в пікселях живе в сцені (ARCHITECTURE §3.1); реплей відтворює команди, а не рух. Зовнішність (шари) і `spawnId` — ще ні (GAME-76) | GAME-76; GAME-29 | ACCEPTED |
 | DC-043 | `save.household` | члени, тварина (без операції видалення) | CR-017 | ACCEPTED |
-| DC-044 | `save.inventory` | предмети зі станом, екіпіроване й склад | GAME-73 | ACCEPTED |
+| DC-044 | `save.inventory` | предмети зі станом, екіпіроване й склад. Стан — реалізовано v2 (GAME-73): `gear` — `{ [itemId]: { condition, wet } }`, ціле 0…100 і boolean, лише для предмета в інвентарі й лише відхилення від нового сухого (інше — `SAVE_SHAPE`); v1 після міграції — `{}`. Екіпіроване й склад — ще ні | GAME-73 | ACCEPTED |
 | DC-045 | `save.money` | баланс у центах + журнал транзакцій (кожен запис — `commandId`) | CR-040…043 | ACCEPTED |
 | DC-046 | `save.vehicles` | транспорт гравця й стан вузлів | GAME-74 | ACCEPTED |
 | DC-047 | `save.trip` | маршрут, бронювання, бюджет поїздки | GAME-30, GAME-43 | ACCEPTED |

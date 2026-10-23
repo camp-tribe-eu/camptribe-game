@@ -62,7 +62,14 @@ export const SCHEMAS = {
   profiles: obj({ id: req(str), nameKey: req(str), transports: ids, startSkills: { t: 'array', of: obj({ skill: req(str), rank: req({ t: 'int', min: 0, max: 5 }) }), min: 1 } }),
   transports: obj({ id: req(str), nameKey: req(str) }),
   animals: obj({ id: req(str), nameKey: req(str), transports: ids }),
-  items: obj({ id: req(str), nameKey: req(str) }),
+  // Спорядження (GAME-73, DC-023): вид, тир і характеристики. Поля НЕ required тут: їх стереже перевірка gear
+  // власним кодом GEAR_FIELD_MISSING, щоб забута вага не ховалась під загальним SCHEMA_INVALID. Простий предмет
+  // (дрова, ліхтар) не має жодного з них. comfortC — нижня температура комфорту, °C; waterproofMm — водяний стовп.
+  items: obj({
+    id: req(str), nameKey: req(str), kind: en('tent', 'sleeping-bag'), tier: { t: 'int', min: 1, max: 3 },
+    weightG: int1, volumeL: int1, waterproofMm: int0, comfortC: { t: 'int', min: -40, max: 40 }, sleeps: int1,
+    priceCents: int0, resaleCents: int0,
+  }),
   npcs: obj({ id: req(str), nameKey: req(str), locationId: req(str), unlockedBy: str, sells: arr(str), when }),
   locations: obj({ id: req(str), nameKey: req(str), unlockedBy: str, items: arr(str), when }),
   quests: obj({

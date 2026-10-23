@@ -5,6 +5,7 @@ import { advance, newClock, pause, resume, tick, type GameClock } from './clock'
 import { dispatch, type Command } from './commands';
 import { EMPTY_DEFS, type CoreDefs } from './defs';
 import { canonical } from './hash';
+import { wearAfterTrip } from './gear';
 import { eventEligible, route } from './story';
 import { nextInt, seedRng, type RngState } from './rng';
 import { initialState, type GameState } from './state';
@@ -147,6 +148,8 @@ export function step(s: SimState, input: Input, ctx: StepCtx = {}): SimState {
     case 'command': {
       const r = dispatch(s.game, input.command, ctx.defs ?? EMPTY_DEFS);
       const travelled = travelMinutes(s, r, ctx);
+      // Спорядження в дорозі (GAME-73, SIM-GEAR-002/003): погода дня ВИЇЗДУ, як і для хвилин дороги (SIM-WX-007).
+      const tripWeather = travelled > 0 ? todayWeather(s, ctx) : null;
       if (travelled > 0) s = { ...s, clock: advance(s.clock, travelled) };
       // Рівно один запис на прийняту нову команду з переліку, що щось змінила в грі. Відмова, повтор
       // commandId і «порожня» дія (прийти туди, де стоїш; вдруге погрітись біля вогнища) — нуль.
@@ -155,6 +158,7 @@ export function step(s: SimState, input: Input, ctx: StepCtx = {}): SimState {
         const entry: JournalEntry = { at: s.clock.minutes - travelled, commandId: input.command.commandId, type: input.command.type, ref: refOf(input.command) };
         next = { ...next, journal: [...s.journal, entry].slice(-JOURNAL_LIMIT) };
       }
+      if (tripWeather) next = { ...next, game: wearAfterTrip(next.game, (ctx.defs ?? EMPTY_DEFS).items, tripWeather) };
       return travelled > 0 ? roadEvent(next, ctx) : next;
     }
     case 'advance':

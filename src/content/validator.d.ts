@@ -9,10 +9,16 @@ declare module '*/validator/combos.mjs' {
 declare module '*/validator/codes.mjs' {
   /** Вісім напрямів навичок (GAME-72) — мусить збігатися з SKILL_IDS ядра. */
   export const SKILL_IDS: string[];
+  /** Поля картки спорядження (GAME-73), крім kind. */
+  export const GEAR_FIELDS: string[];
+}
+declare module '*/validator/load.mjs' {
+  export function loadContent(dir: string, opts?: { allowMissing?: boolean }): { status: string; content: Record<string, unknown> | null; issues: { code: string; where: string; msg: string }[] };
 }
 declare module '*/validator/checks.mjs' {
   export function buildIndex(content: unknown): { reachable: Set<string> };
   /** remembered — факти пам'яті, які може знати NPC цієї розмови (GAME-48); без нього — жодних. */
   export function satisfiable(cond: unknown, known: Set<string>, remembered?: Set<string>): boolean;
   export function contradictions(cond: unknown): Set<string>;
+  export function validate(content: unknown, opts: { today: string }): { code: string; where: string; msg: string }[];
 }

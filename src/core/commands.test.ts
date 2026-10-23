@@ -5,7 +5,7 @@ import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
 import { dispatch, PROCESSED_LIMIT, type Command, type Safeguards } from './commands';
 import type { CoreDefs } from './defs';
-import { BIKER, DRIVER, MECHANIC, NOVICE, play, ROAD_DEFS, SKILL_DEFS, STORY_DEFS } from './story.fixture';
+import { BIKER, DRIVER, GEAR_DEFS, MECHANIC, NOVICE, play, ROAD_DEFS, SKILL_DEFS, STORY_DEFS } from './story.fixture';
 import { initialState, REJECT_CODES, type GameState, type RejectCode } from './state';
 
 const SEED = 20261022;
@@ -196,6 +196,9 @@ describe('коди відмов: кожен код із реєстру має т
     ['PART_MISSING', play([MECHANIC, { type: 'BuyItem', itemId: 'item.wrench' }], initialState(5_000), SKILL_DEFS), { type: 'Repair', commandId: 's17', targetId: 'obj.bike-wheel' }, SKILL_DEFS],
     ['SKILL_TOO_LOW', play([NOVICE, { type: 'BuyItem', itemId: 'item.wrench' }, { type: 'BuyItem', itemId: 'item.tube' }], initialState(5_000), SKILL_DEFS), { type: 'Repair', commandId: 's18', targetId: 'obj.bike-wheel' }, SKILL_DEFS],
     ['ALREADY_REPAIRED', play([MECHANIC, { type: 'BuyItem', itemId: 'item.multimeter' }, { type: 'Repair', targetId: 'obj.lamp' }], initialState(5_000), SKILL_DEFS), { type: 'Repair', commandId: 's19', targetId: 'obj.lamp' }, SKILL_DEFS],
+    // GAME-73 · спорядження: дрова — ціль активного q.mid (останній примірник); сухий намет сушити нічого.
+    ['ITEM_QUEST_LOCKED', play([DRIVER, { type: 'Visit', locationId: 'loc.home' }, { type: 'Pickup', itemId: 'item.wood' }, { type: 'CompleteQuest', questId: 'q.start' }], initialState(0), GEAR_DEFS), { type: 'SellItem', commandId: 's20', itemId: 'item.wood' }, GEAR_DEFS],
+    ['NOT_WET', play([DRIVER, { type: 'BuyItem', itemId: 'item.tent-a' }], initialState(10_000), GEAR_DEFS), { type: 'DryGear', commandId: 's21', itemId: 'item.tent-a' }, GEAR_DEFS],
   ];
 
   it('кожен код реєстру покрито рівно одним прикладом', () => {

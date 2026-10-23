@@ -37,6 +37,10 @@ export const CODES = {
   // GAME-72: навички профілю (startSkills) — лише вісім відомих напрямів, кожен раз.
   SKILL_UNKNOWN:        { check: 'skills', spec: 'GAME-72: startSkills профілю називає лише один із восьми напрямів навичок (SKILL_IDS)' },
   SKILL_DUPLICATE:      { check: 'skills', spec: 'GAME-72: навичка в startSkills профілю — щонайбільше раз (інакше стартовий ранг неоднозначний)' },
+  // GAME-73: спорядження — повна картка характеристик, викуп ≤ ціни, тир — компроміс, а не «сильніше».
+  GEAR_FIELD_MISSING:   { check: 'gear', spec: 'GAME-73: предмет спорядження (kind) має всі поля: tier, weightG, volumeL, waterproofMm, comfortC, sleeps, priceCents, resaleCents' },
+  GEAR_RESALE_ABOVE_PRICE: { check: 'gear', spec: 'SIM-INV-004: викуп уживаного (resaleCents) не дорожчий за купівлю (priceCents) — інакше купи-продай дає гроші з нічого' },
+  GEAR_DOMINATED:       { check: 'gear', spec: 'SIM-INV-005: річ корисна у своїй ситуації — немає іншої речі того ж виду, не гіршої ні в чому (вага, об’єм, вологостійкість, тепло, місця, ціна)' },
   FACT_SOURCE_MISSING:  { check: 'fact-source', spec: '§2 зовнішній факт має джерело' },
   FACT_DATE_INVALID:    { check: 'fact-source', spec: '§2 зовнішній факт має дату перевірки' },
   FACT_KIND_INVALID:    { check: 'fact-source', spec: '§2 зовнішній факт має тип' },
@@ -75,6 +79,9 @@ export const CODES = {
 // GAME-72: вісім напрямів навичок. Той самий перелік — SKILL_IDS у src/core/skills.ts; звірку тримає
 // src/content/semantics.test.ts — розійдуться, і тест почервоніє.
 export const SKILL_IDS = ['skill.planning', 'skill.camping', 'skill.mechanics', 'skill.electrics', 'skill.cooking', 'skill.finance', 'skill.endurance', 'skill.communication'];
+
+// GAME-73: поля картки спорядження (крім kind — він і робить предмет спорядженням).
+export const GEAR_FIELDS = ['tier', 'weightG', 'volumeL', 'waterproofMm', 'comfortC', 'sleeps', 'priceCents', 'resaleCents'];
 
 export const FACT_KINDS = ['regulation', 'geography', 'price', 'schedule', 'culture'];
 

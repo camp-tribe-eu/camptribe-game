@@ -1,7 +1,7 @@
 {
  "format": "camplife-save",
  "schemaVersion": 2,
- "checksum": "9b48cc36",
+ "checksum": "fe089db9",
  "accountId": null,
  "contentRev": null,
  "sim": {
@@ -187,6 +187,7 @@
     "pickup:item.gold": 1,
     "talk:npc.ann": 1
    },
+   "gear": {},
    "dialogue": {
     "id": "dlg.ann",
     "node": "bike"

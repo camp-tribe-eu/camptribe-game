@@ -4,7 +4,7 @@
 /** Що можна зробити зараз. `key` — ключ тексту контенту (content/locales), `null` — без назви. */
 export interface OfferAction {
   readonly id: string;
-  readonly kind: 'visit' | 'talk' | 'pickup' | 'buy' | 'sell' | 'complete' | 'decline' | 'choose' | 'continue';
+  readonly kind: 'visit' | 'talk' | 'pickup' | 'buy' | 'sell' | 'dry' | 'complete' | 'decline' | 'choose' | 'continue';
   readonly key: string | null;
   readonly priceCents?: number;
   /** Скільки хвилин займе дорога (GAME-31); немає — дія на місці. */

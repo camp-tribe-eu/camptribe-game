@@ -18,7 +18,7 @@ node scripts/mutate-validator.mjs               # довести, що само�
 | `transports.json` | транспорт | `transport.назва` |
 | `animals.json` | тварини (`animal.none` зарезервовано за «без тварини»); `transports` — чим тварину можна везти | `animal.назва` |
 | `quests.json` | етапи кампанії: `optional`, `end`, `requires`, `objectives`, `transitions`, `reward` | `ST-001` або `q.назва` |
-| `items.json` | предмети | `item.назва` |
+| `items.json` | предмети. Спорядження (GAME-73, DC-023) — з `kind` (`tent`/`sleeping-bag`) і повною карткою: `tier` 1–3, `weightG`, `volumeL`, `waterproofMm`, `comfortC` (нижня температура комфорту, °C), `sleeps`, `priceCents`, `resaleCents`; перевірка `gear` | `item.назва` |
 | `npcs.json` | NPC: `locationId`, `unlockedBy`, `sells` | `npc.назва` |
 | `locations.json` | локації: `unlockedBy`, `items` | `loc.назва` |
 | `roads.json` | дороги між локаціями: `from`, `to`, `twoWay`, `ways[]` (транспорт, хвилини, центи, необов'язковий `risk` 0–3 — GAME-72: небезпека дороги, навичка її не знижує); перевірка `roads`: кожна локація досяжна від дому й назад для кожного транспорту (`ROAD_UNREACHABLE`, `ROAD_NO_RETURN`), одне ребро на пару в кожен бік (`ROAD_DUPLICATE`) | `road.назва` |
@@ -147,6 +147,7 @@ Effect    = { setFlag: "f.…" } | { startQuest: "<id квесту>" } | { compl
 | `dialogue-flags` | `DIALOGUE_FLAG_NEVER_SET`, `DIALOGUE_COND_CONTRADICTION` | §2 умова не читає прапорець, який ніщо не ставить; §3 all не суперечить собі |
 | `dialogue-memory` | `MEMORY_NEVER_SET` | GAME-48: умова не читає факт пам'яті, якого цей NPC не може знати |
 | `skills` | `SKILL_UNKNOWN`, `SKILL_DUPLICATE` | GAME-72: стартові навички профілю — лише вісім відомих напрямів, кожен раз; перелік той самий, що в ядрі (звірка в `src/content/semantics.test.ts`) |
+| `gear` | `GEAR_FIELD_MISSING`, `GEAR_RESALE_ABOVE_PRICE`, `GEAR_DOMINATED` | GAME-73: картка спорядження повна; викуп ≤ ціни (SIM-INV-004); немає речі того ж виду, не гіршої ні в чому (SIM-INV-005) — тир є компромісом, а не «сильніше» |
 | `combo-options` | `COMBO_OPTION_UNUSABLE`, `WHEN_UNSATISFIABLE` | §1 кожен транспорт можна обрати; §3 кожна умова `when` (разом з умовою свого квесту; для переходу — ще й квесту-цілі) відповідає хоча б одній дозволеній комбінації |
 | `combos` | `COMBO_NO_START`, `COMBO_TARGETED_UNREACHABLE`, `COMBO_DEAD_CONTENT` + коди шести перевірок вище для кожної комбінації | §3 у кожному стані гравця, «48 сімей × 12 профілів × 3 транспорти × тварини» |
 | завантажувач | `CONTENT_MISSING`, `CONTENT_PARSE`, `CONTENT_EMPTY`, `CONTENT_UNKNOWN_FILE` | закон 4: порожнеча — не зелене |

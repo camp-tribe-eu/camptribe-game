@@ -176,3 +176,21 @@ export const SKILL_DEFS: CoreDefs = {
 
 export const MECHANIC = { type: 'CreateCharacter', profileId: 'profile.mech', transportId: 'transport.car' } as const;
 export const NOVICE = { type: 'CreateCharacter', profileId: 'profile.novice', transportId: 'transport.car' } as const;
+
+/**
+ * Спорядження (GAME-73): ті самі дороги (дім ↔ крамниця автом, 10 хв), у крамниці — намет і спальник зі станом,
+ * пічка без стану. Дрова (`item.wood`, ціль collect у q.mid) і золото (`requires` квесту q.gate, куди веде вибір із q.mid)
+ * тут навмисно викуповуються — щоб довести відмову ITEM_QUEST_LOCKED. Справжній контент таке відсікає ще статично
+ * (DEFS_STORY_ITEM_SELLABLE); відмова ядра — другий рубіж.
+ */
+export const GEAR_DEFS: CoreDefs = {
+  items: {
+    'item.tent-a': { buyCents: 10_000, sellCents: 4_000, gear: { kind: 'tent', tier: 1 } },
+    'item.bag-a': { buyCents: 3_000, sellCents: 1_000, gear: { kind: 'sleeping-bag', tier: 2 } },
+    'item.stove': { buyCents: 300, sellCents: 100 },
+    'item.wood': { buyCents: 500, sellCents: 200 },
+    'item.gold': { buyCents: 900, sellCents: 400 },
+  },
+  interactions: {},
+  story: ROAD_DEFS.story as NonNullable<CoreDefs['story']>,
+};

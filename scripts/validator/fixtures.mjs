@@ -171,6 +171,19 @@ const shopDialogue = (effects) => ({
 // кладемо власну перелічувану властивість — саме таку дає JSON.parse('{"__proto__": …}').
 const ownProto = (o) => Object.defineProperty(o, '__proto__', { value: {}, enumerable: true, configurable: true, writable: true });
 
+// GAME-73: картка спорядження. Три намети — справжній компроміс: дешевий важкий, легкий дорогий, великий для сім'ї.
+const tentCard = (id, stats) => ({ id, nameKey: id, kind: 'tent', tier: 1, weightG: 4000, volumeL: 18, waterproofMm: 1500, comfortC: 10, sleeps: 3, priceCents: 5000, resaleCents: 1500, ...stats });
+function withGear(c, items) {
+  c.items.push(...items);
+  for (const lang of c.meta.locales) for (const i of items) c.locales[lang][i.nameKey] = `[${lang}] ${i.id}`;
+}
+const tents = () => [
+  tentCard('item.fixture-tent-cheap', {}),
+  tentCard('item.fixture-tent-light', { tier: 2, weightG: 1100, volumeL: 3, waterproofMm: 3000, comfortC: 5, sleeps: 1, priceCents: 25000, resaleCents: 11000 }),
+  // Сімейний виграє ЛИШЕ місцями — так контроль доводить, що місця справді рахуються.
+  tentCard('item.fixture-tent-family', { tier: 3, weightG: 14000, volumeL: 60, sleeps: 5, priceCents: 40000, resaleCents: 16000 }),
+];
+
 export const FIXTURES = [
   // ---- позитивні контролі: перевірки не сміють стріляти по коректному ----
   { name: 'еталон коректний', expect: [], patch() {} },
@@ -485,6 +498,21 @@ export const FIXTURES = [
   { base: 'combo', name: '[навички] контроль: та сама навичка у двох профілях — не дубль', expect: [], patch(c) { c.profiles[0].startSkills = [{ skill: 'skill.camping', rank: 2 }]; c.profiles[1].startSkills = [{ skill: 'skill.camping', rank: 1 }]; } },
   { base: 'combo', name: '[навички] ранг 6 — поза 0…5', expect: ['SCHEMA_INVALID'], count: { code: 'SCHEMA_INVALID', n: 1 }, patch(c) { c.profiles[0].startSkills = [{ skill: 'skill.camping', rank: 6 }]; } },
   { base: 'combo', name: '[навички] порожній startSkills', expect: ['SCHEMA_INVALID'], patch(c) { c.profiles[0].startSkills = []; } },
+  // GAME-73: спорядження.
+  { name: '[спорядження] контроль: три намети-компроміси — коректно', expect: [], patch(c) { withGear(c, tents()); } },
+  { name: '[спорядження] контроль: викуп дорівнює ціні — межа дозволена', expect: [], patch(c) { const t = tents(); t[0].resaleCents = t[0].priceCents; withGear(c, t); } },
+  { name: '[спорядження] контроль: спальник кращий за намет у всьому — інший вид, не домінування', expect: [], patch(c) {
+    withGear(c, [...tents(), { ...tentCard('item.fixture-bag', {}), kind: 'sleeping-bag', weightG: 900, volumeL: 3, waterproofMm: 5000, comfortC: -5, sleeps: 5, priceCents: 1000, resaleCents: 100 }]);
+  } },
+  { name: '[спорядження] немає ціни викупу', expect: ['GEAR_FIELD_MISSING'], count: { code: 'GEAR_FIELD_MISSING', n: 1 }, patch(c) { const t = tents(); delete t[1].resaleCents; withGear(c, t); } },
+  { name: '[спорядження] немає ваги', expect: ['GEAR_FIELD_MISSING'], count: { code: 'GEAR_FIELD_MISSING', n: 1 }, patch(c) { const t = tents(); delete t[2].weightG; withGear(c, t); } },
+  { name: '[спорядження] є ціна, але немає виду', expect: ['GEAR_FIELD_MISSING'], count: { code: 'GEAR_FIELD_MISSING', n: 1 }, patch(c) { const t = tents(); delete t[0].kind; withGear(c, t); } },
+  { name: '[спорядження] викуп дорожчий за купівлю', expect: ['GEAR_RESALE_ABOVE_PRICE'], count: { code: 'GEAR_RESALE_ABOVE_PRICE', n: 1 }, patch(c) { const t = tents(); t[1].resaleCents = t[1].priceCents + 1; withGear(c, t); } },
+  { name: '[спорядження] намет, не кращий ні в чому за інший', expect: ['GEAR_DOMINATED'], count: { code: 'GEAR_DOMINATED', n: 1 }, patch(c) {
+    withGear(c, [...tents(), tentCard('item.fixture-tent-worse', { weightG: 4500, priceCents: 5000 })]);
+  } },
+  { name: '[спорядження] тир поза 1…3', expect: ['SCHEMA_INVALID'], count: { code: 'SCHEMA_INVALID', n: 1 }, patch(c) { const t = tents(); t[2].tier = 4; withGear(c, t); } },
+  { name: '[спорядження] вигаданий вид', expect: ['SCHEMA_INVALID'], count: { code: 'SCHEMA_INVALID', n: 1 }, patch(c) { const t = tents(); t[0].kind = 'hammock'; withGear(c, t); } },
   { base: 'combo', name: '[дороги] транспорт, якого не дозволяє жоден профіль: лише COMBO_OPTION_UNUSABLE, без вимоги доріг', expect: ['COMBO_OPTION_UNUSABLE'], patch(c) {
     c.transports.push({ id: 'transport.fixture-boat', nameKey: 'transport.fixture-boat' });
     for (const lang of c.meta.locales) c.locales[lang]['transport.fixture-boat'] = `[${lang}] boat`;

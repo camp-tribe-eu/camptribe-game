@@ -8,7 +8,16 @@ export interface ItemDef {
   readonly buyCents?: number;
   /** Ціна викупу вживаного, центи; немає — не викуповується. ≤ buyCents (SIM-INV-004). */
   readonly sellCents?: number;
+  /**
+   * Спорядження (GAME-73): має стан і намокає (src/core/gear.ts). Повна картка (вага, об'єм, тепло…) живе в
+   * content/items.json і перевіряється валідатором (gear); ядру поки потрібні лише вид і тир.
+   */
+  readonly gear?: GearDef;
 }
+
+/** Види спорядження (GAME-73). Той самий перелік — у схемі валідатора (items.kind). */
+export const GEAR_KINDS = ['tent', 'sleeping-bag'] as const;
+export interface GearDef { readonly kind: (typeof GEAR_KINDS)[number]; readonly tier: number }
 
 export interface InteractionDef {
   /** Нагорода видається рівно раз за grantId (TD-004). */
@@ -170,6 +179,7 @@ export function checkDefs(defs: CoreDefs): { code: DefsCode; where: string }[] {
     if (!ID.test(id)) out.push({ code: 'DEFS_BAD_ID', where: id });
     if ((d.buyCents !== undefined && !isCents(d.buyCents)) || (d.sellCents !== undefined && !isCents(d.sellCents))) out.push({ code: 'DEFS_BAD_AMOUNT', where: id });
     if (d.buyCents !== undefined && d.sellCents !== undefined && d.sellCents > d.buyCents) out.push({ code: 'DEFS_RESALE_ABOVE_PRICE', where: id });
+    if (d.gear && (!(GEAR_KINDS as readonly string[]).includes(d.gear.kind) || !Number.isSafeInteger(d.gear.tier) || d.gear.tier < 1 || d.gear.tier > 3)) out.push({ code: 'DEFS_BAD_AMOUNT', where: `${id}.gear` });
   }
   for (const [id, d] of Object.entries(defs.interactions)) {
     if (!ID.test(id) || !ID.test(d.grantId) || (d.items ?? []).some((i) => !ID.test(i.itemId))) out.push({ code: 'DEFS_BAD_ID', where: id });

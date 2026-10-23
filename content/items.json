@@ -1,6 +1,12 @@
 [
-  { "id": "item.tent", "nameKey": "item.tent" },
-  { "id": "item.sleeping-bag", "nameKey": "item.sleeping-bag" },
+  { "id": "item.tent", "nameKey": "item.tent", "kind": "tent", "tier": 1, "weightG": 4200, "volumeL": 18, "waterproofMm": 1500, "comfortC": 10, "sleeps": 3, "priceCents": 4999, "resaleCents": 1500 },
+  { "id": "item.tent-trek", "nameKey": "item.tent-trek", "kind": "tent", "tier": 2, "weightG": 1100, "volumeL": 3, "waterproofMm": 3000, "comfortC": 5, "sleeps": 1, "priceCents": 24900, "resaleCents": 11000 },
+  { "id": "item.tent-family", "nameKey": "item.tent-family", "kind": "tent", "tier": 2, "weightG": 14500, "volumeL": 65, "waterproofMm": 4000, "comfortC": 5, "sleeps": 5, "priceCents": 39900, "resaleCents": 16000 },
+  { "id": "item.trailer-tent", "nameKey": "item.trailer-tent", "kind": "tent", "tier": 3, "weightG": 280000, "volumeL": 2500, "waterproofMm": 6000, "comfortC": -5, "sleeps": 4, "priceCents": 499000, "resaleCents": 280000 },
+  { "id": "item.sleeping-bag", "nameKey": "item.sleeping-bag", "kind": "sleeping-bag", "tier": 1, "weightG": 1500, "volumeL": 8, "waterproofMm": 0, "comfortC": 12, "sleeps": 1, "priceCents": 2999, "resaleCents": 800 },
+  { "id": "item.sleeping-bag-synthetic", "nameKey": "item.sleeping-bag-synthetic", "kind": "sleeping-bag", "tier": 2, "weightG": 1700, "volumeL": 11, "waterproofMm": 800, "comfortC": 3, "sleeps": 1, "priceCents": 8900, "resaleCents": 3000 },
+  { "id": "item.sleeping-bag-down", "nameKey": "item.sleeping-bag-down", "kind": "sleeping-bag", "tier": 2, "weightG": 900, "volumeL": 4, "waterproofMm": 0, "comfortC": 2, "sleeps": 1, "priceCents": 22900, "resaleCents": 9000 },
+  { "id": "item.sleeping-bag-winter", "nameKey": "item.sleeping-bag-winter", "kind": "sleeping-bag", "tier": 3, "weightG": 1800, "volumeL": 10, "waterproofMm": 1500, "comfortC": -10, "sleeps": 1, "priceCents": 54900, "resaleCents": 22000 },
   { "id": "item.lantern", "nameKey": "item.lantern" },
   { "id": "item.firewood", "nameKey": "item.firewood" }
 ]

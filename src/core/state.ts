@@ -1,5 +1,6 @@
 // Стан проходження (DATA_CONTRACTS DC-040…052). Лише дані: жодних класів, щоб стан
 // серіалізувався в сейв без втрат і порівнювався побайтно.
+import type { GearState } from './gear';
 import { zeroSkills } from './skills';
 
 export interface CommandRecord {
@@ -61,6 +62,11 @@ export interface GameState {
   readonly skills: Readonly<Record<string, number>>;
   /** Практика (GAME-72): ключ дії (`visit:loc.shop`) → скільки разів вона вже вчила (1…PRACTICE_SATURATION). */
   readonly practice: Readonly<Record<string, number>>;
+  /**
+   * Стан спорядження (GAME-73): id предмета спорядження в руках → стан 0…100 і «мокре». Лише відхилення від нового
+   * сухого: немає запису — 100 і сухе (SIM-GEAR-001). Змінюють дорога в дощ (sim.step), DryGear і продаж.
+   */
+  readonly gear: Readonly<Record<string, GearState>>;
   /** Відкритий діалог і вузол; null — розмови немає. */
   readonly dialogue: { readonly id: string; readonly node: string } | null;
 }
@@ -97,10 +103,13 @@ export const REJECT_CODES = [
   'PART_MISSING',
   'SKILL_TOO_LOW',
   'ALREADY_REPAIRED',
+  // GAME-73 · спорядження
+  'ITEM_QUEST_LOCKED',
+  'NOT_WET',
 ] as const;
 
 export type RejectCode = (typeof REJECT_CODES)[number];
 
 export function initialState(moneyCents = 0): GameState {
-  return { schemaVersion: 2, moneyCents, inventory: {}, grants: [], processed: {}, seq: 0, player: null, quests: {}, campaignEnded: false, flags: [], npcMemory: {}, skills: zeroSkills(), practice: {}, dialogue: null };
+  return { schemaVersion: 2, moneyCents, inventory: {}, grants: [], processed: {}, seq: 0, player: null, quests: {}, campaignEnded: false, flags: [], npcMemory: {}, skills: zeroSkills(), practice: {}, gear: {}, dialogue: null };
 }

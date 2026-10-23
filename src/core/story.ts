@@ -11,6 +11,7 @@
 // * `requires` квесту-цілі перевіряється в мить переходу.
 import type { CondDef, EffectDef, QuestDef, RewardDef, StoryDefs, WayDef, WhenDef } from './defs';
 import type { GameEvent } from './commands';
+import type { GearState } from './gear';
 import { startSkills } from './skills';
 import type { GameState, PlayerState, QuestProgress, RejectCode } from './state';
 
@@ -45,6 +46,7 @@ export interface StoryDraft {
   npcMemory: Record<string, readonly string[]>;
   skills: Readonly<Record<string, number>>;
   practice: Readonly<Record<string, number>>;
+  gear: Readonly<Record<string, GearState>>;
   dialogue: { readonly id: string; readonly node: string } | null;
 }
 
@@ -160,6 +162,21 @@ const objectivesFor = (q: QuestDef, p: PlayerState) => q.objectives.filter((o) =
 export function objectiveDone(d: StoryDraft, questId: string, o: QuestDef['objectives'][number]): boolean {
   if (o.kind === 'collect') return (own(d.inventory, o.target) ?? 0) >= 1;
   return own(d.quests, questId)?.done.includes(o.id) ?? false;
+}
+
+/**
+ * Чи потрібен предмет активному квесту (GAME-73, SIM-INV-004): ціль `collect` цього квесту або `requires.items` квесту,
+ * куди з нього веде доступний гравцеві перехід. Такий предмет не продається — інакше квест не завершити.
+ */
+export function questNeedsItem(st: StoryDefs, d: Pick<StoryDraft, 'quests'>, p: PlayerState, itemId: string): boolean {
+  for (const [qid, prog] of Object.entries(d.quests)) {
+    if (prog.status !== 'active') continue;
+    const q = own(st.quests, qid);
+    if (!q || !matches(q.when, p)) continue;
+    if (objectivesFor(q, p).some((o) => o.kind === 'collect' && o.target === itemId)) return true;
+    if (q.transitions.some((t) => matches(t.when, p) && (own(st.quests, t.to)?.requires?.items.includes(itemId) ?? false))) return true;
+  }
+  return false;
 }
 
 /** Переходи, які гравець може взяти: збіг `when` переходу й квесту-цілі. */

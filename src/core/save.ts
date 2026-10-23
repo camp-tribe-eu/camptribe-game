@@ -10,6 +10,7 @@ import type { StoryDefs } from './defs';
 import { matches } from './story';
 import { stateHash } from './hash';
 import { isJournalType, type SimState } from './sim';
+import { CONDITION_MAX } from './gear';
 import { PRACTICE_SATURATION, SKILL_IDS, zeroSkills } from './skills';
 import { REJECT_CODES } from './state';
 
@@ -45,9 +46,10 @@ export const MIGRATIONS: Readonly<Record<number, (sim: unknown) => unknown>> = {
   // тож усім сейвам v1 однаково 0: детерміновано, той самий v1 завжди дає ту саму погоду.
   // GAME-48: пам'ять NPC. До персонажа розмов не було — NPC нічого не пам'ятають.
   // GAME-72: навички. До персонажа вчитись нікому — усі вісім напрямів 0, практики немає.
+  // GAME-73: стан спорядження. Доріг у v1 не було — нічого не намокло й не зносилось: {} (усе нове й сухе).
   1: (sim) => {
     const s = sim as { game: Record<string, unknown> };
-    return { ...s, journal: [], worldSeed: 0, game: { ...s.game, schemaVersion: 2, player: null, quests: {}, campaignEnded: false, flags: [], npcMemory: {}, skills: zeroSkills(), practice: {}, dialogue: null } };
+    return { ...s, journal: [], worldSeed: 0, game: { ...s.game, schemaVersion: 2, player: null, quests: {}, campaignEnded: false, flags: [], npcMemory: {}, skills: zeroSkills(), practice: {}, gear: {}, dialogue: null } };
   },
 };
 
@@ -80,6 +82,9 @@ function shapeError(sim: unknown): string | null {
   // Навички (GAME-72): рівно вісім відомих id, досвід — ціле ≥ 0; лічильник практики — ціле 1…насичення.
   if (!isObj(game.skills) || Object.keys(game.skills).sort().join() !== [...SKILL_IDS].sort().join() || Object.values(game.skills).some((x) => !isInt(x))) return 'game: skills';
   if (!isObj(game.practice) || Object.values(game.practice).some((n) => !isInt(n, 1) || (n as number) > PRACTICE_SATURATION)) return 'game: practice';
+  // Спорядження (GAME-73): запис — лише для предмета в інвентарі й лише відхилення від нового сухого (так пише ядро).
+  if (!isObj(game.gear) || Object.entries(game.gear).some(([id, g]) => !isObj(g) || !isInt(g.condition) || (g.condition as number) > CONDITION_MAX || typeof g.wet !== 'boolean'
+    || (g.condition === CONDITION_MAX && !g.wet) || !isInt((game.inventory as Record<string, unknown>)[id], 1))) return 'game: gear';
   const dl = game.dialogue;
   if (dl !== null && (!isObj(dl) || typeof dl.id !== 'string' || typeof dl.node !== 'string')) return 'game: dialogue';
   const p = game.player;

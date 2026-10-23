@@ -11,6 +11,7 @@
 // * дія, що не змінює нічого (прийти туди, де вже стоїш), не показується.
 import { dispatch, nextCommandId, type Command } from '../core/commands';
 import type { CoreDefs, StoryDefs } from '../core/defs';
+import { sellPriceOf } from '../core/gear';
 import { canonical } from '../core/hash';
 import { todayWeather, type SimState } from '../core/sim';
 import { initialState, type GameState } from '../core/state';
@@ -74,7 +75,9 @@ function describe(m: Move, defs: CoreDefs, s: GameState, weather: Weather): Omit
     case 'Talk': return { kind: 'talk', key: nameKey(m.npcId) };
     case 'Pickup': return { kind: 'pickup', key: nameKey(m.itemId) };
     case 'BuyItem': return { kind: 'buy', key: nameKey(m.itemId), priceCents: defs.items[m.itemId]?.buyCents ?? 0 };
-    case 'SellItem': return { kind: 'sell', key: nameKey(m.itemId), priceCents: defs.items[m.itemId]?.sellCents ?? 0 };
+    // Уживане спорядження — за станом (SIM-GEAR-004): та сама ціна, яку дасть ядро.
+    case 'SellItem': return { kind: 'sell', key: nameKey(m.itemId), priceCents: sellPriceOf(defs.items[m.itemId], s.gear, m.itemId) ?? 0 };
+    case 'DryGear': return { kind: 'dry', key: nameKey(m.itemId) };
     case 'CompleteQuest':
     case 'DeclineQuest': {
       const on = m.type === 'CompleteQuest' ? 'complete' : 'decline';

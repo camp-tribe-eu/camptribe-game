@@ -5,7 +5,8 @@
 import type { CoreDefs } from './defs';
 import type { CommandRecord, GameState, RejectCode } from './state';
 import { practise, rankOf, type SkillId } from './skills';
-import { applyStory, type StoryCommand, type StoryDraft } from './story';
+import { gearOf, pruneGear, sellPriceOf } from './gear';
+import { applyStory, questNeedsItem, type StoryCommand, type StoryDraft } from './story';
 
 export type { StoryCommand } from './story';
 
@@ -15,7 +16,9 @@ export type Command =
   | { readonly type: 'SellItem'; readonly commandId: string; readonly itemId: string }
   | { readonly type: 'Interact'; readonly commandId: string; readonly targetId: string }
   /** Полагодити ціль (GAME-72): вимоги — з каталогу `repairs`, ніколи з команди. */
-  | { readonly type: 'Repair'; readonly commandId: string; readonly targetId: string };
+  | { readonly type: 'Repair'; readonly commandId: string; readonly targetId: string }
+  /** Висушити мокре спорядження (GAME-73, SIM-GEAR-005): знімає «мокре», стану не повертає. */
+  | { readonly type: 'DryGear'; readonly commandId: string; readonly itemId: string };
 
 /** Підтверджений факт (CR-031). Причина — commandId команди, що його спричинила. */
 export type GameEvent =
@@ -88,6 +91,8 @@ function apply(cmd: Command, d: Draft, defs: CoreDefs, guard: Safeguards): Rejec
       if (!def) return 'UNKNOWN_ITEM';
       if (def.buyCents === undefined) return 'NOT_FOR_SALE';
       if (!isCents(def.buyCents)) return 'INVALID_AMOUNT';
+      // Спорядження — один примірник моделі в руках (SIM-GEAR-001): стан ведеться на id предмета.
+      if (def.gear && (own(d.inventory, cmd.itemId) ?? 0) >= 1) return 'ITEM_ALREADY_HELD';
       d.moneyCents -= def.buyCents;
       d.inventory[cmd.itemId] = (own(d.inventory, cmd.itemId) ?? 0) + 1;
       if (d.moneyCents < 0) return 'INSUFFICIENT_FUNDS';
@@ -102,12 +107,16 @@ function apply(cmd: Command, d: Draft, defs: CoreDefs, guard: Safeguards): Rejec
       if (!isCents(def.sellCents)) return 'INVALID_AMOUNT';
       const have = own(d.inventory, cmd.itemId) ?? 0;
       if (have < 1) return 'ITEM_NOT_OWNED';
+      // Останній примірник, потрібний активному квесту, не продається (SIM-INV-004): інакше квест не завершити.
+      if (have === 1 && defs.story && d.player && questNeedsItem(defs.story, d, d.player, cmd.itemId)) return 'ITEM_QUEST_LOCKED';
+      // Уживане спорядження — за станом (SIM-GEAR-004): ⌊викуп × стан / 100⌋ ≤ викуп ≤ ціни купівлі.
+      const price = sellPriceOf(def, d.gear, cmd.itemId) as number;
       d.inventory[cmd.itemId] = have - 1;
       // Інвентар тримає лише додатні кількості: нуль прибираємо перебудовою, без delete.
       if (have === 1) d.inventory = Object.fromEntries(Object.entries(d.inventory).filter(([, q]) => q > 0));
-      d.moneyCents += def.sellCents;
+      d.moneyCents += price;
       if (!isCents(d.moneyCents)) return 'INVALID_AMOUNT';
-      d.events.push({ type: 'ItemSold', commandId: cmd.commandId, itemId: cmd.itemId, priceCents: def.sellCents });
+      d.events.push({ type: 'ItemSold', commandId: cmd.commandId, itemId: cmd.itemId, priceCents: price });
       return null;
     }
     case 'Interact': {
@@ -150,6 +159,16 @@ function apply(cmd: Command, d: Draft, defs: CoreDefs, guard: Safeguards): Rejec
         d.inventory = left > 0 ? { ...d.inventory, [def.part]: left } : Object.fromEntries(Object.entries(d.inventory).filter(([k]) => k !== def.part));
       }
       d.flags = [...d.flags, def.flag].sort();
+      return null;
+    }
+    case 'DryGear': {
+      if (!isContentId(cmd.itemId)) return 'INVALID_COMMAND';
+      const def = own(defs.items, cmd.itemId);
+      if (!def) return 'UNKNOWN_ITEM';
+      if ((own(d.inventory, cmd.itemId) ?? 0) < 1) return 'ITEM_NOT_OWNED';
+      const g = gearOf(d.gear, cmd.itemId);
+      if (!def.gear || !g.wet) return 'NOT_WET';
+      d.gear = { ...d.gear, [cmd.itemId]: { condition: g.condition, wet: false } };
       return null;
     }
     case 'CreateCharacter':
@@ -235,9 +254,11 @@ export function dispatch(state: GameState, cmd: Command, defs: CoreDefs, guard: 
   const draft: Draft = {
     moneyCents: state.moneyCents, inventory: { ...state.inventory }, grants: [...state.grants], events: [],
     player: state.player, quests: state.quests, campaignEnded: state.campaignEnded, flags: [...state.flags], npcMemory: state.npcMemory,
-    skills: state.skills, practice: state.practice, dialogue: state.dialogue,
+    skills: state.skills, practice: state.practice, gear: state.gear, dialogue: state.dialogue,
   };
   const code = apply(cmd, draft, defs, guard);
+  // Стан спорядження — лише для того, що в руках (продали останній — запис зникає), і лише відхилення від нового.
+  if (!code) draft.gear = pruneGear(draft.gear, draft.inventory);
   if (!code) practiseAfter(cmd, state, draft, defs);
   const record: CommandRecord = code ? { ok: false, code, fp } : { ok: true, fp };
   const processed = remember(state.processed, cmd.commandId, record);
