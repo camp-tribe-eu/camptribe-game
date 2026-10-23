@@ -1,15 +1,15 @@
 name: preview
-# Закритий попередній перегляд гри для власника (рішення 23.10.2026): публічної версії немає, а збірка з main
-# лежить на Cloudflare Pages ЛИШЕ як preview-гілка під Cloudflare Access (вхід кодом на пошту зі списку).
+# Закритий попередній перегляд гри для власника (рішення 23.10.2026): публічної версії немає. Збірка з main лежить на
+# Cloudflare Pages як preview-гілка, а пускає на неї лише логін і пароль (варіант 2 власника, замість Cloudflare Access).
 #
-# Чому preview, а не production: Access-замок Pages покриває `*.<проєкт>.pages.dev` (preview-адреси), але не
-# голу адресу проєкту. Тож production-гілку (`release-never`) не публікуємо ніколи, а крок verify доводить:
-#   1) без входу preview-адреса НЕ віддає гру (редирект на сторінку входу Cloudflare Access);
-#   2) гола адреса проєкту теж гри не віддає.
-# Якщо замок зник — workflow червоніє (закон 1), а не мовчки публікує гру.
+# Як закрито: Pages Functions middleware (scripts/preview/auth.mjs → functions/_middleware.js) перевіряє Basic-авторизацію
+# НА СЕРВЕРІ — без пароля не віддається жоден файл збірки. У репозиторії пароля немає: CI кладе в функцію лише випадкову
+# сіль і SHA-256 від «сіль:логін:пароль». Production-гілку (`release-never`) не публікуємо ніколи.
+# Крок verify червоніє (закон 1), якщо: без пароля чи з хибним паролем видно гру; з правильним паролем гри НЕ видно
+# (позитивний контроль — замок не просто «сайт лежить»); гола адреса проєкту віддає гру.
 #
-# Секрети (GitHub → Settings → Secrets → Actions): CLOUDFLARE_API_TOKEN (Pages: Edit; Access: Apps and Policies:
-# Edit), CLOUDFLARE_ACCOUNT_ID, PREVIEW_EMAILS (пошти через кому). Пошти — у секреті: репозиторій публічний.
+# Секрети (GitHub → Settings → Secrets → Actions): CLOUDFLARE_API_TOKEN (Pages: Edit), CLOUDFLARE_ACCOUNT_ID,
+# PREVIEW_PASSWORD. Логін фіксований: camptribe.
 on:
   push:
     branches: [main]
@@ -26,6 +26,7 @@ env:
   PROJECT: camptribe-game
   BRANCH: preview
   WRANGLER: wrangler@4.145.0
+  PREVIEW_USER: camptribe
 
 jobs:
   preview:
@@ -34,12 +35,12 @@ jobs:
     env:
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-      PREVIEW_EMAILS: ${{ secrets.PREVIEW_EMAILS }}
+      PREVIEW_PASSWORD: ${{ secrets.PREVIEW_PASSWORD }}
     steps:
       - name: Секрети задані
         run: |
           miss=""
-          for v in CLOUDFLARE_API_TOKEN CLOUDFLARE_ACCOUNT_ID PREVIEW_EMAILS; do [ -n "${!v:-}" ] || miss="$miss $v"; done
+          for v in CLOUDFLARE_API_TOKEN CLOUDFLARE_ACCOUNT_ID PREVIEW_PASSWORD; do [ -n "${!v:-}" ] || miss="$miss $v"; done
           [ -z "$miss" ] || { echo "::error::Не задано секрет(и):$miss — Settings → Secrets and variables → Actions"; exit 1; }
           echo "секрети є (значення не друкую)"
 
@@ -51,27 +52,26 @@ jobs:
       - run: npm ci --no-audit --no-fund
       - run: npm run build
 
-      - name: Замок Cloudflare Access (до першої публікації)
+      - name: Замок — тести без мережі
+        run: node --test scripts/preview/auth.test.mjs
+
+      - name: Замок — функція з сіллю й хешем (пароля в ній немає)
         run: |
           set -euo pipefail
-          api="https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/access/apps"
-          auth=(-H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" -H "Content-Type: application/json")
-          domain="*.$PROJECT.pages.dev"
-          include=$(jq -cn --arg e "$PREVIEW_EMAILS" '$e | split(",") | map(gsub("^\\s+|\\s+$";"")) | map(select(length>0)) | map({email:{email:.}})')
-          [ "$(jq length <<<"$include")" -gt 0 ] || { echo "::error::PREVIEW_EMAILS порожній — замок нікого б не пустив"; exit 1; }
-          body=$(jq -cn --arg d "$domain" --argjson inc "$include" '{name:"CampLife preview", type:"self_hosted", domain:$d,
-            session_duration:"720h", policies:[{name:"owner", decision:"allow", include:$inc}]}')
-          # Відповідь Cloudflare друкуємо (лише .errors — у ній немає секретів): «HTTP 400» без причини нічого не каже.
-          cf() { local out; out=$(curl -sS -w '\n%{http_code}' "${auth[@]}" "$@"); local code=${out##*$'\n'}; local bodyout=${out%$'\n'*}
-            if [ "$code" -ge 300 ]; then echo "::error::Cloudflare HTTP $code: $(jq -c '.errors // .' <<<"$bodyout" 2>/dev/null | head -c 600)" >&2; return 1; fi
-            printf '%s' "$bodyout"; }
-          list=$(cf "$api") || { echo "::error::Access API відмовило — якщо Zero Trust ще не активовано: dash.cloudflare.com → Zero Trust → назва команди → план Free"; exit 1; }
-          id=$(jq -r --arg d "$domain" '.result[] | select(.domain==$d) | .id' <<<"$list" | head -1)
-          if [ -n "$id" ]; then
-            cf -X PUT "$api/$id" --data "$body" >/dev/null && echo "замок оновлено ($domain)"
-          else
-            cf -X POST "$api" --data "$body" >/dev/null && echo "замок створено ($domain)"
-          fi
+          [ "${#PREVIEW_PASSWORD}" -ge 10 ] || { echo "::error::PREVIEW_PASSWORD коротший за 10 символів"; exit 1; }
+          mkdir -p functions
+          node --input-type=module -e "
+            import { readFileSync, writeFileSync } from 'node:fs';
+            import { randomBytes } from 'node:crypto';
+            import { digest } from './scripts/preview/auth.mjs';
+            const salt = randomBytes(16).toString('hex');
+            const hash = await digest(salt, process.env.PREVIEW_USER, process.env.PREVIEW_PASSWORD);
+            const src = readFileSync('scripts/preview/auth.mjs', 'utf8').replace('__PREVIEW_SALT__', salt).replace('__PREVIEW_HASH__', hash);
+            if (src.includes('__PREVIEW_')) { console.log('::error::мітки не замінено'); process.exit(1); }
+            writeFileSync('functions/_middleware.js', src);
+          "
+          ! grep -qF "$PREVIEW_PASSWORD" functions/_middleware.js || { echo "::error::пароль потрапив у функцію"; exit 1; }
+          echo "функцію замка згенеровано"
 
       - name: Проєкт Pages (production-гілку не публікуємо ніколи)
         run: |
@@ -83,26 +83,21 @@ jobs:
       - name: Публікація preview
         run: npx --yes "$WRANGLER" pages deploy dist --project-name="$PROJECT" --branch="$BRANCH" --commit-hash="$GITHUB_SHA" --commit-dirty=true
 
-      - name: Перевірка замка (без входу гри не видно)
+      - name: Перевірка замка (без пароля гри не видно, з паролем — видно)
         run: |
           set -uo pipefail
-          check() { # $1 — адреса; гра «видна», якщо 200 і в HTML є <script src> зі збірки
-            local code loc
-            code=$(curl -s -o /tmp/p.html -w '%{http_code}' "$1"); loc=$(curl -s -o /dev/null -w '%{redirect_url}' "$1")
-            echo "$1 → HTTP $code ${loc:+→ $loc}"
-            if [ "$code" = 200 ] && grep -q '<script[^>]*src=' /tmp/p.html; then return 1; fi
-            return 0
-          }
-          ok=1
-          for i in 1 2 3 4 5 6; do
-            ok=1
-            check "https://$BRANCH.$PROJECT.pages.dev/" || ok=0
-            check "https://$PROJECT.pages.dev/" || ok=0
-            [ $ok = 1 ] && break
-            sleep 20
+          url="https://$BRANCH.$PROJECT.pages.dev/"
+          # «гра видна» = 200 і в HTML є <script src> зі збірки
+          game() { local code; code=$(curl -s -o /tmp/p.html -w '%{http_code}' "$@"); echo "$code"; [ "$code" = 200 ] && grep -q '<script[^>]*src=' /tmp/p.html; }
+          ok=0
+          for i in 1 2 3 4 5 6 7 8; do
+            c1=$(game "$url"; true); c1=${c1%%$'\n'*}
+            if game "$url" >/dev/null; then echo "::error::ГРА ВИДНА БЕЗ ПАРОЛЯ"; exit 1; fi
+            if game -u "$PREVIEW_USER:wrong-password" "$url" >/dev/null; then echo "::error::ГРА ВИДНА З ХИБНИМ ПАРОЛЕМ"; exit 1; fi
+            if game -u "$PREVIEW_USER:$PREVIEW_PASSWORD" "$url" >/dev/null; then ok=1; break; fi
+            echo "спроба $i: з паролем гри ще не видно (без пароля: HTTP $c1), чекаю"; sleep 15
           done
-          [ $ok = 1 ] || { echo "::error::ГРА ВИДНА БЕЗ ВХОДУ — замок не працює"; exit 1; }
-          # Позитивний контроль: замок саме Access, а не «сайт лежить».
-          loc=$(curl -s -o /dev/null -w '%{redirect_url}' "https://$BRANCH.$PROJECT.pages.dev/")
-          grep -q 'cloudflareaccess.com' <<<"$loc" || { echo "::error::preview не веде на вхід Cloudflare Access ($loc) — перевір, що публікація вдалася"; exit 1; }
-          echo "PREVIEW: OK · https://$BRANCH.$PROJECT.pages.dev/ — лише після входу (код на пошту)"
+          [ $ok = 1 ] || { echo "::error::з правильним паролем гра не відкривається — публікація не вдалася"; exit 1; }
+          code=$(curl -s -o /dev/null -w '%{http_code}' "$url"); [ "$code" = 401 ] || { echo "::error::без пароля очікував 401, а маю $code"; exit 1; }
+          if game "https://$PROJECT.pages.dev/" >/dev/null; then echo "::error::гола адреса проєкту віддає гру"; exit 1; fi
+          echo "PREVIEW: OK · $url — логін $PREVIEW_USER і пароль із секрету PREVIEW_PASSWORD"

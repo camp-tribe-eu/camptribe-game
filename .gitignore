@@ -16,3 +16,4 @@ test-results/
 playwright-report/
 .claude/worktrees/
 __pycache__/
+functions/
