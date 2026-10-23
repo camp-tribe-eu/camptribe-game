@@ -3,3 +3,27 @@
 fact-nl-no-wild-camping	page:https://www.natuurmonumenten.nl/kamperen
 fact-nl-signboard-rules	page:https://www.natuurmonumenten.nl/natuurgebieden/gebiedsregels
 fact-nl-sbb-pole-camping-closed	page:https://www.staatsbosbeheer.nl/wat-we-doen/nieuws/2020/05/sluiten-paalkampeerterreinen
+
+# GAME-21 п.2: ліцензії шарів LPC — дослівно зі сторінок OGA першоджерела (цитати → research/lpc-licences-evidence.md)
+lic-camp-fire-animation-for-rpgs-finished	page:https://opengameart.org/content/camp-fire-animation-for-rpgs-finished
+lic-liberated-pixel-cup-lpc-base-assets-sprites-map-tiles	page:https://opengameart.org/content/liberated-pixel-cup-lpc-base-assets-sprites-map-tiles
+lic-lpc-7-womens-shirts	page:https://opengameart.org/content/lpc-7-womens-shirts
+lic-lpc-be-seated	page:https://opengameart.org/content/lpc-be-seated
+lic-lpc-character-bases	page:https://opengameart.org/content/lpc-character-bases
+lic-lpc-expanded-hair	page:https://opengameart.org/content/lpc-expanded-hair
+lic-lpc-expanded-pants	page:https://opengameart.org/content/lpc-expanded-pants
+lic-lpc-expanded-simple-shirts	page:https://opengameart.org/content/lpc-expanded-simple-shirts
+lic-lpc-expanded-sit-run-jump-more	page:https://opengameart.org/content/lpc-expanded-sit-run-jump-more
+lic-lpc-expanded-socks-shoes	page:https://opengameart.org/content/lpc-expanded-socks-shoes
+lic-lpc-jump-expanded	page:https://opengameart.org/content/lpc-jump-expanded
+lic-lpc-ladies	page:https://opengameart.org/content/lpc-ladies
+lic-lpc-male-jumping-animation-by-durrani	page:https://opengameart.org/content/lpc-male-jumping-animation-by-durrani
+lic-lpc-medieval-fantasy-character-sprites	page:https://opengameart.org/content/lpc-medieval-fantasy-character-sprites
+lic-lpc-modern-car-additions	page:https://opengameart.org/content/lpc-modern-car-additions
+lic-lpc-revised-character-basics	page:https://opengameart.org/content/lpc-revised-character-basics
+lic-lpc-runcycle-and-diagonal-walkcycle	page:https://opengameart.org/content/lpc-runcycle-and-diagonal-walkcycle
+lic-lpc-runcycle-for-male-muscular-and-pregnant-character-bases-with-modular-heads	page:https://opengameart.org/content/lpc-runcycle-for-male-muscular-and-pregnant-character-bases-with-modular-heads
+lic-lpc-teen-unisex-base-clothes	page:https://opengameart.org/content/lpc-teen-unisex-base-clothes
+lic-lpc-tile-atlas	page:https://opengameart.org/content/lpc-tile-atlas
+lic-ponytail-and-plain-hairstyles	page:https://opengameart.org/content/ponytail-and-plain-hairstyles
+lic-tent-3	page:https://opengameart.org/content/tent-3
