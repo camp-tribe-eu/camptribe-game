@@ -82,6 +82,14 @@ test.describe('мобільний екран подорожі', () => {
     // Лишається в порядку Tab (на відміну від disabled): читач її знаходить.
     await bag.focus();
     await expect(bag).toBeFocused();
+    // І з клавіатури (рецензія PR #19): Enter і Space на недоступній кнопці теж нічого не купують.
+    for (const key of ['Enter', 'Space']) {
+      await bag.press(key);
+      await page.waitForTimeout(400);
+      const c2 = await core(page);
+      expect(c2.game.moneyCents).toBe(c0.game.moneyCents);
+      expect(c2.game.inventory).toEqual(c0.game.inventory);
+    }
   });
 
   test('недоступний стан доступний: axe без serious/critical, а сканер уміє червоніти (кнопка без імені)', async ({ page }) => {
