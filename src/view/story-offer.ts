@@ -11,12 +11,12 @@
 // * дія, що не змінює нічого (прийти туди, де вже стоїш), не показується.
 import { dispatch, nextCommandId, type Command } from '../core/commands';
 import type { CoreDefs, StoryDefs } from '../core/defs';
-import { sellPriceOf } from '../core/gear';
+import { gearOf, sellPriceOf } from '../core/gear';
 import { canonical } from '../core/hash';
 import { todayWeather, type SimState } from '../core/sim';
 import { initialState, type GameState } from '../core/state';
 import { matches, route } from '../core/story';
-import { tripMinutes, type Weather } from '../core/weather';
+import { DAY_MINUTES, dayOf, tripMinutes, type Weather } from '../core/weather';
 import { CONTENT } from '../content/story';
 import { moves, progressKey, type Move } from '../content/moves';
 import items from '../../content/items.json';
@@ -126,6 +126,23 @@ export function menuMoves(s: GameState, defs: CoreDefs): { move: Move; next: Gam
   return out;
 }
 
+/**
+ * Купівлі, які тут продаються, але на які бракує грошей (GAME-83). Лише код INSUFFICIENT_FUNDS: решту відмов
+ * (NOT_SOLD_HERE, ITEM_ALREADY_HELD…) меню, як і раніше, ховає. Ядро відмовляє у фондах ПІСЛЯ перевірки місця,
+ * тож «не продається тут» сюди не потрапить. У розмові купівлі немає.
+ */
+export function unaffordableBuys(s: GameState, defs: CoreDefs): { move: Move; shortCents: number }[] {
+  if (s.dialogue !== null) return [];
+  const out: { move: Move; shortCents: number }[] = [];
+  for (const m of moves(s, defs)) {
+    if (m.type !== 'BuyItem') continue;
+    const r = dispatch(s, { ...m, commandId: nextCommandId(s) } as Command, defs);
+    const price = Object.hasOwn(defs.items, m.itemId) ? defs.items[m.itemId]?.buyCents : undefined;
+    if (!r.ok && r.code === 'INSUFFICIENT_FUNDS' && price !== undefined) out.push({ move: m, shortCents: price - s.moneyCents });
+  }
+  return out;
+}
+
 /** Дозволені на старті персонажі: кожна комбінація, яку ядро прийме як CreateCharacter. */
 export function characterChoices(defs: CoreDefs): { offer: OfferCharacter; intent: Move }[] {
   const st = defs.story;
@@ -147,14 +164,18 @@ export function storyOffer(sim: SimState, defs: CoreDefs): Offered {
   const st = defs.story as StoryDefs;
   const intents = new Map<string, Move>();
   const journal = sim.journal.map((e) => ({ type: e.type, key: nameKey(e.ref), at: e.at }));
-  const inventory = Object.entries(s.inventory).sort(([a], [b]) => a.localeCompare(b)).map(([id, qty]) => ({ key: nameKey(id) ?? id, qty }));
+  // Спорядження — зі станом і «мокре» (GAME-83): те саме, що веде ядро (GAME-73), без власного стану в UI.
+  const inventory = Object.entries(s.inventory).sort(([a], [b]) => a.localeCompare(b)).map(([id, qty]) => ({
+    key: nameKey(id) ?? id, qty,
+    ...(Object.hasOwn(defs.items, id) && defs.items[id]?.gear ? { gear: gearOf(s.gear, id) } : {}),
+  }));
   const weather = todayWeather(sim);
-  const base = { moneyCents: s.moneyCents, inventory, journal, weather };
+  const base = { moneyCents: s.moneyCents, inventory, journal, weather, day: dayOf(sim.clock) + 1, timeMinutes: sim.clock.minutes % DAY_MINUTES };
 
   if (!s.player) {
     const choices = characterChoices(defs);
     for (const c of choices) intents.set(c.offer.id, c.intent);
-    return { intents, offer: { ...base, stage: 'create', characters: choices.map((c) => c.offer), locationKey: null, quests: [], dialogue: null, actions: [] } };
+    return { intents, offer: { ...base, stage: 'create', characters: choices.map((c) => c.offer), locationKey: null, quests: [], dialogue: null, actions: [], locked: [] } };
   }
 
   const p = s.player;
@@ -178,6 +199,9 @@ export function storyOffer(sim: SimState, defs: CoreDefs): Offered {
     offered.push(a);
   }
 
+  // Недоступні купівлі: без наміру в `intents` — активувати їх нічим (і нічого не відправиться).
+  const locked: OfferAction[] = unaffordableBuys(s, defs).map(({ move, shortCents }) => ({ id: `locked|${idOf(move, s)}`, ...describe(move, defs, s, weather), shortCents }));
+
   let dialogue: StoryOffer['dialogue'] = null;
   if (s.dialogue) {
     const node = DIALOGUE_NODES.get(`${s.dialogue.id}#${s.dialogue.node}`);
@@ -197,6 +221,7 @@ export function storyOffer(sim: SimState, defs: CoreDefs): Offered {
       quests,
       dialogue,
       actions: dialogue ? [] : offered,
+      locked,
     },
   };
 }
