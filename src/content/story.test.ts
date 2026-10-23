@@ -81,6 +81,10 @@ describe('сюжет: ядро ≡ валідатор на справжньом�
       }
       const stuck = [...seen.keys()].filter((h) => !canEnd.has(h));
       expect(stuck.length, stuck.length ? `тупик: ${JSON.stringify(seen.get(stuck[0] ?? '')?.quests)}` : '').toBe(0);
+      // 4) GAME-48: репліка за пам'яттю Елізи досяжна в ядрі рівно там, де Еліза може запам'ятати
+      // велосипед, — у велосипедиста; у водія вузла shelter немає в жодному стані.
+      const shelter = [...seen.values()].some((s) => s.dialogue?.id === 'dlg.elise-greeting' && s.dialogue.node === 'shelter');
+      expect(shelter, 'shelter').toBe(k.transport === 'transport.bike');
     });
   }
 });
@@ -102,7 +106,9 @@ describe('збірка сюжету з content/ (src/content/story.ts)', () => {
     expect(files.length).toBeGreaterThan(0);
     expect(Object.keys(STORY.dialogues).sort()).toEqual(files.map((f) => `dlg.${f.replace(/^.*\/|\.json$/g, '')}`).sort());
     const hello = STORY.dialogues['dlg.elise-greeting']?.nodes['hello'];
-    expect(hello?.choices?.[0]).toEqual({ next: 'bike', when: { transport: 'transport.bike' }, effects: [{ setFlag: 'f.elise-met' }] });
+    expect(hello?.choices?.[0]).toEqual({ next: 'bike', when: { transport: 'transport.bike' }, effects: [{ setFlag: 'f.elise-met' }, { remember: 'm.came-by-bike' }] });
+    // GAME-48: умова на пам'ять доходить до ядра як є
+    expect(hello?.choices?.[2]).toEqual({ next: 'shelter', when: { remembers: 'm.came-by-bike' }, effects: [] });
     expect(STORY.dialogues['dlg.elise-greeting']?.nodes['bye']).toEqual({ end: true });
   });
 

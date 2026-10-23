@@ -67,14 +67,20 @@ describe('семантика when: валідатор ≡ ядро', () => {
 // навмисно оптимістичний (межі — окремим тестом нижче).
 // Межа охоплення: DIALOGUE_FLAG_NEVER_SET — навмисний лінт одруківок (прапорець, якого ніхто не ставить,
 // навіть у живій гілці any чи в notFlag), а не вирок «не справдиться»; цим тестом він не звіряється.
+// Так само MEMORY_NEVER_SET (GAME-48). Листки пам'яті (remembers/notRemembers) — у тому самому генераторі:
+// ядро читає пам'ять NPC розмови (npc.x), валідатор — факти, які цей NPC може запам'ятати (KNOWN_MEM).
 describe('умови діалогу: валідатор не відкидає того, що ядро може справдити', () => {
   const FLAGS = ['f.a', 'f.b', 'f.c'];
   const KNOWN = new Set(['f.a', 'f.b']);             // f.c — жоден ефект не ставить
+  const FACTS = ['m.a', 'm.b', 'm.c'];
+  const KNOWN_MEM = new Set(['m.a', 'm.b']);         // m.c — NPC цієї розмови не запам'ятовує ніде
   const leaf: fc.Arbitrary<CondDef> = fc.oneof(
     fc.constantFrom(...FLAGS).map((flag) => ({ flag })),
     fc.constantFrom(...FLAGS).map((notFlag) => ({ notFlag })),
     fc.constantFrom('active', 'completed').map((status) => ({ quest: 'q.x', status } as CondDef)),
     fc.constantFrom('transport.car', 'transport.bike').map((transport) => ({ transport })),
+    fc.constantFrom(...FACTS).map((remembers) => ({ remembers })),
+    fc.constantFrom(...FACTS).map((notRemembers) => ({ notRemembers })),
   );
   const tree: fc.Arbitrary<CondDef> = fc.letrec<{ c: CondDef }>((tie) => ({
     c: fc.oneof({ depthSize: 'small', withCrossShrink: true }, leaf,
@@ -87,12 +93,14 @@ describe('умови діалогу: валідатор не відкидає т
     fc.array(tree, { minLength: 1, maxLength: 4 }).map((any) => ({ any })),
     fc.tuple(tree, tree).map(([x, y]) => ({ all: [x, { any: [y] }] })),
   );
-  // Усі стани, які ядро може мати: прапорці — лише з відомих (ставлять лише ефекти контенту).
-  const STATES = subsets(['f.a', 'f.b']).flatMap((flags) => (['none', 'active', 'completed'] as const).flatMap((q) => ['transport.car', 'transport.bike'].map((transportId) => ({
-    draft: { flags: flags ?? [], quests: q === 'none' ? {} : { 'q.x': { status: q, done: [] } } } as unknown as StoryDraft,
+  // Усі стани, які ядро може мати: прапорці — лише з відомих (ставлять лише ефекти контенту), пам'ять
+  // NPC розмови — лише з фактів, які він може запам'ятати; інший NPC (npc.y) може пам'ятати будь-що.
+  const STATES = subsets(['f.a', 'f.b']).flatMap((flags) => subsets(['m.a', 'm.b']).flatMap((mem) => (['none', 'active', 'completed'] as const).flatMap((q) => ['transport.car', 'transport.bike'].map((transportId) => ({
+    draft: { flags: flags ?? [], npcMemory: { ...(mem ? { 'npc.x': mem } : {}), 'npc.y': FACTS }, quests: q === 'none' ? {} : { 'q.x': { status: q, done: [] } } } as unknown as StoryDraft,
     player: { profileId: 'profile.a', transportId, animalId: 'animal.none', locationId: null } as PlayerState,
-  }))));
-  const validatorSaysDead = (c: CondDef): boolean => !satisfiable(c, KNOWN) || contradictions(c).size > 0;
+  })))));
+  const NPC = 'npc.x';
+  const validatorSaysDead = (c: CondDef): boolean => !satisfiable(c, KNOWN, KNOWN_MEM) || contradictions(c).size > 0;
 
   /** Перша умова, яку «суддя» відкинув, а ядро справдило; null — таких немає. */
   function counterexample(isDead: (c: CondDef) => boolean): { cond: CondDef; dead: number } | null {
@@ -101,7 +109,7 @@ describe('умови діалогу: валідатор не відкидає т
     fc.assert(fc.property(cond, (c) => {
       if (!isDead(c)) return;
       dead++;
-      if (found === null && STATES.some((s) => holds(c, s.draft, s.player))) found = c;
+      if (found === null && STATES.some((s) => holds(c, s.draft, s.player, NPC))) found = c;
     }), { seed: 20261023, numRuns: 3000 });
     return found === null ? null : { cond: found, dead };
   }
@@ -111,7 +119,7 @@ describe('умови діалогу: валідатор не відкидає т
     let clash = 0;                                    // мертві саме через суперечність, а не через невідомий прапорець
     fc.assert(fc.property(cond, (c) => {
       if (validatorSaysDead(c)) dead++;
-      if (!satisfiable(c, new Set(FLAGS))) clash++;
+      if (!satisfiable(c, new Set(FLAGS), new Set(FACTS))) clash++;
     }), { seed: 20261023, numRuns: 3000 });
     // Запас від порогів (рецензія: 507 при порозі 500 — оновлення fast-check могло б тихо перетнути межу).
     expect(dead).toBeGreaterThan(400);
@@ -133,16 +141,28 @@ describe('умови діалогу: валідатор не відкидає т
       return walk(c, { yes: new Set(), no: new Set() });
     };
     expect(counterexample(anyClash)).not.toBeNull();
+    // GAME-48: суддя, що вважає remembers нездійсненним завжди (не знає пам'яті), — ловиться.
+    expect(counterexample((c) => !satisfiable(c, KNOWN))).not.toBeNull();
+  });
+
+  it('генератор справді дає листки пам\'яті, і ядро справджує remembers лише пам\'яттю NPC розмови', () => {
+    const leaves = fc.sample(cond, { seed: 20261023, numRuns: 3000 }).map((c) => JSON.stringify(c));
+    expect(leaves.filter((c) => c.includes('"remembers"')).length).toBeGreaterThan(300);
+    expect(leaves.filter((c) => c.includes('"notRemembers"')).length).toBeGreaterThan(300);
+    // m.c пам'ятає лише npc.y — для розмови з npc.x це «ні» в кожному стані.
+    expect(STATES.some((s) => holds({ remembers: 'm.c' }, s.draft, s.player, NPC))).toBe(false);
+    expect(STATES.some((s) => holds({ remembers: 'm.c' }, s.draft, s.player, 'npc.y'))).toBe(true);
   });
 
   it('відома оптимістичність валідатора (межа, не помилка): він пропускає ці мертві умови', () => {
     const KNOWN_DEAD: CondDef[] = [
       { all: [{ quest: 'q.x', status: 'active' }, { quest: 'q.x', status: 'completed' }] },  // квест і так, і так
       { all: [{ flag: 'f.a' }, { any: [{ notFlag: 'f.a' }] }] },                              // notFlag у any з однією гілкою
+      { all: [{ remembers: 'm.a' }, { any: [{ notRemembers: 'm.a' }] }] },                    // те саме для пам'яті (GAME-48)
     ];
     for (const c of KNOWN_DEAD) {
       expect(validatorSaysDead(c), JSON.stringify(c)).toBe(false);
-      expect(STATES.some((s) => holds(c, s.draft, s.player)), JSON.stringify(c)).toBe(false);
+      expect(STATES.some((s) => holds(c, s.draft, s.player, NPC)), JSON.stringify(c)).toBe(false);
     }
   });
 });

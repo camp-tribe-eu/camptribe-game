@@ -194,6 +194,32 @@ describe('storyOffer: знімок для UI', () => {
     expect(answers(toElise(create(car.intent)))).not.toContain('dlg.elise-greeting.hello.c1');
   });
 
+  it('GAME-48: питання Елізі про велосипед — у меню велосипедиста (після того, як сказав), у водія — ніколи', () => {
+    /** Чи показує меню, обходячи всі досяжні через меню стани, відповідь із цим ключем. */
+    const menuShows = (g0: GameState, key: string): { shown: boolean; states: number } => {
+      const queue = [g0];
+      const seen = new Set<string>();
+      for (let s = queue.shift(); s; s = queue.shift()) {
+        const k = outcomeKey(s);
+        if (seen.has(k)) continue;
+        seen.add(k);
+        if (s.dialogue && storyOffer({ ...newSim(1), game: s }, DEFS).offer.dialogue?.answers.some((a) => a.key === key)) return { shown: true, states: seen.size };
+        for (const { next } of realMenu(s)) queue.push(next);
+      }
+      return { shown: false, states: seen.size };
+    };
+    const byTransport = (t: string) => choices.filter(({ intent }) => (intent as { transportId: string }).transportId === t);
+    expect(byTransport('transport.bike').length).toBeGreaterThan(0);
+    expect(byTransport('transport.car').length).toBeGreaterThan(0);
+    for (const c of byTransport('transport.bike')) expect(menuShows(create(c.intent), 'dlg.elise-greeting.hello.c3').shown).toBe(true);
+    for (const c of byTransport('transport.car')) {
+      const r = menuShows(create(c.intent), 'dlg.elise-greeting.hello.c3');
+      expect(r.shown).toBe(false);
+      expect(r.states).toBeGreaterThan(50);                                   // обхід справді пройшов гру, а не впав на старті
+      expect(menuShows(create(c.intent), 'dlg.elise-greeting.hello.c2').shown).toBe(true);   // позитивний контроль тим самим обходом
+    }
+  });
+
   it('дія, що повторює наслідок іншої, показана один раз', () => {
     const g = create((choices[0] as { intent: Move }).intent);
     const keys = realMenu(g).map((o) => outcomeKey(o.next));

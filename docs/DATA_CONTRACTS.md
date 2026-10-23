@@ -62,7 +62,7 @@
 | DC-046 | `save.vehicles` | транспорт гравця й стан вузлів | GAME-74 | ACCEPTED |
 | DC-047 | `save.trip` | маршрут, бронювання, бюджет поїздки | GAME-30, GAME-43 | ACCEPTED |
 | DC-048 | `save.needs`, `save.skills` | потреби, навички, досвід | GAME-72 | ACCEPTED |
-| DC-049 | `save.npcMemory` | структуровані факти пам'яті NPC (`SIMULATION_RULES` SIM-NPC) | GAME-48 | ACCEPTED |
+| DC-049 | `save.npcMemory` | реалізовано v2 (GAME-48): `{ [npcId]: факти[] }`, факт — `m.назва`, відсортовано, без повторів (інше — `SAVE_SHAPE`); v1 після міграції — `{}`. Змінює лише ефект `remember` відповіді в розмові з цим NPC; читають умови `remembers`/`notRemembers` (`SIMULATION_RULES` SIM-NPC) | GAME-48 | ACCEPTED |
 | DC-050 | `save.quests` | реалізовано v2: `status` (`active`/`completed`/`declined`) і `done[]` (виконані цілі `visit`/`talk`; `collect` рахується з інвентаря). «Обрані гілки» видно з того, який квест-ціль став активним; окремого поля немає. Ревізія контенту — `contentRev` сейву (DC-040); сейв, що посилається на зниклий квест, профіль, транспорт, тварину чи локацію, не вантажиться (`SAVE_CONTENT_MISMATCH`) і йде в карантин, а не губиться | GDD §12.2; рецензія TL 23.10 | ACCEPTED |
 | DC-051 | `save.flags`, `save.history` | `flags[]` — реалізовано v2 (ставлять лише ефекти діалогів); `dialogue` — відкрита розмова `{id, node}`. `history` — ще ні (події з відкатом, GAME-45, → v3) | GDD Core Rules §4 | ACCEPTED |
 | DC-052 | `save.grants` | множина виданих `grantId` — сторож «рівно раз» | TD-004 | ACCEPTED |

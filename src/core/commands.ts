@@ -178,7 +178,7 @@ export function dispatch(state: GameState, cmd: Command, defs: CoreDefs, guard: 
 
   const draft: Draft = {
     moneyCents: state.moneyCents, inventory: { ...state.inventory }, grants: [...state.grants], events: [],
-    player: state.player, quests: state.quests, campaignEnded: state.campaignEnded, flags: [...state.flags], dialogue: state.dialogue,
+    player: state.player, quests: state.quests, campaignEnded: state.campaignEnded, flags: [...state.flags], npcMemory: state.npcMemory, dialogue: state.dialogue,
   };
   const code = apply(cmd, draft, defs, guard);
   const record: CommandRecord = code ? { ok: false, code, fp } : { ok: true, fp };

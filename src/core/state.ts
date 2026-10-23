@@ -48,6 +48,11 @@ export interface GameState {
   readonly campaignEnded: boolean;
   /** Сюжетні прапорці (DC-051), відсортовано. Ставлять лише ефекти діалогів. */
   readonly flags: readonly string[];
+  /**
+   * Пам'ять NPC (GAME-48): id NPC → факти, які він пам'ятає про гравця (`m.came-by-bike`), відсортовано,
+   * без повторів. Змінює її лише ефект `remember` відповіді в розмові з цим NPC — і більше нічого.
+   */
+  readonly npcMemory: Readonly<Record<string, readonly string[]>>;
   /** Відкритий діалог і вузол; null — розмови немає. */
   readonly dialogue: { readonly id: string; readonly node: string } | null;
 }
@@ -84,5 +89,5 @@ export const REJECT_CODES = [
 export type RejectCode = (typeof REJECT_CODES)[number];
 
 export function initialState(moneyCents = 0): GameState {
-  return { schemaVersion: 2, moneyCents, inventory: {}, grants: [], processed: {}, seq: 0, player: null, quests: {}, campaignEnded: false, flags: [], dialogue: null };
+  return { schemaVersion: 2, moneyCents, inventory: {}, grants: [], processed: {}, seq: 0, player: null, quests: {}, campaignEnded: false, flags: [], npcMemory: {}, dialogue: null };
 }

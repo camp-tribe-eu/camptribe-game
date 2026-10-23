@@ -330,6 +330,52 @@ export const FIXTURES = [
   { name: '[діалог] суперечність у КОЖНІЙ гілці any — вибір не покажеться ніколи', expect: ['DIALOGUE_COND_CONTRADICTION'], patch(c) {
     node(c, 'help').choices[0].when = { any: [{ all: [{ flag: 'f.fixture-met' }, { notFlag: 'f.fixture-met' }] }, { all: [{ flag: 'f.fixture-helped' }, { notFlag: 'f.fixture-helped' }] }] };
   } },
+  // Пам'ять NPC (GAME-48): remember у розмові з NPC → remembers/notRemembers у розмові з ТИМ САМИМ NPC.
+  { name: '[пам’ять] контроль: рейнджер запам’ятовує й згадує в наступній розмові — коректно', expect: [], patch(c) {
+    node(c, 'hello').choices[1].effects.push({ remember: 'm.fixture-met' });
+    node(c, 'help').choices.push({ textKey: K('help.c1'), next: 'bye', when: { remembers: 'm.fixture-met' } });
+    node(c, 'help').choices.push({ textKey: K('help.c2'), next: 'bye', when: { notRemembers: 'm.fixture-met' } });
+  } },
+  { name: '[пам’ять] умова на факт, який ніхто не запам’ятовує', expect: ['MEMORY_NEVER_SET'], patch(c) { node(c, 'help').choices[0].when = { remembers: 'm.fixture-ghost' }; } },
+  { name: '[пам’ять] notRemembers на факт, який ніхто не запам’ятовує', expect: ['MEMORY_NEVER_SET'], patch(c) { node(c, 'help').choices[0].when = { notRemembers: 'm.fixture-ghost' }; } },
+  { name: '[пам’ять] неіснуючий факт усередині any', expect: ['MEMORY_NEVER_SET'], patch(c) {
+    node(c, 'help').choices[0].when.all[1].any.push({ remembers: 'm.fixture-ghost' });
+  } },
+  { name: '[пам’ять] факт запам’ятав крамар — рейнджер його не знає', expect: ['MEMORY_NEVER_SET'], count: { code: 'MEMORY_NEVER_SET', n: 1 }, patch(c) {
+    c.dialogues.push(shopDialogue([{ remember: 'm.fixture-met' }]));
+    node(c, 'help').choices[0].when = { remembers: 'm.fixture-met' };
+  } },
+  { name: '[пам’ять] факт запам’ятовує лише вибір, що сам його вимагає', expect: ['MEMORY_NEVER_SET'], count: { code: 'MEMORY_NEVER_SET', n: 1 }, patch(c) {
+    node(c, 'help').choices.push({ textKey: K('help.c1'), next: 'bye', when: { remembers: 'm.fixture-loop' }, effects: [{ remember: 'm.fixture-loop' }] });
+  } },
+  // Ланцюжок, де пам'ять у другому проході росте САМА (прапорці вже ні): один прохід її загубив би.
+  // hello.c2 → s1; help.c0 [s1] → s2; hello.new [s2] → s3 (другий прохід); hello.c1 [s3] → s4 (третій).
+  { name: '[пам’ять] контроль: ланцюжок запам’ятовувань через три розмови — коректно', expect: [], patch(c) {
+    const hello = node(c, 'hello');
+    hello.choices[1].effects.push({ remember: 'm.fixture-s1' });
+    hello.choices.push({ textKey: K('hello.c2'), next: 'bye', when: { remembers: 'm.fixture-s2' }, effects: [{ remember: 'm.fixture-s3' }] });
+    hello.choices[0].when = { all: [{ quest: 'ST-001', status: 'completed' }, { remembers: 'm.fixture-s3' }] };
+    hello.choices[0].effects.push({ remember: 'm.fixture-s4' });
+    node(c, 'help').choices[0].when = { remembers: 'm.fixture-s1' };
+    node(c, 'help').choices[0].effects = [{ remember: 'm.fixture-s2' }];
+    node(c, 'help').choices.push({ textKey: K('help.c1'), next: 'bye', when: { remembers: 'm.fixture-s4' } });
+  } },
+  { name: '[пам’ять] all вимагає водночас remembers і notRemembers', expect: ['DIALOGUE_COND_CONTRADICTION'], patch(c) {
+    node(c, 'hello').choices[1].effects.push({ remember: 'm.fixture-met' });
+    node(c, 'help').choices[0].when = { all: [{ flag: 'f.fixture-helped' }, { all: [{ remembers: 'm.fixture-met' }, { notRemembers: 'm.fixture-met' }] }] };
+  } },
+  { name: '[пам’ять] контроль: суперечність лише в одній гілці any, інша гілка — живий факт', expect: [], patch(c) {
+    node(c, 'hello').choices[1].effects.push({ remember: 'm.fixture-met' }, { remember: 'm.fixture-asked' });
+    node(c, 'help').choices[0].when = { any: [{ all: [{ remembers: 'm.fixture-met' }, { notRemembers: 'm.fixture-met' }] }, { remembers: 'm.fixture-asked' }] };
+  } },
+  { name: '[пам’ять] id факту не за форматом', expect: ['ID_FORMAT'], patch(c) { node(c, 'hello').choices[1].effects.push({ remember: 'm.fixture_met' }); } },
+  { name: '[пам’ять] ефект remember — не рядок', expect: ['SCHEMA_INVALID'], patch(c) { node(c, 'hello').choices[1].effects.push({ remember: 7 }); } },
+  { name: '[пам’ять] умова з двома дискримінаторами remembers і notRemembers', expect: ['SCHEMA_INVALID'], patch(c) { node(c, 'help').choices[0].when = { remembers: 'm.x', notRemembers: 'm.x' }; } },
+  { base: 'combo', name: '[пам’ять] подія в дорозі запам’ятовує й читає — NPC немає, пам’яті теж', expect: ['EVENT_EFFECT_UNSUPPORTED', 'MEMORY_NEVER_SET'], patch(c) {
+    const d = withRoadEvent(c);
+    d.nodes[0].choices[0].effects.push({ remember: 'm.fixture-wet' });
+    d.nodes[0].choices.push({ textKey: EV('rain.c1'), next: 'bye', when: { remembers: 'm.fixture-wet' } });
+  } },
   // Один діалог на NPC.
   { name: '[діалог] два діалоги для одного NPC', expect: ['DIALOGUE_NPC_DUPLICATE'], patch(c) {
     const d = shopDialogue([]);

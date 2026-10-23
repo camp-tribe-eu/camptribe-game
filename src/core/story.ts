@@ -41,6 +41,7 @@ export interface StoryDraft {
   quests: Record<string, QuestProgress>;
   campaignEnded: boolean;
   flags: string[];
+  npcMemory: Record<string, readonly string[]>;
   dialogue: { readonly id: string; readonly node: string } | null;
 }
 
@@ -207,19 +208,36 @@ function leave(st: StoryDefs, d: StoryDraft, p: PlayerState, cmd: { commandId: s
   return null;
 }
 
-/** Умова діалогу (TD-006). Семантика — як у валідатора (scripts/validator/checks.mjs, GAME-28). */
-export function holds(c: CondDef, d: StoryDraft, p: PlayerState): boolean {
-  if ('flag' in c) return d.flags.includes(c.flag);
-  if ('notFlag' in c) return !d.flags.includes(c.notFlag);
-  if ('quest' in c) return own(d.quests, c.quest)?.status === c.status;
-  if ('transport' in c) return p.transportId === c.transport;
-  if ('all' in c) return c.all.every((x) => holds(x, d, p));
-  return c.any.some((x) => holds(x, d, p));
+/** Чи пам'ятає NPC факт (GAME-48). Без NPC (подія в дорозі) — ніхто нічого не пам'ятає. */
+export function remembers(d: Pick<StoryDraft, 'npcMemory'>, npcId: string | undefined, fact: string): boolean {
+  return npcId !== undefined && (own(d.npcMemory, npcId) ?? []).includes(fact);
 }
 
-function runEffect(st: StoryDefs, d: StoryDraft, p: PlayerState, e: EffectDef): RejectCode | null {
+/**
+ * Умова діалогу (TD-006). Семантика — як у валідатора (scripts/validator/checks.mjs, GAME-28).
+ * npcId — власник розмови: `remembers`/`notRemembers` читають пам'ять саме цього NPC (GAME-48).
+ */
+export function holds(c: CondDef, d: StoryDraft, p: PlayerState, npcId?: string): boolean {
+  if ('flag' in c) return d.flags.includes(c.flag);
+  if ('notFlag' in c) return !d.flags.includes(c.notFlag);
+  if ('remembers' in c) return remembers(d, npcId, c.remembers);
+  if ('notRemembers' in c) return !remembers(d, npcId, c.notRemembers);
+  if ('quest' in c) return own(d.quests, c.quest)?.status === c.status;
+  if ('transport' in c) return p.transportId === c.transport;
+  if ('all' in c) return c.all.every((x) => holds(x, d, p, npcId));
+  return c.any.some((x) => holds(x, d, p, npcId));
+}
+
+function runEffect(st: StoryDefs, d: StoryDraft, p: PlayerState, e: EffectDef, npcId: string | undefined): RejectCode | null {
   if ('setFlag' in e) {
     if (!d.flags.includes(e.setFlag)) d.flags = [...d.flags, e.setFlag].sort();
+    return null;
+  }
+  if ('remember' in e) {
+    // Нікому пам'ятати (подія в дорозі) — нічого, а не відмова: відмова на єдиному виході замкнула б
+    // гравця в розмові. Статично це ловить валідатор (EVENT_EFFECT_UNSUPPORTED) і checkDefs.
+    if (npcId === undefined || remembers(d, npcId, e.remember)) return null;
+    d.npcMemory = { ...d.npcMemory, [npcId]: [...(own(d.npcMemory, npcId) ?? []), e.remember].sort() };
     return null;
   }
   if ('startQuest' in e) {
@@ -323,9 +341,10 @@ export function applyStory(cmd: StoryCommand, d: StoryDraft, st: StoryDefs | und
       }
       const choice = Number.isSafeInteger(cmd.choice) && cmd.choice >= 0 ? node.choices?.[cmd.choice] : undefined;
       if (!choice) return 'INVALID_CHOICE';
-      if (choice.when && !holds(choice.when, d, p)) return 'CONDITION_FAILED';
+      const npcId = own(st.dialogues, live.id)?.npcId;
+      if (choice.when && !holds(choice.when, d, p, npcId)) return 'CONDITION_FAILED';
       for (const e of choice.effects) {
-        const bad = runEffect(st, d, p, e);
+        const bad = runEffect(st, d, p, e, npcId);
         if (bad) return bad;
       }
       d.dialogue = { id: live.id, node: choice.next };

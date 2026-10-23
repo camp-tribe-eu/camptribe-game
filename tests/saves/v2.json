@@ -1,7 +1,7 @@
 {
  "format": "camplife-save",
  "schemaVersion": 2,
- "checksum": "bc61a222",
+ "checksum": "231459c8",
  "accountId": null,
  "contentRev": null,
  "sim": {
@@ -167,6 +167,11 @@
    "flags": [
     "f.biker"
    ],
+   "npcMemory": {
+    "npc.ann": [
+     "m.biker"
+    ]
+   },
    "dialogue": {
     "id": "dlg.ann",
     "node": "bike"

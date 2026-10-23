@@ -46,10 +46,35 @@ describe('v2 (GAME-29): персонаж і квести', () => {
     const r = fromSave(JSON.stringify(v2));
     expect(r.ok && stateHash(r.sim)).toBe(stateHash(live));
     expect(r.ok && Object.keys(r.sim.game.quests).length).toBe(3);   // фікстура справді несе квести
+    expect(r.ok && r.sim.game.npcMemory).toEqual({ 'npc.ann': ['m.biker'] });   // і пам'ять NPC (GAME-48), не лише {}
   });
   it('v1 після міграції: персонажа ще нема, квестів нема, розділ не завершено', () => {
     const r = fromSave(JSON.stringify(v1));
     expect(r.ok && { p: r.sim.game.player, q: r.sim.game.quests, e: r.sim.game.campaignEnded, v: r.sim.game.schemaVersion }).toEqual({ p: null, q: {}, e: false, v: 2 });
+  });
+  it('v1 після міграції: NPC нічого не пам\'ятають (GAME-48)', () => {
+    const r = fromSave(JSON.stringify(v1));
+    expect(r.ok && r.sim.game.npcMemory).toEqual({});
+  });
+});
+
+describe('пам\'ять NPC у сейві (GAME-48)', () => {
+  const live = run(run(newSim(SEED, 10_000), LOG.slice(0, 600), { defs: DEFS }), V2_STORY as Input[], { defs: STORY_DEFS });
+  it('serialize → fromSave: пам\'ять та сама, хеш той самий; без поля хеш інший (поле справді в хеші)', () => {
+    expect(live.game.npcMemory).toEqual({ 'npc.ann': ['m.biker'] });
+    const r = fromSave(serialize(live));
+    expect(r.ok && r.sim.game.npcMemory).toEqual(live.game.npcMemory);
+    expect(r.ok && stateHash(r.sim)).toBe(stateHash(live));
+    expect(stateHash({ ...live, game: { ...live.game, npcMemory: {} } })).not.toBe(stateHash(live));
+  });
+  it('продовження після завантаження = без перерви: Енн так само пам\'ятає велосипедиста', () => {
+    const r = fromSave(serialize(live));
+    if (!r.ok) throw new Error(r.code);
+    const more: Input[] = [{ type: 'Continue' }, { type: 'Continue' }, { type: 'Talk', npcId: 'npc.ann' }, { type: 'Choose', choice: 5 }]
+      .map((c, i) => ({ kind: 'command', command: { ...c, commandId: `after${i}` } }) as Input);
+    const a = run(r.sim, more, { defs: STORY_DEFS });
+    expect(a.game.dialogue).toEqual({ id: 'dlg.ann', node: 'gossip' });          // вибір «пам'ятає» прийнято
+    expect(stateHash(a)).toBe(stateHash(run(live, more, { defs: STORY_DEFS })));
   });
 });
 
@@ -92,6 +117,8 @@ describe('коди відмов завантаження: кожен має зл
   }
   it('позитивний контроль: щойно записаний сейв завантажується', () => {
     expect(fromSave(JSON.stringify(good)).ok).toBe(true);
+    // і з пам'яттю правильної форми (відсортовано, без повторів) — теж
+    expect(fromSave(withSim((c) => { c.sim.game.npcMemory = { 'npc.ann': ['m.a', 'm.b'], 'npc.bob': [] }; resum(c); })).ok).toBe(true);
   });
   // Рецензія GAME-33: форма елементів, не лише контейнерів (контрольну суму підробник перерахує сам).
   for (const [what, patch] of [
@@ -104,6 +131,11 @@ describe('коди відмов завантаження: кожен має зл
     ['запис журналу невідомого типу (рецензія GAME-32)', (c: typeof good) => { c.sim.journal = [{ at: 0, commandId: 'c0', type: 'Teleport', ref: null }]; }],
     ['без зерна світу (GAME-46)', (c: typeof good) => { delete (c.sim as Record<string, unknown>).worldSeed; }],
     ['зерно світу поза uint32 (GAME-46)', (c: typeof good) => { (c.sim as Record<string, unknown>).worldSeed = 2 ** 32; }],
+    ['без пам\'яті NPC (GAME-48)', (c: typeof good) => { delete c.sim.game.npcMemory; }],
+    ['пам\'ять NPC — масив, а не об\'єкт', (c: typeof good) => { c.sim.game.npcMemory = []; }],
+    ['факт пам\'яті не рядок', (c: typeof good) => { c.sim.game.npcMemory = { 'npc.ann': [42] }; }],
+    ['факти пам\'яті не відсортовано', (c: typeof good) => { c.sim.game.npcMemory = { 'npc.ann': ['m.b', 'm.a'] }; }],
+    ['факт пам\'яті двічі', (c: typeof good) => { c.sim.game.npcMemory = { 'npc.ann': ['m.a', 'm.a'] }; }],
   ] as const) {
     it(`SAVE_SHAPE: ${what}`, () => {
       const r = fromSave(withSim((c) => { patch(c); resum(c); }));

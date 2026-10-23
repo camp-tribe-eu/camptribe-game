@@ -42,9 +42,10 @@ export const MIGRATIONS: Readonly<Record<number, (sim: unknown) => unknown>> = {
   // v1 → v2 (GAME-29): з'явились персонаж і квести. Старий сейв — гра до створення персонажа.
   // GAME-46: зерно світу (погода дня). Зерна v1 не зберігав, а з RNG стану його не відновити —
   // тож усім сейвам v1 однаково 0: детерміновано, той самий v1 завжди дає ту саму погоду.
+  // GAME-48: пам'ять NPC. До персонажа розмов не було — NPC нічого не пам'ятають.
   1: (sim) => {
     const s = sim as { game: Record<string, unknown> };
-    return { ...s, journal: [], worldSeed: 0, game: { ...s.game, schemaVersion: 2, player: null, quests: {}, campaignEnded: false, flags: [], dialogue: null } };
+    return { ...s, journal: [], worldSeed: 0, game: { ...s.game, schemaVersion: 2, player: null, quests: {}, campaignEnded: false, flags: [], npcMemory: {}, dialogue: null } };
   },
 };
 
@@ -72,6 +73,8 @@ function shapeError(sim: unknown): string | null {
   if (typeof game.campaignEnded !== 'boolean' || !isObj(game.quests)) return 'game: quests';
   if (Object.values(game.quests).some((q) => !isObj(q) || !['active', 'completed', 'declined'].includes(q.status as string) || !Array.isArray(q.done) || q.done.some((o) => typeof o !== 'string'))) return 'game: quest progress';
   if (!Array.isArray(game.flags) || game.flags.some((f) => typeof f !== 'string')) return 'game: flags';
+  // Пам'ять NPC (GAME-48): факти — рядки, відсортовані й без повторів (так їх пише лише ядро).
+  if (!isObj(game.npcMemory) || Object.values(game.npcMemory).some((m) => !Array.isArray(m) || m.some((f, i) => typeof f !== 'string' || (i > 0 && !((m[i - 1] as string) < f))))) return 'game: npcMemory';
   const dl = game.dialogue;
   if (dl !== null && (!isObj(dl) || typeof dl.id !== 'string' || typeof dl.node !== 'string')) return 'game: dialogue';
   const p = game.player;

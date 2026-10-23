@@ -26,6 +26,9 @@ Object.assign(cond.variants, {
   notFlag: obj({ notFlag: req(str) }),
   quest: obj({ quest: req(str), status: req(en('active', 'completed')) }),
   transport: obj({ transport: req(str) }),
+  // GAME-48: пам'ять NPC — того, чия це розмова (факт «m.назва»).
+  remembers: obj({ remembers: req(str) }),
+  notRemembers: obj({ notRemembers: req(str) }),
   all: obj({ all: req(conds) }),
   any: obj({ any: req(conds) }),
 });
@@ -33,6 +36,7 @@ const effect = union({
   setFlag: obj({ setFlag: req(str) }),
   startQuest: obj({ startQuest: req(str) }),
   completeObjective: obj({ completeObjective: req(obj({ quest: req(str), objective: req(str) })) }),
+  remember: obj({ remember: req(str) }),
 });
 const choice = obj({ textKey: req(str), next: req(str), when: cond, effects: arr(effect) });
 const node = obj({

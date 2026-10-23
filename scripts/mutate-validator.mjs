@@ -76,7 +76,7 @@ const mutations = [
   { name: '[діалог] схема діалогу без раннього виходу на зламаній формі', file: 'validator/schema.mjs', from: 'if (out.length > before) return;', to: '' },
   { name: 'схема: прототипні ключі рахуються відомими полями', file: 'validator/schema.mjs', from: '!Object.hasOwn(s.fields, k)', to: '!(k in s.fields)' },
   { name: 'схема: прототипні ключі рахуються варіантами union', file: 'validator/schema.mjs', from: 'Object.hasOwn(s.variants, k)', to: 'k in s.variants' },
-  { name: '[діалог] умовний сетер прапорця рахується завжди', file: CHECKS_FILE, from: 'if (ch.when && !satisfiable(ch.when, set)) continue;', to: '' },
+  { name: '[діалог] умовний сетер прапорця рахується завжди', file: CHECKS_FILE, from: 'if (ch.when && !satisfiable(ch.when, set, mem(d.npcId))) continue;', to: '' },
   { name: '[діалог] нерухома точка прапорців — лише один прохід', file: CHECKS_FILE, from: 'set.add(e.setFlag); grew = true; }', to: 'set.add(e.setFlag); }' },
   { name: '[діалог] суперечливий all вважається здійсненним', file: CHECKS_FILE, from: 'if (cj.some((x) => x.notFlag !== undefined && yes.has(x.notFlag))) return false;', to: '' },
   { name: '[діалог] суперечність flag/notFlag не звітується', file: CHECKS_FILE, from: 'for (const f of contradictions(ch.when)) out.push', to: 'for (const f of []) out.push' },
@@ -93,7 +93,7 @@ const mutations = [
   { name: '[подія] місця події не звіряються', file: CHECKS_FILE, from: "if (!by.locations.has(l)) miss(`${d.id}.trigger.at[${i}]`", to: "if (false) miss(`${d.id}.trigger.at[${i}]`" },
   // Семантика «гілки any — не кон'юнкти» тепер у satisfiable (contradictions лише називає прапорці мертвої умови).
   { name: '[діалог] гілки any всередині all рахуються кон\u2019юнктами', file: CHECKS_FILE, from: '    const cj = conjuncts(cond);\n    const yes = new Set(cj.filter((x) => x.flag !== undefined).map((x) => x.flag));\n    if (cj.some(', to: '    const cj = condLeaves(cond);\n    const yes = new Set(cj.filter((x) => x.flag !== undefined).map((x) => x.flag));\n    if (cj.some(' },
-  { name: '[діалог] суперечність в одній гілці any звітується, хоч інша гілка жива', file: CHECKS_FILE, from: 'return satisfiable(cond, every) ? new Set() : conflicts(cond);', to: 'return conflicts(cond);' },
+  { name: '[діалог] суперечність в одній гілці any звітується, хоч інша гілка жива', file: CHECKS_FILE, from: 'return satisfiable(cond, every, facts) ? new Set() : conflicts(cond);', to: 'return conflicts(cond);' },
   { name: '[діалог] completeObjective не звіряє kind цілі', file: CHECKS_FILE, from: "if (o.kind !== 'talk') out.push", to: 'if (false) out.push' },
   { name: '[діалог] completeObjective не звіряє NPC цілі', file: CHECKS_FILE, from: 'o.target !== d.npcId && by.npcs.has(o.target)', to: 'false && by.npcs.has(o.target)' },
   { name: '[діалог] startQuest: when вибору не зараховується як гарантія', file: CHECKS_FILE, from: 'if (ch.when && conjuncts(ch.when).some(', to: 'if (false && conjuncts(ch.when).some(' },
@@ -102,6 +102,17 @@ const mutations = [
   { name: '[діалог] startQuest: доступність NPC не враховується', file: CHECKS_FILE, from: '[...reachable].filter((q) => npcAvail(npc, q))', to: '[...reachable]' },
   { name: '[діалог] startQuest: вимога вважається гарантованою завжди', file: CHECKS_FILE, from: 'stages.filter((q) => !guaranteed.get(q).has(r))', to: '[]' },
   { name: '[діалог] другий діалог того самого NPC не помічається', file: CHECKS_FILE, from: 'if (seen.has(d.npcId)) out.push', to: 'if (false) out.push' },
+  // пам'ять NPC (GAME-48)
+  { name: '[пам’ять] notRemembers не перевіряється на факти', file: CHECKS_FILE, from: 'leaf.remembers !== undefined ? leaf.remembers : leaf.notRemembers', to: 'leaf.remembers' },
+  { name: '[пам’ять] факт, який пам’ятає будь-який NPC, зараховується всім', file: CHECKS_FILE, from: '!mem(d.npcId).has(f)', to: '!(c.content.dialogues ?? []).some((x) => mem(x.npcId).has(f))' },
+  { name: '[пам’ять] умова remembers не обмежує запам’ятовувача', file: CHECKS_FILE, from: 'if (cond.remembers !== undefined) return remembered.has(cond.remembers);', to: '' },
+  { name: '[пам’ять] нерухома точка пам’яті — лише проходи, де росли прапорці', file: CHECKS_FILE, from: 'e.remember])); grew = true; }', to: 'e.remember])); }' },
+  { name: '[пам’ять] подія в дорозі (без NPC) запам’ятовує', file: CHECKS_FILE, from: 'e.remember !== undefined && d.npcId !== undefined &&', to: 'e.remember !== undefined &&' },
+  { name: '[пам’ять] all з remembers і notRemembers вважається здійсненним', file: CHECKS_FILE, from: 'if (cj.some((x) => x.notRemembers !== undefined && kept.has(x.notRemembers))) return false;', to: '' },
+  { name: '[пам’ять] суперечність remembers/notRemembers не називається', file: CHECKS_FILE, from: 'if (x.notRemembers !== undefined && kept.has(x.notRemembers)) out.add(x.notRemembers);', to: '' },
+  { name: '[пам’ять] contradictions не знає фактів — жива гілка any з remembers рахується мертвою', file: CHECKS_FILE, from: 'satisfiable(cond, every, facts) ?', to: 'satisfiable(cond, every) ?' },
+  { name: '[пам’ять] формат id факту не перевіряється', file: CHECKS_FILE, from: 'if (!MEMORY_ID.test(f)) out.push', to: 'if (false) out.push' },
+  { name: '[пам’ять] схема не знає ефекту remember', file: 'validator/schema.mjs', from: '  remember: obj({ remember: req(str) }),\n', to: '' },
   { name: 'посилання transports не перевіряються', file: CHECKS_FILE, from: "ref('transports', id, `${e.id}.transports`)", to: '0' },
 ];
 

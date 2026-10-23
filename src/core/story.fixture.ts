@@ -62,11 +62,14 @@ export const STORY_DEFS: CoreDefs = {
         npcId: 'npc.ann', start: 'hi',
         nodes: {
           hi: { choices: [
-            { next: 'bike', when: { transport: 'transport.bike' }, effects: [{ setFlag: 'f.biker' }] },
+            { next: 'bike', when: { transport: 'transport.bike' }, effects: [{ setFlag: 'f.biker' }, { remember: 'm.biker' }] },
             { next: 'gossip', when: { all: [{ flag: 'f.met' }, { notFlag: 'f.biker' }] }, effects: [] },
             { next: 'bye', effects: [{ setFlag: 'f.met' }, { completeObjective: { quest: 'q.mid', objective: 'meet-ann' } }] },
             { next: 'bye', when: { quest: 'q.mid', status: 'completed' }, effects: [{ startQuest: 'q.secret' }] },
             { next: 'bye', when: { any: [{ flag: 'f.never' }, { flag: 'f.met' }] }, effects: [{ startQuest: 'q.gate' }] },
+            // GAME-48: пам'ять Енн — «а, це ти на велосипеді!» лише тому, хто їй це сказав.
+            { next: 'gossip', when: { remembers: 'm.biker' }, effects: [] },
+            { next: 'bye', when: { notRemembers: 'm.biker' }, effects: [] },
           ] },
           bike: { next: 'bye' },
           gossip: { next: 'bye' },

@@ -62,13 +62,18 @@ export type CondDef =
   | { readonly notFlag: string }
   | { readonly quest: string; readonly status: 'active' | 'completed' }
   | { readonly transport: string }
+  /** GAME-48: NPC, чия це розмова, пам'ятає факт (`m.назва`). У події в дорозі NPC немає — ніколи. */
+  | { readonly remembers: string }
+  | { readonly notRemembers: string }
   | { readonly all: readonly CondDef[] }
   | { readonly any: readonly CondDef[] };
 
 export type EffectDef =
   | { readonly setFlag: string }
   | { readonly startQuest: string }
-  | { readonly completeObjective: { readonly quest: string; readonly objective: string } };
+  | { readonly completeObjective: { readonly quest: string; readonly objective: string } }
+  /** GAME-48: NPC, чия це розмова, запам'ятовує факт. Єдиний спосіб змінити пам'ять NPC. */
+  | { readonly remember: string };
 
 export interface DialogueNodeDef {
   readonly end?: true;
@@ -208,6 +213,8 @@ function checkStory(st: StoryDefs): { code: DefsCode; where: string }[] {
     for (const [nid, n] of Object.entries(d.nodes)) {
       for (const next of [n.next, ...(n.choices ?? []).map((c) => c.next)]) if (!has(d.nodes, next)) out.push({ code: 'DEFS_BAD_REF', where: `${id}/${nid}→${String(next)}` });
       for (const e of (n.choices ?? []).flatMap((c) => c.effects)) {
+        // Пам'ять належить NPC розмови; у події в дорозі NPC немає — запам'ятати нікому (валідатор: EVENT_EFFECT_UNSUPPORTED).
+        if ('remember' in e && d.npcId === undefined) out.push({ code: 'DEFS_BAD_REF', where: `${id}/${nid}: remember without npcId` });
         const q = 'startQuest' in e ? e.startQuest : 'completeObjective' in e ? e.completeObjective.quest : undefined;
         if (!has(st.quests, q)) out.push({ code: 'DEFS_BAD_REF', where: `${id}/${nid}: ${String(q)}` });
       }

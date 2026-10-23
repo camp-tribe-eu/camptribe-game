@@ -8,6 +8,7 @@ declare module '*/validator/combos.mjs' {
 }
 declare module '*/validator/checks.mjs' {
   export function buildIndex(content: unknown): { reachable: Set<string> };
-  export function satisfiable(cond: unknown, known: Set<string>): boolean;
+  /** remembered — факти пам'яті, які може знати NPC цієї розмови (GAME-48); без нього — жодних. */
+  export function satisfiable(cond: unknown, known: Set<string>, remembered?: Set<string>): boolean;
   export function contradictions(cond: unknown): Set<string>;
 }

@@ -44,8 +44,10 @@ Node      = { id: "<a-z0-9->", speaker: "npc"|"player", textKey,
               рівно одне з: end: true | next: "<вузол>" | choices: Choice[≥1] }
 Choice    = { textKey, next: "<вузол>", when?: Cond, effects?: Effect[] }
 Cond      = { flag: "f.…" } | { notFlag: "f.…" } | { quest: "<id квесту>", status: "active"|"completed" }
-          | { transport: "transport.…" } | { all: Cond[≥1] } | { any: Cond[≥1] }
+          | { transport: "transport.…" } | { remembers: "m.…" } | { notRemembers: "m.…" }
+          | { all: Cond[≥1] } | { any: Cond[≥1] }
 Effect    = { setFlag: "f.…" } | { startQuest: "<id квесту>" } | { completeObjective: { quest, objective } }
+          | { remember: "m.…" }
 ```
 
 Умова й ефект — типізовані об'єкти (TD-006) рівно з одним ключем-дискримінатором; рядок
@@ -66,7 +68,13 @@ Effect    = { setFlag: "f.…" } | { startQuest: "<id квесту>" } | { compl
 * `dialogue-flags` → `DIALOGUE_FLAG_NEVER_SET`: кожен `flag`/`notFlag` (зокрема всередині `all`/`any`)
   мусить ставитись хоча б одним `setFlag` у будь-якому діалозі. Квести прапорців поки не
   ставлять (у схемі квестів немає ефектів) — з'являться, додати їх у множину.
-* Наявні перевірки розширено: `id-format` (`dlg.…`, id вузла, прапорець `f.…` — без `_`),
+* `dialogue-memory` → `MEMORY_NEVER_SET` (GAME-48): кожен `remembers`/`notRemembers` читає пам'ять NPC,
+  чия це розмова, і мусить мати здійсненний `remember` у розмові з **тим самим** NPC. Нерухома точка
+  спільна з прапорцями (`settable`): сетер за умовою, що сама вимагає свій факт, — не сетер. Пам'ять
+  змінює лише ефект `remember` (ядро: `npcMemory` у стані, сейв v2); подія в дорозі NPC не має, тож
+  `remember` у ній — `EVENT_EFFECT_UNSUPPORTED`. `remembers` і `notRemembers` того самого факту в одному
+  `all` — `DIALOGUE_COND_CONTRADICTION`.
+* Наявні перевірки розширено: `id-format` (`dlg.…`, id вузла, прапорець `f.…`, факт `m.…` — без `_`),
   `id-unique` (id діалогу, id вузла в діалозі), `locale-keys` (`textKey` вузлів і виборів →
   `LOCALE_MISSING`).
 
@@ -135,7 +143,8 @@ Effect    = { setFlag: "f.…" } | { startQuest: "<id квесту>" } | { compl
 | `dialogue-refs` | `DIALOGUE_REF_MISSING` | §2 посилання діалогу ведуть на існуючі записи |
 | `dialogue-reachable` | `DIALOGUE_NODE_UNREACHABLE` | §3 кожен вузол діалогу досяжний |
 | `dialogue-dead-end` | `DIALOGUE_DEAD_END` | §3 з кожного вузла діалогу є безумовний шлях до кінця |
-| `dialogue-flags` | `DIALOGUE_FLAG_NEVER_SET` | §2 умова не читає прапорець, який ніщо не ставить |
+| `dialogue-flags` | `DIALOGUE_FLAG_NEVER_SET`, `DIALOGUE_COND_CONTRADICTION` | §2 умова не читає прапорець, який ніщо не ставить; §3 all не суперечить собі |
+| `dialogue-memory` | `MEMORY_NEVER_SET` | GAME-48: умова не читає факт пам'яті, якого цей NPC не може знати |
 | `combo-options` | `COMBO_OPTION_UNUSABLE`, `WHEN_UNSATISFIABLE` | §1 кожен транспорт можна обрати; §3 кожна умова `when` (разом з умовою свого квесту; для переходу — ще й квесту-цілі) відповідає хоча б одній дозволеній комбінації |
 | `combos` | `COMBO_NO_START`, `COMBO_TARGETED_UNREACHABLE`, `COMBO_DEAD_CONTENT` + коди шести перевірок вище для кожної комбінації | §3 у кожному стані гравця, «48 сімей × 12 профілів × 3 транспорти × тварини» |
 | завантажувач | `CONTENT_MISSING`, `CONTENT_PARSE`, `CONTENT_EMPTY`, `CONTENT_UNKNOWN_FILE` | закон 4: порожнеча — не зелене |

@@ -22,6 +22,8 @@ const ID_PATTERNS = {
   roads: /^road\.[a-z0-9]+(?:[.-][a-z0-9]+)*$/,
 };
 const FLAG_ID = /^f\.[a-z0-9]+(?:[.-][a-z0-9]+)*$/;
+// Факт пам'яті NPC (GAME-48): «m.» і слова через дефіс — m.came-by-bike.
+const MEMORY_ID = /^m\.[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const GRANT_ID = /^rw\.[a-z0-9]+(?:[.-][a-z0-9]+)*$/;
 const OBJECTIVE_ID = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const TARGET_TYPE = { talk: 'npcs', visit: 'locations', collect: 'items', deliver: 'items' };
@@ -127,6 +129,7 @@ export const CHECKS = [
         if (!OBJECTIVE_ID.test(n.id)) out.push(I('ID_FORMAT', `${d.id}/${n.id}`, `id вузла не відповідає ${OBJECTIVE_ID}`));
       }
       for (const [where, f] of flagUses(c.content)) if (!FLAG_ID.test(f)) out.push(I('ID_FORMAT', where, `прапорець «${f}» не відповідає ${FLAG_ID}`));
+      for (const [where, f] of memoryUses(c.content)) if (!MEMORY_ID.test(f)) out.push(I('ID_FORMAT', where, `факт пам\u2019яті «${f}» не відповідає ${MEMORY_ID}`));
       for (const [where, rw] of rewards(c.content)) {
         if (!GRANT_ID.test(rw.grantId)) out.push(I('ID_FORMAT', where, `grantId не відповідає ${GRANT_ID}`));
       }
@@ -543,22 +546,11 @@ export const CHECKS = [
   {
     id: 'dialogue-flags',
     run(c) { // @check:dialogue-flags
-      // Прапорець «ставиться», лише якщо його сетер може спрацювати. Нерухома точка: спершу ефекти
-      // виборів без when; далі — ефекти умовного вибору, коли його умова здійсненна за вже
-      // відомих прапорців. notFlag, quest і transport вважаються здійсненними (стан квесту й
-      // транспорт стереже інше), окрім notFlag, що суперечить flag у тому самому all.
-      // Прапорці ставлять лише ефекти setFlag у діалогах: у quests.json ефектів на прапорці
-      // поки немає. З'являться — додай їх у початкову множину.
-      // Прапорець «подія була» (f.seen-<назва>) ставить ядро саме, коли подія відкривається (GAME-31).
-      const set = new Set((c.content.dialogues ?? []).filter((d) => d.trigger).map((d) => `f.seen-${d.id.replace(/^dlg\./, '')}`));
+      // Прапорець «ставиться», лише якщо його сетер може спрацювати — нерухома точка settable() (нижче).
+      // notFlag, quest і transport вважаються здійсненними (стан квесту й транспорт стереже інше),
+      // окрім notFlag, що суперечить flag у тому самому all.
+      const { set } = settable(c);
       const choices = dialogueChoices(c.content);
-      for (let grew = true; grew;) {
-        grew = false;
-        for (const [, ch] of choices) {
-          if (ch.when && !satisfiable(ch.when, set)) continue;
-          for (const e of ch.effects ?? []) if (e.setFlag !== undefined && !set.has(e.setFlag)) { set.add(e.setFlag); grew = true; }
-        }
-      }
       const out = [];
       for (const [where, leaf] of condLeavesAll(c.content)) {
         const f = leaf.flag !== undefined ? leaf.flag : leaf.notFlag;
@@ -566,7 +558,23 @@ export const CHECKS = [
       }
       for (const [where, ch] of choices) {
         if (!ch.when) continue;
-        for (const f of contradictions(ch.when)) out.push(I('DIALOGUE_COND_CONTRADICTION', `${where}.when`, `all вимагає водночас flag і notFlag «${f}» — вибір не покажеться ніколи`));
+        for (const f of contradictions(ch.when)) out.push(I('DIALOGUE_COND_CONTRADICTION', `${where}.when`, `all вимагає водночас «так» і «ні» для «${f}» (flag/notFlag чи remembers/notRemembers) — вибір не покажеться ніколи`));
+      }
+      return out;
+    },
+  },
+  {
+    id: 'dialogue-memory',
+    run(c) { // @check:dialogue-memory
+      // GAME-48: пам'ять NPC — його власна. Умова remembers/notRemembers читає пам'ять NPC, чия це
+      // розмова; поставити факт може лише здійсненний remember у розмові з ТИМ САМИМ NPC (нерухома
+      // точка спільна з прапорцями: settable). Як і в прапорців, notRemembers на факт, якого ніхто не
+      // ставить, — одруківка, а не «завжди так».
+      const { mem } = settable(c);
+      const out = [];
+      for (const [where, leaf, d] of condLeavesAll(c.content)) {
+        const f = leaf.remembers !== undefined ? leaf.remembers : leaf.notRemembers;
+        if (f !== undefined && !mem(d.npcId).has(f)) out.push(I('MEMORY_NEVER_SET', where, d.npcId === undefined ? `подія в дорозі читає пам\u2019ять «${f}», а NPC у неї немає — ніхто нічого не пам\u2019ятає` : `умова читає факт «${f}», який жоден здійсненний remember у розмові з «${d.npcId}» не ставить`));
       }
       return out;
     },
@@ -706,33 +714,67 @@ function conjuncts(cond) {
 // раніше така умова червоніла й блокувала здійсненний контент).
 export function contradictions(cond) {
   const every = new Set(condLeaves(cond).flatMap((x) => [x.flag, x.notFlag]).filter((f) => f !== undefined));
-  return satisfiable(cond, every) ? new Set() : conflicts(cond);
+  const facts = new Set(condLeaves(cond).flatMap((x) => [x.remembers, x.notRemembers]).filter((f) => f !== undefined));
+  return satisfiable(cond, every, facts) ? new Set() : conflicts(cond);
 }
 
-// Усі пари flag/notFlag того самого прапорця в одному all (і в any всередині) — сирий перелік.
+// Усі пари flag/notFlag того самого прапорця (і remembers/notRemembers того самого факту) в одному all
+// (і в any всередині) — сирий перелік.
 function conflicts(cond, out = new Set()) {
   if (cond.any) { cond.any.forEach((x) => conflicts(x, out)); return out; }
   if (!cond.all) return out;
   const cj = conjuncts(cond);
   const yes = new Set(cj.filter((x) => x.flag !== undefined).map((x) => x.flag));
+  const kept = new Set(cj.filter((x) => x.remembers !== undefined).map((x) => x.remembers));
   for (const x of cj) {
     if (x.notFlag !== undefined && yes.has(x.notFlag)) out.add(x.notFlag);
+    if (x.notRemembers !== undefined && kept.has(x.notRemembers)) out.add(x.notRemembers);
     if (x.any) conflicts(x, out);
   }
   return out;
 }
 
 // Чи може умова справдитись, якщо поставлені прапорці known (а решта — ні або пізніше).
-export function satisfiable(cond, known) {
-  if (cond.any) return cond.any.some((x) => satisfiable(x, known));
+// remembered — факти, які може пам'ятати NPC цієї розмови (GAME-48).
+export function satisfiable(cond, known, remembered = NONE) {
+  if (cond.any) return cond.any.some((x) => satisfiable(x, known, remembered));
   if (cond.all) {
     const cj = conjuncts(cond);
     const yes = new Set(cj.filter((x) => x.flag !== undefined).map((x) => x.flag));
     if (cj.some((x) => x.notFlag !== undefined && yes.has(x.notFlag))) return false;
-    return cj.every((x) => satisfiable(x, known));
+    const kept = new Set(cj.filter((x) => x.remembers !== undefined).map((x) => x.remembers));
+    if (cj.some((x) => x.notRemembers !== undefined && kept.has(x.notRemembers))) return false;
+    return cj.every((x) => satisfiable(x, known, remembered));
   }
   if (cond.flag !== undefined) return known.has(cond.flag);
-  return true; // notFlag, quest, transport
+  if (cond.remembers !== undefined) return remembered.has(cond.remembers);
+  return true; // notFlag, notRemembers, quest, transport
+}
+
+const NONE = new Set();
+
+// Нерухома точка: що можна поставити (прапорці, глобальні) і запам'ятати (пам'ять — окремо в кожного
+// NPC) хоч в одному проходженні. Спершу ефекти виборів без when; далі — ефекти умовного вибору, коли
+// його умова здійсненна за вже відомих прапорців і пам'яті ЦЬОГО NPC. Прапорці ставлять лише ефекти
+// setFlag у діалогах (у quests.json ефектів поки немає — з'являться, додай їх у початкову множину);
+// прапорець «подія була» (f.seen-<назва>) ставить ядро саме, коли подія відкривається (GAME-31).
+// Пам'ять — лише remember у розмові з NPC; подія в дорозі NPC не має, тож нічого не запам'ятовує.
+function settable(c) {
+  const set = new Set((c.content.dialogues ?? []).filter((d) => d.trigger).map((d) => `f.seen-${d.id.replace(/^dlg\./, '')}`));
+  const memory = new Map();
+  const mem = (npc) => memory.get(npc) ?? NONE;
+  const choices = dialogueChoices(c.content);
+  for (let grew = true; grew;) {
+    grew = false;
+    for (const [, ch, d] of choices) {
+      if (ch.when && !satisfiable(ch.when, set, mem(d.npcId))) continue;
+      for (const e of ch.effects ?? []) {
+        if (e.setFlag !== undefined && !set.has(e.setFlag)) { set.add(e.setFlag); grew = true; }
+        if (e.remember !== undefined && d.npcId !== undefined && !mem(d.npcId).has(e.remember)) { memory.set(d.npcId, new Set([...mem(d.npcId), e.remember])); grew = true; }
+      }
+    }
+  }
+  return { set, mem };
 }
 
 // [where, choice, dialogue] для кожного вибору кожного діалогу.
@@ -747,7 +789,7 @@ function dialogueChoices(content) {
 function condLeavesAll(content) {
   const out = [];
   for (const d of content.dialogues ?? []) for (const n of d.nodes) {
-    (n.choices ?? []).forEach((ch, i) => { if (ch.when) for (const leaf of condLeaves(ch.when)) out.push([`${d.id}/${n.id}.choices[${i}].when`, leaf]); });
+    (n.choices ?? []).forEach((ch, i) => { if (ch.when) for (const leaf of condLeaves(ch.when)) out.push([`${d.id}/${n.id}.choices[${i}].when`, leaf, d]); });
   }
   return out;
 }
@@ -764,6 +806,13 @@ function flagUses(content) {
   const out = [];
   for (const [where, leaf] of condLeavesAll(content)) { const f = leaf.flag ?? leaf.notFlag; if (f !== undefined) out.push([where, f]); }
   for (const [where, e] of dialogueEffects(content)) if (e.setFlag !== undefined) out.push([where, e.setFlag]);
+  return out;
+}
+
+function memoryUses(content) {
+  const out = [];
+  for (const [where, leaf] of condLeavesAll(content)) { const f = leaf.remembers ?? leaf.notRemembers; if (f !== undefined) out.push([where, f]); }
+  for (const [where, e] of dialogueEffects(content)) if (e.remember !== undefined) out.push([where, e.remember]);
   return out;
 }
 
