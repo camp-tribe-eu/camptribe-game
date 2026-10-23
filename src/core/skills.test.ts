@@ -113,7 +113,8 @@ describe('Спосіб перевірки 1: спадна віддача й ме
   });
 
   it('без персонажа вчитись нікому; відмова й повтор commandId нічого не вчать', () => {
-    const blank = send(initialState(10_000), { type: 'BuyItem', itemId: 'item.stove' });
+    // Каталог без сюжету не має локацій, тож купівля без персонажа проходить (з сюжетом — NOT_SOLD_HERE, GAME-81).
+    const blank = send(initialState(10_000), { type: 'BuyItem', itemId: 'item.stove' }, { items: SKILL_DEFS.items, interactions: {} });
     expect(blank.ok && blank.state.skills).toEqual(zeroSkills());
     expect(blank.ok && blank.state.practice).toEqual({});
     const s = start(DRIVER, 0);

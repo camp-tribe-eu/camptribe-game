@@ -7,6 +7,11 @@ import type { LifeDefs } from './life';
 export interface ItemDef {
   /** Ціна купівлі, центи; немає — предмет не продається. */
   readonly buyCents?: number;
+  /**
+   * Де продається (GAME-81): id локацій-крамниць. Немає (або порожньо) — купити ніде, навіть із ціною. Єдина правда
+   * про «чи можна купити тут» — `soldAt` нижче: і ядро (BuyItem), і меню (воно питає ядро) йдуть через неї.
+   */
+  readonly soldAt?: readonly string[];
   /** Ціна викупу вживаного, центи; немає — не викуповується. ≤ buyCents (SIM-INV-004). */
   readonly sellCents?: number;
   /**
@@ -19,6 +24,17 @@ export interface ItemDef {
 /** Види спорядження (GAME-73). Той самий перелік — у схемі валідатора (items.kind). */
 export const GEAR_KINDS = ['tent', 'sleeping-bag'] as const;
 export interface GearDef { readonly kind: (typeof GEAR_KINDS)[number]; readonly tier: number }
+
+/**
+ * Чи можна купити предмет у цій локації (GAME-81) — ЄДИНЕ місце правила: ядро (BuyItem) питає його, меню питає ядро.
+ * Світ із локаціями (`story`) — лише там, де предмет продається; у дорозі (`null`) і без персонажа — ніде.
+ * Каталог без сюжету не має локацій, і «де» там нема чого питати: ціна — і все (так працюють ядрові фікстури).
+ */
+export function canBuyAt(defs: CoreDefs, itemId: string, locationId: string | null | undefined): boolean {
+  if (defs.story === undefined) return true;
+  const sold = Object.hasOwn(defs.items, itemId) ? defs.items[itemId]?.soldAt : undefined;
+  return sold !== undefined && typeof locationId === 'string' && sold.includes(locationId);
+}
 
 export interface InteractionDef {
   /** Нагорода видається рівно раз за grantId (TD-004). */
@@ -168,7 +184,7 @@ export interface CoreDefs {
 
 export const EMPTY_DEFS: CoreDefs = { items: {}, interactions: {} };
 
-export const DEFS_CODES = ['DEFS_BAD_AMOUNT', 'DEFS_RESALE_ABOVE_PRICE', 'DEFS_BAD_ID', 'DEFS_BAD_REF', 'DEFS_STORY_ITEM_SELLABLE'] as const;
+export const DEFS_CODES = ['DEFS_BAD_AMOUNT', 'DEFS_RESALE_ABOVE_PRICE', 'DEFS_BAD_ID', 'DEFS_BAD_REF', 'DEFS_STORY_ITEM_SELLABLE', 'DEFS_STORY_ITEM_BUYABLE'] as const;
 export type DefsCode = (typeof DEFS_CODES)[number];
 
 const isCents = (n: unknown): boolean => typeof n === 'number' && Number.isSafeInteger(n) && n >= 0;
@@ -203,6 +219,15 @@ export function checkDefs(defs: CoreDefs): { code: DefsCode; where: string }[] {
     // підібраного — нескінченні гроші: підняв, продав, підняв знову (рецензія GAME-29).
     const story = storyItems(defs.story);
     for (const [id, d] of Object.entries(defs.items)) if (d.sellCents !== undefined && story.has(id)) out.push({ code: 'DEFS_STORY_ITEM_SELLABLE', where: id });
+    // GAME-81: те, що лежить у локації, сюжет дає безкоштовно — купівля десь інде робить «Узяти» неможливим
+    // (ITEM_ALREADY_HELD), а гравець заплатив би за подарунок. Тому ціни в такого предмета немає взагалі.
+    const places = defs.story.locations;
+    const lying = new Set(Object.values(places).flatMap((l) => l.items));
+    for (const [id, d] of Object.entries(defs.items)) if (d.buyCents !== undefined && lying.has(id)) out.push({ code: 'DEFS_STORY_ITEM_BUYABLE', where: id });
+    // soldAt веде в існуючу локацію: помилка в id мовчки зробила б предмет непродаваним.
+    for (const [id, d] of Object.entries(defs.items)) {
+      if (d.soldAt?.some((l) => !Object.hasOwn(places, l))) out.push({ code: 'DEFS_BAD_REF', where: `${id}.soldAt` });
+    }
   }
   return out;
 }

@@ -1,6 +1,6 @@
 // Мінімальний сюжет для тестів ядра (GAME-29): кожна гілка семантики — тут один раз.
 import { dispatch, type Command } from './commands';
-import type { CoreDefs } from './defs';
+import type { CoreDefs, ItemDef } from './defs';
 import { initialState, type GameState } from './state';
 
 export const STORY_DEFS: CoreDefs = {
@@ -141,15 +141,22 @@ export const EVENT_DEFS: CoreDefs = {
  * мультиметр і пічку, а профіль `profile.mech` — механік і електрик на рангах 5 (старт професії).
  * Колесо велосипеда: механіка ≥ 2, ключ (лишається) і камера (витрачається). Лампа: електрика ≥ 1, мультиметр.
  */
+/**
+ * Фікстури навичок і спорядження перевіряють навички й стан, а не географію крамниці (її — SHOP_DEFS нижче, GAME-81):
+ * тут усе продається в кожній локації сюжету, щоб тести не їздили по крамницях перед кожною купівлею.
+ */
+const ALL_LOCATIONS = Object.keys((STORY_DEFS.story as NonNullable<CoreDefs['story']>).locations);
+const soldAnywhere = (items: Record<string, ItemDef>): Record<string, ItemDef> =>
+  Object.fromEntries(Object.entries(items).map(([id, d]) => [id, d.buyCents === undefined ? d : { ...d, soldAt: ALL_LOCATIONS }]));
 const risky = (minutes: number, cents: number, risk: number) => ({ minutes, cents, risk });
 const ROAD_STORY = ROAD_DEFS.story as NonNullable<CoreDefs['story']>;
 export const SKILL_DEFS: CoreDefs = {
-  items: {
+  items: soldAnywhere({
     'item.wrench': { buyCents: 1_000 },
     'item.tube': { buyCents: 300 },
     'item.multimeter': { buyCents: 2_000 },
     'item.stove': { buyCents: 300, sellCents: 100 },
-  },
+  }),
   interactions: {},
   repairs: {
     'obj.bike-wheel': { skill: 'skill.mechanics', minRank: 2, tool: 'item.wrench', part: 'item.tube', flag: 'f.wheel-fixed' },
@@ -174,6 +181,21 @@ export const SKILL_DEFS: CoreDefs = {
   },
 };
 
+/**
+ * Крамниця (GAME-81): дім ↔ крамниця автом; пічка й лампа продаються ЛИШЕ в `loc.shop`. Дрова й золото лежать у локаціях
+ * (дім, крамниця) — ціни в них немає, інакше checkDefs відмовить (DEFS_STORY_ITEM_BUYABLE).
+ */
+export const SHOP_DEFS: CoreDefs = {
+  items: {
+    'item.stove': { buyCents: 300, sellCents: 100, soldAt: ['loc.shop'] },
+    'item.lamp': { buyCents: 900, soldAt: ['loc.shop'] },
+    'item.wood': {},
+    'item.gold': {},
+  },
+  interactions: {},
+  story: ROAD_DEFS.story as NonNullable<CoreDefs['story']>,
+};
+
 export const MECHANIC = { type: 'CreateCharacter', profileId: 'profile.mech', transportId: 'transport.car' } as const;
 export const NOVICE = { type: 'CreateCharacter', profileId: 'profile.novice', transportId: 'transport.car' } as const;
 
@@ -184,13 +206,13 @@ export const NOVICE = { type: 'CreateCharacter', profileId: 'profile.novice', tr
  * (DEFS_STORY_ITEM_SELLABLE); відмова ядра — другий рубіж.
  */
 export const GEAR_DEFS: CoreDefs = {
-  items: {
+  items: soldAnywhere({
     'item.tent-a': { buyCents: 10_000, sellCents: 4_000, gear: { kind: 'tent', tier: 1 } },
     'item.bag-a': { buyCents: 3_000, sellCents: 1_000, gear: { kind: 'sleeping-bag', tier: 2 } },
     'item.stove': { buyCents: 300, sellCents: 100 },
     'item.wood': { buyCents: 500, sellCents: 200 },
     'item.gold': { buyCents: 900, sellCents: 400 },
-  },
+  }),
   interactions: {},
   story: ROAD_DEFS.story as NonNullable<CoreDefs['story']>,
 };

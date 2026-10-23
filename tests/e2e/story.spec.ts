@@ -301,6 +301,11 @@ test('кожна ціль екрана подорожі ≥ 44×44 CSS px і н�
   await panel(page).locator('[data-act="create"]').first().click();
   await page.waitForTimeout(400);   // GAME-80: панель глуха ~350 мс після дії
   await act(page, 'visit', 'loc.home');
+  // GAME-81: удома більше немає кнопок «Купити» — для щільного екрана йдемо в крамницю (три «Узяти», дорога, квест).
+  await act(page, 'complete', 'q.st-001');
+  await act(page, 'visit', 'loc.home');
+  await act(page, 'complete', 'q.st-002');
+  await act(page, 'visit', 'loc.shop');
   await panel(page).locator('[data-ui="journal"] summary').click();
   const bad = await page.evaluate(() => {
     const out: string[] = [];
