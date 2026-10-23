@@ -83,4 +83,40 @@ Job 120541133497. Усі 22 сторінки відповіли `HTTP 200`; ря
 - Сторінки `lpc-clothing-updates` (http) і голий `https://opengameart.org/content/` у `fetch.txt` не перелічені — сторінок немає.
   Рядок `head/female` посилається на `https://opengameart.org/content/` без slug — це не джерело.
 - `hair/*` з CC-BY-SA 3.0: `lpc-expanded-hair` у розділі ліцензій дає CC-BY-SA 4.0.
-- Реєстр `docs/LICENSE_REGISTER.md` (ART-006) не змінено: умова «нуль MISMATCH і нуль NOT FOUND» не виконана.
+- На цей момент (прогін 39990624717) реєстр ART-006 не змінювали: умова «нуль MISMATCH і нуль NOT FOUND» не виконана. Виправлення — нижче.
+
+## 2026-10-23 · прогін [39991667844](https://github.com/camp-tribe-eu/camptribe-game/actions/runs/39991667844) — сторінка, якої бракувало
+
+| slug | url | HTTP | sha256 (16) | ліцензії, дослівно | Author |
+|---|---|---|---|---|---|
+| lpc-clothing-updates | https://opengameart.org/content/lpc-clothing-updates | 200 | `e13aed6689009e15` | CC-BY-SA 3.0 | bluecarrot16 |
+
+## Виправлення (23.10.2026)
+
+Правило вибору тепер: ліцензія, яку дають **усі** сторінки першоджерела рядка, а не «найм'якша з генератора». Сумісність:
+частини під "CC-BY 3.0" чи "OGA-BY 3.0" можна включати у твір під "CC-BY-SA 3.0" (зі збереженням атрибуції), тож
+"CC-BY-SA 3.0" задовольняє рядки, де поруч стоять сторінки «CC-BY-SA 3.0 ; GPL 3.0», «CC-BY 3.0» чи лише «OGA-BY».
+Закріплення — `assets/licence-pins.json` (12 шарів); сторож `scripts/assets/check-assets.mjs` вимагає для кожного
+наявний цей файл (код `LICENCE_PIN_NO_EVIDENCE`), збіг із титрами (`LICENCE_PIN_MISMATCH`) і рядок титрів
+(`LICENCE_PIN_UNUSED`); імпортер `scripts/assets/import_lpc_characters.py` закріплення не затирає (перевірено:
+`--offline` відтворює той самий CSV).
+
+| файл | було | стало | чому |
+|---|---|---|---|
+| body/bodies/female, male, teen | OGA-BY 3.0 | CC-BY-SA 3.0 | сторінки: «CC-BY-SA 3.0 ; GPL 3.0» і «CC-BY 3.0» (`lpc-be-seated`) |
+| feet/shoes/basic/male, thin | OGA-BY 3.0 | CC-BY-SA 3.0 | `lpc-clothing-updates` «CC-BY-SA 3.0», `lpc-expanded-socks-shoes` «GPL 3.0 ; CC-BY-SA 3.0» |
+| hair/plain | OGA-BY 3.0 | CC-BY-SA 3.0 | base assets «CC-BY-SA 3.0 ; GPL 3.0»; `lpc-expanded-hair` — див. нижче |
+| head/heads/human/female, male | OGA-BY 3.0 | CC-BY-SA 3.0 | `lpc-character-bases`, base assets: «CC-BY-SA 3.0 ; GPL 3.0» |
+| legs/pants/male, thin | OGA-BY 3.0 | CC-BY-SA 3.0 | base assets «CC-BY-SA 3.0 ; GPL 3.0», `lpc-clothing-updates` «CC-BY-SA 3.0» |
+| torso/…/longsleeve/female, male | OGA-BY 3.0 | CC-BY-SA 3.0 | сторінки «CC-BY-SA 3.0 ; GPL 3.0» і `lpc-expanded-sit-run-jump-more` лише «OGA-BY 3.0, OGA-BY 4.0» — частини під OGA-BY включаються у твір під CC-BY-SA |
+| torso/…/longsleeve/teen | OGA-BY 3.0 | **прибрано** | у грі не використано; генератор пропонує «OGA-BY 3.0 ; GPL 3.0» — "CC-BY-SA 3.0" немає, а GPL реєстр не дозволяє |
+| hair/messy1, ponytail bg/fg | CC-BY-SA 3.0 | без змін | `lpc-expanded-hair`: розділ «License(s)» — «GPL 3.0 ; CC-BY-SA 4.0», а опис файлів тієї ж сторінки дослівно «License: CC-BY-SA 3.0. Please see credits.txt for more details.»; генератор — «CC-BY-SA 3.0». Розбіжність самої сторінки; беремо опис файлів |
+| head/heads/human/male_small | OGA-BY 3.0 | без змін | сторінки OGA немає (джерело — генератор на GitHub) |
+
+Рядок `head/female`: перше посилання в даних генератора — голе `https://opengameart.org/content/` без назви сторінки;
+це **порожнє посилання в даних генератора**, а не джерело. Друге посилання (`lpc-character-bases`) звірено.
+
+Підсумок після виправлення: 21 файл. Кожна обрана ліцензія або є в розділі ліцензій кожної OGA-сторінки рядка, або
+сумісна з усіма ними (CC-BY / OGA-BY → CC-BY-SA), з двома названими винятками вище (`hair/*` — опис файлів сторінки;
+`male_small` — сторінки OGA немає). `node scripts/assets/check-assets.mjs` → `ASSETS: OK · 21 PNG, 21 рядків титрів
+(CC-BY-SA 3.0×19, OGA-BY 3.0×1, CC0×1), 10 рядків реєстру`.
