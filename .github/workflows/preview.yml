@@ -61,12 +61,16 @@ jobs:
           [ "$(jq length <<<"$include")" -gt 0 ] || { echo "::error::PREVIEW_EMAILS порожній — замок нікого б не пустив"; exit 1; }
           body=$(jq -cn --arg d "$domain" --argjson inc "$include" '{name:"CampLife preview", type:"self_hosted", domain:$d,
             session_duration:"720h", policies:[{name:"owner", decision:"allow", include:$inc}]}')
-          list=$(curl -fsS "${auth[@]}" "$api") || { echo "::error::Access API недоступне (Zero Trust не налаштовано або токену бракує прав Access: Apps and Policies)"; exit 1; }
+          # Відповідь Cloudflare друкуємо (лише .errors — у ній немає секретів): «HTTP 400» без причини нічого не каже.
+          cf() { local out; out=$(curl -sS -w '\n%{http_code}' "${auth[@]}" "$@"); local code=${out##*$'\n'}; local bodyout=${out%$'\n'*}
+            if [ "$code" -ge 300 ]; then echo "::error::Cloudflare HTTP $code: $(jq -c '.errors // .' <<<"$bodyout" 2>/dev/null | head -c 600)" >&2; return 1; fi
+            printf '%s' "$bodyout"; }
+          list=$(cf "$api") || { echo "::error::Access API відмовило — якщо Zero Trust ще не активовано: dash.cloudflare.com → Zero Trust → назва команди → план Free"; exit 1; }
           id=$(jq -r --arg d "$domain" '.result[] | select(.domain==$d) | .id' <<<"$list" | head -1)
           if [ -n "$id" ]; then
-            curl -fsS -X PUT "${auth[@]}" "$api/$id" --data "$body" >/dev/null && echo "замок оновлено ($domain)"
+            cf -X PUT "$api/$id" --data "$body" >/dev/null && echo "замок оновлено ($domain)"
           else
-            curl -fsS -X POST "${auth[@]}" "$api" --data "$body" >/dev/null && echo "замок створено ($domain)"
+            cf -X POST "$api" --data "$body" >/dev/null && echo "замок створено ($domain)"
           fi
 
       - name: Проєкт Pages (production-гілку не публікуємо ніколи)
