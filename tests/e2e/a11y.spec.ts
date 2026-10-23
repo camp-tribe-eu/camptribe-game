@@ -129,16 +129,18 @@ test.describe('axe-core: 0 порушень serious/critical на кожному
 
   test('світ із дотиковими кнопками', async ({ page }) => {
     const errors = await openGame(page);
-    await expect(page.locator('[data-touch="up"]')).toBeVisible();
+    await expect(page.locator('[data-touch="stick"]')).toBeVisible();
     expect(await seriousViolations(page)).toEqual([]);
     expect(await passedRules(page)).toBeGreaterThan(5);
     expect(errors).toEqual([]);
   });
 
-  test('підпис збірки на канві читається й над найсвітлішим пікселем гри (білий під канвою)', async ({ page }) => {
+  test('підпис збірки в меню паузи читається й над найсвітлішим пікселем гри (білий під канвою)', async ({ page }) => {
     await openGame(page);
+    await openPause(page);
     await page.addStyleTag({ content: WORST_BACKDROP });
-    const r = await new AxeBuilder({ page }).include('.build').withRules(['color-contrast']).analyze();
+    await page.locator('[data-ui="build"]').scrollIntoViewIfNeeded();   // поза екраном axe контраст не мірить (incomplete)
+    const r = await new AxeBuilder({ page }).include('[data-ui="build"]').withRules(['color-contrast']).analyze();
     expect(r.violations.map((v) => v.id)).toEqual([]);
     expect(r.passes.map((v) => v.id)).toContain('color-contrast');   // справді зміряно, а не «не вдалося»
   });

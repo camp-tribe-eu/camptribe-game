@@ -9,7 +9,6 @@ const rectOf = (page: Page, sel: string): Promise<Rect> => page.locator(sel).fir
   const r = el.getBoundingClientRect();
   return { left: r.left, top: r.top, right: r.right, bottom: r.bottom, width: r.width, height: r.height };
 });
-const meets = (a: Rect, b: Rect): boolean => a.left < b.right && b.left < a.right && a.top < b.bottom && b.top < a.bottom;
 
 async function newPage(browser: Browser, vp: { width: number; height: number }, scale: 100 | 200, touch: boolean): Promise<Page> {
   const ctx = await browser.newContext({ viewport: vp, hasTouch: touch, isMobile: touch });
@@ -102,13 +101,13 @@ test.describe('№12 «Зберегти» не двічі', () => {
   });
 });
 
-test.describe('№9 дотикові стрілки не просвічують крізь панелі', () => {
+test.describe('№9 дотикові елементи (джойстик, дія) не просвічують крізь панелі', () => {
   test.use({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true });
 
-  test('на карті стрілки видно; під панеллю подорожі й під паузою їх немає (visibility: hidden)', async ({ page }) => {
+  test('на карті джойстик і кнопку дії видно; під панеллю подорожі й під паузою їх немає (visibility: hidden)', async ({ page }) => {
     await load(page);
-    const arrows = page.locator('.touch button');
-    expect(await arrows.count()).toBeGreaterThanOrEqual(5);
+    const arrows = page.locator('.touch > *');
+    expect(await arrows.count()).toBe(2);   // джойстик + кнопка дії (GAME-91)
     const vis = (): Promise<string[]> => arrows.evaluateAll((els) => els.map((e) => getComputedStyle(e).visibility));
     expect((await vis()).every((v) => v === 'visible')).toBe(true);          // позитивний контроль: на карті вони є
     await openStory(page);
@@ -122,20 +121,21 @@ test.describe('№9 дотикові стрілки не просвічують 
   });
 });
 
+// GAME-91: підпис збірки прибрано з екрана гри — він у меню паузи (було: на канві, GAME-84 №10).
 for (const scale of [100, 200] as const) {
   test.describe(`№10 підпис збірки, телефон 390×844, текст ${scale} %`, () => {
-    test(`повний SHA в підписі, підпис у межах екрана й не під ☰ та ‖`, async ({ browser }) => {
+    test(`на екрані гри підпису немає; в меню паузи — повний SHA, у межах екрана`, async ({ browser }) => {
       const page = await newPage(browser, { width: 390, height: 844 }, scale, true);
       await load(page);
-      const label = await page.locator('.build').textContent();
-      expect(label ?? '').toMatch(/[0-9a-f]{40}|unknown/);                       // повний SHA (або чесне «unknown» без git)
-      const b = await rectOf(page, '.build');
-      const story = await rectOf(page, '[data-touch="story"]');
-      const pause = await rectOf(page, '[data-touch="pause"]');
+      await expect(page.locator('.build')).toHaveCount(0);
+      expect(await page.locator('#app').innerText()).not.toMatch(/CampLife v|[0-9a-f]{40}/);   // ні в шапці, ні деінде на екрані гри
+      await page.locator('[data-touch="pause"]').click();
+      const build = page.locator('[data-ui="pause"] [data-ui="build"]');
+      await build.scrollIntoViewIfNeeded();
+      expect((await build.textContent()) ?? '').toMatch(/^CampLife v\S+ · ([0-9a-f]{40}|unknown)$/);   // повний SHA (або чесне «unknown» без git)
+      const b = await rectOf(page, '[data-ui="build"]');
       expect(b.left).toBeGreaterThanOrEqual(0);
       expect(b.right).toBeLessThanOrEqual(390);                                  // не вилазить за екран (при 200 % раніше — вилазив)
-      expect(meets(b, story), `підпис ${JSON.stringify(b)} під ☰ ${JSON.stringify(story)}`).toBe(false);
-      expect(meets(b, pause), `підпис під ‖`).toBe(false);
       expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);   // сторінка не їде вбік
     });
   });

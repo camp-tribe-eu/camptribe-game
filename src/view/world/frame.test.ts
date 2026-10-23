@@ -7,14 +7,18 @@ describe('frameSize (GAME-84 №13)', () => {
     for (const [w, h] of [[1280, 724], [844, 314], [800, 600], [720, 600]] as [number, number][]) expect(frameSize(w, h), `${w}×${h}`).toEqual({ width: 240, height: 160 });
   });
 
-  it('вузьке поле (телефон сторч, планшет сторч): кадр заповнює його за формою, але не вище за мапу', () => {
-    expect(frameSize(390, 768)).toEqual({ width: 160, height: MAP_HEIGHT });
-    expect(frameSize(820, 1100)).toEqual({ width: 160, height: MAP_HEIGHT });
-    // Майже квадратне поле: висота між 160 і мапою, пропорція кадру ≈ пропорції поля (FIT не лишає смуг по краях).
-    const f = frameSize(600, 700);
-    expect(f.height).toBeGreaterThanOrEqual(160);
-    expect(f.height).toBeLessThanOrEqual(MAP_HEIGHT);
-    expect(Math.abs(f.width / f.height - 600 / 700)).toBeLessThan(0.05);
+  it('вузьке поле (телефон сторч, GAME-91): цілий масштаб, кадр = поле / k, висота не вища за мапу', () => {
+    // 390×788 → k=4: кадр 97×192 (мапа на всю висоту, по ширині камера їде за персонажем).
+    expect(frameSize(390, 788)).toEqual({ width: 97, height: MAP_HEIGHT });
+    expect(frameSize(375, 611)).toEqual({ width: 125, height: MAP_HEIGHT });   // k=3
+    expect(frameSize(360, 744)).toEqual({ width: 90, height: 186 });           // k=4, 744/4 < мапи
+    for (const [w, h] of [[390, 788], [375, 611], [360, 744], [820, 1100], [600, 700]] as [number, number][]) {
+      const f = frameSize(w, h);
+      const k = Math.max(1, Math.round(h / MAP_HEIGHT));
+      expect(f.height, `${w}×${h}`).toBeLessThanOrEqual(MAP_HEIGHT);
+      expect(f.width * k, `${w}×${h}`).toBeLessThanOrEqual(w);
+      expect(f.width * k, `${w}×${h}: кадр заповнює поле по ширині`).toBeGreaterThan(w - k);
+    }
   });
 
   it('поле без розміру (ще не розкладене) і нульові виміри — безпечний широкий кадр, не NaN', () => {
@@ -23,6 +27,6 @@ describe('frameSize (GAME-84 №13)', () => {
 
   it('межа 1,2: поле 1,2 — ще широке, трохи вужче — уже вузьке', () => {
     expect(frameSize(1200, 1000).width).toBe(240);
-    expect(frameSize(1190, 1000).width).toBe(160);
+    expect(frameSize(1190, 1000)).toEqual({ width: 238, height: MAP_HEIGHT });   // k=5: уже вузька гілка (GAME-91), а не 240×160
   });
 });

@@ -46,6 +46,23 @@ export function moveVector(held: ReadonlySet<Action>): { x: number; y: number } 
   return len === 0 ? { x: 0, y: 0 } : { x: x / len, y: y / len };
 }
 
+/** Мертва зона джойстика — частка радіуса, до якої стік вважається в центрі (GAME-91). */
+export const STICK_DEADZONE = 0.25;
+const SIN_HALF_OCTANT = Math.sin(Math.PI / 8);   // 22,5°: межа між вісьовим і діагональним сектором
+
+/**
+ * Зсув пальця від центру джойстика → утримувані напрямки (8 секторів по 45°). Той самий набір `Action`, що й у клавіш,
+ * тому рух ідеться тим самим шляхом (press/release → consumeFrame → moveVector), і ядро та детермінізм не зачеплено.
+ */
+export function stickActions(dx: number, dy: number, radius: number): Set<Action> {
+  const dist = Math.hypot(dx, dy);
+  const out = new Set<Action>();
+  if (radius <= 0 || dist < radius * STICK_DEADZONE) return out;
+  if (Math.abs(dx) > dist * SIN_HALF_OCTANT) out.add(dx > 0 ? 'right' : 'left');
+  if (Math.abs(dy) > dist * SIN_HALF_OCTANT) out.add(dy > 0 ? 'down' : 'up');
+  return out;
+}
+
 /**
  * Взаємодія спрацьовує на ФРОНТ натискання і не частіше, ніж раз на `cooldownMs`:
  * подвійне натискання (чи дотик + клавіша разом) — одна команда.

@@ -9,7 +9,7 @@ import { StoryPanel, money } from './StoryPanel';
 import { trapTab } from './focus-trap';
 import type { StoryOffer } from './story-types';
 
-export function Shell({ port, langOverride, credits }: { port: UiPort; langOverride?: AnyLang; credits: Credits }) {
+export function Shell({ port, langOverride, credits, build }: { port: UiPort; langOverride?: AnyLang; credits: Credits; build: string }) {
   const [paused, setPaused] = useState(false);
   // Підтвердження «Нової гри» (GAME-82): окремий діалог замість меню паузи; Escape — «Ні», а не закрити паузу.
   const [confirmNew, setConfirmNew] = useState(false);
@@ -93,7 +93,7 @@ export function Shell({ port, langOverride, credits }: { port: UiPort; langOverr
     document.documentElement.lang = settings.language;
     document.getElementById('stage')?.setAttribute('aria-label', t('ui.stage'));
     // Дотикові кнопки сцени (src/view/world/touch.ts) — підписи мовою гравця, а не id дії англійською.
-    const TOUCH: Readonly<Record<string, Key>> = { up: 'touch.up', down: 'touch.down', left: 'touch.left', right: 'touch.right', interact: 'touch.interact' };
+    const TOUCH: Readonly<Record<string, Key>> = { stick: 'touch.stick', interact: 'touch.interact' };
     for (const b of document.querySelectorAll<HTMLElement>('.touch [data-touch]')) {
       const k = TOUCH[b.dataset.touch ?? ''];
       if (k) b.setAttribute('aria-label', t(k));
@@ -118,17 +118,21 @@ export function Shell({ port, langOverride, credits }: { port: UiPort; langOverr
 
   return (
     <>
-      {/* Під діалогом HUD не малюємо: його дані є в самому діалозі, а схована смуга під ним збивала вимірювання контрасту (axe). */}
-      {!paused && !storyOpen && <div class="ui-hud" data-ui="hud" role="group" aria-label={t('ui.hud')}>
-        <span data-ui="hud-place">{offer.locationKey ? ct(lang, offer.locationKey) : t('ui.noPlace')}</span>
-        <span data-ui="hud-time">{`${t('ui.day')} ${offer.day}, ${hh}:${mm}`}</span>
-        <span data-ui="hud-money">{money(lang, offer.moneyCents)}</span>
-        {showHint && <span class="ui-hint" data-ui="hint" role="status">{t('ui.hint')}</span>}
-        {/* GAME-89 №6: кампанія завершена — мапа лишається живою (можна ходити), але про кінець видно й поза ☰. */}
-        {offer.stage === 'ended' && <span class="ui-hint" data-ui="ended-hint" role="status">{t('ui.endedHint')}</span>}
-      </div>}
-      {!paused && !storyOpen && <button type="button" class="ui-pause-btn" data-touch="pause" aria-label={t('ui.pause')} onClick={() => toggle(true)}>{'‖'}</button>}
-      {!paused && !storyOpen && <button type="button" class="ui-story-btn" data-hint={showHint || offer.stage === 'ended' ? 'yes' : undefined} data-touch="story" aria-label={t('ui.story')} onClick={() => story(true)}>{'☰'}</button>}
+      {/* GAME-91: шапка — ☰ ліворуч, ‖ праворуч, текст (HUD) між ними. Усе в одному ряду потоку, а не абсолютом: кнопки
+          ніколи не лежать на тексті, при 200 % текст переноситься в середній колонці. Під діалогом шапки немає: дані HUD є
+          в самому діалозі, а схована смуга під ним збивала вимірювання контрасту (axe). */}
+      {!paused && !storyOpen && <header class="ui-header">
+        <button type="button" class="ui-story-btn" data-hint={showHint || offer.stage === 'ended' ? 'yes' : undefined} data-touch="story" aria-label={t('ui.story')} onClick={() => story(true)}>{'☰'}</button>
+        <div class="ui-hud" data-ui="hud" role="group" aria-label={t('ui.hud')}>
+          <span data-ui="hud-place">{offer.locationKey ? ct(lang, offer.locationKey) : t('ui.noPlace')}</span>
+          <span data-ui="hud-time">{`${t('ui.day')} ${offer.day}, ${hh}:${mm}`}</span>
+          <span data-ui="hud-money">{money(lang, offer.moneyCents)}</span>
+          {showHint && <span class="ui-hint" data-ui="hint" role="status">{t('ui.hint')}</span>}
+          {/* GAME-89 №6: кампанія завершена — мапа лишається живою (можна ходити), але про кінець видно й поза ☰. */}
+          {offer.stage === 'ended' && <span class="ui-hint" data-ui="ended-hint" role="status">{t('ui.endedHint')}</span>}
+        </div>
+        <button type="button" class="ui-pause-btn" data-touch="pause" aria-label={t('ui.pause')} onClick={() => toggle(true)}>{'‖'}</button>
+      </header>}
       {storyOpen && <StoryPanel offer={offer} lang={lang} t={t} act={(id) => port.act(id)} close={() => story(false)}>{staleNotice}</StoryPanel>}
       {paused && confirmNew && (
         <div class="ui-overlay" role="dialog" aria-modal="true" aria-label={t('ui.newGame')} data-ui="confirm-new" onKeyDown={(e) => trapTab(e, e.currentTarget)}>
@@ -176,6 +180,8 @@ export function Shell({ port, langOverride, credits }: { port: UiPort; langOverr
             <button type="button" class="ui-btn" data-ui="new-game" onClick={() => setConfirmNew(true)}>{t('ui.newGame')}</button>
             <button type="button" class="ui-btn" data-ui="reset" onClick={() => update({ ...DEFAULT_SETTINGS, hintSeen: settings.hintSeen })}>{t('ui.reset')}</button>
           </fieldset>
+          {/* GAME-91: підпис збірки (версія + повний SHA) — тут, а не на екрані гри; для баг-репортів. */}
+          <p class="ui-build" data-ui="build">{build}</p>
           {/* Титри обов'язкові (OD-013): автор, джерело, ліцензія і чи змінено — для кожного файлу графіки. */}
           <details class="ui-credits" data-ui="credits">
             <summary class="ui-btn">{t('ui.credits')}</summary>
