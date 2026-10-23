@@ -54,6 +54,12 @@ export function StoryPanel({ offer, lang, t, act, close, children }: { offer: St
     ];
     return `${t(ACT[a.kind])} ${ct(lang, a.key)}${extras.length ? ` (${extras.join(', ')})` : ''}`;
   };
+  // Недоступна купівля (GAME-83): aria-disabled, а не disabled — лишається в порядку Tab, тож екранний читач
+  // чує назву, ціну й причину; активація нічого не робить. Причина — частина доступного імені кнопки.
+  const lockedButton = (a: OfferAction) => (
+    <button type="button" class="ui-btn ui-btn-locked" key={a.id} aria-disabled="true" data-act="buy-locked" data-key={a.key ?? ''}
+      onClick={(e) => e.preventDefault()}>{`${label(a)} — ${t('ui.short')} ${money(lang, a.shortCents ?? 0)}`}</button>
+  );
   const button = (a: OfferAction) => (
     <button type="button" class="ui-btn" key={a.id} data-act={a.kind} data-key={a.key ?? ''} onClick={guarded(a.id)}>{label(a)}</button>
   );
@@ -97,14 +103,23 @@ export function StoryPanel({ offer, lang, t, act, close, children }: { offer: St
           <div class="ui-answers">{offer.dialogue.answers.map(button)}</div>
         </section>
       )}
-      {offer.actions.length > 0 && (
+      {(offer.actions.length > 0 || offer.locked.length > 0) && (
         <fieldset data-ui="actions">
           <legend>{t('ui.actions')}</legend>
           {offer.actions.map(button)}
+          {!offer.dialogue && offer.locked.map(lockedButton)}
         </fieldset>
       )}
       {offer.inventory.length > 0 && (
-        <p class="ui-status" data-ui="inventory">{`${t('ui.inventory')}: ${offer.inventory.map((i) => `${ct(lang, i.key)}${i.qty > 1 ? ` ×${i.qty}` : ''}`).join(', ')}`}</p>
+        <p class="ui-status" data-ui="inventory">{`${t('ui.inventory')}: `}
+          {offer.inventory.map((i, n) => (
+            // Спорядження — зі станом і позначкою «мокре» (GAME-83); решта речей — як і було.
+            <span key={i.key} data-ui="inv-item" data-key={i.key} data-wet={i.gear ? (i.gear.wet ? 'yes' : 'no') : undefined}>
+              {n > 0 && ', '}
+              {`${ct(lang, i.key)}${i.qty > 1 ? ` ×${i.qty}` : ''}${i.gear ? ` (${t('ui.condition')} ${i.gear.condition} %${i.gear.wet ? `, ${t('ui.wet')}` : ''})` : ''}`}
+            </span>
+          ))}
+        </p>
       )}
       <details class="ui-journal" data-ui="journal">
         <summary class="ui-btn">{t('ui.journal')}</summary>

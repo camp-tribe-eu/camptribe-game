@@ -67,7 +67,7 @@ mountTouchControls(app, input, hidden);
 const label = document.createElement('p');
 label.className = 'build';
 label.textContent = buildLabel(__GAME_VERSION__, __GAME_COMMIT__);
-app.append(label);
+stage.append(label);   // у полі гри, а не над HUD (GAME-83): підпис збірки не перекриває смугу HUD
 
 const game = new Phaser.Game({
   type: Phaser.AUTO,
@@ -133,6 +133,16 @@ render(h(Shell, {
     },
   },
 }), ui);
+
+// HUD живий (GAME-83): ігрова хвилина змінилась — повідомляємо UI, він перечитає знімок. Без таймера реального часу
+// (сторож no-realtime): це крок самої гри, а не відлік; поки меню чи екран відкриті, годинник стоїть — подій немає.
+let lastMinute = bridge.state.clock.minutes;
+game.events.on(Phaser.Core.Events.POST_STEP, () => {
+  const m = bridge.state.clock.minutes;
+  if (m === lastMinute) return;
+  lastMinute = m;
+  storyChanged();
+});
 
 // Автозбереження, коли вкладку згортають чи закривають (телефон може вбити її будь-коли).
 document.addEventListener('visibilitychange', () => {

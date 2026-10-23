@@ -72,5 +72,12 @@
   "ui.weather": "Weather",
   "ui.weather.sunny": "sunny",
   "ui.weather.cloudy": "cloudy",
-  "ui.weather.rain": "rain"
+  "ui.weather.rain": "rain",
+  "ui.hud": "Where you are, when, and how much money",
+  "ui.day": "Day",
+  "ui.noPlace": "no place yet",
+  "ui.hint": "Open ☰ to begin",
+  "ui.short": "short by",
+  "ui.wet": "wet",
+  "ui.condition": "condition"
 }

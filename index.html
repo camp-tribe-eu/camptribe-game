@@ -8,11 +8,21 @@
       /* Піксельний шрифт із повною українською кирилицею (OFL, GAME-26; перевірка — scripts/i18n/font_glyphs.py). */
       @font-face { font-family: 'CampPixel'; src: url('fonts/PressStart2P-Regular.ttf') format('truetype'); font-display: swap; }
       html, body { margin: 0; height: 100%; background: #1b1f23; color: #e8e6e3; font-family: system-ui, sans-serif; overscroll-behavior: none; }
-      #app { position: fixed; inset: 0; touch-action: none; user-select: none; -webkit-user-select: none; }
-      #stage { position: absolute; inset: 0; }
+      /* Розкладка (GAME-83): згори смуга HUD, під нею поле гри на весь решту екрана. HUD лежить ПОЗА полем —
+         не перекриває гру; праворуч від нього лишено місце під кнопки ☰ і ‖ (вони абсолютні: 12 + 52 + 12 + 52 + 12 = 140 px
+         по ширині, 12 + 52 = 64 px по висоті — тож смуга не нижча за 76 px, і кнопки не наїжджають на поле). */
+      #app { position: fixed; inset: 0; display: flex; flex-direction: column; touch-action: none; user-select: none; -webkit-user-select: none; }
+      #ui { display: contents; }
+      #stage { position: relative; flex: 1 1 0; min-height: 0; }
+      .ui-hud { order: -1; flex: none; display: flex; flex-wrap: wrap; align-items: center; gap: 4px 16px; box-sizing: border-box;
+        min-height: 76px; margin-right: 140px; padding: 8px 12px; background: #1b1f23; color: #e8e6e3; font-size: 0.875rem; line-height: 1.4; overflow-wrap: anywhere; }
+      .ui-hud [data-ui="hud-place"] { font-weight: 700; }
+      .ui-hint { flex-basis: 100%; color: #ffd54a; font-weight: 700; }
+      .ui-story-btn[data-hint="yes"] { outline: 3px solid #ffd54a; outline-offset: 2px; }
+      .ui-btn-locked { border-style: dashed; color: #cfcbc7; background: #22262b; cursor: not-allowed; }
       #stage canvas { image-rendering: pixelated; }
       /* Підпис збірки лежить просто на канві: власне тло, інакше на світлому пікселі гри контраст ≈ 1,1:1 (GAME-39). */
-      .build { position: absolute; left: 8px; top: 4px; margin: 0; padding: 2px 6px; border-radius: 4px; font-size: 0.75rem;
+      .build { position: absolute; left: 8px; top: 4px; z-index: 1; margin: 0; padding: 2px 6px; border-radius: 4px; font-size: 0.75rem;
         color: #e8e6e3; background: #000000b3; pointer-events: none; }
       /* Під відкритим діалогом підпис однаково затемнений — ховаємо, щоб його тло не плутало обчислення контрасту тексту діалогу. */
       #app:has([role="dialog"]) .build { visibility: hidden; }

@@ -9,6 +9,8 @@ export interface OfferAction {
   readonly priceCents?: number;
   /** Скільки хвилин займе дорога (GAME-31); немає — дія на місці. */
   readonly minutes?: number;
+  /** Лише для недоступної купівлі (GAME-83): скільки центів бракує. Така дія не має команди — клік нічого не робить. */
+  readonly shortCents?: number;
 }
 
 export interface OfferCharacter {
@@ -31,7 +33,13 @@ export interface StoryOffer {
   /** Відкрита розмова: репліка й відповіді (лише ті, що ядро прийме). */
   readonly dialogue: { readonly speakerKey: string | null; readonly key: string | null; readonly answers: readonly OfferAction[] } | null;
   readonly actions: readonly OfferAction[];
-  readonly inventory: readonly { readonly key: string; readonly qty: number }[];
+  /** Речі в руках; для спорядження (GAME-73) — ще стан 0…100 і чи мокре. */
+  readonly inventory: readonly { readonly key: string; readonly qty: number; readonly gear?: { readonly condition: number; readonly wet: boolean } }[];
+  /** Продаються тут, але бракує грошей (GAME-83): показуються вимкненими з причиною, а не зникають. */
+  readonly locked: readonly OfferAction[];
+  /** День гри з 1 і хвилина доби 0…1439 — для HUD (GAME-83). */
+  readonly day: number;
+  readonly timeMinutes: number;
   /** Погода сьогодні (GAME-46, SIM-WX-005). */
   readonly weather: 'sunny' | 'cloudy' | 'rain';
   /** Журнал подорожі, від старого до нового. */

@@ -4,7 +4,8 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'preact/hooks';
 import { DEFAULT_SETTINGS, TEXT_SCALES, loadSettings, saveSettings, type Settings } from '../platform/settings';
 import type { Credits, UiPort } from './port';
 import { t as tr, type AnyLang, type Key } from '../i18n';
-import { StoryPanel } from './StoryPanel';
+import { ct } from '../i18n/content';
+import { StoryPanel, money } from './StoryPanel';
 import type { StoryOffer } from './story-types';
 
 export function Shell({ port, langOverride, credits }: { port: UiPort; langOverride?: AnyLang; credits: Credits }) {
@@ -25,7 +26,11 @@ export function Shell({ port, langOverride, credits }: { port: UiPort; langOverr
   const lang: AnyLang = langOverride ?? settings.language;
   const t = (key: Key): string => tr(lang, key);
 
+  // Перша дія (GAME-83): відкрито ☰ чи паузу — підказка «Відкрий ☰» більше не потрібна, і не повернеться після
+  // перезавантаження. Зберігаємо в налаштуваннях (не в сейві): схема сейву не змінюється.
+  const acted = (): void => { if (!settings.hintSeen) update({ ...settings, hintSeen: true }); };
   const toggle = (next: boolean): void => {
+    if (next) acted();
     setPaused(next);
     port.setPaused(next);
   };
@@ -43,6 +48,7 @@ export function Shell({ port, langOverride, credits }: { port: UiPort; langOverr
     });
   };
   const story = (open: boolean): void => {
+    if (open) acted();
     setStoryOpen(open);
     // Фокус повертається грі (#stage з підписом), а не на ☰: Space — клавіша дії в сцені, і сфокусована ☰
     // перехоплювала б її (знайдено e2e розмови з Елізою на мапі). ☰ лишається досяжною Tab.
@@ -104,10 +110,22 @@ export function Shell({ port, langOverride, credits }: { port: UiPort; langOverr
     </p>
   );
 
+  // HUD (GAME-83): де ти, день і час, гроші. Лежить над полем гри, а не на ньому (див. #app у index.html).
+  const hh = String(Math.floor(offer.timeMinutes / 60)).padStart(2, '0');
+  const mm = String(offer.timeMinutes % 60).padStart(2, '0');
+  const showHint = !settings.hintSeen && offer.stage === 'create';
+
   return (
     <>
+      {/* Під діалогом HUD не малюємо: його дані є в самому діалозі, а схована смуга під ним збивала вимірювання контрасту (axe). */}
+      {!paused && !storyOpen && <div class="ui-hud" data-ui="hud" role="group" aria-label={t('ui.hud')}>
+        <span data-ui="hud-place">{offer.locationKey ? ct(lang, offer.locationKey) : t('ui.noPlace')}</span>
+        <span data-ui="hud-time">{`${t('ui.day')} ${offer.day}, ${hh}:${mm}`}</span>
+        <span data-ui="hud-money">{money(lang, offer.moneyCents)}</span>
+        {showHint && <span class="ui-hint" data-ui="hint" role="status">{t('ui.hint')}</span>}
+      </div>}
       {!paused && !storyOpen && <button type="button" class="ui-pause-btn" data-touch="pause" aria-label={t('ui.pause')} onClick={() => toggle(true)}>{'‖'}</button>}
-      {!paused && !storyOpen && <button type="button" class="ui-story-btn" data-touch="story" aria-label={t('ui.story')} onClick={() => story(true)}>{'☰'}</button>}
+      {!paused && !storyOpen && <button type="button" class="ui-story-btn" data-hint={showHint ? 'yes' : undefined} data-touch="story" aria-label={t('ui.story')} onClick={() => story(true)}>{'☰'}</button>}
       {storyOpen && <StoryPanel offer={offer} lang={lang} t={t} act={(id) => port.act(id)} close={() => story(false)}>{staleNotice}</StoryPanel>}
       {paused && confirmNew && (
         <div class="ui-overlay" role="dialog" aria-modal="true" aria-label={t('ui.newGame')} data-ui="confirm-new">
@@ -153,7 +171,7 @@ export function Shell({ port, langOverride, credits }: { port: UiPort; langOverr
           <fieldset>
             <legend>{t('ui.gameMenu')}</legend>
             <button type="button" class="ui-btn" data-ui="new-game" onClick={() => setConfirmNew(true)}>{t('ui.newGame')}</button>
-            <button type="button" class="ui-btn" data-ui="reset" onClick={() => update(DEFAULT_SETTINGS)}>{t('ui.reset')}</button>
+            <button type="button" class="ui-btn" data-ui="reset" onClick={() => update({ ...DEFAULT_SETTINGS, hintSeen: settings.hintSeen })}>{t('ui.reset')}</button>
           </fieldset>
           {/* Титри обов'язкові (OD-013): автор, джерело, ліцензія і чи змінено — для кожного файлу графіки. */}
           <details class="ui-credits" data-ui="credits">
