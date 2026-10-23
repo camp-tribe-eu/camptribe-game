@@ -95,7 +95,7 @@ describe('GAME-87 · «Нова велозона» закривається ли
     expect(send(start, { type: 'CompleteQuest', questId: QUEST })).toMatchObject({ ok: false, code: 'QUEST_OBJECTIVES_OPEN' });
   });
 
-  it('після шляху без велосипеда ціль лишається відкритою й у повторній розмові; відмова з квесту — як і раніше', () => {
+  it('після шляху без велосипеда ціль відкрита; у повторній розмові її знову закриває лише велосипед; відмова лишається', () => {
     const spot = allPaths(start).find((l) => !viaBike(l) && l.end.flags.includes('f.elise-met'));
     expect(spot, 'є шлях «знайомство без велосипеда»').toBeDefined();
     const again = play([talk], must(spot, 'шлях без велосипеда').end);
@@ -103,10 +103,43 @@ describe('GAME-87 · «Нова велозона» закривається ли
     const leaves = allPaths(again);
     expect(leaves.length).toBeGreaterThan(0);
     for (const l of leaves) {
-      expect(done(l.end), l.path.join(' ')).not.toContain(OBJ);
+      expect(done(l.end).includes(OBJ), l.path.join(' ')).toBe(viaBike(l));
+      if (viaBike(l)) continue;
       const dr = send(l.end, { type: 'DeclineQuest', questId: QUEST, to: 'ST-005' });
       expect(dr.ok ? 'ok' : dr.code, l.path.join(' ')).toBe('ok');   // вихід лишається: відмова
     }
+  });
+
+  it('поганий порядок: намет першим → вихід → друга розмова → відповідь про велосипед закриває ціль (+500)', () => {
+    const tentFirst = allPaths(start).find((l) => !viaBike(l) && l.end.flags.includes('f.elise-met'));
+    const again = play([talk], must(tentFirst, 'намет першим').end);
+    expect(done(again)).not.toContain(OBJ);
+    const bikeLeaves = allPaths(again).filter(viaBike);
+    expect(bikeLeaves.length).toBeGreaterThan(0);
+    for (const l of bikeLeaves) {
+      expect(done(l.end), l.path.join(' ')).toContain(OBJ);
+      const r = send(l.end, { type: 'CompleteQuest', questId: QUEST });
+      expect(r.ok && r.state.moneyCents - l.end.moneyCents, l.path.join(' ')).toBe(BIKE_REWARD);
+    }
+  });
+
+  it('з кожного досяжного стану розмови, поки квест активний і ціль відкрита, гілка велосипеда досяжна', () => {
+    // Перебір станів: від першої розмови, через будь-які шляхи, виходи й повторні розмови (до трьох візитів).
+    let checked = 0;
+    const visit = (s: GameState, depth: number): void => {
+      const open = s.quests[QUEST]?.status === 'active' && !done(s).includes(OBJ);
+      if (open) {
+        checked++;
+        expect(allPaths(s).some(viaBike), `розмова ${depth}: ${JSON.stringify(s.dialogue)}`).toBe(true);
+      }
+      if (depth >= 3 || !open) return;
+      for (const l of allPaths(s)) {
+        if (viaBike(l)) continue;
+        visit(play([talk], l.end), depth + 1);
+      }
+    };
+    visit(start, 1);
+    expect(checked).toBeGreaterThan(3);
   });
 
   describe('негативні контролі: сторож уміє червоніти', () => {
