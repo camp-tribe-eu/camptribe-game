@@ -114,7 +114,7 @@ jobs:
           asset=$(grep -o '<script[^>]*src="[^"]*"' /tmp/auth.html | head -1 | sed 's/.*src="\([^"]*\)"/\1/; s#^\./##; s#^/##')
           [ -n "$asset" ] || { echo "::error::у HTML немає бандла — нема що перевіряти"; exit 1; }
           # Справжні файли збірки (бандл і перший не-JS файл із dist: мапа, шрифт, картинка) — лише 401.
-          other=$(cd dist && find . -type f ! -name '*.html' ! -name '*.js' | sed 's#^\./##' | sort | head -1)
+          other=$(cd dist && find . -type f ! -name '*.html' ! -name '*.js' | sed 's#^\./##' | sort | awk 'NR==1')
           for path in "$asset" ${other:+"$other"}; do
             c=$(curl -s --max-time 20 -o /dev/null -w '%{http_code}' "https://$BRANCH.$PROJECT.pages.dev/$path")
             [ "$c" = 401 ] || { echo "::error::$path без пароля віддає HTTP $c (очікував 401)"; exit 1; }
@@ -129,21 +129,28 @@ jobs:
           if game "https://$PROJECT.pages.dev/" >/dev/null; then echo "::error::гола адреса проєкту віддає гру"; exit 1; fi
           echo "PREVIEW: OK · $url — логін $PREVIEW_USER і пароль із секрету PREVIEW_PASSWORD"
 
-      - name: Старі публікації — видалити, крім щойно перевіреної (рецензія PR #25)
-        # Після verify, а не до публікації: інакше між видаленням і новою публікацією адреса порожня, браузер питає
-        # /favicon.ico, і Cloudflare кешує 404 (run 39958494211). Найновіша за created_on — наша (concurrency: preview).
+      - name: Старі публікації — видалити, крім щойно перевіреної (рецензія PR #25, #30)
+        # Після verify, а не до публікації: інакше адреса порожніє, і Cloudflare кешує 404 (run 39958494211).
+        # «Наша» — найновіша з commit_hash = GITHUB_SHA (deploy передає --commit-hash), а не просто найновіша:
+        # ручна публікація поза workflow не стане «перевіреною». Колами, доки не лишиться тільки наша.
         run: |
           set -euo pipefail
           api="https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/pages/projects/$PROJECT/deployments"
-          list=$(curl -sS --max-time 30 -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" "$api" || true)
-          jq -e '.success' <<<"$list" >/dev/null 2>&1 || { echo "::error::перелік публікацій не отримано: $(jq -c '.errors' <<<"$list" 2>/dev/null | head -c 400)"; exit 1; }
-          old=$(jq -r '.result | sort_by(.created_on) | reverse | .[1:] | .[].id' <<<"$list")
-          for id in $old; do
-            curl -sS --max-time 30 -X DELETE -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" "$api/$id?force=true" | jq -e '.success' >/dev/null \
-              || { echo "::error::не вдалося видалити стару публікацію $id"; exit 1; }
-            echo "видалено стару $id"
+          ours=""
+          for round in $(seq 1 20); do
+            list=$(curl -sS --max-time 30 -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" "$api" || true)
+            jq -e '.success' <<<"$list" >/dev/null 2>&1 || { echo "::error::перелік публікацій не отримано: $(jq -c '.errors' <<<"$list" 2>/dev/null | head -c 400)"; exit 1; }
+            [ -n "$ours" ] || ours=$(jq -r --arg sha "$GITHUB_SHA" '[.result[] | select(.deployment_trigger.metadata.commit_hash == $sha)] | sort_by(.created_on) | last | .id // empty' <<<"$list")
+            [ -n "$ours" ] || { echo "::error::серед публікацій немає тієї, що з коміту $GITHUB_SHA"; exit 1; }
+            old=$(jq -r --arg id "$ours" '.result[] | select(.id != $id) | .id' <<<"$list")
+            [ -n "$old" ] || { echo "лишилась одна публікація: $ours"; exit 0; }
+            for id in $old; do
+              curl -sS --max-time 30 -X DELETE -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" "$api/$id?force=true" | jq -e '.success' >/dev/null \
+                || { echo "::error::не вдалося видалити стару публікацію $id"; exit 1; }
+              echo "видалено стару $id"
+            done
           done
-          echo "лишилась одна публікація: $(jq -r '.result | sort_by(.created_on) | last | .id' <<<"$list")"
+          echo "::error::після 20 кіл старі публікації ще лишились"; exit 1
 
       - name: Перевірка не пройшла — прибрати публікацію (рецензія PR #25)
         if: failure()
