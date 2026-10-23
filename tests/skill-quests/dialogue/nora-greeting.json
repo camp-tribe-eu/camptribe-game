@@ -1,0 +1,64 @@
+{
+  "id": "dlg.nora-greeting",
+  "npcId": "npc.nora",
+  "start": "hello",
+  "nodes": [
+    {
+      "id": "hello",
+      "speaker": "npc",
+      "textKey": "dlg.nora-greeting.hello",
+      "choices": [
+        {
+          "textKey": "dlg.nora-greeting.hello.c1",
+          "next": "intro",
+          "effects": [
+            {
+              "completeObjective": {
+                "quest": "q.nora-hello",
+                "objective": "talk-nora"
+              }
+            }
+          ]
+        },
+        {
+          "textKey": "dlg.nora-greeting.hello.c2",
+          "next": "thanks",
+          "when": {
+            "quest": "q.nora-parcel",
+            "status": "active"
+          },
+          "effects": [
+            {
+              "completeObjective": {
+                "quest": "q.nora-parcel",
+                "objective": "talk-nora-parcel"
+              }
+            }
+          ]
+        },
+        {
+          "textKey": "dlg.nora-greeting.hello.c3",
+          "next": "bye"
+        }
+      ]
+    },
+    {
+      "id": "intro",
+      "speaker": "npc",
+      "textKey": "dlg.nora-greeting.intro",
+      "next": "bye"
+    },
+    {
+      "id": "thanks",
+      "speaker": "npc",
+      "textKey": "dlg.nora-greeting.thanks",
+      "next": "bye"
+    },
+    {
+      "id": "bye",
+      "speaker": "npc",
+      "textKey": "dlg.nora-greeting.bye",
+      "end": true
+    }
+  ]
+}

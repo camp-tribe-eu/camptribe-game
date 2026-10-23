@@ -1,0 +1,4 @@
+[
+  { "id": "npc.elise", "nameKey": "npc.elise", "locationId": "loc.camp.lake", "unlockedBy": "ST-004" },
+  { "id": "npc.nora", "nameKey": "npc.nora", "locationId": "loc.camp.lake", "unlockedBy": "ST-004" }
+]

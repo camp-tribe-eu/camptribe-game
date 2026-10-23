@@ -1,0 +1,6 @@
+[
+  { "id": "loc.home", "nameKey": "loc.home", "sheltered": true },
+  { "id": "loc.shop", "nameKey": "loc.shop", "unlockedBy": "ST-002", "items": ["item.tent", "item.sleeping-bag", "item.lantern"] },
+  { "id": "loc.road", "nameKey": "loc.road", "unlockedBy": "ST-003" },
+  { "id": "loc.camp.lake", "nameKey": "loc.camp.lake", "unlockedBy": "ST-004", "items": ["item.firewood", "item.pinecone", "item.parcel"], "sheltered": true }
+]

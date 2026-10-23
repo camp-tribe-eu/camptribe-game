@@ -1,0 +1,3 @@
+[
+  { "id": "animal.cat", "nameKey": "animal.cat", "transports": ["transport.car"] }
+]
