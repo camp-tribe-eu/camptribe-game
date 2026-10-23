@@ -87,6 +87,8 @@ export const REJECT_CODES = [
   'UNKNOWN_ITEM',
   'UNKNOWN_TARGET',
   'NOT_FOR_SALE',
+  // GAME-81 · крамниці
+  'NOT_SOLD_HERE',
   // GAME-29 · квести й світ
   'NO_CHARACTER',
   'CHARACTER_EXISTS',

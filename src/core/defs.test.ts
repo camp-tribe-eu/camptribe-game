@@ -29,6 +29,8 @@ const cases: [DefsCode, string, CoreDefs][] = [
   ['DEFS_STORY_ITEM_SELLABLE', 'викуп предмета, якого вимагає ціль collect (ніде не лежить і не нагорода)', { items: { 'item.rare': { buyCents: 9, sellCents: 1 } }, interactions: {}, story: quest('q.start', { objectives: [{ id: 'o', kind: 'collect', target: 'item.rare', required: true }] })(story) }],
   ['DEFS_STORY_ITEM_SELLABLE', 'викуп предмета з requires.items', { items: { 'item.gold2': { buyCents: 9, sellCents: 1 } }, interactions: {}, story: quest('q.gate', { requires: { quests: [], items: ['item.gold2'] } })(story) }],
   ['DEFS_STORY_ITEM_SELLABLE', 'викуп нагороди квесту (продав — квест не завершити)', { items: { 'item.map': { buyCents: 5, sellCents: 1 } }, interactions: {}, story }],
+  ['DEFS_STORY_ITEM_BUYABLE', 'ціна в предмета, що лежить у локації (сюжет дає його безкоштовно, купівля блокує «Узяти»)', { items: { 'item.wood': { buyCents: 100, soldAt: ['loc.shop'] } }, interactions: {}, story }],
+  ['DEFS_BAD_REF', 'soldAt веде в неіснуючу локацію (предмет мовчки став би непродаваним)', { items: { 'item.x': { buyCents: 100, soldAt: ['loc.ghost'] } }, interactions: {}, story }],
   ['DEFS_BAD_AMOUNT', 'від’ємна нагорода квесту', withStory(quest('q.end', { reward: { grantId: 'rw.end', moneyCents: -1, items: [] } }))],
   ['DEFS_BAD_AMOUNT', 'нульова кількість у нагороді квесту', withStory(quest('q.end', { reward: { grantId: 'rw.end', moneyCents: 0, items: [{ itemId: 'item.x', qty: 0 }] } }))],
 ];
@@ -37,9 +39,9 @@ describe('checkDefs: каталог цілий до гри', () => {
   it('кожен код має приклад', () => {
     expect([...new Set(cases.map(([c]) => c))].sort()).toEqual([...DEFS_CODES].sort());
   });
-  it('позитивний контроль: фікстура сюжету ціла; купівля без викупу предмета сюжету дозволена', () => {
+  it('позитивний контроль: фікстура сюжету ціла; предмет, що ніде не лежить, продається в існуючій локації', () => {
     expect(checkDefs(STORY_DEFS)).toEqual([]);
-    expect(checkDefs({ items: { 'item.wood': { buyCents: 100 }, 'item.other': { buyCents: 5, sellCents: 1 } }, interactions: {}, story })).toEqual([]);
+    expect(checkDefs({ items: { 'item.other': { buyCents: 5, sellCents: 1, soldAt: ['loc.shop'] } }, interactions: {}, story })).toEqual([]);
   });
   for (const [code, what, defs] of cases) {
     it(`${code}: ${what}`, () => {

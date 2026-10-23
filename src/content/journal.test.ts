@@ -6,14 +6,14 @@ import { dispatch, type Command } from '../core/commands';
 import { JOURNAL_LIMIT, JOURNAL_TYPES, changedGame, newSim, step, type Input, type SimState } from '../core/sim';
 import { moves } from './moves';
 import { GAME_DEFS } from './slice-defs';
-import { PROLOGUE_BIKE } from './replay.scenario';
+import { PROLOGUE_BIKE, START_MONEY } from './replay.scenario';
 
 const CTX = { defs: GAME_DEFS };
 const listed = (t: string): boolean => (JOURNAL_TYPES as readonly string[]).includes(t);
 
 describe('журнал подорожі (GAME-32)', () => {
   it('Пролог: записів рівно стільки, скільки прийнятих команд із переліку; час — ігрова хвилина тієї миті', () => {
-    let s: SimState = newSim(20261023, 5_000);
+    let s: SimState = newSim(20261023, START_MONEY);
     let expected = 0;
     for (const i of PROLOGUE_BIKE) {
       if (i.kind === 'command') {

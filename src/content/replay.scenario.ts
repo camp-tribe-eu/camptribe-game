@@ -8,7 +8,8 @@ const c = (cmd: Record<string, unknown>): Input => ({ kind: 'command', command: 
 const frames = (k: number, ms = 250): Input[] => Array.from({ length: k }, () => ({ kind: 'frame', realMs: ms }) as Input);
 
 export const SEED = 20261023;
-export const START_MONEY = 5_000;
+// 10 000: найдешевше, що крамниця справді продає (синтетичний спальник, 8 900), — GAME-81: дрова й ліхтар більше не продаються.
+export const START_MONEY = 10_000;
 
 export const PROLOGUE_BIKE: readonly Input[] = [
   ...frames(8),
@@ -17,7 +18,7 @@ export const PROLOGUE_BIKE: readonly Input[] = [
   c({ type: 'Visit', locationId: 'loc.home' }), c({ type: 'CompleteQuest', questId: 'ST-002' }),
   c({ type: 'Visit', locationId: 'loc.shop' }), ...frames(6),
   c({ type: 'Pickup', itemId: 'item.tent' }), c({ type: 'Pickup', itemId: 'item.sleeping-bag' }),
-  c({ type: 'BuyItem', itemId: 'item.firewood' }),                                       // купівля: гроші в хеші
+  c({ type: 'BuyItem', itemId: 'item.sleeping-bag-synthetic' }),                         // купівля в крамниці: гроші в хеші
   c({ type: 'Pickup', itemId: 'item.tent' }),                                            // відмова (уже в руках) теж у журналі
   c({ type: 'CompleteQuest', questId: 'ST-003' }), ...frames(4),
   c({ type: 'Visit', locationId: 'loc.road' }), ...frames(12, 1000),                     // дорога: хвилини й знахідки

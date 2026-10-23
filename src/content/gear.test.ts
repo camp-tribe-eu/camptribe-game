@@ -7,6 +7,7 @@ import { describe, expect, it } from 'vitest';
 import { dispatch } from '../core/commands';
 import { checkDefs, storyItems } from '../core/defs';
 import { initialState } from '../core/state';
+import { play } from '../core/story.fixture';
 import { loadContent } from '../../scripts/validator/load.mjs';
 import { validate } from '../../scripts/validator/checks.mjs';
 import { GEAR_FIELDS } from '../../scripts/validator/codes.mjs';
@@ -19,6 +20,12 @@ const TODAY = '2026-10-23';
 const loaded = loadContent('content');
 const gear = RAW_ITEMS.filter((i) => i.kind !== undefined);
 const START_MONEY = 5_000; // як у createBridge
+/** Стан гравця в крамниці: Пролог до ST-003 справжнім каталогом (GAME-81: купувати можна лише тут). */
+const atShop = () => play([
+  { type: 'CreateCharacter', profileId: 'profile.solo-explorer', transportId: 'transport.bike' }, { type: 'Visit', locationId: 'loc.home' },
+  { type: 'CompleteQuest', questId: 'ST-001' }, { type: 'Visit', locationId: 'loc.home' }, { type: 'CompleteQuest', questId: 'ST-002' },
+  { type: 'Visit', locationId: 'loc.shop' },
+], initialState(START_MONEY), GAME_DEFS);
 
 describe('каталог v1 (Спосіб перевірки №1)', () => {
   it('контент завантажився й чистий для перевірки gear', () => {
@@ -83,9 +90,11 @@ describe('каталог у грі (GAME_DEFS)', () => {
     expect(tier2.length).toBeGreaterThanOrEqual(2);
     for (const i of tier2) {
       const price = i.priceCents as number;
-      const ok = dispatch(initialState(price), { type: 'BuyItem', commandId: 'b1', itemId: i.id }, GAME_DEFS);
+      // Купівля — лише в крамниці (GAME-81): ідемо туди Прологом, потім виставляємо рівно потрібні гроші.
+      const at = { ...atShop(), moneyCents: price };
+      const ok = dispatch(at, { type: 'BuyItem', commandId: 'b1', itemId: i.id }, GAME_DEFS);
       expect(ok.ok && { money: ok.state.moneyCents, qty: ok.state.inventory[i.id] }, i.id).toEqual({ money: 0, qty: 1 });
-      expect(dispatch(initialState(price - 1), { type: 'BuyItem', commandId: 'b2', itemId: i.id }, GAME_DEFS), i.id).toMatchObject({ ok: false, code: 'INSUFFICIENT_FUNDS' });
+      expect(dispatch({ ...at, moneyCents: price - 1 }, { type: 'BuyItem', commandId: 'b2', itemId: i.id }, GAME_DEFS), i.id).toMatchObject({ ok: false, code: 'INSUFFICIENT_FUNDS' });
     }
   });
 

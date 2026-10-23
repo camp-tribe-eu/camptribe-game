@@ -80,7 +80,7 @@ const pick = <T>(rng: RngState, xs: readonly T[]): { value: T; rng: RngState } =
 
 export function runBot(defs: CoreDefs, variant: Variant, seed: number, memo: EndMemo, opts = { maxSteps: 80, cap: 20_000 }): BotRun {
   let rng = seedRng(seed);
-  const created = dispatch(initialState(variant.money === 'some' ? 5_000 : 0), {
+  const created = dispatch(initialState(variant.money === 'some' ? 10_000 : 0), {
     type: 'CreateCharacter', commandId: 'b0', profileId: variant.profile, transportId: variant.transport,
     ...(variant.animal === 'animal.none' ? {} : { animalId: variant.animal }),
   }, defs);

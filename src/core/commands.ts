@@ -2,7 +2,7 @@
 // ядро бере лише з каталогу визначень (CoreDefs). Застосовує повністю або відмовляє з кодом,
 // і решта стану лишається вихідною. Успіх повертає події-факти (DC-061).
 
-import type { CoreDefs } from './defs';
+import { canBuyAt, type CoreDefs } from './defs';
 import type { CommandRecord, GameState, RejectCode } from './state';
 import { practise, rankOf, type SkillId } from './skills';
 import { gearOf, pruneGear, sellPriceOf } from './gear';
@@ -99,6 +99,8 @@ function apply(cmd: Command, d: Draft, defs: CoreDefs, guard: Safeguards, today:
       if (!def) return 'UNKNOWN_ITEM';
       if (def.buyCents === undefined) return 'NOT_FOR_SALE';
       if (!isCents(def.buyCents)) return 'INVALID_AMOUNT';
+      // Купівля — лише там, де предмет продається (GAME-81); меню питає це саме ядро, тож розбіжності немає.
+      if (!canBuyAt(defs, cmd.itemId, d.player?.locationId)) return 'NOT_SOLD_HERE';
       // Спорядження — один примірник моделі в руках (SIM-GEAR-001): стан ведеться на id предмета.
       if (def.gear && (own(d.inventory, cmd.itemId) ?? 0) >= 1) return 'ITEM_ALREADY_HELD';
       d.moneyCents -= def.buyCents;

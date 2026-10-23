@@ -5,7 +5,7 @@ import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
 import { dispatch, PROCESSED_LIMIT, type Command, type Safeguards } from './commands';
 import type { CoreDefs } from './defs';
-import { BIKER, DRIVER, GEAR_DEFS, LIFE_DEFS, MECHANIC, NOVICE, play, ROAD_DEFS, SKILL_DEFS, STORY_DEFS } from './story.fixture';
+import { BIKER, DRIVER, GEAR_DEFS, LIFE_DEFS, MECHANIC, NOVICE, play, ROAD_DEFS, SHOP_DEFS, SKILL_DEFS, STORY_DEFS } from './story.fixture';
 import { initialState, REJECT_CODES, type GameState, type RejectCode } from './state';
 
 const SEED = 20261022;
@@ -174,6 +174,8 @@ describe('коди відмов: кожен код із реєстру має т
     ['UNKNOWN_ITEM', s, { type: 'BuyItem', commandId: 'c5', itemId: 'item.ghost' }, DEFS],
     ['UNKNOWN_TARGET', s, { type: 'Interact', commandId: 'c6', targetId: 'obj.ghost' }, DEFS],
     ['NOT_FOR_SALE', s, { type: 'BuyItem', commandId: 'c7', itemId: 'item.map' }, DEFS],
+    // GAME-81 · купівля лише в крамниці (SHOP_DEFS)
+    ['NOT_SOLD_HERE', play([DRIVER, { type: 'Visit', locationId: 'loc.home' }], initialState(1000), SHOP_DEFS), { type: 'BuyItem', commandId: 'c8', itemId: 'item.stove' }, SHOP_DEFS],
     // GAME-29 · сюжет (STORY_DEFS — src/core/story.fixture.ts)
     ['NO_CHARACTER', s, { type: 'Visit', commandId: 's1', locationId: 'loc.home' }, STORY_DEFS],
     ['CHARACTER_EXISTS', play([DRIVER]), { ...DRIVER, commandId: 's2' }, STORY_DEFS],
