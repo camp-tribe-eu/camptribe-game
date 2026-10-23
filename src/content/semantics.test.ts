@@ -108,8 +108,14 @@ describe('умови діалогу: валідатор не відкидає т
 
   it(`fast-check, 3000 умов × ${STATES.length} станів: «нездійсненне» у валідатора — false у ядра скрізь`, () => {
     let dead = 0;
-    fc.assert(fc.property(cond, (c) => { if (validatorSaysDead(c)) dead++; }), { seed: 20261023, numRuns: 3000 });
-    expect(dead).toBeGreaterThan(500);                // перевірка справді бачила «нездійсненні» умови
+    let clash = 0;                                    // мертві саме через суперечність, а не через невідомий прапорець
+    fc.assert(fc.property(cond, (c) => {
+      if (validatorSaysDead(c)) dead++;
+      if (!satisfiable(c, new Set(FLAGS))) clash++;
+    }), { seed: 20261023, numRuns: 3000 });
+    // Запас від порогів (рецензія: 507 при порозі 500 — оновлення fast-check могло б тихо перетнути межу).
+    expect(dead).toBeGreaterThan(400);
+    expect(clash).toBeGreaterThan(100);
     expect(counterexample(validatorSaysDead)).toBeNull();
   });
 

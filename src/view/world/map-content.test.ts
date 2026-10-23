@@ -15,7 +15,7 @@ import { GAME_DEFS } from '../../content/slice-defs';
 interface TiledObject { name: string; type?: string; class?: string; point?: boolean; gid?: number }
 interface TiledLayer {
   name: string; type: string; objects?: TiledObject[]; properties?: { name: string; value: unknown }[];
-  offsetx?: number; offsety?: number; parallaxx?: number; parallaxy?: number; visible?: boolean; opacity?: number; data?: number[]; layers?: TiledLayer[];
+  offsetx?: number; offsety?: number; x?: number; y?: number; parallaxx?: number; parallaxy?: number; visible?: boolean; opacity?: number; data?: number[]; layers?: TiledLayer[];
 }
 interface TiledMap { properties?: { name: string; value: unknown }[]; layers: TiledLayer[]; tilesets?: { name?: string; tiles?: { properties?: { name: string }[] }[] }[] }
 
@@ -37,6 +37,7 @@ export function gameMapFormatProblems(map: TiledMap): string[] {
   for (const l of layers) {
     if ((l.offsetx ?? 0) !== 0 || (l.offsety ?? 0) !== 0) out.push(`шар ${l.name}: зсув offsetx/offsety — валідатор його не знає`);
     if ((l.parallaxx ?? 1) !== 1 || (l.parallaxy ?? 1) !== 1) out.push(`шар ${l.name}: паралакс — сцена й валідатор бачать різні місця`);
+    if ((l.x ?? 0) !== 0 || (l.y ?? 0) !== 0) out.push(`шар ${l.name}: x/y шару — Phaser зсуває шар, валідатор ні`);
   }
   // Один тайлсет kenney-rpg: сцена реєструє лише його — тайли іншого не малюються, але стіни з них колізять.
   if (map.tilesets?.length !== 1 || map.tilesets[0]?.name !== 'kenney-rpg') out.push('потрібен рівно один тайлсет kenney-rpg (лише його реєструє сцена)');
@@ -120,6 +121,7 @@ describe('мапа сцени ↔ контент (GAME-32)', () => {
       ['walls у групі шарів', (m) => { const w = m.layers.find((l) => l.name === 'walls'); if (w) { m.layers = m.layers.filter((l) => l !== w); m.layers.push({ name: 'g', type: 'group', layers: [w] }); } }, 'групи'],
       ['другий тайлсет', (m) => { m.tilesets?.push({ name: 'other' }); }, 'тайлсет'],
       ['gid із бітом 0x10000000', (m) => { const w = m.layers.find((l) => l.name === 'walls'); if (w?.data) w.data[0] = (w.data[0] ?? 0) | 0x10000000; }, '0x10000000'],
+      ['x шару walls (стара властивість Tiled)', (m) => { const w = m.layers.find((l) => l.name === 'walls'); if (w) w.x = 2; }, 'x/y'],
       ['невидимі стіни', (m) => { const w = m.layers.find((l) => l.name === 'walls'); if (w) w.visible = false; }, 'невидимий'],
     ];
     for (const [what, patch, mark] of cases) {

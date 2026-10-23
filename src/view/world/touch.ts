@@ -10,7 +10,7 @@ export function mountTouchControls(root: HTMLElement, input: InputState, hidden:
     b.dataset.touch = action;
     b.className = `touch-${action}`;
     b.textContent = TOUCH_CONTROLS[action];
-    b.setAttribute('aria-label', action);
+    // aria-label ставить оболонка UI мовою гравця (Shell.tsx); англійського id дії гравець не чує.
     b.style.minWidth = b.style.minHeight = `${MIN_TOUCH_PX + 12}px`;
     if (hidden.includes(action)) b.hidden = true;
     const down = (e: Event): void => { e.preventDefault(); press(input, action); };

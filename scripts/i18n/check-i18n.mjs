@@ -40,27 +40,74 @@ export function cyrillicLiterals(path, text) {
   return out;
 }
 
-// Підписи, які бачить або чує гравець: текст JSX і ці атрибути. data-*, class, key — не для людини.
-const HUMAN_ATTRS = new Set(['aria-label', 'title', 'placeholder', 'alt', 'aria-description']);
+// GAME-30 #3, друге коло рецензії: «заборонено за замовчуванням». У src/ui/** (.ts і .tsx) КОЖЕН рядок,
+// шаблон і JSX-текст із літерою — червоний, крім явно не-людських місць нижче. Список «що ловимо»
+// обходився тернарником, шаблоном, константою чи пропом власного компонента; список «що можна» — ні.
 const LETTER = /\p{L}/u;
+// Атрибути, чиї значення не для людини.
+const MACHINE_ATTRS = /^(class|className|id|key|type|role|rel|target|href|lang|for|htmlFor|name|ref|tabIndex|data-[\w-]+|aria-(pressed|modal|hidden|live|expanded|controls|haspopup|current|disabled|atomic|relevant))$/;
+// Рядок-ключ чи ідентифікатор: «ui.save», «jr.Visit», «story-close», «uk-UA», «en», «.touch [data-touch]».
+// Слово з великої («Save»), рядок із пробілом — текст; ключ має роздільник і жодного пробілу, або це одне слово малими.
+const KEYISH = /^[\w$]+(?:[.:/_-][\w$-]+)+$|^[a-z][a-z0-9]*$|^[.#[][\w\s[\]="-.:#>]*$/;
+// Виклики, чиї аргументи — не текст для людини.
+const MACHINE_CALLS = /^(t|tr|ct|querySelector|querySelectorAll|getElementById|closest|matches|addEventListener|removeEventListener|getItem|setItem|removeItem|setAttribute|getAttribute|NumberFormat|DateTimeFormat|Intl\.\w+)$/;
+// Стоки в DOM для всього src/: текст, записаний сюди літералом, бачить гравець (рецензія: так і жив англійський aria-label).
+const DOM_TEXT_PROPS = /^(textContent|innerText|innerHTML|title|placeholder|alt)$/;
+const DOM_TEXT_ATTRS = new Set(['aria-label', 'title', 'alt', 'placeholder', 'aria-description']);
+
+function textParts(node) {
+  if (ts.isStringLiteral(node) || ts.isNoSubstitutionTemplateLiteral(node)) return [node.text];
+  if (ts.isTemplateExpression(node)) return [node.head.text, ...node.templateSpans.map((x) => x.literal.text)];
+  if (node.kind === ts.SyntaxKind.JsxText) return [node.text];
+  return null;
+}
+
+/** Чому рядок не текст для людини (або null — отже текст). */
+function exempt(node, sf) {
+  const parts = textParts(node) ?? [];
+  if (!parts.some((x) => LETTER.test(x))) return 'без літер';
+  if (node.kind !== ts.SyntaxKind.JsxText && parts.every((x) => !LETTER.test(x) || KEYISH.test(x.trim()))) return 'ключ чи id';
+  const p = node.parent;
+  if (!p) return null;
+  if (ts.isImportDeclaration(p) || ts.isExportDeclaration(p) || ts.isLiteralTypeNode(p) || ts.isExternalModuleReference(p)) return 'модуль чи тип';
+  if (ts.isPropertyAssignment(p) && p.name === node) return 'ім’я поля';
+  if (ts.isBinaryExpression(p) && [ts.SyntaxKind.EqualsEqualsEqualsToken, ts.SyntaxKind.ExclamationEqualsEqualsToken, ts.SyntaxKind.EqualsEqualsToken, ts.SyntaxKind.ExclamationEqualsToken].includes(p.operatorToken.kind)) return 'порівняння';
+  if (ts.isCaseClause(p)) return 'порівняння';
+  if (ts.isJsxAttribute(p) && MACHINE_ATTRS.test(p.name.getText(sf))) return 'машинний атрибут';
+  if (ts.isJsxExpression(p) && p.parent && ts.isJsxAttribute(p.parent) && MACHINE_ATTRS.test(p.parent.name.getText(sf))) return 'машинний атрибут';
+  for (let x = p; x; x = x.parent) {
+    if (ts.isCallExpression(x) || ts.isNewExpression(x)) {
+      const callee = x.expression.getText(sf).split('.').pop() ?? '';
+      if (MACHINE_CALLS.test(callee) || /^Intl\./.test(x.expression.getText(sf))) return 'аргумент службового виклику';
+      break;
+    }
+    if (ts.isJsxElement(x) || ts.isJsxSelfClosingElement(x) || ts.isBlock(x) || ts.isSourceFile(x)) break;
+  }
+  return null;
+}
 
 /**
- * Текст інтерфейсу будь-якою мовою прямо в коді UI (GAME-30 #3): кирилицю ловить CYRILLIC_LITERAL, а
- * англійський «Save» у JSX проходив. Лише src/ui/*.tsx|jsx: JSX-текст із літерами, рядок із літерами в
- * {…} JSX і в атрибутах для людини. Символи без літер (‖ ☰ · % ✓) — дозволено.
+ * Текст інтерфейсу будь-якою мовою прямо в коді (GAME-30 #3). src/ui/**: усе з літерами, крім винятків
+ * exempt(). Увесь src/: літерал із літерами, записаний у textContent/innerText/innerHTML/title/placeholder/alt
+ * чи в setAttribute('aria-label'|'title'|'alt'|'placeholder', …) — теж.
  */
 export function uiLiterals(path, text) {
-  if (!/^src\/ui\/.*\.(tsx|jsx)$/.test(path.split('\\').join('/'))) return [];
-  const sf = ts.createSourceFile(path, text, ts.ScriptTarget.Latest, true, path.endsWith('.jsx') ? ts.ScriptKind.JSX : ts.ScriptKind.TSX);
+  const rel = path.split('\\').join('/');
+  if (!/\.(tsx|jsx|ts|js|mts|mjs)$/.test(rel) || !rel.startsWith('src/')) return [];
+  const isUi = rel.startsWith('src/ui/');
+  const jsx = /\.(tsx|jsx)$/.test(rel);
+  const sf = ts.createSourceFile(path, text, ts.ScriptTarget.Latest, true, jsx ? ts.ScriptKind.TSX : ts.ScriptKind.TS);
   const out = [];
   const hit = (node) => { const { line } = sf.getLineAndCharacterOfPosition(node.getStart(sf)); out.push({ line: line + 1, text: node.getText(sf).slice(0, 60) }); };
-  const stringy = (n) => ts.isStringLiteral(n) || ts.isNoSubstitutionTemplateLiteral(n);
+  const literalWithLetters = (n) => { const parts = n && textParts(n); return !!parts && parts.some((x) => LETTER.test(x)); };
   const visit = (node) => {
-    if (node.kind === ts.SyntaxKind.JsxText && LETTER.test(node.text)) hit(node);
-    if (ts.isJsxExpression(node) && node.expression && stringy(node.expression) && LETTER.test(node.expression.text)) hit(node.expression);
-    if (ts.isJsxAttribute(node) && HUMAN_ATTRS.has(node.name.getText(sf)) && node.initializer) {
-      const v = ts.isJsxExpression(node.initializer) ? node.initializer.expression : node.initializer;
-      if (v && stringy(v) && LETTER.test(v.text)) hit(v);
+    if (isUi && textParts(node) && !(node.kind === ts.SyntaxKind.JsxText && !LETTER.test(node.text)) && exempt(node, sf) === null) hit(node);
+    // Стоки в DOM — у всьому src/.
+    if (ts.isBinaryExpression(node) && node.operatorToken.kind === ts.SyntaxKind.EqualsToken && ts.isPropertyAccessExpression(node.left)
+      && DOM_TEXT_PROPS.test(node.left.name.text) && literalWithLetters(node.right)) hit(node.right);
+    if (ts.isCallExpression(node) && ts.isPropertyAccessExpression(node.expression) && node.expression.name.text === 'setAttribute') {
+      const [k, v] = node.arguments;
+      if (k && ts.isStringLiteral(k) && DOM_TEXT_ATTRS.has(k.text) && literalWithLetters(v)) hit(v);
     }
     ts.forEachChild(node, visit);
   };
@@ -152,12 +199,18 @@ function selfTest() {
     ['JSON, що не розбирається', f('{"a": ', 'src/content/x.json'), okLoc, 'JSON_INVALID'],
     ['позитивний контроль: JSON без кирилиці', f('{"a": ["Pause", 1, null]}', 'src/content/x.json'), okLoc, ''],
     // (d) коментарі звільнені, і з екрануванням теж
-    // (e) GAME-30 #3: текст інтерфейсу будь-якою мовою в коді UI
+    // (e) GAME-30 #3: текст інтерфейсу будь-якою мовою в коді (заборонено за замовчуванням)
     ['англійський текст у JSX UI', f('export const A = () => <b>Save</b>;\n', 'src/ui/x.tsx'), okLoc, 'UI_LITERAL'],
     ['англійський рядок у {…} JSX UI', f("export const A = () => <b>{'Save'}</b>;\n", 'src/ui/x.tsx'), okLoc, 'UI_LITERAL'],
     ['aria-label рядком у UI', f('export const A = () => <button aria-label="Pause">‖</button>;\n', 'src/ui/x.tsx'), okLoc, 'UI_LITERAL'],
-    ['placeholder виразом-рядком у UI', f("export const A = () => <input placeholder={'Code'} />;\n", 'src/ui/x.tsx'), okLoc, 'UI_LITERAL'],
-    ['позитивний контроль: ключі, символи, data-* і class у UI', f("export const A = ({ t }: { t: (k: string) => string }) => <b class=\"ui-btn\" data-ui=\"save\" aria-label={t('ui.save')}>{t('ui.save')} ‖ ☰ · {'✓'} 100%</b>;\n", 'src/ui/x.tsx'), okLoc, ''],
+    ['тернарник у JSX', f("export const A = ({ c }: { c: boolean }) => <b>{c ? 'Yes' : 'No'}</b>;\n", 'src/ui/x.tsx'), okLoc, 'UI_LITERAL'],
+    ['шаблон із текстом', f('export const A = ({ n }: { n: number }) => <b>{`Slot ${n}`}</b>;\n', 'src/ui/x.tsx'), okLoc, 'UI_LITERAL'],
+    ['константа, показана пізніше', f("const L = { a: 'Save' };\nexport const A = () => <b>{L.a}</b>;\n", 'src/ui/x.tsx'), okLoc, 'UI_LITERAL'],
+    ['проп власного компонента', f('export const A = () => <Btn label="Save" />;\n', 'src/ui/x.tsx'), okLoc, 'UI_LITERAL'],
+    ['.ts-помічник у src/ui', f("export const label = (): string => 'Saved';\n", 'src/ui/x.ts'), okLoc, 'UI_LITERAL'],
+    ['textContent літералом поза UI', f("export const f = (el: HTMLElement): void => { el.textContent = 'Saved'; };\n", 'src/view/x.ts'), okLoc, 'UI_LITERAL'],
+    ['setAttribute aria-label літералом поза UI', f("export const f = (el: HTMLElement): void => { el.setAttribute('aria-label', 'interact now'); };\n", 'src/view/x.ts'), okLoc, 'UI_LITERAL'],
+    ['позитивний контроль: ключі, символи, data-*, class, порівняння, Intl, селектори', f("export const A = ({ t, e, n }: { t: (k: string) => string; e: KeyboardEvent; n: number }) => {\n  if (e.code === 'Escape') return null;\n  const m = new Intl.NumberFormat('uk-UA', { style: 'currency', currency: 'EUR' }).format(n);\n  document.querySelectorAll('.touch [data-touch]');\n  const K = { up: 'touch.up', visit: 'jr.Visit' };\n  return <b class=\"ui-btn\" data-ui=\"save\" type=\"button\" aria-label={t('ui.save')}>{t(K.up)} {m} ‖ ☰ · {'✓'} 100%</b>;\n};\n", 'src/ui/x.tsx'), okLoc, ''],
     ['позитивний контроль: англійський JSX поза src/ui (сцена, спайк) — не UI_LITERAL', f('export const A = () => <b>Save</b>;\n', 'src/view/x.tsx'), okLoc, ''],
     ['позитивний контроль: кирилиця й \\u-екранування лише в коментарях', f("// 'Пауза' \\u041f\n/* `\\u0445в` */\nexport const a = 'Pause'; // ще 'Пауза'\n"), okLoc, ''],
   ];

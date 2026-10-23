@@ -1,6 +1,7 @@
 // GAME-32 / GAME-36 · пролог проходиться в браузері через екран «Подорож»: вибір персонажа, квести,
 // розмова з Елізою, журнал — до кінця розділу. Кожна дія — справжній клік по кнопці, команда йде в ядро.
 import { readFileSync } from 'node:fs';
+import ts from 'typescript';
 import { expect, test, type Page } from '@playwright/test';
 
 interface Core { game: { campaignEnded: boolean; grants: string[]; player: { transportId: string } | null }; clock: { paused: boolean; minutes: number }; journal: { type: string }[] }
@@ -193,23 +194,37 @@ test('негативний контроль: прихована кнопка «�
 
 test('прохід керується лише кліками й клавішами: без приватного API гри та без імпортів ядра', () => {
   const src = readFileSync(new URL(import.meta.url), 'utf8');
-  const imports = [...src.matchAll(/^import .* from '([^']+)';$/gm)].map((m) => m[1]);
-  expect(imports.sort()).toEqual(['@playwright/test', 'node:fs']);
-  // Під перевіркою — сам прохід і помічники, якими він ходить (panel, act), а не лише текст між позначками.
-  const flow = src.slice(src.indexOf('const panel ='), src.indexOf('// ПРОХІД-END'));
-  expect(flow.length).toBeGreaterThan(500);                                      // позначки на місці, прохід між ними
-  expect(flow).not.toMatch(/__game|evaluate\(|dispatch|bridge/);
-  // Список дозволених викликів (рецензія: заборонні слова обходились через $eval, waitForFunction,
-  // addInitScript, localStorage чи помічник, оголошений поза позначками).
-  const ALLOWED = new Set(['playBikeProlog', 'act', 'panel', 'locator', 'first', 'click', 'tap', 'press', 'down', 'up', 'expect', 'toBeVisible', 'toHaveCount',
-    'Promise', 'Error', 'async', 'function', 'catch']);
-  const code = flow.replace(/\/\/.*$/gm, '').replace(/\/\*\*[\s\S]*?\*\//g, '').replace(/'[^']*'|`[^`]*`/g, "''");
-  // Виклик через дужки чи ?. — page['evaluate'](…), page.$eval?.(…) — не має імені для списку: заборонено.
-  expect(code).not.toMatch(/\]\s*\(|\?\.\s*\(/);
-  const called = [...code.matchAll(/\b([A-Za-z_$][\w$]*)\s*\(/g)].map((m) => m[1] ?? '');
+  const sf = ts.createSourceFile('story.spec.ts', src, ts.ScriptTarget.Latest, true);
+  const imports = sf.statements.filter(ts.isImportDeclaration).map((d) => (d.moduleSpecifier as ts.StringLiteral).text);
+  expect(imports.sort()).toEqual(['@playwright/test', 'node:fs', 'typescript']);
+  expect(src).not.toMatch(/\brequire\s*\(|\bimport\s*\(/);                       // і жодних динамічних імпортів
+  // Під перевіркою — сам прохід і помічники, якими він ходить (panel, act): за синтаксичним деревом
+  // (рецензія: регулярні вирази обходились шаблоном `${…}` і «//» усередині рядка).
+  const FLOW = ['panel', 'act', 'playBikeProlog'];
+  const roots: ts.Node[] = [];
+  ts.forEachChild(sf, (n) => {
+    if (ts.isFunctionDeclaration(n) && n.name && FLOW.includes(n.name.text)) roots.push(n);
+    if (ts.isVariableStatement(n)) for (const d of n.declarationList.declarations) if (ts.isIdentifier(d.name) && FLOW.includes(d.name.text)) roots.push(d);
+  });
+  expect(roots.length).toBe(FLOW.length);
+  const ALLOWED = new Set(['playBikeProlog', 'act', 'panel', 'locator', 'first', 'click', 'tap', 'press', 'down', 'up', 'expect', 'toBeVisible', 'toHaveCount', 'Error']);
+  const called: string[] = [];
+  const bad: string[] = [];
+  const walk = (n: ts.Node): void => {
+    if (ts.isCallExpression(n) || ts.isNewExpression(n)) {
+      const e = n.expression;
+      const optional = ts.isCallExpression(n) && !!n.questionDotToken;
+      if (ts.isIdentifier(e) && !optional) called.push(e.text);
+      else if (ts.isPropertyAccessExpression(e) && !e.questionDotToken && !optional) called.push(e.name.text);
+      else bad.push(e.getText(sf));                                        // page['evaluate'](…), x?.(…), (f)(…)
+    }
+    if (ts.isIdentifier(n) && /^(__game|bridge|dispatch|localStorage|indexedDB|sessionStorage)$/.test(n.text)) bad.push(n.text);
+    ts.forEachChild(n, walk);
+  };
+  roots.forEach(walk);
+  expect(bad).toEqual([]);
   expect(called.length).toBeGreaterThan(20);
   expect([...new Set(called.filter((c) => !ALLOWED.has(c)))]).toEqual([]);
-  expect(src.slice(src.indexOf('async function act('), src.indexOf('// ПРОХІД-START'))).not.toMatch(/__game|evaluate\(/);
 });
 
 // GAME-32 · Еліза стоїть на мапі кемпінгу: до неї доходять пішки й заговорюють клавішею дії.

@@ -1,6 +1,6 @@
 // Оболонка UI над канвою (GAME-25): пауза й налаштування. Preact, DOM — для кирилиці, масштабу тексту
 // й екранного читача (TD-003).
-import { useEffect, useRef, useState } from 'preact/hooks';
+import { useEffect, useLayoutEffect, useRef, useState } from 'preact/hooks';
 import { DEFAULT_SETTINGS, loadSettings, saveSettings, type Settings } from '../platform/settings';
 import type { Credits, UiPort } from './port';
 import { t as tr, type AnyLang, type Key } from '../i18n';
@@ -62,7 +62,8 @@ export function Shell({ port, langOverride, credits }: { port: UiPort; langOverr
     saveSettings(next);
   };
 
-  useEffect(() => {
+  // До малювання (useLayoutEffect): екранний читач не застає кнопки без підпису (рецензія).
+  useLayoutEffect(() => {
     document.documentElement.style.fontSize = `${settings.textScale}%`;
     document.documentElement.lang = settings.language;
     document.getElementById('stage')?.setAttribute('aria-label', t('ui.stage'));
