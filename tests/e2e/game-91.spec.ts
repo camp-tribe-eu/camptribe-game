@@ -188,6 +188,123 @@ test.describe('джойстик', () => {
     expect(Math.abs(b.playerX - a.playerX) + Math.abs(b.playerY - a.playerY)).toBeLessThan(0.5);
     await page.context().close();
   });
+
+  // Відпускання без pointerup (рецензія PR #31): палець ще «тримає», а подія відпускання не прийде. Усе міряємо ВСЕРЕДИНІ
+  // утримання (до справжнього touchEnd, який сам би відпустив), інакше тест нічого не доводить.
+  const heldDirs = (page: Page): Promise<string> => page.locator('[data-touch="stick"]').evaluate((e) => (e as HTMLElement).dataset.held ?? '');
+  async function expectStopped(page: Page, why: string): Promise<void> {
+    await page.waitForTimeout(150);
+    const a = await probe(page);
+    await page.waitForTimeout(500);
+    const b = await probe(page);
+    expect(Math.abs(b.playerX - a.playerX) + Math.abs(b.playerY - a.playerY), `${why}: стоїть`).toBeLessThan(0.5);
+    expect(await heldDirs(page), `${why}: жоден напрямок не натиснутий`).toBe('');
+    expect(await page.locator('.touch-knob').evaluate((e) => (e as HTMLElement).style.transform), `${why}: ручка повернулась`).toBe('');
+  }
+  async function movingNow(page: Page): Promise<void> {
+    const a = await probe(page);
+    await page.waitForTimeout(200);
+    const b = await probe(page);
+    expect(Math.abs(b.playerY - a.playerY) + Math.abs(b.playerX - a.playerX), 'до перерви персонаж ішов').toBeGreaterThan(2);
+    expect(await heldDirs(page), 'до перерви напрямок натиснутий').not.toBe('');
+  }
+  const stickEvent = (page: Page, type: string): Promise<void> => page.locator('[data-touch="stick"]').evaluate((el, t) => {
+    el.dispatchEvent(new PointerEvent(t, { pointerId: (window as unknown as { __pid: number }).__pid, bubbles: true }));
+  }, type);
+  async function trackPointerId(page: Page): Promise<void> {
+    await page.locator('[data-touch="stick"]').evaluate((el) => el.addEventListener('pointerdown', (e) => { (window as unknown as { __pid: number }).__pid = (e as PointerEvent).pointerId; }, { capture: true }));
+  }
+
+  for (const type of ['pointercancel', 'lostpointercapture']) {
+    test(`${type} посеред утримання: персонаж зупиняється, жоден напрямок не лишається`, async ({ browser }) => {
+      const page = await newPage(browser, { width: 390, height: 844 }, 100);
+      await createCharacter(page);
+      await trackPointerId(page);
+      await drag(page, 0, 50, 350, async () => {
+        await movingNow(page);
+        await stickEvent(page, type);
+        await expectStopped(page, type);
+      });
+      await page.context().close();
+    });
+  }
+
+  test('blur вікна посеред утримання: персонаж зупиняється', async ({ browser }) => {
+    const page = await newPage(browser, { width: 390, height: 844 }, 100);
+    await createCharacter(page);
+    await drag(page, 0, 50, 350, async () => {
+      await movingNow(page);
+      await page.evaluate(() => window.dispatchEvent(new Event('blur')));
+      await expectStopped(page, 'blur');
+    });
+    await page.context().close();
+  });
+
+  test('pagehide посеред утримання: персонаж зупиняється', async ({ browser }) => {
+    const page = await newPage(browser, { width: 390, height: 844 }, 100);
+    await createCharacter(page);
+    await drag(page, 0, 50, 350, async () => {
+      await movingNow(page);
+      await page.evaluate(() => window.dispatchEvent(new Event('pagehide')));
+      await expectStopped(page, 'pagehide');
+    });
+    await page.context().close();
+  });
+
+  test('вкладка схована (visibilitychange → hidden) посеред утримання: персонаж зупиняється', async ({ browser }) => {
+    const page = await newPage(browser, { width: 390, height: 844 }, 100);
+    await createCharacter(page);
+    await drag(page, 0, 50, 350, async () => {
+      await movingNow(page);
+      await page.evaluate(() => {
+        Object.defineProperty(document, 'visibilityState', { configurable: true, get: () => 'hidden' });
+        document.dispatchEvent(new Event('visibilitychange'));
+      });
+      await expectStopped(page, 'visibilitychange');
+    });
+    await page.context().close();
+  });
+
+  test('пауза (‖) відкрита посеред утримання, потім закрита: персонаж не йде сам', async ({ browser }) => {
+    const page = await newPage(browser, { width: 390, height: 844 }, 100);
+    await createCharacter(page);
+    await drag(page, 0, 50, 350, async () => {
+      await movingNow(page);
+      await page.locator('[data-touch="pause"]').evaluate((el) => (el as HTMLElement).click());
+      await expect(page.locator('[data-ui="pause"]')).toHaveCount(1);
+      await page.locator('[data-ui="resume"]').evaluate((el) => (el as HTMLElement).click());
+      await expect(page.locator('[data-ui="pause"]')).toHaveCount(0);
+      await expectStopped(page, 'після закриття паузи');
+    });
+    await page.context().close();
+  });
+
+  test('панель «Подорож» відкрита посеред утримання, потім закрита: персонаж не йде сам', async ({ browser }) => {
+    const page = await newPage(browser, { width: 390, height: 844 }, 100);
+    await createCharacter(page);
+    await drag(page, 0, 50, 350, async () => {
+      await movingNow(page);
+      await page.locator('[data-touch="story"]').evaluate((el) => (el as HTMLElement).click());
+      await expect(page.locator('[data-ui="story"]')).toHaveCount(1);
+      await page.waitForTimeout(400);
+      await page.locator('[data-ui="story-close"]').evaluate((el) => (el as HTMLElement).click());
+      await expect(page.locator('[data-ui="story"]')).toHaveCount(0);
+      await expectStopped(page, 'після закриття історії');
+    });
+    await page.context().close();
+  });
+
+  for (const type of ['pointercancel', 'lostpointercapture']) {
+    test(`кнопка дії: ${type} відпускає її`, async ({ browser }) => {
+      const page = await newPage(browser, { width: 390, height: 844 }, 100);
+      const btn = page.locator('[data-touch="interact"]');
+      await btn.evaluate((el) => el.dispatchEvent(new PointerEvent('pointerdown', { pointerId: 7, bubbles: true })));
+      expect(await btn.evaluate((e) => (e as HTMLElement).dataset.held), 'натиснута').toBe('interact');
+      await btn.evaluate((el, t) => el.dispatchEvent(new PointerEvent(t, { pointerId: 7, bubbles: true })), type);
+      expect(await btn.evaluate((e) => (e as HTMLElement).dataset.held), `${type}: відпущена`).toBe('');
+      await page.context().close();
+    });
+  }
 });
 
 test.describe('підпис збірки', () => {

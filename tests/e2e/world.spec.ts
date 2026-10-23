@@ -266,6 +266,9 @@ test.describe('поворот екрана (телефон)', () => {
   test('поворот не втрачає стан сцени', async ({ page }) => {
     await open(page);
     await holdTouch(page, 'down', (p) => p.playerY > 110);
+    // Після відпускання сцена гасить швидкість на наступному кадрі: на завантаженому CI `before` читався ще посеред ходу
+    // (PR #31, CI). Чекаємо, доки позиція стоїть між двома зчитуваннями, — і лише тоді міряємо поворот.
+    await expect.poll(async () => { const a = await probe(page); await page.waitForTimeout(120); const b = await probe(page); return Math.abs(a.playerY - b.playerY) + Math.abs(a.playerX - b.playerX); }, { timeout: 5_000 }).toBeLessThan(0.1);
     const before = await probe(page);
     await page.setViewportSize({ width: 844, height: 390 });
     await page.waitForTimeout(300);

@@ -8,12 +8,26 @@ const DIRECTIONS: readonly Action[] = ['up', 'down', 'left', 'right'];
 export function mountTouchControls(root: HTMLElement, input: InputState, hidden: readonly string[] = []): HTMLElement {
   const pad = document.createElement('div');
   pad.className = 'touch';
-  pad.append(buildStick(input, hidden.includes('stick')), buildActionButton(input, hidden.includes('interact')));
+  const resets: Array<() => void> = [];
+  pad.append(buildStick(input, hidden.includes('stick'), resets), buildActionButton(input, hidden.includes('interact'), resets));
   root.append(pad);
+  // Перерване, після якого pointerup може й не прийти: вікно втратило фокус, вкладка сховалась, сторінка йде.
+  // Джойстик під діалогом лише ховається CSS (visibility), тож палець «лишається» натиснутим — відпускаємо сами.
+  const releaseAll = (): void => { for (const r of resets) r(); };
+  window.addEventListener('blur', releaseAll);
+  window.addEventListener('pagehide', releaseAll);
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') releaseAll(); });
+  // Будь-який діалог/накладка (пауза, історія, журнал, підтвердження): з'явився role="dialog" — відпустити все.
+  let dialogOpen = root.querySelector('[role="dialog"]') !== null;
+  new MutationObserver(() => {
+    const now = root.querySelector('[role="dialog"]') !== null;
+    if (now && !dialogOpen) releaseAll();
+    dialogOpen = now;
+  }).observe(root, { childList: true, subtree: true });
   return pad;
 }
 
-function buildStick(input: InputState, hide: boolean): HTMLElement {
+function buildStick(input: InputState, hide: boolean, resets: Array<() => void>): HTMLElement {
   const base = document.createElement('div');
   base.className = 'touch-stick';
   base.dataset.touch = 'stick';
@@ -24,6 +38,7 @@ function buildStick(input: InputState, hide: boolean): HTMLElement {
   knob.setAttribute('aria-hidden', 'true');
   base.append(knob);
   if (hide) base.hidden = true;
+  base.dataset.held = '';
 
   let pointer: number | null = null;
   const held = new Set<Action>();
@@ -32,6 +47,7 @@ function buildStick(input: InputState, hide: boolean): HTMLElement {
       if (next.has(a) && !held.has(a)) { press(input, a); held.add(a); }
       else if (!next.has(a) && held.has(a)) { release(input, a); held.delete(a); }
     }
+    base.dataset.held = [...held].join(' ');   // видимий стан натиснутих напрямків (e2e: «жоден не лишився»)
   };
   const move = (e: PointerEvent): void => {
     const r = base.getBoundingClientRect();
@@ -45,12 +61,13 @@ function buildStick(input: InputState, hide: boolean): HTMLElement {
     if (dist > reach && dist > 0) { dx *= reach / dist; dy *= reach / dist; }
     knob.style.transform = `translate(${dx}px, ${dy}px)`;
   };
-  const stop = (e: PointerEvent): void => {
-    if (e.pointerId !== pointer) return;
+  const reset = (): void => {
     pointer = null;
     apply(new Set());
     knob.style.transform = '';
   };
+  resets.push(reset);
+  const stop = (e: PointerEvent): void => { if (e.pointerId === pointer) reset(); };
   base.addEventListener('pointerdown', (e) => {
     if (pointer !== null) return;
     e.preventDefault();
@@ -63,7 +80,7 @@ function buildStick(input: InputState, hide: boolean): HTMLElement {
   return base;
 }
 
-function buildActionButton(input: InputState, hide: boolean): HTMLElement {
+function buildActionButton(input: InputState, hide: boolean, resets: Array<() => void>): HTMLElement {
   const b = document.createElement('button');
   b.type = 'button';
   b.dataset.touch = 'interact';
@@ -71,11 +88,17 @@ function buildActionButton(input: InputState, hide: boolean): HTMLElement {
   b.textContent = TOUCH_CONTROLS.interact;
   b.style.minWidth = b.style.minHeight = `${MIN_TOUCH_PX + 12}px`;
   if (hide) b.hidden = true;
-  const down = (e: Event): void => { e.preventDefault(); press(input, 'interact'); };
-  const up = (e: Event): void => { e.preventDefault(); release(input, 'interact'); };
+  const off = (): void => { release(input, 'interact'); b.dataset.held = ''; };
+  resets.push(off);
+  b.dataset.held = '';
+  const down = (e: PointerEvent): void => {
+    e.preventDefault();
+    try { b.setPointerCapture(e.pointerId); } catch { /* синтетична подія без активного вказівника */ }
+    press(input, 'interact');
+    b.dataset.held = 'interact';
+  };
+  const up = (e: Event): void => { e.preventDefault(); off(); };
   b.addEventListener('pointerdown', down);
-  b.addEventListener('pointerup', up);
-  b.addEventListener('pointercancel', up);
-  b.addEventListener('pointerleave', up);
+  for (const type of ['pointerup', 'pointercancel', 'lostpointercapture', 'pointerleave'] as const) b.addEventListener(type, up);
   return b;
 }
