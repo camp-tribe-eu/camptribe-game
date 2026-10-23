@@ -11,13 +11,16 @@ from a session; opengameart.org is not). For every layer in LAYERS:
 Rows of assets/CREDITS.csv that are not under characters/ are kept as they are.
 
 Licence choice: the generator offers several licences per layer; we take the most permissive one
-(CC0 > OGA-BY > CC-BY > CC-BY-SA > GPL). A layer with no upstream row is an error, not a skip.
+(CC0 > OGA-BY > CC-BY > CC-BY-SA > GPL) — unless assets/licence-pins.json pins the layer: the generator
+offers OGA-BY, but the first-hand OGA pages do not, so we take the licence all of them give (GAME-21,
+quotes in research/lpc-licences-evidence.md). A layer with no upstream row is an error, not a skip.
 Upstream fields carry trailing spaces after the closing quote; they are stripped.
 After running: node scripts/assets/check-assets.mjs --write-json && node scripts/assets/check-assets.mjs
 """
 import argparse
 import csv
 import io
+import json
 import os
 import sys
 import urllib.request
@@ -27,6 +30,7 @@ RAW = f'https://raw.githubusercontent.com/{REPO}/master'
 HOME = f'https://github.com/{REPO}'
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 CREDITS = os.path.join(ROOT, 'assets', 'CREDITS.csv')
+PINS = os.path.join(ROOT, 'assets', 'licence-pins.json')
 HEADER = ['file', 'authors', 'licence', 'licences_offered', 'source_urls', 'origin', 'notes', 'modified']
 
 # The 17 layers of the art spike (research/art-spike/compose_chars.py, OD-013).
@@ -35,7 +39,8 @@ LAYERS = [
     'head/heads/human/male', 'head/heads/human/female', 'head/heads/human/male_small',
     'hair/plain/adult', 'hair/messy1/adult', 'hair/ponytail/adult/fg', 'hair/ponytail/adult/bg',
     'torso/clothes/longsleeve/longsleeve/male', 'torso/clothes/longsleeve/longsleeve/female',
-    'torso/clothes/longsleeve/longsleeve/teen',
+    # longsleeve/teen dropped (GAME-21): unused in the game, and no licence is offered by all its
+    # first-hand OGA pages that our register allows (generator: OGA-BY | GPL; pages: CC-BY-SA | GPL; OGA-BY).
     'legs/pants/male', 'legs/pants/thin',
     'feet/shoes/basic/male', 'feet/shoes/basic/thin',
 ]
@@ -71,6 +76,7 @@ def main(argv=None):
     for r in csv.DictReader(io.StringIO(raw.decode('utf-8'))):
         upstream[r['filename'].strip()] = {k: (v or '').strip() for k, v in r.items()}
 
+    pins = json.load(open(PINS, encoding='utf-8'))['pins'] if os.path.exists(PINS) else {}
     rows = []
     for layer in LAYERS:
         name = f'{layer}/walk.png'
@@ -92,7 +98,7 @@ def main(argv=None):
         rows.append({
             'file': f'characters/{name}',
             'authors': '; '.join(x.strip() for x in u['authors'].split(',') if x.strip()),
-            'licence': most_permissive(offered),
+            'licence': pins[f'characters/{name}']['licence'] if f'characters/{name}' in pins else most_permissive(offered),
             'licences_offered': ' | '.join(offered),
             'source_urls': ' '.join(urls),
             'origin': f'{RAW}/spritesheets/{name}',

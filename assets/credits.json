@@ -39,7 +39,7 @@
         "characters/head/heads/human/male/walk.png"
       ],
       "licences": [
-        "OGA-BY 3.0"
+        "CC-BY-SA 3.0"
       ],
       "sources": [
         "https://gitlab.com/vagabondgame/lpc-characters",
@@ -81,11 +81,10 @@
         "characters/head/heads/human/male/walk.png",
         "characters/legs/pants/male/walk.png",
         "characters/legs/pants/thin/walk.png",
-        "characters/torso/clothes/longsleeve/longsleeve/female/walk.png",
-        "characters/torso/clothes/longsleeve/longsleeve/teen/walk.png"
+        "characters/torso/clothes/longsleeve/longsleeve/female/walk.png"
       ],
       "licences": [
-        "OGA-BY 3.0"
+        "CC-BY-SA 3.0"
       ],
       "sources": [
         "http://opengameart.org/content/lpc-clothing-updates",
@@ -170,7 +169,7 @@
         "characters/body/bodies/teen/walk.png"
       ],
       "licences": [
-        "OGA-BY 3.0"
+        "CC-BY-SA 3.0"
       ],
       "sources": [
         "https://gitlab.com/vagabondgame/lpc-characters",
@@ -197,10 +196,10 @@
         "characters/head/heads/human/male_small/walk.png",
         "characters/legs/pants/male/walk.png",
         "characters/legs/pants/thin/walk.png",
-        "characters/torso/clothes/longsleeve/longsleeve/female/walk.png",
-        "characters/torso/clothes/longsleeve/longsleeve/teen/walk.png"
+        "characters/torso/clothes/longsleeve/longsleeve/female/walk.png"
       ],
       "licences": [
+        "CC-BY-SA 3.0",
         "OGA-BY 3.0"
       ],
       "sources": [
@@ -233,7 +232,7 @@
         "characters/body/bodies/teen/walk.png"
       ],
       "licences": [
-        "OGA-BY 3.0"
+        "CC-BY-SA 3.0"
       ],
       "sources": [
         "https://gitlab.com/vagabondgame/lpc-characters",
@@ -264,12 +263,10 @@
         "characters/legs/pants/male/walk.png",
         "characters/legs/pants/thin/walk.png",
         "characters/torso/clothes/longsleeve/longsleeve/female/walk.png",
-        "characters/torso/clothes/longsleeve/longsleeve/male/walk.png",
-        "characters/torso/clothes/longsleeve/longsleeve/teen/walk.png"
+        "characters/torso/clothes/longsleeve/longsleeve/male/walk.png"
       ],
       "licences": [
-        "CC-BY-SA 3.0",
-        "OGA-BY 3.0"
+        "CC-BY-SA 3.0"
       ],
       "sources": [
         "http://opengameart.org/content/lpc-clothing-updates",
@@ -289,7 +286,6 @@
         "https://opengameart.org/content/lpc-revised-character-basics",
         "https://opengameart.org/content/lpc-runcycle-and-diagonal-walkcycle",
         "https://opengameart.org/content/lpc-runcycle-for-male-muscular-and-pregnant-character-bases-with-modular-heads",
-        "https://opengameart.org/content/lpc-teen-unisex-base-clothes",
         "https://opengameart.org/content/ponytail-and-plain-hairstyles"
       ]
     },
@@ -301,7 +297,7 @@
         "characters/legs/pants/thin/walk.png"
       ],
       "licences": [
-        "OGA-BY 3.0"
+        "CC-BY-SA 3.0"
       ],
       "sources": [
         "http://opengameart.org/content/lpc-clothing-updates",
@@ -336,11 +332,10 @@
         "characters/feet/shoes/basic/thin/walk.png",
         "characters/legs/pants/male/walk.png",
         "characters/legs/pants/thin/walk.png",
-        "characters/torso/clothes/longsleeve/longsleeve/male/walk.png",
-        "characters/torso/clothes/longsleeve/longsleeve/teen/walk.png"
+        "characters/torso/clothes/longsleeve/longsleeve/male/walk.png"
       ],
       "licences": [
-        "OGA-BY 3.0"
+        "CC-BY-SA 3.0"
       ],
       "sources": [
         "http://opengameart.org/content/lpc-clothing-updates",
@@ -388,8 +383,7 @@
         "tiles/terrain_atlas.png"
       ],
       "licences": [
-        "CC-BY-SA 3.0",
-        "OGA-BY 3.0"
+        "CC-BY-SA 3.0"
       ],
       "sources": [
         "https://opengameart.org/content/liberated-pixel-cup-lpc-base-assets-sprites-map-tiles",
@@ -407,7 +401,7 @@
         "characters/legs/pants/thin/walk.png"
       ],
       "licences": [
-        "OGA-BY 3.0"
+        "CC-BY-SA 3.0"
       ],
       "sources": [
         "http://opengameart.org/content/lpc-clothing-updates",
@@ -433,7 +427,7 @@
         "characters/body/bodies/teen/walk.png"
       ],
       "licences": [
-        "OGA-BY 3.0"
+        "CC-BY-SA 3.0"
       ],
       "sources": [
         "https://gitlab.com/vagabondgame/lpc-characters",
@@ -458,7 +452,7 @@
         "characters/body/bodies/teen/walk.png"
       ],
       "licences": [
-        "OGA-BY 3.0"
+        "CC-BY-SA 3.0"
       ],
       "sources": [
         "https://gitlab.com/vagabondgame/lpc-characters",
@@ -499,7 +493,6 @@
         "characters/legs/pants/male/walk.png",
         "characters/legs/pants/thin/walk.png",
         "characters/torso/clothes/longsleeve/longsleeve/female/walk.png",
-        "characters/torso/clothes/longsleeve/longsleeve/teen/walk.png",
         "tiles/base_out_atlas.png",
         "tiles/terrain_atlas.png"
       ],
@@ -539,7 +532,7 @@
         "characters/body/bodies/teen/walk.png"
       ],
       "licences": [
-        "OGA-BY 3.0"
+        "CC-BY-SA 3.0"
       ],
       "sources": [
         "https://gitlab.com/vagabondgame/lpc-characters",
@@ -598,7 +591,7 @@
         "Johannes Sjölund (wulax)",
         "Stephen Challener (Redshrike)"
       ],
-      "licence": "OGA-BY 3.0",
+      "licence": "CC-BY-SA 3.0",
       "sources": [
         "https://opengameart.org/content/liberated-pixel-cup-lpc-base-assets-sprites-map-tiles",
         "https://opengameart.org/content/lpc-medieval-fantasy-character-sprites",
@@ -627,7 +620,7 @@
         "Johannes Sjölund (wulax)",
         "Stephen Challener (Redshrike)"
       ],
-      "licence": "OGA-BY 3.0",
+      "licence": "CC-BY-SA 3.0",
       "sources": [
         "https://opengameart.org/content/liberated-pixel-cup-lpc-base-assets-sprites-map-tiles",
         "https://opengameart.org/content/lpc-medieval-fantasy-character-sprites",
@@ -656,7 +649,7 @@
         "Johannes Sjölund (wulax)",
         "Stephen Challener (Redshrike)"
       ],
-      "licence": "OGA-BY 3.0",
+      "licence": "CC-BY-SA 3.0",
       "sources": [
         "https://opengameart.org/content/liberated-pixel-cup-lpc-base-assets-sprites-map-tiles",
         "https://opengameart.org/content/lpc-medieval-fantasy-character-sprites",
@@ -678,7 +671,7 @@
         "bluecarrot16",
         "Johannes Sjölund (wulax)"
       ],
-      "licence": "OGA-BY 3.0",
+      "licence": "CC-BY-SA 3.0",
       "sources": [
         "https://opengameart.org/content/lpc-medieval-fantasy-character-sprites",
         "http://opengameart.org/content/lpc-clothing-updates",
@@ -693,7 +686,7 @@
         "Joe White",
         "Johannes Sjölund (wulax)"
       ],
-      "licence": "OGA-BY 3.0",
+      "licence": "CC-BY-SA 3.0",
       "sources": [
         "https://opengameart.org/content/lpc-medieval-fantasy-character-sprites",
         "http://opengameart.org/content/lpc-clothing-updates",
@@ -721,7 +714,7 @@
         "Manuel Riecke (MrBeast)",
         "Joe White"
       ],
-      "licence": "OGA-BY 3.0",
+      "licence": "CC-BY-SA 3.0",
       "sources": [
         "https://opengameart.org/content/liberated-pixel-cup-lpc-base-assets-sprites-map-tiles",
         "https://opengameart.org/content/ponytail-and-plain-hairstyles",
@@ -762,7 +755,7 @@
         "Benjamin K. Smith (BenCreating)",
         "Stephen Challener (Redshrike)"
       ],
-      "licence": "OGA-BY 3.0",
+      "licence": "CC-BY-SA 3.0",
       "sources": [
         "https://opengameart.org/content/",
         "https://opengameart.org/content/lpc-character-bases"
@@ -776,7 +769,7 @@
         "Benjamin K. Smith (BenCreating)",
         "Stephen Challener (Redshrike)"
       ],
-      "licence": "OGA-BY 3.0",
+      "licence": "CC-BY-SA 3.0",
       "sources": [
         "https://opengameart.org/content/liberated-pixel-cup-lpc-base-assets-sprites-map-tiles",
         "https://opengameart.org/content/lpc-character-bases"
@@ -805,7 +798,7 @@
         "Johannes Sjölund (wulax)",
         "Stephen Challener (Redshrike)"
       ],
-      "licence": "OGA-BY 3.0",
+      "licence": "CC-BY-SA 3.0",
       "sources": [
         "https://opengameart.org/content/liberated-pixel-cup-lpc-base-assets-sprites-map-tiles",
         "https://opengameart.org/content/lpc-medieval-fantasy-character-sprites",
@@ -824,7 +817,7 @@
         "Johannes Sjölund (wulax)",
         "Stephen Challener (Redshrike)"
       ],
-      "licence": "OGA-BY 3.0",
+      "licence": "CC-BY-SA 3.0",
       "sources": [
         "https://opengameart.org/content/liberated-pixel-cup-lpc-base-assets-sprites-map-tiles",
         "https://opengameart.org/content/lpc-medieval-fantasy-character-sprites",
@@ -841,7 +834,7 @@
         "JaidynReiman",
         "Stephen Challener (Redshrike)"
       ],
-      "licence": "OGA-BY 3.0",
+      "licence": "CC-BY-SA 3.0",
       "sources": [
         "https://opengameart.org/content/liberated-pixel-cup-lpc-base-assets-sprites-map-tiles",
         "https://opengameart.org/content/lpc-7-womens-shirts",
@@ -859,30 +852,9 @@
         "JaidynReiman",
         "Johannes Sjölund (wulax)"
       ],
-      "licence": "OGA-BY 3.0",
+      "licence": "CC-BY-SA 3.0",
       "sources": [
         "https://opengameart.org/content/lpc-medieval-fantasy-character-sprites",
-        "http://opengameart.org/content/lpc-clothing-updates",
-        "https://opengameart.org/content/lpc-revised-character-basics",
-        "https://github.com/ElizaWy/LPC/tree/main/Characters/Clothing",
-        "https://opengameart.org/content/lpc-expanded-sit-run-jump-more",
-        "https://opengameart.org/content/lpc-expanded-simple-shirts"
-      ],
-      "modified": "no"
-    },
-    {
-      "file": "characters/torso/clothes/longsleeve/longsleeve/teen/walk.png",
-      "authors": [
-        "bluecarrot16",
-        "Eliza Wyatt (ElizaWy)",
-        "JaidynReiman",
-        "Stephen Challener (Redshrike)",
-        "Johannes Sjölund (wulax)"
-      ],
-      "licence": "OGA-BY 3.0",
-      "sources": [
-        "https://opengameart.org/content/liberated-pixel-cup-lpc-base-assets-sprites-map-tiles",
-        "https://opengameart.org/content/lpc-teen-unisex-base-clothes",
         "http://opengameart.org/content/lpc-clothing-updates",
         "https://opengameart.org/content/lpc-revised-character-basics",
         "https://github.com/ElizaWy/LPC/tree/main/Characters/Clothing",
