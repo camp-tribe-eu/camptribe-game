@@ -104,18 +104,28 @@ test('на екрані подорожі світ на паузі; Escape і «�
   await expect(page.locator('[data-ui="pause"]')).toHaveCount(0);   // не плутається з меню паузи
 });
 
-test('дорога (GAME-31): кнопка показує час у дорозі, і годинник рухається саме на нього — лише дією', async ({ page }) => {
-  await open(page);
-  await panel(page).locator('[data-act="create"]', { hasText: 'Велосипед' }).first().click();
-  for (const [k, key] of [['visit', 'loc.home'], ['complete', 'q.st-001'], ['visit', 'loc.home'], ['complete', 'q.st-002']] as const) await act(page, k, key);
-  const shop = panel(page).locator('[data-act="visit"][data-key="loc.shop"]');
-  await expect(shop).toContainText('25 хв');                       // велосипедом дім → крамниця
-  const m0 = (await core(page)).clock.minutes;
-  await page.waitForTimeout(1500);                                    // стоїмо в меню — час стоїть
-  expect((await core(page)).clock.minutes).toBe(m0);
-  await shop.click();
-  expect((await core(page)).clock.minutes).toBe(m0 + 25);           // дорога — одним кроком
-});
+// Погода дня (GAME-46): зерно 2 — день 0 сонячний, зерно 10 — дощовий (weatherOf, src/core/weather.ts).
+// Дощ сповільнює велосипед ×1.5 угору (SIM-WX-007): дім → крамниця 25 хв → 38 хв, і годинник іде саме на них.
+for (const [seed, weather, label, minutes] of [[2, 'sunny', 'сонячно', 25], [10, 'rain', 'дощ', 38]] as const) {
+  test(`дорога (GAME-31) у погоду «${weather}» (GAME-46): у шапці погода дня, кнопка показує час, годинник рухається саме на нього`, async ({ browser }) => {
+    const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true });
+    const page = await ctx.newPage();
+    await open(page, `?seed=${seed}`);
+    await panel(page).locator('[data-act="create"]', { hasText: 'Велосипед' }).first().click();
+    const where = panel(page).locator('[data-ui="where"]');
+    await expect(where).toHaveAttribute('data-weather', weather);
+    await expect(where).toContainText(`Погода: ${label}`);
+    for (const [k, key] of [['visit', 'loc.home'], ['complete', 'q.st-001'], ['visit', 'loc.home'], ['complete', 'q.st-002']] as const) await act(page, k, key);
+    const shop = panel(page).locator('[data-act="visit"][data-key="loc.shop"]');
+    await expect(shop).toContainText(`${minutes} хв`);                // велосипедом дім → крамниця
+    const m0 = (await core(page)).clock.minutes;
+    await page.waitForTimeout(1500);                                    // стоїмо в меню — час стоїть
+    expect((await core(page)).clock.minutes).toBe(m0);
+    await shop.click();
+    expect((await core(page)).clock.minutes).toBe(m0 + minutes);      // дорога — одним кроком
+    await ctx.close();
+  });
+}
 
 /**
  * До дороги з даним зерном у ЧИСТОМУ контексті браузера: інакше автозбереження попередньої спроби (пауза під час

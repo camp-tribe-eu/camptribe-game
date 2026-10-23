@@ -8,11 +8,14 @@ import { canonical } from './hash';
 import { eventEligible, route } from './story';
 import { nextInt, seedRng, type RngState } from './rng';
 import { initialState, type GameState } from './state';
+import { dayOf, tripMinutes, weatherOf, type Weather } from './weather';
 
 export interface SimState {
   readonly game: GameState;
   readonly clock: GameClock;
   readonly rng: RngState;
+  /** Зерно світу (GAME-46): з нього погода дня. Незмінне за гру; RNG стану від нього не залежить. */
+  readonly worldSeed: number;
   /** Скільки разів за кроки вільного руху випала дрібна знахідка — приклад системи, що споживає RNG. */
   readonly finds: number;
   /** Журнал подорожі (GAME-32): пишеться сам, по запису на кожну прийняту НОВУ команду з переліку. */
@@ -51,15 +54,23 @@ function refOf(c: Command): string | null {
 
 /**
  * Дорога перемотує ігровий час одним кроком (SIM-TIME-004, GAME-31): прийнята НОВА команда Visit, що
- * змінила локацію, — хвилини найкоротшої дороги транспорту гравця. Запис журналу бере час ДО дороги.
+ * змінила локацію, — хвилини найкоротшої дороги транспорту гравця з поправкою на погоду дня (GAME-46).
+ * Запис журналу бере час ДО дороги.
  */
-function travelMinutes(before: GameState, r: ReturnType<typeof dispatch>, defs: CoreDefs | undefined): number {
-  const st = defs?.story;
+function travelMinutes(s: SimState, r: ReturnType<typeof dispatch>, ctx: StepCtx): number {
+  const before = s.game;
+  const st = ctx.defs?.story;
   const from = before.player?.locationId ?? null;
   const to = r.ok ? r.state.player?.locationId ?? null : null;
   if (!st || !r.ok || r.repeated || to === null || from === to || !before.player) return 0;
-  return route(st, from, to, before.player.transportId)?.minutes ?? 0;
+  const minutes = route(st, from, to, before.player.transportId)?.minutes ?? 0;
+  // Погода дня ВИЇЗДУ (SIM-WX-007): дорога, що перетинає північ, не змінює своєї ціни посеред шляху.
+  return (ctx.weather?.tripMinutes ?? tripMinutes)(minutes, before.player.transportId, todayWeather(s, ctx));
 }
+
+/** Погода поточного дня симуляції (SIM-WX-005). Підміна — лише для тестів (StepCtx.weather). */
+export const todayWeather = (s: Pick<SimState, 'worldSeed' | 'clock'>, ctx: StepCtx = {}): Weather =>
+  (ctx.weather?.of ?? weatherOf)(s.worldSeed, dayOf(s.clock));
 
 /**
  * Подія в дорозі (GAME-31): після приїзду — один кидок RNG стану серед подій, доречних тут (eventEligible),
@@ -106,13 +117,21 @@ export const findsSystem: System = (s, steps) => {
 };
 
 export function newSim(seed: number, moneyCents = 0): SimState {
-  return { game: initialState(moneyCents), clock: newClock(), rng: seedRng(seed), finds: 0, journal: [] };
+  return { game: initialState(moneyCents), clock: newClock(), rng: seedRng(seed), worldSeed: seed >>> 0, finds: 0, journal: [] };
 }
 
 /** Контекст кроку: незмінний каталог визначень і системи. У сейв не потрапляє. */
 export interface StepCtx {
   readonly defs?: CoreDefs;
   readonly systems?: readonly System[];
+  /**
+   * ЛИШЕ ДЛЯ ТЕСТІВ (GAME-46): підміна погоди дня й/або її впливу на дорогу — «найгірша погода щодня»
+   * і негативний контроль «погода, що закрила дорогу». Гра й реплеї цього поля не задають.
+   */
+  readonly weather?: {
+    readonly of?: (worldSeed: number, day: number) => Weather;
+    readonly tripMinutes?: (minutes: number, transportId: string, weather: Weather) => number;
+  };
 }
 
 export function step(s: SimState, input: Input, ctx: StepCtx = {}): SimState {
@@ -124,7 +143,7 @@ export function step(s: SimState, input: Input, ctx: StepCtx = {}): SimState {
     }
     case 'command': {
       const r = dispatch(s.game, input.command, ctx.defs ?? EMPTY_DEFS);
-      const travelled = travelMinutes(s.game, r, ctx.defs);
+      const travelled = travelMinutes(s, r, ctx);
       if (travelled > 0) s = { ...s, clock: advance(s.clock, travelled) };
       // Рівно один запис на прийняту нову команду з переліку, що щось змінила в грі. Відмова, повтор
       // commandId і «порожня» дія (прийти туди, де стоїш; вдруге погрітись біля вогнища) — нуль.

@@ -1,7 +1,7 @@
 {
  "format": "camplife-save",
  "schemaVersion": 2,
- "checksum": "5457fbcc",
+ "checksum": "bc61a222",
  "accountId": null,
  "contentRev": null,
  "sim": {
@@ -183,6 +183,7 @@
    1917599617,
    2937056887
   ],
+  "worldSeed": 20261022,
   "finds": 9,
   "journal": [
    {

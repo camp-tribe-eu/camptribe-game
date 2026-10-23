@@ -61,5 +61,9 @@
   "touch.right": "Праворуч",
   "touch.interact": "Дія",
   "ui.minutes": "хв",
-  "jr.RoadEvent": "Подія в дорозі"
+  "jr.RoadEvent": "Подія в дорозі",
+  "ui.weather": "Погода",
+  "ui.weather.sunny": "сонячно",
+  "ui.weather.cloudy": "хмарно",
+  "ui.weather.rain": "дощ"
 }

@@ -12,9 +12,10 @@
 import { dispatch, nextCommandId, type Command } from '../core/commands';
 import type { CoreDefs, StoryDefs } from '../core/defs';
 import { canonical } from '../core/hash';
-import type { SimState } from '../core/sim';
+import { todayWeather, type SimState } from '../core/sim';
 import { initialState, type GameState } from '../core/state';
 import { matches, route } from '../core/story';
+import { tripMinutes, type Weather } from '../core/weather';
 import { CONTENT } from '../content/story';
 import { moves, type Move } from '../content/moves';
 import items from '../../content/items.json';
@@ -58,12 +59,14 @@ const tryMove = (s: GameState, m: Move | Omit<Command, 'commandId'>, defs: CoreD
 const idOf = (m: Move, s: GameState): string =>
   canonical(m.type === 'Choose' || m.type === 'Continue' ? { ...m, at: s.dialogue } : m);
 
-function describe(m: Move, defs: CoreDefs, s: GameState): Omit<OfferAction, 'id'> {
+function describe(m: Move, defs: CoreDefs, s: GameState, weather: Weather): Omit<OfferAction, 'id'> {
   switch (m.type) {
     case 'Visit': {
-      // Ціна дороги для гравця (GAME-31): хвилини й гроші найкоротшого шляху його транспортом.
+      // Ціна дороги для гравця (GAME-31): хвилини й гроші найкоротшого шляху його транспортом;
+      // хвилини — уже з погодою дня (SIM-WX-007), тобто ті самі, що симуляція перемотає.
       const way = s.player && defs.story ? route(defs.story, s.player.locationId, m.locationId, s.player.transportId) : null;
-      return { kind: 'visit', key: nameKey(m.locationId), ...(way && way.minutes > 0 ? { minutes: way.minutes } : {}), ...(way && way.cents > 0 ? { priceCents: way.cents } : {}) };
+      const minutes = way && s.player ? tripMinutes(way.minutes, s.player.transportId, weather) : 0;
+      return { kind: 'visit', key: nameKey(m.locationId), ...(minutes > 0 ? { minutes } : {}), ...(way && way.cents > 0 ? { priceCents: way.cents } : {}) };
     }
     case 'Talk': return { kind: 'talk', key: nameKey(m.npcId) };
     case 'Pickup': return { kind: 'pickup', key: nameKey(m.itemId) };
@@ -139,7 +142,8 @@ export function storyOffer(sim: SimState, defs: CoreDefs): Offered {
   const intents = new Map<string, Move>();
   const journal = sim.journal.map((e) => ({ type: e.type, key: nameKey(e.ref), at: e.at }));
   const inventory = Object.entries(s.inventory).sort(([a], [b]) => a.localeCompare(b)).map(([id, qty]) => ({ key: nameKey(id) ?? id, qty }));
-  const base = { moneyCents: s.moneyCents, inventory, journal };
+  const weather = todayWeather(sim);
+  const base = { moneyCents: s.moneyCents, inventory, journal, weather };
 
   if (!s.player) {
     const choices = characterChoices(defs);
@@ -163,7 +167,7 @@ export function storyOffer(sim: SimState, defs: CoreDefs): Offered {
 
   const offered: OfferAction[] = [];
   for (const { move } of menuMoves(s, defs)) {
-    const a: OfferAction = { id: idOf(move, s), ...describe(move, defs, s) };
+    const a: OfferAction = { id: idOf(move, s), ...describe(move, defs, s, weather) };
     intents.set(a.id, move);
     offered.push(a);
   }

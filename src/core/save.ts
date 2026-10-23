@@ -40,9 +40,11 @@ export type LoadResult =
 /** Міграції: MIGRATIONS[v] переводить сейв версії v у v+1. Кожна — чиста й не губить жодного поля. */
 export const MIGRATIONS: Readonly<Record<number, (sim: unknown) => unknown>> = {
   // v1 → v2 (GAME-29): з'явились персонаж і квести. Старий сейв — гра до створення персонажа.
+  // GAME-46: зерно світу (погода дня). Зерна v1 не зберігав, а з RNG стану його не відновити —
+  // тож усім сейвам v1 однаково 0: детерміновано, той самий v1 завжди дає ту саму погоду.
   1: (sim) => {
     const s = sim as { game: Record<string, unknown> };
-    return { ...s, journal: [], game: { ...s.game, schemaVersion: 2, player: null, quests: {}, campaignEnded: false, flags: [], dialogue: null } };
+    return { ...s, journal: [], worldSeed: 0, game: { ...s.game, schemaVersion: 2, player: null, quests: {}, campaignEnded: false, flags: [], dialogue: null } };
   },
 };
 
@@ -58,8 +60,9 @@ const isInt = (v: unknown, min = 0): boolean => typeof v === 'number' && Number.
 /** Мінімальна перевірка форми поточної версії: решту гарантує контрольна сума. */
 function shapeError(sim: unknown): string | null {
   if (!isObj(sim)) return 'sim is not an object';
-  const { game, clock, rng, finds, journal } = sim;
+  const { game, clock, rng, finds, journal, worldSeed } = sim;
   if (!isObj(game) || !isObj(clock) || !Array.isArray(rng) || !isInt(finds)) return 'missing game/clock/rng/finds';
+  if (!isInt(worldSeed) || (worldSeed as number) > 0xffff_ffff) return 'worldSeed';
   if (!Array.isArray(journal) || journal.some((e) => !isObj(e) || !isInt(e.at) || typeof e.commandId !== 'string' || !isJournalType(e.type) || !(e.ref === null || typeof e.ref === 'string'))) return 'journal';
   if (game.schemaVersion !== 2 || !isInt(game.moneyCents) || !isInt(game.seq)) return 'game: version, money or seq';
   if (!isObj(game.inventory) || !Array.isArray(game.grants) || !isObj(game.processed)) return 'game: inventory, grants or processed';

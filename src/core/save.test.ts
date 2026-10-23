@@ -34,7 +34,9 @@ describe('вічні фікстури сейвів (TD-007)', () => {
     const r = fromSave(JSON.stringify(v1));
     // Журналу у v1 не було (GAME-32): міграція дає порожній — історію не вигадуємо. Решта — побайтно.
     expect(r.ok && r.sim.journal).toEqual([]);
-    expect(r.ok && stateHash({ ...r.sim, journal: null })).toBe(stateHash({ ...live, journal: null }));
+    // Зерна світу у v1 теж не було (GAME-46): міграція дає 0 — детерміновано, однаково для всіх v1.
+    expect(r.ok && r.sim.worldSeed).toBe(0);
+    expect(r.ok && stateHash({ ...r.sim, journal: null, worldSeed: null })).toBe(stateHash({ ...live, journal: null, worldSeed: null }));
   });
 });
 
@@ -100,6 +102,8 @@ describe('коди відмов завантаження: кожен має зл
     ['персонаж без транспорту', (c: typeof good) => { c.sim.game.player = { profileId: 'profile.a', animalId: 'animal.none', locationId: null }; }],
     ['запис processed — null (без перевірки об\'єкта — виняток, а не код)', (c: typeof good) => { c.sim.game.processed = { c0: null }; }],
     ['запис журналу невідомого типу (рецензія GAME-32)', (c: typeof good) => { c.sim.journal = [{ at: 0, commandId: 'c0', type: 'Teleport', ref: null }]; }],
+    ['без зерна світу (GAME-46)', (c: typeof good) => { delete (c.sim as Record<string, unknown>).worldSeed; }],
+    ['зерно світу поза uint32 (GAME-46)', (c: typeof good) => { (c.sim as Record<string, unknown>).worldSeed = 2 ** 32; }],
   ] as const) {
     it(`SAVE_SHAPE: ${what}`, () => {
       const r = fromSave(withSim((c) => { patch(c); resum(c); }));

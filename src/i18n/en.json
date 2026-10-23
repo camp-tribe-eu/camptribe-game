@@ -61,5 +61,9 @@
   "touch.right": "Right",
   "touch.interact": "Act",
   "ui.minutes": "min",
-  "jr.RoadEvent": "On the road"
+  "jr.RoadEvent": "On the road",
+  "ui.weather": "Weather",
+  "ui.weather.sunny": "sunny",
+  "ui.weather.cloudy": "cloudy",
+  "ui.weather.rain": "rain"
 }

@@ -18,6 +18,10 @@ import en from '../../content/locales/en.json';
 import { JOURNAL_TYPES } from '../core/sim';
 import { JOURNAL_LABELS } from '../ui/StoryPanel';
 import { characterChoices, menuMoves, outcomeKey, storyOffer } from './story-offer';
+import { DAY_MINUTES, WEATHERS, tripMinutes, weatherOf, type Weather } from '../core/weather';
+import { WEATHER_LABELS } from '../ui/StoryPanel';
+import ukUi from '../i18n/uk.json';
+import enUi from '../i18n/en.json';
 
 const DEFS: CoreDefs = GAME_DEFS;
 type Menu = (s: GameState) => { move: Move; next: GameState }[];
@@ -212,5 +216,54 @@ describe('storyOffer: знімок для UI', () => {
     const idB = storyOffer({ ...newSim(1), game: b }, DEFS).offer.dialogue?.answers[0]?.id;
     expect(idA).toBeDefined();
     expect(idA).not.toBe(idB);
+  });
+});
+
+describe('storyOffer: погода дня (GAME-46)', () => {
+  const dayWith = (w: Weather): number => Array.from({ length: 60 }, (_, d) => d).find((d) => weatherOf(1, d) === w) as number;
+  const simAt = (g: GameState, day: number): SimState => ({ ...newSim(1), game: g, clock: { minutes: day * DAY_MINUTES, accMs: 0, paused: false } });
+  /** Перший стан меню, де є дорога з хвилинами (для цього транспорту). */
+  const withRoad = (g0: GameState): GameState => {
+    const queue = [g0];
+    const seen = new Set<string>();
+    for (let s = queue.shift(); s; s = queue.shift()) {
+      if (storyOffer(simAt(s, dayWith('sunny')), DEFS).offer.actions.some((a) => a.kind === 'visit' && a.minutes !== undefined)) return s;
+      const k = outcomeKey(s);
+      if (seen.has(k)) continue;
+      seen.add(k);
+      for (const { next } of realMenu(s)) queue.push(next);
+    }
+    throw new Error('no road with minutes reachable');
+  };
+  const minutesOf = (g: GameState, day: number): (number | undefined)[] =>
+    storyOffer(simAt(g, day), DEFS).offer.actions.filter((a) => a.kind === 'visit').map((a) => a.minutes);
+
+  it('знімок несе погоду поточного дня — ту саму, що weatherOf(зерно світу, день); на екрані вибору теж', () => {
+    for (const w of ['sunny', 'cloudy', 'rain'] as const) {
+      expect(storyOffer(simAt(newSim(1).game, dayWith(w)), DEFS).offer.weather).toBe(w);
+      expect(storyOffer(simAt(create((choices[0] as { intent: Move }).intent), dayWith(w)), DEFS).offer.weather).toBe(w);
+    }
+  });
+
+  it('меню показує час дороги вже з погодою: велосипед у дощ ×1.5 угору, авто — як завжди', () => {
+    const pick = (t: string) => choices.find(({ intent }) => (intent as { transportId: string }).transportId === t) as { intent: Move };
+    const bike = withRoad(create(pick('transport.bike').intent));
+    const dry = minutesOf(bike, dayWith('sunny'));
+    expect(dry.some((m) => m !== undefined)).toBe(true);
+    expect(minutesOf(bike, dayWith('rain'))).toEqual(dry.map((m) => (m === undefined ? m : tripMinutes(m, 'transport.bike', 'rain'))));
+    expect(minutesOf(bike, dayWith('rain'))).not.toEqual(dry);
+    const car = withRoad(create(pick('transport.car').intent));
+    expect(minutesOf(car, dayWith('rain'))).toEqual(minutesOf(car, dayWith('sunny')));
+  });
+
+  it('кожен вид погоди має підпис в обох мовах інтерфейсу', () => {
+    expect(Object.keys(WEATHER_LABELS).sort()).toEqual([...WEATHERS].sort());
+    for (const w of ['sunny', 'cloudy', 'rain'] as const) {
+      const k = WEATHER_LABELS[w];
+      expect(ukUi[k], `uk ${k}`).toBeTruthy();
+      expect(enUi[k], `en ${k}`).toBeTruthy();
+    }
+    expect(ukUi['ui.weather']).toBeTruthy();
+    expect(enUi['ui.weather']).toBeTruthy();
   });
 });

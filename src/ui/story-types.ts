@@ -32,6 +32,8 @@ export interface StoryOffer {
   readonly dialogue: { readonly speakerKey: string | null; readonly key: string | null; readonly answers: readonly OfferAction[] } | null;
   readonly actions: readonly OfferAction[];
   readonly inventory: readonly { readonly key: string; readonly qty: number }[];
+  /** Погода сьогодні (GAME-46, SIM-WX-005). */
+  readonly weather: 'sunny' | 'cloudy' | 'rain';
   /** Журнал подорожі, від старого до нового. */
   readonly journal: readonly { readonly type: string; readonly key: string | null; readonly at: number }[];
 }

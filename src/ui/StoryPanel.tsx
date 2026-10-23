@@ -17,6 +17,10 @@ const JR: Readonly<Record<string, Key>> = {
 };
 export const JOURNAL_LABELS = JR;
 
+// Погода дня (GAME-46): вид → підпис.
+const WX: Readonly<Record<StoryOffer['weather'], Key>> = { sunny: 'ui.weather.sunny', cloudy: 'ui.weather.cloudy', rain: 'ui.weather.rain' };
+export const WEATHER_LABELS = WX;
+
 export function money(lang: AnyLang, cents: number): string {
   return new Intl.NumberFormat(lang === 'uk' ? 'uk-UA' : 'en-IE', { style: 'currency', currency: 'EUR' }).format(cents / 100);
 }
@@ -56,7 +60,7 @@ export function StoryPanel({ offer, lang, t, act, close, children }: { offer: St
         </fieldset>
       )}
       {offer.stage !== 'create' && (
-        <p class="ui-status" data-ui="where">{`${t('ui.here')}: ${ct(lang, offer.locationKey)} · ${t('ui.money')}: ${money(lang, offer.moneyCents)}`}</p>
+        <p class="ui-status" data-ui="where" data-weather={offer.weather}>{`${t('ui.here')}: ${ct(lang, offer.locationKey)} · ${t('ui.money')}: ${money(lang, offer.moneyCents)} · ${t('ui.weather')}: ${t(WX[offer.weather])}`}</p>
       )}
       {offer.stage === 'ended' && <p class="ui-status" data-ui="ended" role="status">{t('ui.ended')}</p>}
       {offer.quests.map((q) => (
