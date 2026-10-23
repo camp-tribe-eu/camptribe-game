@@ -58,7 +58,8 @@ export const SCHEMAS = {
   meta: obj({ start: req(str), locales: req(arr(str)) }),
   // transports — з якими транспортами сумісний запис; немає поля — з усіма. Несумісні комбінації
   // не перебираються: гравець не може їх обрати, тож тупик у них — не тупик (закон 5).
-  profiles: obj({ id: req(str), nameKey: req(str), transports: ids }),
+  // startSkills (GAME-72, DC-022): стартові ранги професії 0–5; які id відомі — перевірка skills.
+  profiles: obj({ id: req(str), nameKey: req(str), transports: ids, startSkills: { t: 'array', of: obj({ skill: req(str), rank: req({ t: 'int', min: 0, max: 5 }) }), min: 1 } }),
   transports: obj({ id: req(str), nameKey: req(str) }),
   animals: obj({ id: req(str), nameKey: req(str), transports: ids }),
   items: obj({ id: req(str), nameKey: req(str) }),
@@ -80,7 +81,8 @@ export const SCHEMAS = {
   // Транспорту немає в ways — цим ребром він не їде. twoWay — те саме ребро і назад.
   roads: obj({
     id: req(str), from: req(str), to: req(str), twoWay: bool,
-    ways: req({ t: 'array', of: obj({ transport: req(str), minutes: req(int1), cents: req(int0) }), min: 1 }),
+    // risk (GAME-72) — небезпека дороги цим транспортом 0…3; навичка її не знижує (SIM-SKL-003).
+    ways: req({ t: 'array', of: obj({ transport: req(str), minutes: req(int1), cents: req(int0), risk: { t: 'int', min: 0, max: 3 } }), min: 1 }),
   }),
   // source/checkedAt/kind навмисно не required тут: їх стереже перевірка fact-source
   // власними кодами, щоб відсутнє джерело не ховалось під загальним SCHEMA_INVALID.

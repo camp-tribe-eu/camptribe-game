@@ -41,10 +41,10 @@
 |---|---|---|---|---|
 | DC-020 | `events.family`, `events.tags`, `events.weight`, `events.choices[]` | сім'я подій, теги `positive`/`neutral`/`negative`/`plan_change`/`eco`, вага, ≥ 2 виходи без втрати прогресу для `negative` | GAME-45 | PROPOSED |
 | DC-021 | `events.trigger`, `events.cooldownDays`, `events.maxPerTrip` | передумова й обмеження повторів | GAME-45 | PROPOSED |
-| DC-022 | `profiles.job`, `profiles.incomeCents`, `profiles.vacationDays`, `profiles.schedule`, `profiles.startSkills`, `profiles.startItems` | профіль як джерело петлі OD-012 | GAME-51, GAME-71 | PROPOSED |
+| DC-022 | `profiles.job`, `profiles.incomeCents`, `profiles.vacationDays`, `profiles.schedule`, `profiles.startSkills`, `profiles.startItems` | профіль як джерело петлі OD-012. `startSkills` — реалізовано (GAME-72): `[{ "skill": "skill.camping", "rank": 2 }]`, ранг 0–5, id — один із восьми (`SKILL_UNKNOWN`, `SKILL_DUPLICATE`) | GAME-51, GAME-71, GAME-72 | PROPOSED |
 | DC-023 | `items.tier`, `items.weightG`, `items.volumeL`, `items.priceCents`, `items.resaleCents`, `items.condition` | спорядження з тиром, знос, продаж | GAME-73 | PROPOSED |
 | DC-024 | `vehicles` (нова) | транспорт гравця з техпаспортом: двигун, шини/гальма, електрика, вода, опалення, кузов, житловий модуль; приховані дефекти | GAME-74 | PROPOSED |
-| DC-025 | `skills` (нова) | 8 напрямів, ранги 0–5, крива досвіду | GAME-72 | PROPOSED |
+| DC-025 | `skills` (нова) | 8 напрямів, ранги 0–5, крива досвіду. Реалізовано GAME-72 без окремого файлу: вісім id фіксовано в коді (`src/core/skills.ts` і валідатор `codes.mjs`, звірка в `semantics.test.ts`), крива — SIM-SKL-005…007 | GAME-72 | PROPOSED |
 | DC-026 | `calendar` (нова) | шкільні канікули, свята, сезони | GAME-71 | PROPOSED |
 | DC-027 | `atlasPages` (нова) | шаблони сторінок Атласу за подорожжю й транспортом | GAME-78 | PROPOSED |
 | DC-028 | `dialogues` (нова) | JSON-граф: вузли `id`, `speaker`, `text`, `choices[].next`, умови | TD-005; GAME-42; GAME-70 | PROPOSED |
@@ -61,7 +61,7 @@
 | DC-045 | `save.money` | баланс у центах + журнал транзакцій (кожен запис — `commandId`) | CR-040…043 | ACCEPTED |
 | DC-046 | `save.vehicles` | транспорт гравця й стан вузлів | GAME-74 | ACCEPTED |
 | DC-047 | `save.trip` | маршрут, бронювання, бюджет поїздки | GAME-30, GAME-43 | ACCEPTED |
-| DC-048 | `save.needs`, `save.skills` | потреби, навички, досвід | GAME-72 | ACCEPTED |
+| DC-048 | `save.needs`, `save.skills` | `skills` — реалізовано v2 (GAME-72): рівно вісім id → досвід, ціле ≥ 0; `practice` — ключ дії → лічильник 1…12 (інше — `SAVE_SHAPE`); v1 після міграції — нулі й `{}`. `needs` — ще ні | GAME-72 | ACCEPTED |
 | DC-049 | `save.npcMemory` | реалізовано v2 (GAME-48): `{ [npcId]: факти[] }`, факт — `m.назва`, відсортовано, без повторів (інше — `SAVE_SHAPE`); v1 після міграції — `{}`. Змінює лише ефект `remember` відповіді в розмові з цим NPC; читають умови `remembers`/`notRemembers` (`SIMULATION_RULES` SIM-NPC) | GAME-48 | ACCEPTED |
 | DC-050 | `save.quests` | реалізовано v2: `status` (`active`/`completed`/`declined`) і `done[]` (виконані цілі `visit`/`talk`; `collect` рахується з інвентаря). «Обрані гілки» видно з того, який квест-ціль став активним; окремого поля немає. Ревізія контенту — `contentRev` сейву (DC-040); сейв, що посилається на зниклий квест, профіль, транспорт, тварину чи локацію, не вантажиться (`SAVE_CONTENT_MISMATCH`) і йде в карантин, а не губиться | GDD §12.2; рецензія TL 23.10 | ACCEPTED |
 | DC-051 | `save.flags`, `save.history` | `flags[]` — реалізовано v2 (ставлять лише ефекти діалогів); `dialogue` — відкрита розмова `{id, node}`. `history` — ще ні (події з відкатом, GAME-45, → v3) | GDD Core Rules §4 | ACCEPTED |

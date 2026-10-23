@@ -1,5 +1,6 @@
 // Стан проходження (DATA_CONTRACTS DC-040…052). Лише дані: жодних класів, щоб стан
 // серіалізувався в сейв без втрат і порівнювався побайтно.
+import { zeroSkills } from './skills';
 
 export interface CommandRecord {
   readonly ok: boolean;
@@ -53,6 +54,13 @@ export interface GameState {
    * без повторів. Змінює її лише ефект `remember` відповіді в розмові з цим NPC — і більше нічого.
    */
   readonly npcMemory: Readonly<Record<string, readonly string[]>>;
+  /**
+   * Навички (GAME-72): усі вісім id (`skill.planning`…) → досвід, ціле ≥ 0; ранг — rankOf(досвід).
+   * До персонажа — нулі; CreateCharacter ставить старт професії; далі росте лише з практики.
+   */
+  readonly skills: Readonly<Record<string, number>>;
+  /** Практика (GAME-72): ключ дії (`visit:loc.shop`) → скільки разів вона вже вчила (1…PRACTICE_SATURATION). */
+  readonly practice: Readonly<Record<string, number>>;
   /** Відкритий діалог і вузол; null — розмови немає. */
   readonly dialogue: { readonly id: string; readonly node: string } | null;
 }
@@ -84,10 +92,15 @@ export const REJECT_CODES = [
   'CONDITION_FAILED',
   // GAME-31 · дороги
   'NO_ROUTE',
+  // GAME-72 · навички й ремонт
+  'TOOL_MISSING',
+  'PART_MISSING',
+  'SKILL_TOO_LOW',
+  'ALREADY_REPAIRED',
 ] as const;
 
 export type RejectCode = (typeof REJECT_CODES)[number];
 
 export function initialState(moneyCents = 0): GameState {
-  return { schemaVersion: 2, moneyCents, inventory: {}, grants: [], processed: {}, seq: 0, player: null, quests: {}, campaignEnded: false, flags: [], npcMemory: {}, dialogue: null };
+  return { schemaVersion: 2, moneyCents, inventory: {}, grants: [], processed: {}, seq: 0, player: null, quests: {}, campaignEnded: false, flags: [], npcMemory: {}, skills: zeroSkills(), practice: {}, dialogue: null };
 }

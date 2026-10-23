@@ -34,6 +34,9 @@ export const CODES = {
   ROAD_PAID_NO_ECONOMY: { check: 'roads', spec: 'SIM-TRAVEL-003: платна дорога без доходу — грошовий тупик; до економіки (GAME-47/71) дороги безкоштовні' },
   ROAD_NO_HOME:         { check: 'roads', spec: 'GAME-31: є дороги — стартовий квест мусить мати locationId (інакше перша дорога з «ніде»)' },
   ROAD_DUPLICATE:       { check: 'roads', spec: 'GAME-31: між двома вузлами одне ребро в кожен бік — інакше ціна дороги неоднозначна' },
+  // GAME-72: навички профілю (startSkills) — лише вісім відомих напрямів, кожен раз.
+  SKILL_UNKNOWN:        { check: 'skills', spec: 'GAME-72: startSkills профілю називає лише один із восьми напрямів навичок (SKILL_IDS)' },
+  SKILL_DUPLICATE:      { check: 'skills', spec: 'GAME-72: навичка в startSkills профілю — щонайбільше раз (інакше стартовий ранг неоднозначний)' },
   FACT_SOURCE_MISSING:  { check: 'fact-source', spec: '§2 зовнішній факт має джерело' },
   FACT_DATE_INVALID:    { check: 'fact-source', spec: '§2 зовнішній факт має дату перевірки' },
   FACT_KIND_INVALID:    { check: 'fact-source', spec: '§2 зовнішній факт має тип' },
@@ -68,6 +71,10 @@ export const CODES = {
   // перевірка, що впала сама, — теж червоне, а не зелене
   INTERNAL_ERROR:       { check: 'runner', spec: 'перевірка, що впала, не сміє виглядати як пройдена' },
 };
+
+// GAME-72: вісім напрямів навичок. Той самий перелік — SKILL_IDS у src/core/skills.ts; звірку тримає
+// src/content/semantics.test.ts — розійдуться, і тест почервоніє.
+export const SKILL_IDS = ['skill.planning', 'skill.camping', 'skill.mechanics', 'skill.electrics', 'skill.cooking', 'skill.finance', 'skill.endurance', 'skill.communication'];
 
 export const FACT_KINDS = ['regulation', 'geography', 'price', 'schedule', 'culture'];
 

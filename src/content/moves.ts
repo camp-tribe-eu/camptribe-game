@@ -2,6 +2,7 @@
 // бота (bot.ts). Ядро саме відмовить у недоречному; тут лише перелік спроб.
 import type { Command } from '../core/commands';
 import type { CoreDefs, StoryDefs } from '../core/defs';
+import { canonical } from '../core/hash';
 import type { GameState } from '../core/state';
 
 export type Move = Command extends infer C ? (C extends Command ? Omit<C, 'commandId'> : never) : never;
@@ -24,6 +25,9 @@ export function moves(s: GameState, defs: CoreDefs): Move[] {
     out.push({ type: 'SellItem', itemId: id });
   }
   for (const id of Object.keys(defs.interactions)) out.push({ type: 'Interact', targetId: id });
+  // Ремонт (GAME-72) читає навички. Поки в контенті ремонтів немає, цих ходів немає; з'являться — перевірка
+  // «навички не змінюють жодного ходу» (story.test) почервоніє, і progressKey доведеться переглянути.
+  for (const id of Object.keys(defs.repairs ?? {})) out.push({ type: 'Repair', targetId: id });
   for (const [qid, p] of Object.entries(s.quests)) {
     if (p.status !== 'active') continue;
     for (const type of ['CompleteQuest', 'DeclineQuest']) {
@@ -33,6 +37,15 @@ export function moves(s: GameState, defs: CoreDefs): Move[] {
   }
   return out as Move[];
 }
+
+/**
+ * Ключ стану для перебору й меню: без лічильників команд і без навичок (GAME-72). Навички й практика
+ * ростуть майже від кожної дії — з ними однакові за сюжетом стани множились би без кінця (перебір вибухнув би).
+ * Чесно лише доти, доки жоден хід moves() не залежить від навичок: це доводить story.test
+ * («навички не змінюють жодного ходу») на кожному досяжному стані — інакше зелене тут нічого не доводить.
+ */
+export const progressView = (s: GameState): object => ({ ...s, processed: null, seq: null, skills: null, practice: null });
+export const progressKey = (s: GameState): string => canonical(progressView(s));
 
 /**
  * Хід, що залежить від везіння (SIM-EV-003): КОЖНА подія в дорозі. Симуляція кидає лише після дороги з

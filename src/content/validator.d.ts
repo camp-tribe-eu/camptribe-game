@@ -6,6 +6,10 @@ declare module '*/validator/combos.mjs' {
   export function project(content: unknown, k: Combo, keep?: Set<string>): unknown;
   export function matches(when: unknown, k: Combo): boolean;
 }
+declare module '*/validator/codes.mjs' {
+  /** Вісім напрямів навичок (GAME-72) — мусить збігатися з SKILL_IDS ядра. */
+  export const SKILL_IDS: string[];
+}
 declare module '*/validator/checks.mjs' {
   export function buildIndex(content: unknown): { reachable: Set<string> };
   /** remembered — факти пам'яті, які може знати NPC цієї розмови (GAME-48); без нього — жодних. */

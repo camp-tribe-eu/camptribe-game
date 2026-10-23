@@ -5,7 +5,7 @@ import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
 import { dispatch, PROCESSED_LIMIT, type Command, type Safeguards } from './commands';
 import type { CoreDefs } from './defs';
-import { BIKER, DRIVER, play, ROAD_DEFS, STORY_DEFS } from './story.fixture';
+import { BIKER, DRIVER, MECHANIC, NOVICE, play, ROAD_DEFS, SKILL_DEFS, STORY_DEFS } from './story.fixture';
 import { initialState, REJECT_CODES, type GameState, type RejectCode } from './state';
 
 const SEED = 20261022;
@@ -191,6 +191,11 @@ describe('коди відмов: кожен код із реєстру має т
     // GAME-31 · дороги: у ROAD_DEFS з крамниці додому — лише автом; велосипедист у крамниці не має дороги назад.
     ['NO_ROUTE', play([BIKER, { type: 'Visit', locationId: 'loc.home' }, { type: 'CompleteQuest', questId: 'q.start' }, { type: 'Visit', locationId: 'loc.shop' }], initialState(0), ROAD_DEFS), { type: 'Visit', commandId: 's15', locationId: 'loc.home' }, ROAD_DEFS],
     ['QUEST_NO_EXIT', { ...play([BIKER]), quests: { 'q.stuck': { status: 'active', done: [] } } }, { type: 'CompleteQuest', commandId: 's11', questId: 'q.stuck' }, STORY_DEFS],
+    // GAME-72 · ремонт: механік рангу 5 без ключа; з ключем без камери; новачок з усім; полагоджене вдруге.
+    ['TOOL_MISSING', play([MECHANIC], initialState(0), SKILL_DEFS), { type: 'Repair', commandId: 's16', targetId: 'obj.bike-wheel' }, SKILL_DEFS],
+    ['PART_MISSING', play([MECHANIC, { type: 'BuyItem', itemId: 'item.wrench' }], initialState(5_000), SKILL_DEFS), { type: 'Repair', commandId: 's17', targetId: 'obj.bike-wheel' }, SKILL_DEFS],
+    ['SKILL_TOO_LOW', play([NOVICE, { type: 'BuyItem', itemId: 'item.wrench' }, { type: 'BuyItem', itemId: 'item.tube' }], initialState(5_000), SKILL_DEFS), { type: 'Repair', commandId: 's18', targetId: 'obj.bike-wheel' }, SKILL_DEFS],
+    ['ALREADY_REPAIRED', play([MECHANIC, { type: 'BuyItem', itemId: 'item.multimeter' }, { type: 'Repair', targetId: 'obj.lamp' }], initialState(5_000), SKILL_DEFS), { type: 'Repair', commandId: 's19', targetId: 'obj.lamp' }, SKILL_DEFS],
   ];
 
   it('кожен код реєстру покрито рівно одним прикладом', () => {

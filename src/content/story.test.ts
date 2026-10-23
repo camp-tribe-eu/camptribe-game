@@ -7,17 +7,18 @@
 import { describe, expect, it } from 'vitest';
 import { dispatch, nextCommandId, type Command } from '../core/commands';
 
-import { stateHash } from '../core/hash';
+import { canonical, stateHash } from '../core/hash';
 import { initialState, type GameState } from '../core/state';
 import { buildIndex } from '../../scripts/validator/checks.mjs';
 import { enumerateCombos, project } from '../../scripts/validator/combos.mjs';
 import { GAME_DEFS } from './slice-defs';
 import { CONTENT, STORY, compileStory } from './story';
-import { isLuckMove, moves as allMoves, type Move } from './moves';
+import { isLuckMove, moves as allMoves, progressView, type Move } from './moves';
+import { RANK_XP, SKILL_IDS } from '../core/skills';
 import { checkDefs, type CoreDefs } from '../core/defs';
 import { route } from '../core/story';
 
-// Повний перебір — свідомо важкий (велосипедна гілка з подією й пам'яттю ≈ 5 с локально, на CI довше): власна межа
+// Повний перебір — свідомо важкий (велосипедна гілка з подією й пам'яттю ≈ 5 с локально, з контролем навичок GAME-72 ≈ 7.5 с, на CI довше): власна межа
 // часу замість типових 5 с, щоб падіння означало «доказ не вкладається», а не «повільна машина».
 const EXHAUSTIVE_MS = 60_000;
 
@@ -29,9 +30,25 @@ const NO_ANIMAL = 'animal.none';
 
 const moves = (s: GameState): Move[] => allMoves(s, DEFS);
 
-const key = (s: GameState): string => stateHash({ ...s, processed: null, seq: null });
+// Ключ — проєкція без навичок (progressView, GAME-72); 32-бітний відбиток, як і раніше, лише для швидкості.
+const key = (s: GameState): string => stateHash(progressView(s));
 
-function explore(first: GameState) {
+/** Той самий стан, але з навичками на рангах 5 і без практики — контроль «навички не змінюють жодного ходу». */
+const MAXED = Object.fromEntries(SKILL_IDS.map((id) => [id, RANK_XP[5] as number]));
+const maxed = (s: GameState): GameState => ({ ...s, skills: MAXED, practice: {} });
+
+/**
+ * Ті самі сюжетні поля (усе, крім лічильників команд і навичок — як progressView). Дешевше за повний key:
+ * поля, яких хід не торкався, — той самий об'єкт в обох станах, і їх не серіалізуємо.
+ */
+const sameProgress = (a: GameState, b: GameState): boolean => (Object.keys(a) as (keyof GameState)[])
+  .every((k) => k === 'processed' || k === 'seq' || k === 'skills' || k === 'practice' || a[k] === b[k] || canonical(a[k]) === canonical(b[k]))
+  && Object.keys(a).length === Object.keys(b).length;
+
+/** Розбіжності «той самий хід, інші навички — інший сюжетний наслідок». Порожньо — проєкція key чесна. */
+type SkillLeak = { move: Move; base: string; maxed: string };
+
+function explore(first: GameState, leaks: SkillLeak[] = []) {
   const seen = new Map<string, GameState>([[key(first), first]]);
   const edges = new Map<string, Set<string>>();
   const queue = [first];
@@ -40,6 +57,11 @@ function explore(first: GameState) {
     edges.set(k, new Set());
     for (const m of moves(s)) {
       const r = dispatch(s, { ...m, commandId: nextCommandId(s) } as Command, DEFS);
+      // GAME-72: key не бачить навичок — це чесно, лише якщо навички не змінюють ні рішення ядра, ні сюжетного
+      // наслідку жодного ходу. Перевірка на КОЖНОМУ стані й ході перебору, а не на вибірці.
+      const r2 = dispatch(maxed(s), { ...m, commandId: nextCommandId(s) } as Command, DEFS);
+      const same = r.ok && r2.ok ? sameProgress(r.state, r2.state) : !r.ok && !r2.ok && r.code === r2.code;
+      if (!same && leaks.length < 5) leaks.push({ move: m, base: r.ok ? 'ok' : r.code, maxed: r2.ok ? 'ok' : r2.code });
       if (!r.ok) continue;
       const nk = key(r.state);
       if (!isLuckMove(m)) edges.get(k)?.add(nk);   // у стан після везіння заходимо, але шлях до кінця — без нього
@@ -65,7 +87,9 @@ describe('сюжет: ядро ≡ валідатор на справжньом�
         ...(k.animal === NO_ANIMAL ? {} : { animalId: k.animal }),
       }, DEFS);
       expect(created.ok, label).toBe(true);
-      const { seen, edges } = explore(created.state);
+      const leaks: SkillLeak[] = [];
+      const { seen, edges } = explore(created.state, leaks);
+      expect(leaks, 'навички змінили хід — progressKey більше не чесний').toEqual([]);
 
       // 1) множини квестів збігаються
       const opened = new Set<string>();
@@ -129,6 +153,25 @@ describe('збірка сюжету з content/ (src/content/story.ts)', () => {
 
   it('каталог сюжету цілий для ядра (checkDefs)', () => {
     expect(checkDefs(DEFS)).toEqual([]);
+  });
+
+  it('GAME-72: startSkills профілю → ранги в ядрі, і CreateCharacter ставить старт професії', () => {
+    expect(STORY.profiles['profile.solo-explorer']?.startSkills).toEqual({ 'skill.camping': 2, 'skill.endurance': 2, 'skill.planning': 1, 'skill.mechanics': 1 });
+    const r = dispatch(initialState(0), { type: 'CreateCharacter', commandId: 'g72', profileId: 'profile.solo-explorer', transportId: 'transport.bike' }, DEFS);
+    expect(r.ok && r.state.skills).toEqual({
+      'skill.planning': 10, 'skill.camping': 30, 'skill.mechanics': 10, 'skill.electrics': 0,
+      'skill.cooking': 0, 'skill.finance': 0, 'skill.endurance': 30, 'skill.communication': 0,
+    });
+  });
+
+  it('GAME-72: risk дороги доходить до ядра лише там, де задано; без нього сюжет той самий', () => {
+    expect(STORY.roads?.some((r) => Object.values(r.ways).some((w) => 'risk' in w))).toBe(false);
+    const c = structuredClone(CONTENT);
+    const way = c.roads?.[0]?.ways[0];
+    if (way) way.risk = 2;
+    const st = compileStory(c);
+    expect(st.roads?.[0]?.ways[way?.transport ?? '']).toEqual({ minutes: way?.minutes, cents: way?.cents, risk: 2 });
+    expect(st.roads?.[1]?.ways[way?.transport ?? '']).toEqual({ minutes: way?.minutes, cents: way?.cents, risk: 2 });   // twoWay — і назад
   });
 });
 

@@ -9,6 +9,8 @@ import type { PlayerState } from '../core/state';
 import { holds, matches as coreMatches, type StoryDraft } from '../core/story';
 import { matches as validatorMatches } from '../../scripts/validator/combos.mjs';
 import { contradictions, satisfiable } from '../../scripts/validator/checks.mjs';
+import { SKILL_IDS as VALIDATOR_SKILLS } from '../../scripts/validator/codes.mjs';
+import { SKILL_IDS as CORE_SKILLS } from '../core/skills';
 
 const P = ['profile.a', 'profile.b', 'profile.c'];
 const T = ['transport.car', 'transport.bike', 'transport.camper'];
@@ -164,5 +166,12 @@ describe('умови діалогу: валідатор не відкидає т
       expect(validatorSaysDead(c), JSON.stringify(c)).toBe(false);
       expect(STATES.some((s) => holds(c, s.draft, s.player, NPC)), JSON.stringify(c)).toBe(false);
     }
+  });
+});
+
+describe('навички: валідатор ≡ ядро (GAME-72)', () => {
+  it('той самий перелік восьми напрямів — інакше валідатор пропустить id, який ядро мовчки обнулить', () => {
+    expect([...VALIDATOR_SKILLS].sort()).toEqual([...CORE_SKILLS].sort());
+    expect(CORE_SKILLS.length).toBe(8);
   });
 });

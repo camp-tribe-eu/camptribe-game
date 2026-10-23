@@ -135,3 +135,44 @@ export const EVENT_DEFS: CoreDefs = {
     },
   },
 };
+
+/**
+ * Навички й ремонт (GAME-72): той самий сюжет, де дороги мають небезпеку, у крамниці продають ключ, камеру,
+ * мультиметр і пічку, а профіль `profile.mech` — механік і електрик на рангах 5 (старт професії).
+ * Колесо велосипеда: механіка ≥ 2, ключ (лишається) і камера (витрачається). Лампа: електрика ≥ 1, мультиметр.
+ */
+const risky = (minutes: number, cents: number, risk: number) => ({ minutes, cents, risk });
+const ROAD_STORY = ROAD_DEFS.story as NonNullable<CoreDefs['story']>;
+export const SKILL_DEFS: CoreDefs = {
+  items: {
+    'item.wrench': { buyCents: 1_000 },
+    'item.tube': { buyCents: 300 },
+    'item.multimeter': { buyCents: 2_000 },
+    'item.stove': { buyCents: 300, sellCents: 100 },
+  },
+  interactions: {},
+  repairs: {
+    'obj.bike-wheel': { skill: 'skill.mechanics', minRank: 2, tool: 'item.wrench', part: 'item.tube', flag: 'f.wheel-fixed' },
+    'obj.lamp': { skill: 'skill.electrics', minRank: 1, tool: 'item.multimeter', flag: 'f.lamp-fixed' },
+  },
+  story: {
+    ...ROAD_STORY,
+    profiles: {
+      ...ROAD_STORY.profiles,
+      'profile.mech': { startSkills: { 'skill.mechanics': 5, 'skill.electrics': 5 } },
+      'profile.novice': { startSkills: { 'skill.mechanics': 1 } },
+    },
+    // Автом напряму — небезпечна дорога (3); велосипедом через парк — 1, потім 2.
+    roads: [
+      { from: 'loc.home', to: 'loc.shop', ways: { 'transport.car': risky(10, 0, 3) } },
+      { from: 'loc.shop', to: 'loc.home', ways: { 'transport.car': risky(10, 0, 3) } },
+      { from: 'loc.home', to: 'loc.dogpark', ways: { 'transport.bike': risky(15, 0, 1), 'transport.car': risky(6, 0, 0) } },
+      { from: 'loc.dogpark', to: 'loc.shop', ways: { 'transport.bike': risky(15, 0, 2), 'transport.car': risky(6, 0, 0) } },
+      { from: 'loc.shop', to: 'loc.dogpark', ways: { 'transport.bike': risky(15, 0, 2) } },
+      { from: 'loc.dogpark', to: 'loc.home', ways: { 'transport.bike': risky(15, 0, 1) } },
+    ],
+  },
+};
+
+export const MECHANIC = { type: 'CreateCharacter', profileId: 'profile.mech', transportId: 'transport.car' } as const;
+export const NOVICE = { type: 'CreateCharacter', profileId: 'profile.novice', transportId: 'transport.car' } as const;

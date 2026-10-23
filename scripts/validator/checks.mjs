@@ -3,7 +3,7 @@
 // Не прибирай і не дублюй маркери — мутаційний прогін звіряє їх із реєстром CHECKS.
 
 import { checkSchema } from './schema.mjs';
-import { FACT_KINDS, FACT_STALE_DAYS, isWarning } from './codes.mjs';
+import { FACT_KINDS, FACT_STALE_DAYS, isWarning, SKILL_IDS } from './codes.mjs';
 import { checkCombos, checkOptions, enumerateCombos, NO_ANIMAL } from './combos.mjs';
 
 const I = (code, where, msg) => ({ code, where, msg });
@@ -195,6 +195,22 @@ export const CHECKS = [
         r.ways.forEach((w, i) => ref('transports', w.transport, `${r.id}.ways[${i}].transport`));
       }
       for (const [where, rw] of rewards(c.content)) (rw.items ?? []).forEach((i) => ref('items', i.item, where));
+      return out;
+    },
+  },
+  {
+    id: 'skills',
+    run(c) { // @check:skills
+      // GAME-72: професія задає старт навичок. Одруківка в id мовчки дала б нуль замість рангу.
+      const out = [];
+      for (const p of c.content.profiles ?? []) {
+        const seen = new Set();
+        (p.startSkills ?? []).forEach((s, i) => {
+          if (!SKILL_IDS.includes(s.skill)) out.push(I('SKILL_UNKNOWN', `${p.id}.startSkills[${i}]`, `навички «${s.skill}» немає; відомі: ${SKILL_IDS.join(', ')}`));
+          if (seen.has(s.skill)) out.push(I('SKILL_DUPLICATE', `${p.id}.startSkills[${i}]`, `навичка «${s.skill}» вже задана`));
+          seen.add(s.skill);
+        });
+      }
       return out;
     },
   },

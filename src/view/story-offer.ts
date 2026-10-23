@@ -17,7 +17,7 @@ import { initialState, type GameState } from '../core/state';
 import { matches, route } from '../core/story';
 import { tripMinutes, type Weather } from '../core/weather';
 import { CONTENT } from '../content/story';
-import { moves, type Move } from '../content/moves';
+import { moves, progressKey, type Move } from '../content/moves';
 import items from '../../content/items.json';
 import type { OfferAction, OfferCharacter, StoryOffer } from '../ui/story-types';
 
@@ -43,8 +43,11 @@ const TRANSITIONS: ReadonlyMap<string, readonly RawTransition[]> = new Map(
   CONTENT.quests.map((q) => [q.id, q.transitions as RawTransition[]] as const),
 );
 
-/** Ключ стану для порівняння наслідків: без лічильників команд (як у бота). */
-export const outcomeKey = (s: GameState): string => canonical({ ...s, processed: null, seq: null });
+/**
+ * Ключ стану для порівняння наслідків: без лічильників команд і навичок (як у бота, progressKey). Дія, що
+ * лише додала досвіду (вдруге поговорити з тим, хто вже все сказав), — «нічого не змінює» і в меню не йде.
+ */
+export const outcomeKey = progressKey;
 
 const tryMove = (s: GameState, m: Move | Omit<Command, 'commandId'>, defs: CoreDefs): GameState | null => {
   const r = dispatch(s, { ...m, commandId: nextCommandId(s) } as Command, defs);

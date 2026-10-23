@@ -10,6 +10,7 @@ import type { StoryDefs } from './defs';
 import { matches } from './story';
 import { stateHash } from './hash';
 import { isJournalType, type SimState } from './sim';
+import { PRACTICE_SATURATION, SKILL_IDS, zeroSkills } from './skills';
 import { REJECT_CODES } from './state';
 
 export const SAVE_FORMAT = 'camplife-save';
@@ -43,9 +44,10 @@ export const MIGRATIONS: Readonly<Record<number, (sim: unknown) => unknown>> = {
   // GAME-46: зерно світу (погода дня). Зерна v1 не зберігав, а з RNG стану його не відновити —
   // тож усім сейвам v1 однаково 0: детерміновано, той самий v1 завжди дає ту саму погоду.
   // GAME-48: пам'ять NPC. До персонажа розмов не було — NPC нічого не пам'ятають.
+  // GAME-72: навички. До персонажа вчитись нікому — усі вісім напрямів 0, практики немає.
   1: (sim) => {
     const s = sim as { game: Record<string, unknown> };
-    return { ...s, journal: [], worldSeed: 0, game: { ...s.game, schemaVersion: 2, player: null, quests: {}, campaignEnded: false, flags: [], npcMemory: {}, dialogue: null } };
+    return { ...s, journal: [], worldSeed: 0, game: { ...s.game, schemaVersion: 2, player: null, quests: {}, campaignEnded: false, flags: [], npcMemory: {}, skills: zeroSkills(), practice: {}, dialogue: null } };
   },
 };
 
@@ -75,6 +77,9 @@ function shapeError(sim: unknown): string | null {
   if (!Array.isArray(game.flags) || game.flags.some((f) => typeof f !== 'string')) return 'game: flags';
   // Пам'ять NPC (GAME-48): факти — рядки, відсортовані й без повторів (так їх пише лише ядро).
   if (!isObj(game.npcMemory) || Object.values(game.npcMemory).some((m) => !Array.isArray(m) || m.some((f, i) => typeof f !== 'string' || (i > 0 && !((m[i - 1] as string) < f))))) return 'game: npcMemory';
+  // Навички (GAME-72): рівно вісім відомих id, досвід — ціле ≥ 0; лічильник практики — ціле 1…насичення.
+  if (!isObj(game.skills) || Object.keys(game.skills).sort().join() !== [...SKILL_IDS].sort().join() || Object.values(game.skills).some((x) => !isInt(x))) return 'game: skills';
+  if (!isObj(game.practice) || Object.values(game.practice).some((n) => !isInt(n, 1) || (n as number) > PRACTICE_SATURATION)) return 'game: practice';
   const dl = game.dialogue;
   if (dl !== null && (!isObj(dl) || typeof dl.id !== 'string' || typeof dl.node !== 'string')) return 'game: dialogue';
   const p = game.player;

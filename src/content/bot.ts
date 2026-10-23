@@ -7,10 +7,9 @@
 // з випадковими купівлями, продажами й відмовами.
 import { dispatch, nextCommandId, type Command } from '../core/commands';
 import type { CoreDefs } from '../core/defs';
-import { canonical } from '../core/hash';
 import { nextInt, seedRng, type RngState } from '../core/rng';
 import { initialState, type GameState } from '../core/state';
-import { isLuckMove, moves, type Move } from './moves';
+import { isLuckMove, moves, progressKey, type Move } from './moves';
 
 export interface Variant {
   readonly profile: string;
@@ -40,7 +39,8 @@ export interface BotRun {
 
 // Повний канонічний JSON, а не 32-бітний stateHash (рецензія GAME-37): зіткнення при рості контенту
 // (~25 % на 50 тис. станів) сховало б справжній тупик за чужим «true» у пам'яті — зелене, що не червоніє.
-const key = (s: GameState): string => canonical({ ...s, processed: null, seq: null });
+// Без навичок (GAME-72): див. progressKey.
+const key = progressKey;
 
 /** Пам'ять «з цього стану кінець досяжний?» між прогонами — тисячі прогонів лишаються дешевими. */
 export type EndMemo = Map<string, boolean>;

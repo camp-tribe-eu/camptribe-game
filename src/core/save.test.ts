@@ -9,6 +9,7 @@ import { stateHash } from './hash';
 import type { StoryDefs } from './defs';
 import { LOAD_CODES, SAVE_VERSION, danglingRefs, fromSave, serialize, type LoadCode } from './save';
 import { newSim, run, type Input } from './sim';
+import { zeroSkills } from './skills';
 
 /** Кожна випущена версія сейву — фікстура назавжди (TD-007). Нову версію додати сюди. */
 const FIXTURES: Record<number, unknown> = { 1: v1, 2: v2 };
@@ -51,6 +52,16 @@ describe('v2 (GAME-29): персонаж і квести', () => {
   it('v1 після міграції: персонажа ще нема, квестів нема, розділ не завершено', () => {
     const r = fromSave(JSON.stringify(v1));
     expect(r.ok && { p: r.sim.game.player, q: r.sim.game.quests, e: r.sim.game.campaignEnded, v: r.sim.game.schemaVersion }).toEqual({ p: null, q: {}, e: false, v: 2 });
+  });
+  it('v1 після міграції: навички — вісім нулів, практики немає (GAME-72)', () => {
+    const r = fromSave(JSON.stringify(v1));
+    expect(r.ok && r.sim.game.skills).toEqual(zeroSkills());
+    expect(r.ok && r.sim.game.practice).toEqual({});
+  });
+  it('фікстура v2 несе навички й практику, не лише нулі (GAME-72)', () => {
+    const r = fromSave(JSON.stringify(v2));
+    expect(r.ok && r.sim.game.skills['skill.planning']).toBe(12);
+    expect(r.ok && r.sim.game.practice).toEqual({ 'visit:loc.shop': 1, 'pickup:item.gold': 1, 'talk:npc.ann': 1 });
   });
   it('v1 після міграції: NPC нічого не пам\'ятають (GAME-48)', () => {
     const r = fromSave(JSON.stringify(v1));
@@ -136,6 +147,14 @@ describe('коди відмов завантаження: кожен має зл
     ['факт пам\'яті не рядок', (c: typeof good) => { c.sim.game.npcMemory = { 'npc.ann': [42] }; }],
     ['факти пам\'яті не відсортовано', (c: typeof good) => { c.sim.game.npcMemory = { 'npc.ann': ['m.b', 'm.a'] }; }],
     ['факт пам\'яті двічі', (c: typeof good) => { c.sim.game.npcMemory = { 'npc.ann': ['m.a', 'm.a'] }; }],
+    ['без навичок (GAME-72)', (c: typeof good) => { delete (c.sim.game as Record<string, unknown>).skills; }],
+    ['навичок сім, а не вісім', (c: typeof good) => { c.sim.game.skills = Object.fromEntries(Object.entries(c.sim.game.skills as Record<string, number>).filter(([k]) => k !== 'skill.cooking')); }],
+    ['невідома навичка', (c: typeof good) => { c.sim.game.skills = { ...(c.sim.game.skills as Record<string, number>), 'skill.swimming': 1 }; }],
+    ['досвід від\'ємний', (c: typeof good) => { c.sim.game.skills = { ...(c.sim.game.skills as Record<string, number>), 'skill.camping': -1 }; }],
+    ['досвід дробовий', (c: typeof good) => { c.sim.game.skills = { ...(c.sim.game.skills as Record<string, number>), 'skill.camping': 1.5 }; }],
+    ['без практики', (c: typeof good) => { delete (c.sim.game as Record<string, unknown>).practice; }],
+    ['лічильник практики 0', (c: typeof good) => { c.sim.game.practice = { 'visit:loc.a': 0 }; }],
+    ['лічильник практики понад насичення', (c: typeof good) => { c.sim.game.practice = { 'visit:loc.a': 13 }; }],
   ] as const) {
     it(`SAVE_SHAPE: ${what}`, () => {
       const r = fromSave(withSim((c) => { patch(c); resum(c); }));

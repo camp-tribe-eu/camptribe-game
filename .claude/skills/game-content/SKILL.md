@@ -93,7 +93,7 @@ GDD — приватний (`brain/Передача/00-dzherelo-lezhyt-lokalno.m
 | файл | поля (жирні — обов'язкові) | id |
 |---|---|---|
 | `meta.json` | **`start`**, **`locales`** | — |
-| `profiles.json` | **`id`**, **`nameKey`**, `transports` | `profile.family-teen` |
+| `profiles.json` | **`id`**, **`nameKey`**, `transports`, `startSkills` (`[{ "skill": "skill.camping", "rank": 2 }]`, ранг 0–5) | `profile.family-teen` |
 | `transports.json` | **`id`**, **`nameKey`** | `transport.bike` |
 | `animals.json` | **`id`**, **`nameKey`**, `transports` | `animal.cat` (`animal.none` — зарезервовано) |
 | `items.json` | **`id`**, **`nameKey`** | `item.sleeping-bag` |
@@ -213,6 +213,8 @@ GDD — приватний (`brain/Передача/00-dzherelo-lezhyt-lokalno.m
 - `ROAD_UNREACHABLE` — до локації не доїхати дорогами від дому (від локації стартового квесту) хоча б одним транспортом. Не допустити: кожна нова локація — з дорогою (`content/roads.json`), і в `ways` кожної дороги — кожен транспорт, яким до неї мають доїхати.
 - `ROAD_NO_RETURN` — до локації доїхати можна, а повернутись — ні (дорога лише туди). Не допустити: дороги пиши з `"twoWay": true`, якщо немає справжньої причини для односторонньої.
 - `ROAD_SELF_LOOP` — дорога з локації в неї ж. Не допустити: `from` і `to` — різні локації.
+- `SKILL_UNKNOWN` — `startSkills` профілю називає навичку, якої немає серед восьми напрямів (GAME-72). Не допустити: лише `skill.planning`, `skill.camping`, `skill.mechanics`, `skill.electrics`, `skill.cooking`, `skill.finance`, `skill.endurance`, `skill.communication` — звір id дослівно; новий напрям — не контент, а рішення власника й зміна ядра.
+- `SKILL_DUPLICATE` — та сама навичка двічі в `startSkills` одного профілю: стартовий ранг неоднозначний. Не допустити: одна навичка — один запис із одним `rank`; у різних профілях та сама навичка — нормально.
 - `ROAD_PAID_NO_ECONOMY` — дорога коштує гроші (`cents` > 0), а доходу в грі ще немає: гравець катався б туди-сюди до нуля й не доїхав би до кемпінгу (SIM-TRAVEL-003). Не допустити: до економіки (GAME-47/71) усі `cents` — 0; ціну дороги показуй часом.
 - `ROAD_NO_HOME` — дороги є, а стартовий квест (`meta.start`) не має `locationId`: незрозуміло, звідки перша дорога. Не допустити: стартовому квесту — `locationId` дому.
 - `ROAD_DUPLICATE` — між двома локаціями в один бік дві дороги: ціна дороги стає неоднозначною. Не допустити: одна дорога на пару в кожен бік; інша ціна для іншого транспорту — ще один запис у `ways`.

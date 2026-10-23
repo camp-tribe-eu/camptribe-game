@@ -1,7 +1,7 @@
 {
  "format": "camplife-save",
  "schemaVersion": 2,
- "checksum": "231459c8",
+ "checksum": "9b48cc36",
  "accountId": null,
  "contentRev": null,
  "sim": {
@@ -171,6 +171,21 @@
     "npc.ann": [
      "m.biker"
     ]
+   },
+   "skills": {
+    "skill.planning": 12,
+    "skill.camping": 12,
+    "skill.mechanics": 0,
+    "skill.electrics": 0,
+    "skill.cooking": 0,
+    "skill.finance": 0,
+    "skill.endurance": 12,
+    "skill.communication": 12
+   },
+   "practice": {
+    "visit:loc.shop": 1,
+    "pickup:item.gold": 1,
+    "talk:npc.ann": 1
    },
    "dialogue": {
     "id": "dlg.ann",

@@ -26,14 +26,14 @@ interface RawDialogue {
 }
 export interface RawContent {
   meta: { start: string };
-  profiles: { id: string; transports?: string[] }[];
+  profiles: { id: string; transports?: string[]; startSkills?: { skill: string; rank: number }[] }[];
   transports: { id: string }[];
   animals: { id: string; transports?: string[] }[];
   locations: { id: string; unlockedBy?: string; when?: RawWhen; items?: string[] }[];
   npcs: { id: string; locationId: string; unlockedBy?: string; when?: RawWhen; sells?: string[] }[];
   quests: RawQuest[];
   dialogues: RawDialogue[];
-  roads?: { id: string; from: string; to: string; twoWay?: boolean; ways: { transport: string; minutes: number; cents: number }[] }[];
+  roads?: { id: string; from: string; to: string; twoWay?: boolean; ways: { transport: string; minutes: number; cents: number; risk?: number }[] }[];
 }
 
 const when = (w: RawWhen | undefined): { when?: WhenDef } => (w ? { when: w } : {});
@@ -78,7 +78,11 @@ export function compileStory(c: RawContent): StoryDefs {
   for (const n of c.npcs) if (n.sells?.length) throw new Error(`story: ${n.id}.sells: buying from NPCs is not supported by the core yet`);
   return {
     start: c.meta.start,
-    profiles: Object.fromEntries(c.profiles.map((p) => [p.id, p.transports ? { transports: p.transports } : {}])),
+    // startSkills (GAME-72): масив контенту → id навички → ранг; поля немає — старт із нулів.
+    profiles: Object.fromEntries(c.profiles.map((p) => [p.id, {
+      ...(p.transports ? { transports: p.transports } : {}),
+      ...(p.startSkills ? { startSkills: Object.fromEntries(p.startSkills.map((s) => [s.skill, s.rank])) } : {}),
+    }])),
     transports: c.transports.map((t) => t.id),
     animals: Object.fromEntries(c.animals.map((a) => [a.id, a.transports ? { transports: a.transports } : {}])),
     locations: Object.fromEntries(c.locations.map((l) => [l.id, { ...(l.unlockedBy ? { unlockedBy: l.unlockedBy } : {}), ...when(l.when), items: l.items ?? [] }])),
@@ -86,7 +90,8 @@ export function compileStory(c: RawContent): StoryDefs {
     quests: Object.fromEntries(c.quests.map((q) => [q.id, quest(q)])),
     dialogues: Object.fromEntries(c.dialogues.map((d) => [d.id, dialogue(d)])),
     roads: (c.roads ?? []).flatMap((r) => {
-      const ways = Object.fromEntries(r.ways.map((w) => [w.transport, { minutes: w.minutes, cents: w.cents }]));
+      // risk (GAME-72) — лише якщо задано: дороги без нього лишаються тими самими (і відбиток сюжету теж).
+      const ways = Object.fromEntries(r.ways.map((w) => [w.transport, { minutes: w.minutes, cents: w.cents, ...(w.risk !== undefined ? { risk: w.risk } : {}) }]));
       return r.twoWay ? [{ from: r.from, to: r.to, ways }, { from: r.to, to: r.from, ways }] : [{ from: r.from, to: r.to, ways }];
     }),
   };

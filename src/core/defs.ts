@@ -1,6 +1,7 @@
 // Визначення, яким вірить ядро (рецензія TL PR #13): ціни й нагороди — лише з каталогу (CR-041),
 // ніколи з команди. Команда несе НАМІР (`Interact{targetId}`, `BuyItem{itemId}`), а не ЕФЕКТ.
 // Каталог збирається з перевіреного content/ (валідатор) — ядро його не змінює.
+import { isSkillId, MAX_RANK, type SkillId } from './skills';
 
 export interface ItemDef {
   /** Ціна купівлі, центи; немає — предмет не продається. */
@@ -96,17 +97,27 @@ export interface DialogueDef {
   readonly nodes: Readonly<Record<string, DialogueNodeDef>>;
 }
 
+/**
+ * Спосіб проїхати дорогу одним транспортом. `risk` (GAME-72) — небезпека дороги 0…3, властивість дороги й
+ * транспорту, а не гравця: навичка її не знижує (SIM-SKL-003). Немає — 0.
+ */
+export interface WayDef { readonly minutes: number; readonly cents: number; readonly risk?: number }
+
 /** Дорога (GAME-31): одне ребро в один бік; ways — транспорт → час і гроші. Немає транспорту — ним не їдуть. */
 export interface RoadDef {
   readonly from: string;
   readonly to: string;
-  readonly ways: Readonly<Record<string, { readonly minutes: number; readonly cents: number }>>;
+  readonly ways: Readonly<Record<string, WayDef>>;
 }
+
+/** Найбільша небезпека дороги (GAME-72). */
+export const MAX_RISK = 3;
 
 /** Сюжет розділу (GAME-29): збирається з перевіреного content/ (src/content/story.ts). */
 export interface StoryDefs {
   readonly start: string;
-  readonly profiles: Readonly<Record<string, { readonly transports?: readonly string[] }>>;
+  /** startSkills (GAME-72, DC-022): id навички → стартовий ранг 0…5. Професія задає старт, не стелю (SIM-SKL-004). */
+  readonly profiles: Readonly<Record<string, { readonly transports?: readonly string[]; readonly startSkills?: Readonly<Record<string, number>> }>>;
   readonly transports: readonly string[];
   readonly animals: Readonly<Record<string, { readonly transports?: readonly string[] }>>;
   readonly locations: Readonly<Record<string, { readonly unlockedBy?: string; readonly when?: WhenDef; readonly items: readonly string[] }>>;
@@ -118,9 +129,24 @@ export interface StoryDefs {
   readonly roads?: readonly RoadDef[];
 }
 
+/**
+ * Ремонт (GAME-72): що потрібно, щоб полагодити ціль. Навичка відкриває дію (`minRank`), але не скасовує
+ * інструмент (`tool` — потрібен у руках, не витрачається) і запчастину (`part` — витрачається одна)
+ * (SIM-SKL-003). Полагоджене ставить прапорець `flag` — і вдруге не ремонтується.
+ */
+export interface RepairDef {
+  readonly skill: SkillId;
+  readonly minRank: number;
+  readonly tool: string;
+  readonly part?: string;
+  readonly flag: string;
+}
+
 export interface CoreDefs {
   readonly items: Readonly<Record<string, ItemDef>>;
   readonly interactions: Readonly<Record<string, InteractionDef>>;
+  /** Ремонти за id цілі (GAME-72). У контенті гри їх поки немає: команду доводять тести ядра. */
+  readonly repairs?: Readonly<Record<string, RepairDef>>;
   /** Немає — команди сюжету відмовляють (UNKNOWN_TARGET), решта працює. */
   readonly story?: StoryDefs;
 }
@@ -132,6 +158,7 @@ export type DefsCode = (typeof DEFS_CODES)[number];
 
 const isCents = (n: unknown): boolean => typeof n === 'number' && Number.isSafeInteger(n) && n >= 0;
 const ID = /^[a-z]+\.[a-z0-9]+(?:[.-][a-z0-9]+)*$/;
+const isRank = (n: unknown): boolean => typeof n === 'number' && Number.isSafeInteger(n) && n >= 0 && n <= MAX_RANK;
 
 /**
  * Каталог має бути цілим ДО гри: ціни — цілі центи ≥ 0, викуп ≤ купівлі (SIM-INV-004, інакше
@@ -147,6 +174,11 @@ export function checkDefs(defs: CoreDefs): { code: DefsCode; where: string }[] {
   for (const [id, d] of Object.entries(defs.interactions)) {
     if (!ID.test(id) || !ID.test(d.grantId) || (d.items ?? []).some((i) => !ID.test(i.itemId))) out.push({ code: 'DEFS_BAD_ID', where: id });
     if (!isCents(d.moneyCents) || (d.items ?? []).some((i) => !Number.isSafeInteger(i.qty) || i.qty < 1)) out.push({ code: 'DEFS_BAD_AMOUNT', where: id });
+  }
+  for (const [id, r] of Object.entries(defs.repairs ?? {})) {
+    if (!ID.test(id) || !ID.test(r.tool) || (r.part !== undefined && !ID.test(r.part)) || !ID.test(r.flag)) out.push({ code: 'DEFS_BAD_ID', where: id });
+    if (!isSkillId(r.skill)) out.push({ code: 'DEFS_BAD_REF', where: `${id}.skill` });
+    if (!isRank(r.minRank)) out.push({ code: 'DEFS_BAD_AMOUNT', where: `${id}.minRank` });
   }
   if (defs.story) {
     out.push(...checkStory(defs.story));
@@ -188,6 +220,12 @@ function checkStory(st: StoryDefs): { code: DefsCode; where: string }[] {
     }
     if (q.reward && (!isCents(q.reward.moneyCents) || q.reward.items.some((i) => !Number.isSafeInteger(i.qty) || i.qty < 1))) out.push({ code: 'DEFS_BAD_AMOUNT', where: `${id}.reward` });
   }
+  for (const [id, p] of Object.entries(st.profiles)) {
+    for (const [sk, r] of Object.entries(p.startSkills ?? {})) {
+      if (!isSkillId(sk)) out.push({ code: 'DEFS_BAD_REF', where: `${id}.startSkills.${sk}` });
+      if (!isRank(r)) out.push({ code: 'DEFS_BAD_AMOUNT', where: `${id}.startSkills.${sk}` });
+    }
+  }
   for (const [id, n] of Object.entries(st.npcs)) if (!has(st.locations, n.locationId)) out.push({ code: 'DEFS_BAD_REF', where: `${id}.locationId` });
   // Одруківка в unlockedBy зачинила б локацію чи NPC назавжди — мовчки.
   for (const [id, e] of [...Object.entries(st.locations), ...Object.entries(st.npcs)]) if (!has(st.quests, e.unlockedBy)) out.push({ code: 'DEFS_BAD_REF', where: `${id}.unlockedBy` });
@@ -196,6 +234,7 @@ function checkStory(st: StoryDefs): { code: DefsCode; where: string }[] {
     for (const [t, w] of Object.entries(r.ways)) {
       if (!st.transports.includes(t)) out.push({ code: 'DEFS_BAD_REF', where: `roads[${i}].${t}` });
       if (!isCents(w.cents) || !Number.isSafeInteger(w.minutes) || w.minutes < 1) out.push({ code: 'DEFS_BAD_AMOUNT', where: `roads[${i}].${t}` });
+      if (w.risk !== undefined && (!Number.isSafeInteger(w.risk) || w.risk < 0 || w.risk > MAX_RISK)) out.push({ code: 'DEFS_BAD_AMOUNT', where: `roads[${i}].${t}.risk` });
     }
   }
   const npcsWithDialogue = new Set<string>();

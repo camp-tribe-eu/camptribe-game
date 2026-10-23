@@ -114,6 +114,14 @@ const mutations = [
   { name: '[пам’ять] формат id факту не перевіряється', file: CHECKS_FILE, from: 'if (!MEMORY_ID.test(f)) out.push', to: 'if (false) out.push' },
   { name: '[пам’ять] схема не знає ефекту remember', file: 'validator/schema.mjs', from: '  remember: obj({ remember: req(str) }),\n', to: '' },
   { name: 'посилання transports не перевіряються', file: CHECKS_FILE, from: "ref('transports', id, `${e.id}.transports`)", to: '0' },
+  // навички й небезпека дороги (GAME-72)
+  { name: '[навички] невідома навичка не звітується', file: CHECKS_FILE, from: "if (!SKILL_IDS.includes(s.skill)) out.push(I('SKILL_UNKNOWN'", to: "if (false) out.push(I('SKILL_UNKNOWN'" },
+  { name: '[навички] дубль навички не звітується', file: CHECKS_FILE, from: "if (seen.has(s.skill)) out.push(I('SKILL_DUPLICATE'", to: "if (false) out.push(I('SKILL_DUPLICATE'" },
+  { name: '[навички] дубль рахується між профілями', file: CHECKS_FILE, from: '      for (const p of c.content.profiles ?? []) {\n        const seen = new Set();\n', to: '      const seen = new Set();\n      for (const p of c.content.profiles ?? []) {\n' },
+  { name: '[навички] реєстр знає вигадану навичку', file: 'validator/codes.mjs', from: "'skill.communication'];", to: "'skill.communication', 'skill.swimming'];" },
+  { name: '[навички] схема не обмежує ранг згори', file: 'validator/schema.mjs', from: "rank: req({ t: 'int', min: 0, max: 5 })", to: "rank: req({ t: 'int', min: 0 })" },
+  { name: '[дороги] схема не обмежує небезпеку згори', file: 'validator/schema.mjs', from: "risk: { t: 'int', min: 0, max: 3 }", to: "risk: { t: 'int', min: 0 }" },
+  { name: '[дороги] схема не знає небезпеки', file: 'validator/schema.mjs', from: ", risk: { t: 'int', min: 0, max: 3 } }), min: 1 }),", to: ' }), min: 1 }),' },
   // GAME-56: давність факту — попередження, не помилка
   { name: '[факт] поріг давності включно (>= замість >)', file: CHECKS_FILE, from: 'if (age > FACT_STALE_DAYS)', to: 'if (age >= FACT_STALE_DAYS)' },
   { name: '[факт] попередження рахується помилкою', file: 'validator/codes.mjs', from: "CODES[code]?.severity === 'warning'", to: 'false' },

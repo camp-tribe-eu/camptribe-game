@@ -4,6 +4,7 @@
 
 import type { CoreDefs } from './defs';
 import type { CommandRecord, GameState, RejectCode } from './state';
+import { practise, rankOf, type SkillId } from './skills';
 import { applyStory, type StoryCommand, type StoryDraft } from './story';
 
 export type { StoryCommand } from './story';
@@ -12,7 +13,9 @@ export type Command =
   | StoryCommand
   | { readonly type: 'BuyItem'; readonly commandId: string; readonly itemId: string }
   | { readonly type: 'SellItem'; readonly commandId: string; readonly itemId: string }
-  | { readonly type: 'Interact'; readonly commandId: string; readonly targetId: string };
+  | { readonly type: 'Interact'; readonly commandId: string; readonly targetId: string }
+  /** Полагодити ціль (GAME-72): вимоги — з каталогу `repairs`, ніколи з команди. */
+  | { readonly type: 'Repair'; readonly commandId: string; readonly targetId: string };
 
 /** Підтверджений факт (CR-031). Причина — commandId команди, що його спричинила. */
 export type GameEvent =
@@ -131,6 +134,24 @@ function apply(cmd: Command, d: Draft, defs: CoreDefs, guard: Safeguards): Rejec
       });
       return null;
     }
+    case 'Repair': {
+      if (!isContentId(cmd.targetId)) return 'INVALID_COMMAND';
+      const def = own(defs.repairs ?? {}, cmd.targetId);
+      if (!def) return 'UNKNOWN_TARGET';
+      if (!d.player) return 'NO_CHARACTER';
+      if (d.flags.includes(def.flag)) return 'ALREADY_REPAIRED';
+      // Порядок навмисний (SIM-SKL-003): спершу фізика — інструмент і запчастина, — потім навичка.
+      // Навіть ранг 5 без інструмента — TOOL_MISSING: навичка не замінює ключа.
+      if ((own(d.inventory, def.tool) ?? 0) < 1) return 'TOOL_MISSING';
+      if (def.part !== undefined && (own(d.inventory, def.part) ?? 0) < 1) return 'PART_MISSING';
+      if (rankOf(own(d.skills, def.skill) ?? 0) < def.minRank) return 'SKILL_TOO_LOW';
+      if (def.part !== undefined) {
+        const left = (own(d.inventory, def.part) as number) - 1;
+        d.inventory = left > 0 ? { ...d.inventory, [def.part]: left } : Object.fromEntries(Object.entries(d.inventory).filter(([k]) => k !== def.part));
+      }
+      d.flags = [...d.flags, def.flag].sort();
+      return null;
+    }
     case 'CreateCharacter':
     case 'Visit':
     case 'Talk':
@@ -144,6 +165,41 @@ function apply(cmd: Command, d: Draft, defs: CoreDefs, guard: Safeguards): Rejec
     default:
       return 'INVALID_COMMAND';
   }
+}
+
+/**
+ * Яку практику дає прийнята команда (SIM-SKL-006): ключ дії й навички, яких вона вчить. Ключ — тип і ціль:
+ * повтор того самого (знову в ту саму крамницю) вчить дедалі менше, нове місце — вчить знову.
+ * Харчування поки не вчить жодна дія: команди «готувати» в ядрі ще немає. null — команда не вчить.
+ */
+export function practiceOf(cmd: Command, before: GameState, after: Pick<Draft, 'player'>, defs: CoreDefs): { key: string; skills: readonly SkillId[] } | null {
+  switch (cmd.type) {
+    case 'Visit':
+      // Лише справжній переїзд: «прийти туди, де стоїш» нічого не вчить.
+      return before.player && after.player && before.player.locationId !== after.player.locationId
+        ? { key: `visit:${cmd.locationId}`, skills: ['skill.planning', 'skill.endurance'] } : null;
+    case 'Talk':
+      return { key: `talk:${cmd.npcId}`, skills: ['skill.communication'] };
+    case 'Pickup':
+      return { key: `pickup:${cmd.itemId}`, skills: ['skill.camping'] };
+    case 'BuyItem':
+    case 'SellItem':
+      return { key: `trade:${cmd.itemId}`, skills: ['skill.finance'] };
+    case 'Repair': {
+      const def = own(defs.repairs ?? {}, cmd.targetId);
+      return def ? { key: `repair:${cmd.targetId}`, skills: [def.skill] } : null;
+    }
+    default:
+      return null;
+  }
+}
+
+/** Записати практику прийнятої команди в чернетку. Без персонажа вчитись нікому — нічого. */
+function practiseAfter(cmd: Command, before: GameState, d: Draft, defs: CoreDefs): void {
+  if (!d.player) return;
+  const p = practiceOf(cmd, before, d, defs);
+  const next = p && practise(d.skills, d.practice, p.key, p.skills);
+  if (next) { d.skills = next.skills; d.practice = next.practice; }
 }
 
 /**
@@ -178,9 +234,11 @@ export function dispatch(state: GameState, cmd: Command, defs: CoreDefs, guard: 
 
   const draft: Draft = {
     moneyCents: state.moneyCents, inventory: { ...state.inventory }, grants: [...state.grants], events: [],
-    player: state.player, quests: state.quests, campaignEnded: state.campaignEnded, flags: [...state.flags], npcMemory: state.npcMemory, dialogue: state.dialogue,
+    player: state.player, quests: state.quests, campaignEnded: state.campaignEnded, flags: [...state.flags], npcMemory: state.npcMemory,
+    skills: state.skills, practice: state.practice, dialogue: state.dialogue,
   };
   const code = apply(cmd, draft, defs, guard);
+  if (!code) practiseAfter(cmd, state, draft, defs);
   const record: CommandRecord = code ? { ok: false, code, fp } : { ok: true, fp };
   const processed = remember(state.processed, cmd.commandId, record);
   const seq = state.seq + 1;

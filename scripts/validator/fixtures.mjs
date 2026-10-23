@@ -472,6 +472,19 @@ export const FIXTURES = [
   { base: 'combo', name: '[дороги] платна дорога без економіки', expect: ['ROAD_PAID_NO_ECONOMY'], patch(c) { c.roads[1].ways[0].cents = 300; } },
   { base: 'combo', name: '[дороги] дорога в саму себе', expect: ['ROAD_SELF_LOOP'], patch(c) { c.roads.push({ id: 'road.camp-camp', from: 'loc.camp', to: 'loc.camp', twoWay: true, ways: [{ transport: T_CAR, minutes: 1, cents: 0 }] }); } },
   { base: 'combo', name: '[дороги] стартовий квест без місця', expect: ['ROAD_NO_HOME'], patch(c) { delete q(c, 'ST-001').locationId; } },
+  // GAME-72: небезпека дороги — ціле 0…3.
+  { base: 'combo', name: '[дороги] контроль: небезпечна дорога (risk 3) — коректно', expect: [], patch(c) { c.roads[1].ways[1].risk = 3; c.roads[0].ways[0].risk = 0; } },
+  { base: 'combo', name: '[дороги] небезпека поза 0…3', expect: ['SCHEMA_INVALID'], count: { code: 'SCHEMA_INVALID', n: 1 }, patch(c) { c.roads[1].ways[1].risk = 4; } },
+  // GAME-72: стартові навички професії.
+  { base: 'combo', name: '[навички] контроль: старт професії з відомих навичок — коректно', expect: [], patch(c) {
+    c.profiles[0].startSkills = [{ skill: 'skill.camping', rank: 2 }, { skill: 'skill.mechanics', rank: 5 }];
+    c.profiles[1].startSkills = [{ skill: 'skill.cooking', rank: 0 }];
+  } },
+  { base: 'combo', name: '[навички] невідома навичка', expect: ['SKILL_UNKNOWN'], count: { code: 'SKILL_UNKNOWN', n: 1 }, patch(c) { c.profiles[0].startSkills = [{ skill: 'skill.camping', rank: 2 }, { skill: 'skill.swimming', rank: 1 }]; } },
+  { base: 'combo', name: '[навички] навичка двічі в одному профілі', expect: ['SKILL_DUPLICATE'], count: { code: 'SKILL_DUPLICATE', n: 1 }, patch(c) { c.profiles[0].startSkills = [{ skill: 'skill.camping', rank: 2 }, { skill: 'skill.camping', rank: 3 }]; } },
+  { base: 'combo', name: '[навички] контроль: та сама навичка у двох профілях — не дубль', expect: [], patch(c) { c.profiles[0].startSkills = [{ skill: 'skill.camping', rank: 2 }]; c.profiles[1].startSkills = [{ skill: 'skill.camping', rank: 1 }]; } },
+  { base: 'combo', name: '[навички] ранг 6 — поза 0…5', expect: ['SCHEMA_INVALID'], count: { code: 'SCHEMA_INVALID', n: 1 }, patch(c) { c.profiles[0].startSkills = [{ skill: 'skill.camping', rank: 6 }]; } },
+  { base: 'combo', name: '[навички] порожній startSkills', expect: ['SCHEMA_INVALID'], patch(c) { c.profiles[0].startSkills = []; } },
   { base: 'combo', name: '[дороги] транспорт, якого не дозволяє жоден профіль: лише COMBO_OPTION_UNUSABLE, без вимоги доріг', expect: ['COMBO_OPTION_UNUSABLE'], patch(c) {
     c.transports.push({ id: 'transport.fixture-boat', nameKey: 'transport.fixture-boat' });
     for (const lang of c.meta.locales) c.locales[lang]['transport.fixture-boat'] = `[${lang}] boat`;

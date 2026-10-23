@@ -9,9 +9,10 @@
 // * предмет здобувається з `items` локації, де стоїть гравець, або з нагороди квесту;
 // * перехід із `choiceKey` — вибір гравця; без нього — шлях за замовчуванням;
 // * `requires` квесту-цілі перевіряється в мить переходу.
-import type { CondDef, EffectDef, QuestDef, RewardDef, StoryDefs, WhenDef } from './defs';
+import type { CondDef, EffectDef, QuestDef, RewardDef, StoryDefs, WayDef, WhenDef } from './defs';
 import type { GameEvent } from './commands';
-import type { PlayerState, QuestProgress, RejectCode } from './state';
+import { startSkills } from './skills';
+import type { GameState, PlayerState, QuestProgress, RejectCode } from './state';
 
 export const NO_ANIMAL = 'animal.none';
 
@@ -42,6 +43,8 @@ export interface StoryDraft {
   campaignEnded: boolean;
   flags: string[];
   npcMemory: Record<string, readonly string[]>;
+  skills: Readonly<Record<string, number>>;
+  practice: Readonly<Record<string, number>>;
   dialogue: { readonly id: string; readonly node: string } | null;
 }
 
@@ -69,8 +72,8 @@ export function npcOpen(st: StoryDefs, d: StoryDraft, p: PlayerState, id: string
 
 // Сусіди вузла для транспорту — раз на заморожений перелік доріг (рецензія: route() кличуть на кожен Visit,
 // у меню і в повному переборі; лінійний прохід по всіх дорогах на кожному кроці росте квадратично).
-const ADJ = new WeakMap<object, Map<string, Map<string, [string, { minutes: number; cents: number }][]>>>();
-function adjacency(roads: NonNullable<StoryDefs['roads']>, transport: string): Map<string, [string, { minutes: number; cents: number }][]> {
+const ADJ = new WeakMap<object, Map<string, Map<string, [string, WayDef][]>>>();
+function adjacency(roads: NonNullable<StoryDefs['roads']>, transport: string): Map<string, [string, WayDef][]> {
   let byTransport = ADJ.get(roads);
   if (!byTransport) { byTransport = new Map(); ADJ.set(roads, byTransport); }
   let adj = byTransport.get(transport);
@@ -91,10 +94,33 @@ function adjacency(roads: NonNullable<StoryDefs['roads']>, transport: string): M
  * немає — перехід миттєвий і безкоштовний; на місці чи ще ніде (null) — теж. null — дороги немає.
  */
 export function route(st: StoryDefs, from: string | null, to: string, transport: string): { minutes: number; cents: number } | null {
+  const w = way(st, from, to, transport);
+  return w && { minutes: w.minutes, cents: w.cents };
+}
+
+/**
+ * Небезпека дороги, якою поїде гравець (GAME-72): найбільший `risk` ребер тієї самої найкоротшої дороги,
+ * що й route(). Аргументи — лише сюжет, місце й транспорт: навичок ця функція не бачить (SIM-SKL-003).
+ */
+export function routeRisk(st: StoryDefs, from: string | null, to: string, transport: string): number | null {
+  return way(st, from, to, transport)?.risk ?? null;
+}
+
+/**
+ * Небезпека поїздки гравця в `to` (GAME-72) — те, що покаже UI. Бере весь стан гри (і навички в ньому), але
+ * результат від навичок не залежить: досвідчений водій на небезпечній дорозі — так само на небезпечній
+ * (SIM-SKL-003). Доказ — властивість у src/core/skills.test.ts. null — персонажа чи дороги немає.
+ */
+export function tripRisk(st: StoryDefs, s: Pick<GameState, 'player' | 'skills'>, to: string): number | null {
+  const p = s.player;
+  return p ? routeRisk(st, p.locationId, to, p.transportId) : null;
+}
+
+function way(st: StoryDefs, from: string | null, to: string, transport: string): { minutes: number; cents: number; risk: number } | null {
   const roads = st.roads ?? [];
-  if (roads.length === 0 || from === null || from === to) return { minutes: 0, cents: 0 };
+  if (roads.length === 0 || from === null || from === to) return { minutes: 0, cents: 0, risk: 0 };
   // Дейкстра на кількох вузлах: перебором, детерміновано (рівні за часом — дешевший, далі — за id).
-  const best = new Map<string, { minutes: number; cents: number }>([[from, { minutes: 0, cents: 0 }]]);
+  const best = new Map<string, { minutes: number; cents: number; risk: number }>([[from, { minutes: 0, cents: 0, risk: 0 }]]);
   const done = new Set<string>();
   for (;;) {
     let cur: string | null = null;
@@ -106,9 +132,9 @@ export function route(st: StoryDefs, from: string | null, to: string, transport:
     if (cur === null) return null;
     if (cur === to) return best.get(cur) ?? null;
     done.add(cur);
-    const here = best.get(cur) as { minutes: number; cents: number };
+    const here = best.get(cur) as { minutes: number; cents: number; risk: number };
     for (const [to, w] of adjacency(roads, transport).get(cur) ?? []) {
-      const cand = { minutes: here.minutes + w.minutes, cents: here.cents + w.cents };
+      const cand = { minutes: here.minutes + w.minutes, cents: here.cents + w.cents, risk: Math.max(here.risk, w.risk ?? 0) };
       const old = best.get(to);
       if (!old || cand.minutes < old.minutes || (cand.minutes === old.minutes && cand.cents < old.cents)) best.set(to, cand);
     }
@@ -283,6 +309,8 @@ export function applyStory(cmd: StoryCommand, d: StoryDraft, st: StoryDefs | und
     if (!matches(start.when, player)) return 'INVALID_CHOICE';
     d.player = player;
     d.quests = { [st.start]: { status: 'active', done: [] } };
+    // Старт професії (SIM-SKL-004). До персонажа практики не було (practiseAfter вимагає гравця).
+    d.skills = startSkills(profile.startSkills);
     return null;
   }
 
