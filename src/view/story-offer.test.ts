@@ -232,12 +232,10 @@ describe('storyOffer: знімок для UI', () => {
     const g = create((choices[0] as { intent: Move }).intent);
     const keys = realMenu(g).map((o) => outcomeKey(o.next));
     expect(new Set(keys).size).toBe(keys.length);
-    // Удома, коли ціль «озирнись удома» вже виконана: «Піти: Дім» нічого не змінює — його немає.
-    const home = realMenu(g).find((o) => o.move.type === 'Visit' && o.move.locationId === 'loc.home')?.next;
-    if (!home) throw new Error('visit home expected right after creation (it ticks ST-001)');
-    const there = dispatch(home, { type: 'Visit', locationId: 'loc.home', commandId: 'zz' } as Command, DEFS);
-    expect(there.ok).toBe(true);                    // ядро таку дію приймає — фільтр саме в меню
-    expect(realMenu(home).some((o) => o.move.type === 'Visit' && o.move.locationId === 'loc.home')).toBe(false);
+    // GAME-84 №1: удома, на старті, «Піти: Дім» не пропонується: ціль «озирнись удома» виконана самим стартом.
+    // (Повний перебір «ніде не пропонується піти туди, де стоїш» — src/content/menu-here.test.ts.)
+    expect(realMenu(g).some((o) => o.move.type === 'Visit' && o.move.locationId === 'loc.home')).toBe(false);
+    expect(realMenu(g).some((o) => o.move.type === 'CompleteQuest' && o.move.questId === 'ST-001')).toBe(true);
   });
 
   it('у розмові id відповіді прив\'язаний до вузла: той самий номер відповіді в іншому вузлі — інший id', () => {

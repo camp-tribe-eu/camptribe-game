@@ -155,7 +155,7 @@ export function Shell({ port, langOverride, credits }: { port: UiPort; langOverr
           </fieldset>
           {staleNotice}
           <fieldset>
-            <legend>{t('ui.save')}</legend>
+            <legend>{t('ui.saveGroup')}</legend>
             <button type="button" class="ui-btn" data-ui="save"
               onClick={() => { void port.save().then((ok) => setStatus(ok ? 'ui.saved' : 'ui.saveFailed')); }}>{t('ui.save')}</button>
             <button type="button" class="ui-btn" data-ui="code-export"

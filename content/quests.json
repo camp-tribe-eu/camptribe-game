@@ -27,7 +27,8 @@
     "id": "ST-004", "titleKey": "q.st-004", "optional": false, "locationId": "loc.road",
     "requires": { "quests": ["ST-003"], "items": ["item.tent", "item.sleeping-bag"] },
     "objectives": [
-      { "id": "road-to-lake", "textKey": "q.st-004.o1", "kind": "visit", "target": "loc.road", "required": true }
+      { "id": "road-to-lake", "textKey": "q.st-004.o1", "kind": "visit", "target": "loc.road", "required": true },
+      { "id": "cat-on-road", "textKey": "q.st-004.o2", "kind": "visit", "target": "loc.road", "required": false, "when": { "animals": ["animal.cat"] } }
     ],
     "transitions": [
       { "on": "complete", "to": "ST-005" },
@@ -51,7 +52,8 @@
     "objectives": [
       { "id": "meet-elise", "textKey": "q.st-005.o1", "kind": "talk", "target": "npc.elise", "required": true },
       { "id": "pitch-tent", "textKey": "q.st-005.o2", "kind": "visit", "target": "loc.camp.lake", "required": true },
-      { "id": "gather-firewood", "textKey": "q.st-005.o3", "kind": "collect", "target": "item.firewood", "required": true }
+      { "id": "gather-firewood", "textKey": "q.st-005.o3", "kind": "collect", "target": "item.firewood", "required": true },
+      { "id": "cat-looks-around", "textKey": "q.st-005.o4", "kind": "visit", "target": "loc.camp.lake", "required": false, "when": { "animals": ["animal.cat"] } }
     ],
     "transitions": [],
     "reward": { "grantId": "rw.st-005", "money": 1000 }

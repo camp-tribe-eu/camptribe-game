@@ -42,7 +42,7 @@ async function createBike(page: Page): Promise<void> {
 }
 async function toShop(page: Page): Promise<void> {
   await createBike(page);
-  for (const [k, key] of [['visit', 'loc.home'], ['complete', 'q.st-001'], ['visit', 'loc.home'], ['complete', 'q.st-002'], ['visit', 'loc.shop']] as const) await act(page, k, key);
+  for (const [k, key] of [['complete', 'q.st-001'], ['complete', 'q.st-002'], ['visit', 'loc.shop']] as const) await act(page, k, key);
 }
 /** Далі з крамниці: намет і спальник, завершити st-003, на дорогу (там дощ чи сонце — за зерном), далі до озера. */
 async function shopToLake(page: Page): Promise<void> {
@@ -182,7 +182,6 @@ for (const vp of VIEWPORTS) for (const scale of [100, 200] as const) {
     await load(page, '?seed=2');
     await openStory(page);
     await createBike(page);
-    await act(page, 'visit', 'loc.home');
     await page.keyboard.press('Escape');
     await expect(panel(page)).toHaveCount(0);
 

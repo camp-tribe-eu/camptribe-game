@@ -197,6 +197,14 @@ function mark(st: StoryDefs, d: StoryDraft, p: PlayerState, kind: 'visit' | 'tal
   }
 }
 
+/**
+ * GAME-84 №1: квест, що стартує там, де гравець уже стоїть, одразу рахує ціль «побувати тут» виконаною.
+ * Без цього меню мусило пропонувати «Піти: Дім» тому, хто вдома, — лише щоб поставити позначку.
+ */
+function markHere(st: StoryDefs, d: StoryDraft, p: PlayerState): void {
+  if (p.locationId !== null) mark(st, d, p, 'visit', p.locationId);
+}
+
 function giveReward(d: StoryDraft, commandId: string, questId: string, r: RewardDef, guardGrant: boolean): RejectCode | null {
   if (guardGrant && d.grants.includes(r.grantId)) return null; // нагорода — рівно раз за grantId (TD-004); квест усе одно завершено
   if (!isCents(r.moneyCents)) return 'INVALID_AMOUNT';
@@ -249,7 +257,7 @@ function leave(st: StoryDefs, d: StoryDraft, p: PlayerState, cmd: { commandId: s
   if (req && (req.quests.some((r) => !completed(d, r)) || req.items.some((i) => (own(d.inventory, i) ?? 0) < 1))) return 'QUEST_REQUIRES_UNMET';
   // Повторний вхід (цикл у графі, валідатор його дозволяє за наявності виходу — cycle-exit) знову
   // робить квест активним із чистими цілями; нагорода за grantId однаково не повториться.
-  if (own(d.quests, to)?.status !== 'active') d.quests = { ...d.quests, [to]: { status: 'active', done: [] } };
+  if (own(d.quests, to)?.status !== 'active') { d.quests = { ...d.quests, [to]: { status: 'active', done: [] } }; markHere(st, d, p); }
   return null;
 }
 
@@ -294,7 +302,7 @@ function runEffect(st: StoryDefs, d: StoryDraft, p: PlayerState, e: EffectDef, n
     const req = q.requires;
     if (req && (req.quests.some((r) => !completed(d, r)) || req.items.some((i) => (own(d.inventory, i) ?? 0) < 1))) return null;
     const cur = own(d.quests, e.startQuest)?.status;
-    if (cur !== 'active' && cur !== 'completed') d.quests = { ...d.quests, [e.startQuest]: { status: 'active', done: [] } };
+    if (cur !== 'active' && cur !== 'completed') { d.quests = { ...d.quests, [e.startQuest]: { status: 'active', done: [] } }; markHere(st, d, p); }
     return null;
   }
   // completeObjective: лише в активному квесті (як і позначки Visit/Talk); інакше — нічого.
@@ -328,6 +336,7 @@ export function applyStory(cmd: StoryCommand, d: StoryDraft, st: StoryDefs | und
     if (!matches(start.when, player)) return 'INVALID_CHOICE';
     d.player = player;
     d.quests = { [st.start]: { status: 'active', done: [] } };
+    markHere(st, d, player);
     // Старт професії (SIM-SKL-004). До персонажа практики не було (practiseAfter вимагає гравця).
     d.skills = startSkills(profile.startSkills);
     return null;

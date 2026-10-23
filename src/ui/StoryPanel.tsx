@@ -25,7 +25,9 @@ export const WEATHER_LABELS = WX;
 export const ACT_COOLDOWN_MS = 350;
 
 export function money(lang: AnyLang, cents: number): string {
-  return new Intl.NumberFormat(lang === 'uk' ? 'uk-UA' : 'en-IE', { style: 'currency', currency: 'EUR' }).format(cents / 100);
+  // GAME-84 №7: Intl ставить між числом і валютою нерозривний пробіл. Коли «249,00 EUR» не вміщується в рядок (текст 200 %),
+  // браузер різав її посеред слова («EU R»). Звичайний пробіл — рядок рветься між числом і валютою, а слово лишається цілим.
+  return new Intl.NumberFormat(lang === 'uk' ? 'uk-UA' : 'en-IE', { style: 'currency', currency: 'EUR' }).format(cents / 100).replace(/[\u00a0\u202f]/g, ' ');
 }
 
 export function StoryPanel({ offer, lang, t, act, close, children }: { offer: StoryOffer; lang: AnyLang; t: (k: Key) => string; act: (id: string) => void; close: () => void; children?: ComponentChildren }) {
@@ -37,7 +39,10 @@ export function StoryPanel({ offer, lang, t, act, close, children }: { offer: St
   const lastAct = useRef(Number.NEGATIVE_INFINITY);
   useEffect(() => {
     const el = root.current;
-    (el?.querySelector<HTMLElement>('[data-ui="where"]') ?? el?.querySelector<HTMLElement>('h2'))?.focus();
+    // GAME-84 №7: фокус без прокрутки (інакше браузер тягнув рядок стану нагору панелі, і заголовок зникав за межею),
+    // а панель повертається на початок — гравець бачить заголовок, де він і що змінилось.
+    (el?.querySelector<HTMLElement>('[data-ui="where"]') ?? el?.querySelector<HTMLElement>('h2'))?.focus({ preventScroll: true });
+    if (el) el.scrollTop = 0;
   }, [offer]);
   const guarded = (id: string) => (e: Event): void => {
     if (e.timeStamp - lastAct.current < ACT_COOLDOWN_MS) return;

@@ -61,10 +61,15 @@ describe('журнал подорожі (GAME-32)', () => {
     let s: SimState = newSim(1, 5_000);
     const cmd = (c: Record<string, unknown>, id: string): Input => ({ kind: 'command', command: { ...c, commandId: id } as Command });
     s = step(s, cmd({ type: 'CreateCharacter', profileId: 'profile.solo-explorer', transportId: 'transport.bike' }, 'k0'), CTX);
-    s = step(s, cmd({ type: 'Visit', locationId: 'loc.home' }, 'k1'), CTX);   // ціль ST-001 виконано — зміна
+    // GAME-84 №1: ціль «озирнись удома» виконана самим стартом, тож Visit удома нічого не міняє — запису немає (раніше це була «зміна»).
+    s = step(s, cmd({ type: 'Visit', locationId: 'loc.home' }, 'k1'), CTX);
+    expect(s.journal).toHaveLength(1);
+    s = step(s, cmd({ type: 'CompleteQuest', questId: 'ST-001' }, 'k1b'), CTX);
+    s = step(s, cmd({ type: 'CompleteQuest', questId: 'ST-002' }, 'k1c'), CTX);
+    s = step(s, cmd({ type: 'Visit', locationId: 'loc.shop' }, 'k1d'), CTX);   // справжній переїзд — зміна
     const n = s.journal.length;
-    expect(n).toBe(2);
-    for (let i = 2; i < 52; i++) s = step(s, cmd({ type: 'Visit', locationId: 'loc.home' }, `k${i}`), CTX);
+    expect(n).toBe(4);
+    for (let i = 2; i < 52; i++) s = step(s, cmd({ type: 'Visit', locationId: 'loc.shop' }, `k${i}`), CTX);
     expect(s.journal).toHaveLength(n);
     expect(Object.keys(s.game.processed).length).toBeGreaterThan(50);       // команди справді прийняті, а не відхилені
   });
@@ -76,7 +81,7 @@ describe('журнал подорожі (GAME-32)', () => {
     // Журнал уже повний (як після довгої подорожі): нова дія зі зміною витісняє найстаріший запис.
     const old = Array.from({ length: JOURNAL_LIMIT }, (_, i) => ({ at: i, commandId: `old${i}`, type: 'Visit' as const, ref: 'loc.home' }));
     s = { ...s, journal: old };
-    s = step(s, cmd({ type: 'Visit', locationId: 'loc.home' }, 'p1'), CTX);
+    s = step(s, cmd({ type: 'CompleteQuest', questId: 'ST-001' }, 'p1'), CTX);
     const id = 2;
     expect(s.journal).toHaveLength(JOURNAL_LIMIT);
     expect(s.journal.at(-1)?.commandId).toBe(`p${id - 1}`);
