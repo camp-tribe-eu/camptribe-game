@@ -90,26 +90,6 @@ jobs:
             echo "проєкт створено"
           fi
 
-      - name: Старі публікації — видалити (рецензія PR #25: на них може не бути замка)
-        # Без параметра розміру сторінки: Cloudflare відкидає 100 (код 8000024, run 39951370653). Беремо сторінку
-        # за замовчуванням і видаляємо, доки перелік не спорожніє (не більше 20 кіл — інакше червоний).
-        run: |
-          set -euo pipefail
-          api="https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/pages/projects/$PROJECT/deployments"
-          total=0
-          for round in $(seq 1 20); do
-            list=$(curl -sS --max-time 30 -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" "$api" || true)
-            jq -e '.success' <<<"$list" >/dev/null 2>&1 || { echo "::error::перелік публікацій не отримано: $(jq -c '.errors' <<<"$list" 2>/dev/null | head -c 400)"; exit 1; }
-            ids=$(jq -r '.result | .[].id' <<<"$list")
-            [ -n "$ids" ] || { echo "старих публікацій видалено: $total"; exit 0; }
-            for id in $ids; do
-              curl -sS --max-time 30 -X DELETE -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" "$api/$id?force=true" | jq -e '.success' >/dev/null \
-                || { echo "::error::не вдалося видалити публікацію $id"; exit 1; }
-              total=$((total + 1))
-            done
-          done
-          echo "::error::після 20 кіл публікації ще лишились"; exit 1
-
       - name: Публікація preview
         run: npx --yes "$WRANGLER" pages deploy dist --project-name="$PROJECT" --branch="$BRANCH" --commit-hash="$GITHUB_SHA" --commit-dirty=true
 
@@ -133,15 +113,44 @@ jobs:
           curl -s --max-time 20 -u "$PREVIEW_USER:$PREVIEW_PASSWORD" -o /tmp/auth.html "$url"
           asset=$(grep -o '<script[^>]*src="[^"]*"' /tmp/auth.html | head -1 | sed 's/.*src="\([^"]*\)"/\1/; s#^\./##; s#^/##')
           [ -n "$asset" ] || { echo "::error::у HTML немає бандла — нема що перевіряти"; exit 1; }
-          for path in "$asset" /favicon.ico /robots.txt; do
-            c=$(curl -s --max-time 20 -o /dev/null -w '%{http_code}' "https://$BRANCH.$PROJECT.pages.dev/${path#/}")
+          # Справжні файли збірки (бандл і перший не-JS файл із dist: мапа, шрифт, картинка) — лише 401.
+          other=$(cd dist && find . -type f ! -name '*.html' ! -name '*.js' | sed 's#^\./##' | sort | awk 'NR==1')
+          for path in "$asset" ${other:+"$other"}; do
+            c=$(curl -s --max-time 20 -o /dev/null -w '%{http_code}' "https://$BRANCH.$PROJECT.pages.dev/$path")
             [ "$c" = 401 ] || { echo "::error::$path без пароля віддає HTTP $c (очікував 401)"; exit 1; }
             echo "$path без пароля → 401"
           done
+          # Неіснуючий шлях: 401 або 404 (Cloudflare може віддати закешований 404, run 39958494211), але ніколи не 200.
+          c=$(curl -s --max-time 20 -o /dev/null -w '%{http_code}' "https://$BRANCH.$PROJECT.pages.dev/favicon.ico")
+          [ "$c" != 200 ] || { echo "::error::/favicon.ico без пароля віддає 200"; exit 1; }
+          echo "/favicon.ico без пароля → $c"
           c=$(curl -s --max-time 20 -o /dev/null -w '%{http_code}' -u "$PREVIEW_USER:$PREVIEW_PASSWORD" "https://$BRANCH.$PROJECT.pages.dev/$asset")
           [ "$c" = 200 ] || { echo "::error::бандл з паролем: HTTP $c (очікував 200)"; exit 1; }
           if game "https://$PROJECT.pages.dev/" >/dev/null; then echo "::error::гола адреса проєкту віддає гру"; exit 1; fi
           echo "PREVIEW: OK · $url — логін $PREVIEW_USER і пароль із секрету PREVIEW_PASSWORD"
+
+      - name: Старі публікації — видалити, крім щойно перевіреної (рецензія PR #25, #30)
+        # Після verify, а не до публікації: інакше адреса порожніє, і Cloudflare кешує 404 (run 39958494211).
+        # «Наша» — найновіша з commit_hash = GITHUB_SHA (deploy передає --commit-hash), а не просто найновіша:
+        # ручна публікація поза workflow не стане «перевіреною». Колами, доки не лишиться тільки наша.
+        run: |
+          set -euo pipefail
+          api="https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/pages/projects/$PROJECT/deployments"
+          ours=""
+          for round in $(seq 1 20); do
+            list=$(curl -sS --max-time 30 -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" "$api" || true)
+            jq -e '.success' <<<"$list" >/dev/null 2>&1 || { echo "::error::перелік публікацій не отримано: $(jq -c '.errors' <<<"$list" 2>/dev/null | head -c 400)"; exit 1; }
+            [ -n "$ours" ] || ours=$(jq -r --arg sha "$GITHUB_SHA" '[.result[] | select(.deployment_trigger.metadata.commit_hash == $sha)] | sort_by(.created_on) | last | .id // empty' <<<"$list")
+            [ -n "$ours" ] || { echo "::error::серед публікацій немає тієї, що з коміту $GITHUB_SHA"; exit 1; }
+            old=$(jq -r --arg id "$ours" '.result[] | select(.id != $id) | .id' <<<"$list")
+            [ -n "$old" ] || { echo "лишилась одна публікація: $ours"; exit 0; }
+            for id in $old; do
+              curl -sS --max-time 30 -X DELETE -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" "$api/$id?force=true" | jq -e '.success' >/dev/null \
+                || { echo "::error::не вдалося видалити стару публікацію $id"; exit 1; }
+              echo "видалено стару $id"
+            done
+          done
+          echo "::error::після 20 кіл старі публікації ще лишились"; exit 1
 
       - name: Перевірка не пройшла — прибрати публікацію (рецензія PR #25)
         if: failure()

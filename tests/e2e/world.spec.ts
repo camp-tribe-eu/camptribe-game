@@ -67,11 +67,12 @@ test.describe('клавіатура (десктоп)', () => {
   test('стрілка 1 с зсуває персонажа в очікуваному напрямку', async ({ page }) => {
     await open(page);
     const p0 = await probe(page);
+    // Тримаємо, доки не пройде 30 px (≈0,5 с при 64 px/с), а не рівно 1 с: на завантаженому CI кадри стартують
+    // пізно, і за фіксовану секунду персонаж ішов лише 19 px (PR #30). Межа 5 с: персонаж, що стоїть, — червоний.
     await page.keyboard.down('ArrowDown');
-    await page.waitForTimeout(1000);
+    await expect.poll(async () => (await probe(page)).playerY - p0.playerY, { timeout: 5_000 }).toBeGreaterThan(30);
     await page.keyboard.up('ArrowDown');
     const p1 = await probe(page);
-    expect(p1.playerY - p0.playerY).toBeGreaterThan(30);   // ~64 px/с; запас на старт кадрів
     expect(Math.abs(p1.playerX - p0.playerX)).toBeLessThan(1);
   });
 
@@ -82,14 +83,15 @@ test.describe('клавіатура (десктоп)', () => {
     const dirs = [['ArrowDown', 'y', 1], ['ArrowUp', 'y', -1], ['ArrowLeft', 'x', -1], ['ArrowRight', 'x', 1]] as const;
     for (const [key, axis, sign] of dirs) {
       const a = await probe(page);
+      const along = (p: Probe): number => (axis === 'y' ? p.playerY - a.playerY : p.playerX - a.playerX) * sign;
+      // Тримаємо, доки не пройде 10 px у свій бік (межа 3 с), а не фіксовані 0,4 с — та сама причина, що вище.
       await page.keyboard.down(key);
-      await page.waitForTimeout(400);
+      await expect.poll(async () => along(await probe(page)), { timeout: 3_000, message: key }).toBeGreaterThan(10);
       await page.keyboard.up(key);
       await page.waitForTimeout(100);
       const b = await probe(page);
-      const along = axis === 'y' ? b.playerY - a.playerY : b.playerX - a.playerX;
       const across = axis === 'y' ? b.playerX - a.playerX : b.playerY - a.playerY;
-      expect(along * sign, key).toBeGreaterThan(10);
+      expect(along(b), key).toBeGreaterThan(10);
       expect(Math.abs(across), key).toBeLessThan(1);
     }
   });
