@@ -15,6 +15,7 @@ import { createBridge } from './view/world/bridge';
 import { WorldScene, type WorldProbe } from './view/world/scene';
 import { mountTouchControls } from './view/world/touch';
 import { storyOffer } from './view/story-offer';
+import type { StoryOffer } from './ui/story-types';
 
 const app = document.querySelector<HTMLElement>('#app');
 if (!app) throw new Error('#app is missing');
@@ -24,6 +25,13 @@ const bridge = createBridge(20261022, GAME_DEFS);
 const input = newInput();
 // Екран подорожі (GAME-32): знімок сюжету з поточного стану; дію шукаємо в СВІЖОМУ знімку за id —
 // якщо стан тим часом змінився і дії вже немає, нічого не надсилаємо.
+// ?hideAct=complete — лише для негативного контролю e2e (GAME-36): прихована кнопка мусить ламати прохід.
+const hiddenActs = (new URLSearchParams(location.search).get('hideAct') ?? '').split(',').filter(Boolean);
+const shown = (o: StoryOffer): StoryOffer => (hiddenActs.length === 0 ? o : {
+  ...o,
+  actions: o.actions.filter((a) => !hiddenActs.includes(a.kind)),
+  dialogue: o.dialogue && { ...o.dialogue, answers: o.dialogue.answers.filter((a) => !hiddenActs.includes(a.kind)) },
+});
 const storyListeners = new Set<() => void>();
 const storyChanged = (): void => { for (const l of storyListeners) l(); };
 const saves = createSaveSession(bridge, { read: readSaves, write: writeSave, quarantine: writeStale, readStale, dismissStale }, { story: STORY, contentRev: STORY_REV, viable: (g) => saveViable(g, GAME_DEFS) });
@@ -79,7 +87,7 @@ render(h(Shell, {
       storyChanged();
       return r;
     },
-    story: () => storyOffer(bridge.state, GAME_DEFS).offer,
+    story: () => shown(storyOffer(bridge.state, GAME_DEFS).offer),
     act(id: string) {
       const intent = storyOffer(bridge.state, GAME_DEFS).intents.get(id);
       if (!intent) return;

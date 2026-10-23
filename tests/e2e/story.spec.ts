@@ -1,5 +1,6 @@
 // GAME-32 / GAME-36 · пролог проходиться в браузері через екран «Подорож»: вибір персонажа, квести,
 // розмова з Елізою, журнал — до кінця розділу. Кожна дія — справжній клік по кнопці, команда йде в ядро.
+import { readFileSync } from 'node:fs';
 import { expect, test, type Page } from '@playwright/test';
 
 interface Core { game: { campaignEnded: boolean; grants: string[]; player: { transportId: string } | null }; clock: { paused: boolean; minutes: number }; journal: { type: string }[] }
@@ -16,11 +17,17 @@ async function open(page: Page, query = ''): Promise<string[]> {
 }
 
 const panel = (page: Page) => page.locator('[data-ui="story"]');
-async function act(page: Page, kind: string, key = ''): Promise<void> {
-  await panel(page).locator(`[data-act="${kind}"][data-key="${key}"]`).click();
+/** Один крок проходу — лише клік. Немає кнопки — падіння з назвою кроку (GAME-36, негативний контроль). */
+async function act(page: Page, kind: string, key = '', timeout = 5_000): Promise<void> {
+  try {
+    await panel(page).locator(`[data-act="${kind}"][data-key="${key}"]`).click({ timeout });
+  } catch {
+    throw new Error(`крок «${kind} ${key}»: кнопки немає на екрані подорожі`);
+  }
 }
 
 /** Пролог велосипедистом із бічним квестом Елізи. Порядок — як гравець читає завдання. */
+// ПРОХІД-START — між цими позначками лише кліки й клавіші, без тестового хука гри (перевіряє тест нижче).
 async function playBikeProlog(page: Page): Promise<void> {
   await panel(page).locator('[data-act="create"]', { hasText: 'Велосипед' }).first().click();
   await act(page, 'visit', 'loc.home');
@@ -50,6 +57,7 @@ async function playBikeProlog(page: Page): Promise<void> {
   await act(page, 'pickup', 'item.firewood');
   await act(page, 'complete', 'q.st-005');
 }
+// ПРОХІД-END
 
 test.use({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true });
 
@@ -157,4 +165,20 @@ test('кожна ціль екрана подорожі ≥ 44×44 CSS px і н�
   });
   expect(await panel(page).locator('button').count()).toBeGreaterThan(3);
   expect(bad).toEqual([]);
+});
+
+test('негативний контроль: прихована кнопка «Завершити» — прохід червоніє з назвою кроку', async ({ page }) => {
+  await open(page, '?hideAct=complete');
+  await expect(panel(page).locator('[data-act="create"]').first()).toBeVisible();  // екран живий, сховано лише «Завершити»
+  await expect(playBikeProlog(page)).rejects.toThrow('крок «complete q.st-001»');
+});
+
+test('прохід керується лише кліками й клавішами: без приватного API гри та без імпортів ядра', () => {
+  const src = readFileSync(new URL(import.meta.url), 'utf8');
+  const imports = [...src.matchAll(/^import .* from '([^']+)';$/gm)].map((m) => m[1]);
+  expect(imports.sort()).toEqual(['@playwright/test', 'node:fs']);
+  const flow = src.slice(src.indexOf('// ПРОХІД-START'), src.indexOf('// ПРОХІД-END'));
+  expect(flow.length).toBeGreaterThan(500);                                      // позначки на місці, прохід між ними
+  expect(flow).not.toMatch(/__game|evaluate\(|dispatch|bridge/);
+  expect(src.slice(src.indexOf('async function act('), src.indexOf('// ПРОХІД-START'))).not.toMatch(/__game|evaluate\(/);
 });
