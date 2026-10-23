@@ -6,6 +6,10 @@
       "url": "https://creativecommons.org/licenses/by-sa/3.0/",
       "drm_ok": false
     },
+    "CC0": {
+      "url": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "drm_ok": true
+    },
     "OGA-BY 3.0": {
       "url": "https://static.opengameart.org/OGA-BY-3.0.txt",
       "drm_ok": true
@@ -52,6 +56,18 @@
         "https://opengameart.org/content/lpc-runcycle-and-diagonal-walkcycle",
         "https://opengameart.org/content/lpc-runcycle-for-male-muscular-and-pregnant-character-bases-with-modular-heads",
         "https://opengameart.org/content/lpc-teen-unisex-base-clothes"
+      ]
+    },
+    {
+      "name": "Blue Moon Bear",
+      "files": [
+        "tiles/camp_car.png"
+      ],
+      "licences": [
+        "CC-BY-SA 3.0"
+      ],
+      "sources": [
+        "https://opengameart.org/content/lpc-modern-car-additions"
       ]
     },
     {
@@ -540,6 +556,30 @@
         "https://opengameart.org/content/lpc-runcycle-for-male-muscular-and-pregnant-character-bases-with-modular-heads",
         "https://opengameart.org/content/lpc-teen-unisex-base-clothes"
       ]
+    },
+    {
+      "name": "xhunterko",
+      "files": [
+        "tiles/camp_tent.png"
+      ],
+      "licences": [
+        "CC0"
+      ],
+      "sources": [
+        "https://opengameart.org/content/tent-3"
+      ]
+    },
+    {
+      "name": "Zabin",
+      "files": [
+        "sprites/campfire.png"
+      ],
+      "licences": [
+        "CC-BY-SA 3.0"
+      ],
+      "sources": [
+        "https://opengameart.org/content/camp-fire-animation-for-rpgs-finished"
+      ]
     }
   ],
   "files": [
@@ -852,6 +892,17 @@
       "modified": "no"
     },
     {
+      "file": "sprites/campfire.png",
+      "authors": [
+        "Zabin"
+      ],
+      "licence": "CC-BY-SA 3.0",
+      "sources": [
+        "https://opengameart.org/content/camp-fire-animation-for-rpgs-finished"
+      ],
+      "modified": "recoloured onto the base palette (scripts/palette/quantize.py), alpha made binary; frames unchanged"
+    },
+    {
       "file": "tiles/base_out_atlas.png",
       "authors": [
         "adrix89",
@@ -870,6 +921,28 @@
         "https://opengameart.org/content/lpc-tile-atlas"
       ],
       "modified": "no"
+    },
+    {
+      "file": "tiles/camp_car.png",
+      "authors": [
+        "Blue Moon Bear"
+      ],
+      "licence": "CC-BY-SA 3.0",
+      "sources": [
+        "https://opengameart.org/content/lpc-modern-car-additions"
+      ],
+      "modified": "cropped to the car, scaled to 64 px height with nearest-neighbour (about 0.67x, the car was ~30% too big), centred on a 128x64 canvas, recoloured onto the base palette (scripts/palette/quantize.py)"
+    },
+    {
+      "file": "tiles/camp_tent.png",
+      "authors": [
+        "xhunterko"
+      ],
+      "licence": "CC0",
+      "sources": [
+        "https://opengameart.org/content/tent-3"
+      ],
+      "modified": "scaled 2x with nearest-neighbour, set on a 96x64 canvas, one outline colour recoloured onto the base palette (scripts/palette/quantize.py)"
     },
     {
       "file": "tiles/terrain_atlas.png",

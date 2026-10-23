@@ -3,16 +3,30 @@
 // GAME-32: мапа — maps/camp-lake.tmj під валідатором мап (npm run validate, --dir public/maps).
 // Точку появи, тригери й NPC сцена бере з шару `objects` цієї мапи — тобто саме ті координати, для
 // яких валідатор довів досяжність пішки (а не числа, вписані в код окремо від мапи).
+// GAME-93: графіка LPC (OD-013) — тайли 32 px, персонаж із шарів (ходьба 9 кадрів × 4 напрямки), анімоване вогнище,
+// 3/4-глибина: верхівки дерев і дах намету малюються над персонажем, коли той стоїть ПОЗАД об'єктом (див. `bands`).
 import Phaser from 'phaser';
 import { KEY_BINDINGS, KEY_CODES, consumeFrame, createActionGate, moveVector, press, release, type Action, type InputState } from './actions';
 import type { Bridge } from './bridge';
+import type { WorldArt } from './art';
+import { COLS, FRAME, frameIndex, type Dir } from './character';
 
-export const TILE = 16;
-export const SPEED = 64; // px/с — 4 тайли за секунду
+export const TILE = 32;
+export const SPEED = 128; // px/с — 4 тайли за секунду (як було при 16 px: 64 px/с)
 const INTERACT_RANGE = TILE * 1.5;
+/** Ноги персонажа — на 0,9 висоти кадру 64 px; тіло колізії (16×10) стоїть на ногах. y ноги = y спрайта = глибина сортування. */
+const ORIGIN_Y = 0.9;
+const BODY = { w: 16, h: 10 };
+const WALK_FPS = 12;
+/** Глибини: земля, декор і стіни (стовбури, намети) — завжди під персонажем; спрайти сортуються за y ніг; верхівки — смугами. */
+const DEPTH = { ground: -300, decor: -200, walls: -100, always: 100_000 } as const;
+const DIRS: readonly Dir[] = ['up', 'left', 'down', 'right'];
 
 /** Об'єкт мапи, з яким можна взаємодіяти: тригер (Interact у ядро) чи NPC (розмова). */
 interface Spot { readonly name: string; readonly kind: 'trigger' | 'npc'; readonly x: number; readonly y: number }
+
+/** Смуга шару `above`: тайли верхівок, що мають одну «базову» лінію (низ стовбура під ними). */
+interface Band { readonly layer: Phaser.Tilemaps.TilemapLayer; readonly depth: number }
 
 export interface WorldProbe {
   ready: boolean;
@@ -27,31 +41,62 @@ export interface WorldProbe {
   saveLoaded: boolean;
   /** lerp камери [x, y], прочитаний з живої камери: 1 — миттєвий слід, без плавного «доїзду» (GAME-39 #3). */
   cameraLerp: [number, number];
+  /** GAME-93 (лише для e2e): номер кадру листа персонажа — рядок напрямку × 9 + стовпець (0 — стоїть). */
+  playerFrame: number;
+  playerDir: Dir;
+  playerMoving: boolean;
+  /** Глибина персонажа (= y ніг) і кількість тайлів верхівок, що зараз перекривають його кадр / лежать позаду нього. */
+  playerDepth: number;
+  coveredTiles: number;
+  behindTiles: number;
 }
 
 export class WorldScene extends Phaser.Scene {
   private player!: Phaser.Types.Physics.Arcade.SpriteWithDynamicBody;
   private readonly gate = createActionGate();
   private spots: Spot[] = [];
+  private bands: Band[] = [];
+  private facing: Dir = 'down';
+  private last = { x: 0, y: 0 };
 
-  /** onNpc — гравець заговорив із NPC на мапі (розмову веде екран подорожі). */
-  constructor(private readonly bridge: Bridge, private readonly controls: InputState, private readonly probe: WorldProbe, private readonly onNpc: (npcId: string) => void = () => {}) {
+  /** art — графіка, декодована до старту гри (loadWorldArt); onNpc — гравець заговорив із NPC на мапі (розмову веде екран подорожі). */
+  constructor(private readonly bridge: Bridge, private readonly controls: InputState, private readonly probe: WorldProbe, private readonly art: WorldArt, private readonly onNpc: (npcId: string) => void = () => {}) {
     super('world');
   }
 
   preload(): void {
     this.load.tilemapTiledJSON('camp', 'maps/camp-lake.tmj');
-    this.load.spritesheet('kenney-rpg', 'spike/kenney-rpg.png', { frameWidth: TILE, frameHeight: TILE, spacing: 1 });
+  }
+
+  /** Складений лист ходьби як текстура з 36 кадрами (ключ кадру — номер). */
+  private addSheet(key: string, canvas: HTMLCanvasElement): void {
+    const tex = this.textures.addCanvas(key, canvas);
+    if (!tex) throw new Error(`texture ${key} failed`);
+    for (let i = 0; i < COLS * 4; i++) tex.add(i, 0, (i % COLS) * FRAME, Math.floor(i / COLS) * FRAME, FRAME, FRAME);
   }
 
   create(): void {
+    for (const [name, img] of Object.entries(this.art.tilesets)) this.textures.addImage(name, img);
+    this.textures.addSpriteSheet('campfire', this.art.campfire, { frameWidth: FRAME, frameHeight: FRAME });
+    this.addSheet('player', this.art.sheets.player);
+    this.addSheet('elise', this.art.sheets.elise);
+
     const map = this.make.tilemap({ key: 'camp' });
-    const tiles = map.addTilesetImage('kenney-rpg', 'kenney-rpg', TILE, TILE, 0, 1);
-    if (!tiles) throw new Error('tileset kenney-rpg failed to load');
-    map.createLayer('ground', tiles);
-    const walls = map.createLayer('walls', tiles);
-    if (!walls) throw new Error('layer walls is missing');
+    const tilesets = Object.keys(this.art.tilesets).map((name) => {
+      const ts = map.addTilesetImage(name, name, TILE, TILE, 0, 0);
+      if (!ts) throw new Error(`tileset ${name} is missing in the map`);
+      return ts;
+    });
+    const need = (name: string): Phaser.Tilemaps.TilemapLayer => {
+      const layer = map.createLayer(name, tilesets);
+      if (!layer || !(layer instanceof Phaser.Tilemaps.TilemapLayer)) throw new Error(`layer ${name} is missing`);
+      return layer;
+    };
+    need('ground').setDepth(DEPTH.ground);
+    need('decor').setDepth(DEPTH.decor);
+    const walls = need('walls').setDepth(DEPTH.walls);
     walls.setCollisionByExclusion([-1]);
+    this.bands = this.makeBands(map, tilesets);
 
     const objects = map.getObjectLayer('objects')?.objects ?? [];
     const typeOf = (o: Phaser.Types.Tilemaps.TiledObject): string => String(o.type || (o as { class?: string }).class || '');
@@ -60,21 +105,20 @@ export class WorldScene extends Phaser.Scene {
     this.spots = objects.filter((o) => typeOf(o) === 'trigger' || typeOf(o) === 'npc')
       .map((o) => ({ name: o.name, kind: typeOf(o) as Spot['kind'], x: o.x ?? 0, y: o.y ?? 0 }));
 
-    const square = (key: string, color: number): void => {
-      const g = this.add.graphics();
-      g.fillStyle(color).fillRect(0, 0, 12, 12);
-      g.generateTexture(key, 12, 12);
-      g.destroy();
-    };
-    square('player', 0xd94f30);
-    square('npc', 0x4f7a3a); // сірий прототип (S01–S02): NPC — квадрат, доки немає спрайта LPC
+    this.anims.create({ key: 'fire', frames: this.anims.generateFrameNumbers('campfire', { start: 0, end: 4 }), frameRate: 8, repeat: -1 });
+    for (const dir of DIRS) {
+      this.anims.create({ key: `walk-${dir}`, frames: Array.from({ length: COLS - 1 }, (_, i) => ({ key: 'player', frame: frameIndex(dir, i + 1) })), frameRate: WALK_FPS, repeat: -1 });
+    }
     for (const s of this.spots) {
-      // Вогнище з аркуша Kenney (кадр 15,8); інші тригери поки без картинки.
-      if (s.kind === 'npc') this.add.image(s.x, s.y, 'npc');
-      else if (s.name === 'obj.campfire') this.add.image(s.x, s.y, 'kenney-rpg', 8 * 57 + 15);
+      // Точка об'єкта — ноги/основа: спрайт стоїть на ній, а глибина сортування — її y.
+      if (s.kind === 'npc') this.add.sprite(s.x, s.y, 'elise', frameIndex('down', 0)).setOrigin(0.5, ORIGIN_Y).setDepth(s.y);
+      else if (s.name === 'obj.campfire') this.add.sprite(s.x, s.y, 'campfire').setOrigin(0.5, 0.85).setDepth(s.y).play('fire');
     }
 
-    this.player = this.physics.add.sprite(spawn.x ?? 0, spawn.y ?? 0, 'player');
+    this.player = this.physics.add.sprite(spawn.x ?? 0, spawn.y ?? 0, 'player', frameIndex('down', 0));
+    this.player.setOrigin(0.5, ORIGIN_Y);
+    this.player.body.setSize(BODY.w, BODY.h);
+    this.player.body.setOffset(FRAME / 2 - BODY.w / 2, FRAME * ORIGIN_Y - BODY.h / 2);
     this.player.setCollideWorldBounds(true);
     this.physics.world.setBounds(0, 0, map.widthInPixels, map.heightInPixels);
     this.physics.add.collider(this.player, walls);
@@ -100,20 +144,66 @@ export class WorldScene extends Phaser.Scene {
         }
       }
     }
+    this.last = { x: this.player.x, y: this.player.y };
+    // Зонд має правдиві значення вже в момент ready, а не після першого update.
+    Object.assign(this.probe, { playerX: this.player.x, playerY: this.player.y, playerFrame: frameIndex(this.facing, 0), playerDir: this.facing, playerMoving: false, playerDepth: this.player.y });
     this.probe.ready = true;
+  }
+
+  /**
+   * 3/4-глибина. Тайли шару `above` (крони, дах) ділимо на смуги за «базовою лінією» — низом найближчого стінного тайла
+   * під ними в тому ж стовпці (стовбур, низ намету). Смуга має глибину цієї лінії, а персонаж — свою y ніг: ноги вище
+   * лінії (персонаж ПОЗАД деревом) → смуга над ним і закриває; нижче (ПЕРЕД деревом) → персонаж над смугою.
+   * Тайл без стінного тайла під собою — завжди над персонажем.
+   */
+  private makeBands(map: Phaser.Tilemaps.Tilemap, tilesets: Phaser.Tilemaps.Tileset[]): Band[] {
+    const above = map.getLayer('above');
+    const walls = map.getLayer('walls');
+    if (!above || !walls) throw new Error('layers above/walls are missing');
+    const groups = new Map<number, { x: number; y: number; index: number }[]>();
+    for (let y = 0; y < map.height; y++) {
+      for (let x = 0; x < map.width; x++) {
+        const index = above.data[y]?.[x]?.index ?? -1;
+        if (index < 0) continue;
+        let base = y;
+        while (base < map.height && (walls.data[base]?.[x]?.index ?? -1) < 0) base++;
+        const depth = base < map.height ? (base + 1) * TILE : DEPTH.always;
+        const g = groups.get(depth) ?? [];
+        g.push({ x, y, index });
+        groups.set(depth, g);
+      }
+    }
+    return [...groups].map(([depth, tiles]) => {
+      const layer = map.createBlankLayer(`above@${depth}`, tilesets, 0, 0, map.width, map.height, TILE, TILE);
+      if (!layer || !(layer instanceof Phaser.Tilemaps.TilemapLayer)) throw new Error('band layer failed');
+      for (const t of tiles) layer.putTileAt(t.index, t.x, t.y);
+      return { layer: layer.setDepth(depth), depth };
+    });
   }
 
   /** Межа паузи: зупинити тіло, інакше фізика дотягує стару швидкість після продовження (рецензія PR #13). */
   haltPlayer(): void {
+    if (!this.player) return;
     this.player.setVelocity(0, 0);
     this.player.body.reset(this.player.x, this.player.y);
   }
 
   override update(time: number, delta: number): void {
     this.bridge.frame(delta);
+    if (!this.player) return;   // update може випередити create лише в першому кадрі завантаження
     const held = consumeFrame(this.controls);
     const v = moveVector(held);
+    // Рухається той, хто справді зсунувся з минулого кадру (по зсуву, а не по швидкості — вона лишається, коли тіло вперлося в стіну): упертий у стіну персонаж стоїть, а не «іде на місці».
+    const moving = Math.hypot(this.player.x - this.last.x, this.player.y - this.last.y) > 0.25;
+    this.last = { x: this.player.x, y: this.player.y };
     this.player.setVelocity(v.x * SPEED, v.y * SPEED);
+    if (v.x !== 0 || v.y !== 0) {
+      const horizontal = v.x !== 0 && (v.y === 0 || this.facing === 'left' || this.facing === 'right');
+      this.facing = horizontal ? (v.x < 0 ? 'left' : 'right') : (v.y < 0 ? 'up' : 'down');
+    }
+    if (moving) this.player.anims.play(`walk-${this.facing}`, true);
+    else { this.player.anims.stop(); this.player.setFrame(frameIndex(this.facing, 0)); }
+    this.player.setDepth(this.player.y);
 
     let spot: Spot | null = null;
     let best = INTERACT_RANGE;
@@ -127,6 +217,14 @@ export class WorldScene extends Phaser.Scene {
       else this.bridge.send({ type: 'Interact', targetId: spot.name });
     }
 
+    const box = this.player.getBounds();
+    let covered = 0;
+    let behind = 0;
+    for (const b of this.bands) {
+      const n = b.layer.getTilesWithinWorldXY(box.x, box.y, box.width, box.height).filter((t) => t.index > 0).length;
+      if (b.layer.depth > this.player.depth) covered += n; else behind += n;   // глибина — з живого шару, не з нашого запису: тест бачить, що справді малюється
+    }
+    const frame = Number(this.player.frame.name);
     Object.assign(this.probe, {
       playerX: this.player.x,
       playerY: this.player.y,
@@ -135,6 +233,12 @@ export class WorldScene extends Phaser.Scene {
       cameraScrollX: this.cameras.main.scrollX,
       cameraScrollY: this.cameras.main.scrollY,
       clockMinutes: this.bridge.state.clock.minutes,
+      playerFrame: frame,
+      playerDir: this.facing,
+      playerMoving: this.player.anims.isPlaying,
+      playerDepth: this.player.depth,
+      coveredTiles: covered,
+      behindTiles: behind,
     });
   }
 }

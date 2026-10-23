@@ -184,6 +184,8 @@ test.describe('axe-core: 0 порушень serious/critical на кожному
 
   for (const scale of [150, 200] as const) {
     test(`налаштування при тексті ${scale} %`, async ({ page }) => {
+      // GAME-93: титри зросли на 3 рядки (22) — axe міряє перелік кроками й сам біля 60 с (50–54 с наодинці, понад 60 с у повному прогоні).
+      test.setTimeout(120_000);
       await openGame(page);
       await openPause(page);
       await page.locator(`[data-ui="text-${scale}"]`).click();
