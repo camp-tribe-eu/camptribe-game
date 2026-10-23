@@ -15,7 +15,7 @@ import { loadContent } from '../../scripts/validator/load.mjs';
 import { LIFE } from './life';
 import { moves, progressKey } from './moves';
 import { runYearBot, type YearReport } from './life-bot';
-import { payCaseArb, payrollViolation } from './life-oracle';
+import { payCaseArb, payrollViolation } from './life-oracle.test.helpers';
 import { GAME_DEFS } from './slice-defs';
 import { CONTENT } from './story';
 

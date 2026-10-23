@@ -8,7 +8,7 @@ import {
   civilFromDays, dateOf, daysFromCivil, dayKind, payroll, paydayDay, vacationUsed, weekdayOf, yearOf,
   type LifeDefs,
 } from './life';
-import { payCaseArb, payrollViolation, utcDate, type Stepper } from '../content/life-oracle';
+import { payCaseArb, payrollViolation, utcDate, type Stepper } from '../content/life-oracle.test.helpers';
 import { fromSave, serialize } from './save';
 import { newSim, step, type SimState } from './sim';
 import { initialState, type GameState } from './state';
