@@ -14,29 +14,82 @@ async function openGame(page: Page, query = ''): Promise<string[]> {
 }
 
 /**
- * Порушення axe з впливом serious/critical: «правило: вузол» — щоб у червоному звіті було видно, що саме.
- * Контраст axe міряє лише на видимому: діалог, вищий за екран, проганяємо на кожній висоті прокрутки
- * (натиснута кнопка 4.0:1 ховалась саме так — поза екраном axe кладе її в «incomplete», а не в порушення).
+ * Найгірше тло під діалогом. Фон .ui-overlay — #000000cc (80 % чорного) поверх полотна Phaser, і axe не
+ * бачить пікселів полотна: без підміни текст діалогу йде в «incomplete» (imgNode), тобто не міряється.
+ * Під час сканування полотно ховаємо, а #stage робимо білим: 20 % білого крізь оверлей = #333333 — найсвітліше,
+ * що може дати будь-який піксель гри. Це найгірший випадок для КОЖНОГО кольору тексту: світлий текст, що
+ * тримає 4.5:1 на #333, тримає його й на темнішому; темний текст на #333 не дотягує навіть до 1.7:1.
  */
-async function seriousViolations(page: Page): Promise<string[]> {
+const WORST_BACKDROP = '#stage canvas { visibility: hidden !important; } #stage { background: #fff !important; }';
+
+/**
+ * Контраст усередині діалогу, який axe так і не зміряв (incomplete на всіх висотах прокрутки), — з причиною.
+ * Порожньо: рядок сюди — лише з назвою вузла, причиною axe (messageKey) і чому це не текст для читання.
+ */
+const UNMEASURED_OK: Readonly<Record<string, string>> = {};
+
+/**
+ * Порушення axe з впливом serious/critical: «правило: вузол» — щоб у червоному звіті було видно, що саме.
+ * Плюс незміряний контраст у діалозі: «incomplete» — це не «пройдено» (закон 4), тож він теж червоний.
+ * Контраст axe міряє лише на видимому: діалог, вищий за екран, проганяємо на кожній висоті прокрутки —
+ * один analyze() вузол нижче екрана не кладе ні в порушення, ні в incomplete, а просто пропускає
+ * (доведено контролем «нижче згину» нижче). `scroll: false` — лише для цього контролю.
+ */
+async function seriousViolations(page: Page, { scroll = true }: { scroll?: boolean } = {}): Promise<string[]> {
   const found = new Set<string>();
+  const unmeasured = new Map<string, string>();
+  const measured = new Set<string>();
+  // Крок — пів екрана: вузол на межі двох зупинок (axe: elmPartiallyObscured) цілком видно на проміжній.
   const stops = await page.evaluate(() => {
     const d = document.querySelector<HTMLElement>('[role="dialog"]');
-    if (!d) return 1;
+    if (!d) return 0;
     d.scrollTop = 0;
-    return Math.max(1, Math.ceil(d.scrollHeight / d.clientHeight));
+    return Math.max(1, Math.ceil((2 * d.scrollHeight) / d.clientHeight));
   });
-  for (let i = 0; i < stops; i++) {
+  // Найгірше тло — лише під діалогом: HUD світу лежить просто на полотні, і його тло — сама гра.
+  const backdrop = stops > 0 ? await page.addStyleTag({ content: WORST_BACKDROP }) : null;
+  const collect = async (r: Awaited<ReturnType<AxeBuilder['analyze']>>): Promise<void> => {
+    for (const v of r.violations) {
+      if (v.id === 'color-contrast') for (const n of v.nodes) measured.add(n.target.join(' '));
+      if (v.impact !== 'serious' && v.impact !== 'critical') continue;
+      for (const n of v.nodes) {
+        const c = n.any[0]?.data as { fgColor?: string; bgColor?: string; contrastRatio?: number } | null;
+        const colours = v.id === 'color-contrast' && c?.fgColor ? ` — ${c.fgColor} на ${c.bgColor}, ${c.contrastRatio}:1` : '';
+        found.add(`${v.id} (${v.impact}): ${n.target.join(' ')}${colours}`);
+      }
+    }
+    for (const v of r.passes) if (v.id === 'color-contrast') for (const n of v.nodes) measured.add(n.target.join(' '));
+    for (const v of r.incomplete) {
+      if (v.id !== 'color-contrast') continue;
+      for (const n of v.nodes) {
+        const sel = n.target.join(' ');
+        const inDialog = await page.evaluate((q) => document.querySelector(q)?.closest('[role="dialog"]') != null, sel);
+        if (inDialog) unmeasured.set(sel, String((n.any[0]?.data as { messageKey?: string } | null)?.messageKey ?? n.any[0]?.message ?? '?'));
+      }
+    }
+  };
+  for (let i = 0; i < (scroll ? Math.max(1, stops) : 1); i++) {
     await page.evaluate((k) => {
       const d = document.querySelector<HTMLElement>('[role="dialog"]');
-      if (d) d.scrollTop = k * d.clientHeight;
+      if (d) d.scrollTop = (k * d.clientHeight) / 2;
     }, i);
-    const r = await new AxeBuilder({ page }).analyze();
-    for (const v of r.violations) {
-      if (v.impact !== 'serious' && v.impact !== 'critical') continue;
-      for (const n of v.nodes) found.add(`${v.id} (${v.impact}): ${n.target.join(' ')}`);
-    }
+    await collect(await new AxeBuilder({ page }).analyze());
   }
+  // Вузол, вищий за пів екрана (довгий перелік авторів у титрах при 200 %), не влазить у жодну зупинку.
+  // Його міряємо окремо у вікні, вищому за нього: ширина та сама, тож перенос рядків і кольори ті самі.
+  const tall = scroll ? [...unmeasured.keys()].filter((q) => !measured.has(q)) : [];
+  const vp = page.viewportSize();
+  if (tall.length > 0 && vp) {
+    const h = await page.evaluate((qs) => Math.max(...qs.map((q) => document.querySelector(q)?.getBoundingClientRect().height ?? 0)), tall);
+    await page.setViewportSize({ width: vp.width, height: Math.max(vp.height, Math.ceil(h) + 200) });
+    for (const q of tall) {
+      await page.evaluate((x) => document.querySelector(x)?.scrollIntoView({ block: 'center' }), q);
+      await collect(await new AxeBuilder({ page }).include(q).analyze());
+    }
+    await page.setViewportSize(vp);
+  }
+  await backdrop?.evaluate((el) => el.remove());
+  for (const [sel, why] of unmeasured) if (!measured.has(sel) && !UNMEASURED_OK[sel]) found.add(`color-contrast (не зміряно: ${why}): ${sel}`);
   return [...found];
 }
 
@@ -122,6 +175,39 @@ test.describe('axe-core: 0 порушень serious/critical на кожному
       document.querySelector('[data-ui="pause"]')?.append(p);
     });
     expect((await seriousViolations(page)).some((v) => v.startsWith('color-contrast') && v.includes('low-contrast'))).toBe(true);
+  });
+
+  // Блідий текст БЕЗ власного тла: його тло — оверлей над полотном. Без найгіршого тла й перевірки
+  // «incomplete» цей вузол лишався незміряним, а перевірка — зеленою (знахідка рецензента c92d93b).
+  test('негативний контроль: блідий текст без власного тла — червоніє (тло під оверлеєм не вгадується)', async ({ page }) => {
+    await openGame(page);
+    await openPause(page);
+    await page.evaluate(() => {
+      const p = document.createElement('p');
+      p.dataset.probe = 'no-bg';
+      p.textContent = 'low contrast probe';
+      p.style.color = '#333';
+      document.querySelector('[data-ui="pause"]')?.prepend(p);
+    });
+    expect((await seriousViolations(page)).filter((v) => v.includes('no-bg'))).toEqual(['color-contrast (не зміряно: equalRatio): p[data-probe="no-bg"]']);
+  });
+
+  // Нижче згину високого діалогу: один analyze() не бачить вузол зовсім, прокрутка — бачить.
+  test('негативний контроль: блідий вузол нижче згину — пропущений одним скануванням, спійманий прокруткою', async ({ page }) => {
+    await openGame(page);
+    await openPause(page);
+    await page.evaluate(() => {
+      const d = document.querySelector<HTMLElement>('[data-ui="pause"]');
+      const spacer = document.createElement('div');
+      spacer.style.height = '3000px';
+      const p = document.createElement('p');
+      p.dataset.probe = 'below-fold';
+      p.textContent = 'low contrast probe';
+      p.style.cssText = 'color:#333;background:#2a2f35';
+      d?.append(spacer, p);
+    });
+    expect((await seriousViolations(page, { scroll: false })).filter((v) => v.includes('below-fold'))).toEqual([]);
+    expect((await seriousViolations(page)).filter((v) => v.includes('below-fold'))).toEqual(['color-contrast (serious): p[data-probe="below-fold"] — #333333 на #2a2f35, 1.06:1']);
   });
 });
 
