@@ -9,6 +9,9 @@ import type { StoryOffer } from './story-types';
 
 export function Shell({ port, langOverride, credits }: { port: UiPort; langOverride?: AnyLang; credits: Credits }) {
   const [paused, setPaused] = useState(false);
+  // Підтвердження «Нової гри» (GAME-82): окремий діалог замість меню паузи; Escape — «Ні», а не закрити паузу.
+  const [confirmNew, setConfirmNew] = useState(false);
+  const noRef = useRef<HTMLButtonElement>(null);
   const [settings, setSettings] = useState<Settings>(() => loadSettings());
   const resumeRef = useRef<HTMLButtonElement>(null);
   const [status, setStatus] = useState<Key | null>(null);
@@ -26,6 +29,19 @@ export function Shell({ port, langOverride, credits }: { port: UiPort; langOverr
     setPaused(next);
     port.setPaused(next);
   };
+  // Підтверджено: порт чистить гру; далі — екран подорожі, а там вибір персонажа (гри без гравця на мапі немає).
+  const startNew = (): void => {
+    setConfirmNew(false);
+    setStatus(null);
+    setCodeOut('');
+    setCodeIn('');
+    void port.newGame().then((ok) => {
+      // Запис не вдався — лишаємо меню паузи відкритим, щоб повідомлення було видно (рецензія PR #17).
+      if (!ok) { setStatus('ui.newGameFailed'); return; }
+      setPaused(false);
+      story(true);
+    });
+  };
   const story = (open: boolean): void => {
     setStoryOpen(open);
     // Фокус повертається грі (#stage з підписом), а не на ☰: Space — клавіша дії в сцені, і сфокусована ☰
@@ -38,22 +54,24 @@ export function Shell({ port, langOverride, credits }: { port: UiPort; langOverr
   // Розмова з NPC на мапі відкриває екран подорожі (якщо не відкрите меню паузи).
   useEffect(() => port.onOpenStory(() => { if (!paused && !storyOpen) story(true); }), [paused, storyOpen]);
 
-  useEffect(() => {
+  // useLayoutEffect: слухач Escape має бачити confirmNew до наступного кадру (інакше швидкий Escape закривав паузу).
+  useLayoutEffect(() => {
     const onKey = (e: KeyboardEvent): void => {
       if (e.code !== 'Escape') return;
       e.preventDefault();
-      if (storyOpen) story(false); else toggle(!paused);
+      if (confirmNew) setConfirmNew(false); else if (storyOpen) story(false); else toggle(!paused);
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [paused, storyOpen]);
+  }, [paused, storyOpen, confirmNew]);
 
   // Фокус — у діалог, щоб клавіатура й екранний читач починали з «Продовжити».
   useEffect(() => {
-    if (paused) resumeRef.current?.focus();
+    if (paused && !confirmNew) resumeRef.current?.focus();
+    if (paused && confirmNew) noRef.current?.focus();
     // Відкладений застарілий сейв — питаємо при кожному відкритті меню (старт міг завершитись пізніше).
     if (paused) void port.staleCode().then(setStaleCode);
-  }, [paused]);
+  }, [paused, confirmNew]);
 
   // Зберігаємо одразу в обробнику, а не в ефекті: ефект Preact відкладено до після малювання, і зміна
   // мови перед закриттям вкладки (чи reload у e2e на CI) губилась — сторінка встигала піти раніше.
@@ -91,7 +109,15 @@ export function Shell({ port, langOverride, credits }: { port: UiPort; langOverr
       {!paused && !storyOpen && <button type="button" class="ui-pause-btn" data-touch="pause" aria-label={t('ui.pause')} onClick={() => toggle(true)}>{'‖'}</button>}
       {!paused && !storyOpen && <button type="button" class="ui-story-btn" data-touch="story" aria-label={t('ui.story')} onClick={() => story(true)}>{'☰'}</button>}
       {storyOpen && <StoryPanel offer={offer} lang={lang} t={t} act={(id) => port.act(id)} close={() => story(false)}>{staleNotice}</StoryPanel>}
-      {paused && (
+      {paused && confirmNew && (
+        <div class="ui-overlay" role="dialog" aria-modal="true" aria-label={t('ui.newGame')} data-ui="confirm-new">
+          <h2>{t('ui.newGame')}</h2>
+          <p data-ui="confirm-new-text">{t('ui.newGameAsk')}</p>
+          <button type="button" class="ui-btn" data-ui="confirm-new-no" ref={noRef} onClick={() => setConfirmNew(false)}>{t('ui.newGameNo')}</button>
+          <button type="button" class="ui-btn" data-ui="confirm-new-yes" onClick={startNew}>{t('ui.newGameYes')}</button>
+        </div>
+      )}
+      {paused && !confirmNew && (
         <div class="ui-overlay" role="dialog" aria-modal="true" aria-label={t('ui.paused')} data-ui="pause">
           <h2>{t('ui.paused')}</h2>
           <button type="button" class="ui-btn" data-ui="resume" ref={resumeRef} onClick={() => toggle(false)}>{t('ui.resume')}</button>
@@ -124,7 +150,11 @@ export function Shell({ port, langOverride, credits }: { port: UiPort; langOverr
               onClick={() => { void port.importCode(codeIn).then((r) => setStatus(({ ok: 'ui.importOk', bad: 'ui.importBad', outdated: 'ui.importOutdated', newer: 'ui.importNewer', unsaved: 'ui.importUnsaved' } as const)[r])); }}>{t('ui.apply')}</button>
             {status && <p class="ui-status" data-ui="status" role="status">{t(status)}</p>}
           </fieldset>
-          <button type="button" class="ui-btn" data-ui="reset" onClick={() => update(DEFAULT_SETTINGS)}>{t('ui.reset')}</button>
+          <fieldset>
+            <legend>{t('ui.gameMenu')}</legend>
+            <button type="button" class="ui-btn" data-ui="new-game" onClick={() => setConfirmNew(true)}>{t('ui.newGame')}</button>
+            <button type="button" class="ui-btn" data-ui="reset" onClick={() => update(DEFAULT_SETTINGS)}>{t('ui.reset')}</button>
+          </fieldset>
           {/* Титри обов'язкові (OD-013): автор, джерело, ліцензія і чи змінено — для кожного файлу графіки. */}
           <details class="ui-credits" data-ui="credits">
             <summary class="ui-btn">{t('ui.credits')}</summary>

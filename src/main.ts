@@ -93,6 +93,11 @@ render(h(Shell, {
   credits,
   port: {
     save: () => saves.save(),
+    newGame: async () => {
+      const ok = await saves.newGame();
+      storyChanged();
+      return ok;
+    },
     exportCode: () => encodeRestoreCode(saves.exportJson()),
     staleCode: () => (saves.stale ? encodeRestoreCode(saves.stale) : Promise.resolve(null)),
     dismissStale: () => saves.dismissStale(),

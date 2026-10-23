@@ -151,6 +151,21 @@ test.describe('axe-core: 0 порушень serious/critical на кожному
     expect(await seriousViolations(page)).toEqual([]);
   });
 
+  test('підтвердження «Нова гра» (GAME-82): діалог із фокусом на «Ні», підписи, цілі ≥ 44 px', async ({ page }) => {
+    await openGame(page);
+    await openPause(page);
+    await page.locator('[data-ui="new-game"]').click();
+    const d = page.locator('[data-ui="confirm-new"]');
+    await expect(d).toBeVisible();
+    await expect(d).toHaveAttribute('role', 'dialog');
+    await expect(d).toHaveAttribute('aria-modal', 'true');
+    expect(await d.getAttribute('aria-label')).toBeTruthy();
+    await expect(page.locator('[data-ui="confirm-new-no"]')).toBeFocused();
+    expect(await small(page, '[data-ui="confirm-new"]')).toEqual([]);
+    expect(await seriousViolations(page)).toEqual([]);
+    expect(await passedRules(page)).toBeGreaterThan(5);
+  });
+
   test('екран подорожі: вибір персонажа', async ({ page }) => {
     await openGame(page);
     await page.locator('[data-touch="story"]').click();

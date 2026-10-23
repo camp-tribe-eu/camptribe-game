@@ -20,13 +20,17 @@ export interface Bridge {
   setPaused(paused: boolean): void;
   /** Замінити стан завантаженим сейвом (вже перевіреним ядром, fromSave). */
   load(sim: SimState): void;
+  /** Нова гра: чистий стан з тим самим сідом і стартовими грошима (ядро лишається детермінованим). */
+  restart(): void;
 }
+
+const START_MONEY_CENTS = 5_000;
 
 export function createBridge(seed: number, catalog: CoreDefs): Bridge {
   const problems = checkDefs(catalog);
   if (problems.length) throw new Error(`catalog is invalid: ${JSON.stringify(problems)}`);
   const defs = freezeDefs(catalog);
-  let state = newSim(seed, 5_000);
+  let state = newSim(seed, START_MONEY_CENTS);
   let sent = 0;
   return {
     get sent() { return sent; },
@@ -44,6 +48,10 @@ export function createBridge(seed: number, catalog: CoreDefs): Bridge {
     },
     load(sim) {
       state = sim;
+    },
+    restart() {
+      state = newSim(seed, START_MONEY_CENTS);
+      sent = 0;
     },
   };
 }

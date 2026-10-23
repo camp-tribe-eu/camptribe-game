@@ -6,6 +6,8 @@ export interface UiPort {
   setPaused(paused: boolean): void;
   /** Записати сейв у сховище браузера (GAME-33). */
   save(): Promise<boolean>;
+  /** Нова гра: стерти поточну й записати чисту; false — у пам'яті нова, але в сховище не записалась. */
+  newGame(): Promise<boolean>;
   /** Код відновлення поточної гри (OD-008). */
   exportCode(): Promise<string>;
   /**
