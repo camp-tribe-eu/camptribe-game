@@ -6,6 +6,7 @@
 import { describe, expect, it } from 'vitest';
 import pkg from '../../../package.json';
 import sceneSource from './scene.ts?raw';
+import { TILESET_IMAGES } from './art';
 
 // Файли сцени гри (src/view/world). Сторінка спайка (src/view/spike) має свою мапу й гри не стосується.
 const WORLD_SOURCES = import.meta.glob<string>(['./**/*.ts', '!./**/*.test.ts'], { query: '?raw', import: 'default', eager: true });
@@ -39,8 +40,13 @@ export function gameMapFormatProblems(map: TiledMap): string[] {
     if ((l.parallaxx ?? 1) !== 1 || (l.parallaxy ?? 1) !== 1) out.push(`шар ${l.name}: паралакс — сцена й валідатор бачать різні місця`);
     if ((l.x ?? 0) !== 0 || (l.y ?? 0) !== 0) out.push(`шар ${l.name}: x/y шару — Phaser зсуває шар, валідатор ні`);
   }
-  // Один тайлсет kenney-rpg: сцена реєструє лише його — тайли іншого не малюються, але стіни з них колізять.
-  if (map.tilesets?.length !== 1 || map.tilesets[0]?.name !== 'kenney-rpg') out.push('потрібен рівно один тайлсет kenney-rpg (лише його реєструє сцена)');
+  // Тайлсети — рівно ті, що сцена реєструє (art.ts, GAME-93): тайли тайлсету, якого сцена не знає, не малюються, але стіни з них колізять.
+  const names = (map.tilesets ?? []).map((t) => t.name ?? '').sort().join(',');
+  if (names !== Object.keys(TILESET_IMAGES).sort().join(',')) out.push(`тайлсети мапи [${names}] ≠ тайлсети сцени [${Object.keys(TILESET_IMAGES).sort().join(',')}]`);
+  // Шари, які сцена створює за іменем: відсутній — виняток у грі. 3/4-глибина: above (верхівки) і decor (тіні) — тайлові, без колізій.
+  for (const need of ['ground', 'decor', 'walls', 'above']) {
+    if (layers.filter((l) => l.name === need && l.type === 'tilelayer').length !== 1) out.push(`потрібен рівно один тайловий шар ${need}`);
+  }
   // Біти gid понад три прапорці віддзеркалення: валідатор їх знімає, Phaser (0x10000000) — ні.
   for (const l of layers) if ((l.data ?? []).some((g) => (g & 0x10000000) !== 0)) out.push(`шар ${l.name}: gid з бітом 0x10000000 — Phaser такий тайл не малює`);
   const collides = (l: TiledLayer): boolean => l.properties?.some((p) => p.name === 'collides' && p.value === true) ?? false;
@@ -119,7 +125,9 @@ describe('мапа сцени ↔ контент (GAME-32)', () => {
       ['зсув шару walls (стіна наїжджає на точку появи)', (m) => { const w = m.layers.find((l) => l.name === 'walls'); if (w) w.offsetx = -64; }, 'walls: зсув'],
       ['паралакс шару walls', (m) => { const w = m.layers.find((l) => l.name === 'walls'); if (w) w.parallaxx = 0.5; }, 'паралакс'],
       ['walls у групі шарів', (m) => { const w = m.layers.find((l) => l.name === 'walls'); if (w) { m.layers = m.layers.filter((l) => l !== w); m.layers.push({ name: 'g', type: 'group', layers: [w] }); } }, 'групи'],
-      ['другий тайлсет', (m) => { m.tilesets?.push({ name: 'other' }); }, 'тайлсет'],
+      ['чужий тайлсет', (m) => { m.tilesets?.push({ name: 'other' }); }, 'тайлсети'],
+      ['тайлсет сцени прибрано з мапи', (m) => { m.tilesets = (m.tilesets ?? []).filter((t) => t.name !== 'camp-car'); }, 'тайлсети'],
+      ['немає шару above', (m) => { m.layers = m.layers.filter((l) => l.name !== 'above'); }, 'above'],
       ['gid із бітом 0x10000000', (m) => { const w = m.layers.find((l) => l.name === 'walls'); if (w?.data) w.data[0] = (w.data[0] ?? 0) | 0x10000000; }, '0x10000000'],
       ['x шару walls (стара властивість Tiled)', (m) => { const w = m.layers.find((l) => l.name === 'walls'); if (w) w.x = 2; }, 'x/y'],
       ['невидимі стіни', (m) => { const w = m.layers.find((l) => l.name === 'walls'); if (w) w.visible = false; }, 'невидимий'],

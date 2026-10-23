@@ -13,6 +13,7 @@ import { createSaveSession } from './platform/save-session';
 import credits from '../assets/credits.json';
 import { createBridge } from './view/world/bridge';
 import { WorldScene, type WorldProbe } from './view/world/scene';
+import { loadWorldArt } from './view/world/art';
 import { mountTouchControls } from './view/world/touch';
 import { frameSize } from './view/world/frame';
 import { storyOffer } from './view/story-offer';
@@ -22,7 +23,8 @@ import type { StoryOffer } from './ui/story-types';
 const app = document.querySelector<HTMLElement>('#app');
 if (!app) throw new Error('#app is missing');
 
-const probe: WorldProbe = { ready: false, playerX: 0, playerY: 0, nearObject: null, commandsSent: 0, cameraScrollX: 0, cameraScrollY: 0, clockMinutes: 0, saveLoaded: false, cameraLerp: [0, 0] };
+const probe: WorldProbe = { ready: false, playerX: 0, playerY: 0, nearObject: null, commandsSent: 0, cameraScrollX: 0, cameraScrollY: 0, clockMinutes: 0, saveLoaded: false, cameraLerp: [0, 0],
+  playerFrame: 0, playerDir: 'down', playerMoving: false, playerDepth: 0, coveredTiles: 0, behindTiles: 0 };
 // GAME-86: кожна команда ядру (дія екрана, розмова, взаємодія на мапі) → автозбереження одразу, а не лише на паузі.
 // GAME-89 №2: сід світу (а з ним погода дня 1) — свіжий для кожної гри, з crypto на межі; ядро лишається детермінованим,
 // бо сід записується в worldSeed сейву. ?seed=N (лише збірка e2e) закріплює сід — для відтворюваних тестів.
@@ -74,6 +76,8 @@ app.append(stage);
 const hidden = switches.hideTouch;
 mountTouchControls(app, input, hidden);
 
+// GAME-93: картинки LPC (assets/, титри) і шари персонажів декодуємо до гри — сцена будується синхронно в create().
+const worldArt = await loadWorldArt();
 const frame0 = frameSize(stage.clientWidth, stage.clientHeight);
 
 const game = new Phaser.Game({
@@ -88,7 +92,7 @@ const game = new Phaser.Game({
   // 150 px порожнечі між HUD і мапою; тепер мапа стоїть під HUD, а вільне місце внизу — де й так лежать дотикові кнопки.
   scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_HORIZONTALLY },
   physics: { default: 'arcade', arcade: { debug: false } },
-  scene: [new WorldScene(bridge, input, probe, talkOnMap)],
+  scene: [new WorldScene(bridge, input, probe, worldArt, talkOnMap)],
 });
 
 // Поле змінило розмір (поворот телефону, смуга HUD, текст 200 %) — кадр підлаштовується під його форму.

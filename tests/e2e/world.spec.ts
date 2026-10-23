@@ -61,7 +61,7 @@ async function holdTouch(page: Page, action: string, until: (p: Probe) => boolea
 
 /** Повний прохід дотиком: дійти до вогнища і взаємодіяти. Повертає кількість надісланих команд. */
 async function touchFlow(page: Page): Promise<number> {
-  if (!(await holdTouch(page, 'left', (p) => p.playerX <= 60))) return 0;
+  if (!(await holdTouch(page, 'left', (p) => p.playerX <= 120))) return 0;
   if (!(await holdTouch(page, 'up', (p) => p.nearObject !== null))) return 0;
   if (!(await holdTouch(page, 'interact', () => true, 100))) return 0;
   await page.waitForTimeout(100);
@@ -109,8 +109,8 @@ test.describe('клавіатура (десктоп)', () => {
   test('60+ кадрів поштовху в стіну — персонаж лишається по цей бік', async ({ page }) => {
     await open(page);
     const p = await holdKey(page, 'ArrowRight', () => false, 2500);
-    expect(p.playerX).toBeGreaterThan(140);                  // дійшов до стіни…
-    expect(p.playerX + 6).toBeLessThanOrEqual(160 + 0.5);    // …і не пройшов (ліва грань стіни x=160)
+    expect(p.playerX).toBeGreaterThan(280);                  // дійшов до стіни…
+    expect(p.playerX + 8).toBeLessThanOrEqual(320 + 0.5);    // …і не пройшов (ліва грань стіни x=320; GAME-93: тайл 32 px, тіло 16 px, координати ×2)
   });
 
   test('камера йде за персонажем у межах мапи', async ({ page }) => {
@@ -118,12 +118,12 @@ test.describe('клавіатура (десктоп)', () => {
     const p0 = await probe(page);
     const p1 = await holdKey(page, 'ArrowDown', () => false, 1500);
     expect(p1.cameraScrollY).toBeGreaterThan(p0.cameraScrollY);
-    expect(p1.cameraScrollY).toBeLessThanOrEqual(192 - 160);
+    expect(p1.cameraScrollY).toBeLessThanOrEqual(384 - 352);   // GAME-93: мапа 384 px, широкий кадр 352
   });
 
   test('дія біля об’єкта — рівно одна команда; подвійне натискання — одна; в ядрі нагорода одна', async ({ page }) => {
     await open(page);
-    await holdKey(page, 'ArrowLeft', (p) => p.playerX <= 60);
+    await holdKey(page, 'ArrowLeft', (p) => p.playerX <= 120);
     const near = await holdKey(page, 'ArrowUp', (p) => p.nearObject !== null);
     expect(near.nearObject).toBe('obj.campfire');
     await page.keyboard.press('Space');
@@ -204,7 +204,7 @@ for (const vp of VIEWPORTS) {
         }
       }
       await page.locator('[data-ui="story-close"]').tap();
-      expect(await holdTouch(page, 'left', (p) => p.playerX <= 44)).toBe(true);
+      expect(await holdTouch(page, 'left', (p) => p.playerX <= 88)).toBe(true);
       expect(await holdTouch(page, 'down', (p) => p.nearObject === 'npc.elise')).toBe(true);
       expect((await probe(page)).nearObject).toBe('npc.elise');
       expect(await holdTouch(page, 'interact', () => true, 100)).toBe(true);
@@ -265,7 +265,7 @@ test.describe('поворот екрана (телефон)', () => {
 
   test('поворот не втрачає стан сцени', async ({ page }) => {
     await open(page);
-    await holdTouch(page, 'down', (p) => p.playerY > 110);
+    await holdTouch(page, 'down', (p) => p.playerY > 220);
     // Після відпускання сцена гасить швидкість на наступному кадрі: на завантаженому CI `before` читався ще посеред ходу
     // (PR #31, CI). Чекаємо, доки позиція стоїть між двома зчитуваннями, — і лише тоді міряємо поворот.
     await expect.poll(async () => { const a = await probe(page); await page.waitForTimeout(120); const b = await probe(page); return Math.abs(a.playerY - b.playerY) + Math.abs(a.playerX - b.playerX); }, { timeout: 5_000 }).toBeLessThan(0.1);
@@ -286,7 +286,7 @@ test.describe('поворот екрана (телефон)', () => {
       (window as unknown as { __rot: number }).__rot = 0;
       screen.orientation.addEventListener('change', () => { (window as unknown as { __rot: number }).__rot++; });
     });
-    await holdTouch(page, 'down', (p) => p.playerY > 110);
+    await holdTouch(page, 'down', (p) => p.playerY > 220);
     const before = await probe(page);
     const cdp = await page.context().newCDPSession(page);
     await cdp.send('Emulation.setDeviceMetricsOverride', { width: 844, height: 390, deviceScaleFactor: 3, mobile: true, screenOrientation: { type: 'landscapePrimary', angle: 90 } });

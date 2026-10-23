@@ -223,7 +223,7 @@ test.describe('№8 текст 200 % на десктопі: завдання й 
 });
 
 test.describe('№13 телефон: поле гри заповнює екран, а не смужка посередині', () => {
-  test('390×844 сторч: полотно на всю ширину поля й ≥ 55 % його висоти; повернули вбік — знову широке 3:2', async ({ browser }) => {
+  test('390×844 сторч: полотно на всю ширину поля й ≥ 55 % його висоти; повернули вбік — знову широкий кадр 640×352 (GAME-93; було 3:2)', async ({ browser }) => {
     const page = await newPage(browser, { width: 390, height: 844 }, 100, true);
     await load(page);
     const stage = await rectOf(page, '#stage');
@@ -232,7 +232,7 @@ test.describe('№13 телефон: поле гри заповнює екран
     expect(canvas.height / stage.height, `полотно ${canvas.width}×${canvas.height} у полі ${stage.width}×${stage.height}`).toBeGreaterThanOrEqual(0.55);
     // Поворот: кадр перераховується під нову форму поля (ResizeObserver), а не лишається вертикальним у горизонтальному полі.
     await page.setViewportSize({ width: 844, height: 390 });
-    await page.waitForFunction(() => { const c = document.querySelector('#stage canvas') as HTMLCanvasElement | null; return !!c && Math.abs(c.width / c.height - 1.5) < 0.01; }, null, { timeout: 5_000 });
+    await page.waitForFunction(() => { const c = document.querySelector('#stage canvas') as HTMLCanvasElement | null; return !!c && Math.abs(c.width / c.height - 640 / 352) < 0.01; }, null, { timeout: 5_000 });
     const wide = await rectOf(page, '#stage canvas');
     const wideStage = await rectOf(page, '#stage');
     expect(wide.height / wideStage.height).toBeGreaterThanOrEqual(0.95);          // у широкому полі — на всю висоту, як і раніше
@@ -241,10 +241,10 @@ test.describe('№13 телефон: поле гри заповнює екран
     await page.waitForFunction(() => { const c = document.querySelector('#stage canvas') as HTMLCanvasElement | null; return !!c && c.width / c.height < 1; }, null, { timeout: 5_000 });
   });
 
-  test('на десктопі кадр лишається 240×160 (нічого не змінилось для широкого поля)', async ({ browser }) => {
+  test('на десктопі кадр широкого поля — 640×352 (GAME-93: тайли 32 px; було 240×160 при 16 px)', async ({ browser }) => {
     const page = await newPage(browser, { width: 1280, height: 800 }, 100, false);
     await load(page);
     const size = await page.locator('#stage canvas').evaluate((c) => [(c as HTMLCanvasElement).width, (c as HTMLCanvasElement).height]);
-    expect(size).toEqual([240, 160]);
+    expect(size).toEqual([640, 352]);
   });
 });

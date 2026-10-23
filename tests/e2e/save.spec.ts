@@ -30,7 +30,7 @@ async function hold(page: Page, key: string, until: (p: Probe) => boolean): Prom
 
 /** Дійти до вогнища й взаємодіяти: у стані з'являється нагорода. */
 async function warmUp(page: Page): Promise<void> {
-  await hold(page, 'ArrowLeft', (p) => p.playerX <= 60);
+  await hold(page, 'ArrowLeft', (p) => p.playerX <= 120);
   await hold(page, 'ArrowUp', (p) => p.nearObject !== null);
   await page.keyboard.press('Space');
   await expect.poll(async () => (await snap(page)).game.grants).toContain('rw.campfire-warmth');

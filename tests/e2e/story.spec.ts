@@ -408,7 +408,7 @@ async function walk(page: Page, key: string, until: (p: Probe) => boolean): Prom
   return probe(page);
 }
 async function walkToElise(page: Page): Promise<void> {
-  await walk(page, 'ArrowLeft', (p) => p.playerX <= 44);
+  await walk(page, 'ArrowLeft', (p) => p.playerX <= 88);
   const p = await walk(page, 'ArrowDown', (q) => q.nearObject === 'npc.elise');
   expect(p.nearObject).toBe('npc.elise');
 }

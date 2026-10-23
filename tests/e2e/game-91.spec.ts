@@ -67,7 +67,7 @@ for (const vp of PHONES) {
       expect(Math.abs(k - Math.round(k)), `масштаб ${k}`).toBeLessThan(0.05);
       await page.screenshot({ path: `test-results/game-91-${vp.width}x${vp.height}.png` });
 
-      // Мапа ~320 px завширшки, кадр — ~100: без камери персонаж, що дійшов до правої стіни, вийшов би за кадр.
+      // Мапа 640 px завширшки, кадр — ~200 (GAME-93): без камери персонаж, що дійшов до правої стіни, вийшов би за кадр.
       const inFrame = async (): Promise<{ x: number; y: number }> => { const p = await probe(page); return { x: p.playerX - p.cameraScrollX, y: p.playerY - p.cameraScrollY }; };
       let farthest = 0;
       for (const [dx, dy] of [[50, 0], [0, 50], [-50, 0], [0, -50]] as const) {
@@ -324,7 +324,7 @@ test.describe('десктоп без дотику', () => {
     await expect(page.locator('[data-touch="stick"]')).toBeHidden();
     await expect(page.locator('[data-touch="interact"]')).toBeHidden();
     await expect(page.locator('[data-touch="story"]')).toBeVisible();
-    expect(await page.evaluate(() => (document.querySelector('#stage canvas') as HTMLCanvasElement).width)).toBe(240);
+    expect(await page.evaluate(() => (document.querySelector('#stage canvas') as HTMLCanvasElement).width)).toBe(640);   // GAME-93: широкий кадр 640×352 (тайл 32 px)
     const a = await probe(page);
     await page.keyboard.down('ArrowDown');
     await expect.poll(async () => (await probe(page)).playerY - a.playerY, { timeout: 5000 }).toBeGreaterThan(20);
