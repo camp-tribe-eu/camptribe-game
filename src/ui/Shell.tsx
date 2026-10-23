@@ -35,10 +35,11 @@ export function Shell({ port, langOverride, credits }: { port: UiPort; langOverr
     setStatus(null);
     setCodeOut('');
     setCodeIn('');
-    setPaused(false);
     void port.newGame().then((ok) => {
+      // Запис не вдався — лишаємо меню паузи відкритим, щоб повідомлення було видно (рецензія PR #17).
+      if (!ok) { setStatus('ui.newGameFailed'); return; }
+      setPaused(false);
       story(true);
-      if (!ok) setStatus('ui.newGameFailed');
     });
   };
   const story = (open: boolean): void => {
