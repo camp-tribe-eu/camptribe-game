@@ -17,6 +17,10 @@ import { isLuckMove, moves as allMoves, type Move } from './moves';
 import { checkDefs, type CoreDefs } from '../core/defs';
 import { route } from '../core/story';
 
+// Повний перебір — свідомо важкий (велосипедна гілка з подією й пам'яттю ≈ 5 с локально, на CI довше): власна межа
+// часу замість типових 5 с, щоб падіння означало «доказ не вкладається», а не «повільна машина».
+const EXHAUSTIVE_MS = 60_000;
+
 // Справжній каталог гри (зріз + сюжет) — як у містку: купівля, продаж і взаємодії теж серед ходів
 // (рецензія GAME-29: без них продаж нагороди, що ламає квест, був невидимий).
 const DEFS: CoreDefs = GAME_DEFS;
@@ -85,7 +89,7 @@ describe('сюжет: ядро ≡ валідатор на справжньом�
       // велосипед, — у велосипедиста; у водія вузла shelter немає в жодному стані.
       const shelter = [...seen.values()].some((s) => s.dialogue?.id === 'dlg.elise-greeting' && s.dialogue.node === 'shelter');
       expect(shelter, 'shelter').toBe(k.transport === 'transport.bike');
-    });
+    }, EXHAUSTIVE_MS);
   }
 });
 

@@ -23,6 +23,10 @@ import { WEATHER_LABELS } from '../ui/StoryPanel';
 import ukUi from '../i18n/uk.json';
 import enUi from '../i18n/en.json';
 
+// Повний перебір — свідомо важкий (велосипедна гілка з подією й пам'яттю ≈ 5 с локально, на CI довше): власна межа
+// часу замість типових 5 с, щоб падіння означало «доказ не вкладається», а не «повільна машина».
+const EXHAUSTIVE_MS = 60_000;
+
 const DEFS: CoreDefs = GAME_DEFS;
 type Menu = (s: GameState) => { move: Move; next: GameState }[];
 const realMenu: Menu = (s) => menuMoves(s, DEFS);
@@ -90,7 +94,7 @@ describe('меню сюжету: з кожного стану, досяжног�
       expect(r.states).toBeGreaterThan(10);
       expect(r.ended).toBeGreaterThan(0);
       expect(r.stuck.map((s) => ({ quests: s.quests, at: s.player?.locationId, dialogue: s.dialogue }))).toEqual([]);
-    });
+    }, EXHAUSTIVE_MS);
   }
 
   it('негативний контроль: меню без «завершити квест» — тупик знайдено', () => {
@@ -148,7 +152,7 @@ describe('тексти меню: кожен ключ існує в обох мо
     }
     expect(journals).toBeGreaterThan(5);            // журнал справді наповнювався — його ключі перевірено
     expect([...missing].sort()).toEqual([]);
-  });
+  }, EXHAUSTIVE_MS);
 
   it('кожен тип запису журналу має підпис — і нічого зайвого', () => {
     expect(Object.keys(JOURNAL_LABELS).sort()).toEqual([...JOURNAL_TYPES].sort());
