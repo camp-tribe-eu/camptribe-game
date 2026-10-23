@@ -85,6 +85,9 @@ const mutations = [
   { name: '[дороги] транспорт ребра не враховується', file: CHECKS_FILE, from: "if (tr !== null && !r.ways.some((w) => w.transport === tr)) continue;", to: 'if (false) continue;' },
   { name: '[дороги] шлях назад рахується по ребрах туди', file: CHECKS_FILE, from: 'const back = closure(prev);', to: 'const back = closure(next);' },
   { name: '[дороги] дубль ребра не звітується', file: CHECKS_FILE, from: "if (seenPair.has(k)) out.push(I('ROAD_DUPLICATE'", to: "if (false) out.push(I('ROAD_DUPLICATE'" },
+  { name: '[дороги] платна дорога пропускається', file: CHECKS_FILE, from: 'if (w.cents > 0) out.push', to: 'if (false) out.push' },
+  { name: '[дороги] вимагати дороги для кожного транспорту з transports.json', file: CHECKS_FILE, from: 'const transports = [...new Set(enumerateCombos(c.content).map((k) => k.transport))];', to: 'const transports = (c.content.transports ?? []).map((t) => t.id);' },
+  { name: '[дороги] самопетля не звітується', file: CHECKS_FILE, from: "if (r.from === r.to) { out.push(I('ROAD_SELF_LOOP'", to: "if (false) { out.push(I('ROAD_SELF_LOOP'" },
   // Семантика «гілки any — не кон'юнкти» тепер у satisfiable (contradictions лише називає прапорці мертвої умови).
   { name: '[діалог] гілки any всередині all рахуються кон\u2019юнктами', file: CHECKS_FILE, from: '    const cj = conjuncts(cond);\n    const yes = new Set(cj.filter((x) => x.flag !== undefined).map((x) => x.flag));\n    if (cj.some(', to: '    const cj = condLeaves(cond);\n    const yes = new Set(cj.filter((x) => x.flag !== undefined).map((x) => x.flag));\n    if (cj.some(' },
   { name: '[діалог] суперечність в одній гілці any звітується, хоч інша гілка жива', file: CHECKS_FILE, from: 'return satisfiable(cond, every) ? new Set() : conflicts(cond);', to: 'return conflicts(cond);' },

@@ -4,7 +4,7 @@
 
 import { checkSchema } from './schema.mjs';
 import { FACT_KINDS } from './codes.mjs';
-import { checkCombos, checkOptions, NO_ANIMAL } from './combos.mjs';
+import { checkCombos, checkOptions, enumerateCombos, NO_ANIMAL } from './combos.mjs';
 
 const I = (code, where, msg) => ({ code, where, msg });
 
@@ -423,16 +423,25 @@ export const CHECKS = [
       const locs = (c.content.locations ?? []).map((l) => l.id);
       const known = new Set(locs);
       const seenPair = new Set();
-      for (const r of roads) for (const [a, b] of r.twoWay ? [[r.from, r.to], [r.to, r.from]] : [[r.from, r.to]]) {
-        const k = `${a}>${b}`;
-        if (seenPair.has(k)) out.push(I('ROAD_DUPLICATE', r.id, `ребро ${a} → ${b} уже задано іншою дорогою`));
-        seenPair.add(k);
+      for (const r of roads) {
+        if (r.from === r.to) { out.push(I('ROAD_SELF_LOOP', r.id, `дорога з «${r.from}» у саму себе`)); continue; }
+        for (const [a, b] of r.twoWay ? [[r.from, r.to], [r.to, r.from]] : [[r.from, r.to]]) {
+          const k = `${a}>${b}`;
+          if (seenPair.has(k)) out.push(I('ROAD_DUPLICATE', r.id, `ребро ${a} → ${b} уже задано іншою дорогою`));
+          seenPair.add(k);
+        }
+        // SIM-TRAVEL-003: поки немає доходу й економіки (GAME-47/71), платна дорога — грошовий тупик
+        // (катаєшся туди-сюди до нуля й не доїжджаєш). Ядро гроші за дорогу вміє; вмикати — з економікою.
+        r.ways.forEach((w, i) => { if (w.cents > 0) out.push(I('ROAD_PAID_NO_ECONOMY', `${r.id}.ways[${i}]`, `${w.cents} центів: платних доріг не можна, доки в грі немає доходу (SIM-TRAVEL-003)`)); });
       }
       const startQuest = (c.content.quests ?? []).find((q) => q.id === c.content.meta.start);
-      const home = startQuest?.locationId ?? locs[0];
-      if (home === undefined || !known.has(home)) return out;
-      const transports = (c.content.transports ?? []).map((t) => t.id);
-      for (const tr of transports.length ? transports : [null]) {
+      // Без місця старту перша дорога миттєва й безкоштовна з «ніде» — граф доріг тоді нічого не означає.
+      if (!startQuest?.locationId) { out.push(I('ROAD_NO_HOME', 'meta.start', 'є дороги, але стартовий квест не має locationId — звідки гравець їде вперше?')); return out; }
+      const home = startQuest.locationId;
+      if (!known.has(home)) return out; // першопричину назвав REF_MISSING
+      // Лише транспорти, які гравець справді може обрати (комбінації); недоступний нікому — не вимога.
+      const transports = [...new Set(enumerateCombos(c.content).map((k) => k.transport))];
+      for (const tr of transports) {
         const next = new Map(locs.map((l) => [l, []]));
         const prev = new Map(locs.map((l) => [l, []]));
         for (const r of roads) {

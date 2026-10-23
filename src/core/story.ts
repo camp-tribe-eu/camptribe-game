@@ -61,6 +61,24 @@ export function npcOpen(st: StoryDefs, d: StoryDraft, p: PlayerState, id: string
   return !!npc && matches(npc.when, p) && completed(d, npc.unlockedBy) && locationOpen(st, d, p, npc.locationId);
 }
 
+// Сусіди вузла для транспорту — раз на заморожений перелік доріг (рецензія: route() кличуть на кожен Visit,
+// у меню і в повному переборі; лінійний прохід по всіх дорогах на кожному кроці росте квадратично).
+const ADJ = new WeakMap<object, Map<string, Map<string, [string, { minutes: number; cents: number }][]>>>();
+function adjacency(roads: NonNullable<StoryDefs['roads']>, transport: string): Map<string, [string, { minutes: number; cents: number }][]> {
+  let byTransport = ADJ.get(roads);
+  if (!byTransport) { byTransport = new Map(); ADJ.set(roads, byTransport); }
+  let adj = byTransport.get(transport);
+  if (!adj) {
+    adj = new Map();
+    for (const r of roads) {
+      const w = own(r.ways, transport);
+      if (w) adj.set(r.from, [...(adj.get(r.from) ?? []), [r.to, w]]);
+    }
+    byTransport.set(transport, adj);
+  }
+  return adj;
+}
+
 /**
  * Найкоротша (за часом) дорога між локаціями для транспорту (GAME-31): хвилини й гроші. Крізь замкнену
  * локацію проїхати можна — зупинитись ні (так само рахує валідатор, перевірка `roads`). Доріг у сюжеті
@@ -83,13 +101,10 @@ export function route(st: StoryDefs, from: string | null, to: string, transport:
     if (cur === to) return best.get(cur) ?? null;
     done.add(cur);
     const here = best.get(cur) as { minutes: number; cents: number };
-    for (const r of roads) {
-      if (r.from !== cur) continue;
-      const w = own(r.ways, transport);
-      if (!w) continue;
+    for (const [to, w] of adjacency(roads, transport).get(cur) ?? []) {
       const cand = { minutes: here.minutes + w.minutes, cents: here.cents + w.cents };
-      const old = best.get(r.to);
-      if (!old || cand.minutes < old.minutes || (cand.minutes === old.minutes && cand.cents < old.cents)) best.set(r.to, cand);
+      const old = best.get(to);
+      if (!old || cand.minutes < old.minutes || (cand.minutes === old.minutes && cand.cents < old.cents)) best.set(to, cand);
     }
   }
 }
