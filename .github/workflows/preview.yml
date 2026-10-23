@@ -74,11 +74,21 @@ jobs:
           echo "функцію замка згенеровано"
 
       - name: Проєкт Pages (production-гілку не публікуємо ніколи)
+        # Прямо через API, а не `out=$(wrangler …)`: крок іде під bash -e, і невдала підстановка обривала скрипт раніше,
+        # ніж він друкував причину (run 39950520436 — «exit code 1» без жодного слова). Тепер друкуємо .errors Cloudflare.
         run: |
-          set -uo pipefail
-          out=$(npx --yes "$WRANGLER" pages project create "$PROJECT" --production-branch=release-never 2>&1); code=$?
-          echo "$out" | tail -3
-          if [ $code -ne 0 ] && ! grep -qi 'already exists' <<<"$out"; then echo "::error::не вдалося створити проєкт Pages"; exit 1; fi
+          set -euo pipefail
+          api="https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/pages/projects"
+          r=$(curl -sS --max-time 30 -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" "$api/$PROJECT" || true)
+          if jq -e '.success' <<<"$r" >/dev/null 2>&1; then
+            echo "проєкт є (production: $(jq -r '.result.production_branch' <<<"$r"))"
+          else
+            echo "проєкту немає або не прочитано: $(jq -c '.errors' <<<"$r" 2>/dev/null | head -c 400) — створюю"
+            body=$(jq -cn --arg n "$PROJECT" '{name:$n, production_branch:"release-never"}')
+            r=$(curl -sS --max-time 30 -X POST -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" -H "Content-Type: application/json" "$api" --data "$body" || true)
+            jq -e '.success' <<<"$r" >/dev/null 2>&1 || { echo "::error::Cloudflare не створив проєкт Pages: $(jq -c '.errors // .' <<<"$r" 2>/dev/null | head -c 600)"; exit 1; }
+            echo "проєкт створено"
+          fi
 
       - name: Старі публікації — видалити (рецензія PR #25: на них може не бути замка)
         run: |
