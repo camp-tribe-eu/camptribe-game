@@ -108,6 +108,35 @@ test.describe('сейви (десктоп)', () => {
   });
 });
 
+test.describe('сейв v2 з опублікованої гри (рецензія GAME-71): без поля life', () => {
+  test.use({ viewport: { width: 1280, height: 800 } });
+
+  test('персонаж на дні 100: після завантаження три минулі дні виплати зараховано без грошей', async ({ page }) => {
+    await open(page);
+    await page.locator('[data-touch="story"]').click();
+    await page.locator('[data-ui="story"] [data-act="create"]', { hasText: 'Велосипед' }).first().click();
+    await expect.poll(async () => ((await snap(page)) as unknown as { game: { player: unknown } }).game.player).not.toBeNull();
+    const sim = (await page.evaluate(() => (window as unknown as { __game: { read: () => unknown } }).__game.read())) as { game: Record<string, unknown>; clock: Record<string, unknown> };
+    // Так пише сейв гра з main (be0bcbb): schemaVersion 2, поля life немає. Годинник — день 100 (9 вересня 2027), 10:00.
+    const game: Record<string, unknown> = { ...sim.game, schemaVersion: 2 };
+    delete game.life;
+    const old = { ...sim, game, clock: { ...sim.clock, minutes: 100 * 1440 + 600, accMs: 0, paused: false } };
+    const file = JSON.stringify({ format: 'camplife-save', schemaVersion: 2, checksum: stateHash(old), accountId: null, sim: old });
+    await page.evaluate((json) => new Promise<void>((resolve) => {
+      const req = indexedDB.open('camplife', 1);
+      req.onsuccess = () => { const tx = req.result.transaction('saves', 'readwrite'); tx.objectStore('saves').put(json, 'main'); tx.oncomplete = () => { req.result.close(); resolve(); }; };
+    }), file);
+    await page.reload();
+    await loaded(page);
+    await page.waitForTimeout(500);                                          // кілька кадрів: catch-up уже мав би спрацювати
+    const after = (await snap(page)) as unknown as { game: { moneyCents: number; life: { paydays: number }; player: unknown }; clock: { minutes: number } };
+    expect(after.game.player).not.toBeNull();
+    expect(after.clock.minutes).toBeGreaterThanOrEqual(100 * 1440 + 600);   // справді завантажено старий сейв, а не нова гра
+    expect(after.game.life.paydays).toBe(3);                                 // 25.06, 25.07, 25.08
+    expect(after.game.moneyCents).toBe(game.moneyCents);                 // без календаря в міграції: + 3 × 80 000
+  });
+});
+
 test.describe('сейв від старішої версії контенту (рецензія сейвів 23.10)', () => {
   test.use({ viewport: { width: 1280, height: 800 } });
 
@@ -116,7 +145,7 @@ test.describe('сейв від старішої версії контенту (�
     // Справжній сейв нинішньої гри, але з активним квестом, якого в контенті немає (як після оновлення).
     const sim = (await page.evaluate(() => (window as unknown as { __game: { read: () => unknown } }).__game.read())) as { game: Record<string, unknown> };
     const stale = { ...sim, game: { ...sim.game, player: { profileId: 'profile.solo-explorer', transportId: 'transport.bike', animalId: 'animal.none', locationId: 'loc.home' }, quests: { 'q.removed-in-update': { status: 'active', done: [] } } } };
-    const file = JSON.stringify({ format: 'camplife-save', schemaVersion: 2, checksum: stateHash(stale), accountId: null, contentRev: 'old', sim: stale });
+    const file = JSON.stringify({ format: 'camplife-save', schemaVersion: 3, checksum: stateHash(stale), accountId: null, contentRev: 'old', sim: stale });
     await page.evaluate((json) => new Promise<void>((resolve) => {
       const req = indexedDB.open('camplife', 1);
       req.onsuccess = () => { const tx = req.result.transaction('saves', 'readwrite'); tx.objectStore('saves').put(json, 'main'); tx.oncomplete = () => { req.result.close(); resolve(); }; };
@@ -161,7 +190,7 @@ test.describe('сейв від старішої версії контенту (�
     await open(page);
     const sim = (await page.evaluate(() => (window as unknown as { __game: { read: () => unknown } }).__game.read())) as { game: Record<string, unknown> };
     const stale = { ...sim, game: { ...sim.game, player: { profileId: 'profile.gone', transportId: 'transport.car', animalId: 'animal.none', locationId: null } } };
-    const file = JSON.stringify({ format: 'camplife-save', schemaVersion: 2, checksum: stateHash(stale), accountId: null, sim: stale });
+    const file = JSON.stringify({ format: 'camplife-save', schemaVersion: 3, checksum: stateHash(stale), accountId: null, sim: stale });
     const code = await page.evaluate(async (json) => {
       const bytes = new TextEncoder().encode(json);
       const cs = new CompressionStream('deflate-raw');

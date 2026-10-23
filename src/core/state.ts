@@ -1,6 +1,7 @@
 // Стан проходження (DATA_CONTRACTS DC-040…052). Лише дані: жодних класів, щоб стан
 // серіалізувався в сейв без втрат і порівнювався побайтно.
 import type { GearState } from './gear';
+import type { LifeState } from './life';
 import { zeroSkills } from './skills';
 
 export interface CommandRecord {
@@ -28,7 +29,7 @@ export interface QuestProgress {
 }
 
 export interface GameState {
-  readonly schemaVersion: 2;
+  readonly schemaVersion: 3;
   /** Баланс у центах EUR (CR-040). */
   readonly moneyCents: number;
   /** id предмета → кількість, лише додатні. */
@@ -67,6 +68,11 @@ export interface GameState {
    * сухого: немає запису — 100 і сухе (SIM-GEAR-001). Змінюють дорога в дощ (sim.step), DryGear і продаж.
    */
   readonly gear: Readonly<Record<string, GearState>>;
+  /**
+   * Календар життя (GAME-71): скільки днів виплати вже враховано (`paydays`) і заброньовані відпустки (`leave`, за днем
+   * початку). Зарплату нараховує симуляція (sim.step → payroll), відпустки — команди BookLeave / CancelLeave.
+   */
+  readonly life: LifeState;
   /** Відкритий діалог і вузол; null — розмови немає. */
   readonly dialogue: { readonly id: string; readonly node: string } | null;
 }
@@ -106,10 +112,17 @@ export const REJECT_CODES = [
   // GAME-73 · спорядження
   'ITEM_QUEST_LOCKED',
   'NOT_WET',
+  // GAME-71 · календар життя
+  'VACATION_EXHAUSTED',
+  'SCHOOL_TERM',
+  'LEAVE_OVERLAP',
+  'LEAVE_DATE',
+  'LEAVE_NOT_FOUND',
+  'LEAVE_STARTED',
 ] as const;
 
 export type RejectCode = (typeof REJECT_CODES)[number];
 
 export function initialState(moneyCents = 0): GameState {
-  return { schemaVersion: 2, moneyCents, inventory: {}, grants: [], processed: {}, seq: 0, player: null, quests: {}, campaignEnded: false, flags: [], npcMemory: {}, skills: zeroSkills(), practice: {}, gear: {}, dialogue: null };
+  return { schemaVersion: 3, moneyCents, inventory: {}, grants: [], processed: {}, seq: 0, player: null, quests: {}, campaignEnded: false, flags: [], npcMemory: {}, skills: zeroSkills(), practice: {}, gear: {}, life: { paydays: 0, leave: [] }, dialogue: null };
 }

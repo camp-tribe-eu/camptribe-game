@@ -89,11 +89,11 @@ export const STORY_DEFS: CoreDefs = {
 export type Step = Command extends infer C ? (C extends Command ? Omit<C, 'commandId'> : never) : never;
 
 let n = 0;
-/** Прогнати команди; кожна мусить пройти — інакше тест падає з назвою кроку. */
+/** Прогнати команди; кожна мусить пройти — інакше тест падає з назвою кроку. «Сьогодні» для календаря — день 0. */
 export function play(cmds: readonly Step[], from: GameState = initialState(0), defs: CoreDefs = STORY_DEFS): GameState {
   let s = from;
   for (const c of cmds) {
-    const r = dispatch(s, { ...c, commandId: `t${n++}` } as Command, defs);
+    const r = dispatch(s, { ...c, commandId: `t${n++}` } as Command, defs, undefined, 0);
     if (!r.ok) throw new Error(`${c.type} ${JSON.stringify(c)} → ${r.code}`);
     s = r.state;
   }
@@ -193,4 +193,25 @@ export const GEAR_DEFS: CoreDefs = {
   },
   interactions: {},
   story: ROAD_DEFS.story as NonNullable<CoreDefs['story']>,
+};
+
+/**
+ * Календар життя (GAME-71): той самий сюжет; день 0 — вівторок 2027-06-01, виплата 25-го. profile.a (велосипедист) —
+ * зі школярем, profile.b (водій) — без; обидва працюють, водій має лише 10 днів відпустки (щоб вичерпати за дві відпустки);
+ * profile.any не працює. Свідомо НЕ content/calendar.json: тести ядра не залежать від смаку власника в контенті.
+ */
+export const LIFE_DEFS: CoreDefs = {
+  ...STORY_DEFS,
+  life: {
+    calendar: {
+      start: '2027-06-01', payday: 25, longTripDays: 4, maxLeaveDays: 31, bookAheadDays: 366,
+      publicHolidays: ['01-01', '05-01', '12-25', '12-26'],
+      schoolHolidays: [{ from: '07-01', to: '08-31' }, { from: '12-23', to: '01-06' }],
+    },
+    jobs: {
+      'profile.a': { salaryCents: 250_000, billsCents: 180_000, vacationDays: 25 },
+      'profile.b': { salaryCents: 300_000, billsCents: 300_000, vacationDays: 10 },
+    },
+    schoolProfiles: ['profile.a'],
+  },
 };

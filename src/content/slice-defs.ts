@@ -5,6 +5,7 @@
 import { storyItems, type CoreDefs, type GearDef, type ItemDef } from '../core/defs';
 import items from '../../content/items.json';
 import { STORY } from './story';
+import { LIFE } from './life';
 
 /** Рядок content/items.json (GAME-73). Картку спорядження перевіряє валідатор (gear); тут — лише переклад у форму ядра. */
 interface RawItem {
@@ -39,5 +40,8 @@ export const SLICE_DEFS: CoreDefs = {
   },
 };
 
-/** Те, з чим працює гра: зріз + сюжет. Перевіряється й заморожується в містку (createBridge). */
-export const GAME_DEFS: CoreDefs = { ...SLICE_DEFS, story: STORY };
+/**
+ * Те, з чим працює гра: зріз + сюжет + календар життя (GAME-71). Перевіряється й заморожується в містку (createBridge).
+ * Календар читає лише симуляція (зарплата) і команди BookLeave/CancelLeave — у ходах перебору (moves.ts) їх немає.
+ */
+export const GAME_DEFS: CoreDefs = { ...SLICE_DEFS, story: STORY, life: LIFE };

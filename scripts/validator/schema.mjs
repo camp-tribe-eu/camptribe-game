@@ -59,7 +59,18 @@ export const SCHEMAS = {
   // transports — з якими транспортами сумісний запис; немає поля — з усіма. Несумісні комбінації
   // не перебираються: гравець не може їх обрати, тож тупик у них — не тупик (закон 5).
   // startSkills (GAME-72, DC-022): стартові ранги професії 0–5; які id відомі — перевірка skills.
-  profiles: obj({ id: req(str), nameKey: req(str), transports: ids, startSkills: { t: 'array', of: obj({ skill: req(str), rank: req({ t: 'int', min: 0, max: 5 }) }), min: 1 } }),
+  // job (GAME-71, DC-022): зарплата й рахунки за місяць, центи; днів відпустки на рік. childInSchool — у родині школяр:
+  // довга подорож поза канікулами — лише явним рішенням (SIM-LIFE-004). Рахунки ≤ зарплати — перевірка calendar.
+  profiles: obj({
+    id: req(str), nameKey: req(str), transports: ids, startSkills: { t: 'array', of: obj({ skill: req(str), rank: req({ t: 'int', min: 0, max: 5 }) }), min: 1 },
+    job: obj({ salaryCents: req(int1), billsCents: req(int0), vacationDays: req({ t: 'int', min: 0, max: 60 }) }), childInSchool: bool,
+  }),
+  // Календар гри (GAME-71, DC-026): дата дня 0 «YYYY-MM-DD», день виплати 1…28 (є в кожному місяці), свята й канікули —
+  // «MM-DD» щороку. Справжність дат і перетини — перевірка calendar власними кодами, не SCHEMA_INVALID.
+  calendar: obj({
+    start: req(str), payday: req({ t: 'int', min: 1, max: 28 }), longTripDays: req(int1), maxLeaveDays: req(int1), bookAheadDays: req(int1),
+    publicHolidays: req(arr(str)), schoolHolidays: req(arr(obj({ from: req(str), to: req(str) }))),
+  }),
   transports: obj({ id: req(str), nameKey: req(str) }),
   animals: obj({ id: req(str), nameKey: req(str), transports: ids }),
   // Спорядження (GAME-73, DC-023): вид, тир і характеристики. Поля НЕ required тут: їх стереже перевірка gear
@@ -142,11 +153,12 @@ function walk(s, v, where, out) {
 export function checkSchema(content) {
   const out = [];
   if (!typeOk({ t: 'object' }, content)) return [{ code: 'SCHEMA_INVALID', where: 'content', msg: 'не об\u2019єкт' }];
-  const known = ['meta', 'locales', 'dialogues', ...COLLECTIONS];
+  const known = ['meta', 'calendar', 'locales', 'dialogues', ...COLLECTIONS];
   for (const k of Object.keys(content)) {
     if (!known.includes(k)) out.push({ code: 'SCHEMA_UNKNOWN_FIELD', where: k, msg: 'невідомий розділ контенту' });
   }
   walk(SCHEMAS.meta, content.meta, 'meta', out);
+  if (content.calendar !== undefined) walk(SCHEMAS.calendar, content.calendar, 'calendar', out);
   for (const c of COLLECTIONS) {
     if (content[c] === undefined) continue;
     if (!Array.isArray(content[c])) { out.push({ code: 'SCHEMA_INVALID', where: c, msg: 'очікується масив' }); continue; }

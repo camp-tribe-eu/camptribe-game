@@ -9,6 +9,7 @@
 // * предмет здобувається з `items` локації, де стоїть гравець, або з нагороди квесту;
 // * перехід із `choiceKey` — вибір гравця; без нього — шлях за замовчуванням;
 // * `requires` квесту-цілі перевіряється в мить переходу.
+import type { LifeState } from './life';
 import type { CondDef, EffectDef, QuestDef, RewardDef, StoryDefs, WayDef, WhenDef } from './defs';
 import type { GameEvent } from './commands';
 import type { GearState } from './gear';
@@ -47,6 +48,7 @@ export interface StoryDraft {
   skills: Readonly<Record<string, number>>;
   practice: Readonly<Record<string, number>>;
   gear: Readonly<Record<string, GearState>>;
+  life: LifeState;
   dialogue: { readonly id: string; readonly node: string } | null;
 }
 

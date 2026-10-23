@@ -5,7 +5,7 @@ import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
 import { dispatch, PROCESSED_LIMIT, type Command, type Safeguards } from './commands';
 import type { CoreDefs } from './defs';
-import { BIKER, DRIVER, GEAR_DEFS, MECHANIC, NOVICE, play, ROAD_DEFS, SKILL_DEFS, STORY_DEFS } from './story.fixture';
+import { BIKER, DRIVER, GEAR_DEFS, LIFE_DEFS, MECHANIC, NOVICE, play, ROAD_DEFS, SKILL_DEFS, STORY_DEFS } from './story.fixture';
 import { initialState, REJECT_CODES, type GameState, type RejectCode } from './state';
 
 const SEED = 20261022;
@@ -199,6 +199,14 @@ describe('коди відмов: кожен код із реєстру має т
     // GAME-73 · спорядження: дрова — ціль активного q.mid (останній примірник); сухий намет сушити нічого.
     ['ITEM_QUEST_LOCKED', play([DRIVER, { type: 'Visit', locationId: 'loc.home' }, { type: 'Pickup', itemId: 'item.wood' }, { type: 'CompleteQuest', questId: 'q.start' }], initialState(0), GEAR_DEFS), { type: 'SellItem', commandId: 's20', itemId: 'item.wood' }, GEAR_DEFS],
     ['NOT_WET', play([DRIVER, { type: 'BuyItem', itemId: 'item.tent-a' }], initialState(10_000), GEAR_DEFS), { type: 'DryGear', commandId: 's21', itemId: 'item.tent-a' }, GEAR_DEFS],
+    // GAME-71 · календар життя (LIFE_DEFS: день 0 — вівторок 2027-06-01; день 6 — понеділок). Водій має 10 днів відпустки:
+    // 7–18 червня — рівно 10 робочих; велосипедист — зі школярем, 5–13 червня — шкільні дні.
+    ['VACATION_EXHAUSTED', play([DRIVER, { type: 'BookLeave', from: 6, days: 12 }], initialState(0), LIFE_DEFS), { type: 'BookLeave', commandId: 's22', from: 20, days: 1 }, LIFE_DEFS],
+    ['SCHOOL_TERM', play([BIKER], initialState(0), LIFE_DEFS), { type: 'BookLeave', commandId: 's23', from: 4, days: 9 }, LIFE_DEFS],
+    ['LEAVE_OVERLAP', play([DRIVER, { type: 'BookLeave', from: 6, days: 12 }], initialState(0), LIFE_DEFS), { type: 'BookLeave', commandId: 's24', from: 17, days: 2 }, LIFE_DEFS],
+    ['LEAVE_DATE', play([DRIVER], initialState(0), LIFE_DEFS), { type: 'BookLeave', commandId: 's25', from: -1, days: 2 }, LIFE_DEFS],
+    ['LEAVE_NOT_FOUND', play([DRIVER, { type: 'BookLeave', from: 6, days: 2 }], initialState(0), LIFE_DEFS), { type: 'CancelLeave', commandId: 's26', from: 7 }, LIFE_DEFS],
+    ['LEAVE_STARTED', play([DRIVER, { type: 'BookLeave', from: 0, days: 2 }], initialState(0), LIFE_DEFS), { type: 'CancelLeave', commandId: 's27', from: 0 }, LIFE_DEFS],
   ];
 
   it('кожен код реєстру покрито рівно одним прикладом', () => {
@@ -207,13 +215,34 @@ describe('коди відмов: кожен код із реєстру має т
 
   for (const [code, state, cmd, defs] of cases) {
     it(`повертає ${code}`, () => {
-      const r = dispatch(state, cmd, defs);
+      const r = dispatch(state, cmd, defs, undefined, 0);
       expect(r.ok).toBe(false);
       expect(r.ok ? null : r.code).toBe(code);
       expect(r.state.moneyCents).toBe(state.moneyCents);
       expect(r.events).toEqual([]);
     });
   }
+
+  // Рецензія GAME-71: дзеркальна межа перетину — наявна відпустка починається в ОСТАННІЙ день нової. Наявна — з дня 10
+  // (пт 11 червня), 2 дні. Нова [5, 11) — дні 5…10, останній = перший день наявної → LEAVE_OVERLAP; нова [4, 10) — встик, можна.
+  it('LEAVE_OVERLAP: наявна відпустка починається в останній день нової — перетин; на день раніше — встик, можна', () => {
+    const s = play([DRIVER, { type: 'BookLeave', from: 10, days: 2 }], initialState(0), LIFE_DEFS);
+    const over = dispatch(s, { type: 'BookLeave', commandId: 'mo1', from: 5, days: 6 }, LIFE_DEFS, undefined, 0);
+    expect(over.ok ? 'ok' : over.code).toBe('LEAVE_OVERLAP');
+    expect(dispatch(s, { type: 'BookLeave', commandId: 'mo2', from: 4, days: 6 }, LIFE_DEFS, undefined, 0).ok).toBe(true);
+  });
+
+  // Рецензія GAME-71: dispatch без «сьогодні» не бронює й не скасовує проти мовчазного дня 0; решта команд — як були.
+  it('без today: BookLeave і CancelLeave — INVALID_COMMAND; з today — прийнято; інші команди без today не змінились', () => {
+    const s = play([DRIVER, { type: 'BookLeave', from: 6, days: 2 }], initialState(0), LIFE_DEFS);
+    for (const cmd of [{ type: 'BookLeave', commandId: 'nt1', from: 20, days: 1 }, { type: 'CancelLeave', commandId: 'nt2', from: 6 }] as Command[]) {
+      const r = dispatch(s, cmd, LIFE_DEFS);
+      expect(r.ok ? 'ok' : r.code).toBe('INVALID_COMMAND');
+      expect(r.state.life).toEqual(s.life);
+      expect(dispatch(s, cmd, LIFE_DEFS, undefined, 0).ok).toBe(true);
+    }
+    expect(dispatch(s, { type: 'Visit', commandId: 'nt3', locationId: 'loc.home' }, LIFE_DEFS).ok).toBe(true);
+  });
 
   it('ключі прототипу як id не створюють предметів і грошей (рецензія PR #13)', () => {
     for (const id of ['toString', 'constructor', '__proto__', 'hasOwnProperty']) {

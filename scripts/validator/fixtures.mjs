@@ -177,6 +177,19 @@ function withGear(c, items) {
   c.items.push(...items);
   for (const lang of c.meta.locales) for (const i of items) c.locales[lang][i.nameKey] = `[${lang}] ${i.id}`;
 }
+// GAME-71: календар життя — канікули через Новий рік і літні; профіль A працює й має школяра.
+const calendarCard = () => ({
+  start: '2027-06-01', payday: 25, longTripDays: 4, maxLeaveDays: 31, bookAheadDays: 366,
+  publicHolidays: ['01-01', '12-25'],
+  schoolHolidays: [{ from: '07-01', to: '08-31' }, { from: '12-23', to: '01-06' }],
+});
+function withLife(c, cal = calendarCard()) {
+  c.calendar = cal;
+  c.profiles[0].job = { salaryCents: 250000, billsCents: 180000, vacationDays: 25 };
+  c.profiles[0].childInSchool = true;
+  return c;
+}
+
 const tents = () => [
   tentCard('item.fixture-tent-cheap', {}),
   tentCard('item.fixture-tent-light', { tier: 2, weightG: 1100, volumeL: 3, waterproofMm: 3000, comfortC: 5, sleeps: 1, priceCents: 25000, resaleCents: 11000 }),
@@ -517,6 +530,24 @@ export const FIXTURES = [
   } },
   { name: '[спорядження] тир поза 1…3', expect: ['SCHEMA_INVALID'], count: { code: 'SCHEMA_INVALID', n: 1 }, patch(c) { const t = tents(); t[2].tier = 4; withGear(c, t); } },
   { name: '[спорядження] вигаданий вид', expect: ['SCHEMA_INVALID'], count: { code: 'SCHEMA_INVALID', n: 1 }, patch(c) { const t = tents(); t[0].kind = 'hammock'; withGear(c, t); } },
+  // GAME-71: календар життя.
+  { base: 'combo', name: '[календар] контроль: календар, робота й школяр — коректно', expect: [], patch(c) { withLife(c); } },
+  { base: 'combo', name: '[календар] контроль: рахунки дорівнюють зарплаті — межа дозволена', expect: [], patch(c) { withLife(c); c.profiles[0].job.billsCents = c.profiles[0].job.salaryCents; } },
+  { base: 'combo', name: '[календар] контроль: канікули встик (08-31 і 09-01) — не перетин', expect: [], patch(c) { withLife(c).calendar.schoolHolidays.push({ from: '09-01', to: '09-02' }); } },
+  { base: 'combo', name: '[календар] контроль: без календаря й без роботи — нічого не потрібно', expect: [], patch() {} },
+  { base: 'combo', name: '[календар] робота без calendar.json', expect: ['CALENDAR_MISSING'], count: { code: 'CALENDAR_MISSING', n: 1 }, patch(c) { withLife(c); delete c.calendar; delete c.profiles[0].childInSchool; } },
+  { base: 'combo', name: '[календар] школяр без calendar.json', expect: ['CALENDAR_MISSING'], count: { code: 'CALENDAR_MISSING', n: 1 }, patch(c) { withLife(c); delete c.calendar; delete c.profiles[0].job; } },
+  { base: 'combo', name: '[календар] свято 02-30', expect: ['CALENDAR_BAD_DATE'], count: { code: 'CALENDAR_BAD_DATE', n: 1 }, patch(c) { withLife(c).calendar.publicHolidays.push('02-30'); } },
+  { base: 'combo', name: '[календар] свято 02-29 — є не щороку', expect: ['CALENDAR_BAD_DATE'], count: { code: 'CALENDAR_BAD_DATE', n: 1 }, patch(c) { withLife(c).calendar.publicHolidays.push('02-29'); } },
+  { base: 'combo', name: '[календар] межа канікул 13-01', expect: ['CALENDAR_BAD_DATE'], count: { code: 'CALENDAR_BAD_DATE', n: 1 }, patch(c) { withLife(c).calendar.schoolHolidays[0].to = '13-01'; } },
+  { base: 'combo', name: '[календар] межа канікул 04-31', expect: ['CALENDAR_BAD_DATE'], count: { code: 'CALENDAR_BAD_DATE', n: 1 }, patch(c) { withLife(c).calendar.schoolHolidays.push({ from: '04-20', to: '04-31' }); } },
+  { base: 'combo', name: '[календар] старт 2027-02-30', expect: ['CALENDAR_BAD_DATE'], count: { code: 'CALENDAR_BAD_DATE', n: 1 }, patch(c) { withLife(c).calendar.start = '2027-02-30'; } },
+  { base: 'combo', name: '[календар] канікули перетинаються в один день (08-31)', expect: ['CALENDAR_RANGE_OVERLAP'], count: { code: 'CALENDAR_RANGE_OVERLAP', n: 1 }, patch(c) { withLife(c).calendar.schoolHolidays.push({ from: '08-31', to: '09-05' }); } },
+  { base: 'combo', name: '[календар] канікули перетинаються через Новий рік (01-06)', expect: ['CALENDAR_RANGE_OVERLAP'], count: { code: 'CALENDAR_RANGE_OVERLAP', n: 1 }, patch(c) { withLife(c).calendar.schoolHolidays.push({ from: '01-06', to: '01-10' }); } },
+  { base: 'combo', name: '[календар] свято записане двічі', expect: ['CALENDAR_RANGE_OVERLAP'], count: { code: 'CALENDAR_RANGE_OVERLAP', n: 1 }, patch(c) { withLife(c).calendar.publicHolidays.push('12-25'); } },
+  { base: 'combo', name: '[календар] рахунки на 1 цент більші за зарплату', expect: ['JOB_BILLS_EXCEED_SALARY'], count: { code: 'JOB_BILLS_EXCEED_SALARY', n: 1 }, patch(c) { withLife(c); c.profiles[0].job.billsCents = c.profiles[0].job.salaryCents + 1; } },
+  { base: 'combo', name: '[календар] день виплати 29 — є не в кожному місяці', expect: ['SCHEMA_INVALID'], count: { code: 'SCHEMA_INVALID', n: 1 }, patch(c) { withLife(c).calendar.payday = 29; } },
+  { base: 'combo', name: '[календар] невідоме поле в календарі', expect: ['SCHEMA_UNKNOWN_FIELD'], count: { code: 'SCHEMA_UNKNOWN_FIELD', n: 1 }, patch(c) { withLife(c).calendar.timezone = 'CET'; } },
   { base: 'combo', name: '[дороги] транспорт, якого не дозволяє жоден профіль: лише COMBO_OPTION_UNUSABLE, без вимоги доріг', expect: ['COMBO_OPTION_UNUSABLE'], patch(c) {
     c.transports.push({ id: 'transport.fixture-boat', nameKey: 'transport.fixture-boat' });
     for (const lang of c.meta.locales) c.locales[lang]['transport.fixture-boat'] = `[${lang}] boat`;
@@ -674,5 +705,6 @@ export const FILE_FIXTURES = [
   { name: 'тека з назвою x.json у dialogue/', files: 'baseline', dirs: ['dialogue/x.json'], expectStatus: 'ISSUES', expect: ['CONTENT_UNKNOWN_FILE'] },
   { name: 'назва файлу діалогу не збігається з id', files: 'baseline', override: { 'dialogue/shop.json': JSON.stringify(shopDialogue([])) }, expectStatus: 'ISSUES', expect: ['DIALOGUE_FILE_NAME'] },
   { name: 'одруківка в назві файлу', files: 'baseline', override: { 'quest.json': '[]' }, expectStatus: 'ISSUES', expect: ['CONTENT_UNKNOWN_FILE'] },
+  { name: 'calendar.json (GAME-71) — відомий файл, не одруківка', files: 'baseline', override: { 'calendar.json': JSON.stringify(calendarCard()) }, expectStatus: 'OK', expect: [] },
   { name: 'еталон із диска читається повністю й без втрат', files: 'baseline', expectStatus: 'OK', expect: [], roundTrip: true },
 ];

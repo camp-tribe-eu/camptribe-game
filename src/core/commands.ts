@@ -6,6 +6,7 @@ import type { CoreDefs } from './defs';
 import type { CommandRecord, GameState, RejectCode } from './state';
 import { practise, rankOf, type SkillId } from './skills';
 import { gearOf, pruneGear, sellPriceOf } from './gear';
+import { bookLeave, cancelLeave } from './life';
 import { applyStory, questNeedsItem, type StoryCommand, type StoryDraft } from './story';
 
 export type { StoryCommand } from './story';
@@ -18,7 +19,14 @@ export type Command =
   /** Полагодити ціль (GAME-72): вимоги — з каталогу `repairs`, ніколи з команди. */
   | { readonly type: 'Repair'; readonly commandId: string; readonly targetId: string }
   /** Висушити мокре спорядження (GAME-73, SIM-GEAR-005): знімає «мокре», стану не повертає. */
-  | { readonly type: 'DryGear'; readonly commandId: string; readonly itemId: string };
+  | { readonly type: 'DryGear'; readonly commandId: string; readonly itemId: string }
+  /**
+   * Відпустка-подорож (GAME-71, SIM-LIFE-003/004): дні гри [from, from + days). `schoolOverride: true` — явне рішення
+   * гравця везти школяра поза канікулами (без нього довга подорож у шкільні дні — SCHOOL_TERM).
+   */
+  | { readonly type: 'BookLeave'; readonly commandId: string; readonly from: number; readonly days: number; readonly schoolOverride?: boolean }
+  /** Скасувати ще не розпочату відпустку, що починається в день `from` (GAME-71): дні відпустки повертаються. */
+  | { readonly type: 'CancelLeave'; readonly commandId: string; readonly from: number };
 
 /** Підтверджений факт (CR-031). Причина — commandId команди, що його спричинила. */
 export type GameEvent =
@@ -83,7 +91,7 @@ function fingerprint(cmd: Command): string {
   return h.toString(16).padStart(8, '0');
 }
 
-function apply(cmd: Command, d: Draft, defs: CoreDefs, guard: Safeguards): RejectCode | null {
+function apply(cmd: Command, d: Draft, defs: CoreDefs, guard: Safeguards, today: number | undefined): RejectCode | null {
   switch (cmd.type) {
     case 'BuyItem': {
       if (!isContentId(cmd.itemId)) return 'INVALID_COMMAND';
@@ -171,6 +179,21 @@ function apply(cmd: Command, d: Draft, defs: CoreDefs, guard: Safeguards): Rejec
       d.gear = { ...d.gear, [cmd.itemId]: { condition: g.condition, wet: false } };
       return null;
     }
+    case 'BookLeave': {
+      if (today === undefined) return 'INVALID_COMMAND';   // без годинника «сьогодні» невідоме — не бронюємо проти дня 0
+      const r = bookLeave(d, { from: cmd.from, days: cmd.days, ...(cmd.schoolOverride !== undefined ? { schoolOverride: cmd.schoolOverride } : {}) }, defs.life, today);
+      if ('code' in r) return r.code;
+      d.life = r.life;
+      return null;
+    }
+    case 'CancelLeave': {
+      if (today === undefined) return 'INVALID_COMMAND';
+      if (typeof cmd.from !== 'number' || !Number.isSafeInteger(cmd.from)) return 'INVALID_AMOUNT';
+      const r = cancelLeave(d, cmd.from, defs.life, today);
+      if ('code' in r) return r.code;
+      d.life = r.life;
+      return null;
+    }
     case 'CreateCharacter':
     case 'Visit':
     case 'Talk':
@@ -238,7 +261,12 @@ function remember(processed: Readonly<Record<string, CommandRecord>>, id: string
   return Object.fromEntries(entries.slice(Math.max(0, entries.length - PROCESSED_LIMIT)));
 }
 
-export function dispatch(state: GameState, cmd: Command, defs: CoreDefs, guard: Safeguards = SAFE): DispatchResult {
+/**
+ * `today` — день гри (⌊хвилини / 1440⌋), який знає лише симуляція: його читають тільки BookLeave/CancelLeave (GAME-71).
+ * Повний перебір і бот кличуть dispatch без годинника — команд календаря в їхніх ходах немає (moves.ts). Без `today`
+ * BookLeave/CancelLeave — INVALID_COMMAND (рецензія GAME-71): мовчазний «день 0» дозволив би бронювати в минулому.
+ */
+export function dispatch(state: GameState, cmd: Command, defs: CoreDefs, guard: Safeguards = SAFE, today?: number): DispatchResult {
   if (!cmd || typeof cmd !== 'object' || !isCommandId(cmd.commandId)) {
     return { ok: false, state, code: 'INVALID_COMMAND', repeated: false, events: [] };
   }
@@ -254,9 +282,9 @@ export function dispatch(state: GameState, cmd: Command, defs: CoreDefs, guard: 
   const draft: Draft = {
     moneyCents: state.moneyCents, inventory: { ...state.inventory }, grants: [...state.grants], events: [],
     player: state.player, quests: state.quests, campaignEnded: state.campaignEnded, flags: [...state.flags], npcMemory: state.npcMemory,
-    skills: state.skills, practice: state.practice, gear: state.gear, dialogue: state.dialogue,
+    skills: state.skills, practice: state.practice, gear: state.gear, life: state.life, dialogue: state.dialogue,
   };
-  const code = apply(cmd, draft, defs, guard);
+  const code = apply(cmd, draft, defs, guard, today);
   // Стан спорядження — лише для того, що в руках (продали останній — запис зникає), і лише відхилення від нового.
   if (!code) draft.gear = pruneGear(draft.gear, draft.inventory);
   if (!code) practiseAfter(cmd, state, draft, defs);

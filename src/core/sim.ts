@@ -6,6 +6,7 @@ import { dispatch, type Command } from './commands';
 import { EMPTY_DEFS, type CoreDefs } from './defs';
 import { canonical } from './hash';
 import { wearAfterTrip } from './gear';
+import { payroll } from './life';
 import { eventEligible, route } from './story';
 import { nextInt, seedRng, type RngState } from './rng';
 import { initialState, type GameState } from './state';
@@ -138,15 +139,30 @@ export interface StepCtx {
   };
 }
 
+/**
+ * Зарплата (GAME-71, SIM-LIFE-002): після кожного кроку, що міг рухнути годинник, — усі дні виплати, що настали
+ * (а для команди — ще й ДО неї, див. step).
+ * Ідемпотентно: лічильник `life.paydays` росте разом із нарахуванням, тож той самий день удруге не платить.
+ * Годинник іде лише в грі (кадри, перемотування, дорога) — закрита вкладка не нараховує й не списує нічого (SIM-TIME-005).
+ */
+const paid = (s: SimState, ctx: StepCtx): SimState => {
+  const game = payroll(s.game, dayOf(s.clock), ctx.defs?.life);
+  return game === s.game ? s : { ...s, game };
+};
+
 export function step(s: SimState, input: Input, ctx: StepCtx = {}): SimState {
   const systems = ctx.systems ?? [findsSystem];
   switch (input.kind) {
     case 'frame': {
       const t = tick(s.clock, input.realMs);
-      return systems.reduce((acc, sys) => sys(acc, t.steps), { ...s, clock: t.clock });
+      return paid(systems.reduce((acc, sys) => sys(acc, t.steps), { ...s, clock: t.clock }), ctx);
     }
     case 'command': {
-      const r = dispatch(s.game, input.command, ctx.defs ?? EMPTY_DEFS);
+      // Спершу — дні виплати, що вже настали за годинником ДО команди (SIM-LIFE-007). У грі їх нуль: кожен крок, що
+      // рухає годинник, платить сам. Але стан, який прийшов не з кроку (старий сейв, тест), міг минути дні виплати:
+      // якщо перша команда — CreateCharacter, без цього кроку зарплата за час до персонажа прийшла б йому заднім числом.
+      s = paid(s, ctx);
+      const r = dispatch(s.game, input.command, ctx.defs ?? EMPTY_DEFS, undefined, dayOf(s.clock));
       const travelled = travelMinutes(s, r, ctx);
       // Спорядження в дорозі (GAME-73, SIM-GEAR-002/003): погода дня ВИЇЗДУ, як і для хвилин дороги (SIM-WX-007).
       const tripWeather = travelled > 0 ? todayWeather(s, ctx) : null;
@@ -159,10 +175,10 @@ export function step(s: SimState, input: Input, ctx: StepCtx = {}): SimState {
         next = { ...next, journal: [...s.journal, entry].slice(-JOURNAL_LIMIT) };
       }
       if (tripWeather) next = { ...next, game: wearAfterTrip(next.game, (ctx.defs ?? EMPTY_DEFS).items, tripWeather) };
-      return travelled > 0 ? roadEvent(next, ctx) : next;
+      return paid(travelled > 0 ? roadEvent(next, ctx) : next, ctx);
     }
     case 'advance':
-      return { ...s, clock: advance(s.clock, input.minutes) };
+      return paid({ ...s, clock: advance(s.clock, input.minutes) }, ctx);
     case 'pause':
       return { ...s, clock: pause(s.clock) };
     case 'resume':

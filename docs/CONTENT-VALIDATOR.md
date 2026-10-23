@@ -15,6 +15,7 @@ node scripts/mutate-validator.mjs               # довести, що само�
 |---|---|---|
 | `meta.json` | `{ start, locales: [...] }` | — |
 | `profiles.json` | життєві профілі гравця; `transports` — які транспорти доступні профілю; `startSkills` — стартові ранги навичок професії 0–5 (GAME-72), перевірка `skills`: лише вісім відомих id (`SKILL_UNKNOWN`), кожен раз (`SKILL_DUPLICATE`) | `profile.назва` |
+| `calendar.json` | календар гри (GAME-71, DC-026), один об'єкт: `start` (`YYYY-MM-DD`), `payday` 1–28, `longTripDays`, `maxLeaveDays`, `bookAheadDays`, `publicHolidays` (`MM-DD`), `schoolHolidays` (`{from, to}`, `MM-DD`); у профілях — `job` (`salaryCents`, `billsCents`, `vacationDays`) і `childInSchool`; перевірка `calendar` | — |
 | `transports.json` | транспорт | `transport.назва` |
 | `animals.json` | тварини (`animal.none` зарезервовано за «без тварини»); `transports` — чим тварину можна везти | `animal.назва` |
 | `quests.json` | етапи кампанії: `optional`, `end`, `requires`, `objectives`, `transitions`, `reward` | `ST-001` або `q.назва` |
@@ -147,6 +148,7 @@ Effect    = { setFlag: "f.…" } | { startQuest: "<id квесту>" } | { compl
 | `dialogue-flags` | `DIALOGUE_FLAG_NEVER_SET`, `DIALOGUE_COND_CONTRADICTION` | §2 умова не читає прапорець, який ніщо не ставить; §3 all не суперечить собі |
 | `dialogue-memory` | `MEMORY_NEVER_SET` | GAME-48: умова не читає факт пам'яті, якого цей NPC не може знати |
 | `skills` | `SKILL_UNKNOWN`, `SKILL_DUPLICATE` | GAME-72: стартові навички профілю — лише вісім відомих напрямів, кожен раз; перелік той самий, що в ядрі (звірка в `src/content/semantics.test.ts`) |
+| `calendar` | `CALENDAR_MISSING`, `CALENDAR_BAD_DATE`, `CALENDAR_RANGE_OVERLAP`, `JOB_BILLS_EXCEED_SALARY` | GAME-71: робота чи школяр у профілі — лише з `calendar.json`; `start` — справжня `YYYY-MM-DD`, свята й межі канікул — справжні `MM-DD`, що є щороку; канікули не перетинаються (і через Новий рік), свято не двічі; рахунки профілю ≤ зарплати (SIM-LIFE-008) |
 | `gear` | `GEAR_FIELD_MISSING`, `GEAR_RESALE_ABOVE_PRICE`, `GEAR_DOMINATED` | GAME-73: картка спорядження повна; викуп ≤ ціни (SIM-INV-004); немає речі того ж виду, не гіршої ні в чому (SIM-INV-005) — тир є компромісом, а не «сильніше» |
 | `combo-options` | `COMBO_OPTION_UNUSABLE`, `WHEN_UNSATISFIABLE` | §1 кожен транспорт можна обрати; §3 кожна умова `when` (разом з умовою свого квесту; для переходу — ще й квесту-цілі) відповідає хоча б одній дозволеній комбінації |
 | `combos` | `COMBO_NO_START`, `COMBO_TARGETED_UNREACHABLE`, `COMBO_DEAD_CONTENT` + коди шести перевірок вище для кожної комбінації | §3 у кожному стані гравця, «48 сімей × 12 профілів × 3 транспорти × тварини» |

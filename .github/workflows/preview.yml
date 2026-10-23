@@ -1,0 +1,104 @@
+name: preview
+# Закритий попередній перегляд гри для власника (рішення 23.10.2026): публічної версії немає, а збірка з main
+# лежить на Cloudflare Pages ЛИШЕ як preview-гілка під Cloudflare Access (вхід кодом на пошту зі списку).
+#
+# Чому preview, а не production: Access-замок Pages покриває `*.<проєкт>.pages.dev` (preview-адреси), але не
+# голу адресу проєкту. Тож production-гілку (`release-never`) не публікуємо ніколи, а крок verify доводить:
+#   1) без входу preview-адреса НЕ віддає гру (редирект на сторінку входу Cloudflare Access);
+#   2) гола адреса проєкту теж гри не віддає.
+# Якщо замок зник — workflow червоніє (закон 1), а не мовчки публікує гру.
+#
+# Секрети (GitHub → Settings → Secrets → Actions): CLOUDFLARE_API_TOKEN (Pages: Edit; Access: Apps and Policies:
+# Edit), CLOUDFLARE_ACCOUNT_ID, PREVIEW_EMAILS (пошти через кому). Пошти — у секреті: репозиторій публічний.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: preview
+  cancel-in-progress: false
+
+env:
+  PROJECT: camptribe-game
+  BRANCH: preview
+  WRANGLER: wrangler@4.145.0
+
+jobs:
+  preview:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      PREVIEW_EMAILS: ${{ secrets.PREVIEW_EMAILS }}
+    steps:
+      - name: Секрети задані
+        run: |
+          miss=""
+          for v in CLOUDFLARE_API_TOKEN CLOUDFLARE_ACCOUNT_ID PREVIEW_EMAILS; do [ -n "${!v:-}" ] || miss="$miss $v"; done
+          [ -z "$miss" ] || { echo "::error::Не задано секрет(и):$miss — Settings → Secrets and variables → Actions"; exit 1; }
+          echo "секрети є (значення не друкую)"
+
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      - run: npm run build
+
+      - name: Замок Cloudflare Access (до першої публікації)
+        run: |
+          set -euo pipefail
+          api="https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/access/apps"
+          auth=(-H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" -H "Content-Type: application/json")
+          domain="*.$PROJECT.pages.dev"
+          include=$(jq -cn --arg e "$PREVIEW_EMAILS" '$e | split(",") | map(gsub("^\\s+|\\s+$";"")) | map(select(length>0)) | map({email:{email:.}})')
+          [ "$(jq length <<<"$include")" -gt 0 ] || { echo "::error::PREVIEW_EMAILS порожній — замок нікого б не пустив"; exit 1; }
+          body=$(jq -cn --arg d "$domain" --argjson inc "$include" '{name:"CampLife preview", type:"self_hosted", domain:$d,
+            session_duration:"720h", policies:[{name:"owner", decision:"allow", include:$inc}]}')
+          list=$(curl -fsS "${auth[@]}" "$api") || { echo "::error::Access API недоступне (Zero Trust не налаштовано або токену бракує прав Access: Apps and Policies)"; exit 1; }
+          id=$(jq -r --arg d "$domain" '.result[] | select(.domain==$d) | .id' <<<"$list" | head -1)
+          if [ -n "$id" ]; then
+            curl -fsS -X PUT "${auth[@]}" "$api/$id" --data "$body" >/dev/null && echo "замок оновлено ($domain)"
+          else
+            curl -fsS -X POST "${auth[@]}" "$api" --data "$body" >/dev/null && echo "замок створено ($domain)"
+          fi
+
+      - name: Проєкт Pages (production-гілку не публікуємо ніколи)
+        run: |
+          set -uo pipefail
+          out=$(npx --yes "$WRANGLER" pages project create "$PROJECT" --production-branch=release-never 2>&1); code=$?
+          echo "$out" | tail -3
+          if [ $code -ne 0 ] && ! grep -qi 'already exists' <<<"$out"; then echo "::error::не вдалося створити проєкт Pages"; exit 1; fi
+
+      - name: Публікація preview
+        run: npx --yes "$WRANGLER" pages deploy dist --project-name="$PROJECT" --branch="$BRANCH" --commit-hash="$GITHUB_SHA" --commit-dirty=true
+
+      - name: Перевірка замка (без входу гри не видно)
+        run: |
+          set -uo pipefail
+          check() { # $1 — адреса; гра «видна», якщо 200 і в HTML є <script src> зі збірки
+            local code loc
+            code=$(curl -s -o /tmp/p.html -w '%{http_code}' "$1"); loc=$(curl -s -o /dev/null -w '%{redirect_url}' "$1")
+            echo "$1 → HTTP $code ${loc:+→ $loc}"
+            if [ "$code" = 200 ] && grep -q '<script[^>]*src=' /tmp/p.html; then return 1; fi
+            return 0
+          }
+          ok=1
+          for i in 1 2 3 4 5 6; do
+            ok=1
+            check "https://$BRANCH.$PROJECT.pages.dev/" || ok=0
+            check "https://$PROJECT.pages.dev/" || ok=0
+            [ $ok = 1 ] && break
+            sleep 20
+          done
+          [ $ok = 1 ] || { echo "::error::ГРА ВИДНА БЕЗ ВХОДУ — замок не працює"; exit 1; }
+          # Позитивний контроль: замок саме Access, а не «сайт лежить».
+          loc=$(curl -s -o /dev/null -w '%{redirect_url}' "https://$BRANCH.$PROJECT.pages.dev/")
+          grep -q 'cloudflareaccess.com' <<<"$loc" || { echo "::error::preview не веде на вхід Cloudflare Access ($loc) — перевір, що публікація вдалася"; exit 1; }
+          echo "PREVIEW: OK · https://$BRANCH.$PROJECT.pages.dev/ — лише після входу (код на пошту)"

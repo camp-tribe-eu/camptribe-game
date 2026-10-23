@@ -13,9 +13,11 @@ import { isJournalType, type SimState } from './sim';
 import { CONDITION_MAX } from './gear';
 import { PRACTICE_SATURATION, SKILL_IDS, zeroSkills } from './skills';
 import { REJECT_CODES } from './state';
+import { paydaysThrough, type LifeDefs } from './life';
+import { DAY_MINUTES } from './weather';
 
 export const SAVE_FORMAT = 'camplife-save';
-export const SAVE_VERSION = 2;
+export const SAVE_VERSION = 3;
 
 export interface SaveFile {
   readonly format: typeof SAVE_FORMAT;
@@ -39,8 +41,13 @@ export type LoadResult =
   | { readonly ok: true; readonly sim: SimState; readonly fromVersion: number; readonly contentRev: string | null }
   | { readonly ok: false; readonly code: LoadCode; readonly detail: string };
 
+/** Що міграції можуть знати про нинішню гру (не сам сейв): календар життя — для v2 → v3. */
+export interface MigrationCtx {
+  readonly life?: LifeDefs;
+}
+
 /** Міграції: MIGRATIONS[v] переводить сейв версії v у v+1. Кожна — чиста й не губить жодного поля. */
-export const MIGRATIONS: Readonly<Record<number, (sim: unknown) => unknown>> = {
+export const MIGRATIONS: Readonly<Record<number, (sim: unknown, ctx: MigrationCtx) => unknown>> = {
   // v1 → v2 (GAME-29): з'явились персонаж і квести. Старий сейв — гра до створення персонажа.
   // GAME-46: зерно світу (погода дня). Зерна v1 не зберігав, а з RNG стану його не відновити —
   // тож усім сейвам v1 однаково 0: детерміновано, той самий v1 завжди дає ту саму погоду.
@@ -50,6 +57,18 @@ export const MIGRATIONS: Readonly<Record<number, (sim: unknown) => unknown>> = {
   1: (sim) => {
     const s = sim as { game: Record<string, unknown> };
     return { ...s, journal: [], worldSeed: 0, game: { ...s.game, schemaVersion: 2, player: null, quests: {}, campaignEnded: false, flags: [], npcMemory: {}, skills: zeroSkills(), practice: {}, gear: {}, dialogue: null } };
+  },
+  // v2 → v3 (GAME-71): календар життя. v2 вийшов до гравців (main → GitHub Pages) без поля `life`, тож поле — лише міграцією.
+  // Відпусток у v2 не було: []. Дні виплати, що минули до збереження, минули ДО зарплати в грі — їх зараховано БЕЗ грошей
+  // (paydays = скільки вже настало за годинником сейву), інакше перший же крок виплатив би персонажу зарплату заднім
+  // числом (SIM-LIFE-007). Без календаря в ctx — 0: це вірно лише там, де календаря немає й під час гри (payroll без
+  // defs.life нічого не робить). Сейв із персонажем, завантажений без календаря, а зіграний з ним, отримав би пропущені
+  // виплати, — тому гра (save-session ← main.ts) передає календар завжди; це перевіряє save-session.test.
+  2: (sim, ctx) => {
+    const s = sim as { game: Record<string, unknown>; clock?: { minutes?: unknown } };
+    const minutes = typeof s.clock?.minutes === 'number' && Number.isSafeInteger(s.clock.minutes) && s.clock.minutes >= 0 ? s.clock.minutes : 0;
+    const paydays = ctx.life ? paydaysThrough(ctx.life.calendar, Math.floor(minutes / DAY_MINUTES)) : 0;
+    return { ...s, game: { ...s.game, schemaVersion: 3, life: { paydays, leave: [] } } };
   },
 };
 
@@ -69,7 +88,7 @@ function shapeError(sim: unknown): string | null {
   if (!isObj(game) || !isObj(clock) || !Array.isArray(rng) || !isInt(finds)) return 'missing game/clock/rng/finds';
   if (!isInt(worldSeed) || (worldSeed as number) > 0xffff_ffff) return 'worldSeed';
   if (!Array.isArray(journal) || journal.some((e) => !isObj(e) || !isInt(e.at) || typeof e.commandId !== 'string' || !isJournalType(e.type) || !(e.ref === null || typeof e.ref === 'string'))) return 'journal';
-  if (game.schemaVersion !== 2 || !isInt(game.moneyCents) || !isInt(game.seq)) return 'game: version, money or seq';
+  if (game.schemaVersion !== 3 || !isInt(game.moneyCents) || !isInt(game.seq)) return 'game: version, money or seq';
   if (!isObj(game.inventory) || !Array.isArray(game.grants) || !isObj(game.processed)) return 'game: inventory, grants or processed';
   if (Object.values(game.inventory).some((q) => !isInt(q, 1))) return 'game: inventory quantity';
   if (game.grants.some((g) => typeof g !== 'string')) return 'game: grant ids';
@@ -85,6 +104,12 @@ function shapeError(sim: unknown): string | null {
   // Спорядження (GAME-73): запис — лише для предмета в інвентарі й лише відхилення від нового сухого (так пише ядро).
   if (!isObj(game.gear) || Object.entries(game.gear).some(([id, g]) => !isObj(g) || !isInt(g.condition) || (g.condition as number) > CONDITION_MAX || typeof g.wet !== 'boolean'
     || (g.condition === CONDITION_MAX && !g.wet) || !isInt((game.inventory as Record<string, unknown>)[id], 1))) return 'game: gear';
+  // Календар життя (GAME-71): лічильник виплат — ціле ≥ 0; відпустки — цілі дні, відсортовані за початком і без перетинів
+  // (так пише лише ядро), витрачені дні відпустки не більші за довжину.
+  const life = game.life;
+  if (!isObj(life) || !isInt(life.paydays) || !Array.isArray(life.leave) || life.leave.some((e, i) => !isObj(e) || !isInt(e.from) || !isInt(e.days, 1)
+    || !isInt(e.vacation) || (e.vacation as number) > (e.days as number)
+    || (i > 0 && (e.from as number) < ((life.leave as Record<string, number>[])[i - 1]?.from ?? 0) + ((life.leave as Record<string, number>[])[i - 1]?.days ?? 0)))) return 'game: life';
   const dl = game.dialogue;
   if (dl !== null && (!isObj(dl) || typeof dl.id !== 'string' || typeof dl.node !== 'string')) return 'game: dialogue';
   const p = game.player;
@@ -123,7 +148,11 @@ export function danglingRefs(game: SimState['game'], st: StoryDefs): string[] {
   return out;
 }
 
-export function fromSave(text: string, opts: { readonly story?: StoryDefs } = {}): LoadResult {
+/**
+ * `story` — перевірити посилання сейву проти нинішнього сюжету; `life` — календар нинішньої гри для міграції v2 → v3
+ * (без нього дні виплати, що минули до старого сейву, лічильник не зараховує — див. MIGRATIONS[2]).
+ */
+export function fromSave(text: string, opts: { readonly story?: StoryDefs; readonly life?: LifeDefs } = {}): LoadResult {
   let raw: unknown;
   try {
     raw = JSON.parse(text);
@@ -142,7 +171,7 @@ export function fromSave(text: string, opts: { readonly story?: StoryDefs } = {}
   for (let v = version as number; v < SAVE_VERSION; v++) {
     const migrate = MIGRATIONS[v];
     if (!migrate) return { ok: false, code: 'SAVE_VERSION_UNSUPPORTED', detail: `no migration ${v}→${v + 1}` };
-    sim = migrate(sim);
+    sim = migrate(sim, opts.life ? { life: opts.life } : {});
   }
   const bad = shapeError(sim);
   if (bad) return { ok: false, code: 'SAVE_SHAPE', detail: bad };
