@@ -6,11 +6,45 @@
 import { describe, expect, it } from 'vitest';
 import pkg from '../../../package.json';
 import sceneSource from './scene.ts?raw';
+
+// Файли сцени гри (src/view/world). Сторінка спайка (src/view/spike) має свою мапу й гри не стосується.
+const WORLD_SOURCES = import.meta.glob<string>(['./**/*.ts', '!./**/*.test.ts'], { query: '?raw', import: 'default', eager: true });
 import type { CoreDefs } from '../../core/defs';
 import { GAME_DEFS } from '../../content/slice-defs';
 
-interface TiledObject { name: string; type?: string; class?: string }
-interface TiledMap { properties?: { name: string; value: unknown }[]; layers: { name: string; type: string; objects?: TiledObject[] }[] }
+interface TiledObject { name: string; type?: string; class?: string; point?: boolean; gid?: number }
+interface TiledLayer { name: string; type: string; objects?: TiledObject[]; properties?: { name: string; value: unknown }[]; offsetx?: number; offsety?: number; layers?: TiledLayer[] }
+interface TiledMap { properties?: { name: string; value: unknown }[]; layers: TiledLayer[]; tilesets?: { tiles?: { properties?: { name: string }[] }[] }[] }
+
+/**
+ * Формат мапи, який сцена читає ТАК САМО, як валідатор мап (рецензія ea1e98e: чотири правки мапи
+ * проходили валідатор, але в грі поводились інакше):
+ *  - стіни — лише шар `walls` з collides=true (сцена блокує кожен непорожній тайл шару walls; валідатор —
+ *    шари з collides і тайли з collides; без цього правила вони розходяться);
+ *  - тип об'єкта — у `type` (Phaser 4 копіює `type`, але не `class`);
+ *  - об'єкти — точки, без зсуву шару (валідатор бере центр і не знає offsetx/offsety; сцена — x/y
+ *    об'єкта плюс зсув шару: для точок без зсуву це та сама клітинка).
+ */
+export function gameMapFormatProblems(map: TiledMap): string[] {
+  const out: string[] = [];
+  const flat = (ls: TiledLayer[]): TiledLayer[] => ls.flatMap((l) => [l, ...flat(l.layers ?? [])]);
+  const layers = flat(map.layers);
+  const collides = (l: TiledLayer): boolean => l.properties?.some((p) => p.name === 'collides' && p.value === true) ?? false;
+  const walls = layers.filter((l) => l.name === 'walls');
+  if (walls.length !== 1 || walls[0]?.type !== 'tilelayer' || !collides(walls[0])) out.push('потрібен рівно один тайловий шар walls з collides=true');
+  for (const l of layers) if (l.name !== 'walls' && collides(l)) out.push(`шар ${l.name} має collides, але сцена блокує лише walls`);
+  if (map.tilesets?.some((t) => t.tiles?.some((x) => x.properties?.some((p) => p.name === 'collides')))) out.push('collides на тайлі тайлсета: сцена його не читає');
+  const groups = layers.filter((l) => l.type === 'objectgroup');
+  if (groups.length !== 1 || groups[0]?.name !== 'objects') out.push('потрібен рівно один шар об\'єктів objects');
+  for (const g of groups) {
+    if ((g.offsetx ?? 0) !== 0 || (g.offsety ?? 0) !== 0) out.push(`шар ${g.name}: зсув offsetx/offsety — валідатор його не знає`);
+    for (const o of g.objects ?? []) {
+      if (!o.type) out.push(`${o.name}: тип у class без type — Phaser 4 його не копіює, сцена об'єкта не побачить`);
+      if (o.point !== true || o.gid !== undefined) out.push(`${o.name}: не точка — сцена й валідатор беруть різні точки прив'язки`);
+    }
+  }
+  return out;
+}
 
 
 export function mapContentProblems(map: TiledMap, defs: CoreDefs): string[] {
@@ -39,6 +73,10 @@ describe('мапа сцени ↔ контент (GAME-32)', () => {
     expect(MAPS.length).toBeGreaterThan(0);
     const loaded = [...sceneSource.matchAll(/tilemapTiledJSON\(\s*'[^']*'\s*,\s*'([^']+)'/g)].map((m) => m[1]);
     expect(loaded.length).toBeGreaterThan(0);
+    // Кожен виклик у будь-якому файлі сцени — розпізнаний цим шаблоном (рецензія: інші лапки, змінна,
+    // об'єктна форма чи інший файл обходили перевірку).
+    const calls = Object.values(WORLD_SOURCES).reduce((n, src) => n + (src.match(/tilemapTiledJSON\s*\(/g) ?? []).length, 0);
+    expect(calls).toBe(loaded.length);
     for (const p of loaded) expect(p).toMatch(/^maps\/[^/]+\.tmj$/);
     for (const p of loaded) expect(MAPS).toContain(p?.replace('maps/', ''));
     const validate = (pkg as { scripts: Record<string, string> }).scripts.validate ?? '';
@@ -49,7 +87,28 @@ describe('мапа сцени ↔ контент (GAME-32)', () => {
     it(`${f}: NPC і тригери — з контенту, кожен NPC локації — на мапі`, () => {
       expect(mapContentProblems(mapOf(f), GAME_DEFS)).toEqual([]);
     });
+    it(`${f}: формат, який сцена читає так само, як валідатор мап`, () => {
+      expect(gameMapFormatProblems(mapOf(f))).toEqual([]);
+    });
   }
+
+  it('негативні контролі формату: кожна правка, що проходила валідатор, але ламала гру, — червона', () => {
+    const base = mapOf('camp-lake.tmj');
+    const objs = (m: TiledMap): TiledObject[] => m.layers.find((l) => l.name === 'objects')?.objects ?? [];
+    const cases: [string, (m: TiledMap) => void, string][] = [
+      ['walls без collides', (m) => { const w = m.layers.find((l) => l.name === 'walls'); if (w) w.properties = []; }, 'walls'],
+      ['шар walls перейменовано', (m) => { const w = m.layers.find((l) => l.name === 'walls'); if (w) w.name = 'wall'; }, 'walls'],
+      ['class замість type', (m) => { for (const o of objs(m)) { o.class = o.type ?? ''; delete o.type; } }, 'class'],
+      ['прямокутник замість точки', (m) => { const o = objs(m)[0]; if (o) o.point = false; }, 'не точка'],
+      ['зсув шару об\'єктів', (m) => { const g = m.layers.find((l) => l.name === 'objects'); if (g) g.offsetx = 56; }, 'зсув'],
+      ['другий шар з collides', (m) => { m.layers.push({ name: 'rocks', type: 'tilelayer', properties: [{ name: 'collides', value: true }] }); }, 'rocks'],
+    ];
+    for (const [what, patch, mark] of cases) {
+      const m = structuredClone(base);
+      patch(m);
+      expect(gameMapFormatProblems(m).join(' | '), what).toContain(mark);
+    }
+  });
 
   it('негативні контролі: чужий NPC, невідомий тригер, NPC локації без місця, чужа локація', () => {
     const base = mapOf('camp-lake.tmj');

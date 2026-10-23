@@ -130,11 +130,12 @@ test('затиснутий Enter не пробігає кроки: одне на
   expect((await core(page)).journal.length).toBe(1);   // лише «Початок подорожі»
 });
 
-test('після закриття екрана подорожі фокус у грі: Space — дія сцени, а не кнопка ☰', async ({ page }) => {
+test('після закриття екрана подорожі фокус на полі гри з підписом: Space — дія сцени, а не кнопка ☰', async ({ page }) => {
   await open(page);
   await page.locator('[data-ui="story-close"]').click();
   await page.waitForTimeout(50);
-  expect(await page.evaluate(() => document.activeElement === document.body)).toBe(true);
+  expect(await page.evaluate(() => ({ id: document.activeElement?.id, label: document.activeElement?.getAttribute('aria-label') })))
+    .toEqual({ id: 'stage', label: expect.stringMatching(/стрілки|arrows/) });
   await page.keyboard.press('Space');                       // далеко від об'єктів: нічого не відкривається
   await page.waitForTimeout(100);
   await expect(panel(page)).toHaveCount(0);
@@ -184,6 +185,12 @@ test('прохід керується лише кліками й клавіша�
   const flow = src.slice(src.indexOf('// ПРОХІД-START'), src.indexOf('// ПРОХІД-END'));
   expect(flow.length).toBeGreaterThan(500);                                      // позначки на місці, прохід між ними
   expect(flow).not.toMatch(/__game|evaluate\(|dispatch|bridge/);
+  // Список дозволених викликів (рецензія: заборонні слова обходились через $eval, waitForFunction,
+  // addInitScript, localStorage чи помічник, оголошений поза позначками).
+  const ALLOWED = new Set(['playBikeProlog', 'act', 'panel', 'locator', 'first', 'click', 'tap', 'press', 'down', 'up', 'expect', 'toBeVisible', 'toHaveCount']);
+  const called = [...flow.replace(/\/\/.*$/gm, '').replace(/'[^']*'/g, "''").matchAll(/\b([A-Za-z_$][\w$]*)\s*\(/g)].map((m) => m[1] ?? '');
+  expect(called.length).toBeGreaterThan(20);
+  expect([...new Set(called.filter((c) => !ALLOWED.has(c)))]).toEqual([]);
   expect(src.slice(src.indexOf('async function act('), src.indexOf('// ПРОХІД-START'))).not.toMatch(/__game|evaluate\(/);
 });
 

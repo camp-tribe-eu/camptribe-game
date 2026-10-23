@@ -8,4 +8,6 @@ declare module '*/validator/combos.mjs' {
 }
 declare module '*/validator/checks.mjs' {
   export function buildIndex(content: unknown): { reachable: Set<string> };
+  export function satisfiable(cond: unknown, known: Set<string>): boolean;
+  export function contradictions(cond: unknown): Set<string>;
 }

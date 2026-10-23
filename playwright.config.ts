@@ -16,8 +16,9 @@ export default defineConfig({
     deviceScaleFactor: 1,
     ...(executablePath ? { launchOptions: { executablePath } } : {}),
   },
+  // --mode e2e: вмикає перемикачі негативних контролів (src/view/test-switches.ts); у звичайній збірці їх немає.
   webServer: {
-    command: `npx vite build && npx vite preview --port ${port} --strictPort --host 127.0.0.1`,
+    command: `npx vite build --mode e2e && npx vite preview --port ${port} --strictPort --host 127.0.0.1`,
     url: `http://127.0.0.1:${port}/`,
     timeout: 120_000,
     reuseExistingServer: false,

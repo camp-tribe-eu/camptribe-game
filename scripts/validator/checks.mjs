@@ -615,21 +615,30 @@ function conjuncts(cond) {
   return cond.all ? cond.all.flatMap(conjuncts) : [cond];
 }
 
-// Прапорці, які all вимагає водночас як flag і як notFlag. Шукає в кожному all (і в any всередині).
-function contradictions(cond, out = new Set()) {
-  if (cond.any) { cond.any.forEach((x) => contradictions(x, out)); return out; }
+// Прапорці, через суперечність яких (all вимагає водночас flag і notFlag) умова НЕ справдиться ніколи —
+// навіть якщо всі прапорці можна поставити. Суперечність в одній гілці any, коли інша гілка жива, —
+// не «вибір не покажеться ніколи» (знайдено перехресною перевіркою з ядром, semantics.test, 23.10:
+// раніше така умова червоніла й блокувала здійсненний контент).
+export function contradictions(cond) {
+  const every = new Set(condLeaves(cond).flatMap((x) => [x.flag, x.notFlag]).filter((f) => f !== undefined));
+  return satisfiable(cond, every) ? new Set() : conflicts(cond);
+}
+
+// Усі пари flag/notFlag того самого прапорця в одному all (і в any всередині) — сирий перелік.
+function conflicts(cond, out = new Set()) {
+  if (cond.any) { cond.any.forEach((x) => conflicts(x, out)); return out; }
   if (!cond.all) return out;
   const cj = conjuncts(cond);
   const yes = new Set(cj.filter((x) => x.flag !== undefined).map((x) => x.flag));
   for (const x of cj) {
     if (x.notFlag !== undefined && yes.has(x.notFlag)) out.add(x.notFlag);
-    if (x.any) contradictions(x, out);
+    if (x.any) conflicts(x, out);
   }
   return out;
 }
 
 // Чи може умова справдитись, якщо поставлені прапорці known (а решта — ні або пізніше).
-function satisfiable(cond, known) {
+export function satisfiable(cond, known) {
   if (cond.any) return cond.any.some((x) => satisfiable(x, known));
   if (cond.all) {
     const cj = conjuncts(cond);

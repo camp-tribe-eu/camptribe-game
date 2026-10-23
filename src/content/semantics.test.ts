@@ -4,10 +4,11 @@
 // умови й гравці: обидві реалізації мусять відповідати однаково.
 import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
-import type { WhenDef } from '../core/defs';
+import type { CondDef, WhenDef } from '../core/defs';
 import type { PlayerState } from '../core/state';
-import { matches as coreMatches } from '../core/story';
+import { holds, matches as coreMatches, type StoryDraft } from '../core/story';
 import { matches as validatorMatches } from '../../scripts/validator/combos.mjs';
+import { contradictions, satisfiable } from '../../scripts/validator/checks.mjs';
 
 const P = ['profile.a', 'profile.b', 'profile.c'];
 const T = ['transport.car', 'transport.bike', 'transport.camper'];
@@ -57,5 +58,53 @@ describe('семантика when: валідатор ≡ ядро', () => {
     const out = fc.sample(fc.tuple(when, player), { seed: 1, numRuns: 500 }).map(([w, p]) => coreMatches(w, { ...p, locationId: null } as PlayerState));
     expect(out).toContain(true);
     expect(out).toContain(false);
+  });
+});
+
+// Рецензія GAME-42: умови реплік діалогу (CondDef) ядро обчислює (holds), а валідатор лише судить
+// статично (satisfiable / contradictions у checks.mjs). Вимога — НАДІЙНІСТЬ валідатора: що він
+// назвав нездійсненним, того ядро не справдить у жодному стані. Обернене не вимагається: валідатор
+// навмисно оптимістичний щодо quest і transport (рахує їх здійсненними), — це перелічено нижче.
+describe('умови діалогу: валідатор не відкидає того, що ядро може справдити', () => {
+  const FLAGS = ['f.a', 'f.b', 'f.c'];
+  const KNOWN = new Set(['f.a', 'f.b']);             // f.c — жоден ефект не ставить
+  const leaf: fc.Arbitrary<CondDef> = fc.oneof(
+    fc.constantFrom(...FLAGS).map((flag) => ({ flag })),
+    fc.constantFrom(...FLAGS).map((notFlag) => ({ notFlag })),
+    fc.constantFrom('active', 'completed').map((status) => ({ quest: 'q.x', status } as CondDef)),
+    fc.constantFrom('transport.car', 'transport.bike').map((transport) => ({ transport })),
+  );
+  const cond: fc.Arbitrary<CondDef> = fc.letrec<{ c: CondDef }>((tie) => ({
+    c: fc.oneof({ depthSize: 'small', withCrossShrink: true }, leaf,
+      fc.array(tie('c'), { minLength: 1, maxLength: 3 }).map((all) => ({ all })),
+      fc.array(tie('c'), { minLength: 1, maxLength: 3 }).map((any) => ({ any }))),
+  })).c;
+  // Усі стани, які ядро може мати: прапорці — лише з відомих (ставлять лише ефекти контенту).
+  const STATES = subsets(['f.a', 'f.b']).flatMap((flags) => (['none', 'active', 'completed'] as const).flatMap((q) => ['transport.car', 'transport.bike'].map((transportId) => ({
+    draft: { flags: flags ?? [], quests: q === 'none' ? {} : { 'q.x': { status: q, done: [] } } } as unknown as StoryDraft,
+    player: { profileId: 'profile.a', transportId, animalId: 'animal.none', locationId: null } as PlayerState,
+  }))));
+
+  it(`fast-check, 3000 умов × ${STATES.length} станів: «нездійсненне» у валідатора — false у ядра скрізь`, () => {
+    let rejected = 0;
+    fc.assert(fc.property(cond, (c) => {
+      const dead = !satisfiable(c, KNOWN) || contradictions(c).size > 0;
+      if (!dead) return;
+      rejected++;
+      for (const s of STATES) if (holds(c, s.draft, s.player)) throw new Error(`валідатор відкинув здійсненне: ${JSON.stringify(c)} справджується в ${JSON.stringify(s.draft)} ${s.player.transportId}`);
+    }), { seed: 20261023, numRuns: 3000 });
+    expect(rejected).toBeGreaterThan(300);            // перевірка справді бачила «нездійсненні» умови
+  });
+
+  it('відома оптимістичність валідатора (не помилка, а межа): quest-суперечність і чужий транспорт він пропускає', () => {
+    const both: CondDef = { all: [{ quest: 'q.x', status: 'active' }, { quest: 'q.x', status: 'completed' }] };
+    expect(satisfiable(both, KNOWN)).toBe(true);
+    expect(STATES.some((s) => holds(both, s.draft, s.player))).toBe(false);
+  });
+
+  it('негативний контроль: «валідатор», що відкидає все, ловиться', () => {
+    const c: CondDef = { flag: 'f.a' };
+    const fakeDead = true;
+    expect(fakeDead && STATES.some((s) => holds(c, s.draft, s.player))).toBe(true);
   });
 });

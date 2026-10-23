@@ -28,9 +28,9 @@ export function Shell({ port, langOverride, credits }: { port: UiPort; langOverr
   };
   const story = (open: boolean): void => {
     setStoryOpen(open);
-    // Фокус повертається грі, а не на ☰: Space — клавіша дії в сцені, і сфокусована ☰ перехоплювала б
-    // її (знайдено e2e розмови з Елізою на мапі). ☰ лишається досяжною Tab.
-    if (!open) requestAnimationFrame(() => (document.activeElement as HTMLElement | null)?.blur());
+    // Фокус повертається грі (#stage з підписом), а не на ☰: Space — клавіша дії в сцені, і сфокусована ☰
+    // перехоплювала б її (знайдено e2e розмови з Елізою на мапі). ☰ лишається досяжною Tab.
+    if (!open) requestAnimationFrame(() => document.getElementById('stage')?.focus());
     if (open) { setOffer(port.story()); void port.staleCode().then(setStaleCode); }
     port.setPaused(open);
   };
@@ -65,6 +65,7 @@ export function Shell({ port, langOverride, credits }: { port: UiPort; langOverr
   useEffect(() => {
     document.documentElement.style.fontSize = `${settings.textScale}%`;
     document.documentElement.lang = settings.language;
+    document.getElementById('stage')?.setAttribute('aria-label', t('ui.stage'));
   }, [settings]);
 
   // Відкладений сейв: і в меню паузи, і на екрані подорожі (туди гравець іде першим), доки не сховає.

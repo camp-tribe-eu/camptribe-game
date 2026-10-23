@@ -15,6 +15,7 @@ import { createBridge } from './view/world/bridge';
 import { WorldScene, type WorldProbe } from './view/world/scene';
 import { mountTouchControls } from './view/world/touch';
 import { storyOffer } from './view/story-offer';
+import { testSwitches } from './view/test-switches';
 import type { StoryOffer } from './ui/story-types';
 
 const app = document.querySelector<HTMLElement>('#app');
@@ -25,8 +26,9 @@ const bridge = createBridge(20261022, GAME_DEFS);
 const input = newInput();
 // Екран подорожі (GAME-32): знімок сюжету з поточного стану; дію шукаємо в СВІЖОМУ знімку за id —
 // якщо стан тим часом змінився і дії вже немає, нічого не надсилаємо.
-// ?hideAct=complete — лише для негативного контролю e2e (GAME-36): прихована кнопка мусить ламати прохід.
-const hiddenActs = (new URLSearchParams(location.search).get('hideAct') ?? '').split(',').filter(Boolean);
+// ?hideAct=complete — лише для негативного контролю e2e (GAME-36; лише в збірці --mode e2e).
+const switches = testSwitches(location.search, import.meta.env.MODE);
+const hiddenActs = switches.hideAct;
 const shown = (o: StoryOffer): StoryOffer => (hiddenActs.length === 0 ? o : {
   ...o,
   actions: o.actions.filter((a) => !hiddenActs.includes(a.kind)),
@@ -52,10 +54,12 @@ const saves = createSaveSession(bridge, { read: readSaves, write: writeSave, qua
 
 const stage = document.createElement('div');
 stage.id = 'stage';
+// Ціль фокуса після закриття екрана подорожі (рецензія: <body> губив місце читача). Не в порядку Tab.
+stage.tabIndex = -1;
 app.append(stage);
 
-// ?hideTouch=interact — лише для негативного контролю e2e: прихована кнопка мусить ламати прохід.
-const hidden = (new URLSearchParams(location.search).get('hideTouch') ?? '').split(',').filter(Boolean) as Action[];
+// ?hideTouch=interact — лише для негативного контролю e2e (лише в збірці --mode e2e): прихована кнопка мусить ламати прохід.
+const hidden = switches.hideTouch as Action[];
 mountTouchControls(app, input, hidden);
 
 const label = document.createElement('p');

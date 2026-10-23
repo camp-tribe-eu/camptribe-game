@@ -53,5 +53,6 @@
   "jr.CompleteQuest": "Done",
   "jr.DeclineQuest": "Set aside",
   "ui.importNewer": "This code is from a newer version of the game. Reload the page (to get the new version) and try again.",
-  "ui.staleDismiss": "I kept the code — hide"
+  "ui.staleDismiss": "I kept the code — hide",
+  "ui.stage": "Game: arrows to move, Space or E to act"
 }

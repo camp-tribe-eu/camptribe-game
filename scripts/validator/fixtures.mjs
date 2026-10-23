@@ -301,6 +301,12 @@ export const FIXTURES = [
   { name: '[діалог] контроль: flag і notFlag у різних гілках any всередині all — не суперечність', expect: [], patch(c) {
     node(c, 'help').choices[0].when = { all: [{ flag: 'f.fixture-met' }, { any: [{ flag: 'f.fixture-helped' }, { notFlag: 'f.fixture-helped' }] }] };
   } },
+  { name: '[діалог] контроль: суперечність лише в одній гілці any — вибір живий через іншу (звірка з ядром)', expect: [], patch(c) {
+    node(c, 'help').choices[0].when = { all: [{ any: [{ all: [{ flag: 'f.fixture-met' }, { notFlag: 'f.fixture-met' }] }, { flag: 'f.fixture-helped' }] }] };
+  } },
+  { name: '[діалог] суперечність у КОЖНІЙ гілці any — вибір не покажеться ніколи', expect: ['DIALOGUE_COND_CONTRADICTION'], patch(c) {
+    node(c, 'help').choices[0].when = { any: [{ all: [{ flag: 'f.fixture-met' }, { notFlag: 'f.fixture-met' }] }, { all: [{ flag: 'f.fixture-helped' }, { notFlag: 'f.fixture-helped' }] }] };
+  } },
   // Один діалог на NPC.
   { name: '[діалог] два діалоги для одного NPC', expect: ['DIALOGUE_NPC_DUPLICATE'], patch(c) {
     const d = shopDialogue([]);
