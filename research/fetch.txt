@@ -27,3 +27,4 @@ lic-lpc-teen-unisex-base-clothes	page:https://opengameart.org/content/lpc-teen-u
 lic-lpc-tile-atlas	page:https://opengameart.org/content/lpc-tile-atlas
 lic-ponytail-and-plain-hairstyles	page:https://opengameart.org/content/ponytail-and-plain-hairstyles
 lic-tent-3	page:https://opengameart.org/content/tent-3
+lic-lpc-clothing-updates	page:https://opengameart.org/content/lpc-clothing-updates
