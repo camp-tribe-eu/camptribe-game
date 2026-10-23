@@ -115,6 +115,7 @@ test.describe('сейв v2 з опублікованої гри (рецензі�
     await open(page);
     await page.locator('[data-touch="story"]').click();
     await page.locator('[data-ui="story"] [data-act="create"]', { hasText: 'Велосипед' }).first().click();
+    await page.waitForTimeout(400);   // GAME-80: панель глуха ~350 мс після дії
     await expect.poll(async () => ((await snap(page)) as unknown as { game: { player: unknown } }).game.player).not.toBeNull();
     const sim = (await page.evaluate(() => (window as unknown as { __game: { read: () => unknown } }).__game.read())) as { game: Record<string, unknown>; clock: Record<string, unknown> };
     // Так пише сейв гра з main (be0bcbb): schemaVersion 2, поля life немає. Годинник — день 100 (9 вересня 2027), 10:00.

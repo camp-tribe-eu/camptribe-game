@@ -21,14 +21,29 @@ export const JOURNAL_LABELS = JR;
 const WX: Readonly<Record<StoryOffer['weather'], Key>> = { sunny: 'ui.weather.sunny', cloudy: 'ui.weather.cloudy', rain: 'ui.weather.rain' };
 export const WEATHER_LABELS = WX;
 
+/** Скільки після прийнятої дії панель глуха до нових активацій (мс між event.timeStamp). */
+export const ACT_COOLDOWN_MS = 350;
+
 export function money(lang: AnyLang, cents: number): string {
   return new Intl.NumberFormat(lang === 'uk' ? 'uk-UA' : 'en-IE', { style: 'currency', currency: 'EUR' }).format(cents / 100);
 }
 
 export function StoryPanel({ offer, lang, t, act, close, children }: { offer: StoryOffer; lang: AnyLang; t: (k: Key) => string; act: (id: string) => void; close: () => void; children?: ComponentChildren }) {
   const root = useRef<HTMLDivElement>(null);
-  // Фокус — на першу дію після кожної зміни: клавіатура й екранний читач не губляться.
-  useEffect(() => { root.current?.querySelector<HTMLButtonElement>('button[data-act]')?.focus(); }, [offer]);
+  // GAME-80: після дії кнопки перебудовуються, і друге натискання (дотик чи Enter) через ~150 мс влучало б
+  // в нову першу кнопку — дорогу покупку чи дорогу додому. Тому: (а) фокус після зміни йде на СТАБІЛЬНИЙ
+  // рядок стану (де ти, гроші, погода), а не на кнопку; (б) панель ігнорує активації ще ACT_COOLDOWN_MS
+  // після прийнятої. Мірка — event.timeStamp двох подій (без таймерів і без годинника: див. no-realtime).
+  const lastAct = useRef(Number.NEGATIVE_INFINITY);
+  useEffect(() => {
+    const el = root.current;
+    (el?.querySelector<HTMLElement>('[data-ui="where"]') ?? el?.querySelector<HTMLElement>('h2'))?.focus();
+  }, [offer]);
+  const guarded = (id: string) => (e: Event): void => {
+    if (e.timeStamp - lastAct.current < ACT_COOLDOWN_MS) return;
+    lastAct.current = e.timeStamp;
+    act(id);
+  };
 
   const label = (a: OfferAction): string => {
     if (a.kind === 'continue') return t('ui.continue');
@@ -40,27 +55,27 @@ export function StoryPanel({ offer, lang, t, act, close, children }: { offer: St
     return `${t(ACT[a.kind])} ${ct(lang, a.key)}${extras.length ? ` (${extras.join(', ')})` : ''}`;
   };
   const button = (a: OfferAction) => (
-    <button type="button" class="ui-btn" key={a.id} data-act={a.kind} data-key={a.key ?? ''} onClick={() => act(a.id)}>{label(a)}</button>
+    <button type="button" class="ui-btn" key={a.id} data-act={a.kind} data-key={a.key ?? ''} onClick={guarded(a.id)}>{label(a)}</button>
   );
 
   return (
     // Затиснутий Enter/Space (автоповтор) не «пробігає» кроки: фокус після кожної дії стрибає на нову першу
     // кнопку, і повтор клавіші влучав би вже в неї (рецензія GAME-32). Свідомі натискання — без затримки.
     <div ref={root} onKeyDown={(e) => { if (e.repeat && (e.key === 'Enter' || e.key === ' ')) e.preventDefault(); }} class="ui-overlay ui-story" role="dialog" aria-modal="true" aria-label={t('ui.story')} data-ui="story">
-      <h2>{t('ui.story')}</h2>
+      <h2 tabIndex={-1}>{t('ui.story')}</h2>
       {children}
       {offer.stage === 'create' && (
         <fieldset data-ui="create">
           <legend>{t('ui.createTitle')}</legend>
           {offer.characters.map((c) => (
-            <button type="button" class="ui-btn" key={c.id} data-act="create" onClick={() => act(c.id)}>
+            <button type="button" class="ui-btn" key={c.id} data-act="create" onClick={guarded(c.id)}>
               {`${ct(lang, c.profileKey)} · ${ct(lang, c.transportKey)} · ${c.animalKey ? ct(lang, c.animalKey) : t('ui.noAnimal')}`}
             </button>
           ))}
         </fieldset>
       )}
       {offer.stage !== 'create' && (
-        <p class="ui-status" data-ui="where" data-weather={offer.weather}>{`${t('ui.here')}: ${ct(lang, offer.locationKey)} · ${t('ui.money')}: ${money(lang, offer.moneyCents)} · ${t('ui.weather')}: ${t(WX[offer.weather])}`}</p>
+        <p class="ui-status" data-ui="where" tabIndex={-1} role="status" data-weather={offer.weather}>{`${t('ui.here')}: ${ct(lang, offer.locationKey)} · ${t('ui.money')}: ${money(lang, offer.moneyCents)} · ${t('ui.weather')}: ${t(WX[offer.weather])}`}</p>
       )}
       {offer.stage === 'ended' && <p class="ui-status" data-ui="ended" role="status">{t('ui.ended')}</p>}
       {offer.quests.map((q) => (

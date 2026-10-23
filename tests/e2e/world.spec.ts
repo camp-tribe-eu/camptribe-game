@@ -178,13 +178,17 @@ for (const vp of VIEWPORTS) {
       await page.locator('[data-touch="story"]').tap();
       const story = page.locator('[data-ui="story"]');
       await story.locator('[data-act="create"]', { hasText: /Велосипед|Bike/ }).first().tap();
+      await page.waitForTimeout(400);   // GAME-80: панель глуха ~350 мс після дії
       for (const [kind, key] of [['visit', 'loc.home'], ['complete', 'q.st-001'], ['visit', 'loc.home'], ['complete', 'q.st-002'], ['visit', 'loc.shop'],
         ['pickup', 'item.tent'], ['pickup', 'item.sleeping-bag'], ['complete', 'q.st-003'], ['visit', 'loc.road'], ['complete', 'q.st-004'], ['visit', 'loc.camp.lake']] as const) {
         await story.locator(`[data-act="${kind}"][data-key="${key}"]`).tap();
+        await page.waitForTimeout(400);   // GAME-80: панель глуха ~350 мс після дії
         // На дорозі з шансом 50 % — подія (GAME-31): відповідаємо дотиком, як гравець.
         if (key === 'loc.road' && await story.locator('[data-key="dlg.road-apples.box.c2"]').isVisible({ timeout: 400 }).catch(() => false)) {
           await story.locator('[data-key="dlg.road-apples.box.c2"]').tap();
+          await page.waitForTimeout(400);   // GAME-80: панель глуха ~350 мс після дії
           await story.locator('[data-act="continue"]').tap();
+          await page.waitForTimeout(400);   // GAME-80: панель глуха ~350 мс після дії
         }
       }
       await page.locator('[data-ui="story-close"]').tap();
@@ -194,9 +198,13 @@ for (const vp of VIEWPORTS) {
       expect(await holdTouch(page, 'interact', () => true, 100)).toBe(true);
       await expect(story.locator('[data-ui="dialogue"]')).toBeVisible();
       await story.locator('[data-key="dlg.elise-greeting.hello.c1"]').tap();   // велосипедна відповідь
+      await page.waitForTimeout(400);   // GAME-80: панель глуха ~350 мс після дії
       await story.locator('[data-act="continue"]').tap();
+      await page.waitForTimeout(400);   // GAME-80: панель глуха ~350 мс після дії
       await story.locator('[data-key="dlg.elise-greeting.spot.c1"]').tap();
+      await page.waitForTimeout(400);   // GAME-80: панель глуха ~350 мс після дії
       await story.locator('[data-act="continue"]').tap();
+      await page.waitForTimeout(400);   // GAME-80: панель глуха ~350 мс після дії
       await expect(story.locator('[data-ui="dialogue"]')).toHaveCount(0);
       const g = await page.evaluate(() => (window as unknown as { __game: { read: () => { game: { dialogue: unknown; flags: string[] } } } }).__game.read().game);
       expect(g.dialogue).toBeNull();
