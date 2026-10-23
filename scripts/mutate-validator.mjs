@@ -119,6 +119,12 @@ const mutations = [
   { name: '[факт] попередження рахується помилкою', file: 'validator/codes.mjs', from: "CODES[code]?.severity === 'warning'", to: 'false' },
   { name: '[факт] попередження бруднить контент і вимикає комбінації', file: CHECKS_FILE, from: 'const clean = issues.every((i) => isWarning(i.code));', to: 'const clean = issues.length === 0;' },
   { name: '[факт] вердикт: код виходу не залежить від помилок', file: 'validator/verdict.mjs', from: 'exitCode: errors.length ? 1 : 0', to: 'exitCode: 0' },
+  // CLI (рецензія GAME-56): шлях, що справді вирішує CI.
+  { name: '[факт] CLI не друкує ::warning::', file: 'validate-content.mjs', from: 'for (const i of warnings) console.log', to: 'for (const i of []) console.log' },
+  { name: '[факт] CLI валить запуск на попередженні', file: 'validate-content.mjs', from: 'if (exitCode === 0 && ', to: 'if (errors.length + warnings.length === 0 && ' },
+  { name: '[факт] CLI не передає «сьогодні»', file: 'validate-content.mjs', from: "validate(loaded.content, { today: new Date().toISOString().slice(0, 10) })", to: 'validate(loaded.content, {})' },
+  { name: '[факт] --fail-on-warnings ігнорується', file: 'validate-content.mjs', from: "!(flag('--fail-on-warnings') && warnings.length)", to: 'true' },
+  { name: '[факт] зламане «сьогодні» не зупиняє валідатор', file: CHECKS_FILE, from: "if (!isIsoDay(today)) return", to: 'if (false) return' },
 ];
 
 function selfTestIn(dir) {

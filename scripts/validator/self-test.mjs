@@ -1,7 +1,8 @@
 // Самотест: доводить, що кожна перевірка вміє почервоніти, і що жодна не стріляє по коректному.
 import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from 'node:fs';
+import { spawnSync } from 'node:child_process';
 import { tmpdir } from 'node:os';
-import { join, resolve } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { isDeepStrictEqual } from 'node:util';
 import { CODES } from './codes.mjs';
@@ -113,12 +114,46 @@ export function selfTest() {
       `[код, попереджень] застарілий ${got.slice(0, 2)}; [код, помилок] без джерела ${got.slice(2, 4)}; чистий ${got[4]}`);
   }
 
+  // 3b. Те саме через справжній CLI (рецензія GAME-56): друк ::warning::, гілка коду виходу й джерело «сьогодні»
+  // живуть у validate-content.mjs, і verdict() їх не бачить. Дати відносно справжнього сьогодні: 2000-01-01 — завжди
+  // застарілий, учора — завжди свіжий і не з майбутнього.
+  {
+    const cliPath = resolve(dirname(fileURLToPath(import.meta.url)), '..', 'validate-content.mjs');
+    const yesterday = new Date(Date.now() - 86_400_000).toISOString().slice(0, 10);
+    const runCli = (patch, extra = []) => {
+      const root = mkdtempSync(join(tmpdir(), 'ct-validator-cli-'));
+      const dir = join(root, 'content');
+      try {
+        const facts = baseline().facts.map((f) => ({ ...f, checkedAt: yesterday }));
+        patch(facts);
+        mkdirSync(dir); writeBaseline(dir, { 'facts.json': JSON.stringify(facts) });
+        const r = spawnSync(process.execPath, [cliPath, '--dir', dir, ...extra], { encoding: 'utf8' });
+        const out = `${r.stdout}${r.stderr}`;
+        return [r.status, out.split('\n').filter((l) => l.startsWith('::warning::FACT_STALE')).length, /^PASS /m.test(out)];
+      } finally { rmSync(root, { recursive: true, force: true }); }
+    };
+    const stale = (f) => { f[0].checkedAt = '2000-01-01'; };
+    const got = [runCli(() => {}), runCli(stale), runCli((f) => { stale(f); delete f[0].source; }),
+      runCli(stale, ['--fail-on-warnings']), runCli(() => {}, ['--fail-on-warnings'])];
+    report(isDeepStrictEqual(got, [[0, 0, true], [0, 1, true], [1, 1, false], [1, 1, false], [0, 0, true]]),
+      '[CLI] свіжий → 0 без попереджень; застарілий → 0, рівно один ::warning::FACT_STALE і PASS; ще й без джерела → 1; '
+      + '--fail-on-warnings: застарілий → 1, свіжий → 0',
+      `[код, попереджень, PASS]: ${JSON.stringify(got)}`);
+  }
+
+  // 3c. Без справжнього «сьогодні» валідатор не мовчить, а падає (INTERNAL_ERROR).
+  {
+    const bad = [undefined, '', '2026-02-30', '22.10.2026'].map((t) => codeSet(validate(baseline(), { today: t })));
+    report(bad.every((g) => isDeepStrictEqual(g, ['INTERNAL_ERROR'])) && validate(baseline(), { today: TODAY }).length === 0,
+      '«сьогодні» відсутнє чи зламане → INTERNAL_ERROR; справжня дата → чисто', JSON.stringify(bad));
+  }
+
   // 4. Покриття: кожен код (крім INTERNAL_ERROR) хоч раз спрацював там, де його чекали.
   const uncovered = Object.keys(CODES).filter((c) => c !== 'INTERNAL_ERROR' && !covered.has(c));
   report(uncovered.length === 0, 'кожен код має зламаний приклад, на якому він спрацював', `без доказу: ${uncovered.join(', ')}`);
 
   // 5. Звірка числа прогонів із базою: набір, що обірвався, не сміє виглядати як пройдений.
-  const expected = 1 + 2 + FIXTURES.length + FILE_FIXTURES.length + 1 + 1; // інвентар, 2 звірки count, приклади, код виходу, покриття
+  const expected = 1 + 2 + FIXTURES.length + FILE_FIXTURES.length + 3 + 1; // інвентар, 2 звірки count, приклади, код виходу (verdict, CLI, «сьогодні»), покриття
   const before = ran;
   report(before === expected, `до звірки виконано ${before} кроків із ${expected} очікуваних`, 'набір обірвався або пропустив приклади');
 

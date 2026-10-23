@@ -6,6 +6,7 @@
 //   node scripts/validate-content.mjs --dir <тека>    перевірити іншу теку
 //   node scripts/validate-content.mjs --self-test     довести, що кожна перевірка вміє почервоніти
 //   --allow-missing-content                           якщо теки немає — NOT RUN (код 0, з попередженням)
+//   --fail-on-warnings                                попередження теж валять запуск (щотижневий facts-fresh, GAME-56)
 //
 // Коди виходу: 0 — перевірено й чисто (попередження ::warning:: код не псують); 1 — знайдено проблеми або самотест упав;
 //              0 + «NOT RUN» — теки немає й це явно дозволено прапорцем.
@@ -19,7 +20,7 @@ import { enumerateCombos } from './validator/combos.mjs';
 import { verdict } from './validator/verdict.mjs';
 import { cli } from './lib/cli.mjs';
 
-const args = cli({ flags: ['self-test', 'allow-missing-content'], options: ['dir'] });
+const args = cli({ flags: ['self-test', 'allow-missing-content', 'fail-on-warnings'], options: ['dir'] });
 const flag = (f) => args[f.slice(2)] === true;
 const opt = (f) => args[f.slice(2)];
 
@@ -43,12 +44,12 @@ const issues = loaded.issues.length ? loaded.issues : validate(loaded.content, {
 const { exitCode, errors, warnings } = verdict(issues);
 for (const i of warnings) console.log(`::warning::${i.code} · ${i.where} · ${i.msg}`);
 const warned = warnings.length ? ` · попереджень ${warnings.length}` : '';
-if (exitCode === 0) {
+if (exitCode === 0 && !(flag('--fail-on-warnings') && warnings.length)) {
   const c = loaded.content;
   const n = (k) => (c[k] ?? []).length;
   console.log(`PASS · квестів ${n('quests')}, предметів ${n('items')}, NPC ${n('npcs')}, локацій ${n('locations')}, подій ${n('events')}, фактів ${n('facts')}, доріг ${n('roads')}, діалогів ${n('dialogues')} (вузлів ${(c.dialogues ?? []).reduce((s, d) => s + d.nodes.length, 0)}), мов ${c.meta.locales.length} · профілів ${n('profiles')}, транспортів ${n('transports')}, тварин ${n('animals')} → комбінацій перевірено ${enumerateCombos(c).length}${warned}`);
   process.exit(0);
 }
 for (const i of errors) console.log(`::error::${i.code} · ${i.where} · ${i.msg}`);
-console.log(`\nFAIL · проблем: ${errors.length}${warned}`);
+console.log(`\nFAIL · проблем: ${errors.length}${warned}${errors.length ? '' : ' (--fail-on-warnings)'}`);
 process.exit(1);

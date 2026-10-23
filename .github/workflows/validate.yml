@@ -13,6 +13,9 @@ on:
   pull_request:
   push:
     branches: [main]
+  # GAME-56: факт старіє з календарем, а не з пушем — щотижня перевіряємо давність (лише на main).
+  schedule:
+    - cron: '17 6 * * 1'
 
 permissions:
   contents: read
@@ -31,3 +34,17 @@ jobs:
       - run: npm ci --no-audit --no-fund
       - name: Усі сторожі — самотести, мутації, справжні прогони
         run: npm run validate
+
+  # Щотижнева звірка давності фактів (рецензія GAME-56). На PR попередження FACT_STALE лише жовте
+  # в Annotations; тут воно червоне, щоб розкладний прогін упав і GitHub надіслав лист. PR не блокує.
+  facts-fresh:
+    if: github.event_name == 'schedule'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: '24' }
+      - name: Давність фактів (попередження → червоне)
+        run: node scripts/validate-content.mjs --fail-on-warnings
+

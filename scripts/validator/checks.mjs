@@ -841,7 +841,13 @@ function rewards(content) {
 
 // Схема йде першою: якщо форма зламана, змістові перевірки не запускаються,
 // бо на кривих даних вони або впадуть, або збрешуть.
+/** Справжня календарна дата YYYY-MM-DD (не 2026-02-30). */
+const isIsoDay = (d) => typeof d === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(d)
+  && !Number.isNaN(Date.parse(`${d}T00:00:00Z`)) && new Date(`${d}T00:00:00Z`).toISOString().slice(0, 10) === d;
+
 export function validate(content, { today }) {
+  // Без «сьогодні» давність і майбутні дати фактів мовчки вимикаються (NaN > 365 — завжди false) — це збій, не PASS (закон 4).
+  if (!isIsoDay(today)) return [I('INTERNAL_ERROR', 'today', `«сьогодні» не дата YYYY-MM-DD: ${JSON.stringify(today)}`)];
   const ctx = { content, today, ix: null };
   const issues = [];
   const runOne = (chk) => {
