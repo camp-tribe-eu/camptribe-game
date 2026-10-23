@@ -51,7 +51,11 @@ describe('v2 (GAME-29): персонаж і квести', () => {
   it('фікстура v2 — той самий стан, що й живий прогін із сюжетом', () => {
     const live = run(run(newSim(SEED, 10_000), LOG.slice(0, 600), { defs: DEFS }), V2_STORY as Input[], { defs: STORY_DEFS });
     const r = fromSave(JSON.stringify(v2));
-    expect(r.ok && stateHash(r.sim)).toBe(stateHash(live));
+    // GAME-84 №1: фікстура — вічна (сейв, записаний до виправлення), тож вона тримає запис журналу «Visit loc.home» удома,
+    // якого новий рушій уже не пише (дія нічого не міняє). Усе інше — той самий стан; журнал порівнюємо окремо нижче.
+    expect(r.ok && stateHash({ ...r.sim, journal: null })).toBe(stateHash({ ...live, journal: null }));
+    expect(r.ok && r.sim.journal.length).toBe(live.journal.length + 1);
+    expect(r.ok && r.sim.journal.filter((e) => !(e.type === 'Visit' && e.ref === 'loc.home'))).toEqual(live.journal);
     expect(r.ok && Object.keys(r.sim.game.quests).length).toBe(3);   // фікстура справді несе квести
     expect(r.ok && r.sim.game.npcMemory).toEqual({ 'npc.ann': ['m.biker'] });   // і пам'ять NPC (GAME-48), не лише {}
   });
@@ -117,7 +121,9 @@ describe('v3 (GAME-71): календар життя; v2 вийшов до гра
     const live = run(run(run(newSim(SEED, 10_000), LOG.slice(0, 600), { defs: DEFS }), V2_STORY as Input[], { defs: LIFE_DEFS }), V3_LIFE as Input[], { defs: LIFE_DEFS });
     const r = fromSave(JSON.stringify(v3), { life: LIFE });
     expect(r.ok && r.fromVersion).toBe(3);
-    expect(r.ok && stateHash(r.sim)).toBe(stateHash(live));
+    // Журнал — як у v2 вище (GAME-84 №1): старий запис «Visit loc.home» удома нове ядро не пише; решта стану збігається.
+    expect(r.ok && stateHash({ ...r.sim, journal: null })).toBe(stateHash({ ...live, journal: null }));
+    expect(r.ok && r.sim.journal.filter((e) => !(e.type === 'Visit' && e.ref === 'loc.home'))).toEqual(live.journal);
     expect(r.ok && r.sim.game.life).toEqual({ paydays: 1, leave: [{ from: 40, days: 3, vacation: 2 }] });
   });
   it('paydaysThrough (закрита формула) = кількість paydayDay ≤ дня, 20 років щодня; і старт після дня виплати', () => {

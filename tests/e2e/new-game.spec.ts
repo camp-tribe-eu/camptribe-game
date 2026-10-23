@@ -18,7 +18,7 @@ async function playSome(page: Page): Promise<Core> {
   await page.locator('[data-touch="story"]').click();
   await story(page).locator('[data-act="create"]', { hasText: /Велосипед|Bike/ }).first().click();
   await page.waitForTimeout(400);   // GAME-80: панель відкидає другу дію раніше ніж за 350 мс
-  await story(page).locator('[data-act="visit"][data-key="loc.home"]').click();
+  await story(page).locator('[data-act="complete"][data-key="q.st-001"]').click();
   await page.locator('[data-ui="story-close"]').click();
   const c = await core(page);
   expect(c.game.player).not.toBeNull();

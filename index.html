@@ -4,6 +4,8 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <title>CampLife</title>
+    <!-- GAME-84 №11: значок вкладки — власний (намет), вбудований: файлу в public/ не треба (немає рядка реєстру ліцензій), і запиту, що дав би 404, теж. -->
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' shape-rendering='crispEdges'%3E%3Crect width='16' height='16' fill='%231b1f23'/%3E%3Cpath d='M8 2 1 13h14z' fill='%23d94f30'/%3E%3Cpath d='M8 7 5 13h6z' fill='%231b1f23'/%3E%3C/svg%3E" />
     <style>
       /* Піксельний шрифт із повною українською кирилицею (OFL, GAME-26; перевірка — scripts/i18n/font_glyphs.py). */
       @font-face { font-family: 'CampPixel'; src: url('fonts/PressStart2P-Regular.ttf') format('truetype'); font-display: swap; }
@@ -15,17 +17,21 @@
       #ui { display: contents; }
       #stage { position: relative; flex: 1 1 0; min-height: 0; }
       .ui-hud { order: -1; flex: none; display: flex; flex-wrap: wrap; align-items: center; gap: 4px 16px; box-sizing: border-box;
-        min-height: 76px; margin-right: 140px; padding: 8px 12px; background: #1b1f23; color: #e8e6e3; font-size: 0.875rem; line-height: 1.4; overflow-wrap: anywhere; }
+        min-height: 76px; margin-right: 140px; padding: 8px 12px; background: #1b1f23; color: #e8e6e3; font-size: 0.875rem; line-height: 1.4; overflow-wrap: break-word; hyphens: auto; }
       .ui-hud [data-ui="hud-place"] { font-weight: 700; }
+      /* GAME-84 №7: «50,00 EUR» не розривається посеред слова («EU R» при тексті 200 %): суму можна лише перенести цілою. */
+      .ui-hud [data-ui="hud-money"], .ui-hud [data-ui="hud-time"] { white-space: nowrap; }
       .ui-hint { flex-basis: 100%; color: #ffd54a; font-weight: 700; }
       .ui-story-btn[data-hint="yes"] { outline: 3px solid #ffd54a; outline-offset: 2px; }
       .ui-btn-locked { border-style: dashed; color: #cfcbc7; background: #22262b; cursor: not-allowed; }
       #stage canvas { image-rendering: pixelated; }
       /* Підпис збірки лежить просто на канві: власне тло, інакше на світлому пікселі гри контраст ≈ 1,1:1 (GAME-39). */
       .build { position: absolute; left: 8px; top: 4px; z-index: 1; margin: 0; padding: 2px 6px; border-radius: 4px; font-size: 0.75rem;
-        color: #e8e6e3; background: #000000b3; pointer-events: none; }
+        color: #e8e6e3; background: #000000b3; pointer-events: none; max-width: calc(100% - 16px); box-sizing: border-box; overflow-wrap: anywhere; }
       /* Під відкритим діалогом підпис однаково затемнений — ховаємо, щоб його тло не плутало обчислення контрасту тексту діалогу. */
       #app:has([role="dialog"]) .build { visibility: hidden; }
+      /* GAME-84 №9: панель (#000000cc) напівпрозора — стрілки й кнопка дії під нею просвічували крізь текст. */
+      #app:has([role="dialog"]) .touch { visibility: hidden; }
       .touch { position: absolute; inset: auto 0 0 0; height: 0; }
       .touch button {
         position: absolute; border: 2px solid #e8e6e3aa; border-radius: 12px; background: #00000066;
@@ -40,7 +46,7 @@
         border: 2px solid #e8e6e3aa; background: #00000066; color: #e8e6e3; font-size: 1.25rem; }
       /* safe center (GAME-39): діалог, вищий за екран (титри, текст 200 %), притискається до верху, а не
          вилазить за нього — інакше «Продовжити» лишалась вище за межу прокрутки. start — для браузерів без safe. */
-      .ui-overlay { position: absolute; inset: 0; display: grid; place-content: start center; place-content: safe center; gap: 12px; padding: 16px; font-family: 'CampPixel', system-ui, sans-serif; line-height: 1.6; overflow-wrap: anywhere;
+      .ui-overlay { position: absolute; inset: 0; display: grid; place-content: start center; place-content: safe center; justify-items: center; gap: 12px; padding: 16px; font-family: 'CampPixel', system-ui, sans-serif; line-height: 1.6; overflow-wrap: anywhere; hyphens: auto;
         background: #000000cc; text-align: center; }
       .ui-story-btn { position: absolute; right: 76px; top: 12px; min-width: 52px; min-height: 52px; border-radius: 12px;
         border: 2px solid #e8e6e3aa; background: #00000066; color: #e8e6e3; font-size: 1.25rem; }
@@ -58,7 +64,7 @@
       .ui-btn { font-family: inherit; font-size: 0.75rem; max-width: 92vw; white-space: normal; min-width: 52px; min-height: 48px; padding: 8px 16px; border-radius: 10px; border: 2px solid #e8e6e3aa;
         background: #2a2f35; color: #e8e6e3; font-size: 1rem; }
       .ui-overlay, .ui-overlay * { box-sizing: border-box; }
-      .ui-code { width: 100%; max-width: 560px; font: 0.7rem monospace; background: #111; color: #e8e6e3; border: 1px solid #e8e6e355; border-radius: 6px; padding: 6px; }
+            .ui-code { width: 100%; max-width: 560px; font: 0.7rem monospace; background: #111; color: #e8e6e3; border: 1px solid #e8e6e355; border-radius: 6px; padding: 6px; }
       .ui-status { margin: 4px 0 0; width: 100%; font-size: 0.75rem; }
       .ui-story [tabindex="-1"]:focus { outline: 2px solid currentColor; outline-offset: 2px; }
       .ui-overlay { overflow-y: auto; }

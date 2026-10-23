@@ -14,8 +14,8 @@ export const START_MONEY = 10_000;
 export const PROLOGUE_BIKE: readonly Input[] = [
   ...frames(8),
   c({ type: 'CreateCharacter', profileId: 'profile.solo-explorer', transportId: 'transport.bike' }),
-  c({ type: 'Visit', locationId: 'loc.home' }), c({ type: 'CompleteQuest', questId: 'ST-001' }), ...frames(4),
-  c({ type: 'Visit', locationId: 'loc.home' }), c({ type: 'CompleteQuest', questId: 'ST-002' }),
+  c({ type: 'CompleteQuest', questId: 'ST-001' }), ...frames(4),                         // GAME-84 №1: «Піти: Дім» удома більше не потрібне — ціль виконано стартом
+  c({ type: 'CompleteQuest', questId: 'ST-002' }),
   c({ type: 'Visit', locationId: 'loc.shop' }), ...frames(6),
   c({ type: 'Pickup', itemId: 'item.tent' }), c({ type: 'Pickup', itemId: 'item.sleeping-bag' }),
   c({ type: 'BuyItem', itemId: 'item.sleeping-bag-synthetic' }),                         // купівля в крамниці: гроші в хеші
@@ -25,10 +25,10 @@ export const PROLOGUE_BIKE: readonly Input[] = [
   { kind: 'pause' }, ...frames(3, 1000), { kind: 'advance', minutes: 30 }, { kind: 'resume' }, // пауза меню, перемотування (рецензія GAME-34)
   c({ type: 'CompleteQuest', questId: 'ST-004', to: 'q.elise-bike-area' }),
   c({ type: 'Visit', locationId: 'loc.camp.lake' }),
-  c({ type: 'Talk', npcId: 'npc.elise' }), c({ type: 'Choose', choice: 0 }), c({ type: 'Continue' }), c({ type: 'Choose', choice: 0 }), c({ type: 'Continue' }),
+  c({ type: 'Talk', npcId: 'npc.elise' }), c({ type: 'Choose', choice: 0 }), c({ type: 'Continue' }), c({ type: 'Continue' }), c({ type: 'Choose', choice: 0 }), c({ type: 'Continue' }),
   c({ type: 'CompleteQuest', questId: 'q.elise-bike-area' }), ...frames(4),
   c({ type: 'Interact', targetId: 'obj.campfire' }),
-  c({ type: 'Talk', npcId: 'npc.elise' }), c({ type: 'Choose', choice: 1 }), c({ type: 'Choose', choice: 0 }), c({ type: 'Continue' }),
-  c({ type: 'Visit', locationId: 'loc.camp.lake' }), c({ type: 'Pickup', itemId: 'item.firewood' }),
+  c({ type: 'Talk', npcId: 'npc.elise' }), c({ type: 'Choose', choice: 3 }), c({ type: 'Choose', choice: 0 }), c({ type: 'Continue' }), // друга розмова: «нагадай» (вона вже знайома)
+  c({ type: 'Pickup', itemId: 'item.firewood' }),
   c({ type: 'CompleteQuest', questId: 'ST-005' }), ...frames(8),
 ];

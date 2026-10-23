@@ -179,7 +179,7 @@ for (const vp of VIEWPORTS) {
       const story = page.locator('[data-ui="story"]');
       await story.locator('[data-act="create"]', { hasText: /Велосипед|Bike/ }).first().tap();
       await page.waitForTimeout(400);   // GAME-80: панель глуха ~350 мс після дії
-      for (const [kind, key] of [['visit', 'loc.home'], ['complete', 'q.st-001'], ['visit', 'loc.home'], ['complete', 'q.st-002'], ['visit', 'loc.shop'],
+      for (const [kind, key] of [['complete', 'q.st-001'], ['complete', 'q.st-002'], ['visit', 'loc.shop'],
         ['pickup', 'item.tent'], ['pickup', 'item.sleeping-bag'], ['complete', 'q.st-003'], ['visit', 'loc.road'], ['complete', 'q.st-004'], ['visit', 'loc.camp.lake']] as const) {
         await story.locator(`[data-act="${kind}"][data-key="${key}"]`).tap();
         await page.waitForTimeout(400);   // GAME-80: панель глуха ~350 мс після дії
@@ -200,6 +200,8 @@ for (const vp of VIEWPORTS) {
       await story.locator('[data-key="dlg.elise-greeting.hello.c1"]').tap();   // велосипедна відповідь
       await page.waitForTimeout(400);   // GAME-80: панель глуха ~350 мс після дії
       await story.locator('[data-act="continue"]').tap();
+      await page.waitForTimeout(400);   // GAME-80: панель глуха ~350 мс після дії
+      await story.locator('[data-act="continue"]').tap();                       // GAME-84 №5: після велосипеда вона ще й називає себе (intro)
       await page.waitForTimeout(400);   // GAME-80: панель глуха ~350 мс після дії
       await story.locator('[data-key="dlg.elise-greeting.spot.c1"]').tap();
       await page.waitForTimeout(400);   // GAME-80: панель глуха ~350 мс після дії

@@ -184,7 +184,8 @@ describe('коди відмов: кожен код із реєстру має т
     ['NOT_HERE', play([DRIVER, { type: 'Visit', locationId: 'loc.home' }, { type: 'CompleteQuest', questId: 'q.start' }]), { type: 'Talk', commandId: 's5', npcId: 'npc.ann' }, STORY_DEFS],
     ['ITEM_ALREADY_HELD', play([DRIVER, { type: 'Pickup', itemId: 'item.wood' }]), { type: 'Pickup', commandId: 's6', itemId: 'item.wood' }, STORY_DEFS],
     ['QUEST_NOT_ACTIVE', play([DRIVER]), { type: 'CompleteQuest', commandId: 's7', questId: 'q.mid' }, STORY_DEFS],
-    ['QUEST_OBJECTIVES_OPEN', play([DRIVER]), { type: 'CompleteQuest', commandId: 's8', questId: 'q.start' }, STORY_DEFS],
+    // GAME-84 №1: «озирнись» стартового квесту вже виконано самим стартом (гравець там стоїть) — відкриті цілі лишаються в q.mid.
+    ['QUEST_OBJECTIVES_OPEN', play([DRIVER, { type: 'CompleteQuest', questId: 'q.start' }]), { type: 'CompleteQuest', commandId: 's8', questId: 'q.mid' }, STORY_DEFS],
     ['QUEST_REQUIRES_UNMET', play([DRIVER, { type: 'Visit', locationId: 'loc.home' }, { type: 'Pickup', itemId: 'item.wood' }, { type: 'CompleteQuest', questId: 'q.start' }, { type: 'Visit', locationId: 'loc.shop' }, { type: 'Talk', npcId: 'npc.ann' }, { type: 'Choose', choice: 2 }, { type: 'Continue' }]), { type: 'CompleteQuest', commandId: 's9', questId: 'q.mid', to: 'q.gate' }, STORY_DEFS],
     ['QUEST_NOT_OPTIONAL', play([DRIVER]), { type: 'DeclineQuest', commandId: 's10', questId: 'q.start' }, STORY_DEFS],
     ['IN_DIALOGUE', play([DRIVER, { type: 'Visit', locationId: 'loc.home' }, { type: 'CompleteQuest', questId: 'q.start' }, { type: 'Visit', locationId: 'loc.shop' }, { type: 'Talk', npcId: 'npc.ann' }]), { type: 'Visit', commandId: 's12', locationId: 'loc.home' }, STORY_DEFS],

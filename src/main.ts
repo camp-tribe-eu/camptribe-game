@@ -14,6 +14,7 @@ import credits from '../assets/credits.json';
 import { createBridge } from './view/world/bridge';
 import { WorldScene, type WorldProbe } from './view/world/scene';
 import { mountTouchControls } from './view/world/touch';
+import { frameSize } from './view/world/frame';
 import { storyOffer } from './view/story-offer';
 import { testSwitches } from './view/test-switches';
 import type { StoryOffer } from './ui/story-types';
@@ -69,11 +70,13 @@ label.className = 'build';
 label.textContent = buildLabel(__GAME_VERSION__, __GAME_COMMIT__);
 stage.append(label);   // у полі гри, а не над HUD (GAME-83): підпис збірки не перекриває смугу HUD
 
+const frame0 = frameSize(stage.clientWidth, stage.clientHeight);
+
 const game = new Phaser.Game({
   type: Phaser.AUTO,
   parent: stage,
-  width: 240,
-  height: 160,
+  width: frame0.width,
+  height: frame0.height,
   pixelArt: true,
   backgroundColor: '#000000',
   render: { preserveDrawingBuffer: true },
@@ -81,6 +84,12 @@ const game = new Phaser.Game({
   physics: { default: 'arcade', arcade: { debug: false } },
   scene: [new WorldScene(bridge, input, probe, talkOnMap)],
 });
+
+// Поле змінило розмір (поворот телефону, смуга HUD, текст 200 %) — кадр підлаштовується під його форму.
+new ResizeObserver(() => {
+  const f = frameSize(stage.clientWidth, stage.clientHeight);
+  if (f.width !== game.scale.gameSize.width || f.height !== game.scale.gameSize.height) game.scale.setGameSize(f.width, f.height);
+}).observe(stage);
 
 // Оболонка UI (GAME-25): пауза зупиняє і сцену, і ігровий годинник ядра.
 const ui = document.createElement('div');

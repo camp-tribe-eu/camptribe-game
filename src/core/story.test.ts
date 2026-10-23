@@ -15,7 +15,13 @@ describe('сюжет у ядрі (GAME-29)', () => {
   it('створення персонажа відкриває стартовий квест і ставить у його локацію', () => {
     const s = play([DRIVER]);
     expect(s.player).toEqual({ profileId: 'profile.b', transportId: 'transport.car', animalId: 'animal.none', locationId: 'loc.home' });
-    expect(s.quests).toEqual({ 'q.start': { status: 'active', done: [] } });
+    // GAME-84 №1: «озирнись удома» гравець уже виконує самим стартом удома — окремий Visit туди не потрібен.
+    expect(s.quests).toEqual({ 'q.start': { status: 'active', done: ['look-around'] } });
+  });
+
+  it('GAME-84 №1: квест, що відкрився в іншому місці, ніж його ціль «побувати», цілі не отримує (тик — лише там, де гравець стоїть)', () => {
+    const away = play([BIKER, { type: 'CompleteQuest', questId: 'q.start', to: 'q.side' }]);
+    expect(away.quests['q.side']?.done).toEqual([]);                         // ride — у крамниці, гравець удома
   });
 
   it('водій: шлях за замовчуванням до кінця, нагорода рівно раз, кінець розділу', () => {
@@ -141,7 +147,8 @@ describe('сюжет у ядрі (GAME-29)', () => {
     const defs = structuredClone(STORY_DEFS) as Mutable;
     const side = defs.story.quests['q.side'];
     if (side) side.transitions = [{ on: 'decline', to: 'q.start', choice: false }];
-    const s = play([BIKER, START[0], { type: 'CompleteQuest', questId: 'q.start', to: 'q.side' }, { type: 'DeclineQuest', questId: 'q.side' }], undefined, defs);
+    // Гравець іде в крамницю й відмовляється там: у q.start він повертається НЕ вдома, тож ціль «озирнись удома» чиста.
+    const s = play([BIKER, START[0], { type: 'CompleteQuest', questId: 'q.start', to: 'q.side' }, { type: 'Visit', locationId: 'loc.shop' }, { type: 'DeclineQuest', questId: 'q.side' }], undefined, defs);
     expect(s.quests['q.start']).toEqual({ status: 'active', done: [] });
   });
 
