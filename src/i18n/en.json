@@ -54,5 +54,10 @@
   "jr.DeclineQuest": "Set aside",
   "ui.importNewer": "This code is from a newer version of the game. Reload the page (to get the new version) and try again.",
   "ui.staleDismiss": "I kept the code — hide",
-  "ui.stage": "Game: arrows to move, Space or E to act"
+  "ui.stage": "Game: arrows to move, Space or E to act",
+  "touch.up": "Up",
+  "touch.down": "Down",
+  "touch.left": "Left",
+  "touch.right": "Right",
+  "touch.interact": "Act"
 }

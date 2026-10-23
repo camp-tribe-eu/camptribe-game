@@ -66,6 +66,12 @@ export function Shell({ port, langOverride, credits }: { port: UiPort; langOverr
     document.documentElement.style.fontSize = `${settings.textScale}%`;
     document.documentElement.lang = settings.language;
     document.getElementById('stage')?.setAttribute('aria-label', t('ui.stage'));
+    // Дотикові кнопки сцени (src/view/world/touch.ts) — підписи мовою гравця, а не id дії англійською.
+    const TOUCH: Readonly<Record<string, Key>> = { up: 'touch.up', down: 'touch.down', left: 'touch.left', right: 'touch.right', interact: 'touch.interact' };
+    for (const b of document.querySelectorAll<HTMLElement>('.touch [data-touch]')) {
+      const k = TOUCH[b.dataset.touch ?? ''];
+      if (k) b.setAttribute('aria-label', t(k));
+    }
   }, [settings]);
 
   // Відкладений сейв: і в меню паузи, і на екрані подорожі (туди гравець іде першим), доки не сховає.

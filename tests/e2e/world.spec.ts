@@ -205,6 +205,19 @@ for (const vp of VIEWPORTS) {
   });
 }
 
+test.describe('підписи дотикових кнопок мовою гравця (GAME-30 #3)', () => {
+  test.use({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true });
+
+  test('aria-label кнопок сцени — з словника, і змінюється разом із мовою', async ({ page }) => {
+    await open(page);
+    const labels = (): Promise<(string | null)[]> => page.locator('.touch [data-touch]').evaluateAll((els) => els.map((e) => e.getAttribute('aria-label')));
+    expect(await labels()).toEqual(['Вгору', 'Вниз', 'Ліворуч', 'Праворуч', 'Дія']);
+    await page.locator('[data-touch="pause"]').tap();
+    await page.locator('[data-ui="lang-en"]').tap();
+    await expect.poll(labels).toEqual(['Up', 'Down', 'Left', 'Right', 'Act']);   // ефект Preact — після малювання
+  });
+});
+
 test.describe('поворот екрана (телефон)', () => {
   test.use({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true });
 
