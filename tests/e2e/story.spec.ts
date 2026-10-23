@@ -25,12 +25,14 @@ async function act(page: Page, kind: string, key = '', timeout = 5_000): Promise
   } catch {
     throw new Error(`крок «${kind} ${key}»: кнопки немає на екрані подорожі`);
   }
+  await page.waitForTimeout(400);   // GAME-80: панель глуха ~350 мс після дії — гравець теж не тисне швидше
   // На дорозі з шансом 50 % трапляється подія (GAME-31; кидок залежить від прожитих кадрів) — відповідаємо, як гравець.
   if (kind === 'visit' && key === 'loc.road') {
     const answer = panel(page).locator('[data-key="dlg.road-apples.box.c2"]');
     if (await answer.isVisible({ timeout: 400 }).catch(() => false)) {
       await answer.click();
       await panel(page).locator('[data-act="continue"]').click();
+      await page.waitForTimeout(400);   // GAME-80: панель глуха ~350 мс після дії
     }
   }
 }
@@ -39,6 +41,7 @@ async function act(page: Page, kind: string, key = '', timeout = 5_000): Promise
 // ПРОХІД-START — між цими позначками лише кліки й клавіші, без тестового хука гри (перевіряє тест нижче).
 async function playBikeProlog(page: Page): Promise<void> {
   await panel(page).locator('[data-act="create"]', { hasText: 'Велосипед' }).first().click();
+  await page.waitForTimeout(400);   // GAME-80: панель глуха ~350 мс після дії
   await act(page, 'visit', 'loc.home');
   await act(page, 'complete', 'q.st-001');
   await act(page, 'visit', 'loc.home');
@@ -112,6 +115,7 @@ for (const [seed, weather, label, minutes] of [[2, 'sunny', 'сонячно', 25
     const page = await ctx.newPage();
     await open(page, `?seed=${seed}`);
     await panel(page).locator('[data-act="create"]', { hasText: 'Велосипед' }).first().click();
+    await page.waitForTimeout(400);   // GAME-80: панель глуха ~350 мс після дії
     const where = panel(page).locator('[data-ui="where"]');
     await expect(where).toHaveAttribute('data-weather', weather);
     await expect(where).toContainText(`Погода: ${label}`);
@@ -137,9 +141,11 @@ async function toRoad(browser: Browser, seed: number): Promise<{ page: Page; fir
   const page = await ctx.newPage();
   await open(page, `?seed=${seed}`);
   await panel(page).locator('[data-act="create"]', { hasText: 'Велосипед' }).first().click();
+  await page.waitForTimeout(400);   // GAME-80: панель глуха ~350 мс після дії
   for (const [k, key] of [['visit', 'loc.home'], ['complete', 'q.st-001'], ['visit', 'loc.home'], ['complete', 'q.st-002'], ['visit', 'loc.shop'],
     ['pickup', 'item.tent'], ['pickup', 'item.sleeping-bag'], ['complete', 'q.st-003']] as const) await act(page, k, key);
   await panel(page).locator('[data-act="visit"][data-key="loc.road"]').click();
+  await page.waitForTimeout(400);   // GAME-80: панель глуха ~350 мс після дії
   const fired = await panel(page).locator('[data-ui="dialogue"]').isVisible({ timeout: 400 }).catch(() => false);
   return { page, fired, close: () => ctx.close() };
 }
@@ -169,7 +175,9 @@ test('подія в дорозі (GAME-31): трапляється на доро
   await expect(panel(page).locator('[data-ui="dialogue"] h3')).toHaveText('Яблука біля дороги');
   await expect(panel(page).locator('[data-ui="actions"]')).toHaveCount(0);                // у події — лише відповіді
   await panel(page).locator('[data-key="dlg.road-apples.box.c1"]').click();
+  await page.waitForTimeout(400);   // GAME-80: панель глуха ~350 мс після дії
   await panel(page).locator('[data-act="continue"]').click();
+  await page.waitForTimeout(400);   // GAME-80: панель глуха ~350 мс після дії
   await expect(panel(page).locator('[data-ui="dialogue"]')).toHaveCount(0);
   const c = await core(page) as unknown as { game: { flags: string[] }; journal: { type: string; ref: string | null }[] };
   expect(c.game.flags).toEqual(expect.arrayContaining(['f.road-apple', 'f.seen-road-apples']));
@@ -181,6 +189,7 @@ test('подія в дорозі (GAME-31): трапляється на доро
 test('автівкою — без бічного квесту й без відповіді про велосипед, і так само до кінця розділу', async ({ page }) => {
   await open(page);
   await panel(page).locator('[data-act="create"]', { hasText: 'Авто' }).first().click();
+  await page.waitForTimeout(400);   // GAME-80: панель глуха ~350 мс після дії
   for (const [k, key] of [['visit', 'loc.home'], ['complete', 'q.st-001'], ['visit', 'loc.home'], ['complete', 'q.st-002'], ['visit', 'loc.shop'],
     ['pickup', 'item.tent'], ['pickup', 'item.sleeping-bag'], ['complete', 'q.st-003'], ['visit', 'loc.road']] as const) await act(page, k, key);
   await expect(panel(page).locator('[data-key="q.elise-bike-area.choice"]')).toHaveCount(0);
@@ -201,6 +210,57 @@ test('автівкою — без бічного квесту й без відп
   expect(c.game.campaignEnded).toBe(true);
   expect(c.game.grants).not.toContain('rw.q-elise-bike-area');
   expect(await panel(page).textContent()).not.toContain('⟦');
+});
+
+// GAME-80 · друге свідоме натискання через ~150 мс не має влучати в кнопку, що з'явилась після першої дії.
+/** Авто, до кемпінгу з дровами на екрані: перша дія ще не виконана. */
+async function carToCamp(page: Page): Promise<void> {
+  await panel(page).locator('[data-act="create"]', { hasText: 'Авто' }).first().click();
+  await page.waitForTimeout(400);   // GAME-80: панель глуха ~350 мс після дії
+  for (const [k, key] of [['visit', 'loc.home'], ['complete', 'q.st-001'], ['visit', 'loc.home'], ['complete', 'q.st-002'], ['visit', 'loc.shop'],
+    ['pickup', 'item.tent'], ['pickup', 'item.sleeping-bag'], ['complete', 'q.st-003'], ['visit', 'loc.road']] as const) await act(page, k, key);
+  await act(page, 'complete', 'q.st-004');
+  await act(page, 'visit', 'loc.camp.lake');
+  await expect(panel(page).locator('[data-act="pickup"][data-key="item.firewood"]')).toBeVisible();
+}
+
+test.describe('GAME-80 · подвійне натискання', () => {
+  test.use({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true });
+  test('два дотики з інтервалом 150 мс — одна дія (журнал +1)', async ({ page }) => {
+    await open(page, '?seed=5');
+    await carToCamp(page);
+    const before = (await core(page)).journal.length;
+    const box = await panel(page).locator('[data-act="pickup"][data-key="item.firewood"]').boundingBox();
+    if (!box) throw new Error('кнопки «Узяти: Дрова» немає на екрані');
+    const x = box.x + box.width / 2, y = box.y + box.height / 2;
+    await page.touchscreen.tap(x, y);
+    await page.waitForTimeout(150);
+    await page.touchscreen.tap(x, y);
+    await page.waitForTimeout(500);
+    const c = await core(page);
+    expect(c.journal.length - before).toBe(1);
+    expect(c.journal[c.journal.length - 1]?.type).toBe('Pickup');
+  });
+});
+
+test('два Enter з інтервалом 150 мс — одна дія; фокус після дії не на кнопці, а на рядку стану', async ({ page }) => {
+  await open(page, '?seed=5');
+  await carToCamp(page);
+  const before = (await core(page)).journal.length;
+  await panel(page).locator('[data-act="pickup"][data-key="item.firewood"]').focus();
+  await page.keyboard.press('Enter');
+  await page.waitForTimeout(150);
+  await page.keyboard.press('Enter');
+  await page.waitForTimeout(500);
+  const c = await core(page);
+  expect(c.journal.length - before).toBe(1);
+  expect(c.journal[c.journal.length - 1]?.type).toBe('Pickup');
+  await expect(panel(page).locator('[data-ui="where"]')).toBeFocused();
+  // після паузи наступна свідома дія проходить: сторож не глушить гру назавжди (позитивний контроль)
+  await panel(page).locator('[data-act]').first().focus();
+  await page.keyboard.press('Enter');
+  await page.waitForTimeout(200);
+  expect((await core(page)).journal.length - before).toBe(2);
 });
 
 test('затиснутий Enter не пробігає кроки: одне натискання — одна дія', async ({ page }) => {
@@ -239,6 +299,7 @@ test('сейв після прологу: перезавантаження — �
 test('кожна ціль екрана подорожі ≥ 44×44 CSS px і нічого не вилазить за екран (псевдолокаль)', async ({ page }) => {
   await open(page, '?lang=pseudo');
   await panel(page).locator('[data-act="create"]').first().click();
+  await page.waitForTimeout(400);   // GAME-80: панель глуха ~350 мс після дії
   await act(page, 'visit', 'loc.home');
   await panel(page).locator('[data-ui="journal"] summary').click();
   const bad = await page.evaluate(() => {
@@ -276,7 +337,7 @@ test('прохід керується лише кліками й клавіша�
     if (ts.isVariableStatement(n)) for (const d of n.declarationList.declarations) if (ts.isIdentifier(d.name) && FLOW.includes(d.name.text)) roots.push(d);
   });
   expect(roots.length).toBe(FLOW.length);
-  const ALLOWED = new Set(['playBikeProlog', 'act', 'panel', 'locator', 'first', 'click', 'tap', 'press', 'down', 'up', 'expect', 'toBeVisible', 'toHaveCount', 'Error', 'isVisible', 'catch']);
+  const ALLOWED = new Set(['playBikeProlog', 'act', 'panel', 'locator', 'first', 'click', 'tap', 'press', 'down', 'up', 'expect', 'toBeVisible', 'toHaveCount', 'Error', 'isVisible', 'catch', 'waitForTimeout']);
   const called: string[] = [];
   const bad: string[] = [];
   const walk = (n: ts.Node): void => {
@@ -320,6 +381,7 @@ test.describe('Еліза на мапі (клавіатура)', () => {
   test('у кемпінгу: дійти пішки, натиснути дію — відкривається розмова з нею', async ({ page }) => {
     await open(page);
     await panel(page).locator('[data-act="create"]', { hasText: 'Велосипед' }).first().click();
+    await page.waitForTimeout(400);   // GAME-80: панель глуха ~350 мс після дії
     for (const [k, key] of [['visit', 'loc.home'], ['complete', 'q.st-001'], ['visit', 'loc.home'], ['complete', 'q.st-002'], ['visit', 'loc.shop'],
       ['pickup', 'item.tent'], ['pickup', 'item.sleeping-bag'], ['complete', 'q.st-003'], ['visit', 'loc.road'], ['complete', 'q.st-004'], ['visit', 'loc.camp.lake']] as const) await act(page, k, key);
     await page.locator('[data-ui="story-close"]').click();
@@ -333,6 +395,7 @@ test.describe('Еліза на мапі (клавіатура)', () => {
   test('ще вдома: Еліза на мапі є, але ядро розмову не приймає — екран подорожі без розмови', async ({ page }) => {
     await open(page);
     await panel(page).locator('[data-act="create"]').first().click();
+    await page.waitForTimeout(400);   // GAME-80: панель глуха ~350 мс після дії
     await page.locator('[data-ui="story-close"]').click();
     await walkToElise(page);
     await page.keyboard.press('Space');
