@@ -1,6 +1,9 @@
 // GAME-33 · атомарність запису сейву: обрив між put('prev') і put('main') не лишає половинного стану.
 // fake-indexeddb у залежностях немає (і не додаємо) — мінімальна пам'яттєва підробка того підмножини IDB,
 // яке справді використовує save-store: open/upgrade, transaction, get/put/delete/openCursor, complete/abort.
+// Межі підробки (рецензія PR #34): onerror не стріляє (у справжньому IDB помилка запиту → error → abort), а запит після
+// автокомміту не кидає TransactionInactiveError. Нинішньому save-store це байдуже (запити синхронно в onsuccess), але
+// await усередині транзакції пройшов би тут і впав би в браузері — така зміна потребує e2e, не лише цього тесту.
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { dismissStale, readSaves, readStale, writeSave, writeStale } from './save-store';
 
