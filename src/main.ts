@@ -24,7 +24,15 @@ if (!app) throw new Error('#app is missing');
 
 const probe: WorldProbe = { ready: false, playerX: 0, playerY: 0, nearObject: null, commandsSent: 0, cameraScrollX: 0, cameraScrollY: 0, clockMinutes: 0, saveLoaded: false, cameraLerp: [0, 0] };
 // GAME-86: кожна команда ядру (дія екрана, розмова, взаємодія на мапі) → автозбереження одразу, а не лише на паузі.
-const bridge = createBridge(testSwitches(location.search, import.meta.env.MODE).seed ?? 20261022, GAME_DEFS, () => { if (!switches.noAutosave) saves.autosave(); });
+// GAME-89 №2: сід світу (а з ним погода дня 1) — свіжий для кожної гри, з crypto на межі; ядро лишається детермінованим,
+// бо сід записується в worldSeed сейву. ?seed=N (лише збірка e2e) закріплює сід — для відтворюваних тестів.
+// Збірка e2e без ?seed тримає сталий 20261022 (відтворюваність існуючих тестів); ?freshSeed=1 вмикає свіжий, як у продакшені.
+const seedSwitches = testSwitches(location.search, import.meta.env.MODE);
+const DEFAULT_SEED = 20261022;
+const randomSeed = (): number => crypto.getRandomValues(new Uint32Array(1))[0] ?? DEFAULT_SEED;
+const pinnedSeed = seedSwitches.seed ?? (import.meta.env.MODE === 'e2e' && !seedSwitches.freshSeed ? DEFAULT_SEED : undefined);
+const newSeed = (): number => pinnedSeed ?? randomSeed();
+const bridge = createBridge(newSeed(), GAME_DEFS, () => { if (!switches.noAutosave) saves.autosave(); }, newSeed);
 const input = newInput();
 // Екран подорожі (GAME-32): знімок сюжету з поточного стану; дію шукаємо в СВІЖОМУ знімку за id —
 // якщо стан тим часом змінився і дії вже немає, нічого не надсилаємо.
@@ -81,7 +89,9 @@ const game = new Phaser.Game({
   pixelArt: true,
   backgroundColor: '#000000',
   render: { preserveDrawingBuffer: true },
-  scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_BOTH },
+  // GAME-89 №4: по вертикалі кадр НЕ центруємо. На телефоні сторч мапа нижча за поле (кадр ≤ 192 px), і центрування клало
+  // 150 px порожнечі між HUD і мапою; тепер мапа стоїть під HUD, а вільне місце внизу — де й так лежать дотикові кнопки.
+  scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_HORIZONTALLY },
   physics: { default: 'arcade', arcade: { debug: false } },
   scene: [new WorldScene(bridge, input, probe, talkOnMap)],
 });
@@ -139,7 +149,10 @@ render(h(Shell, {
       (game.scene.getScene('world') as WorldScene | null)?.haltPlayer();
       bridge.setPaused(paused);
       if (paused) saves.autosave(); // автозбереження на паузі
-      if (paused) game.scene.pause('world'); else game.scene.resume('world');
+      // GAME-89 №3: пауза вже поставленої на паузу сцени (Нова гра: меню → екран подорожі) давала в консолі
+      // «Cannot pause non-running Scene world». Тож переводимо сцену лише коли її стан справді змінюється.
+      if (paused && game.scene.isActive('world')) game.scene.pause('world');
+      else if (!paused && game.scene.isPaused('world')) game.scene.resume('world');
     },
   },
 }), ui);

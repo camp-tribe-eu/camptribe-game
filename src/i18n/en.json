@@ -78,6 +78,7 @@
   "ui.day": "Day",
   "ui.noPlace": "no place yet",
   "ui.hint": "Open ☰ to begin",
+  "ui.endedHint": "End of the Prologue. Open ☰ to see what's next and how to save.",
   "ui.short": "short by",
   "ui.wet": "wet",
   "ui.condition": "condition"

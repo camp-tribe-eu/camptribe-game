@@ -20,13 +20,19 @@ export interface Bridge {
   setPaused(paused: boolean): void;
   /** Замінити стан завантаженим сейвом (вже перевіреним ядром, fromSave). */
   load(sim: SimState): void;
-  /** Нова гра: чистий стан з тим самим сідом і стартовими грошима (ядро лишається детермінованим). */
+  /** Нова гра: чистий стан зі свіжим сідом (GAME-89 №2) і стартовими грошима. Сід лягає в worldSeed сейву. */
   restart(): void;
 }
 
 const START_MONEY_CENTS = 5_000;
 
-export function createBridge(seed: number, catalog: CoreDefs, afterSend?: () => void): Bridge {
+/**
+ * `freshSeed` — звідки береться сід НОВОЇ гри (GAME-89 №2). Раніше кожна нова гра мала той самий сід 20261022, тож
+ * погода першого дня була завжди та сама (15 із 15 — дощ). Ядро від цього не змінюється: сід лише потрапляє в
+ * `worldSeed` стану, а значить у сейв (схема не змінена), і та сама гра відтворюється з журналу. Випадковість —
+ * тут, на межі (main.ts дає crypto), а не в ядрі. Без `freshSeed` нова гра, як і раніше, бере початковий сід (тести).
+ */
+export function createBridge(seed: number, catalog: CoreDefs, afterSend?: () => void, freshSeed?: () => number): Bridge {
   const problems = checkDefs(catalog);
   if (problems.length) throw new Error(`catalog is invalid: ${JSON.stringify(problems)}`);
   const defs = freezeDefs(catalog);
@@ -51,7 +57,7 @@ export function createBridge(seed: number, catalog: CoreDefs, afterSend?: () => 
       state = sim;
     },
     restart() {
-      state = newSim(seed, START_MONEY_CENTS);
+      state = newSim(freshSeed ? freshSeed() : seed, START_MONEY_CENTS);
       sent = 0;
     },
   };

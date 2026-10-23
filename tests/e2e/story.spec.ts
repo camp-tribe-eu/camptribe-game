@@ -305,6 +305,31 @@ test('сейв після прологу: перезавантаження — �
   await expect(panel(page).locator('[data-ui="ended"]')).toBeVisible();
 });
 
+// GAME-89 №6: після кінця кампанії поза ☰ видно, що розділ завершено; мапа лишається живою (персонаж ходить).
+test('кінець розділу видно поза ☰: підказка в HUD, ☰ підсвічена, мапа далі рухається', async ({ page }) => {
+  await open(page);
+  await expect(page.locator('[data-ui="ended-hint"]')).toHaveCount(0);   // до кінця підказки немає (контроль)
+  await playBikeProlog(page);
+  await page.locator('[data-ui="story-close"]').click();
+  const hint = page.locator('[data-ui="ended-hint"]');
+  await expect(hint).toBeVisible();
+  await expect(hint).toContainText('Кінець Прологу');
+  await expect(hint).toContainText('☰');
+  await expect(page.locator('[data-touch="story"]')).toHaveAttribute('data-hint', 'yes');
+  // Мапа лишається придатною: утримана стрілка зсуває персонажа.
+  const x0 = (await page.evaluate(() => (window as unknown as { __game: { probe: { playerX: number; playerY: number } } }).__game.probe)).playerX;
+  const y0 = (await page.evaluate(() => (window as unknown as { __game: { probe: { playerX: number; playerY: number } } }).__game.probe)).playerY;
+  const btn = page.locator('[data-touch="right"]');
+  const box = await btn.boundingBox();
+  if (!box) throw new Error('кнопки «вправо» немає');
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+  await page.mouse.down();
+  await page.waitForTimeout(600);
+  await page.mouse.up();
+  const p1 = await page.evaluate(() => (window as unknown as { __game: { probe: { playerX: number; playerY: number } } }).__game.probe);
+  expect(Math.abs(p1.playerX - x0) + Math.abs(p1.playerY - y0)).toBeGreaterThan(4);
+});
+
 test('кожна ціль екрана подорожі ≥ 44×44 CSS px і нічого не вилазить за екран (псевдолокаль)', async ({ page }) => {
   await open(page, '?lang=pseudo');
   await panel(page).locator('[data-act="create"]').first().click();

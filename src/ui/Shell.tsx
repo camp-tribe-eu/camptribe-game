@@ -6,6 +6,7 @@ import type { Credits, UiPort } from './port';
 import { t as tr, type AnyLang, type Key } from '../i18n';
 import { ct } from '../i18n/content';
 import { StoryPanel, money } from './StoryPanel';
+import { trapTab } from './focus-trap';
 import type { StoryOffer } from './story-types';
 
 export function Shell({ port, langOverride, credits }: { port: UiPort; langOverride?: AnyLang; credits: Credits }) {
@@ -123,12 +124,14 @@ export function Shell({ port, langOverride, credits }: { port: UiPort; langOverr
         <span data-ui="hud-time">{`${t('ui.day')} ${offer.day}, ${hh}:${mm}`}</span>
         <span data-ui="hud-money">{money(lang, offer.moneyCents)}</span>
         {showHint && <span class="ui-hint" data-ui="hint" role="status">{t('ui.hint')}</span>}
+        {/* GAME-89 №6: кампанія завершена — мапа лишається живою (можна ходити), але про кінець видно й поза ☰. */}
+        {offer.stage === 'ended' && <span class="ui-hint" data-ui="ended-hint" role="status">{t('ui.endedHint')}</span>}
       </div>}
       {!paused && !storyOpen && <button type="button" class="ui-pause-btn" data-touch="pause" aria-label={t('ui.pause')} onClick={() => toggle(true)}>{'‖'}</button>}
-      {!paused && !storyOpen && <button type="button" class="ui-story-btn" data-hint={showHint ? 'yes' : undefined} data-touch="story" aria-label={t('ui.story')} onClick={() => story(true)}>{'☰'}</button>}
+      {!paused && !storyOpen && <button type="button" class="ui-story-btn" data-hint={showHint || offer.stage === 'ended' ? 'yes' : undefined} data-touch="story" aria-label={t('ui.story')} onClick={() => story(true)}>{'☰'}</button>}
       {storyOpen && <StoryPanel offer={offer} lang={lang} t={t} act={(id) => port.act(id)} close={() => story(false)}>{staleNotice}</StoryPanel>}
       {paused && confirmNew && (
-        <div class="ui-overlay" role="dialog" aria-modal="true" aria-label={t('ui.newGame')} data-ui="confirm-new">
+        <div class="ui-overlay" role="dialog" aria-modal="true" aria-label={t('ui.newGame')} data-ui="confirm-new" onKeyDown={(e) => trapTab(e, e.currentTarget)}>
           <h2>{t('ui.newGame')}</h2>
           <p data-ui="confirm-new-text">{t('ui.newGameAsk')}</p>
           <button type="button" class="ui-btn" data-ui="confirm-new-no" ref={noRef} onClick={() => setConfirmNew(false)}>{t('ui.newGameNo')}</button>
@@ -136,7 +139,7 @@ export function Shell({ port, langOverride, credits }: { port: UiPort; langOverr
         </div>
       )}
       {paused && !confirmNew && (
-        <div class="ui-overlay" role="dialog" aria-modal="true" aria-label={t('ui.paused')} data-ui="pause">
+        <div class="ui-overlay" role="dialog" aria-modal="true" aria-label={t('ui.paused')} data-ui="pause" onKeyDown={(e) => trapTab(e, e.currentTarget)}>
           <h2>{t('ui.paused')}</h2>
           <button type="button" class="ui-btn" data-ui="resume" ref={resumeRef} onClick={() => toggle(false)}>{t('ui.resume')}</button>
           <fieldset>
