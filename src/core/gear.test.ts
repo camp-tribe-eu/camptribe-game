@@ -156,7 +156,7 @@ describe('GAME-88: у дощ просто неба сушити не можна 
     // те саме через симуляцію: погоду дня бере вона
     expect(gearOf(dry(s, 'item.tent-a', rain).game.gear, 'item.tent-a').wet).toBe(true);
   });
-  it('дорога (loc.road) теж просто неба — так само відмова', () => {
+  it('інша локація без sheltered (loc.dogpark у фікстурі) — так само відмова', () => {
     const s = atShop();
     const g = { ...s.game, player: s.game.player && { ...s.game.player, locationId: 'loc.dogpark' } };
     expect(dispatch(g, { type: 'DryGear', commandId: 'r2', itemId: 'item.tent-a' }, GEAR_DEFS, undefined, 0, 'rain')).toMatchObject({ ok: false, code: 'CANNOT_DRY_HERE' });
