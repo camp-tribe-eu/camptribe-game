@@ -84,7 +84,9 @@ jobs:
         run: |
           set -euo pipefail
           api="https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/pages/projects/$PROJECT/deployments"
-          ids=$(curl -sS --max-time 30 -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" "$api?per_page=100" | jq -r '.result // [] | .[].id')
+          list=$(curl -sS --max-time 30 -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" "$api?per_page=100")
+          jq -e '.success' <<<"$list" >/dev/null || { echo "::error::перелік публікацій не отримано: $(jq -c '.errors' <<<"$list" | head -c 400)"; exit 1; }
+          ids=$(jq -r '.result | .[].id' <<<"$list")
           for id in $ids; do
             curl -sS --max-time 30 -X DELETE -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" "$api/$id?force=true" | jq -e '.success' >/dev/null \
               && echo "видалено $id" || { echo "::error::не вдалося видалити публікацію $id"; exit 1; }
@@ -130,5 +132,6 @@ jobs:
           set -uo pipefail
           api="https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/pages/projects/$PROJECT/deployments"
           for id in $(curl -sS --max-time 30 -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" "$api?per_page=100" | jq -r '.result // [] | .[].id'); do
-            curl -sS --max-time 30 -X DELETE -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" "$api/$id?force=true" >/dev/null && echo "видалено $id"
+            curl -sS --max-time 30 -X DELETE -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" "$api/$id?force=true" | jq -e '.success' >/dev/null \
+              && echo "видалено $id" || echo "::error::НЕ ВИДАЛЕНО публікацію $id — прибрати вручну (Cloudflare → Pages → camptribe-game → Deployments)"
           done
