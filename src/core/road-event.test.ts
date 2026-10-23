@@ -50,6 +50,11 @@ describe('кидок у симуляції після приїзду', () => {
     const s = go(seed);
     expect(s.journal.slice(-2).map((e) => [e.type, e.ref, e.commandId])).toEqual([['Visit', 'loc.shop', 'a3'], ['RoadEvent', 'dlg.ev-rain', 'ev4']]);
   });
+  it('id події вже зайнятий командою ззовні («ev4») — подія однаково відкривається', () => {
+    const seeds = Array.from({ length: 40 }, (_, i) => i + 1).filter((x) => go(x).game.dialogue?.id === 'dlg.ev-rain');
+    const log = LOG.map((i, k) => (k === 3 && i.kind === 'command' ? { kind: 'command', command: { ...i.command, commandId: 'ev4' } } : i)) as Input[];
+    for (const x of seeds) expect(go(x, EVENT_DEFS, log).game.dialogue?.id).toBe('dlg.ev-rain');
+  });
   it('довгий id приїзду (63 знаки) не губить подію: id події не з нього', () => {
     const long = 'v'.repeat(63);
     const log = LOG.map((i, k) => (k === 3 && i.kind === 'command' ? { kind: 'command', command: { ...i.command, commandId: long } } : i)) as Input[];

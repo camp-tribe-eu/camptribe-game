@@ -78,7 +78,10 @@ function roadEvent(s: SimState, ctx: StepCtx): SimState {
   if (!hit) return rolled;
   // id — з лічильника нових команд ядра: унікальний і завжди коротший за межу COMMAND_ID (рецензія:
   // «<id приїзду>.ev» переростав 64 знаки й міг збігтися з чужим id).
-  return step(rolled, { kind: 'command', command: { type: 'RoadEvent', commandId: `ev${s.game.seq}`, eventId: hit } }, ctx);
+  // Зайнятий id (команда ззовні з id «evN») пропускаємо, як nextCommandId, — інакше подію загубив би COMMAND_ID_REUSED.
+  let n = s.game.seq;
+  while (Object.hasOwn(s.game.processed, `ev${n}`)) n++;
+  return step(rolled, { kind: 'command', command: { type: 'RoadEvent', commandId: `ev${n}`, eventId: hit } }, ctx);
 }
 
 export type Input =
