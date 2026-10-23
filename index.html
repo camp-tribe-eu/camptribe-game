@@ -9,20 +9,46 @@
     <style>
       /* Піксельний шрифт із повною українською кирилицею (OFL, GAME-26; перевірка — scripts/i18n/font_glyphs.py). */
       @font-face { font-family: 'CampPixel'; src: url('fonts/PressStart2P-Regular.ttf') format('truetype'); font-display: swap; }
+      /* Токени розмірів і відступів (GAME-92): жодних «магічних» чисел нижче. --safe-* — вирізи екрана (чубчик, жест «додому»);
+         --edge-* = виріз + базовий відступ: так кнопки не липнуть до краю і не заходять під виріз. */
+      :root {
+        --gap: 16px;            /* базовий відступ від краю екрана */
+        --gap-inline: 12px;     /* проміжок між ☰, текстом і ‖ (≥ 8) */
+        --gap-header-bottom: 8px;
+        --safe-top: env(safe-area-inset-top, 0px);
+        --safe-right: env(safe-area-inset-right, 0px);
+        --safe-bottom: env(safe-area-inset-bottom, 0px);
+        --safe-left: env(safe-area-inset-left, 0px);
+        --edge-top: calc(var(--gap) + var(--safe-top));
+        --edge-right: calc(var(--gap) + var(--safe-right));
+        --edge-bottom: calc(var(--gap) + var(--safe-bottom));
+        --edge-left: calc(var(--gap) + var(--safe-left));
+        --header-btn: 48px;
+        --stick-size: 128px;
+        --knob-size: 56px;
+        --action-size: 88px;
+        --hud-lh: 1.4;
+      }
       html, body { margin: 0; height: 100%; background: #1b1f23; color: #e8e6e3; font-family: system-ui, sans-serif; overscroll-behavior: none; }
       /* Розкладка (GAME-91): згори шапка (☰ ліворуч, текст HUD посередині, ‖ праворуч), під нею поле гри на весь решту екрана.
          Шапка в потоці, а не абсолютом: кнопки не наїжджають на текст, при тексті 200 % середня колонка переносить рядки. */
       #app { position: fixed; inset: 0; display: flex; flex-direction: column; touch-action: none; user-select: none; -webkit-user-select: none; }
       #ui { display: contents; }
       #stage { position: relative; flex: 1 1 0; min-height: 0; }
-      .ui-header { order: -1; flex: none; display: flex; align-items: flex-start; gap: 8px; box-sizing: border-box;
-        padding: max(4px, env(safe-area-inset-top)) max(8px, env(safe-area-inset-right)) 4px max(8px, env(safe-area-inset-left)); background: #1b1f23; }
-      .ui-hud { flex: 1 1 0; min-width: 0; min-height: 48px; display: flex; flex-wrap: wrap; align-items: center; align-content: center; gap: 2px 12px; box-sizing: border-box;
-        color: #e8e6e3; font-size: 0.8125rem; line-height: 1.35; overflow-wrap: break-word; hyphens: auto; }
+      /* Шапка (GAME-92): сітка ☰ | текст | ‖. Текст зліва, рядки на одній лівій межі, однаковий інтервал. */
+      .ui-header { order: -1; flex: none; display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: start; column-gap: var(--gap-inline);
+        box-sizing: border-box; padding: var(--edge-top) var(--edge-right) var(--gap-header-bottom) var(--edge-left); background: #1b1f23; }
+      .ui-hud { min-width: 0; min-height: var(--header-btn); display: flex; flex-direction: column; justify-content: flex-start; align-items: flex-start; text-align: left;
+        /* Два рядки (місце, «день · гроші») стоять посередині висоти кнопки ☰; відступ зверху — той самий із підказкою й без: рядки не стрибають. */
+        padding-top: max(0px, calc((var(--header-btn) - 2 * var(--hud-lh) * 0.8125rem) / 2)); box-sizing: border-box; color: #e8e6e3; font-size: 0.8125rem; line-height: var(--hud-lh); overflow-wrap: break-word; hyphens: auto; }
       .ui-hud [data-ui="hud-place"] { font-weight: 700; }
-      /* GAME-84 №7: «50,00 EUR» не розривається посеред слова («EU R» при тексті 200 %): суму можна лише перенести цілою. */
+      /* Рядок 2: «День N, HH:MM · 50,00 €». GAME-84 №7: час і сума не розриваються всередині («EU R» при тексті 200 %), лише переносяться цілими. */
+      .ui-hud-line { color: #cfcbc7; }
       .ui-hud [data-ui="hud-money"], .ui-hud [data-ui="hud-time"] { white-space: nowrap; }
-      .ui-hint { flex-basis: 100%; color: #ffd54a; font-weight: 700; }
+      /* Рядок підказки — окремий, другорядний (менший, не жирний). Шапку видно лише тоді, коли жодна панель не відкрита, а підказка
+         з'являється/зникає тільки всередині панелей (дія в «Подорожі», відкриття ☰/паузи), тож зникнення на очах не буває; рядок
+         додається знизу, місце й «день · гроші» від нього не рухаються. Резерв рядка назавжди коштував би ~36 px поля при тексті 200 %. */
+      .ui-hint { font-size: 0.75rem; color: #ffd54a; font-weight: 400; }
       .ui-story-btn[data-hint="yes"] { outline: 3px solid #ffd54a; outline-offset: 2px; }
       .ui-btn-locked { border-style: dashed; color: #cfcbc7; background: #22262b; cursor: not-allowed; }
       #stage canvas { image-rendering: pixelated; }
@@ -32,14 +58,14 @@
       #app:has([role="dialog"]) .touch { visibility: hidden; }
       .touch { position: absolute; inset: auto 0 0 0; height: 0; }
       /* Джойстик (знизу ліворуч) і кругла кнопка дії (знизу праворуч) лежать просто на мапі, напівпрозорі (GAME-91). */
-      .touch-stick { position: absolute; left: max(16px, env(safe-area-inset-left)); bottom: calc(24px + env(safe-area-inset-bottom)); width: 136px; height: 136px;
+      .touch-stick { position: absolute; left: var(--edge-left); bottom: var(--edge-bottom); width: var(--stick-size); height: var(--stick-size);
         box-sizing: border-box; border: 2px solid #e8e6e3aa; border-radius: 50%; background: #00000055; touch-action: none; }
-      .touch-knob { position: absolute; left: 50%; top: 50%; width: 60px; height: 60px; margin: -30px 0 0 -30px; border-radius: 50%;
+      .touch-knob { position: absolute; left: 50%; top: 50%; width: var(--knob-size); height: var(--knob-size); margin: calc(var(--knob-size) / -2) 0 0 calc(var(--knob-size) / -2); border-radius: 50%;
         background: #e8e6e3aa; border: 2px solid #1b1f23aa; box-sizing: border-box; pointer-events: none; }
-      .touch-interact { position: absolute; right: max(20px, env(safe-area-inset-right)); bottom: calc(48px + env(safe-area-inset-bottom)); width: 80px; height: 80px;
+      .touch-interact { position: absolute; right: var(--edge-right); bottom: var(--edge-bottom); width: var(--action-size); height: var(--action-size);
         border: 2px solid #e8e6e3aa; border-radius: 50%; background: #00000066; color: #e8e6e3; font-size: 1.5rem; padding: 0; touch-action: none; }
       .touch-stick[hidden], .touch-interact[hidden] { display: none; }
-      .ui-pause-btn, .ui-story-btn { flex: none; min-width: 48px; min-height: 48px; border-radius: 12px;
+      .ui-pause-btn, .ui-story-btn { flex: none; min-width: var(--header-btn); min-height: var(--header-btn); border-radius: 12px;
         border: 2px solid #e8e6e3aa; background: #00000066; color: #e8e6e3; font-size: 1.25rem; padding: 0; }
       /* safe center (GAME-39): діалог, вищий за екран (титри, текст 200 %), притискається до верху, а не
          вилазить за нього — інакше «Продовжити» лишалась вище за межу прокрутки. start — для браузерів без safe. */
