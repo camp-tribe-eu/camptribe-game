@@ -171,6 +171,33 @@ for (const vp of VIEWPORTS) {
       expect(small).toEqual([]);
     });
 
+    // Звірка GAME-69 #1 «…і діалог»: персонаж біля озера (кроки меню — дотиком), до Елізи — дотиковими
+    // стрілками, розмова — дотиком по відповідях, до кінця розмови.
+    test('діалог дотиком: дійти до Елізи, заговорити, відповісти до кінця розмови', async ({ page }) => {
+      await open(page);
+      await page.locator('[data-touch="story"]').tap();
+      const story = page.locator('[data-ui="story"]');
+      await story.locator('[data-act="create"]', { hasText: /Велосипед|Bike/ }).first().tap();
+      for (const [kind, key] of [['visit', 'loc.home'], ['complete', 'q.st-001'], ['visit', 'loc.home'], ['complete', 'q.st-002'], ['visit', 'loc.shop'],
+        ['pickup', 'item.tent'], ['pickup', 'item.sleeping-bag'], ['complete', 'q.st-003'], ['visit', 'loc.road'], ['complete', 'q.st-004'], ['visit', 'loc.camp.lake']] as const) {
+        await story.locator(`[data-act="${kind}"][data-key="${key}"]`).tap();
+      }
+      await page.locator('[data-ui="story-close"]').tap();
+      expect(await holdTouch(page, 'left', (p) => p.playerX <= 44)).toBe(true);
+      expect(await holdTouch(page, 'down', (p) => p.nearObject === 'npc.elise')).toBe(true);
+      expect((await probe(page)).nearObject).toBe('npc.elise');
+      expect(await holdTouch(page, 'interact', () => true, 100)).toBe(true);
+      await expect(story.locator('[data-ui="dialogue"]')).toBeVisible();
+      await story.locator('[data-key="dlg.elise-greeting.hello.c1"]').tap();   // велосипедна відповідь
+      await story.locator('[data-act="continue"]').tap();
+      await story.locator('[data-key="dlg.elise-greeting.spot.c1"]').tap();
+      await story.locator('[data-act="continue"]').tap();
+      await expect(story.locator('[data-ui="dialogue"]')).toHaveCount(0);
+      const g = await page.evaluate(() => (window as unknown as { __game: { read: () => { game: { dialogue: unknown; flags: string[] } } } }).__game.read().game);
+      expect(g.dialogue).toBeNull();
+      expect(g.flags).toContain('f.elise-met');                               // ефект відповіді дійшов до ядра
+    });
+
     test('негативний контроль: прихована кнопка взаємодії — прохід дотиком неможливий', async ({ page }) => {
       await open(page, '?hideTouch=interact');
       expect(await touchFlow(page)).toBe(0);
