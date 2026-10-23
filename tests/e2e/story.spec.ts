@@ -25,6 +25,14 @@ async function act(page: Page, kind: string, key = '', timeout = 5_000): Promise
   } catch {
     throw new Error(`крок «${kind} ${key}»: кнопки немає на екрані подорожі`);
   }
+  // На дорозі з шансом 50 % трапляється подія (GAME-31; кидок залежить від прожитих кадрів) — відповідаємо, як гравець.
+  if (kind === 'visit' && key === 'loc.road') {
+    const answer = panel(page).locator('[data-key="dlg.road-apples.box.c2"]');
+    if (await answer.isVisible({ timeout: 400 }).catch(() => false)) {
+      await answer.click();
+      await panel(page).locator('[data-act="continue"]').click();
+    }
+  }
 }
 
 /** Пролог велосипедистом із бічним квестом Елізи. Порядок — як гравець читає завдання. */
@@ -107,6 +115,31 @@ test('дорога (GAME-31): кнопка показує час у дорозі
   expect((await core(page)).clock.minutes).toBe(m0);
   await shop.click();
   expect((await core(page)).clock.minutes).toBe(m0 + 25);           // дорога — одним кроком
+});
+
+test('подія в дорозі (GAME-31): трапляється на дорозі, читається, відповідь — у ядрі й у журналі', async ({ page }) => {
+  // Кидок залежить від кадрів, прожитих до відкриття екрана, тож перезавантажуємо, доки подія не трапиться:
+  // шанс 50 %, 12 спроб — промах ≈ 0,02 %.
+  let fired = false;
+  for (let attempt = 0; attempt < 12 && !fired; attempt++) {
+    await open(page);
+    await panel(page).locator('[data-act="create"]', { hasText: 'Велосипед' }).first().click();
+    for (const [k, key] of [['visit', 'loc.home'], ['complete', 'q.st-001'], ['visit', 'loc.home'], ['complete', 'q.st-002'], ['visit', 'loc.shop'],
+      ['pickup', 'item.tent'], ['pickup', 'item.sleeping-bag'], ['complete', 'q.st-003']] as const) await act(page, k, key);
+    await panel(page).locator('[data-act="visit"][data-key="loc.road"]').click();
+    fired = await panel(page).locator('[data-ui="dialogue"]').isVisible({ timeout: 400 }).catch(() => false);
+  }
+  expect(fired).toBe(true);
+  await expect(panel(page).locator('[data-ui="dialogue"] h3')).toHaveText('Яблука біля дороги');
+  await expect(panel(page).locator('[data-ui="actions"]')).toHaveCount(0);                // у події — лише відповіді
+  await panel(page).locator('[data-key="dlg.road-apples.box.c1"]').click();
+  await panel(page).locator('[data-act="continue"]').click();
+  await expect(panel(page).locator('[data-ui="dialogue"]')).toHaveCount(0);
+  const c = await core(page) as unknown as { game: { flags: string[] }; journal: { type: string; ref: string | null }[] };
+  expect(c.game.flags).toEqual(expect.arrayContaining(['f.road-apple', 'f.seen-road-apples']));
+  expect(c.journal.slice(-2).map((e) => e.type)).toEqual(['Visit', 'RoadEvent']);
+  await panel(page).locator('[data-ui="journal"] summary').click();
+  await expect(panel(page).locator('[data-ui="journal"] li').last()).toContainText('Яблука біля дороги');
 });
 
 test('автівкою — без бічного квесту й без відповіді про велосипед, і так само до кінця розділу', async ({ page }) => {
@@ -207,7 +240,7 @@ test('прохід керується лише кліками й клавіша�
     if (ts.isVariableStatement(n)) for (const d of n.declarationList.declarations) if (ts.isIdentifier(d.name) && FLOW.includes(d.name.text)) roots.push(d);
   });
   expect(roots.length).toBe(FLOW.length);
-  const ALLOWED = new Set(['playBikeProlog', 'act', 'panel', 'locator', 'first', 'click', 'tap', 'press', 'down', 'up', 'expect', 'toBeVisible', 'toHaveCount', 'Error']);
+  const ALLOWED = new Set(['playBikeProlog', 'act', 'panel', 'locator', 'first', 'click', 'tap', 'press', 'down', 'up', 'expect', 'toBeVisible', 'toHaveCount', 'Error', 'isVisible', 'catch']);
   const called: string[] = [];
   const bad: string[] = [];
   const walk = (n: ts.Node): void => {

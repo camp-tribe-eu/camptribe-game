@@ -27,10 +27,12 @@ interface RawNode { id: string; speaker?: string; textKey?: string; choices?: { 
 interface RawTransition { on: string; to: string; choiceKey?: string }
 
 /** id сутності → ключ її назви в content/locales. Невідомий id — null (UI покаже лише тип запису). */
-const NAMES: ReadonlyMap<string, string> = new Map(
-  ([...CONTENT.profiles, ...CONTENT.transports, ...CONTENT.animals, ...CONTENT.locations, ...CONTENT.npcs, ...CONTENT.quests, ...items] as Named[])
+const NAMES: ReadonlyMap<string, string> = new Map([
+  ...([...CONTENT.profiles, ...CONTENT.transports, ...CONTENT.animals, ...CONTENT.locations, ...CONTENT.npcs, ...CONTENT.quests, ...items] as Named[])
     .flatMap((x) => { const k = x.nameKey ?? x.titleKey; return k ? [[x.id, k] as const] : []; }),
-);
+  // Подія в дорозі (GAME-31): назва — titleKey тригера (заголовок розмови й запис журналу).
+  ...CONTENT.dialogues.flatMap((d) => (d.trigger ? [[d.id, d.trigger.titleKey] as const] : [])),
+]);
 export const nameKey = (id: string | null | undefined): string | null => (id ? NAMES.get(id) ?? null : null);
 
 const DIALOGUE_NODES: ReadonlyMap<string, RawNode> = new Map(
@@ -170,7 +172,9 @@ export function storyOffer(sim: SimState, defs: CoreDefs): Offered {
   if (s.dialogue) {
     const node = DIALOGUE_NODES.get(`${s.dialogue.id}#${s.dialogue.node}`);
     const npcId = st.dialogues[s.dialogue.id]?.npcId;
-    dialogue = { speakerKey: node?.speaker === 'npc' ? nameKey(npcId) : null, key: node?.textKey ?? null, answers: offered };
+    // Розмова з NPC — його ім'я; подія в дорозі — її назва.
+    const speakerKey = npcId === undefined ? nameKey(s.dialogue.id) : node?.speaker === 'npc' ? nameKey(npcId) : null;
+    dialogue = { speakerKey, key: node?.textKey ?? null, answers: offered };
   }
 
   return {

@@ -39,5 +39,11 @@
   "dlg.elise-greeting.bike": "All the way here by bike? Respect! It'll stay dry and safe under the shelter by my cabin.",
   "dlg.elise-greeting.spot": "By the pines: it's quiet there, and in the morning you can see the lake from your tent.",
   "dlg.elise-greeting.spot.c1": "Perfect, thank you!",
-  "dlg.elise-greeting.bye": "Have a lovely evening! If you need anything, I'm in the cabin with the green door."
+  "dlg.elise-greeting.bye": "Have a lovely evening! If you need anything, I'm in the cabin with the green door.",
+  "dlg.road-apples.title": "Apples by the road",
+  "dlg.road-apples.box": "By the roadside: a wooden crate of apples and a sign — “Help yourself! Coin box next to it.”",
+  "dlg.road-apples.box.c1": "Drop a coin and take an apple",
+  "dlg.road-apples.box.c2": "Smile and drive on",
+  "dlg.road-apples.crunch": "The apple is crisp and tart-sweet. The road suddenly feels shorter.",
+  "dlg.road-apples.wave": "You quietly thank the unknown gardener. Maybe next time."
 }

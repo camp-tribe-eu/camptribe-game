@@ -88,6 +88,9 @@ const mutations = [
   { name: '[дороги] платна дорога пропускається', file: CHECKS_FILE, from: 'if (w.cents > 0) out.push', to: 'if (false) out.push' },
   { name: '[дороги] вимагати дороги для кожного транспорту з transports.json', file: CHECKS_FILE, from: 'const transports = [...new Set(enumerateCombos(c.content).map((k) => k.transport))];', to: 'const transports = (c.content.transports ?? []).map((t) => t.id);' },
   { name: '[дороги] самопетля не звітується', file: CHECKS_FILE, from: "if (r.from === r.to) { out.push(I('ROAD_SELF_LOOP'", to: "if (false) { out.push(I('ROAD_SELF_LOOP'" },
+  { name: '[подія] прапорець «подія була» не рахується поставленим', file: CHECKS_FILE, from: "const set = new Set((c.content.dialogues ?? []).filter((d) => d.trigger).map((d) => `f.seen-${d.id.replace(/^dlg\\./, '')}`));", to: 'const set = new Set();' },
+  { name: '[подія] ефекти події не обмежуються', file: CHECKS_FILE, from: "if (e.setFlag === undefined) out.push(I('EVENT_EFFECT_UNSUPPORTED'", to: "if (false) out.push(I('EVENT_EFFECT_UNSUPPORTED'" },
+  { name: '[подія] місця події не звіряються', file: CHECKS_FILE, from: "if (!by.locations.has(l)) miss(`${d.id}.trigger.at[${i}]`", to: "if (false) miss(`${d.id}.trigger.at[${i}]`" },
   // Семантика «гілки any — не кон'юнкти» тепер у satisfiable (contradictions лише називає прапорці мертвої умови).
   { name: '[діалог] гілки any всередині all рахуються кон\u2019юнктами', file: CHECKS_FILE, from: '    const cj = conjuncts(cond);\n    const yes = new Set(cj.filter((x) => x.flag !== undefined).map((x) => x.flag));\n    if (cj.some(', to: '    const cj = condLeaves(cond);\n    const yes = new Set(cj.filter((x) => x.flag !== undefined).map((x) => x.flag));\n    if (cj.some(' },
   { name: '[діалог] суперечність в одній гілці any звітується, хоч інша гілка жива', file: CHECKS_FILE, from: 'return satisfiable(cond, every) ? new Set() : conflicts(cond);', to: 'return conflicts(cond);' },

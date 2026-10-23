@@ -104,6 +104,20 @@ export function baseline() {
 
 const q = (c, id) => c.quests.find((x) => x.id === id);
 
+// Подія в дорозі (GAME-31): діалог без NPC, відкривається сам у лісі з шансом 50 %.
+const EV = (k) => `dlg.fixture-rain.${k}`;
+function withRoadEvent(c) {
+  c.dialogues.push({
+    id: 'dlg.fixture-rain', trigger: { at: ['loc.forest'], chance: 50, titleKey: EV('title') }, start: 'rain',
+    nodes: [
+      { id: 'rain', speaker: 'player', textKey: EV('rain'), choices: [{ textKey: EV('rain.c1'), next: 'bye', effects: [{ setFlag: 'f.fixture-wet' }] }] },
+      { id: 'bye', speaker: 'player', textKey: EV('bye'), end: true },
+    ],
+  });
+  for (const lang of c.meta.locales) for (const k of ['title', 'rain', 'rain.c1', 'bye']) c.locales[lang][EV(k)] = `[${lang}] ${k}`;
+  return c.dialogues[c.dialogues.length - 1];
+}
+
 // Еталон комбінаторики: ДВА СИНТЕТИЧНІ профілі, не профілі гри (реальний перелік із 12 ще не
 // передано, вигадувати його заборонено). 2 профілі × 2 транспорти × (без тварини | собака) = 8.
 // Додано гілку лише для власника собаки, що повертається в основний сюжет.
@@ -412,6 +426,20 @@ export const FIXTURES = [
     c.transports.push({ id: 'transport.fixture-boat', nameKey: 'transport.fixture-boat' });
     for (const lang of c.meta.locales) c.locales[lang]['transport.fixture-boat'] = `[${lang}] boat`;
     for (const p of c.profiles) p.transports = [T_CAR, T_BIKE];
+  } },
+  // Події в дорозі (GAME-31).
+  { base: 'combo', name: '[подія] контроль: подія в дорозі з прапорцем і умова на «подія була» — коректно', expect: [], patch(c) {
+    withRoadEvent(c);
+    node(c, 'help').choices.push({ textKey: K('help.c2'), next: 'bye', when: { notFlag: 'f.seen-fixture-rain' } });
+  } },
+  { base: 'combo', name: '[подія] діалог без власника (ні NPC, ні trigger)', expect: ['DIALOGUE_OWNER'], patch(c) { delete dlg(c).npcId; } },
+  { base: 'combo', name: '[подія] діалог і з NPC, і з trigger', expect: ['DIALOGUE_OWNER'], patch(c) { withRoadEvent(c).npcId = 'npc.shopkeeper'; } },
+  { base: 'combo', name: '[подія] подія стартує квест — сюжет на везінні', expect: ['EVENT_EFFECT_UNSUPPORTED'], patch(c) { withRoadEvent(c).nodes[0].choices[0].effects.push({ startQuest: 'ST-003' }); } },
+  { base: 'combo', name: '[подія] у неіснуючій локації', expect: ['DIALOGUE_REF_MISSING'], patch(c) { withRoadEvent(c).trigger.at = ['loc.ghost']; } },
+  { base: 'combo', name: '[подія] шанс 101 %', expect: ['SCHEMA_INVALID'], patch(c) { withRoadEvent(c).trigger.chance = 101; } },
+  { base: 'combo', name: '[подія] без виходу — червоніє тими самими перевірками діалогів', expect: ['DIALOGUE_DEAD_END', 'DIALOGUE_NODE_UNREACHABLE'], patch(c) {
+    const d = withRoadEvent(c);
+    d.nodes[0].choices[0].next = 'rain';
   } },
   { base: 'combo', name: '[дороги] id не за форматом', expect: ['ID_FORMAT'], patch(c) { c.roads[0].id = 'camp-forest'; } },
   { base: 'combo', name: '[дороги] дорога за 0 хвилин', expect: ['SCHEMA_INVALID'], patch(c) { c.roads[0].ways[0].minutes = 0; } },

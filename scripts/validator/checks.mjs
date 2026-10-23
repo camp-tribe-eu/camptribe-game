@@ -335,6 +335,7 @@ export const CHECKS = [
       }
       (ct.events ?? []).forEach((e) => add(e.titleKey, e.id));
       (ct.facts ?? []).forEach((f) => add(f.claimKey, f.id));
+      (ct.dialogues ?? []).forEach((d) => add(d.trigger?.titleKey, `${d.id}.trigger`));
       for (const d of ct.dialogues ?? []) for (const n of d.nodes) {
         add(n.textKey, `${d.id}/${n.id}`);
         (n.choices ?? []).forEach((ch, i) => add(ch.textKey, `${d.id}/${n.id}.choices[${i}]`));
@@ -477,7 +478,8 @@ export const CHECKS = [
       const miss = (where, msg) => out.push(I('DIALOGUE_REF_MISSING', where, msg));
       for (const d of c.content.dialogues ?? []) {
         const nodes = new Set(d.nodes.map((n) => n.id));
-        if (!by.npcs.has(d.npcId)) miss(`${d.id}.npcId`, `NPC «${d.npcId}» не існує`);
+        if (d.npcId !== undefined && !by.npcs.has(d.npcId)) miss(`${d.id}.npcId`, `NPC «${d.npcId}» не існує`);
+        (d.trigger?.at ?? []).forEach((l, i) => { if (!by.locations.has(l)) miss(`${d.id}.trigger.at[${i}]`, `локації «${l}» не існує`); });
         if (!nodes.has(d.start)) miss(`${d.id}.start`, `вузла «${d.start}» немає`);
         for (const n of d.nodes) {
           if (n.next !== undefined && !nodes.has(n.next)) miss(`${d.id}/${n.id}.next`, `вузла «${n.next}» немає`);
@@ -547,7 +549,8 @@ export const CHECKS = [
       // транспорт стереже інше), окрім notFlag, що суперечить flag у тому самому all.
       // Прапорці ставлять лише ефекти setFlag у діалогах: у quests.json ефектів на прапорці
       // поки немає. З'являться — додай їх у початкову множину.
-      const set = new Set();
+      // Прапорець «подія була» (f.seen-<назва>) ставить ядро саме, коли подія відкривається (GAME-31).
+      const set = new Set((c.content.dialogues ?? []).filter((d) => d.trigger).map((d) => `f.seen-${d.id.replace(/^dlg\./, '')}`));
       const choices = dialogueChoices(c.content);
       for (let grew = true; grew;) {
         grew = false;
@@ -569,12 +572,30 @@ export const CHECKS = [
     },
   },
   {
+    id: 'dialogue-owner',
+    run(c) { // @check:dialogue-owner
+      // GAME-31: подія в дорозі — діалог без NPC, що відкривається сам після приїзду (ядро: RoadEvent).
+      const out = [];
+      for (const d of c.content.dialogues ?? []) {
+        if ((d.npcId === undefined) === (d.trigger === undefined)) out.push(I('DIALOGUE_OWNER', d.id, d.npcId === undefined ? 'немає ні npcId, ні trigger — діалог ніхто не відкриє' : 'і npcId, і trigger — незрозуміло, хто відкриває'));
+        if (d.trigger === undefined) continue;
+        // Лише setFlag: старт чи закриття квесту з події поставили б сюжет на везіння (SIM-EV-003), а
+        // перевірки dialogue-quest-gate/objective-kind міркують через доступність NPC, якого в події немає.
+        for (const n of d.nodes) (n.choices ?? []).forEach((ch, i) => (ch.effects ?? []).forEach((e) => {
+          if (e.setFlag === undefined) out.push(I('EVENT_EFFECT_UNSUPPORTED', `${d.id}/${n.id}.choices[${i}].effects`, `подія в дорозі може лише ставити прапорці, а тут ${Object.keys(e)[0]}`));
+        }));
+      }
+      return out;
+    },
+  },
+  {
     id: 'dialogue-npc-unique',
     run(c) { // @check:dialogue-npc-unique
       // Один діалог на NPC: рушій запускає діалог за npcId, і двом кандидатам немає правила вибору.
       const out = [];
       const seen = new Map();
       for (const d of c.content.dialogues ?? []) {
+        if (d.npcId === undefined) continue; // подія в дорозі — не розмова
         if (seen.has(d.npcId)) out.push(I('DIALOGUE_NPC_DUPLICATE', `${d.id}.npcId`, `NPC «${d.npcId}» уже має діалог «${seen.get(d.npcId)}»`));
         else seen.set(d.npcId, d.id);
       }

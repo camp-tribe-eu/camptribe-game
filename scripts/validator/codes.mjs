@@ -26,6 +26,8 @@ export const CODES = {
   REWARD_GRANT_DUPLICATE:     { check: 'reward-once', spec: '§2 нагорода не видається двічі за один id' },
   REWARD_REPEATABLE_UNGUARDED:{ check: 'reward-once', spec: '§2 нагорода не видається двічі за один id' },
   LOCALE_MISSING:       { check: 'locale-keys', spec: '§2 ключі локалізації існують для кожної мови' },
+  DIALOGUE_OWNER:       { check: 'dialogue-owner', spec: 'GAME-31: діалог має рівно одного власника — NPC (npcId) або подію в дорозі (trigger)' },
+  EVENT_EFFECT_UNSUPPORTED: { check: 'dialogue-owner', spec: 'GAME-31: подія в дорозі лише ставить прапорці — квести стартує й закриває розмова з NPC (на везінні сюжет не тримається)' },
   ROAD_UNREACHABLE:     { check: 'roads', spec: 'GAME-31: кожен вузол дороги досяжний від дому — для кожного транспорту' },
   ROAD_NO_RETURN:       { check: 'roads', spec: 'GAME-31: з кожного вузла є шлях назад (а отже й до кемпінгу) — для кожного транспорту' },
   ROAD_SELF_LOOP:       { check: 'roads', spec: 'GAME-31: дорога веде з локації в неї ж — одруківка (рецензія)' },

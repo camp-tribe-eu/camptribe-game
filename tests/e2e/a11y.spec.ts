@@ -58,6 +58,11 @@ async function openDialogue(page: Page): Promise<void> {
     ['pickup', 'item.tent'], ['pickup', 'item.sleeping-bag'], ['complete', 'q.st-003'], ['visit', 'loc.road'], ['complete', 'q.elise-bike-area.choice'],
     ['visit', 'loc.camp.lake'], ['talk', 'npc.elise']] as const) {
     await story(page).locator(`[data-act="${kind}"][data-key="${key}"]`).click();
+    // На дорозі з шансом 50 % — подія (GAME-31): відповідаємо, як гравець.
+    if (key === 'loc.road' && await story(page).locator('[data-key="dlg.road-apples.box.c2"]').isVisible({ timeout: 400 }).catch(() => false)) {
+      await story(page).locator('[data-key="dlg.road-apples.box.c2"]').click();
+      await story(page).locator('[data-act="continue"]').click();
+    }
   }
   await expect(story(page).locator('[data-ui="dialogue"]')).toBeVisible();
 }

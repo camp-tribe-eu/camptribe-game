@@ -181,6 +181,11 @@ for (const vp of VIEWPORTS) {
       for (const [kind, key] of [['visit', 'loc.home'], ['complete', 'q.st-001'], ['visit', 'loc.home'], ['complete', 'q.st-002'], ['visit', 'loc.shop'],
         ['pickup', 'item.tent'], ['pickup', 'item.sleeping-bag'], ['complete', 'q.st-003'], ['visit', 'loc.road'], ['complete', 'q.st-004'], ['visit', 'loc.camp.lake']] as const) {
         await story.locator(`[data-act="${kind}"][data-key="${key}"]`).tap();
+        // На дорозі з шансом 50 % — подія (GAME-31): відповідаємо дотиком, як гравець.
+        if (key === 'loc.road' && await story.locator('[data-key="dlg.road-apples.box.c2"]').isVisible({ timeout: 400 }).catch(() => false)) {
+          await story.locator('[data-key="dlg.road-apples.box.c2"]').tap();
+          await story.locator('[data-act="continue"]').tap();
+        }
       }
       await page.locator('[data-ui="story-close"]').tap();
       expect(await holdTouch(page, 'left', (p) => p.playerX <= 44)).toBe(true);
