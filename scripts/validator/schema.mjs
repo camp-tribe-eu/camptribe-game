@@ -82,7 +82,7 @@ export const SCHEMAS = {
     priceCents: int0, resaleCents: int0,
   }),
   npcs: obj({ id: req(str), nameKey: req(str), locationId: req(str), unlockedBy: str, sells: arr(str), when }),
-  locations: obj({ id: req(str), nameKey: req(str), unlockedBy: str, items: arr(str), when }),
+  locations: obj({ id: req(str), nameKey: req(str), unlockedBy: str, items: arr(str), sheltered: bool, when }),
   quests: obj({
     id: req(str), titleKey: req(str), optional: req(bool), end: bool,
     giverId: str, locationId: str, when,

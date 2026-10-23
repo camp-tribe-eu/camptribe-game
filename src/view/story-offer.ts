@@ -50,8 +50,8 @@ const TRANSITIONS: ReadonlyMap<string, readonly RawTransition[]> = new Map(
  */
 export const outcomeKey = progressKey;
 
-const tryMove = (s: GameState, m: Move | Omit<Command, 'commandId'>, defs: CoreDefs): GameState | null => {
-  const r = dispatch(s, { ...m, commandId: nextCommandId(s) } as Command, defs);
+const tryMove = (s: GameState, m: Move | Omit<Command, 'commandId'>, defs: CoreDefs, weather?: Weather): GameState | null => {
+  const r = dispatch(s, { ...m, commandId: nextCommandId(s) } as Command, defs, undefined, undefined, weather);
   return r.ok ? r.state : null;
 };
 
@@ -105,7 +105,7 @@ const refOf = (m: Move): string => {
 export interface Offered { readonly offer: StoryOffer; readonly intents: ReadonlyMap<string, Move> }
 
 /** Спроби, які меню пропонує в стані: прийняті ядром, без Interact, у розмові — лише розмова, без дублів наслідку. */
-export function menuMoves(s: GameState, defs: CoreDefs): { move: Move; next: GameState }[] {
+export function menuMoves(s: GameState, defs: CoreDefs, weather?: Weather): { move: Move; next: GameState }[] {
   const talking = s.dialogue !== null;
   const here = outcomeKey(s);
   const seen = new Set<string>();
@@ -113,7 +113,7 @@ export function menuMoves(s: GameState, defs: CoreDefs): { move: Move; next: Gam
   for (const m of moves(s, defs)) {
     if (m.type === 'Interact' || m.type === 'RoadEvent') continue; // справа сцени й симуляції, не меню
     if (talking && m.type !== 'Choose' && m.type !== 'Continue') continue;
-    const next = tryMove(s, m, defs);
+    const next = tryMove(s, m, defs, weather);
     if (!next) continue;
     const outcome = outcomeKey(next);
     if (outcome === here) continue; // дія, що нічого не змінює (прийти туди, де стоїш), — не пропонуємо
@@ -193,7 +193,7 @@ export function storyOffer(sim: SimState, defs: CoreDefs): Offered {
   });
 
   const offered: OfferAction[] = [];
-  for (const { move } of menuMoves(s, defs)) {
+  for (const { move } of menuMoves(s, defs, weather)) {
     const a: OfferAction = { id: idOf(move, s), ...describe(move, defs, s, weather) };
     intents.set(a.id, move);
     offered.push(a);

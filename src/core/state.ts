@@ -114,6 +114,8 @@ export const REJECT_CODES = [
   // GAME-73 · спорядження
   'ITEM_QUEST_LOCKED',
   'NOT_WET',
+  // GAME-88 · сушити просто неба в дощ марно
+  'CANNOT_DRY_HERE',
   // GAME-71 · календар життя
   'VACATION_EXHAUSTED',
   'SCHOOL_TERM',

@@ -29,7 +29,7 @@ export interface RawContent {
   profiles: { id: string; transports?: string[]; startSkills?: { skill: string; rank: number }[] }[];
   transports: { id: string }[];
   animals: { id: string; transports?: string[] }[];
-  locations: { id: string; unlockedBy?: string; when?: RawWhen; items?: string[] }[];
+  locations: { id: string; unlockedBy?: string; when?: RawWhen; items?: string[]; sheltered?: boolean }[];
   npcs: { id: string; locationId: string; unlockedBy?: string; when?: RawWhen; sells?: string[] }[];
   quests: RawQuest[];
   dialogues: RawDialogue[];
@@ -85,7 +85,7 @@ export function compileStory(c: RawContent): StoryDefs {
     }])),
     transports: c.transports.map((t) => t.id),
     animals: Object.fromEntries(c.animals.map((a) => [a.id, a.transports ? { transports: a.transports } : {}])),
-    locations: Object.fromEntries(c.locations.map((l) => [l.id, { ...(l.unlockedBy ? { unlockedBy: l.unlockedBy } : {}), ...when(l.when), items: l.items ?? [] }])),
+    locations: Object.fromEntries(c.locations.map((l) => [l.id, { ...(l.unlockedBy ? { unlockedBy: l.unlockedBy } : {}), ...when(l.when), items: l.items ?? [], ...(l.sheltered ? { sheltered: true } : {}) }])),
     npcs: Object.fromEntries(c.npcs.map((n) => [n.id, { locationId: n.locationId, ...(n.unlockedBy ? { unlockedBy: n.unlockedBy } : {}), ...when(n.when) }])),
     quests: Object.fromEntries(c.quests.map((q) => [q.id, quest(q)])),
     dialogues: Object.fromEntries(c.dialogues.map((d) => [d.id, dialogue(d)])),
