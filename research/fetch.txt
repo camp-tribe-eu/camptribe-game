@@ -1,2 +1,5 @@
-pack-kenney-chars	kenney:roguelike-characters
-pack-kenney-city	kenney:roguelike-modern-city
+fact-nl-no-wild-camping	page:https://www.natuurmonumenten.nl/kamperen
+fact-nl-signboard-rules	page:https://www.natuurmonumenten.nl/natuurgebieden/gebiedsregels
+fact-nl-sbb-pole-camping-closed	page:https://www.staatsbosbeheer.nl/wat-we-doen/nieuws/2020/05/sluiten-paalkampeerterreinen
+fact-be-vl-bivouac-zone	page:https://natuurenbos.be/activiteiten/bivakzone
+fact-be-vl-fire-in-nature	page:https://natuurenbos.be/een-kampvuur-maken-mag-dat
