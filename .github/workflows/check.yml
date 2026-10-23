@@ -52,10 +52,11 @@ jobs:
       # Сторож розбіжності: якщо @playwright/test оновили, а образ ні, — браузера потрібної ревізії в образі немає.
       # Червоніємо тут із причиною, а не таймаутом у тестах (закон 4).
       - name: Браузер образу відповідає @playwright/test
-        run: |
-          exe=$(node -p "require('playwright-core').chromium.executablePath()")
-          [ -x "$exe" ] || { echo "::error::Немає $exe — тег образу в check.yml не збігається з @playwright/test $(node -p "require('@playwright/test/package.json').version")"; exit 1; }
-          echo "OK: $exe"
+        # Справжній запуск headless (той самий бінарник, що й у тестах — headless shell), а не перевірка шляху.
+        run: >-
+          node -e "require('playwright-core').chromium.launch().then(b => b.close())
+          .then(() => console.log('OK: headless Chromium запускається'))
+          .catch(e => { console.log('::error::Браузер образу не запускається — тег образу в check.yml не збігається з @playwright/test ' + require('@playwright/test/package.json').version + ': ' + e.message.split('\\n')[0]); process.exit(1); })"
       - run: npm run e2e
       - uses: actions/upload-artifact@v4
         if: always()
