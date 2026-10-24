@@ -42,3 +42,7 @@ yt-req-monetization	page:https://developers.google.com/youtube/gaming/playables/
 yt-req-trustsafety	page:https://developers.google.com/youtube/gaming/playables/certification/requirements_trustsafety
 yt-support-faq	page:https://developers.google.com/youtube/gaming/playables/support/faq
 yt-ref-monetization	page:https://developers.google.com/youtube/gaming/playables/reference/monetization
+
+# GAME-111: кішка Mia — спершу LPC/CC0 на OGA, FAL лише якщо не знайдеться (OD-010)
+list-lpc-cat	ogasearch:lpc cat
+list-cat-sprite	ogasearch:cat sprite 32
