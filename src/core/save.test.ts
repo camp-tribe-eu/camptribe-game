@@ -9,12 +9,14 @@ import { DEFS, LOG, SEED } from './determinism.fixture';
 import { stateHash } from './hash';
 import type { StoryDefs } from './defs';
 import { LOAD_CODES, SAVE_VERSION, danglingRefs, fromSave, serialize, type LoadCode } from './save';
-import { newSim, run, step, type Input } from './sim';
+import { newSim, run, step, type Input, type JournalEntry } from './sim';
 import { paydayDay, paydaysThrough } from './life';
 import { zeroSkills } from './skills';
 
 /** Кожна випущена версія сейву — фікстура назавжди (TD-007). Нову версію додати сюди. */
 const FIXTURES: Record<number, unknown> = { 1: v1, 2: v2, 3: v3 };
+/** Фікстури v2/v3 записано до GAME-106: у записах журналу ще немає балансу (`cents`, необов'язкове поле). Решта — та сама. */
+const preBalance = (j: readonly JournalEntry[]): object[] => j.map((e) => ({ at: e.at, commandId: e.commandId, type: e.type, ref: e.ref }));
 
 describe('вічні фікстури сейвів (TD-007)', () => {
   it('є фікстура для кожної версії від 1 до поточної', () => {
@@ -55,7 +57,7 @@ describe('v2 (GAME-29): персонаж і квести', () => {
     // якого новий рушій уже не пише (дія нічого не міняє). Усе інше — той самий стан; журнал порівнюємо окремо нижче.
     expect(r.ok && stateHash({ ...r.sim, journal: null })).toBe(stateHash({ ...live, journal: null }));
     expect(r.ok && r.sim.journal.length).toBe(live.journal.length + 1);
-    expect(r.ok && r.sim.journal.filter((e) => !(e.type === 'Visit' && e.ref === 'loc.home'))).toEqual(live.journal);
+    expect(r.ok && r.sim.journal.filter((e) => !(e.type === 'Visit' && e.ref === 'loc.home'))).toEqual(preBalance(live.journal));
     expect(r.ok && Object.keys(r.sim.game.quests).length).toBe(3);   // фікстура справді несе квести
     expect(r.ok && r.sim.game.npcMemory).toEqual({ 'npc.ann': ['m.biker'] });   // і пам'ять NPC (GAME-48), не лише {}
   });
@@ -124,7 +126,7 @@ describe('v3 (GAME-71): календар життя; v2 вийшов до гра
     // Журнал — як у v2 вище (GAME-84 №1): старий запис «Visit loc.home» удома нове ядро не пише; решта стану збігається.
     expect(r.ok && stateHash({ ...r.sim, journal: null })).toBe(stateHash({ ...live, journal: null }));
     expect(r.ok && r.sim.journal.length).toBe(live.journal.length + 1);   // рівно один старий запис, як у v2 (рецензія PR #21)
-    expect(r.ok && r.sim.journal.filter((e) => !(e.type === 'Visit' && e.ref === 'loc.home'))).toEqual(live.journal);
+    expect(r.ok && r.sim.journal.filter((e) => !(e.type === 'Visit' && e.ref === 'loc.home'))).toEqual(preBalance(live.journal));
     expect(r.ok && r.sim.game.life).toEqual({ paydays: 1, leave: [{ from: 40, days: 3, vacation: 2 }] });
   });
   it('paydaysThrough (закрита формула) = кількість paydayDay ≤ дня, 20 років щодня; і старт після дня виплати', () => {
@@ -209,7 +211,9 @@ describe('коди відмов завантаження: кожен має зл
     ['персонаж без транспорту', (c: typeof good) => { c.sim.game.player = { profileId: 'profile.a', animalId: 'animal.none', locationId: null }; }],
     ['запис processed — null (без перевірки об\'єкта — виняток, а не код)', (c: typeof good) => { c.sim.game.processed = { c0: null }; }],
     ['запис журналу невідомого типу (рецензія GAME-32)', (c: typeof good) => { c.sim.journal = [{ at: 0, commandId: 'c0', type: 'Teleport', ref: null }]; }],
-    ['без зерна світу (GAME-46)', (c: typeof good) => { delete (c.sim as Record<string, unknown>).worldSeed; }],
+    ['баланс у записі журналу від\'ємний (GAME-106)', (c: typeof good) => { c.sim.journal = [{ at: 0, commandId: 'c0', type: 'Visit', ref: null, cents: -1 }]; }],
+    ['баланс у записі журналу — рядок (GAME-106)', (c: typeof good) => { c.sim.journal = [{ at: 0, commandId: 'c0', type: 'Visit', ref: null, cents: '5' }]; }],
+    ['без зерна світу (GAME-46)',(c: typeof good) => { delete (c.sim as Record<string, unknown>).worldSeed; }],
     ['зерно світу поза uint32 (GAME-46)', (c: typeof good) => { (c.sim as Record<string, unknown>).worldSeed = 2 ** 32; }],
     ['без пам\'яті NPC (GAME-48)', (c: typeof good) => { delete c.sim.game.npcMemory; }],
     ['пам\'ять NPC — масив, а не об\'єкт', (c: typeof good) => { c.sim.game.npcMemory = []; }],

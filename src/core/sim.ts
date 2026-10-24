@@ -30,6 +30,11 @@ export interface JournalEntry {
   readonly commandId: string;
   readonly type: JournalType;
   readonly ref: string | null;
+  /**
+   * Баланс у центах ПІСЛЯ команди (GAME-106): з нього підсумок дня бере «гроші на початку й у кінці дня» — фактом, а не
+   * відтворенням із цін. Необов'язкове: записи з сейвів до GAME-106 його не мають, і тоді підсумок гроші не показує.
+   */
+  readonly cents?: number;
 }
 
 /**
@@ -171,7 +176,7 @@ export function step(s: SimState, input: Input, ctx: StepCtx = {}): SimState {
       // commandId і «порожня» дія (прийти туди, де стоїш; вдруге погрітись біля вогнища) — нуль.
       let next: SimState = { ...s, game: r.state };
       if (r.ok && !r.repeated && isJournalType(input.command.type) && changedGame(s.game, r.state)) {
-        const entry: JournalEntry = { at: s.clock.minutes - travelled, commandId: input.command.commandId, type: input.command.type, ref: refOf(input.command) };
+        const entry: JournalEntry = { at: s.clock.minutes - travelled, commandId: input.command.commandId, type: input.command.type, ref: refOf(input.command), cents: r.state.moneyCents };
         next = { ...next, journal: [...s.journal, entry].slice(-JOURNAL_LIMIT) };
       }
       if (tripWeather) next = { ...next, game: wearAfterTrip(next.game, (ctx.defs ?? EMPTY_DEFS).items, tripWeather) };
