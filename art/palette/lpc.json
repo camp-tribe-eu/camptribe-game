@@ -92,11 +92,6 @@
       "path": "assets/characters/torso/clothes/longsleeve/longsleeve/male/walk.png",
       "sha256": "8b1c79d535d7a233371c9398ca51b196aa8fdf06117bd0eafd7fbcbf438d711b",
       "colors": 5
-    },
-    {
-      "path": "assets/characters/torso/clothes/longsleeve/longsleeve/teen/walk.png",
-      "sha256": "62a06dc179d65251402f11f6db12ed0092235dafa1df6bb84f73d8319e2049e1",
-      "colors": 6
     }
   ],
   "count": 519,

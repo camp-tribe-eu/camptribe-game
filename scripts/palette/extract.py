@@ -41,7 +41,6 @@ DEFAULT_SOURCES = [
     'assets/characters/legs/pants/thin/walk.png',
     'assets/characters/torso/clothes/longsleeve/longsleeve/female/walk.png',
     'assets/characters/torso/clothes/longsleeve/longsleeve/male/walk.png',
-    'assets/characters/torso/clothes/longsleeve/longsleeve/teen/walk.png',
 ]
 
 

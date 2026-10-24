@@ -1,0 +1,53 @@
+{
+  "about": "GAME-21: генератор LPC пропонує для цих шарів OGA-BY 3.0, а сторінки першоджерела OGA — ні. Обрано ліцензію, яку дають усі сторінки першоджерела рядка або з якою сумісні їхні ліцензії (CC-BY, OGA-BY → CC-BY-SA); цитати й звірка — у файлі evidence.",
+  "pins": {
+    "characters/body/bodies/female/walk.png": {
+      "licence": "CC-BY-SA 3.0",
+      "evidence": "research/lpc-licences-evidence.md"
+    },
+    "characters/body/bodies/male/walk.png": {
+      "licence": "CC-BY-SA 3.0",
+      "evidence": "research/lpc-licences-evidence.md"
+    },
+    "characters/body/bodies/teen/walk.png": {
+      "licence": "CC-BY-SA 3.0",
+      "evidence": "research/lpc-licences-evidence.md"
+    },
+    "characters/feet/shoes/basic/male/walk.png": {
+      "licence": "CC-BY-SA 3.0",
+      "evidence": "research/lpc-licences-evidence.md"
+    },
+    "characters/feet/shoes/basic/thin/walk.png": {
+      "licence": "CC-BY-SA 3.0",
+      "evidence": "research/lpc-licences-evidence.md"
+    },
+    "characters/hair/plain/adult/walk.png": {
+      "licence": "CC-BY-SA 3.0",
+      "evidence": "research/lpc-licences-evidence.md"
+    },
+    "characters/head/heads/human/female/walk.png": {
+      "licence": "CC-BY-SA 3.0",
+      "evidence": "research/lpc-licences-evidence.md"
+    },
+    "characters/head/heads/human/male/walk.png": {
+      "licence": "CC-BY-SA 3.0",
+      "evidence": "research/lpc-licences-evidence.md"
+    },
+    "characters/legs/pants/male/walk.png": {
+      "licence": "CC-BY-SA 3.0",
+      "evidence": "research/lpc-licences-evidence.md"
+    },
+    "characters/legs/pants/thin/walk.png": {
+      "licence": "CC-BY-SA 3.0",
+      "evidence": "research/lpc-licences-evidence.md"
+    },
+    "characters/torso/clothes/longsleeve/longsleeve/female/walk.png": {
+      "licence": "CC-BY-SA 3.0",
+      "evidence": "research/lpc-licences-evidence.md"
+    },
+    "characters/torso/clothes/longsleeve/longsleeve/male/walk.png": {
+      "licence": "CC-BY-SA 3.0",
+      "evidence": "research/lpc-licences-evidence.md"
+    }
+  }
+}
