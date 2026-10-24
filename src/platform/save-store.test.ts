@@ -4,6 +4,9 @@
 // Межі підробки (рецензія PR #34): onerror не стріляє (у справжньому IDB помилка запиту → error → abort), а запит після
 // автокомміту не кидає TransactionInactiveError. Нинішньому save-store це байдуже (запити синхронно в onsuccess), але
 // await усередині транзакції пройшов би тут і впав би в браузері — така зміна потребує e2e, не лише цього тесту.
+// GAME-103: ці тести — ЛИШЕ для IndexedDB-реалізації, свідомо: вони перевіряють транзакції IDB (лічильник транзакцій,
+// обрив між put('prev') і put('main') з відкатом), яких у пам'яттєвої заглушки немає. Контракт, спільний для обох
+// реалізацій (ротація, відкат, карантин), — у save-backend.test.ts, а вся сесія на обох — у save-session.test.ts.
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { installFakeIdb, type Fake } from './save-idb-fake.test.helpers';
 import { dismissStale, readSaves, readStale, writeSave, writeStale } from './save-store';
