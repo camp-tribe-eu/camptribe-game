@@ -190,6 +190,24 @@ function withLife(c, cal = calendarCard()) {
   return c;
 }
 
+// GAME-109: пакування. Карта — «потрібне» (2 од.), дрова — «корисне», подарунок — «можна лишити», лише для власника собаки.
+const packingCard = () => ({
+  openAfter: 'ST-002', at: ['loc.camp'],
+  capacity: [{ transport: T_CAR, units: 5 }, { transport: T_BIKE, units: 3 }],
+  items: [
+    { item: 'item.map', group: 'needed', units: 2 }, { item: 'item.firewood', group: 'useful', units: 1 },
+    { item: 'item.gift', group: 'leave', units: 1, when: { animals: [DOG] } },
+  ],
+  notes: [{ missing: 'item.map', transports: [T_BIKE], textKey: 'pack.note.fixture' }],
+});
+function withPacking(c, pk = packingCard()) {
+  c.packing = pk;
+  for (const lang of c.meta.locales) c.locales[lang]['pack.note.fixture'] = `[${lang}] pack.note.fixture`;
+  return c;
+}
+// Діалог читає прапорець пакування: окремий вибір поруч із безумовним виходом.
+const readsPackFlag = (c, flag) => node(c, 'help').choices.unshift({ textKey: K('help.c1'), next: 'bye', when: { flag } });
+
 const tents = () => [
   tentCard('item.fixture-tent-cheap', {}),
   tentCard('item.fixture-tent-light', { tier: 2, weightG: 1100, volumeL: 3, waterproofMm: 3000, comfortC: 5, sleeps: 1, priceCents: 25000, resaleCents: 11000 }),
@@ -563,6 +581,22 @@ export const FIXTURES = [
   { base: 'combo', name: '[календар] рахунки на 1 цент більші за зарплату', expect: ['JOB_BILLS_EXCEED_SALARY'], count: { code: 'JOB_BILLS_EXCEED_SALARY', n: 1 }, patch(c) { withLife(c); c.profiles[0].job.billsCents = c.profiles[0].job.salaryCents + 1; } },
   { base: 'combo', name: '[календар] день виплати 29 — є не в кожному місяці', expect: ['SCHEMA_INVALID'], count: { code: 'SCHEMA_INVALID', n: 1 }, patch(c) { withLife(c).calendar.payday = 29; } },
   { base: 'combo', name: '[календар] невідоме поле в календарі', expect: ['SCHEMA_UNKNOWN_FIELD'], count: { code: 'SCHEMA_UNKNOWN_FIELD', n: 1 }, patch(c) { withLife(c).calendar.timezone = 'CET'; } },
+  // GAME-109: пакування.
+  { base: 'combo', name: '[пакування] контроль: коректна картка й діалог, що читає f.pack-map', expect: [], patch(c) { withPacking(c); readsPackFlag(c, 'f.pack-map'); } },
+  { base: 'combo', name: '[пакування] контроль: «потрібного» рівно стільки, скільки місця — межа дозволена', expect: [], patch(c) { withPacking(c).packing.capacity[1].units = 2; } },
+  { base: 'combo', name: '[пакування] річ двічі', expect: ['PACK_ITEM_DUPLICATE'], count: { code: 'PACK_ITEM_DUPLICATE', n: 1 }, patch(c) { withPacking(c).packing.items.push({ item: 'item.map', group: 'leave', units: 1 }); } },
+  { base: 'combo', name: '[пакування] для транспорту немає місця', expect: ['PACK_CAPACITY_MISSING'], count: { code: 'PACK_CAPACITY_MISSING', n: 1 }, patch(c) { withPacking(c).packing.capacity.pop(); } },
+  { base: 'combo', name: '[пакування] для транспорту два записи місця', expect: ['PACK_CAPACITY_MISSING'], count: { code: 'PACK_CAPACITY_MISSING', n: 1 }, patch(c) { withPacking(c).packing.capacity.push({ transport: T_BIKE, units: 9 }); } },
+  { base: 'combo', name: '[пакування] «потрібне» не вміщається у велосипед', expect: ['PACK_NEEDED_OVERFLOW'], count: { code: 'PACK_NEEDED_OVERFLOW', n: 1 }, patch(c) { withPacking(c).packing.capacity[1].units = 1; } },
+  { base: 'combo', name: '[пакування] «потрібне» для власника собаки переливає лише разом із ним', expect: ['PACK_NEEDED_OVERFLOW'], count: { code: 'PACK_NEEDED_OVERFLOW', n: 1 }, patch(c) { const p = withPacking(c).packing; p.items.push({ item: 'item.gift', group: 'needed', units: 2, when: { animals: [DOG] } }); p.items.splice(2, 1); p.capacity[1].units = 3; } },
+  { base: 'combo', name: '[пакування] підпис про річ, якої не пакують', expect: ['PACK_NOTE_UNPACKABLE'], count: { code: 'PACK_NOTE_UNPACKABLE', n: 1 }, patch(c) { withPacking(c).packing.notes[0].missing = 'item.ticket'; c.items.push({ id: 'item.ticket', nameKey: 'item.ticket' }); } },
+  { base: 'combo', name: '[пакування] річ, якої немає в items.json', expect: ['REF_MISSING'], count: { code: 'REF_MISSING', n: 1 }, patch(c) { withPacking(c).packing.items[1].item = 'item.nope'; } },
+  { base: 'combo', name: '[пакування] місце й квест-відкривач: неіснуючі посилання', expect: ['REF_MISSING'], count: { code: 'REF_MISSING', n: 3 }, patch(c) { const p = withPacking(c).packing; p.openAfter = 'ST-099'; p.at = ['loc.nowhere']; p.capacity[0].transport = 'transport.nope'; p.capacity.push({ transport: T_CAR, units: 5 }); } },
+  { base: 'combo', name: '[пакування] група не з переліку', expect: ['SCHEMA_INVALID'], count: { code: 'SCHEMA_INVALID', n: 1 }, patch(c) { withPacking(c).packing.items[0].group = 'optional'; } },
+  { base: 'combo', name: '[пакування] невідоме поле картки', expect: ['SCHEMA_UNKNOWN_FIELD'], count: { code: 'SCHEMA_UNKNOWN_FIELD', n: 1 }, patch(c) { withPacking(c).packing.weightLimit = 5; } },
+  { base: 'combo', name: '[пакування] підпис без перекладу', expect: ['LOCALE_MISSING'], count: { code: 'LOCALE_MISSING', n: 1 }, patch(c) { withPacking(c); delete c.locales.en['pack.note.fixture']; } },
+  { base: 'combo', name: '[пакування] діалог читає прапорець речі, якої не пакують', expect: ['DIALOGUE_FLAG_NEVER_SET'], count: { code: 'DIALOGUE_FLAG_NEVER_SET', n: 1 }, patch(c) { withPacking(c); readsPackFlag(c, 'f.pack-ticket'); } },
+  { base: 'combo', name: '[пакування] діалог читає f.pack-map, а картки пакування немає', expect: ['DIALOGUE_FLAG_NEVER_SET'], count: { code: 'DIALOGUE_FLAG_NEVER_SET', n: 1 }, patch(c) { readsPackFlag(c, 'f.pack-map'); } },
   { base: 'combo', name: '[дороги] транспорт, якого не дозволяє жоден профіль: лише COMBO_OPTION_UNUSABLE, без вимоги доріг', expect: ['COMBO_OPTION_UNUSABLE'], patch(c) {
     c.transports.push({ id: 'transport.fixture-boat', nameKey: 'transport.fixture-boat' });
     for (const lang of c.meta.locales) c.locales[lang]['transport.fixture-boat'] = `[${lang}] boat`;
@@ -721,5 +755,6 @@ export const FILE_FIXTURES = [
   { name: 'назва файлу діалогу не збігається з id', files: 'baseline', override: { 'dialogue/shop.json': JSON.stringify(shopDialogue([])) }, expectStatus: 'ISSUES', expect: ['DIALOGUE_FILE_NAME'] },
   { name: 'одруківка в назві файлу', files: 'baseline', override: { 'quest.json': '[]' }, expectStatus: 'ISSUES', expect: ['CONTENT_UNKNOWN_FILE'] },
   { name: 'calendar.json (GAME-71) — відомий файл, не одруківка', files: 'baseline', override: { 'calendar.json': JSON.stringify(calendarCard()) }, expectStatus: 'OK', expect: [] },
+  { name: 'packing.json (GAME-109) — відомий файл, не одруківка', files: 'baseline', override: { 'packing.json': JSON.stringify({ at: ['loc.camp'], capacity: [{ transport: 'transport.x', units: 1 }], items: [{ item: 'item.map', group: 'needed', units: 1 }] }) }, expectStatus: 'OK', expect: [] },
   { name: 'еталон із диска читається повністю й без втрат', files: 'baseline', expectStatus: 'OK', expect: [], roundTrip: true },
 ];

@@ -8,5 +8,14 @@
   { "id": "item.sleeping-bag-down", "nameKey": "item.sleeping-bag-down", "kind": "sleeping-bag", "tier": 2, "weightG": 900, "volumeL": 4, "waterproofMm": 0, "comfortC": 2, "sleeps": 1, "priceCents": 22900, "resaleCents": 9000 },
   { "id": "item.sleeping-bag-winter", "nameKey": "item.sleeping-bag-winter", "kind": "sleeping-bag", "tier": 3, "weightG": 1800, "volumeL": 10, "waterproofMm": 1500, "comfortC": -10, "sleeps": 1, "priceCents": 54900, "resaleCents": 22000 },
   { "id": "item.lantern", "nameKey": "item.lantern" },
-  { "id": "item.firewood", "nameKey": "item.firewood" }
+  { "id": "item.firewood", "nameKey": "item.firewood" },
+  { "id": "item.water", "nameKey": "item.water" },
+  { "id": "item.simple-dinner", "nameKey": "item.simple-dinner" },
+  { "id": "item.snacks", "nameKey": "item.snacks" },
+  { "id": "item.mia-carrier", "nameKey": "item.mia-carrier" },
+  { "id": "item.mia-blanket", "nameKey": "item.mia-blanket" },
+  { "id": "item.mia-bowl-food", "nameKey": "item.mia-bowl-food" },
+  { "id": "item.big-cushion", "nameKey": "item.big-cushion" },
+  { "id": "item.lantern-2", "nameKey": "item.lantern-2" },
+  { "id": "item.lantern-3", "nameKey": "item.lantern-3" }
 ]

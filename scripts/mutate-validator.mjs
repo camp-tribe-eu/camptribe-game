@@ -150,6 +150,15 @@ const mutations = [
   { name: '[календар] схема не обмежує день виплати згори', file: 'validator/schema.mjs', from: "payday: req({ t: 'int', min: 1, max: 28 })", to: "payday: req({ t: 'int', min: 1 })" },
   { name: '[календар] завантажувач не знає calendar.json', file: 'validator/load.mjs', from: "'meta.json', 'calendar.json',", to: "'meta.json'," },
   { name: '[календар] схема не перевіряє календар', file: 'validator/schema.mjs', from: "if (content.calendar !== undefined) walk(", to: 'if (false) walk(' },
+  // пакування (GAME-109)
+  { name: '[пакування] завантажувач не знає packing.json', file: 'validator/load.mjs', from: "'calendar.json', 'packing.json',", to: "'calendar.json'," },
+  { name: '[пакування] схема не перевіряє packing', file: 'validator/schema.mjs', from: "if (content.packing !== undefined) walk(", to: 'if (false) walk(' },
+  { name: '[пакування] «потрібне» рівно в міру вважається переливом (межа зсунута)', file: CHECKS_FILE, from: 'need[1] > cap.units', to: 'need[1] >= cap.units' },
+  { name: '[пакування] «потрібне» не рахується (перелив пропущено)', file: CHECKS_FILE, from: "x.group === 'needed' && (!x.when?.animals", to: "x.group === 'needed' && false && (!x.when?.animals" },
+  { name: '[пакування] прапорці f.pack-* не вважаються здійсненними', file: CHECKS_FILE, from: "set.add(`f.pack-${String(x.item).replace(/^item\\./, '')}`);", to: ';' },
+  { name: '[пакування] посилання речей пакування на items.json не перевіряються', file: CHECKS_FILE, from: "ref('items', x.item, `packing.items[${i}].item`);", to: ';' },
+  { name: '[пакування] ключі підписів не потрапляють у перевірку перекладів', file: CHECKS_FILE, from: "(ct.packing?.notes ?? []).forEach((n, i) => add(n.textKey", to: "[].forEach((n, i) => add(n.textKey" },
+  { name: '[пакування] дубль речі не звітується', file: CHECKS_FILE, from: "if (seen.has(x.item)) out.push(I('PACK_ITEM_DUPLICATE'", to: "if (false) out.push(I('PACK_ITEM_DUPLICATE'" },
   // GAME-56: давність факту — попередження, не помилка
   { name: '[факт] поріг давності включно (>= замість >)', file: CHECKS_FILE, from: 'if (age > FACT_STALE_DAYS)', to: 'if (age >= FACT_STALE_DAYS)' },
   { name: '[факт] попередження рахується помилкою', file: 'validator/codes.mjs', from: "CODES[code]?.severity === 'warning'", to: 'false' },

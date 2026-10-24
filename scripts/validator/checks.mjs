@@ -195,6 +195,17 @@ export const CHECKS = [
         r.ways.forEach((w, i) => ref('transports', w.transport, `${r.id}.ways[${i}].transport`));
       }
       for (const [where, rw] of rewards(c.content)) (rw.items ?? []).forEach((i) => ref('items', i.item, where));
+      const pk = c.content.packing;
+      if (pk) {
+        ref('quests', pk.openAfter, 'packing.openAfter');
+        pk.at.forEach((l) => ref('locations', l, 'packing.at'));
+        pk.capacity.forEach((x, i) => ref('transports', x.transport, `packing.capacity[${i}].transport`));
+        pk.items.forEach((x, i) => {
+          ref('items', x.item, `packing.items[${i}].item`);
+          for (const [dim, t] of Object.entries(WHEN_TYPE)) for (const id of x.when?.[dim] ?? []) if (!(dim === 'animals' && id === NO_ANIMAL)) ref(t, id, `packing.items[${i}].when.${dim}`);
+        });
+        (pk.notes ?? []).forEach((n, i) => { ref('items', n.missing, `packing.notes[${i}].missing`); (n.transports ?? []).forEach((t) => ref('transports', t, `packing.notes[${i}].transports`)); });
+      }
       return out;
     },
   },
@@ -239,6 +250,33 @@ export const CHECKS = [
         const b = complete.find((x) => x !== a && x.kind === a.kind && notWorse(x, a) && (!same(x, a) || complete.indexOf(x) < complete.indexOf(a)));
         if (b) out.push(I('GEAR_DOMINATED', a.id, `«${b.id}» не гірший ні в чому — у «${a.id}» немає своєї ситуації (SIM-INV-005)`));
       }
+      return out;
+    },
+  },
+  {
+    id: 'packing',
+    run(c) { // @check:packing
+      // GAME-109: пакування. Перелив «потрібного» зробив би автоукладання нездатним його включити; дубль речі — неоднозначне місце.
+      const out = [];
+      const pk = c.content.packing;
+      if (!pk) return out;
+      const seen = new Set();
+      pk.items.forEach((x, i) => {
+        if (seen.has(x.item)) out.push(I('PACK_ITEM_DUPLICATE', `packing.items[${i}]`, `річ «${x.item}» уже в списку`));
+        seen.add(x.item);
+      });
+      for (const t of c.content.transports ?? []) {
+        const n = pk.capacity.filter((x) => x.transport === t.id).length;
+        if (n !== 1) out.push(I('PACK_CAPACITY_MISSING', `packing.capacity:${t.id}`, `записів місця для транспорту: ${n}, а не 1`));
+      }
+      // Для кожного транспорту — найгірша тварина, яка з ним їде (або без): сума «потрібного», що їй належить, мусить вміститись.
+      for (const cap of pk.capacity) {
+        const pets = [NO_ANIMAL, ...(c.content.animals ?? []).filter((a) => !a.transports || a.transports.includes(cap.transport)).map((a) => a.id)];
+        const need = pets.map((pet) => [pet, pk.items.filter((x) => x.group === 'needed' && (!x.when?.animals || x.when.animals.includes(pet)) && (!x.when?.transports || x.when.transports.includes(cap.transport)))
+          .reduce((a, x) => a + x.units, 0)]).sort((x, y) => y[1] - x[1])[0];
+        if (need && need[1] > cap.units) out.push(I('PACK_NEEDED_OVERFLOW', `packing.capacity:${cap.transport}`, `«потрібного» ${need[1]} од. (${need[0]}), місця ${cap.units}`));
+      }
+      (pk.notes ?? []).forEach((n, i) => { if (!seen.has(n.missing)) out.push(I('PACK_NOTE_UNPACKABLE', `packing.notes[${i}]`, `«${n.missing}» немає в packing.items`)); });
       return out;
     },
   },
@@ -425,6 +463,7 @@ export const CHECKS = [
       }
       (ct.events ?? []).forEach((e) => add(e.titleKey, e.id));
       (ct.facts ?? []).forEach((f) => add(f.claimKey, f.id));
+      (ct.packing?.notes ?? []).forEach((n, i) => add(n.textKey, `packing.notes[${i}]`));
       (ct.dialogues ?? []).forEach((d) => add(d.trigger?.titleKey, `${d.id}.trigger`));
       for (const d of ct.dialogues ?? []) for (const n of d.nodes) {
         add(n.textKey, `${d.id}/${n.id}`);
@@ -899,6 +938,8 @@ const NONE = new Set();
 // Пам'ять — лише remember у розмові з NPC; подія в дорозі NPC не має, тож нічого не запам'ятовує.
 function settable(c) {
   const set = new Set((c.content.dialogues ?? []).filter((d) => d.trigger).map((d) => `f.seen-${d.id.replace(/^dlg\./, '')}`));
+  // GAME-109: прапорець «упаковано» (f.pack-<річ>) ставить ядро командами пакування — для кожної речі packing.items.
+  for (const x of c.content.packing?.items ?? []) set.add(`f.pack-${String(x.item).replace(/^item\./, '')}`);
   const memory = new Map();
   const mem = (npc) => memory.get(npc) ?? NONE;
   const choices = dialogueChoices(c.content);

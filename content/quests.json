@@ -51,7 +51,7 @@
     "id": "ST-005", "titleKey": "q.st-005", "optional": false, "end": true, "giverId": "npc.elise", "locationId": "loc.camp.lake",
     "objectives": [
       { "id": "meet-elise", "textKey": "q.st-005.o1", "kind": "talk", "target": "npc.elise", "required": true },
-      { "id": "pitch-tent", "textKey": "q.st-005.o2", "kind": "visit", "target": "loc.camp.lake", "required": true },
+      { "id": "pitch-tent", "textKey": "q.st-005.o2", "kind": "talk", "target": "npc.elise", "required": true, "byDialogue": true },
       { "id": "gather-firewood", "textKey": "q.st-005.o3", "kind": "collect", "target": "item.firewood", "required": true },
       { "id": "cat-looks-around", "textKey": "q.st-005.o4", "kind": "visit", "target": "loc.camp.lake", "required": false, "when": { "animals": ["animal.cat"] } }
     ],

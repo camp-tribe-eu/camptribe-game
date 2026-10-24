@@ -7,6 +7,7 @@ import type { CommandRecord, GameState, RejectCode } from './state';
 import { practise, rankOf, type SkillId } from './skills';
 import { gearOf, pruneGear, sellPriceOf } from './gear';
 import { bookLeave, cancelLeave } from './life';
+import { autoPack, capacityOf, packFlag, packingOpen, packItemsFor, usedUnits, withPacked } from './packing';
 import type { Weather } from './weather';
 import { applyStory, questNeedsItem, type StoryCommand, type StoryDraft } from './story';
 
@@ -27,7 +28,11 @@ export type Command =
    */
   | { readonly type: 'BookLeave'; readonly commandId: string; readonly from: number; readonly days: number; readonly schoolOverride?: boolean }
   /** Скасувати ще не розпочату відпустку, що починається в день `from` (GAME-71): дні відпустки повертаються. */
-  | { readonly type: 'CancelLeave'; readonly commandId: string; readonly from: number };
+  | { readonly type: 'CancelLeave'; readonly commandId: string; readonly from: number }
+  /** Пакування (GAME-109): покласти / дістати річ, або укласти автоматично. Лише там і тоді, де його відкрито (packing.at/openAfter). */
+  | { readonly type: 'PackItem'; readonly commandId: string; readonly itemId: string }
+  | { readonly type: 'UnpackItem'; readonly commandId: string; readonly itemId: string }
+  | { readonly type: 'AutoPack'; readonly commandId: string };
 
 /** Підтверджений факт (CR-031). Причина — commandId команди, що його спричинила. */
 export type GameEvent =
@@ -199,7 +204,41 @@ function apply(cmd: Command, d: Draft, defs: CoreDefs, guard: Safeguards, today:
       d.life = r.life;
       return null;
     }
-    case 'CreateCharacter':
+    case 'PackItem':
+    case 'UnpackItem': {
+      if (!isContentId(cmd.itemId)) return 'INVALID_COMMAND';
+      const pk = defs.packing;
+      if (!pk) return 'UNKNOWN_TARGET';
+      if (!d.player) return 'NO_CHARACTER';
+      const item = packItemsFor(pk, d.player).find((i) => i.itemId === cmd.itemId);
+      if (!item) return 'UNKNOWN_ITEM';
+      if (!packingOpen(pk, d)) return 'PACK_CLOSED';
+      const flag = packFlag(item.itemId);
+      const packed = d.flags.includes(flag);
+      if (cmd.type === 'UnpackItem') {
+        if (!packed) return 'PACK_NOT_PACKED';
+        d.flags = d.flags.filter((f) => f !== flag);
+        return null;
+      }
+      if (packed) return 'PACK_ALREADY';
+      if (usedUnits(d.flags, pk, d.player) + item.units > capacityOf(pk, d.player.transportId)) return 'PACK_FULL';
+      d.flags = [...d.flags, flag].sort();
+      return null;
+    }
+    case 'AutoPack': {
+      const pk = defs.packing;
+      if (!pk) return 'UNKNOWN_TARGET';
+      if (!d.player) return 'NO_CHARACTER';
+      if (!packingOpen(pk, d)) return 'PACK_CLOSED';
+      d.flags = withPacked(d.flags, pk, autoPack(pk, d.player));
+      return null;
+    }
+    case 'CreateCharacter': {
+      const bad = applyStory(cmd, d, defs.story, isContentId, guard.grantId);
+      // Старт: усе спаковано «як радить гра» (GAME-109) — екран пакування лише уточнює, а не починає з порожнього.
+      if (!bad && defs.packing && d.player) d.flags = withPacked(d.flags, defs.packing, autoPack(defs.packing, d.player));
+      return bad;
+    }
     case 'Visit':
     case 'Talk':
     case 'Pickup':

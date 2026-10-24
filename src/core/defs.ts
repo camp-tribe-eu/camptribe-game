@@ -171,6 +171,18 @@ export interface RepairDef {
   readonly flag: string;
 }
 
+/** Річ пакування (GAME-109): група, місце в одиницях, `when` — лише для частини гравців (переноска — з кішкою). */
+export interface PackItemDef { readonly itemId: string; readonly group: 'needed' | 'useful' | 'leave'; readonly units: number; readonly when?: WhenDef }
+
+/** Пакування (GAME-109): де й коли відкрите, скільки місця на транспорт, що пакують, підписи, коли речі бракує. */
+export interface PackingDefs {
+  readonly openAfter?: string;
+  readonly at: readonly string[];
+  readonly capacity: Readonly<Record<string, number>>;
+  readonly items: readonly PackItemDef[];
+  readonly notes: readonly { readonly missing: string; readonly transports?: readonly string[]; readonly textKey: string }[];
+}
+
 export interface CoreDefs {
   readonly items: Readonly<Record<string, ItemDef>>;
   readonly interactions: Readonly<Record<string, InteractionDef>>;
@@ -183,6 +195,8 @@ export interface CoreDefs {
    * UNKNOWN_TARGET. Збирається з content/calendar.json і content/profiles.json (src/content/life.ts).
    */
   readonly life?: LifeDefs;
+  /** Пакування (GAME-109, content/packing.json). Немає — команди пакування відмовляють (UNKNOWN_TARGET), персонаж стартує без прапорців. */
+  readonly packing?: PackingDefs;
 }
 
 export const EMPTY_DEFS: CoreDefs = { items: {}, interactions: {} };
@@ -214,6 +228,20 @@ export function checkDefs(defs: CoreDefs): { code: DefsCode; where: string }[] {
     if (!ID.test(id) || !ID.test(r.tool) || (r.part !== undefined && !ID.test(r.part)) || !ID.test(r.flag)) out.push({ code: 'DEFS_BAD_ID', where: id });
     if (!isSkillId(r.skill)) out.push({ code: 'DEFS_BAD_REF', where: `${id}.skill` });
     if (!isRank(r.minRank)) out.push({ code: 'DEFS_BAD_AMOUNT', where: `${id}.minRank` });
+  }
+  const pk = defs.packing;
+  if (pk) {
+    // GAME-109: одиниці — цілі ≥ 1, річ — з id контенту, місце — ціле ≥ 1; посилання на сюжет — лише коли він є.
+    for (const i of pk.items) {
+      if (!ID.test(i.itemId)) out.push({ code: 'DEFS_BAD_ID', where: `packing.${i.itemId}` });
+      if (!Number.isSafeInteger(i.units) || i.units < 1) out.push({ code: 'DEFS_BAD_AMOUNT', where: `packing.${i.itemId}.units` });
+    }
+    for (const [t, u] of Object.entries(pk.capacity)) if (!Number.isSafeInteger(u) || u < 1) out.push({ code: 'DEFS_BAD_AMOUNT', where: `packing.capacity.${t}` });
+    if (defs.story) {
+      if (pk.openAfter !== undefined && !Object.hasOwn(defs.story.quests, pk.openAfter)) out.push({ code: 'DEFS_BAD_REF', where: 'packing.openAfter' });
+      for (const l of pk.at) if (!Object.hasOwn(defs.story.locations, l)) out.push({ code: 'DEFS_BAD_REF', where: `packing.at.${l}` });
+      for (const t of Object.keys(pk.capacity)) if (!defs.story.transports.includes(t)) out.push({ code: 'DEFS_BAD_REF', where: `packing.capacity.${t}` });
+    }
   }
   if (defs.story) {
     out.push(...checkStory(defs.story));

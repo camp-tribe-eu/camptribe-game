@@ -25,6 +25,7 @@
 | DC-012 | `roads` | дорога між локаціями: `from`, `to`, `twoWay`, `ways[]` — `transport`, `minutes` (≥ 1), `cents` (≥ 0). Граф кожного транспорту сильно зв'язний (валідатор `roads`) | GAME-31 | ACCEPTED |
 | DC-010 | `facts` | зовнішній факт: `source`, `checkedAt` (РРРР-ММ-ДД), `kind` | GDD §12.4; CR-019 | ACCEPTED |
 | DC-013 | `calendar` | календар гри (`content/calendar.json`, один об'єкт): `start`, `payday`, `longTripDays`, `maxLeaveDays`, `bookAheadDays`, `publicHolidays[]`, `schoolHolidays[]` — докладно DC-026. Ядро виконує: `src/core/life.ts` (GAME-71) | GAME-71 | ACCEPTED |
+| DC-014 | `packing` | пакування перед першою дорогою (`content/packing.json`, один об'єкт): `openAfter` (квест), `at` (локації), `capacity` (місце в одиницях на транспорт), `items` (12 речей: `item`, `group` — `needed`/`useful`/`leave`, `units`, `when`), `notes` (підпис, коли речі бракує). Стан гри — прапорці `f.pack-<річ>` у `flags` сейву (формат сейву v3 не змінюється); їх ставить лише ядро (PackItem/UnpackItem/AutoPack), діалоги читають | GAME-109; рішення власника 24.10 | ACCEPTED |
 | DC-011 | `dialogues` | діалог (`content/dialogue/<назва>.json`, один на файл): `npcId`, `start`, `nodes[]` — вузол із `speaker`, `textKey` і рівно одним виходом `end` / `next` / `choices`; вибір — `when` (умова) і `effects` (`setFlag`, `startQuest`, `completeObjective`). Кожен вузол досяжний і має безумовний шлях до `end` | GAME-28 | ACCEPTED |
 
 Спільні частини:

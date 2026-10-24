@@ -16,11 +16,12 @@ import { canonical } from '../core/hash';
 import { todayWeather, type SimState } from '../core/sim';
 import { initialState, type GameState } from '../core/state';
 import { matches, route } from '../core/story';
+import { capacityOf, packedOf, packFlag, packingOpen, packItemsFor, usedUnits } from '../core/packing';
 import { DAY_MINUTES, dayOf, tripMinutes, type Weather } from '../core/weather';
 import { CONTENT } from '../content/story';
 import { moves, progressKey, type Move } from '../content/moves';
 import items from '../../content/items.json';
-import type { OfferAction, OfferCharacter, StoryOffer } from '../ui/story-types';
+import type { OfferAction, OfferCharacter, OfferPacking, StoryOffer } from '../ui/story-types';
 
 const NO_ANIMAL = 'animal.none';
 
@@ -159,6 +160,35 @@ export function characterChoices(defs: CoreDefs): { offer: OfferCharacter; inten
   return out;
 }
 
+/**
+ * Екран пакування (GAME-109): річ, яку ядро прийме, дістає наміру; та, що не вміщається, — без дії (UI покаже причину).
+ * Пакування не серед `moves()`: інакше простір станів повного перебору множився б на 2^12. Його доводить окремий перебір (story.test).
+ */
+function packingOffer(s: GameState, defs: CoreDefs, intents: Map<string, Move>): OfferPacking | null {
+  const pk = defs.packing;
+  const p = s.player;
+  if (!pk || !p || !packingOpen(pk, s)) return null;
+  const action = (m: Move, kind: OfferAction['kind'], key: string | null): OfferAction | null => {
+    if (!tryMove(s, m, defs)) return null;
+    const a: OfferAction = { id: idOf(m, s), kind, key };
+    intents.set(a.id, m);
+    return a;
+  };
+  const packed = new Set(packedOf(s.flags, pk, p));
+  const groups = (['needed', 'useful', 'leave'] as const).map((group) => ({
+    group,
+    items: packItemsFor(pk, p).filter((i) => i.group === group).map((i) => {
+      const on = packed.has(i.itemId);
+      return { key: nameKey(i.itemId) ?? i.itemId, units: i.units, packed: on, action: action({ type: on ? 'UnpackItem' : 'PackItem', itemId: i.itemId }, on ? 'unpack' : 'pack', nameKey(i.itemId)) };
+    }),
+  })).filter((g) => g.items.length > 0);
+  const note = pk.notes.find((n) => !s.flags.includes(packFlag(n.missing)) && packItemsFor(pk, p).some((i) => i.itemId === n.missing) && (!n.transports || n.transports.includes(p.transportId)));
+  // «Укласти автоматично» показується завжди; дія без наслідку (вже так складено) лишається натисканням «нічого не змінило».
+  const auto: OfferAction = { id: idOf({ type: 'AutoPack' }, s), kind: 'autopack', key: null };
+  intents.set(auto.id, { type: 'AutoPack' });
+  return { used: usedUnits(s.flags, pk, p), capacity: capacityOf(pk, p.transportId), groups, auto, noteKey: note?.textKey ?? null };
+}
+
 export function storyOffer(sim: SimState, defs: CoreDefs): Offered {
   const s = sim.game;
   const st = defs.story as StoryDefs;
@@ -176,7 +206,7 @@ export function storyOffer(sim: SimState, defs: CoreDefs): Offered {
   if (!s.player) {
     const choices = characterChoices(defs);
     for (const c of choices) intents.set(c.offer.id, c.intent);
-    return { intents, offer: { ...base, stage: 'create', characters: choices.map((c) => c.offer), locationKey: null, quests: [], dialogue: null, actions: [], locked: [] } };
+    return { intents, offer: { ...base, stage: 'create', characters: choices.map((c) => c.offer), locationKey: null, quests: [], dialogue: null, actions: [], packing: null, locked: [] } };
   }
 
   const p = s.player;
@@ -222,6 +252,7 @@ export function storyOffer(sim: SimState, defs: CoreDefs): Offered {
       quests,
       dialogue,
       actions: dialogue ? [] : offered,
+      packing: dialogue ? null : packingOffer(s, defs, intents),
       locked,
     },
   };
