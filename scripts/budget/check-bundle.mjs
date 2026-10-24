@@ -5,6 +5,10 @@
 //  * кожен файл — БАЖАНО < 512 KiB (WARN), ЗАВЖДИ < 30 MiB (FAIL);
 //  * файлів ≤ 8000; кожен сегмент шляху — лише [A-Za-z0-9_.-]; шляхи відносні;
 //  * HTML (index.html, spike.html) посилається лише на відносні URL: без початкового «/», «//» і схем http(s):.
+//    Межа: читаються лише кореневі *.html (атрибути й url() у <style>); абсолютні URL усередині .js/.css НЕ бачить —
+//    їх стереже vite base './' і рецензія; заборону зовнішніх запитів у YouTube-збірці перевіряє окрема картка.
+//  * dist/ містить і spike.html зі spike/ (~100 KiB), що до готовності гри не вантажаться: межа консервативна, зайве
+//    рахується, а не пропускається.
 // Запуск після `vite build`:
 //   node scripts/budget/check-bundle.mjs [--dir dist]   — перевірити збірку, надрукувати справжні числа
 //   node scripts/budget/check-bundle.mjs --self-test    — довести на синтетичних теках, що кожен код червоніє
@@ -76,6 +80,7 @@ function loadDir(dir) {
 }
 
 const HTML_OK = '<!doctype html><link rel="icon" href="data:image/svg+xml,%3Csvg/%3E"><script type="module" src="./assets/a.js"></script><link href="./assets/b.css">';
+const HTML_BYTES = Buffer.byteLength(HTML_OK);
 
 /** Синтетичні теки: чиста й по одній зіпсованій на кожен код. Зіпсована мусить дати свій код (і FAIL, якщо код — не WARN), чиста — нічого. */
 function selfTest(off = new Set()) {
@@ -91,6 +96,7 @@ function selfTest(off = new Set()) {
     }
     return d;
   };
+  const many = (n) => Object.fromEntries(Array.from({ length: n }, (_, i) => [`assets/f${i}.txt`, 0]));
   const sized = (n, size) => Object.fromEntries(Array.from({ length: n }, (_, i) => [`assets/p${i}.bin`, size]));
   const cases = [
     ['clean', build('clean', {}), null],
@@ -99,7 +105,17 @@ function selfTest(off = new Set()) {
     ['total 31 MiB in 1 MiB files', build('t31', { files: sized(31, MiB) }), 'TOTAL_FAIL'],
     ['total 16 MiB in 400 KiB files (warn only)', build('t16', { files: sized(41, 400 * KiB) }), 'TOTAL_WARN'],
     ['file 600 KiB (warn only)', build('w600', { files: { 'assets/mid.bin': 600 * KiB } }), 'FILE_WARN'],
-    ['8001 files', build('n8001', { files: Object.fromEntries(Array.from({ length: 8001 }, (_, i) => [`assets/f${i}.txt`, 0])) }), 'FILE_COUNT'],
+    // Рівно на межі й на байт/файл нижче (рецензія PR #52: без цього зсув порога на одиницю лишався зеленим).
+    // index.html — теж файл пакета: його розмір і його самого враховано.
+    ['8001 files with index.html', build('n8001', { files: many(LIMITS.maxFiles) }), 'FILE_COUNT'],
+    ['8000 files with index.html', build('n8000', { files: many(LIMITS.maxFiles - 1) }), null, 'FILE_COUNT'],
+    ['file exactly 512 KiB', build('w512', { files: { 'assets/mid.bin': LIMITS.fileWarn } }), 'FILE_WARN'],
+    ['file 512 KiB − 1', build('w511', { files: { 'assets/mid.bin': LIMITS.fileWarn - 1 } }), null],
+    ['file 30 MiB − 1', build('f30m', { files: { 'assets/big.bin': LIMITS.fileFail - 1 } }), 'TOTAL_FAIL', 'FILE_FAIL'],
+    ['total exactly 30 MiB', build('t30', { files: { 'assets/big.bin': LIMITS.totalFail - HTML_BYTES } }), 'TOTAL_FAIL'],
+    ['total 30 MiB − 1', build('t30m', { files: { 'assets/big.bin': LIMITS.totalFail - HTML_BYTES - 1 } }), 'TOTAL_WARN', 'TOTAL_FAIL'],
+    ['total exactly 15 MiB', build('t15', { files: { 'assets/big.bin': LIMITS.totalWarn - HTML_BYTES } }), 'TOTAL_WARN'],
+    ['total 15 MiB − 1', build('t15m', { files: { 'assets/big.bin': LIMITS.totalWarn - HTML_BYTES - 1 } }), 'FILE_WARN', 'TOTAL_WARN'],
     ['name with space', build('sp', { files: { 'assets/my file.png': 10 } }), 'BAD_NAME'],
     ['Cyrillic directory', build('cy', { files: { 'assets/мапа/a.png': 10 } }), 'BAD_NAME'],
     ['absolute src', build('abs', { html: '<script type="module" src="/assets/a.js"></script>' }), 'ABS_URL'],
@@ -108,13 +124,14 @@ function selfTest(off = new Set()) {
     ['absolute url() in <style>', build('cssurl', { html: "<style>@font-face{src:url('/fonts/a.ttf')}</style>" }), 'ABS_URL'],
     ['empty dir', (() => { const d = join(base, 'empty'); mkdirSync(d); return d; })(), 'EMPTY'],
   ];
-  for (const [label, dir, want] of cases) {
+  for (const [label, dir, want, absent] of cases) {
     const { files, htmls } = loadDir(dir);
     const found = check(files, htmls, off);
     const codes = new Set(found.map((f) => f.code));
     const failing = found.some((f) => f.severity === 'FAIL');
     // Чиста тека — без знахідок; зіпсована — свій код; FAIL лише для кодів, що не є WARN (попередження не червонять).
-    const ok = want === null ? found.length === 0 : codes.has(want) && failing === !/WARN$/.test(want);
+    // absent — код, якого тут бути НЕ може (випадок на байт/файл нижче межі).
+    const ok = (want === null ? (absent ? !codes.has(absent) : found.length === 0) : codes.has(want) && failing === !/WARN$/.test(want)) && !(absent && codes.has(absent));
     if (!ok) { bad++; console.log(`SELFTEST FAIL «${label}»: очікували ${want ?? 'чисто'}, є [${[...codes].join(', ')}], FAIL=${failing}`); }
   }
   rmSync(base, { recursive: true, force: true });
