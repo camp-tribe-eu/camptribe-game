@@ -36,8 +36,8 @@ const rgb = (r: number, g: number, b: number): readonly [number, number, number]
 /**
  * Канонічні шаблони родини (OD-011; compose_chars.py проби). Шари знизу вгору; tint — колір одягу/волосся. Victoria з'явиться в грі
  * в розділі 1, тож жоден NPC не може мати її вигляд (looks.test). Matthew, 15 (GAME-147): підліткове тіло й менша голова
- * генератора, жовта футболка shortsleeve/teen (longsleeve/teen не має дозволеної ліцензії — реєстр ART-006), темне скуйовджене
- * волосся — нижчий за George на екрані і без його зеленої сорочки.
+ * генератора, бордова футболка shortsleeve/teen (longsleeve/teen не має дозволеної ліцензії — реєстр ART-006), темне скуйовджене
+ * волосся — нижчий за George на екрані, без його зеленої сорочки і далеко від гірчичної сорочки Елізи (теж темноволосої; looks.test).
  */
 export const FAMILY_LOOKS = {
   george: [
@@ -50,7 +50,7 @@ export const FAMILY_LOOKS = {
   ],
   matthew: [
     { url: bodyTeen }, { url: headTeen }, { url: shoesThin, tint: rgb(220, 220, 220) }, { url: pantsThin, tint: rgb(50, 60, 90) },
-    { url: tshirtTeen, tint: rgb(230, 180, 60) }, { url: hairMessy, tint: rgb(60, 40, 25) },
+    { url: tshirtTeen, tint: rgb(150, 50, 60) }, { url: hairMessy, tint: rgb(60, 40, 25) },
   ],
 } as const satisfies Readonly<Record<string, readonly LayerSpec[]>>;
 
@@ -73,7 +73,7 @@ export const ANNA_LOOK: readonly LayerSpec[] = [
 export const NPC_LOOKS: Readonly<Record<string, readonly LayerSpec[]>> = { elise: ELISE_LOOK, anna: ANNA_LOOK };
 
 /**
- * Mia, сіра смугаста кішка родини (GAME-147): готовий аркуш assets/sprites/cat_mia.png із «[LPC] Cats and Dogs» (ART-010), не
+ * Mia, сіра смугаста кішка родини (GAME-147): готовий аркуш assets/sprites/cat_mia.png із «[LPC] Cats and Dogs» (ART-020; ART-010…015 зайняті GAME-146), не
  * шари. Клітинка 32 px; рядки 0–3 — ходьба праворуч / вгору / вниз / ліворуч по 3 кадри (стовпці 0–2), у рядках 0 і 3 стовпець 3 —
  * лежить; рядок 4 — сидить. У сцену ще не підключена: тут лише опис аркуша, щоб сцена і майбутній сторож брали ті самі числа.
  */

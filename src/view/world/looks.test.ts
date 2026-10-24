@@ -30,17 +30,23 @@ describe('шаблони вигляду', () => {
     expect(all.length).toBeGreaterThanOrEqual(5);
   });
 
-  it('кожна пара відрізняється набором шарів або кольором волосся/сорочки на ≥ 60', () => {
+  // Незалежно від шарів: інше тіло чи зачіска на 32 px не рятує, якщо і волосся, і сорочка одного кольору (Matthew у жовтому
+  // поруч із гірчичною Елізою — обоє темноволосі — рецензія GAME-147). Мутація: сорочка Matthew = tint сорочки Елізи → червоне.
+  it('кожна пара відрізняється кольором волосся АБО сорочки на ≥ 60 — навіть із різними шарами', () => {
     for (let i = 0; i < all.length; i++) {
       for (let j = i + 1; j < all.length; j++) {
         const [na, a] = all[i] as (typeof all)[number];
         const [nb, b] = all[j] as (typeof all)[number];
-        if (urls(a) !== urls(b)) continue;
         const hair = dist(layer(a, /\/hair\//)?.tint, layer(b, /\/hair\//)?.tint);
         const shirt = dist(layer(a, /\/torso\//)?.tint, layer(b, /\/torso\//)?.tint);
-        expect(Math.max(hair, shirt), `${na} і ${nb}: ті самі шари, волосся ${hair.toFixed(0)}, сорочка ${shirt.toFixed(0)}`).toBeGreaterThanOrEqual(MIN_TINT_DIST);
+        expect(Math.max(hair, shirt), `${na} і ${nb}: волосся ${hair.toFixed(0)}, сорочка ${shirt.toFixed(0)}`).toBeGreaterThanOrEqual(MIN_TINT_DIST);
       }
     }
+  });
+
+  it('Matthew і Eliza (обоє темноволосі) — сорочки різних кольорів на ≥ 60', () => {
+    const shirt = dist(layer(FAMILY_LOOKS.matthew, /\/torso\//)?.tint, layer(ELISE_LOOK, /\/torso\//)?.tint);
+    expect(shirt).toBeGreaterThanOrEqual(MIN_TINT_DIST);
   });
 
   it('гравець — George, Eliza й Anna в реєстрі NPC — саме ELISE_LOOK і ANNA_LOOK', () => {
