@@ -14,7 +14,7 @@ type Dict = Readonly<Record<string, unknown>>;
 function hits(dict: Dict, file: string): string[] {
   return Object.entries(dict).flatMap(([key, value]) => {
     if (typeof value !== 'string') return [];
-    const m = PATTERN.exec(value);
+    const m = PATTERN.exec(value.normalize('NFC'));   // «Benoi\u0302t» (розкладений î) — та сама літера, що «Benoît»
     return m ? [`${file} «${key}»: «${m[1]}» латиницею — в uk кирилицею (DECISIONS)`] : [];
   });
 }
@@ -31,7 +31,7 @@ describe('uk: імена кирилицею (GAME-139)', () => {
 
   // Негативні контролі (закон 1): кожна форма мусить червоніти, кирилиця й ID — ні.
   it.each([
-    ['Переноска Mia', 'Mia'], ['Привіт, George!', 'George'], ['Benoît чекає', 'Benoît'], ['родина Martin', 'Martin'], ['ELISE', 'ELISE'],
+    ['Переноска Mia', 'Mia'], ['Привіт, George!', 'George'], ['Benoît чекає', 'Benoît'], ['Benoi\u0302t (NFD) чекає', 'Benoît'], ['родина Martin', 'Martin'], ['ELISE', 'ELISE'],
   ])('негативний контроль: «%s» червоніє', (text, name) => {
     expect(hits({ k: text }, 'probe')).toEqual([`probe «k»: «${name}» латиницею — в uk кирилицею (DECISIONS)`]);
   });
