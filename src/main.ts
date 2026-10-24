@@ -14,7 +14,7 @@ import credits from '../assets/credits.json';
 import { createBridge } from './view/world/bridge';
 import { WorldScene, type WorldProbe } from './view/world/scene';
 import { loadWorldArt } from './view/world/art';
-import { mountTouchControls } from './view/world/touch';
+import { mountTouchControls, setActionTarget } from './view/world/touch';
 import { frameSize } from './view/world/frame';
 import { storyOffer } from './view/story-offer';
 import { testSwitches } from './view/test-switches';
@@ -24,7 +24,7 @@ import type { StoryOffer } from './ui/story-types';
 const app = document.querySelector<HTMLElement>('#app');
 if (!app) throw new Error('#app is missing');
 
-const probe: WorldProbe = { ready: false, playerX: 0, playerY: 0, nearObject: null, commandsSent: 0, cameraScrollX: 0, cameraScrollY: 0, clockMinutes: 0, saveLoaded: false, cameraLerp: [0, 0],
+const probe: WorldProbe = { ready: false, playerX: 0, playerY: 0, nearObject: null, nearKind: null, commandsSent: 0, cameraScrollX: 0, cameraScrollY: 0, clockMinutes: 0, saveLoaded: false, cameraLerp: [0, 0],
   playerFrame: 0, playerDir: 'down', playerMoving: false, playerDepth: 0, coveredTiles: 0, behindTiles: 0, fps: 0, fpsWindows: 0 };
 // GAME-86: кожна команда ядру (дія екрана, розмова, взаємодія на мапі) → автозбереження одразу, а не лише на паузі.
 // GAME-89 №2: сід світу (а з ним погода дня 1) — свіжий для кожної гри, з crypto на межі; ядро лишається детермінованим,
@@ -75,7 +75,7 @@ app.append(stage);
 
 // ?hideTouch=stick|interact — лише для негативного контролю e2e (лише в збірці --mode e2e): прихована кнопка мусить ламати прохід.
 const hidden = switches.hideTouch;
-mountTouchControls(app, input, hidden);
+const pad = mountTouchControls(app, input, hidden);
 
 // GAME-93: картинки LPC (assets/, титри) і шари персонажів декодуємо до гри — сцена будується синхронно в create().
 const worldArt = await loadWorldArt();
@@ -167,6 +167,7 @@ render(h(Shell, {
 // (сторож no-realtime): це крок самої гри, а не відлік; поки меню чи екран відкриті, годинник стоїть — подій немає.
 let lastMinute = bridge.state.clock.minutes;
 game.events.on(Phaser.Core.Events.POST_STEP, () => {
+  setActionTarget(pad, probe.nearKind);   // GAME-95: кнопка дії знає, що поруч (talk/fire/object) чи нічого (idle)
   const m = bridge.state.clock.minutes;
   if (m === lastMinute) return;
   lastMinute = m;
