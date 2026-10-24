@@ -2,6 +2,8 @@
 import { execSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import { defineConfig } from 'vitest/config';
+import type { Plugin } from 'vite';
+import { GAME_NAME } from './src/config/brand.ts';
 
 const pkg = JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 'utf8')) as { version: string };
 
@@ -11,8 +13,16 @@ function commitSha(): string {
   try { return execSync('git rev-parse HEAD', { encoding: 'utf8' }).trim(); } catch { return 'unknown'; }
 }
 
+// GAME-119: назва гри в <title> index.html і spike.html — з однієї константи (src/config/brand.ts), і в dev, і в збірці.
+// order 'pre' — раніше за власну підстановку Vite %ENV%, яка цього імені не знає.
+const gameName: Plugin = {
+  name: 'game-name',
+  transformIndexHtml: { order: 'pre', handler: (html) => html.replaceAll('%GAME_NAME%', GAME_NAME) },
+};
+
 export default defineConfig({
   base: './',
+  plugins: [gameName],
   // Друга сторінка — спайк Phaser 4 (GAME-14); у грі не з'являється.
   build: { rollupOptions: { input: { main: 'index.html', spike: 'spike.html' } } },
   define: {
