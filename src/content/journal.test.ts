@@ -10,11 +10,16 @@ import { PROLOGUE_BIKE, START_MONEY } from './replay.scenario';
 
 const CTX = { defs: GAME_DEFS };
 const listed = (t: string): boolean => (JOURNAL_TYPES as readonly string[]).includes(t);
+/** GAME-110: пам'ятні факти, яких до вибору не було, — кожен дає запис Memory (вибір у розмові сам у журнал не пишеться). */
+const MEMORABLE = GAME_DEFS.story?.memorable ?? [];
+const known = (g: SimState['game']): Set<string> => new Set([...g.flags, ...Object.values(g.npcMemory).flat()]);
+const newMemories = (a: SimState['game'], b: SimState['game']): string[] => MEMORABLE.filter((f) => known(b).has(f) && !known(a).has(f));
 
 describe('журнал подорожі (GAME-32)', () => {
   it('Пролог: записів рівно стільки, скільки прийнятих команд із переліку; час — ігрова хвилина тієї миті', () => {
     let s: SimState = newSim(20261023, START_MONEY);
     let expected = 0;
+    let memories = 0;
     for (const i of PROLOGUE_BIKE) {
       if (i.kind === 'command') {
         const r = dispatch(s.game, i.command, GAME_DEFS);
@@ -25,11 +30,21 @@ describe('журнал подорожі (GAME-32)', () => {
           expect(s.journal.at(-1)).toMatchObject({ at: before, commandId: i.command.commandId, type: i.command.type });
           continue;
         }
+        if (r.ok && !r.repeated && i.command.type === 'Choose') {
+          const facts = newMemories(s.game, r.state);
+          expected += facts.length;
+          memories += facts.length;
+          const before = s.clock.minutes;
+          s = step(s, i, CTX);
+          expect(s.journal.slice(s.journal.length - facts.length)).toEqual(facts.map((ref) => ({ at: before, commandId: i.command.commandId, type: 'Memory', ref })));
+          continue;
+        }
       }
       s = step(s, i, CTX);
     }
     expect(s.journal).toHaveLength(expected);
     expect(expected).toBeGreaterThan(10);                                   // журнал справді щось записав
+    expect(memories).toBeGreaterThan(0);                                    // і пам'ятний вибір (місце намету) — теж (GAME-110)
     expect(s.journal.map((e) => e.type)).toEqual(expect.arrayContaining(['CreateCharacter', 'Visit', 'BuyItem', 'CompleteQuest', 'Interact']));
     expect(s.journal.some((e) => e.type === ('Talk' as never))).toBe(false); // розмова — не подія журналу
   });
@@ -48,6 +63,7 @@ describe('журнал подорожі (GAME-32)', () => {
         else { const ms_ = moves(s.game, GAME_DEFS); cmd = { ...ms_[pick % ms_.length], commandId: `j${n++}` } as Command; }
         const r = dispatch(s.game, cmd, GAME_DEFS);
         if (r.ok && !r.repeated && listed(cmd.type) && changedGame(s.game, r.state)) accepted++;
+        if (r.ok && !r.repeated && cmd.type === 'Choose') accepted += newMemories(s.game, r.state).length;   // GAME-110
         s = step(s, { kind: 'command', command: cmd }, CTX);
         used.push(cmd);
         s = step(s, { kind: 'frame', realMs: ms } as Input, CTX);

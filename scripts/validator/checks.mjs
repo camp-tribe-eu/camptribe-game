@@ -474,6 +474,8 @@ export const CHECKS = [
       (ct.facts ?? []).forEach((f) => add(f.claimKey, f.id));
       (ct.packing?.notes ?? []).forEach((n, i) => add(n.textKey, `packing.notes[${i}]`));
       (ct.dialogues ?? []).forEach((d) => add(d.trigger?.titleKey, `${d.id}.trigger`));
+      // GAME-110: рядок реєстру з journal: true — текст запису журналу: journal.<id> (bool) або journal.<id>-<значення> (enum).
+      for (const f of ct.flags ?? []) for (const k of journalKeys(f)) add(k, `flags:${f.id}`);
       for (const d of ct.dialogues ?? []) for (const n of d.nodes) {
         add(n.textKey, `${d.id}/${n.id}`);
         (n.choices ?? []).forEach((ch, i) => add(ch.textKey, `${d.id}/${n.id}.choices[${i}]`));
@@ -782,6 +784,15 @@ export const CHECKS = [
       }
       // Сімейство «вжите», коли породжувач не порожній: його прапорці ставить ядро, навіть якщо вміст їх не читає.
       for (const e of families) if (generated.get(e.id).size) used.add(e.id);
+      // GAME-110: «прочитаний» — рядок, який читає хоч одна умова (flag/notFlag, remembers/notRemembers; enum — будь-яке
+      // його значення). Рядок, який лише ставлять, — пам'ять, яку ніхто ніколи не згадає: FLAG_NEVER_READ (нижче).
+      const read = new Set();
+      for (const [, leaf] of condLeavesAll(c.content)) {
+        const name = leaf.flag ?? leaf.notFlag ?? leaf.remembers ?? leaf.notRemembers;
+        if (name === undefined) continue;
+        const row = byId.get(name) ?? enums.find((e) => name.startsWith(`${e.id}-`));
+        if (row) read.add(row.id);
+      }
 
       const collection = (k) => (c.content[k] ?? []).map((x) => x.id);
       const boolIds = new Set(reg.filter((e) => e.type === 'bool').map((e) => e.id));
@@ -817,6 +828,11 @@ export const CHECKS = [
         if ((e.type === 'item' || e.type === 'location') && init !== 'unset' && !collection(e.type === 'item' ? 'items' : 'locations').includes(init)) inv(`initial ${JSON.stringify(init)}: «unset» або існуючий id ${e.type}`);
         if (e.reserved === true && used.has(e.id)) inv('позначено reserved, але вже вживається — зніми reserved');
         else if (e.reserved !== true && !used.has(e.id)) bad('FLAG_REGISTERED_UNUSED', where, 'зареєстровано, але жодна умова чи ефект його не вживає (і ядро не породжує) — вживи, прибери або познач reserved: true для майбутнього розділу');
+        // Ставлять, але не читає жодна умова (GAME-110). Сімейства ядра й факти стану s.* — поза цим правилом: перших ставить
+        // ядро для власних потреб (пакування, «подія була»), других ефект не ставить узагалі.
+        else if (e.reserved !== true && core && !e.id.endsWith('-*') && !read.has(e.id)) bad('FLAG_NEVER_READ', where, 'ефект його ставить, але жодна умова не читає — вибір, який гра «пам\u2019ятає», мусить хоч раз згадатись (flag/notFlag, remembers/notRemembers у пізнішій розмові чи події)');
+        // journal: true (GAME-110) — запис журналу подорожі, коли вибір поставив цей факт. Лише для того, що ставить вибір.
+        if (e.journal === true && (!core || e.id.endsWith('-*') || e.reserved === true || !['bool', 'enum'].includes(e.type))) inv('journal: true — лише для прапорця f.* чи пам\u2019яті m.* (bool або enum), який ставить вибір у діалозі; не для сімейства ядра, факту стану чи reserved');
       }
       return out;
     },
@@ -1079,6 +1095,12 @@ function dialogueEffects(content) {
     (n.choices ?? []).forEach((ch, i) => (ch.effects ?? []).forEach((e) => out.push([`${d.id}/${n.id}.choices[${i}].effects`, e])));
   }
   return out;
+}
+
+/** Ключі тексту журналу для рядка реєстру з journal: true (GAME-110); той самий формат читає src/content/story.ts. */
+export function journalKeys(f) {
+  if (f.journal !== true) return [];
+  return f.type === 'enum' ? (f.values ?? []).map((v) => `journal.${f.id}-${v}`) : [`journal.${f.id}`];
 }
 
 function flagUses(content) {

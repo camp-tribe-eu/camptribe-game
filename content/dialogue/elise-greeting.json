@@ -11,7 +11,11 @@
         { "textKey": "dlg.elise-greeting.hello.c3", "next": "shelter", "when": { "remembers": "m.came-by-bike" } },
         { "textKey": "dlg.elise-greeting.hello.c4", "next": "spot", "when": { "flag": "f.elise-met" } },
         { "textKey": "dlg.elise-greeting.hello.c5", "next": "bye" },
-        { "textKey": "dlg.elise-greeting.hello.c6", "next": "bike-late", "when": { "all": [{ "transport": "transport.bike" }, { "quest": "q.elise-bike-area", "status": "active" }, { "notRemembers": "m.came-by-bike" }, { "flag": "f.elise-met" }] }, "effects": [{ "remember": "m.came-by-bike" }, { "completeObjective": { "quest": "q.elise-bike-area", "objective": "talk-elise" } }] }
+        { "textKey": "dlg.elise-greeting.hello.c6", "next": "bike-late", "when": { "all": [{ "transport": "transport.bike" }, { "quest": "q.elise-bike-area", "status": "active" }, { "notRemembers": "m.came-by-bike" }, { "flag": "f.elise-met" }] }, "effects": [{ "remember": "m.came-by-bike" }, { "completeObjective": { "quest": "q.elise-bike-area", "objective": "talk-elise" } }] },
+        { "textKey": "dlg.elise-greeting.hello.c7", "next": "road", "when": { "all": [{ "quest": "ST-005", "status": "completed" }, { "any": [{ "flag": "f.road-apple" }, { "flag": "f.roles-route-george" }, { "flag": "f.roles-route-matthew" }, { "flag": "f.gear-plan-basic" }, { "flag": "f.gear-plan-better" }] }] } },
+        { "textKey": "dlg.elise-greeting.hello.c8", "next": "place", "when": { "all": [{ "quest": "ST-005", "status": "completed" }, { "any": [{ "flag": "f.pitch-pines" }, { "flag": "f.pitch-lake-view" }, { "flag": "f.night-car" }, { "flag": "f.night-gazebo" }] }] } },
+        { "textKey": "dlg.elise-greeting.hello.c9", "next": "advice", "when": { "all": [{ "quest": "ST-005", "status": "completed" }, { "flag": "f.night-tent" }, { "notRemembers": "m.advice-taken" }, { "notRemembers": "m.advice-declined" }] } },
+        { "textKey": "dlg.elise-greeting.hello.c10", "next": "advice-again", "when": { "any": [{ "remembers": "m.advice-taken" }, { "remembers": "m.advice-declined" }] } }
       ]
     },
     { "id": "bike", "speaker": "npc", "textKey": "dlg.elise-greeting.bike", "next": "intro" },
@@ -23,12 +27,64 @@
     {
       "id": "spot", "speaker": "npc", "textKey": "dlg.elise-greeting.spot",
       "choices": [
-        { "textKey": "dlg.elise-greeting.spot.c1", "next": "bye", "when": { "flag": "f.pack-tent" }, "effects": [{ "setFlag": "f.night-tent" }, { "completeObjective": { "quest": "ST-005", "objective": "pitch-tent" } }] },
+        { "textKey": "dlg.elise-greeting.spot.c1", "next": "bye", "when": { "all": [{ "flag": "f.pack-tent" }, { "notFlag": "f.night-tent" }] }, "effects": [{ "setFlag": "f.night-tent" }, { "setFlag": "f.pitch-pines" }, { "completeObjective": { "quest": "ST-005", "objective": "pitch-tent" } }] },
         { "textKey": "dlg.elise-greeting.spot.c2", "next": "night-car", "when": { "all": [{ "notFlag": "f.pack-tent" }, { "transport": "transport.car" }] }, "effects": [{ "setFlag": "f.night-car" }, { "completeObjective": { "quest": "ST-005", "objective": "pitch-tent" } }] },
         { "textKey": "dlg.elise-greeting.spot.c3", "next": "gazebo", "when": { "all": [{ "notFlag": "f.pack-tent" }, { "transport": "transport.bike" }] }, "effects": [{ "setFlag": "f.night-gazebo" }, { "completeObjective": { "quest": "ST-005", "objective": "pitch-tent" } }] },
-        { "textKey": "dlg.elise-greeting.spot.c4", "next": "bye" }
+        { "textKey": "dlg.elise-greeting.spot.c4", "next": "bye" },
+        { "textKey": "dlg.elise-greeting.spot.c5", "next": "bye", "when": { "all": [{ "flag": "f.pack-tent" }, { "notFlag": "f.night-tent" }] }, "effects": [{ "setFlag": "f.night-tent" }, { "setFlag": "f.pitch-lake-view" }, { "completeObjective": { "quest": "ST-005", "objective": "pitch-tent" } }] },
+        { "textKey": "dlg.elise-greeting.spot.c6", "next": "bye", "when": { "flag": "f.night-tent" }, "effects": [{ "completeObjective": { "quest": "ST-005", "objective": "pitch-tent" } }] }
       ]
     },
+    {
+      "id": "road", "speaker": "npc", "textKey": "dlg.elise-greeting.road",
+      "choices": [
+        { "textKey": "dlg.elise-greeting.road.c1", "next": "road-apple", "when": { "flag": "f.road-apple" } },
+        { "textKey": "dlg.elise-greeting.road.c2", "next": "road-george", "when": { "flag": "f.roles-route-george" } },
+        { "textKey": "dlg.elise-greeting.road.c3", "next": "road-matthew", "when": { "flag": "f.roles-route-matthew" } },
+        { "textKey": "dlg.elise-greeting.road.c4", "next": "road-basic", "when": { "flag": "f.gear-plan-basic" } },
+        { "textKey": "dlg.elise-greeting.road.c5", "next": "road-better", "when": { "flag": "f.gear-plan-better" } },
+        { "textKey": "dlg.elise-greeting.road.c6", "next": "bye" }
+      ]
+    },
+    { "id": "road-apple", "speaker": "npc", "textKey": "dlg.elise-greeting.road-apple", "next": "bye" },
+    { "id": "road-george", "speaker": "npc", "textKey": "dlg.elise-greeting.road-george", "next": "bye" },
+    { "id": "road-matthew", "speaker": "npc", "textKey": "dlg.elise-greeting.road-matthew", "next": "bye" },
+    { "id": "road-basic", "speaker": "npc", "textKey": "dlg.elise-greeting.road-basic", "next": "bye" },
+    { "id": "road-better", "speaker": "npc", "textKey": "dlg.elise-greeting.road-better", "next": "bye" },
+    {
+      "id": "place", "speaker": "npc", "textKey": "dlg.elise-greeting.place",
+      "choices": [
+        { "textKey": "dlg.elise-greeting.place.c1", "next": "place-pines", "when": { "flag": "f.pitch-pines" } },
+        { "textKey": "dlg.elise-greeting.place.c2", "next": "place-lake", "when": { "flag": "f.pitch-lake-view" } },
+        { "textKey": "dlg.elise-greeting.place.c3", "next": "place-car", "when": { "flag": "f.night-car" } },
+        { "textKey": "dlg.elise-greeting.place.c4", "next": "place-gazebo", "when": { "flag": "f.night-gazebo" } },
+        { "textKey": "dlg.elise-greeting.place.c5", "next": "bye" }
+      ]
+    },
+    { "id": "place-pines", "speaker": "npc", "textKey": "dlg.elise-greeting.place-pines", "next": "bye" },
+    { "id": "place-lake", "speaker": "npc", "textKey": "dlg.elise-greeting.place-lake", "next": "bye" },
+    { "id": "place-car", "speaker": "npc", "textKey": "dlg.elise-greeting.place-car", "next": "bye" },
+    { "id": "place-gazebo", "speaker": "npc", "textKey": "dlg.elise-greeting.place-gazebo", "next": "bye" },
+    {
+      "id": "advice", "speaker": "npc", "textKey": "dlg.elise-greeting.advice",
+      "choices": [
+        { "textKey": "dlg.elise-greeting.advice.c1", "next": "advice-yes", "effects": [{ "remember": "m.advice-taken" }] },
+        { "textKey": "dlg.elise-greeting.advice.c2", "next": "advice-no", "effects": [{ "remember": "m.advice-declined" }] },
+        { "textKey": "dlg.elise-greeting.advice.c3", "next": "bye" }
+      ]
+    },
+    { "id": "advice-yes", "speaker": "npc", "textKey": "dlg.elise-greeting.advice-yes", "next": "bye" },
+    { "id": "advice-no", "speaker": "npc", "textKey": "dlg.elise-greeting.advice-no", "next": "bye" },
+    {
+      "id": "advice-again", "speaker": "npc", "textKey": "dlg.elise-greeting.advice-again",
+      "choices": [
+        { "textKey": "dlg.elise-greeting.advice-again.c1", "next": "again-yes", "when": { "remembers": "m.advice-taken" } },
+        { "textKey": "dlg.elise-greeting.advice-again.c2", "next": "again-no", "when": { "remembers": "m.advice-declined" } },
+        { "textKey": "dlg.elise-greeting.advice-again.c3", "next": "bye" }
+      ]
+    },
+    { "id": "again-yes", "speaker": "npc", "textKey": "dlg.elise-greeting.again-yes", "next": "bye" },
+    { "id": "again-no", "speaker": "npc", "textKey": "dlg.elise-greeting.again-no", "next": "bye" },
     { "id": "bye", "speaker": "npc", "textKey": "dlg.elise-greeting.bye", "end": true }
   ]
 }

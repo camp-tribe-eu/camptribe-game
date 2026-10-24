@@ -160,8 +160,9 @@ describe('властивість: 400 випадкових днів — у пі�
     let s = newSim(1000 + r, r % 2 === 0 ? 20_000 : 0);
     const transport = r % 3 === 0 ? 'transport.bike' : 'transport.car';
     s = cmd(s, { type: 'CreateCharacter', profileId: 'profile.solo-explorer', transportId: transport });
+    // 400 кроків: з пам'ятними виборами GAME-110 прогулянка довша, а 120 кроків уже не доводили жодного дня до ночівлі.
     // Пакування не серед moves() (story-offer.ts) — частина прогулянок спершу укладає автоматично, як гравець.
-    for (let k = 0; k < 120 && !s.game.campaignEnded; k++) {
+    for (let k = 0; k < 400 && !s.game.campaignEnded; k++) {
       const opts = moves(s.game, GAME_DEFS).filter((m) => m.type !== 'RoadEvent');
       if (r % 4 !== 1) opts.push({ type: 'AutoPack' } as never);
       const p = nextInt(rng, opts.length);

@@ -83,6 +83,7 @@ export const CODES = {
   FLAG_ENUM_VALUE:        { check: 'flags', spec: 'GAME-115: значення enum-прапорця (f.<назва>-<значення>) — лише з його values; «unset» — це відсутність прапорця, а не значення' },
   FLAG_TYPE_MISMATCH:     { check: 'flags', spec: 'GAME-115: умова читає запис реєстру як його тип — flag/notFlag/setFlag лише bool (enum — через конкретне значення), transport — лише enum s.transport' },
   FLAG_REGISTERED_UNUSED: { check: 'flags', spec: 'GAME-115: зареєстрований, але ніде не вживаний запис — помилка, якщо не позначений reserved: true (наперед для майбутніх розділів)' },
+  FLAG_NEVER_READ:        { check: 'flags', spec: 'GAME-110: прапорець f.* чи факт пам\u2019яті m.*, який ставить ефект, читає хоч одна умова (enum — хоч одне значення); інакше вибір «пам\u2019ятається» без жодного наслідку' },
   FLAG_REGISTRY_INVALID:  { check: 'flags', spec: 'GAME-115: запис реєстру узгоджений — початкове значення відповідає типу й ядру, enum має значення, сімейство має породжувача, reserved не вживаний, назви не перетинаються' },
 
   // комбінації профіль × транспорт × тварина

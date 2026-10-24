@@ -120,10 +120,11 @@ export const SCHEMAS = {
   // сімейство «f.<префікс>-*» ставить ядро — generatedFrom), m.* — пам'ять NPC, s.* — факт стану гравця (транспорт, погода).
   // initial — scalar: тип звіряє перевірка flags власним кодом FLAG_REGISTRY_INVALID, не SCHEMA_INVALID.
   // reserved — зареєстровано наперед для майбутнього розділу; aka — назви з реєстру радника, з якими зведено.
+  // journal — вибір, що ставить цей факт, пишеться в журнал подорожі (GAME-110); текст — journal.<id>[-<значення>].
   flags: obj({
     id: req(str), type: req(en('bool', 'enum', 'number', 'item', 'location')), initial: req({ t: 'scalar' }), owner: req(str), note: str,
     values: { t: 'array', of: str, min: 1 }, valuesFrom: en('transports'), generatedFrom: en(...Object.keys(FLAG_FAMILIES)),
-    reserved: bool, aka: arr(str),
+    reserved: bool, aka: arr(str), journal: bool,
   }),
 };
 

@@ -30,7 +30,7 @@ export const PROLOGUE_BIKE: readonly Input[] = [
   c({ type: 'Talk', npcId: 'npc.elise' }), c({ type: 'Choose', choice: 0 }), c({ type: 'Continue' }), c({ type: 'Continue' }), c({ type: 'Choose', choice: 0 }), c({ type: 'Continue' }),
   c({ type: 'CompleteQuest', questId: 'q.elise-bike-area' }), ...frames(4),
   c({ type: 'Interact', targetId: 'obj.campfire' }),
-  c({ type: 'Talk', npcId: 'npc.elise' }), c({ type: 'Choose', choice: 3 }), c({ type: 'Choose', choice: 0 }), c({ type: 'Continue' }), // друга розмова: «нагадай» (вона вже знайома)
+  c({ type: 'Talk', npcId: 'npc.elise' }), c({ type: 'Choose', choice: 3 }), c({ type: 'Choose', choice: 5 }), c({ type: 'Continue' }), // друга розмова: «нагадай» (вона вже знайома)
   c({ type: 'Pickup', itemId: 'item.firewood' }),
   c({ type: 'CompleteQuest', questId: 'ST-005' }), ...frames(8),
 ];

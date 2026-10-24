@@ -1,0 +1,33 @@
+{
+  "id": "dlg.george-plan",
+  "npcId": "npc.george",
+  "start": "hello",
+  "nodes": [
+    {
+      "id": "hello", "speaker": "npc", "textKey": "dlg.george-plan.hello",
+      "choices": [
+        { "textKey": "dlg.george-plan.hello.c1", "next": "gear", "when": { "all": [{ "notFlag": "f.gear-plan-basic" }, { "notFlag": "f.gear-plan-better" }] } },
+        { "textKey": "dlg.george-plan.hello.c3", "next": "bye" }
+      ]
+    },
+    {
+      "id": "gear", "speaker": "npc", "textKey": "dlg.george-plan.gear",
+      "choices": [
+        { "textKey": "dlg.george-plan.gear.c1", "next": "gear-basic", "effects": [{ "setFlag": "f.gear-plan-basic" }] },
+        { "textKey": "dlg.george-plan.gear.c2", "next": "gear-better", "effects": [{ "setFlag": "f.gear-plan-better" }] }
+      ]
+    },
+    { "id": "gear-basic", "speaker": "npc", "textKey": "dlg.george-plan.gear-basic", "next": "route" },
+    { "id": "gear-better", "speaker": "npc", "textKey": "dlg.george-plan.gear-better", "next": "route" },
+    {
+      "id": "route", "speaker": "npc", "textKey": "dlg.george-plan.route",
+      "choices": [
+        { "textKey": "dlg.george-plan.route.c1", "next": "route-george", "effects": [{ "setFlag": "f.roles-route-george" }] },
+        { "textKey": "dlg.george-plan.route.c2", "next": "route-matthew", "effects": [{ "setFlag": "f.roles-route-matthew" }] }
+      ]
+    },
+    { "id": "route-george", "speaker": "npc", "textKey": "dlg.george-plan.route-george", "next": "bye" },
+    { "id": "route-matthew", "speaker": "npc", "textKey": "dlg.george-plan.route-matthew", "next": "bye" },
+    { "id": "bye", "speaker": "npc", "textKey": "dlg.george-plan.bye", "end": true }
+  ]
+}

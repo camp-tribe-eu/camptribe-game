@@ -40,8 +40,9 @@ export interface JournalEntry {
 /**
  * Команди, що потрапляють у журнал. Розмова, вибір реплік і «далі» — ні: це не події подорожі.
  * Repair (GAME-72) поки ні: ремонтів у контенті немає. Додати сюди разом із першим ремонтом у content/.
+ * `Memory` (GAME-110) — не команда, а пам'ятний вибір: вибір у розмові поставив факт зі `story.memorable`; ref — назва факту.
  */
-export const JOURNAL_TYPES = ['CreateCharacter', 'Visit', 'Pickup', 'BuyItem', 'SellItem', 'Interact', 'CompleteQuest', 'DeclineQuest', 'RoadEvent', 'PackItem', 'UnpackItem', 'AutoPack'] as const;
+export const JOURNAL_TYPES = ['CreateCharacter', 'Visit', 'Pickup', 'BuyItem', 'SellItem', 'Interact', 'CompleteQuest', 'DeclineQuest', 'RoadEvent', 'PackItem', 'UnpackItem', 'AutoPack', 'Memory'] as const;
 export type JournalType = (typeof JOURNAL_TYPES)[number];
 export const isJournalType = (t: unknown): t is JournalType => (JOURNAL_TYPES as readonly unknown[]).includes(t);
 
@@ -103,6 +104,19 @@ function roadEvent(s: SimState, ctx: StepCtx): SimState {
   let n = s.game.seq;
   while (Object.hasOwn(s.game.processed, `ev${n}`)) n++;
   return step(rolled, { kind: 'command', command: { type: 'RoadEvent', commandId: `ev${n}`, eventId: hit } }, ctx);
+}
+
+/**
+ * Пам'ятні вибори (GAME-110): факти зі `story.memorable`, яких до вибору не було, а після — є (прапорець чи пам'ять будь-якого NPC).
+ * По запису на факт; у контенті один вибір ставить щонайбільше один такий факт (commandId у журналі не повторюється — journal.test).
+ */
+function remembered(before: GameState, after: GameState, ctx: StepCtx, commandId: string, at: number): JournalEntry[] {
+  const facts = ctx.defs?.story?.memorable ?? [];
+  if (facts.length === 0) return [];
+  const known = (g: GameState): Set<string> => new Set([...g.flags, ...Object.values(g.npcMemory).flat()]);
+  const was = known(before);
+  const now = known(after);
+  return facts.filter((f) => now.has(f) && !was.has(f)).map((f) => ({ at, commandId, type: 'Memory' as const, ref: f }));
 }
 
 export type Input =
@@ -179,6 +193,7 @@ export function step(s: SimState, input: Input, ctx: StepCtx = {}): SimState {
         const entry: JournalEntry = { at: s.clock.minutes - travelled, commandId: input.command.commandId, type: input.command.type, ref: refOf(input.command), cents: r.state.moneyCents };
         next = { ...next, journal: [...s.journal, entry].slice(-JOURNAL_LIMIT) };
       }
+      if (r.ok && !r.repeated && input.command.type === 'Choose') next = { ...next, journal: [...next.journal, ...remembered(s.game, r.state, ctx, input.command.commandId, s.clock.minutes)].slice(-JOURNAL_LIMIT) };
       if (tripWeather) next = { ...next, game: wearAfterTrip(next.game, (ctx.defs ?? EMPTY_DEFS).items, tripWeather) };
       return paid(travelled > 0 ? roadEvent(next, ctx) : next, ctx);
     }

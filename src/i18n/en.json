@@ -97,6 +97,7 @@
   "jr.PackItem": "Packed",
   "jr.UnpackItem": "Taken out of the luggage",
   "jr.AutoPack": "Luggage packed by the list",
+  "jr.Memory": "Remembered",
   "sum.title": "Day summary",
   "sum.night": "Night",
   "sum.night.tent": "in the tent by the pines",
