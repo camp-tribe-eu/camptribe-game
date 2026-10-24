@@ -133,15 +133,36 @@ test.describe('клавіатура (десктоп)', () => {
     await holdKey(page, 'ArrowLeft', (p) => p.playerX <= 120);
     const near = await holdKey(page, 'ArrowUp', (p) => p.nearObject !== null);
     expect(near.nearObject).toBe('obj.campfire');
-    await page.keyboard.press('Space');
-    await page.waitForTimeout(120);          // друге натискання — в ІНШОМУ кадрі: засувка не зливає їх,
-    await page.keyboard.press('Space');      // одну команду забезпечує саме відкат 400 мс (рецензія PR #13)
-    await page.waitForTimeout(100);
-    expect((await probe(page)).commandsSent).toBe(1);
-    await page.waitForTimeout(500);
+    // Друге натискання — в ІНШОМУ кадрі: засувка не зливає їх, одну команду забезпечує саме відкат 400 мс (рецензія PR #13).
+    // Відкат рахує час сторінки, а під навантаженням CI проміжок між двома press сам буває > 400 мс — тоді друга команда
+    // законна, і тест нічого не доводить (CI PR #53). Міряємо проміжок у сторінці; спроба зараховується лише при < 300 мс.
+    // Проміжок — між мітками часу самих подій keydown у сторінці (те, що бачить гра), а не між викликами з тесту.
+    await page.evaluate(() => {
+      const w = window as unknown as { __spaceDowns: number[] };
+      w.__spaceDowns = [];
+      window.addEventListener('keydown', (e) => { if (e.code === 'Space') w.__spaceDowns.push(e.timeStamp); }, true);
+    });
+    const lastGap = (): Promise<number> => page.evaluate(() => {
+      const d = (window as unknown as { __spaceDowns: number[] }).__spaceDowns;
+      return (d.at(-1) ?? 0) - (d.at(-2) ?? 0);
+    });
+    let judged = false;
+    for (let attempt = 0; attempt < 5 && !judged; attempt++) {
+      const before = (await probe(page)).commandsSent;
+      await page.keyboard.press('Space');
+      await page.waitForTimeout(120);
+      await page.keyboard.press('Space');
+      const gap = await lastGap();
+      await page.waitForTimeout(100);
+      const sent = (await probe(page)).commandsSent - before;
+      if (gap < 300) { expect(sent, `проміжок ${Math.round(gap)} мс`).toBe(1); judged = true; }
+      await page.waitForTimeout(500);
+    }
+    expect(judged, 'жодна спроба не вклалась у 300 мс — подвійне натискання не перевірено').toBe(true);
+    const sentBefore = (await probe(page)).commandsSent;
     await page.keyboard.press('KeyE');
     await page.waitForTimeout(100);
-    expect((await probe(page)).commandsSent).toBe(2);            // друга свідома взаємодія — друга команда…
+    expect((await probe(page)).commandsSent).toBe(sentBefore + 1);  // друга свідома взаємодія — ще одна команда…
     expect((await grants(page)).filter((g) => g === 'rw.campfire-warmth')).toHaveLength(1); // …але нагорода рівно одна
   });
 
