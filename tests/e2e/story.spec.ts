@@ -159,6 +159,7 @@ async function toRoad(browser: Browser, seed: number): Promise<{ page: Page; fir
 }
 
 test('подія в дорозі не трапилась — дорога триває: жодної розмови, далі звичайні дії', async ({ browser }) => {
+  test.setTimeout(180_000);   // до 16 зерен, кожне — новий контекст і 7 кроків пролога; під навантаженням CI > 60 с (CI PR #53)
   for (let seed = 1; seed <= 16; seed++) {
     const r = await toRoad(browser, seed);
     if (!r.fired) {
@@ -173,6 +174,7 @@ test('подія в дорозі не трапилась — дорога три
 });
 
 test('подія в дорозі (GAME-31): трапляється на дорозі, читається, відповідь — у ядрі й у журналі', async ({ browser }) => {
+  test.setTimeout(180_000);   // до 16 зерен, кожне — новий контекст і 7 кроків пролога; під навантаженням CI > 60 с (CI PR #53)
   // Шанс 50 %, різні зерна, кожне — у чистому контексті.
   let page: Page | null = null;
   for (let seed = 1; seed <= 16 && !page; seed++) {
