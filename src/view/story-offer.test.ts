@@ -235,7 +235,7 @@ describe('storyOffer: знімок для UI', () => {
     // GAME-84 №1: удома, на старті, «Піти: Дім» не пропонується: ціль «озирнись удома» виконана самим стартом.
     // (Повний перебір «ніде не пропонується піти туди, де стоїш» — src/content/menu-here.test.ts.)
     expect(realMenu(g).some((o) => o.move.type === 'Visit' && o.move.locationId === 'loc.home')).toBe(false);
-    expect(realMenu(g).some((o) => o.move.type === 'CompleteQuest' && o.move.questId === 'ST-001')).toBe(true);
+    expect(realMenu(g).some((o) => o.move.type === 'CompleteQuest' && o.move.questId === 'PROLOGUE-HOME-001')).toBe(true);
   });
 
   it('у розмові id відповіді прив\'язаний до вузла: той самий номер відповіді в іншому вузлі — інший id', () => {

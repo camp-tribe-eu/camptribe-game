@@ -99,7 +99,7 @@ GDD — приватний (`brain/Передача/00-dzherelo-lezhyt-lokalno.m
 | `items.json` | **`id`**, **`nameKey`** | `item.sleeping-bag` |
 | `npcs.json` | **`id`**, **`nameKey`**, **`locationId`**, `unlockedBy`, `sells`, `when` | `npc.elise` |
 | `locations.json` | **`id`**, **`nameKey`**, `unlockedBy`, `items`, `when` | `loc.camp.lake` |
-| `quests.json` | **`id`**, **`titleKey`**, **`optional`**, **`objectives`**, **`transitions`**, `end`, `giverId`, `locationId`, `when`, `requires`, `reward` | основний `ST-006`, бічний `q.nora-walk` |
+| `quests.json` | **`id`**, **`titleKey`**, **`optional`**, **`objectives`**, **`transitions`**, `end`, `giverId`, `locationId`, `when`, `requires`, `reward` | основний — канонічний id сценарію `ST-006`, `CH1-HOME-001` (ключ тексту — `q.ch1-home-001`), бічний `q.nora-walk` |
 | `events.json` | **`id`**, **`titleKey`**, **`repeatable`**, `locationId`, `reward` | `ev.neighbours-firewood` |
 | `facts.json` | **`id`**, **`claimKey`**, `source`, `checkedAt`, `kind` | `fact.de-quiet-hours` |
 | `flags.json` | **`id`**, **`type`** (`bool` \| `enum` \| `number` \| `item` \| `location`), **`initial`**, **`owner`** (хто ставить), `note`, `values` (enum), `valuesFrom` (enum факту стану), `generatedFrom` (сімейство ядра), `reserved`, `aka` (назви з реєстру радника), `journal` (вибір пишеться в журнал подорожі, GAME-110) | `f.elise-met`, `f.night`, `f.pack-*`, `m.came-by-bike`, `s.transport` |
