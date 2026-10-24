@@ -1,4 +1,5 @@
 // GAME-24 (рух, камера, колізії, взаємодія) і GAME-69 (дотик, три в'юпорти) — у справжньому браузері.
+import { readFileSync } from 'node:fs';
 import { expect, test, type Page } from '@playwright/test';
 
 interface Probe { ready: boolean; playerX: number; playerY: number; nearObject: string | null; commandsSent: number; cameraScrollX: number; cameraScrollY: number }
@@ -244,15 +245,15 @@ for (const vp of VIEWPORTS) {
       await page.locator('[data-ui="story-close"]').tap();
       expect(await holdTouch(page, 'left', (p) => p.playerX <= 88)).toBe(true);
       // GAME-97: зону Елізи (радіус 48 px при 128 px/с) персонаж проходить за ~0,75 с; під навантаженням CI опитування буває
-      // рідшим, і затиснутий стік її проскакував (CI #43, CI PR #53). Короткі дотики за годинником теж ненадійні: під
-      // навантаженням 150 мс дають то 0, то 40 px. Тому довертаємо за координатою: запам'ятали Y входу в зону, ціль —
-      // її середина (вхід + 48 px униз), тримаємо стік до перетину цілі; промах від середини < 48 px лишає нас у зоні.
-      let entryY = Number.NaN;
-      expect(await holdTouch(page, 'down', (p) => { if (p.nearObject === 'npc.elise') entryY = p.playerY; return !Number.isNaN(entryY); })).toBe(true);
-      const midY = entryY + 48;
+      // рідшим, і затиснутий стік її проскакував, часом не побувавши в ній жодного опитування (CI PR #53). Тому ціль —
+      // сама точка Елізи з мапи (public/maps/camp-lake.tmj, y = 272): тримаємо стік до перетину цієї лінії й довертаємо
+      // назад за координатою; промах від центру < 48 px лишає нас у зоні. Кожне утримання — не довше 4 с.
+      const ELISE_Y = 272;
+      const map = JSON.parse(readFileSync('public/maps/camp-lake.tmj', 'utf8')) as { layers: { objects?: { name: string; y: number }[] }[] };
+      expect(map.layers.flatMap((l) => l.objects ?? []).find((o) => o.name === 'npc.elise')?.y, 'Еліза на мапі зсунулась — онови ELISE_Y').toBe(ELISE_Y);
       for (let i = 0; i < 8 && (await probe(page)).nearObject !== 'npc.elise'; i++) {
-        const dir = (await probe(page)).playerY > midY ? 'up' : 'down';
-        expect(await holdTouch(page, dir, (p) => p.nearObject === 'npc.elise' || (dir === 'up' ? p.playerY <= midY : p.playerY >= midY))).toBe(true);
+        const dir = (await probe(page)).playerY > ELISE_Y ? 'up' : 'down';
+        expect(await holdTouch(page, dir, (p) => p.nearObject === 'npc.elise' || (dir === 'up' ? p.playerY <= ELISE_Y : p.playerY >= ELISE_Y), 4_000)).toBe(true);
       }
       expect((await probe(page)).nearObject).toBe('npc.elise');
       expect(await holdTouch(page, 'interact', () => true, 100)).toBe(true);
