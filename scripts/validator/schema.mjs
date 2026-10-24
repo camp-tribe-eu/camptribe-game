@@ -2,6 +2,8 @@
 // Невідоме поле — помилка: так у визначення не просочується стан проходження
 // (completed, progress, visited…) і не живуть одруківки.
 
+import { FLAG_FAMILIES } from './codes.mjs';
+
 const str = { t: 'string' };
 const bool = { t: 'boolean' };
 const int0 = { t: 'int', min: 0 };
@@ -114,15 +116,25 @@ export const SCHEMAS = {
   // source/checkedAt/kind навмисно не required тут: їх стереже перевірка fact-source
   // власними кодами, щоб відсутнє джерело не ховалось під загальним SCHEMA_INVALID.
   facts: obj({ id: req(str), claimKey: req(str), source: str, checkedAt: str, kind: str }),
+  // Реєстр прапорців і фактів стану (GAME-115, DC-015): f.* — прапорці (bool або enum, закодований як f.<назва>-<значення>;
+  // сімейство «f.<префікс>-*» ставить ядро — generatedFrom), m.* — пам'ять NPC, s.* — факт стану гравця (транспорт, погода).
+  // initial — scalar: тип звіряє перевірка flags власним кодом FLAG_REGISTRY_INVALID, не SCHEMA_INVALID.
+  // reserved — зареєстровано наперед для майбутнього розділу; aka — назви з реєстру радника, з якими зведено.
+  flags: obj({
+    id: req(str), type: req(en('bool', 'enum', 'number', 'item', 'location')), initial: req({ t: 'scalar' }), owner: req(str), note: str,
+    values: { t: 'array', of: str, min: 1 }, valuesFrom: en('transports'), generatedFrom: en(...Object.keys(FLAG_FAMILIES)),
+    reserved: bool, aka: arr(str),
+  }),
 };
 
 
-export const COLLECTIONS = ['profiles', 'transports', 'animals', 'items', 'npcs', 'locations', 'quests', 'events', 'facts', 'roads'];
+export const COLLECTIONS = ['profiles', 'transports', 'animals', 'items', 'npcs', 'locations', 'quests', 'events', 'facts', 'roads', 'flags'];
 
 function typeOk(s, v) {
   switch (s.t) {
     case 'string': return typeof v === 'string' && (!s.enum || s.enum.includes(v));
     case 'boolean': return typeof v === 'boolean';
+    case 'scalar': return typeof v === 'string' || typeof v === 'boolean' || Number.isFinite(v);
     case 'int': return Number.isInteger(v) && v >= (s.min ?? -Infinity) && v <= (s.max ?? Infinity);
     case 'array': return Array.isArray(v) && v.length >= (s.min ?? 0);
     case 'object': case 'union': return v !== null && typeof v === 'object' && !Array.isArray(v);

@@ -248,6 +248,10 @@ for (const vp of VIEWPORTS) {
       };
       await tapAct('pickup', 'item.firewood');
       await tapAct('complete', 'q.st-005');
+      // GAME-106: кінець дня 1 — підсумок дня; «Продовжити» дотиком, і знову ☰ — там кінець розділу.
+      await expect(page.locator('[data-ui="summary"]')).toBeVisible();
+      await page.locator('[data-ui="summary-continue"]').tap();
+      await page.locator('[data-touch="story"]').tap();
       await expect(story.locator('[data-ui="ended"]')).toBeVisible();
       expect((await page.evaluate(() => (window as unknown as { __game: { read: () => { game: { campaignEnded: boolean } } } }).__game.read().game.campaignEnded))).toBe(true);
     });

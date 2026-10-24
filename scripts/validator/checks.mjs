@@ -3,7 +3,7 @@
 // Не прибирай і не дублюй маркери — мутаційний прогін звіряє їх із реєстром CHECKS.
 
 import { checkSchema } from './schema.mjs';
-import { FACT_KINDS, FACT_STALE_DAYS, GEAR_FIELDS, isWarning, SKILL_IDS } from './codes.mjs';
+import { FACT_KINDS, FACT_STALE_DAYS, FLAG_FAMILIES, GEAR_FIELDS, isWarning, SKILL_IDS } from './codes.mjs';
 import { checkCombos, checkOptions, enumerateCombos, NO_ANIMAL } from './combos.mjs';
 
 const I = (code, where, msg) => ({ code, where, msg });
@@ -24,6 +24,11 @@ const ID_PATTERNS = {
 const FLAG_ID = /^f\.[a-z0-9]+(?:[.-][a-z0-9]+)*$/;
 // Факт пам'яті NPC (GAME-48): «m.» і слова через дефіс — m.came-by-bike.
 const MEMORY_ID = /^m\.[a-z0-9]+(?:-[a-z0-9]+)*$/;
+// GAME-115: реєстр. Факт стану гравця — «s.» (s.transport); сімейство прапорців ядра — «f.<префікс>-*»;
+// значення enum — слова через дефіс (закодований прапорець f.<назва>-<значення> мусить пройти FLAG_ID).
+const STATE_ID = /^s\.[a-z0-9]+(?:-[a-z0-9]+)*$/;
+const FAMILY_ID = /^f\.[a-z0-9]+(?:[.-][a-z0-9]+)*-\*$/;
+const ENUM_VALUE = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const GRANT_ID = /^rw\.[a-z0-9]+(?:[.-][a-z0-9]+)*$/;
 const OBJECTIVE_ID = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const TARGET_TYPE = { talk: 'npcs', visit: 'locations', collect: 'items', deliver: 'items' };
@@ -129,6 +134,10 @@ export const CHECKS = [
         if (!OBJECTIVE_ID.test(n.id)) out.push(I('ID_FORMAT', `${d.id}/${n.id}`, `id вузла не відповідає ${OBJECTIVE_ID}`));
       }
       for (const [where, f] of flagUses(c.content)) if (!FLAG_ID.test(f)) out.push(I('ID_FORMAT', where, `прапорець «${f}» не відповідає ${FLAG_ID}`));
+      for (const e of c.content.flags ?? []) {
+        const ok = e.id.startsWith('f.') ? FLAG_ID.test(e.id) || FAMILY_ID.test(e.id) : e.id.startsWith('m.') ? MEMORY_ID.test(e.id) : STATE_ID.test(e.id);
+        if (!ok) out.push(I('ID_FORMAT', `flags:${e.id}`, `id реєстру — f.<назва> (чи сімейство f.<префікс>-*), m.<назва> або s.<назва>, слова через дефіс`));
+      }
       for (const [where, f] of memoryUses(c.content)) if (!MEMORY_ID.test(f)) out.push(I('ID_FORMAT', where, `факт пам\u2019яті «${f}» не відповідає ${MEMORY_ID}`));
       for (const [where, rw] of rewards(c.content)) {
         if (!GRANT_ID.test(rw.grantId)) out.push(I('ID_FORMAT', where, `grantId не відповідає ${GRANT_ID}`));
@@ -144,7 +153,7 @@ export const CHECKS = [
         const seen = new Set();
         for (const id of list) { if (seen.has(id)) out.push(I('ID_DUPLICATE', where, `id «${id}» повторюється`)); seen.add(id); }
       };
-      for (const t of Object.keys(ID_PATTERNS)) dup((c.content[t] ?? []).map((e) => e.id), t);
+      for (const t of [...Object.keys(ID_PATTERNS), 'flags']) dup((c.content[t] ?? []).map((e) => e.id), t);
       for (const q of c.content.quests ?? []) dup(q.objectives.map((o) => o.id), `${q.id}.objectives`);
       for (const d of c.content.dialogues ?? []) dup(d.nodes.map((n) => n.id), `${d.id}.nodes`);
       return out;
@@ -722,6 +731,97 @@ export const CHECKS = [
     },
   },
   {
+    id: 'flags',
+    run(c) { // @check:flags
+      // GAME-115: реєстр content/flags.json — єдине джерело назв і типів стану, який читають умови й ставлять ефекти.
+      // Немає файлу — реєстр порожній, і кожен вжиток червоніє (FLAG_UNREGISTERED): відсутній сторож — не «нічого не бракує».
+      // Ціна хибного спрацювання FLAG_REGISTERED_UNUSED (помилка, не попередження): рядок, доданий наперед, валить CI,
+      // доки автор не вживе його або не позначить reserved: true — одне поле. Попередження дешевше, але мертві рядки
+      // тоді накопичуються мовчки, і реєстр перестає бути правдою.
+      const out = [];
+      const bad = (code, where, msg) => out.push(I(code, where, msg));
+      const reg = c.content.flags ?? [];
+      const byId = new Map(reg.map((e) => [e.id, e]));
+      const used = new Set();
+      const families = reg.filter((e) => e.id.endsWith('-*'));
+      const generated = new Map(families.map((e) => [e.id, new Set(FLAG_FAMILIES[e.generatedFrom]?.gen(c.content) ?? [])]));
+      // Найдовший префікс першим: f.night-x і f.night-owl-x не плутаються.
+      const enums = reg.filter((e) => e.type === 'enum' && e.id.startsWith('f.')).sort((a, b) => b.id.length - a.id.length);
+      const asBool = (e, name, where) => {
+        used.add(e.id);
+        if (e.type !== 'bool') bad('FLAG_TYPE_MISMATCH', where, e.type === 'enum' ? `«${name}» — enum; умова й ефект працюють із конкретним значенням ${name}-<значення> (${(e.values ?? []).join(', ')})` : `«${name}» має тип ${e.type}, а прапорець-умова читає лише bool`);
+      };
+      const flag = (name, where) => {
+        if (byId.has(name)) return asBool(byId.get(name), name, where);
+        const fam = families.find((e) => name.startsWith(e.id.slice(0, -1)));
+        if (fam) {
+          if (!generated.get(fam.id).has(name)) bad('FLAG_UNREGISTERED', where, `«${name}» схожий на сімейство «${fam.id}», але ${fam.generatedFrom ?? 'жоден породжувач'} його не породжує (зараз: ${[...generated.get(fam.id)].join(', ') || 'нічого'})`);
+          return;
+        }
+        const en = enums.find((e) => name.startsWith(`${e.id}-`));
+        if (en) {
+          used.add(en.id);
+          const v = name.slice(en.id.length + 1);
+          if (!(en.values ?? []).includes(v)) bad('FLAG_ENUM_VALUE', where, `значення «${v}» немає серед values «${en.id}» (${(en.values ?? []).join(', ')})${v === 'unset' ? '; unset — це відсутність прапорця' : ''}`);
+          return;
+        }
+        bad('FLAG_UNREGISTERED', where, `прапорця «${name}» немає в content/flags.json — зареєструй (тип, початкове значення, хто ставить) або звір написання`);
+      };
+      for (const [where, f] of flagUses(c.content)) flag(f, where);
+      for (const [where, m] of memoryUses(c.content)) {
+        if (byId.has(m)) asBool(byId.get(m), m, where);
+        else bad('FLAG_UNREGISTERED', where, `факту пам’яті «${m}» немає в content/flags.json`);
+      }
+      for (const [where, leaf] of condLeavesAll(c.content)) {
+        if (leaf.transport === undefined) continue;
+        const e = byId.get('s.transport');
+        if (!e) { bad('FLAG_UNREGISTERED', where, 'умова transport читає факт стану «s.transport», якого немає в content/flags.json'); continue; }
+        used.add(e.id);
+        // Значення (id транспорту) звіряє DIALOGUE_REF_MISSING — тут лише тип, без дубля першопричини.
+        if (e.type !== 'enum') bad('FLAG_TYPE_MISMATCH', where, `умова transport читає «s.transport» як enum, а в реєстрі він ${e.type}`);
+      }
+      // Сімейство «вжите», коли породжувач не порожній: його прапорці ставить ядро, навіть якщо вміст їх не читає.
+      for (const e of families) if (generated.get(e.id).size) used.add(e.id);
+
+      const collection = (k) => (c.content[k] ?? []).map((x) => x.id);
+      const boolIds = new Set(reg.filter((e) => e.type === 'bool').map((e) => e.id));
+      for (const e of reg) {
+        const where = `flags:${e.id}`;
+        const inv = (msg) => bad('FLAG_REGISTRY_INVALID', where, msg);
+        const core = e.id.startsWith('f.') || e.id.startsWith('m.'); // їх зберігає ядро як множину рядків
+        if (e.id.endsWith('-*')) {
+          const gen = FLAG_FAMILIES[e.generatedFrom];
+          if (!gen) inv(`сімейство без породжувача: generatedFrom — одне з ${Object.keys(FLAG_FAMILIES).join(', ')}`);
+          else if (gen.prefix !== e.id.slice(0, -1)) inv(`${e.generatedFrom} породжує «${gen.prefix}…», а сімейство названо «${e.id}»`);
+          if (e.type !== 'bool') inv('сімейство прапорців ядра — лише bool');
+        } else if (e.generatedFrom !== undefined) inv('generatedFrom — лише для сімейства «f.<префікс>-*»');
+        if (e.id.startsWith('m.') && e.type !== 'bool') inv('пам’ять NPC (m.*) — лише bool: ядро пам’ятає факт або ні');
+        if (e.id.startsWith('f.') && !['bool', 'enum'].includes(e.type) && e.reserved !== true) inv(`ядро зберігає прапорці як множину рядків — ${e.type} лише з reserved: true, доки ядро не вміє`);
+        const allowed = e.valuesFrom !== undefined ? collection(e.valuesFrom) : e.values;
+        if (e.type === 'enum') {
+          if ((e.values === undefined) === (e.valuesFrom === undefined)) inv('enum має рівно одне з values | valuesFrom');
+          if (e.valuesFrom !== undefined && !e.id.startsWith('s.')) inv('valuesFrom — лише для факту стану s.*: прапорець кодує значення у своїй назві');
+          const seen = new Set();
+          for (const v of e.values ?? []) {
+            if (!ENUM_VALUE.test(v) || v === 'unset') inv(`значення «${v}»: слова через дефіс і не «unset» (unset — відсутність значення)`);
+            if (seen.has(v)) inv(`значення «${v}» двічі`);
+            seen.add(v);
+            if (boolIds.has(`${e.id}-${v}`)) inv(`«${e.id}-${v}» зареєстровано й окремим bool — назва неоднозначна`);
+          }
+        } else if (e.values !== undefined || e.valuesFrom !== undefined) inv(`values/valuesFrom — лише для enum, а тип ${e.type}`);
+        // Початкове значення — правда ядра: новий сейв не має жодного прапорця, тож f.*/m.* стартують false / unset.
+        const init = e.initial;
+        if (e.type === 'bool' && (typeof init !== 'boolean' || (core && init !== false))) inv(`initial ${JSON.stringify(init)}: bool${core ? ' прапорця ядра — лише false (новий сейв не має прапорців)' : ' — true або false'}`);
+        if (e.type === 'enum' && init !== 'unset' && (core || !(allowed ?? []).includes(init))) inv(`initial ${JSON.stringify(init)}: ${core ? '«unset» — новий сейв не має прапорців' : '«unset» або одне з дозволених значень'}`);
+        if (e.type === 'number' && !Number.isInteger(init)) inv(`initial ${JSON.stringify(init)}: число — ціле`);
+        if ((e.type === 'item' || e.type === 'location') && init !== 'unset' && !collection(e.type === 'item' ? 'items' : 'locations').includes(init)) inv(`initial ${JSON.stringify(init)}: «unset» або існуючий id ${e.type}`);
+        if (e.reserved === true && used.has(e.id)) inv('позначено reserved, але вже вживається — зніми reserved');
+        else if (e.reserved !== true && !used.has(e.id)) bad('FLAG_REGISTERED_UNUSED', where, 'зареєстровано, але жодна умова чи ефект його не вживає (і ядро не породжує) — вживи, прибери або познач reserved: true для майбутнього розділу');
+      }
+      return out;
+    },
+  },
+  {
     id: 'dialogue-owner',
     run(c) { // @check:dialogue-owner
       // GAME-31: подія в дорозі — діалог без NPC, що відкривається сам після приїзду (ядро: RoadEvent).
@@ -937,9 +1037,9 @@ const NONE = new Set();
 // прапорець «подія була» (f.seen-<назва>) ставить ядро саме, коли подія відкривається (GAME-31).
 // Пам'ять — лише remember у розмові з NPC; подія в дорозі NPC не має, тож нічого не запам'ятовує.
 function settable(c) {
-  const set = new Set((c.content.dialogues ?? []).filter((d) => d.trigger).map((d) => `f.seen-${d.id.replace(/^dlg\./, '')}`));
-  // GAME-109: прапорець «упаковано» (f.pack-<річ>) ставить ядро командами пакування — для кожної речі packing.items.
-  for (const x of c.content.packing?.items ?? []) set.add(`f.pack-${String(x.item).replace(/^item\./, '')}`);
+  // Сімейства ядра (FLAG_FAMILIES, codes.mjs): «подія була» (f.seen-<подія>, GAME-31) і «упаковано» (f.pack-<річ>,
+  // GAME-109) — ставить ядро саме, для кожної події в дорозі й кожної речі packing.items.
+  const set = new Set(Object.values(FLAG_FAMILIES).flatMap((f) => f.gen(c.content)));
   const memory = new Map();
   const mem = (npc) => memory.get(npc) ?? NONE;
   const choices = dialogueChoices(c.content);

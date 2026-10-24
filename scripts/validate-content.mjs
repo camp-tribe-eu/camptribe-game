@@ -47,7 +47,7 @@ const warned = warnings.length ? ` · попереджень ${warnings.length}`
 if (exitCode === 0 && !(flag('--fail-on-warnings') && warnings.length)) {
   const c = loaded.content;
   const n = (k) => (c[k] ?? []).length;
-  console.log(`PASS · квестів ${n('quests')}, предметів ${n('items')}, NPC ${n('npcs')}, локацій ${n('locations')}, подій ${n('events')}, фактів ${n('facts')}, доріг ${n('roads')}, діалогів ${n('dialogues')} (вузлів ${(c.dialogues ?? []).reduce((s, d) => s + d.nodes.length, 0)}), мов ${c.meta.locales.length} · профілів ${n('profiles')}, транспортів ${n('transports')}, тварин ${n('animals')} → комбінацій перевірено ${enumerateCombos(c).length}${warned}`);
+  console.log(`PASS · квестів ${n('quests')}, предметів ${n('items')}, NPC ${n('npcs')}, локацій ${n('locations')}, подій ${n('events')}, фактів ${n('facts')}, доріг ${n('roads')}, записів реєстру прапорців ${n('flags')}, діалогів ${n('dialogues')} (вузлів ${(c.dialogues ?? []).reduce((s, d) => s + d.nodes.length, 0)}), мов ${c.meta.locales.length} · профілів ${n('profiles')}, транспортів ${n('transports')}, тварин ${n('animals')} → комбінацій перевірено ${enumerateCombos(c).length}${warned}`);
   process.exit(0);
 }
 for (const i of errors) console.log(`::error::${i.code} · ${i.where} · ${i.msg}`);

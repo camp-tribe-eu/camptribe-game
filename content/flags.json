@@ -1,0 +1,12 @@
+[
+  { "id": "f.elise-met", "type": "bool", "initial": false, "owner": "dlg.elise-greeting/hello", "note": "Перша розмова з Елізою відбулась.", "aka": ["met_elise"] },
+  { "id": "f.road-apple", "type": "bool", "initial": false, "owner": "dlg.road-apples/box", "note": "Родина взяла яблуко з придорожньої скриньки.", "aka": ["apple_taken"] },
+  { "id": "f.night", "type": "enum", "values": ["tent", "car", "gazebo"], "initial": "unset", "owner": "dlg.elise-greeting/spot", "note": "У ЧОМУ родина ночує першу ніч (намет / авто / альтанка). Значення — прапорець f.night-<значення>. Не те саме, що f.pitch (ДЕ стоїть намет)." },
+  { "id": "f.pitch", "type": "enum", "values": ["pines", "lake-view", "sheltered"], "initial": "unset", "owner": "розділ 1, вибір місця для намету (ще не написано)", "note": "ДЕ стоїть намет. Значення — прапорець f.pitch-<значення>. Ставиться разом із f.night-tent, не замість нього.", "reserved": true, "aka": ["pitch_choice", "pitch_type_pines"] },
+  { "id": "f.mia-plan", "type": "enum", "values": ["car-carrier", "anna-care"], "initial": "unset", "owner": "розділ 1, план для кішки перед поїздкою (ще не написано)", "note": "Кішка їде в переносці авто або лишається з Анною. unset — рішення ще не прийнято.", "reserved": true, "aka": ["mia_travel_plan"] },
+  { "id": "f.pack-*", "type": "bool", "initial": false, "generatedFrom": "packing.items", "owner": "ядро: packFlag, src/core/packing.ts", "note": "Річ спакована: f.pack-<річ без item.> для кожної речі content/packing.json. Не перелічується вручну — породжує packing.items." },
+  { "id": "f.seen-*", "type": "bool", "initial": false, "generatedFrom": "dialogues.trigger", "owner": "ядро: eventSeenFlag, src/core/story.ts", "note": "Подія в дорозі вже була: f.seen-<діалог без dlg.> для кожного діалогу з trigger." },
+  { "id": "m.came-by-bike", "type": "bool", "initial": false, "owner": "dlg.elise-greeting (пам'ять Елізи)", "note": "Еліза пам'ятає, що родина приїхала велосипедами." },
+  { "id": "s.transport", "type": "enum", "valuesFrom": "transports", "initial": "unset", "owner": "ядро: транспорт гравця, обраний на старті", "note": "Його читає умова transport у діалогах.", "aka": ["current_transport"] },
+  { "id": "s.weather", "type": "enum", "values": ["sunny", "cloudy", "rain"], "initial": "unset", "owner": "ядро: weatherOf, src/core/weather.ts", "note": "Погода дня; обчислюється з насіння світу. Умови на погоду в діалогах ще немає.", "reserved": true, "aka": ["current_weather"] }
+]

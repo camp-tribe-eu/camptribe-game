@@ -108,6 +108,15 @@
       .ui-overlay { overflow-y: auto; }
       /* Натиснута кнопка: #386228 дає 5.7:1 зі світлим текстом (було #4f7a3a — 4.0:1, axe color-contrast, GAME-39). */
       .ui-btn[aria-pressed="true"] { background: #386228; }
+      /* GAME-106: підсумок дня — секції ліворуч, ширина як у квестів; кнопки в ряд, на вузькому — під одною. */
+      .ui-summary { place-content: start center; }
+      .ui-summary-body { width: min(92vw, 760px); display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 8px 16px; align-items: start; }
+      .ui-summary-sec { margin: 0; text-align: left; font-size: 0.75rem; }
+      .ui-summary-body > p { grid-column: 1 / -1; }
+      .ui-summary-sec h3 { margin: 0 0 2px; font-size: 0.9rem; }
+      .ui-summary-sec ul { margin: 0; padding-left: 1.2em; }
+      .ui-summary-actions { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
+      .ui-summary [tabindex="-1"]:focus { outline: 2px solid currentColor; outline-offset: 2px; }
       .ui-credits { max-width: min(92vw, 640px); font-size: 0.6rem; text-align: left; }
       .ui-credits summary { list-style: none; display: inline-block; cursor: pointer; }
       .ui-credits ul { padding-left: 1em; }

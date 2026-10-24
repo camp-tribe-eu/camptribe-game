@@ -78,6 +78,13 @@ export const CODES = {
   DIALOGUE_OBJECTIVE_KIND:   { check: 'dialogue-objective-kind', spec: '§2 розмова закриває лише ціль talk із цим самим NPC' },
   DIALOGUE_NPC_DUPLICATE:    { check: 'dialogue-npc-unique', spec: '§2 один діалог на NPC — інакше рушій не знає, який запускати' },
 
+  // реєстр прапорців і фактів стану, GAME-115 (content/flags.json)
+  FLAG_UNREGISTERED:      { check: 'flags', spec: 'GAME-115: прапорець (f.*), факт пам\u2019яті (m.*) чи факт стану (s.*) в умові чи ефекті — лише зареєстрований у content/flags.json' },
+  FLAG_ENUM_VALUE:        { check: 'flags', spec: 'GAME-115: значення enum-прапорця (f.<назва>-<значення>) — лише з його values; «unset» — це відсутність прапорця, а не значення' },
+  FLAG_TYPE_MISMATCH:     { check: 'flags', spec: 'GAME-115: умова читає запис реєстру як його тип — flag/notFlag/setFlag лише bool (enum — через конкретне значення), transport — лише enum s.transport' },
+  FLAG_REGISTERED_UNUSED: { check: 'flags', spec: 'GAME-115: зареєстрований, але ніде не вживаний запис — помилка, якщо не позначений reserved: true (наперед для майбутніх розділів)' },
+  FLAG_REGISTRY_INVALID:  { check: 'flags', spec: 'GAME-115: запис реєстру узгоджений — початкове значення відповідає типу й ядру, enum має значення, сімейство має породжувача, reserved не вживаний, назви не перетинаються' },
+
   // комбінації профіль × транспорт × тварина
   COMBO_NO_START:             { check: 'combos', spec: '§3 кожен вузол досяжний — у кожній комбінації стану гравця' },
   COMBO_TARGETED_UNREACHABLE: { check: 'combos', spec: '§3 вузол, адресований комбінації, у ній досяжний' },
@@ -95,6 +102,14 @@ export const SKILL_IDS = ['skill.planning', 'skill.camping', 'skill.mechanics', 
 
 // GAME-73: поля картки спорядження (крім kind — він і робить предмет спорядженням).
 export const GEAR_FIELDS = ['tier', 'weightG', 'volumeL', 'waterproofMm', 'comfortC', 'sleeps', 'priceCents', 'resaleCents'];
+
+// GAME-115: сімейства прапорців, які ставить ЯДРО, а не контент. Сімейство в реєстрі — «<префікс>*» з generatedFrom;
+// конкретні назви породжує gen(content). Ті самі формати — packFlag (src/core/packing.ts) і eventSeenFlag
+// (src/core/story.ts); звірку тримає src/content/flags.test.ts.
+export const FLAG_FAMILIES = {
+  'packing.items': { prefix: 'f.pack-', gen: (content) => (content.packing?.items ?? []).map((x) => `f.pack-${String(x.item).replace(/^item\./, '')}`) },
+  'dialogues.trigger': { prefix: 'f.seen-', gen: (content) => (content.dialogues ?? []).filter((d) => d.trigger).map((d) => `f.seen-${String(d.id).replace(/^dlg\./, '')}`) },
+};
 
 export const FACT_KINDS = ['regulation', 'geography', 'price', 'schedule', 'culture'];
 

@@ -11,6 +11,8 @@ declare module '*/validator/codes.mjs' {
   export const SKILL_IDS: string[];
   /** Поля картки спорядження (GAME-73), крім kind. */
   export const GEAR_FIELDS: string[];
+  /** Сімейства прапорців ядра (GAME-115): f.pack-*, f.seen-* — префікс і породжувач із контенту. */
+  export const FLAG_FAMILIES: Record<'packing.items' | 'dialogues.trigger', { prefix: string; gen: (content: unknown) => string[] }>;
 }
 declare module '*/validator/load.mjs' {
   export function loadContent(dir: string, opts?: { allowMissing?: boolean }): { status: string; content: Record<string, unknown> | null; issues: { code: string; where: string; msg: string }[] };

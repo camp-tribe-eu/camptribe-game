@@ -36,6 +36,17 @@ export interface OfferPacking {
   readonly noteKey: string | null;
 }
 
+/**
+ * Підсумок дня (GAME-106): лише факти з ядра (src/core/day-summary.ts). `keys` — ключі текстів: для `night` — ключ UI
+ * (`sum.night.<вид>`), для решти — ключ контенту (назва предмета, події, квесту). Порожніх секцій немає.
+ */
+export interface OfferSummary {
+  readonly day: number;
+  readonly sections: readonly { readonly kind: 'night' | 'packed' | 'events' | 'quests' | 'bought' | 'got' | 'sold'; readonly keys: readonly string[] }[];
+  /** Гроші на початку й у кінці дня (центи); null — факту немає (сейв до GAME-106). */
+  readonly money: { readonly start: number; readonly end: number } | null;
+}
+
 export interface StoryOffer {
   /** create — персонажа ще немає; play — гра йде; ended — кінець розділу. */
   readonly stage: 'create' | 'play' | 'ended';
@@ -60,6 +71,10 @@ export interface StoryOffer {
   /** Ідентичність останньої завершеної подорожі (GAME-94): commandId останнього запису журналу «Visit»; null — ще не їздили.
    *  Похідна від стану ядра, тож однакова після перезавантаження; журнал обрізається з голови, а id лишається унікальним. */
   readonly lastTrip: string | null;
+  /** Скільки днів історії вже завершено (GAME-106): зростання після дії гравця — сигнал показати підсумок. */
+  readonly daysEnded: number;
+  /** Підсумок останнього завершеного дня; null — жоден день ще не завершився. */
+  readonly summary: OfferSummary | null;
   /** Журнал подорожі, від старого до нового. */
   readonly journal: readonly { readonly type: string; readonly key: string | null; readonly at: number }[];
 }
