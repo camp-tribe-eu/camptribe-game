@@ -48,6 +48,7 @@ const mutations = [
   { name: 'розкладка: до двоспального ліжка досить підійти з одного боку', file: C, from: 'return left && right;', to: 'return left || right;' },
   { name: 'розкладка: freestanding не знімає правило спинки', file: C, from: "if (spec.hug && it.freestanding !== true) {", to: 'if (spec.hug) {' },
   { name: 'розкладка: меблі за спинкою зараховуються як стіна', file: C, from: "(spec.hug === 'back' || y < 0 || !m.layout.furnished.has(y * m.W + x))", to: 'true' },
+  { name: 'розкладка: freestanding без правила спинки мовчки приймається', file: C, from: 'if (spec && it.freestanding !== undefined && !spec.hug) why.push(', to: 'if (false) why.push(' },
   { name: 'розкладка: об’єкт поза кімнатами не помилка', file: C, from: "if (n !== 1) why.push(n === 0", to: 'if (n > 1) why.push(n === 0' },
   { name: 'розкладка: настінному досить однієї клітинки на стіні', file: C, from: 'if (open.length) out.push(', to: 'if (open.length > 1) out.push(' },
   { name: 'розкладка: під дверима досить підлоги в одній клітинці', file: C, from: 'for (let x = it.x; x < it.x + it.w; x++) if (blockedAt(m, x, y)) bad.push(`${x},${y}`);', to: 'if (blockedAt(m, it.x, y) && blockedAt(m, it.x, y - 1) && blockedAt(m, it.x, y + 1)) bad.push(`${it.x},${y}`);' },

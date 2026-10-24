@@ -348,6 +348,7 @@ export const CHECKS = [
         if (!it.aligned) why.push('не прямокутник по сітці тайлів (x, y, width, height кратні тайлу, точка не підходить)');
         else if (!it.inside) why.push(`поза мапою ${m.W}×${m.H}`);
         if (it.freestanding !== undefined && typeof it.freestanding !== 'boolean') why.push('freestanding — не bool');
+        if (spec && it.freestanding !== undefined && !spec.hug) why.push(`freestanding без правила спинки: kind «${it.kind}» і так стоїть де завгодно`);
         if (spec && it.inside && spec.rooms !== null) {
           const n = roomsOf(m, it).length;
           if (n !== 1) why.push(n === 0 ? 'не лежить цілком у жодній кімнаті' : `лежить у ${n} кімнатах одразу`);
@@ -423,7 +424,7 @@ export const CHECKS = [
       const out = [];
       const items = sound(m).filter((it) => LAYOUT_KINDS[it.kind].access);
       if (!items.length) return out;
-      const starts = m.objects.filter((o) => o.kind === 'spawn' && o.inside && spawnState(m, o) !== 'on-wall' && spawnState(m, o) !== 'walled');
+      const starts = m.objects.filter((o) => o.kind === 'spawn' && spawnState(m, o) === 'ok' && o.inside);
       const floods = starts.map((s) => ({ s, seen: flood(m, s.i) }));
       const seenAt = (seen, x, y) => x >= 0 && y >= 0 && x < m.W && y < m.H && seen[y * m.W + x];
       for (const it of items) {

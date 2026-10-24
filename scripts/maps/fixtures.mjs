@@ -140,6 +140,7 @@ export const FIXTURES = [
   { name: '[розкладка] вікно звисає на підлогу', patch: (m) => { house(m); litem(m, 'window').y = T; }, expect: ['LAYOUT_WALL'], count: { code: 'LAYOUT_WALL', n: 1 } },
   { name: '[розкладка] одруківка у виді меблів (bedd)', patch: (m) => { house(m); litem(m, 'bed').type = 'bedd'; }, expect: ['LAYOUT_OBJECT'] },
   { name: '[розкладка] об’єкт не по сітці тайлів', patch: (m) => { house(m); litem(m, 'sofa').x += 5; }, expect: ['LAYOUT_OBJECT'] },
+  { name: '[розкладка] freestanding на журнальному столику, що й так не має правила спинки', patch: (m) => { house(m); litem(m, 'coffee').properties = [{ name: 'freestanding', type: 'bool', value: true }]; }, expect: ['LAYOUT_OBJECT'] },
   { name: '[розкладка] торшер поза будь-якою кімнатою', patch: (m) => { house(m); addItem(m, 'lamp', 'lamp.1', 0, 3, 1, 1); }, expect: ['LAYOUT_OBJECT'] },
   { name: '[розкладка] кімната з невідомою назвою (salon) і все, що в ній', patch: (m) => { house(m); lroom(m, 'living').properties[0].value = 'salon'; }, expect: ['LAYOUT_OBJECT'] },
   { name: '[розкладка] кімнати перекриваються — меблі у двох кімнатах одразу', patch: (m) => { house(m); addRoom(m, 'hall', 1, 0, 5, 8); }, expect: ['LAYOUT_OBJECT'] },
