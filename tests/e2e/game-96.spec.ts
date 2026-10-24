@@ -63,11 +63,11 @@ for (const vp of LANDSCAPE) for (const inset of [0, 47]) {
     expect(intersects(frame, sR), 'рамка не на ☰').toBe(false);
     expect(intersects(frame, pR), 'рамка не на ‖').toBe(false);
     expect(Math.min(sR.width, sR.height, pR.width, pR.height), 'кнопки ≥ 44').toBeGreaterThanOrEqual(44);
-    await page.waitForTimeout(800);   // Phaser перераховує масштаб полотна сам, раз на 0,5 с — міряємо після, а не до
-    const canvas = await page.locator('#stage canvas').evaluate((el) => el.getBoundingClientRect().height);
+    // Phaser перераховує масштаб полотна сам, із затримкою — чекаємо умову, а не фіксовану паузу (рецензія PR #53).
     const stageH = await page.locator('#stage').evaluate((el) => el.getBoundingClientRect().height);
     expect(stageH / vp.height, `поле гри ${stageH} із ${vp.height}: шапка лежить на мапі`).toBeGreaterThanOrEqual(0.99);
-    expect(canvas / vp.height, `полотно ${canvas} із ${vp.height}`).toBeGreaterThanOrEqual(0.85);
+    await expect.poll(async () => (await page.locator('#stage canvas').evaluate((el) => el.getBoundingClientRect().height)) / vp.height,
+      { message: 'полотно ≥ 85 % висоти', timeout: 10_000 }).toBeGreaterThanOrEqual(0.85);
     if (vp.width === 844 && !inset) {
       await page.screenshot({ path: `${SHOTS}/game-96-844x390-game.png` });
       await page.locator('[data-touch="pause"]').tap();
