@@ -35,7 +35,7 @@ const ALLOW: Readonly<Record<string, Readonly<Record<string, { count: number; wh
     requestAnimationFrame: { count: 1, why: 'повернути фокус на #stage після закриття екрана подорожі — керування фокусом, не рішення й не строк' },
   },
   'src/view/frame-lag.ts': {
-    performance: { count: 2, why: 'GAME-97: штучно довгий кадр лише в збірці e2e (?frameLagMs) — міряє затримку, гра нічого за ним не вирішує' },
+    performance: { count: 3, why: 'GAME-97/GAME-38: штучна затримка кадру й старту лише в збірці e2e (?frameLagMs, ?bootDelayMs) і вимір часу першого кадру (probe.firstFrameMs) — міряють затримку, гра нічого за ними не вирішує' },
   },
 };
 
@@ -160,6 +160,6 @@ describe('жодного таймера реального часу на дія�
   });
 
   it(`файлів у скануванні: ${files.length}; знахідок у коді: ${hits.length} (усі — в переліку)`, () => {
-    expect(hits.map((h) => `${h.file}|${h.name}`)).toEqual(['src/ui/Shell.tsx|setTimeout', 'src/ui/Shell.tsx|requestAnimationFrame', 'src/view/frame-lag.ts|performance', 'src/view/frame-lag.ts|performance']);
+    expect(hits.map((h) => `${h.file}|${h.name}`)).toEqual(['src/ui/Shell.tsx|setTimeout', 'src/ui/Shell.tsx|requestAnimationFrame', 'src/view/frame-lag.ts|performance', 'src/view/frame-lag.ts|performance', 'src/view/frame-lag.ts|performance']);
   });
 });

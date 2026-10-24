@@ -126,6 +126,22 @@ jobs:
           echo "/favicon.ico без пароля → $c"
           c=$(curl -s --max-time 20 -o /dev/null -w '%{http_code}' -u "$PREVIEW_USER:$PREVIEW_PASSWORD" "https://$BRANCH.$PROJECT.pages.dev/$asset")
           [ "$c" = 200 ] || { echo "::error::бандл з паролем: HTTP $c (очікував 200)"; exit 1; }
+          # GAME-15 (TD-008): баг-репорт має називати збірку. Опублікований бандл несе ПОВНИЙ SHA саме цього коміту — той,
+          # що рядок версії показує в меню паузи. Повтор: CDN віддає нову збірку не миттєво. SHA шукаємо в ПЕРШОМУ <script src>:
+          # __GAME_COMMIT__ підставляє vite.config.ts у src/main.ts (вхідний модуль); винесуть підпис у ліниві чанки — тут червоне.
+          [[ "$GITHUB_SHA" =~ ^[0-9a-f]{40}$ ]] || { echo "::error::GITHUB_SHA не 40 hex: '$GITHUB_SHA'"; exit 1; }
+          shaok=0
+          rm -f /tmp/bundle.js
+          for i in 1 2 3 4 5 6; do
+            curl -s --max-time 30 -u "$PREVIEW_USER:$PREVIEW_PASSWORD" -o /tmp/bundle.js "https://$BRANCH.$PROJECT.pages.dev/$asset"
+            if grep -qF "$GITHUB_SHA" /tmp/bundle.js; then shaok=1; break; fi
+            echo "спроба $i: у бандлі ще немає $GITHUB_SHA, чекаю"; sleep 15
+          done
+          [ $shaok = 1 ] || { echo "::error::опублікований бандл не містить SHA $GITHUB_SHA — у перегляді інша збірка"; exit 1; }
+          # Контроль, що перевірка вміє почервоніти (закон 1): чужий SHA (інвертовані цифри) у бандлі не знаходиться.
+          other_sha=$(tr '0123456789abcdef' 'fedcba9876543210' <<<"$GITHUB_SHA")
+          if grep -qF "$other_sha" /tmp/bundle.js; then echo "::error::чужий SHA $other_sha знайдено — перевірка SHA нічого не доводить"; exit 1; fi
+          echo "SHA $GITHUB_SHA у бандлі є; чужого $other_sha немає"
           if game "https://$PROJECT.pages.dev/" >/dev/null; then echo "::error::гола адреса проєкту віддає гру"; exit 1; fi
           echo "PREVIEW: OK · $url — логін $PREVIEW_USER і пароль із секрету PREVIEW_PASSWORD"
 
