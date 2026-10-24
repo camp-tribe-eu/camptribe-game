@@ -193,6 +193,7 @@ for (const vp of VIEWPORTS) {
     // Звірка GAME-69 #1 «…і діалог»: персонаж біля озера (кроки меню — дотиком), до Елізи — дотиковими
     // стрілками, розмова — дотиком по відповідях, до кінця розмови.
     test('пролог дотиком до кінця розділу: джойстик, кнопка дії й тапи по панелі (дійти до Елізи, розмова, кінець)', async ({ page }) => {
+      test.setTimeout(120_000);   // увесь пролог дотиком під навантаженням CI довший за 60 с (CI PR #53)
       await open(page);
       await page.locator('[data-touch="story"]').tap();
       const story = page.locator('[data-ui="story"]');
@@ -213,10 +214,15 @@ for (const vp of VIEWPORTS) {
       await page.locator('[data-ui="story-close"]').tap();
       expect(await holdTouch(page, 'left', (p) => p.playerX <= 88)).toBe(true);
       // GAME-97: зону Елізи (радіус 48 px при 128 px/с) персонаж проходить за ~0,75 с; під навантаженням CI опитування буває
-      // рідшим, і затиснутий стік її проскакував (CI #43, CI PR #53). Тому підходимо короткими дотиками (~60 мс ≈ 8 px),
-      // перевіряючи після кожного, — зону так не проскочиш.
-      for (let i = 0; i < 150 && (await probe(page)).nearObject !== 'npc.elise'; i++) {
-        expect(await holdTouch(page, 'down', () => false, 60)).toBe(true);
+      // рідшим, і затиснутий стік її проскакував (CI #43, CI PR #53). Короткі дотики за годинником теж ненадійні: під
+      // навантаженням 150 мс дають то 0, то 40 px. Тому довертаємо за координатою: запам'ятали Y входу в зону, ціль —
+      // її середина (вхід + 48 px униз), тримаємо стік до перетину цілі; промах від середини < 48 px лишає нас у зоні.
+      let entryY = Number.NaN;
+      expect(await holdTouch(page, 'down', (p) => { if (p.nearObject === 'npc.elise') entryY = p.playerY; return !Number.isNaN(entryY); })).toBe(true);
+      const midY = entryY + 48;
+      for (let i = 0; i < 8 && (await probe(page)).nearObject !== 'npc.elise'; i++) {
+        const dir = (await probe(page)).playerY > midY ? 'up' : 'down';
+        expect(await holdTouch(page, dir, (p) => p.nearObject === 'npc.elise' || (dir === 'up' ? p.playerY <= midY : p.playerY >= midY))).toBe(true);
       }
       expect((await probe(page)).nearObject).toBe('npc.elise');
       expect(await holdTouch(page, 'interact', () => true, 100)).toBe(true);
