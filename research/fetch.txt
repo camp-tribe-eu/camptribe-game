@@ -42,3 +42,9 @@ yt-req-monetization	page:https://developers.google.com/youtube/gaming/playables/
 yt-req-trustsafety	page:https://developers.google.com/youtube/gaming/playables/certification/requirements_trustsafety
 yt-support-faq	page:https://developers.google.com/youtube/gaming/playables/support/faq
 yt-ref-monetization	page:https://developers.google.com/youtube/gaming/playables/reference/monetization
+
+# GAME-146: сучасні набори LPC — інтер'єр дому Les Tilleuls (першоджерело OGA, ліцензія зі сторінки)
+pack-lpc-modern-furniture	oga:lpc-simple-modern-furniture
+pack-lpc-office	oga:lpc-revised-the-office
+list-lpc-interior	ogasearch:lpc interior
+list-lpc-furniture	ogasearch:lpc furniture
