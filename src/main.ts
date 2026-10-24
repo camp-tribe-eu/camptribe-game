@@ -8,7 +8,7 @@ import { GAME_DEFS } from './content/slice-defs';
 import { STORY, STORY_REV } from './content/story';
 import { saveViable } from './content/viability';
 import { decodeRestoreCode, encodeRestoreCode } from './platform/save-code';
-import { dismissStale, readSaves, readStale, writeSave, writeStale } from './platform/save-store';
+import { saveBackend } from './platform/save-backend';
 import { createSaveSession } from './platform/save-session';
 import credits from '../assets/credits.json';
 import { createBridge } from './view/world/bridge';
@@ -57,7 +57,7 @@ const talkOnMap = (npcId: string): void => {
   storyChanged();
   for (const l of openListeners) l();
 };
-const saves = createSaveSession(bridge, { read: readSaves, write: writeSave, quarantine: writeStale, readStale, dismissStale }, { story: STORY, ...(GAME_DEFS.life ? { life: GAME_DEFS.life } : {}), contentRev: STORY_REV, viable: (g) => saveViable(g, GAME_DEFS) });
+const saves = createSaveSession(bridge, saveBackend, { story: STORY, ...(GAME_DEFS.life ? { life: GAME_DEFS.life } : {}), contentRev: STORY_REV, viable: (g) => saveViable(g, GAME_DEFS) });
 // Тестовий хук Playwright: лише ЧИТАННЯ — знімок стану копією, місток назовні не віддається
 // (рецензія PR #13: раніше скрипт сторінки міг надіслати команду в ядро).
 (window as unknown as { __game: { probe: WorldProbe; read: () => unknown } }).__game = {
