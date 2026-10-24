@@ -4,6 +4,9 @@
 // цією межею, тож вимір не червоніє від шуму, але червоніє від довгої роботи в кадрі (негативний контроль: 300 мс у update).
 import { expect, test, type Page } from '@playwright/test';
 
+// Без сусідів: проєкт «perf» іде після всіх інших (playwright.config.ts), а тут — по одному тесту за раз.
+test.describe.configure({ mode: 'serial' });
+
 const FLOOR_FPS = 20;
 interface Probe { ready: boolean; fps: number; fpsWindows: number }
 const probe = (page: Page): Promise<Probe> => page.evaluate(() => ({ ...(window as unknown as { __game: { probe: Probe } }).__game.probe }));
