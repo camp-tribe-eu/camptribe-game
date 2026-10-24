@@ -96,6 +96,9 @@ for (const scale of [100, 200] as const) for (const hint of [false, true]) {
   test(`шапка 844×390, текст ${scale} %${hint ? ', з підказкою першого запуску' : ''}: ☰ ліворуч, ‖ праворуч, текст між ними без перетинів`, async ({ browser }) => {
     const page = await newPage(browser, { width: 844, height: 390 }, scale, { hintSeen: !hint });
     if (hint) await expect(page.locator('[data-ui="hint"]')).toBeVisible();
+    // Підказку міряємо одразу, разом із шапкою: після GAME-95 це тост, що сам зникає за 5 с, і під навантаженням CI
+    // вимір наприкінці тесту бачив уже порожнє місце (ширина 0).
+    const hintRect = hint ? await rectOf(page, '[data-ui="hint"]') : null;
     const [menu, pause, hud, place, time, money, header] = await Promise.all(
       ['[data-touch="story"]', '[data-touch="pause"]', '[data-ui="hud"]', '[data-ui="hud-place"]', '[data-ui="hud-time"]', '[data-ui="hud-money"]', '.ui-header'].map((q) => rectOf(page, q)));
     if (!menu || !pause || !hud || !place || !time || !money || !header) throw new Error('немає елемента шапки');
@@ -114,7 +117,7 @@ for (const scale of [100, 200] as const) for (const hint of [false, true]) {
     }
     expect(await page.locator('[data-ui="hud"]').evaluate((el) => el.scrollWidth <= el.clientWidth)).toBe(true);
     for (const [name, r] of Object.entries({ menu, pause })) { expect(r.width, name).toBeGreaterThanOrEqual(44); expect(r.height, name).toBeGreaterThanOrEqual(44); }
-    if (hint) { const h = await rectOf(page, '[data-ui="hint"]'); expect(h.left).toBeGreaterThanOrEqual(hud.left - 0.5); expect(h.right).toBeLessThanOrEqual(hud.right + 0.5); }
+    if (hintRect) { const h = hintRect; expect(h.width, 'підказка ще видима в момент виміру').toBeGreaterThan(0); expect(h.left).toBeGreaterThanOrEqual(hud.left - 0.5); expect(h.right).toBeLessThanOrEqual(hud.right + 0.5); }
     await page.context().close();
   });
 }

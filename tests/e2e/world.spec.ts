@@ -15,7 +15,7 @@ async function open(page: Page, query = ''): Promise<void> {
   expect(errors).toEqual([]);
 }
 
-async function holdKey(page: Page, key: string, until: (p: Probe) => boolean, maxMs = 4000): Promise<Probe> {
+async function holdKey(page: Page, key: string, until: (p: Probe) => boolean, maxMs = 10_000): Promise<Probe> {
   await page.keyboard.down(key);
   const start = Date.now();
   let p = await probe(page);
@@ -38,7 +38,7 @@ const STICK_OFFSETS: Readonly<Record<string, [number, number]>> = {
  * `action`: 'interact' — кругла кнопка дії; будь-який із STICK_OFFSETS — дотик у центр джойстика й відведення ручки (GAME-91).
  * false — елемента не видно, прохід неможливий.
  */
-async function holdTouch(page: Page, action: string, until: (p: Probe) => boolean, maxMs = 4000): Promise<boolean> {
+async function holdTouch(page: Page, action: string, until: (p: Probe) => boolean, maxMs = 10_000): Promise<boolean> {
   const offset = STICK_OFFSETS[action];
   const btn = page.locator(offset ? '[data-touch="stick"]' : `[data-touch="${action}"]`);
   if (!(await btn.isVisible())) return false;
@@ -61,8 +61,9 @@ async function holdTouch(page: Page, action: string, until: (p: Probe) => boolea
 
 /** Повний прохід дотиком: дійти до вогнища і взаємодіяти. Повертає кількість надісланих команд. */
 async function touchFlow(page: Page): Promise<number> {
-  if (!(await holdTouch(page, 'left', (p) => p.playerX <= 120))) return 0;
-  if (!(await holdTouch(page, 'up', (p) => p.nearObject !== null))) return 0;
+  // GAME-97: межа ходьби 10 с — крок фізики йде від згладженої дельти, під навантаженням CI персонаж іде повільніше.
+  if (!(await holdTouch(page, 'left', (p) => p.playerX <= 120, 10_000))) return 0;
+  if (!(await holdTouch(page, 'up', (p) => p.nearObject !== null, 10_000))) return 0;
   if (!(await holdTouch(page, 'interact', () => true, 100))) return 0;
   await page.waitForTimeout(100);
   // Команда мусить дійти до ядра: нагорода записана рівно раз (рецензія PR #13).
@@ -108,7 +109,11 @@ test.describe('клавіатура (десктоп)', () => {
 
   test('60+ кадрів поштовху в стіну — персонаж лишається по цей бік', async ({ page }) => {
     await open(page);
-    const p = await holdKey(page, 'ArrowRight', () => false, 2500);
+    // GAME-97: дійти до стіни — за умовою, а не за 2,5 с. Аркадна фізика робить крок 1/60 с на кадр від згладженої дельти
+    // Phaser, тож під навантаженням CI персонаж проходить за ті самі секунди менше (main 2e1b7c8: 250,7 замість > 280).
+    // Дійшов — ще 1,5 с тиснемо в стіну: це й є «60+ кадрів поштовху».
+    await holdKey(page, 'ArrowRight', (q) => q.playerX > 280, 10_000);
+    const p = await holdKey(page, 'ArrowRight', () => false, 1500);
     expect(p.playerX).toBeGreaterThan(280);                  // дійшов до стіни…
     expect(p.playerX + 8).toBeLessThanOrEqual(320 + 0.5);    // …і не пройшов (ліва грань стіни x=320; GAME-93: тайл 32 px, тіло 16 px, координати ×2)
   });
@@ -116,7 +121,9 @@ test.describe('клавіатура (десктоп)', () => {
   test('камера йде за персонажем у межах мапи', async ({ page }) => {
     await open(page);
     const p0 = await probe(page);
-    const p1 = await holdKey(page, 'ArrowDown', () => false, 1500);
+    // GAME-97: за умовою, а не за часом; далі тиснемо, доки камера не впреться в край, — інакше межа нижче нічого не доводить.
+    await holdKey(page, 'ArrowDown', (q) => q.cameraScrollY > p0.cameraScrollY);
+    const p1 = await holdKey(page, 'ArrowDown', (q) => q.cameraScrollY >= 384 - 352);
     expect(p1.cameraScrollY).toBeGreaterThan(p0.cameraScrollY);
     expect(p1.cameraScrollY).toBeLessThanOrEqual(384 - 352);   // GAME-93: мапа 384 px, широкий кадр 352
   });
@@ -206,6 +213,11 @@ for (const vp of VIEWPORTS) {
       await page.locator('[data-ui="story-close"]').tap();
       expect(await holdTouch(page, 'left', (p) => p.playerX <= 88)).toBe(true);
       expect(await holdTouch(page, 'down', (p) => p.nearObject === 'npc.elise')).toBe(true);
+      // GAME-97: зону Елізи (радіус 48 px при 128 px/с) персонаж проходить за ~0,75 с; під навантаженням CI опитування буває
+      // рідшим, і тест проскакував її (CI #43: nearObject null). Тоді довертаємо коротким ходом назад, як зробив би гравець.
+      for (let i = 0; i < 4 && (await probe(page)).nearObject !== 'npc.elise'; i++) {
+        await holdTouch(page, i % 2 === 0 ? 'up' : 'down', (p) => p.nearObject === 'npc.elise', 2000);
+      }
       expect((await probe(page)).nearObject).toBe('npc.elise');
       expect(await holdTouch(page, 'interact', () => true, 100)).toBe(true);
       await expect(story.locator('[data-ui="dialogue"]')).toBeVisible();

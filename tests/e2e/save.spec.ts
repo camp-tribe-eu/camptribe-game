@@ -24,7 +24,7 @@ async function open(page: Page): Promise<void> {
 async function hold(page: Page, key: string, until: (p: Probe) => boolean): Promise<void> {
   await page.keyboard.down(key);
   const t0 = Date.now();
-  while (!until(await probe(page)) && Date.now() - t0 < 4000) await page.waitForTimeout(16);
+  while (!until(await probe(page)) && Date.now() - t0 < 10_000) await page.waitForTimeout(16);   // GAME-97: під навантаженням CI ходьба повільніша
   await page.keyboard.up(key);
 }
 
