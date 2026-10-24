@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { ACTIONS, KEY_BINDINGS, KEY_CODES, TOUCH_CONTROLS, consumeFrame, createActionGate, moveVector, newInput, press, release, stickActions } from './actions';
+import { ACTIONS, KEY_BINDINGS, KEY_CODES, TOUCH_CONTROLS, actionTarget, tapHitsSpot, consumeFrame, createActionGate, moveVector, newInput, press, release, stickActions } from './actions';
 
 describe('карта дій (GAME-69)', () => {
   it('кожна дія з клавіатури має дотиковий елемент, і навпаки', () => {
@@ -73,5 +73,20 @@ describe('джойстик → напрямки (GAME-91)', () => {
   });
   it('майже вісь (до 22,5°) — одна дія, а не діагональ', () => {
     expect([...stickActions(50, 10, R)]).toEqual(['right']);
+  });
+});
+
+describe('ціль дії й тап (GAME-95)', () => {
+  it('рід цілі: NPC — розмова, вогнище — вогонь, інший тригер — об\'єкт', () => {
+    expect(actionTarget('npc', 'npc.elise')).toBe('talk');
+    expect(actionTarget('trigger', 'obj.campfire')).toBe('fire');
+    expect(actionTarget('trigger', 'obj.sign')).toBe('object');
+  });
+  it('тап влучає в спрайт над точкою ніг і не влучає поза ним', () => {
+    const s = { x: 80, y: 272 };
+    expect(tapHitsSpot(s, { x: 80, y: 248 })).toBe(true);
+    expect(tapHitsSpot(s, { x: 105, y: 248 })).toBe(false);
+    expect(tapHitsSpot(s, { x: 80, y: 215 })).toBe(false);
+    expect(tapHitsSpot(s, { x: 80, y: 281 })).toBe(false);
   });
 });

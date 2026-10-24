@@ -9,6 +9,9 @@ import { StoryPanel, money } from './StoryPanel';
 import { trapTab } from './focus-trap';
 import type { StoryOffer } from './story-types';
 
+/** Скільки тост-підказка висить на екрані (мс), якщо гравець нічого не зробив (GAME-95). Картка: ≤ 6 с. */
+const TOAST_MS = 5000;
+
 export function Shell({ port, langOverride, credits, build }: { port: UiPort; langOverride?: AnyLang; credits: Credits; build: string }) {
   const [paused, setPaused] = useState(false);
   // Підтвердження «Нової гри» (GAME-82): окремий діалог замість меню паузи; Escape — «Ні», а не закрити паузу.
@@ -27,6 +30,18 @@ export function Shell({ port, langOverride, credits, build }: { port: UiPort; la
   // Нагадування про код відновлення (GAME-94): тихий рядок після подорожі, не діалог — гра йде далі. Показ фіксуємо в
   // налаштуваннях одразу, як рядок з'явився: після перезавантаження про ту саму подорож він не повертається.
   const [remind, setRemind] = useState<{ trip: string; state: 'ask' | 'done' | 'manual'; code: string } | null>(null);
+  // GAME-95: підказка — тост. Зникає через TOAST_MS або на першу дію гравця (дотик чи клавіша), але лише з екрана:
+  // hintSeen лишається, поки гравець не відкрив ☰ чи паузу, тож після перезавантаження підказка повертається.
+  const [toastGone, setToastGone] = useState(false);
+  const toastLive = !settings.hintSeen && offer.stage === 'create' && !toastGone;
+  useEffect(() => {
+    if (!toastLive) return;
+    const done = (): void => setToastGone(true);
+    const timer = setTimeout(done, TOAST_MS);
+    window.addEventListener('pointerdown', done);
+    window.addEventListener('keydown', done);
+    return () => { clearTimeout(timer); window.removeEventListener('pointerdown', done); window.removeEventListener('keydown', done); };
+  }, [toastLive]);
   const lang: AnyLang = langOverride ?? settings.language;
   const t = (key: Key): string => tr(lang, key);
 
@@ -156,7 +171,7 @@ export function Shell({ port, langOverride, credits, build }: { port: UiPort; la
           <span data-ui="hud-place">{offer.locationKey ? ct(lang, offer.locationKey) : t('ui.noPlace')}</span>
           <span class="ui-hud-line"><span data-ui="hud-time">{`${t('ui.day')} ${offer.day}, ${hh}:${mm}`}</span>{' · '}<span data-ui="hud-money">{money(lang, offer.moneyCents)}</span></span>
           {/* GAME-92: підказка — окремий рядок знизу; місце й «день · гроші» над нею не рухаються (див. .ui-hint в index.html). */}
-          {showHint && <span class="ui-hint" data-ui="hint" role="status">{t('ui.hint')}</span>}
+          {toastLive && <span class="ui-toast" data-ui="hint" role="status">{t('ui.hint')}</span>}
           {/* GAME-89 №6: кампанія завершена — мапа лишається живою (можна ходити), але про кінець видно й поза ☰. */}
           {offer.stage === 'ended' && <span class="ui-hint" data-ui="ended-hint" role="status">{t('ui.endedHint')}</span>}
         </div>
