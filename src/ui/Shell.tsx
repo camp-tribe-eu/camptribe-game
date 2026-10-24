@@ -13,7 +13,7 @@ import type { OfferSummary, StoryOffer } from './story-types';
 /** Скільки тост-підказка висить на екрані (мс), якщо гравець нічого не зробив (GAME-95). Картка: ≤ 6 с. */
 const TOAST_MS = 5000;
 
-export function Shell({ port, langOverride, credits, build }: { port: UiPort; langOverride?: AnyLang; credits: Credits; build: string }) {
+export function Shell({ port, langOverride, credits, build, holdToast = false }: { port: UiPort; langOverride?: AnyLang; credits: Credits; build: string; holdToast?: boolean }) {
   const [paused, setPaused] = useState(false);
   // Підтвердження «Нової гри» (GAME-82): окремий діалог замість меню паузи; Escape — «Ні», а не закрити паузу.
   const [confirmNew, setConfirmNew] = useState(false);
@@ -65,7 +65,7 @@ export function Shell({ port, langOverride, credits, build }: { port: UiPort; la
   useEffect(() => {
     if (!toastLive) return;
     const done = (): void => setToastGone(true);
-    const timer = setTimeout(done, TOAST_MS);
+    const timer = holdToast ? undefined : setTimeout(done, TOAST_MS);   // holdToast — лише e2e (test-switches.ts)
     window.addEventListener('pointerdown', done);
     window.addEventListener('keydown', done);
     return () => { clearTimeout(timer); window.removeEventListener('pointerdown', done); window.removeEventListener('keydown', done); };

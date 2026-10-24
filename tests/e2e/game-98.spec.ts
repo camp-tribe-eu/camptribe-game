@@ -16,7 +16,9 @@ async function open(browser: Browser, vp: { width: number; height: number }, tou
   const ctx = await browser.newContext({ viewport: vp, deviceScaleFactor: 1, ...(touch ? { hasTouch: true, isMobile: true } : {}) });
   const page = await ctx.newPage();
   await page.addInitScript(([k, seen]) => { try { localStorage.setItem(k as string, JSON.stringify({ textScale: 100, language: 'uk', hintSeen: seen })); } catch { /* сховища немає */ } }, [SETTINGS_KEY, hintSeen] as const);
-  await page.goto('/?seed=2');
+  // holdToast: тост живе 5 с від старту, а на повільному CI сторінка готова пізніше — без перемикача тест червонів би
+  // за часом, а не за контрастом (рецензія Fable, GAME-98).
+  await page.goto(hintSeen ? '/?seed=2' : '/?seed=2&holdToast=1');
   await page.waitForFunction(() => (window as unknown as { __game?: { probe: { saveLoaded: boolean } } }).__game?.probe.saveLoaded === true, null, { timeout: 30_000 });
   // Полотно Phaser має встигнути намалювати мапу: інакше «тло» — порожній чорний, і контраст вийшов би завищеним.
   await expect.poll(async () => (await page.locator('#stage canvas').evaluate((el) => el.getBoundingClientRect().height)) / vp.height, { timeout: 15_000 }).toBeGreaterThanOrEqual(0.85);
@@ -94,6 +96,7 @@ async function measure(page: Page, vp: { width: number; height: number }, sel: s
   // Та сама ділянка без рамки — гола мапа; вона мусить бути світлішою, інакше ми зняли не мапу (а, скажімо, чорне порожнє полотно).
   await setStyle(page, HIDE_TEXT, '.ui-header { visibility: hidden !important; }');
   const bare = await lightest(page, line);
+  // Найсвітліший піксель усього екрана без шапки — разом із кнопками дотику (☰/джойстик): це суворіше за «найсвітліший тайл».
   const field = await lightest(page, { x: 0, y: 0, width: vp.width, height: vp.height });
   await setStyle(page, HIDE_TEXT, null);
   expect(under.n, 'зміряно пікселів під рядком').toBe(line.width * line.height);
@@ -121,7 +124,7 @@ for (const vp of [{ width: 844, height: 390 }, { width: 667, height: 375 }]) {
 test('844×390 дотик: тост-підказка поруч із рамкою ≥ 4.5:1 на змішаному тлі', async ({ browser }) => {
   const vp = { width: 844, height: 390 };
   const page = await open(browser, vp, true, false);
-  // Тост живе ≤ 5 с — міряємо одразу; якщо він уже зник, тест червоний, а не «пропущено».
+  // Тост утримано перемикачем holdToast (лише збірка e2e); якщо його немає — тест червоний, а не «пропущено».
   await expect(page.locator('[data-ui="hint"]')).toBeVisible();
   const r = await measure(page, vp, '[data-ui="hint"]', '[data-ui="hint"]');
   expect(r.under, r.note).toBeGreaterThanOrEqual(AA);
