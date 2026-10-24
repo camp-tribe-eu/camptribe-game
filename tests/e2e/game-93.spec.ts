@@ -73,7 +73,9 @@ test.describe('LPC на сцені (десктоп 1280×800)', () => {
 
   test('упертий у стіну персонаж не «йде на місці»: кадр спокою, напрямок до стіни зберігається', async ({ page }) => {
     await open(page);
-    const { end } = await hold(page, 'ArrowRight', () => false, 2500);        // до стіни x=320 і далі тиснемо
+    // GAME-97: до стіни — за умовою (крок фізики йде від згладженої дельти, під навантаженням CI повільніше), далі тиснемо.
+    await hold(page, 'ArrowRight', (q) => q.playerX > 280, 10_000);
+    const { end } = await hold(page, 'ArrowRight', () => false, 1000);
     await page.keyboard.down('ArrowRight');
     await page.waitForTimeout(400);
     const p = await probe(page);
@@ -100,7 +102,7 @@ test.describe('LPC на сцені (десктоп 1280×800)', () => {
 
   test('мапа 32 px: камера їде за персонажем лише по вертикалі (кадр 640 завширшки = мапа), у межах 384 − 352', async ({ page }) => {
     await open(page);
-    const p = (await hold(page, 'ArrowDown', () => false, 1500)).end;
+    const p = (await hold(page, 'ArrowDown', (q) => q.cameraScrollY > 0, 10_000)).end;   // GAME-97: за умовою, а не за часом
     expect(p.cameraScrollY).toBeGreaterThan(0);
     expect(p.cameraScrollY).toBeLessThanOrEqual(32);
   });
