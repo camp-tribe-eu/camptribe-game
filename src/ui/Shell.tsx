@@ -120,7 +120,7 @@ export function Shell({ port, langOverride, credits, build }: { port: UiPort; la
 
   useEffect(() => {
     const trip = offer.lastTrip;
-    if (paused || storyOpen || offer.stage !== 'play' || trip === null || trip === settings.remindedTrip || remind?.trip === trip) return;
+    if (paused || storyOpen || offer.stage === 'create' || trip === null || trip === settings.remindedTrip || remind?.trip === trip) return;
     setRemind({ trip, state: 'ask', code: '' });
     update({ ...settings, remindedTrip: trip });
   }, [paused, storyOpen, offer, settings.remindedTrip]);
@@ -132,7 +132,7 @@ export function Shell({ port, langOverride, credits, build }: { port: UiPort; la
       } catch {
         setRemind((r) => r && { ...r, state: 'manual', code });   // буфер недоступний (дозвіл, не-HTTPS) — показуємо код
       }
-    });
+    }).catch(() => setRemind((r) => r && { ...r, state: 'manual', code: '' }));   // код не зібрано — хоч не мовчимо
   };
   const reminder = remind && remind.trip === offer.lastTrip && !paused && !storyOpen && (
     <div class="ui-reminder" data-ui="recovery-reminder" role="status">
@@ -176,8 +176,8 @@ export function Shell({ port, langOverride, credits, build }: { port: UiPort; la
           {offer.stage === 'ended' && <span class="ui-hint" data-ui="ended-hint" role="status">{t('ui.endedHint')}</span>}
         </div>
         <button type="button" class="ui-pause-btn" data-touch="pause" aria-label={t('ui.pause')} onClick={() => toggle(true)}>{'‖'}</button>
+        {reminder}
       </header>}
-      {reminder}
       {storyOpen && <StoryPanel offer={offer} lang={lang} t={t} act={(id) => port.act(id)} close={() => story(false)}>{staleNotice}</StoryPanel>}
       {paused && confirmNew && (
         <div class="ui-overlay" role="dialog" aria-modal="true" aria-label={t('ui.newGame')} data-ui="confirm-new" onKeyDown={(e) => trapTab(e, e.currentTarget)}>

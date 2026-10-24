@@ -36,7 +36,7 @@
       #ui { display: contents; }
       #stage { position: relative; flex: 1 1 0; min-height: 0; }
       /* Шапка (GAME-92): сітка ☰ | текст | ‖. Текст зліва, рядки на одній лівій межі, однаковий інтервал. */
-      .ui-header { order: -1; flex: none; display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: start; column-gap: var(--gap-inline);
+      .ui-header { order: -1; flex: none; position: relative; display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: start; column-gap: var(--gap-inline);
         box-sizing: border-box; padding: var(--edge-top) var(--edge-right) var(--gap-header-bottom) var(--edge-left); background: #1b1f23; }
       .ui-hud { position: relative; min-width: 0; min-height: var(--header-btn); display: flex; flex-direction: column; justify-content: flex-start; align-items: flex-start; text-align: left;
         /* Два рядки (місце, «день · гроші») стоять посередині висоти кнопки ☰; відступ зверху — той самий із підказкою й без: рядки не стрибають. */
@@ -98,8 +98,9 @@
         background: #2a2f35; color: #e8e6e3; font-size: 1rem; }
       .ui-overlay, .ui-overlay * { box-sizing: border-box; }
             .ui-code { width: 100%; max-width: 560px; font: 0.7rem monospace; background: #111; color: #e8e6e3; border: 1px solid #e8e6e355; border-radius: 6px; padding: 6px; }
-      /* GAME-94: нагадування про код відновлення — тихий рядок під шапкою, у потоці; не діалог, гру не зупиняє. */
-      .ui-reminder { order: -1; flex: none; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; box-sizing: border-box; padding: 4px var(--edge-right) 4px var(--edge-left);
+      /* GAME-94: нагадування про код відновлення — тихий рядок під шапкою ПОВЕРХ поля (як тост GAME-95): поле гри не
+         стискається, коли рядок з'являється чи зникає. Не діалог, гру не зупиняє. */
+      .ui-reminder { position: absolute; left: 0; right: 0; top: 100%; z-index: 4; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; box-sizing: border-box; padding: 4px var(--edge-right) 4px var(--edge-left);
         background: #22262b; color: #e8e6e3; font-size: 0.75rem; line-height: 1.4; }
       .ui-reminder > span, .ui-reminder > textarea { flex: 1 1 200px; min-width: 0; }
       .ui-status { margin: 4px 0 0; width: 100%; font-size: 0.75rem; }

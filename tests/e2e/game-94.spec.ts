@@ -48,12 +48,15 @@ for (const viewport of [{ width: 390, height: 844 }, { width: 844, height: 390 }
       await page.waitForFunction(() => (window as unknown as { __game?: { probe: { saveLoaded: boolean } } }).__game?.probe.saveLoaded === true);
       await page.waitForTimeout(500);
       await expect(reminder(page)).toHaveCount(0);
+      const stage0 = await page.locator('#stage').boundingBox();         // поле гри без нагадування — база
 
       await page.locator('[data-touch="story"]').click();
       await act(page, 'visit', 'loc.shop');                              // дорога: приїзд
       await closeStory(page);
       const r = reminder(page);
       await expect(r).toBeVisible();
+      // Поверх поля, а не в потоці: поле гри не стискається, коли рядок є (рецензія PR #44).
+      expect(await page.locator('#stage').boundingBox(), 'поле гри з нагадуванням').toEqual(stage0);
       await expect(r).toHaveAttribute('role', 'status');
       await expect(page.locator('[role="dialog"]')).toHaveCount(0);      // не модальне
       await expect(r).toContainText('Нічого не горить');
@@ -72,6 +75,7 @@ for (const viewport of [{ width: 390, height: 844 }, { width: 844, height: 390 }
       await expect(r).toBeVisible();
       await r.locator('[data-ui="recovery-close"]').click();
       await expect(r).toHaveCount(0);
+      expect(await page.locator('#stage').boundingBox(), 'поле гри після закриття').toEqual(stage0);
       await ctx.close();
     });
 
