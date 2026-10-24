@@ -35,6 +35,7 @@ const OFF = new Set((process.env.BUDGET_MUTATE_OFF ?? '').split(',').filter(Bool
 export const BUDGET_KEYS = ['totalWarnBytes', 'totalFailBytes', 'fileWarnBytes', 'fileFailBytes', 'maxFiles', 'jsFailBytes', 'firstFrameMaxMs', 'fpsMedianMin', 'fpsSamples'];
 
 /** Читає budgets.json і кидає помилку, якщо файл битий, ключа нема, value не ціле > 0 чи why порожній. off.has('BUDGETS') — мутація: без перевірок. */
+const MIN_FPS_SAMPLES = 5;
 export function loadBudgets(path, off = OFF) {
   const skip = off.has('BUDGETS');
   let raw;
@@ -50,6 +51,8 @@ export function loadBudgets(path, off = OFF) {
     out[k] = e?.value;
   }
   if (!skip && (out.totalWarnBytes >= out.totalFailBytes || out.fileWarnBytes >= out.fileFailBytes)) throw new Error(`${path}: WARN-поріг не менший за FAIL-поріг`);
+  // Картка GAME-38: FPS — медіана з ≥ 5 замірів. Менше — не медіана, а випадковий кадр (рецензія PR #54).
+  if (!skip && out.fpsSamples < MIN_FPS_SAMPLES) throw new Error(`${path}: «fpsSamples» = ${out.fpsSamples}, картка GAME-38 вимагає ≥ ${MIN_FPS_SAMPLES}`);
   return out;
 }
 
@@ -172,6 +175,8 @@ function selfTest(off = new Set()) {
     ['budgets: value 0', JSON.stringify({ ...goodRaw, fpsMedianMin: { value: 0, why: 'x' } }), true],
     ['budgets: empty why', JSON.stringify({ ...goodRaw, jsFailBytes: { value: 1, why: ' ' } }), true],
     ['budgets: warn ≥ fail', JSON.stringify({ ...goodRaw, totalWarnBytes: { ...goodRaw.totalFailBytes } }), true],
+    ['budgets: fpsSamples 4 (< 5, картка)', JSON.stringify({ ...goodRaw, fpsSamples: { value: 4, why: 'x' } }), true],
+    ['budgets: fpsSamples exactly 5', JSON.stringify({ ...goodRaw, fpsSamples: { value: 5, why: 'x' } }), false],
     ['budgets: repository file', JSON.stringify(goodRaw), false],
   ];
   for (const [label, text, wantThrow] of bcases) {
