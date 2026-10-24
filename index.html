@@ -38,7 +38,7 @@
       /* Шапка (GAME-92): сітка ☰ | текст | ‖. Текст зліва, рядки на одній лівій межі, однаковий інтервал. */
       .ui-header { order: -1; flex: none; display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: start; column-gap: var(--gap-inline);
         box-sizing: border-box; padding: var(--edge-top) var(--edge-right) var(--gap-header-bottom) var(--edge-left); background: #1b1f23; }
-      .ui-hud { min-width: 0; min-height: var(--header-btn); display: flex; flex-direction: column; justify-content: flex-start; align-items: flex-start; text-align: left;
+      .ui-hud { position: relative; min-width: 0; min-height: var(--header-btn); display: flex; flex-direction: column; justify-content: flex-start; align-items: flex-start; text-align: left;
         /* Два рядки (місце, «день · гроші») стоять посередині висоти кнопки ☰; відступ зверху — той самий із підказкою й без: рядки не стрибають. */
         padding-top: max(0px, calc((var(--header-btn) - 2 * var(--hud-lh) * 0.8125rem) / 2)); box-sizing: border-box; color: #e8e6e3; font-size: 0.8125rem; line-height: var(--hud-lh); overflow-wrap: break-word; hyphens: auto; }
       .ui-hud [data-ui="hud-place"] { font-weight: 700; }
@@ -49,6 +49,10 @@
          з'являється/зникає тільки всередині панелей (дія в «Подорожі», відкриття ☰/паузи), тож зникнення на очах не буває; рядок
          додається знизу, місце й «день · гроші» від нього не рухаються. Резерв рядка назавжди коштував би ~36 px поля при тексті 200 %. */
       .ui-hint { font-size: 0.75rem; color: #ffd54a; font-weight: 400; }
+      /* GAME-95: підказка — тимчасовий тост: висить ПІД шапкою поверх поля, а не в потоці, тож коли зникає (≤ 5 с чи на першу дію),
+         ні місце, ні годинник, ні кнопки, ні поле гри не зсуваються. Ліва й права межі — межі колонки HUD (GAME-92). */
+      .ui-toast { position: absolute; left: 0; right: 0; top: 100%; z-index: 3; box-sizing: border-box; padding: 2px 6px 2px 0; font-size: 0.75rem; color: #ffd54a;
+        background: #1b1f23d9; pointer-events: none; }
       .ui-story-btn[data-hint="yes"] { outline: 3px solid #ffd54a; outline-offset: 2px; }
       .ui-btn-locked { border-style: dashed; color: #cfcbc7; background: #22262b; cursor: not-allowed; }
       #stage canvas { image-rendering: pixelated; }
@@ -60,10 +64,18 @@
       /* Джойстик (знизу ліворуч) і кругла кнопка дії (знизу праворуч) лежать просто на мапі, напівпрозорі (GAME-91). */
       .touch-stick { position: absolute; left: var(--edge-left); bottom: var(--edge-bottom); width: var(--stick-size); height: var(--stick-size);
         box-sizing: border-box; border: 2px solid #e8e6e3aa; border-radius: 50%; background: #00000055; touch-action: none; }
+      /* GAME-95: плаваюча основа. У спокої — бліда знизу ліворуч; під пальцем (data-active) — на повну яскравість, а left/bottom
+         ставить touch.ts (центр під пальцем). Опації плавності немає: prefers-reduced-motion і так нічого не анімує. */
+      .touch-stick:not([data-active]) { opacity: 0.4; }
+      .touch-stick[data-active] { opacity: 1; }
       .touch-knob { position: absolute; left: 50%; top: 50%; width: var(--knob-size); height: var(--knob-size); margin: calc(var(--knob-size) / -2) 0 0 calc(var(--knob-size) / -2); border-radius: 50%;
         background: #e8e6e3aa; border: 2px solid #1b1f23aa; box-sizing: border-box; pointer-events: none; }
       .touch-interact { position: absolute; right: var(--edge-right); bottom: var(--edge-bottom); width: var(--action-size); height: var(--action-size);
         border: 2px solid #e8e6e3aa; border-radius: 50%; background: #00000066; color: #e8e6e3; font-size: 1.5rem; padding: 0; touch-action: none; }
+      /* GAME-95: кнопка дії за ціллю. idle — бліда (натискається, нічого не робить); ready — яскрава, жовта рамка, значок цілі. */
+      .touch-interact { display: flex; align-items: center; justify-content: center; }
+      .touch-interact[data-state="idle"] { opacity: 0.45; }
+      .touch-interact[data-state="ready"] { opacity: 1; border-color: #ffd54a; background: #000000bb; color: #ffd54a; }
       .touch-stick[hidden], .touch-interact[hidden] { display: none; }
       .ui-pause-btn, .ui-story-btn { flex: none; min-width: var(--header-btn); min-height: var(--header-btn); border-radius: 12px;
         border: 2px solid #e8e6e3aa; background: #00000066; color: #e8e6e3; font-size: 1.25rem; padding: 0; }
