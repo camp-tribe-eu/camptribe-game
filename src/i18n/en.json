@@ -71,6 +71,7 @@
   "ui.weather.sunny": "sunny",
   "ui.weather.cloudy": "cloudy",
   "ui.weather.rain": "rain",
+  "ui.forecast.today": "Forecast for today",
   "ui.hud": "Where you are, when, and how much money",
   "ui.day": "Day",
   "ui.noPlace": "no place yet",

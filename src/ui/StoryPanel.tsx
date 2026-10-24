@@ -94,6 +94,11 @@ export function StoryPanel({ offer, lang, t, act, close, children }: { offer: St
       {offer.stage !== 'create' && (
         <p class="ui-status" data-ui="where" tabIndex={-1} role="status" data-weather={offer.weather}>{`${t('ui.here')}: ${ct(lang, offer.locationKey)} · ${t('ui.money')}: ${money(lang, offer.moneyCents)} · ${t('ui.weather')}: ${t(WX[offer.weather])}`}</p>
       )}
+      {offer.stage !== 'create' && (
+        // GAME-169: прогноз на сьогодні (GAME-131) — окремим рядком від факту й зі словом «прогноз»: він може не збутись,
+        // і гравець має бачити обидва. Та сама лексика підписів, що й у погоди (WX). Не кнопка — без цілі 44 px.
+        <p class="ui-status" data-ui="forecast" data-forecast={offer.forecast} data-hit={offer.forecast === offer.weather ? 'yes' : 'no'}>{`${t('ui.forecast.today')}: ${t(WX[offer.forecast])}`}</p>
+      )}
       {offer.stage === 'ended' && <p class="ui-status" data-ui="ended" role="status">{t('ui.ended')}</p>}
       {offer.quests.map((q) => (
         <section class="ui-quest" data-ui="quest" key={q.key}>
