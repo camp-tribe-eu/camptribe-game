@@ -416,7 +416,7 @@ test('прохід керується лише кліками й клавіша�
 });
 
 // GAME-32 · Еліза стоїть на мапі кемпінгу: до неї доходять пішки й заговорюють клавішею дії.
-interface Probe { playerX: number; playerY: number; nearObject: string | null }
+interface Probe { playerX: number; playerY: number; nearObject: string | null; fps: number }
 const probe = (page: Page): Promise<Probe> => page.evaluate(() => ({ ...(window as unknown as { __game: { probe: Probe } }).__game.probe }));
 /** Точка Елізи з мапи (public/maps/camp-lake.tmj) — ціль за координатою, як у world.spec (CI PR #53: кроки за годинником
  *  на повільному CI то не доходили, то проскакували зону Ø 96 px). Звірка з мапою — нижче, щоб константа не застаріла. */
@@ -449,12 +449,15 @@ async function walkToElise(page: Page): Promise<void> {
   const o = map.layers.flatMap((l) => l.objects ?? []).find((n) => n.name === 'npc.elise');
   expect({ x: o?.x, y: o?.y }, 'Еліза на мапі зсунулась — онови ELISE').toEqual(ELISE);
   // Довертаємо за координатою по обох осях: X до ±16 px, потім Y до точки Елізи (зона дії Ø 96 px).
+  const trail: string[] = [];   // шлях у тексті падіння: CI червонів без даних, локально (і при CPU ×8) зелений
   for (let i = 0; i < 12 && (await probe(page)).nearObject !== 'npc.elise'; i++) {
     const p = await probe(page);
+    trail.push(`${Math.round(p.playerX)},${Math.round(p.playerY)}@${p.fps.toFixed(1)}fps`);
     if (Math.abs(p.playerX - ELISE.x) > 16) await walkInPage(page, p.playerX > ELISE.x ? 'ArrowLeft' : 'ArrowRight', 'playerX', ELISE.x);
     else await walkInPage(page, p.playerY > ELISE.y ? 'ArrowUp' : 'ArrowDown', 'playerY', ELISE.y);
   }
-  expect((await probe(page)).nearObject).toBe('npc.elise');
+  const last = await probe(page);
+  expect(last.nearObject, `шлях до Елізи: ${trail.join(' → ')} → ${Math.round(last.playerX)},${Math.round(last.playerY)}`).toBe('npc.elise');
 }
 
 test.describe('Еліза на мапі (клавіатура)', () => {
