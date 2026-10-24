@@ -5,8 +5,8 @@
 import { expect, test, type Browser, type CDPSession, type Page } from '@playwright/test';
 
 const SETTINGS_KEY = 'camplife.settings.v1';
-// Два положення телефона: сторч і горизонтально (власник: грати будуть горизонтально, як Stardew mobile) — кожен тест іде в обох.
-const VIEWPORTS = [{ width: 390, height: 844 }, { width: 844, height: 390 }] as const;
+// GAME-96: телефон грають лише горизонтально (сторч — накладка «Поверни», див. game-96.spec.ts); сторч-варіант прибрано.
+const VIEWPORTS = [{ width: 844, height: 390 }] as const;
 type Vp = { readonly width: number; readonly height: number };
 interface Probe { ready: boolean; playerX: number; playerY: number; nearObject: string | null; nearKind: string | null; commandsSent: number; cameraScrollX: number; cameraScrollY: number }
 interface Rect { left: number; top: number; right: number; bottom: number; width: number; height: number }

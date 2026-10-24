@@ -1,5 +1,7 @@
 {
   "ui.paused": "Paused",
+  "ui.rotate": "Rotate your phone",
+  "ui.rotateHint": "The game is played in landscape. Turn the screen: the game waits and your save is safe.",
   "ui.resume": "Resume",
   "ui.settings": "Settings",
   "ui.textSize": "Text size",

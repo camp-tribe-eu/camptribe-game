@@ -73,7 +73,7 @@ test('налаштування переживають перезавантаже
 });
 
 test.describe('дотик: пауза без клавіатури (телефон)', () => {
-  test.use({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true });
+  test.use({ viewport: { width: 844, height: 390 }, hasTouch: true, isMobile: true });
   test('кнопка ‖ ставить паузу, «Продовжити» знімає', async ({ page }) => {
     await open(page);
     await page.locator('[data-touch="pause"]').tap();

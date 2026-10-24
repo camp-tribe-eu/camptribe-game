@@ -147,7 +147,7 @@ test.describe('клавіатура (десктоп)', () => {
 });
 
 const VIEWPORTS = [
-  { name: 'телефон', width: 390, height: 844, isMobile: true },
+  { name: 'телефон', width: 844, height: 390, isMobile: true },
   { name: 'планшет', width: 820, height: 1180, isMobile: true },
   { name: 'десктоп з дотиком', width: 1280, height: 800, isMobile: false },
 ] as const;
@@ -248,7 +248,7 @@ for (const vp of VIEWPORTS) {
 }
 
 test.describe('підписи дотикових кнопок мовою гравця (GAME-30 #3)', () => {
-  test.use({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true });
+  test.use({ viewport: { width: 844, height: 390 }, hasTouch: true, isMobile: true });
 
   test('aria-label кнопок сцени — з словника, і змінюється разом із мовою', async ({ page }) => {
     await open(page);
@@ -261,7 +261,7 @@ test.describe('підписи дотикових кнопок мовою гра�
 });
 
 test.describe('поворот екрана (телефон)', () => {
-  test.use({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true });
+  test.use({ viewport: { width: 844, height: 390 }, hasTouch: true, isMobile: true });
 
   test('поворот не втрачає стан сцени', async ({ page }) => {
     await open(page);
@@ -270,7 +270,11 @@ test.describe('поворот екрана (телефон)', () => {
     // (PR #31, CI). Чекаємо, доки позиція стоїть між двома зчитуваннями, — і лише тоді міряємо поворот.
     await expect.poll(async () => { const a = await probe(page); await page.waitForTimeout(120); const b = await probe(page); return Math.abs(a.playerY - b.playerY) + Math.abs(a.playerX - b.playerX); }, { timeout: 5_000 }).toBeLessThan(0.1);
     const before = await probe(page);
+    // GAME-96: вбік → сторч (накладка «Поверни», гра на паузі) → знову вбік; стан сцени той самий.
+    await page.setViewportSize({ width: 390, height: 844 });
+    await expect(page.locator('[data-ui="rotate"]')).toBeVisible();
     await page.setViewportSize({ width: 844, height: 390 });
+    await expect(page.locator('[data-ui="rotate"]')).toHaveCount(0);
     await page.waitForTimeout(300);
     const after = await probe(page);
     expect(after.ready).toBe(true);
@@ -289,9 +293,13 @@ test.describe('поворот екрана (телефон)', () => {
     await holdTouch(page, 'down', (p) => p.playerY > 220);
     const before = await probe(page);
     const cdp = await page.context().newCDPSession(page);
+    // GAME-96: гра йде вбік, тож справжній поворот — у сторч (накладка) і назад.
+    await cdp.send('Emulation.setDeviceMetricsOverride', { width: 390, height: 844, deviceScaleFactor: 3, mobile: true, screenOrientation: { type: 'portraitPrimary', angle: 0 } });
+    await expect(page.locator('[data-ui="rotate"]')).toBeVisible();
     await cdp.send('Emulation.setDeviceMetricsOverride', { width: 844, height: 390, deviceScaleFactor: 3, mobile: true, screenOrientation: { type: 'landscapePrimary', angle: 90 } });
+    await expect(page.locator('[data-ui="rotate"]')).toHaveCount(0);
     await page.waitForTimeout(400);
-    expect(await page.evaluate(() => ({ type: screen.orientation.type, fired: (window as unknown as { __rot: number }).__rot }))).toEqual({ type: 'landscape-primary', fired: 1 });
+    expect(await page.evaluate(() => ({ type: screen.orientation.type, fired: (window as unknown as { __rot: number }).__rot }))).toEqual({ type: 'landscape-primary', fired: 2 });
     const after = await probe(page);
     expect(after.playerX).toBeCloseTo(before.playerX, 0);
     expect(after.playerY).toBeCloseTo(before.playerY, 0);

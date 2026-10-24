@@ -7,7 +7,7 @@ interface Core { worldSeed: number; game: { player: unknown } }
 const core = (page: Page): Promise<Core> => page.evaluate(() => (window as unknown as { __game: { read: () => Core } }).__game.read());
 
 async function phone(browser: Browser, scale: 100 | 200): Promise<Page> {
-  const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true });
+  const ctx = await browser.newContext({ viewport: { width: 844, height: 390 }, hasTouch: true, isMobile: true });
   const page = await ctx.newPage();
   await page.addInitScript(([k, s]) => { try { localStorage.setItem(k, JSON.stringify({ textScale: s, language: 'uk', hintSeen: true })); } catch { /* сховища немає */ } }, [SETTINGS_KEY, scale] as const);
   return page;
@@ -57,7 +57,7 @@ test.describe('№3 і №2 · «Нова гра»', () => {
 });
 
 for (const scale of [100, 200] as const) {
-  test(`№4 телефон 390×844, текст ${scale} %: канва ціла в полі гри, нічого не обрізано, порожнечі над мапою немає`, async ({ browser }) => {
+  test(`№4 телефон 844×390, текст ${scale} %: канва ціла в полі гри, нічого не обрізано, порожнечі над мапою немає`, async ({ browser }) => {
     const page = await phone(browser, scale);
     await load(page, '/?seed=2');
     const m = await page.evaluate(() => {
@@ -80,13 +80,12 @@ for (const scale of [100, 200] as const) {
     expect(m.canvas.bottom).toBeLessThanOrEqual(m.stage.bottom + eps);
     // Видима пропорція = пропорція буфера кадру: канву не розтягнуто й не обрізано CSS.
     expect(Math.abs(m.canvas.width / m.canvas.height - m.buffer.w / m.buffer.h)).toBeLessThan(0.01);
-    // Широка по ширині поля (FIT по ширині), а не смужка серед порожнечі.
-    expect(m.canvas.width).toBeGreaterThanOrEqual(m.stage.width * 0.98);   // GAME-91: ціле k ріже кадр до floor(w / k) — до k px недобору, не смужка
-    // Над мапою — одразу шапка, без смуги: верх канви = верх поля = низ шапки.
+    // GAME-96: вбік кадр широкий (640×352), FIT по ВИСОТІ поля — на весь екран, а не смужка; шапка лежить на мапі, тож поле = екран.
+    expect(m.canvas.height).toBeGreaterThanOrEqual(m.stage.height * 0.95);
     expect(m.canvas.top - m.stage.top).toBeLessThanOrEqual(eps);
-    expect(Math.abs(m.stage.top - m.header.bottom)).toBeLessThanOrEqual(eps);
+    expect(m.stage.top).toBeLessThanOrEqual(eps);
     // GAME-91: дотикові елементи лежать НА мапі (напівпрозорі), у межах екрана; сторінка не прокручується убік.
-    for (const b of m.touch) { expect(b.left).toBeGreaterThanOrEqual(-eps); expect(b.right).toBeLessThanOrEqual(390 + eps); expect(b.bottom).toBeLessThanOrEqual(m.canvas.bottom + eps); }
+    for (const b of m.touch) { expect(b.left).toBeGreaterThanOrEqual(-eps); expect(b.right).toBeLessThanOrEqual(844 + eps); expect(b.bottom).toBeLessThanOrEqual(m.canvas.bottom + eps); }
     expect(m.scroll.x).toBeLessThanOrEqual(0);
   });
 }

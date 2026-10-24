@@ -28,7 +28,7 @@ async function start(page: Page, url = '/'): Promise<void> {
   await act(page, 'complete', 'q.st-002');
 }
 
-test.use({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true });
+test.use({ viewport: { width: 844, height: 390 }, hasTouch: true, isMobile: true });
 
 test('F5 без паузи після двох квестів: персонаж, квести, гроші й журнал на місці', async ({ page }) => {
   await start(page);

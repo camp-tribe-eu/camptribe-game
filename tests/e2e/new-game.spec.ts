@@ -33,7 +33,7 @@ async function askNewGame(page: Page): Promise<void> {
   await expect(confirm(page)).toBeVisible();
 }
 
-test.use({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true });
+test.use({ viewport: { width: 844, height: 390 }, hasTouch: true, isMobile: true });
 
 test('скасування нічого не змінює: журнал, гроші й гравець ті самі', async ({ page }) => {
   await playSome(page);

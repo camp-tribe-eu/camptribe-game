@@ -7,6 +7,8 @@ import { t as tr, type AnyLang, type Key } from '../i18n';
 import { ct } from '../i18n/content';
 import { StoryPanel, money } from './StoryPanel';
 import { trapTab } from './focus-trap';
+import { hasTouch, needsRotate } from '../platform/phone';
+import { RotateIcon } from '../platform/rotate-icon';
 import type { StoryOffer } from './story-types';
 
 /** Скільки тост-підказка висить на екрані (мс), якщо гравець нічого не зробив (GAME-95). Картка: ≤ 6 с. */
@@ -39,6 +41,25 @@ export function Shell({ port, langOverride, credits, build }: { port: UiPort; la
     window.addEventListener('keydown', done);
     return () => { clearTimeout(timer); window.removeEventListener('pointerdown', done); window.removeEventListener('keydown', done); };
   }, [toastLive]);
+  // GAME-96: телефон сторч — накладка «Поверни телефон», гра на паузі під нею. Паузу тримаємо ЛИШЕ якщо її не було (меню, ☰):
+  // overlayHeld — «паузу поставила саме накладка»; зняти можна тільки її. Без таймера: стежимо за подією resize.
+  const readRotate = (): boolean => needsRotate(hasTouch(), window.innerWidth, window.innerHeight);
+  const [rotate, setRotate] = useState(readRotate);
+  useEffect(() => {
+    const on = (): void => setRotate(readRotate());
+    window.addEventListener('resize', on);
+    window.addEventListener('orientationchange', on);
+    return () => { window.removeEventListener('resize', on); window.removeEventListener('orientationchange', on); };
+  }, []);
+  const overlayHeld = useRef(false);
+  const busy = useRef(false);
+  busy.current = paused || storyOpen;
+  useEffect(() => {
+    if (rotate && !overlayHeld.current && !busy.current) { overlayHeld.current = true; port.setPaused(true); }
+    else if (!rotate && overlayHeld.current) { overlayHeld.current = false; if (!busy.current) port.setPaused(false); }
+  }, [rotate]);
+  const rotateRef = useRef<HTMLDivElement>(null);
+  useEffect(() => { if (rotate) rotateRef.current?.focus(); }, [rotate]);
   const lang: AnyLang = langOverride ?? settings.language;
   const t = (key: Key): string => tr(lang, key);
 
@@ -81,11 +102,12 @@ export function Shell({ port, langOverride, credits, build }: { port: UiPort; la
     const onKey = (e: KeyboardEvent): void => {
       if (e.code !== 'Escape') return;
       e.preventDefault();
+      if (rotate) return;   // GAME-96: під накладкою «Поверни» пауза не наша — Escape її не зачіпає
       if (confirmNew) setConfirmNew(false); else if (storyOpen) story(false); else toggle(!paused);
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [paused, storyOpen, confirmNew]);
+  }, [paused, storyOpen, confirmNew, rotate]);
 
   // Фокус — у діалог, щоб клавіатура й екранний читач починали з «Продовжити».
   useEffect(() => {
@@ -136,7 +158,7 @@ export function Shell({ port, langOverride, credits, build }: { port: UiPort; la
       {/* GAME-91: шапка — ☰ ліворуч, ‖ праворуч, текст (HUD) між ними. Усе в одному ряду потоку, а не абсолютом: кнопки
           ніколи не лежать на тексті, при 200 % текст переноситься в середній колонці. Під діалогом шапки немає: дані HUD є
           в самому діалозі, а схована смуга під ним збивала вимірювання контрасту (axe). */}
-      {!paused && !storyOpen && <header class="ui-header">
+      {!paused && !storyOpen && !rotate && <header class="ui-header">
         <button type="button" class="ui-story-btn" data-hint={showHint || offer.stage === 'ended' ? 'yes' : undefined} data-touch="story" aria-label={t('ui.story')} onClick={() => story(true)}>{'☰'}</button>
         <div class="ui-hud" data-ui="hud" role="group" aria-label={t('ui.hud')}>
           <span data-ui="hud-place">{offer.locationKey ? ct(lang, offer.locationKey) : t('ui.noPlace')}</span>
@@ -149,6 +171,13 @@ export function Shell({ port, langOverride, credits, build }: { port: UiPort; la
         <button type="button" class="ui-pause-btn" data-touch="pause" aria-label={t('ui.pause')} onClick={() => toggle(true)}>{'‖'}</button>
       </header>}
       {storyOpen && <StoryPanel offer={offer} lang={lang} t={t} act={(id) => port.act(id)} close={() => story(false)}>{staleNotice}</StoryPanel>}
+      {rotate && (
+        <div class="ui-overlay ui-rotate" role="dialog" aria-modal="true" aria-label={t('ui.rotate')} data-ui="rotate" tabIndex={-1} ref={rotateRef} onKeyDown={(e) => trapTab(e, e.currentTarget)}>
+          <RotateIcon />
+          <h2>{t('ui.rotate')}</h2>
+          <p>{t('ui.rotateHint')}</p>
+        </div>
+      )}
       {paused && confirmNew && (
         <div class="ui-overlay" role="dialog" aria-modal="true" aria-label={t('ui.newGame')} data-ui="confirm-new" onKeyDown={(e) => trapTab(e, e.currentTarget)}>
           <h2>{t('ui.newGame')}</h2>

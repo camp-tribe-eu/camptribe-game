@@ -34,7 +34,7 @@ async function newPage(browser: Browser, vp: Vp, scale: 100 | 200, opts: { hintS
 }
 
 // 320×568 — найвужчий живий телефон (iPhone SE 1): рецензія PR #35 — раніше лише арифметикою.
-const PHONES: Vp[] = [{ width: 320, height: 568 }, { width: 390, height: 844 }, { width: 375, height: 667 }, { width: 360, height: 800 }, { width: 412, height: 915 }];
+const PHONES: Vp[] = [{ width: 568, height: 320 }, { width: 844, height: 390 }, { width: 667, height: 375 }, { width: 800, height: 360 }, { width: 915, height: 412 }];
 const CONTROLS = { 'ширма ☰': '[data-touch="story"]', 'пауза ‖': '[data-touch="pause"]', 'джойстик': '[data-touch="stick"]', 'кнопка дії': '[data-touch="interact"]' } as const;
 
 for (const vp of PHONES) {
@@ -60,8 +60,8 @@ for (const vp of PHONES) {
 }
 
 for (const scale of [100, 200] as const) for (const hint of [false, true]) {
-  test(`шапка 390×844, текст ${scale} %${hint ? ' з підказкою' : ''}: проміжки ☰↔текст і текст↔‖ ≥ 8 px, без перетинів, рядки на одній лівій межі`, async ({ browser }) => {
-    const page = await newPage(browser, { width: 390, height: 844 }, scale, { hintSeen: !hint });
+  test(`шапка 844×390, текст ${scale} %${hint ? ' з підказкою' : ''}: проміжки ☰↔текст і текст↔‖ ≥ 8 px, без перетинів, рядки на одній лівій межі`, async ({ browser }) => {
+    const page = await newPage(browser, { width: 844, height: 390 }, scale, { hintSeen: !hint });
     if (hint) await expect(page.locator('[data-ui="hint"]')).toBeVisible();
     const [menu, pause, hud, place, time, money] = await Promise.all(['[data-touch="story"]', '[data-touch="pause"]', '[data-ui="hud"]', '[data-ui="hud-place"]', '[data-ui="hud-time"]', '[data-ui="hud-money"]'].map((q) => rectOf(page, q)));
     if (!menu || !pause || !hud || !place || !time || !money) throw new Error('немає елемента шапки');
@@ -82,11 +82,11 @@ for (const scale of [100, 200] as const) for (const hint of [false, true]) {
 
 test('підказка зникає: місце й «день · гроші» не рухаються, ☰ і ‖ теж; підказка — окремий рядок нижче (100 %, 390×844)', async ({ browser }) => {
   const sel = ['[data-ui="hud-place"]', '[data-ui="hud-time"]', '[data-touch="story"]', '[data-touch="pause"]'];
-  const withHint = await newPage(browser, { width: 390, height: 844 }, 100, { hintSeen: false });
+  const withHint = await newPage(browser, { width: 844, height: 390 }, 100, { hintSeen: false });
   await expect(withHint.locator('[data-ui="hint"]')).toBeVisible();
   const a = await Promise.all(sel.map((q) => rectOf(withHint, q)));
   const hint = await rectOf(withHint, '[data-ui="hint"]');
-  const without = await newPage(browser, { width: 390, height: 844 }, 100, { hintSeen: true });
+  const without = await newPage(browser, { width: 844, height: 390 }, 100, { hintSeen: true });
   await expect(without.locator('[data-ui="hint"]')).toHaveCount(0);
   const b = await Promise.all(sel.map((q) => rectOf(without, q)));
   sel.forEach((q, i) => {
@@ -99,7 +99,7 @@ test('підказка зникає: місце й «день · гроші» н
 });
 
 test('вирізи екрана (CDP-емуляція env(safe-area-inset-*)): ☰, ‖, джойстик і кнопка дії поза вирізами плюс базовий відступ', async ({ browser }) => {
-  const vp = { width: 390, height: 844 };
+  const vp = { width: 844, height: 390 };
   const ins = { top: 47, right: 20, bottom: 34, left: 24 };
   const page = await newPage(browser, vp, 100, { insets: ins });
   // Спершу доводимо, що емуляція справді діє (інакше перевірка нижче була б порожньою): токен читає env().

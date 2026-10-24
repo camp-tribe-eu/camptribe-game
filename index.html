@@ -113,6 +113,20 @@
       /* Ховати дотикові кнопки лише там, де немає жодного дотикового вказівника (any-pointer):
          сенсорний ноутбук має pointer: fine, але any-pointer: coarse — кнопки лишаються. */
       @media not (any-pointer: coarse) { .touch { display: none; } }
+      /* GAME-96: телефон грають горизонтально (як Stardew Valley mobile). Низький широкий екран із дотиком (≤ 500 px заввишки) —
+         карта на ВЕСЬ екран, а шапка (☰, текст, ‖) лежить на ній прозорим рядком: у потоці вона з'їла б ≥ 18 % висоти. Бокові виміри
+         --edge-left/right уже додають виріз (чубчик збоку!) до відступу 16 px; кнопки ловлять дотик, текст — ні. */
+      @media (any-pointer: coarse) and (orientation: landscape) and (max-height: 500px) {
+        :root { --header-btn: 44px; --stick-size: 112px; --action-size: 80px; }
+        .ui-header { position: absolute; top: 0; left: 0; right: 0; z-index: 2; background: transparent; pointer-events: none; padding-bottom: 0; }
+        .ui-header button { pointer-events: auto; }
+        .ui-hud { border-radius: 8px; background: #1b1f23b3; box-shadow: 0 0 0 4px #1b1f23b3; }
+        .ui-story-btn, .ui-pause-btn { background: #000000aa; }
+      }
+      /* GAME-96: накладка «Поверни телефон» (телефон сторч) лежить над усім, навіть над меню паузи. */
+      .ui-rotate { z-index: 10; background: #1b1f23; place-content: center; }
+      .ui-rotate:focus { outline: none; }
+      .ui-rotate-icon { color: #ffd54a; }
       /* GAME-39 #3: гравець попросив менше руху — жодних анімацій і переходів в інтерфейсі, навіть доданих пізніше
          чи вписаних у style (!important перебиває інлайн). Перевірка — tests/e2e/a11y.spec.ts. */
       @media (prefers-reduced-motion: reduce) {

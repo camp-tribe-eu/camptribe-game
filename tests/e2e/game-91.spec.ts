@@ -47,11 +47,11 @@ async function drag(page: Page, dx: number, dy: number, ms: number, during?: () 
   await page.waitForTimeout(100);
 }
 
-const PHONES = [{ width: 390, height: 844 }, { width: 375, height: 667 }, { width: 360, height: 800 }] as const;
+const PHONES = [{ width: 844, height: 390 }, { width: 667, height: 375 }, { width: 800, height: 360 }] as const;
 
 for (const vp of PHONES) {
-  test.describe(`телефон сторч ${vp.width}×${vp.height}`, () => {
-    test(`мапа на весь екран: канва ≥ 95 % ширини й ≥ 75 % висоти вікна; камера везе персонажа, він завжди в кадрі`, async ({ browser }) => {
+  test.describe(`телефон вбік ${vp.width}×${vp.height}`, () => {
+    test(`мапа на весь екран: канва ≥ 85 % висоти вікна (GAME-96); персонаж завжди в кадрі`, async ({ browser }) => {
       const page = await newPage(browser, vp, 100);
       await createCharacter(page);
       await page.waitForTimeout(300);
@@ -60,14 +60,12 @@ for (const vp of PHONES) {
         const r = c.getBoundingClientRect();
         return { w: r.width, h: r.height, bufW: c.width, bufH: c.height, vw: innerWidth, vh: innerHeight };
       });
-      expect(m.w, `ширина ${m.w} з ${m.vw}`).toBeGreaterThanOrEqual(m.vw * 0.95);
-      expect(m.h, `висота ${m.h} з ${m.vh}`).toBeGreaterThanOrEqual(m.vh * 0.75);
-      // Пікселі чіткі: масштаб буфера → екран цілий (допуск на пів-відсотка округлення поля).
-      const k = m.w / m.bufW;
-      expect(Math.abs(k - Math.round(k)), `масштаб ${k}`).toBeLessThan(0.05);
+      expect(m.h, `висота ${m.h} з ${m.vh}`).toBeGreaterThanOrEqual(m.vh * 0.85);
+      // GAME-96: вбік кадр сталий 640×352 і вписується в поле (FIT), тож масштаб дробовий; чіткість пікселів дає image-rendering: pixelated.
+      expect(m.w / m.bufW, 'масштаб ≥ 1').toBeGreaterThanOrEqual(1);
       await page.screenshot({ path: `test-results/game-91-${vp.width}x${vp.height}.png` });
 
-      // Мапа 640 px завширшки, кадр — ~200 (GAME-93): без камери персонаж, що дійшов до правої стіни, вийшов би за кадр.
+      // Вбік кадр 640×352 майже вся мапа (GAME-96): камера лише підтримує персонажа в кадрі по вертикалі.
       const inFrame = async (): Promise<{ x: number; y: number }> => { const p = await probe(page); return { x: p.playerX - p.cameraScrollX, y: p.playerY - p.cameraScrollY }; };
       let farthest = 0;
       for (const [dx, dy] of [[50, 0], [0, 50], [-50, 0], [0, -50]] as const) {
@@ -84,8 +82,7 @@ for (const vp of PHONES) {
       await drag(page, 50, 0, 3000);
       const end = await probe(page);
       farthest = Math.max(farthest, end.playerX);
-      expect(farthest, 'дійшов далі за ширину кадру — без камери зник би').toBeGreaterThan(m.bufW);
-      expect(end.cameraScrollX, 'камера справді поїхала').toBeGreaterThan(0);
+      expect(farthest, 'дійшов далеко вправо').toBeGreaterThan(200);
       const s = await inFrame();
       expect(s.x).toBeGreaterThanOrEqual(0);
       expect(s.x).toBeLessThanOrEqual(m.bufW);
@@ -96,14 +93,14 @@ for (const vp of PHONES) {
 
 // Шапка: ☰ зліва, ‖ справа, текст посередині; жодних перетинів, також при тексті 200 % і з підказкою першого запуску.
 for (const scale of [100, 200] as const) for (const hint of [false, true]) {
-  test(`шапка 390×844, текст ${scale} %${hint ? ', з підказкою першого запуску' : ''}: ☰ ліворуч, ‖ праворуч, текст між ними без перетинів`, async ({ browser }) => {
-    const page = await newPage(browser, { width: 390, height: 844 }, scale, { hintSeen: !hint });
+  test(`шапка 844×390, текст ${scale} %${hint ? ', з підказкою першого запуску' : ''}: ☰ ліворуч, ‖ праворуч, текст між ними без перетинів`, async ({ browser }) => {
+    const page = await newPage(browser, { width: 844, height: 390 }, scale, { hintSeen: !hint });
     if (hint) await expect(page.locator('[data-ui="hint"]')).toBeVisible();
     const [menu, pause, hud, place, time, money, header] = await Promise.all(
       ['[data-touch="story"]', '[data-touch="pause"]', '[data-ui="hud"]', '[data-ui="hud-place"]', '[data-ui="hud-time"]', '[data-ui="hud-money"]', '.ui-header'].map((q) => rectOf(page, q)));
     if (!menu || !pause || !hud || !place || !time || !money || !header) throw new Error('немає елемента шапки');
     expect(menu.left, '☰ у лівому куті').toBeLessThan(20);
-    expect(390 - pause.right, '‖ у правому куті').toBeLessThan(20);
+    expect(844 - pause.right, '‖ у правому куті').toBeLessThan(20);
     expect(menu.top).toBeLessThan(20);
     expect(pause.top).toBeLessThan(20);
     expect(menu.right, '☰ ліворуч від тексту').toBeLessThanOrEqual(hud.left + 0.5);
@@ -124,16 +121,16 @@ for (const scale of [100, 200] as const) for (const hint of [false, true]) {
 
 test.describe('джойстик', () => {
   test('ціль ≥ 44×44; вісім напрямків рухають персонажа в свій бік; ручка їде за пальцем; відпустив — стоїть', async ({ browser }) => {
-    const page = await newPage(browser, { width: 390, height: 844 }, 100);
+    const page = await newPage(browser, { width: 844, height: 390 }, 100);
     await createCharacter(page);
     const base = await rectOf(page, '[data-touch="stick"]');
     expect(base.width).toBeGreaterThanOrEqual(44);
     expect(base.height).toBeGreaterThanOrEqual(44);
     expect(base.left, 'знизу ліворуч').toBeLessThan(40);
-    expect(844 - base.bottom, 'знизу ліворуч').toBeLessThan(60);
+    expect(390 - base.bottom, 'знизу ліворуч').toBeLessThan(60);
     const act = await rectOf(page, '[data-touch="interact"]');
     expect(act.width).toBeGreaterThanOrEqual(44);
-    expect(390 - act.right, 'кнопка дії знизу праворуч').toBeLessThan(40);
+    expect(844 - act.right, 'кнопка дії знизу праворуч').toBeLessThan(40);
     expect(meets(base, act)).toBe(false);
 
     // Порядок: пара, що повертає на місце, — щоб не впертися в стіну.
@@ -172,7 +169,7 @@ test.describe('джойстик', () => {
   });
 
   test('мишею (вказівник): потягнув — пішов, відпустив — зупинився', async ({ browser }) => {
-    const page = await newPage(browser, { width: 390, height: 844 }, 100);
+    const page = await newPage(browser, { width: 844, height: 390 }, 100);
     await createCharacter(page);
     const box = await page.locator('[data-touch="stick"]').boundingBox();
     if (!box) throw new Error('джойстика немає');
@@ -200,7 +197,7 @@ test.describe('джойстик', () => {
   });
 
   test('дрібний зсув у мертвій зоні не рухає персонажа', async ({ browser }) => {
-    const page = await newPage(browser, { width: 390, height: 844 }, 100);
+    const page = await newPage(browser, { width: 844, height: 390 }, 100);
     const a = await probe(page);
     await drag(page, 6, 6, 400);
     const b = await probe(page);
@@ -236,7 +233,7 @@ test.describe('джойстик', () => {
 
   for (const type of ['pointercancel', 'lostpointercapture']) {
     test(`${type} посеред утримання: персонаж зупиняється, жоден напрямок не лишається`, async ({ browser }) => {
-      const page = await newPage(browser, { width: 390, height: 844 }, 100);
+      const page = await newPage(browser, { width: 844, height: 390 }, 100);
       await createCharacter(page);
       await trackPointerId(page);
       await drag(page, 0, 50, 350, async () => {
@@ -249,7 +246,7 @@ test.describe('джойстик', () => {
   }
 
   test('blur вікна посеред утримання: персонаж зупиняється', async ({ browser }) => {
-    const page = await newPage(browser, { width: 390, height: 844 }, 100);
+    const page = await newPage(browser, { width: 844, height: 390 }, 100);
     await createCharacter(page);
     await drag(page, 0, 50, 350, async () => {
       await movingNow(page);
@@ -260,7 +257,7 @@ test.describe('джойстик', () => {
   });
 
   test('pagehide посеред утримання: персонаж зупиняється', async ({ browser }) => {
-    const page = await newPage(browser, { width: 390, height: 844 }, 100);
+    const page = await newPage(browser, { width: 844, height: 390 }, 100);
     await createCharacter(page);
     await drag(page, 0, 50, 350, async () => {
       await movingNow(page);
@@ -271,7 +268,7 @@ test.describe('джойстик', () => {
   });
 
   test('вкладка схована (visibilitychange → hidden) посеред утримання: персонаж зупиняється', async ({ browser }) => {
-    const page = await newPage(browser, { width: 390, height: 844 }, 100);
+    const page = await newPage(browser, { width: 844, height: 390 }, 100);
     await createCharacter(page);
     await drag(page, 0, 50, 350, async () => {
       await movingNow(page);
@@ -285,7 +282,7 @@ test.describe('джойстик', () => {
   });
 
   test('пауза (‖) відкрита посеред утримання, потім закрита: персонаж не йде сам', async ({ browser }) => {
-    const page = await newPage(browser, { width: 390, height: 844 }, 100);
+    const page = await newPage(browser, { width: 844, height: 390 }, 100);
     await createCharacter(page);
     await drag(page, 0, 50, 350, async () => {
       await movingNow(page);
@@ -299,7 +296,7 @@ test.describe('джойстик', () => {
   });
 
   test('панель «Подорож» відкрита посеред утримання, потім закрита: персонаж не йде сам', async ({ browser }) => {
-    const page = await newPage(browser, { width: 390, height: 844 }, 100);
+    const page = await newPage(browser, { width: 844, height: 390 }, 100);
     await createCharacter(page);
     await drag(page, 0, 50, 350, async () => {
       await movingNow(page);
@@ -315,7 +312,7 @@ test.describe('джойстик', () => {
 
   for (const type of ['pointercancel', 'lostpointercapture']) {
     test(`кнопка дії: ${type} відпускає її`, async ({ browser }) => {
-      const page = await newPage(browser, { width: 390, height: 844 }, 100);
+      const page = await newPage(browser, { width: 844, height: 390 }, 100);
       const btn = page.locator('[data-touch="interact"]');
       await btn.evaluate((el) => el.dispatchEvent(new PointerEvent('pointerdown', { pointerId: 7, bubbles: true })));
       expect(await btn.evaluate((e) => (e as HTMLElement).dataset.held), 'натиснута').toBe('interact');
@@ -328,7 +325,7 @@ test.describe('джойстик', () => {
 
 test.describe('підпис збірки', () => {
   test('є в меню паузи (повний SHA), на екрані гри його немає', async ({ browser }) => {
-    const page = await newPage(browser, { width: 390, height: 844 }, 100);
+    const page = await newPage(browser, { width: 844, height: 390 }, 100);
     await expect(page.locator('.build')).toHaveCount(0);
     await expect(page.locator('[data-ui="build"]')).toHaveCount(0);
     await page.locator('[data-touch="pause"]').tap();

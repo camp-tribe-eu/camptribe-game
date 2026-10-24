@@ -125,7 +125,7 @@ async function openDialogue(page: Page): Promise<void> {
 }
 
 test.describe('axe-core: 0 порушень serious/critical на кожному екрані (GAME-39 #1)', () => {
-  test.use({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true });
+  test.use({ viewport: { width: 844, height: 390 }, hasTouch: true, isMobile: true });
 
   test('світ із дотиковими кнопками', async ({ page }) => {
     const errors = await openGame(page);
@@ -350,7 +350,7 @@ async function injectMotion(page: Page): Promise<void> {
 }
 
 test.describe('prefers-reduced-motion (GAME-39 #3)', () => {
-  test.use({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true });
+  test.use({ viewport: { width: 844, height: 390 }, hasTouch: true, isMobile: true });
 
   test('reduce: жоден елемент UI не анімується, навіть із власним переходом; камера без згладжування', async ({ page }) => {
     await page.emulateMedia({ reducedMotion: 'reduce' });

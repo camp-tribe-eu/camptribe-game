@@ -50,7 +50,7 @@ async function shopToLake(page: Page): Promise<void> {
 }
 
 test.describe('мобільний екран подорожі', () => {
-  test.use({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true });
+  test.use({ viewport: { width: 844, height: 390 }, hasTouch: true, isMobile: true });
 
   test('недоступна купівля — вимкнена кнопка з ціною й причиною «бракує», клік нічого не робить', async ({ page }) => {
     await load(page, '?seed=2');
@@ -140,7 +140,7 @@ test.describe('мобільний екран подорожі', () => {
 });
 
 test.describe('підказка першого запуску', () => {
-  test.use({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true });
+  test.use({ viewport: { width: 844, height: 390 }, hasTouch: true, isMobile: true });
 
   test('є на старті, зникає після першої дії, не повертається після перезавантаження', async ({ page }) => {
     await load(page);
@@ -169,7 +169,7 @@ test.describe('підказка першого запуску', () => {
 });
 
 // HUD: три в'юпорти, 100 % і 200 % тексту. «Поле гри» — #stage (його розмір задає розкладка в index.html) і полотно в ньому.
-const VIEWPORTS = [{ width: 375, height: 667 }, { width: 768, height: 1024 }, { width: 1280, height: 800 }] as const;
+const VIEWPORTS = [{ width: 667, height: 375 }, { width: 768, height: 1024 }, { width: 1280, height: 800 }] as const;
 interface Rect { left: number; top: number; right: number; bottom: number }
 const meets = (a: Rect, b: Rect): boolean => a.left < b.right && b.left < a.right && a.top < b.bottom && b.top < a.bottom;
 const rectOf = (page: Page, sel: string): Promise<Rect> => page.locator(sel).first().evaluate((el) => { const r = el.getBoundingClientRect(); return { left: r.left, top: r.top, right: r.right, bottom: r.bottom }; });
@@ -198,9 +198,14 @@ for (const vp of VIEWPORTS) for (const scale of [100, 200] as const) {
     const stage = await rectOf(page, '#stage');
     const menu = await rectOf(page, '[data-touch="story"]');
     const pauseBtn = await rectOf(page, '[data-touch="pause"]');
-    expect(meets(h, stage), 'HUD не перекриває #stage').toBe(false);
-    // Phaser перераховує масштаб полотна сам, раз на 0,5 с, — чекаємо, а не міряємо миттєво.
-    await expect.poll(async () => meets(h, await rectOf(page, '#stage canvas')), { message: 'HUD не перекриває полотно' }).toBe(false);
+    // GAME-96: телефон вбік (низький екран з дотиком) — шапка лежить на мапі прозорим рядком (поле = весь екран), тож «не перекриває
+    // поле» там не вимагаємо; зате ☰ і ‖ HUD не перекриває ніде. Планшет і десктоп — шапка в потоці, як було.
+    const overlaysMap = vp.height <= 500;
+    if (!overlaysMap) {
+      expect(meets(h, stage), 'HUD не перекриває #stage').toBe(false);
+      // Phaser перераховує масштаб полотна сам, раз на 0,5 с, — чекаємо, а не міряємо миттєво.
+      await expect.poll(async () => meets(h, await rectOf(page, '#stage canvas')), { message: 'HUD не перекриває полотно' }).toBe(false);
+    }
     const canvas = await rectOf(page, '#stage canvas');
     expect(meets(h, menu), 'HUD не перекриває ☰').toBe(false);
     expect(meets(h, pauseBtn), 'HUD не перекриває ‖').toBe(false);

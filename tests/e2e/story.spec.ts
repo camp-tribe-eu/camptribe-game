@@ -76,7 +76,7 @@ async function playBikeProlog(page: Page): Promise<void> {
 }
 // ПРОХІД-END
 
-test.use({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true });
+test.use({ viewport: { width: 844, height: 390 }, hasTouch: true, isMobile: true });
 
 test('пролог від вибору персонажа до кінця розділу — кліками, кожна дія доходить до ядра', async ({ page }) => {
   const errors = await open(page);
@@ -119,7 +119,7 @@ test('на екрані подорожі світ на паузі; Escape і «�
 // Дощ сповільнює велосипед ×1.5 угору (SIM-WX-007): дім → крамниця 25 хв → 38 хв, і годинник іде саме на них.
 for (const [seed, weather, label, minutes] of [[2, 'sunny', 'сонячно', 25], [10, 'rain', 'дощ', 38]] as const) {
   test(`дорога (GAME-31) у погоду «${weather}» (GAME-46): у шапці погода дня, кнопка показує час, годинник рухається саме на нього`, async ({ browser }) => {
-    const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true });
+    const ctx = await browser.newContext({ viewport: { width: 844, height: 390 }, hasTouch: true, isMobile: true });
     const page = await ctx.newPage();
     await open(page, `?seed=${seed}`);
     await panel(page).locator('[data-act="create"]', { hasText: 'Велосипед' }).first().click();
@@ -145,7 +145,7 @@ for (const [seed, weather, label, minutes] of [[2, 'sunny', 'сонячно', 25
  * той самий стан RNG). Повертає сторінку і чи трапилась подія.
  */
 async function toRoad(browser: Browser, seed: number): Promise<{ page: Page; fired: boolean; close: () => Promise<void> }> {
-  const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true });
+  const ctx = await browser.newContext({ viewport: { width: 844, height: 390 }, hasTouch: true, isMobile: true });
   const page = await ctx.newPage();
   await open(page, `?seed=${seed}`);
   await panel(page).locator('[data-act="create"]', { hasText: 'Велосипед' }).first().click();
@@ -234,11 +234,13 @@ async function carToCamp(page: Page): Promise<void> {
 }
 
 test.describe('GAME-80 · подвійне натискання', () => {
-  test.use({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true });
+  test.use({ viewport: { width: 844, height: 390 }, hasTouch: true, isMobile: true });
   test('два дотики з інтервалом 150 мс — одна дія (журнал +1)', async ({ page }) => {
     await open(page, '?seed=5');
     await carToCamp(page);
     const before = (await core(page)).journal.length;
+    // GAME-96: екран 390 px заввишки — кнопка може бути нижче згину панелі; тапаємо лише побачену.
+    await panel(page).locator('[data-act="pickup"][data-key="item.firewood"]').scrollIntoViewIfNeeded();
     const box = await panel(page).locator('[data-act="pickup"][data-key="item.firewood"]').boundingBox();
     if (!box) throw new Error('кнопки «Узяти: Дрова» немає на екрані');
     const x = box.x + box.width / 2, y = box.y + box.height / 2;

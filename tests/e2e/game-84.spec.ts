@@ -34,7 +34,7 @@ async function createBike(page: Page): Promise<void> {
 }
 
 test.describe('№1 «Піти» туди, де стоїш', () => {
-  test.use({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true });
+  test.use({ viewport: { width: 844, height: 390 }, hasTouch: true, isMobile: true });
 
   test('удома на старті й після ST-001/ST-002 кнопки «Піти: Дім» немає; крамниця й далі є (позитивний контроль)', async ({ page }) => {
     await load(page);
@@ -57,7 +57,7 @@ test.describe('№1 «Піти» туди, де стоїш', () => {
 
 test.describe('№11 жодного 404 за звичайний сеанс', () => {
   test('відповіді, консоль і запити: жодної помилки, значок оголошено у <head>, /favicon.ico не просять', async ({ browser }) => {
-    const page = await newPage(browser, { width: 390, height: 844 }, 100, true);
+    const page = await newPage(browser, { width: 844, height: 390 }, 100, true);
     const bad: string[] = [];
     const requested: string[] = [];
     const consoleErrors: string[] = [];
@@ -86,7 +86,7 @@ test.describe('№11 жодного 404 за звичайний сеанс', () 
 });
 
 test.describe('№12 «Зберегти» не двічі', () => {
-  test.use({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true });
+  test.use({ viewport: { width: 844, height: 390 }, hasTouch: true, isMobile: true });
 
   test('у меню паузи слово «Зберегти» — рівно один елемент (кнопка); група має власну назву', async ({ page }) => {
     await load(page);
@@ -102,7 +102,7 @@ test.describe('№12 «Зберегти» не двічі', () => {
 });
 
 test.describe('№9 дотикові елементи (джойстик, дія) не просвічують крізь панелі', () => {
-  test.use({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true });
+  test.use({ viewport: { width: 844, height: 390 }, hasTouch: true, isMobile: true });
 
   test('на карті джойстик і кнопку дії видно; під панеллю подорожі й під паузою їх немає (visibility: hidden)', async ({ page }) => {
     await load(page);
@@ -123,9 +123,9 @@ test.describe('№9 дотикові елементи (джойстик, дія)
 
 // GAME-91: підпис збірки прибрано з екрана гри — він у меню паузи (було: на канві, GAME-84 №10).
 for (const scale of [100, 200] as const) {
-  test.describe(`№10 підпис збірки, телефон 390×844, текст ${scale} %`, () => {
+  test.describe(`№10 підпис збірки, телефон 844×390, текст ${scale} %`, () => {
     test(`на екрані гри підпису немає; в меню паузи — повний SHA, у межах екрана`, async ({ browser }) => {
-      const page = await newPage(browser, { width: 390, height: 844 }, scale, true);
+      const page = await newPage(browser, { width: 844, height: 390 }, scale, true);
       await load(page);
       await expect(page.locator('.build')).toHaveCount(0);
       expect(await page.locator('#app').innerText()).not.toMatch(/CampLife v|[0-9a-f]{40}/);   // ні в шапці, ні деінде на екрані гри
@@ -135,16 +135,17 @@ for (const scale of [100, 200] as const) {
       expect((await build.textContent()) ?? '').toMatch(/^CampLife v\S+ · ([0-9a-f]{40}|unknown)$/);   // повний SHA (або чесне «unknown» без git)
       const b = await rectOf(page, '[data-ui="build"]');
       expect(b.left).toBeGreaterThanOrEqual(0);
-      expect(b.right).toBeLessThanOrEqual(390);                                  // не вилазить за екран (при 200 % раніше — вилазив)
-      expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);   // сторінка не їде вбік
+      expect(b.right).toBeLessThanOrEqual(844);                                  // не вилазить за екран (при 200 % раніше — вилазив)
+      expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(844);   // сторінка не їде вбік
     });
   });
 }
 
 test.describe('№7 текст 200 % на телефоні', () => {
-  for (const width of [360, 375, 390]) {
+  // GAME-96: телефон вбік — найвужчі горизонтальні екрани (568 — найменший, який обслуговуємо), висота 375.
+  for (const width of [568, 667, 844]) {
     test(`жодне слово суми на екрані подорожі (рядок стану, ціни в кнопках) не розривається посеред слова, вікно ${width} px`, async ({ browser }) => {
-      const page = await newPage(browser, { width, height: 700 }, 200, true);
+      const page = await newPage(browser, { width, height: 375 }, 200, true);
       await load(page);
       await openStory(page);
       await createBike(page);
@@ -171,7 +172,7 @@ test.describe('№7 текст 200 % на телефоні', () => {
   }
 
   test('перенос слів на екрані 200 %: hyphens: auto (з дефісом там, де браузер знає мову); «де завгодно» — лише крайній випадок', async ({ browser }) => {
-    const page = await newPage(browser, { width: 390, height: 844 }, 200, true);
+    const page = await newPage(browser, { width: 844, height: 390 }, 200, true);
     await load(page);
     await openStory(page);
     // Автопрокрутка фокусу (заголовок за верхом після дії) перевіряється нижче, на екрані розмови (№8): там вона була видна.
@@ -223,22 +224,14 @@ test.describe('№8 текст 200 % на десктопі: завдання й 
 });
 
 test.describe('№13 телефон: поле гри заповнює екран, а не смужка посередині', () => {
-  test('390×844 сторч: полотно на всю ширину поля й ≥ 55 % його висоти; повернули вбік — знову широкий кадр 640×352 (GAME-93; було 3:2)', async ({ browser }) => {
-    const page = await newPage(browser, { width: 390, height: 844 }, 100, true);
+  test('телефон вбік 844×390 (GAME-96: сторч лише накладка): полотно на всю висоту поля, кадр широкий 640×352; поле заповнює екран', async ({ browser }) => {
+    const page = await newPage(browser, { width: 844, height: 390 }, 100, true);
     await load(page);
     const stage = await rectOf(page, '#stage');
     const canvas = await rectOf(page, '#stage canvas');
-    expect(canvas.width).toBeGreaterThanOrEqual(stage.width * 0.97);
-    expect(canvas.height / stage.height, `полотно ${canvas.width}×${canvas.height} у полі ${stage.width}×${stage.height}`).toBeGreaterThanOrEqual(0.55);
-    // Поворот: кадр перераховується під нову форму поля (ResizeObserver), а не лишається вертикальним у горизонтальному полі.
-    await page.setViewportSize({ width: 844, height: 390 });
-    await page.waitForFunction(() => { const c = document.querySelector('#stage canvas') as HTMLCanvasElement | null; return !!c && Math.abs(c.width / c.height - 640 / 352) < 0.01; }, null, { timeout: 5_000 });
-    const wide = await rectOf(page, '#stage canvas');
-    const wideStage = await rectOf(page, '#stage');
-    expect(wide.height / wideStage.height).toBeGreaterThanOrEqual(0.95);          // у широкому полі — на всю висоту, як і раніше
-    // І назад.
-    await page.setViewportSize({ width: 390, height: 844 });
-    await page.waitForFunction(() => { const c = document.querySelector('#stage canvas') as HTMLCanvasElement | null; return !!c && c.width / c.height < 1; }, null, { timeout: 5_000 });
+    expect(canvas.height / stage.height, `полотно ${canvas.width}×${canvas.height} у полі ${stage.width}×${stage.height}`).toBeGreaterThanOrEqual(0.95);
+    expect(Math.abs(canvas.width / canvas.height - 640 / 352)).toBeLessThan(0.01);
+    expect(stage.height / 390, 'поле — весь екран (шапка лежить на мапі)').toBeGreaterThanOrEqual(0.99);
   });
 
   test('на десктопі кадр широкого поля — 640×352 (GAME-93: тайли 32 px; було 240×160 при 16 px)', async ({ browser }) => {

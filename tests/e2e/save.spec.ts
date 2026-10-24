@@ -207,8 +207,8 @@ test.describe('сейв від старішої версії контенту (�
   });
 });
 
-test.describe('код відновлення (телефон 390×844)', () => {
-  test.use({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true });
+test.describe('код відновлення (телефон 844×390)', () => {
+  test.use({ viewport: { width: 844, height: 390 }, hasTouch: true, isMobile: true });
 
   test('код → чистий браузер → імпорт → той самий стан', async ({ page, browser }) => {
     await open(page);
@@ -220,7 +220,7 @@ test.describe('код відновлення (телефон 390×844)', () => {
     const code = await page.locator('[data-ui="code-out"]').inputValue();
     expect(code).toMatch(/^CL1\.[A-Za-z0-9_-]+$/);
 
-    const fresh = await browser.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true });
+    const fresh = await browser.newContext({ viewport: { width: 844, height: 390 }, hasTouch: true, isMobile: true });
     const p2 = await fresh.newPage();
     await open(p2);
     expect((await snap(p2)).game.grants).toEqual([]);                    // справді чистий браузер

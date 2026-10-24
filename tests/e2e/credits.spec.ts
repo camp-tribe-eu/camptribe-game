@@ -28,8 +28,8 @@ test.describe('титри', () => {
     await expect(page.locator('[data-licence-missing]')).toHaveCount(0);
   });
 
-  test.describe('телефон 390×844', () => {
-    test.use({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true });
+  test.describe('телефон 844×390', () => {
+    test.use({ viewport: { width: 844, height: 390 }, hasTouch: true, isMobile: true });
     test('титри не вилазять за край екрана', async ({ page }) => {
       await openCredits(page);
       const overflow = await page.locator('[data-ui="pause"]').evaluate((el) => el.scrollWidth - el.clientWidth);
