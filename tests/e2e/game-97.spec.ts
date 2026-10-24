@@ -21,3 +21,27 @@ for (const vp of [{ width: 1280, height: 800 }, { width: 390, height: 844 }]) {
     expect(p.fps).toBeGreaterThanOrEqual(FLOOR_FPS);
   });
 }
+
+// Корінь червоного ui-shell.spec.ts:19 на main: справа не лише у fps. Phaser згладжує дельту кадру — 120 кадрів після старту
+// (і поза фокусом) ріже її до 16,7 мс, а понад 200 мс підміняє останньою «нормальною». Годинник, що брав згладжену дельту,
+// при 8 fps ішов у 8 разів повільніше за реальний час. Тепер годинник бере сиру дельту (scene.ts), а слабкий пристрій тут —
+// штучні 80 мс у кожному кадрі (?frameLagMs, лише збірка e2e): ≈ 11 fps, кадр із запасом нижче MAX_FRAME_MS навіть на повільному CI, і всі ці кадри — у тих 120.
+// Негативний контроль: scene.ts зі згладженою дельтою (`this.bridge.frame(delta)`) — тут 1,2 с гри за 6 с (19 %), тест червоний.
+test('при ≈ 11 fps годинник гри йде в ногу з реальним часом (≥ 80 %)', async ({ page }) => {
+  const LAG_MS = 80;
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await page.goto(`/?seed=2&frameLagMs=${LAG_MS}`);
+  await page.waitForFunction(() => (window as unknown as { __game?: { probe: { ready: boolean } } }).__game?.probe.ready === true, null, { timeout: 30_000 });
+  const gameMs = (): Promise<{ ms: number; at: number }> => page.evaluate(() => {
+    const c = (window as unknown as { __game: { read: () => { clock: { minutes: number; accMs: number } } } }).__game.read().clock;
+    return { ms: c.minutes * 1000 + c.accMs, at: performance.now() };   // STEP_MS = 1000: хвилина гри — секунда реального часу
+  });
+  const a = await gameMs();
+  await page.waitForTimeout(6000);
+  const b = await gameMs();
+  const p = await probe(page);
+  const ratio = (b.ms - a.ms) / (b.at - a.at);
+  console.log(`GAME-97 годинник при lag ${LAG_MS} мс: ${(b.ms - a.ms).toFixed(0)} мс гри за ${(b.at - a.at).toFixed(0)} мс, fps ${p.fps.toFixed(1)}`);
+  expect(p.fps, 'штучна затримка не спрацювала — тест нічого не доводить').toBeLessThan(15);
+  expect(ratio).toBeGreaterThanOrEqual(0.8);
+});

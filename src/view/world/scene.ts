@@ -236,8 +236,11 @@ export class WorldScene extends Phaser.Scene {
     this.fpsStart = time;
   }
 
-  override update(time: number, delta: number): void {
-    this.bridge.frame(delta);
+  override update(time: number): void {
+    // GAME-97: годинник ядра — від сирої дельти кадру, а не від згладженої. Phaser 120 кадрів після старту (і поза фокусом)
+    // ріже дельту до 16,7 мс, а понад 200 мс підміняє останньою «нормальною»: при 8 fps годинник ішов у 8 разів повільніше
+    // за реальний час. Межу кадру (згорнута вкладка) тримає сам міст — MAX_FRAME_MS.
+    this.bridge.frame(this.game.loop.rawDelta);
     this.countFps(time);
     if (!this.player) return;   // update може випередити create лише в першому кадрі завантаження
     const held = consumeFrame(this.controls);

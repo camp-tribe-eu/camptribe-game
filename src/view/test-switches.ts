@@ -12,6 +12,9 @@ export interface TestSwitches {
   readonly freshSeed?: boolean;
   /** ?noAutosave=1 — негативний контроль GAME-86: без автозбереження після дії e2e перезавантаження мусить губити прогрес. */
   readonly noAutosave?: boolean;
+  /** ?frameLagMs=N (1…190) — GAME-97: кожен кадр сцени довший на N мс, як на слабкому телефоні. e2e так перевіряє, що
+   *  годинник гри при низькому fps іде в ногу з реальним часом, на будь-якій машині CI однаково. */
+  readonly frameLagMs?: number;
 }
 
 export function testSwitches(search: string, mode: string): TestSwitches {
@@ -19,5 +22,6 @@ export function testSwitches(search: string, mode: string): TestSwitches {
   const q = new URLSearchParams(search);
   const list = (k: string): string[] => (q.get(k) ?? '').split(',').filter(Boolean);
   const seed = Number(q.get('seed'));
-  return { hideTouch: list('hideTouch'), hideAct: list('hideAct'), ...(q.get('noAutosave') === '1' ? { noAutosave: true } : {}), ...(q.get('freshSeed') === '1' ? { freshSeed: true } : {}), ...(q.has('seed') && Number.isSafeInteger(seed) && seed >= 0 ? { seed } : {}) };
+  const lag = Number(q.get('frameLagMs'));
+  return { ...(Number.isInteger(lag) && lag >= 1 && lag <= 190 ? { frameLagMs: lag } : {}), hideTouch: list('hideTouch'), hideAct: list('hideAct'), ...(q.get('noAutosave') === '1' ? { noAutosave: true } : {}), ...(q.get('freshSeed') === '1' ? { freshSeed: true } : {}), ...(q.has('seed') && Number.isSafeInteger(seed) && seed >= 0 ? { seed } : {}) };
 }
