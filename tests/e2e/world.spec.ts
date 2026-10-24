@@ -80,9 +80,9 @@ test.describe('клавіатура (десктоп)', () => {
     await open(page);
     const p0 = await probe(page);
     // Тримаємо, доки не пройде 30 px (≈0,5 с при 64 px/с), а не рівно 1 с: на завантаженому CI кадри стартують
-    // пізно, і за фіксовану секунду персонаж ішов лише 19 px (PR #30). Межа 5 с: персонаж, що стоїть, — червоний.
+    // пізно, і за фіксовану секунду персонаж ішов лише 19 px (PR #30). Межа 15 с (CI PR #53: за 5 с лише 25,6 px під навантаженням): персонаж, що стоїть, — однаково червоний.
     await page.keyboard.down('ArrowDown');
-    await expect.poll(async () => (await probe(page)).playerY - p0.playerY, { timeout: 5_000 }).toBeGreaterThan(30);
+    await expect.poll(async () => (await probe(page)).playerY - p0.playerY, { timeout: 15_000 }).toBeGreaterThan(30);
     await page.keyboard.up('ArrowDown');
     const p1 = await probe(page);
     expect(Math.abs(p1.playerX - p0.playerX)).toBeLessThan(1);
