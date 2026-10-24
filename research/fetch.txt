@@ -48,3 +48,10 @@ pack-lpc-modern-furniture	oga:lpc-simple-modern-furniture
 pack-lpc-office	oga:lpc-revised-the-office
 list-lpc-interior	ogasearch:lpc interior
 list-lpc-furniture	ogasearch:lpc furniture
+pack-lpc-house-interior	oga:lpc-house-interior-and-decorations
+pack-lpc-upholstery	oga:lpc-upholstery
+pack-lpc-wooden-furniture	oga:lpc-wooden-furniture
+pack-lpc-walls	oga:lpc-walls
+pack-lpc-floors	oga:lpc-floors
+pack-lpc-shelves	oga:lpc-shelves-rework
+pack-lpc-base-object-kit	oga:lpc-revised-base-object-kit
