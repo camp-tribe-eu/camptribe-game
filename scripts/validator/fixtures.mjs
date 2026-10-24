@@ -321,6 +321,15 @@ export const FIXTURES = [
   { name: 'немає ключа в одній мові', expect: ['LOCALE_MISSING'], patch(c) { delete c.locales.en['q.st-003']; } },
   { name: 'порожній переклад', expect: ['LOCALE_MISSING'], patch(c) { c.locales.uk['npc.ranger'] = '  '; } },
   { name: 'підтримувана мова без файлу', expect: ['LOCALE_MISSING'], patch(c) { c.meta.locales.push('de'); } },
+  // GAME-144: ціль gearCheck — текст на кожен варіант проблеми спорядження в кожній мові (4 варіанти × 2 мови = 8).
+  { name: 'ціль gearCheck без текстів варіантів', expect: ['LOCALE_MISSING'], count: { code: 'LOCALE_MISSING', n: 8 }, patch(c) {
+    c.quests.find((q) => q.id === 'ST-003').objectives[0].gearCheck = true;
+  } },
+  { name: 'ціль gearCheck з усіма текстами варіантів — коректно', expect: [], patch(c) {
+    const o = c.quests.find((q) => q.id === 'ST-003').objectives[0];
+    o.gearCheck = true;
+    for (const lang of ['uk', 'en']) for (const v of ['tent-wet', 'tent-worn', 'sleeping-bag-wet', 'sleeping-bag-worn']) c.locales[lang][`${o.textKey}.${v}`] = v;
+  } },
 
   // ---- зовнішній факт ----
   { name: 'факт без джерела', expect: ['FACT_SOURCE_MISSING'], patch(c) { delete c.facts[0].source; } },

@@ -96,9 +96,46 @@
     "transitions": [{ "on": "complete", "to": "CH1-D2-FIRE-001" }]
   },
   {
-    "id": "CH1-D2-FIRE-001", "titleKey": "q.ch1-d2-fire-001", "optional": false, "end": true, "dayEnd": true, "locationId": "loc.camp.lake",
+    "id": "CH1-D2-FIRE-001", "titleKey": "q.ch1-d2-fire-001", "optional": false, "dayEnd": true, "locationId": "loc.camp.lake",
     "objectives": [
       { "id": "evening", "textKey": "q.ch1-d2-fire-001.o1", "kind": "visit", "target": "loc.camp.lake", "required": true }
+    ],
+    "transitions": [{ "on": "complete", "to": "CH1-D3-001" }]
+  },
+  {
+    "id": "CH1-D3-001", "titleKey": "q.ch1-d3-001", "optional": false, "locationId": "loc.camp.lake",
+    "objectives": [
+      { "id": "morning", "textKey": "q.ch1-d3-001.o1", "kind": "visit", "target": "loc.camp.lake", "required": true },
+      { "id": "mia-list", "textKey": "q.ch1-d3-001.o2", "kind": "visit", "target": "loc.camp.lake", "required": false, "when": { "profiles": ["profile.family-teen"], "animals": ["animal.cat"] } }
+    ],
+    "transitions": [{ "on": "complete", "to": "CH1-D3-GEAR-001" }]
+  },
+  {
+    "id": "CH1-D3-GEAR-001", "titleKey": "q.ch1-d3-gear-001", "optional": false, "locationId": "loc.camp.lake",
+    "objectives": [
+      { "id": "check-gear", "textKey": "q.ch1-d3-gear-001.o1", "kind": "visit", "target": "loc.camp.lake", "required": true, "gearCheck": true, "when": { "profiles": ["profile.family-teen"] } },
+      { "id": "check-gear-solo", "textKey": "q.ch1-d3-gear-001.o2", "kind": "visit", "target": "loc.camp.lake", "required": true, "gearCheck": true, "when": { "profiles": ["profile.solo-explorer"] } }
+    ],
+    "transitions": [{ "on": "complete", "to": "CH1-D3-ELISE-001" }]
+  },
+  {
+    "id": "CH1-D3-ELISE-001", "titleKey": "q.ch1-d3-elise-001", "optional": false, "giverId": "npc.elise", "locationId": "loc.camp.lake",
+    "objectives": [
+      { "id": "goodbye", "textKey": "q.ch1-d3-elise-001.o1", "kind": "talk", "target": "npc.elise", "required": true, "byDialogue": true }
+    ],
+    "transitions": [{ "on": "complete", "to": "CH1-D3-RETURN-001" }]
+  },
+  {
+    "id": "CH1-D3-RETURN-001", "titleKey": "q.ch1-d3-return-001", "optional": false, "locationId": "loc.road",
+    "objectives": [
+      { "id": "road-home", "textKey": "q.ch1-d3-return-001.o1", "kind": "visit", "target": "loc.road", "required": true }
+    ],
+    "transitions": [{ "on": "complete", "to": "CH1-D3-HOME-001" }]
+  },
+  {
+    "id": "CH1-D3-HOME-001", "titleKey": "q.ch1-d3-home-001", "optional": false, "end": true, "dayEnd": true, "locationId": "loc.home",
+    "objectives": [
+      { "id": "home", "textKey": "q.ch1-d3-home-001.o1", "kind": "visit", "target": "loc.home", "required": true }
     ],
     "transitions": []
   }

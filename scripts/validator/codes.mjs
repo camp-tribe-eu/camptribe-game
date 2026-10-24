@@ -106,6 +106,11 @@ export const SKILL_IDS = ['skill.planning', 'skill.camping', 'skill.mechanics', 
 // GAME-73: поля картки спорядження (крім kind — він і робить предмет спорядженням).
 export const GEAR_FIELDS = ['tier', 'weightG', 'volumeL', 'waterproofMm', 'comfortC', 'sleeps', 'priceCents', 'resaleCents'];
 
+// GAME-144: варіанти сцени «перевірка спорядження» (ціль із `gearCheck: true`): вид спорядження × стан. Ціль показує
+// `<textKey>.<варіант>`, коли ядро бачить таку проблему (gearIssue у src/core/gear.ts), і сам `textKey` — нейтральну сцену,
+// коли все сухе й ціле. Той самий перелік — GEAR_SCENE_VARIANTS у src/core/gear.ts; звірку тримає src/content/day3.test.ts.
+export const GEAR_CHECK_VARIANTS = ['tent-wet', 'tent-worn', 'sleeping-bag-wet', 'sleeping-bag-worn'];
+
 // GAME-115: сімейства прапорців, які ставить ЯДРО, а не контент. Сімейство в реєстрі — «<префікс>*» з generatedFrom;
 // конкретні назви породжує gen(content). Ті самі формати — packFlag (src/core/packing.ts) і eventSeenFlag
 // (src/core/story.ts); звірку тримає src/content/flags.test.ts.

@@ -7,7 +7,7 @@
 // * контрольна сума — над станом у ТІЙ версії, у якій його записано (до міграцій);
 // * кожна випущена версія лишається фікстурою в tests/saves/ назавжди.
 import type { StoryDefs } from './defs';
-import { exitsFor, matches } from './story';
+import { chapterComplete, exitsFor, matches } from './story';
 import { stateHash } from './hash';
 import { isJournalType, type SimState } from './sim';
 import { CONDITION_MAX } from './gear';
@@ -155,13 +155,14 @@ export function danglingRefs(game: SimState['game'], st: StoryDefs): string[] {
  * «пройдений», а зупинений на межі дня. Такий сейв знову відкривається: campaignEnded = false, а з кожної завершеної межі
  * дня, жоден вихід якої ще не починався, — її перехід за замовчуванням стає активним (цілі `visit` місця, де гравець
  * стоїть, — виконані, як при звичайному вході в квест, GAME-84). Розділ, завершений на нинішньому кінці, не чіпається.
+ * GAME-144: те саме вдруге — кінець розділу переїхав із CH1-D2-FIRE-001 (день 2) на CH1-D3-HOME-001 (день 3).
  */
 export function reopenChapter(game: SimState['game'], st: StoryDefs): SimState['game'] {
   const p = game.player;
   if (!game.campaignEnded || !p) return game;
   const own = (id: string) => (Object.hasOwn(st.quests, id) ? st.quests[id] : undefined);
   const completed = (id: string) => (Object.hasOwn(game.quests, id) ? game.quests[id]?.status : undefined) === 'completed';
-  if (Object.keys(st.quests).some((id) => own(id)?.end && completed(id))) return game;
+  if (chapterComplete(game, st)) return game;
   let quests = game.quests;
   for (const id of Object.keys(game.quests).sort()) {
     const q = own(id);
@@ -174,7 +175,9 @@ export function reopenChapter(game: SimState['game'], st: StoryDefs): SimState['
     const here = target.objectives.filter((o) => o.kind === 'visit' && o.byDialogue !== true && o.target === p.locationId && matches(o.when, p)).map((o) => o.id).sort();
     quests = { ...quests, [to]: { status: 'active', done: here } };
   }
-  return quests === game.quests ? game : { ...game, campaignEnded: false, quests };
+  // GAME-144: кінець розділу — лише завершений квест-кінець (chapterComplete). Без нього campaignEnded знімається завжди,
+  // навіть коли відкривати нічого (прапорець без квесту — не кінець).
+  return { ...game, campaignEnded: false, quests };
 }
 
 /**

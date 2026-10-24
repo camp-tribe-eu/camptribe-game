@@ -11,11 +11,11 @@
 // * дія, що не змінює нічого (прийти туди, де вже стоїш), не показується.
 import { dispatch, nextCommandId, type Command } from '../core/commands';
 import type { CoreDefs, StoryDefs } from '../core/defs';
-import { gearOf, sellPriceOf } from '../core/gear';
+import { gearIssue, gearOf, gearSceneVariant, sellPriceOf } from '../core/gear';
 import { canonical } from '../core/hash';
 import { todayWeather, type SimState } from '../core/sim';
 import { initialState, type GameState } from '../core/state';
-import { matches, route } from '../core/story';
+import { chapterComplete, matches, route } from '../core/story';
 import { capacityOf, packedOf, packFlag, packingOpen, packItemsFor, usedUnits } from '../core/packing';
 import { DAY_MINUTES, dayOf, tripMinutes, type Weather } from '../core/weather';
 import { CONTENT, memorableFacts } from '../content/story';
@@ -210,6 +210,18 @@ export function summaryOffer(sim: SimState, defs: CoreDefs): { daysEnded: number
   };
 }
 
+/**
+ * Текст цілі. Ціль «перевірка спорядження» (`gearCheck`, GAME-144) — сцена за ФАКТИЧНИМ станом речей: є проблема (gearIssue
+ * ядра) — `<textKey>.<вид>-<стан>`, усе сухе й ціле — сам `textKey` (нейтральна сцена). Тексти всіх варіантів вимагає валідатор
+ * (LOCALE_MISSING). Стану тут ніхто не міняє: сцена лише читає, а розв'язок — справжня дія ядра (DryGear) або «далі».
+ */
+export function objectiveKey(raw: { textKey?: string; gearCheck?: boolean } | undefined, id: string, s: Pick<GameState, 'inventory' | 'gear'>, defs: Pick<CoreDefs, 'items'>, issueOf = gearIssue): string {
+  if (!raw?.textKey) return id;
+  if (raw.gearCheck !== true) return raw.textKey;
+  const issue = issueOf(s, defs.items);
+  return issue ? `${raw.textKey}.${gearSceneVariant(issue)}` : raw.textKey;
+}
+
 export function storyOffer(sim: SimState, defs: CoreDefs): Offered {
   const s = sim.game;
   const st = defs.story as StoryDefs;
@@ -233,11 +245,11 @@ export function storyOffer(sim: SimState, defs: CoreDefs): Offered {
   const p = s.player;
   const quests = Object.entries(s.quests).filter(([, q]) => q.status === 'active').map(([qid, q]) => {
     const def = st.quests[qid];
-    const raw = CONTENT.quests.find((x) => x.id === qid) as { objectives: { id: string; textKey?: string }[] } | undefined;
+    const raw = CONTENT.quests.find((x) => x.id === qid) as { objectives: { id: string; textKey?: string; gearCheck?: boolean }[] } | undefined;
     const objectives = (def?.objectives ?? [])
       .filter((o) => matches(o.when, p))
       .map((o) => ({
-        key: raw?.objectives.find((r) => r.id === o.id)?.textKey ?? o.id,
+        key: objectiveKey(raw?.objectives.find((r) => r.id === o.id), o.id, s, defs),
         required: o.required,
         done: o.kind === 'collect' ? (s.inventory[o.target] ?? 0) >= 1 : q.done.includes(o.id),
       }));
@@ -267,7 +279,7 @@ export function storyOffer(sim: SimState, defs: CoreDefs): Offered {
     intents,
     offer: {
       ...base,
-      stage: s.campaignEnded ? 'ended' : 'play',
+      stage: chapterComplete(s, st) ? 'ended' : 'play',   // GAME-144: кінець розділу — завершений квест-кінець, не прапорець
       characters: [],
       locationKey: nameKey(p.locationId),
       quests,

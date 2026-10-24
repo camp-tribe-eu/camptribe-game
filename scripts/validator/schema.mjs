@@ -100,7 +100,7 @@ export const SCHEMAS = {
     requires: obj({ quests: arr(str), items: arr(str) }),
     objectives: req(arr(obj({
       id: req(str), textKey: req(str), kind: req(en('talk', 'visit', 'collect', 'deliver')),
-      target: req(str), npcId: str, required: req(bool), byDialogue: bool, when,
+      target: req(str), npcId: str, required: req(bool), byDialogue: bool, gearCheck: bool, when,
     }))),
     transitions: req(arr(obj({ on: req(en('complete', 'decline')), to: req(str), choiceKey: str, when }))),
     reward,

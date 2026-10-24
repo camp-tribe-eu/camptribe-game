@@ -3,7 +3,7 @@
 // Не прибирай і не дублюй маркери — мутаційний прогін звіряє їх із реєстром CHECKS.
 
 import { checkSchema } from './schema.mjs';
-import { FACT_KINDS, FACT_STALE_DAYS, FLAG_FAMILIES, GEAR_FIELDS, isWarning, SKILL_IDS } from './codes.mjs';
+import { FACT_KINDS, FACT_STALE_DAYS, FLAG_FAMILIES, GEAR_CHECK_VARIANTS, GEAR_FIELDS, isWarning, SKILL_IDS } from './codes.mjs';
 import { checkCombos, checkOptions, enumerateCombos, NO_ANIMAL } from './combos.mjs';
 
 const I = (code, where, msg) => ({ code, where, msg });
@@ -469,6 +469,8 @@ export const CHECKS = [
       for (const q of ct.quests ?? []) {
         add(q.titleKey, q.id);
         q.objectives.forEach((o) => add(o.textKey, `${q.id}/${o.id}`));
+        // GAME-144: ціль «перевірка спорядження» має текст на кожну проблему, яку може показати ядро (gearIssue).
+        for (const o of q.objectives) if (o.gearCheck === true) for (const v of GEAR_CHECK_VARIANTS) add(`${o.textKey}.${v}`, `${q.id}/${o.id}.gearCheck`);
         q.transitions.forEach((t) => add(t.choiceKey, `${q.id}.transitions`));
       }
       (ct.events ?? []).forEach((e) => add(e.titleKey, e.id));
