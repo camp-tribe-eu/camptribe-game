@@ -104,6 +104,26 @@ for (const viewport of [{ width: 844, height: 390 }, { width: 667, height: 375 }
       await ctx.close();
     });
 
+    test('буфер недоступний — поле з кодом можна торкнути й виділити пальцем (рецензія PR #45)', async ({ browser }) => {
+      const { ctx, page } = await start(browser, viewport);
+      await act(page, 'visit', 'loc.shop');
+      await closeStory(page);
+      // Буфер відмовив (дозвіл, не-HTTPS): гра показує код у полі для ручного копіювання.
+      await page.evaluate(() => { navigator.clipboard.writeText = () => Promise.reject(new Error('no clipboard')); });
+      await page.locator('[data-ui="recovery-copy"]').click();
+      const field = page.locator('[data-ui="recovery-code"]');
+      await expect(field).toBeVisible();
+      await expect(field).toHaveValue(/^CL1\./);
+      const box = await field.boundingBox();
+      if (!box) throw new Error('поля з кодом немає');
+      const at = { x: box.x + box.width / 2, y: box.y + box.height / 2 };
+      // Під пальцем саме поле, а не шапка з pointer-events: none чи канва.
+      expect(await page.evaluate(({ x, y }) => (document.elementFromPoint(x, y) as HTMLElement | null)?.dataset.ui ?? null, at)).toBe('recovery-code');
+      await page.touchscreen.tap(at.x, at.y);
+      await expect(field).toBeFocused();
+      await ctx.close();
+    });
+
     test('та сама подорож після перезавантаження — без повтору; інша подорож — знову', async ({ browser }) => {
       const { ctx, page } = await start(browser, viewport);
       await act(page, 'visit', 'loc.shop');

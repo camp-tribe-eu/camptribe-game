@@ -125,6 +125,9 @@
         :root { --header-btn: 44px; --stick-size: 112px; --action-size: 80px; }
         .ui-header { position: absolute; top: 0; left: 0; right: 0; z-index: 2; background: transparent; pointer-events: none; padding-bottom: 0; }
         .ui-header button { pointer-events: auto; }
+        /* Рядок нагадування GAME-94 лежить усередині шапки: без цього поле з кодом (запас, коли буфер недоступний) не можна було б
+           виділити пальцем (рецензія PR #45). */
+        .ui-reminder { pointer-events: auto; }
         .ui-hud { border-radius: 8px; background: #1b1f23b3; box-shadow: 0 0 0 4px #1b1f23b3; }
         .ui-story-btn, .ui-pause-btn { background: #000000aa; }
       }
