@@ -82,7 +82,8 @@ SHEETS = [
     # ст. 0: вазон 1×3 · ст. 1–2 р. 0: диван 2×1 синій · (1,1) стілець обличчям, (2,1) стілець спинкою ·
     # ст. 1–2 р. 2: журнальний столик 2×1 · ст. 3–4: ліжко 2×3 (узголів'я + подушки + матрац) · ст. 5: шафа 1×3 ·
     # ст. 6–7 р. 0: накритий обідній стіл 2×1 · (6,2) тумба · (7,2) настінна полиця · ст. 8–10 р. 0–1: стільниця 3×2 ·
-    # (8,2) пляшки, (9,2) дошка з зеленню · ст. 11: торшер 1×3 · ст. 12–13 р. 0: картина 2×1 «дерево біля річки».
+    # (8,2) пляшки, (9,2) дошка з зеленню · ст. 11 р. 0–1: торшер 1×2 (аркуш Lighting стовпець 1, рядки 1–2; рядок 0 там —
+    # окремий абажур, не частина торшера — через нього в v2 лампа мала два абажури) · ст. 12–13 р. 0: картина 2×1.
     ('home-furniture', 'home_furniture.png', (14, 3), [
         (f'{KIT}/Decoration/Planters.png', (64, 0, 32, 96), (0, 0)),
         (f'{KIT}/Furniture/Sofas, Casual.png', (128, 32, 64, 32), (32, 0)),
@@ -99,7 +100,7 @@ SHEETS = [
         (f'{KIT}/Furniture/Countertops.png', (96, 128, 96, 64), (256, 0)),
         (f'{KIT}/Decoration/Clutter.png', (160, 64, 32, 32), (256, 64)),
         (f'{KIT}/Decoration/Clutter.png', (96, 64, 32, 32), (288, 64)),
-        (f'{KIT}/Lighting & Fire/Lighting.png', (32, 0, 32, 96), (352, 0)),
+        (f'{KIT}/Lighting & Fire/Lighting.png', (32, 32, 32, 64), (352, 0)),
         (f'{KIT}/Decoration/Paintings.png', (192, 0, 64, 32), (384, 0)),
     ]),
     # [LPC Revised] The Office, OGA-BY 3.0: ст. 0–2: письмовий стіл 3×2 (Desk, Ornate рядки 2–3); (3,0) ноутбук;
@@ -224,7 +225,7 @@ def build_grid(sheets):
     WIN = ('home-windows-doors', 0, 0, 2, 3)
     g.stamp(F, 1, 0, 2, 1, 0, 3, {0});                 item('sofa', 'sofa', 0, 3, 2, 1)
     g.stamp(F, 12, 0, 2, 1, 0, 1, set());              item('painting', 'painting.river', 0, 1, 2, 1)
-    g.stamp(F, 11, 0, 1, 3, 2, 1, {2});                item('lamp', 'lamp.floor', 2, 3)
+    g.stamp(F, 11, 0, 1, 2, 2, 2, {1});                item('lamp', 'lamp.floor', 2, 3)
     g.stamp(*WIN, 3, 0, set()); g.stamp(*WIN, 5, 0, set()); item('window', 'window.living', 3, 0, 4, 3)
     g.stamp('home-windows-doors', 2, 0, 1, 2, 7, 1, set()); item('door', 'door.front', 7, 1, 1, 2)
     g.stamp('home-shelf', 0, 0, 2, 3, 8, 1, {2});      item('shelf', 'bookshelf', 8, 3, 2, 1)

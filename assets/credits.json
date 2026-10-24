@@ -1397,7 +1397,7 @@
       "sources": [
         "https://opengameart.org/content/lpc-revised-base-object-kit"
       ],
-      "modified": "sofa 2x1, two dining chairs, coffee table 2x1, double bed 2x3 assembled from headboard + pillows + mattress, wardrobe 1x3, set dining table 2x1, nightstand, wall shelf, countertop 3x2, bottles, cutting board, floor lamp 1x3, planter 1x3 and one painting 2x1 cropped from the kit sheets onto a 448x96 sheet, recoloured onto the base palette (scripts/palette/quantize.py)"
+      "modified": "sofa 2x1, two dining chairs, coffee table 2x1, double bed 2x3 assembled from headboard + pillows + mattress, wardrobe 1x3, set dining table 2x1, nightstand, wall shelf, countertop 3x2, bottles, cutting board, floor lamp 1x2, planter 1x3 and one painting 2x1 cropped from the kit sheets onto a 448x96 sheet, recoloured onto the base palette (scripts/palette/quantize.py)"
     },
     {
       "file": "tiles/home_office.png",
