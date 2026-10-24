@@ -5,6 +5,7 @@ import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
 import { dispatch, PROCESSED_LIMIT, type Command, type Safeguards } from './commands';
 import type { CoreDefs } from './defs';
+import { PACK_DEFS } from './pack.fixture';
 import { BIKER, DRIVER, GEAR_DEFS, LIFE_DEFS, MECHANIC, NOVICE, play, ROAD_DEFS, SHOP_DEFS, SKILL_DEFS, STORY_DEFS } from './story.fixture';
 import { initialState, REJECT_CODES, type GameState, type RejectCode } from './state';
 import type { Weather } from './weather';
@@ -213,6 +214,11 @@ describe('коди відмов: кожен код із реєстру має т
     ['LEAVE_DATE', play([DRIVER], initialState(0), LIFE_DEFS), { type: 'BookLeave', commandId: 's25', from: -1, days: 2 }, LIFE_DEFS],
     ['LEAVE_NOT_FOUND', play([DRIVER, { type: 'BookLeave', from: 6, days: 2 }], initialState(0), LIFE_DEFS), { type: 'CancelLeave', commandId: 's26', from: 7 }, LIFE_DEFS],
     ['LEAVE_STARTED', play([DRIVER, { type: 'BookLeave', from: 0, days: 2 }], initialState(0), LIFE_DEFS), { type: 'CancelLeave', commandId: 's27', from: 0 }, LIFE_DEFS],
+    // GAME-109: пакування. Відкрите лише після q.start; авто 4 од.: тент 2 + стілець 2 заповнюють усе.
+    ['PACK_CLOSED', play([DRIVER], initialState(0), PACK_DEFS), { type: 'PackItem', commandId: 's28', itemId: 'item.bag' }, PACK_DEFS],
+    ['PACK_FULL', play([DRIVER, { type: 'CompleteQuest', questId: 'q.start' }, { type: 'UnpackItem', itemId: 'item.bag' }, { type: 'PackItem', itemId: 'item.chair' }], initialState(0), PACK_DEFS), { type: 'PackItem', commandId: 's29', itemId: 'item.bag' }, PACK_DEFS],
+    ['PACK_ALREADY', play([DRIVER, { type: 'CompleteQuest', questId: 'q.start' }], initialState(0), PACK_DEFS), { type: 'PackItem', commandId: 's30', itemId: 'item.tent' }, PACK_DEFS],
+    ['PACK_NOT_PACKED', play([DRIVER, { type: 'CompleteQuest', questId: 'q.start' }, { type: 'UnpackItem', itemId: 'item.tent' }], initialState(0), PACK_DEFS), { type: 'UnpackItem', commandId: 's31', itemId: 'item.tent' }, PACK_DEFS],
   ];
 
   it('кожен код реєстру покрито рівно одним прикладом', () => {

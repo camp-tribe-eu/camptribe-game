@@ -2,13 +2,18 @@
 // Найбільший реалістичний сейв: справжній Пролог до кінця контенту (реплей-сценарій), потім журнал і лічильник
 // команд добиті до меж (JOURNAL_LIMIT, PROCESSED_LIMIT), потім відпустки на 10 років календаря (скільки з них прийме ліміт відпусток гри). Міряємо рядок, який
 // справді лягає в сховище (serialize), у байтах UTF-8, і той самий сейв у вигляді коду відновлення (encodeRestoreCode).
-import { describe, expect, it } from 'vitest';
+// Друга половина (картка GAME-103, «найбільший сейв, який дає бот на повному проходженні + журнал на межі»): бот
+// GAME-37 (той самий, src/content/bot-campaign.test.helpers.ts), найбільший сейв серед його прогонів, журнал добитий до межі.
+import { beforeAll, describe, expect, it } from 'vitest';
 import { PROCESSED_LIMIT, type Command } from '../core/commands';
-import { JOURNAL_LIMIT, newSim, step, type SimState } from '../core/sim';
+import { JOURNAL_LIMIT, newSim, step, type JournalEntry, type SimState } from '../core/sim';
 import { fromSave, serialize } from '../core/save';
+import { enumerateCombos } from '../../scripts/validator/combos.mjs';
+import { uncoveredPairs, variantsFor, type BotRun } from '../content/bot';
+import { BOT_SEED, campaign } from '../content/bot-campaign.test.helpers';
 import { GAME_DEFS } from '../content/slice-defs';
 import { PROLOGUE_BIKE, SEED, START_MONEY } from '../content/replay.scenario';
-import { STORY_REV } from '../content/story';
+import { CONTENT, STORY_REV } from '../content/story';
 import { DAY_MINUTES, dayOf } from '../core/weather';
 import { encodeRestoreCode } from './save-code';
 import { createMemoryBackend } from './save-memory';
@@ -20,6 +25,8 @@ const YT_SOFT_BYTES = 500 * 1024;
 
 const CTX = { defs: GAME_DEFS };
 const bytes = (s: string): number => new TextEncoder().encode(s).length;
+/** Найдовший запис журналу на межах: id по 64 знаки, найдовший тип, дев'ятизначна хвилина. */
+const WORST_ENTRY: JournalEntry = { at: 999_999_999, commandId: 'c'.repeat(64), type: 'CompleteQuest', ref: 'r'.repeat(64) };
 
 /** Найбільший реалістичний стан: Пролог до кінця + журнал і processed на межах + відпустки, скільки прийме гра. */
 function largestSim(): SimState {
@@ -75,8 +82,7 @@ describe('розмір сейву проти лімітів YouTube (GAME-103)',
   });
 
   it('найгірший випадок на межах: журнал на JOURNAL_LIMIT записів із найдовшими id (64 знаки) — теж < 3 МіБ і < 500 КіБ', () => {
-    const worst = { at: 999_999_999, commandId: 'c'.repeat(64), type: 'CompleteQuest' as const, ref: 'r'.repeat(64) };
-    const stuffed = { ...sim, journal: Array.from({ length: JOURNAL_LIMIT }, () => worst) };
+    const stuffed = { ...sim, journal: Array.from({ length: JOURNAL_LIMIT }, () => WORST_ENTRY) };
     const n = bytes(serialize(stuffed, STORY_REV));
     console.info(`GAME-103 worst-case at caps: ${n} bytes (${(n / 1024).toFixed(1)} KiB)`);
     expect(n).toBeLessThan(YT_LIMIT_BYTES);
@@ -119,5 +125,75 @@ describe('розмір сейву проти лімітів YouTube (GAME-103)',
     const need = Math.ceil((YT_SOFT_BYTES - size) / per) + 1;
     const inflated = { ...sim, journal: [...sim.journal, ...Array.from({ length: need }, () => entry)] };
     expect(bytes(serialize(inflated, STORY_REV)) < YT_SOFT_BYTES).toBe(false);
+  });
+});
+
+// ---- найбільший сейв, який дає бот GAME-37 (картка GAME-103, «Спосіб перевірки») ----
+/**
+ * Скільки прогонів бота міряємо. Той самий бот, те саме зерно, що й bot.test.ts (BOT_SEED), і префікс тієї самої
+ * послідовності прогонів (перші BOT_RUNS із 2000; прогін i — завжди той самий варіант і зерно BOT_SEED + i).
+ * Чому досить: (1) тест нижче вимагає, щоб ці прогони покривали КОЖНУ дозволену пару осей (профіль, транспорт, тварина,
+ * бічна гілка, гроші) — як головна кампанія; (2) бот обмежений maxSteps 80, тож його сейв не росте з N: N лише
+ * перебирає варіанти, а їх усі пари вже покрито; (3) 300 — той самий розмір, що в bot.test для «виправленого контенту»,
+ * і замір іде ~5 с проти ~35 с на 2000 (межа ≈ 20 с на тест).
+ * Звірено разово (24.10.2026, той самий код): усі 2000 прогонів — макс. 4 273 Б (прогін #1652, зерно 20262675), після
+ * добивання журналу 100 272 Б; на 300 — 4 250 Б і 100 249 Б. Різниця 23 Б (0,02 % бажаної межі), запас до 500 КіБ ~5×.
+ */
+const BOT_RUNS = 300;
+
+interface BotSave { readonly index: number; readonly run: BotRun; readonly sim: SimState; readonly size: number }
+
+/** Сейв прогону: стан, на якому бот зупинився, у сім-обгортці гри (годинник/RNG нової гри, зерно прогону). */
+const botSim = (run: BotRun): SimState => ({ ...newSim(run.seed), game: run.final });
+
+/** Найбільший сейв серед прогонів. Порожній список — збій, а не «0 байтів»: замір без прогонів нічого не доводить. */
+function maxBotSave(runs: readonly BotRun[]): BotSave {
+  let best: BotSave | null = null;
+  for (const [index, run] of runs.entries()) {
+    const sim = botSim(run);
+    const size = bytes(serialize(sim, STORY_REV));
+    if (best === null || size > best.size) best = { index, run, sim, size };
+  }
+  if (best === null) throw new Error('немає прогонів бота — замір розміру вакуумний');
+  return best;
+}
+
+describe(`розмір сейву: найбільший сейв бота GAME-37 (${BOT_RUNS} прогонів, зерно ${BOT_SEED}) + журнал на межі`, () => {
+  let runs: BotRun[] = [];
+  beforeAll(() => { runs = campaign(GAME_DEFS, BOT_RUNS, BOT_SEED); }, 120_000);
+
+  it('замір не вакуумний: прогонів рівно BOT_RUNS (> 0), усі пари осей покриті, бот доходить до кінця', () => {
+    expect(runs.length, 'немає прогонів бота').toBeGreaterThan(0);
+    expect(runs).toHaveLength(BOT_RUNS);
+    expect(uncoveredPairs(variantsFor(enumerateCombos(CONTENT)), runs)).toEqual([]);
+    expect(runs.filter((r) => r.verdict === 'ended').length).toBeGreaterThan(0);
+    expect(runs.filter((r) => r.verdict === 'softlock' || r.verdict === 'unknown')).toEqual([]);
+  });
+
+  it('найбільший сейв бота — справжній сейв (читається назад без втрат)', () => {
+    const max = maxBotSave(runs);
+    const json = serialize(max.sim, STORY_REV);
+    const r = fromSave(json, { ...(GAME_DEFS.story ? { story: GAME_DEFS.story } : {}), ...(GAME_DEFS.life ? { life: GAME_DEFS.life } : {}) });
+    expect(r.ok, r.ok ? '' : `${r.code} ${r.detail}`).toBe(true);
+    expect(r.ok && serialize(r.sim, STORY_REV)).toBe(json);
+  });
+
+  it('найбільший сейв бота, журнал добитий до JOURNAL_LIMIT найдовшими записами, — < 3 МіБ і < 500 КіБ; числа друкуються', () => {
+    const max = maxBotSave(runs);
+    // Бот ходить ядром (dispatch), без журналу подорожі: його журнал порожній — добиваємо всі JOURNAL_LIMIT записів.
+    const padded: SimState = { ...max.sim, journal: [...max.sim.journal, ...Array.from({ length: JOURNAL_LIMIT - max.sim.journal.length }, () => WORST_ENTRY)] };
+    const n = bytes(serialize(padded, STORY_REV));
+    const v = max.run.variant;
+    console.info(`GAME-103 bot max save: ${max.size} bytes (${(max.size / 1024).toFixed(1)} KiB) — run #${max.index} of ${runs.length}, seed ${max.run.seed}, `
+      + `${v.profile}/${v.transport}/${v.animal}/${v.side}/${v.money}, ${max.run.verdict}, ${max.run.steps} steps, processed ${Object.keys(max.run.final.processed).length}; `
+      + `with journal ${padded.journal.length}/${JOURNAL_LIMIT}: ${n} bytes (${(n / 1024).toFixed(1)} KiB)`);
+    expect(padded.journal).toHaveLength(JOURNAL_LIMIT);
+    expect(n).toBeGreaterThan(max.size);
+    expect(n).toBeLessThan(YT_LIMIT_BYTES);
+    expect(n).toBeLessThan(YT_SOFT_BYTES);
+  });
+
+  it('негативний контроль: без прогонів замір падає, а не повертає «0 байтів»', () => {
+    expect(() => maxBotSave([])).toThrow(/немає прогонів/);
   });
 });

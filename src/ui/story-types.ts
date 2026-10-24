@@ -4,7 +4,7 @@
 /** Що можна зробити зараз. `key` — ключ тексту контенту (content/locales), `null` — без назви. */
 export interface OfferAction {
   readonly id: string;
-  readonly kind: 'visit' | 'talk' | 'pickup' | 'buy' | 'sell' | 'dry' | 'complete' | 'decline' | 'choose' | 'continue';
+  readonly kind: 'visit' | 'talk' | 'pickup' | 'buy' | 'sell' | 'dry' | 'complete' | 'decline' | 'choose' | 'continue' | 'pack' | 'unpack' | 'autopack';
   readonly key: string | null;
   readonly priceCents?: number;
   /** Скільки хвилин займе дорога (GAME-31); немає — дія на місці. */
@@ -23,6 +23,19 @@ export interface OfferCharacter {
 
 export interface OfferObjective { readonly key: string; readonly done: boolean; readonly required: boolean }
 
+/** Екран пакування (GAME-109): місце в одиницях, три групи, підпис за фактами стану. `action` null — річ не вміщається. */
+export interface OfferPacking {
+  readonly used: number;
+  readonly capacity: number;
+  readonly groups: readonly {
+    readonly group: 'needed' | 'useful' | 'leave';
+    readonly items: readonly { readonly key: string; readonly units: number; readonly packed: boolean; readonly action: OfferAction | null }[];
+  }[];
+  readonly auto: OfferAction;
+  /** Ключ підпису (content/locales), коли бракує речі, яку радить гра; null — нічого казати. */
+  readonly noteKey: string | null;
+}
+
 export interface StoryOffer {
   /** create — персонажа ще немає; play — гра йде; ended — кінець розділу. */
   readonly stage: 'create' | 'play' | 'ended';
@@ -33,6 +46,8 @@ export interface StoryOffer {
   /** Відкрита розмова: репліка й відповіді (лише ті, що ядро прийме). */
   readonly dialogue: { readonly speakerKey: string | null; readonly key: string | null; readonly answers: readonly OfferAction[] } | null;
   readonly actions: readonly OfferAction[];
+  /** Пакування перед дорогою; null — зараз закрите. */
+  readonly packing: OfferPacking | null;
   /** Речі в руках; для спорядження (GAME-73) — ще стан 0…100 і чи мокре. */
   readonly inventory: readonly { readonly key: string; readonly qty: number; readonly gear?: { readonly condition: number; readonly wet: boolean } }[];
   /** Продаються тут, але бракує грошей (GAME-83): показуються вимкненими з причиною, а не зникають. */

@@ -122,9 +122,9 @@ describe('тексти цілей (GAME-84 №2, №3)', () => {
     expect(L.uk[o?.textKey ?? '']).not.toMatch(/^Рушай до озера/);
     expect(L.en[o?.textKey ?? '']).toMatch(/road/i);
     expect(L.en[o?.textKey ?? '']).not.toMatch(/^Head for the lake/);
-    // Озеро — окрема ціль ST-005 (відвідати Кемпінг), яка тікається лише в таборі.
+    // GAME-109: «облаштуватись на ніч» — репліка Елізи (намет, авто чи альтанка), а не просте відвідування табору.
     const st005 = quests.find((q) => q.id === 'ST-005');
-    expect(st005?.objectives.find((x) => x.id === 'pitch-tent')).toMatchObject({ kind: 'visit', target: 'loc.camp.lake' });
+    expect(st005?.objectives.find((x) => x.id === 'pitch-tent')).toMatchObject({ kind: 'talk', target: 'npc.elise', byDialogue: true });
   });
 });
 

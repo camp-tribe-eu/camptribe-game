@@ -21,6 +21,8 @@ export const PROLOGUE_BIKE: readonly Input[] = [
   c({ type: 'BuyItem', itemId: 'item.sleeping-bag-synthetic' }),                         // купівля в крамниці: гроші в хеші
   c({ type: 'Pickup', itemId: 'item.tent' }),                                            // відмова (уже в руках) теж у журналі
   c({ type: 'CompleteQuest', questId: 'ST-003' }), ...frames(4),
+  // GAME-109: пакування (велосипед — 10 од.): міняємо ліхтар на перекуси, подушка не вміщається (відмова в журналі), «автоматично» повертає як було
+  c({ type: 'UnpackItem', itemId: 'item.lantern' }), c({ type: 'PackItem', itemId: 'item.snacks' }), c({ type: 'PackItem', itemId: 'item.big-cushion' }), c({ type: 'AutoPack' }),
   c({ type: 'Visit', locationId: 'loc.road' }), ...frames(12, 1000),                     // дорога: хвилини й знахідки
   { kind: 'pause' }, ...frames(3, 1000), { kind: 'advance', minutes: 30 }, { kind: 'resume' }, // пауза меню, перемотування (рецензія GAME-34)
   c({ type: 'CompleteQuest', questId: 'ST-004', to: 'q.elise-bike-area' }),

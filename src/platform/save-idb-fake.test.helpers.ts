@@ -4,6 +4,9 @@
 // Межі підробки (рецензія PR #34): onerror не стріляє (у справжньому IDB помилка запиту → error → abort), а запит після
 // автокомміту не кидає TransactionInactiveError. Нинішньому save-store це байдуже (запити синхронно в onsuccess), але
 // await усередині транзакції пройшов би тут і впав би в браузері — така зміна потребує e2e, не лише цього тесту.
+// Паралельні транзакції (GAME-103, тести сесії на обох реалізаціях): як у справжньому IDB, транзакції з тим самим
+// сховищем ідуть по черзі (тут — усі, у порядку створення; специфікація це дозволяє), а readonly нічого не коммітить.
+// Без цього читання, що почалось до запису, своїм знімком затирало б щойно записаний main — збій підробки, не коду.
 type Data = Map<string, unknown>;
 
 export interface Fake {
@@ -17,10 +20,17 @@ export interface Fake {
 export function installFakeIdb(): Fake {
   const fake: Fake = { data: new Map(), failPutKey: null, txCount: 0 };
 
-  function makeTx(db: object) {
+  /** Черга транзакцій: наступна починається, коли попередня завершилась (complete чи abort). */
+  let queue: Promise<void> = Promise.resolve();
+
+  function makeTx(db: object, mode: string) {
     fake.txCount++;
-    // Робоча копія: комміт лише на complete, обрив її викидає — це і є відкат транзакції.
-    const work: Data = new Map(fake.data);
+    let done!: () => void;
+    const turn = queue;
+    queue = new Promise<void>((r) => { done = r; });
+    // Робоча копія: знімок — коли настала черга; комміт лише на complete (і лише readwrite), обрив її викидає — відкат.
+    let work: Data = new Map();
+    void turn.then(() => { work = new Map(fake.data); });
     let pending = 0;
     let aborted = false;
     let settled = false;
@@ -31,25 +41,26 @@ export function installFakeIdb(): Fake {
     const abort = () => {
       if (aborted || settled) return;
       aborted = true;
-      setTimeout(() => { settled = true; tx.onabort?.(); }, 0);
+      setTimeout(() => { settled = true; done(); tx.onabort?.(); }, 0);
     };
     const finishIfIdle = () => {
       if (pending > 0 || aborted || settled) return;
       setTimeout(() => {
         if (pending > 0 || aborted || settled) return;
         settled = true;
-        fake.data = work;
+        if (mode === 'readwrite') fake.data = work;
+        done();
         tx.oncomplete?.();
       }, 0);
     };
     function request<T>(op: () => T) {
       const req: { result: T | undefined; onsuccess: (() => void) | null } = { result: undefined, onsuccess: null };
       pending++;
-      setTimeout(() => {
+      void turn.then(() => setTimeout(() => {
         pending--;
         if (!aborted) { req.result = op(); req.onsuccess?.(); }
         finishIfIdle();
-      }, 0);
+      }, 0));
       return req;
     }
     const store = {
@@ -61,20 +72,21 @@ export function installFakeIdb(): Fake {
       }),
       delete: (k: string) => request(() => { work.delete(k); }),
       openCursor: () => {
-        const keys = [...work.keys()].sort();
+        let keys: string[] = [];
         let i = 0;
         const req: { result: unknown; onsuccess: (() => void) | null } = { result: null, onsuccess: null };
-        const next = () => {
+        const next = (first = false) => {
           pending++;
-          setTimeout(() => {
+          void turn.then(() => setTimeout(() => {
+            if (first) keys = [...work.keys()].sort();
             pending--;
             const k = keys[i];
             req.result = k === undefined ? null : { key: k, value: work.get(k), continue: () => { i++; next(); } };
             req.onsuccess?.();
             finishIfIdle();
-          }, 0);
+          }, 0));
         };
-        next();
+        next(true);
         return req;
       },
     };
@@ -84,7 +96,7 @@ export function installFakeIdb(): Fake {
 
   (globalThis as { indexedDB?: unknown }).indexedDB = {
     open: () => {
-      const db = { createObjectStore: () => ({}), transaction: () => makeTx(db), close: () => {} };
+      const db = { createObjectStore: () => ({}), transaction: (_s: string, mode = 'readonly') => makeTx(db, mode), close: () => {} };
       const req: { result: typeof db; error: null; onupgradeneeded: (() => void) | null; onsuccess: (() => void) | null; onerror: (() => void) | null } =
         { result: db, error: null, onupgradeneeded: null, onsuccess: null, onerror: null };
       setTimeout(() => { req.onupgradeneeded?.(); req.onsuccess?.(); }, 0);

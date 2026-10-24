@@ -83,5 +83,18 @@
   "ui.remind.copy": "Copy code",
   "ui.remind.close": "Close",
   "ui.remind.done": "Code copied. Keep it wherever suits you — nothing in the game changed.",
-  "ui.remind.manual": "Copying did not work here. Here is the code — select and copy it yourself whenever you like:"
+  "ui.remind.manual": "Copying did not work here. Here is the code — select and copy it yourself whenever you like:",
+  "pack.title": "Did we pack everything?",
+  "pack.space": "Space",
+  "pack.units": "units",
+  "pack.group.needed": "Needed",
+  "pack.group.useful": "Useful",
+  "pack.group.leave": "Can stay home",
+  "pack.in": "Pack:",
+  "pack.out": "Take out:",
+  "pack.auto": "Pack automatically",
+  "pack.full": "won't fit",
+  "jr.PackItem": "Packed",
+  "jr.UnpackItem": "Taken out of the luggage",
+  "jr.AutoPack": "Luggage packed by the list"
 }
