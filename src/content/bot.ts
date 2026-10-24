@@ -35,6 +35,8 @@ export interface BotRun {
   readonly verdict: Verdict;
   /** Для тупика — стан, з якого кінець недосяжний (квести, локація, інвентар). */
   readonly stuck?: Pick<GameState, 'quests' | 'player' | 'inventory' | 'flags' | 'dialogue'>;
+  /** Стан, на якому бот зупинився (GAME-103: з нього міряють найбільший сейв, який дає бот). */
+  readonly final: GameState;
 }
 
 // Повний канонічний JSON, а не 32-бітний stateHash (рецензія GAME-37): зіткнення при рості контенту
@@ -84,7 +86,7 @@ export function runBot(defs: CoreDefs, variant: Variant, seed: number, memo: End
     type: 'CreateCharacter', commandId: 'b0', profileId: variant.profile, transportId: variant.transport,
     ...(variant.animal === 'animal.none' ? {} : { animalId: variant.animal }),
   }, defs);
-  if (!created.ok) return { seed, variant, steps: 0, purchases: 0, verdict: 'softlock', stuck: { quests: {}, player: null, inventory: {}, flags: [], dialogue: null } };
+  if (!created.ok) return { seed, variant, steps: 0, purchases: 0, verdict: 'softlock', stuck: { quests: {}, player: null, inventory: {}, flags: [], dialogue: null }, final: initialState(0) };
   let s = created.state;
   let steps = 0;
   let purchases = 0;
@@ -104,12 +106,13 @@ export function runBot(defs: CoreDefs, variant: Variant, seed: number, memo: End
     if (p.value.m.type === 'BuyItem' && s.grants.length === 0) purchases++;
     s = p.value.n;
   }
-  if (s.campaignEnded) return { seed, variant, steps, purchases, verdict: 'ended' };
+  if (s.campaignEnded) return { seed, variant, steps, purchases, verdict: 'ended', final: s };
   const reach = endReachable(s, defs, memo, opts.cap);
-  if (reach === true) return { seed, variant, steps, purchases, verdict: 'end-reachable' };
+  if (reach === true) return { seed, variant, steps, purchases, verdict: 'end-reachable', final: s };
   return {
     seed, variant, steps, purchases, verdict: reach === false ? 'softlock' : 'unknown',
     stuck: { quests: s.quests, player: s.player, inventory: s.inventory, flags: s.flags, dialogue: s.dialogue },
+    final: s,
   };
 }
 

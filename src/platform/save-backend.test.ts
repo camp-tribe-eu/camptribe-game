@@ -4,21 +4,10 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { serialize } from '../core/save';
 import { newSim, type SimState } from '../core/sim';
-import { installFakeIdb } from './save-idb-fake.test.helpers';
-import { idbBackend, type SaveBackend } from './save-backend';
-import { createMemoryBackend } from './save-memory';
+import { IMPLS, uninstallFakeIdb } from './save-impls.test.helpers';
 import { createSaveSession, type SessionBridge } from './save-session';
 
-interface Harness { readonly backend: SaveBackend; failNextWrite(): void }
-const IMPLS: readonly [name: string, make: () => Harness][] = [
-  ['IndexedDB (сайт)', () => { const f = installFakeIdb();
-    // Обрив — на одну операцію, як і в заглушки: після неї сховище знову справне.
-    const once = <A extends unknown[], R>(op: (...a: A) => Promise<R>) => async (...a: A): Promise<R> => { try { return await op(...a); } finally { f.failPutKey = null; } };
-    return { backend: { ...idbBackend, write: once(idbBackend.write), quarantine: once(idbBackend.quarantine) }, failNextWrite: () => { f.failPutKey = 'main'; } };
-  }],
-  ["пам'ять (заглушка YouTube SDK)", () => { const m = createMemoryBackend(); return { backend: m, failNextWrite: () => m.failNextWrite() }; }],
-];
-afterEach(() => { delete (globalThis as { indexedDB?: unknown }).indexedDB; });
+afterEach(uninstallFakeIdb);
 
 function bridge(): SessionBridge & { sim: SimState } {
   const b = {
