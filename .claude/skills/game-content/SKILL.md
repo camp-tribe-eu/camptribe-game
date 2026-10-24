@@ -85,7 +85,7 @@ GDD — приватний (`brain/Передача/00-dzherelo-lezhyt-lokalno.m
 `tags`, `completed`, `progress`. Хочеш нове поле — спершу картка на схему, потім контент.
 
 **Файли.** У `content/` лише: `meta.json`, `profiles.json`, `transports.json`, `animals.json`,
-`items.json`, `npcs.json`, `locations.json`, `quests.json`, `events.json`, `facts.json`, тека
+`items.json`, `npcs.json`, `locations.json`, `quests.json`, `events.json`, `facts.json`, `flags.json` (реєстр прапорців, GAME-115), тека
 `locales/` з `<мова>.json` і тека `dialogue/` з `<назва>.json` (один діалог на файл). Більше нічого (жодних `README.json`, `quests-draft.json`, `lint/` усередині).
 
 **id — лише малі латинські літери, цифри, `.` і `-`. Підкреслення `_` і великі літери — ніколи.**
@@ -102,6 +102,7 @@ GDD — приватний (`brain/Передача/00-dzherelo-lezhyt-lokalno.m
 | `quests.json` | **`id`**, **`titleKey`**, **`optional`**, **`objectives`**, **`transitions`**, `end`, `giverId`, `locationId`, `when`, `requires`, `reward` | основний `ST-006`, бічний `q.nora-walk` |
 | `events.json` | **`id`**, **`titleKey`**, **`repeatable`**, `locationId`, `reward` | `ev.neighbours-firewood` |
 | `facts.json` | **`id`**, **`claimKey`**, `source`, `checkedAt`, `kind` | `fact.de-quiet-hours` |
+| `flags.json` | **`id`**, **`type`** (`bool` \| `enum` \| `number` \| `item` \| `location`), **`initial`**, **`owner`** (хто ставить), `note`, `values` (enum), `valuesFrom` (enum факту стану), `generatedFrom` (сімейство ядра), `reserved`, `aka` (назви з реєстру радника) | `f.elise-met`, `f.night`, `f.pack-*`, `m.came-by-bike`, `s.transport` |
 
 * **Ціль квесту:** **`id`** (`pitch-tent` — без крапок, лише `a-z0-9` і `-`), **`textKey`**,
   **`kind`** (`talk` → `target` NPC, `byDialogue: true` — не зараховувати саму розмову, лише репліку з `completeObjective`; `visit` → локація; `collect` / `deliver` → предмет; `deliver`
@@ -148,6 +149,17 @@ GDD — приватний (`brain/Передача/00-dzherelo-lezhyt-lokalno.m
 * Ефект — рівно один ключ: `{ "setFlag": "f.x" }`, `{ "startQuest": "q.x" }`,
   `{ "completeObjective": { "quest": "ST-003", "objective": "get-tent" } }`, `{ "remember": "m.x" }`.
 * Прапорець — `f.назва`. Читати можна лише прапорець, який десь ставить `setFlag`.
+* **Реєстр** (GAME-115) — `content/flags.json`. Кожен прапорець `f.*`, факт пам'яті `m.*` і факт стану `s.*`, що
+  з'являється в умові чи ефекті, — спершу рядок реєстру: тип, початкове значення, хто ставить. Новий сейв не має
+  прапорців, тож `initial` у `f.*`/`m.*` — `false` (bool) або `"unset"` (enum).
+  **Enum-прапорець** — один рядок `{ "id": "f.night", "type": "enum", "values": ["tent", "car", "gazebo"], "initial": "unset" }`;
+  у діалозі він живе як конкретне значення `f.night-tent` (`setFlag` / `flag` / `notFlag`). `unset` — це відсутність прапорця,
+  не значення. Ядро прапорців не знімає: значення enum ставиться раз (змінити його — окрема картка ядра).
+  **Сімейства ядра** — `f.pack-*` (`generatedFrom: "packing.items"`) і `f.seen-*` (`generatedFrom: "dialogues.trigger"`): не
+  перелічуй їх вручну. Факт стану `s.transport` читає умова `transport`. Рядок наперед для майбутнього розділу — з
+  `"reserved": true`; щойно вжив — зніми `reserved`.
+  🔴 **Журнал і підписи Matthew** (GAME-140, ще не написані): кожен запис матиме стабільний `id` і умову, що посилається
+  лише на зареєстрований прапорець або факт стану з цього реєстру — без «здогадів» із тексту.
 * **Пам'ять NPC** (GAME-48) — факт `m.слово-слово` (`m.came-by-bike`). `remember` у відповіді запам'ятовує
   факт NPC, **чия це розмова**; `remembers`/`notRemembers` читають пам'ять того самого NPC. Інший NPC
   цього факту не знає; подія в дорозі (без NPC) нічого не запам'ятовує й не пам'ятає. Репліка «а пам'ятаєш…»
@@ -242,6 +254,13 @@ GDD — приватний (`brain/Передача/00-dzherelo-lezhyt-lokalno.m
 - `OBJECTIVE_BY_DIALOGUE_ALWAYS` — `completeObjective` цілі `byDialogue` лежить на кожному шляху діалогу до кінця: це знову «будь-яка розмова». Не допустити: став ефект лише на вибір потрібної гілки, лишай шлях до `end` повз нього (GAME-87: «Нова велозона» — лише гілка про велосипед).
 - `DIALOGUE_NPC_DUPLICATE` — два діалоги з однаковим `npcId`; рушій не знає, який запускати. Не допустити: один файл діалогу на NPC; нова тема розмови — нові вузли й умовні вибори в наявному діалозі.
 - `DIALOGUE_FILE_NAME` — `id` діалогу не збігається з назвою файлу (`dialogue/elise-greeting.json` мусить мати `"id": "dlg.elise-greeting"`). Не допустити: перейменовуєш діалог — перейменуй і файл, і `id` разом; назву файлу бери з `id` без префікса `dlg.`.
+
+**Реєстр прапорців** (GAME-115, `content/flags.json`)
+- `FLAG_UNREGISTERED` — умова чи ефект вживає прапорець `f.*`, факт пам'яті `m.*` або факт стану `s.transport` (умова `transport`), якого немає в `content/flags.json`; також `f.pack-<річ>` / `f.seen-<подія>`, яких породжувач не дає (речі немає в `packing.items`, події — в `dialogue/`). Немає файлу реєстру — червоніє кожен вжиток. Не допустити: спершу рядок реєстру `{ "id", "type", "initial", "owner" }`, потім умова; звір написання id дослівно; новий транспорт чи подія — через свої файли, а не вручну.
+- `FLAG_ENUM_VALUE` — `f.<enum>-<значення>`, де значення немає серед `values` enum-рядка (зокрема `-unset`: unset — відсутність прапорця). Не допустити: значення — лише з `values`; нове значення — спершу додай у `values` реєстру, слова через дефіс (`lake-view`, не `lake_view`).
+- `FLAG_TYPE_MISMATCH` — умова чи ефект читає запис реєстру не за типом: `flag`/`notFlag`/`setFlag`/`remember` на enum без значення (`f.night` замість `f.night-tent`) чи на `number`/`item`/`location`; умова `transport`, а `s.transport` у реєстрі не enum. Не допустити: bool — напряму, enum — через конкретне значення `f.<назва>-<значення>`, `s.transport` — `type: "enum"`, `valuesFrom: "transports"`.
+- `FLAG_REGISTERED_UNUSED` — рядок реєстру, якого не вживає жодна умова чи ефект, а для сімейства — порожній породжувач. Помилка, не попередження: мертві рядки інакше накопичуються мовчки. Не допустити: вживи прапорець, прибери рядок або, якщо він для майбутнього розділу, познач `"reserved": true`.
+- `FLAG_REGISTRY_INVALID` — рядок реєстру сам собі суперечить: `initial` не того типу (bool `f.*`/`m.*` — лише `false`, enum `f.*` — лише `"unset"`, `s.*` — `"unset"` чи дозволене значення, number — ціле, location/item — існуючий id чи `"unset"`); enum без `values` (або `valuesFrom` не у `s.*`); `unset`, дубль чи `_` у `values`; `values` у не-enum; `m.*` не bool; `f.*` типу number/item/location без `reserved`; сімейство без `generatedFrom` чи з чужим префіксом; `generatedFrom` у звичайного прапорця; `reserved`, але вже вжитий; bool `f.x-y`, що збігається зі значенням enum `f.x`. Не допустити: заповнюй рядок за таблицею з розділу 7 і знімай `reserved`, щойно прапорець з'явився в діалозі.
 
 **Комбінації профіль × транспорт × тварина**
 - `COMBO_NO_START` — стартовий квест має `when`, що виключає частину гравців. Не допустити: на `meta.start` ніколи не став `when`.

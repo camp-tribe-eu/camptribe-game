@@ -1,0 +1,7 @@
+[
+  { "id": "f.elise-met", "type": "bool", "initial": false, "owner": "dlg.elise-greeting/hello" },
+  { "id": "f.road-apple", "type": "bool", "initial": false, "owner": "dlg.road-apples/box" },
+  { "id": "f.seen-*", "type": "bool", "initial": false, "generatedFrom": "dialogues.trigger", "owner": "ядро: eventSeenFlag, src/core/story.ts" },
+  { "id": "m.came-by-bike", "type": "bool", "initial": false, "owner": "dlg.elise-greeting (пам'ять Елізи)" },
+  { "id": "s.transport", "type": "enum", "valuesFrom": "transports", "initial": "unset", "owner": "ядро: транспорт гравця, обраний на старті" }
+]
