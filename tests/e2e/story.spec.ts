@@ -418,34 +418,41 @@ test('прохід керується лише кліками й клавіша�
 // GAME-32 · Еліза стоїть на мапі кемпінгу: до неї доходять пішки й заговорюють клавішею дії.
 interface Probe { playerX: number; playerY: number; nearObject: string | null }
 const probe = (page: Page): Promise<Probe> => page.evaluate(() => ({ ...(window as unknown as { __game: { probe: Probe } }).__game.probe }));
-async function walk(page: Page, key: string, until: (p: Probe) => boolean): Promise<Probe> {
-  await page.keyboard.down(key);
-  const start = Date.now();
-  let p = await probe(page);
-  while (!until(p) && Date.now() - start < 5_000) { await page.waitForTimeout(16); p = await probe(page); }
-  await page.keyboard.up(key);
-  await page.waitForTimeout(50);
-  return probe(page);
-}
 /** Точка Елізи з мапи (public/maps/camp-lake.tmj) — ціль за координатою, як у world.spec (CI PR #53: кроки за годинником
  *  на повільному CI то не доходили, то проскакували зону Ø 96 px). Звірка з мапою — нижче, щоб константа не застаріла. */
 const ELISE = { x: 80, y: 272 };
+const KEY_CODE = { ArrowLeft: 37, ArrowUp: 38, ArrowRight: 39, ArrowDown: 40 } as const;
+/** Ходьба до координати, яку стереже сама сторінка: keydown, перевірка позиції кожен кадр (rAF), keyup одразу на цілі.
+ *  CI PR #53: цикл «клавіша з Playwright → probe → клавіша» мав затримку в сотні мс на кожен обмін, і персонаж проскакував
+ *  зону Елізи то по X, то по Y. Тут обміну через CDP між кроками немає. Подія — як справжня клавіша (keyCode), як у world.spec. */
+async function walkInPage(page: Page, key: keyof typeof KEY_CODE, axis: 'playerX' | 'playerY', target: number): Promise<void> {
+  await page.evaluate(({ code, key, axis, target }) => new Promise<void>((resolve) => {
+    const g = (window as unknown as { __game: { probe: { playerX: number; playerY: number; nearObject: string | null } } }).__game;
+    const fire = (type: string): void => {
+      const e = new KeyboardEvent(type, { key, code: key, bubbles: true, cancelable: true });
+      Object.defineProperty(e, 'keyCode', { get: () => code });
+      window.dispatchEvent(e);
+    };
+    const neg = key === 'ArrowLeft' || key === 'ArrowUp';
+    const done = (): boolean => g.probe.nearObject === 'npc.elise' || (neg ? g.probe[axis] <= target : g.probe[axis] >= target);
+    const start = performance.now();
+    fire('keydown');
+    const tick = (): void => {
+      if (done() || performance.now() - start > 8_000) { fire('keyup'); resolve(); } else requestAnimationFrame(tick);
+    };
+    requestAnimationFrame(tick);
+  }), { code: KEY_CODE[key], key, axis, target });
+  await page.waitForTimeout(100);
+}
 async function walkToElise(page: Page): Promise<void> {
   const map = JSON.parse(readFileSync('public/maps/camp-lake.tmj', 'utf8')) as { layers: { objects?: { name: string; x: number; y: number }[] }[] };
   const o = map.layers.flatMap((l) => l.objects ?? []).find((n) => n.name === 'npc.elise');
   expect({ x: o?.x, y: o?.y }, 'Еліза на мапі зсунулась — онови ELISE').toEqual(ELISE);
-  await walk(page, 'ArrowLeft', (p) => p.playerX <= ELISE.x + 8);
-  // Довертаємо за координатою по обох осях: на повільному CI затиснута клавіша проскакувала й ліворуч (тоді жодна
-  // корекція по Y не давала зони Ø 96 px), і по вертикалі (CI PR #53).
+  // Довертаємо за координатою по обох осях: X до ±16 px, потім Y до точки Елізи (зона дії Ø 96 px).
   for (let i = 0; i < 12 && (await probe(page)).nearObject !== 'npc.elise'; i++) {
     const p = await probe(page);
-    if (Math.abs(p.playerX - ELISE.x) > 16) {
-      const key = p.playerX > ELISE.x ? 'ArrowLeft' : 'ArrowRight';
-      await walk(page, key, (q) => q.nearObject === 'npc.elise' || (key === 'ArrowLeft' ? q.playerX <= ELISE.x : q.playerX >= ELISE.x));
-    } else {
-      const key = p.playerY > ELISE.y ? 'ArrowUp' : 'ArrowDown';
-      await walk(page, key, (q) => q.nearObject === 'npc.elise' || (key === 'ArrowUp' ? q.playerY <= ELISE.y : q.playerY >= ELISE.y));
-    }
+    if (Math.abs(p.playerX - ELISE.x) > 16) await walkInPage(page, p.playerX > ELISE.x ? 'ArrowLeft' : 'ArrowRight', 'playerX', ELISE.x);
+    else await walkInPage(page, p.playerY > ELISE.y ? 'ArrowUp' : 'ArrowDown', 'playerY', ELISE.y);
   }
   expect((await probe(page)).nearObject).toBe('npc.elise');
 }
