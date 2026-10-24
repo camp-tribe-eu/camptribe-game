@@ -125,5 +125,25 @@ for (const viewport of [{ width: 390, height: 844 }, { width: 844, height: 390 }
       await expect(reminder(page)).toBeVisible();
       await ctx.close();
     });
+
+    test('нова гра тим самим маршрутом — нагадування знову є (commandId — лічильник, рецензія PR #44)', async ({ browser }) => {
+      const { ctx, page } = await start(browser, viewport);
+      await act(page, 'visit', 'loc.shop');
+      await closeStory(page);
+      await expect(reminder(page)).toBeVisible();
+      const trip1 = (await core(page)).journal.filter((e) => e.type === 'Visit').at(-1)?.commandId;
+      await page.locator('[data-touch="pause"]').click();
+      await page.locator('[data-ui="new-game"]').click();
+      await page.locator('[data-ui="confirm-new-yes"]').click();
+      await panel(page).locator('[data-act="create"]', { hasText: 'Велосипед' }).first().click();
+      await page.waitForTimeout(400);
+      await act(page, 'complete', 'q.st-001');
+      await act(page, 'complete', 'q.st-002');
+      await act(page, 'visit', 'loc.shop');
+      await closeStory(page);
+      expect((await core(page)).journal.filter((e) => e.type === 'Visit').at(-1)?.commandId, 'той самий id приїзду — інакше тест нічого не доводить').toBe(trip1);
+      await expect(reminder(page)).toBeVisible();
+      await ctx.close();
+    });
   });
 }

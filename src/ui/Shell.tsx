@@ -62,6 +62,10 @@ export function Shell({ port, langOverride, credits, build }: { port: UiPort; la
     void port.newGame().then((ok) => {
       // Запис не вдався — лишаємо меню паузи відкритим, щоб повідомлення було видно (рецензія PR #17).
       if (!ok) { setStatus('ui.newGameFailed'); return; }
+      // commandId — лічильник (c1, c2…): у новій грі той самий маршрут дає той самий id приїзду, і старе «нагадано»
+      // мовчки з'їло б перше нагадування нової гри (рецензія PR #44).
+      setRemind(null);
+      if (settings.remindedTrip !== null) update({ ...settings, remindedTrip: null });
       setPaused(false);
       story(true);
     });
