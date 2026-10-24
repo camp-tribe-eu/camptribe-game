@@ -1,0 +1,10 @@
+{
+  "id": "dlg.ev.ch1.road-010",
+  "trigger": {"at": ["loc.road"], "chance": 6, "titleKey": "dlg.ev.ch1.road-010.title"},
+  "start": "wind",
+  "nodes": [
+    {"id": "wind", "speaker": "player", "textKey": "dlg.ev.ch1.road-010.wind", "choices": [{"textKey": "dlg.ev.ch1.road-010.wind.c1", "next": "slow"}, {"textKey": "dlg.ev.ch1.road-010.wind.c2", "next": "plan"}]},
+    {"id": "slow", "speaker": "player", "textKey": "dlg.ev.ch1.road-010.slow", "end": true},
+    {"id": "plan", "speaker": "player", "textKey": "dlg.ev.ch1.road-010.plan", "end": true}
+  ]
+}

@@ -762,6 +762,14 @@ export const FIXTURES = [
   { base: 'combo', name: '[подія] подія стартує квест — сюжет на везінні', expect: ['EVENT_EFFECT_UNSUPPORTED'], patch(c) { withRoadEvent(c).nodes[0].choices[0].effects.push({ startQuest: 'ST-003' }); } },
   { base: 'combo', name: '[подія] у неіснуючій локації', expect: ['DIALOGUE_REF_MISSING'], patch(c) { withRoadEvent(c).trigger.at = ['loc.ghost']; } },
   { base: 'combo', name: '[подія] шанс 101 %', expect: ['SCHEMA_INVALID'], patch(c) { withRoadEvent(c).trigger.chance = 101; } },
+  // GAME-108: when тригера — ті самі refs і combo-options, що й when квесту.
+  { base: 'combo', name: '[подія] контроль: when тригера лише для велосипеда — коректно', expect: [], patch(c) { withRoadEvent(c).trigger.when = { transports: [T_BIKE] }; } },
+  { base: 'combo', name: '[подія] when тригера з неіснуючим транспортом', expect: ['REF_MISSING'], patch(c) { withRoadEvent(c).trigger.when = { transports: ['transport.ghost'] }; } },
+  { base: 'combo', name: '[подія] when тригера: собака на велосипеді, а собаку возять лише авто', expect: ['WHEN_UNSATISFIABLE'], patch(c) {
+    withRoadEvent(c).trigger.when = { animals: [DOG], transports: [T_BIKE] };
+    c.animals[0].transports = [T_CAR];
+  } },
+  { base: 'combo', name: '[подія] when тригера з невідомим полем', expect: ['SCHEMA_UNKNOWN_FIELD'], patch(c) { withRoadEvent(c).trigger.when = { weather: ['rain'] }; } },
   { base: 'combo', name: '[подія] без виходу — червоніє тими самими перевірками діалогів', expect: ['DIALOGUE_DEAD_END', 'DIALOGUE_NODE_UNREACHABLE'], patch(c) {
     const d = withRoadEvent(c);
     d.nodes[0].choices[0].next = 'rain';

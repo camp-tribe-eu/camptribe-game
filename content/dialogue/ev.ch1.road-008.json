@@ -1,0 +1,11 @@
+{
+  "id": "dlg.ev.ch1.road-008",
+  "trigger": {"at": ["loc.road"], "chance": 6, "titleKey": "dlg.ev.ch1.road-008.title"},
+  "start": "missing",
+  "nodes": [
+    {"id": "missing", "speaker": "player", "textKey": "dlg.ev.ch1.road-008.missing", "choices": [{"textKey": "dlg.ev.ch1.road-008.missing.c1", "next": "bag"}, {"textKey": "dlg.ev.ch1.road-008.missing.c2", "next": "memory"}, {"textKey": "dlg.ev.ch1.road-008.missing.c3", "next": "without"}]},
+    {"id": "bag", "speaker": "player", "textKey": "dlg.ev.ch1.road-008.bag", "end": true},
+    {"id": "memory", "speaker": "player", "textKey": "dlg.ev.ch1.road-008.memory", "end": true},
+    {"id": "without", "speaker": "player", "textKey": "dlg.ev.ch1.road-008.without", "end": true}
+  ]
+}

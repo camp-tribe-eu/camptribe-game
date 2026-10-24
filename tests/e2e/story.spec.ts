@@ -26,14 +26,17 @@ async function act(page: Page, kind: string, key = '', timeout = 5_000): Promise
     throw new Error(`крок «${kind} ${key}»: кнопки немає на екрані подорожі`);
   }
   await page.waitForTimeout(400);   // GAME-80: панель глуха ~350 мс після дії — гравець теж не тисне швидше
-  // На дорозі з шансом 50 % трапляється подія (GAME-31; кидок залежить від прожитих кадрів) — відповідаємо, як гравець.
-  if (kind === 'visit' && key === 'loc.road') {
-    const answer = panel(page).locator('[data-key="dlg.road-apples.box.c2"]');
-    if (await answer.isVisible({ timeout: 400 }).catch(() => false)) {
-      await answer.click();
-      await panel(page).locator('[data-act="continue"]').click();
-      await page.waitForTimeout(400);   // GAME-80: панель глуха ~350 мс після дії
-    }
+  // На дорозі з шансом трапляється одна з десяти подій (GAME-31, GAME-108; кидок залежить від прожитих кадрів) —
+  // відповідаємо, як гравець, що поспішає: остання відповідь у кожному вузлі (у подій дороги вона безумовна).
+  if (kind === 'visit' && key === 'loc.road') await leaveRoadEvent(page);
+}
+
+/** GAME-108: з будь-якої події дороги — останньою відповіддю до кінця розмови. */
+async function leaveRoadEvent(page: Page): Promise<void> {
+  const dlg = panel(page).locator('[data-ui="dialogue"]');
+  for (let i = 0; i < 6 && await dlg.isVisible({ timeout: 400 }).catch(() => false); i++) {
+    await dlg.locator('[data-act]').last().click();
+    await page.waitForTimeout(400);   // GAME-80: панель глуха ~350 мс після дії
   }
 }
 
@@ -185,17 +188,22 @@ test('подія в дорозі не трапилась — дорога три
     }
     await r.close();
   }
-  throw new Error('за 16 зерен подія трапилась щоразу — шанс 50 % так не поводиться');
+  throw new Error('за 16 зерен подія трапилась щоразу — сумарний шанс 82 % так не поводиться');
 });
 
 test('подія в дорозі (GAME-31): трапляється на дорозі, читається, відповідь — у ядрі й у журналі', async ({ browser }) => {
-  // Шанс 50 %, різні зерна, кожне — у чистому контексті.
+  // Шанс «Яблук» 40 % (GAME-108: ще дев'ять подій ділять дорогу), різні зерна, кожне — у чистому контексті.
+  // Спроба ≈ 7 с, до 24 зерен — межа часу більша за типові 60 с.
+  test.setTimeout(240_000);
   let page: Page | null = null;
-  for (let seed = 1; seed <= 16 && !page; seed++) {
+  const others = new Set<string>();
+  for (let seed = 1; seed <= 24 && !page; seed++) {
     const r = await toRoad(browser, seed);
-    if (r.fired) page = r.page; else await r.close();
+    const title = r.fired ? await panel(r.page).locator('[data-ui="dialogue"] h3').textContent() : null;
+    if (title === 'Яблука біля дороги') page = r.page;
+    else { if (title) others.add(title); await r.close(); }
   }
-  if (!page) throw new Error('за 16 зерен подія не трапилась жодного разу — шанс 50 % так не поводиться');
+  if (!page) throw new Error(`за 24 зерна «Яблука» не трапились жодного разу (інші події: ${[...others].join(', ')}) — шанс 40 % так не поводиться`);
   await expect(panel(page).locator('[data-ui="dialogue"] h3')).toHaveText('Яблука біля дороги');
   await expect(panel(page).locator('[data-ui="actions"]')).toHaveCount(0);                // у події — лише відповіді
   await panel(page).locator('[data-key="dlg.road-apples.box.c1"]').click();
@@ -389,14 +397,14 @@ test('прохід керується лише кліками й клавіша�
   expect(src).not.toMatch(/\brequire\s*\(|\bimport\s*\(/);                       // і жодних динамічних імпортів
   // Під перевіркою — сам прохід і помічники, якими він ходить (panel, act): за синтаксичним деревом
   // (рецензія: регулярні вирази обходились шаблоном `${…}` і «//» усередині рядка).
-  const FLOW = ['panel', 'act', 'playBikeProlog'];
+  const FLOW = ['panel', 'act', 'leaveRoadEvent', 'playBikeProlog'];
   const roots: ts.Node[] = [];
   ts.forEachChild(sf, (n) => {
     if (ts.isFunctionDeclaration(n) && n.name && FLOW.includes(n.name.text)) roots.push(n);
     if (ts.isVariableStatement(n)) for (const d of n.declarationList.declarations) if (ts.isIdentifier(d.name) && FLOW.includes(d.name.text)) roots.push(d);
   });
   expect(roots.length).toBe(FLOW.length);
-  const ALLOWED = new Set(['playBikeProlog', 'act', 'panel', 'locator', 'first', 'click', 'tap', 'press', 'down', 'up', 'expect', 'toBeVisible', 'toHaveCount', 'Error', 'isVisible', 'catch', 'waitForTimeout']);
+  const ALLOWED = new Set(['playBikeProlog', 'act', 'leaveRoadEvent', 'panel', 'locator', 'first', 'last', 'click', 'tap', 'press', 'down', 'up', 'expect', 'toBeVisible', 'toHaveCount', 'Error', 'isVisible', 'catch', 'waitForTimeout']);
   const called: string[] = [];
   const bad: string[] = [];
   const walk = (n: ts.Node): void => {

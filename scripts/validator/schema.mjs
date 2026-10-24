@@ -52,7 +52,9 @@ const reward = obj({ grantId: req(str), items: arr(obj({ item: req(str), qty: re
 // У SCHEMAS як `dialogues` (DC-011), але НЕ в COLLECTIONS: це тека файлів, а не один <колекція>.json.
 // Власник діалогу — рівно один: npcId (розмова) або trigger (подія в дорозі, GAME-31). «Рівно один» стереже
 // перевірка dialogue-owner власним кодом, а не загальний SCHEMA_INVALID.
-const trigger = obj({ at: req(ids), chance: req({ t: 'int', min: 1, max: 100 }), titleKey: req(str) });
+// when (GAME-108) — кому подія взагалі може трапитись (профіль × транспорт × тварина), як when квесту: «скрип
+// велосипеда» — лише велосипедистові, «тиша в машині» — лише родині в авто.
+const trigger = obj({ at: req(ids), chance: req({ t: 'int', min: 1, max: 100 }), titleKey: req(str), when });
 export const DIALOGUE_SCHEMA = obj({ id: req(str), npcId: str, trigger, start: req(str), nodes: req({ t: 'array', of: node, min: 1 }) });
 
 export const SCHEMAS = {

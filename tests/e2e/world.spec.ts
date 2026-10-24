@@ -202,11 +202,10 @@ for (const vp of VIEWPORTS) {
         ['pickup', 'item.tent'], ['pickup', 'item.sleeping-bag'], ['complete', 'q.st-003'], ['visit', 'loc.home'], ['complete', 'q.ch1-home-001'], ['visit', 'loc.road'], ['complete', 'q.st-004'], ['visit', 'loc.camp.lake']] as const) {
         await story.locator(`[data-act="${kind}"][data-key="${key}"]`).tap();
         await page.waitForTimeout(400);   // GAME-80: панель глуха ~350 мс після дії
-        // На дорозі з шансом 50 % — подія (GAME-31): відповідаємо дотиком, як гравець.
-        if (key === 'loc.road' && await story.locator('[data-key="dlg.road-apples.box.c2"]').isVisible({ timeout: 400 }).catch(() => false)) {
-          await story.locator('[data-key="dlg.road-apples.box.c2"]').tap();
-          await page.waitForTimeout(400);   // GAME-80: панель глуха ~350 мс після дії
-          await story.locator('[data-act="continue"]').tap();
+        // На дорозі з шансом — подія (GAME-31): відповідаємо дотиком, як гравець. GAME-108: на дорозі одна з десяти подій — з будь-якої виходимо останньою відповіддю (у подій дороги вона безумовна).
+        const dlg = story.locator('[data-ui="dialogue"]');
+        for (let i = 0; key === 'loc.road' && i < 6 && await dlg.isVisible({ timeout: 400 }).catch(() => false); i++) {
+          await dlg.locator('[data-act]').last().tap();
           await page.waitForTimeout(400);   // GAME-80: панель глуха ~350 мс після дії
         }
       }

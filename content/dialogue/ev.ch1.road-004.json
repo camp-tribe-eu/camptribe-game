@@ -1,0 +1,12 @@
+{
+  "id": "dlg.ev.ch1.road-004",
+  "trigger": {"at": ["loc.road"], "chance": 6, "titleKey": "dlg.ev.ch1.road-004.title", "when": {"profiles": ["profile.family-teen"]}},
+  "start": "stop",
+  "nodes": [
+    {"id": "stop", "speaker": "player", "textKey": "dlg.ev.ch1.road-004.stop", "choices": [{"textKey": "dlg.ev.ch1.road-004.stop.c1", "next": "lanterns", "when": {"any": [{"flag": "f.pack-lantern-2"}, {"flag": "f.pack-lantern-3"}]}}, {"textKey": "dlg.ev.ch1.road-004.stop.c2", "next": "go"}]},
+    {"id": "lanterns", "speaker": "player", "textKey": "dlg.ev.ch1.road-004.lanterns", "choices": [{"textKey": "dlg.ev.ch1.road-004.lanterns.c1", "next": "repack"}, {"textKey": "dlg.ev.ch1.road-004.lanterns.c2", "next": "keep"}]},
+    {"id": "repack", "speaker": "player", "textKey": "dlg.ev.ch1.road-004.repack", "end": true},
+    {"id": "keep", "speaker": "player", "textKey": "dlg.ev.ch1.road-004.keep", "end": true},
+    {"id": "go", "speaker": "player", "textKey": "dlg.ev.ch1.road-004.go", "end": true}
+  ]
+}

@@ -22,7 +22,7 @@ interface RawQuest {
   reward?: { grantId: string; money?: number; items?: { item: string; qty: number }[]; once?: boolean };
 }
 interface RawDialogue {
-  id: string; npcId?: string; trigger?: { at: string[]; chance: number; titleKey: string }; start: string;
+  id: string; npcId?: string; trigger?: { at: string[]; chance: number; titleKey: string; when?: RawWhen }; start: string;
   nodes: { id: string; end?: boolean; next?: string; choices?: { next: string; when?: CondDef; effects?: EffectDef[] }[] }[];
 }
 export interface RawContent {
@@ -58,8 +58,8 @@ function objective(qid: string, o: RawQuest['objectives'][number]): ObjectiveDef
 function dialogue(d: RawDialogue): DialogueDef {
   return {
     ...(d.npcId !== undefined ? { npcId: d.npcId } : {}),
-    // Подія в дорозі (GAME-31): ядру потрібні лише місце й шанс; titleKey — для екрана (story-offer).
-    ...(d.trigger ? { trigger: { at: d.trigger.at, chance: d.trigger.chance } } : {}),
+    // Подія в дорозі (GAME-31): ядру потрібні місце, шанс і кому (when, GAME-108); titleKey — для екрана (story-offer).
+    ...(d.trigger ? { trigger: { at: d.trigger.at, chance: d.trigger.chance, ...when(d.trigger.when) } } : {}),
     start: d.start,
     nodes: Object.fromEntries(d.nodes.map((n) => [n.id, {
       ...(n.end === true ? { end: true as const } : {}),
