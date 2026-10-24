@@ -53,6 +53,21 @@ export const progressView = (s: GameState): object => ({ ...s, ...Object.fromEnt
 export const progressKey = (s: GameState): string => canonical(progressView(s));
 
 /**
+ * GAME-110 · вигляд стану для ПОВНОГО ПЕРЕБОРУ в тестах: progressView без пам'ятних фактів (`story.memorable`). П'ять
+ * пам'ятних виборів незалежні, тож разом вони множать простір станів у 2⁵+ разів — перебір вибухав (66 тис. станів замість 886).
+ * Чесно, бо пам'ятні факти косметичні: їх читають лише вибори, чиє піддерево до кінця розмови ставить тільки пам'ятні
+ * факти й більше нічого не змінює (доводить src/content/memory-flags.test.ts, «косметичні»). Тож два стани, що різняться
+ * лише ними, мають ті самі сюжетні наслідки, а самі гілки-згадки проходить той самий тест (2⁵ комбінацій до кінця розділу).
+ * Меню (outcomeKey = progressKey) цього вигляду НЕ вживає: два вибори, що різняться лише пам'ятним фактом, — різні кнопки.
+ */
+export function exploreView(s: GameState, st: Pick<StoryDefs, 'memorable'>): object {
+  const mem = new Set(st.memorable ?? []);
+  if (mem.size === 0) return progressView(s);
+  const npcMemory = Object.fromEntries(Object.entries(s.npcMemory).map(([npc, facts]) => [npc, facts.filter((f) => !mem.has(f))] as const).filter(([, facts]) => facts.length > 0));
+  return { ...progressView(s), flags: s.flags.filter((f) => !mem.has(f)), npcMemory };
+}
+
+/**
  * Хід, що залежить від везіння (SIM-EV-003): КОЖНА подія в дорозі. Симуляція кидає лише після дороги з
  * хвилинами (не на першому приїзді, не в сюжеті без доріг) і ділить шанс між кількома подіями місця, тож
  * навіть «chance: 100» не гарантована (рецензія eb12626). Перебір заходить у стани після неї, але шлях до

@@ -96,5 +96,6 @@
   "pack.full": "won't fit",
   "jr.PackItem": "Packed",
   "jr.UnpackItem": "Taken out of the luggage",
-  "jr.AutoPack": "Luggage packed by the list"
+  "jr.AutoPack": "Luggage packed by the list",
+  "jr.Memory": "Remembered"
 }

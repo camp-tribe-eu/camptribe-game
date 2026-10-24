@@ -156,6 +156,11 @@ export interface StoryDefs {
   readonly dialogues: Readonly<Record<string, DialogueDef>>;
   /** Дороги між локаціями (GAME-31). Немає або порожньо — моделі подорожі немає: перехід миттєвий і безкоштовний. */
   readonly roads?: readonly RoadDef[];
+  /**
+   * Пам'ятні вибори (GAME-110): конкретні назви фактів (`f.pitch-pines`, `m.advice-taken`), які вибір у розмові пише в журнал
+   * подорожі. Збирається з рядків content/flags.json із `journal: true`. Немає — журнал вибору не пише нічого.
+   */
+  readonly memorable?: readonly string[];
 }
 
 /**

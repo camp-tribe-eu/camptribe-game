@@ -18,7 +18,7 @@ import { initialState, type GameState } from '../core/state';
 import { matches, route } from '../core/story';
 import { capacityOf, packedOf, packFlag, packingOpen, packItemsFor, usedUnits } from '../core/packing';
 import { DAY_MINUTES, dayOf, tripMinutes, type Weather } from '../core/weather';
-import { CONTENT } from '../content/story';
+import { CONTENT, memorableFacts } from '../content/story';
 import { moves, progressKey, type Move } from '../content/moves';
 import items from '../../content/items.json';
 import type { OfferAction, OfferCharacter, OfferPacking, StoryOffer } from '../ui/story-types';
@@ -35,6 +35,8 @@ const NAMES: ReadonlyMap<string, string> = new Map([
     .flatMap((x) => { const k = x.nameKey ?? x.titleKey; return k ? [[x.id, k] as const] : []; }),
   // Подія в дорозі (GAME-31): назва — titleKey тригера (заголовок розмови й запис журналу).
   ...CONTENT.dialogues.flatMap((d) => (d.trigger ? [[d.id, d.trigger.titleKey] as const] : [])),
+  // Пам'ятний вибір (GAME-110): запис журналу «Запам'ятали: …» — текст journal.<факт> (валідатор: LOCALE_MISSING без нього).
+  ...memorableFacts(CONTENT).map((f) => [f, `journal.${f}`] as const),
 ]);
 export const nameKey = (id: string | null | undefined): string | null => (id ? NAMES.get(id) ?? null : null);
 

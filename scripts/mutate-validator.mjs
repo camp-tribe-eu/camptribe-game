@@ -169,6 +169,13 @@ const mutations = [
   { name: '[реєстр] сімейство «вжите» й без породжувача', file: CHECKS_FILE, from: 'for (const e of families) if (generated.get(e.id).size) used.add(e.id);', to: 'for (const e of families) used.add(e.id);' },
   { name: '[реєстр] reserved не звільняє від «невживаного»', file: CHECKS_FILE, from: "else if (e.reserved !== true && !used.has(e.id)) bad('FLAG_REGISTERED_UNUSED'", to: "else if (!used.has(e.id)) bad('FLAG_REGISTERED_UNUSED'" },
   { name: '[реєстр] невживаний рядок не звітується', file: CHECKS_FILE, from: "else if (e.reserved !== true && !used.has(e.id)) bad('FLAG_REGISTERED_UNUSED'", to: "else if (false) bad('FLAG_REGISTERED_UNUSED'" },
+  // GAME-110: прапорець, який ставлять, але ніхто не читає
+  { name: '[реєстр] прапорець без читача не звітується', file: CHECKS_FILE, from: "&& !read.has(e.id)) bad('FLAG_NEVER_READ'", to: "&& false) bad('FLAG_NEVER_READ'" },
+  { name: '[реєстр] notFlag/notRemembers не вважаються читанням', file: CHECKS_FILE, from: 'const name = leaf.flag ?? leaf.notFlag ?? leaf.remembers ?? leaf.notRemembers;', to: 'const name = leaf.flag ?? leaf.remembers;' },
+  { name: '[реєстр] значення enum не зводиться до рядка реєстру при читанні', file: CHECKS_FILE, from: "const row = byId.get(name) ?? enums.find((e) => name.startsWith(`${e.id}-`));", to: 'const row = byId.get(name);' },
+  { name: '[реєстр] journal-ключі не потрапляють у перевірку перекладів', file: CHECKS_FILE, from: 'for (const f of ct.flags ?? []) for (const k of journalKeys(f)) add(k', to: 'for (const f of []) for (const k of journalKeys(f)) add(k' },
+  { name: '[реєстр] journal у enum вимагає лише один текст', file: CHECKS_FILE, from: "return f.type === 'enum' ? (f.values ?? []).map((v) => `journal.${f.id}-${v}`) : [`journal.${f.id}`];", to: "return f.type === 'enum' ? (f.values ?? []).slice(0, 1).map((v) => `journal.${f.id}-${v}`) : [`journal.${f.id}`];" },
+  { name: '[реєстр] journal дозволено будь-якому рядку', file: CHECKS_FILE, from: "if (e.journal === true && (!core ||", to: "if (false && (!core ||" },
   { name: '[реєстр] прапорець ядра може стартувати true', file: CHECKS_FILE, from: '(core && init !== false)', to: 'false' },
   { name: '[реєстр] «unset» дозволено серед значень enum', file: CHECKS_FILE, from: "if (!ENUM_VALUE.test(v) || v === 'unset') inv(", to: 'if (!ENUM_VALUE.test(v)) inv(' },
   { name: '[реєстр] завантажувач і схема не знають flags.json', file: 'validator/schema.mjs', from: "'facts', 'roads', 'flags'];", to: "'facts', 'roads'];" },

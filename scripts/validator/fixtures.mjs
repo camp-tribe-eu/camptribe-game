@@ -29,6 +29,9 @@ function rangerDialogue() {
       { id: 'help', speaker: 'npc', textKey: K('help'), choices: [
         { textKey: K('help.c1'), next: 'thanks', when: { all: [{ flag: 'f.fixture-helped' }, { any: [{ notFlag: 'f.fixture-met' }, { flag: 'f.fixture-helped' }] }] } },
         { textKey: K('help.c2'), next: 'bye' },
+        // GAME-110: обидва прапорці еталона ще й прочитано тут — приклади, що переписують умову help.c1, не червоніють
+        // заодно FLAG_NEVER_READ (той має власний приклад).
+        { textKey: K('help.c1'), next: 'bye', when: { any: [{ flag: 'f.fixture-met' }, { flag: 'f.fixture-helped' }] } },
       ] },
       { id: 'thanks', speaker: 'player', textKey: K('thanks'), next: 'bye' },
       { id: 'bye', speaker: 'npc', textKey: K('bye'), end: true },
@@ -115,7 +118,7 @@ function withRoadEvent(c) {
   c.dialogues.push({
     id: 'dlg.fixture-rain', trigger: { at: ['loc.forest'], chance: 50, titleKey: EV('title') }, start: 'rain',
     nodes: [
-      { id: 'rain', speaker: 'player', textKey: EV('rain'), choices: [{ textKey: EV('rain.c1'), next: 'bye', effects: [{ setFlag: 'f.fixture-wet' }] }] },
+      { id: 'rain', speaker: 'player', textKey: EV('rain'), choices: [{ textKey: EV('rain.c1'), next: 'bye', effects: [{ setFlag: 'f.fixture-wet' }] }, { textKey: EV('rain.c1'), next: 'bye', when: { flag: 'f.fixture-wet' } }] },
       { id: 'bye', speaker: 'player', textKey: EV('bye'), end: true },
     ],
   });
@@ -439,7 +442,7 @@ export const FIXTURES = [
     node(c, 'hello').choices[1].effects.push({ remember: 'm.fixture-met' }, { remember: 'm.fixture-asked' });
     node(c, 'help').choices[0].when = { any: [{ all: [{ remembers: 'm.fixture-met' }, { notRemembers: 'm.fixture-met' }] }, { remembers: 'm.fixture-asked' }] };
   } },
-  { name: '[пам’ять] id факту не за форматом (і у вжитку, і в реєстрі)', expect: ['ID_FORMAT'], count: { code: 'ID_FORMAT', n: 2 }, patch(c) { reg(c, 'm.fixture_met'); node(c, 'hello').choices[1].effects.push({ remember: 'm.fixture_met' }); } },
+  { name: '[пам’ять] id факту не за форматом (і у вжитку, і в реєстрі)', expect: ['ID_FORMAT', 'FLAG_NEVER_READ'], count: { code: 'ID_FORMAT', n: 2 }, patch(c) { reg(c, 'm.fixture_met'); node(c, 'hello').choices[1].effects.push({ remember: 'm.fixture_met' }); } },
   { name: '[пам’ять] ефект remember — не рядок', expect: ['SCHEMA_INVALID'], patch(c) { node(c, 'hello').choices[1].effects.push({ remember: 7 }); } },
   { name: '[пам’ять] умова з двома дискримінаторами remembers і notRemembers', expect: ['SCHEMA_INVALID'], patch(c) { node(c, 'help').choices[0].when = { remembers: 'm.x', notRemembers: 'm.x' }; } },
   { base: 'combo', name: '[пам’ять] подія в дорозі запам’ятовує й читає — NPC немає, пам’яті теж', expect: ['EVENT_EFFECT_UNSUPPORTED', 'MEMORY_NEVER_SET'], patch(c) { reg(c, 'm.fixture-wet');
@@ -525,10 +528,11 @@ export const FIXTURES = [
   { name: '[схема] прототипний ключ constructor в умові', expect: ['SCHEMA_UNKNOWN_FIELD'], patch(c) { node(c, 'help').choices[0].when = { flag: 'f.fixture-helped', constructor: 'x' }; } },
   { name: '[схема] власний ключ __proto__ в умові', expect: ['SCHEMA_UNKNOWN_FIELD'], patch(c) { node(c, 'help').choices[0].when = ownProto({ flag: 'f.fixture-helped' }); } },
   { name: '[схема] умова лише з прототипним ключем', expect: ['SCHEMA_INVALID'], patch(c) { node(c, 'help').choices[0].when = { toString: 'f.fixture-helped' }; } },
-  { name: '[діалог] прапорець із підкресленням (два вжитки й рядок реєстру)', expect: ['ID_FORMAT'], count: { code: 'ID_FORMAT', n: 3 }, patch(c) {
+  { name: '[діалог] прапорець із підкресленням (три вжитки й рядок реєстру)', expect: ['ID_FORMAT'], count: { code: 'ID_FORMAT', n: 4 }, patch(c) {
     c.flags[0].id = 'f.fixture_helped'; // і в реєстрі той самий id — ID_FORMAT, а не FLAG_UNREGISTERED
     node(c, 'hello').choices[0].effects[0].setFlag = 'f.fixture_helped';
     node(c, 'help').choices[0].when = { flag: 'f.fixture_helped' };
+    node(c, 'help').choices[2].when.any[1].flag = 'f.fixture_helped';
   } },
   { name: '[діалог] id вузла з великою літерою', expect: ['ID_FORMAT'], patch(c) {
     node(c, 'thanks').id = 'Thanks';
@@ -644,8 +648,8 @@ export const FIXTURES = [
     withTransportFact(c);
     node(c, 'help').choices.push({ textKey: K('help.c1'), next: 'bye', when: { transport: 'transport.fixture-car' } });
   } },
-  { name: '[реєстр] прибрано рядок вживаного прапорця', expect: ['FLAG_UNREGISTERED'], count: { code: 'FLAG_UNREGISTERED', n: 2 }, patch(c) { c.flags = c.flags.filter((f) => f.id !== 'f.fixture-met'); } },
-  { name: '[реєстр] немає content/flags.json — червоніє кожен вжиток, а не мовчить', expect: ['FLAG_UNREGISTERED'], count: { code: 'FLAG_UNREGISTERED', n: 5 }, patch(c) { delete c.flags; } },
+  { name: '[реєстр] прибрано рядок вживаного прапорця', expect: ['FLAG_UNREGISTERED'], count: { code: 'FLAG_UNREGISTERED', n: 3 }, patch(c) { c.flags = c.flags.filter((f) => f.id !== 'f.fixture-met'); } },
+  { name: '[реєстр] немає content/flags.json — червоніє кожен вжиток, а не мовчить', expect: ['FLAG_UNREGISTERED'], count: { code: 'FLAG_UNREGISTERED', n: 7 }, patch(c) { delete c.flags; } },
   { name: '[реєстр] факт пам’яті без рядка в реєстрі', expect: ['FLAG_UNREGISTERED'], count: { code: 'FLAG_UNREGISTERED', n: 2 }, patch(c) {
     node(c, 'hello').choices[1].effects.push({ remember: 'm.fixture-met' });
     node(c, 'help').choices.push({ textKey: K('help.c1'), next: 'bye', when: { remembers: 'm.fixture-met' } });
@@ -657,11 +661,11 @@ export const FIXTURES = [
     withRoadEvent(c);
     node(c, 'help').choices.push({ textKey: K('help.c2'), next: 'bye', when: { notFlag: 'f.seen-fixture-snow' } });
   } },
-  { name: '[реєстр] ефект ставить enum-значення поза списком', expect: ['FLAG_ENUM_VALUE'], count: { code: 'FLAG_ENUM_VALUE', n: 1 }, patch(c) { useMood(withMood(c), 'f.fixture-mood-angry', null); } },
+  { name: '[реєстр] ефект ставить enum-значення поза списком (і жодна умова його не читає)', expect: ['FLAG_ENUM_VALUE', 'FLAG_NEVER_READ'], count: { code: 'FLAG_ENUM_VALUE', n: 1 }, patch(c) { useMood(withMood(c), 'f.fixture-mood-angry', null); } },
   { name: '[реєстр] умова читає enum-значення поза списком', expect: ['FLAG_ENUM_VALUE', 'DIALOGUE_FLAG_NEVER_SET'], count: { code: 'FLAG_ENUM_VALUE', n: 1 }, patch(c) { useMood(withMood(c), 'f.fixture-mood-calm', 'f.fixture-mood-angry'); } },
-  { name: '[реєстр] «unset» як значення enum — це відсутність прапорця, не значення', expect: ['FLAG_ENUM_VALUE'], count: { code: 'FLAG_ENUM_VALUE', n: 1 }, patch(c) { useMood(withMood(c), 'f.fixture-mood-unset', null); } },
-  { name: '[реєстр] ефект ставить enum як bool (без значення)', expect: ['FLAG_TYPE_MISMATCH'], count: { code: 'FLAG_TYPE_MISMATCH', n: 1 }, patch(c) { useMood(withMood(c), 'f.fixture-mood', null); } },
-  { name: '[реєстр] умова flag на прапорець типу number (reserved, але вжитий; і ніхто його не ставить)', expect: ['FLAG_TYPE_MISMATCH', 'FLAG_REGISTRY_INVALID', 'DIALOGUE_FLAG_NEVER_SET'], count: { code: 'FLAG_TYPE_MISMATCH', n: 1 }, patch(c) {
+  { name: '[реєстр] «unset» як значення enum — це відсутність прапорця, не значення (і жодна умова його не читає)', expect: ['FLAG_ENUM_VALUE', 'FLAG_NEVER_READ'], count: { code: 'FLAG_ENUM_VALUE', n: 1 }, patch(c) { useMood(withMood(c), 'f.fixture-mood-unset', null); } },
+  { name: '[реєстр] ефект ставить enum як bool (без значення; і жодна умова його не читає)', expect: ['FLAG_TYPE_MISMATCH', 'FLAG_NEVER_READ'], count: { code: 'FLAG_TYPE_MISMATCH', n: 1 }, patch(c) { useMood(withMood(c), 'f.fixture-mood', null); } },
+  { name: '[реєстр] умова flag на прапорець типу number (reserved, але вжитий; і ніхто його не ставить)', expect: ['FLAG_TYPE_MISMATCH', 'FLAG_REGISTRY_INVALID', 'DIALOGUE_FLAG_NEVER_SET'], count: { code: 'FLAG_TYPE_MISMATCH', n: 2 }, patch(c) {
     c.flags.find((f) => f.id === 'f.fixture-met').type = 'number';
     c.flags.find((f) => f.id === 'f.fixture-met').initial = 0;
     c.flags.find((f) => f.id === 'f.fixture-met').reserved = true;
@@ -673,6 +677,39 @@ export const FIXTURES = [
     c.flags.push(row('s.transport'));
     node(c, 'help').choices.push({ textKey: K('help.c1'), next: 'bye', when: { transport: 'transport.fixture-car' } });
   } },
+  // GAME-110: другий бік «прапорця без пари» — ставлять, але жодна умова не читає (перший бік — DIALOGUE_FLAG_NEVER_SET).
+  { name: '[реєстр] прапорець ставлять, але жодна умова не читає', expect: ['FLAG_NEVER_READ'], count: { code: 'FLAG_NEVER_READ', n: 1 }, patch(c) {
+    reg(c, 'f.fixture-unread'); node(c, 'hello').choices[1].effects.push({ setFlag: 'f.fixture-unread' });
+  } },
+  { name: '[реєстр] факт пам’яті запам’ятовують, але жодна умова не згадує', expect: ['FLAG_NEVER_READ'], count: { code: 'FLAG_NEVER_READ', n: 1 }, patch(c) {
+    reg(c, 'm.fixture-unread'); node(c, 'hello').choices[1].effects.push({ remember: 'm.fixture-unread' });
+  } },
+  { name: '[реєстр] enum: значення ставлять, жодне не читають', expect: ['FLAG_NEVER_READ'], count: { code: 'FLAG_NEVER_READ', n: 1 }, patch(c) { useMood(withMood(c), 'f.fixture-mood-calm', null); } },
+  { name: '[реєстр] контроль: enum ставлять двома значеннями, читають одне — рядок прочитаний', expect: [], patch(c) {
+    useMood(withMood(c), 'f.fixture-mood-glad', 'f.fixture-mood-glad'); node(c, 'hello').choices[1].effects.push({ setFlag: 'f.fixture-mood-calm' });
+  } },
+  { name: '[реєстр] контроль: notFlag — теж читання', expect: [], patch(c) {
+    reg(c, 'f.fixture-unread'); node(c, 'hello').choices[1].effects.push({ setFlag: 'f.fixture-unread' });
+    node(c, 'help').choices.push({ textKey: K('help.c1'), next: 'bye', when: { notFlag: 'f.fixture-unread' } });
+  } },
+  { name: '[реєстр] контроль: journal у bool і enum — є тексти journal.<id>[-<значення>] обома мовами', expect: [], patch(c) {
+    useMood(withMood(c)); c.flags[0].journal = true; c.flags.at(-1).journal = true;
+    for (const lang of c.meta.locales) for (const k of ['journal.f.fixture-helped', 'journal.f.fixture-mood-calm', 'journal.f.fixture-mood-glad']) c.locales[lang][k] = `[${lang}] ${k}`;
+  } },
+  { name: '[реєстр] journal без тексту запису в одній мові', expect: ['LOCALE_MISSING'], count: { code: 'LOCALE_MISSING', n: 1 }, patch(c) {
+    c.flags[0].journal = true; c.locales.uk['journal.f.fixture-helped'] = '[uk] journal';
+  } },
+  { name: '[реєстр] journal у enum — текст на КОЖНЕ значення', expect: ['LOCALE_MISSING'], count: { code: 'LOCALE_MISSING', n: 2 }, patch(c) {
+    useMood(withMood(c)); c.flags.at(-1).journal = true;
+    for (const lang of c.meta.locales) c.locales[lang]['journal.f.fixture-mood-calm'] = `[${lang}] calm`;
+  } },
+  { base: 'combo', name: '[реєстр] journal у сімейства ядра чи факту стану — його ставить не вибір', expect: ['FLAG_REGISTRY_INVALID'], count: { code: 'FLAG_REGISTRY_INVALID', n: 2 }, patch(c) {
+    withPacking(c).flags.at(-1).journal = true;
+    withTransportFact(c); c.flags.at(-1).journal = true;
+    node(c, 'help').choices.push({ textKey: K('help.c1'), next: 'bye', when: { transport: 'transport.fixture-car' } });
+    for (const lang of c.meta.locales) for (const k of ['journal.f.pack-*', 'journal.s.transport']) c.locales[lang][k] = `[${lang}] ${k}`;
+  } },
+  { name: '[реєстр] journal — не булеве', expect: ['SCHEMA_INVALID'], count: { code: 'SCHEMA_INVALID', n: 1 }, patch(c) { c.flags[0].journal = 'yes'; } },
   { name: '[реєстр] зареєстровано, але ніде не вжито', expect: ['FLAG_REGISTERED_UNUSED'], count: { code: 'FLAG_REGISTERED_UNUSED', n: 1 }, patch(c) { c.flags.push(row('f.fixture-ghost')); } },
   { name: '[реєстр] enum зареєстровано, жодне значення не вжито', expect: ['FLAG_REGISTERED_UNUSED'], count: { code: 'FLAG_REGISTERED_UNUSED', n: 1 }, patch(c) { withMood(c); } },
   { base: 'combo', name: '[реєстр] сімейство f.pack-*, а картки пакування немає — породжувач порожній', expect: ['FLAG_REGISTERED_UNUSED'], count: { code: 'FLAG_REGISTERED_UNUSED', n: 1 }, patch(c) {
@@ -680,12 +717,12 @@ export const FIXTURES = [
   } },
   { name: '[реєстр] bool прапорця ядра з initial true — новий сейв не має прапорців', expect: ['FLAG_REGISTRY_INVALID'], count: { code: 'FLAG_REGISTRY_INVALID', n: 1 }, patch(c) { c.flags[0].initial = true; } },
   { name: '[реєстр] bool з initial-рядком', expect: ['FLAG_REGISTRY_INVALID'], count: { code: 'FLAG_REGISTRY_INVALID', n: 1 }, patch(c) { c.flags[0].initial = 'false'; } },
-  { name: '[реєстр] enum без values (і вжите значення тоді поза списком)', expect: ['FLAG_REGISTRY_INVALID', 'FLAG_ENUM_VALUE'], count: { code: 'FLAG_REGISTRY_INVALID', n: 1 }, patch(c) { delete withMood(c).flags.at(-1).values; useMood(c, 'f.fixture-mood-calm', null); } },
+  { name: '[реєстр] enum без values (і вжите значення тоді поза списком, і лише ставиться)', expect: ['FLAG_REGISTRY_INVALID', 'FLAG_ENUM_VALUE', 'FLAG_NEVER_READ'], count: { code: 'FLAG_REGISTRY_INVALID', n: 1 }, patch(c) { delete withMood(c).flags.at(-1).values; useMood(c, 'f.fixture-mood-calm', null); } },
   { name: '[реєстр] enum-прапорець з initial не «unset»', expect: ['FLAG_REGISTRY_INVALID'], count: { code: 'FLAG_REGISTRY_INVALID', n: 1 }, patch(c) { withMood(c).flags.at(-1).initial = 'calm'; useMood(c); } },
   { name: '[реєстр] «unset» серед values', expect: ['FLAG_REGISTRY_INVALID'], count: { code: 'FLAG_REGISTRY_INVALID', n: 1 }, patch(c) { withMood(c).flags.at(-1).values.push('unset'); useMood(c); } },
   { name: '[реєстр] значення enum двічі', expect: ['FLAG_REGISTRY_INVALID'], count: { code: 'FLAG_REGISTRY_INVALID', n: 1 }, patch(c) { withMood(c).flags.at(-1).values.push('calm'); useMood(c); } },
   { name: '[реєстр] значення enum із підкресленням', expect: ['FLAG_REGISTRY_INVALID'], count: { code: 'FLAG_REGISTRY_INVALID', n: 1 }, patch(c) { withMood(c).flags.at(-1).values.push('lake_view'); useMood(c); } },
-  { name: '[реєстр] valuesFrom у прапорця f.* (значення кодує назва)', expect: ['FLAG_REGISTRY_INVALID', 'FLAG_ENUM_VALUE'], count: { code: 'FLAG_REGISTRY_INVALID', n: 1 }, patch(c) {
+  { name: '[реєстр] valuesFrom у прапорця f.* (значення кодує назва; і лише ставиться)', expect: ['FLAG_REGISTRY_INVALID', 'FLAG_ENUM_VALUE', 'FLAG_NEVER_READ'], count: { code: 'FLAG_REGISTRY_INVALID', n: 1 }, patch(c) {
     const m = withMood(c).flags.at(-1); delete m.values; m.valuesFrom = 'transports'; useMood(c, 'f.fixture-mood-calm', null);
   } },
   { name: '[реєстр] bool f.<enum>-<значення> зареєстровано окремо — назва неоднозначна (а enum лишився без вжитку)', expect: ['FLAG_REGISTRY_INVALID', 'FLAG_REGISTERED_UNUSED'], count: { code: 'FLAG_REGISTRY_INVALID', n: 1 }, patch(c) { useMood(withMood(c)); c.flags.push(row('f.fixture-mood-calm')); } },
@@ -727,6 +764,7 @@ export const FIXTURES = [
   { base: 'combo', name: '[подія] без виходу — червоніє тими самими перевірками діалогів', expect: ['DIALOGUE_DEAD_END', 'DIALOGUE_NODE_UNREACHABLE'], patch(c) {
     const d = withRoadEvent(c);
     d.nodes[0].choices[0].next = 'rain';
+    d.nodes[0].choices[1].next = 'rain';
   } },
   { base: 'combo', name: '[дороги] id не за форматом', expect: ['ID_FORMAT'], patch(c) { c.roads[0].id = 'camp-forest'; } },
   { base: 'combo', name: '[дороги] дорога за 0 хвилин', expect: ['SCHEMA_INVALID'], patch(c) { c.roads[0].ways[0].minutes = 0; } },

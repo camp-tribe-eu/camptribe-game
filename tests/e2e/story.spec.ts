@@ -67,7 +67,9 @@ async function playBikeProlog(page: Page): Promise<void> {
   await expect(panel(page).locator('[data-ui="dialogue"]', { hasText: 'Еліза, тут' })).toHaveCount(0);
   await expect(panel(page).locator('[data-key="dlg.elise-greeting.hello.c2"]')).toHaveCount(0);
   await act(page, 'choose', 'dlg.elise-greeting.hello.c4');
-  await act(page, 'choose', 'dlg.elise-greeting.spot.c1');
+  // GAME-110: намет уже стоїть — місце вдруге не обирають (f.pitch не отримає двох значень), лише дякують.
+  await expect(panel(page).locator('[data-key="dlg.elise-greeting.spot.c1"]')).toHaveCount(0);
+  await act(page, 'choose', 'dlg.elise-greeting.spot.c6');
   await act(page, 'continue');
   // GAME-84 №1: «Поставити намет» зарахувалось самим поверненням у табір (ST-005 відкрився, коли ти вже тут) — «Піти: Кемпінг» немає.
   await expect(panel(page).locator('[data-act="visit"][data-key="loc.camp.lake"]')).toHaveCount(0);
@@ -96,6 +98,8 @@ test('пролог від вибору персонажа до кінця роз
   expect(await panel(page).locator('[data-ui="journal"] li').evaluateAll((els) => els.map((e) => (e as HTMLElement).dataset.type)))
     .toEqual(c.journal.map((e) => e.type));
   expect(c.journal.length).toBeGreaterThan(10);   // GAME-84 №1: два «Прибуття» вдома й одне в таборі більше не пишуться — було 16, тепер 13
+  // GAME-110: пам'ятний вибір (намет біля сосон) — у журналі на екрані текстом, рівно раз, хоч spot.c1 обрано двічі.
+  await expect(panel(page).locator('[data-ui="journal"] li[data-type="Memory"]')).toHaveText(['Запам\'ятали: намет біля сосон']);
   expect(await panel(page).textContent()).not.toContain('⟦');      // жодного ключа без тексту
   expect(errors).toEqual([]);
 });
@@ -189,9 +193,12 @@ test('подія в дорозі (GAME-31): трапляється на доро
   await expect(panel(page).locator('[data-ui="dialogue"]')).toHaveCount(0);
   const c = await core(page) as unknown as { game: { flags: string[] }; journal: { type: string; ref: string | null }[] };
   expect(c.game.flags).toEqual(expect.arrayContaining(['f.road-apple', 'f.seen-road-apples']));
-  expect(c.journal.slice(-2).map((e) => e.type)).toEqual(['Visit', 'RoadEvent']);
+  // GAME-110: узяте яблуко — пам'ятний вибір, тож після запису події йде запис «Запам'ятали» з текстом вибору.
+  expect(c.journal.slice(-3).map((e) => e.type)).toEqual(['Visit', 'RoadEvent', 'Memory']);
+  expect(c.journal.at(-1)?.ref).toBe('f.road-apple');
   await panel(page).locator('[data-ui="journal"] summary').click();
-  await expect(panel(page).locator('[data-ui="journal"] li').last()).toContainText('Яблука біля дороги');
+  await expect(panel(page).locator('[data-ui="journal"] li').nth(-2)).toContainText('Яблука біля дороги');
+  await expect(panel(page).locator('[data-ui="journal"] li').last()).toHaveText('Запам\'ятали: яблуко з придорожнього ящика й записка «Дякую!»');
 });
 
 test('автівкою — без бічного квесту й без відповіді про велосипед, і так само до кінця розділу', async ({ page }) => {
