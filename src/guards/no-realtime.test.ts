@@ -98,6 +98,8 @@ describe('жодного таймера реального часу на дія�
     expect(files).toContain('src/ui/StoryPanel.tsx');
     expect(files).toContain('src/platform/settings.ts');
     expect(files).toContain('src/view/story-offer.ts');
+    // GAME-131: погода й прогноз — у скануванні, і для них винятків немає.
+    for (const f of ['src/core/weather.ts', 'src/core/sim.ts', 'src/core/save.ts']) { expect(files).toContain(f); expect(ALLOW[f]).toBeUndefined(); }
   });
 
   it('логіка рішень: 0 знахідок поза переліком винятків, і перелік збігається з кодом', () => {
@@ -152,6 +154,19 @@ describe('жодного таймера реального часу на дія�
     const more = realtimeHits('src/ui/Shell.tsx', `${shell}\nexport const again = (): number => setTimeout(() => {}, 1);\n`);
     expect(verdict([...hits.filter((h) => h.file !== 'src/ui/Shell.tsx'), ...more])).toEqual(['src/ui/Shell.tsx setTimeout: у переліку 1, у коді 2']);
   });
+
+  // GAME-131 №3: прогноз, що «на завтра» рахує від годинника браузера, — червоніє в самому weather.ts.
+  for (const [form, code] of [
+    ['Date.now() у прогнозі', 'export const forecastDay = (): number => Math.floor(Date.now() / 86_400_000);\n'],
+    ['new Date().getDate() у прогнозі', 'export const forecastDay = (): number => new Date().getDate();\n'],
+  ] as const) {
+    it(`негативний контроль (GAME-131): ${form} у src/core/weather.ts червоніє`, () => {
+      const weather = SOURCES.get('src/core/weather.ts') ?? '';
+      expect(weather).toContain('export function forecastOf');
+      const injected = realtimeHits('src/core/weather.ts', `${weather}\n${code}`);
+      expect(verdict([...hits.filter((h) => h.file !== 'src/core/weather.ts'), ...injected])).toEqual([expect.stringMatching(/^src\/core\/weather\.ts:\d+ Date — не в переліку винятків$/)]);
+    });
+  }
 
   it('позитивний контроль: коментар, рядок і тип Date — не знахідки (без хибного спрацювання)', () => {
     const ok = "// не використовувати setTimeout тут\nexport const label = 'Date.now';\nexport const f = (d: Date): number => d.getTime();\nexport const o = { setTimeout: 1 };\n"

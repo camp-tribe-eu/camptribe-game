@@ -13,7 +13,7 @@ import { dispatch, nextCommandId, type Command } from '../core/commands';
 import type { CoreDefs, StoryDefs } from '../core/defs';
 import { gearOf, sellPriceOf } from '../core/gear';
 import { canonical } from '../core/hash';
-import { todayWeather, type SimState } from '../core/sim';
+import { todayForecast, todayWeather, type SimState } from '../core/sim';
 import { initialState, type GameState } from '../core/state';
 import { matches, route } from '../core/story';
 import { capacityOf, packedOf, packFlag, packingOpen, packItemsFor, usedUnits } from '../core/packing';
@@ -222,7 +222,7 @@ export function storyOffer(sim: SimState, defs: CoreDefs): Offered {
   }));
   const weather = todayWeather(sim);
   const lastTrip = [...sim.journal].reverse().find((e) => e.type === 'Visit')?.commandId ?? null;
-  const base = { moneyCents: s.moneyCents, inventory, journal, lastTrip, weather, day: dayOf(sim.clock) + 1, timeMinutes: sim.clock.minutes % DAY_MINUTES, ...summaryOffer(sim, defs) };
+  const base = { moneyCents: s.moneyCents, inventory, journal, lastTrip, weather, forecast: todayForecast(sim), day: dayOf(sim.clock) + 1, timeMinutes: sim.clock.minutes % DAY_MINUTES, ...summaryOffer(sim, defs) };
 
   if (!s.player) {
     const choices = characterChoices(defs);
