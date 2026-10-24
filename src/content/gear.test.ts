@@ -23,7 +23,7 @@ const START_MONEY = 5_000; // як у createBridge
 /** Стан гравця в крамниці: Пролог до ST-003 справжнім каталогом (GAME-81: купувати можна лише тут). */
 const atShop = () => play([
   { type: 'CreateCharacter', profileId: 'profile.solo-explorer', transportId: 'transport.bike' }, { type: 'Visit', locationId: 'loc.home' },
-  { type: 'CompleteQuest', questId: 'ST-001' }, { type: 'Visit', locationId: 'loc.home' }, { type: 'CompleteQuest', questId: 'ST-002' },
+  { type: 'CompleteQuest', questId: 'PROLOGUE-HOME-001' }, { type: 'CompleteQuest', questId: 'ST-001' }, { type: 'Visit', locationId: 'loc.home' }, { type: 'CompleteQuest', questId: 'ST-002' },
   { type: 'Visit', locationId: 'loc.shop' },
 ], initialState(START_MONEY), GAME_DEFS);
 

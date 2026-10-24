@@ -44,7 +44,8 @@ test.describe('№1 «Піти» туди, де стоїш', () => {
     const home = panel(page).locator('[data-act="visit"][data-key="loc.home"]');
     await expect(panel(page).locator('[data-act="visit"][data-key="loc.shop"]')).toHaveCount(0);   // крамниця ще зачинена до ST-002
     await expect(home).toHaveCount(0);
-    await expect(panel(page).locator('[data-act="complete"][data-key="q.st-001"]')).toBeVisible();   // і її можна завершити без «Піти»
+    await expect(panel(page).locator('[data-act="complete"][data-key="q.prologue-home-001"]')).toBeVisible();   // і її можна завершити без «Піти»
+    await act(page, 'complete', 'q.prologue-home-001');
     await act(page, 'complete', 'q.st-001');
     await expect(home).toHaveCount(0);
     await act(page, 'complete', 'q.st-002');
@@ -69,6 +70,7 @@ test.describe('№11 жодного 404 за звичайний сеанс', () 
     await load(page);
     await openStory(page);
     await createBike(page);
+    await act(page, 'complete', 'q.prologue-home-001');
     await act(page, 'complete', 'q.st-001');
     await page.keyboard.press('Escape');
     await page.keyboard.press('Escape');
@@ -149,6 +151,7 @@ test.describe('№7 текст 200 % на телефоні', () => {
       await load(page);
       await openStory(page);
       await createBike(page);
+      await act(page, 'complete', 'q.prologue-home-001');
       await act(page, 'complete', 'q.st-001');
       await act(page, 'complete', 'q.st-002');
       await act(page, 'visit', 'loc.shop');          // у крамниці: ціни в кнопках («Купити … (89,00 €)», «бракує …»)
@@ -187,6 +190,7 @@ test.describe('№8 текст 200 % на десктопі: завдання й 
     await load(page);
     await openStory(page);
     await createBike(page);
+    await act(page, 'complete', 'q.prologue-home-001');
     await act(page, 'complete', 'q.st-001');
     const centre = (r: Rect): number => (r.left + r.right) / 2;
     const h2 = await rectOf(page, '[data-ui="story"] h2');
@@ -194,7 +198,7 @@ test.describe('№8 текст 200 % на десктопі: завдання й 
     expect(Math.abs(centre(quest) - centre(h2)), `завдання ${JSON.stringify(quest)} проти заголовка ${JSON.stringify(h2)}`).toBeLessThan(3);
     expect(quest.width, 'завдання розтягнулось на весь екран: текст знову притиснутий до лівого краю').toBeLessThanOrEqual(660);   // межа макета: min(92vw, 640px)
     // Діалог: до Елізи — повний прохід (кліком), далі беремо рамку діалогу.
-    for (const [k, key] of [['complete', 'q.st-002'], ['visit', 'loc.shop'], ['pickup', 'item.tent'], ['pickup', 'item.sleeping-bag'], ['complete', 'q.st-003'], ['visit', 'loc.road']] as const) await act(page, k, key);
+    for (const [k, key] of [['complete', 'q.st-002'], ['visit', 'loc.shop'], ['pickup', 'item.tent'], ['pickup', 'item.sleeping-bag'], ['complete', 'q.st-003'], ['visit', 'loc.home'], ['complete', 'q.ch1-home-001'], ['visit', 'loc.road']] as const) await act(page, k, key);
     const apples = panel(page).locator('[data-key="dlg.road-apples.box.c2"]');
     if (await apples.isVisible({ timeout: 400 }).catch(() => false)) {
       // Подія в дорозі — теж діалог: перевіряємо на ньому, інакше йдемо до Елізи.

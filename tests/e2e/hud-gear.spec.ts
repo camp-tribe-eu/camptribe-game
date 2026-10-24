@@ -42,11 +42,11 @@ async function createBike(page: Page): Promise<void> {
 }
 async function toShop(page: Page): Promise<void> {
   await createBike(page);
-  for (const [k, key] of [['complete', 'q.st-001'], ['complete', 'q.st-002'], ['visit', 'loc.shop']] as const) await act(page, k, key);
+  for (const [k, key] of [['complete', 'q.prologue-home-001'], ['complete', 'q.st-001'], ['complete', 'q.st-002'], ['visit', 'loc.shop']] as const) await act(page, k, key);
 }
-/** Далі з крамниці: намет і спальник, завершити st-003, на дорогу (там дощ чи сонце — за зерном), далі до озера. */
-async function shopToLake(page: Page): Promise<void> {
-  for (const [k, key] of [['pickup', 'item.tent'], ['pickup', 'item.sleeping-bag'], ['complete', 'q.st-003'], ['visit', 'loc.road']] as const) await act(page, k, key);
+/** Далі з крамниці: намет і спальник, завершити st-003 і додому пакуватись (GAME-138: CH1-HOME-001) — перша дорога з наметом (дощ чи сонце — за зерном). */
+async function shopToHome(page: Page): Promise<void> {
+  for (const [k, key] of [['pickup', 'item.tent'], ['pickup', 'item.sleeping-bag'], ['complete', 'q.st-003'], ['visit', 'loc.home']] as const) await act(page, k, key);
 }
 
 test.describe('мобільний екран подорожі', () => {
@@ -115,7 +115,7 @@ test.describe('мобільний екран подорожі', () => {
       await load(page, `?seed=${seed}`);
       await openStory(page);
       await toShop(page);
-      await shopToLake(page);
+      await shopToHome(page);
       const tent = panel(page).locator('[data-ui="inv-item"][data-key="item.tent"]');
       const g1 = (await core(page)).game.gear['item.tent'];
       if (wet) {
@@ -124,8 +124,8 @@ test.describe('мобільний екран подорожі', () => {
         await expect(tent).toContainText('мокре');
         await expect(tent).toContainText('стан 100 %');
         // Друга дорога з мокрим: −10 стану (SIM-GEAR-003) — і екран показує те саме число, що ядро.
-        await act(page, 'complete', 'q.elise-bike-area.choice');
-        await act(page, 'visit', 'loc.camp.lake');
+        await act(page, 'complete', 'q.ch1-home-001');
+        await act(page, 'visit', 'loc.road');
         expect((await core(page)).game.gear['item.tent']).toEqual({ condition: 90, wet: true });
         await expect(tent).toContainText('стан 90 %');
         await expect(tent).toContainText('мокре');

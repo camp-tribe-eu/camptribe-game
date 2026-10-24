@@ -142,5 +142,9 @@
   "journal.f.roles-route-matthew": "Matthew leads the route",
   "journal.m.advice-taken": "Eliza's tip to dry the tent in the morning: taken",
   "journal.m.advice-declined": "Eliza's tip: we did it our way",
-  "dlg.elise-greeting.spot.c6": "The tent is already up. Thanks!"
+  "dlg.elise-greeting.spot.c6": "The tent is already up. Thanks!",
+  "q.prologue-home-001": "An evening at home",
+  "q.prologue-home-001.o1": "Friday evening. A map on the table, a phone with the forecast and a note: “One free night”. Have a look around.",
+  "q.ch1-home-001": "Did we really pack everything?",
+  "q.ch1-home-001.o1": "Head home and pack: by hand or with “Pack automatically”."
 }
