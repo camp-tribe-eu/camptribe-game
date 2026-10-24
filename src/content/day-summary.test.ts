@@ -105,6 +105,22 @@ describe('daySummary: кожна секція — лише при факті (GA
     expect(d2?.money?.start).toBe(daySummary(s, 1, GAME_DEFS)?.money?.end);   // кінець дня 1 = початок дня 2
   });
 
+  it('кінець завершеного дня — баланс на межі, а не нинішній: витрати дня 2 не переписують день 1 (рецензія PR #60)', () => {
+    let s = prologue();
+    const atBoundary = s.game.moneyCents;
+    // Після кінця розділу команди, що міняють гроші, ядро не приймає — тож зміну після межі ставимо в стан напряму.
+    s = closeDialogue(cmd(s, { type: 'Visit', locationId: 'loc.road' }));
+    s = { ...s, game: { ...s.game, moneyCents: atBoundary + 999 } };
+    expect(daySummary(s, 1, GAME_DEFS)?.money?.end).toBe(atBoundary);
+    expect(daySummary(s, 2, GAME_DEFS)?.money).toEqual({ start: atBoundary, end: s.game.moneyCents });
+  });
+
+  it('старий сейв v2/v3 з першим записом «Visit loc.home» (не CreateCharacter) — підсумку немає: рішення, а не випадок', () => {
+    const s = prologue();
+    const legacy = { ...s, journal: [{ at: 0, commandId: 'legacy', type: 'Visit' as const, ref: 'loc.home' }, ...s.journal] };
+    expect(daySummary(legacy, 1, GAME_DEFS)).toBeNull();
+  });
+
   it('гроші без факту не вигадуються: записи без балансу (сейв до GAME-106) — money null, а секції лишаються', () => {
     const s = prologue();
     const old = { ...s, journal: s.journal.map((e) => ({ at: e.at, commandId: e.commandId, type: e.type, ref: e.ref })) };

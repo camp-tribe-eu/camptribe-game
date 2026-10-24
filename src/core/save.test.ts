@@ -213,7 +213,7 @@ describe('коди відмов завантаження: кожен має зл
     ['запис журналу невідомого типу (рецензія GAME-32)', (c: typeof good) => { c.sim.journal = [{ at: 0, commandId: 'c0', type: 'Teleport', ref: null }]; }],
     ['баланс у записі журналу від\'ємний (GAME-106)', (c: typeof good) => { c.sim.journal = [{ at: 0, commandId: 'c0', type: 'Visit', ref: null, cents: -1 }]; }],
     ['баланс у записі журналу — рядок (GAME-106)', (c: typeof good) => { c.sim.journal = [{ at: 0, commandId: 'c0', type: 'Visit', ref: null, cents: '5' }]; }],
-    ['без зерна світу (GAME-46)',(c: typeof good) => { delete (c.sim as Record<string, unknown>).worldSeed; }],
+    ['без зерна світу (GAME-46)', (c: typeof good) => { delete (c.sim as Record<string, unknown>).worldSeed; }],
     ['зерно світу поза uint32 (GAME-46)', (c: typeof good) => { (c.sim as Record<string, unknown>).worldSeed = 2 ** 32; }],
     ['без пам\'яті NPC (GAME-48)', (c: typeof good) => { delete c.sim.game.npcMemory; }],
     ['пам\'ять NPC — масив, а не об\'єкт', (c: typeof good) => { c.sim.game.npcMemory = []; }],

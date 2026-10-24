@@ -58,6 +58,8 @@ const uniq = (xs: readonly string[]): string[] => [...new Set(xs)];
 /**
  * Підсумок дня `day` (з 1). null — такого дня в журналі немає. Журнал обрізається з голови (JOURNAL_LIMIT): якщо перший
  * запис — уже не CreateCharacter, номери днів від нього не відлічити, і підсумку немає (чесне «не знаю», а не вигадка).
+ * Ночівля й спаковане читаються з НИНІШНІХ прапорців (у прапорців немає часу), тож секції останнього дня правдиві лише
+ * одразу на межі дня — саме там Shell і будує підсумок; пізніше перебудований підсумок може з тим днем розійтися.
  */
 export function daySummary(sim: Pick<SimState, 'game' | 'journal'>, day: number, defs: CoreDefs): DaySummary | null {
   if (!Number.isSafeInteger(day) || day < 1) return null;
