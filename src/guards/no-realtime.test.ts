@@ -3,7 +3,7 @@
 // рішень за синтаксичним деревом TypeScript (коментарі й рядки не рахуються) і звіряє кожну знахідку
 // з переліком винятків нижче — з причиною і точною кількістю.
 // Ядро вже стереже eslint (src/guards/core-boundary.test.ts); тут — той самий принцип для всього src/.
-// Сам ігровий годинник іде від дельти кадру (src/view/world/scene.ts → bridge.frame(delta)) і стоїть,
+// Сам ігровий годинник іде від дельти кадру (src/view/world/scene.ts → bridge.frame(game.loop.rawDelta), GAME-97) і стоїть,
 // поки відкрито меню, — це хід світу, а не строк на вибір: жодна дія не зникає, поки гравець думає.
 import ts from 'typescript';
 import { describe, expect, it } from 'vitest';
