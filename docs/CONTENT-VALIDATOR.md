@@ -26,6 +26,7 @@ node scripts/mutate-validator.mjs               # довести, що само�
 | `roads.json` | дороги між локаціями: `from`, `to`, `twoWay`, `ways[]` (транспорт, хвилини, центи, необов'язковий `risk` 0–3 — GAME-72: небезпека дороги, навичка її не знижує); перевірка `roads`: кожна локація досяжна від дому й назад для кожного транспорту (`ROAD_UNREACHABLE`, `ROAD_NO_RETURN`), одне ребро на пару в кожен бік (`ROAD_DUPLICATE`) | `road.назва` |
 | `events.json` | події: `repeatable`, `reward` | `ev.назва` |
 | `facts.json` | зовнішні факти: `source`, `checkedAt` (РРРР-ММ-ДД), `kind` | `fact.назва` |
+| `flags.json` | реєстр прапорців і фактів стану (GAME-115, DC-015, розділ «Реєстр прапорців»): `id`, `type`, `initial`, `owner`, `note`, `values`, `valuesFrom`, `generatedFrom`, `reserved`, `aka` | `f.назва`, `f.префікс-*`, `m.назва`, `s.назва` |
 | `locales/<мова>.json` | ключ → переклад | — |
 | `dialogue/<назва>.json` | один діалог-граф на файл (розділ «Діалоги») | `dlg.назва` |
 
@@ -148,6 +149,7 @@ Effect    = { setFlag: "f.…" } | { startQuest: "<id квесту>" } | { compl
 | `dialogue-dead-end` | `DIALOGUE_DEAD_END` | §3 з кожного вузла діалогу є безумовний шлях до кінця |
 | `dialogue-flags` | `DIALOGUE_FLAG_NEVER_SET`, `DIALOGUE_COND_CONTRADICTION` | §2 умова не читає прапорець, який ніщо не ставить; §3 all не суперечить собі |
 | `dialogue-memory` | `MEMORY_NEVER_SET` | GAME-48: умова не читає факт пам'яті, якого цей NPC не може знати |
+| `flags` | `FLAG_UNREGISTERED`, `FLAG_ENUM_VALUE`, `FLAG_TYPE_MISMATCH`, `FLAG_REGISTERED_UNUSED`, `FLAG_REGISTRY_INVALID` | GAME-115: кожен прапорець, факт пам'яті й факт стану в умові чи ефекті — зареєстрований, вжитий за типом, enum — у межах `values`; зайвий рядок — лише з `reserved`. Формат id реєстру — `ID_FORMAT`, дублі — `ID_DUPLICATE` |
 | `skills` | `SKILL_UNKNOWN`, `SKILL_DUPLICATE` | GAME-72: стартові навички профілю — лише вісім відомих напрямів, кожен раз; перелік той самий, що в ядрі (звірка в `src/content/semantics.test.ts`) |
 | `packing` | `PACK_ITEM_DUPLICATE`, `PACK_CAPACITY_MISSING`, `PACK_NEEDED_OVERFLOW`, `PACK_NOTE_UNPACKABLE` | GAME-109: кожна річ раз; місце на кожен транспорт; «потрібне» вміщається; підпис — про річ зі списку. Посилання — `REF_MISSING`, переклад підписів — `LOCALE_MISSING`, прапорці `f.pack-*` — `dialogue-flags` |
 | `calendar` | `CALENDAR_MISSING`, `CALENDAR_BAD_DATE`, `CALENDAR_RANGE_OVERLAP`, `JOB_BILLS_EXCEED_SALARY` | GAME-71: робота чи школяр у профілі — лише з `calendar.json`; `start` — справжня `YYYY-MM-DD`, свята й межі канікул — справжні `MM-DD`, що є щороку; канікули не перетинаються (і через Новий рік), свято не двічі; рахунки профілю ≤ зарплати (SIM-LIFE-008) |
@@ -155,6 +157,48 @@ Effect    = { setFlag: "f.…" } | { startQuest: "<id квесту>" } | { compl
 | `combo-options` | `COMBO_OPTION_UNUSABLE`, `WHEN_UNSATISFIABLE` | §1 кожен транспорт можна обрати; §3 кожна умова `when` (разом з умовою свого квесту; для переходу — ще й квесту-цілі) відповідає хоча б одній дозволеній комбінації |
 | `combos` | `COMBO_NO_START`, `COMBO_TARGETED_UNREACHABLE`, `COMBO_DEAD_CONTENT` + коди шести перевірок вище для кожної комбінації | §3 у кожному стані гравця, «48 сімей × 12 профілів × 3 транспорти × тварини» |
 | завантажувач | `CONTENT_MISSING`, `CONTENT_PARSE`, `CONTENT_EMPTY`, `CONTENT_UNKNOWN_FILE` | закон 4: порожнеча — не зелене |
+
+## Реєстр прапорців (GAME-115)
+
+`content/flags.json` — масив рядків, один на прапорець, факт пам'яті чи факт стану. Діалог не може
+прочитати чи поставити назву, якої тут немає (`FLAG_UNREGISTERED`). Файлу немає — реєстр порожній, і
+червоніє кожен вжиток: відсутній сторож не читається як «нічого не бракує».
+
+| префікс | що | тип | хто зберігає |
+|---|---|---|---|
+| `f.назва` | прапорець | `bool`; `enum` — значення кодується в назві: `f.night` зі `values: [tent, car, gazebo]` живе як `f.night-tent` | ядро, `save.flags` (множина рядків) |
+| `f.префікс-*` | сімейство, яке ставить ЯДРО: `f.pack-*` (`generatedFrom: "packing.items"`, `packFlag`), `f.seen-*` (`generatedFrom: "dialogues.trigger"`, `eventSeenFlag`) | `bool` | ядро |
+| `m.назва` | пам'ять NPC (GAME-48) | `bool` | ядро, `save.npcMemory` |
+| `s.назва` | факт стану гравця: `s.transport` (його читає умова `transport`), `s.weather` | будь-який; enum — `values` або `valuesFrom` (колекція) | ядро, з інших частин сейву |
+
+Правила, які звіряє перевірка `flags`:
+
+* **`initial` — правда ядра.** Новий сейв не має жодного прапорця, тож bool `f.*`/`m.*` — лише `false`,
+  enum `f.*` — лише `"unset"`. `unset` — відсутність прапорця, не значення (у `values` заборонене, а
+  `f.x-unset` — `FLAG_ENUM_VALUE`).
+* **`number`/`item`/`location`** у `f.*` — лише з `reserved: true`: ядро зберігає прапорці як множину
+  рядків і числа там не тримає. Знадобиться — спершу картка на ядро й сейв.
+* **Сімейства не перелічуються вручну**: їх конкретні назви породжує `FLAG_FAMILIES` у
+  `scripts/validator/codes.mjs` з того самого контенту, що й ядро (звірку формату тримає
+  `src/content/flags.test.ts`). `f.pack-tnt` при сімействі `f.pack-*` — `FLAG_UNREGISTERED`, бо речі
+  `item.tnt` немає в `packing.items`.
+* **`FLAG_REGISTERED_UNUSED` — помилка, не попередження.** Ціна хибного спрацювання: рядок, доданий
+  наперед, валить CI, доки автор не вживе його або не поставить `reserved: true` — одне поле. Ціна
+  попередження була б вищою: мертві рядки накопичуються мовчки, і реєстр перестає бути правдою.
+  Сімейство «вжите», коли його породжувач не порожній (прапорці ставить ядро, навіть якщо вміст їх не
+  читає). `reserved`, але вже вжитий — `FLAG_REGISTRY_INVALID`: позначка застаріла.
+* **`aka`** — назви з реєстру радника, з якими зведено рядок (`met_elise` → `f.elise-met`,
+  `apple_taken` → `f.road-apple`, `pitch_choice` → `f.pitch`, `mia_travel_plan` → `f.mia-plan`,
+  `current_transport` → `s.transport`, `current_weather` → `s.weather`). `f.night` (У ЧОМУ ночують) і
+  `f.pitch` (ДЕ стоїть намет) — різні виміри, тому два enum, а не один.
+* **Журнал і підписи Matthew** (GAME-140): коли з'являться, кожен запис матиме стабільний `id` і умову,
+  що посилається лише на рядок цього реєстру (або квест із `quests.json`). Їхні умови мусять іти через
+  ті самі `flagUses`/`memoryUses`/`condLeavesAll` у `checks.mjs` — тоді `FLAG_UNREGISTERED` покриє їх без
+  нового коду. Сьогодні таких записів немає, тож ця вимога — договір, а не перевірка (NOT RUN).
+
+Межі: значення enum ядро не знімає — ставиться раз; що в одному проходженні не ставляться два різні
+значення того самого enum, не перевіряється. Умова `transport` з неіснуючим id — `DIALOGUE_REF_MISSING`,
+не `FLAG_*` (першопричина одна). Умови `quest` читають `quests.json`, а не реєстр.
 
 ## Давність фактів (GAME-56)
 
@@ -236,7 +280,8 @@ Actions → validate → Enable workflow).
 * **Вкладені умови поза ланцюгом квест → ціль/перехід → квест.** `when` NPC-видавця
   (`giverId`), локації квесту (`locationId`) і необов'язкової цілі не звіряються з `when`
   квесту: якщо вони ніде не перетинаються, валідатор мовчить (рецензія PR #10).
-* **Умови на стан світу** (пройдені квести, гроші, погода) — `when` знає лише стан гравця.
+* **Умови на стан світу** (пройдені квести, гроші, погода) — `when` знає лише стан гравця. `s.weather`
+  уже в реєстрі (`reserved`), але умови на погоду в діалогах ще немає.
 * **Умови на стан світу на переходах.** Перехід знає лише стан гравця (`when`); цикл із виходом, умова якого ніколи не
   справджується, пройде як коректний.
 * **Діалоги в комбінаціях.** Умова `transport` у діалозі не звіряється з комбінаціями: вибір
