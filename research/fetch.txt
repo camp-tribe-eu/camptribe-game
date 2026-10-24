@@ -36,3 +36,9 @@ yt-test-suite	page:https://developers.google.com/youtube/gaming/playables/test_s
 yt-faq	page:https://developers.google.com/youtube/gaming/playables/faq
 yt-phaser-template	page:https://github.com/phaserjs/template-youtube-playables
 yt-phaser-readme	page:https://raw.githubusercontent.com/phaserjs/template-youtube-playables/main/README.md
+yt-req-stability	page:https://developers.google.com/youtube/gaming/playables/certification/requirements_stability
+yt-req-privacydata	page:https://developers.google.com/youtube/gaming/playables/certification/requirements_privacydata
+yt-req-monetization	page:https://developers.google.com/youtube/gaming/playables/certification/requirements_monetization
+yt-req-trustsafety	page:https://developers.google.com/youtube/gaming/playables/certification/requirements_trustsafety
+yt-support-faq	page:https://developers.google.com/youtube/gaming/playables/support/faq
+yt-ref-monetization	page:https://developers.google.com/youtube/gaming/playables/reference/monetization
