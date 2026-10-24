@@ -15,6 +15,8 @@ export interface TestSwitches {
   /** ?frameLagMs=N (1…190) — GAME-97: кожен кадр сцени довший на N мс, як на слабкому телефоні. e2e так перевіряє, що
    *  годинник гри при низькому fps іде в ногу з реальним часом, на будь-якій машині CI однаково. */
   readonly frameLagMs?: number;
+  /** ?bootDelayMs=N (1…5000) — GAME-38: старт гри довший на N мс; негативний контроль проби першого кадру (бюджет 1,5 с). */
+  readonly bootDelayMs?: number;
 }
 
 export function testSwitches(search: string, mode: string): TestSwitches {
@@ -23,5 +25,6 @@ export function testSwitches(search: string, mode: string): TestSwitches {
   const list = (k: string): string[] => (q.get(k) ?? '').split(',').filter(Boolean);
   const seed = Number(q.get('seed'));
   const lag = Number(q.get('frameLagMs'));
-  return { ...(Number.isInteger(lag) && lag >= 1 && lag <= 190 ? { frameLagMs: lag } : {}), hideTouch: list('hideTouch'), hideAct: list('hideAct'), ...(q.get('noAutosave') === '1' ? { noAutosave: true } : {}), ...(q.get('freshSeed') === '1' ? { freshSeed: true } : {}), ...(q.has('seed') && Number.isSafeInteger(seed) && seed >= 0 ? { seed } : {}) };
+  const boot = Number(q.get('bootDelayMs'));
+  return { ...(Number.isInteger(boot) && boot >= 1 && boot <= 5000 ? { bootDelayMs: boot } : {}), ...(Number.isInteger(lag) && lag >= 1 && lag <= 190 ? { frameLagMs: lag } : {}), hideTouch: list('hideTouch'), hideAct: list('hideAct'), ...(q.get('noAutosave') === '1' ? { noAutosave: true } : {}), ...(q.get('freshSeed') === '1' ? { freshSeed: true } : {}), ...(q.has('seed') && Number.isSafeInteger(seed) && seed >= 0 ? { seed } : {}) };
 }
