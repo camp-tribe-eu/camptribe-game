@@ -92,6 +92,16 @@
       "path": "assets/characters/torso/clothes/longsleeve/longsleeve/male/walk.png",
       "sha256": "8b1c79d535d7a233371c9398ca51b196aa8fdf06117bd0eafd7fbcbf438d711b",
       "colors": 5
+    },
+    {
+      "path": "assets/characters/torso/clothes/shortsleeve/shortsleeve/teen/walk.png",
+      "sha256": "79934e87c480486565d2dee35ecdffab45213dfea097471e2d64a6fba99faa80",
+      "colors": 6
+    },
+    {
+      "path": "assets/characters/hair/pixie/adult/walk.png",
+      "sha256": "ec85396b8d5e66b445f9be386688818b27f0b193fd5a61126f23ef0fa2dcccd5",
+      "colors": 6
     }
   ],
   "count": 519,

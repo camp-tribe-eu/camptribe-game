@@ -42,3 +42,9 @@ yt-req-monetization	page:https://developers.google.com/youtube/gaming/playables/
 yt-req-trustsafety	page:https://developers.google.com/youtube/gaming/playables/certification/requirements_trustsafety
 yt-support-faq	page:https://developers.google.com/youtube/gaming/playables/support/faq
 yt-ref-monetization	page:https://developers.google.com/youtube/gaming/playables/reference/monetization
+
+# GAME-147: кішка Mia — «[LPC] Cats and Dogs» (bluecarrot16) з першоджерела; список — на випадок іншого slug.
+pack-lpc-cats-dogs	oga:lpc-cats-and-dogs
+list-lpc-cats	ogasearch:lpc cats dogs
+# GAME-147: сорочка підлітка shortsleeve/teen — єдина сторінка рядка генератора, якої ще не звірено.
+lic-lpc-teen-androgynous-short-sleeve-shirt	page:https://opengameart.org/content/lpc-teen-androgynous-short-sleeve-shirt

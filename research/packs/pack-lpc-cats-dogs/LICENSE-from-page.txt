@@ -1,0 +1,21 @@
+CC-BY 3.0 | http://creativecommons.org/licenses/by/3.0/
+CC-BY-SA 3.0 | http://creativecommons.org/licenses/by-sa/3.0/
+GPL 3.0 | http://www.gnu.org/licenses/gpl-3.0.html
+GPL 2.0 | http://www.gnu.org/licenses/old-licenses/gpl-2.0.html
+OGA-BY 3.0 | http://opengameart.org/content/oga-by-30-faq
+Submitted by: bluecarrot16
+FILE https://opengameart.org/sites/default/files/css/css_xE-rWrJf-fncB6ztZfd2huxqgxu4WO-qwma6Xer30m4.css
+FILE https://opengameart.org/sites/default/files/css/css_ff3tJc71Z402cxcrQprs7GRkOQJuOqgs2LWeSWIHHR0.css
+FILE https://opengameart.org/sites/default/files/css/css_tEtvFGhnOc-KHD4tmmzYBpkDNcsr2D2Ep4vHodgpeO0.css
+FILE https://opengameart.org/sites/default/files/css/css_6NcQOcblGY28_iJd_khUiH7LvkXsK2NzkKjV006jQ5I.css
+FILE https://opengameart.org/sites/default/files/cat_dog_preview_4_0.png
+FILE https://opengameart.org/sites/default/files/cat_dog_preview_cat_black_walk_0.gif
+FILE https://opengameart.org/sites/default/files/cat_dog_preview_cat_brown_walk_0.gif
+FILE https://opengameart.org/sites/default/files/cat_dog_preview_cat_eat_0.gif
+FILE https://opengameart.org/sites/default/files/cat_dog_preview_cat_golden_walk_0.gif
+FILE https://opengameart.org/sites/default/files/cat_dog_preview_cat_white_walk_0.gif
+FILE https://opengameart.org/sites/default/files/cat_dog_preview_dog_brown_walk_0.gif
+FILE https://opengameart.org/sites/default/files/cat_dog_preview_dog_golden_eat_0.gif
+FILE https://opengameart.org/sites/default/files/cat_dog_preview_dog_white_walk.gif
+FILE https://opengameart.org/sites/default/files/cat_0.png
+FILE https://opengameart.org/sites/default/files/dog_2.png
