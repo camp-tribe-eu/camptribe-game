@@ -56,3 +56,8 @@ pack-lpc-floors	oga:lpc-floors
 pack-lpc-shelves	oga:lpc-shelves-rework
 pack-lpc-base-object-kit	oga:lpc-revised-base-object-kit
 pack-lpc-windows-doors	oga:lpc-windows-doors
+# GAME-147: кішка Mia — «[LPC] Cats and Dogs» (bluecarrot16) з першоджерела; список — на випадок іншого slug.
+pack-lpc-cats-dogs	oga:lpc-cats-and-dogs
+list-lpc-cats	ogasearch:lpc cats dogs
+# GAME-147: сорочка підлітка shortsleeve/teen — єдина сторінка рядка генератора, якої ще не звірено.
+lic-lpc-teen-androgynous-short-sleeve-shirt	page:https://opengameart.org/content/lpc-teen-androgynous-short-sleeve-shirt

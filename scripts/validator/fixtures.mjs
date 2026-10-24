@@ -240,6 +240,25 @@ const tents = () => [
   tentCard('item.fixture-tent-family', { tier: 3, weightG: 14000, volumeL: 60, sleeps: 5, priceCents: 40000, resaleCents: 16000 }),
 ];
 
+// Сцена сюжету (GAME-142): діалог без NPC, який відкриває StartScene. Факт сцени f.fixture-fire ставить стартер;
+// вузол «open» сам обирає гілку за фактом: вогнище (лише за гілкою) чи ліхтар (безумовний next).
+const SC = (k) => `dlg.fixture-fire.${k}`;
+function withScene(c) {
+  c.dialogues.push({
+    id: 'dlg.fixture-fire', scene: { titleKey: SC('title'), facts: ['f.fixture-fire'] }, start: 'open',
+    nodes: [
+      { id: 'open', speaker: 'player', textKey: SC('open'), next: 'lantern', branches: [{ when: { flag: 'f.fixture-fire' }, next: 'fire' }] },
+      { id: 'fire', speaker: 'player', textKey: SC('fire'), next: 'bye' },
+      { id: 'lantern', speaker: 'player', textKey: SC('lantern'), choices: [{ textKey: SC('lantern.c1'), next: 'bye', effects: [{ setFlag: 'f.fixture-lit' }] }, { textKey: SC('lantern.c1'), next: 'bye', when: { flag: 'f.fixture-lit' } }] },
+      { id: 'bye', speaker: 'player', textKey: SC('bye'), end: true },
+    ],
+  });
+  for (const lang of c.meta.locales) for (const k of ['title', 'open', 'fire', 'lantern', 'lantern.c1', 'bye']) c.locales[lang][SC(k)] = `[${lang}] ${k}`;
+  c.flags.push(row('f.fixture-fire'), row('f.fixture-lit'));
+  return c.dialogues[c.dialogues.length - 1];
+}
+const sceneNode = (c, id) => c.dialogues.find((d) => d.id === 'dlg.fixture-fire').nodes.find((n) => n.id === id);
+
 export const FIXTURES = [
   // ---- позитивні контролі: перевірки не сміють стріляти по коректному ----
   { name: 'еталон коректний', expect: [], patch() {} },
@@ -766,6 +785,18 @@ export const FIXTURES = [
     d.nodes[0].choices[0].next = 'rain';
     d.nodes[0].choices[1].next = 'rain';
   } },
+  // Сцени сюжету й автоматичні гілки (GAME-142).
+  { base: 'combo', name: '[сцена] контроль: сцена з фактом стартера й гілкою за ним — коректно', expect: [], patch(c) { withScene(c); } },
+  { base: 'combo', name: '[сцена] і scene, і npcId', expect: ['DIALOGUE_OWNER'], patch(c) { withScene(c).npcId = 'npc.shopkeeper'; } },
+  { base: 'combo', name: '[сцена] і scene, і trigger', expect: ['DIALOGUE_OWNER'], patch(c) { withScene(c).trigger = { at: ['loc.forest'], chance: 50, titleKey: SC('title') }; c.flags.push({ id: 'f.seen-*', type: 'bool', initial: false, generatedFrom: 'dialogues.trigger', owner: 'ядро' }); } },
+  { base: 'combo', name: '[сцена] сцена стартує квест', expect: ['EVENT_EFFECT_UNSUPPORTED'], patch(c) { sceneNode(withScene(c) && c, 'lantern').choices[0].effects.push({ startQuest: 'ST-003' }); } },
+  { base: 'combo', name: '[сцена] факт сцени не зареєстровано', expect: ['FLAG_UNREGISTERED'], patch(c) { withScene(c).scene.facts.push('f.fixture-ghost'); } },
+  { base: 'combo', name: '[сцена] без перекладу назви', expect: ['LOCALE_MISSING'], patch(c) { withScene(c); delete c.locales.en[SC('title')]; } },
+  { base: 'combo', name: '[сцена] гілку читає прапорець, якого не ставить ніхто (факт прибрано)', expect: ['DIALOGUE_FLAG_NEVER_SET', 'FLAG_REGISTERED_UNUSED'], patch(c) { withScene(c).scene.facts = []; sceneNode(c, 'open').branches[0].when = { flag: 'f.fixture-nobody' }; reg(c, 'f.fixture-nobody'); } },
+  { base: 'combo', name: '[гілка] веде на неіснуючий вузол (вогнище стає недосяжним)', expect: ['DIALOGUE_NODE_UNREACHABLE', 'DIALOGUE_REF_MISSING'], patch(c) { withScene(c); sceneNode(c, 'open').branches[0].next = 'ghost'; } },
+  { base: 'combo', name: '[гілка] без запасного next', expect: ['SCHEMA_INVALID'], patch(c) { withScene(c); delete sceneNode(c, 'open').next; } },
+  { base: 'combo', name: '[гілка] гілка не рахується безумовним виходом (next по колу)', expect: ['DIALOGUE_DEAD_END', 'DIALOGUE_NODE_UNREACHABLE'], patch(c) { withScene(c); sceneNode(c, 'open').next = 'open'; } },
+  { base: 'combo', name: '[гілка] суперечлива умова гілки', expect: ['DIALOGUE_COND_CONTRADICTION'], patch(c) { withScene(c); sceneNode(c, 'open').branches[0].when = { all: [{ flag: 'f.fixture-fire' }, { notFlag: 'f.fixture-fire' }] }; } },
   { base: 'combo', name: '[дороги] id не за форматом', expect: ['ID_FORMAT'], patch(c) { c.roads[0].id = 'camp-forest'; } },
   { base: 'combo', name: '[дороги] дорога за 0 хвилин', expect: ['SCHEMA_INVALID'], patch(c) { c.roads[0].ways[0].minutes = 0; } },
   { base: 'combo', name: '[умова] when переходу рядком', expect: ['SCHEMA_INVALID'], patch(c) { dogEntry(c).when = 'animals == dog'; } },

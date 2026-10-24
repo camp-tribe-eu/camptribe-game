@@ -137,6 +137,8 @@
         "characters/legs/pants/male/walk.png",
         "characters/legs/pants/thin/walk.png",
         "characters/torso/clothes/longsleeve/longsleeve/female/walk.png",
+        "characters/torso/clothes/shortsleeve/shortsleeve/teen/walk.png",
+        "sprites/cat_mia.png",
         "tiles/home_floor.png",
         "tiles/home_furniture.png",
         "tiles/home_walls.png",
@@ -144,16 +146,19 @@
       ],
       "licences": [
         "CC-BY-SA 3.0",
-        "CC-BY-SA 4.0"
+        "CC-BY-SA 4.0",
+        "OGA-BY 3.0"
       ],
       "sources": [
         "http://opengameart.org/content/lpc-clothing-updates",
+        "http://opengameart.org/content/lpc-revised-character-basics",
         "https://github.com/ElizaWy/LPC/tree/main/Characters/Clothing",
         "https://gitlab.com/vagabondgame/lpc-characters",
         "https://opengameart.org/content/",
         "https://opengameart.org/content/liberated-pixel-cup-lpc-base-assets-sprites-map-tiles",
         "https://opengameart.org/content/lpc-7-womens-shirts",
         "https://opengameart.org/content/lpc-be-seated",
+        "https://opengameart.org/content/lpc-cats-and-dogs",
         "https://opengameart.org/content/lpc-character-bases",
         "https://opengameart.org/content/lpc-expanded-pants",
         "https://opengameart.org/content/lpc-expanded-simple-shirts",
@@ -168,6 +173,7 @@
         "https://opengameart.org/content/lpc-revised-character-basics",
         "https://opengameart.org/content/lpc-runcycle-and-diagonal-walkcycle",
         "https://opengameart.org/content/lpc-runcycle-for-male-muscular-and-pregnant-character-bases-with-modular-heads",
+        "https://opengameart.org/content/lpc-teen-androgynous-short-sleeve-shirt",
         "https://opengameart.org/content/lpc-teen-unisex-base-clothes",
         "https://opengameart.org/content/lpc-walls",
         "https://opengameart.org/content/lpc-windows-doors"
@@ -335,6 +341,7 @@
         "characters/legs/pants/male/walk.png",
         "characters/legs/pants/thin/walk.png",
         "characters/torso/clothes/longsleeve/longsleeve/female/walk.png",
+        "characters/torso/clothes/shortsleeve/shortsleeve/teen/walk.png",
         "tiles/home_furniture.png",
         "tiles/home_office.png"
       ],
@@ -344,6 +351,7 @@
       ],
       "sources": [
         "http://opengameart.org/content/lpc-clothing-updates",
+        "http://opengameart.org/content/lpc-revised-character-basics",
         "https://github.com/ElizaWy/LPC/tree/main/Characters/Clothing",
         "https://github.com/LiberatedPixelCup/Universal-LPC-Spritesheet-Character-Generator",
         "https://gitlab.com/vagabondgame/lpc-characters",
@@ -363,6 +371,7 @@
         "https://opengameart.org/content/lpc-revised-the-office",
         "https://opengameart.org/content/lpc-runcycle-and-diagonal-walkcycle",
         "https://opengameart.org/content/lpc-runcycle-for-male-muscular-and-pregnant-character-bases-with-modular-heads",
+        "https://opengameart.org/content/lpc-teen-androgynous-short-sleeve-shirt",
         "https://opengameart.org/content/lpc-teen-unisex-base-clothes"
       ]
     },
@@ -454,19 +463,22 @@
         "characters/feet/shoes/basic/male/walk.png",
         "characters/feet/shoes/basic/thin/walk.png",
         "characters/hair/messy1/adult/walk.png",
+        "characters/hair/pixie/adult/walk.png",
         "characters/hair/plain/adult/walk.png",
         "characters/hair/ponytail/adult/bg/walk.png",
         "characters/hair/ponytail/adult/fg/walk.png",
         "characters/legs/pants/male/walk.png",
         "characters/legs/pants/thin/walk.png",
         "characters/torso/clothes/longsleeve/longsleeve/female/walk.png",
-        "characters/torso/clothes/longsleeve/longsleeve/male/walk.png"
+        "characters/torso/clothes/longsleeve/longsleeve/male/walk.png",
+        "characters/torso/clothes/shortsleeve/shortsleeve/teen/walk.png"
       ],
       "licences": [
         "CC-BY-SA 3.0"
       ],
       "sources": [
         "http://opengameart.org/content/lpc-clothing-updates",
+        "http://opengameart.org/content/lpc-revised-character-basics",
         "https://github.com/ElizaWy/LPC/tree/main/Characters/Clothing",
         "https://opengameart.org/content/liberated-pixel-cup-lpc-base-assets-sprites-map-tiles",
         "https://opengameart.org/content/lpc-7-womens-shirts",
@@ -483,6 +495,7 @@
         "https://opengameart.org/content/lpc-revised-character-basics",
         "https://opengameart.org/content/lpc-runcycle-and-diagonal-walkcycle",
         "https://opengameart.org/content/lpc-runcycle-for-male-muscular-and-pregnant-character-bases-with-modular-heads",
+        "https://opengameart.org/content/lpc-teen-androgynous-short-sleeve-shirt",
         "https://opengameart.org/content/ponytail-and-plain-hairstyles"
       ]
     },
@@ -659,6 +672,7 @@
       "name": "Manuel Riecke (MrBeast)",
       "files": [
         "characters/hair/messy1/adult/walk.png",
+        "characters/hair/pixie/adult/walk.png",
         "characters/hair/plain/adult/walk.png",
         "characters/hair/ponytail/adult/bg/walk.png",
         "characters/hair/ponytail/adult/fg/walk.png",
@@ -753,6 +767,25 @@
       "sources": [
         "https://opengameart.org/content/lpc-floors",
         "https://opengameart.org/content/lpc-walls"
+      ]
+    },
+    {
+      "name": "Nyom",
+      "files": [
+        "characters/torso/clothes/shortsleeve/shortsleeve/teen/walk.png"
+      ],
+      "licences": [
+        "CC-BY-SA 3.0"
+      ],
+      "sources": [
+        "http://opengameart.org/content/lpc-clothing-updates",
+        "http://opengameart.org/content/lpc-revised-character-basics",
+        "https://github.com/ElizaWy/LPC/tree/main/Characters/Clothing",
+        "https://opengameart.org/content/liberated-pixel-cup-lpc-base-assets-sprites-map-tiles",
+        "https://opengameart.org/content/lpc-7-womens-shirts",
+        "https://opengameart.org/content/lpc-expanded-simple-shirts",
+        "https://opengameart.org/content/lpc-expanded-sit-run-jump-more",
+        "https://opengameart.org/content/lpc-teen-androgynous-short-sleeve-shirt"
       ]
     },
     {
@@ -857,6 +890,7 @@
         "characters/legs/pants/male/walk.png",
         "characters/legs/pants/thin/walk.png",
         "characters/torso/clothes/longsleeve/longsleeve/female/walk.png",
+        "characters/torso/clothes/shortsleeve/shortsleeve/teen/walk.png",
         "tiles/base_out_atlas.png",
         "tiles/home_floor.png",
         "tiles/home_walls.png",
@@ -869,6 +903,7 @@
       ],
       "sources": [
         "http://opengameart.org/content/lpc-clothing-updates",
+        "http://opengameart.org/content/lpc-revised-character-basics",
         "https://github.com/ElizaWy/LPC/tree/main/Characters/Clothing",
         "https://github.com/LiberatedPixelCup/Universal-LPC-Spritesheet-Character-Generator",
         "https://gitlab.com/vagabondgame/lpc-characters",
@@ -888,6 +923,7 @@
         "https://opengameart.org/content/lpc-revised-character-basics",
         "https://opengameart.org/content/lpc-runcycle-and-diagonal-walkcycle",
         "https://opengameart.org/content/lpc-runcycle-for-male-muscular-and-pregnant-character-bases-with-modular-heads",
+        "https://opengameart.org/content/lpc-teen-androgynous-short-sleeve-shirt",
         "https://opengameart.org/content/lpc-teen-unisex-base-clothes",
         "https://opengameart.org/content/lpc-tile-atlas",
         "https://opengameart.org/content/lpc-walls"
@@ -1144,6 +1180,19 @@
       "modified": "no"
     },
     {
+      "file": "characters/hair/pixie/adult/walk.png",
+      "authors": [
+        "JaidynReiman",
+        "Manuel Riecke (MrBeast)"
+      ],
+      "licence": "CC-BY-SA 3.0",
+      "sources": [
+        "https://opengameart.org/content/liberated-pixel-cup-lpc-base-assets-sprites-map-tiles",
+        "https://opengameart.org/content/lpc-expanded-hair"
+      ],
+      "modified": "no"
+    },
+    {
       "file": "characters/hair/plain/adult/walk.png",
       "authors": [
         "JaidynReiman",
@@ -1300,6 +1349,28 @@
       "modified": "no"
     },
     {
+      "file": "characters/torso/clothes/shortsleeve/shortsleeve/teen/walk.png",
+      "authors": [
+        "Nyom",
+        "bluecarrot16",
+        "Eliza Wyatt (ElizaWy)",
+        "JaidynReiman",
+        "Stephen Challener (Redshrike)"
+      ],
+      "licence": "CC-BY-SA 3.0",
+      "sources": [
+        "https://opengameart.org/content/liberated-pixel-cup-lpc-base-assets-sprites-map-tiles",
+        "https://opengameart.org/content/lpc-7-womens-shirts",
+        "http://opengameart.org/content/lpc-revised-character-basics",
+        "http://opengameart.org/content/lpc-clothing-updates",
+        "https://opengameart.org/content/lpc-teen-androgynous-short-sleeve-shirt",
+        "https://github.com/ElizaWy/LPC/tree/main/Characters/Clothing",
+        "https://opengameart.org/content/lpc-expanded-sit-run-jump-more",
+        "https://opengameart.org/content/lpc-expanded-simple-shirts"
+      ],
+      "modified": "no"
+    },
+    {
       "file": "sprites/campfire.png",
       "authors": [
         "Zabin"
@@ -1309,6 +1380,17 @@
         "https://opengameart.org/content/camp-fire-animation-for-rpgs-finished"
       ],
       "modified": "recoloured onto the base palette (scripts/palette/quantize.py), alpha made binary; frames unchanged"
+    },
+    {
+      "file": "sprites/cat_mia.png",
+      "authors": [
+        "bluecarrot16"
+      ],
+      "licence": "OGA-BY 3.0",
+      "sources": [
+        "https://opengameart.org/content/lpc-cats-and-dogs"
+      ],
+      "modified": "cropped the brown tabby cat (columns 8–11 -> 128×160, 5 rows: walk right/up/down/left 3 frames + lying, sit); its 3 brown tones recoloured to LPC-palette greys (#858481, #6d6c69, #514647); other pixels quantized to the palette"
     },
     {
       "file": "tiles/base_out_atlas.png",

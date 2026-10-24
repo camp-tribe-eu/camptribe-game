@@ -1,0 +1,28 @@
+{
+  "id": "dlg.ch1-fire",
+  "scene": {"titleKey": "dlg.ch1-fire.title", "facts": ["f.fire-allowed", "f.fire-dinner-done", "f.fire-photo-tent"]},
+  "start": "open",
+  "nodes": [
+    {"id": "open", "speaker": "player", "textKey": "dlg.ch1-fire.open", "next": "lantern", "branches": [{"when": {"all": [{"flag": "f.fire-allowed"}, {"flag": "f.fire-dinner-done"}]}, "next": "fire"}]},
+    {"id": "fire", "speaker": "player", "textKey": "dlg.ch1-fire.fire", "next": "l1"},
+    {"id": "lantern", "speaker": "player", "textKey": "dlg.ch1-fire.lantern", "next": "lantern-george"},
+    {"id": "lantern-george", "speaker": "player", "textKey": "dlg.ch1-fire.lantern-george", "next": "l1"},
+    {"id": "l1", "speaker": "player", "textKey": "dlg.ch1-fire.l1", "next": "l2"},
+    {"id": "l2", "speaker": "player", "textKey": "dlg.ch1-fire.l2", "next": "l3"},
+    {"id": "l3", "speaker": "player", "textKey": "dlg.ch1-fire.l3", "next": "l4"},
+    {"id": "l4", "speaker": "player", "textKey": "dlg.ch1-fire.l4", "next": "l5"},
+    {"id": "l5", "speaker": "player", "textKey": "dlg.ch1-fire.l5", "next": "l6-plain", "branches": [{"when": {"flag": "f.fire-photo-tent"}, "next": "l6-photo"}]},
+    {"id": "l6-photo", "speaker": "player", "textKey": "dlg.ch1-fire.l6-photo", "next": "l7"},
+    {"id": "l6-plain", "speaker": "player", "textKey": "dlg.ch1-fire.l6-plain", "next": "l7"},
+    {"id": "l7", "speaker": "player", "textKey": "dlg.ch1-fire.l7", "choices": [{"textKey": "dlg.ch1-fire.l7.c1", "next": "l8"}, {"textKey": "dlg.ch1-fire.l7.c2", "next": "b1"}]},
+    {"id": "l8", "speaker": "player", "textKey": "dlg.ch1-fire.l8", "next": "l9"},
+    {"id": "l9", "speaker": "player", "textKey": "dlg.ch1-fire.l9", "next": "l10"},
+    {"id": "l10", "speaker": "player", "textKey": "dlg.ch1-fire.l10", "next": "l11"},
+    {"id": "l11", "speaker": "player", "textKey": "dlg.ch1-fire.l11", "next": "l12-plain", "branches": [{"when": {"flag": "f.fire-photo-tent"}, "next": "l12-photo"}]},
+    {"id": "l12-photo", "speaker": "player", "textKey": "dlg.ch1-fire.l12-photo", "end": true},
+    {"id": "l12-plain", "speaker": "player", "textKey": "dlg.ch1-fire.l12-plain", "end": true},
+    {"id": "b1", "speaker": "player", "textKey": "dlg.ch1-fire.b1", "next": "b2"},
+    {"id": "b2", "speaker": "player", "textKey": "dlg.ch1-fire.b2", "next": "b3"},
+    {"id": "b3", "speaker": "player", "textKey": "dlg.ch1-fire.b3", "end": true}
+  ]
+}
