@@ -281,8 +281,11 @@ test.describe('тап по об\'єкту на канві', () => {
 test.describe('підказка-тост', () => {
   const STABLE = ['.ui-header', '[data-ui="hud-place"]', '[data-ui="hud-time"]', '[data-touch="story"]', '[data-touch="pause"]', '#stage canvas'];
   const snap = (page: Page): Promise<Rect[]> => Promise.all(STABLE.map((q) => rectOf(page, q)));
+  // Годинник іде (GAME-97: у ногу з реальним часом), і нова хвилина може бути ширшою на гліф (main: 3 падіння з 30, +2,9 px).
+  // Це не стрибок розкладки: для годинника звіряємо місце й висоту, а ширину — ні.
   const same = (a: Rect[], b: Rect[]): void => STABLE.forEach((q, i) => {
-    for (const k of ['top', 'left', 'height', 'width'] as const) expect(Math.abs((a[i] as Rect)[k] - (b[i] as Rect)[k]), `${q}: ${k}`).toBeLessThan(0.5);
+    const keys = q === '[data-ui="hud-time"]' ? (['top', 'left', 'height'] as const) : (['top', 'left', 'height', 'width'] as const);
+    for (const k of keys) expect(Math.abs((a[i] as Rect)[k] - (b[i] as Rect)[k]), `${q}: ${k}`).toBeLessThan(0.5);
   });
 
   test('сама зникає не пізніше ніж за 6 с; шапка, місце, годинник, кнопки й поле не рухаються; role=status', async ({ browser }) => {
