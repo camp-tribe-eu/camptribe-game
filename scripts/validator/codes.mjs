@@ -63,6 +63,8 @@ export const CODES = {
   REQUIRES_CYCLE:       { check: 'requires-deadlock', spec: '§3 немає взаємного блокування двох квестів' },
   OPTIONAL_NO_DECLINE:  { check: 'optional-decline', spec: '§3 відмова від необов\u2019язкового вузла лишає шлях уперед' },
   BRANCH_NO_NEXT:       { check: 'branch-next', spec: '§3 кожна гілка має наступний етап або кінець' },
+  // GAME-141: межа дня (dayEnd) окремо від кінця розділу (end)
+  DAY_END_OPTIONAL:     { check: 'day-end', spec: 'GAME-141: межа дня — лише на основному етапі, відмова не лишає день незавершеним' },
 
   // діалоги, GAME-28 (TD-005 граф, TD-006 типізовані умови)
   DIALOGUE_REF_MISSING:      { check: 'dialogue-refs', spec: '§2 кожне посилання діалогу (NPC, квест, ціль, транспорт, вузол) веде на існуючий запис' },

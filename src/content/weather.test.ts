@@ -36,7 +36,7 @@ function simBot(v: Variant, seed: number, ctx: StepCtx, memo: EndMemo): Outcome 
   const send = (m: object): void => { s = step(s, { kind: 'command', command: { ...m, commandId: nextCommandId(s.game) } as Command }, ctx); };
   try {
     send({ type: 'CreateCharacter', profileId: v.profile, transportId: v.transport, ...(v.animal === 'animal.none' ? {} : { animalId: v.animal }) });
-    for (let k = 0; k < 80 && !s.game.campaignEnded; k++) {
+    for (let k = 0; k < 200 && !s.game.campaignEnded; k++) {   // GAME-141: розділ дводенний — 80 ходів до кінця не вистачало
       const ok = moves(s.game, GAME_DEFS)
         .filter((m) => m.type !== 'RoadEvent')     // подія — хід середовища: її кидає сама симуляція
         .filter((m) => dispatch(s.game, { ...m, commandId: nextCommandId(s.game) } as Command, GAME_DEFS).ok);

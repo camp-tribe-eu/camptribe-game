@@ -7,7 +7,7 @@
 // * контрольна сума — над станом у ТІЙ версії, у якій його записано (до міграцій);
 // * кожна випущена версія лишається фікстурою в tests/saves/ назавжди.
 import type { StoryDefs } from './defs';
-import { matches } from './story';
+import { exitsFor, matches } from './story';
 import { stateHash } from './hash';
 import { isJournalType, type SimState } from './sim';
 import { CONDITION_MAX } from './gear';
@@ -149,6 +149,35 @@ export function danglingRefs(game: SimState['game'], st: StoryDefs): string[] {
 }
 
 /**
+ * Розділ, закінчений на СТАРОМУ контенті, продовжується на нинішньому (GAME-141). До GAME-141 кінцем розділу 1 був ST-005
+ * (`end: true`); тепер ST-005 — лише межа дня 1 (`dayEnd`), а кінець розділу — наприкінці дня 2. Сейв, записаний після
+ * старого кінця, має campaignEnded, але жодного завершеного квесту, який у нинішньому сюжеті є кінцем (`end`): він не
+ * «пройдений», а зупинений на межі дня. Такий сейв знову відкривається: campaignEnded = false, а з кожної завершеної межі
+ * дня, жоден вихід якої ще не починався, — її перехід за замовчуванням стає активним (цілі `visit` місця, де гравець
+ * стоїть, — виконані, як при звичайному вході в квест, GAME-84). Розділ, завершений на нинішньому кінці, не чіпається.
+ */
+export function reopenChapter(game: SimState['game'], st: StoryDefs): SimState['game'] {
+  const p = game.player;
+  if (!game.campaignEnded || !p) return game;
+  const own = (id: string) => (Object.hasOwn(st.quests, id) ? st.quests[id] : undefined);
+  const completed = (id: string) => (Object.hasOwn(game.quests, id) ? game.quests[id]?.status : undefined) === 'completed';
+  if (Object.keys(st.quests).some((id) => own(id)?.end && completed(id))) return game;
+  let quests = game.quests;
+  for (const id of Object.keys(game.quests).sort()) {
+    const q = own(id);
+    if (!q || q.dayEnd !== true || !completed(id)) continue;
+    const exits = exitsFor(st, q, 'complete', p);
+    if (exits.some((t) => Object.hasOwn(quests, t.to))) continue;
+    const to = exits.find((t) => !t.choice)?.to;
+    const target = to === undefined ? undefined : own(to);
+    if (to === undefined || !target) continue;
+    const here = target.objectives.filter((o) => o.kind === 'visit' && o.byDialogue !== true && o.target === p.locationId && matches(o.when, p)).map((o) => o.id).sort();
+    quests = { ...quests, [to]: { status: 'active', done: here } };
+  }
+  return quests === game.quests ? game : { ...game, campaignEnded: false, quests };
+}
+
+/**
  * `story` — перевірити посилання сейву проти нинішнього сюжету; `life` — календар нинішньої гри для міграції v2 → v3
  * (без нього дні виплати, що минули до старого сейву, лічильник не зараховує — див. MIGRATIONS[2]).
  */
@@ -178,6 +207,8 @@ export function fromSave(text: string, opts: { readonly story?: StoryDefs; reado
   if (opts.story) {
     const missing = danglingRefs((sim as SimState).game, opts.story);
     if (missing.length) return { ok: false, code: 'SAVE_CONTENT_MISMATCH', detail: `not in current content: ${missing.join(', ')}` };
+    const game = reopenChapter((sim as SimState).game, opts.story);
+    if (game !== (sim as SimState).game) sim = { ...(sim as SimState), game };
   }
   const contentRev = typeof raw.contentRev === 'string' ? raw.contentRev : null;
   return { ok: true, sim: sim as SimState, fromVersion: version as number, contentRev };

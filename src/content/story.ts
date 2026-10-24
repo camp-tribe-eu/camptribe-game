@@ -15,7 +15,7 @@ import transports from '../../content/transports.json';
 
 interface RawWhen { profiles?: string[]; transports?: string[]; animals?: string[] }
 interface RawQuest {
-  id: string; optional: boolean; end?: boolean; locationId?: string; when?: RawWhen;
+  id: string; optional: boolean; end?: boolean; dayEnd?: boolean; locationId?: string; when?: RawWhen;
   requires?: { quests?: string[]; items?: string[] };
   objectives: { id: string; kind: string; target: string; required: boolean; byDialogue?: boolean; when?: RawWhen }[];
   transitions: { on: string; to: string; choiceKey?: string; when?: RawWhen }[];
@@ -73,6 +73,7 @@ function quest(q: RawQuest): QuestDef {
   return {
     optional: q.optional,
     end: q.end === true,
+    ...(q.dayEnd === true ? { dayEnd: true as const } : {}),
     ...(q.locationId ? { locationId: q.locationId } : {}),
     ...when(q.when),
     ...(q.requires ? { requires: { quests: q.requires.quests ?? [], items: q.requires.items ?? [] } } : {}),

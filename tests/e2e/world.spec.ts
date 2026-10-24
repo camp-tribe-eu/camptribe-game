@@ -242,8 +242,16 @@ for (const vp of VIEWPORTS) {
       };
       await tapAct('pickup', 'item.firewood');
       await tapAct('complete', 'q.st-005');
-      // GAME-106: кінець дня 1 — підсумок дня; «Продовжити» дотиком, і знову ☰ — там кінець розділу.
+      // GAME-106: кінець дня 1 — підсумок дня; «Продовжити» дотиком, і знову ☰ — там уже день 2 (GAME-141), не кінець.
       await expect(page.locator('[data-ui="summary"]')).toBeVisible();
+      await page.locator('[data-ui="summary-continue"]').tap();
+      await page.locator('[data-touch="story"]').tap();
+      await expect(story.locator('[data-ui="ended"]')).toHaveCount(0);
+      // День 2 тим самим дотиком: ранок, «Доброго ранку!», вечеря, вечір біля вогнища — і підсумок дня 2.
+      for (const [k, key] of [['complete', 'q.ch1-d2-001'], ['talk', 'npc.elise'], ['choose', 'dlg.elise-greeting.hello.c11'], ['choose', 'dlg.elise-greeting.morning.c2'], ['continue', ''],
+        ['complete', 'q.ch1-d2-elise-001'], ['talk', 'npc.elise'], ['choose', 'dlg.elise-greeting.hello.c14'], ['choose', 'dlg.elise-greeting.dinner.c2'], ['continue', ''], ['continue', ''],
+        ['complete', 'q.ch1-d2-camp-001'], ['complete', 'q.ch1-d2-fire-001']] as const) await tapAct(k, key);
+      await expect(page.locator('[data-ui="summary"] h2')).toHaveText('Підсумок дня 2');
       await page.locator('[data-ui="summary-continue"]').tap();
       await page.locator('[data-touch="story"]').tap();
       await expect(story.locator('[data-ui="ended"]')).toBeVisible();
