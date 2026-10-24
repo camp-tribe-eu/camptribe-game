@@ -28,10 +28,10 @@ async function act(page: Page, kind: string, key = ''): Promise<void> {
   await panel(page).locator(`[data-act="${kind}"][data-key="${key}"]`).click({ timeout: 5_000 });
   await page.waitForTimeout(400);
   if (kind === 'visit' && key === 'loc.road') {
-    const answer = panel(page).locator('[data-key="dlg.road-apples.box.c2"]');
-    if (await answer.isVisible({ timeout: 400 }).catch(() => false)) {
-      await answer.click();
-      await panel(page).locator('[data-act="continue"]').click();
+    // GAME-108: на дорозі одна з десяти подій — з будь-якої виходимо останньою відповіддю (у подій дороги вона безумовна).
+    const dlg = panel(page).locator('[data-ui="dialogue"]');
+    for (let i = 0; i < 6 && await dlg.isVisible({ timeout: 400 }).catch(() => false); i++) {
+      await dlg.locator('[data-act]').last().click();
       await page.waitForTimeout(400);
     }
   }

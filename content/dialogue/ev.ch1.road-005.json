@@ -1,0 +1,10 @@
+{
+  "id": "dlg.ev.ch1.road-005",
+  "trigger": {"at": ["loc.road"], "chance": 6, "titleKey": "dlg.ev.ch1.road-005.title", "when": {"profiles": ["profile.family-teen"]}},
+  "start": "quiet",
+  "nodes": [
+    {"id": "quiet", "speaker": "player", "textKey": "dlg.ev.ch1.road-005.quiet", "choices": [{"textKey": "dlg.ev.ch1.road-005.quiet.c1", "next": "game"}, {"textKey": "dlg.ev.ch1.road-005.quiet.c2", "next": "calm"}]},
+    {"id": "game", "speaker": "player", "textKey": "dlg.ev.ch1.road-005.game", "end": true},
+    {"id": "calm", "speaker": "player", "textKey": "dlg.ev.ch1.road-005.calm", "end": true}
+  ]
+}

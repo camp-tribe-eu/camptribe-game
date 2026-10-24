@@ -1,0 +1,10 @@
+{
+  "id": "dlg.ev.ch1.road-003",
+  "trigger": {"at": ["loc.road"], "chance": 6, "titleKey": "dlg.ev.ch1.road-003.title", "when": {"transports": ["transport.bike"]}},
+  "start": "sign",
+  "nodes": [
+    {"id": "sign", "speaker": "player", "textKey": "dlg.ev.ch1.road-003.sign", "choices": [{"textKey": "dlg.ev.ch1.road-003.sign.c1", "next": "map"}, {"textKey": "dlg.ev.ch1.road-003.sign.c2", "next": "main"}]},
+    {"id": "map", "speaker": "player", "textKey": "dlg.ev.ch1.road-003.map", "end": true},
+    {"id": "main", "speaker": "player", "textKey": "dlg.ev.ch1.road-003.main", "end": true}
+  ]
+}

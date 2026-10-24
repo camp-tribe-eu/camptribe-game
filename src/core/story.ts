@@ -154,14 +154,14 @@ function way(st: StoryDefs, from: string | null, to: string, transport: string):
 /** Прапорець «подія вже була» — подія в дорозі трапляється раз; вміст може читати його в умовах (notFlag). */
 export const eventSeenFlag = (eventId: string): string => `f.seen-${eventId.replace(/^dlg\./, '')}`;
 
-/** Чи може подія відкритись зараз: гравець є, розмови немає, він у локації з `at`, події ще не було. */
+/** Чи може подія відкритись зараз: гравець є, розмови немає, він у локації з `at`, подія для нього (`when`, GAME-108), її ще не було. */
 export function eventEligible(st: StoryDefs, d: { readonly player: PlayerState | null; readonly flags: readonly string[]; readonly dialogue: StoryDraft['dialogue'] }, eventId: string): boolean {
   const ev = own(st.dialogues, eventId);
   const p = d.player;
   if (!ev?.trigger || !p || p.locationId === null) return false;
   const open = d.dialogue ? own(st.dialogues, d.dialogue.id) : undefined;
   if (d.dialogue && open && own(open.nodes, d.dialogue.node)) return false; // жива розмова (зависла — не заважає, як у liveDialogue)
-  return ev.trigger.at.includes(p.locationId) && !d.flags.includes(eventSeenFlag(eventId));
+  return ev.trigger.at.includes(p.locationId) && matches(ev.trigger.when, p) && !d.flags.includes(eventSeenFlag(eventId));
 }
 
 /** Цілі квесту, що існують для цього гравця. */

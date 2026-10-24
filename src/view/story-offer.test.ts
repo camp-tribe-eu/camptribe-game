@@ -11,7 +11,9 @@ import { newSim, step, type SimState } from '../core/sim';
 import type { GameState } from '../core/state';
 import { enumerateCombos } from '../../scripts/validator/combos.mjs';
 import { GAME_DEFS } from '../content/slice-defs';
-import { CONTENT } from '../content/story';
+import { CONTENT, STORY } from '../content/story';
+import { exploreView } from '../content/moves';
+import { canonical } from '../core/hash';
 import type { Move } from '../content/moves';
 import uk from '../../content/locales/uk.json';
 import en from '../../content/locales/en.json';
@@ -51,7 +53,13 @@ const sceneMoves = (s: GameState): { move: Move; next: GameState }[] => [
  * Стани, з яких через меню кінця не досягти (порожньо — тупиків немає), і скільки станів усього.
  * Досяжне — меню ПЛЮС сцена (рецензія: Interact можливий будь-коли); кінець має бути досяжний меню.
  */
+// Ключ перебору — exploreView (як у story.test): без пам'ятних фактів (GAME-110) і прапорців «подія вже була» (GAME-108).
+// З outcomeKey десять подій дороги, кожна раз за гру, множили простір станів понад межу. Чесність — memory-flags.test
+// (пам'ятні факти косметичні) і road-events.test (f.seen-* читає лише хід везіння RoadEvent).
+const exploreKey = (s: GameState): string => canonical(exploreView(s, STORY));
+
 function deadEnds(first: GameState, menu: Menu, scene: Menu = sceneMoves): { states: number; ended: number; stuck: GameState[] } {
+  const outcomeKey = exploreKey;
   const seen = new Map<string, GameState>([[outcomeKey(first), first]]);
   const back = new Map<string, string[]>();
   const queue = [first];

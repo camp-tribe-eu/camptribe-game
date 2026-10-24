@@ -199,16 +199,17 @@ test.describe('№8 текст 200 % на десктопі: завдання й 
     expect(quest.width, 'завдання розтягнулось на весь екран: текст знову притиснутий до лівого краю').toBeLessThanOrEqual(660);   // межа макета: min(92vw, 640px)
     // Діалог: до Елізи — повний прохід (кліком), далі беремо рамку діалогу.
     for (const [k, key] of [['complete', 'q.st-002'], ['visit', 'loc.shop'], ['pickup', 'item.tent'], ['pickup', 'item.sleeping-bag'], ['complete', 'q.st-003'], ['visit', 'loc.home'], ['complete', 'q.ch1-home-001'], ['visit', 'loc.road']] as const) await act(page, k, key);
-    const apples = panel(page).locator('[data-key="dlg.road-apples.box.c2"]');
-    if (await apples.isVisible({ timeout: 400 }).catch(() => false)) {
+    const event = panel(page).locator('[data-ui="dialogue"]');
+    if (await event.isVisible({ timeout: 400 }).catch(() => false)) {
       // Подія в дорозі — теж діалог: перевіряємо на ньому, інакше йдемо до Елізи.
       const dlg = await rectOf(page, '[data-ui="dialogue"]');
       const head = await rectOf(page, '[data-ui="story"] h2');
       expect(Math.abs(centre(dlg) - centre(head))).toBeLessThan(3);
-      await apples.click();
-      await page.waitForTimeout(400);
-      await panel(page).locator('[data-act="continue"]').click();
-      await page.waitForTimeout(400);
+      // GAME-108: на дорозі одна з десяти подій — з будь-якої виходимо останньою відповіддю (у подій дороги вона безумовна).
+      for (let i = 0; i < 6 && await event.isVisible({ timeout: 400 }).catch(() => false); i++) {
+        await event.locator('[data-act]').last().click();
+        await page.waitForTimeout(400);
+      }
     }
     await act(page, 'complete', 'q.elise-bike-area.choice');
     await act(page, 'visit', 'loc.camp.lake');

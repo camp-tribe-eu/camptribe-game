@@ -980,6 +980,8 @@ function whens(content) {
     for (const o of q.objectives) if (o.when) out.push([`${q.id}/${o.id}`, o.when, q.when]);
     q.transitions.forEach((t, i) => t.when && out.push([`${q.id}.transitions[${i}]`, t.when, q.when, 'transition']));
   }
+  // Подія в дорозі (GAME-108): when тригера — ті самі перевірки посилань і здійсненності, що й у квесту.
+  for (const d of content.dialogues ?? []) if (d.trigger?.when) out.push([`${d.id}.trigger`, d.trigger.when]);
   return out;
 }
 
