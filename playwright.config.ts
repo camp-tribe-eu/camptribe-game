@@ -17,6 +17,14 @@ export default defineConfig({
     ...(executablePath ? { launchOptions: { executablePath } } : {}),
   },
   // --mode e2e: вмикає перемикачі негативних контролів (src/view/test-switches.ts); у звичайній збірці їх немає.
+  // GAME-97: проба fps міряє абсолютне число, тож ділити процесор з іншими тестами їй не можна — інакше результат залежить від
+  // того, який важкий тест випав поруч (CI #45: 4,97 fps при 60 наодинці, полотно те саме). Тести продуктивності — окремий
+  // проєкт ПІСЛЯ всіх інших (dependencies), а всередині — послідовно (game-97.spec: mode serial). Лише ці тести, без решти:
+  // `npx playwright test game-97 --no-deps` (інакше залежність проганяє весь проєкт e2e перед ними).
+  projects: [
+    { name: 'e2e', testIgnore: /game-97\.spec\.ts/ },
+    { name: 'perf', testMatch: /game-97\.spec\.ts/, dependencies: ['e2e'] },
+  ],
   webServer: {
     command: `npx vite build --mode e2e && npx vite preview --port ${port} --strictPort --host 127.0.0.1`,
     url: `http://127.0.0.1:${port}/`,

@@ -40,7 +40,7 @@ async function press(cdp: CDPSession, x: number, y: number, dx: number, dy: numb
   await touch(cdp, 'touchMove', x + dx, y + dy);
 }
 /** Утримати, доки умова не справдиться (межа maxMs), і відпустити. */
-async function driveUntil(page: Page, cdp: CDPSession, dx: number, dy: number, until: (p: Probe) => boolean, maxMs = 5000): Promise<void> {
+async function driveUntil(page: Page, cdp: CDPSession, dx: number, dy: number, until: (p: Probe) => boolean, maxMs = 10_000): Promise<void> {
   const y0 = Math.round((page.viewportSize()?.height ?? 844) * 0.5);   // середина висоти: поза спокійною основою й під шапкою в обох положеннях
   await press(cdp, 70, y0, dx, dy);
   const start = Date.now();
@@ -55,6 +55,11 @@ async function driveUntil(page: Page, cdp: CDPSession, dx: number, dy: number, u
 async function walkToEliza(page: Page, cdp: CDPSession): Promise<void> {
   await driveUntil(page, cdp, -50, 0, (p) => p.playerX <= 88);
   await driveUntil(page, cdp, 0, 50, (p) => p.nearObject === 'npc.elise');
+  // Зону Елізи (48 px при 128 px/с) персонаж проходить за ~0,75 с; під навантаженням CI опитування рідше і проскакує її
+  // (CI #45: nearObject null). Тоді довертаємо коротким ходом назад, як зробив би гравець (так само, як world.spec, #43).
+  for (let i = 0; i < 4 && (await probe(page)).nearObject !== 'npc.elise'; i++) {
+    await driveUntil(page, cdp, 0, i % 2 === 0 ? -50 : 50, (p) => p.nearObject === 'npc.elise', 2000);
+  }
   expect((await probe(page)).nearObject).toBe('npc.elise');
 }
 /** Де на екрані (CSS px) стоїть точка світу: масштаб — з розміру елемента канви й кадру. */
