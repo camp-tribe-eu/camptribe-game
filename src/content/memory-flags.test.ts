@@ -197,6 +197,24 @@ describe('п’ять пам’ятних виборів (GAME-110)', () => {
     expect(cosmeticViolations(CONTENT)).toEqual([]);
   });
 
+  // Запис Memory бере id команди вибору: вибір із двома пам'ятними фактами дав би два записи з одним commandId (рецензія PR #61).
+  const multiMemorable = (content: Pick<RawContent, 'dialogues' | 'flags'>): string[] => {
+    const mem = new Set(memorableFacts(content));
+    return content.dialogues.flatMap((d) => nodesOf(d).flatMap((n) => (n.choices ?? []).flatMap((ch, i) => {
+      const facts = (ch.effects ?? []).filter((e) => (typeof e.setFlag === 'string' && mem.has(e.setFlag)) || (typeof e.remember === 'string' && mem.has(e.remember)));
+      return facts.length > 1 ? [`${d.id}/${n.id}.choices[${i}]: ${facts.length}`] : [];
+    })));
+  };
+  it('№3 один вибір ставить не більше одного пам\u2019ятного факту (інакше дубль commandId у журналі)', () => {
+    expect(multiMemorable(CONTENT)).toEqual([]);
+    const broken = structuredClone(CONTENT);
+    const ch = broken.dialogues.flatMap((d) => nodesOf(d).flatMap((n) => n.choices ?? []))
+      .find((c) => (c.effects ?? []).some((e) => typeof e.setFlag === 'string' && memorableFacts(broken).includes(e.setFlag)));
+    const other = memorableFacts(broken).find((f) => f.startsWith('f.') && !(ch?.effects ?? []).some((e) => e.setFlag === f));
+    ch?.effects?.push({ setFlag: other ?? '' });
+    expect(multiMemorable(broken)).toHaveLength(1);              // негативний контроль: другий факт у тому ж виборі — червоне
+  });
+
   it('№2 негативний контроль: згадка, що закриває ціль чи стартує квест, — червоне', () => {
     const broken = structuredClone(CONTENT);
     const elise = broken.dialogues.find((d) => d.id === 'dlg.elise-greeting');
