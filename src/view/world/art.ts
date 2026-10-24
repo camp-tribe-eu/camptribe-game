@@ -45,10 +45,10 @@ export const FAMILY_LOOKS = {
 
 /** Вигляд гравця: чоловічий шаблон родини George. */
 export const PLAYER_LOOK: readonly LayerSpec[] = FAMILY_LOOKS.george;
-/** Вигляд Елізи: власний шаблон NPC, не родини (GAME-114) — ті самі шари LPC, що й у Victoria, але темне волосся, бірюзова сорочка, хакі. */
+/** Вигляд Елізи: власний шаблон NPC, не родини (GAME-114) — ті самі шари LPC, що й у Victoria, але чорне волосся й гірчична сорочка, щоб не плутати ні з Victoria, ні з гравцем. */
 export const ELISE_LOOK: readonly LayerSpec[] = [
-  { url: ponytailBack, tint: rgb(60, 40, 30) }, { url: bodyFemale }, { url: headFemale }, { url: shoesThin, tint: rgb(80, 60, 50) },
-  { url: pantsThin, tint: rgb(110, 100, 70) }, { url: shirtFemale, tint: rgb(60, 130, 130) }, { url: ponytailFront, tint: rgb(60, 40, 30) },
+  { url: ponytailBack, tint: rgb(35, 28, 28) }, { url: bodyFemale }, { url: headFemale }, { url: shoesThin, tint: rgb(80, 60, 50) },
+  { url: pantsThin, tint: rgb(90, 70, 60) }, { url: shirtFemale, tint: rgb(195, 150, 50) }, { url: ponytailFront, tint: rgb(35, 28, 28) },
 ];
 /** Усі NPC зі своїм виглядом: сторож looks.test порівнює їх із родиною. */
 export const NPC_LOOKS: Readonly<Record<string, readonly LayerSpec[]>> = { elise: ELISE_LOOK };
