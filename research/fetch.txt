@@ -33,7 +33,7 @@ lic-lpc-clothing-updates	page:https://opengameart.org/content/lpc-clothing-updat
 yt-requirements	page:https://developers.google.com/youtube/gaming/playables/certification/requirements
 yt-sdk	page:https://developers.google.com/youtube/gaming/playables/reference/sdk
 yt-test-suite	page:https://developers.google.com/youtube/gaming/playables/test_suite
-yt-faq	page:https://developers.google.com/youtube/gaming/playables/faq
+# yt-faq	page:https://developers.google.com/youtube/gaming/playables/faq   ← HTTP 404 (run 40081959023); FAQ живе на support/faq (yt-support-faq)
 yt-phaser-template	page:https://github.com/phaserjs/template-youtube-playables
 yt-phaser-readme	page:https://raw.githubusercontent.com/phaserjs/template-youtube-playables/main/README.md
 yt-req-stability	page:https://developers.google.com/youtube/gaming/playables/certification/requirements_stability
