@@ -37,7 +37,7 @@ jobs:
   # GAME-14: e2e у справжньому браузері (спайк Phaser 4). Скриншот сцени — артефакт CI.
   e2e:
     runs-on: ubuntu-latest
-    timeout-minutes: 45   # один воркер (playwright.config.ts): ~30 хв замість ~18; з двома вже впритул до 20
+    timeout-minutes: 60   # один воркер (playwright.config.ts): 37 хв на PR #53; з двома вже впритул до 20
     # GAME-85: браузер і системні бібліотеки — уже в офіційному образі. `playwright install --with-deps` тягнув apt
     # і з'їдав 10 хв із 20 ліміту job. Тег образу = версія @playwright/test у package.json (оновлювати разом).
     container:
