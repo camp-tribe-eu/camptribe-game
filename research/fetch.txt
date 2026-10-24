@@ -48,3 +48,12 @@ list-lpc-cat	ogasearch:lpc cat
 list-cat-sprite	ogasearch:cat sprite 32
 lic-lpc-cats-and-dogs	page:https://opengameart.org/content/lpc-cats-and-dogs
 lic-lpc-rat-cat-and-dog	page:https://opengameart.org/content/lpc-rat-cat-and-dog
+
+# Інвентар арту (радник 24.10 п.6): спершу готові сучасні набори LPC/OGA з сумісною ліцензією, потім доведення
+list-lpc-modern-interior	ogasearch:lpc modern interior
+list-lpc-modern-city	ogasearch:lpc modern city
+list-lpc-modern-furniture	ogasearch:lpc modern furniture
+list-lpc-library	ogasearch:lpc library
+list-lpc-bicycle	ogasearch:lpc bicycle
+list-bike-32	ogasearch:bicycle 32x32
+list-lpc-duck	ogasearch:lpc duck
