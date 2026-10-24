@@ -97,5 +97,20 @@
   "jr.PackItem": "Packed",
   "jr.UnpackItem": "Taken out of the luggage",
   "jr.AutoPack": "Luggage packed by the list",
-  "jr.Memory": "Remembered"
+  "jr.Memory": "Remembered",
+  "sum.title": "Day summary",
+  "sum.night": "Night",
+  "sum.night.tent": "in the tent by the pines",
+  "sum.night.car": "in the car by the pines",
+  "sum.night.gazebo": "in the gazebo by the water",
+  "sum.packed": "Packed",
+  "sum.events": "On the road",
+  "sum.quests": "Done",
+  "sum.bought": "Bought",
+  "sum.got": "Got",
+  "sum.sold": "Sold",
+  "sum.money": "Money",
+  "sum.continue": "Continue",
+  "sum.endSession": "End session",
+  "ui.sessionSaved": "Session saved. You can close the game: next time you'll continue from here."
 }

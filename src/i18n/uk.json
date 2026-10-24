@@ -97,5 +97,20 @@
   "jr.PackItem": "Покладено",
   "jr.UnpackItem": "Дістали з багажу",
   "jr.AutoPack": "Багаж складено за списком",
-  "jr.Memory": "Запам'ятали"
+  "jr.Memory": "Запам'ятали",
+  "sum.title": "Підсумок дня",
+  "sum.night": "Ночівля",
+  "sum.night.tent": "у наметі біля сосон",
+  "sum.night.car": "в машині біля сосон",
+  "sum.night.gazebo": "в альтанці біля води",
+  "sum.packed": "Спаковано",
+  "sum.events": "У дорозі",
+  "sum.quests": "Виконано",
+  "sum.bought": "Куплено",
+  "sum.got": "Отримано",
+  "sum.sold": "Продано",
+  "sum.money": "Гроші",
+  "sum.continue": "Продовжити",
+  "sum.endSession": "Завершити сесію",
+  "ui.sessionSaved": "Сесію збережено. Можна закривати гру: наступного разу продовжиш звідси."
 }

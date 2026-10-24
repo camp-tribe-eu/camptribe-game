@@ -78,6 +78,14 @@ async function playBikeProlog(page: Page): Promise<void> {
 }
 // ПРОХІД-END
 
+/** GAME-106: кінець дня 1 відкриває підсумок дня; «Продовжити» — на мапу. reopen — знову відкрити ☰ (там «кінець розділу»). */
+async function finishDay(page: Page, reopen: boolean): Promise<void> {
+  await expect(page.locator('[data-ui="summary"]')).toBeVisible();
+  await page.locator('[data-ui="summary-continue"]').click();
+  await expect(page.locator('[data-ui="summary"]')).toHaveCount(0);
+  if (reopen) await page.locator('[data-touch="story"]').click();
+}
+
 test.use({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true });
 
 test('пролог від вибору персонажа до кінця розділу — кліками, кожна дія доходить до ядра', async ({ page }) => {
@@ -85,6 +93,7 @@ test('пролог від вибору персонажа до кінця роз
   await expect(panel(page).locator('[data-ui="create"]')).toBeVisible();
   expect((await core(page)).game.player).toBeNull();
   await playBikeProlog(page);
+  await finishDay(page, true);
   await expect(panel(page).locator('[data-ui="ended"]')).toBeVisible();
   // GAME-84 №6: на екрані кінця — що далі (Розділ I) і що зробити, щоб не загубити гру (зберегти в паузі).
   await expect(panel(page).locator('[data-ui="ended"]')).toContainText('Розділ I');
@@ -221,6 +230,7 @@ test('автівкою — без бічного квесту й без відп
   await expect(panel(page).locator('[data-act="visit"][data-key="loc.camp.lake"]')).toHaveCount(0);
   await act(page, 'pickup', 'item.firewood');
   await act(page, 'complete', 'q.st-005');
+  await finishDay(page, true);
   await expect(panel(page).locator('[data-ui="ended"]')).toBeVisible();
   const c = await core(page);
   expect(c.game.campaignEnded).toBe(true);
@@ -303,7 +313,7 @@ test('після закриття екрана подорожі фокус на 
 test('сейв після прологу: перезавантаження — і кінець розділу на місці', async ({ page }) => {
   await open(page);
   await playBikeProlog(page);
-  await page.locator('[data-ui="story-close"]').click();
+  await finishDay(page, false);
   await page.locator('[data-touch="pause"]').click();
   await page.locator('[data-ui="save"]').click();
   await expect(page.locator('[data-ui="status"]')).toBeVisible();
@@ -317,7 +327,7 @@ test('кінець розділу видно поза ☰: підказка в H
   await open(page);
   await expect(page.locator('[data-ui="ended-hint"]')).toHaveCount(0);   // до кінця підказки немає (контроль)
   await playBikeProlog(page);
-  await page.locator('[data-ui="story-close"]').click();
+  await finishDay(page, false);
   const hint = page.locator('[data-ui="ended-hint"]');
   await expect(hint).toBeVisible();
   await expect(hint).toContainText('Кінець Прологу');

@@ -6,8 +6,9 @@ import type { Credits, UiPort } from './port';
 import { t as tr, type AnyLang, type Key } from '../i18n';
 import { ct } from '../i18n/content';
 import { StoryPanel, money } from './StoryPanel';
+import { DaySummary } from './DaySummary';
 import { trapTab } from './focus-trap';
-import type { StoryOffer } from './story-types';
+import type { OfferSummary, StoryOffer } from './story-types';
 
 /** Скільки тост-підказка висить на екрані (мс), якщо гравець нічого не зробив (GAME-95). Картка: ≤ 6 с. */
 const TOAST_MS = 5000;
@@ -27,6 +28,33 @@ export function Shell({ port, langOverride, credits, build }: { port: UiPort; la
   const [storyOpen, setStoryOpen] = useState(false);
   const [offer, setOffer] = useState<StoryOffer>(() => port.story());
   useEffect(() => port.onStory(() => setOffer(port.story())), []);
+  // Підсумок дня (GAME-106): з'являється, коли ДІЯ гравця завершила день (daysEnded зріс саме на ній), а не при завантаженні
+  // сейву вже завершеного дня — після «Завершити сесію» й перезавантаження гравець повертається на мапу, а не в підсумок.
+  // Поки він відкритий, світ на паузі (як на екрані подорожі).
+  const [summary, setSummary] = useState<OfferSummary | null>(null);
+  const storyAct = (id: string): void => {
+    const before = port.story().daysEnded;
+    port.act(id);
+    const after = port.story();
+    if (after.daysEnded > before && after.summary) {
+      setStoryOpen(false);   // екран подорожі ховається без відпускання паузи: підсумок тримає її далі
+      setSummary(after.summary);
+    }
+  };
+  // «Продовжити»: назад до мапи — день іде далі (кінець Прологу: мапа жива, ☰ скаже, що далі).
+  const summaryContinue = (): void => {
+    setSummary(null);
+    story(false);
+  };
+  // «Завершити сесію»: записати сейв і вийти в меню паузи з підтвердженням — гру можна закривати, прогрес на місці.
+  const summaryEnd = (): void => {
+    setSummary(null);
+    setStoryOpen(false);
+    setStatus(null);
+    setPaused(true);
+    port.setPaused(true);
+    void port.save().then((ok) => setStatus(ok ? 'ui.sessionSaved' : 'ui.saveFailed'));
+  };
   // Нагадування про код відновлення (GAME-94): тихий рядок після подорожі, не діалог — гра йде далі. Показ фіксуємо в
   // налаштуваннях одразу, як рядок з'явився: після перезавантаження про ту саму подорож він не повертається.
   const [remind, setRemind] = useState<{ trip: string; state: 'ask' | 'done' | 'manual'; code: string } | null>(null);
@@ -88,11 +116,11 @@ export function Shell({ port, langOverride, credits, build }: { port: UiPort; la
     const onKey = (e: KeyboardEvent): void => {
       if (e.code !== 'Escape') return;
       e.preventDefault();
-      if (confirmNew) setConfirmNew(false); else if (storyOpen) story(false); else toggle(!paused);
+      if (confirmNew) setConfirmNew(false); else if (summary) summaryContinue(); else if (storyOpen) story(false); else toggle(!paused);
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [paused, storyOpen, confirmNew]);
+  }, [paused, storyOpen, confirmNew, summary]);
 
   // Фокус — у діалог, щоб клавіатура й екранний читач починали з «Продовжити».
   useEffect(() => {
@@ -124,10 +152,10 @@ export function Shell({ port, langOverride, credits, build }: { port: UiPort; la
 
   useEffect(() => {
     const trip = offer.lastTrip;
-    if (paused || storyOpen || offer.stage === 'create' || trip === null || trip === settings.remindedTrip || remind?.trip === trip) return;
+    if (paused || storyOpen || summary || offer.stage === 'create' || trip === null || trip === settings.remindedTrip || remind?.trip === trip) return;
     setRemind({ trip, state: 'ask', code: '' });
     update({ ...settings, remindedTrip: trip });
-  }, [paused, storyOpen, offer, settings.remindedTrip]);
+  }, [paused, storyOpen, summary, offer, settings.remindedTrip]);
   const copyCode = (): void => {
     void port.exportCode().then(async (code) => {
       try {
@@ -138,7 +166,7 @@ export function Shell({ port, langOverride, credits, build }: { port: UiPort; la
       }
     }).catch(() => setRemind((r) => r && { ...r, state: 'manual', code: '' }));   // код не зібрано — хоч не мовчимо
   };
-  const reminder = remind && remind.trip === offer.lastTrip && !paused && !storyOpen && (
+  const reminder = remind && remind.trip === offer.lastTrip && !paused && !storyOpen && !summary && (
     <div class="ui-reminder" data-ui="recovery-reminder" role="status">
       <span data-ui="recovery-text">{t(remind.state === 'done' ? 'ui.remind.done' : remind.state === 'manual' ? 'ui.remind.manual' : 'ui.remind.text')}</span>
       {remind.state === 'manual' && <textarea class="ui-code" data-ui="recovery-code" readOnly rows={2} aria-label={t('ui.exportCode')} value={remind.code}
@@ -169,7 +197,7 @@ export function Shell({ port, langOverride, credits, build }: { port: UiPort; la
       {/* GAME-91: шапка — ☰ ліворуч, ‖ праворуч, текст (HUD) між ними. Усе в одному ряду потоку, а не абсолютом: кнопки
           ніколи не лежать на тексті, при 200 % текст переноситься в середній колонці. Під діалогом шапки немає: дані HUD є
           в самому діалозі, а схована смуга під ним збивала вимірювання контрасту (axe). */}
-      {!paused && !storyOpen && <header class="ui-header">
+      {!paused && !storyOpen && !summary && <header class="ui-header">
         <button type="button" class="ui-story-btn" data-hint={showHint || offer.stage === 'ended' ? 'yes' : undefined} data-touch="story" aria-label={t('ui.story')} onClick={() => story(true)}>{'☰'}</button>
         <div class="ui-hud" data-ui="hud" role="group" aria-label={t('ui.hud')}>
           <span data-ui="hud-place">{offer.locationKey ? ct(lang, offer.locationKey) : t('ui.noPlace')}</span>
@@ -182,7 +210,8 @@ export function Shell({ port, langOverride, credits, build }: { port: UiPort; la
         <button type="button" class="ui-pause-btn" data-touch="pause" aria-label={t('ui.pause')} onClick={() => toggle(true)}>{'‖'}</button>
         {reminder}
       </header>}
-      {storyOpen && <StoryPanel offer={offer} lang={lang} t={t} act={(id) => port.act(id)} close={() => story(false)}>{staleNotice}</StoryPanel>}
+      {storyOpen && <StoryPanel offer={offer} lang={lang} t={t} act={storyAct} close={() => story(false)}>{staleNotice}</StoryPanel>}
+      {summary && !paused && <DaySummary summary={summary} lang={lang} t={t} onContinue={summaryContinue} onEnd={summaryEnd} />}
       {paused && confirmNew && (
         <div class="ui-overlay" role="dialog" aria-modal="true" aria-label={t('ui.newGame')} data-ui="confirm-new" onKeyDown={(e) => trapTab(e, e.currentTarget)}>
           <h2>{t('ui.newGame')}</h2>
