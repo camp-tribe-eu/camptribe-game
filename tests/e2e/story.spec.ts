@@ -429,14 +429,23 @@ async function walk(page: Page, key: string, until: (p: Probe) => boolean): Prom
 }
 /** Точка Елізи з мапи (public/maps/camp-lake.tmj) — ціль за координатою, як у world.spec (CI PR #53: кроки за годинником
  *  на повільному CI то не доходили, то проскакували зону Ø 96 px). Звірка з мапою — нижче, щоб константа не застаріла. */
-const ELISE_Y = 272;
+const ELISE = { x: 80, y: 272 };
 async function walkToElise(page: Page): Promise<void> {
-  const map = JSON.parse(readFileSync('public/maps/camp-lake.tmj', 'utf8')) as { layers: { objects?: { name: string; y: number }[] }[] };
-  expect(map.layers.flatMap((l) => l.objects ?? []).find((o) => o.name === 'npc.elise')?.y, 'Еліза на мапі зсунулась — онови ELISE_Y').toBe(ELISE_Y);
-  await walk(page, 'ArrowLeft', (p) => p.playerX <= 88);
-  for (let i = 0; i < 8 && (await probe(page)).nearObject !== 'npc.elise'; i++) {
-    const key = (await probe(page)).playerY > ELISE_Y ? 'ArrowUp' : 'ArrowDown';
-    await walk(page, key, (q) => q.nearObject === 'npc.elise' || (key === 'ArrowUp' ? q.playerY <= ELISE_Y : q.playerY >= ELISE_Y));
+  const map = JSON.parse(readFileSync('public/maps/camp-lake.tmj', 'utf8')) as { layers: { objects?: { name: string; x: number; y: number }[] }[] };
+  const o = map.layers.flatMap((l) => l.objects ?? []).find((n) => n.name === 'npc.elise');
+  expect({ x: o?.x, y: o?.y }, 'Еліза на мапі зсунулась — онови ELISE').toEqual(ELISE);
+  await walk(page, 'ArrowLeft', (p) => p.playerX <= ELISE.x + 8);
+  // Довертаємо за координатою по обох осях: на повільному CI затиснута клавіша проскакувала й ліворуч (тоді жодна
+  // корекція по Y не давала зони Ø 96 px), і по вертикалі (CI PR #53).
+  for (let i = 0; i < 12 && (await probe(page)).nearObject !== 'npc.elise'; i++) {
+    const p = await probe(page);
+    if (Math.abs(p.playerX - ELISE.x) > 16) {
+      const key = p.playerX > ELISE.x ? 'ArrowLeft' : 'ArrowRight';
+      await walk(page, key, (q) => q.nearObject === 'npc.elise' || (key === 'ArrowLeft' ? q.playerX <= ELISE.x : q.playerX >= ELISE.x));
+    } else {
+      const key = p.playerY > ELISE.y ? 'ArrowUp' : 'ArrowDown';
+      await walk(page, key, (q) => q.nearObject === 'npc.elise' || (key === 'ArrowUp' ? q.playerY <= ELISE.y : q.playerY >= ELISE.y));
+    }
   }
   expect((await probe(page)).nearObject).toBe('npc.elise');
 }

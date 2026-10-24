@@ -249,11 +249,19 @@ for (const vp of VIEWPORTS) {
       // сама точка Елізи з мапи (public/maps/camp-lake.tmj, y = 272): тримаємо стік до перетину цієї лінії й довертаємо
       // назад за координатою; промах від центру < 48 px лишає нас у зоні. Кожне утримання — не довше 4 с.
       const ELISE_Y = 272;
-      const map = JSON.parse(readFileSync('public/maps/camp-lake.tmj', 'utf8')) as { layers: { objects?: { name: string; y: number }[] }[] };
+      const map = JSON.parse(readFileSync('public/maps/camp-lake.tmj', 'utf8')) as { layers: { objects?: { name: string; x: number; y: number }[] }[] };
       expect(map.layers.flatMap((l) => l.objects ?? []).find((o) => o.name === 'npc.elise')?.y, 'Еліза на мапі зсунулась — онови ELISE_Y').toBe(ELISE_Y);
-      for (let i = 0; i < 8 && (await probe(page)).nearObject !== 'npc.elise'; i++) {
-        const dir = (await probe(page)).playerY > ELISE_Y ? 'up' : 'down';
-        expect(await holdTouch(page, dir, (p) => p.nearObject === 'npc.elise' || (dir === 'up' ? p.playerY <= ELISE_Y : p.playerY >= ELISE_Y), 4_000)).toBe(true);
+      const ELISE_X = map.layers.flatMap((l) => l.objects ?? []).find((o) => o.name === 'npc.elise')?.x ?? 80;
+      // По обох осях: на повільному CI стік ліворуч проскакував і по X — тоді корекція лише по Y зони не давала.
+      for (let i = 0; i < 12 && (await probe(page)).nearObject !== 'npc.elise'; i++) {
+        const p0 = await probe(page);
+        if (Math.abs(p0.playerX - ELISE_X) > 16) {
+          const dir = p0.playerX > ELISE_X ? 'left' : 'right';
+          expect(await holdTouch(page, dir, (p) => p.nearObject === 'npc.elise' || (dir === 'left' ? p.playerX <= ELISE_X : p.playerX >= ELISE_X), 4_000)).toBe(true);
+        } else {
+          const dir = p0.playerY > ELISE_Y ? 'up' : 'down';
+          expect(await holdTouch(page, dir, (p) => p.nearObject === 'npc.elise' || (dir === 'up' ? p.playerY <= ELISE_Y : p.playerY >= ELISE_Y), 4_000)).toBe(true);
+        }
       }
       expect((await probe(page)).nearObject).toBe('npc.elise');
       expect(await holdTouch(page, 'interact', () => true, 100)).toBe(true);
