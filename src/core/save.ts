@@ -149,23 +149,36 @@ export function danglingRefs(game: SimState['game'], st: StoryDefs): string[] {
 }
 
 /**
- * Розділ, закінчений на СТАРОМУ контенті, продовжується на нинішньому (GAME-141). До GAME-141 кінцем розділу 1 був ST-005
- * (`end: true`); тепер ST-005 — лише межа дня 1 (`dayEnd`), а кінець розділу — наприкінці дня 2. Сейв, записаний після
- * старого кінця, має campaignEnded, але жодного завершеного квесту, який у нинішньому сюжеті є кінцем (`end`): він не
- * «пройдений», а зупинений на межі дня. Такий сейв знову відкривається: campaignEnded = false, а з кожної завершеної межі
- * дня, жоден вихід якої ще не починався, — її перехід за замовчуванням стає активним (цілі `visit` місця, де гравець
- * стоїть, — виконані, як при звичайному вході в квест, GAME-84). Розділ, завершений на нинішньому кінці, не чіпається.
+ * Сейв під СТАРИЙ сюжет розділу 1 продовжується на нинішньому (GAME-141). Два випадки, обидва з контенту до GAME-141:
+ * 1) розділ закінчено на старому кінці: ST-005 мав `end`, тепер це лише межа дня 1 (`dayEnd`). У сейві campaignEnded, але
+ *    жодного завершеного квесту, що нині є кінцем (`end`): гра не «пройдена», а зупинена на межі дня;
+ * 2) осиротілий квест: активний, хоча в нинішньому сюжеті до нього не веде жоден перехід із завершеного чи відхиленого квесту
+ *    (і не startQuest розмови): велозону раніше відкривав ST-004, тепер — CH1-D2-ELISE-001. Такий квест прибирається з сейву
+ *    (ніби ще не починався — вдень 2 його запропонують звичайним шляхом), інакше він перестрибнув би через ST-005 у день 2.
+ * Тоді campaignEnded = false, а кожен завершений ОСНОВНИЙ квест, жоден вихід якого ще не починався, відкриває свій перехід за
+ * замовчуванням (ST-005 → CH1-D2-001 для випадку 1, ST-004 → ST-005 для випадку 2); цілі `visit` місця, де гравець стоїть, —
+ * виконані, як при звичайному вході в квест (GAME-84). Бічні квести переходів не відкривають (відмова від велозони не
+ * відкриє табірний день повз ранок). Розділ, завершений на нинішньому кінці, і звичайний сейв посеред гри не чіпаються.
  */
 export function reopenChapter(game: SimState['game'], st: StoryDefs): SimState['game'] {
   const p = game.player;
-  if (!game.campaignEnded || !p) return game;
+  if (!p) return game;
   const own = (id: string) => (Object.hasOwn(st.quests, id) ? st.quests[id] : undefined);
-  const completed = (id: string) => (Object.hasOwn(game.quests, id) ? game.quests[id]?.status : undefined) === 'completed';
-  if (Object.keys(st.quests).some((id) => own(id)?.end && completed(id))) return game;
-  let quests = game.quests;
+  const status = (id: string) => (Object.hasOwn(game.quests, id) ? game.quests[id]?.status : undefined);
+  const endedOld = game.campaignEnded && !Object.keys(st.quests).some((id) => own(id)?.end && status(id) === 'completed');
+  if (game.campaignEnded && !endedOld) return game;
+  // Хто може відкрити квест: перехід із завершеного/відхиленого квесту або startQuest у будь-якій розмові.
+  const started = new Set(Object.values(st.dialogues).flatMap((d) => Object.values(d.nodes).flatMap((n) => (n.choices ?? []).flatMap((c) => c.effects.flatMap((e) => ('startQuest' in e ? [e.startQuest] : []))))));
+  const entered = (id: string): boolean => id === st.start || started.has(id) || Object.entries(st.quests).some(([from, q]) => {
+    const s = status(from);
+    return (s === 'completed' || s === 'declined') && q.transitions.some((t) => t.to === id);
+  });
+  const orphans = Object.keys(game.quests).filter((id) => status(id) === 'active' && !entered(id)).sort();
+  if (!endedOld && orphans.length === 0) return game;
+  let quests = Object.fromEntries(Object.entries(game.quests).filter(([id]) => !orphans.includes(id)));
   for (const id of Object.keys(game.quests).sort()) {
     const q = own(id);
-    if (!q || q.dayEnd !== true || !completed(id)) continue;
+    if (!q || q.optional || status(id) !== 'completed') continue;
     const exits = exitsFor(st, q, 'complete', p);
     if (exits.some((t) => Object.hasOwn(quests, t.to))) continue;
     const to = exits.find((t) => !t.choice)?.to;
@@ -174,7 +187,7 @@ export function reopenChapter(game: SimState['game'], st: StoryDefs): SimState['
     const here = target.objectives.filter((o) => o.kind === 'visit' && o.byDialogue !== true && o.target === p.locationId && matches(o.when, p)).map((o) => o.id).sort();
     quests = { ...quests, [to]: { status: 'active', done: here } };
   }
-  return quests === game.quests ? game : { ...game, campaignEnded: false, quests };
+  return { ...game, campaignEnded: false, quests };
 }
 
 /**

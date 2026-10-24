@@ -266,10 +266,13 @@ describe('GAME-141 · Спосіб перевірки 2: Еліза згадує
 });
 
 describe('GAME-141 · сумісність сейвів: старий кінець розділу (ST-005 з end) продовжується днем 2', () => {
-  /** Контент ДО GAME-141: ST-005 — кінець розділу без виходів, велозона з ST-004. Ядро те саме — змінився лише контент. */
+  /** Контент ДО GAME-141: ST-005 — кінець розділу без виходів, велозона — вибір із ST-004 і веде в ST-005. Ядро те саме. */
   const OLD = mutate((c) => {
     const st005 = c.quests.find((q) => q.id === 'ST-005');
     if (st005) { st005.end = true; delete st005.dayEnd; st005.transitions = []; }
+    c.quests.find((q) => q.id === 'ST-004')?.transitions.push({ on: 'complete', to: ZONE, choiceKey: 'q.elise-bike-area.choice', when: { transports: ['transport.bike'] } });
+    const zone = c.quests.find((q) => q.id === ZONE);
+    if (zone) zone.transitions = [{ on: 'complete', to: 'ST-005' }, { on: 'decline', to: 'ST-005', choiceKey: 'q.elise-bike-area.decline' }];
   });
   const CTX_OLD = { defs: OLD };
   const oldEnded = (): SimState => {
@@ -302,11 +305,62 @@ describe('GAME-141 · сумісність сейвів: старий кінец
     expect(r.ok && r.sim.game.quests['CH1-D2-001']).toBeUndefined();
   });
 
+  /** Старий сейв посеред дня 1: велосипедист обрав велозону з ST-004 (старий контент) і стоїть біля озера; ST-005 ще не було. */
+  const oldMidZone = (): SimState => {
+    let sim = newSim(12, 5_000);
+    const ms: Move[] = [{ type: 'CreateCharacter', profileId: 'profile.solo-explorer', transportId: 'transport.bike' } as Move, ...DAY1_HEAD,
+      done('CH1-HOME-001'), { type: 'Visit', locationId: 'loc.road' }];
+    for (const m of ms) sim = step(sim, { kind: 'command', command: { ...m, commandId: `o${n++}` } as Command }, CTX_OLD);
+    for (let i = 0; sim.game.dialogue && i < 10; i++) sim = step(sim, { kind: 'command', command: { type: 'Continue', commandId: `o${n++}` } }, CTX_OLD);
+    for (const m of [{ type: 'CompleteQuest', questId: 'ST-004', to: ZONE } as Move, { type: 'Visit', locationId: 'loc.camp.lake' } as Move]) sim = step(sim, { kind: 'command', command: { ...m, commandId: `o${n++}` } as Command }, CTX_OLD);
+    return sim;
+  };
+
+  it('старий сейв з активною велозоною дня 1 (ST-005 ще немає): велозона прибирається, відкривається ST-005 — день 1 не перестрибнути', () => {
+    const old = oldMidZone();
+    expect(old.game.quests[ZONE]?.status).toBe('active');
+    expect(old.game.quests['ST-005']).toBeUndefined();
+    const r = fromSave(serialize(old), { story: STORY });
+    expect(r.ok, r.ok ? '' : `${r.code}: ${r.detail}`).toBe(true);
+    if (!r.ok) return;
+    expect(r.sim.game.quests['ST-005']).toEqual({ status: 'active', done: [] });
+    expect(r.sim.game.quests[ZONE]).toBeUndefined();                                            // вдень 2 запропонують звичайним шляхом
+    expect(r.sim.game.campaignEnded).toBe(false);
+    // Далі звичайний день 1 → день 2, і велосипедист знову може обрати велозону після поради Елізи.
+    const d2 = play([talk, choose(0), next, next, choose(0), next, ...DAY1_TAIL, done('CH1-D2-001'), talk, choose(10), choose(1), next,
+      { type: 'CompleteQuest', questId: 'CH1-D2-ELISE-001', to: ZONE } as Move], r.sim.game);
+    expect(d2.quests[ZONE]?.status).toBe('active');
+    expect(endReachable(r.sim.game, GAME_DEFS, new Map(), 50_000)).toBe(true);
+  });
+
+  it('МУТАЦІЯ «без ремонту» (той самий сейв без reopenChapter): ST-005 немає, а завершена велозона перестрибує в табірний день 2', () => {
+    const r = fromSave(serialize(oldMidZone()));                                               // без story — reopenChapter не кличеться
+    if (!r.ok) throw new Error(r.code);
+    expect(r.sim.game.quests['ST-005']).toBeUndefined();
+    // hello.c1 → bike → intro → spot.c1; далі hello.c12 → bikezone.c1 («Ходімо, гляну») — і «Завершити» велозону.
+    const s = play([talk, choose(0), next, next, choose(0), next, talk, choose(11), choose(0), next, next, { type: 'CompleteQuest', questId: ZONE } as Move], r.sim.game);
+    expect(s.quests['CH1-D2-CAMP-001']?.status).toBe('active');
+    expect(s.quests['ST-005']).toBeUndefined();                                                // день 1 і «Прибуття» пропущено
+  });
+
   it('розділ, закінчений на НИНІШНЬОМУ кінці, не відкривається знову; незакінчений — не змінюється', () => {
     const now = play([done('CH1-D2-001'), talk, choose(10), choose(1), next, done('CH1-D2-ELISE-001'), talk, choose(13), choose(0), next, next, done('CH1-D2-CAMP-001'), done('CH1-D2-FIRE-001')], startOf('car-cat'));
     expect(now.campaignEnded).toBe(true);
     expect(reopenChapter(now, STORY)).toBe(now);
     const mid = startOf('bike');
     expect(reopenChapter(mid, STORY)).toBe(mid);
+    // Сторож 1 (кінець — нинішній `end`): навіть коли в сейві є «сирота» (активна велозона, а CH1-D2-ELISE-001, що її відкриває,
+    // прибрано руками), закінчений на нинішньому кінці розділ не чіпається. Без сторожа сироту прибрало б, ELISE-001 відкрився б
+    // знову, а campaignEnded став би false.
+    const holey = { ...now, quests: { ...Object.fromEntries(Object.entries(now.quests).filter(([id]) => id !== 'CH1-D2-ELISE-001')), [ZONE]: { status: 'active' as const, done: [] } } };
+    expect(reopenChapter(holey, STORY)).toBe(holey);
+  });
+
+  it('сторож 2 (вихід уже почався): у старому закінченому сейві CH1-D2-001 уже є — його не перезаписують активним', () => {
+    const g = oldEnded().game;
+    const already = { ...g, quests: { ...g.quests, 'CH1-D2-001': { status: 'completed' as const, done: ['morning'] } } };
+    const out = reopenChapter(already, STORY);
+    expect(out.quests['CH1-D2-001']).toEqual({ status: 'completed', done: ['morning'] });
+    expect(out.quests['CH1-D2-ELISE-001']?.status).toBe('active');                             // далі — наступний етап, а не повтор
   });
 });

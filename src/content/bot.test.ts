@@ -41,6 +41,22 @@ describe(`бот: ${N} прогонів, зерно ${SEED} (GAME-37)`, () => {
 
 // GAME-141: велозона тепер — вибір із CH1-D2-ELISE-001 (день 2), тож обхідна бічна гілка є саме там. Ламаємо перехід за
 // замовчуванням CH1-D2-ELISE-001 → CH1-D2-CAMP-001: водій застряє, велосипедист доходить через велозону.
+// GAME-141: розділ дводенний — за 80 ходів основної кампанії прогулянка майже ніколи не доходить до кінця (лише «досяжно»).
+// Окрема кампанія з довшою прогулянкою доводить, що бот справді проходить день 2 до кінця розділу, а не лише бачить його пошуком.
+describe('бот справді проходить день 2 (300 прогонів × 200 ходів)', () => {
+  let runs: BotRun[] = [];
+  beforeAll(() => { runs = campaign(GAME_DEFS, 300, SEED, { maxSteps: 200, cap: 20_000 }); }, 300_000);
+
+  it('кінець розділу — щонайменше в 5 % прогонів; тупиків і «не знаю» 0; день 2 пройдено й велосипедом із велозоною, і авто', () => {
+    const ended = runs.filter((r) => r.verdict === 'ended');
+    expect(ended.length, JSON.stringify(tally(runs))).toBeGreaterThanOrEqual(runs.length / 20);
+    expect(runs.filter((r) => r.verdict === 'softlock' || r.verdict === 'unknown')).toEqual([]);
+    expect(ended.every((r) => r.final.quests['CH1-D2-FIRE-001']?.status === 'completed')).toBe(true);
+    expect(ended.some((r) => r.final.quests['q.elise-bike-area'] !== undefined)).toBe(true);
+    expect(ended.some((r) => r.variant.transport === 'transport.car')).toBe(true);
+  });
+});
+
 describe('навмисно зламаний квест (вимкнений перехід CH1-D2-ELISE-001 → CH1-D2-CAMP-001)', () => {
   const broken = structuredClone(CONTENT);
   const elise = broken.quests.find((q) => q.id === 'CH1-D2-ELISE-001');

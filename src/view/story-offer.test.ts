@@ -104,21 +104,21 @@ describe('меню сюжету: з кожного стану, досяжног�
     const r = deadEnds(create(first.intent), (s) => realMenu(s).filter((o) => o.move.type !== 'CompleteQuest'));
     expect(r.ended).toBe(0);
     expect(r.stuck.length).toBeGreaterThan(0);
-  });
+  }, EXHAUSTIVE_MS);
 
   it('сцена справді додає стани (інакше «меню + сцена» нічого не доводить)', () => {
     const first = choices[0];
     if (!first) throw new Error('no characters');
     const g = create(first.intent);
     expect(deadEnds(g, realMenu).states).toBeGreaterThan(deadEnds(g, realMenu, () => []).states);
-  });
+  }, EXHAUSTIVE_MS);   // GAME-141: два повні перебори з днем 2 — на CI 30 с за замовчуванням не вистачило
 
   it('негативний контроль: розмова без відповідей (лише «далі») — застрягає в діалозі', () => {
     const first = choices[0];
     if (!first) throw new Error('no characters');
     const r = deadEnds(create(first.intent), (s) => realMenu(s).filter((o) => o.move.type !== 'Choose'));
     expect(r.stuck.some((s) => s.dialogue !== null)).toBe(true);
-  });
+  }, EXHAUSTIVE_MS);
 });
 
 describe('тексти меню: кожен ключ існує в обох мовах', () => {
