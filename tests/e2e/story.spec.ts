@@ -82,7 +82,8 @@ async function playBikeProlog(page: Page): Promise<void> {
 async function finishDay(page: Page, reopen: boolean): Promise<void> {
   await expect(page.locator('[data-ui="summary"]')).toBeVisible();
   await page.locator('[data-ui="summary-continue"]').click();
-  await expect(page.locator('[data-ui="summary"]')).toHaveCount(0);
+  // 15 с: на CI PR #53 сторінка під навантаженням 5 с не відповідала на запит лічильника («Received: undefined»).
+  await expect(page.locator('[data-ui="summary"]')).toHaveCount(0, { timeout: 15_000 });
   if (reopen) await page.locator('[data-touch="story"]').click();
 }
 
@@ -172,6 +173,7 @@ async function toRoad(browser: Browser, seed: number): Promise<{ page: Page; fir
 }
 
 test('подія в дорозі не трапилась — дорога триває: жодної розмови, далі звичайні дії', async ({ browser }) => {
+  test.setTimeout(480_000);   // до 16 зерен, кожне — новий контекст і кроки пролога; на CI одне зерно 15–20 с (CI PR #53: 180 с замало)
   for (let seed = 1; seed <= 16; seed++) {
     const r = await toRoad(browser, seed);
     if (!r.fired) {
@@ -186,6 +188,7 @@ test('подія в дорозі не трапилась — дорога три
 });
 
 test('подія в дорозі (GAME-31): трапляється на дорозі, читається, відповідь — у ядрі й у журналі', async ({ browser }) => {
+  test.setTimeout(480_000);   // до 16 зерен, кожне — новий контекст і кроки пролога; на CI одне зерно 15–20 с (CI PR #53: 180 с замало)
   // Шанс 50 %, різні зерна, кожне — у чистому контексті.
   let page: Page | null = null;
   for (let seed = 1; seed <= 16 && !page; seed++) {
@@ -424,10 +427,18 @@ async function walk(page: Page, key: string, until: (p: Probe) => boolean): Prom
   await page.waitForTimeout(50);
   return probe(page);
 }
+/** Точка Елізи з мапи (public/maps/camp-lake.tmj) — ціль за координатою, як у world.spec (CI PR #53: кроки за годинником
+ *  на повільному CI то не доходили, то проскакували зону Ø 96 px). Звірка з мапою — нижче, щоб константа не застаріла. */
+const ELISE_Y = 272;
 async function walkToElise(page: Page): Promise<void> {
+  const map = JSON.parse(readFileSync('public/maps/camp-lake.tmj', 'utf8')) as { layers: { objects?: { name: string; y: number }[] }[] };
+  expect(map.layers.flatMap((l) => l.objects ?? []).find((o) => o.name === 'npc.elise')?.y, 'Еліза на мапі зсунулась — онови ELISE_Y').toBe(ELISE_Y);
   await walk(page, 'ArrowLeft', (p) => p.playerX <= 88);
-  const p = await walk(page, 'ArrowDown', (q) => q.nearObject === 'npc.elise');
-  expect(p.nearObject).toBe('npc.elise');
+  for (let i = 0; i < 8 && (await probe(page)).nearObject !== 'npc.elise'; i++) {
+    const key = (await probe(page)).playerY > ELISE_Y ? 'ArrowUp' : 'ArrowDown';
+    await walk(page, key, (q) => q.nearObject === 'npc.elise' || (key === 'ArrowUp' ? q.playerY <= ELISE_Y : q.playerY >= ELISE_Y));
+  }
+  expect((await probe(page)).nearObject).toBe('npc.elise');
 }
 
 test.describe('Еліза на мапі (клавіатура)', () => {

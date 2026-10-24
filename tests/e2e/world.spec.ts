@@ -1,4 +1,5 @@
 // GAME-24 (рух, камера, колізії, взаємодія) і GAME-69 (дотик, три в'юпорти) — у справжньому браузері.
+import { readFileSync } from 'node:fs';
 import { expect, test, type Page } from '@playwright/test';
 
 interface Probe { ready: boolean; playerX: number; playerY: number; nearObject: string | null; commandsSent: number; cameraScrollX: number; cameraScrollY: number }
@@ -79,9 +80,9 @@ test.describe('клавіатура (десктоп)', () => {
     await open(page);
     const p0 = await probe(page);
     // Тримаємо, доки не пройде 30 px (≈0,5 с при 64 px/с), а не рівно 1 с: на завантаженому CI кадри стартують
-    // пізно, і за фіксовану секунду персонаж ішов лише 19 px (PR #30). Межа 5 с: персонаж, що стоїть, — червоний.
+    // пізно, і за фіксовану секунду персонаж ішов лише 19 px (PR #30). Межа 15 с (CI PR #53: за 5 с лише 25,6 px під навантаженням): персонаж, що стоїть, — однаково червоний.
     await page.keyboard.down('ArrowDown');
-    await expect.poll(async () => (await probe(page)).playerY - p0.playerY, { timeout: 5_000 }).toBeGreaterThan(30);
+    await expect.poll(async () => (await probe(page)).playerY - p0.playerY, { timeout: 15_000 }).toBeGreaterThan(30);
     await page.keyboard.up('ArrowDown');
     const p1 = await probe(page);
     expect(Math.abs(p1.playerX - p0.playerX)).toBeLessThan(1);
@@ -133,15 +134,45 @@ test.describe('клавіатура (десктоп)', () => {
     await holdKey(page, 'ArrowLeft', (p) => p.playerX <= 120);
     const near = await holdKey(page, 'ArrowUp', (p) => p.nearObject !== null);
     expect(near.nearObject).toBe('obj.campfire');
-    await page.keyboard.press('Space');
-    await page.waitForTimeout(120);          // друге натискання — в ІНШОМУ кадрі: засувка не зливає їх,
-    await page.keyboard.press('Space');      // одну команду забезпечує саме відкат 400 мс (рецензія PR #13)
-    await page.waitForTimeout(100);
-    expect((await probe(page)).commandsSent).toBe(1);
-    await page.waitForTimeout(500);
+    // Друге натискання — в ІНШОМУ кадрі: засувка не зливає їх, одну команду забезпечує саме відкат 400 мс (рецензія PR #13).
+    // Відкат рахує час сторінки, а під навантаженням CI проміжок між двома press сам буває > 400 мс — тоді друга команда
+    // законна, і тест нічого не доводить (CI PR #53). Міряємо проміжок у сторінці; спроба зараховується лише при < 300 мс.
+    // Проміжок — між мітками часу самих подій keydown у сторінці (те, що бачить гра), а не між викликами з тесту.
+    await page.evaluate(() => {
+      const w = window as unknown as { __spaceDowns: number[] };
+      w.__spaceDowns = [];
+      window.addEventListener('keydown', (e) => { if (e.code === 'Space') w.__spaceDowns.push(performance.now()); }, true);
+    });
+    const lastGap = (): Promise<number> => page.evaluate(() => {
+      const d = (window as unknown as { __spaceDowns: number[] }).__spaceDowns;
+      return (d.at(-1) ?? 0) - (d.at(-2) ?? 0);
+    });
+    let judged = false;
+    for (let attempt = 0; attempt < 5 && !judged; attempt++) {
+      const before = (await probe(page)).commandsSent;
+      // Обидва натискання подає таймер у сторінці (keyCode 32, як справжній Space): на повільному CI кожен
+      // page.keyboard.press — окремий обмін із браузером, і пара натискань через нього не вкладалась у 300 мс.
+      await page.evaluate(() => new Promise<void>((done) => {
+        const key = (type: string): void => {
+          const e = new KeyboardEvent(type, { code: 'Space', key: ' ', bubbles: true, cancelable: true });
+          Object.defineProperty(e, 'keyCode', { get: () => 32 });
+          Object.defineProperty(e, 'which', { get: () => 32 });
+          window.dispatchEvent(e);
+        };
+        key('keydown'); setTimeout(() => key('keyup'), 40);
+        setTimeout(() => key('keydown'), 120); setTimeout(() => { key('keyup'); done(); }, 160);
+      }));
+      const gap = await lastGap();
+      await page.waitForTimeout(100);
+      const sent = (await probe(page)).commandsSent - before;
+      if (gap < 300) { expect(sent, `проміжок ${Math.round(gap)} мс`).toBe(1); judged = true; }
+      await page.waitForTimeout(500);
+    }
+    expect(judged, 'жодна спроба не вклалась у 300 мс — подвійне натискання не перевірено').toBe(true);
+    const sentBefore = (await probe(page)).commandsSent;
     await page.keyboard.press('KeyE');
     await page.waitForTimeout(100);
-    expect((await probe(page)).commandsSent).toBe(2);            // друга свідома взаємодія — друга команда…
+    expect((await probe(page)).commandsSent).toBe(sentBefore + 1);  // друга свідома взаємодія — ще одна команда…
     expect((await grants(page)).filter((g) => g === 'rw.campfire-warmth')).toHaveLength(1); // …але нагорода рівно одна
   });
 
@@ -193,6 +224,7 @@ for (const vp of VIEWPORTS) {
     // Звірка GAME-69 #1 «…і діалог»: персонаж біля озера (кроки меню — дотиком), до Елізи — дотиковими
     // стрілками, розмова — дотиком по відповідях, до кінця розмови.
     test('пролог дотиком до кінця розділу: джойстик, кнопка дії й тапи по панелі (дійти до Елізи, розмова, кінець)', async ({ page }) => {
+      test.setTimeout(120_000);   // увесь пролог дотиком під навантаженням CI довший за 60 с (CI PR #53)
       await open(page);
       await page.locator('[data-touch="story"]').tap();
       const story = page.locator('[data-ui="story"]');
@@ -212,11 +244,16 @@ for (const vp of VIEWPORTS) {
       }
       await page.locator('[data-ui="story-close"]').tap();
       expect(await holdTouch(page, 'left', (p) => p.playerX <= 88)).toBe(true);
-      expect(await holdTouch(page, 'down', (p) => p.nearObject === 'npc.elise')).toBe(true);
       // GAME-97: зону Елізи (радіус 48 px при 128 px/с) персонаж проходить за ~0,75 с; під навантаженням CI опитування буває
-      // рідшим, і тест проскакував її (CI #43: nearObject null). Тоді довертаємо коротким ходом назад, як зробив би гравець.
-      for (let i = 0; i < 4 && (await probe(page)).nearObject !== 'npc.elise'; i++) {
-        await holdTouch(page, i % 2 === 0 ? 'up' : 'down', (p) => p.nearObject === 'npc.elise', 2000);
+      // рідшим, і затиснутий стік її проскакував, часом не побувавши в ній жодного опитування (CI PR #53). Тому ціль —
+      // сама точка Елізи з мапи (public/maps/camp-lake.tmj, y = 272): тримаємо стік до перетину цієї лінії й довертаємо
+      // назад за координатою; промах від центру < 48 px лишає нас у зоні. Кожне утримання — не довше 4 с.
+      const ELISE_Y = 272;
+      const map = JSON.parse(readFileSync('public/maps/camp-lake.tmj', 'utf8')) as { layers: { objects?: { name: string; y: number }[] }[] };
+      expect(map.layers.flatMap((l) => l.objects ?? []).find((o) => o.name === 'npc.elise')?.y, 'Еліза на мапі зсунулась — онови ELISE_Y').toBe(ELISE_Y);
+      for (let i = 0; i < 8 && (await probe(page)).nearObject !== 'npc.elise'; i++) {
+        const dir = (await probe(page)).playerY > ELISE_Y ? 'up' : 'down';
+        expect(await holdTouch(page, dir, (p) => p.nearObject === 'npc.elise' || (dir === 'up' ? p.playerY <= ELISE_Y : p.playerY >= ELISE_Y), 4_000)).toBe(true);
       }
       expect((await probe(page)).nearObject).toBe('npc.elise');
       expect(await holdTouch(page, 'interact', () => true, 100)).toBe(true);
