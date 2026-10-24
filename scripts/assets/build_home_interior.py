@@ -9,7 +9,7 @@
     «файл → рівно один рядок реєстру → одна ліцензія». Усе — похідні файли: рядки в assets/CREDITS.csv і
     docs/LICENSE_REGISTER.md, колонка modified описує обрізку й квантування;
   * збирає пробну мапу public/maps/trial/home-interior.tmj (14×10, тайли 32 px): підлога, стіна з вікнами й
-    дверима, кухня (холодильник, стіл, стільці, кавоварка, ноутбук), вітальня (диван, полиця, картина, вазон),
+    дверима, кухня (шафа, стіл, стільці, кавоварка, ноутбук), вітальня (диван, полиця, картина, вазон),
     спальня (ліжко). Мапа лежить у підтеці trial/: валідатор мап читає підтеки (npm run validate
     --dir public/maps), а тест GAME-32 (src/view/world/map-content.test.ts) бере лише public/maps/*.tmj — він
     вимагає тайлсети сцени й NPC контенту, а ця мапа в гру ще не підключена;
@@ -56,19 +56,23 @@ SHEETS = [
     ('home-office', 'home_office.png', None, [], (128, 64)),
     ('home-shelf', 'home_shelf.png', 'pack-lpc-shelves/bookshelf-brown_0.png',
      [(0, 0, 64, 96, 0, 0)], (64, 96)),                                      # книжкова полиця 2×3
-    ('home-fridge', 'home_fridge.png', 'pack-lpc-modern-furniture/fridge.png',
-     [(0, 0, 30, 69, 1, 27)], (32, 96)),                                     # холодильник 30×69 на полотні 1×3
 ]
+# Холодильник із [LPC] Simple Modern Furniture прибрано після рецензії PR #65: без темного контуру LPC і світла
+# зліва-згори він виглядав чужим (правило гармонії CLAUDE.md). Замість нього — висока шафа з того ж Base Object Kit.
 KIT = 'pack-lpc-base-object-kit/pack/Objects'
 # Меблі з [LPC Revised] Base Object Kit (одна сторінка OGA → один файл), полотно 6×3 тайли:
-# стовпець 0 — вазон 1×3; стовпці 1–2 — диван 2×2; 3–4 — ліжко 2×2; 5 — два стільці 1×1; (1,2) — картина 1×1.
+# стовпець 0 — вазон 1×3; (1–2,0) — диван 2×1 (один диван, вид спереду); (1,1) — картина; (2,1), (2,2) — два
+# стільці 1×1; стовпці 3–4 — ліжко 2×3, складене з узголів'я, подушок і матраца з ковдрою; стовпець 5 — шафа 1×3.
 FURNITURE = [
     (f'{KIT}/Decoration/Planters.png', (64, 0, 32, 96), (0, 0)),
-    (f'{KIT}/Furniture/Sofas, Casual.png', (128, 0, 64, 64), (32, 0)),
-    (f'{KIT}/Furniture/Beds, Double.png', (320, 0, 64, 64), (96, 0)),
-    (f'{KIT}/Furniture/Chairs, Dining.png', (128, 256, 32, 32), (160, 0)),
-    (f'{KIT}/Furniture/Chairs, Dining.png', (128, 288, 32, 32), (160, 32)),
-    (f'{KIT}/Decoration/Paintings.png', (160, 0, 32, 32), (32, 64)),
+    (f'{KIT}/Furniture/Sofas, Casual.png', (128, 32, 64, 32), (32, 0)),
+    (f'{KIT}/Decoration/Paintings.png', (160, 0, 32, 32), (32, 32)),
+    (f'{KIT}/Furniture/Chairs, Dining.png', (128, 256, 32, 32), (64, 32)),
+    (f'{KIT}/Furniture/Chairs, Dining.png', (128, 288, 32, 32), (64, 64)),
+    (f'{KIT}/Furniture/Beds, Double Headboards.png', (0, 224, 64, 32), (96, 0)),   # пласке узголів'я, середнє дерево
+    (f'{KIT}/Furniture/Beds, Double.png', (256, 64, 64, 64), (96, 32)),             # синій матрац із ковдрою й бильцем
+    (f'{KIT}/Furniture/Beds, Double.png', (256, 0, 64, 32), (96, 6)),               # сині подушки — поверх краю матраца
+    (f'{KIT}/Storage/Cabinets.png', (0, 0, 32, 96), (160, 0)),                      # висока шафа з карнизом
 ]
 # The Office (Eliza Wyatt, OGA-BY 3.0): кухонний стіл 3×2 (бежевий), ноутбук, кавоварка.
 OFFICE = [
@@ -176,19 +180,19 @@ def build_grid(sheets):
         g.put('above', c, 1, WINDOW[0]); g.put('above', c, 2, WINDOW[1])
     g.put('above', 7, 1, DOOR[0]); g.put('above', 7, 2, DOOR[1])
     g.put('above', 8, 1, ('home-furniture', 1, 2))                          # картина
-    # Кухня (ліворуч): холодильник 1×3 біля стіни, стіл 3×2, стільці, кавоварка й ноутбук на столі.
-    g.stamp('home-fridge', 0, 0, 1, 3, 0, 2, top_above)
+    # Кухня (ліворуч): шафа 1×3 біля стіни, стіл 3×2, стільці, кавоварка й ноутбук на столі.
+    g.stamp('home-furniture', 5, 0, 1, 3, 0, 2, top_above)
     g.stamp('home-office', 0, 0, 3, 2, 1, 5, solid)
     g.put('above', 2, 5, ('home-office', 3, 1))                             # кавоварка
     g.put('above', 3, 5, ('home-office', 3, 0))                             # ноутбук
-    g.put('walls', 0, 5, ('home-furniture', 5, 0))                          # стілець (спинкою до гравця)
-    g.put('walls', 4, 5, ('home-furniture', 5, 1))                          # стілець (обличчям)
-    # Вітальня: полиця 2×3 біля стіни, диван 2×2, вазон 1×3 у кутку.
+    g.put('walls', 0, 5, ('home-furniture', 2, 1))                          # стілець (спинкою до гравця)
+    g.put('walls', 4, 5, ('home-furniture', 2, 2))                          # стілець (обличчям)
+    # Вітальня: полиця 2×3 біля стіни, диван 2×1, вазон 1×3 у кутку.
     g.stamp('home-shelf', 0, 0, 2, 3, 5, 2, top_above)
-    g.stamp('home-furniture', 1, 0, 2, 2, 8, 5, solid)
+    g.stamp('home-furniture', 1, 0, 2, 1, 8, 5, solid)
     g.stamp('home-furniture', 0, 0, 1, 3, 13, 2, top_above)
-    # Спальня: ліжко 2×2 у правому нижньому куті.
-    g.stamp('home-furniture', 3, 0, 2, 2, 11, 7, solid)
+    # Спальня: ліжко 2×3 у правому нижньому куті.
+    g.stamp('home-furniture', 3, 0, 2, 3, 11, 6, solid)
     walls = g.layers['walls']
     for name, c, r in (('spawn', 7, 3), ('перед диваном', 8, 7), ('біля ліжка', 10, 8), ('біля столу', 2, 7)):
         assert not walls[r * W + c], f'{name} у клітинці ({c},{r}) замуровано'
@@ -252,12 +256,14 @@ def main(argv):
             preview(g, argv[argv.index('--preview') + 1])
         if check:
             bad = []
-            for name, fname, *_ in SHEETS:
-                a, b = open(os.path.join(OUT, fname), 'rb').read(), open(os.path.join(real_out, fname), 'rb').read()
-                if a != b:
-                    bad.append(f'assets/tiles/{fname}')
-            if open(MAP, encoding='utf-8').read() != open(real_map, encoding='utf-8').read():
-                bad.append('public/maps/trial/home-interior.tmj')
+            # Відсутній закомічений файл — чистий FAIL із назвою, а не traceback (рецензія PR #65).
+            pairs = [(os.path.join(OUT, f), os.path.join(real_out, f), f'assets/tiles/{f}') for _, f, *_ in SHEETS]
+            pairs.append((MAP, real_map, 'public/maps/trial/home-interior.tmj'))
+            for built, committed, label in pairs:
+                if not os.path.isfile(committed):
+                    bad.append(f'{label} (відсутній)')
+                elif open(built, 'rb').read() != open(committed, 'rb').read():
+                    bad.append(label)
             if bad:
                 print('home-interior: FAIL — відрізняються від збірки: ' + ', '.join(bad))
                 return 1

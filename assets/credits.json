@@ -751,18 +751,6 @@
       ]
     },
     {
-      "name": "o10001771",
-      "files": [
-        "tiles/home_fridge.png"
-      ],
-      "licences": [
-        "CC-BY-SA 3.0"
-      ],
-      "sources": [
-        "https://opengameart.org/content/lpc-simple-modern-furniture"
-      ]
-    },
-    {
       "name": "Pierre Vigier (pvigier)",
       "files": [
         "characters/body/bodies/female/walk.png",
@@ -1393,17 +1381,6 @@
       "modified": "one 32x32 oak plank tile cropped from floors.png, recoloured onto the base palette (scripts/palette/quantize.py)"
     },
     {
-      "file": "tiles/home_fridge.png",
-      "authors": [
-        "o10001771"
-      ],
-      "licence": "CC-BY-SA 3.0",
-      "sources": [
-        "https://opengameart.org/content/lpc-simple-modern-furniture"
-      ],
-      "modified": "fridge 30x69 set on a 32x96 canvas (bottom-aligned), recoloured onto the base palette (scripts/palette/quantize.py)"
-    },
-    {
       "file": "tiles/home_furniture.png",
       "authors": [
         "Eliza Wyatt (ElizaWy)",
@@ -1414,7 +1391,7 @@
       "sources": [
         "https://opengameart.org/content/lpc-revised-base-object-kit"
       ],
-      "modified": "sofa 2x2, double bed 2x2, two dining chairs 1x1, planter 1x3 and one painting cropped from the kit sheets onto a 192x96 sheet, recoloured onto the base palette (scripts/palette/quantize.py)"
+      "modified": "sofa 2x1 (front view), double bed 2x3 assembled from headboard + pillows + mattress, two dining chairs 1x1, planter 1x3, one painting and a tall cabinet 1x3 cropped from the kit sheets onto a 192x96 sheet, recoloured onto the base palette (scripts/palette/quantize.py)"
     },
     {
       "file": "tiles/home_office.png",
