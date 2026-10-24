@@ -170,7 +170,8 @@ export function storyOffer(sim: SimState, defs: CoreDefs): Offered {
     ...(Object.hasOwn(defs.items, id) && defs.items[id]?.gear ? { gear: gearOf(s.gear, id) } : {}),
   }));
   const weather = todayWeather(sim);
-  const base = { moneyCents: s.moneyCents, inventory, journal, weather, day: dayOf(sim.clock) + 1, timeMinutes: sim.clock.minutes % DAY_MINUTES };
+  const lastTrip = [...sim.journal].reverse().find((e) => e.type === 'Visit')?.commandId ?? null;
+  const base = { moneyCents: s.moneyCents, inventory, journal, lastTrip, weather, day: dayOf(sim.clock) + 1, timeMinutes: sim.clock.minutes % DAY_MINUTES };
 
   if (!s.player) {
     const choices = characterChoices(defs);

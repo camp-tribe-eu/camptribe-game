@@ -7,9 +7,11 @@ export interface Settings {
   readonly language: 'uk' | 'en';
   /** Гравець уже діяв (відкрив ☰ чи паузу): підказку першого запуску (GAME-83) більше не показуємо. Не частина сейву. */
   readonly hintSeen: boolean;
+  /** Подорож, про яку вже нагадали скопіювати код відновлення (GAME-94); null — ще ні. Не частина сейву: формат сейву не змінюється. */
+  readonly remindedTrip: string | null;
 }
 
-export const DEFAULT_SETTINGS: Settings = { textScale: 100, language: 'uk', hintSeen: false };
+export const DEFAULT_SETTINGS: Settings = { textScale: 100, language: 'uk', hintSeen: false, remindedTrip: null };
 const KEY = 'camplife.settings.v1';
 // 200 % — WCAG 1.4.4 (GAME-39): текст удвічі без обрізання й без втрати функцій.
 export const TEXT_SCALES = [100, 125, 150, 200] as const;
@@ -24,6 +26,7 @@ export function loadSettings(storage: Pick<Storage, 'getItem'> | undefined = saf
       textScale: SCALES.includes(v.textScale as never) ? (v.textScale as Settings['textScale']) : DEFAULT_SETTINGS.textScale,
       language: v.language === 'en' ? 'en' : 'uk',
       hintSeen: v.hintSeen === true,
+      remindedTrip: typeof v.remindedTrip === 'string' && v.remindedTrip !== '' ? v.remindedTrip : null,
     };
   } catch {
     return DEFAULT_SETTINGS;

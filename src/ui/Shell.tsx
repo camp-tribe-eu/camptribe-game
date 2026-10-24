@@ -24,6 +24,9 @@ export function Shell({ port, langOverride, credits, build }: { port: UiPort; la
   const [storyOpen, setStoryOpen] = useState(false);
   const [offer, setOffer] = useState<StoryOffer>(() => port.story());
   useEffect(() => port.onStory(() => setOffer(port.story())), []);
+  // Нагадування про код відновлення (GAME-94): тихий рядок після подорожі, не діалог — гра йде далі. Показ фіксуємо в
+  // налаштуваннях одразу, як рядок з'явився: після перезавантаження про ту саму подорож він не повертається.
+  const [remind, setRemind] = useState<{ trip: string; state: 'ask' | 'done' | 'manual'; code: string } | null>(null);
   const lang: AnyLang = langOverride ?? settings.language;
   const t = (key: Key): string => tr(lang, key);
 
@@ -100,6 +103,32 @@ export function Shell({ port, langOverride, credits, build }: { port: UiPort; la
     }
   }, [settings]);
 
+  useEffect(() => {
+    const trip = offer.lastTrip;
+    if (paused || storyOpen || offer.stage !== 'play' || trip === null || trip === settings.remindedTrip || remind?.trip === trip) return;
+    setRemind({ trip, state: 'ask', code: '' });
+    update({ ...settings, remindedTrip: trip });
+  }, [paused, storyOpen, offer, settings.remindedTrip]);
+  const copyCode = (): void => {
+    void port.exportCode().then(async (code) => {
+      try {
+        await navigator.clipboard.writeText(code);
+        setRemind((r) => r && { ...r, state: 'done' });
+      } catch {
+        setRemind((r) => r && { ...r, state: 'manual', code });   // буфер недоступний (дозвіл, не-HTTPS) — показуємо код
+      }
+    });
+  };
+  const reminder = remind && remind.trip === offer.lastTrip && !paused && !storyOpen && (
+    <div class="ui-reminder" data-ui="recovery-reminder" role="status">
+      <span data-ui="recovery-text">{t(remind.state === 'done' ? 'ui.remind.done' : remind.state === 'manual' ? 'ui.remind.manual' : 'ui.remind.text')}</span>
+      {remind.state === 'manual' && <textarea class="ui-code" data-ui="recovery-code" readOnly rows={2} aria-label={t('ui.exportCode')} value={remind.code}
+        onFocus={(e) => (e.currentTarget as HTMLTextAreaElement).select()} />}
+      {remind.state !== 'done' && <button type="button" class="ui-btn" data-ui="recovery-copy" onClick={copyCode}>{t('ui.remind.copy')}</button>}
+      <button type="button" class="ui-btn" data-ui="recovery-close" onClick={() => setRemind(null)}>{t('ui.remind.close')}</button>
+    </div>
+  );
+
   // Відкладений сейв: і в меню паузи, і на екрані подорожі (туди гравець іде першим), доки не сховає.
   const staleNotice = staleCode && (
     <p class="ui-status" data-ui="stale" role="status">
@@ -133,6 +162,7 @@ export function Shell({ port, langOverride, credits, build }: { port: UiPort; la
         </div>
         <button type="button" class="ui-pause-btn" data-touch="pause" aria-label={t('ui.pause')} onClick={() => toggle(true)}>{'‖'}</button>
       </header>}
+      {reminder}
       {storyOpen && <StoryPanel offer={offer} lang={lang} t={t} act={(id) => port.act(id)} close={() => story(false)}>{staleNotice}</StoryPanel>}
       {paused && confirmNew && (
         <div class="ui-overlay" role="dialog" aria-modal="true" aria-label={t('ui.newGame')} data-ui="confirm-new" onKeyDown={(e) => trapTab(e, e.currentTarget)}>
@@ -178,7 +208,7 @@ export function Shell({ port, langOverride, credits, build }: { port: UiPort; la
           <fieldset>
             <legend>{t('ui.gameMenu')}</legend>
             <button type="button" class="ui-btn" data-ui="new-game" onClick={() => setConfirmNew(true)}>{t('ui.newGame')}</button>
-            <button type="button" class="ui-btn" data-ui="reset" onClick={() => update({ ...DEFAULT_SETTINGS, hintSeen: settings.hintSeen })}>{t('ui.reset')}</button>
+            <button type="button" class="ui-btn" data-ui="reset" onClick={() => update({ ...DEFAULT_SETTINGS, hintSeen: settings.hintSeen, remindedTrip: settings.remindedTrip })}>{t('ui.reset')}</button>
           </fieldset>
           {/* GAME-91: підпис збірки (версія + повний SHA) — тут, а не на екрані гри; для баг-репортів. */}
           <p class="ui-build" data-ui="build">{build}</p>

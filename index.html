@@ -86,6 +86,10 @@
         background: #2a2f35; color: #e8e6e3; font-size: 1rem; }
       .ui-overlay, .ui-overlay * { box-sizing: border-box; }
             .ui-code { width: 100%; max-width: 560px; font: 0.7rem monospace; background: #111; color: #e8e6e3; border: 1px solid #e8e6e355; border-radius: 6px; padding: 6px; }
+      /* GAME-94: нагадування про код відновлення — тихий рядок під шапкою, у потоці; не діалог, гру не зупиняє. */
+      .ui-reminder { order: -1; flex: none; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; box-sizing: border-box; padding: 4px var(--edge-right) 4px var(--edge-left);
+        background: #22262b; color: #e8e6e3; font-size: 0.75rem; line-height: 1.4; }
+      .ui-reminder > span, .ui-reminder > textarea { flex: 1 1 200px; min-width: 0; }
       .ui-status { margin: 4px 0 0; width: 100%; font-size: 0.75rem; }
       .ui-story [tabindex="-1"]:focus { outline: 2px solid currentColor; outline-offset: 2px; }
       .ui-overlay { overflow-y: auto; }
