@@ -245,6 +245,26 @@ test.describe('тап по об\'єкту на канві', () => {
     await page.context().close();
   });
 
+  test('тап, що не дочекався кадру до паузи, після «Продовжити» не спрацьовує (рецензія)', async ({ browser }) => {
+    const { page, cdp } = await newPage(browser, VP);
+    await walkToEliza(page, cdp);
+    const p0 = await probe(page);
+    const at = await screenOf(page, ELISE.x, ELISE.y - 24);
+    // Тап по Елізі й пауза — в одному завданні сторінки: пауза ставиться з обробника того самого touchend (після канви Phaser),
+    // тож кадру update між тапом і паузою немає, тап лишається непрочитаним. Дотик — справжній (CDP), синтетичний TouchEvent Phaser не бачить.
+    await page.evaluate(() => window.addEventListener('touchend', () => (document.querySelector('[data-touch="pause"]') as HTMLElement).click(), { once: true }));
+    await touch(cdp, 'touchStart', at.x, at.y);
+    await touch(cdp, 'touchEnd');
+    await expect(page.locator('[role="dialog"]')).toBeVisible();
+    expect((await probe(page)).commandsSent, 'на паузі тап не спрацював').toBe(p0.commandsSent);
+    await page.getByRole('button', { name: 'Продовжити' }).tap();
+    await expect(page.locator('[role="dialog"]')).toHaveCount(0);
+    await page.waitForTimeout(500);
+    expect((await probe(page)).commandsSent, 'старий тап не надіслав команди').toBe(p0.commandsSent);
+    await expect(page.locator('[data-ui="story"]')).toHaveCount(0);
+    await page.context().close();
+  });
+
   test('тап по порожньому місцю в зоні дії біля Елізи нічого не робить', async ({ browser }) => {
     const { page, cdp } = await newPage(browser, VP);
     await walkToEliza(page, cdp);

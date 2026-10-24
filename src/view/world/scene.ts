@@ -168,6 +168,9 @@ export class WorldScene extends Phaser.Scene {
       const w = this.cameras.main.getWorldPoint(p.x, p.y);
       this.tap = { x: w.x, y: w.y };
     });
+    // Тап, що не дочекався кадру до паузи, після «Продовжити» не мусить спрацювати сам (рецензія GAME-95).
+    this.events.on(Phaser.Scenes.Events.PAUSE, () => { this.tap = null; });
+    this.events.on(Phaser.Scenes.Events.RESUME, () => { this.tap = null; });
     this.last = { x: this.player.x, y: this.player.y };
     // Зонд має правдиві значення вже в момент ready, а не після першого update.
     Object.assign(this.probe, { playerX: this.player.x, playerY: this.player.y, playerFrame: frameIndex(this.facing, 0), playerDir: this.facing, playerMoving: false, playerDepth: this.player.y });
