@@ -37,7 +37,8 @@ async function start(browser: import('@playwright/test').Browser, viewport: { wi
   return { ctx, page };
 }
 
-for (const viewport of [{ width: 390, height: 844 }, { width: 844, height: 390 }]) {
+// GAME-96: на телефоні грають горизонтально (сторч — накладка «Поверни телефон»), тож обидва вікна — горизонтальні.
+for (const viewport of [{ width: 844, height: 390 }, { width: 667, height: 375 }]) {
   test.describe(`${viewport.width}×${viewport.height} дотик`, () => {
     test('без приїзду нагадування немає (негативний контроль), після приїзду — є; не діалог, гру не зупиняє', async ({ browser }) => {
       const { ctx, page } = await start(browser, viewport);
