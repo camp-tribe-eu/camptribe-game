@@ -43,6 +43,19 @@ yt-req-trustsafety	page:https://developers.google.com/youtube/gaming/playables/c
 yt-support-faq	page:https://developers.google.com/youtube/gaming/playables/support/faq
 yt-ref-monetization	page:https://developers.google.com/youtube/gaming/playables/reference/monetization
 
+# GAME-146: сучасні набори LPC — інтер'єр дому Les Tilleuls (першоджерело OGA, ліцензія зі сторінки)
+# pack-lpc-modern-furniture	oga:lpc-simple-modern-furniture   ← прибрано 24.10 (рецензія PR #65): холодильник чужий за стилем, набір не читається
+pack-lpc-office	oga:lpc-revised-the-office
+list-lpc-interior	ogasearch:lpc interior
+list-lpc-furniture	ogasearch:lpc furniture
+# pack-lpc-house-interior	oga:lpc-house-interior-and-decorations   ← прибрано 24.10: збірка не читає
+# pack-lpc-upholstery	oga:lpc-upholstery   ← прибрано 24.10: збірка не читає
+# pack-lpc-wooden-furniture	oga:lpc-wooden-furniture   ← прибрано 24.10: збірка не читає
+pack-lpc-walls	oga:lpc-walls
+pack-lpc-floors	oga:lpc-floors
+pack-lpc-shelves	oga:lpc-shelves-rework
+pack-lpc-base-object-kit	oga:lpc-revised-base-object-kit
+pack-lpc-windows-doors	oga:lpc-windows-doors
 # GAME-147: кішка Mia — «[LPC] Cats and Dogs» (bluecarrot16) з першоджерела; список — на випадок іншого slug.
 pack-lpc-cats-dogs	oga:lpc-cats-and-dogs
 list-lpc-cats	ogasearch:lpc cats dogs
