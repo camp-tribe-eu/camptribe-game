@@ -82,7 +82,8 @@ async function playBikeProlog(page: Page): Promise<void> {
 async function finishDay(page: Page, reopen: boolean): Promise<void> {
   await expect(page.locator('[data-ui="summary"]')).toBeVisible();
   await page.locator('[data-ui="summary-continue"]').click();
-  await expect(page.locator('[data-ui="summary"]')).toHaveCount(0);
+  // 15 с: на CI PR #53 сторінка під навантаженням 5 с не відповідала на запит лічильника («Received: undefined»).
+  await expect(page.locator('[data-ui="summary"]')).toHaveCount(0, { timeout: 15_000 });
   if (reopen) await page.locator('[data-touch="story"]').click();
 }
 
