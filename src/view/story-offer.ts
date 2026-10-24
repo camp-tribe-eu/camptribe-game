@@ -21,7 +21,8 @@ import { DAY_MINUTES, dayOf, tripMinutes, type Weather } from '../core/weather';
 import { CONTENT } from '../content/story';
 import { moves, progressKey, type Move } from '../content/moves';
 import items from '../../content/items.json';
-import type { OfferAction, OfferCharacter, OfferPacking, StoryOffer } from '../ui/story-types';
+import { daySummary, daysEnded, NIGHT_PREFIX } from '../core/day-summary';
+import type { OfferAction, OfferCharacter, OfferPacking, OfferSummary, StoryOffer } from '../ui/story-types';
 
 const NO_ANIMAL = 'animal.none';
 
@@ -189,6 +190,24 @@ function packingOffer(s: GameState, defs: CoreDefs, intents: Map<string, Move>):
   return { used: usedUnits(s.flags, pk, p), capacity: capacityOf(pk, p.transportId), groups, auto, noteKey: note?.textKey ?? null };
 }
 
+/**
+ * Підсумок останнього завершеного дня (GAME-106) — для екрана: id фактів → ключі текстів. Сам підсумок (що є фактом) вирішує
+ * ядро; тут лише назви. Ночівля — ключ UI `sum.night.<вид>` (наявність підписів для кожного f.night-* контенту звіряє тест).
+ */
+export function summaryOffer(sim: SimState, defs: CoreDefs): { daysEnded: number; summary: OfferSummary | null } {
+  const ended = daysEnded(sim, defs);
+  const sum = ended > 0 ? daySummary(sim, ended, defs) : null;
+  if (!sum) return { daysEnded: ended, summary: null };
+  return {
+    daysEnded: ended,
+    summary: {
+      day: sum.day,
+      money: sum.money,
+      sections: sum.sections.map((x) => ({ kind: x.kind, keys: x.ids.map((id) => (x.kind === 'night' ? `sum.night.${id.slice(NIGHT_PREFIX.length)}` : nameKey(id) ?? id)) })),
+    },
+  };
+}
+
 export function storyOffer(sim: SimState, defs: CoreDefs): Offered {
   const s = sim.game;
   const st = defs.story as StoryDefs;
@@ -201,7 +220,7 @@ export function storyOffer(sim: SimState, defs: CoreDefs): Offered {
   }));
   const weather = todayWeather(sim);
   const lastTrip = [...sim.journal].reverse().find((e) => e.type === 'Visit')?.commandId ?? null;
-  const base = { moneyCents: s.moneyCents, inventory, journal, lastTrip, weather, day: dayOf(sim.clock) + 1, timeMinutes: sim.clock.minutes % DAY_MINUTES };
+  const base = { moneyCents: s.moneyCents, inventory, journal, lastTrip, weather, day: dayOf(sim.clock) + 1, timeMinutes: sim.clock.minutes % DAY_MINUTES, ...summaryOffer(sim, defs) };
 
   if (!s.player) {
     const choices = characterChoices(defs);

@@ -80,7 +80,14 @@ const pick = <T>(rng: RngState, xs: readonly T[]): { value: T; rng: RngState } =
   return { value: xs[r.value] as T, rng: r.state };
 };
 
-export function runBot(defs: CoreDefs, variant: Variant, seed: number, memo: EndMemo, opts = { maxSteps: 80, cap: 20_000 }): BotRun {
+/** Параметри прогону. `trace` (GAME-106) — кожен зроблений хід бота по порядку: з нього модель часу рахує хвилини гравця. */
+export interface BotOpts {
+  readonly maxSteps: number;
+  readonly cap: number;
+  readonly trace?: (move: Move, before: GameState, after: GameState) => void;
+}
+
+export function runBot(defs: CoreDefs, variant: Variant, seed: number, memo: EndMemo, opts: BotOpts = { maxSteps: 80, cap: 20_000 }): BotRun {
   let rng = seedRng(seed);
   const created = dispatch(initialState(variant.money === 'some' ? 10_000 : 0), {
     type: 'CreateCharacter', commandId: 'b0', profileId: variant.profile, transportId: variant.transport,
@@ -104,6 +111,7 @@ export function runBot(defs: CoreDefs, variant: Variant, seed: number, memo: End
     const p = pick(rng, options);
     rng = p.rng;
     if (p.value.m.type === 'BuyItem' && s.grants.length === 0) purchases++;
+    opts.trace?.(p.value.m, s, p.value.n);
     s = p.value.n;
   }
   if (s.campaignEnded) return { seed, variant, steps, purchases, verdict: 'ended', final: s };
