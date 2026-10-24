@@ -1,5 +1,6 @@
 // GAME-84 · дрібні дефекти Прологу (QA), лише ті, що видно в справжньому браузері: №1, №7–№13.
 // Кожна перевірка має негативний контроль (мутація CSS/коду — у звіті картки). Числа — межі прямокутників, а не «на око».
+import { GAME_NAME } from '../../src/config/brand';
 import { expect, test, type Browser, type Page } from '@playwright/test';
 
 const SETTINGS_KEY = 'camplife.settings.v1';
@@ -128,11 +129,11 @@ for (const scale of [100, 200] as const) {
       const page = await newPage(browser, { width: 390, height: 844 }, scale, true);
       await load(page);
       await expect(page.locator('.build')).toHaveCount(0);
-      expect(await page.locator('#app').innerText()).not.toMatch(/CampLife v|[0-9a-f]{40}/);   // ні в шапці, ні деінде на екрані гри
+      expect(await page.locator('#app').innerText()).not.toMatch(new RegExp(`${GAME_NAME} v|[0-9a-f]{40}`));   // ні в шапці, ні деінде на екрані гри
       await page.locator('[data-touch="pause"]').click();
       const build = page.locator('[data-ui="pause"] [data-ui="build"]');
       await build.scrollIntoViewIfNeeded();
-      expect((await build.textContent()) ?? '').toMatch(/^CampLife v\S+ · ([0-9a-f]{40}|unknown)$/);   // повний SHA (або чесне «unknown» без git)
+      expect((await build.textContent()) ?? '').toMatch(new RegExp(`^${GAME_NAME} v\\S+ · ([0-9a-f]{40}|unknown)$`));   // повний SHA (або чесне «unknown» без git)
       const b = await rectOf(page, '[data-ui="build"]');
       expect(b.left).toBeGreaterThanOrEqual(0);
       expect(b.right).toBeLessThanOrEqual(390);                                  // не вилазить за екран (при 200 % раніше — вилазив)

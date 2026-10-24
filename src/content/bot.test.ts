@@ -1,29 +1,13 @@
 // GAME-37 · бот-гравець: N прогонів ядра з фіксованим зерном (TD-012).
 import { beforeAll, describe, expect, it } from 'vitest';
 import type { CoreDefs } from '../core/defs';
-import { nextInt, seedRng } from '../core/rng';
 import { enumerateCombos } from '../../scripts/validator/combos.mjs';
-import { endReachable, runBot, uncoveredPairs, variantsFor, type BotRun, type EndMemo, type Variant } from './bot';
+import { endReachable, runBot, uncoveredPairs, variantsFor, type BotRun, type Variant } from './bot';
+import { BOT_N as N, BOT_SEED as SEED, campaign } from './bot-campaign.test.helpers';
 import { dispatch } from '../core/commands';
 import { initialState } from '../core/state';
 import { GAME_DEFS } from './slice-defs';
 import { CONTENT, compileStory } from './story';
-
-const N = 2000;
-const SEED = 20261023;
-
-function campaign(defs: CoreDefs, n: number, seed: number): BotRun[] {
-  const variants = variantsFor(enumerateCombos(CONTENT));
-  const memo: EndMemo = new Map();
-  let rng = seedRng(seed);
-  const runs: BotRun[] = [];
-  for (let i = 0; i < n; i++) {
-    const r = nextInt(rng, variants.length);
-    rng = r.state;
-    runs.push(runBot(defs, variants[r.value] as Variant, seed + i, memo));
-  }
-  return runs;
-}
 
 const tally = (runs: readonly BotRun[]) => runs.reduce<Record<string, number>>((m, r) => ({ ...m, [r.verdict]: (m[r.verdict] ?? 0) + 1 }), {});
 
