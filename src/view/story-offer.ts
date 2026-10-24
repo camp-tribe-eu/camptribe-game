@@ -36,6 +36,8 @@ const NAMES: ReadonlyMap<string, string> = new Map([
     .flatMap((x) => { const k = x.nameKey ?? x.titleKey; return k ? [[x.id, k] as const] : []; }),
   // Подія в дорозі (GAME-31): назва — titleKey тригера (заголовок розмови й запис журналу).
   ...CONTENT.dialogues.flatMap((d) => (d.trigger ? [[d.id, d.trigger.titleKey] as const] : [])),
+  // Сцена сюжету (GAME-142): так само — назва сцени над репліками.
+  ...CONTENT.dialogues.flatMap((d) => (d.scene ? [[d.id, d.scene.titleKey] as const] : [])),
   // Пам'ятний вибір (GAME-110): запис журналу «Запам'ятали: …» — текст journal.<факт> (валідатор: LOCALE_MISSING без нього).
   ...memorableFacts(CONTENT).map((f) => [f, `journal.${f}`] as const),
 ]);
