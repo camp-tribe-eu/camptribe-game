@@ -33,6 +33,9 @@ const ALLOW: Readonly<Record<string, Readonly<Record<string, { count: number; wh
   'src/ui/Shell.tsx': {
     requestAnimationFrame: { count: 1, why: 'повернути фокус на #stage після закриття екрана подорожі — керування фокусом, не рішення й не строк' },
   },
+  'src/view/frame-lag.ts': {
+    performance: { count: 2, why: 'GAME-97: штучно довгий кадр лише в збірці e2e (?frameLagMs) — міряє затримку, гра нічого за ним не вирішує' },
+  },
 };
 
 interface Hit { readonly file: string; readonly name: string; readonly line: number }
@@ -150,6 +153,6 @@ describe('жодного таймера реального часу на дія�
   });
 
   it(`файлів у скануванні: ${files.length}; знахідок у коді: ${hits.length} (усі — в переліку)`, () => {
-    expect(hits.map((h) => `${h.file}|${h.name}`)).toEqual(['src/ui/Shell.tsx|requestAnimationFrame']);
+    expect(hits.map((h) => `${h.file}|${h.name}`)).toEqual(['src/ui/Shell.tsx|requestAnimationFrame', 'src/view/frame-lag.ts|performance', 'src/view/frame-lag.ts|performance']);
   });
 });
