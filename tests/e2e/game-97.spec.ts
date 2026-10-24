@@ -3,6 +3,7 @@
 // Поріг ≥ 20 fps: годинник ядра йде 1 хв/с, поки кадр ≤ 250 мс (MAX_FRAME_MS), тобто мінімум 4 fps; 20 fps — запас 5× над
 // цією межею, тож вимір не червоніє від шуму, але червоніє від довгої роботи в кадрі (негативний контроль: 300 мс у update).
 import { expect, test, type Page } from '@playwright/test';
+import { budget } from './budgets';
 
 // Без сусідів: проєкт «perf» іде після всіх інших (playwright.config.ts), а тут — по одному тесту за раз.
 test.describe.configure({ mode: 'serial' });
@@ -47,4 +48,38 @@ test('при ≈ 11 fps годинник гри йде в ногу з реаль
   console.log(`GAME-97 годинник при lag ${LAG_MS} мс: ${(b.ms - a.ms).toFixed(0)} мс гри за ${(b.at - a.at).toFixed(0)} мс, fps ${p.fps.toFixed(1)}`);
   expect(p.fps, 'штучна затримка не спрацювала — тест нічого не доводить').toBeLessThan(15);
   expect(ratio).toBeGreaterThanOrEqual(0.8);
+});
+
+// GAME-38 · бюджет fps еталонної сцени (?seed=2, 1280×800, без ?frameLagMs): медіана з ≥ fpsSamples незалежних вікон probe.fps
+// (по ~3 с, scene.ts) ≥ fpsMedianMin — обидва пороги з budgets.json. Тут, а не окремим файлом: проєкт perf іде послідовно лише
+// в межах файла, а два файли perf розійшлися б різними воркерами й ділили б процесор.
+// Негативний контроль: GAME38_FRAME_LAG_MS=80 npx playwright test game-97 --project=perf --no-deps -g "GAME-38" — ≈11 fps, червоне.
+const FPS_MEDIAN_MIN = budget('fpsMedianMin');
+const FPS_SAMPLES = budget('fpsSamples');
+const fpsLag = Number(process.env.GAME38_FRAME_LAG_MS ?? 0);
+
+test(`GAME-38 медіана fps еталонної сцени ≥ ${FPS_MEDIAN_MIN} з ≥ ${FPS_SAMPLES} замірів`, async ({ page }) => {
+  test.setTimeout(30_000 + FPS_SAMPLES * 10_000);
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await page.goto(`/?seed=2${fpsLag ? `&frameLagMs=${fpsLag}` : ''}`);
+  await page.waitForFunction(() => (window as unknown as { __game?: { probe: { ready: boolean } } }).__game?.probe.ready === true, null, { timeout: 30_000 });
+  const nextWindow = async (after: number): Promise<Probe> => {
+    await page.waitForFunction((n) => (window as unknown as { __game: { probe: Probe } }).__game.probe.fpsWindows > n, after, { timeout: 15_000, polling: 100 });
+    return probe(page);
+  };
+  // Вікно, відкрите ще до готовності сторінки, відкидаємо: воно не повністю в нашому вимірі.
+  let last = (await nextWindow((await probe(page)).fpsWindows)).fpsWindows;
+  const samples: number[] = [];
+  while (samples.length < FPS_SAMPLES) {
+    const p = await nextWindow(last);   // кожен замір — окреме закрите вікно (fpsWindows зріс), не повтор того самого числа
+    samples.push(p.fps);
+    last = p.fpsWindows;
+  }
+  const sorted = [...samples].sort((a, b) => a - b);
+  const mid = sorted.length >> 1;
+  const at = (i: number): number => sorted[i] ?? Number.NaN;   // NaN, а не 0: порожній список не пройде порогу тихо
+  const median = sorted.length % 2 ? at(mid) : (at(mid - 1) + at(mid)) / 2;
+  console.log(`GAME-38 fps median ${median.toFixed(1)} з ${samples.length} замірів [${samples.map((s) => s.toFixed(1)).join(', ')}] (поріг ${FPS_MEDIAN_MIN}${fpsLag ? `, frameLagMs ${fpsLag}` : ''})`);
+  expect(samples.length).toBeGreaterThanOrEqual(FPS_SAMPLES);
+  expect(median).toBeGreaterThanOrEqual(FPS_MEDIAN_MIN);
 });
