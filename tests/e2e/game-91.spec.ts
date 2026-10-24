@@ -1,6 +1,7 @@
 // GAME-91 · рішення власника про телефон сторч: мапа на весь екран (камера їде за персонажем), шапка (☰ · текст · ‖),
 // джойстик і кругла кнопка дії замість чотирьох стрілок, підпис збірки — лише в меню паузи.
 // Кожна перевірка — числа (межі прямокутників, зсуви в px), не «на око». Негативні контролі (мутації) — у звіті картки.
+import { GAME_NAME } from '../../src/config/brand';
 import { expect, test, type Browser, type Page } from '@playwright/test';
 
 const SETTINGS_KEY = 'camplife.settings.v1';
@@ -335,7 +336,7 @@ test.describe('підпис збірки', () => {
     await expect(page.locator('.build')).toHaveCount(0);
     await expect(page.locator('[data-ui="build"]')).toHaveCount(0);
     await page.locator('[data-touch="pause"]').tap();
-    await expect(page.locator('[data-ui="pause"] [data-ui="build"]')).toHaveText(/^CampLife v\S+ · ([0-9a-f]{40}|unknown)$/);
+    await expect(page.locator('[data-ui="pause"] [data-ui="build"]')).toHaveText(new RegExp(`^${GAME_NAME} v\\S+ · ([0-9a-f]{40}|unknown)$`));
     await page.context().close();
   });
 });

@@ -159,7 +159,7 @@ export function fromSave(text: string, opts: { readonly story?: StoryDefs; reado
   } catch (e) {
     return { ok: false, code: 'SAVE_PARSE', detail: String(e) };
   }
-  if (!isObj(raw) || raw.format !== SAVE_FORMAT) return { ok: false, code: 'SAVE_FORMAT', detail: 'not a CampLife save' };
+  if (!isObj(raw) || raw.format !== SAVE_FORMAT) return { ok: false, code: 'SAVE_FORMAT', detail: `not a ${SAVE_FORMAT} file` };
   const version = raw.schemaVersion;
   if (!isInt(version, 1) || (version as number) > SAVE_VERSION) {
     return { ok: false, code: 'SAVE_VERSION_UNSUPPORTED', detail: `version ${String(version)}, supported up to ${SAVE_VERSION}` };

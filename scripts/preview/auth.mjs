@@ -45,6 +45,6 @@ export async function onRequest(context) {
   }
   return new Response('Потрібен вхід / Login required', {
     status: 401,
-    headers: { 'WWW-Authenticate': 'Basic realm="CampLife preview", charset="UTF-8"', 'Cache-Control': 'no-store', 'X-Robots-Tag': 'noindex, nofollow' },
+    headers: { 'WWW-Authenticate': 'Basic realm="CampTribe preview", charset="UTF-8"', 'Cache-Control': 'no-store', 'X-Robots-Tag': 'noindex, nofollow' },
   });
 }
