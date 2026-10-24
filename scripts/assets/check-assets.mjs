@@ -8,7 +8,10 @@
 //    має рядок реєстру; ліцензія, що вимагає титрів (BY), у public/ не допускається — такий файл
 //    живе в assets/ з рядком титрів; ліцензія, що вимагає тексту поруч (OFL, «атрибуція: так»),
 //    мусить мати цей текст у public/;
-//  * колонка modified: `no` або опис змін; змінений файл під обов'язковим CC-BY-SA лишається CC-BY-SA.
+//  * колонка modified: `no` або опис змін; змінений файл під обов'язковим CC-BY-SA лишається CC-BY-SA;
+//  * закріплення ліцензії (assets/licence-pins.json, GAME-21): генератор LPC пропонує для шару OGA-BY, а
+//    сторінки першоджерела OGA — ні. Тоді обрано не «найм'якшу з генератора», а ту, яку дають ВСІ сторінки
+//    першоджерела; закріплення мусить називати файл-доказ із цитатами (research/…), що існує.
 //
 //   node scripts/assets/check-assets.mjs              — перевірити assets/
 //   node scripts/assets/check-assets.mjs --write-json — перегенерувати assets/credits.json
@@ -37,7 +40,8 @@ const CREDITS = 'assets/CREDITS.csv';
 const JSON_OUT = 'assets/credits.json';
 const PUBLIC = 'public';
 const UPSTREAM = 'research/art-spike/CREDITS-lpc-characters.csv';
-const META_FILES = new Set(['CREDITS.csv', 'credits.json']);
+const PINS = 'assets/licence-pins.json';
+const META_FILES = new Set(['CREDITS.csv', 'credits.json', 'licence-pins.json']);
 // Медіа в public/, яке мусить мати рядок реєстру. Решта (мапи .tmj, тексти ліцензій) — не медіа.
 const PUBLIC_MEDIA = /\.(png|jpe?g|gif|webp|avif|svg|ico|ttf|otf|woff2?|ogg|oga|opus|mp3|wav|flac|m4a|aac|mp4|webm)$/i;
 
@@ -65,6 +69,7 @@ export const CODES = [
   'LICENCE_NOT_OFFERED', 'LICENCE_NOT_ALLOWED', 'LICENCE_NOT_MOST_PERMISSIVE', 'CREDITS_JSON_STALE',
   'CREDITS_UPSTREAM_MISSING', 'CREDITS_UPSTREAM_MISMATCH', 'CREDITS_MODIFIED_UNDESCRIBED', 'CREDITS_SA_RELICENSED',
   'PUBLIC_EMPTY', 'PUBLIC_NO_REGISTER_ROW', 'PUBLIC_NEEDS_CREDITS',
+  'LICENCE_PINS_BAD', 'LICENCE_PIN_MISMATCH', 'LICENCE_PIN_NO_EVIDENCE', 'LICENCE_PIN_UNUSED',
 ];
 
 // RFC 4180: лапки, коми й переноси всередині лапок.
@@ -166,10 +171,20 @@ export function buildJson(rows) {
 }
 
 // input: { files: шляхи всередині assets/ (усі файли), publicFiles: шляхи всередині public/ (усі файли),
-//          register, credits, json, upstream: текст закріпленої виписки першоджерела (або null) }
-export function check({ files, publicFiles, register, credits, json, upstream }) {
+//          register, credits, json, upstream: текст закріпленої виписки першоджерела (або null),
+//          pins: текст assets/licence-pins.json (або null — закріплень немає), evidence: { шлях доказу в research/: його текст } }
+export function check({ files, publicFiles, register, credits, json, upstream, pins = null, evidence = {} }) {
   const out = [];
   const add = (code, where, msg) => out.push({ code, where, msg });
+  let pin = {};
+  try {
+    const p = pins === null ? { pins: {} } : JSON.parse(pins);
+    if (!p || typeof p.pins !== 'object' || p.pins === null || Array.isArray(p.pins)) throw new Error('немає об\'єкта pins');
+    pin = p.pins;
+  } catch (e) {
+    // @check:LICENCE_PINS_BAD
+    add('LICENCE_PINS_BAD', PINS, `не розібрано: ${e.message}`);
+  }
   const pngs = files.filter((f) => /\.png$/i.test(f));
   // @check:ASSETS_EMPTY
   if (pngs.length === 0) add('ASSETS_EMPTY', ASSETS, 'жодного PNG — нічого не перевірено');
@@ -243,8 +258,15 @@ export function check({ files, publicFiles, register, credits, json, upstream })
     // @check:LICENCE_NOT_ALLOWED
     if (!(r.licence in LICENCES)) add('LICENCE_NOT_ALLOWED', at, `«${r.licence}» не в списку дозволених`);
     const best = Math.min(...r.offered.map((o) => RANK.indexOf(family(o))).filter((i) => i >= 0));
+    const pr = Object.hasOwn(pin, r.file) ? pin[r.file] : null;
+    // @check:LICENCE_PIN_MISMATCH
+    if (pr && pr.licence !== r.licence) add('LICENCE_PIN_MISMATCH', at, `закріплено «${pr.licence}», а в титрах «${r.licence}»`);
+    // @check:LICENCE_PIN_NO_EVIDENCE
+    // Доказ має існувати в research/ І називати сам закріплений файл (рецензія PR #38: інакше годився б будь-який файл).
+    if (pr && !(typeof pr.evidence === 'string' && Object.hasOwn(evidence, pr.evidence) && evidence[pr.evidence].includes(r.file))) add('LICENCE_PIN_NO_EVIDENCE', at, `доказ відсутній або не називає файл (${pr.evidence ?? 'не вказано'})`);
+    const pinned = !!pr && pr.licence === r.licence;
     // @check:LICENCE_NOT_MOST_PERMISSIVE
-    if (family(r.licence) && RANK.indexOf(family(r.licence)) > best) add('LICENCE_NOT_MOST_PERMISSIVE', at, `є м'якша: ${RANK[best]}`);
+    if (!pinned && family(r.licence) && RANK.indexOf(family(r.licence)) > best) add('LICENCE_NOT_MOST_PERMISSIVE', at, `є м'якша: ${RANK[best]}`);
     const reg1 = rowOf.get(r.file);
     // @check:REGISTER_LICENCE_MISMATCH
     if (reg1 && !reg1.licence.includes(r.licence)) add('REGISTER_LICENCE_MISMATCH', at, `${reg1.id} не цитує «${r.licence}»`);
@@ -271,6 +293,10 @@ export function check({ files, publicFiles, register, credits, json, upstream })
     // @check:CREDITS_SA_RELICENSED
     if (mod !== 'no' && (saOffered || saRegister) && family(r.licence) !== 'CC-BY-SA') add('CREDITS_SA_RELICENSED', at, `змінений твір під CC-BY-SA лишається CC-BY-SA, а не «${r.licence}»`);
   }
+  for (const f of Object.keys(pin)) {
+    // @check:LICENCE_PIN_UNUSED
+    if (cr.ok && !seen.has(f)) add('LICENCE_PIN_UNUSED', PINS, `закріплення для «${f}», а рядка в титрах немає`);
+  }
   for (const f of pngs) {
     // @check:ASSET_NO_CREDITS_ROW
     if (cr.ok && !seen.has(f)) add('ASSET_NO_CREDITS_ROW', f, `немає рядка в ${CREDITS}`);
@@ -293,6 +319,7 @@ function load(root = ROOT) {
   return {
     files: walk(join(root, ASSETS)), publicFiles: walk(join(root, PUBLIC)),
     register: read(REGISTER) ?? '', credits: read(CREDITS) ?? '', json: read(JSON_OUT), upstream: read(UPSTREAM),
+    pins: read(PINS), evidence: Object.fromEntries(walk(join(root, 'research')).filter((p) => /\.(md|txt)$/.test(p)).map((p) => [`research/${p}`, read(`research/${p}`)])),
   };
 }
 
@@ -322,6 +349,9 @@ function selfTest() {
     return { files, publicFiles, register: reg, credits, json: cr.ok ? buildJson(cr.rows) : '', upstream: UP, ...over };
   };
   const base = mk([T, H, C]);
+  const EV = 'research/lpc-licences-evidence.md';
+  const EVT = { [EV]: '| c/hero.png | OGA-BY 3.0 | CC-BY-SA 3.0 | сторінка не дає OGA-BY |' };
+  const PIN = (licence) => JSON.stringify({ pins: { 'c/hero.png': { licence, evidence: EV } } });
   const swap = (from, to) => mk([T, H.replace(from, to), C]);
   const swapT = (from, to) => mk([T.replace(from, to), H, C]);
   const swapC = (from, to) => mk([T, H, C.replace(from, to)]);
@@ -355,6 +385,13 @@ function selfTest() {
     ['обрана ліцензія не з запропонованих', swap(',OGA-BY 3.0,OGA-BY', ',CC0,OGA-BY'), 'LICENCE_NOT_OFFERED,REGISTER_LICENCE_MISMATCH'],
     ['обрано GPL (не дозволено)', mk([T.replace('CC-BY-SA 3.0,CC-BY-SA 3.0 | GPL 3.0', 'GPL 3.0,GPL 3.0'), H, C], { register: reg.replace('"GPL 3.0"', 'GPL 3.0') }), 'LICENCE_NOT_ALLOWED'],
     ['обрано не найм\'якшу', swap(',OGA-BY 3.0,OGA-BY', ',CC-BY-SA 3.0,OGA-BY'), 'LICENCE_NOT_MOST_PERMISSIVE'],
+    // 4. закріплення ліцензії: сторінки першоджерела не дають «найм'якшої з генератора»
+    ['позитивний контроль: закріплено CC-BY-SA 3.0 з наявним доказом — «не найм\'якша» не спрацьовує', { ...swap(',OGA-BY 3.0,OGA-BY', ',CC-BY-SA 3.0,OGA-BY'), pins: PIN('CC-BY-SA 3.0'), evidence: EVT }, ''],
+    ['закріплення не збігається з титрами', { ...base, pins: PIN('CC-BY-SA 3.0'), evidence: EVT }, 'LICENCE_PIN_MISMATCH'],
+    ['закріплення без наявного доказу', { ...swap(',OGA-BY 3.0,OGA-BY', ',CC-BY-SA 3.0,OGA-BY'), pins: PIN('CC-BY-SA 3.0'), evidence: {} }, 'LICENCE_PIN_NO_EVIDENCE'],
+    ['доказ існує, але не називає закріплений файл', { ...swap(',OGA-BY 3.0,OGA-BY', ',CC-BY-SA 3.0,OGA-BY'), pins: PIN('CC-BY-SA 3.0'), evidence: { [EV]: 'інший файл' } }, 'LICENCE_PIN_NO_EVIDENCE'],
+    ['закріплення на файл без рядка титрів', { ...base, pins: JSON.stringify({ pins: { 'c/ghost.png': { licence: 'CC0', evidence: EV } } }), evidence: EVT }, 'LICENCE_PIN_UNUSED'],
+    ['зламаний файл закріплень', { ...base, pins: '{"pins": [' }, 'LICENCE_PINS_BAD'],
     ['credits.json застарів', { ...base, json: base.json.replace('Ann', 'Anna') }, 'CREDITS_JSON_STALE'],
     ['credits.json відсутній', { ...base, json: null }, 'CREDITS_JSON_STALE'],
     // 1. звірка шарів персонажів із закріпленою випискою першоджерела

@@ -9,7 +9,7 @@
 | ART-003 | Forchild Basic Village Tileset | https://forchild.itch.io/village-tileset | "You can use this tileset in any way you prefer (CC-0)" | ні | 22.10.2026 | _ще не використано_ |
 | ART-004 | inkBubi Forest Tileset (sample) | https://opengameart.org/content/free-sample-16x16-pixel-forest-tileset-%E2%80%93-top-down-rpg-style | "License(s): CC0" | ні | 22.10.2026 | _ще не використано_ |
 | ART-005 | LPC Tile Atlas (adrix89; автори зі зведеного `Attribution.txt` набору — у `assets/CREDITS.csv`) | https://opengameart.org/content/lpc-tile-atlas | "License(s): CC-BY-SA 3.0", "GPL 3.0" — обрано "CC-BY-SA 3.0" (цитата зі сторінки: `research/packs/pack-lpc-atlas/page.html.lic-snippet.txt`) | так, титри | 22.10.2026 | `assets/tiles/terrain_atlas.png` і `assets/tiles/base_out_atlas.png` — без змін (GAME-21; `terrain_atlas.png` — основа мапи кемпінгу, GAME-93) |
-| ART-006 | Universal LPC Spritesheet Character Generator — 17 шарів ходьби `walk.png` | https://github.com/LiberatedPixelCup/Universal-LPC-Spritesheet-Character-Generator/blob/master/CREDITS.csv (сторінки авторів — колонка `source_urls` у `assets/CREDITS.csv`) | по шару, дослівно з колонки `licenses` CREDITS.csv генератора: 14 шарів "OGA-BY 3.0" (поряд "CC-BY-SA 3.0", "GPL 3.0" або "CC-BY"), 3 шари волосся лише "CC-BY-SA 3.0", "GPL 3.0"; обрано найм'якшу: "OGA-BY 3.0" або "CC-BY-SA 3.0" | так, титри | 22.10.2026 за генератором; сторінки OGA з сесії не звірені — **NOT RUN** | `assets/characters/` (GAME-21) |
+| ART-006 | Universal LPC Spritesheet Character Generator — 16 шарів ходьби `walk.png` | https://github.com/LiberatedPixelCup/Universal-LPC-Spritesheet-Character-Generator/blob/master/CREDITS.csv (сторінки авторів — колонка `source_urls` у `assets/CREDITS.csv`) | по шару. Генератор (колонка `licenses`) пропонує 13 шарам "OGA-BY 3.0" (поряд "CC-BY-SA 3.0", "GPL 3.0"), 3 шарам волосся — лише "CC-BY-SA 3.0", "GPL 3.0". Сторінки першоджерела OGA "OGA-BY 3.0" для 12 із них не дають (лише "CC-BY-SA 3.0", "GPL 3.0"; `lpc-be-seated` — "CC-BY 3.0"), тож обрано "CC-BY-SA 3.0" — ліцензію, яку дають усі сторінки рядка або з якою сумісні їхні ліцензії ("CC-BY 3.0", "OGA-BY" → "CC-BY-SA") (закріплено в `assets/licence-pins.json`). "OGA-BY 3.0" лишився лише в `head/heads/human/male_small` (сторінки OGA немає, джерело — генератор) | так, титри | 23.10.2026: звірено зі сторінками OGA (research-fetch, прогони 39990624717 і 39991667844; цитати й звірка рядків — `research/lpc-licences-evidence.md`) | `assets/characters/` (GAME-21) |
 | ART-007 | Camp Fire Animation for RPGs, finished (Zabin) — вогнище 5 кадрів | https://opengameart.org/content/camp-fire-animation-for-rpgs-finished | "License(s): CC-BY-SA 3.0" (цитата зі сторінки: `research/packs/pack-lpc-campfire/page.html.lic-snippet.txt`) | так, титри; **змінено**: квантовано на палітру основи, змінений твір лишається CC-BY-SA 3.0 | 23.10.2026 | `assets/sprites/campfire.png` — анімоване вогнище сцени (GAME-93) |
 | ART-008 | LPC modern car additions (Blue Moon Bear) — авто Skorpio | https://opengameart.org/content/lpc-modern-car-additions | "License(s): GPL 3.0", "CC-BY-SA 3.0" — обрано "CC-BY-SA 3.0" (`research/packs/pack-lpc-car/page.html.lic-snippet.txt`) | так, титри; **змінено**: обрізка, зменшення до висоти 64 px (NEAREST), квантування на палітру; лишається CC-BY-SA 3.0 | 23.10.2026 | `assets/tiles/camp_car.png` — авто на мапі кемпінгу (GAME-93; прогалина «авто ~30 % завелике» закрита зменшенням) |
 | ART-009 | tent-3 (xhunterko) — намет | https://opengameart.org/content/tent-3 | "License(s): CC-BY 3.0", "GPL 3.0", "GPL 2.0", "OGA-BY 3.0", "CC0" — обрано "CC0" (`research/packs/pack-lpc-tent/page.html.lic-snippet.txt`) | ні (CC0), титр лишено з ввічливості; **змінено**: ×2 NEAREST, полотно 96×64, один колір контуру на палітру | 23.10.2026 | `assets/tiles/camp_tent.png` — два намети кемпінгу (GAME-93; намет у стилі LPC — досі прогалина, це найкращий наявний) |
@@ -53,8 +53,19 @@ chuckiecatt (CC BY 4.0 — обов'язкова атрибуція), MrBeast OG
 `scripts/assets/import_lpc_characters.py` (`--offline research/art-spike/CREDITS-lpc-characters.csv`
 відтворює їхні рядки байт у байт).
 
-**Чесна межа ART-006.** Ліцензії шарів персонажів процитовано з `CREDITS.csv` генератора, тобто з
-агрегатора, а не зі сторінок авторів на OpenGameArt: OGA із сесії закрито. Звірка зі сторінками
-першоджерел — через runner `research-fetch` (`oga:<slug>` із `source_urls`); до того — NOT RUN.
+**Чесна межа ART-006.** Генератор LPC пропонує для більшості шарів "OGA-BY 3.0", але сторінки авторів на
+OpenGameArt (першоджерело) цієї ліцензії здебільшого не дають — звірено 23.10.2026 через runner `research-fetch`
+(режим `page:`, текст сторінки в лозі прогону, sha256 і дата — у `research/lpc-licences-evidence.md`). Тому шари, де
+сторінки першоджерела не дають "OGA-BY 3.0", закріплено під "CC-BY-SA 3.0" (`assets/licence-pins.json`; сторож
+`check-assets` вимагає для кожного закріплення наявний файл-доказ, а імпортер не затирає закріплення). Сорочка
+`longsleeve` складена з частин під "CC-BY-SA 3.0" і частин лише під "OGA-BY" (`lpc-expanded-sit-run-jump-more`) —
+частини під OGA-BY можна включати у твір під CC-BY-SA, тож обрано "CC-BY-SA 3.0". Підліткову `longsleeve/teen`
+прибрано: у грі не використана, а "CC-BY-SA 3.0" генератор для неї не пропонує. Волосся `hair/*`: розділ «License(s)»
+сторінки `lpc-expanded-hair` каже "GPL 3.0", "CC-BY-SA 4.0", а опис файлів на тій самій сторінці — дослівно
+«License: CC-BY-SA 3.0»; генератор теж каже "CC-BY-SA 3.0" — розбіжність самої сторінки, записана в доказі.
 Шар `head/heads/human/male_small` у генераторі не має жодного посилання на сторінку: у титрах
 стоїть посилання на сам генератор і примітка про це.
+
+🔴 **Наслідок для магазинів застосунків.** "CC-BY-SA 3.0" забороняє поширення під технічним захистом (DRM). Вебгрі це
+байдуже; збірка для App Store (FairPlay DRM) чи іншого магазину з DRM потребує або заміни цих шарів, або окремого
+дозволу авторів — питання до власника і юриста ПЕРЕД будь-яким релізом у магазин.

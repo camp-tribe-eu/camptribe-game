@@ -80,5 +80,10 @@
   "ui.endedHint": "End of the Prologue. Open ☰ to see what's next and how to save.",
   "ui.short": "short by",
   "ui.wet": "wet",
-  "ui.condition": "condition"
+  "ui.condition": "condition",
+  "ui.remind.text": "You have arrived. Your save lives only in this browser — copy the restore code whenever you like. No rush.",
+  "ui.remind.copy": "Copy code",
+  "ui.remind.close": "Close",
+  "ui.remind.done": "Code copied. Keep it wherever suits you — nothing in the game changed.",
+  "ui.remind.manual": "Copying did not work here. Here is the code — select and copy it yourself whenever you like:"
 }
