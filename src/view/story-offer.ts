@@ -13,7 +13,7 @@ import { dispatch, nextCommandId, type Command } from '../core/commands';
 import type { CoreDefs, StoryDefs } from '../core/defs';
 import { gearOf, sellPriceOf } from '../core/gear';
 import { canonical } from '../core/hash';
-import { todayWeather, type SimState } from '../core/sim';
+import { todayForecast, todayWeather, type SimState } from '../core/sim';
 import { initialState, type GameState } from '../core/state';
 import { matches, route } from '../core/story';
 import { capacityOf, packedOf, packFlag, packingOpen, packItemsFor, usedUnits } from '../core/packing';
@@ -36,6 +36,8 @@ const NAMES: ReadonlyMap<string, string> = new Map([
     .flatMap((x) => { const k = x.nameKey ?? x.titleKey; return k ? [[x.id, k] as const] : []; }),
   // Подія в дорозі (GAME-31): назва — titleKey тригера (заголовок розмови й запис журналу).
   ...CONTENT.dialogues.flatMap((d) => (d.trigger ? [[d.id, d.trigger.titleKey] as const] : [])),
+  // Сцена сюжету (GAME-142): так само — назва сцени над репліками.
+  ...CONTENT.dialogues.flatMap((d) => (d.scene ? [[d.id, d.scene.titleKey] as const] : [])),
   // Пам'ятний вибір (GAME-110): запис журналу «Запам'ятали: …» — текст journal.<факт> (валідатор: LOCALE_MISSING без нього).
   ...memorableFacts(CONTENT).map((f) => [f, `journal.${f}`] as const),
 ]);
@@ -222,7 +224,7 @@ export function storyOffer(sim: SimState, defs: CoreDefs): Offered {
   }));
   const weather = todayWeather(sim);
   const lastTrip = [...sim.journal].reverse().find((e) => e.type === 'Visit')?.commandId ?? null;
-  const base = { moneyCents: s.moneyCents, inventory, journal, lastTrip, weather, day: dayOf(sim.clock) + 1, timeMinutes: sim.clock.minutes % DAY_MINUTES, ...summaryOffer(sim, defs) };
+  const base = { moneyCents: s.moneyCents, inventory, journal, lastTrip, weather, forecast: todayForecast(sim), day: dayOf(sim.clock) + 1, timeMinutes: sim.clock.minutes % DAY_MINUTES, ...summaryOffer(sim, defs) };
 
   if (!s.player) {
     const choices = characterChoices(defs);

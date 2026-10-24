@@ -38,9 +38,13 @@ LAYERS = [
     'body/bodies/male', 'body/bodies/female', 'body/bodies/teen',
     'head/heads/human/male', 'head/heads/human/female', 'head/heads/human/male_small',
     'hair/plain/adult', 'hair/messy1/adult', 'hair/ponytail/adult/fg', 'hair/ponytail/adult/bg',
+    'hair/pixie/adult',  # GAME-147: Anna (neighbour); same pages as messy1/plain
     'torso/clothes/longsleeve/longsleeve/male', 'torso/clothes/longsleeve/longsleeve/female',
     # longsleeve/teen dropped (GAME-21): unused in the game, and no licence is offered by all its
     # first-hand OGA pages that our register allows (generator: OGA-BY | GPL; pages: CC-BY-SA | GPL; OGA-BY).
+    # GAME-147: Matthew wears shortsleeve/teen instead — the generator offers CC-BY-SA 3.0 for it, and
+    # its one unverified page (lpc-teen-androgynous-short-sleeve-shirt) gives "GPL 3.0 ; CC-BY-SA 3.0" (run 40116768691).
+    'torso/clothes/shortsleeve/shortsleeve/teen',
     'legs/pants/male', 'legs/pants/thin',
     'feet/shoes/basic/male', 'feet/shoes/basic/thin',
 ]

@@ -1,0 +1,10 @@
+CC-BY-SA 4.0 | http://creativecommons.org/licenses/by-sa/4.0/
+Submitted by: bluecarrot16
+FILE https://opengameart.org/sites/default/files/css/css_xE-rWrJf-fncB6ztZfd2huxqgxu4WO-qwma6Xer30m4.css
+FILE https://opengameart.org/sites/default/files/css/css_ff3tJc71Z402cxcrQprs7GRkOQJuOqgs2LWeSWIHHR0.css
+FILE https://opengameart.org/sites/default/files/css/css_6UEBFnlGteypjA9bRlSvOUlqYDnWWJT1LrWXUIi-jrM.css
+FILE https://opengameart.org/sites/default/files/css/css_6NcQOcblGY28_iJd_khUiH7LvkXsK2NzkKjV006jQ5I.css
+FILE https://opengameart.org/sites/default/files/floor-snapshot.png
+FILE https://opengameart.org/sites/default/files/interior-preview_0.png
+FILE https://opengameart.org/sites/default/files/floors_1.png
+FILE https://opengameart.org/sites/default/files/lpc-floors.zip

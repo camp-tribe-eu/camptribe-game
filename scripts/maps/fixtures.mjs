@@ -119,7 +119,73 @@ export const FIXTURES = [
   { name: 'зовнішній тайлсет (.tsx)', patch: (m) => { m.tilesets[0] = { firstgid: 1, source: 'fixture.tsx' }; }, expect: ['MAP_STRUCTURE'] },
   { name: 'дані шару в base64', patch: (m) => { Object.assign(layer(m, 'walls'), { encoding: 'base64', data: 'AAAA' }); }, expect: ['MAP_STRUCTURE'] },
   { name: 'невідомий тип шару', patch: (m) => { layer(m, 'ground').type = 'tilelayr'; }, expect: ['MAP_STRUCTURE'] },
+
+  // ---------- розкладка інтер'єру (GAME-146, docs/LAYOUT_RULES.md) ----------
+  // Мапа без шару layout розкладкою не перевіряється — еталон вище лишається чистим.
+  { name: '[розкладка] будинок із двох кімнат чистий', patch: house, expect: [] },
+  { name: '[розкладка] диван посеред кімнати з freestanding=true — свідомий виняток, не помилка',
+    patch: (m) => { house(m); const s = litem(m, 'sofa'); clear(m, s); place(m, s, 3, 4); s.properties = [{ name: 'freestanding', type: 'bool', value: true }]; }, expect: [] },
+  { name: '[розкладка] диван спинкою до журнального столика (до зони), не до стіни — дозволено',
+    patch: (m) => { house(m); const s = litem(m, 'sofa'); clear(m, s); place(m, s, 1, 5); }, expect: [] },
+  { name: '[розкладка] диван посеред кімнати', patch: (m) => { house(m); const s = litem(m, 'sofa'); clear(m, s); place(m, s, 3, 4); }, expect: ['LAYOUT_WALL'], count: { code: 'LAYOUT_WALL', n: 1 } },
+  { name: '[розкладка] двері над підлогою (у верхньому ряду стіни)', patch: (m) => { house(m); litem(m, 'door').y = 0; }, expect: ['LAYOUT_DOOR'], count: { code: 'LAYOUT_DOOR', n: 1 } },
+  { name: '[розкладка] ліжко у вітальні (двері відсунуто, щоб червоніло лише правило кімнати)',
+    patch: (m) => { house(m); const b = litem(m, 'bed'); clear(m, b); place(m, b, 3, 2); litem(m, 'door').x = 5 * T; const c = litem(m, 'coffee'); clear(m, c); place(m, c, 1, 6); }, expect: ['LAYOUT_ROOM'], count: { code: 'LAYOUT_ROOM', n: 1 } },
+  { name: '[розкладка] письмовий стіл у вітальні', patch: (m) => { house(m); addItem(m, 'desk', 'desk.1', 4, 2, 1, 1); }, expect: ['LAYOUT_ROOM'] },
+  { name: '[розкладка] ліжко узголів’ям не до стіни (зсунуте на ряд від стіни)', patch: (m) => { house(m); const b = litem(m, 'bed'); clear(m, b); place(m, b, 8, 3); }, expect: ['LAYOUT_WALL'], count: { code: 'LAYOUT_WALL', n: 1 } },
+  { name: '[розкладка] тумба під ліжком, а не біля стіни (меблі за спинкою — не стіна)', patch: (m) => { house(m); addItem(m, 'nightstand', 'ns.1', 8, 4, 1, 1); }, expect: ['LAYOUT_WALL'] },
+  { name: '[розкладка] до двоспального ліжка не підійти з лівого боку', patch: (m) => { house(m); wall(m, [7, 2], [7, 3]); }, expect: ['LAYOUT_ACCESS'], count: { code: 'LAYOUT_ACCESS', n: 1 } },
+  { name: '[розкладка] перед шафою стіна: ні до шафи, ні до ліжка справа', patch: (m) => { house(m); wall(m, [10, 3]); }, expect: ['LAYOUT_ACCESS'], count: { code: 'LAYOUT_ACCESS', n: 2 } },
+  { name: '[розкладка] дверний проріз замуровано — спальня відрізана', patch: (m) => { house(m); wall(m, [6, 4]); }, expect: ['LAYOUT_WALL', 'LAYOUT_ACCESS'] },
+  { name: '[розкладка] вікно звисає на підлогу', patch: (m) => { house(m); litem(m, 'window').y = T; }, expect: ['LAYOUT_WALL'], count: { code: 'LAYOUT_WALL', n: 1 } },
+  { name: '[розкладка] одруківка у виді меблів (bedd)', patch: (m) => { house(m); litem(m, 'bed').type = 'bedd'; }, expect: ['LAYOUT_OBJECT'] },
+  { name: '[розкладка] об’єкт не по сітці тайлів', patch: (m) => { house(m); litem(m, 'sofa').x += 5; }, expect: ['LAYOUT_OBJECT'] },
+  { name: '[розкладка] freestanding на журнальному столику, що й так не має правила спинки', patch: (m) => { house(m); litem(m, 'coffee').properties = [{ name: 'freestanding', type: 'bool', value: true }]; }, expect: ['LAYOUT_OBJECT'] },
+  { name: '[розкладка] торшер поза будь-якою кімнатою', patch: (m) => { house(m); addItem(m, 'lamp', 'lamp.1', 0, 3, 1, 1); }, expect: ['LAYOUT_OBJECT'] },
+  { name: '[розкладка] кімната з невідомою назвою (salon) і все, що в ній', patch: (m) => { house(m); lroom(m, 'living').properties[0].value = 'salon'; }, expect: ['LAYOUT_OBJECT'] },
+  { name: '[розкладка] кімнати перекриваються — меблі у двох кімнатах одразу', patch: (m) => { house(m); addRoom(m, 'hall', 1, 0, 5, 8); }, expect: ['LAYOUT_OBJECT'] },
 ];
+
+// ---------- будинок для прикладів розкладки: 12×9, дві кімнати, перегородка x=6 з прорізом (6,4) ----------
+//            x 0123456789AB
+const HOUSE = [ '############',   // y0  стіна (верх)
+  /* y1 */    '###D########',   // y1  стіна (низ), D — двері (3,1) на лінії підлоги
+  /* y2 */    '#SS...#.BBW#',   // S — диван 2×1, B — ліжко 2×2 (8,2), W — шафа (10,2)
+  /* y3 */    '#.....#.BB.#',
+  /* y4 */    '#CC....?...#',   // C — журнальний столик 2×1 (1,4); ? — дверний проріз (6,4)
+  /* y5 */    '#.....#....#',
+  /* y6 */    '#.....#....#',
+  /* y7 */    '#.....#....#',
+  /* y8 */    '############'];
+const lrect = (id, name, type, tx, ty, w, h, props) => ({ ...rect(id, name, type, tx, ty, w, h), ...(props ? { properties: props } : {}) });
+
+function house(m) {
+  const W = HOUSE[0].length, H = HOUSE.length;
+  const cells = HOUSE.join('');
+  m.width = W; m.height = H;
+  layer(m, 'ground').data = new Array(W * H).fill(FLOOR); layer(m, 'ground').width = W; layer(m, 'ground').height = H;
+  // Усе, що не підлога і не проріз, блокує: стіни, двері (у стіні), меблі.
+  layer(m, 'walls').data = [...cells].map((c) => (c === '.' || c === '?' ? 0 : WALL)); layer(m, 'walls').width = W; layer(m, 'walls').height = H;
+  layer(m, 'objects').objects = [point(1, 's.main', 'spawn', 3, 6)];
+  m.layers.push({ id: 4, name: 'layout', type: 'objectgroup', x: 0, y: 0, opacity: 1, visible: true, objects: [
+    lrect(10, 'living', 'room', 1, 0, 5, 8, [{ name: 'room', type: 'string', value: 'living' }]),
+    lrect(11, 'bedroom', 'room', 7, 0, 4, 8, [{ name: 'room', type: 'string', value: 'bedroom' }]),
+    lrect(12, 'sofa', 'sofa', 1, 2, 2, 1),
+    lrect(13, 'coffee', 'coffee_table', 1, 4, 2, 1),
+    lrect(14, 'door', 'door', 3, 1, 1, 1),
+    lrect(15, 'window', 'window', 4, 0, 1, 2),
+    lrect(16, 'bed', 'bed', 8, 2, 2, 2),
+    lrect(17, 'wardrobe', 'wardrobe', 10, 2, 1, 1),
+    lrect(18, 'doorway', 'doorway', 6, 4, 1, 1),
+  ] });
+}
+const litem = (m, name) => layer(m, 'layout').objects.find((o) => o.name === name);
+const lroom = litem;
+// Зняти колізію під об'єктом розкладки (щоб пересунути меблі) і поставити її на новому місці.
+const clear = (m, o) => { for (let y = o.y / T; y < (o.y + o.height) / T; y++) for (let x = o.x / T; x < (o.x + o.width) / T; x++) setCell(m, 'walls', x, y, 0); };
+const place = (m, o, tx, ty) => { o.x = tx * T; o.y = ty * T; for (let y = ty; y < ty + o.height / T; y++) for (let x = tx; x < tx + o.width / T; x++) setCell(m, 'walls', x, y, WALL); };
+const addItem = (m, type, name, tx, ty, w, h) => { const o = lrect(90 + layer(m, 'layout').objects.length, name, type, tx, ty, w, h); layer(m, 'layout').objects.push(o); place(m, o, tx, ty); };
+const addRoom = (m, room, tx, ty, w, h) => layer(m, 'layout').objects.push(lrect(80, room, 'room', tx, ty, w, h, [{ name: 'room', type: 'string', value: room }]));
 
 // Файлові приклади для завантажувача. files: null — теки немає; {} — порожня тека; 'baseline' — еталон.
 export const FILE_FIXTURES = [

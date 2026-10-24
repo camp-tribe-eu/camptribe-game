@@ -39,7 +39,13 @@ export type StoryCommand =
    * Подія в дорозі (GAME-31): відкрити діалог-подію. Шле її НЕ гравець, а симуляція після приїзду (кидок
    * RNG у sim.step); ядро лише перевіряє, що подія доречна. Повний перебір має її серед можливих ходів.
    */
-  | { readonly type: 'RoadEvent'; readonly commandId: string; readonly eventId: string };
+  | { readonly type: 'RoadEvent'; readonly commandId: string; readonly eventId: string }
+  /**
+   * Сцена сюжету (GAME-142): відкрити діалог зі `scene`. Шле її НЕ гравець, а сюжет (гачок кінця дня). `facts` — які з
+   * `scene.facts` правдиві зараз (вогнище дозволене, вечеря завершена, фото є); ядро ставить їх прапорцями й відкриває
+   * розмову. Факт поза `scene.facts` — відмова: стартер не може вигадати стан, якого сцена не оголосила.
+   */
+  | { readonly type: 'StartScene'; readonly commandId: string; readonly sceneId: string; readonly facts?: readonly string[] };
 
 export interface StoryDraft {
   moneyCents: number;
@@ -386,6 +392,17 @@ export function applyStory(cmd: StoryCommand, d: StoryDraft, st: StoryDefs | und
       d.dialogue = { id: cmd.eventId, node: ev.start };
       return null;
     }
+    case 'StartScene': {
+      if (!isId(cmd.sceneId)) return 'INVALID_COMMAND';
+      const sc = own(st.dialogues, cmd.sceneId);
+      if (!sc?.scene) return 'UNKNOWN_TARGET';
+      if (liveDialogue(st, d)) return 'IN_DIALOGUE';
+      const facts = cmd.facts ?? [];
+      if (!Array.isArray(facts) || facts.some((f) => typeof f !== 'string' || !sc.scene?.facts.includes(f))) return 'INVALID_CHOICE';
+      if (facts.length) d.flags = [...new Set([...d.flags, ...facts])].sort();
+      d.dialogue = { id: cmd.sceneId, node: sc.start };
+      return null;
+    }
     case 'Choose':
     case 'Continue': {
       const live = liveDialogue(st, d);
@@ -398,7 +415,11 @@ export function applyStory(cmd: StoryCommand, d: StoryDraft, st: StoryDefs | und
       const { node } = live;
       if (cmd.type === 'Continue') {
         if (node.choices) return 'INVALID_CHOICE';
-        d.dialogue = node.next !== undefined ? { id: live.id, node: node.next } : null;
+        if (node.next === undefined) { d.dialogue = null; return null; }
+        // Автоматична розвилка (GAME-142): перша гілка, чия умова виконана; жодна — безумовний next.
+        const npcOwner = own(st.dialogues, live.id)?.npcId;
+        const hit = (node.branches ?? []).find((b) => holds(b.when, d, p, npcOwner));
+        d.dialogue = { id: live.id, node: hit ? hit.next : node.next };
         return null;
       }
       const choice = Number.isSafeInteger(cmd.choice) && cmd.choice >= 0 ? node.choices?.[cmd.choice] : undefined;

@@ -77,6 +77,13 @@ Effect    = { setFlag: "f.…" } | { startQuest: "<id квесту>" } | { compl
   змінює лише ефект `remember` (ядро: `npcMemory` у стані, сейв v2); подія в дорозі NPC не має, тож
   `remember` у ній — `EVENT_EFFECT_UNSUPPORTED`. `remembers` і `notRemembers` того самого факту в одному
   `all` — `DIALOGUE_COND_CONTRADICTION`.
+* **Сцена сюжету й автоматичні гілки (GAME-142).** Третій власник діалогу — `scene: { titleKey, facts }`: діалог без NPC
+  і без кидка RNG, який відкриває команда ядра `StartScene` (шле сюжет, напр. гачок кінця дня; точка старту вогнища —
+  `src/content/fireplace.ts`). `facts` — bool-прапорці, які стартер може поставити в мить старту; вони рахуються сетерами
+  (`settable`) і вжитками реєстру (`FLAG_UNREGISTERED`). Як і подія, сцена лише ставить прапорці (`EVENT_EFFECT_UNSUPPORTED`).
+  Вузол із `next` може мати `branches: [{ when, next }]` — «Далі» йде в першу гілку, чия умова виконана, інакше в `next`.
+  Гілка — умовний вихід: досяжність її рахує, `DIALOGUE_DEAD_END` — ні; `branches` без `next` — `SCHEMA_INVALID`;
+  умови гілок читає `dialogue-flags` (зокрема `DIALOGUE_COND_CONTRADICTION`) і реєстр.
 * Наявні перевірки розширено: `id-format` (`dlg.…`, id вузла, прапорець `f.…`, факт `m.…` — без `_`),
   `id-unique` (id діалогу, id вузла в діалозі), `locale-keys` (`textKey` вузлів і виборів →
   `LOCALE_MISSING`).
