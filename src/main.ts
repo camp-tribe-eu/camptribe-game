@@ -18,6 +18,7 @@ import { mountTouchControls } from './view/world/touch';
 import { frameSize } from './view/world/frame';
 import { storyOffer } from './view/story-offer';
 import { testSwitches } from './view/test-switches';
+import { addFrameLag } from './view/frame-lag';
 import type { StoryOffer } from './ui/story-types';
 
 const app = document.querySelector<HTMLElement>('#app');
@@ -97,6 +98,8 @@ const game = new Phaser.Game({
   physics: { default: 'arcade', arcade: { debug: false } },
   scene: [new WorldScene(bridge, input, probe, worldArt, talkOnMap)],
 });
+// ?frameLagMs — лише збірка e2e (GAME-97): штучно довгий кадр.
+if (switches.frameLagMs) addFrameLag(game, switches.frameLagMs);
 
 // Поле змінило розмір (поворот телефону, смуга HUD, текст 200 %) — кадр підлаштовується під його форму.
 new ResizeObserver(() => {
