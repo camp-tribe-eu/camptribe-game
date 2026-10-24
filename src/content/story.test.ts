@@ -13,7 +13,7 @@ import { buildIndex } from '../../scripts/validator/checks.mjs';
 import { enumerateCombos, project } from '../../scripts/validator/combos.mjs';
 import { GAME_DEFS } from './slice-defs';
 import { CONTENT, STORY, compileStory } from './story';
-import { PROGRESS_IGNORED, isLuckMove, moves as allMoves, progressView, type Move } from './moves';
+import { PROGRESS_IGNORED, exploreView, isLuckMove, moves as allMoves, progressView, type Move } from './moves';
 import { RANK_XP, SKILL_IDS, zeroSkills } from '../core/skills';
 import { checkDefs, type CondDef, type CoreDefs, type PackingDefs } from '../core/defs';
 import { packFlag, packItemsFor } from '../core/packing';
@@ -31,8 +31,9 @@ const NO_ANIMAL = 'animal.none';
 
 const moves = (s: GameState): Move[] => allMoves(s, DEFS);
 
-// Ключ — проєкція без навичок (progressView, GAME-72); 32-бітний відбиток, як і раніше, лише для швидкості.
-const key = (s: GameState): string => stateHash(progressView(s));
+// Ключ — проєкція без навичок (progressView, GAME-72) і без пам'ятних фактів (exploreView, GAME-110: вони косметичні —
+// доводить memory-flags.test); 32-бітний відбиток, як і раніше, лише для швидкості.
+const key = (s: GameState): string => stateHash(exploreView(s, STORY));
 
 /** Той самий стан, але з навичками на рангах 5 і без практики — контроль «навички не змінюють жодного ходу». */
 const MAXED = Object.fromEntries(SKILL_IDS.map((id) => [id, RANK_XP[5] as number]));

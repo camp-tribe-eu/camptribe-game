@@ -1,3 +1,4 @@
 [
-  { "id": "npc.elise", "nameKey": "npc.elise", "locationId": "loc.camp.lake", "unlockedBy": "ST-004" }
+  { "id": "npc.elise", "nameKey": "npc.elise", "locationId": "loc.camp.lake", "unlockedBy": "ST-004" },
+  { "id": "npc.george", "nameKey": "npc.george", "locationId": "loc.home", "when": { "profiles": ["profile.family-teen"] } }
 ]

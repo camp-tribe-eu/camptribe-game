@@ -4,6 +4,7 @@
 import { stateHash } from '../core/hash';
 import type { CondDef, DialogueDef, EffectDef, ObjectiveDef, QuestDef, StoryDefs, WhenDef } from '../core/defs';
 import animals from '../../content/animals.json';
+import flags from '../../content/flags.json';
 import locations from '../../content/locations.json';
 import meta from '../../content/meta.json';
 import npcs from '../../content/npcs.json';
@@ -34,6 +35,17 @@ export interface RawContent {
   quests: RawQuest[];
   dialogues: RawDialogue[];
   roads?: { id: string; from: string; to: string; twoWay?: boolean; ways: { transport: string; minutes: number; cents: number; risk?: number }[] }[];
+  /** Реєстр прапорців (GAME-115); ядру з нього потрібні лише пам'ятні вибори (`journal: true`, GAME-110). */
+  flags?: { id: string; type: string; values?: string[]; journal?: boolean }[];
+}
+
+/**
+ * Пам'ятні вибори (GAME-110): конкретні назви фактів із `journal: true` — bool як є, enum — `<id>-<значення>` на кожне
+ * значення (так ядро й кодує enum у множині прапорців). Ключ тексту запису — `journal.<назва>` (той самий формат звіряє
+ * валідатор: journalKeys у scripts/validator/checks.mjs).
+ */
+export function memorableFacts(c: Pick<RawContent, 'flags'>): string[] {
+  return (c.flags ?? []).filter((f) => f.journal === true).flatMap((f) => (f.type === 'enum' ? (f.values ?? []).map((v) => `${f.id}-${v}`) : [f.id]));
 }
 
 const when = (w: RawWhen | undefined): { when?: WhenDef } => (w ? { when: w } : {});
@@ -94,6 +106,7 @@ export function compileStory(c: RawContent): StoryDefs {
       const ways = Object.fromEntries(r.ways.map((w) => [w.transport, { minutes: w.minutes, cents: w.cents, ...(w.risk !== undefined ? { risk: w.risk } : {}) }]));
       return r.twoWay ? [{ from: r.from, to: r.to, ways }, { from: r.to, to: r.from, ways }] : [{ from: r.from, to: r.to, ways }];
     }),
+    ...(memorableFacts(c).length ? { memorable: memorableFacts(c) } : {}),
   };
 }
 
@@ -101,7 +114,7 @@ export function compileStory(c: RawContent): StoryDefs {
 const dialogueFiles = import.meta.glob<RawDialogue>('../../content/dialogue/*.json', { eager: true, import: 'default' });
 
 export const CONTENT: RawContent = {
-  meta, profiles, transports, animals, locations, npcs, quests: quests as RawQuest[], roads,
+  meta, profiles, transports, animals, locations, npcs, quests: quests as RawQuest[], roads, flags: flags as NonNullable<RawContent['flags']>,
   dialogues: Object.keys(dialogueFiles).sort().map((k) => dialogueFiles[k] as RawDialogue),
 };
 export const STORY: StoryDefs = compileStory(CONTENT);

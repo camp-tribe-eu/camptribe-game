@@ -26,7 +26,7 @@ node scripts/mutate-validator.mjs               # довести, що само�
 | `roads.json` | дороги між локаціями: `from`, `to`, `twoWay`, `ways[]` (транспорт, хвилини, центи, необов'язковий `risk` 0–3 — GAME-72: небезпека дороги, навичка її не знижує); перевірка `roads`: кожна локація досяжна від дому й назад для кожного транспорту (`ROAD_UNREACHABLE`, `ROAD_NO_RETURN`), одне ребро на пару в кожен бік (`ROAD_DUPLICATE`) | `road.назва` |
 | `events.json` | події: `repeatable`, `reward` | `ev.назва` |
 | `facts.json` | зовнішні факти: `source`, `checkedAt` (РРРР-ММ-ДД), `kind` | `fact.назва` |
-| `flags.json` | реєстр прапорців і фактів стану (GAME-115, DC-015, розділ «Реєстр прапорців»): `id`, `type`, `initial`, `owner`, `note`, `values`, `valuesFrom`, `generatedFrom`, `reserved`, `aka` | `f.назва`, `f.префікс-*`, `m.назва`, `s.назва` |
+| `flags.json` | реєстр прапорців і фактів стану (GAME-115, DC-015, розділ «Реєстр прапорців»): `id`, `type`, `initial`, `owner`, `note`, `values`, `valuesFrom`, `generatedFrom`, `reserved`, `aka`, `journal` | `f.назва`, `f.префікс-*`, `m.назва`, `s.назва` |
 | `locales/<мова>.json` | ключ → переклад | — |
 | `dialogue/<назва>.json` | один діалог-граф на файл (розділ «Діалоги») | `dlg.назва` |
 
@@ -149,7 +149,7 @@ Effect    = { setFlag: "f.…" } | { startQuest: "<id квесту>" } | { compl
 | `dialogue-dead-end` | `DIALOGUE_DEAD_END` | §3 з кожного вузла діалогу є безумовний шлях до кінця |
 | `dialogue-flags` | `DIALOGUE_FLAG_NEVER_SET`, `DIALOGUE_COND_CONTRADICTION` | §2 умова не читає прапорець, який ніщо не ставить; §3 all не суперечить собі |
 | `dialogue-memory` | `MEMORY_NEVER_SET` | GAME-48: умова не читає факт пам'яті, якого цей NPC не може знати |
-| `flags` | `FLAG_UNREGISTERED`, `FLAG_ENUM_VALUE`, `FLAG_TYPE_MISMATCH`, `FLAG_REGISTERED_UNUSED`, `FLAG_REGISTRY_INVALID` | GAME-115: кожен прапорець, факт пам'яті й факт стану в умові чи ефекті — зареєстрований, вжитий за типом, enum — у межах `values`; зайвий рядок — лише з `reserved`. Формат id реєстру — `ID_FORMAT`, дублі — `ID_DUPLICATE` |
+| `flags` | `FLAG_UNREGISTERED`, `FLAG_ENUM_VALUE`, `FLAG_TYPE_MISMATCH`, `FLAG_REGISTERED_UNUSED`, `FLAG_NEVER_READ`, `FLAG_REGISTRY_INVALID` | GAME-115: кожен прапорець, факт пам'яті й факт стану в умові чи ефекті — зареєстрований, вжитий за типом, enum — у межах `values`; зайвий рядок — лише з `reserved`. GAME-110: те, що ставлять, хтось і читає (`FLAG_NEVER_READ`). Формат id реєстру — `ID_FORMAT`, дублі — `ID_DUPLICATE` |
 | `skills` | `SKILL_UNKNOWN`, `SKILL_DUPLICATE` | GAME-72: стартові навички профілю — лише вісім відомих напрямів, кожен раз; перелік той самий, що в ядрі (звірка в `src/content/semantics.test.ts`) |
 | `packing` | `PACK_ITEM_DUPLICATE`, `PACK_CAPACITY_MISSING`, `PACK_NEEDED_OVERFLOW`, `PACK_NOTE_UNPACKABLE` | GAME-109: кожна річ раз; місце на кожен транспорт; «потрібне» вміщається; підпис — про річ зі списку. Посилання — `REF_MISSING`, переклад підписів — `LOCALE_MISSING`, прапорці `f.pack-*` — `dialogue-flags` |
 | `calendar` | `CALENDAR_MISSING`, `CALENDAR_BAD_DATE`, `CALENDAR_RANGE_OVERLAP`, `JOB_BILLS_EXCEED_SALARY` | GAME-71: робота чи школяр у профілі — лише з `calendar.json`; `start` — справжня `YYYY-MM-DD`, свята й межі канікул — справжні `MM-DD`, що є щороку; канікули не перетинаються (і через Новий рік), свято не двічі; рахунки профілю ≤ зарплати (SIM-LIFE-008) |
@@ -187,14 +187,27 @@ Effect    = { setFlag: "f.…" } | { startQuest: "<id квесту>" } | { compl
   попередження була б вищою: мертві рядки накопичуються мовчки, і реєстр перестає бути правдою.
   Сімейство «вжите», коли його породжувач не порожній (прапорці ставить ядро, навіть якщо вміст їх не
   читає). `reserved`, але вже вжитий — `FLAG_REGISTRY_INVALID`: позначка застаріла.
+* **Пара «ставлять ↔ читають» (GAME-110).** Прапорець чи факт пам'яті, який умова читає, а ніщо не ставить, —
+  `DIALOGUE_FLAG_NEVER_SET` / `MEMORY_NEVER_SET`. Зворотний бік — `FLAG_NEVER_READ`: рядок `f.*`/`m.*`, який ставить ефект, але
+  не читає жодна умова (`flag`/`notFlag`, `remembers`/`notRemembers`; enum — хоч одне значення). Сімейства ядра (`f.pack-*`,
+  `f.seen-*`) і факти стану `s.*` — поза правилом: їх ставить ядро для власних потреб. Ціна хибного спрацювання (закон 5):
+  прапорець «на майбутнє» без читача валить CI, доки автор не напише згадку або не прибере сетер і не позначить `reserved` —
+  дешевше, ніж вибір, який гра «пам'ятає» і ніколи не згадує.
+* **`journal: true` (GAME-110)** — пам'ятний вибір: коли вибір у розмові ставить цей факт, ядро пише запис журналу подорожі
+  `Memory` (ref — назва факту, `sim.step`; перелік — `story.memorable`). Текст запису — `journal.<id>` (bool) або
+  `journal.<id>-<значення>` на кожне значення enum, у кожній мові (`LOCALE_MISSING`). `journal` у сімейства ядра, факту стану,
+  `reserved` чи типу, відмінного від bool/enum, — `FLAG_REGISTRY_INVALID`. Пам'ятні факти косметичні: їх читають лише вибори,
+  чиє піддерево ставить тільки пам'ятні факти — це доводить `src/content/memory-flags.test.ts`, і на цьому стоїть ключ повного
+  перебору `exploreView` (`src/content/moves.ts`), без якого п'ять незалежних виборів множили б простір станів у десятки разів.
 * **`aka`** — назви з реєстру радника, з якими зведено рядок (`met_elise` → `f.elise-met`,
   `apple_taken` → `f.road-apple`, `pitch_choice` → `f.pitch`, `mia_travel_plan` → `f.mia-plan`,
   `current_transport` → `s.transport`, `current_weather` → `s.weather`). `f.night` (У ЧОМУ ночують) і
   `f.pitch` (ДЕ стоїть намет) — різні виміри, тому два enum, а не один.
-* **Журнал і підписи Matthew** (GAME-140): коли з'являться, кожен запис матиме стабільний `id` і умову,
+* **Підписи Matthew** (GAME-140): коли з'являться, кожен запис матиме стабільний `id` і умову,
   що посилається лише на рядок цього реєстру (або квест із `quests.json`). Їхні умови мусять іти через
   ті самі `flagUses`/`memoryUses`/`condLeavesAll` у `checks.mjs` — тоді `FLAG_UNREGISTERED` покриє їх без
-  нового коду. Сьогодні таких записів немає, тож ця вимога — договір, а не перевірка (NOT RUN).
+  нового коду. Сьогодні таких записів немає, тож ця вимога — договір, а не перевірка (NOT RUN). Записи журналу
+  про пам'ятні вибори вже є (`journal: true`, GAME-110) — їх стереже правило вище.
 
 Межі: значення enum ядро не знімає — ставиться раз; що в одному проходженні не ставляться два різні
 значення того самого enum, не перевіряється. Умова `transport` з неіснуючим id — `DIALOGUE_REF_MISSING`,

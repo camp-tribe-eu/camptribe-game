@@ -6,10 +6,13 @@ import { storyItems } from '../core/defs';
 import { initialState, type GameState } from '../core/state';
 import { menuMoves } from '../view/story-offer';
 import { GAME_DEFS, SHOP } from './slice-defs';
-import { moves, progressKey } from './moves';
+import { exploreView, moves } from './moves';
+import { canonical } from '../core/hash';
 
 const MONEY = 10_000;              // достатньо для найдешевшого тир 2 (8 900): купівлі в переборі справді бувають
 const STORY = GAME_DEFS.story as NonNullable<typeof GAME_DEFS.story>;
+// GAME-110: пам'ятні факти в ключі перебору не множать стани (exploreView, чесність — memory-flags.test).
+const progressKey = (s: GameState): string => canonical(exploreView(s, STORY));
 const LYING = new Set(Object.values(STORY.locations).flatMap((l) => l.items));
 const here = (s: GameState): string | null => s.player?.locationId ?? null;
 

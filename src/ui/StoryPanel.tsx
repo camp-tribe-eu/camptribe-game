@@ -16,7 +16,7 @@ const ACT: Readonly<Record<Exclude<OfferAction['kind'], 'choose' | 'continue'>, 
 const JR: Readonly<Record<string, Key>> = {
   CreateCharacter: 'jr.CreateCharacter', Visit: 'jr.Visit', Pickup: 'jr.Pickup', BuyItem: 'jr.BuyItem', SellItem: 'jr.SellItem',
   Interact: 'jr.Interact', CompleteQuest: 'jr.CompleteQuest', DeclineQuest: 'jr.DeclineQuest', RoadEvent: 'jr.RoadEvent',
-  PackItem: 'jr.PackItem', UnpackItem: 'jr.UnpackItem', AutoPack: 'jr.AutoPack',
+  PackItem: 'jr.PackItem', UnpackItem: 'jr.UnpackItem', AutoPack: 'jr.AutoPack', Memory: 'jr.Memory',
 };
 export const JOURNAL_LABELS = JR;
 
