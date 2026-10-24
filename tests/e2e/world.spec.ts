@@ -299,6 +299,8 @@ test.describe('поворот екрана (телефон)', () => {
       screen.orientation.addEventListener('change', () => { (window as unknown as { __rot: number }).__rot++; });
     });
     await holdTouch(page, 'down', (p) => p.playerY > 220);
+    // Як у тесті вище (PR #31): після відпускання персонаж ще кадр-два котиться — `before` міряємо, коли позиція стоїть.
+    await expect.poll(async () => { const a = await probe(page); await page.waitForTimeout(120); const b = await probe(page); return Math.abs(a.playerY - b.playerY) + Math.abs(a.playerX - b.playerX); }, { timeout: 5_000 }).toBeLessThan(0.1);
     const before = await probe(page);
     const cdp = await page.context().newCDPSession(page);
     await cdp.send('Emulation.setDeviceMetricsOverride', { width: 844, height: 390, deviceScaleFactor: 3, mobile: true, screenOrientation: { type: 'landscapePrimary', angle: 90 } });

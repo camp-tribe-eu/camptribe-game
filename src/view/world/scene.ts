@@ -55,6 +55,8 @@ export interface WorldProbe {
   fps: number;
   /** Скільки вікон fps уже закрито (тест чекає на нове вікно, а не читає застаріле число). */
   fpsWindows: number;
+  /** GAME-38: мс від початку навігації до першого намальованого кадру Phaser; 0, доки кадру не було (ставить main.ts). */
+  firstFrameMs: number;
 }
 
 /** Вікно вимірювання fps, мс. */
