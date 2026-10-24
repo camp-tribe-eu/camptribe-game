@@ -27,16 +27,31 @@ export const CAMPFIRE_SHEET = campfire;
 
 const rgb = (r: number, g: number, b: number): readonly [number, number, number] => [r, g, b];
 
-/** Вигляд гравця: чоловічий шаблон родини George (OD-011). Шари знизу вгору; tint — колір одягу/волосся (скрипт проби compose_chars.py). */
-export const PLAYER_LOOK: readonly LayerSpec[] = [
-  { url: bodyMale }, { url: headMale }, { url: shoesMale, tint: rgb(70, 50, 40) }, { url: pantsMale, tint: rgb(60, 80, 120) },
-  { url: shirtMale, tint: rgb(70, 120, 80) }, { url: hairPlain, tint: rgb(90, 60, 35) },
-];
-/** Вигляд Елізи: жіночий шаблон (Victoria, OD-011), волосся зі шарами позаду й попереду тіла. */
+/**
+ * Канонічні шаблони родини (OD-011; compose_chars.py проби). Шари знизу вгору; tint — колір одягу/волосся. Victoria з'явиться в грі
+ * в розділі 1, тож жоден NPC не може мати її вигляд (looks.test). Matthew (підліток) не додано: шару torso/longsleeve/teen
+ * немає в assets/, а новий PNG потребує рядка реєстру ліцензій.
+ */
+export const FAMILY_LOOKS = {
+  george: [
+    { url: bodyMale }, { url: headMale }, { url: shoesMale, tint: rgb(70, 50, 40) }, { url: pantsMale, tint: rgb(60, 80, 120) },
+    { url: shirtMale, tint: rgb(70, 120, 80) }, { url: hairPlain, tint: rgb(90, 60, 35) },
+  ],
+  victoria: [
+    { url: ponytailBack, tint: rgb(150, 90, 40) }, { url: bodyFemale }, { url: headFemale }, { url: shoesThin, tint: rgb(120, 60, 60) },
+    { url: pantsThin, tint: rgb(70, 70, 90) }, { url: shirtFemale, tint: rgb(200, 110, 90) }, { url: ponytailFront, tint: rgb(150, 90, 40) },
+  ],
+} as const satisfies Readonly<Record<string, readonly LayerSpec[]>>;
+
+/** Вигляд гравця: чоловічий шаблон родини George. */
+export const PLAYER_LOOK: readonly LayerSpec[] = FAMILY_LOOKS.george;
+/** Вигляд Елізи: власний шаблон NPC, не родини (GAME-114) — ті самі шари LPC, що й у Victoria, але темне волосся, бірюзова сорочка, хакі. */
 export const ELISE_LOOK: readonly LayerSpec[] = [
-  { url: ponytailBack, tint: rgb(150, 90, 40) }, { url: bodyFemale }, { url: headFemale }, { url: shoesThin, tint: rgb(120, 60, 60) },
-  { url: pantsThin, tint: rgb(70, 70, 90) }, { url: shirtFemale, tint: rgb(200, 110, 90) }, { url: ponytailFront, tint: rgb(150, 90, 40) },
+  { url: ponytailBack, tint: rgb(60, 40, 30) }, { url: bodyFemale }, { url: headFemale }, { url: shoesThin, tint: rgb(80, 60, 50) },
+  { url: pantsThin, tint: rgb(110, 100, 70) }, { url: shirtFemale, tint: rgb(60, 130, 130) }, { url: ponytailFront, tint: rgb(60, 40, 30) },
 ];
+/** Усі NPC зі своїм виглядом: сторож looks.test порівнює їх із родиною. */
+export const NPC_LOOKS: Readonly<Record<string, readonly LayerSpec[]>> = { elise: ELISE_LOOK };
 
 export interface WorldArt {
   readonly tilesets: Readonly<Record<string, HTMLImageElement>>;
