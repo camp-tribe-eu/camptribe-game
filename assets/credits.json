@@ -434,6 +434,7 @@
       "name": "Hyptosis",
       "files": [
         "tiles/home_floor.png",
+        "tiles/home_furniture.png",
         "tiles/home_walls.png"
       ],
       "licences": [
@@ -442,6 +443,7 @@
       ],
       "sources": [
         "https://opengameart.org/content/lpc-floors",
+        "https://opengameart.org/content/lpc-revised-base-object-kit",
         "https://opengameart.org/content/lpc-walls"
       ]
     },
@@ -632,6 +634,7 @@
         "tiles/base_out_atlas.png",
         "tiles/home_floor.png",
         "tiles/home_furniture.png",
+        "tiles/home_office.png",
         "tiles/home_shelf.png",
         "tiles/home_walls.png",
         "tiles/home_windows_doors.png",
@@ -639,11 +642,13 @@
       ],
       "licences": [
         "CC-BY-SA 3.0",
-        "CC-BY-SA 4.0"
+        "CC-BY-SA 4.0",
+        "OGA-BY 3.0"
       ],
       "sources": [
         "https://opengameart.org/content/lpc-floors",
         "https://opengameart.org/content/lpc-revised-base-object-kit",
+        "https://opengameart.org/content/lpc-revised-the-office",
         "https://opengameart.org/content/lpc-shelves-rework",
         "https://opengameart.org/content/lpc-tile-atlas",
         "https://opengameart.org/content/lpc-walls",
@@ -1378,31 +1383,33 @@
       "sources": [
         "https://opengameart.org/content/lpc-floors"
       ],
-      "modified": "one 32x32 oak plank tile cropped from floors.png, recoloured onto the base palette (scripts/palette/quantize.py)"
+      "modified": "two 32x32 tiles (oak plank, cream diamond tile) cropped from floors.png onto a 64x32 sheet, recoloured onto the base palette (scripts/palette/quantize.py)"
     },
     {
       "file": "tiles/home_furniture.png",
       "authors": [
         "Eliza Wyatt (ElizaWy)",
         "Lanea Zimmerman (Sharm)",
-        "bluecarrot16"
+        "bluecarrot16",
+        "Hyptosis"
       ],
       "licence": "CC-BY-SA 3.0",
       "sources": [
         "https://opengameart.org/content/lpc-revised-base-object-kit"
       ],
-      "modified": "sofa 2x1 (front view), double bed 2x3 assembled from headboard + pillows + mattress, two dining chairs 1x1, planter 1x3, one painting and a tall cabinet 1x3 cropped from the kit sheets onto a 192x96 sheet, recoloured onto the base palette (scripts/palette/quantize.py)"
+      "modified": "sofa 2x1, two dining chairs, coffee table 2x1, double bed 2x3 assembled from headboard + pillows + mattress, wardrobe 1x3, set dining table 2x1, nightstand, wall shelf, countertop 3x2, bottles, cutting board, floor lamp 1x3, planter 1x3 and one painting 2x1 cropped from the kit sheets onto a 448x96 sheet, recoloured onto the base palette (scripts/palette/quantize.py)"
     },
     {
       "file": "tiles/home_office.png",
       "authors": [
-        "Eliza Wyatt (ElizaWy)"
+        "Eliza Wyatt (ElizaWy)",
+        "Lanea Zimmerman (Sharm)"
       ],
       "licence": "OGA-BY 3.0",
       "sources": [
         "https://opengameart.org/content/lpc-revised-the-office"
       ],
-      "modified": "beige card table 3x2, one laptop and one coffee maker cropped onto a 128x64 sheet, recoloured onto the base palette (scripts/palette/quantize.py)"
+      "modified": "ornate desk 3x2, one laptop and one coffee maker cropped onto a 128x64 sheet, recoloured onto the base palette (scripts/palette/quantize.py)"
     },
     {
       "file": "tiles/home_shelf.png",
@@ -1444,7 +1451,7 @@
       "sources": [
         "https://opengameart.org/content/lpc-walls"
       ],
-      "modified": "light-blue plain wall block 3x3 tiles cropped from walls.png, recoloured onto the base palette (scripts/palette/quantize.py)"
+      "modified": "light-blue plain wall block 3x3 tiles and a cream wall-top column 1x3 (end cap, middle, bottom cap) cropped from walls.png onto a 128x96 sheet, recoloured onto the base palette (scripts/palette/quantize.py)"
     },
     {
       "file": "tiles/home_windows_doors.png",
@@ -1463,7 +1470,7 @@
       "sources": [
         "https://opengameart.org/content/lpc-windows-doors"
       ],
-      "modified": "one curtained window (1x2) and one white door (1x2) cropped from windows-doors.png onto a 64x64 sheet, recoloured onto the base palette (scripts/palette/quantize.py)"
+      "modified": "one white 2-tile window (cropped from x=16 so it sits on the tile grid) and one white door (shifted 16 px down so it stands on the floor line) cropped from windows-doors.png onto a 96x96 sheet, recoloured onto the base palette (scripts/palette/quantize.py)"
     },
     {
       "file": "tiles/terrain_atlas.png",
