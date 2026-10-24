@@ -55,3 +55,4 @@ pack-lpc-walls	oga:lpc-walls
 pack-lpc-floors	oga:lpc-floors
 pack-lpc-shelves	oga:lpc-shelves-rework
 pack-lpc-base-object-kit	oga:lpc-revised-base-object-kit
+pack-lpc-windows-doors	oga:lpc-windows-doors
