@@ -26,7 +26,8 @@ async function open(page: Page, seed: number): Promise<string[]> {
   return errors;
 }
 
-test.use({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true });
+for (const vp of [{ width: 390, height: 844 }, { width: 844, height: 390 }]) test.describe(`${vp.width}×${vp.height}`, () => {
+test.use({ viewport: vp, hasTouch: true, isMobile: true });
 
 for (const [seed, hit] of [[4, 'no'], [2, 'yes']] as const) {
   test(`зерно ${seed}: прогноз видно окремо від погоди, зі словом «прогноз», і він = forecastOf ядра (збіг із фактом: ${hit})`, async ({ page }) => {
@@ -52,9 +53,12 @@ for (const [seed, hit] of [[4, 'no'], [2, 'yes']] as const) {
     await expect(fc).not.toContainText('Погода:');
     if (hit === 'no') await expect(fc).not.toContainText(LABEL[actual]);   // саме тут мутація «показати факт» червоніє
     expect(errors).toEqual([]);
-    await page.screenshot({ path: `test-results/game-169-seed${seed}.png` });
+    // Якір незалежно від ядра (рецензія Fable): для зерна 4 день 0 — прогноз «хмарно» буквально.
+    if (seed === 4) await expect(fc).toContainText('Прогноз на сьогодні: хмарно');
+    await page.screenshot({ path: `test-results/game-169-seed${seed}-${vp.width}.png` });
   });
 }
+});
 
 // Контраст рядка прогнозу ≥ 4.5:1 — тим самим способом, що a11y.spec.ts (найгірше тло: білий під оверлеєм = #333).
 // Не кнопка — цілі 44 px не вимагаємо. «Пройдено» рахується лише коли axe справді зміряв (passes), а не «не вдалося».
