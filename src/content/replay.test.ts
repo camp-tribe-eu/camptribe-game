@@ -40,7 +40,7 @@ describe('реплеї журналу (GAME-34)', () => {
       if (i.kind === 'command') { const r = dispatch(s.game, i.command, GAME_DEFS); if (!r.ok) rejected.push(`${i.command.type}:${r.code}`); }
       s = step(s, i, CTX);
     }
-    expect(rejected).toEqual(['Pickup:ITEM_ALREADY_HELD']);     // лише навмисна відмова (GAME-81: дрова в таборі тепер підбираються — їх не купили наперед)
+    expect(rejected).toEqual(['Pickup:ITEM_ALREADY_HELD', 'PackItem:PACK_FULL']);     // лише навмисна відмова (GAME-81: дрова в таборі тепер підбираються — їх не купили наперед)
     expect(s.game.campaignEnded).toBe(true);
     expect(s.game.grants).toEqual(['rw.campfire-warmth', 'rw.q-elise-bike-area', 'rw.st-005']);
     expect(s.finds).toBeGreaterThan(0);                                                      // RNG справді працював

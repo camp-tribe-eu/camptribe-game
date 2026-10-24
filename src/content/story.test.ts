@@ -15,7 +15,8 @@ import { GAME_DEFS } from './slice-defs';
 import { CONTENT, STORY, compileStory } from './story';
 import { PROGRESS_IGNORED, isLuckMove, moves as allMoves, progressView, type Move } from './moves';
 import { RANK_XP, SKILL_IDS, zeroSkills } from '../core/skills';
-import { checkDefs, type CoreDefs } from '../core/defs';
+import { checkDefs, type CondDef, type CoreDefs, type PackingDefs } from '../core/defs';
+import { packFlag, packItemsFor } from '../core/packing';
 import { route } from '../core/story';
 
 // Повний перебір — свідомо важкий (велосипедна гілка з подією й пам'яттю ≈ 5 с локально, з контролем навичок GAME-72 ≈ 7.5 с, на CI довше): власна межа
@@ -249,4 +250,180 @@ describe('сторож витоку навичок уміє почервоніт
   it('справжнє ядро — витоків немає', () => {
     expect(leaksOf(s, m, r, dispatch)).toEqual([]);
   });
+});
+
+
+// ───────────────────────────── GAME-109 · пакування: будь-який набір речей — розділ завершуваний ─────────────────────────────
+// Пакування не серед moves() (інакше перебір множився б на 2^12), тож його доводить окремий перебір:
+// для КОЖНОЇ комбінації й КОЖНОЇ підмножини речей — набір складається командами пакування (вміщається ⇔ усі PackItem прийняті),
+// і з нього розділ доходить до кінця БЕЗ повернення до пакування (хід «пакувати» у пошуку немає). Доказ — свідок: шлях ходів, який
+// відтворюється з кожного набору команда за командою. Свідка шукаємо перебором раз на клас наборів, що однаково читаються діалогами
+// (прапорці f.pack-*, які читає хоч одна умова), — а відтворення з КОЖНОГО набору перевіряє, що клас справді був однаковим.
+
+describe('пакування (GAME-109): усі підмножини речей → розділ завершуваний без повернення до пакування', () => {
+  const PK = GAME_DEFS.packing as PackingDefs;
+  const BIG = 60_000;
+
+  /** Стан: персонаж створений, пролог дійшов до відкритого пакування (крамниця, ST-003 завершено, намет і спальник в руках). */
+  function atPacking(k: { profile: string | null; transport: string | null; animal: string | null }, defs: CoreDefs): GameState {
+    let s = initialState(START_MONEY);
+    const run = (m: Move): void => {
+      const r = dispatch(s, { ...m, commandId: nextCommandId(s) } as Command, defs);
+      if (!r.ok) throw new Error(`${m.type} → ${r.code}`);
+      s = r.state;
+    };
+    run({ type: 'CreateCharacter', profileId: k.profile ?? '', transportId: k.transport ?? '', ...(k.animal === NO_ANIMAL ? {} : { animalId: k.animal ?? '' }) } as Move);
+    run({ type: 'CompleteQuest', questId: 'ST-001' });
+    run({ type: 'CompleteQuest', questId: 'ST-002' });
+    run({ type: 'Visit', locationId: 'loc.shop' });
+    run({ type: 'Pickup', itemId: 'item.tent' });
+    run({ type: 'Pickup', itemId: 'item.sleeping-bag' });
+    run({ type: 'CompleteQuest', questId: 'ST-003' });
+    return s;
+  }
+
+  const send = (s: GameState, m: Move, defs: CoreDefs) => dispatch(s, { ...m, commandId: nextCommandId(s) } as Command, defs);
+
+  /** Скласти набір `want` командами пакування: спершу дістати зайве, далі покласти потрібне. `full` — хоч одна річ не вмістилась. */
+  function packSet(open: GameState, want: ReadonlySet<string>, defs: CoreDefs): { state: GameState; full: boolean } {
+    let s = open;
+    const p = s.player as NonNullable<GameState['player']>;
+    const items = packItemsFor(PK, p);
+    for (const i of items) if (!want.has(i.itemId) && s.flags.includes(packFlag(i.itemId))) {
+      const r = send(s, { type: 'UnpackItem', itemId: i.itemId }, defs);
+      if (!r.ok) throw new Error(`Unpack → ${r.code}`);
+      s = r.state;
+    }
+    let full = false;
+    for (const i of items) if (want.has(i.itemId) && !s.flags.includes(packFlag(i.itemId))) {
+      const r = send(s, { type: 'PackItem', itemId: i.itemId }, defs);
+      if (r.ok) s = r.state; else if (r.code === 'PACK_FULL') full = true; else throw new Error(`Pack → ${r.code}`);
+    }
+    return { state: s, full };
+  }
+
+  /** Свідок: найкоротший (за ходами, без везіння) шлях до кінця розділу з `first`; null — кінця немає. */
+  function witness(first: GameState, defs: CoreDefs): Move[] | null {
+    const k = (s: GameState): string => stateHash(progressView(s));
+    const nodes: { s: GameState; parent: number; move: Move | null }[] = [{ s: first, parent: -1, move: null }];
+    const seen = new Set<string>([k(first)]);
+    for (let i = 0; i < nodes.length; i++) {
+      const cur = (nodes[i] as (typeof nodes)[number]).s;
+      if (cur.campaignEnded) {
+        const path: Move[] = [];
+        for (let n = i; n > 0; n = (nodes[n] as (typeof nodes)[number]).parent) path.unshift((nodes[n] as (typeof nodes)[number]).move as Move);
+        return path;
+      }
+      for (const m of allMoves(cur, defs)) {
+        if (isLuckMove(m)) continue;
+        const r = send(cur, m, defs);
+        if (!r.ok) continue;
+        const nk = k(r.state);
+        if (seen.has(nk)) continue;
+        seen.add(nk);
+        nodes.push({ s: r.state, parent: i, move: m });
+        if (nodes.length > BIG) throw new Error('простір станів вибухнув — свідок нічого не доводить');
+      }
+    }
+    return null;
+  }
+
+  function replays(first: GameState, path: readonly Move[], defs: CoreDefs): boolean {
+    let s = first;
+    for (const m of path) {
+      const r = send(s, m, defs);
+      if (!r.ok) return false;
+      s = r.state;
+    }
+    return s.campaignEnded;
+  }
+
+  /** Прапорці f.pack-*, які читає хоч одна умова діалогів (flag/notFlag, у т. ч. у all/any). */
+  const readPackFlags = (st: typeof STORY): Set<string> => {
+    const out = new Set<string>();
+    const walk = (c: CondDef): void => {
+      if ('flag' in c) out.add(c.flag); else if ('notFlag' in c) out.add(c.notFlag);
+      else if ('all' in c) c.all.forEach(walk); else if ('any' in c) c.any.forEach(walk);
+    };
+    for (const d of Object.values(st.dialogues)) for (const n of Object.values(d.nodes)) for (const ch of n.choices ?? []) if (ch.when) walk(ch.when);
+    return new Set([...out].filter((f) => f.startsWith('f.pack-')));
+  };
+
+  /** Перебір усіх наборів для однієї комбінації; повертає підсумок і набори, з яких розділ не завершити. */
+  function sweep(k: { profile: string | null; transport: string | null; animal: string | null }, defs: CoreDefs) {
+    const open = atPacking(k, defs);
+    const p = open.player as NonNullable<GameState['player']>;
+    const items = packItemsFor(PK, p);
+    const cap = PK.capacity[p.transportId] as number;
+    const read = readPackFlags(defs.story as typeof STORY);
+    const witnesses = new Map<string, Move[] | null>();
+    const out = { masks: 0, fit: 0, rejected: 0, completable: 0, stuck: [] as string[], oracleMismatch: 0, classes: 0 };
+    for (let mask = 0; mask < 1 << items.length; mask++) {
+      const want = new Set(items.filter((_, i) => (mask >> i) & 1).map((i) => i.itemId));
+      const units = items.reduce((a, i) => a + (want.has(i.itemId) ? i.units : 0), 0);
+      const { state, full } = packSet(open, want, defs);
+      out.masks++;
+      // Оракул вміщення — проста сума з контенту, а не usedUnits ядра: вміщається ⇔ жодна річ не відхилена PACK_FULL.
+      if (full !== units > cap) out.oracleMismatch++;
+      if (full) { out.rejected++; continue; }
+      out.fit++;
+      const cls = items.filter((i) => read.has(packFlag(i.itemId))).map((i) => (want.has(i.itemId) ? 1 : 0)).join('');
+      if (!witnesses.has(cls)) { witnesses.set(cls, witness(state, defs)); out.classes++; }
+      const w = witnesses.get(cls) ?? null;
+      if (w !== null && replays(state, w, defs)) out.completable++;
+      else out.stuck.push([...want].join(','));
+    }
+    return out;
+  }
+
+  const combos = enumerateCombos(CONTENT);
+  const tally = { masks: 0, fit: 0, rejected: 0, completable: 0, classes: 0 };
+
+  for (const k of combos) {
+    it(`${k.profile} · ${k.transport} · ${k.animal}: кожна підмножина — або не вміщається, або завершуваний розділ`, () => {
+      const r = sweep(k, DEFS);
+      expect(r.oracleMismatch, 'вміщається ⇔ сума одиниць ≤ місця').toBe(0);
+      expect(r.masks).toBeGreaterThanOrEqual(2 ** 9);   // без кішки — 9 речей, з кішкою — 12
+      expect(r.fit, 'пакування приймає й відхиляє: обидва боки').toBeGreaterThan(0);
+      expect(r.rejected).toBeGreaterThan(0);
+      expect(r.fit + r.rejected).toBe(r.masks);
+      expect(r.stuck.slice(0, 3), `набір, з якого розділ не завершити (${r.stuck.length} із ${r.fit})`).toEqual([]);
+      expect(r.completable).toBe(r.fit);
+      for (const key of ['masks', 'fit', 'rejected', 'completable', 'classes'] as const) tally[key] += r[key];
+    }, EXHAUSTIVE_MS);
+  }
+
+  for (const k of combos) {
+    it(`${k.profile} · ${k.transport} · ${k.animal}: з порожнього багажу тупиків немає в жодному досяжному стані (повний перебір)`, () => {
+      const first = packSet(atPacking(k, DEFS), new Set(), DEFS).state;
+      expect(first.flags.some((f) => f.startsWith('f.pack-'))).toBe(false);
+      const { seen, edges } = explore(first);
+      const back = new Map<string, string[]>();
+      for (const [from, tos] of edges) for (const to of tos) back.set(to, [...(back.get(to) ?? []), from]);
+      const canEnd = new Set([...seen].filter(([, s]) => s.campaignEnded).map(([h]) => h));
+      const stack = [...canEnd];
+      for (let h = stack.pop(); h !== undefined; h = stack.pop()) for (const p of back.get(h) ?? []) if (!canEnd.has(p)) { canEnd.add(p); stack.push(p); }
+      expect(canEnd.size).toBeGreaterThan(0);
+      expect([...seen.keys()].filter((h) => !canEnd.has(h)).length, 'тупик').toBe(0);
+    }, EXHAUSTIVE_MS);
+  }
+
+  it('підсумок: скільки наборів перебрано (для звіту) і що класів читання прапорців більше одного', () => {
+    console.log(`PACKING SWEEP: комбінацій ${combos.length}, наборів ${tally.masks}, вміщається ${tally.fit}, відхилено за місцем ${tally.rejected}, завершуваних ${tally.completable}, класів свідків ${tally.classes}`);
+    expect(tally.completable).toBe(tally.fit);
+    expect(tally.classes).toBeGreaterThan(combos.length);   // і «намет є», і «намету нема» — свідки різні
+  });
+
+  it('НЕГАТИВНИЙ КОНТРОЛЬ: без запасних ночівель (авто й альтанка) набір без намету червоніє', () => {
+    const c = structuredClone(CONTENT);
+    const dlg = c.dialogues.find((d) => d.id === 'dlg.elise-greeting');
+    const spot = dlg?.nodes.find((n) => n.id === 'spot');
+    if (spot?.choices) spot.choices = spot.choices.filter((ch) => !JSON.stringify(ch).includes('f.night-car') && !JSON.stringify(ch).includes('f.night-gazebo'));
+    const mutated: CoreDefs = { ...DEFS, story: compileStory(c) };
+    for (const k of combos) {
+      const r = sweep(k, mutated);
+      expect(r.stuck.length, `${k.transport}: без запасної ночівлі наборів без намету мало б не вистачати`).toBeGreaterThan(0);
+      expect(r.stuck.every((s) => !s.split(',').includes('item.tent')), 'застрягають лише набори БЕЗ намету').toBe(true);
+    }
+  }, EXHAUSTIVE_MS);
 });

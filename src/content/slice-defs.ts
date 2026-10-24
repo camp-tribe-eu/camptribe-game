@@ -2,8 +2,9 @@
 // Дрова й ліхтар — предмети сюжету без картки спорядження: лежать у локаціях, ціни не мають (GAME-81).
 // Головне вже зараз: ціни й нагороди — у каталозі, не в командах (CR-041).
 // Предмети сюжету (дрова, ліхтар, стартові намет і спальник — лежать у локаціях) не викуповуються: DEFS_STORY_ITEM_SELLABLE.
-import { storyItems, type CoreDefs, type GearDef, type ItemDef } from '../core/defs';
+import { storyItems, type CoreDefs, type GearDef, type ItemDef, type PackingDefs, type WhenDef } from '../core/defs';
 import items from '../../content/items.json';
+import packing from '../../content/packing.json';
 import { STORY } from './story';
 import { LIFE } from './life';
 
@@ -44,8 +45,25 @@ export const SLICE_DEFS: CoreDefs = {
   },
 };
 
+/** content/packing.json (GAME-109) → форма ядра: місце транспорт → одиниці, речі в порядку контенту. */
+interface RawPacking {
+  openAfter?: string; at: string[]; capacity: { transport: string; units: number }[];
+  items: { item: string; group: 'needed' | 'useful' | 'leave'; units: number; when?: WhenDef }[];
+  notes?: { missing: string; transports?: string[]; textKey: string }[];
+}
+export function compilePacking(raw: RawPacking): PackingDefs {
+  return {
+    ...(raw.openAfter !== undefined ? { openAfter: raw.openAfter } : {}),
+    at: raw.at,
+    capacity: Object.fromEntries(raw.capacity.map((c) => [c.transport, c.units])),
+    items: raw.items.map((i) => ({ itemId: i.item, group: i.group, units: i.units, ...(i.when ? { when: i.when } : {}) })),
+    notes: (raw.notes ?? []).map((n) => ({ missing: n.missing, ...(n.transports ? { transports: n.transports } : {}), textKey: n.textKey })),
+  };
+}
+export const PACKING: PackingDefs = compilePacking(packing as RawPacking);
+
 /**
  * Те, з чим працює гра: зріз + сюжет + календар життя (GAME-71). Перевіряється й заморожується в містку (createBridge).
  * Календар читає лише симуляція (зарплата) і команди BookLeave/CancelLeave — у ходах перебору (moves.ts) їх немає.
  */
-export const GAME_DEFS: CoreDefs = { ...SLICE_DEFS, story: STORY, life: LIFE };
+export const GAME_DEFS: CoreDefs = { ...SLICE_DEFS, story: STORY, life: LIFE, packing: PACKING };

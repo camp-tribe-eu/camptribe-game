@@ -71,6 +71,15 @@ export const SCHEMAS = {
     start: req(str), payday: req({ t: 'int', min: 1, max: 28 }), longTripDays: req(int1), maxLeaveDays: req(int1), bookAheadDays: req(int1),
     publicHolidays: req(arr(str)), schoolHolidays: req(arr(obj({ from: req(str), to: req(str) }))),
   }),
+  // Пакування (GAME-109): одна картка. openAfter — квест, після якого відкривається екран; at — де пакують;
+  // capacity — місце (одиниці) на транспорт; items — 12 речей у трьох групах, when — лише для частини гравців (переноска — з кішкою);
+  // notes — підпис на екрані, коли речі бракує. Посилання, перелив місця й дублі — перевірка packing власними кодами.
+  packing: obj({
+    openAfter: str, at: req(ids),
+    capacity: req({ t: 'array', of: obj({ transport: req(str), units: req(int1) }), min: 1 }),
+    items: req({ t: 'array', of: obj({ item: req(str), group: req(en('needed', 'useful', 'leave')), units: req(int1), when }), min: 1 }),
+    notes: arr(obj({ missing: req(str), transports: ids, textKey: req(str) })),
+  }),
   transports: obj({ id: req(str), nameKey: req(str) }),
   animals: obj({ id: req(str), nameKey: req(str), transports: ids }),
   // Спорядження (GAME-73, DC-023): вид, тир і характеристики. Поля НЕ required тут: їх стереже перевірка gear
@@ -153,12 +162,13 @@ function walk(s, v, where, out) {
 export function checkSchema(content) {
   const out = [];
   if (!typeOk({ t: 'object' }, content)) return [{ code: 'SCHEMA_INVALID', where: 'content', msg: 'не об\u2019єкт' }];
-  const known = ['meta', 'calendar', 'locales', 'dialogues', ...COLLECTIONS];
+  const known = ['meta', 'calendar', 'packing', 'locales', 'dialogues', ...COLLECTIONS];
   for (const k of Object.keys(content)) {
     if (!known.includes(k)) out.push({ code: 'SCHEMA_UNKNOWN_FIELD', where: k, msg: 'невідомий розділ контенту' });
   }
   walk(SCHEMAS.meta, content.meta, 'meta', out);
   if (content.calendar !== undefined) walk(SCHEMAS.calendar, content.calendar, 'calendar', out);
+  if (content.packing !== undefined) walk(SCHEMAS.packing, content.packing, 'packing', out);
   for (const c of COLLECTIONS) {
     if (content[c] === undefined) continue;
     if (!Array.isArray(content[c])) { out.push({ code: 'SCHEMA_INVALID', where: c, msg: 'очікується масив' }); continue; }

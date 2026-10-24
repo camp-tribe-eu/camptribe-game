@@ -46,6 +46,11 @@ export const CODES = {
   CALENDAR_BAD_DATE:    { check: 'calendar', spec: 'GAME-71: start — справжня дата YYYY-MM-DD; свята й межі канікул — справжні MM-DD, що є щороку (не 02-30 і не 02-29)' },
   CALENDAR_RANGE_OVERLAP: { check: 'calendar', spec: 'GAME-71: канікули не перетинаються, свято не записане двічі — інакше межі канікул неоднозначні' },
   JOB_BILLS_EXCEED_SALARY: { check: 'calendar', spec: 'GAME-71, SIM-LIFE-008: рахунки профілю (billsCents) не більші за зарплату (salaryCents) — інакше робота веде в мінус, а гравця карають за сам час' },
+  // GAME-109: пакування — кожна річ раз, місце на кожен транспорт, «потрібне» завжди вміщається, підписи лише про пакувальні речі.
+  PACK_ITEM_DUPLICATE:  { check: 'packing', spec: 'GAME-109: річ у packing.items — раз, інакше її місце й група неоднозначні' },
+  PACK_CAPACITY_MISSING: { check: 'packing', spec: 'GAME-109: для кожного транспорту рівно один запис місця (capacity) — без нього гравець не спакує нічого або спакує безмежно' },
+  PACK_NEEDED_OVERFLOW: { check: 'packing', spec: 'GAME-109: усе «потрібне» (для будь-якої тварини) вміщається в кожен транспорт — інакше «укласти автоматично» не може включити його' },
+  PACK_NOTE_UNPACKABLE: { check: 'packing', spec: 'GAME-109: підпис говорить про річ, яку справді можна спакувати (є в packing.items)' },
   FACT_SOURCE_MISSING:  { check: 'fact-source', spec: '§2 зовнішній факт має джерело' },
   FACT_DATE_INVALID:    { check: 'fact-source', spec: '§2 зовнішній факт має дату перевірки' },
   FACT_KIND_INVALID:    { check: 'fact-source', spec: '§2 зовнішній факт має тип' },

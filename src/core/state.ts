@@ -123,6 +123,11 @@ export const REJECT_CODES = [
   'LEAVE_DATE',
   'LEAVE_NOT_FOUND',
   'LEAVE_STARTED',
+  // GAME-109 · пакування
+  'PACK_CLOSED',
+  'PACK_FULL',
+  'PACK_ALREADY',
+  'PACK_NOT_PACKED',
 ] as const;
 
 export type RejectCode = (typeof REJECT_CODES)[number];

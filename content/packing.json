@@ -1,0 +1,26 @@
+{
+  "openAfter": "ST-003",
+  "at": ["loc.home", "loc.shop"],
+  "capacity": [
+    { "transport": "transport.car", "units": 14 },
+    { "transport": "transport.bike", "units": 10 }
+  ],
+  "items": [
+    { "item": "item.tent", "group": "needed", "units": 4 },
+    { "item": "item.sleeping-bag", "group": "needed", "units": 2 },
+    { "item": "item.water", "group": "needed", "units": 2 },
+    { "item": "item.simple-dinner", "group": "needed", "units": 1 },
+    { "item": "item.mia-carrier", "group": "needed", "units": 2, "when": { "animals": ["animal.cat"] } },
+    { "item": "item.mia-bowl-food", "group": "needed", "units": 1, "when": { "animals": ["animal.cat"] } },
+    { "item": "item.lantern", "group": "useful", "units": 1 },
+    { "item": "item.snacks", "group": "useful", "units": 1 },
+    { "item": "item.mia-blanket", "group": "useful", "units": 1, "when": { "animals": ["animal.cat"] } },
+    { "item": "item.lantern-2", "group": "leave", "units": 1 },
+    { "item": "item.lantern-3", "group": "leave", "units": 1 },
+    { "item": "item.big-cushion", "group": "leave", "units": 2 }
+  ],
+  "notes": [
+    { "missing": "item.tent", "transports": ["transport.car"], "textKey": "pack.note.tent-car" },
+    { "missing": "item.tent", "transports": ["transport.bike"], "textKey": "pack.note.tent-bike" }
+  ]
+}

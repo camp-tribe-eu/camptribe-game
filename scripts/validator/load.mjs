@@ -7,7 +7,7 @@ import { join } from 'node:path';
 import { COLLECTIONS } from './schema.mjs';
 
 // calendar.json (GAME-71) — один об'єкт, як meta.json, а не колекція.
-const KNOWN = new Set(['meta.json', 'calendar.json', ...COLLECTIONS.map((c) => `${c}.json`)]);
+const KNOWN = new Set(['meta.json', 'calendar.json', 'packing.json', ...COLLECTIONS.map((c) => `${c}.json`)]);
 const I = (code, where, msg) => ({ code, where, msg });
 
 export function loadContent(dir, { allowMissing = false } = {}) {

@@ -18,10 +18,15 @@
     { "id": "bike-late", "speaker": "npc", "textKey": "dlg.elise-greeting.bike", "next": "spot" },
     { "id": "intro", "speaker": "npc", "textKey": "dlg.elise-greeting.intro", "next": "spot" },
     { "id": "shelter", "speaker": "npc", "textKey": "dlg.elise-greeting.shelter", "next": "bye" },
+    { "id": "night-car", "speaker": "npc", "textKey": "dlg.elise-greeting.night-car", "next": "bye" },
+    { "id": "gazebo", "speaker": "npc", "textKey": "dlg.elise-greeting.gazebo", "next": "bye" },
     {
       "id": "spot", "speaker": "npc", "textKey": "dlg.elise-greeting.spot",
       "choices": [
-        { "textKey": "dlg.elise-greeting.spot.c1", "next": "bye" }
+        { "textKey": "dlg.elise-greeting.spot.c1", "next": "bye", "when": { "flag": "f.pack-tent" }, "effects": [{ "setFlag": "f.night-tent" }, { "completeObjective": { "quest": "ST-005", "objective": "pitch-tent" } }] },
+        { "textKey": "dlg.elise-greeting.spot.c2", "next": "night-car", "when": { "all": [{ "notFlag": "f.pack-tent" }, { "transport": "transport.car" }] }, "effects": [{ "setFlag": "f.night-car" }, { "completeObjective": { "quest": "ST-005", "objective": "pitch-tent" } }] },
+        { "textKey": "dlg.elise-greeting.spot.c3", "next": "gazebo", "when": { "all": [{ "notFlag": "f.pack-tent" }, { "transport": "transport.bike" }] }, "effects": [{ "setFlag": "f.night-gazebo" }, { "completeObjective": { "quest": "ST-005", "objective": "pitch-tent" } }] },
+        { "textKey": "dlg.elise-greeting.spot.c4", "next": "bye" }
       ]
     },
     { "id": "bye", "speaker": "npc", "textKey": "dlg.elise-greeting.bye", "end": true }
