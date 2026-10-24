@@ -22,8 +22,10 @@ export default defineConfig({
   // проєкт ПІСЛЯ всіх інших (dependencies), а всередині — послідовно (game-97.spec: mode serial). Лише ці тести, без решти:
   // `npx playwright test game-97 --no-deps` (інакше залежність проганяє весь проєкт e2e перед ними).
   projects: [
-    { name: 'e2e', testIgnore: /game-97\.spec\.ts/ },
+    { name: 'e2e', testIgnore: /game-(97|38)\.spec\.ts/ },
     { name: 'perf', testMatch: /game-97\.spec\.ts/, dependencies: ['e2e'] },
+    // GAME-38: перший кадр — теж абсолютний вимір; окремий проєкт ПІСЛЯ perf, щоб два файли perf не йшли паралельно різними воркерами.
+    { name: 'perf-boot', testMatch: /game-38\.spec\.ts/, dependencies: ['perf'] },
   ],
   webServer: {
     command: `npx vite build --mode e2e && npx vite preview --port ${port} --strictPort --host 127.0.0.1`,
