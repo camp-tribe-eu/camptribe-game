@@ -23,7 +23,7 @@ const STEMS = [
   'політик', 'політичн', 'виборч', 'президент', 'парламент', 'депутат', 'мітинг',
   'politic', 'election', 'president', 'parliament', 'senator', 'protest',
   // релігія
-  'церкв', 'церков', 'молит', 'релігі', 'мечет', 'синагог', 'священ', 'біблі',
+  'церкв', 'церков', 'молит', 'релігі', 'мечет', 'синагог', 'священ', 'біблій',
   'church', 'pray', 'religio', 'mosque', 'synagogue', 'bible', 'priest', 'sermon',
 ];
 const WORDS = ['бог', 'бога', 'богу', 'богом', 'уряд', 'уряду', 'god', 'gods', 'vote', 'votes', 'voting', 'government'];
@@ -65,7 +65,7 @@ describe('без політики й релігії: словник над ря�
     expect(forbiddenHits({ ...contentUk, [key]: text }, 'probe')).toEqual([`probe «${key}»: «${word}» — політика чи релігія (правило власника)`]);
   });
 
-  it.each([['Пам’ятні вибори'], ['Birthday party at the lake'], ['Saint-Hubert'], ['убогий'], ['Godwit на озері'], ['порядок'], ['політ на повітряній кулі']])(
+  it.each([['Пам’ятні вибори'], ['Birthday party at the lake'], ['Saint-Hubert'], ['убогий'], ['Godwit на озері'], ['порядок'], ['політ на повітряній кулі'], ['Бібліотека в Намюрі']])(
     'позитивний контроль (без хибного червоного): «%s»', (text) => {
       expect(forbiddenHits({ k: text }, 'probe')).toEqual([]);
     });
