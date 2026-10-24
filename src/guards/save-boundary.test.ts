@@ -4,6 +4,9 @@
 //   * модуль збереження: src/platform/save-*.ts (не тести);
 //   * settings.ts — названий виняток (див. ALLOW_SETTINGS).
 // Друга половина: поза модулем ніхто не імпортує реалізації (save-store, save-memory) напряму — лише save-backend.
+// Межі сторожа: (1) імена, складені під час виконання (globalThis['local' + 'Storage']), AST не бачить — це ловить лише
+// рецензія; (2) vitest кешує результат import.meta.glob у node_modules/.vitest-cache, тож локально НОВИЙ файл-порушник
+// видно лише після `npm run check` (він чистить кеш) — CI завжди стартує з чистого кешу.
 import ts from 'typescript';
 import { describe, expect, it } from 'vitest';
 

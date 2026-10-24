@@ -1,7 +1,7 @@
 // GAME-103 · розмір сейву. Перше джерело YouTube Playables: збережена гра МУСИТЬ бути < 3 МіБ, БАЖАНО < 500 КіБ.
 // Найбільший реалістичний сейв: справжній Пролог до кінця контенту (реплей-сценарій), потім журнал і лічильник
-// команд добиті до меж (JOURNAL_LIMIT, PROCESSED_LIMIT), потім 10 ігрових років відпусток. Міряємо рядок, який
-// справді лягає в сховище (serialize), у байтах UTF-8, і той самий рядок у вигляді коду відновлення.
+// команд добиті до меж (JOURNAL_LIMIT, PROCESSED_LIMIT), потім відпустки на 10 років календаря (скільки з них прийме ліміт відпусток гри). Міряємо рядок, який
+// справді лягає в сховище (serialize), у байтах UTF-8, і той самий сейв у вигляді коду відновлення (encodeRestoreCode).
 import { describe, expect, it } from 'vitest';
 import { PROCESSED_LIMIT, type Command } from '../core/commands';
 import { JOURNAL_LIMIT, newSim, step, type SimState } from '../core/sim';
@@ -10,6 +10,7 @@ import { GAME_DEFS } from '../content/slice-defs';
 import { PROLOGUE_BIKE, SEED, START_MONEY } from '../content/replay.scenario';
 import { STORY_REV } from '../content/story';
 import { DAY_MINUTES, dayOf } from '../core/weather';
+import { encodeRestoreCode } from './save-code';
 import { createMemoryBackend } from './save-memory';
 
 /** Жорстка межа YouTube: сейв ≥ 3 МіБ платформа не прийме. */
@@ -20,7 +21,7 @@ const YT_SOFT_BYTES = 500 * 1024;
 const CTX = { defs: GAME_DEFS };
 const bytes = (s: string): number => new TextEncoder().encode(s).length;
 
-/** Найбільший реалістичний стан: Пролог до кінця + журнал і processed на межах + 10 років відпусток. */
+/** Найбільший реалістичний стан: Пролог до кінця + журнал і processed на межах + відпустки, скільки прийме гра. */
 function largestSim(): SimState {
   let s = newSim(SEED, START_MONEY);
   for (const i of PROLOGUE_BIKE) s = step(s, i, CTX);
@@ -78,6 +79,14 @@ describe('розмір сейву проти лімітів YouTube (GAME-103)',
     const stuffed = { ...sim, journal: Array.from({ length: JOURNAL_LIMIT }, () => worst) };
     const n = bytes(serialize(stuffed, STORY_REV));
     console.info(`GAME-103 worst-case at caps: ${n} bytes (${(n / 1024).toFixed(1)} KiB)`);
+    expect(n).toBeLessThan(YT_LIMIT_BYTES);
+    expect(n).toBeLessThan(YT_SOFT_BYTES);
+  });
+
+  it('код відновлення того самого сейву теж < 3 МіБ і < 500 КіБ', async () => {
+    const n = bytes(await encodeRestoreCode(json));
+    console.info(`GAME-103 restore code: ${n} bytes (${(n / 1024).toFixed(1)} KiB)`);
+    expect(n).toBeGreaterThan(0);
     expect(n).toBeLessThan(YT_LIMIT_BYTES);
     expect(n).toBeLessThan(YT_SOFT_BYTES);
   });
