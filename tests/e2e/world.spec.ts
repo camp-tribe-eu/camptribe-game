@@ -140,7 +140,7 @@ test.describe('клавіатура (десктоп)', () => {
     await page.evaluate(() => {
       const w = window as unknown as { __spaceDowns: number[] };
       w.__spaceDowns = [];
-      window.addEventListener('keydown', (e) => { if (e.code === 'Space') w.__spaceDowns.push(e.timeStamp); }, true);
+      window.addEventListener('keydown', (e) => { if (e.code === 'Space') w.__spaceDowns.push(performance.now()); }, true);
     });
     const lastGap = (): Promise<number> => page.evaluate(() => {
       const d = (window as unknown as { __spaceDowns: number[] }).__spaceDowns;
@@ -149,9 +149,18 @@ test.describe('клавіатура (десктоп)', () => {
     let judged = false;
     for (let attempt = 0; attempt < 5 && !judged; attempt++) {
       const before = (await probe(page)).commandsSent;
-      await page.keyboard.press('Space');
-      await page.waitForTimeout(120);
-      await page.keyboard.press('Space');
+      // Обидва натискання подає таймер у сторінці (keyCode 32, як справжній Space): на повільному CI кожен
+      // page.keyboard.press — окремий обмін із браузером, і пара натискань через нього не вкладалась у 300 мс.
+      await page.evaluate(() => new Promise<void>((done) => {
+        const key = (type: string): void => {
+          const e = new KeyboardEvent(type, { code: 'Space', key: ' ', bubbles: true, cancelable: true });
+          Object.defineProperty(e, 'keyCode', { get: () => 32 });
+          Object.defineProperty(e, 'which', { get: () => 32 });
+          window.dispatchEvent(e);
+        };
+        key('keydown'); setTimeout(() => key('keyup'), 40);
+        setTimeout(() => key('keydown'), 120); setTimeout(() => { key('keyup'); done(); }, 160);
+      }));
       const gap = await lastGap();
       await page.waitForTimeout(100);
       const sent = (await probe(page)).commandsSent - before;
