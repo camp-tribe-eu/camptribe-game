@@ -28,3 +28,11 @@ lic-lpc-tile-atlas	page:https://opengameart.org/content/lpc-tile-atlas
 lic-ponytail-and-plain-hairstyles	page:https://opengameart.org/content/ponytail-and-plain-hairstyles
 lic-tent-3	page:https://opengameart.org/content/tent-3
 lic-lpc-clothing-updates	page:https://opengameart.org/content/lpc-clothing-updates
+
+# Рішення власника 24.10: YouTube Playables — вимоги звірити з першоджерелом (пошукові витяги — не доказ).
+yt-requirements	page:https://developers.google.com/youtube/gaming/playables/certification/requirements
+yt-sdk	page:https://developers.google.com/youtube/gaming/playables/reference/sdk
+yt-test-suite	page:https://developers.google.com/youtube/gaming/playables/test_suite
+yt-faq	page:https://developers.google.com/youtube/gaming/playables/faq
+yt-phaser-template	page:https://github.com/phaserjs/template-youtube-playables
+yt-phaser-readme	page:https://raw.githubusercontent.com/phaserjs/template-youtube-playables/main/README.md
