@@ -52,24 +52,39 @@ function tryMove(s: GameState, m: Move, defs: CoreDefs): GameState | null {
   return r.ok ? r.state : null;
 }
 
-/** Обмежений пошук у ширину до campaignEnded. undefined — ліміт вичерпано (чесне «не знаю»). */
+/** Скільки квестів уже позаду (завершено чи відхилено) — порядок пошуку: далі по сюжету — раніше. */
+const progressOf = (s: GameState): number => Object.values(s.quests).filter((q) => q.status !== 'active').length;
+
+/**
+ * Обмежений пошук до campaignEnded. undefined — ліміт вичерпано (чесне «не знаю»).
+ * GAME-141: порядок — «спершу далі по сюжету» (кошики за кількістю пройдених квестів, у кошику — FIFO), а не чиста ширина:
+ * з днем 2 кінець розділу на ~40 ходів глибше, і пошук у ширину перебирав майже весь простір, перш ніж дійти до кінця. Порядок
+ * не змінює відповіді: «так» — лише коли знайдено справжній стан кінця, «ні» — лише коли досяжний простір вичерпано повністю.
+ */
 export function endReachable(start: GameState, defs: CoreDefs, memo: EndMemo, cap: number): boolean | undefined {
   const k0 = key(start);
   const known = memo.get(k0);
   if (known !== undefined) return known;
   const seen = new Set([k0]);
-  const queue = [start];
-  for (let s = queue.shift(); s; s = queue.shift()) {
+  const buckets: GameState[][] = [];
+  const push = (s: GameState): void => { const p = progressOf(s); (buckets[p] ??= []).push(s); };
+  const pop = (): GameState | undefined => {
+    for (let p = buckets.length - 1; p >= 0; p--) { const b = buckets[p]; if (b?.length) return b.shift(); }
+    return undefined;
+  };
+  push(start);
+  for (let s = pop(); s; s = pop()) {
     if (s.campaignEnded || memo.get(key(s)) === true) { memo.set(k0, true); return true; }
     for (const m of moves(s, defs)) {
       if (isLuckMove(m)) continue; // кінець — без удачі (SIM-EV-003); у випадкову прогулянку подія входить
       const n = tryMove(s, m, defs);
       if (!n) continue;
       const k = key(n);
-      if (!seen.has(k)) { seen.add(k); queue.push(n); }
+      if (!seen.has(k)) { seen.add(k); push(n); }
     }
     if (seen.size > cap) return undefined;
   }
+
   // Увесь досяжний простір пройдено — кінця немає ніде: усі ці стани — тупики.
   for (const k of seen) memo.set(k, false);
   return false;

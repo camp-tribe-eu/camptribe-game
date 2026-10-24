@@ -26,7 +26,9 @@ function endedTraces(): { variant: Variant; moves: Move[] }[] {
     rng = r.state;
     const variant = variants[r.value] as Variant;
     const ms: Move[] = [];
-    const run = runBot(GAME_DEFS, variant, SEED + i, memo, { maxSteps: 80, cap: 20_000, trace: (m) => ms.push(m) });
+    // GAME-141: розділ — уже два дні; випадкова прогулянка доходить до кінця за ~150 ходів (за 80 — 3 з 300). Беремо лише
+    // дійшлі прогони, тож пошук «кінець досяжний» не потрібен (cap 1).
+    const run = runBot(GAME_DEFS, variant, SEED + i, memo, { maxSteps: 200, cap: 1, trace: (m) => ms.push(m) });
     if (run.verdict === 'ended') out.push({ variant, moves: ms });
   }
   return out;
