@@ -31,7 +31,14 @@ async function hold(page: Page, key: string, until: (p: Probe) => boolean): Prom
 /** Дійти до вогнища й взаємодіяти: у стані з'являється нагорода. */
 async function warmUp(page: Page): Promise<void> {
   await hold(page, 'ArrowLeft', (p) => p.playerX <= 120);
-  await hold(page, 'ArrowUp', (p) => p.nearObject !== null);
+  // Короткими кроками, перевіряючи після кожного: затиснута клавіша під навантаженням CI проскакувала зону багаття (CI PR #53).
+  for (let i = 0; i < 150 && (await probe(page)).nearObject === null; i++) {
+    await page.keyboard.down('ArrowUp');
+    await page.waitForTimeout(60);
+    await page.keyboard.up('ArrowUp');
+    await page.waitForTimeout(30);
+  }
+  expect((await probe(page)).nearObject).not.toBeNull();
   await page.keyboard.press('Space');
   await expect.poll(async () => (await snap(page)).game.grants).toContain('rw.campfire-warmth');
 }

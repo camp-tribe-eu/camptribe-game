@@ -212,11 +212,11 @@ for (const vp of VIEWPORTS) {
       }
       await page.locator('[data-ui="story-close"]').tap();
       expect(await holdTouch(page, 'left', (p) => p.playerX <= 88)).toBe(true);
-      expect(await holdTouch(page, 'down', (p) => p.nearObject === 'npc.elise')).toBe(true);
       // GAME-97: зону Елізи (радіус 48 px при 128 px/с) персонаж проходить за ~0,75 с; під навантаженням CI опитування буває
-      // рідшим, і тест проскакував її (CI #43: nearObject null). Тоді довертаємо коротким ходом назад, як зробив би гравець.
-      for (let i = 0; i < 4 && (await probe(page)).nearObject !== 'npc.elise'; i++) {
-        await holdTouch(page, i % 2 === 0 ? 'up' : 'down', (p) => p.nearObject === 'npc.elise', 2000);
+      // рідшим, і затиснутий стік її проскакував (CI #43, CI PR #53). Тому підходимо короткими дотиками (~60 мс ≈ 8 px),
+      // перевіряючи після кожного, — зону так не проскочиш.
+      for (let i = 0; i < 150 && (await probe(page)).nearObject !== 'npc.elise'; i++) {
+        expect(await holdTouch(page, 'down', () => false, 60)).toBe(true);
       }
       expect((await probe(page)).nearObject).toBe('npc.elise');
       expect(await holdTouch(page, 'interact', () => true, 100)).toBe(true);

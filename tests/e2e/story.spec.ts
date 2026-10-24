@@ -407,9 +407,22 @@ async function walk(page: Page, key: string, until: (p: Probe) => boolean): Prom
   await page.waitForTimeout(50);
   return probe(page);
 }
+/** Короткими кроками (≈60 мс ходу ≈ 8 px), перевіряючи після кожного: зону Елізи (Ø 96 px) так не проскочиш, хоч би як рідко
+ *  під навантаженням CI опитувався зонд (CI PR #53: затиснута клавіша проскакувала зону). */
+async function stepUntil(page: Page, key: string, until: (p: Probe) => boolean, maxSteps = 150): Promise<Probe> {
+  for (let i = 0; i < maxSteps; i++) {
+    const p = await probe(page);
+    if (until(p)) return p;
+    await page.keyboard.down(key);
+    await page.waitForTimeout(60);
+    await page.keyboard.up(key);
+    await page.waitForTimeout(30);
+  }
+  return probe(page);
+}
 async function walkToElise(page: Page): Promise<void> {
   await walk(page, 'ArrowLeft', (p) => p.playerX <= 88);
-  const p = await walk(page, 'ArrowDown', (q) => q.nearObject === 'npc.elise');
+  const p = await stepUntil(page, 'ArrowDown', (q) => q.nearObject === 'npc.elise');
   expect(p.nearObject).toBe('npc.elise');
 }
 
