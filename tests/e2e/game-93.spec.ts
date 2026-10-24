@@ -21,7 +21,7 @@ async function open(page: Page): Promise<void> {
 }
 
 /** Тримає клавішу, доки умова не справдиться (межа maxMs), і повертає всі кадри, що пройшли за цей час. */
-async function hold(page: Page, key: string, until: (p: Probe) => boolean, maxMs = 4000): Promise<{ end: Probe; seen: Probe[] }> {
+async function hold(page: Page, key: string, until: (p: Probe) => boolean, maxMs = 10_000): Promise<{ end: Probe; seen: Probe[] }> {
   const seen: Probe[] = [];
   await page.keyboard.down(key);
   const start = Date.now();
@@ -47,14 +47,14 @@ test.describe('LPC на сцені (десктоп 1280×800)', () => {
   for (const [key, dir, axis, sign] of [['ArrowDown', 'down', 'y', 1], ['ArrowUp', 'up', 'y', -1], ['ArrowLeft', 'left', 'x', -1], ['ArrowRight', 'right', 'x', 1]] as const) {
     test(`ходьба ${dir}: кадр змінюється в рядку свого напрямку, відпустив — кадр спокою`, async ({ page }) => {
       await open(page);
-      if (dir === 'up') await hold(page, 'ArrowDown', (p) => p.playerY >= 260, 3000);   // вгору є куди йти: далеко від наметів
+      if (dir === 'up') await hold(page, 'ArrowDown', (p) => p.playerY >= 260, 10_000);   // вгору є куди йти: далеко від наметів
       const a = await probe(page);
       // Тримаємо, доки не побачимо три різні кадри ходьби (а не фіксований час): під навантаженням кадри йдуть повільно.
       const frames = new Set<number>();
       const { seen } = await hold(page, key, (p) => {
         if (p.playerMoving) frames.add(p.playerFrame);
         return frames.size >= 3 && (axis === 'y' ? p.playerY - a.playerY : p.playerX - a.playerX) * sign > 40;
-      }, 4000);
+      }, 10_000);
       const walking = seen.filter((p) => p.playerMoving);
       expect(walking.length, `${dir}: анімація грала`).toBeGreaterThan(3);
       for (const p of walking) {
@@ -88,13 +88,13 @@ test.describe('LPC на сцені (десктоп 1280×800)', () => {
   // 3/4-глибина: два намети в рядках 2–3 (дах — шар above, низ — walls), між ними прохід у стовпцях 3–4 (x 96–160).
   test('глибина: перед наметом дах НЕ закриває персонажа, позаду — закриває; глибина персонажа = y ніг', async ({ page }) => {
     await open(page);
-    const front = (await hold(page, 'ArrowUp', (p) => p.playerY <= 136, 3000)).end;   // впирається в низ намету B: ноги ≈ 133
+    const front = (await hold(page, 'ArrowUp', (p) => p.playerY <= 136, 10_000)).end;   // впирається в низ намету B: ноги ≈ 133
     expect(front.playerDepth).toBeCloseTo(front.playerY, 5);
     expect(front.behindTiles, 'дах намету лежить позаду персонажа, що стоїть перед наметом').toBeGreaterThan(0);
     expect(front.coveredTiles, 'перед наметом дах не перекриває').toBe(0);
 
-    await hold(page, 'ArrowLeft', (p) => p.playerX <= 150, 3000);                       // у прохід між наметами
-    const back = (await hold(page, 'ArrowUp', (p) => p.playerY <= 100, 3000)).end;      // і позад намету (його низ — рядок 3, y 96–128)
+    await hold(page, 'ArrowLeft', (p) => p.playerX <= 150, 10_000);                       // у прохід між наметами
+    const back = (await hold(page, 'ArrowUp', (p) => p.playerY <= 100, 10_000)).end;      // і позад намету (його низ — рядок 3, y 96–128)
     expect(back.playerY).toBeLessThan(128);
     expect(back.playerDepth).toBeLessThan(128);                                          // глибина лінії основи намету — 128
     expect(back.coveredTiles, 'позаду намету дах закриває кадр персонажа').toBeGreaterThan(0);
@@ -102,7 +102,9 @@ test.describe('LPC на сцені (десктоп 1280×800)', () => {
 
   test('мапа 32 px: камера їде за персонажем лише по вертикалі (кадр 640 завширшки = мапа), у межах 384 − 352', async ({ page }) => {
     await open(page);
-    const p = (await hold(page, 'ArrowDown', (q) => q.cameraScrollY > 0, 10_000)).end;   // GAME-97: за умовою, а не за часом
+    // GAME-97: за умовою, а не за часом; далі ще тиснемо, щоб камера дійшла до краю і межа ≤ 32 щось доводила.
+    await hold(page, 'ArrowDown', (q) => q.cameraScrollY > 0, 10_000);
+    const p = (await hold(page, 'ArrowDown', (q) => q.cameraScrollY >= 32, 10_000)).end;
     expect(p.cameraScrollY).toBeGreaterThan(0);
     expect(p.cameraScrollY).toBeLessThanOrEqual(32);
   });

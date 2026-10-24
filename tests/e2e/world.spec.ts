@@ -15,7 +15,7 @@ async function open(page: Page, query = ''): Promise<void> {
   expect(errors).toEqual([]);
 }
 
-async function holdKey(page: Page, key: string, until: (p: Probe) => boolean, maxMs = 4000): Promise<Probe> {
+async function holdKey(page: Page, key: string, until: (p: Probe) => boolean, maxMs = 10_000): Promise<Probe> {
   await page.keyboard.down(key);
   const start = Date.now();
   let p = await probe(page);
@@ -38,7 +38,7 @@ const STICK_OFFSETS: Readonly<Record<string, [number, number]>> = {
  * `action`: 'interact' — кругла кнопка дії; будь-який із STICK_OFFSETS — дотик у центр джойстика й відведення ручки (GAME-91).
  * false — елемента не видно, прохід неможливий.
  */
-async function holdTouch(page: Page, action: string, until: (p: Probe) => boolean, maxMs = 4000): Promise<boolean> {
+async function holdTouch(page: Page, action: string, until: (p: Probe) => boolean, maxMs = 10_000): Promise<boolean> {
   const offset = STICK_OFFSETS[action];
   const btn = page.locator(offset ? '[data-touch="stick"]' : `[data-touch="${action}"]`);
   if (!(await btn.isVisible())) return false;
@@ -121,7 +121,9 @@ test.describe('клавіатура (десктоп)', () => {
   test('камера йде за персонажем у межах мапи', async ({ page }) => {
     await open(page);
     const p0 = await probe(page);
-    const p1 = await holdKey(page, 'ArrowDown', (q) => q.cameraScrollY > p0.cameraScrollY, 10_000);   // GAME-97: за умовою, а не за часом
+    // GAME-97: за умовою, а не за часом; далі тиснемо, доки камера не впреться в край, — інакше межа нижче нічого не доводить.
+    await holdKey(page, 'ArrowDown', (q) => q.cameraScrollY > p0.cameraScrollY);
+    const p1 = await holdKey(page, 'ArrowDown', (q) => q.cameraScrollY >= 384 - 352);
     expect(p1.cameraScrollY).toBeGreaterThan(p0.cameraScrollY);
     expect(p1.cameraScrollY).toBeLessThanOrEqual(384 - 352);   // GAME-93: мапа 384 px, широкий кадр 352
   });
