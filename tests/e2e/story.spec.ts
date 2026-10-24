@@ -427,23 +427,18 @@ async function walk(page: Page, key: string, until: (p: Probe) => boolean): Prom
   await page.waitForTimeout(50);
   return probe(page);
 }
-/** Короткими кроками (≈60 мс ходу ≈ 8 px), перевіряючи після кожного: зону Елізи (Ø 96 px) так не проскочиш, хоч би як рідко
- *  під навантаженням CI опитувався зонд (CI PR #53: затиснута клавіша проскакувала зону). */
-async function stepUntil(page: Page, key: string, until: (p: Probe) => boolean, maxSteps = 150): Promise<Probe> {
-  for (let i = 0; i < maxSteps; i++) {
-    const p = await probe(page);
-    if (until(p)) return p;
-    await page.keyboard.down(key);
-    await page.waitForTimeout(60);
-    await page.keyboard.up(key);
-    await page.waitForTimeout(30);
-  }
-  return probe(page);
-}
+/** Точка Елізи з мапи (public/maps/camp-lake.tmj) — ціль за координатою, як у world.spec (CI PR #53: кроки за годинником
+ *  на повільному CI то не доходили, то проскакували зону Ø 96 px). Звірка з мапою — нижче, щоб константа не застаріла. */
+const ELISE_Y = 272;
 async function walkToElise(page: Page): Promise<void> {
+  const map = JSON.parse(readFileSync('public/maps/camp-lake.tmj', 'utf8')) as { layers: { objects?: { name: string; y: number }[] }[] };
+  expect(map.layers.flatMap((l) => l.objects ?? []).find((o) => o.name === 'npc.elise')?.y, 'Еліза на мапі зсунулась — онови ELISE_Y').toBe(ELISE_Y);
   await walk(page, 'ArrowLeft', (p) => p.playerX <= 88);
-  const p = await stepUntil(page, 'ArrowDown', (q) => q.nearObject === 'npc.elise');
-  expect(p.nearObject).toBe('npc.elise');
+  for (let i = 0; i < 8 && (await probe(page)).nearObject !== 'npc.elise'; i++) {
+    const key = (await probe(page)).playerY > ELISE_Y ? 'ArrowUp' : 'ArrowDown';
+    await walk(page, key, (q) => q.nearObject === 'npc.elise' || (key === 'ArrowUp' ? q.playerY <= ELISE_Y : q.playerY >= ELISE_Y));
+  }
+  expect((await probe(page)).nearObject).toBe('npc.elise');
 }
 
 test.describe('Еліза на мапі (клавіатура)', () => {
