@@ -10,6 +10,20 @@ const loaded = (page: Page) => page.waitForFunction(() => (window as unknown as 
 const probe = (page: Page): Promise<Probe> => page.evaluate(() => ({ ...(window as unknown as { __game: { probe: Probe } }).__game.probe }));
 const snap = (page: Page): Promise<Snap> => page.evaluate(() => (window as unknown as { __game: { read: () => Snap } }).__game.read());
 
+/** Вміст основного слота сейву в IndexedDB (або '' якщо нема). Сейв пишеться асинхронно — тести чекають на ФАКТ запису,
+ *  а не на фіксовану паузу (CI PR #53: під навантаженням 300 мс не вистачало, і перезавантаження губило нагороду). */
+const mainSlot = (page: Page): Promise<string> => page.evaluate(() => new Promise<string>((resolve) => {
+  const req = indexedDB.open('camplife', 1);
+  req.onsuccess = () => {
+    const db = req.result;
+    if (!db.objectStoreNames.contains('saves')) { db.close(); resolve(''); return; }
+    const get = db.transaction('saves').objectStore('saves').get('main');
+    get.onsuccess = () => { db.close(); resolve(typeof get.result === 'string' ? get.result : ''); };
+    get.onerror = () => { db.close(); resolve(''); };
+  };
+  req.onerror = () => resolve('');
+}));
+
 async function open(page: Page): Promise<void> {
   const errors: string[] = [];
   page.on('pageerror', (e) => errors.push(e.message));
@@ -55,7 +69,7 @@ test.describe('сейви (десктоп)', () => {
     await open(page);
     await warmUp(page);
     await page.keyboard.press('Escape');
-    await page.waitForTimeout(300);
+    await expect.poll(() => mainSlot(page), { timeout: 10_000 }).toContain('rw.campfire-warmth');
     await page.reload();
     await page.waitForFunction(() => (window as unknown as { __game?: { probe: Probe } }).__game?.probe.saveLoaded === true);
     expect((await snap(page)).game.grants).toContain('rw.campfire-warmth');
@@ -80,7 +94,7 @@ test.describe('сейви (десктоп)', () => {
     await page.waitForTimeout(300);
     await page.keyboard.press('Escape');                       // продовжити
     await warmUp(page);                                        // GAME-86: дія сама пише — main = з нагородою, prev = чистий
-    await page.waitForTimeout(300);
+    await expect.poll(() => mainSlot(page), { timeout: 10_000 }).toContain('rw.campfire-warmth');
     const slots = await page.evaluate(() => new Promise<string[]>((resolve) => {
       const req = indexedDB.open('camplife', 1);
       req.onsuccess = () => {
