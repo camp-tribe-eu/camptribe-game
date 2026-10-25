@@ -53,7 +53,7 @@ for (const vp of LANDSCAPE) for (const inset of [0, 47]) {
     const frame = await rect(page, '[data-ui="hud"]');
     const time = await rect(page, '[data-ui="hud-time"]');
     const money = await rect(page, '[data-ui="hud-money"]');
-    expect(frame.left, `рамка ${JSON.stringify(frame)}: лівий край правіше середини`).toBeGreaterThanOrEqual(vp.width / 2);
+    expect(frame.left, `рамка ${JSON.stringify(frame)}: правіше ☰`).toBeGreaterThanOrEqual((await rect(page, '[data-touch="story"]')).right + 8);
     expect(frame.bottom, 'рамка: низ вище середини висоти').toBeLessThanOrEqual(vp.height / 2);
     expect(frame.right, 'рамка: правий край у межах з вирізом').toBeLessThanOrEqual(vp.width - sides);
     expect(time.width, 'час видно').toBeGreaterThan(0);
@@ -62,6 +62,16 @@ for (const vp of LANDSCAPE) for (const inset of [0, 47]) {
     const pR = await rect(page, '[data-touch="pause"]');
     expect(intersects(frame, sR), 'рамка не на ☰').toBe(false);
     expect(intersects(frame, pR), 'рамка не на ‖').toBe(false);
+    // Симетрія (смак власника): ‖ — дзеркало ☰; рамка — ліворуч від ‖ у тому ж ряду, проміжок ≥ 8.
+    const mirror = (sv: Rect, pv: Rect, fr: Rect, w: number): void => {
+      expect(Math.abs(sv.left - (w - pv.right)), `відступ збоку ☰ ${sv.left} vs ‖ ${w - pv.right}`).toBeLessThanOrEqual(2);
+      expect(Math.abs(sv.top - pv.top), '‖ і ☰ на одній висоті').toBeLessThanOrEqual(2);
+      expect(Math.abs(sv.width - pv.width), 'однакова ширина').toBeLessThanOrEqual(1);
+      expect(Math.abs(sv.height - pv.height), 'однакова висота').toBeLessThanOrEqual(1);
+      expect(fr.right, 'рамка ліворуч від ‖ з проміжком ≥ 8').toBeLessThanOrEqual(pv.left - 8);
+      expect(Math.abs((fr.top + fr.bottom) / 2 - (pv.top + pv.bottom) / 2), 'рамка по центру з ‖').toBeLessThanOrEqual(2);
+    };
+    mirror(sR, pR, frame, vp.width);
     expect(Math.min(sR.width, sR.height, pR.width, pR.height), 'кнопки ≥ 44').toBeGreaterThanOrEqual(44);
     // Phaser перераховує масштаб полотна сам, із затримкою — чекаємо умову, а не фіксовану паузу (рецензія PR #53).
     const stageH = await page.locator('#stage').evaluate((el) => el.getBoundingClientRect().height);
@@ -229,8 +239,10 @@ for (const c of FULL) {
     }
     const [story, hud, pause] = rects as [Rect, Rect, Rect, ...Rect[]];
     expect(story.right, '☰ у лівій половині').toBeLessThanOrEqual(vp.width / 2);
-    expect(hud.left, 'рамка в правій половині').toBeGreaterThanOrEqual(vp.width / 2);
-    expect(pause.top, '‖ під рамкою').toBeGreaterThanOrEqual(hud.bottom);
+    expect(hud.left, 'рамка правіше ☰').toBeGreaterThanOrEqual(story.right + 8);
+    expect(Math.abs(story.top - pause.top), '‖ і ☰ на одній висоті').toBeLessThanOrEqual(2);
+    expect(Math.abs(story.left - (vp.width - pause.right)), '‖ дзеркало ☰').toBeLessThanOrEqual(2);
+    expect(hud.right, 'рамка ліворуч від ‖ ≥ 8').toBeLessThanOrEqual(pause.left - 8);
     expect(pause.left, '‖ у правій половині').toBeGreaterThanOrEqual(vp.width / 2);
     if (c.touch) {
       const [, , , stick, act] = rects as [Rect, Rect, Rect, Rect, Rect];
