@@ -1,5 +1,12 @@
 [
   {
+    "id": "PROLOGUE-HOME-001", "titleKey": "q.prologue-home-001", "optional": false, "locationId": "loc.home",
+    "objectives": [
+      { "id": "look-around", "textKey": "q.prologue-home-001.o1", "kind": "visit", "target": "loc.home", "required": true }
+    ],
+    "transitions": [{ "on": "complete", "to": "ST-001" }]
+  },
+  {
     "id": "ST-001", "titleKey": "q.st-001", "optional": false, "locationId": "loc.home",
     "objectives": [
       { "id": "free-night", "textKey": "q.st-001.o1", "kind": "visit", "target": "loc.home", "required": true }
@@ -20,6 +27,13 @@
       { "id": "get-tent", "textKey": "q.st-003.o2", "kind": "collect", "target": "item.tent", "required": true },
       { "id": "get-sleeping-bag", "textKey": "q.st-003.o3", "kind": "collect", "target": "item.sleeping-bag", "required": true },
       { "id": "get-lantern", "textKey": "q.st-003.o4", "kind": "collect", "target": "item.lantern", "required": false }
+    ],
+    "transitions": [{ "on": "complete", "to": "CH1-HOME-001" }]
+  },
+  {
+    "id": "CH1-HOME-001", "titleKey": "q.ch1-home-001", "optional": false, "locationId": "loc.home",
+    "objectives": [
+      { "id": "pack-at-home", "textKey": "q.ch1-home-001.o1", "kind": "visit", "target": "loc.home", "required": true }
     ],
     "transitions": [{ "on": "complete", "to": "ST-004" }]
   },

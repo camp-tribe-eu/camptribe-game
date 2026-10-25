@@ -280,6 +280,7 @@ export const FIXTURES = [
   { name: 'індекс масиву як id', expect: ['ID_FORMAT'], patch(c) { c.items.push({ id: '0', nameKey: 'item.map' }); } },
   { name: 'назва як id', expect: ['ID_FORMAT'], patch(c) { c.npcs.push({ id: 'Ranger Anna', nameKey: 'npc.ranger', locationId: 'loc.camp' }); } },
   { name: 'grantId без префікса rw.', expect: ['ID_FORMAT'], patch(c) { q(c, 'ST-002').reward.grantId = 'st-002'; } },
+  { name: 'id основного етапу не за форматом (рецензія PR #62; решта кодів — від розірваних посилань на старий id)', expect: ['ID_FORMAT', 'NODE_UNREACHABLE', 'NO_PATH_TO_END', 'REF_MISSING'], patch(c) { q(c, 'ST-002').id = 'st-002x'; } },
   { name: 'дубль id у межах типу', expect: ['ID_DUPLICATE'], patch(c) { c.npcs.push({ ...c.npcs[1] }); } },
   { name: 'дубль id цілі в квесті', expect: ['ID_DUPLICATE'], patch(c) { q(c, 'ST-002').objectives[1].id = 'visit-forest'; } },
 

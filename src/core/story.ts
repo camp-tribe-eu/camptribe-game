@@ -18,6 +18,12 @@ import type { GameState, PlayerState, QuestProgress, RejectCode } from './state'
 
 export const NO_ANIMAL = 'animal.none';
 
+/**
+ * id основного етапу (GAME-138): канонічний id сценарію великими літерами з номером — ST-001, PROLOGUE-HOME-001, CH1-HOME-001.
+ * Той самий формат, що й у валідатора (ID_PATTERNS.quests у scripts/validator/checks.mjs); бічні квести — `q.назва` (isContentId).
+ */
+export const MAIN_QUEST_ID = /^(?:[A-Z][A-Z0-9]*-)+\d{3}$/;
+
 export type StoryCommand =
   | { readonly type: 'CreateCharacter'; readonly commandId: string; readonly profileId: string; readonly transportId: string; readonly animalId?: string }
   | { readonly type: 'Visit'; readonly commandId: string; readonly locationId: string }
@@ -438,8 +444,8 @@ export function applyStory(cmd: StoryCommand, d: StoryDraft, st: StoryDefs | und
     }
     case 'CompleteQuest':
     case 'DeclineQuest':
-      if (!isId(cmd.questId) && !/^ST-\d{3}$/.test(cmd.questId)) return 'INVALID_COMMAND';
-      if (cmd.to !== undefined && !isId(cmd.to) && !/^ST-\d{3}$/.test(cmd.to)) return 'INVALID_COMMAND';
+      if (!isId(cmd.questId) && !MAIN_QUEST_ID.test(cmd.questId)) return 'INVALID_COMMAND';
+      if (cmd.to !== undefined && !isId(cmd.to) && !MAIN_QUEST_ID.test(cmd.to)) return 'INVALID_COMMAND';
       return leave(st, d, p, cmd, cmd.type === 'CompleteQuest' ? 'complete' : 'decline', guardGrant);
   }
 }

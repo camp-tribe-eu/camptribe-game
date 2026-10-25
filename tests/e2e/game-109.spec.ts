@@ -36,6 +36,7 @@ for (const mode of MODES) {
 
     await press(panel(page).locator('[data-act="create"]', { hasText: 'Велосипед' }).first());
     await expect(packing(page)).toHaveCount(0);                        // ще вдома, до крамниці: пакувати рано
+    await act('complete', 'q.prologue-home-001');
     await act('complete', 'q.st-001');
     await act('complete', 'q.st-002');
     await act('visit', 'loc.shop');
@@ -85,6 +86,8 @@ for (const mode of MODES) {
     await expect(packing(page).locator('[data-ui="pack-note"]')).toHaveCount(0);
 
     // Далі — на дорогу: пакування зникає, гравець на дорозі, журнал пам'ятає пакування (лише факти стану).
+    await act('visit', 'loc.home');                                   // GAME-138: CH1-HOME-001 — пакування вдома, тоді дорога
+    await act('complete', 'q.ch1-home-001');
     await act('visit', 'loc.road');
     await expect(packing(page)).toHaveCount(0);
     const c = await core(page);

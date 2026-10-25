@@ -47,8 +47,8 @@ for (const mode of MODES) {
     // День 1 автом: Пролог до ST-005 — так само, як tests/e2e/story.spec.ts (кроки меню; до Елізи — «Поговорити» в меню).
     await press(page.locator('[data-touch="story"]'));
     await press(panel(page).locator('[data-act="create"]', { hasText: /Авто|Car/ }).first());
-    for (const [k, key] of [['complete', 'q.st-001'], ['complete', 'q.st-002'], ['visit', 'loc.shop'], ['pickup', 'item.tent'], ['pickup', 'item.sleeping-bag'],
-      ['complete', 'q.st-003'], ['visit', 'loc.road'], ['complete', 'q.st-004'], ['visit', 'loc.camp.lake'], ['talk', 'npc.elise'],
+    for (const [k, key] of [['complete', 'q.prologue-home-001'], ['complete', 'q.st-001'], ['complete', 'q.st-002'], ['visit', 'loc.shop'], ['pickup', 'item.tent'], ['pickup', 'item.sleeping-bag'],
+      ['complete', 'q.st-003'], ['visit', 'loc.home'], ['complete', 'q.ch1-home-001'], ['visit', 'loc.road'], ['complete', 'q.st-004'], ['visit', 'loc.camp.lake'], ['talk', 'npc.elise'],
       ['choose', 'dlg.elise-greeting.hello.c2'], ['continue', ''], ['choose', 'dlg.elise-greeting.spot.c1'], ['continue', ''], ['pickup', 'item.firewood']] as const) await act(k, key);
     await expect(summary(page)).toHaveCount(0);                     // контроль: до кінця дня підсумку немає
     await act('complete', 'q.st-005');
@@ -70,7 +70,7 @@ for (const mode of MODES) {
     expect(kinds).toContain('night');
     expect(await keys('night')).toEqual(['sum.night.tent']);
     await expect(summary(page).locator('[data-kind="night"]')).toContainText('у наметі');
-    expect(await keys('quests')).toEqual(['q.st-001', 'q.st-002', 'q.st-003', 'q.st-004', 'q.st-005']);
+    expect(await keys('quests')).toEqual(['q.prologue-home-001', 'q.st-001', 'q.st-002', 'q.st-003', 'q.ch1-home-001', 'q.st-004', 'q.st-005']);
     expect(await keys('got')).toEqual(['item.tent', 'item.sleeping-bag', 'item.firewood']);
     expect(kinds).not.toContain('bought');                           // нічого не купували
     expect(kinds).not.toContain('sold');
@@ -136,8 +136,8 @@ test('«Продовжити» — назад на мапу: світ іде д�
   await page.locator('[data-touch="story"]').click();
   const click = async (sel: string): Promise<void> => { await panel(page).locator(sel).first().click(); await page.waitForTimeout(400); };
   await click('[data-act="create"]:has-text("Авто")');
-  for (const [k, key] of [['complete', 'q.st-001'], ['complete', 'q.st-002'], ['visit', 'loc.shop'], ['pickup', 'item.tent'], ['pickup', 'item.sleeping-bag'],
-    ['complete', 'q.st-003'], ['visit', 'loc.road']] as const) await click(`[data-act="${k}"][data-key="${key}"]`);
+  for (const [k, key] of [['complete', 'q.prologue-home-001'], ['complete', 'q.st-001'], ['complete', 'q.st-002'], ['visit', 'loc.shop'], ['pickup', 'item.tent'], ['pickup', 'item.sleeping-bag'],
+    ['complete', 'q.st-003'], ['visit', 'loc.home'], ['complete', 'q.ch1-home-001'], ['visit', 'loc.road']] as const) await click(`[data-act="${k}"][data-key="${key}"]`);
   if (await panel(page).locator('[data-key="dlg.road-apples.box.c1"]').isVisible({ timeout: 400 }).catch(() => false)) {
     await click('[data-key="dlg.road-apples.box.c1"]');
     await click('[data-act="continue"]');
