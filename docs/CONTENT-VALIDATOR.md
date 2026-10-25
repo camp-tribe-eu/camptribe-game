@@ -26,6 +26,7 @@ node scripts/mutate-validator.mjs               # довести, що само�
 | `roads.json` | дороги між локаціями: `from`, `to`, `twoWay`, `ways[]` (транспорт, хвилини, центи, необов'язковий `risk` 0–3 — GAME-72: небезпека дороги, навичка її не знижує); перевірка `roads`: кожна локація досяжна від дому й назад для кожного транспорту (`ROAD_UNREACHABLE`, `ROAD_NO_RETURN`), одне ребро на пару в кожен бік (`ROAD_DUPLICATE`) | `road.назва` |
 | `events.json` | події: `repeatable`, `reward` | `ev.назва` |
 | `facts.json` | зовнішні факти: `source`, `checkedAt` (РРРР-ММ-ДД), `kind` | `fact.назва` |
+| `waves.json` | хвилі напруги (GAME-170, DC-016): `stage`, `when`, `tasks[]` зі строком `limitMin` (ігрові хвилини 1–60), `leaderOnly`, `animal` + `targets[{id, safe}]`, наслідками `done`/`late` (лише `setFlag`), `allDone`, `fallback`; перевірка `waves` (розділ «Хвилі напруги») | `wave.назва` |
 | `flags.json` | реєстр прапорців і фактів стану (GAME-115, DC-015, розділ «Реєстр прапорців»): `id`, `type`, `initial`, `owner`, `note`, `values`, `valuesFrom`, `generatedFrom`, `reserved`, `aka`, `journal` | `f.назва`, `f.префікс-*`, `m.назва`, `s.назва` |
 | `locales/<мова>.json` | ключ → переклад | — |
 | `dialogue/<назва>.json` | один діалог-граф на файл (розділ «Діалоги») | `dlg.назва` |
@@ -161,9 +162,29 @@ Effect    = { setFlag: "f.…" } | { startQuest: "<id квесту>" } | { compl
 | `packing` | `PACK_ITEM_DUPLICATE`, `PACK_CAPACITY_MISSING`, `PACK_NEEDED_OVERFLOW`, `PACK_NOTE_UNPACKABLE` | GAME-109: кожна річ раз; місце на кожен транспорт; «потрібне» вміщається; підпис — про річ зі списку. Посилання — `REF_MISSING`, переклад підписів — `LOCALE_MISSING`, прапорці `f.pack-*` — `dialogue-flags` |
 | `calendar` | `CALENDAR_MISSING`, `CALENDAR_BAD_DATE`, `CALENDAR_RANGE_OVERLAP`, `JOB_BILLS_EXCEED_SALARY` | GAME-71: робота чи школяр у профілі — лише з `calendar.json`; `start` — справжня `YYYY-MM-DD`, свята й межі канікул — справжні `MM-DD`, що є щороку; канікули не перетинаються (і через Новий рік), свято не двічі; рахунки профілю ≤ зарплати (SIM-LIFE-008) |
 | `gear` | `GEAR_FIELD_MISSING`, `GEAR_RESALE_ABOVE_PRICE`, `GEAR_DOMINATED` | GAME-73: картка спорядження повна; викуп ≤ ціни (SIM-INV-004); немає речі того ж виду, не гіршої ні в чому (SIM-INV-005) — тир є компромісом, а не «сильніше» |
+| `waves` | `WAVE_TOO_FEW_TASKS`, `WAVE_LIMIT_INVALID`, `WAVE_OUTCOME_MISSING`, `WAVE_VARIANT_INCOMPLETE`, `WAVE_REPEATED`, `WAVE_ANIMAL_UNSAFE`, `WAVE_ANIMAL_HELPER` | GAME-170, сценарій v3 §6: ≥ 2 справи, строк, обидва наслідки, текст для авто/вело/соло, унікальність справ між етапами, Мія ніколи в небезпечній точці й лише в руках лідера — кожне з мутацією |
 | `combo-options` | `COMBO_OPTION_UNUSABLE`, `WHEN_UNSATISFIABLE` | §1 кожен транспорт можна обрати; §3 кожна умова `when` (разом з умовою свого квесту; для переходу — ще й квесту-цілі) відповідає хоча б одній дозволеній комбінації |
 | `combos` | `COMBO_NO_START`, `COMBO_TARGETED_UNREACHABLE`, `COMBO_DEAD_CONTENT` + коди шести перевірок вище для кожної комбінації | §3 у кожному стані гравця, «48 сімей × 12 профілів × 3 транспорти × тварини» |
 | завантажувач | `CONTENT_MISSING`, `CONTENT_PARSE`, `CONTENT_EMPTY`, `CONTENT_UNKNOWN_FILE` | закон 4: порожнеча — не зелене |
+
+## Хвилі напруги (GAME-170)
+
+`content/waves.json` — хвилі за контрактом сценарію (§6): `stage` (етап-квест), `when` (варіант за транспортом / профілем /
+твариною), `tasks[]` — 2–4 справи зі строком `limitMin` в **ігрових** хвилинах (1 хв ≈ 1 с вільної сцени, SIM-TIME-002; хвиля
+триває 30–60 с; пауза зупиняє годинник — і строки), обома наслідками `done`/`late` (текст і лише `setFlag`), `leaderOnly`,
+`animal` з `targets[{ id, safe }]`; `allDone` — коли встигли все; `fallback` — репліка, коли ні. Кінець розділу від хвиль не
+залежить: хвиля завжди закінчується сама (ядро `settleWave`), наслідки лишаються в `game.wave.past`.
+
+Перевірка `waves`: `WAVE_TOO_FEW_TASKS` (< 2), `WAVE_LIMIT_INVALID` (не ціле 1…60), `WAVE_OUTCOME_MISSING` (без `done` чи `late`),
+`WAVE_VARIANT_INCOMPLETE` (у дозволеній комбінації, яку адресує `when` хвилі, після відбору справ за їхнім `when` видно < 2;
+на хвилі з < 2 справ мовчить — першопричину вже назвав `WAVE_TOO_FEW_TASKS`), `WAVE_REPEATED` (той самий набір id справ на
+іншому етапі; на тому ж етапі — ні), `WAVE_ANIMAL_UNSAFE` (справа з `animal` без цілей або з `safe: false`),
+`WAVE_ANIMAL_HELPER` (справа з `animal` без `leaderOnly`). Інші перевірки розширено: `refs` (`stage`, `animal`), `id-format` /
+`id-unique` (`wave.*`, id справ), `locale-keys` (усі `textKey`), `combo-options` (`when` справи успадковує `when` хвилі),
+`flags` і `dialogue-flags` (ефекти наслідків — вжитки реєстру й здійсненні сетери). **Ціна хибного спрацювання (закон 5):**
+автор додає другу справу, строк, наслідок, `safe: true` чи `leaderOnly` — одне поле; ціна пропуску — «напруга» з однією
+справою або кіт біля води. Чого не перевіряє: що стартер справді шле `StartWave` на етапі `stage` (це сюжет, зріз 2) і що
+сума строків лягає в 30–60 с реального часу — лише кожен строк окремо.
 
 ## Реєстр прапорців (GAME-115)
 

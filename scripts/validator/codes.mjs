@@ -86,6 +86,15 @@ export const CODES = {
   FLAG_NEVER_READ:        { check: 'flags', spec: 'GAME-110: прапорець f.* чи факт пам\u2019яті m.*, який ставить ефект, читає хоч одна умова (enum — хоч одне значення); інакше вибір «пам\u2019ятається» без жодного наслідку' },
   FLAG_REGISTRY_INVALID:  { check: 'flags', spec: 'GAME-115: запис реєстру узгоджений — початкове значення відповідає типу й ядру, enum має значення, сімейство має породжувача, reserved не вживаний, назви не перетинаються' },
 
+  // хвилі напруги, GAME-170 (content/waves.json; рішення власника 24–25.10 і контракт хвилі в сценарії, §6)
+  WAVE_TOO_FEW_TASKS:     { check: 'waves', spec: 'GAME-170: хвиля — 2–4 одночасні справи; одна справа — не напруга, а черга' },
+  WAVE_LIMIT_INVALID:     { check: 'waves', spec: 'GAME-170: кожна справа має строк в ігрових хвилинах — ціле 1…WAVE_MAX_LIMIT (хвиля триває 30–60 с)' },
+  WAVE_OUTCOME_MISSING:   { check: 'waves', spec: 'GAME-170: у кожної справи обидва наслідки — встиг (done) і не встиг (late); без late гра карала б мовчанням' },
+  WAVE_VARIANT_INCOMPLETE:{ check: 'waves', spec: 'GAME-170: у кожній дозволеній комбінації (авто / вело / соло), яку хвиля адресує, видно ≥ 2 справи з текстом' },
+  WAVE_REPEATED:          { check: 'waves', spec: 'GAME-170: хвиля унікальна для етапу — той самий набір справ на двох етапах не повторюється' },
+  WAVE_ANIMAL_UNSAFE:     { check: 'waves', spec: 'GAME-170: Мія завжди в безпеці — ціль справи про тварину ніколи не біля води чи вогню (кожна ціль safe: true)' },
+  WAVE_ANIMAL_HELPER:     { check: 'waves', spec: 'GAME-170: справу про тварину робить лише лідер (leaderOnly) — помічники шукати Мію не можуть' },
+
   // комбінації профіль × транспорт × тварина
   COMBO_NO_START:             { check: 'combos', spec: '§3 кожен вузол досяжний — у кожній комбінації стану гравця' },
   COMBO_TARGETED_UNREACHABLE: { check: 'combos', spec: '§3 вузол, адресований комбінації, у ній досяжний' },
@@ -111,6 +120,9 @@ export const FLAG_FAMILIES = {
   'packing.items': { prefix: 'f.pack-', gen: (content) => (content.packing?.items ?? []).map((x) => `f.pack-${String(x.item).replace(/^item\./, '')}`) },
   'dialogues.trigger': { prefix: 'f.seen-', gen: (content) => (content.dialogues ?? []).filter((d) => d.trigger).map((d) => `f.seen-${String(d.id).replace(/^dlg\./, '')}`) },
 };
+
+// GAME-170: найбільший строк справи хвилі, ігрові хвилини (1 хв ≈ 1 с вільної сцени, SIM-TIME-002). Той самий — WAVE_MAX_LIMIT ядра.
+export const WAVE_MAX_LIMIT = 60;
 
 export const FACT_KINDS = ['regulation', 'geography', 'price', 'schedule', 'culture'];
 

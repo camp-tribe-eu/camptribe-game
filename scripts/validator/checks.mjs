@@ -3,8 +3,8 @@
 // Не прибирай і не дублюй маркери — мутаційний прогін звіряє їх із реєстром CHECKS.
 
 import { checkSchema } from './schema.mjs';
-import { FACT_KINDS, FACT_STALE_DAYS, FLAG_FAMILIES, GEAR_FIELDS, isWarning, SKILL_IDS } from './codes.mjs';
-import { checkCombos, checkOptions, enumerateCombos, NO_ANIMAL } from './combos.mjs';
+import { FACT_KINDS, FACT_STALE_DAYS, FLAG_FAMILIES, GEAR_FIELDS, isWarning, SKILL_IDS, WAVE_MAX_LIMIT } from './codes.mjs';
+import { checkCombos, checkOptions, comboLabel, enumerateCombos, matches, NO_ANIMAL } from './combos.mjs';
 
 const I = (code, where, msg) => ({ code, where, msg });
 
@@ -20,6 +20,7 @@ const ID_PATTERNS = {
   facts: /^fact\.[a-z0-9]+(?:[.-][a-z0-9]+)*$/,
   dialogues: /^dlg\.[a-z0-9]+(?:[.-][a-z0-9]+)*$/,
   roads: /^road\.[a-z0-9]+(?:[.-][a-z0-9]+)*$/,
+  waves: /^wave\.[a-z0-9]+(?:[.-][a-z0-9]+)*$/,
 };
 const FLAG_ID = /^f\.[a-z0-9]+(?:[.-][a-z0-9]+)*$/;
 // Факт пам'яті NPC (GAME-48): «m.» і слова через дефіс — m.came-by-bike.
@@ -133,6 +134,9 @@ export const CHECKS = [
       for (const d of c.content.dialogues ?? []) for (const n of d.nodes) {
         if (!OBJECTIVE_ID.test(n.id)) out.push(I('ID_FORMAT', `${d.id}/${n.id}`, `id вузла не відповідає ${OBJECTIVE_ID}`));
       }
+      for (const w of c.content.waves ?? []) for (const t of w.tasks) {
+        if (!OBJECTIVE_ID.test(t.id)) out.push(I('ID_FORMAT', `${w.id}/${t.id}`, `id справи не відповідає ${OBJECTIVE_ID}`));
+      }
       for (const [where, f] of flagUses(c.content)) if (!FLAG_ID.test(f)) out.push(I('ID_FORMAT', where, `прапорець «${f}» не відповідає ${FLAG_ID}`));
       for (const e of c.content.flags ?? []) {
         const ok = e.id.startsWith('f.') ? FLAG_ID.test(e.id) || FAMILY_ID.test(e.id) : e.id.startsWith('m.') ? MEMORY_ID.test(e.id) : STATE_ID.test(e.id);
@@ -156,6 +160,7 @@ export const CHECKS = [
       for (const t of [...Object.keys(ID_PATTERNS), 'flags']) dup((c.content[t] ?? []).map((e) => e.id), t);
       for (const q of c.content.quests ?? []) dup(q.objectives.map((o) => o.id), `${q.id}.objectives`);
       for (const d of c.content.dialogues ?? []) dup(d.nodes.map((n) => n.id), `${d.id}.nodes`);
+      for (const w of c.content.waves ?? []) dup(w.tasks.map((t) => t.id), `${w.id}.tasks`);
       return out;
     },
   },
@@ -198,6 +203,10 @@ export const CHECKS = [
         q.transitions.forEach((tr) => ref('quests', tr.to, `${q.id}.transitions`));
       }
       for (const e of by.events.values()) ref('locations', e.locationId, `${e.id}.locationId`);
+      for (const w of by.waves.values()) {
+        ref('quests', w.stage, `${w.id}.stage`);
+        for (const t of w.tasks) ref('animals', t.animal, `${w.id}/${t.id}.animal`);
+      }
       for (const r of by.roads.values()) {
         ref('locations', r.from, `${r.id}.from`);
         ref('locations', r.to, `${r.id}.to`);
@@ -471,6 +480,10 @@ export const CHECKS = [
         q.transitions.forEach((t) => add(t.choiceKey, `${q.id}.transitions`));
       }
       (ct.events ?? []).forEach((e) => add(e.titleKey, e.id));
+      for (const w of ct.waves ?? []) {
+        add(w.titleKey, w.id); add(w.hookKey, `${w.id}.hookKey`); add(w.fallback?.textKey, `${w.id}.fallback`); add(w.allDone?.textKey, `${w.id}.allDone`);
+        for (const t of w.tasks) { add(t.textKey, `${w.id}/${t.id}`); add(t.done?.textKey, `${w.id}/${t.id}.done`); add(t.late?.textKey, `${w.id}/${t.id}.late`); }
+      }
       (ct.facts ?? []).forEach((f) => add(f.claimKey, f.id));
       (ct.packing?.notes ?? []).forEach((n, i) => add(n.textKey, `packing.notes[${i}]`));
       (ct.dialogues ?? []).forEach((d) => add(d.trigger?.titleKey, `${d.id}.trigger`));
@@ -963,6 +976,42 @@ export const CHECKS = [
     },
   },
   {
+    id: 'waves',
+    run(c) { // @check:waves
+      // GAME-170: хвиля напруги — 2–4 справи зі строком, обидва наслідки, варіант для кожної комбінації, унікальність між
+      // етапами, Мія в безпеці й лише в руках лідера. Ціна хибного спрацювання (закон 5): автор додає другу справу, строк,
+      // наслідок чи safe: true — одне поле; ціна пропуску — гравець у «напрузі» з однією справою або кіт біля води.
+      const out = [];
+      const waves = c.content.waves ?? [];
+      const combos = enumerateCombos(c.content);
+      const signatures = new Map();
+      for (const w of waves) {
+        if (w.tasks.length < 2) out.push(I('WAVE_TOO_FEW_TASKS', w.id, `справ ${w.tasks.length}, а хвиля — це 2–4 одночасні справи`));
+        for (const t of w.tasks) {
+          const where = `${w.id}/${t.id}`;
+          if (!Number.isInteger(t.limitMin) || t.limitMin < 1 || t.limitMin > WAVE_MAX_LIMIT) out.push(I('WAVE_LIMIT_INVALID', `${where}.limitMin`, `строк ${JSON.stringify(t.limitMin)}: ціле 1…${WAVE_MAX_LIMIT} ігрових хвилин`));
+          for (const k of ['done', 'late']) if (t[k] === undefined) out.push(I('WAVE_OUTCOME_MISSING', `${where}.${k}`, `немає наслідку «${k}»: у справи завжди два виходи — встиг і не встиг`));
+          if (t.animal !== undefined) {
+            if (!t.targets?.length || t.targets.some((x) => x.safe !== true)) out.push(I('WAVE_ANIMAL_UNSAFE', `${where}.targets`, 'справа про тварину: кожна ціль мусить бути safe: true (ніколи біля води чи вогню), і хоч одна ціль є'));
+            if (t.leaderOnly !== true) out.push(I('WAVE_ANIMAL_HELPER', `${where}.leaderOnly`, 'справу про тварину робить лише лідер — постав leaderOnly: true'));
+          }
+        }
+        // Варіанти: у кожній дозволеній комбінації, яку хвиля адресує, після відбору справ за їхнім when лишається ≥ 2.
+        // Хвиля з < 2 справ уже звітує WAVE_TOO_FEW_TASKS — варіанти не дублюють першопричину.
+        for (const k of w.tasks.length < 2 ? [] : combos) {
+          if (!matches(w.when, k)) continue;
+          const visible = w.tasks.filter((t) => matches(t.when, k));
+          if (visible.length < 2) out.push(I('WAVE_VARIANT_INCOMPLETE', `${w.id} @ ${comboLabel(k)}`, `у цій комбінації видно лише ${visible.length} справ (${visible.map((t) => t.id).join(', ') || '—'}): дай варіант справи або звузь when хвилі`));
+        }
+        const sig = [...new Set(w.tasks.map((t) => t.id))].sort().join(',');
+        const prev = signatures.get(sig);
+        if (prev && prev.stage !== w.stage) out.push(I('WAVE_REPEATED', w.id, `той самий набір справ (${sig}) уже є у «${prev.id}» на етапі ${prev.stage} — хвиля не повторюється на іншому етапі`));
+        else if (!prev) signatures.set(sig, w);
+      }
+      return out;
+    },
+  },
+  {
     id: 'combo-options',
     run(c) { // @check:combo-options
       return checkOptions(c.content, whens(c.content));
@@ -984,6 +1033,11 @@ function whens(content) {
     // Третій елемент — умова квесту: ціль і перехід живуть лише там, де живе їхній квест.
     for (const o of q.objectives) if (o.when) out.push([`${q.id}/${o.id}`, o.when, q.when]);
     q.transitions.forEach((t, i) => t.when && out.push([`${q.id}.transitions[${i}]`, t.when, q.when, 'transition']));
+  }
+  // Хвилі (GAME-170): умова хвилі й умова справи (справа живе лише там, де живе її хвиля).
+  for (const w of content.waves ?? []) {
+    if (w.when) out.push([w.id, w.when]);
+    for (const t of w.tasks) if (t.when) out.push([`${w.id}/${t.id}`, t.when, w.when]);
   }
   return out;
 }
@@ -1066,6 +1120,8 @@ function settable(c) {
   const set = new Set(Object.values(FLAG_FAMILIES).flatMap((f) => f.gen(c.content)));
   // Факти сцени (GAME-142, scene.facts) ставить стартер сцени в мить StartScene — ядро, а не вибір у діалозі.
   for (const d of c.content.dialogues ?? []) for (const f of d.scene?.facts ?? []) set.add(f);
+  // Наслідки хвиль (GAME-170) ставить ядро, щойно справа встигла чи спізнилась, — так само без вибору в діалозі.
+  for (const [, f] of waveEffects(c.content)) set.add(f);
   const memory = new Map();
   const mem = (npc) => memory.get(npc) ?? NONE;
   const choices = dialogueChoices(c.content);
@@ -1128,6 +1184,17 @@ function flagUses(content) {
   for (const [where, leaf] of condLeavesAll(content)) { const f = leaf.flag ?? leaf.notFlag; if (f !== undefined) out.push([where, f]); }
   for (const [where, e] of dialogueEffects(content)) if (e.setFlag !== undefined) out.push([where, e.setFlag]);
   for (const d of content.dialogues ?? []) (d.scene?.facts ?? []).forEach((f, i) => out.push([`${d.id}.scene.facts[${i}]`, f]));
+  for (const [where, f] of waveEffects(content)) out.push([where, f]);
+  return out;
+}
+
+/** [where, прапорець] для кожного ефекту наслідку хвилі (GAME-170): їх ставить ядро в мить наслідку, не вибір у діалозі. */
+function waveEffects(content) {
+  const out = [];
+  for (const w of content.waves ?? []) {
+    (w.allDone?.effects ?? []).forEach((e, i) => e.setFlag !== undefined && out.push([`${w.id}.allDone.effects[${i}]`, e.setFlag]));
+    for (const t of w.tasks) for (const k of ['done', 'late']) (t[k]?.effects ?? []).forEach((e, i) => e.setFlag !== undefined && out.push([`${w.id}/${t.id}.${k}.effects[${i}]`, e.setFlag]));
+  }
   return out;
 }
 
