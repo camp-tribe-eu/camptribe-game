@@ -41,6 +41,10 @@ DEFAULT_SOURCES = [
     'assets/characters/legs/pants/thin/walk.png',
     'assets/characters/torso/clothes/longsleeve/longsleeve/female/walk.png',
     'assets/characters/torso/clothes/longsleeve/longsleeve/male/walk.png',
+    # GAME-147: two more generator layers (Matthew's teen shirt, Anna's hair). Both passed the guard
+    # against the 519-colour palette before being listed here, so they widen nothing.
+    'assets/characters/torso/clothes/shortsleeve/shortsleeve/teen/walk.png',
+    'assets/characters/hair/pixie/adult/walk.png',
 ]
 
 

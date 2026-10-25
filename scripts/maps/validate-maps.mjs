@@ -144,9 +144,9 @@ const issues = [...loaded.issues];
 for (const { name, map } of loaded.maps) issues.push(...validateMap(map, name));
 
 if (issues.length === 0) {
-  const t = { spawns: 0, triggers: 0, npcs: 0, walkable: 0, tiles: 0 };
+  const t = { spawns: 0, triggers: 0, npcs: 0, walkable: 0, tiles: 0, layouts: 0, rooms: 0, furniture: 0, freestanding: 0 };
   for (const { map } of loaded.maps) for (const [k, v] of Object.entries(summarize(map))) t[k] += v;
-  console.log(`PASS · мап ${loaded.maps.length} · точок появи ${t.spawns}, тригерів ${t.triggers}, NPC ${t.npcs} → пар «точка появи → ціль» перевірено ${loaded.maps.reduce((a, { map }) => { const s = summarize(map); return a + s.spawns * (s.triggers + s.npcs); }, 0)} · прохідних клітинок ${t.walkable} із ${t.tiles}`);
+  console.log(`PASS · мап ${loaded.maps.length} · точок появи ${t.spawns}, тригерів ${t.triggers}, NPC ${t.npcs} → пар «точка появи → ціль» перевірено ${loaded.maps.reduce((a, { map }) => { const s = summarize(map); return a + s.spawns * (s.triggers + s.npcs); }, 0)} · прохідних клітинок ${t.walkable} із ${t.tiles} · розкладка: мап ${t.layouts}, кімнат ${t.rooms}, меблів ${t.furniture}, freestanding ${t.freestanding}`);
   process.exit(0);
 }
 for (const i of issues) console.log(`::error::${i.code} · ${i.where} · ${i.msg}`);

@@ -475,6 +475,7 @@ export const CHECKS = [
       (ct.facts ?? []).forEach((f) => add(f.claimKey, f.id));
       (ct.packing?.notes ?? []).forEach((n, i) => add(n.textKey, `packing.notes[${i}]`));
       (ct.dialogues ?? []).forEach((d) => add(d.trigger?.titleKey, `${d.id}.trigger`));
+      (ct.dialogues ?? []).forEach((d) => add(d.scene?.titleKey, `${d.id}.scene`));
       // GAME-110: рядок реєстру з journal: true — текст запису журналу: journal.<id> (bool) або journal.<id>-<значення> (enum).
       for (const f of ct.flags ?? []) for (const k of journalKeys(f)) add(k, `flags:${f.id}`);
       for (const d of ct.dialogues ?? []) for (const n of d.nodes) {
@@ -651,6 +652,7 @@ export const CHECKS = [
         for (const n of d.nodes) {
           if (n.next !== undefined && !nodes.has(n.next)) miss(`${d.id}/${n.id}.next`, `вузла «${n.next}» немає`);
           (n.choices ?? []).forEach((ch, i) => { if (!nodes.has(ch.next)) miss(`${d.id}/${n.id}.choices[${i}].next`, `вузла «${ch.next}» немає`); });
+          (n.branches ?? []).forEach((b, i) => { if (!nodes.has(b.next)) miss(`${d.id}/${n.id}.branches[${i}].next`, `вузла «${b.next}» немає`); });
         }
       }
       for (const [where, leaf] of condLeavesAll(c.content)) {
@@ -720,7 +722,7 @@ export const CHECKS = [
         const f = leaf.flag !== undefined ? leaf.flag : leaf.notFlag;
         if (f !== undefined && !set.has(f)) out.push(I('DIALOGUE_FLAG_NEVER_SET', where, `умова читає прапорець «${f}», який жоден здійсненний ефект не ставить`));
       }
-      for (const [where, ch] of choices) {
+      for (const [where, ch] of [...choices, ...dialogueBranches(c.content)]) {
         if (!ch.when) continue;
         for (const f of contradictions(ch.when)) out.push(I('DIALOGUE_COND_CONTRADICTION', `${where}.when`, `all вимагає водночас «так» і «ні» для «${f}» (flag/notFlag чи remembers/notRemembers) — вибір не покажеться ніколи`));
       }
@@ -852,14 +854,18 @@ export const CHECKS = [
     id: 'dialogue-owner',
     run(c) { // @check:dialogue-owner
       // GAME-31: подія в дорозі — діалог без NPC, що відкривається сам після приїзду (ядро: RoadEvent).
+      // GAME-142: сцена — діалог без NPC, який відкриває сюжет (ядро: StartScene). Власник — рівно один із трьох.
       const out = [];
       for (const d of c.content.dialogues ?? []) {
-        if ((d.npcId === undefined) === (d.trigger === undefined)) out.push(I('DIALOGUE_OWNER', d.id, d.npcId === undefined ? 'немає ні npcId, ні trigger — діалог ніхто не відкриє' : 'і npcId, і trigger — незрозуміло, хто відкриває'));
-        if (d.trigger === undefined) continue;
+        const owners = [d.npcId !== undefined, d.trigger !== undefined, d.scene !== undefined].filter(Boolean).length;
+        if (owners !== 1) out.push(I('DIALOGUE_OWNER', d.id, owners === 0 ? 'немає ні npcId, ні trigger, ні scene — діалог ніхто не відкриє' : 'більше одного власника (npcId / trigger / scene) — незрозуміло, хто відкриває'));
+        if (d.trigger === undefined && d.scene === undefined) continue;
+        // Сцена, як і подія, — лише setFlag: перевірки dialogue-quest-gate/objective-kind міркують через доступність NPC,
+        // якого у сцени немає. Сюжет рухає квест, що стартує сцену, а не сцена — квест.
         // Лише setFlag: старт чи закриття квесту з події поставили б сюжет на везіння (SIM-EV-003), а
         // перевірки dialogue-quest-gate/objective-kind міркують через доступність NPC, якого в події немає.
         for (const n of d.nodes) (n.choices ?? []).forEach((ch, i) => (ch.effects ?? []).forEach((e) => {
-          if (e.setFlag === undefined) out.push(I('EVENT_EFFECT_UNSUPPORTED', `${d.id}/${n.id}.choices[${i}].effects`, `подія в дорозі може лише ставити прапорці, а тут ${Object.keys(e)[0]}`));
+          if (e.setFlag === undefined) out.push(I('EVENT_EFFECT_UNSUPPORTED', `${d.id}/${n.id}.choices[${i}].effects`, `${d.scene !== undefined ? 'сцена' : 'подія в дорозі'} може лише ставити прапорці, а тут ${Object.keys(e)[0]}`));
         }));
       }
       return out;
@@ -925,7 +931,7 @@ export const CHECKS = [
           while (stack.length && !free) {
             const n = nodes.get(stack.pop());
             if (n.end === true) { free = true; break; }
-            const next = [...(n.next !== undefined ? [n.next] : []), ...(n.choices ?? []).filter((ch) => !closes(ch)).map((ch) => ch.next)];
+            const next = [...(n.next !== undefined ? [n.next] : []), ...(n.branches ?? []).map((b) => b.next), ...(n.choices ?? []).filter((ch) => !closes(ch)).map((ch) => ch.next)];
             for (const v of next) if (nodes.has(v) && !visited.has(v)) { visited.add(v); stack.push(v); }
           }
           if (!free) out.push(I('OBJECTIVE_BY_DIALOGUE_ALWAYS', `${d.id}`, `ціль «${at}» закривається на кожному шляху діалогу до кінця — це та сама будь-яка розмова; закривай лише в потрібній гілці`));
@@ -996,6 +1002,8 @@ function whens(content) {
 // Виходи вузла діалогу. onlyUnconditional — лише ті, що доступні завжди (next або вибір без when).
 function exits(n, onlyUnconditional) {
   const out = n.next !== undefined ? [n.next] : [];
+  // Гілка (GAME-142) завжди умовна: безумовний вихід такого вузла — його next.
+  if (!onlyUnconditional) for (const b of n.branches ?? []) out.push(b.next);
   for (const ch of n.choices ?? []) if (!onlyUnconditional || !ch.when) out.push(ch.next);
   return out;
 }
@@ -1067,6 +1075,8 @@ function settable(c) {
   // Сімейства ядра (FLAG_FAMILIES, codes.mjs): «подія була» (f.seen-<подія>, GAME-31) і «упаковано» (f.pack-<річ>,
   // GAME-109) — ставить ядро саме, для кожної події в дорозі й кожної речі packing.items.
   const set = new Set(Object.values(FLAG_FAMILIES).flatMap((f) => f.gen(c.content)));
+  // Факти сцени (GAME-142, scene.facts) ставить стартер сцени в мить StartScene — ядро, а не вибір у діалозі.
+  for (const d of c.content.dialogues ?? []) for (const f of d.scene?.facts ?? []) set.add(f);
   const memory = new Map();
   const mem = (npc) => memory.get(npc) ?? NONE;
   const choices = dialogueChoices(c.content);
@@ -1096,6 +1106,16 @@ function condLeavesAll(content) {
   const out = [];
   for (const d of content.dialogues ?? []) for (const n of d.nodes) {
     (n.choices ?? []).forEach((ch, i) => { if (ch.when) for (const leaf of condLeaves(ch.when)) out.push([`${d.id}/${n.id}.choices[${i}].when`, leaf, d]); });
+    (n.branches ?? []).forEach((b, i) => { for (const leaf of condLeaves(b.when)) out.push([`${d.id}/${n.id}.branches[${i}].when`, leaf, d]); });
+  }
+  return out;
+}
+
+// [where, branch, dialogue] для кожної автоматичної гілки (GAME-142).
+function dialogueBranches(content) {
+  const out = [];
+  for (const d of content.dialogues ?? []) for (const n of d.nodes) {
+    (n.branches ?? []).forEach((b, i) => out.push([`${d.id}/${n.id}.branches[${i}]`, b, d]));
   }
   return out;
 }
@@ -1118,6 +1138,7 @@ function flagUses(content) {
   const out = [];
   for (const [where, leaf] of condLeavesAll(content)) { const f = leaf.flag ?? leaf.notFlag; if (f !== undefined) out.push([where, f]); }
   for (const [where, e] of dialogueEffects(content)) if (e.setFlag !== undefined) out.push([where, e.setFlag]);
+  for (const d of content.dialogues ?? []) (d.scene?.facts ?? []).forEach((f, i) => out.push([`${d.id}.scene.facts[${i}]`, f]));
   return out;
 }
 

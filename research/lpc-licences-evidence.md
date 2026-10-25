@@ -120,3 +120,24 @@ Job 120541133497. Усі 22 сторінки відповіли `HTTP 200`; ря
 сумісна з усіма ними (CC-BY / OGA-BY → CC-BY-SA), з двома названими винятками вище (`hair/*` — опис файлів сторінки;
 `male_small` — сторінки OGA немає). `node scripts/assets/check-assets.mjs` → `ASSETS: OK · 21 PNG, 21 рядків титрів
 (CC-BY-SA 3.0×19, OGA-BY 3.0×1, CC0×1), 10 рядків реєстру`.
+
+## 2026-10-24 · прогін [40116768691](https://github.com/camp-tribe-eu/camptribe-game/actions/runs/40116768691) — GAME-147: сорочка підлітка, волосся Anna, кішка Mia
+
+Job 120939551710 (лог прочитано через GitHub API; `gh run view --log` із сесії — 403 на results-receiver).
+
+| slug | url | HTTP | sha256 (16) | ліцензії, дослівно | Author |
+|---|---|---|---|---|---|
+| lpc-teen-androgynous-short-sleeve-shirt | https://opengameart.org/content/lpc-teen-androgynous-short-sleeve-shirt | 200 | `1b1b3f19044709b9` | GPL 3.0 ; CC-BY-SA 3.0 | Nyom |
+| lpc-cats-and-dogs | https://opengameart.org/content/lpc-cats-and-dogs | 200 (режим `oga:`) | — | CC-BY 3.0 ; CC-BY-SA 3.0 ; GPL 3.0 ; GPL 2.0 ; OGA-BY 3.0 | bluecarrot16 («Submitted by») |
+
+Цитата сторінки сорочки, дослівно з тексту: «License(s): GPL 3.0 CC-BY-SA 3.0»; «Copyright/Attribution Notice: Joe White,
+Stephen Challener (AKA Redshrike), Death's Darling. No attribution required to myself (Nyom).» У коментарях (04/29/2024)
+стверджують, що сорочка ElizaWy випущена також під OGA-BY 3.0 — це коментар, не розділ «License(s)», тож він не рахується.
+
+| файл | обрана ліцензія | статус і причина |
+|---|---|---|
+| characters/torso/clothes/shortsleeve/shortsleeve/teen/walk.png | CC-BY-SA 3.0 (**закріплено**) | генератор: «OGA-BY 3.0, CC-BY-SA 3.0, GPL 3.0». Сторінки рядка: base assets «CC-BY-SA 3.0 ; GPL 3.0», `lpc-7-womens-shirts` «CC-BY-SA 3.0 ; GPL 3.0», `lpc-revised-character-basics` «CC-BY-SA 3.0 ; GPL 3.0 ; OGA-BY 3.0», `lpc-clothing-updates` «CC-BY-SA 3.0», `lpc-teen-androgynous-short-sleeve-shirt` «GPL 3.0 ; CC-BY-SA 3.0», `lpc-expanded-sit-run-jump-more` лише «OGA-BY 3.0 ; OGA-BY 4.0» (частини під OGA-BY включаються у твір під CC-BY-SA, як у `longsleeve`), `lpc-expanded-simple-shirts` містить «CC-BY-SA 3.0»; github.com — not OGA — not checked here. "OGA-BY 3.0" з генератора сторінки Nyom і base assets не дають → CC-BY-SA 3.0 |
+| characters/hair/pixie/adult/walk.png | CC-BY-SA 3.0 | генератор: «CC-BY-SA 3.0, GPL 3.0» — ті самі сторінки, що в `hair/messy1` (base assets; `lpc-expanded-hair` — розбіжність сторінки описана вище); закріплення не потрібне |
+| sprites/cat_mia.png | OGA-BY 3.0 | одна сторінка, п'ять ліцензій; найм'якша дозволена — OGA-BY 3.0. Файл змінено (обрізка, перефарбування в сіре, квантування) — за OGA-BY похідний твір переліцензовувати не заборонено, ліцензію лишено тією ж |
+
+Підсумок: 24 файли — 18 шарів генератора (`CC-BY-SA 3.0`×17, `OGA-BY 3.0`×1 `male_small`), вогнище, авто, намет, два атласи, кішка.

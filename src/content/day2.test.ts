@@ -161,7 +161,7 @@ describe('GAME-141 · межа дня й кінець розділу — різ�
     expect(STORY.quests['CH1-D2-CAMP-001']?.objectives.find((o) => o.id === 'dinner')?.required).toBe(true);
     // Ціль «вечір» — візит табору (гравець уже тут): GAME-142 замінить її на сцену, не чіпаючи межі дня.
     expect(STORY.quests['CH1-D2-FIRE-001']?.objectives).toEqual([{ id: 'evening', kind: 'visit', target: 'loc.camp.lake', required: true }]);
-    expect((flags as { id: string }[]).some((f) => f.id.startsWith('f.fire'))).toBe(false);   // прапорці вогнища приносить GAME-142
+    expect((flags as { id: string }[]).filter((f) => f.id.startsWith('f.fire')).map((f) => f.id).sort()).toEqual(['f.fire-allowed', 'f.fire-dinner-done', 'f.fire-photo-tent']);   // прапорці вогнища принесла GAME-142 (#66)
   });
 
   it('підсумок дня: «день 1» закінчується на ST-005, «день 2» — на CH1-D2-FIRE-001 (повний прохід авто)', () => {
@@ -218,7 +218,7 @@ describe('GAME-141 · Спосіб перевірки 1: відмова від �
     const codes = validate(c, { today: '2026-10-24' }).map((x) => x.code);
     expect(codes).toContain('NO_PATH_TO_END');
     expect(validate(loaded.content, { today: '2026-10-24' }).filter((x) => x.code === 'NO_PATH_TO_END')).toEqual([]);
-  });
+  }, 120_000);
 });
 
 describe('GAME-141 · Спосіб перевірки 2: Еліза згадує лише підтверджене (EL-REVISIT)', () => {

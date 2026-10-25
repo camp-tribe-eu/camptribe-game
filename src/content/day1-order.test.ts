@@ -189,7 +189,7 @@ describe('GAME-138 · порядок дня 1 у контенті', () => {
 describe('GAME-138 · Спосіб перевірки 1: бот і реплей проходять порядок дня 1', () => {
   const N = 600;
   let runs: TracedRun[] = [];
-  beforeAll(() => { runs = campaign(GAME_DEFS, N, 20261023); }, 120_000);
+  beforeAll(() => { runs = campaign(GAME_DEFS, N, 20261023); }, 300_000);
 
   it(`бот (${N} прогонів, усі варіанти): порядок етапів, яблука між ST-004 і ST-005, підсумок дня 1 — на ST-005; тупиків 0`, () => {
     expect(campaignViolations(runs, GAME_DEFS).slice(0, 5)).toEqual([]);

@@ -48,6 +48,10 @@
     "characters/torso/clothes/longsleeve/longsleeve/male/walk.png": {
       "licence": "CC-BY-SA 3.0",
       "evidence": "research/lpc-licences-evidence.md"
+    },
+    "characters/torso/clothes/shortsleeve/shortsleeve/teen/walk.png": {
+      "licence": "CC-BY-SA 3.0",
+      "evidence": "research/lpc-licences-evidence.md"
     }
   }
 }
