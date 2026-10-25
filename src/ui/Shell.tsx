@@ -78,7 +78,7 @@ export function Shell({ port, langOverride, credits, build, holdToast = false }:
   const acted = (): void => { if (!settings.hintSeen) update({ ...settings, hintSeen: true }); };
   // Фокус — грі (#stage з підписом), коли закривається накладка: екран подорожі, підсумок дня, пауза (GAME-98). Інакше кнопка
   // зникає разом із накладкою і фокус падає на <body>: читач губить місце. Кадр затримки — щоб #stage уже не був під накладкою.
-  const focusStage = (): void => { requestAnimationFrame(() => document.getElementById('stage')?.focus()); };
+  const focusStage = (): void => { requestAnimationFrame(() => { if (document.activeElement === document.body) document.getElementById('stage')?.focus(); }); };
   const toggle = (next: boolean): void => {
     if (next) acted();
     setPaused(next);

@@ -4,7 +4,8 @@
 //    випадок. Друга вимога строгіша: найсвітліший піксель УСЬОГО видимого поля гри, змішаний із тлом рамки (мапа рухається, і
 //    під рамку може заїхати будь-яка плитка). Обидва ≥ 4.5:1 (WCAG AA, звичайний текст).
 // 2) Після «Продовжити» в паузі (і Escape) фокус — на #stage, як після екрана подорожі, а не на <body>.
-// Негативні контролі (мутації) — у звіті картки: альфа рамки 30 % замість 85 % → червоне; без повернення фокуса → червоне.
+// Негативні контролі — тут, у коді (закон 1): світлий/сірий текст рамки → міряч дає < 4.5; blur → фокус не на #stage, а шлях гри повертає;
+// без ?holdToast=1 тост зникає, з ним — лишається.
 import { expect, test, type Browser, type Locator, type Page } from '@playwright/test';
 
 const SETTINGS_KEY = 'camplife.settings.v1';
@@ -12,13 +13,13 @@ const AA = 4.5;
 type Rgb = readonly [number, number, number];
 interface Rect { x: number; y: number; width: number; height: number }
 
-async function open(browser: Browser, vp: { width: number; height: number }, touch: boolean, hintSeen = true): Promise<Page> {
+async function open(browser: Browser, vp: { width: number; height: number }, touch: boolean, hintSeen = true, hold = !hintSeen): Promise<Page> {
   const ctx = await browser.newContext({ viewport: vp, deviceScaleFactor: 1, ...(touch ? { hasTouch: true, isMobile: true } : {}) });
   const page = await ctx.newPage();
   await page.addInitScript(([k, seen]) => { try { localStorage.setItem(k as string, JSON.stringify({ textScale: 100, language: 'uk', hintSeen: seen })); } catch { /* сховища немає */ } }, [SETTINGS_KEY, hintSeen] as const);
   // holdToast: тост живе 5 с від старту, а на повільному CI сторінка готова пізніше — без перемикача тест червонів би
   // за часом, а не за контрастом (рецензія Fable, GAME-98).
-  await page.goto(hintSeen ? '/?seed=2' : '/?seed=2&holdToast=1');
+  await page.goto(hold ? '/?seed=2&holdToast=1' : '/?seed=2');
   await page.waitForFunction(() => (window as unknown as { __game?: { probe: { saveLoaded: boolean } } }).__game?.probe.saveLoaded === true, null, { timeout: 30_000 });
   // Полотно Phaser має встигнути намалювати мапу: інакше «тло» — порожній чорний, і контраст вийшов би завищеним.
   await expect.poll(async () => (await page.locator('#stage canvas').evaluate((el) => el.getBoundingClientRect().height)) / vp.height, { timeout: 15_000 }).toBeGreaterThanOrEqual(0.85);
@@ -132,6 +133,37 @@ test('844×390 дотик: тост-підказка поруч із рамко�
   await page.context().close();
 });
 
+test('негативний контроль контрасту: сірий текст #444 на рамці → міряч бачить < 4.5', async ({ browser }) => {
+  const vp = { width: 844, height: 390 };
+  const page = await open(browser, vp, true);
+  await setStyle(page, 'neg-low', '[data-ui="hud"], [data-ui="hud"] * { color: #444 !important; }');
+  const r = await measure(page, vp, '[data-ui="hud-time"]', '[data-ui="hud"]');
+  console.log(`GAME-98 нег.контроль: ${r.note}`);
+  expect(r.under, r.note).toBeLessThan(AA);
+  expect(r.worst, r.note).toBeLessThan(AA);
+  await page.context().close();
+});
+
+test('негативний контроль найгіршого тла: світле тло рамки → ratio < 4.5', () => {
+  const mix: Rgb = [0, 1, 2].map(() => 0.3 * 255 + 0.7 * 255) as unknown as Rgb;
+  expect(ratio([255, 255, 255], [255, 255, 255])).toBeLessThan(AA);
+  expect(ratio([240, 240, 240], mix)).toBeLessThan(AA);
+});
+
+test('негативний контроль тосту: без ?holdToast=1 тост зникає, з ним — лишається', async ({ browser }) => {
+  test.setTimeout(60_000);
+  const vp = { width: 844, height: 390 };
+  const free = await open(browser, vp, true, false, false);
+  await expect(free.locator('[data-ui="hint"]')).toBeVisible();
+  await expect(free.locator('[data-ui="hint"]')).toHaveCount(0, { timeout: 12_000 });
+  await free.context().close();
+  const held = await open(browser, vp, true, false, true);
+  await expect(held.locator('[data-ui="hint"]')).toBeVisible();
+  await held.waitForTimeout(7_000);
+  await expect(held.locator('[data-ui="hint"]')).toBeVisible();
+  await held.context().close();
+});
+
 const focusId = (page: Page): Promise<string> => page.evaluate(() => (document.activeElement === document.body ? 'body' : document.activeElement?.id || document.activeElement?.tagName || 'none'));
 
 for (const vp of [{ width: 844, height: 390 }, { width: 390, height: 844 }]) {
@@ -146,6 +178,16 @@ for (const vp of [{ width: 844, height: 390 }, { width: 390, height: 844 }]) {
     await page.context().close();
   });
 }
+
+test('негативний контроль фокуса: після blur активний не #stage; шлях паузи його повертає', async ({ browser }) => {
+  const page = await open(browser, { width: 844, height: 390 }, true);
+  await page.evaluate(() => (document.activeElement as HTMLElement | null)?.blur());
+  expect(await focusId(page)).not.toBe('stage');   // без focusStage фокуса на #stage немає
+  await page.locator('[data-touch="pause"]').tap();
+  await page.locator('[data-ui="resume"]').tap();
+  await expect.poll(() => focusId(page), { timeout: 5_000 }).toBe('stage');
+  await page.context().close();
+});
 
 test('1280×800 клавіатура: Escape відкриває й закриває паузу — фокус на #stage', async ({ browser }) => {
   const page = await open(browser, { width: 1280, height: 800 }, false);
