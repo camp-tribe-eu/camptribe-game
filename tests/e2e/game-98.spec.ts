@@ -208,10 +208,9 @@ test('844×390 дотик: підсумок дня → «Продовжити» 
   await tap(panel.locator('[data-act="create"]', { hasText: /Авто|Car/ }).first());
   for (const [k, key] of [['complete', 'q.prologue-home-001'], ['complete', 'q.st-001'], ['complete', 'q.st-002'], ['visit', 'loc.shop'], ['pickup', 'item.tent'], ['pickup', 'item.sleeping-bag'],
     ['complete', 'q.st-003'], ['visit', 'loc.home'], ['complete', 'q.ch1-home-001'], ['visit', 'loc.road']] as const) await tap(panel.locator(`[data-act="${k}"][data-key="${key}"]`));
-  if (await panel.locator('[data-key="dlg.road-apples.box.c1"]').isVisible({ timeout: 400 }).catch(() => false)) {
-    await tap(panel.locator('[data-key="dlg.road-apples.box.c1"]'));
-    await tap(panel.locator('[data-act="continue"]'));
-  }
+  // GAME-108: на дорозі трапляється одна з десяти подій (не лише «Яблука») — як гравець, що поспішає: остання відповідь до кінця розмови.
+  const dlg = panel.locator('[data-ui="dialogue"]');
+  for (let i = 0; i < 6 && await dlg.isVisible({ timeout: 400 }).catch(() => false); i++) await tap(dlg.locator('[data-act]').last());
   for (const [k, key] of [['complete', 'q.st-004'], ['visit', 'loc.camp.lake'], ['talk', 'npc.elise'], ['choose', 'dlg.elise-greeting.hello.c2'], ['continue', ''],
     ['choose', 'dlg.elise-greeting.spot.c1'], ['continue', ''], ['pickup', 'item.firewood'], ['complete', 'q.st-005']] as const) await tap(panel.locator(`[data-act="${k}"][data-key="${key}"]`));
   const summary = page.locator('[data-ui="summary"]');
