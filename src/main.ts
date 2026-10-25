@@ -51,6 +51,7 @@ const shown = (o: StoryOffer): StoryOffer => (hiddenActs.length === 0 ? o : {
 const storyListeners = new Set<() => void>();
 // GAME-170 зріз 2 · режисер: перед кожним оновленням екрана — ходи СЮЖЕТУ (StartWave на етапі хвилі). Ядро — сторож законності;
 // режисер шле лише те, що ядро прийме, і рівно раз (після прийняття pendingWave порожній; відмова видна в processed).
+// Завантаження збереження на CH1-D2-CAMP-001 без хвилі стартує її тут же, строки — від годинника завантаження (прийнято, див. director.ts).
 const direct = (): void => { for (const m of storyMoves(bridge.state, GAME_DEFS)) bridge.send(m); };
 const storyChanged = (): void => { direct(); for (const l of storyListeners) l(); };
 const openListeners = new Set<() => void>();

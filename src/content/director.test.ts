@@ -124,6 +124,33 @@ describe('режисер W4: стартер хвилі (GAME-170, зріз 2)', 
   });
 });
 
+describe('режисер W4: завантаження збереження на CAMP-001 (рішення GAME-170: прийнятно)', () => {
+  // Збереження на CAMP-001 без wave (вийшли до старту хвилі) → після завантаження хвиля стартує одразу, строки — від годинника
+  // ЗАВАНТАЖЕННЯ. Штрафу немає (пауза між сесіями не з'їдає строк), повторів немає (past). Зафіксовано, щоб це не стало випадковістю.
+  it('(a) завантаження на CAMP-001 без хвилі: хвиля стартує рівно раз, строки = годинник завантаження + ліміти', () => {
+    const saved = JSON.parse(JSON.stringify(toStage('bike', CAMP))) as SimState; // «збереження»: серіалізований стан без wave
+    expect(saved.game.wave?.active ?? null).toBeNull();
+    const loaded = minutes(saved, 30); // «завантаження» пізніше: годинник пішов
+    const cmds = storyMoves(loaded, GAME_DEFS);
+    expect(cmds).toEqual([{ type: 'StartWave', waveId: WAVE_CH1_EVENING }]);
+    const s = must(loaded, cmds[0] as Move);
+    const limits = Object.fromEntries((RAW_WAVES.find((w) => w.id === WAVE_CH1_EVENING)?.tasks ?? []).map((t) => [t.id, t.limitMin]));
+    expect(s.game.wave?.active?.startedAt).toBe(loaded.clock.minutes);
+    for (const [id, t] of Object.entries(s.game.wave?.active?.tasks ?? {})) expect(t.dueAt, id).toBe(loaded.clock.minutes + (limits[id] as number));
+    expect(storyMoves(s, GAME_DEFS)).toEqual([]); // удруге — нічого
+  });
+
+  it('(b) перезавантаження після кінця хвилі: хвиля не стартує знову', () => {
+    const at = toStage('bike', CAMP);
+    const gone = minutes(must(at, storyMoves(at, GAME_DEFS)[0] as Move), 61);
+    expect(gone.game.wave?.active).toBeNull();
+    const reloaded = JSON.parse(JSON.stringify(gone)) as SimState;
+    expect(storyMoves(reloaded, GAME_DEFS)).toEqual([]);
+    expect(storyMoves(minutes(reloaded, 600), GAME_DEFS)).toEqual([]);
+    expect(reloaded.game.wave?.past[WAVE_CH1_EVENING]).toBeDefined();
+  });
+});
+
 describe('режисер W4: цілі на мапі', () => {
   const map = JSON.parse(campLake) as { layers: { name: string; objects?: { name: string; type: string }[] }[] };
   const triggers = (map.layers.find((l) => l.name === 'objects')?.objects ?? []).filter((o) => o.type === 'trigger').map((o) => o.name);

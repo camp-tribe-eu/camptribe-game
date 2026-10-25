@@ -271,3 +271,46 @@ test.describe('(c) негативні контролі', () => {
     expect((await core(page)).game.wave?.active?.tasks['firewood']?.outcome).toBe('open');
   });
 });
+
+// Картка хвилі не накриває жодного елемента керування: HUD, ☰, ‖, джойстик, кнопка дії — у двох орієнтаціях телефона й трьох пропорціях.
+const CONTROLS = ['[data-ui="hud"]', '[data-touch="story"]', '[data-touch="pause"]', '[data-touch="stick"]', '[data-touch="interact"]'] as const;
+/** Селектори керування, яких картка торкається. Елемента немає на екрані → помилка (порожній перетин не мусить означати «все гаразд»). */
+async function overlaps(page: Page): Promise<string[]> {
+  const c = await card(page).boundingBox();
+  if (!c) throw new Error('картки хвилі немає на екрані');
+  const hit: string[] = [];
+  for (const sel of CONTROLS) {
+    const b = await page.locator(sel).first().boundingBox();
+    if (!b) throw new Error(`${sel}: елемента немає на екрані`);
+    if (c.x < b.x + b.width && b.x < c.x + c.width && c.y < b.y + b.height && b.y < c.y + c.height) hit.push(sel);
+  }
+  return hit;
+}
+const LAYOUTS = [['сторч 390×844', 390, 844], ['вбік 844×390', 844, 390], ['9:16 360×640', 360, 640], ['1:1 600×600', 600, 600], ['16:9 640×360', 640, 360]] as const;
+for (const [name, width, height] of LAYOUTS) {
+  test.describe(`(d) розкладка картки: ${name}`, () => {
+    test.use({ viewport: { width, height }, hasTouch: true, isMobile: true });
+    test('картка не перетинає HUD, ☰, ‖, джойстик і кнопку дії', async ({ page }) => {
+      test.setTimeout(240_000);
+      await open(page, '?seed=5');
+      await toEvening(page);
+      await panel(page).locator('[data-ui="story-close"]').click();
+      await expect(card(page)).toBeVisible();
+      expect(await overlaps(page), 'картка перетинає елементи керування').toEqual([]);
+    });
+  });
+}
+test.describe('(d) негативний контроль розкладки', () => {
+  test.use({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true });
+  test('CSS ставить картку на ☰ → перевірка червоніє', async ({ page }) => {
+    test.setTimeout(240_000);
+    await open(page, '?seed=5');
+    await toEvening(page);
+    await panel(page).locator('[data-ui="story-close"]').click();
+    await expect(card(page)).toBeVisible();
+    const m = await page.locator('[data-touch="story"]').first().boundingBox();
+    if (!m) throw new Error('☰ немає');
+    await page.addStyleTag({ content: `[data-ui="wave"]{position:fixed!important;left:${m.x}px!important;top:${m.y}px!important;right:auto!important;bottom:auto!important;transform:none!important}` });
+    expect(await overlaps(page)).toContain('[data-touch="story"]');
+  });
+});

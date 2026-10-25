@@ -22,6 +22,11 @@ export const TASK_SPOT = 'task.';
 
 const own = <T>(o: Readonly<Record<string, T>>, k: string): T | undefined => (Object.hasOwn(o, k) ? o[k] : undefined);
 
+/**
+ * Збереження на CH1-D2-CAMP-001 без `wave` (гравець вийшов до старту хвилі): після завантаження (src/main.ts, перший direct())
+ * хвиля стартує одразу, а строки рахуються від годинника ЗАВАНТАЖЕННЯ. Рішення (GAME-170): прийнятно — пауза між сесіями строк
+ * не з'їдає, штрафу немає, а `past` не дає хвилі повторитись. Це зафіксовано в director.test («завантаження на CAMP-001»).
+ */
 /** Хвиля, яку сюжет мусить відкрити зараз (та сама перевірка, що в applyWave/StartWave), або null. */
 export function pendingWave(game: GameState, defs: CoreDefs): string | null {
   const p = game.player;
