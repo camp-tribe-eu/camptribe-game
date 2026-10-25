@@ -34,7 +34,8 @@
          Шапка в потоці, а не абсолютом: кнопки не наїжджають на текст, при тексті 200 % середня колонка переносить рядки. */
       #app { position: fixed; inset: 0; display: flex; flex-direction: column; touch-action: none; user-select: none; -webkit-user-select: none; }
       #ui { display: contents; }
-      #stage { position: relative; flex: 1 1 0; min-height: 0; }
+      /* GAME-96: полотно покриває поле (кадр = ⌈поле / zoom⌉), зайве < zoom px з правого і нижнього краю ховаємо. */
+      #stage { position: relative; flex: 1 1 0; min-height: 0; overflow: hidden; }
       /* Шапка (GAME-92): сітка ☰ | текст | ‖. Текст зліва, рядки на одній лівій межі, однаковий інтервал. */
       .ui-header { order: -1; flex: none; position: relative; display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: start; column-gap: var(--gap-inline);
         box-sizing: border-box; padding: var(--edge-top) var(--edge-right) var(--gap-header-bottom) var(--edge-left); background: #1b1f23; }
@@ -139,8 +140,12 @@
          Вбік (дотик, низький широкий екран ≤ 500 px заввишки, як Stardew Valley mobile): мапа на ВЕСЬ екран, шапка лежить на ній
          прозорим шаром. ☰ — зліва вгорі; рамка «день · час · гроші» — справа вгорі, ‖ — під рамкою; назва місця схована.
          Бокові відступи --edge-left/right уже містять виріз (чубчик збоку). Шапка не ловить дотик, кнопки й нагадування — ловлять. */
+      /* GAME-96 (смак власника 25.10): те саме на десктопі й на будь-якому широкому екрані — мапа на всю ширину, керування поверх неї
+         (інвентар і спорядження — у ☰). Менші кнопки — лише на низькому екрані (телефон вбік). Сторч — без змін. */
       @media (any-pointer: coarse) and (orientation: landscape) and (max-height: 500px) {
         :root { --header-btn: 44px; --stick-size: 112px; --action-size: 80px; }
+      }
+      @media (orientation: landscape) {
         .ui-header { position: absolute; top: 0; left: 0; right: 0; z-index: 2; background: transparent; pointer-events: none; padding-bottom: 0;
           grid-template-columns: auto minmax(0, 1fr) auto; row-gap: 8px; }
         .ui-header button { pointer-events: auto; }
