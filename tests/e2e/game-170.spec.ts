@@ -187,6 +187,7 @@ test.describe('(a) сторч 390×844, клавіатура: усе встиг�
     await expect(card(page)).toHaveCount(0);
     expect(real, 'усі три справи клавіатурою — менше за найкоротший строк (40 ігрових хв ≈ 40 с)').toBeLessThan(40);
     info.annotations.push({ type: 'wave-real-seconds-all-done', description: real.toFixed(1) });
+    console.log(`GAME-170 (a): три справи клавіатурою за ${real.toFixed(1)} с реального часу`);
 
     // Вечеря з Елізою, кінець етапу → вогнище на мапі відкриває сцену; дрова встигли → «Вогнище тихо потріскує».
     await dinnerAndCamp(page);
@@ -208,11 +209,6 @@ test.describe('(b) вбік 844×390, дотик: нічого не робимо
     for (;;) { await page.waitForTimeout(16); if (until(await probe(page)) || Date.now() - start >= maxMs) break; }
     await touch(cdp, 'touchEnd');
     await page.waitForTimeout(120);
-  }
-  async function screenOf(page: Page, wx: number, wy: number): Promise<{ x: number; y: number }> {
-    const p = await probe(page);
-    const c = await page.locator('#stage canvas').evaluate((el) => { const r = el.getBoundingClientRect(); return { left: r.left, top: r.top, k: r.width / (el as HTMLCanvasElement).width }; });
-    return { x: c.left + (wx - p.cameraScrollX) * c.k, y: c.top + (wy - p.cameraScrollY) * c.k };
   }
   test('усі три late, хвиля згасає сама за ≈ 40–60 с реального часу; вогнище — гілка lantern; розділ усе одно завершено', async ({ browser }: { browser: Browser }, info) => {
     test.setTimeout(300_000);
@@ -236,6 +232,7 @@ test.describe('(b) вбік 844×390, дотик: нічого не робимо
     expect(real).toBeGreaterThanOrEqual(30);
     expect(real).toBeLessThanOrEqual(75);   // ≈ 50 с за годинником гри + запас на повільний кадр CI
     info.annotations.push({ type: 'wave-real-seconds-ignored', description: real.toFixed(1) });
+    console.log(`GAME-170 (b): хвиля згасла сама за ${real.toFixed(1)} с реального часу (${c1.clock.minutes - m0} ігрових хв)`);
     await expect(card(page)).toHaveCount(0);
     expect(c1.game.campaignEnded).toBe(false);
 
@@ -246,8 +243,10 @@ test.describe('(b) вбік 844×390, дотик: нічого не робимо
     await driveUntil(page, cdp, 0, -50, (p) => p.nearObject === 'obj.campfire');
     for (let i = 0; i < 4 && (await probe(page)).nearObject !== 'obj.campfire'; i++) await driveUntil(page, cdp, 0, i % 2 === 0 ? 50 : -50, (p) => p.nearObject === 'obj.campfire', 2_000);
     expect((await probe(page)).nearObject).toBe('obj.campfire');
-    const s = await screenOf(page, fire.x, fire.y - 20);
-    await page.touchscreen.tap(s.x, s.y);
+    // Кнопка дії (GAME-95) показує «вогнище» і дотик до неї відкриває сцену — як робить гравець на телефоні.
+    await expect(page.locator('[data-touch="interact"]')).toHaveAttribute('data-target', 'fire');
+    const b = await rectOf(page, '[data-touch="interact"]');
+    await page.touchscreen.tap(b.left + b.width / 2, b.top + b.height / 2);
     await expect(panel(page)).toBeVisible({ timeout: 5_000 });
     await playFireplace(page, 'Сьогодні без вогнища');
     expect(errors).toEqual([]);
