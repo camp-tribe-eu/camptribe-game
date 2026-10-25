@@ -13,7 +13,7 @@ import type { OfferSummary, StoryOffer } from './story-types';
 /** Скільки тост-підказка висить на екрані (мс), якщо гравець нічого не зробив (GAME-95). Картка: ≤ 6 с. */
 const TOAST_MS = 5000;
 
-export function Shell({ port, langOverride, credits, build }: { port: UiPort; langOverride?: AnyLang; credits: Credits; build: string }) {
+export function Shell({ port, langOverride, credits, build, holdToast = false }: { port: UiPort; langOverride?: AnyLang; credits: Credits; build: string; holdToast?: boolean }) {
   const [paused, setPaused] = useState(false);
   // Підтвердження «Нової гри» (GAME-82): окремий діалог замість меню паузи; Escape — «Ні», а не закрити паузу.
   const [confirmNew, setConfirmNew] = useState(false);
@@ -65,7 +65,7 @@ export function Shell({ port, langOverride, credits, build }: { port: UiPort; la
   useEffect(() => {
     if (!toastLive) return;
     const done = (): void => setToastGone(true);
-    const timer = setTimeout(done, TOAST_MS);
+    const timer = holdToast ? undefined : setTimeout(done, TOAST_MS);   // holdToast — лише e2e (test-switches.ts)
     window.addEventListener('pointerdown', done);
     window.addEventListener('keydown', done);
     return () => { clearTimeout(timer); window.removeEventListener('pointerdown', done); window.removeEventListener('keydown', done); };
@@ -76,10 +76,15 @@ export function Shell({ port, langOverride, credits, build }: { port: UiPort; la
   // Перша дія (GAME-83): відкрито ☰ чи паузу — підказка «Відкрий ☰» більше не потрібна, і не повернеться після
   // перезавантаження. Зберігаємо в налаштуваннях (не в сейві): схема сейву не змінюється.
   const acted = (): void => { if (!settings.hintSeen) update({ ...settings, hintSeen: true }); };
+  // Фокус — грі (#stage з підписом), коли закривається накладка: екран подорожі, підсумок дня, пауза (GAME-98). Інакше кнопка
+  // зникає разом із накладкою і фокус падає на <body>: читач губить місце. Кадр затримки — щоб #stage уже не був під накладкою.
+  const focusStage = (): void => { requestAnimationFrame(() => { if (document.activeElement === document.body) document.getElementById('stage')?.focus(); }); };
   const toggle = (next: boolean): void => {
     if (next) acted();
     setPaused(next);
     port.setPaused(next);
+    // GAME-98: пауза закрилась («Продовжити», Escape) — фокус грі, як після екрана подорожі, а не на <body>.
+    if (!next) focusStage();
   };
   // Підтверджено: порт чистить гру; далі — екран подорожі, а там вибір персонажа (гри без гравця на мапі немає).
   const startNew = (): void => {
@@ -103,7 +108,7 @@ export function Shell({ port, langOverride, credits, build }: { port: UiPort; la
     setStoryOpen(open);
     // Фокус повертається грі (#stage з підписом), а не на ☰: Space — клавіша дії в сцені, і сфокусована ☰
     // перехоплювала б її (знайдено e2e розмови з Елізою на мапі). ☰ лишається досяжною Tab.
-    if (!open) requestAnimationFrame(() => document.getElementById('stage')?.focus());
+    if (!open) focusStage();
     if (open) { setOffer(port.story()); void port.staleCode().then(setStaleCode); }
     port.setPaused(open);
   };

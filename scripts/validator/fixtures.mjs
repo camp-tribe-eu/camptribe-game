@@ -344,6 +344,7 @@ export const FIXTURES = [
   { name: 'індекс масиву як id', expect: ['ID_FORMAT'], patch(c) { c.items.push({ id: '0', nameKey: 'item.map' }); } },
   { name: 'назва як id', expect: ['ID_FORMAT'], patch(c) { c.npcs.push({ id: 'Ranger Anna', nameKey: 'npc.ranger', locationId: 'loc.camp' }); } },
   { name: 'grantId без префікса rw.', expect: ['ID_FORMAT'], patch(c) { q(c, 'ST-002').reward.grantId = 'st-002'; } },
+  { name: 'id основного етапу не за форматом (рецензія PR #62; решта кодів — від розірваних посилань на старий id)', expect: ['ID_FORMAT', 'NODE_UNREACHABLE', 'NO_PATH_TO_END', 'REF_MISSING'], patch(c) { q(c, 'ST-002').id = 'st-002x'; } },
   { name: 'дубль id у межах типу', expect: ['ID_DUPLICATE'], patch(c) { c.npcs.push({ ...c.npcs[1] }); } },
   { name: 'дубль id цілі в квесті', expect: ['ID_DUPLICATE'], patch(c) { q(c, 'ST-002').objectives[1].id = 'visit-forest'; } },
 
@@ -432,6 +433,8 @@ export const FIXTURES = [
     q(c, 'ST-002').transitions.push({ on: 'complete', to: 'ST-005', choiceKey: 'q.st-002' });
   } },
   { name: 'фінал втратив позначку кінця', expect: ['BRANCH_NO_NEXT', 'NO_PATH_TO_END'], patch(c) { q(c, 'ST-004').end = false; } },
+  { name: 'межа дня на необов\u2019язковому квесті', expect: ['DAY_END_OPTIONAL'], patch(c) { q(c, 'ST-003').dayEnd = true; } },
+  { name: 'межа дня на основному етапі — коректно', expect: [], patch(c) { q(c, 'ST-002').dayEnd = true; } },
 
   // ---- діалоги (GAME-28) ----
   { name: '[діалог] контроль: умовні гілки без безумовної альтернативи, але з fallback — коректно', expect: [], patch(c) {
@@ -844,6 +847,14 @@ export const FIXTURES = [
   { base: 'combo', name: '[подія] подія стартує квест — сюжет на везінні', expect: ['EVENT_EFFECT_UNSUPPORTED'], patch(c) { withRoadEvent(c).nodes[0].choices[0].effects.push({ startQuest: 'ST-003' }); } },
   { base: 'combo', name: '[подія] у неіснуючій локації', expect: ['DIALOGUE_REF_MISSING'], patch(c) { withRoadEvent(c).trigger.at = ['loc.ghost']; } },
   { base: 'combo', name: '[подія] шанс 101 %', expect: ['SCHEMA_INVALID'], patch(c) { withRoadEvent(c).trigger.chance = 101; } },
+  // GAME-108: when тригера — ті самі refs і combo-options, що й when квесту.
+  { base: 'combo', name: '[подія] контроль: when тригера лише для велосипеда — коректно', expect: [], patch(c) { withRoadEvent(c).trigger.when = { transports: [T_BIKE] }; } },
+  { base: 'combo', name: '[подія] when тригера з неіснуючим транспортом', expect: ['REF_MISSING'], patch(c) { withRoadEvent(c).trigger.when = { transports: ['transport.ghost'] }; } },
+  { base: 'combo', name: '[подія] when тригера: собака на велосипеді, а собаку возять лише авто', expect: ['WHEN_UNSATISFIABLE'], patch(c) {
+    withRoadEvent(c).trigger.when = { animals: [DOG], transports: [T_BIKE] };
+    c.animals[0].transports = [T_CAR];
+  } },
+  { base: 'combo', name: '[подія] when тригера з невідомим полем', expect: ['SCHEMA_UNKNOWN_FIELD'], patch(c) { withRoadEvent(c).trigger.when = { weather: ['rain'] }; } },
   { base: 'combo', name: '[подія] без виходу — червоніє тими самими перевірками діалогів', expect: ['DIALOGUE_DEAD_END', 'DIALOGUE_NODE_UNREACHABLE'], patch(c) {
     const d = withRoadEvent(c);
     d.nodes[0].choices[0].next = 'rain';

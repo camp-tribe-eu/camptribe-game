@@ -1,6 +1,6 @@
 [
   {
-    "id": "wave.ch1-day2-evening", "titleKey": "wave.ch1-day2-evening", "hookKey": "wave.ch1-day2-evening.hook", "stage": "ST-005",
+    "id": "wave.ch1-day2-evening", "titleKey": "wave.ch1-day2-evening", "hookKey": "wave.ch1-day2-evening.hook", "stage": "CH1-D2-CAMP-001",
     "fallback": { "textKey": "wave.ch1-day2-evening.fallback" },
     "allDone": { "textKey": "wave.ch1-day2-evening.all-done" },
     "tasks": [

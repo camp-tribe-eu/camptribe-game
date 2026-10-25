@@ -24,6 +24,7 @@ const COMBOS_FILE = 'validator/combos.mjs';
 // 1. Вимкнення кожної перевірки цілком. 2. Точкові мутації логіки, де помилка найдорожча.
 const mutations = [
   ...CHECKS.map((c) => ({ name: `вимкнено перевірку ${c.id}`, file: CHECKS_FILE, from: `// @check:${c.id}\n`, to: `// @check:${c.id}\n      return [];\n` })),
+  { name: 'формат id основного етапу — будь-що (рецензія PR #62)', file: CHECKS_FILE, from: 'quests: /^(?:(?:[A-Z][A-Z0-9]*-)+\\d{3}|', to: 'quests: /^(?:.+|' },
   { name: 'відмова рахується як завершення', file: CHECKS_FILE, from: "u === X && tr.on === 'complete'", to: 'u === X' },
   { name: 'transition-gate: джерело зараховано й при відмові', file: CHECKS_FILE, from: "if (tr.on === 'complete') done.add(uid);", to: 'done.add(uid);' },
   { name: 'transition-gate: локація рахується відкритою на вході в ціль, а не на джерелі', file: CHECKS_FILE, from: 'l.items?.includes(it) && avail(l, uid)', to: 'l.items?.includes(it) && avail(l, tr.to)' },

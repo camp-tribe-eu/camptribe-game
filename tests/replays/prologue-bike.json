@@ -46,8 +46,16 @@
    "kind": "command",
    "command": {
     "type": "CompleteQuest",
-    "questId": "ST-001",
+    "questId": "PROLOGUE-HOME-001",
     "commandId": "r1"
+   }
+  },
+  {
+   "kind": "command",
+   "command": {
+    "type": "CompleteQuest",
+    "questId": "ST-001",
+    "commandId": "r2"
    }
   },
   {
@@ -71,7 +79,7 @@
    "command": {
     "type": "CompleteQuest",
     "questId": "ST-002",
-    "commandId": "r2"
+    "commandId": "r3"
    }
   },
   {
@@ -79,7 +87,7 @@
    "command": {
     "type": "Visit",
     "locationId": "loc.shop",
-    "commandId": "r3"
+    "commandId": "r4"
    }
   },
   {
@@ -111,7 +119,7 @@
    "command": {
     "type": "Pickup",
     "itemId": "item.tent",
-    "commandId": "r4"
+    "commandId": "r5"
    }
   },
   {
@@ -119,7 +127,7 @@
    "command": {
     "type": "Pickup",
     "itemId": "item.sleeping-bag",
-    "commandId": "r5"
+    "commandId": "r6"
    }
   },
   {
@@ -127,7 +135,7 @@
    "command": {
     "type": "BuyItem",
     "itemId": "item.sleeping-bag-synthetic",
-    "commandId": "r6"
+    "commandId": "r7"
    }
   },
   {
@@ -135,7 +143,7 @@
    "command": {
     "type": "Pickup",
     "itemId": "item.tent",
-    "commandId": "r7"
+    "commandId": "r8"
    }
   },
   {
@@ -143,7 +151,7 @@
    "command": {
     "type": "CompleteQuest",
     "questId": "ST-003",
-    "commandId": "r8"
+    "commandId": "r9"
    }
   },
   {
@@ -165,9 +173,17 @@
   {
    "kind": "command",
    "command": {
+    "type": "Visit",
+    "locationId": "loc.home",
+    "commandId": "r10"
+   }
+  },
+  {
+   "kind": "command",
+   "command": {
     "type": "UnpackItem",
     "itemId": "item.lantern",
-    "commandId": "r9"
+    "commandId": "r11"
    }
   },
   {
@@ -175,7 +191,7 @@
    "command": {
     "type": "PackItem",
     "itemId": "item.snacks",
-    "commandId": "r10"
+    "commandId": "r12"
    }
   },
   {
@@ -183,14 +199,22 @@
    "command": {
     "type": "PackItem",
     "itemId": "item.big-cushion",
-    "commandId": "r11"
+    "commandId": "r13"
    }
   },
   {
    "kind": "command",
    "command": {
     "type": "AutoPack",
-    "commandId": "r12"
+    "commandId": "r14"
+   }
+  },
+  {
+   "kind": "command",
+   "command": {
+    "type": "CompleteQuest",
+    "questId": "CH1-HOME-001",
+    "commandId": "r15"
    }
   },
   {
@@ -198,7 +222,7 @@
    "command": {
     "type": "Visit",
     "locationId": "loc.road",
-    "commandId": "r13"
+    "commandId": "r16"
    }
   },
   {
@@ -276,8 +300,7 @@
    "command": {
     "type": "CompleteQuest",
     "questId": "ST-004",
-    "to": "q.elise-bike-area",
-    "commandId": "r14"
+    "commandId": "r17"
    }
   },
   {
@@ -285,7 +308,7 @@
    "command": {
     "type": "Visit",
     "locationId": "loc.camp.lake",
-    "commandId": "r15"
+    "commandId": "r18"
    }
   },
   {
@@ -293,28 +316,6 @@
    "command": {
     "type": "Talk",
     "npcId": "npc.elise",
-    "commandId": "r16"
-   }
-  },
-  {
-   "kind": "command",
-   "command": {
-    "type": "Choose",
-    "choice": 0,
-    "commandId": "r17"
-   }
-  },
-  {
-   "kind": "command",
-   "command": {
-    "type": "Continue",
-    "commandId": "r18"
-   }
-  },
-  {
-   "kind": "command",
-   "command": {
-    "type": "Continue",
     "commandId": "r19"
    }
   },
@@ -336,9 +337,23 @@
   {
    "kind": "command",
    "command": {
-    "type": "CompleteQuest",
-    "questId": "q.elise-bike-area",
+    "type": "Continue",
     "commandId": "r22"
+   }
+  },
+  {
+   "kind": "command",
+   "command": {
+    "type": "Choose",
+    "choice": 0,
+    "commandId": "r23"
+   }
+  },
+  {
+   "kind": "command",
+   "command": {
+    "type": "Continue",
+    "commandId": "r24"
    }
   },
   {
@@ -362,7 +377,7 @@
    "command": {
     "type": "Interact",
     "targetId": "obj.campfire",
-    "commandId": "r23"
+    "commandId": "r25"
    }
   },
   {
@@ -370,7 +385,7 @@
    "command": {
     "type": "Talk",
     "npcId": "npc.elise",
-    "commandId": "r24"
+    "commandId": "r26"
    }
   },
   {
@@ -378,7 +393,7 @@
    "command": {
     "type": "Choose",
     "choice": 3,
-    "commandId": "r25"
+    "commandId": "r27"
    }
   },
   {
@@ -386,14 +401,14 @@
    "command": {
     "type": "Choose",
     "choice": 5,
-    "commandId": "r26"
+    "commandId": "r28"
    }
   },
   {
    "kind": "command",
    "command": {
     "type": "Continue",
-    "commandId": "r27"
+    "commandId": "r29"
    }
   },
   {
@@ -401,7 +416,7 @@
    "command": {
     "type": "Pickup",
     "itemId": "item.firewood",
-    "commandId": "r28"
+    "commandId": "r30"
    }
   },
   {
@@ -409,7 +424,248 @@
    "command": {
     "type": "CompleteQuest",
     "questId": "ST-005",
-    "commandId": "r29"
+    "commandId": "r31"
+   }
+  },
+  {
+   "kind": "frame",
+   "realMs": 250
+  },
+  {
+   "kind": "frame",
+   "realMs": 250
+  },
+  {
+   "kind": "frame",
+   "realMs": 250
+  },
+  {
+   "kind": "frame",
+   "realMs": 250
+  },
+  {
+   "kind": "frame",
+   "realMs": 250
+  },
+  {
+   "kind": "frame",
+   "realMs": 250
+  },
+  {
+   "kind": "frame",
+   "realMs": 250
+  },
+  {
+   "kind": "frame",
+   "realMs": 250
+  },
+  {
+   "kind": "command",
+   "command": {
+    "type": "CompleteQuest",
+    "questId": "CH1-D2-001",
+    "commandId": "r32"
+   }
+  },
+  {
+   "kind": "command",
+   "command": {
+    "type": "Talk",
+    "npcId": "npc.elise",
+    "commandId": "r33"
+   }
+  },
+  {
+   "kind": "command",
+   "command": {
+    "type": "Choose",
+    "choice": 10,
+    "commandId": "r34"
+   }
+  },
+  {
+   "kind": "command",
+   "command": {
+    "type": "Choose",
+    "choice": 0,
+    "commandId": "r35"
+   }
+  },
+  {
+   "kind": "command",
+   "command": {
+    "type": "Choose",
+    "choice": 0,
+    "commandId": "r36"
+   }
+  },
+  {
+   "kind": "command",
+   "command": {
+    "type": "Continue",
+    "commandId": "r37"
+   }
+  },
+  {
+   "kind": "command",
+   "command": {
+    "type": "Continue",
+    "commandId": "r38"
+   }
+  },
+  {
+   "kind": "command",
+   "command": {
+    "type": "CompleteQuest",
+    "questId": "CH1-D2-ELISE-001",
+    "to": "q.elise-bike-area",
+    "commandId": "r39"
+   }
+  },
+  {
+   "kind": "frame",
+   "realMs": 250
+  },
+  {
+   "kind": "frame",
+   "realMs": 250
+  },
+  {
+   "kind": "frame",
+   "realMs": 250
+  },
+  {
+   "kind": "frame",
+   "realMs": 250
+  },
+  {
+   "kind": "command",
+   "command": {
+    "type": "Talk",
+    "npcId": "npc.elise",
+    "commandId": "r40"
+   }
+  },
+  {
+   "kind": "command",
+   "command": {
+    "type": "Choose",
+    "choice": 11,
+    "commandId": "r41"
+   }
+  },
+  {
+   "kind": "command",
+   "command": {
+    "type": "Choose",
+    "choice": 0,
+    "commandId": "r42"
+   }
+  },
+  {
+   "kind": "command",
+   "command": {
+    "type": "Continue",
+    "commandId": "r43"
+   }
+  },
+  {
+   "kind": "command",
+   "command": {
+    "type": "Continue",
+    "commandId": "r44"
+   }
+  },
+  {
+   "kind": "command",
+   "command": {
+    "type": "CompleteQuest",
+    "questId": "q.elise-bike-area",
+    "commandId": "r45"
+   }
+  },
+  {
+   "kind": "command",
+   "command": {
+    "type": "Talk",
+    "npcId": "npc.elise",
+    "commandId": "r46"
+   }
+  },
+  {
+   "kind": "command",
+   "command": {
+    "type": "Choose",
+    "choice": 12,
+    "commandId": "r47"
+   }
+  },
+  {
+   "kind": "command",
+   "command": {
+    "type": "Continue",
+    "commandId": "r48"
+   }
+  },
+  {
+   "kind": "command",
+   "command": {
+    "type": "Continue",
+    "commandId": "r49"
+   }
+  },
+  {
+   "kind": "command",
+   "command": {
+    "type": "Talk",
+    "npcId": "npc.elise",
+    "commandId": "r50"
+   }
+  },
+  {
+   "kind": "command",
+   "command": {
+    "type": "Choose",
+    "choice": 13,
+    "commandId": "r51"
+   }
+  },
+  {
+   "kind": "command",
+   "command": {
+    "type": "Choose",
+    "choice": 1,
+    "commandId": "r52"
+   }
+  },
+  {
+   "kind": "command",
+   "command": {
+    "type": "Continue",
+    "commandId": "r53"
+   }
+  },
+  {
+   "kind": "command",
+   "command": {
+    "type": "Continue",
+    "commandId": "r54"
+   }
+  },
+  {
+   "kind": "command",
+   "command": {
+    "type": "CompleteQuest",
+    "questId": "CH1-D2-CAMP-001",
+    "commandId": "r55"
+   }
+  },
+  {
+   "kind": "command",
+   "command": {
+    "type": "CompleteQuest",
+    "questId": "CH1-D2-FIRE-001",
+    "commandId": "r56"
    }
   },
   {
@@ -454,79 +710,118 @@
   "f7e17e58",
   "bda75791",
   "38bd81f8",
-  "8fd451ba",
-  "0cfb62e3",
-  "3be03d16",
-  "848d24fa",
-  "3ddb7c13",
-  "0b14b62e",
-  "da66991d",
-  "81727714",
-  "8c7df199",
-  "167888e5",
-  "09e8e304",
-  "5bfd7db4",
-  "c787e5b5",
-  "47c36389",
-  "c83e8904",
-  "2cf82dff",
-  "861e9874",
-  "d356ade1",
-  "98de2c3b",
-  "3ec0b160",
-  "6c8ad091",
-  "cdc5fe3e",
-  "01d9989a",
-  "1087d2e5",
-  "22854d04",
-  "3665778d",
-  "02cc942b",
-  "f1448c86",
-  "e6e5215d",
-  "4a7df5bc",
-  "13b86c59",
-  "80e03328",
-  "0e1919b2",
-  "bb14e3db",
-  "060217dd",
-  "57faa5a0",
-  "ba4aff8f",
-  "bc458968",
-  "791c16dd",
-  "49fa1a4e",
-  "d6eb08ad",
-  "d6eb08ad",
-  "d6eb08ad",
-  "d6eb08ad",
-  "8f7dc22c",
-  "94ccc031",
-  "59575e52",
-  "ba553351",
-  "f1d0e785",
-  "9b96b247",
-  "91cf4583",
-  "443456f0",
-  "f70a206d",
-  "2db6cbf9",
-  "56b62869",
-  "d9eb182c",
-  "d0f78815",
-  "373e5cea",
-  "2a85758e",
-  "ef47d653",
-  "8ec51b04",
-  "c451899f",
-  "48f4a866",
-  "8fb0e32d",
-  "91fe5623",
-  "274e68e8",
-  "42dbe0a7",
-  "012ca139",
-  "12e79924",
-  "af099e40",
-  "9bdf19a9",
-  "a169b7b8",
-  "cd1184c7",
-  "40872243"
+  "596826c6",
+  "97790848",
+  "a51cc03e",
+  "447024af",
+  "2f9ef303",
+  "24f41bee",
+  "2cdc1c81",
+  "5f50213f",
+  "c49e493f",
+  "a6d75952",
+  "95ae2d0e",
+  "1bde6d0f",
+  "89507aab",
+  "82d6a072",
+  "70372f46",
+  "6193c695",
+  "a10170cd",
+  "ce437e46",
+  "eae04202",
+  "9cb52515",
+  "34cb4eb0",
+  "60081d21",
+  "11b343a0",
+  "b3efb80c",
+  "5ccb40f4",
+  "5b0a1bf2",
+  "c08098af",
+  "6e19e43f",
+  "1a3484e7",
+  "dc3a5e5c",
+  "56683706",
+  "b008e3ab",
+  "04dba5fe",
+  "01523dd3",
+  "8bc75fee",
+  "873c5a65",
+  "e8167272",
+  "a9d2879a",
+  "f9ca09b9",
+  "7b239b26",
+  "187cfcea",
+  "073c8033",
+  "35828488",
+  "faf1fc55",
+  "faf1fc55",
+  "faf1fc55",
+  "faf1fc55",
+  "292dff53",
+  "b55e2c06",
+  "54ae20d3",
+  "1b1e2a76",
+  "97c3ee0a",
+  "79710b6d",
+  "03d0df09",
+  "f71aafca",
+  "aabeffdb",
+  "24de381f",
+  "5d2d8bee",
+  "a50c0f39",
+  "b6922fda",
+  "52bb595e",
+  "1741b8e8",
+  "c2819600",
+  "97b7bdab",
+  "ac5eeb4b",
+  "130ed4c1",
+  "5d31d1b9",
+  "2cf197ad",
+  "12136044",
+  "9288bce4",
+  "406d8613",
+  "84ba6d97",
+  "053f5654",
+  "18468644",
+  "da54103d",
+  "7d91db11",
+  "1e80cdfa",
+  "566962e9",
+  "55e89e8a",
+  "0149a8f7",
+  "650c9725",
+  "7145bdeb",
+  "772fe8cf",
+  "602fed3c",
+  "a5885055",
+  "cf73f3f6",
+  "9b31a869",
+  "8aedbd15",
+  "ebfeb177",
+  "0ec83483",
+  "916d49d4",
+  "1809bfb7",
+  "47bab9b1",
+  "5f1559e7",
+  "53b3f529",
+  "37ed1982",
+  "efb9fe4b",
+  "413ef61e",
+  "506587aa",
+  "8d618ad0",
+  "5265d387",
+  "b7812a6c",
+  "7417a2fb",
+  "b837036d",
+  "ac647c46",
+  "0a8dd413",
+  "9b2666a0",
+  "e541bdd5",
+  "122ff559",
+  "c95efa50",
+  "41998ff6",
+  "53445949",
+  "227d9db5"
  ]
 }

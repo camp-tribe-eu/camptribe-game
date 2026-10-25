@@ -59,7 +59,7 @@ describe('укласти автоматично: завжди в межах мі
         s = r.state;
       };
       send({ type: 'CreateCharacter', profileId: k.profile, transportId: k.transport, ...(k.animal === NO_ANIMAL ? {} : { animalId: k.animal }) });
-      send({ type: 'CompleteQuest', questId: 'ST-001' }); send({ type: 'CompleteQuest', questId: 'ST-002' });
+      send({ type: 'CompleteQuest', questId: 'PROLOGUE-HOME-001' }); send({ type: 'CompleteQuest', questId: 'ST-001' }); send({ type: 'CompleteQuest', questId: 'ST-002' });
       send({ type: 'Visit', locationId: 'loc.shop' }); send({ type: 'Pickup', itemId: 'item.tent' }); send({ type: 'Pickup', itemId: 'item.sleeping-bag' });
       send({ type: 'CompleteQuest', questId: 'ST-003' });
       const p = s.player as PlayerState;
@@ -92,7 +92,7 @@ describe('екран пакування (знімок для UI) ≡ ядро', 
     const send = (c: object): void => { sim = step(sim, { kind: 'command', command: { ...c, commandId: nextCommandId(sim.game) } as Command }, { defs: GAME_DEFS }); };
     send({ type: 'CreateCharacter', profileId: 'profile.solo-explorer', transportId: transport });
     const before = storyOffer(sim, GAME_DEFS).offer.packing;
-    send({ type: 'CompleteQuest', questId: 'ST-001' }); send({ type: 'CompleteQuest', questId: 'ST-002' });
+    send({ type: 'CompleteQuest', questId: 'PROLOGUE-HOME-001' }); send({ type: 'CompleteQuest', questId: 'ST-001' }); send({ type: 'CompleteQuest', questId: 'ST-002' });
     send({ type: 'Visit', locationId: 'loc.shop' }); send({ type: 'Pickup', itemId: 'item.tent' }); send({ type: 'Pickup', itemId: 'item.sleeping-bag' });
     const midway = storyOffer(sim, GAME_DEFS).offer.packing;
     send({ type: 'CompleteQuest', questId: 'ST-003' });
@@ -132,7 +132,13 @@ describe('екран пакування (знімок для UI) ≡ ядро', 
 
   it('у розмові й після виходу з пакувальних місць екрана пакування немає', () => {
     const o = open('transport.bike');
-    const road = step(o.sim, { kind: 'command', command: { type: 'Visit', locationId: 'loc.road', commandId: nextCommandId(o.sim.game) } }, { defs: GAME_DEFS });
+    // GAME-138: дорога відкривається після CH1-HOME-001 (пакування вдома) — спершу додому й завершити його.
+    let home = o.sim;
+    for (const c of [{ type: 'Visit', locationId: 'loc.home' }, { type: 'CompleteQuest', questId: 'CH1-HOME-001' }]) {
+      home = step(home, { kind: 'command', command: { ...c, commandId: nextCommandId(home.game) } as Command }, { defs: GAME_DEFS });
+    }
+    expect(home.game.quests['CH1-HOME-001']?.status).toBe('completed');
+    const road = step(home, { kind: 'command', command: { type: 'Visit', locationId: 'loc.road', commandId: nextCommandId(home.game) } }, { defs: GAME_DEFS });
     expect(storyOffer(road, GAME_DEFS).offer.packing).toBeNull();
     const g: GameState = road.game;
     expect(g.player?.locationId).toBe('loc.road');

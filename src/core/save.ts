@@ -7,7 +7,7 @@
 // * контрольна сума — над станом у ТІЙ версії, у якій його записано (до міграцій);
 // * кожна випущена версія лишається фікстурою в tests/saves/ назавжди.
 import type { StoryDefs } from './defs';
-import { matches } from './story';
+import { exitsFor, matches } from './story';
 import { stateHash } from './hash';
 import { isJournalType, type SimState } from './sim';
 import { CONDITION_MAX } from './gear';
@@ -159,6 +159,69 @@ export function danglingRefs(game: SimState['game'], st: StoryDefs): string[] {
 }
 
 /**
+ * Сейв під СТАРИЙ сюжет розділу 1 продовжується на нинішньому (GAME-141). Два випадки, обидва з контенту до GAME-141:
+ * 1) розділ закінчено на старому кінці: ST-005 мав `end`, тепер це лише межа дня 1 (`dayEnd`). У сейві campaignEnded, але
+ *    жодного завершеного квесту, що нині є кінцем (`end`): гра не «пройдена», а зупинена на межі дня;
+ * 2) осиротілий квест: активний, хоча в нинішньому сюжеті до нього не веде жоден перехід із завершеного чи відхиленого квесту
+ *    (і не startQuest розмови): велозону раніше відкривав ST-004, тепер — CH1-D2-ELISE-001. Такий квест прибирається з сейву
+ *    (ніби ще не починався — вдень 2 його запропонують звичайним шляхом), інакше він перестрибнув би через ST-005 у день 2.
+ * Тоді campaignEnded = false, а кожен завершений ОСНОВНИЙ квест, жоден вихід якого ще не починався, відкриває свій перехід за
+ * замовчуванням (ST-005 → CH1-D2-001 для випадку 1, ST-004 → ST-005 для випадку 2); цілі `visit` місця, де гравець стоїть, —
+ * виконані, як при звичайному вході в квест (GAME-84). Бічні квести переходів не відкривають (відмова від велозони не
+ * відкриє табірний день повз ранок). Розділ, завершений на нинішньому кінці, і звичайний сейв посеред гри не чіпаються.
+ */
+export function reopenChapter(game: SimState['game'], st: StoryDefs): SimState['game'] {
+  const p = game.player;
+  if (!p) return game;
+  const own = (id: string) => (Object.hasOwn(st.quests, id) ? st.quests[id] : undefined);
+  const status = (id: string) => (Object.hasOwn(game.quests, id) ? game.quests[id]?.status : undefined);
+  const endedOld = game.campaignEnded && !Object.keys(st.quests).some((id) => own(id)?.end && status(id) === 'completed');
+  if (game.campaignEnded && !endedOld) return game;
+  // Хто може відкрити квест: перехід із завершеного/відхиленого квесту або startQuest у будь-якій розмові.
+  const started = new Set(Object.values(st.dialogues).flatMap((d) => Object.values(d.nodes).flatMap((n) => (n.choices ?? []).flatMap((c) => c.effects.flatMap((e) => ('startQuest' in e ? [e.startQuest] : []))))));
+  const entered = (id: string): boolean => id === st.start || started.has(id) || Object.entries(st.quests).some(([from, q]) => {
+    const s = status(from);
+    return (s === 'completed' || s === 'declined') && q.transitions.some((t) => t.to === id);
+  });
+  const orphans = Object.keys(game.quests).filter((id) => status(id) === 'active' && !entered(id)).sort();
+  if (!endedOld && orphans.length === 0) return game;
+  let quests = Object.fromEntries(Object.entries(game.quests).filter(([id]) => !orphans.includes(id)));
+  for (const id of Object.keys(game.quests).sort()) {
+    const q = own(id);
+    if (!q || q.optional || status(id) !== 'completed') continue;
+    const exits = exitsFor(st, q, 'complete', p);
+    if (exits.some((t) => Object.hasOwn(quests, t.to))) continue;
+    const to = exits.find((t) => !t.choice)?.to;
+    const target = to === undefined ? undefined : own(to);
+    if (to === undefined || !target) continue;
+    const here = target.objectives.filter((o) => o.kind === 'visit' && o.byDialogue !== true && o.target === p.locationId && matches(o.when, p)).map((o) => o.id).sort();
+    quests = { ...quests, [to]: { status: 'active', done: here } };
+  }
+  return { ...game, campaignEnded: false, quests };
+}
+
+/**
+ * Ворота, що з'явились після випуску сейву (GAME-138: `loc.road` тепер відкриває CH1-HOME-001, раніше ST-003).
+ * Старий сейв, що вже стоїть за воротами (квест тієї локації активний/завершений або гравець там), ворота не проходив:
+ * без ремонту дорога зачинена, а помилки завантаження немає — тихий тупик. Квест-ключ, якого в сейві зовсім немає,
+ * зараховуємо завершеним (done — усі обов'язкові цілі). Детерміновано й ідемпотентно: наявний запис не чіпаємо,
+ * свіжий сейв (за воротами нікого) не змінюється.
+ */
+function openPassedGates(game: SimState['game'], st: StoryDefs): SimState['game'] {
+  let quests = game.quests;
+  for (const [locId, loc] of Object.entries(st.locations)) {
+    const key = loc.unlockedBy;
+    if (key === undefined || Object.hasOwn(quests, key) || !Object.hasOwn(st.quests, key)) continue;
+    const beyond = game.player?.locationId === locId
+      || Object.entries(quests).some(([q, pr]) => pr.status !== 'declined' && Object.hasOwn(st.quests, q) && st.quests[q]?.locationId === locId);
+    if (!beyond) continue;
+    const done = (st.quests[key]?.objectives ?? []).filter((o) => o.required).map((o) => o.id).sort();
+    quests = { ...quests, [key]: { status: 'completed', done } };
+  }
+  return quests === game.quests ? game : { ...game, quests };
+}
+
+/**
  * `story` — перевірити посилання сейву проти нинішнього сюжету; `life` — календар нинішньої гри для міграції v2 → v3
  * (без нього дні виплати, що минули до старого сейву, лічильник не зараховує — див. MIGRATIONS[2]).
  */
@@ -186,8 +249,12 @@ export function fromSave(text: string, opts: { readonly story?: StoryDefs; reado
   const bad = shapeError(sim);
   if (bad) return { ok: false, code: 'SAVE_SHAPE', detail: bad };
   if (opts.story) {
+    const g = openPassedGates((sim as SimState).game, opts.story);
+    if (g !== (sim as SimState).game) sim = { ...(sim as SimState), game: g };
     const missing = danglingRefs((sim as SimState).game, opts.story);
     if (missing.length) return { ok: false, code: 'SAVE_CONTENT_MISMATCH', detail: `not in current content: ${missing.join(', ')}` };
+    const game = reopenChapter((sim as SimState).game, opts.story);
+    if (game !== (sim as SimState).game) sim = { ...(sim as SimState), game };
   }
   const contentRev = typeof raw.contentRev === 'string' ? raw.contentRev : null;
   return { ok: true, sim: sim as SimState, fromVersion: version as number, contentRev };

@@ -35,11 +35,16 @@ jobs:
       - run: npm run check
 
   # GAME-14: e2e у справжньому браузері (спайк Phaser 4). Скриншот сцени — артефакт CI.
-  e2e:
+  # e2e поділено на 4 паралельні частини (PR #53: один воркер ішов 60 хв і впирався в ліміт job; для публічного репо
+  # хвилини безкоштовні). Тести продуктивності — окремо й послідовно (абсолютний вимір, не ділити процесор).
+  # Обов'язкова перевірка гілки зветься «e2e» — це підсумкова job нижче, вона зелена лише коли зелені всі частини.
+  e2e-shard:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
-    # GAME-85: браузер і системні бібліотеки — уже в офіційному образі. `playwright install --with-deps` тягнув apt
-    # і з'їдав 10 хв із 20 ліміту job. Тег образу = версія @playwright/test у package.json (оновлювати разом).
+    timeout-minutes: 40
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4]
     container:
       image: mcr.microsoft.com/playwright:v1.64.1-noble
     steps:
@@ -57,10 +62,46 @@ jobs:
           node -e "require('playwright-core').chromium.launch().then(b => b.close())
           .then(() => console.log('OK: headless Chromium запускається'))
           .catch(e => { console.log('::error::Браузер образу не запускається — тег образу в check.yml не збігається з @playwright/test ' + require('@playwright/test/package.json').version + ': ' + e.message.split('\\n')[0]); process.exit(1); })"
-      - run: npm run e2e
+      - run: npx playwright test --project=e2e --shard=${{ matrix.shard }}/4
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: e2e-results
+          name: e2e-results-${{ matrix.shard }}
           path: test-results
           retention-days: 7
+  e2e-perf:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    container:
+      image: mcr.microsoft.com/playwright:v1.64.1-noble
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      # Сторож розбіжності: якщо @playwright/test оновили, а образ ні, — браузера потрібної ревізії в образі немає.
+      # Червоніємо тут із причиною, а не таймаутом у тестах (закон 4).
+      - name: Браузер образу відповідає @playwright/test
+        # Справжній запуск headless (той самий бінарник, що й у тестах — headless shell), а не перевірка шляху.
+        run: >-
+          node -e "require('playwright-core').chromium.launch().then(b => b.close())
+          .then(() => console.log('OK: headless Chromium запускається'))
+          .catch(e => { console.log('::error::Браузер образу не запускається — тег образу в check.yml не збігається з @playwright/test ' + require('@playwright/test/package.json').version + ': ' + e.message.split('\\n')[0]); process.exit(1); })"
+      - run: npx playwright test --project=perf --project=perf-boot --no-deps
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: e2e-results-perf
+          path: test-results
+          retention-days: 7
+  e2e:
+    if: always()
+    needs: [e2e-shard, e2e-perf]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Усі частини e2e зелені
+        run: |
+          echo "shards=${{ needs.e2e-shard.result }} perf=${{ needs.e2e-perf.result }}"
+          test "${{ needs.e2e-shard.result }}" = success && test "${{ needs.e2e-perf.result }}" = success

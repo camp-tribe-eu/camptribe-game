@@ -15,10 +15,10 @@ const play = (cmds: Record<string, unknown>[]): GameState => cmds.reduce<GameSta
 
 const AT_ST004 = play([
   { type: 'CreateCharacter', profileId: 'profile.family-teen', transportId: 'transport.car' },
-  { type: 'Visit', locationId: 'loc.home' }, { type: 'CompleteQuest', questId: 'ST-001' },
+  { type: 'Visit', locationId: 'loc.home' }, { type: 'CompleteQuest', questId: 'PROLOGUE-HOME-001' }, { type: 'CompleteQuest', questId: 'ST-001' },
   { type: 'Visit', locationId: 'loc.home' }, { type: 'CompleteQuest', questId: 'ST-002' },
   { type: 'Visit', locationId: 'loc.shop' }, { type: 'Pickup', itemId: 'item.tent' }, { type: 'Pickup', itemId: 'item.sleeping-bag' },
-  { type: 'CompleteQuest', questId: 'ST-003' },
+  { type: 'CompleteQuest', questId: 'ST-003' }, { type: 'Visit', locationId: 'loc.home' }, { type: 'CompleteQuest', questId: 'CH1-HOME-001' },
 ]);
 
 describe('придатність сейву на нинішньому контенті', () => {

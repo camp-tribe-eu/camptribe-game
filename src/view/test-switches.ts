@@ -17,6 +17,9 @@ export interface TestSwitches {
   readonly frameLagMs?: number;
   /** ?bootDelayMs=N (1…5000) — GAME-38: старт гри довший на N мс; негативний контроль проби першого кадру (бюджет 1,5 с). */
   readonly bootDelayMs?: number;
+  /** ?holdToast=1 — GAME-98: тост-підказка не зникає за таймером (лише від дії гравця), щоб e2e міряв її контраст і на
+   *  повільному CI, де від старту до готовності сторінки минає більше за 5 с. */
+  readonly holdToast?: boolean;
 }
 
 export function testSwitches(search: string, mode: string): TestSwitches {
@@ -26,5 +29,5 @@ export function testSwitches(search: string, mode: string): TestSwitches {
   const seed = Number(q.get('seed'));
   const lag = Number(q.get('frameLagMs'));
   const boot = Number(q.get('bootDelayMs'));
-  return { ...(Number.isInteger(boot) && boot >= 1 && boot <= 5000 ? { bootDelayMs: boot } : {}), ...(Number.isInteger(lag) && lag >= 1 && lag <= 190 ? { frameLagMs: lag } : {}), hideTouch: list('hideTouch'), hideAct: list('hideAct'), ...(q.get('noAutosave') === '1' ? { noAutosave: true } : {}), ...(q.get('freshSeed') === '1' ? { freshSeed: true } : {}), ...(q.has('seed') && Number.isSafeInteger(seed) && seed >= 0 ? { seed } : {}) };
+  return { ...(Number.isInteger(boot) && boot >= 1 && boot <= 5000 ? { bootDelayMs: boot } : {}), ...(Number.isInteger(lag) && lag >= 1 && lag <= 190 ? { frameLagMs: lag } : {}), hideTouch: list('hideTouch'), hideAct: list('hideAct'), ...(q.get('noAutosave') === '1' ? { noAutosave: true } : {}), ...(q.get('holdToast') === '1' ? { holdToast: true } : {}), ...(q.get('freshSeed') === '1' ? { freshSeed: true } : {}), ...(q.has('seed') && Number.isSafeInteger(seed) && seed >= 0 ? { seed } : {}) };
 }

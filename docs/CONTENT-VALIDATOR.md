@@ -19,7 +19,7 @@ node scripts/mutate-validator.mjs               # довести, що само�
 | `packing.json` | пакування (GAME-109), один об'єкт: `openAfter` (квест), `at` (локації), `capacity` (`transport`, `units`), `items` (`item`, `group` `needed`/`useful`/`leave`, `units`, `when`), `notes` (підпис, коли речі бракує). Прапорець упакованої речі — `f.pack-<id без item.>`, його ставить ядро, діалоги читають | — |
 | `transports.json` | транспорт | `transport.назва` |
 | `animals.json` | тварини (`animal.none` зарезервовано за «без тварини»); `transports` — чим тварину можна везти | `animal.назва` |
-| `quests.json` | етапи кампанії: `optional`, `end`, `requires`, `objectives`, `transitions`, `reward` | `ST-001` або `q.назва` |
+| `quests.json` | етапи кампанії: `optional`, `end` (кінець розділу), `dayEnd` (межа дня історії: її завершення закриває день і показує підсумок дня, GAME-141; кінець розділу теж закриває день), `requires`, `objectives`, `transitions`, `reward` | основний — канонічний id сценарію `ST-001`, `PROLOGUE-HOME-001`, `CH1-HOME-001` (великі літери, дефіси, три цифри в кінці; GAME-138); бічний — `q.назва` |
 | `items.json` | предмети. Спорядження (GAME-73, DC-023) — з `kind` (`tent`/`sleeping-bag`) і повною карткою: `tier` 1–3, `weightG`, `volumeL`, `waterproofMm`, `comfortC` (нижня температура комфорту, °C), `sleeps`, `priceCents`, `resaleCents`; перевірка `gear` | `item.назва` |
 | `npcs.json` | NPC: `locationId`, `unlockedBy`, `sells` | `npc.назва` |
 | `locations.json` | локації: `unlockedBy`, `items` | `loc.назва` |
@@ -53,6 +53,13 @@ Cond      = { flag: "f.…" } | { notFlag: "f.…" } | { quest: "<id квест�
 Effect    = { setFlag: "f.…" } | { startQuest: "<id квесту>" } | { completeObjective: { quest, objective } }
           | { remember: "m.…" }
 ```
+
+**Подія в дорозі** (GAME-31, GAME-108) — діалог без `npcId`, з `trigger: { at: [локації], chance: 1–100, titleKey, when? }`.
+Після приїзду симуляція кидає RNG один раз і обирає ОДНУ подію серед доречних (гравець у локації з `at`, `when` —
+профіль × транспорт × тварина, як у квесту, — збігається, подія ще не була) за накопиченим шансом у порядку id. Сума
+шансів подій одного місця для однієї комбінації — ≤ 100, інакше хвіст переліку на першому приїзді не випаде ніколи
+(стереже `src/content/road-events.test.ts`). `when` тригера проходить перевірки `refs` (`REF_MISSING`) і
+`combo-options` (`WHEN_UNSATISFIABLE`). Події розділу 1 — `dlg.ev.ch1.road-NNN` (NNN — канонічний номер EV-ROAD-NNN).
 
 Умова й ефект — типізовані об'єкти (TD-006) рівно з одним ключем-дискримінатором; рядок
 `"car && x"`, два ключі разом чи невідомий ключ — `SCHEMA_INVALID`. Семантика для рушія: `when`
@@ -152,6 +159,7 @@ Effect    = { setFlag: "f.…" } | { startQuest: "<id квесту>" } | { compl
 | `requires-deadlock` | `REQUIRES_CYCLE` | §3 немає взаємного блокування |
 | `optional-decline` | `OPTIONAL_NO_DECLINE` | §3 відмова лишає шлях уперед |
 | `branch-next` | `BRANCH_NO_NEXT` | §3 кожна гілка має наступний етап або кінець |
+| `day-end` | `DAY_END_OPTIONAL` | GAME-141: межа дня (`dayEnd`) — лише на основному етапі |
 | `dialogue-refs` | `DIALOGUE_REF_MISSING` | §2 посилання діалогу ведуть на існуючі записи |
 | `dialogue-reachable` | `DIALOGUE_NODE_UNREACHABLE` | §3 кожен вузол діалогу досяжний |
 | `dialogue-dead-end` | `DIALOGUE_DEAD_END` | §3 з кожного вузла діалогу є безумовний шлях до кінця |
@@ -301,7 +309,7 @@ Actions → validate → Enable workflow).
 ## Перший контент (GAME-35)
 
 `content/` — перший зріз Прологу «Одна вільна ніч»: ST-001…ST-005 і необов'язковий
-`q.elise-bike-area` лише для велосипеда; 2 профілі × 2 транспорти × (без тварини | кішка) → 5
+`q.elise-bike-area` лише для велосипеда. GAME-138: день 1 — PROLOGUE-HOME-001 → ST-001…ST-003 → CH1-HOME-001 (пакування вдома) → ST-004 → подія «Яблука» → ST-005 → підсумок дня; 2 профілі × 2 транспорти × (без тварини | кішка) → 5
 дозволених комбінацій. Прапорець `--allow-missing-content` із `npm run validate` прибрано: теки
 немає — `CONTENT_MISSING`, код 1.
 

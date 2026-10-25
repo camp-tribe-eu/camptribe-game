@@ -15,7 +15,8 @@ const ID_PATTERNS = {
   items: /^item\.[a-z0-9]+(?:[.-][a-z0-9]+)*$/,
   npcs: /^npc\.[a-z0-9]+(?:[.-][a-z0-9]+)*$/,
   locations: /^loc\.[a-z0-9]+(?:[.-][a-z0-9]+)*$/,
-  quests: /^(?:ST-\d{3}|q\.[a-z0-9]+(?:[.-][a-z0-9]+)*)$/,
+  // Основний етап — канонічний id сценарію великими літерами з номером (ST-001, PROLOGUE-HOME-001, CH1-HOME-001; GAME-138); бічний — q.назва.
+  quests: /^(?:(?:[A-Z][A-Z0-9]*-)+\d{3}|q\.[a-z0-9]+(?:[.-][a-z0-9]+)*)$/,
   events: /^ev\.[a-z0-9]+(?:[.-][a-z0-9]+)*$/,
   facts: /^fact\.[a-z0-9]+(?:[.-][a-z0-9]+)*$/,
   dialogues: /^dlg\.[a-z0-9]+(?:[.-][a-z0-9]+)*$/,
@@ -188,6 +189,7 @@ export const CHECKS = [
         ref('quests', l.unlockedBy, `${l.id}.unlockedBy`);
         (l.items ?? []).forEach((i) => ref('items', i, `${l.id}.items`));
       }
+      for (const d of c.content.dialogues ?? []) ref('quests', d.scene?.atQuest, `${d.id}.scene.atQuest`);
       for (const q of by.quests.values()) {
         ref('npcs', q.giverId, `${q.id}.giverId`);
         ref('locations', q.locationId, `${q.id}.locationId`);
@@ -579,6 +581,16 @@ export const CHECKS = [
       return [...c.ix.by.quests.values()]
         .filter((q) => !q.end && q.transitions.length === 0)
         .map((q) => I('BRANCH_NO_NEXT', q.id, 'не кінець і не має наступного етапу'));
+    },
+  },
+  {
+    id: 'day-end',
+    run(c) { // @check:day-end
+      // GAME-141: межа дня (`dayEnd`) — лише на основному етапі. Бічний квест можна відхилити, а відмова не завершує:
+      // день, межа якого відхилена, не закінчився б ніколи — ні підсумку дня, ні наступного дня в лічильнику.
+      return [...c.ix.by.quests.values()]
+        .filter((q) => q.dayEnd === true && q.optional)
+        .map((q) => I('DAY_END_OPTIONAL', q.id, 'межа дня на необов\u2019язковому квесті: відмова лишила б день незавершеним'));
     },
   },
   // ---------- діалоги (GAME-28) ----------
@@ -1039,6 +1051,8 @@ function whens(content) {
     if (w.when) out.push([w.id, w.when]);
     for (const t of w.tasks) if (t.when) out.push([`${w.id}/${t.id}`, t.when, w.when]);
   }
+  // Подія в дорозі (GAME-108): when тригера — ті самі перевірки посилань і здійсненності, що й у квесту.
+  for (const d of content.dialogues ?? []) if (d.trigger?.when) out.push([`${d.id}.trigger`, d.trigger.when]);
   return out;
 }
 

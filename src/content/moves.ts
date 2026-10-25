@@ -4,6 +4,7 @@ import type { Command } from '../core/commands';
 import type { CoreDefs, StoryDefs } from '../core/defs';
 import { canonical } from '../core/hash';
 import type { GameState } from '../core/state';
+import { eventSeenFlag } from '../core/story';
 
 export type Move = Command extends infer C ? (C extends Command ? Omit<C, 'commandId'> : never) : never;
 
@@ -14,6 +15,8 @@ export function moves(s: GameState, defs: CoreDefs): Move[] {
   for (const id of Object.keys(st.npcs)) out.push({ type: 'Talk', npcId: id });
   // Подія в дорозі — хід СЕРЕДОВИЩА (кидок симуляції), а не гравця: перебір бачить і «сталась», і «ні».
   for (const [id, d] of Object.entries(st.dialogues)) if (d.trigger) out.push({ type: 'RoadEvent', eventId: id });
+  // StartScene — хід СЮЖЕТУ (гачок кінця дня), не гравця; тут його навмисно немає: 16 проходжень сцени множили б простір станів
+  // (shop.test вибухає), а законність доводять fireplace.test і day2.test на справжньому шляху.
   if (s.dialogue) {
     const node = st.dialogues[s.dialogue.id]?.nodes[s.dialogue.node];
     (node?.choices ?? []).forEach((_, i) => out.push({ type: 'Choose', choice: i }));
@@ -60,12 +63,21 @@ export const progressKey = (s: GameState): string => canonical(progressView(s));
  * лише ними, мають ті самі сюжетні наслідки, а самі гілки-згадки проходить той самий тест (2⁵ комбінацій до кінця розділу).
  * Меню (outcomeKey = progressKey) цього вигляду НЕ вживає: два вибори, що різняться лише пам'ятним фактом, — різні кнопки.
  */
-export function exploreView(s: GameState, st: Pick<StoryDefs, 'memorable'>): object {
-  const mem = new Set(st.memorable ?? []);
+export function exploreView(s: GameState, st: Pick<StoryDefs, 'memorable' | 'dialogues'>): object {
+  const mem = new Set([...(st.memorable ?? []), ...seenFlags(st)]);
   if (mem.size === 0) return progressView(s);
   const npcMemory = Object.fromEntries(Object.entries(s.npcMemory).map(([npc, facts]) => [npc, facts.filter((f) => !mem.has(f))] as const).filter(([, facts]) => facts.length > 0));
   return { ...progressView(s), flags: s.flags.filter((f) => !mem.has(f)), npcMemory };
 }
+
+/**
+ * GAME-108 · прапорці «подія в дорозі вже була» (f.seen-*) теж поза ключем перебору. Подій на дорозі дев'ять+, кожна раз за
+ * гру, тож будь-яка підмножина «вже були» множила б простір станів до 2⁹ разів (перебір не закінчувався за 10 хв). Чесно,
+ * бо f.seen-* читає лише ядро (eventEligible) — тобто лише хід RoadEvent, а він хід везіння: шлях до кінця на нього не
+ * покладається. Жодна умова контенту f.seen-* не читає — це стереже src/content/road-events.test.ts (з мутацією).
+ */
+const seenFlags = (st: Pick<StoryDefs, 'dialogues'>): string[] =>
+  Object.entries(st.dialogues ?? {}).filter(([, d]) => d.trigger).map(([id]) => eventSeenFlag(id));
 
 /**
  * Хід, що залежить від везіння (SIM-EV-003): КОЖНА подія в дорозі. Симуляція кидає лише після дороги з

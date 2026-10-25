@@ -17,6 +17,7 @@ import uk from '../../content/locales/uk.json';
 import { GAME_DEFS } from './slice-defs';
 import { CONTENT, STORY, memorableFacts, type RawContent } from './story';
 import { exploreView, type Move } from './moves';
+import { leaveMove } from './road-events.test.helpers';
 
 const CTX = { defs: GAME_DEFS };
 const START_MONEY = 5_000;          // як у createBridge
@@ -34,12 +35,12 @@ type Pick5 = { readonly [K in keyof typeof CHOICES]: 0 | 1 };
 
 /**
  * Мінімум кінця розділу 1 (для PR): стартові 50 € + нагорода «Прибуття» (rw.st-005, 10 €) = 60 €; у руках намет, спальник і
- * дрова; ST-001…ST-005 завершено, розділ закінчено. Жодна комбінація не сміє бути гіршою — і всі мусять бути однаковими.
+ * дрова; ST-001…ST-005 і сцени дня 2 (GAME-141) завершено, розділ закінчено. Жодна комбінація не сміє бути гіршою — і всі мусять бути однаковими.
  */
 const MIN = {
   moneyCents: START_MONEY + 1_000,
   items: ['item.tent', 'item.sleeping-bag', 'item.firewood'],
-  quests: ['ST-001', 'ST-002', 'ST-003', 'ST-004', 'ST-005'],
+  quests: ['CH1-HOME-001', 'PROLOGUE-HOME-001', 'ST-001', 'ST-002', 'ST-003', 'ST-004', 'ST-005', 'CH1-D2-001', 'CH1-D2-ELISE-001', 'CH1-D2-CAMP-001', 'CH1-D2-FIRE-001'],
 } as const;
 
 type Cond = Record<string, unknown>;
@@ -108,11 +109,13 @@ function play(pick: Pick5, tamper?: Tamper): Run {
   go({ type: 'Choose', choice: pick.gear }); go({ type: 'Continue' });
   go({ type: 'Choose', choice: pick.roles }); go({ type: 'Continue' }); go({ type: 'Continue' });
   expect(s.game.dialogue).toBeNull();
-  go({ type: 'CompleteQuest', questId: 'ST-001' }); go({ type: 'CompleteQuest', questId: 'ST-002' });
+  go({ type: 'CompleteQuest', questId: 'PROLOGUE-HOME-001' }); go({ type: 'CompleteQuest', questId: 'ST-001' }); go({ type: 'CompleteQuest', questId: 'ST-002' });
   go({ type: 'Visit', locationId: 'loc.shop' }); go({ type: 'Pickup', itemId: 'item.tent' }); go({ type: 'Pickup', itemId: 'item.sleeping-bag' });
-  go({ type: 'CompleteQuest', questId: 'ST-003' });
+  go({ type: 'CompleteQuest', questId: 'ST-003' }); go({ type: 'Visit', locationId: 'loc.home' }); go({ type: 'CompleteQuest', questId: 'CH1-HOME-001' });
   // Вибір 2 — яблука. Подію може кинути сама симуляція після дороги; не кинула — шлемо її, як шле симуляція.
   go({ type: 'Visit', locationId: 'loc.road' });
+  // GAME-108: кидок міг відкрити іншу з десяти подій — доводимо її до кінця, як гравець.
+  for (let m = leaveMove(s.game, STORY); m && s.game.dialogue?.id !== 'dlg.road-apples'; m = leaveMove(s.game, STORY)) go(m);
   if (s.game.dialogue?.id !== 'dlg.road-apples') go({ type: 'RoadEvent', eventId: 'dlg.road-apples' });
   go({ type: 'Choose', choice: pick.apple }); go({ type: 'Continue' });
   go({ type: 'CompleteQuest', questId: 'ST-004', to: 'ST-005' });
@@ -128,8 +131,8 @@ function play(pick: Pick5, tamper?: Tamper): Run {
   go({ type: 'Choose', choice: 5 }); go({ type: 'Continue' });   // spot.c6 «Намет уже стоїть»
   go({ type: 'Pickup', itemId: 'item.firewood' });
   go({ type: 'CompleteQuest', questId: 'ST-005' });
-  expect(s.game.campaignEnded).toBe(true);
-  // Вибір 4 — порада Елізи на ранок (лише після «Прибуття»): прийняти чи по-своєму.
+  expect(s.game.campaignEnded).toBe(false);                     // GAME-141: ST-005 — межа дня 1, розділ триває
+  // Вибір 4 — порада Елізи на ранок (лише після «Прибуття», тобто вже вранці дня 2): прийняти чи по-своєму.
   go({ type: 'Talk', npcId: 'npc.elise' }); go({ type: 'Choose', choice: 8 }); go({ type: 'Choose', choice: pick.advice }); go({ type: 'Continue' }); go({ type: 'Continue' });
   // Згадки в пізніших розмовах: кожна гілка-згадка, доречна для цієї комбінації, — до кінця розмови.
   const readerNodes: string[] = [];
@@ -145,6 +148,13 @@ function play(pick: Pick5, tamper?: Tamper): Run {
   recall(6, pick.gear === 0 ? 3 : 4);
   recall(7, pick.pitch === 0 ? 0 : 1);
   recall(9, pick.advice);
+  // День 2 (GAME-141) до кінця розділу — однаково для всіх комбінацій: ранок, «Доброго ранку!» (hello.c11 → morning.c2), вечеря.
+  go({ type: 'CompleteQuest', questId: 'CH1-D2-001' });
+  go({ type: 'Talk', npcId: 'npc.elise' }); go({ type: 'Choose', choice: 10 }); go({ type: 'Choose', choice: 1 }); go({ type: 'Continue' });
+  go({ type: 'CompleteQuest', questId: 'CH1-D2-ELISE-001' });
+  go({ type: 'Talk', npcId: 'npc.elise' }); go({ type: 'Choose', choice: 13 }); go({ type: 'Choose', choice: 0 }); go({ type: 'Continue' }); go({ type: 'Continue' });
+  go({ type: 'CompleteQuest', questId: 'CH1-D2-CAMP-001' }); go({ type: 'CompleteQuest', questId: 'CH1-D2-FIRE-001' });
+  expect(s.game.campaignEnded).toBe(true);
   return { pick, sim: s, readerNodes };
 }
 
@@ -223,8 +233,9 @@ describe('п’ять пам’ятних виборів (GAME-110)', () => {
     const advice = elise && nodesOf(elise).find((n) => n.id === 'advice');
     advice?.choices?.[0]?.effects?.push({ startQuest: 'q.elise-bike-area' });
     const v = cosmeticViolations(broken);
-    // Три: зламана згадка road.c1 — і як сама (читає f.road-apple), і як піддерево hello.c7; startQuest — у піддереві hello.c9.
-    expect(v).toHaveLength(3);
+    // Чотири: зламана згадка road.c1 — і як сама (читає f.road-apple), і як піддерево hello.c7; startQuest — у піддереві
+    // hello.c9 і (GAME-141) morning.c1, що теж веде до поради.
+    expect(v).toHaveLength(4);
     expect(v.join('\n')).toContain('completeObjective');
     expect(v.join('\n')).toContain('startQuest');
   });

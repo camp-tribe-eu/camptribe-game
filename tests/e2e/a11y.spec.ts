@@ -108,16 +108,15 @@ async function openDialogue(page: Page): Promise<void> {
   await page.locator('[data-touch="story"]').click();
   await story(page).locator('[data-act="create"]', { hasText: /Велосипед|Bike/ }).first().click();
   await page.waitForTimeout(400);   // GAME-80: панель глуха ~350 мс після дії
-  for (const [kind, key] of [['complete', 'q.st-001'], ['complete', 'q.st-002'], ['visit', 'loc.shop'],
-    ['pickup', 'item.tent'], ['pickup', 'item.sleeping-bag'], ['complete', 'q.st-003'], ['visit', 'loc.road'], ['complete', 'q.elise-bike-area.choice'],
+  for (const [kind, key] of [['complete', 'q.prologue-home-001'], ['complete', 'q.st-001'], ['complete', 'q.st-002'], ['visit', 'loc.shop'],
+    ['pickup', 'item.tent'], ['pickup', 'item.sleeping-bag'], ['complete', 'q.st-003'], ['visit', 'loc.home'], ['complete', 'q.ch1-home-001'], ['visit', 'loc.road'], ['complete', 'q.st-004'],   // GAME-141: велозона — на дні 2
     ['visit', 'loc.camp.lake'], ['talk', 'npc.elise']] as const) {
     await story(page).locator(`[data-act="${kind}"][data-key="${key}"]`).click();
     await page.waitForTimeout(400);   // GAME-80: панель глуха ~350 мс після дії
-    // На дорозі з шансом 50 % — подія (GAME-31): відповідаємо, як гравець.
-    if (key === 'loc.road' && await story(page).locator('[data-key="dlg.road-apples.box.c2"]').isVisible({ timeout: 400 }).catch(() => false)) {
-      await story(page).locator('[data-key="dlg.road-apples.box.c2"]').click();
-      await page.waitForTimeout(400);   // GAME-80: панель глуха ~350 мс після дії
-      await story(page).locator('[data-act="continue"]').click();
+    // На дорозі з шансом — подія (GAME-31). GAME-108: на дорозі одна з десяти подій — з будь-якої виходимо останньою відповіддю (у подій дороги вона безумовна).
+    const dlg = story(page).locator('[data-ui="dialogue"]');
+    for (let i = 0; key === 'loc.road' && i < 6 && await dlg.isVisible({ timeout: 400 }).catch(() => false); i++) {
+      await dlg.locator('[data-act]').last().click();
       await page.waitForTimeout(400);   // GAME-80: панель глуха ~350 мс після дії
     }
   }

@@ -19,6 +19,12 @@ import type { WaveState } from './wave';
 
 export const NO_ANIMAL = 'animal.none';
 
+/**
+ * id основного етапу (GAME-138): канонічний id сценарію великими літерами з номером — ST-001, PROLOGUE-HOME-001, CH1-HOME-001.
+ * Той самий формат, що й у валідатора (ID_PATTERNS.quests у scripts/validator/checks.mjs); бічні квести — `q.назва` (isContentId).
+ */
+export const MAIN_QUEST_ID = /^(?:[A-Z][A-Z0-9]*-)+\d{3}$/;
+
 export type StoryCommand =
   | { readonly type: 'CreateCharacter'; readonly commandId: string; readonly profileId: string; readonly transportId: string; readonly animalId?: string }
   | { readonly type: 'Visit'; readonly commandId: string; readonly locationId: string }
@@ -157,14 +163,14 @@ function way(st: StoryDefs, from: string | null, to: string, transport: string):
 /** Прапорець «подія вже була» — подія в дорозі трапляється раз; вміст може читати його в умовах (notFlag). */
 export const eventSeenFlag = (eventId: string): string => `f.seen-${eventId.replace(/^dlg\./, '')}`;
 
-/** Чи може подія відкритись зараз: гравець є, розмови немає, він у локації з `at`, події ще не було. */
+/** Чи може подія відкритись зараз: гравець є, розмови немає, він у локації з `at`, подія для нього (`when`, GAME-108), її ще не було. */
 export function eventEligible(st: StoryDefs, d: { readonly player: PlayerState | null; readonly flags: readonly string[]; readonly dialogue: StoryDraft['dialogue'] }, eventId: string): boolean {
   const ev = own(st.dialogues, eventId);
   const p = d.player;
   if (!ev?.trigger || !p || p.locationId === null) return false;
   const open = d.dialogue ? own(st.dialogues, d.dialogue.id) : undefined;
   if (d.dialogue && open && own(open.nodes, d.dialogue.node)) return false; // жива розмова (зависла — не заважає, як у liveDialogue)
-  return ev.trigger.at.includes(p.locationId) && !d.flags.includes(eventSeenFlag(eventId));
+  return ev.trigger.at.includes(p.locationId) && matches(ev.trigger.when, p) && !d.flags.includes(eventSeenFlag(eventId));
 }
 
 /** Цілі квесту, що існують для цього гравця. */
@@ -394,6 +400,8 @@ export function applyStory(cmd: StoryCommand, d: StoryDraft, st: StoryDefs | und
       const sc = own(st.dialogues, cmd.sceneId);
       if (!sc?.scene) return 'UNKNOWN_TARGET';
       if (liveDialogue(st, d)) return 'IN_DIALOGUE';
+      // Законний хід лише на своєму етапі (GAME-141): квест сцени активний, а розділ ще не закінчено.
+      if (sc.scene.atQuest !== undefined && (d.campaignEnded || own(d.quests, sc.scene.atQuest)?.status !== 'active')) return 'QUEST_NOT_ACTIVE';
       const facts = cmd.facts ?? [];
       if (!Array.isArray(facts) || facts.some((f) => typeof f !== 'string' || !sc.scene?.facts.includes(f))) return 'INVALID_CHOICE';
       if (facts.length) d.flags = [...new Set([...d.flags, ...facts])].sort();
@@ -441,8 +449,8 @@ export function applyStory(cmd: StoryCommand, d: StoryDraft, st: StoryDefs | und
     }
     case 'CompleteQuest':
     case 'DeclineQuest':
-      if (!isId(cmd.questId) && !/^ST-\d{3}$/.test(cmd.questId)) return 'INVALID_COMMAND';
-      if (cmd.to !== undefined && !isId(cmd.to) && !/^ST-\d{3}$/.test(cmd.to)) return 'INVALID_COMMAND';
+      if (!isId(cmd.questId) && !MAIN_QUEST_ID.test(cmd.questId)) return 'INVALID_COMMAND';
+      if (cmd.to !== undefined && !isId(cmd.to) && !MAIN_QUEST_ID.test(cmd.to)) return 'INVALID_COMMAND';
       return leave(st, d, p, cmd, cmd.type === 'CompleteQuest' ? 'complete' : 'decline', guardGrant);
   }
 }

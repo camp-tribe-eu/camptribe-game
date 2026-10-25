@@ -35,7 +35,9 @@ function closeDialogue(s: SimState): SimState {
  */
 function unbacked(sum: DaySummary, sim: SimState): string[] {
   const out: string[] = [];
-  const ends = sim.journal.map((e, i) => (e.type === 'CompleteQuest' && GAME_DEFS.story?.quests[e.ref ?? '']?.end ? i : -1)).filter((i) => i >= 0);
+  // Межі днів — незалежно від dayRanges: квест-межа дня (`dayEnd`, GAME-141) або кінець розділу (`end`).
+  const isBoundary = (q: string | null): boolean => { const d = GAME_DEFS.story?.quests[q ?? '']; return d?.dayEnd === true || d?.end === true; };
+  const ends = sim.journal.map((e, i) => (e.type === 'CompleteQuest' && isBoundary(e.ref) ? i : -1)).filter((i) => i >= 0);
   const from = sum.day === 1 ? 0 : (ends[sum.day - 2] ?? Infinity) + 1;
   const to = ends[sum.day - 1] ?? sim.journal.length - 1;
   const day = sim.journal.slice(from, to + 1);
@@ -43,7 +45,8 @@ function unbacked(sum: DaySummary, sim: SimState): string[] {
   for (const sec of sum.sections) for (const id of sec.ids) {
     const ok = {
       night: () => id.startsWith(NIGHT_PREFIX) && sim.game.flags.includes(id),
-      packed: () => sim.game.flags.includes(packFlag(id)),
+      // Спаковане — факт стану, і лише в день пакування: день 1 (багаж за замовчуванням) або день із записом пакування.
+      packed: () => sim.game.flags.includes(packFlag(id)) && (sum.day === 1 || day.some((e) => e.type === 'PackItem' || e.type === 'UnpackItem' || e.type === 'AutoPack')),
       events: () => had('RoadEvent', id),
       quests: () => had('CompleteQuest', id),
       bought: () => had('BuyItem', id),
@@ -58,9 +61,16 @@ function unbacked(sum: DaySummary, sim: SimState): string[] {
   return out;
 }
 
+/** Увесь реплей-сценарій: день 1 і день 2 (GAME-141) — до кінця розділу. */
 const prologue = (): SimState => {
   let s = newSim(SEED, START_MONEY);
   for (const i of PROLOGUE_BIKE) s = step(s, i, CTX);
+  return s;
+};
+/** Реплей-сценарій до межі дня 1 (ST-005 завершено) — далі не йдемо. */
+const untilDay1End = (): SimState => {
+  let s = newSim(SEED, START_MONEY);
+  for (const i of PROLOGUE_BIKE) { s = step(s, i, CTX); if (s.game.quests['ST-005']?.status === 'completed') break; }
   return s;
 };
 
@@ -81,21 +91,47 @@ describe('daySummary: кожна секція — лише при факті (GA
     const s = prologue();
     const sum = daySummary(s, 1, GAME_DEFS);
     expect(sum?.ended).toBe(true);
-    expect(daysEnded(s, GAME_DEFS)).toBe(1);
+    expect(daysEnded(s, GAME_DEFS)).toBe(2);                 // GAME-141: сценарій іде й через день 2
     expect(unbacked(sum as DaySummary, s)).toEqual([]);
-    expect(ids(sum, 'night')).toEqual(['f.night-tent']);
-    expect(ids(sum, 'packed')).toEqual(expect.arrayContaining(['item.tent', 'item.sleeping-bag']));
-    expect(ids(sum, 'quests')).toEqual(['ST-001', 'ST-002', 'ST-003', 'ST-004', 'q.elise-bike-area', 'ST-005']);
+    expect(ids(sum, 'night')).toEqual([]);                   // день 1 уже не останній завершений: ночівля — секція дня 2
+    expect(ids(daySummary(untilDay1End(), 1, GAME_DEFS), 'night')).toEqual(['f.night-tent']);   // на самій межі дня 1 — є
+    expect(ids(sum, 'quests')).toEqual(['PROLOGUE-HOME-001', 'ST-001', 'ST-002', 'ST-003', 'CH1-HOME-001', 'ST-004', 'ST-005']);
     expect(ids(sum, 'bought')).toEqual(['item.sleeping-bag-synthetic']);
     expect(ids(sum, 'got')).toEqual(['item.tent', 'item.sleeping-bag', 'item.firewood']);
     expect(kinds(sum)).not.toContain('sold');                // нічого не продано — секції немає
-    // Гроші: 100 € на старті − 89 € спальник + 5 € Еліза + 10 € кінець розділу.
-    expect(sum?.money).toEqual({ start: START_MONEY, end: s.game.moneyCents });
+    // Гроші дня 1: 100 € на старті − 89 € спальник + 10 € за ST-005 (велозона тепер на дні 2).
+    expect(sum?.money).toEqual({ start: START_MONEY, end: START_MONEY - 8_900 + 1_000 });
+  });
+
+  it('GAME-141 · день 2 реплей-сценарію: завершено кінцем розділу; квести дня 2, ночівля нинішня, пакування дня 1 не повторюється', () => {
+    const s = prologue();
+    expect(s.game.campaignEnded).toBe(true);
+    const sum = daySummary(s, 2, GAME_DEFS);
+    expect(sum?.ended).toBe(true);
+    expect(unbacked(sum as DaySummary, s)).toEqual([]);
+    expect(ids(sum, 'quests')).toEqual(['CH1-D2-001', 'CH1-D2-ELISE-001', 'q.elise-bike-area', 'CH1-D2-CAMP-001', 'CH1-D2-FIRE-001']);
+    expect(ids(sum, 'night')).toEqual(['f.night-tent']);
+    expect(kinds(sum)).not.toContain('packed');
+    expect(kinds(sum)).not.toContain('bought');
+    // Гроші дня 2: від кінця дня 1 + 5 € за велозону.
+    expect(sum?.money).toEqual({ start: START_MONEY - 8_900 + 1_000, end: START_MONEY - 8_900 + 1_000 + 500 });
     expect(s.game.moneyCents).toBe(START_MONEY - 8_900 + 500 + 1_000);
+    expect(daySummary(s, 3, GAME_DEFS)).toBeNull();          // дня 3 ще немає (GAME-144)
+  });
+
+  it('МУТАЦІЯ межі дня: ST-005 без dayEnd — день 1 не закінчується на ST-005 (підсумок дня 1 тягнеться до кінця розділу)', () => {
+    const story = GAME_DEFS.story as NonNullable<typeof GAME_DEFS.story>;
+    const st005: { dayEnd?: true } & NonNullable<(typeof story.quests)[string]> = { ...(story.quests['ST-005'] as NonNullable<(typeof story.quests)[string]>) };
+    delete st005.dayEnd;
+    const mutated = { ...GAME_DEFS, story: { ...story, quests: { ...story.quests, 'ST-005': st005 } } };
+    const s = untilDay1End();
+    expect(daysEnded(s, GAME_DEFS)).toBe(1);                 // справжній контент: межа є
+    expect(daysEnded(s, mutated)).toBe(0);                   // без dayEnd — межі немає
+    expect(daySummary(prologue(), 1, mutated)?.sections.find((x) => x.kind === 'quests')?.ids).toContain('CH1-D2-FIRE-001');
   });
 
   it('після межі дня 1 далі ходиш — це відкритий день 2 без ночівлі й пакування; день 1 свої зберігає', () => {
-    let s = prologue();
+    let s = untilDay1End();
     s = closeDialogue(cmd(s, { type: 'Visit', locationId: 'loc.road' }));
     const d2 = daySummary(s, 2, GAME_DEFS);
     expect(d2?.ended).toBe(false);
@@ -106,7 +142,7 @@ describe('daySummary: кожна секція — лише при факті (GA
   });
 
   it('кінець завершеного дня — баланс на межі, а не нинішній: витрати дня 2 не переписують день 1 (рецензія PR #60)', () => {
-    let s = prologue();
+    let s = untilDay1End();
     const atBoundary = s.game.moneyCents;
     // Після кінця розділу команди, що міняють гроші, ядро не приймає — тож зміну після межі ставимо в стан напряму.
     s = closeDialogue(cmd(s, { type: 'Visit', locationId: 'loc.road' }));
@@ -137,6 +173,7 @@ describe('daySummary: кожна секція — лише при факті (GA
   it('продаж — секція «продано» з’являється лише після продажу', () => {
     let s = newSim(3, 20_000);
     s = cmd(s, { type: 'CreateCharacter', profileId: 'profile.solo-explorer', transportId: 'transport.car' });
+    s = cmd(s, { type: 'CompleteQuest', questId: 'PROLOGUE-HOME-001' });
     s = cmd(s, { type: 'CompleteQuest', questId: 'ST-001' });
     s = cmd(s, { type: 'CompleteQuest', questId: 'ST-002' });
     s = closeDialogue(cmd(s, { type: 'Visit', locationId: 'loc.shop' }));

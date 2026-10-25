@@ -63,7 +63,7 @@ describe('W4 «Вечір на трьох фронтах» у симуляції
       expect(ended(i)).toBe(true);
       expect(Object.values(past(i))).toEqual(ids.map(() => 'late'));
       expect(i.game.campaignEnded).toBe(false);
-      expect(Object.keys(i.game.quests)).toEqual(['ST-001']);     // хвиля сюжету не торкнулась
+      expect(Object.keys(i.game.quests)).toEqual(['PROLOGUE-HOME-001']);     // хвиля сюжету не торкнулась
     });
 
     it(`${label}: повний перебір «зробити» × «дочекатись строку» — з кожного стану хвиля закінчується, тупиків 0`, () => {

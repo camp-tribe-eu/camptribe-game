@@ -27,7 +27,10 @@ describe('журнал подорожі (GAME-32)', () => {
           expected++;
           const before = s.clock.minutes;
           s = step(s, i, CTX);
-          expect(s.journal.at(-1)).toMatchObject({ at: before, commandId: i.command.commandId, type: i.command.type });
+          // GAME-108: приїзд на дорогу може відкрити подію (кидок симуляції) — її запис іде одразу за приїздом.
+          const event = i.command.type === 'Visit' && s.journal.at(-1)?.type === 'RoadEvent' ? 1 : 0;
+          expected += event;
+          expect(s.journal.at(-1 - event)).toMatchObject({ at: before, commandId: i.command.commandId, type: i.command.type });
           continue;
         }
         if (r.ok && !r.repeated && i.command.type === 'Choose') {
@@ -80,11 +83,12 @@ describe('журнал подорожі (GAME-32)', () => {
     // GAME-84 №1: ціль «озирнись удома» виконана самим стартом, тож Visit удома нічого не міняє — запису немає (раніше це була «зміна»).
     s = step(s, cmd({ type: 'Visit', locationId: 'loc.home' }, 'k1'), CTX);
     expect(s.journal).toHaveLength(1);
+    s = step(s, cmd({ type: 'CompleteQuest', questId: 'PROLOGUE-HOME-001' }, 'k1a'), CTX);
     s = step(s, cmd({ type: 'CompleteQuest', questId: 'ST-001' }, 'k1b'), CTX);
     s = step(s, cmd({ type: 'CompleteQuest', questId: 'ST-002' }, 'k1c'), CTX);
     s = step(s, cmd({ type: 'Visit', locationId: 'loc.shop' }, 'k1d'), CTX);   // справжній переїзд — зміна
     const n = s.journal.length;
-    expect(n).toBe(4);
+    expect(n).toBe(5);
     for (let i = 2; i < 52; i++) s = step(s, cmd({ type: 'Visit', locationId: 'loc.shop' }, `k${i}`), CTX);
     expect(s.journal).toHaveLength(n);
     expect(Object.keys(s.game.processed).length).toBeGreaterThan(50);       // команди справді прийняті, а не відхилені
@@ -97,7 +101,7 @@ describe('журнал подорожі (GAME-32)', () => {
     // Журнал уже повний (як після довгої подорожі): нова дія зі зміною витісняє найстаріший запис.
     const old = Array.from({ length: JOURNAL_LIMIT }, (_, i) => ({ at: i, commandId: `old${i}`, type: 'Visit' as const, ref: 'loc.home' }));
     s = { ...s, journal: old };
-    s = step(s, cmd({ type: 'CompleteQuest', questId: 'ST-001' }, 'p1'), CTX);
+    s = step(s, cmd({ type: 'CompleteQuest', questId: 'PROLOGUE-HOME-001' }, 'p1'), CTX);
     const id = 2;
     expect(s.journal).toHaveLength(JOURNAL_LIMIT);
     expect(s.journal.at(-1)?.commandId).toBe(`p${id - 1}`);

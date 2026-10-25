@@ -134,8 +134,14 @@ describe('сюжет: ядро ≡ валідатор на справжньом�
 
 describe('збірка сюжету з content/ (src/content/story.ts)', () => {
   it('choiceKey → вибір; money → центи; item → itemId', () => {
-    const st004 = STORY.quests['ST-004'];
-    expect(st004?.transitions.map((t) => [t.to, t.choice])).toEqual([['ST-005', false], ['q.elise-bike-area', true]]);
+    // GAME-141: велозона — вибір на дні 2 (з CH1-D2-ELISE-001), а не з ST-004.
+    const d2elise = STORY.quests['CH1-D2-ELISE-001'];
+    expect(d2elise?.transitions.map((t) => [t.to, t.choice])).toEqual([['CH1-D2-CAMP-001', false], ['q.elise-bike-area', true]]);
+    expect(STORY.quests['ST-004']?.transitions.map((t) => [t.to, t.choice])).toEqual([['ST-005', false]]);
+    // GAME-141: межа дня й кінець розділу — різні поля; ST-005 — лише межа дня 1.
+    expect([STORY.quests['ST-005']?.dayEnd, STORY.quests['ST-005']?.end]).toEqual([true, false]);
+    expect([STORY.quests['CH1-D2-FIRE-001']?.dayEnd, STORY.quests['CH1-D2-FIRE-001']?.end]).toEqual([true, true]);
+    expect(STORY.quests['ST-004'] && 'dayEnd' in STORY.quests['ST-004']).toBe(false);   // поле лише зі значенням true
     expect(STORY.quests['ST-005']?.reward?.moneyCents).toBe(1_000);
     const c = structuredClone(CONTENT);
     const q = c.quests[0];
@@ -149,7 +155,7 @@ describe('збірка сюжету з content/ (src/content/story.ts)', () => {
     expect(files.length).toBeGreaterThan(0);
     expect(Object.keys(STORY.dialogues).sort()).toEqual(files.map((f) => `dlg.${f.replace(/^.*\/|\.json$/g, '')}`).sort());
     const hello = STORY.dialogues['dlg.elise-greeting']?.nodes['hello'];
-    expect(hello?.choices?.[0]).toEqual({ next: 'bike', when: { all: [{ transport: 'transport.bike' }, { notRemembers: 'm.came-by-bike' }, { notFlag: 'f.elise-met' }] }, effects: [{ setFlag: 'f.elise-met' }, { remember: 'm.came-by-bike' }, { completeObjective: { quest: 'q.elise-bike-area', objective: 'talk-elise' } }] }); // GAME-87: велозону закриває лише ця відповідь
+    expect(hello?.choices?.[0]).toEqual({ next: 'bike', when: { all: [{ transport: 'transport.bike' }, { notRemembers: 'm.came-by-bike' }, { notFlag: 'f.elise-met' }] }, effects: [{ setFlag: 'f.elise-met' }, { remember: 'm.came-by-bike' }] }); // GAME-141: велозону закриває вже не привітання, а вузол bikezone дня 2
     // GAME-84 №5: «знайомство» — лише тому, хто ще не знайомий; прапорець/пам'ять доходять до ядра як є
     expect(hello?.choices?.[1]).toEqual({ next: 'intro', when: { notFlag: 'f.elise-met' }, effects: [{ setFlag: 'f.elise-met' }] });
     expect(hello?.choices?.[3]).toEqual({ next: 'spot', when: { flag: 'f.elise-met' }, effects: [] });
@@ -274,7 +280,7 @@ describe('пакування (GAME-109): усі підмножини речей 
       s = r.state;
     };
     run({ type: 'CreateCharacter', profileId: k.profile ?? '', transportId: k.transport ?? '', ...(k.animal === NO_ANIMAL ? {} : { animalId: k.animal ?? '' }) } as Move);
-    run({ type: 'CompleteQuest', questId: 'ST-001' });
+    run({ type: 'CompleteQuest', questId: 'PROLOGUE-HOME-001' }); run({ type: 'CompleteQuest', questId: 'ST-001' });
     run({ type: 'CompleteQuest', questId: 'ST-002' });
     run({ type: 'Visit', locationId: 'loc.shop' });
     run({ type: 'Pickup', itemId: 'item.tent' });
@@ -339,14 +345,16 @@ describe('пакування (GAME-109): усі підмножини речей 
     return s.campaignEnded;
   }
 
-  /** Прапорці f.pack-*, які читає хоч одна умова діалогів (flag/notFlag, у т. ч. у all/any). */
+  /** Прапорці f.pack-*, які читає хоч одна умова розмов з NPC (flag/notFlag, у т. ч. у all/any). */
   const readPackFlags = (st: typeof STORY): Set<string> => {
     const out = new Set<string>();
     const walk = (c: CondDef): void => {
       if ('flag' in c) out.add(c.flag); else if ('notFlag' in c) out.add(c.notFlag);
       else if ('all' in c) c.all.forEach(walk); else if ('any' in c) c.any.forEach(walk);
     };
-    for (const d of Object.values(st.dialogues)) for (const n of Object.values(d.nodes)) for (const ch of n.choices ?? []) if (ch.when) walk(ch.when);
+    // Події в дорозі (trigger) — поза класами (GAME-108): у них заходять лише ходом везіння, а свідок його не бере, тож
+    // прапорець, який читає лише подія (f.pack-lantern-2 у «Трьох однакових ліхтарях»), шляху свідка не змінює.
+    for (const d of Object.values(st.dialogues)) if (!d.trigger) for (const n of Object.values(d.nodes)) for (const ch of n.choices ?? []) if (ch.when) walk(ch.when);
     return new Set([...out].filter((f) => f.startsWith('f.pack-')));
   };
 

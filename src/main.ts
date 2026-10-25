@@ -110,6 +110,9 @@ onFirstFrame(game, (ms) => { probe.firstFrameMs = ms; });
 new ResizeObserver(() => {
   const f = frameSize(stage.clientWidth, stage.clientHeight);
   if (f.width !== game.scale.gameSize.width || f.height !== game.scale.gameSize.height) game.scale.setGameSize(f.width, f.height);
+  // GAME-96: розмір кадру міг не змінитись (широкий 640×352 на будь-якій висоті), а поле — змінилось (шапка з'явилась, поворот): FIT міряє
+  // батьківський блок лише по події, тож без refresh() полотно лишалось завбільшки з поле ДО появи шапки і вилазило за екран (1280×720: 704 у полі 648).
+  game.scale.refresh();
 }).observe(stage);
 
 // Оболонка UI (GAME-25): пауза зупиняє і сцену, і ігровий годинник ядра.
@@ -121,6 +124,7 @@ const langOverride = new URLSearchParams(location.search).get('lang') === 'pseud
 render(h(Shell, {
   build: buildLabel(__GAME_VERSION__, __GAME_COMMIT__),   // GAME-91: підпис збірки — у меню паузи, не на екрані гри
   ...(langOverride ? { langOverride } : {}),
+  ...(switches.holdToast ? { holdToast: true } : {}),
   credits,
   port: {
     save: () => saves.save(),

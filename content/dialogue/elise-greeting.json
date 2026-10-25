@@ -6,20 +6,24 @@
     {
       "id": "hello", "speaker": "npc", "textKey": "dlg.elise-greeting.hello",
       "choices": [
-        { "textKey": "dlg.elise-greeting.hello.c1", "next": "bike", "when": { "all": [{ "transport": "transport.bike" }, { "notRemembers": "m.came-by-bike" }, { "notFlag": "f.elise-met" }] }, "effects": [{ "setFlag": "f.elise-met" }, { "remember": "m.came-by-bike" }, { "completeObjective": { "quest": "q.elise-bike-area", "objective": "talk-elise" } }] },
+        { "textKey": "dlg.elise-greeting.hello.c1", "next": "bike", "when": { "all": [{ "transport": "transport.bike" }, { "notRemembers": "m.came-by-bike" }, { "notFlag": "f.elise-met" }] }, "effects": [{ "setFlag": "f.elise-met" }, { "remember": "m.came-by-bike" }] },
         { "textKey": "dlg.elise-greeting.hello.c2", "next": "intro", "when": { "notFlag": "f.elise-met" }, "effects": [{ "setFlag": "f.elise-met" }] },
         { "textKey": "dlg.elise-greeting.hello.c3", "next": "shelter", "when": { "remembers": "m.came-by-bike" } },
         { "textKey": "dlg.elise-greeting.hello.c4", "next": "spot", "when": { "flag": "f.elise-met" } },
         { "textKey": "dlg.elise-greeting.hello.c5", "next": "bye" },
-        { "textKey": "dlg.elise-greeting.hello.c6", "next": "bike-late", "when": { "all": [{ "transport": "transport.bike" }, { "quest": "q.elise-bike-area", "status": "active" }, { "notRemembers": "m.came-by-bike" }, { "flag": "f.elise-met" }] }, "effects": [{ "remember": "m.came-by-bike" }, { "completeObjective": { "quest": "q.elise-bike-area", "objective": "talk-elise" } }] },
+        { "textKey": "dlg.elise-greeting.hello.c6", "next": "bike-late", "when": { "all": [{ "transport": "transport.bike" }, { "quest": "q.elise-bike-area", "status": "active" }, { "notRemembers": "m.came-by-bike" }, { "flag": "f.elise-met" }] }, "effects": [{ "remember": "m.came-by-bike" }] },
         { "textKey": "dlg.elise-greeting.hello.c7", "next": "road", "when": { "all": [{ "quest": "ST-005", "status": "completed" }, { "any": [{ "flag": "f.road-apple" }, { "flag": "f.roles-route-george" }, { "flag": "f.roles-route-matthew" }, { "flag": "f.gear-plan-basic" }, { "flag": "f.gear-plan-better" }] }] } },
         { "textKey": "dlg.elise-greeting.hello.c8", "next": "place", "when": { "all": [{ "quest": "ST-005", "status": "completed" }, { "any": [{ "flag": "f.pitch-pines" }, { "flag": "f.pitch-lake-view" }, { "flag": "f.night-car" }, { "flag": "f.night-gazebo" }] }] } },
         { "textKey": "dlg.elise-greeting.hello.c9", "next": "advice", "when": { "all": [{ "quest": "ST-005", "status": "completed" }, { "flag": "f.night-tent" }, { "notRemembers": "m.advice-taken" }, { "notRemembers": "m.advice-declined" }] } },
-        { "textKey": "dlg.elise-greeting.hello.c10", "next": "advice-again", "when": { "any": [{ "remembers": "m.advice-taken" }, { "remembers": "m.advice-declined" }] } }
+        { "textKey": "dlg.elise-greeting.hello.c10", "next": "advice-again", "when": { "any": [{ "remembers": "m.advice-taken" }, { "remembers": "m.advice-declined" }] } },
+        { "textKey": "dlg.elise-greeting.hello.c11", "next": "morning", "when": { "quest": "CH1-D2-ELISE-001", "status": "active" }, "effects": [{ "completeObjective": { "quest": "CH1-D2-ELISE-001", "objective": "talk-elise" } }] },
+        { "textKey": "dlg.elise-greeting.hello.c12", "next": "bikezone", "when": { "all": [{ "quest": "q.elise-bike-area", "status": "active" }, { "remembers": "m.came-by-bike" }] } },
+        { "textKey": "dlg.elise-greeting.hello.c13", "next": "bikezone-thanks", "when": { "remembers": "m.bikezone-helped" } },
+        { "textKey": "dlg.elise-greeting.hello.c14", "next": "dinner", "when": { "quest": "CH1-D2-CAMP-001", "status": "active" } }
       ]
     },
     { "id": "bike", "speaker": "npc", "textKey": "dlg.elise-greeting.bike", "next": "intro" },
-    { "id": "bike-late", "speaker": "npc", "textKey": "dlg.elise-greeting.bike", "next": "spot" },
+    { "id": "bike-late", "speaker": "npc", "textKey": "dlg.elise-greeting.bike", "next": "bikezone" },
     { "id": "intro", "speaker": "npc", "textKey": "dlg.elise-greeting.intro", "next": "spot" },
     { "id": "shelter", "speaker": "npc", "textKey": "dlg.elise-greeting.shelter", "next": "bye" },
     { "id": "night-car", "speaker": "npc", "textKey": "dlg.elise-greeting.night-car", "next": "bye" },
@@ -85,6 +89,33 @@
     },
     { "id": "again-yes", "speaker": "npc", "textKey": "dlg.elise-greeting.again-yes", "next": "bye" },
     { "id": "again-no", "speaker": "npc", "textKey": "dlg.elise-greeting.again-no", "next": "bye" },
+    {
+      "id": "morning", "speaker": "npc", "textKey": "dlg.elise-greeting.morning",
+      "choices": [
+        { "textKey": "dlg.elise-greeting.morning.c1", "next": "advice", "when": { "all": [{ "flag": "f.night-tent" }, { "notRemembers": "m.advice-taken" }, { "notRemembers": "m.advice-declined" }] } },
+        { "textKey": "dlg.elise-greeting.morning.c2", "next": "morning-tip" }
+      ]
+    },
+    { "id": "morning-tip", "speaker": "npc", "textKey": "dlg.elise-greeting.morning-tip", "end": true },
+    {
+      "id": "bikezone", "speaker": "npc", "textKey": "dlg.elise-greeting.bikezone",
+      "choices": [
+        { "textKey": "dlg.elise-greeting.bikezone.c1", "next": "bikezone-yes", "effects": [{ "remember": "m.bikezone-helped" }, { "completeObjective": { "quest": "q.elise-bike-area", "objective": "talk-elise" } }] },
+        { "textKey": "dlg.elise-greeting.bikezone.c2", "next": "bikezone-no" }
+      ]
+    },
+    { "id": "bikezone-yes", "speaker": "npc", "textKey": "dlg.elise-greeting.bikezone-yes", "next": "bye" },
+    { "id": "bikezone-no", "speaker": "npc", "textKey": "dlg.elise-greeting.bikezone-no", "next": "bye" },
+    { "id": "bikezone-thanks", "speaker": "npc", "textKey": "dlg.elise-greeting.bikezone-thanks", "next": "bye" },
+    {
+      "id": "dinner", "speaker": "npc", "textKey": "dlg.elise-greeting.dinner",
+      "choices": [
+        { "textKey": "dlg.elise-greeting.dinner.c1", "next": "dinner-together", "effects": [{ "completeObjective": { "quest": "CH1-D2-CAMP-001", "objective": "dinner" } }] },
+        { "textKey": "dlg.elise-greeting.dinner.c2", "next": "dinner-simple", "effects": [{ "completeObjective": { "quest": "CH1-D2-CAMP-001", "objective": "dinner" } }] }
+      ]
+    },
+    { "id": "dinner-together", "speaker": "npc", "textKey": "dlg.elise-greeting.dinner-together", "next": "bye" },
+    { "id": "dinner-simple", "speaker": "npc", "textKey": "dlg.elise-greeting.dinner-simple", "next": "bye" },
     { "id": "bye", "speaker": "npc", "textKey": "dlg.elise-greeting.bye", "end": true }
   ]
 }

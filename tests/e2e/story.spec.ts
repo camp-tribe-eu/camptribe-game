@@ -26,14 +26,17 @@ async function act(page: Page, kind: string, key = '', timeout = 5_000): Promise
     throw new Error(`крок «${kind} ${key}»: кнопки немає на екрані подорожі`);
   }
   await page.waitForTimeout(400);   // GAME-80: панель глуха ~350 мс після дії — гравець теж не тисне швидше
-  // На дорозі з шансом 50 % трапляється подія (GAME-31; кидок залежить від прожитих кадрів) — відповідаємо, як гравець.
-  if (kind === 'visit' && key === 'loc.road') {
-    const answer = panel(page).locator('[data-key="dlg.road-apples.box.c2"]');
-    if (await answer.isVisible({ timeout: 400 }).catch(() => false)) {
-      await answer.click();
-      await panel(page).locator('[data-act="continue"]').click();
-      await page.waitForTimeout(400);   // GAME-80: панель глуха ~350 мс після дії
-    }
+  // На дорозі з шансом трапляється одна з десяти подій (GAME-31, GAME-108; кидок залежить від прожитих кадрів) —
+  // відповідаємо, як гравець, що поспішає: остання відповідь у кожному вузлі (у подій дороги вона безумовна).
+  if (kind === 'visit' && key === 'loc.road') await leaveRoadEvent(page);
+}
+
+/** GAME-108: з будь-якої події дороги — останньою відповіддю до кінця розмови. */
+async function leaveRoadEvent(page: Page): Promise<void> {
+  const dlg = panel(page).locator('[data-ui="dialogue"]');
+  for (let i = 0; i < 6 && await dlg.isVisible({ timeout: 400 }).catch(() => false); i++) {
+    await dlg.locator('[data-act]').last().click();
+    await page.waitForTimeout(400);   // GAME-80: панель глуха ~350 мс після дії
   }
 }
 
@@ -42,14 +45,19 @@ async function act(page: Page, kind: string, key = '', timeout = 5_000): Promise
 async function playBikeProlog(page: Page): Promise<void> {
   await panel(page).locator('[data-act="create"]', { hasText: 'Велосипед' }).first().click();
   await page.waitForTimeout(400);   // GAME-80: панель глуха ~350 мс після дії
+  await act(page, 'complete', 'q.prologue-home-001');
   await act(page, 'complete', 'q.st-001');
   await act(page, 'complete', 'q.st-002');
   await act(page, 'visit', 'loc.shop');
   await act(page, 'pickup', 'item.tent');
   await act(page, 'pickup', 'item.sleeping-bag');
   await act(page, 'complete', 'q.st-003');
+  await act(page, 'visit', 'loc.home');
+  await act(page, 'complete', 'q.ch1-home-001');
   await act(page, 'visit', 'loc.road');
-  await act(page, 'complete', 'q.elise-bike-area.choice');
+  // GAME-141: велозона — сцена дня 2, з ST-004 її вибору більше немає.
+  await expect(panel(page).locator('[data-key="q.elise-bike-area.choice"]')).toHaveCount(0);
+  await act(page, 'complete', 'q.st-004');
   await act(page, 'visit', 'loc.camp.lake');
   await act(page, 'talk', 'npc.elise');
   await expect(panel(page).locator('[data-ui="dialogue"]')).toBeVisible();
@@ -61,7 +69,6 @@ async function playBikeProlog(page: Page): Promise<void> {
   await act(page, 'continue');
   await act(page, 'choose', 'dlg.elise-greeting.spot.c1');
   await act(page, 'continue');
-  await act(page, 'complete', 'q.elise-bike-area');
   // GAME-84 №5: друга розмова — без нового знайомства: ні «Я Еліза…», ні відповіді «Дякую! Де краще поставити намет?» як першого разу.
   await act(page, 'talk', 'npc.elise');
   await expect(panel(page).locator('[data-ui="dialogue"]', { hasText: 'Еліза, тут' })).toHaveCount(0);
@@ -69,20 +76,53 @@ async function playBikeProlog(page: Page): Promise<void> {
   await act(page, 'choose', 'dlg.elise-greeting.hello.c4');
   // GAME-110: намет уже стоїть — місце вдруге не обирають (f.pitch не отримає двох значень), лише дякують.
   await expect(panel(page).locator('[data-key="dlg.elise-greeting.spot.c1"]')).toHaveCount(0);
-  await act(page, 'choose', 'dlg.elise-greeting.spot.c6');
+  // GAME-141: ST-005 уже активний з першої розмови (велозона більше не між ними), тож ціль «намет» закрита ще тоді —
+  // «Намет уже стоїть» (spot.c6) нічого не змінює й меню зливає її з «Ще роззирнусь» (spot.c4).
+  await expect(panel(page).locator('[data-key="dlg.elise-greeting.spot.c6"]')).toHaveCount(0);
+  await act(page, 'choose', 'dlg.elise-greeting.spot.c4');
   await act(page, 'continue');
   // GAME-84 №1: «Поставити намет» зарахувалось самим поверненням у табір (ST-005 відкрився, коли ти вже тут) — «Піти: Кемпінг» немає.
   await expect(panel(page).locator('[data-act="visit"][data-key="loc.camp.lake"]')).toHaveCount(0);
   await act(page, 'pickup', 'item.firewood');
   await act(page, 'complete', 'q.st-005');
 }
+
+/**
+ * GAME-141 · день 2 велосипедиста після підсумку дня 1 (екран подорожі відкрито): ранок, порада Елізи (прийнято), вибір
+ * «Глянути нову велозону», «Ходімо, гляну», вечеря просто, вечір біля вогнища (гачок GAME-142) — кінець розділу.
+ */
+async function playBikeDay2(page: Page): Promise<void> {
+  await act(page, 'complete', 'q.ch1-d2-001');
+  await act(page, 'talk', 'npc.elise');
+  await act(page, 'choose', 'dlg.elise-greeting.hello.c11');
+  await act(page, 'choose', 'dlg.elise-greeting.morning.c1');
+  await act(page, 'choose', 'dlg.elise-greeting.advice.c1');
+  await act(page, 'continue');
+  await act(page, 'continue');
+  await act(page, 'complete', 'q.elise-bike-area.choice');
+  await act(page, 'talk', 'npc.elise');
+  await act(page, 'choose', 'dlg.elise-greeting.hello.c12');
+  await act(page, 'choose', 'dlg.elise-greeting.bikezone.c1');
+  await act(page, 'continue');
+  await act(page, 'continue');
+  await act(page, 'complete', 'q.elise-bike-area');
+  await act(page, 'talk', 'npc.elise');
+  await act(page, 'choose', 'dlg.elise-greeting.hello.c14');
+  await act(page, 'choose', 'dlg.elise-greeting.dinner.c2');
+  await act(page, 'continue');
+  await act(page, 'continue');
+  await act(page, 'complete', 'q.ch1-d2-camp-001');
+  await act(page, 'complete', 'q.ch1-d2-fire-001');
+}
 // ПРОХІД-END
 
-/** GAME-106: кінець дня 1 відкриває підсумок дня; «Продовжити» — на мапу. reopen — знову відкрити ☰ (там «кінець розділу»). */
-async function finishDay(page: Page, reopen: boolean): Promise<void> {
+/** GAME-106: кінець дня відкриває підсумок дня N; «Продовжити» — на мапу. reopen — знову відкрити ☰. */
+async function finishDay(page: Page, reopen: boolean, day = 1): Promise<void> {
   await expect(page.locator('[data-ui="summary"]')).toBeVisible();
+  await expect(page.locator('[data-ui="summary"] h2')).toHaveText(`Підсумок дня ${day}`);
   await page.locator('[data-ui="summary-continue"]').click();
-  await expect(page.locator('[data-ui="summary"]')).toHaveCount(0);
+  // 15 с: на CI PR #53 сторінка під навантаженням 5 с не відповідала на запит лічильника («Received: undefined»).
+  await expect(page.locator('[data-ui="summary"]')).toHaveCount(0, { timeout: 15_000 });
   if (reopen) await page.locator('[data-touch="story"]').click();
 }
 
@@ -94,6 +134,11 @@ test('пролог від вибору персонажа до кінця роз
   expect((await core(page)).game.player).toBeNull();
   await playBikeProlog(page);
   await finishDay(page, true);
+  // GAME-141: ST-005 — межа дня 1, не кінець розділу: далі ранок дня 2.
+  await expect(panel(page).locator('[data-ui="ended"]')).toHaveCount(0);
+  expect((await core(page)).game.campaignEnded).toBe(false);
+  await playBikeDay2(page);
+  await finishDay(page, true, 2);
   await expect(panel(page).locator('[data-ui="ended"]')).toBeVisible();
   // GAME-84 №6: на екрані кінця — що далі (Розділ I) і що зробити, щоб не загубити гру (зберегти в паузі).
   await expect(panel(page).locator('[data-ui="ended"]')).toContainText('Розділ I');
@@ -107,8 +152,8 @@ test('пролог від вибору персонажа до кінця роз
   expect(await panel(page).locator('[data-ui="journal"] li').evaluateAll((els) => els.map((e) => (e as HTMLElement).dataset.type)))
     .toEqual(c.journal.map((e) => e.type));
   expect(c.journal.length).toBeGreaterThan(10);   // GAME-84 №1: два «Прибуття» вдома й одне в таборі більше не пишуться — було 16, тепер 13
-  // GAME-110: пам'ятний вибір (намет біля сосон) — у журналі на екрані текстом, рівно раз, хоч spot.c1 обрано двічі.
-  await expect(panel(page).locator('[data-ui="journal"] li[data-type="Memory"]')).toHaveText(['Запам\'ятали: намет біля сосон']);
+  // GAME-110: пам'ятні вибори (намет біля сосон; порада Елізи вдень 2) — у журналі на екрані текстом, кожен рівно раз.
+  await expect(panel(page).locator('[data-ui="journal"] li[data-type="Memory"]')).toHaveText(['Запам\'ятали: намет біля сосон', 'Запам\'ятали: порада Елізи сушити намет зранку — прийнято']);
   expect(await panel(page).textContent()).not.toContain('⟦');      // жодного ключа без тексту
   expect(errors).toEqual([]);
 });
@@ -140,7 +185,7 @@ for (const [seed, weather, label, minutes] of [[2, 'sunny', 'сонячно', 25
     const where = panel(page).locator('[data-ui="where"]');
     await expect(where).toHaveAttribute('data-weather', weather);
     await expect(where).toContainText(`Погода: ${label}`);
-    for (const [k, key] of [['complete', 'q.st-001'], ['complete', 'q.st-002']] as const) await act(page, k, key);
+    for (const [k, key] of [['complete', 'q.prologue-home-001'], ['complete', 'q.st-001'], ['complete', 'q.st-002']] as const) await act(page, k, key);
     const shop = panel(page).locator('[data-act="visit"][data-key="loc.shop"]');
     await expect(shop).toContainText(`${minutes} хв`);                // велосипедом дім → крамниця
     const m0 = (await core(page)).clock.minutes;
@@ -163,8 +208,8 @@ async function toRoad(browser: Browser, seed: number): Promise<{ page: Page; fir
   await open(page, `?seed=${seed}`);
   await panel(page).locator('[data-act="create"]', { hasText: 'Велосипед' }).first().click();
   await page.waitForTimeout(400);   // GAME-80: панель глуха ~350 мс після дії
-  for (const [k, key] of [['complete', 'q.st-001'], ['complete', 'q.st-002'], ['visit', 'loc.shop'],
-    ['pickup', 'item.tent'], ['pickup', 'item.sleeping-bag'], ['complete', 'q.st-003']] as const) await act(page, k, key);
+  for (const [k, key] of [['complete', 'q.prologue-home-001'], ['complete', 'q.st-001'], ['complete', 'q.st-002'], ['visit', 'loc.shop'],
+    ['pickup', 'item.tent'], ['pickup', 'item.sleeping-bag'], ['complete', 'q.st-003'], ['visit', 'loc.home'], ['complete', 'q.ch1-home-001']] as const) await act(page, k, key);
   await panel(page).locator('[data-act="visit"][data-key="loc.road"]').click();
   await page.waitForTimeout(400);   // GAME-80: панель глуха ~350 мс після дії
   const fired = await panel(page).locator('[data-ui="dialogue"]').isVisible({ timeout: 400 }).catch(() => false);
@@ -172,6 +217,7 @@ async function toRoad(browser: Browser, seed: number): Promise<{ page: Page; fir
 }
 
 test('подія в дорозі не трапилась — дорога триває: жодної розмови, далі звичайні дії', async ({ browser }) => {
+  test.setTimeout(480_000);   // до 16 зерен, кожне — новий контекст і кроки пролога; на CI одне зерно 15–20 с (CI PR #53: 180 с замало)
   for (let seed = 1; seed <= 16; seed++) {
     const r = await toRoad(browser, seed);
     if (!r.fired) {
@@ -182,17 +228,21 @@ test('подія в дорозі не трапилась — дорога три
     }
     await r.close();
   }
-  throw new Error('за 16 зерен подія трапилась щоразу — шанс 50 % так не поводиться');
+  throw new Error('за 16 зерен подія трапилась щоразу — сумарний шанс 82 % так не поводиться');
 });
 
 test('подія в дорозі (GAME-31): трапляється на дорозі, читається, відповідь — у ядрі й у журналі', async ({ browser }) => {
-  // Шанс 50 %, різні зерна, кожне — у чистому контексті.
+  test.setTimeout(480_000);   // до 16 зерен, кожне — новий контекст і кроки пролога; на CI одне зерно 15–20 с (CI PR #53: 180 с замало)
+  // Шанс «Яблук» 40 % (GAME-108: ще дев'ять подій ділять дорогу), різні зерна, кожне — у чистому контексті.
   let page: Page | null = null;
-  for (let seed = 1; seed <= 16 && !page; seed++) {
+  const others = new Set<string>();
+  for (let seed = 1; seed <= 24 && !page; seed++) {
     const r = await toRoad(browser, seed);
-    if (r.fired) page = r.page; else await r.close();
+    const title = r.fired ? await panel(r.page).locator('[data-ui="dialogue"] h3').textContent() : null;
+    if (title === 'Яблука біля дороги') page = r.page;
+    else { if (title) others.add(title); await r.close(); }
   }
-  if (!page) throw new Error('за 16 зерен подія не трапилась жодного разу — шанс 50 % так не поводиться');
+  if (!page) throw new Error(`за 24 зерна «Яблука» не трапились жодного разу (інші події: ${[...others].join(', ')}) — шанс 40 % так не поводиться`);
   await expect(panel(page).locator('[data-ui="dialogue"] h3')).toHaveText('Яблука біля дороги');
   await expect(panel(page).locator('[data-ui="actions"]')).toHaveCount(0);                // у події — лише відповіді
   await panel(page).locator('[data-key="dlg.road-apples.box.c1"]').click();
@@ -214,8 +264,8 @@ test('автівкою — без бічного квесту й без відп
   await open(page);
   await panel(page).locator('[data-act="create"]', { hasText: 'Авто' }).first().click();
   await page.waitForTimeout(400);   // GAME-80: панель глуха ~350 мс після дії
-  for (const [k, key] of [['complete', 'q.st-001'], ['complete', 'q.st-002'], ['visit', 'loc.shop'],
-    ['pickup', 'item.tent'], ['pickup', 'item.sleeping-bag'], ['complete', 'q.st-003'], ['visit', 'loc.road']] as const) await act(page, k, key);
+  for (const [k, key] of [['complete', 'q.prologue-home-001'], ['complete', 'q.st-001'], ['complete', 'q.st-002'], ['visit', 'loc.shop'],
+    ['pickup', 'item.tent'], ['pickup', 'item.sleeping-bag'], ['complete', 'q.st-003'], ['visit', 'loc.home'], ['complete', 'q.ch1-home-001'], ['visit', 'loc.road']] as const) await act(page, k, key);
   await expect(panel(page).locator('[data-key="q.elise-bike-area.choice"]')).toHaveCount(0);
   await act(page, 'complete', 'q.st-004');
   await act(page, 'visit', 'loc.camp.lake');
@@ -231,6 +281,22 @@ test('автівкою — без бічного квесту й без відп
   await act(page, 'pickup', 'item.firewood');
   await act(page, 'complete', 'q.st-005');
   await finishDay(page, true);
+  // День 2 автом (GAME-141): без вибору велозони.
+  await act(page, 'complete', 'q.ch1-d2-001');
+  await act(page, 'talk', 'npc.elise');
+  await act(page, 'choose', 'dlg.elise-greeting.hello.c11');
+  await act(page, 'choose', 'dlg.elise-greeting.morning.c2');
+  await act(page, 'continue');
+  await expect(panel(page).locator('[data-key="q.elise-bike-area.choice"]')).toHaveCount(0);
+  await act(page, 'complete', 'q.ch1-d2-elise-001');
+  await act(page, 'talk', 'npc.elise');
+  await act(page, 'choose', 'dlg.elise-greeting.hello.c14');
+  await act(page, 'choose', 'dlg.elise-greeting.dinner.c1');
+  await act(page, 'continue');
+  await act(page, 'continue');
+  await act(page, 'complete', 'q.ch1-d2-camp-001');
+  await act(page, 'complete', 'q.ch1-d2-fire-001');
+  await finishDay(page, true, 2);
   await expect(panel(page).locator('[data-ui="ended"]')).toBeVisible();
   const c = await core(page);
   expect(c.game.campaignEnded).toBe(true);
@@ -243,8 +309,8 @@ test('автівкою — без бічного квесту й без відп
 async function carToCamp(page: Page): Promise<void> {
   await panel(page).locator('[data-act="create"]', { hasText: 'Авто' }).first().click();
   await page.waitForTimeout(400);   // GAME-80: панель глуха ~350 мс після дії
-  for (const [k, key] of [['complete', 'q.st-001'], ['complete', 'q.st-002'], ['visit', 'loc.shop'],
-    ['pickup', 'item.tent'], ['pickup', 'item.sleeping-bag'], ['complete', 'q.st-003'], ['visit', 'loc.road']] as const) await act(page, k, key);
+  for (const [k, key] of [['complete', 'q.prologue-home-001'], ['complete', 'q.st-001'], ['complete', 'q.st-002'], ['visit', 'loc.shop'],
+    ['pickup', 'item.tent'], ['pickup', 'item.sleeping-bag'], ['complete', 'q.st-003'], ['visit', 'loc.home'], ['complete', 'q.ch1-home-001'], ['visit', 'loc.road']] as const) await act(page, k, key);
   await act(page, 'complete', 'q.st-004');
   await act(page, 'visit', 'loc.camp.lake');
   await expect(panel(page).locator('[data-act="pickup"][data-key="item.firewood"]')).toBeVisible();
@@ -313,7 +379,9 @@ test('після закриття екрана подорожі фокус на 
 test('сейв після прологу: перезавантаження — і кінець розділу на місці', async ({ page }) => {
   await open(page);
   await playBikeProlog(page);
-  await finishDay(page, false);
+  await finishDay(page, true);
+  await playBikeDay2(page);
+  await finishDay(page, false, 2);
   await page.locator('[data-touch="pause"]').click();
   await page.locator('[data-ui="save"]').click();
   await expect(page.locator('[data-ui="status"]')).toBeVisible();
@@ -327,10 +395,13 @@ test('кінець розділу видно поза ☰: підказка в H
   await open(page);
   await expect(page.locator('[data-ui="ended-hint"]')).toHaveCount(0);   // до кінця підказки немає (контроль)
   await playBikeProlog(page);
-  await finishDay(page, false);
+  await finishDay(page, true);
+  await expect(page.locator('[data-ui="ended-hint"]')).toHaveCount(0);   // GAME-141: межа дня 1 — ще не кінець
+  await playBikeDay2(page);
+  await finishDay(page, false, 2);
   const hint = page.locator('[data-ui="ended-hint"]');
   await expect(hint).toBeVisible();
-  await expect(hint).toContainText('Кінець Прологу');
+  await expect(hint).toContainText('Кінець дня 2');
   await expect(hint).toContainText('☰');
   await expect(page.locator('[data-touch="story"]')).toHaveAttribute('data-hint', 'yes');
   // Мапа лишається придатною: відведений убік джойстик зсуває персонажа.
@@ -353,6 +424,7 @@ test('кожна ціль екрана подорожі ≥ 44×44 CSS px і н�
   await panel(page).locator('[data-act="create"]').first().click();
   await page.waitForTimeout(400);   // GAME-80: панель глуха ~350 мс після дії
   // GAME-81: удома більше немає кнопок «Купити» — для щільного екрана йдемо в крамницю (три «Узяти», дорога, квест).
+  await act(page, 'complete', 'q.prologue-home-001');
   await act(page, 'complete', 'q.st-001');
   await act(page, 'complete', 'q.st-002');
   await act(page, 'visit', 'loc.shop');
@@ -374,7 +446,7 @@ test('кожна ціль екрана подорожі ≥ 44×44 CSS px і н�
 test('негативний контроль: прихована кнопка «Завершити» — прохід червоніє з назвою кроку', async ({ page }) => {
   await open(page, '?hideAct=complete');
   await expect(panel(page).locator('[data-act="create"]').first()).toBeVisible();  // екран живий, сховано лише «Завершити»
-  await expect(playBikeProlog(page)).rejects.toThrow('крок «complete q.st-001»');
+  await expect(playBikeProlog(page)).rejects.toThrow('крок «complete q.prologue-home-001»');
 });
 
 test('прохід керується лише кліками й клавішами: без приватного API гри та без імпортів ядра', () => {
@@ -385,14 +457,14 @@ test('прохід керується лише кліками й клавіша�
   expect(src).not.toMatch(/\brequire\s*\(|\bimport\s*\(/);                       // і жодних динамічних імпортів
   // Під перевіркою — сам прохід і помічники, якими він ходить (panel, act): за синтаксичним деревом
   // (рецензія: регулярні вирази обходились шаблоном `${…}` і «//» усередині рядка).
-  const FLOW = ['panel', 'act', 'playBikeProlog'];
+  const FLOW = ['panel', 'act', 'leaveRoadEvent', 'playBikeProlog', 'playBikeDay2'];   // GAME-141: і день 2
   const roots: ts.Node[] = [];
   ts.forEachChild(sf, (n) => {
     if (ts.isFunctionDeclaration(n) && n.name && FLOW.includes(n.name.text)) roots.push(n);
     if (ts.isVariableStatement(n)) for (const d of n.declarationList.declarations) if (ts.isIdentifier(d.name) && FLOW.includes(d.name.text)) roots.push(d);
   });
   expect(roots.length).toBe(FLOW.length);
-  const ALLOWED = new Set(['playBikeProlog', 'act', 'panel', 'locator', 'first', 'click', 'tap', 'press', 'down', 'up', 'expect', 'toBeVisible', 'toHaveCount', 'Error', 'isVisible', 'catch', 'waitForTimeout']);
+  const ALLOWED = new Set(['playBikeProlog', 'playBikeDay2', 'act', 'leaveRoadEvent', 'panel', 'locator', 'first', 'last', 'click', 'tap', 'press', 'down', 'up', 'expect', 'toBeVisible', 'toHaveCount', 'Error', 'isVisible', 'catch', 'waitForTimeout']);
   const called: string[] = [];
   const bad: string[] = [];
   const walk = (n: ts.Node): void => {
@@ -413,32 +485,81 @@ test('прохід керується лише кліками й клавіша�
 });
 
 // GAME-32 · Еліза стоїть на мапі кемпінгу: до неї доходять пішки й заговорюють клавішею дії.
-interface Probe { playerX: number; playerY: number; nearObject: string | null }
+interface Probe { playerX: number; playerY: number; nearObject: string | null; fps: number }
 const probe = (page: Page): Promise<Probe> => page.evaluate(() => ({ ...(window as unknown as { __game: { probe: Probe } }).__game.probe }));
-async function walk(page: Page, key: string, until: (p: Probe) => boolean): Promise<Probe> {
-  await page.keyboard.down(key);
-  const start = Date.now();
-  let p = await probe(page);
-  while (!until(p) && Date.now() - start < 5_000) { await page.waitForTimeout(16); p = await probe(page); }
-  await page.keyboard.up(key);
-  await page.waitForTimeout(50);
-  return probe(page);
+/** Точка Елізи з мапи (public/maps/camp-lake.tmj) — ціль за координатою, як у world.spec (CI PR #53: кроки за годинником
+ *  на повільному CI то не доходили, то проскакували зону Ø 96 px). Звірка з мапою — нижче, щоб константа не застаріла. */
+const ELISE = { x: 80, y: 272 };
+const KEY_CODE = { ArrowLeft: 37, ArrowUp: 38, ArrowRight: 39, ArrowDown: 40 } as const;
+/** Ходьба до координати, яку стереже сама сторінка: keydown, перевірка позиції кожен кадр (rAF), keyup одразу на цілі.
+ *  CI PR #53: цикл «клавіша з Playwright → probe → клавіша» мав затримку в сотні мс на кожен обмін, і персонаж проскакував
+ *  зону Елізи то по X, то по Y. Тут обміну через CDP між кроками немає. Подія — як справжня клавіша (keyCode), як у world.spec. */
+async function walkInPage(page: Page, key: keyof typeof KEY_CODE, axis: 'playerX' | 'playerY', target: number, lead: number): Promise<void> {
+  await page.evaluate(({ code, key, axis, target, lead }) => new Promise<void>((resolve) => {
+    const g = (window as unknown as { __game: { probe: { playerX: number; playerY: number; nearObject: string | null } } }).__game;
+    const fire = (type: string): void => {
+      const e = new KeyboardEvent(type, { key, code: key, bubbles: true, cancelable: true });
+      Object.defineProperty(e, 'keyCode', { get: () => code });
+      window.dispatchEvent(e);
+    };
+    const neg = key === 'ArrowLeft' || key === 'ArrowUp';
+    const done = (): boolean => g.probe.nearObject === 'npc.elise' || (neg ? g.probe[axis] <= target + lead : g.probe[axis] >= target - lead);
+    const start = performance.now();
+    const tick = (): void => {
+      if (done() || performance.now() - start > 8_000) { fire('keyup'); settle(); } else requestAnimationFrame(tick);
+    };
+    // keyup доходить до сцени через кілька кадрів (при ~6 fps — 150–300 мс), а персонаж ще їде: міряємо проскок лише коли
+    // позиція простояла ~700 мс (раніше було waitForTimeout(100) — менше одного кадру, lead вчився з недобору й не збігався).
+    const settle = (): void => {
+      let last = g.probe[axis];
+      let since = performance.now();
+      const watch = (): void => {
+        const now = performance.now();
+        if (g.probe[axis] !== last) { last = g.probe[axis]; since = now; }
+        if (now - since > 700 || now - start > 12_000) resolve(); else requestAnimationFrame(watch);
+      };
+      requestAnimationFrame(watch);
+    };
+    fire('keydown');
+    requestAnimationFrame(tick);
+  }), { code: KEY_CODE[key], key, axis, target, lead });
 }
 async function walkToElise(page: Page): Promise<void> {
-  await walk(page, 'ArrowLeft', (p) => p.playerX <= 88);
-  const p = await walk(page, 'ArrowDown', (q) => q.nearObject === 'npc.elise');
-  expect(p.nearObject).toBe('npc.elise');
+  const map = JSON.parse(readFileSync('public/maps/camp-lake.tmj', 'utf8')) as { layers: { objects?: { name: string; x: number; y: number }[] }[] };
+  const o = map.layers.flatMap((l) => l.objects ?? []).find((n) => n.name === 'npc.elise');
+  expect({ x: o?.x, y: o?.y }, 'Еліза на мапі зсунулась — онови ELISE').toEqual(ELISE);
+  // Довертаємо за координатою по обох осях: X до ±16 px, потім Y до точки Елізи (зона дії Ø 96 px).
+  const trail: string[] = [];   // шлях у тексті падіння: CI червонів без даних, локально (і при CPU ×8) зелений
+  // Випередження (CI PR #53, шлях 48↔101 навколо x=80 при 0,7–7 fps): keyup доходить до сцени через кілька кадрів, і персонаж
+  // проскакує ще ~50 px. Відпускаємо клавішу за `lead` px до цілі; lead вчиться з власного проскоку на кожній осі.
+  const lead = { playerX: 0, playerY: 0 };
+  for (let i = 0; i < 10 && (await probe(page)).nearObject !== 'npc.elise'; i++) {
+    const p = await probe(page);
+    trail.push(`${Math.round(p.playerX)},${Math.round(p.playerY)}@${p.fps.toFixed(1)}fps`);
+    // Допуск по X — 32 px: при x ± 32 хорда зони Ø 96 по Y ≈ 71 px, більше за проскок ~53 px на CI; ±16 при кроці ~53 px
+    // недосяжне (шлях 48↔101 вище).
+    const axis = Math.abs(p.playerX - ELISE.x) > 32 ? 'playerX' : 'playerY';
+    const target = axis === 'playerX' ? ELISE.x : ELISE.y;
+    const neg = p[axis] > target;
+    await walkInPage(page, axis === 'playerX' ? (neg ? 'ArrowLeft' : 'ArrowRight') : (neg ? 'ArrowUp' : 'ArrowDown'), axis, target, lead[axis]);
+    const after = (await probe(page))[axis];
+    const overshoot = neg ? target - after : after - target;   // > 0 — проскочили ціль
+    lead[axis] = Math.min(80, Math.max(0, lead[axis] + overshoot));
+  }
+  const last = await probe(page);
+  expect(last.nearObject, `шлях до Елізи: ${trail.join(' → ')} → ${Math.round(last.playerX)},${Math.round(last.playerY)}`).toBe('npc.elise');
 }
 
 test.describe('Еліза на мапі (клавіатура)', () => {
   test.use({ viewport: { width: 1280, height: 800 }, hasTouch: false, isMobile: false });
+  test.setTimeout(120_000);   // ходьба на CI при 0,7–7 fps: keyup доходить до сцени за сотні мс, довертань кілька
 
   test('у кемпінгу: дійти пішки, натиснути дію — відкривається розмова з нею', async ({ page }) => {
     await open(page);
     await panel(page).locator('[data-act="create"]', { hasText: 'Велосипед' }).first().click();
     await page.waitForTimeout(400);   // GAME-80: панель глуха ~350 мс після дії
-    for (const [k, key] of [['complete', 'q.st-001'], ['complete', 'q.st-002'], ['visit', 'loc.shop'],
-      ['pickup', 'item.tent'], ['pickup', 'item.sleeping-bag'], ['complete', 'q.st-003'], ['visit', 'loc.road'], ['complete', 'q.st-004'], ['visit', 'loc.camp.lake']] as const) await act(page, k, key);
+    for (const [k, key] of [['complete', 'q.prologue-home-001'], ['complete', 'q.st-001'], ['complete', 'q.st-002'], ['visit', 'loc.shop'],
+      ['pickup', 'item.tent'], ['pickup', 'item.sleeping-bag'], ['complete', 'q.st-003'], ['visit', 'loc.home'], ['complete', 'q.ch1-home-001'], ['visit', 'loc.road'], ['complete', 'q.st-004'], ['visit', 'loc.camp.lake']] as const) await act(page, k, key);
     await page.locator('[data-ui="story-close"]').click();
     await walkToElise(page);
     await page.keyboard.press('Space');
