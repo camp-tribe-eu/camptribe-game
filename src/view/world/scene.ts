@@ -74,13 +74,33 @@ export class WorldScene extends Phaser.Scene {
   /** Тап по канві (GAME-95): світова точка, чекає на кадр update, де її звіряють із цілями в зоні дії. */
   private tap: { x: number; y: number } | null = null;
 
-  /** art — графіка, декодована до старту гри (loadWorldArt); onNpc — гравець заговорив із NPC на мапі (розмову веде екран подорожі). */
-  constructor(private readonly bridge: Bridge, private readonly controls: InputState, private readonly probe: WorldProbe, private readonly art: WorldArt, private readonly onNpc: (npcId: string) => void = () => {}) {
+  /** Позначки цілей хвилі й доброї справи (GAME-170 зріз 2) — за назвою об'єкта; видимі лише поки об'єкт «живий» (isLive). */
+  private markers = new Map<string, Phaser.GameObjects.GameObject & { setVisible(v: boolean): unknown }>();
+
+  /** art — графіка, декодована до старту гри (loadWorldArt); onNpc — гравець заговорив із NPC на мапі (розмову веде екран подорожі);
+   *  onObject — дотик до тригера (режисер вирішує: справа хвилі, сцена біля вогнища чи Interact); isLive — чи об'єкт зараз діє й видимий. */
+  constructor(private readonly bridge: Bridge, private readonly controls: InputState, private readonly probe: WorldProbe, private readonly art: WorldArt, private readonly onNpc: (npcId: string) => void = () => {},
+    private readonly onObject: (name: string) => void = (name) => { bridge.send({ type: 'Interact', targetId: name }); }, private readonly isLive: (name: string) => boolean = () => true) {
     super('world');
   }
 
   preload(): void {
     this.load.tilemapTiledJSON('camp', 'maps/camp-lake.tmj');
+  }
+
+  /**
+   * Позначка цілі (GAME-170 зріз 2): тимчасова графіка замість спрайтів LPC (купа дров, лавка, велонавіс, пакети — прогалини набору,
+   * OD-013: спершу доведення наявних спрайтів; скіл game-art-sources). Малюється на точці об'єкта (ноги), глибина — її y.
+   */
+  private marker(s: Spot): Phaser.GameObjects.Graphics {
+    const color = s.name.startsWith('task.') ? 0xffd54a : 0x9be28f;
+    const g = this.add.graphics({ x: s.x, y: s.y });
+    g.fillStyle(0x000000, 0.35).fillEllipse(0, 0, 22, 10);
+    g.fillStyle(color, 1).fillRoundedRect(-7, -16, 14, 14, 3);
+    g.lineStyle(1, 0x1b1f23, 1).strokeRoundedRect(-7, -16, 14, 14, 3);
+    g.setDepth(s.y);
+    g.setVisible(this.isLive(s.name));
+    return g;
   }
 
   /** Складений лист ходьби як текстура з 36 кадрами (ключ кадру — номер). */
@@ -133,6 +153,7 @@ export class WorldScene extends Phaser.Scene {
       // Точка об'єкта — ноги/основа: спрайт стоїть на ній, а глибина сортування — її y.
       if (s.kind === 'npc') this.add.sprite(s.x, s.y, 'elise', frameIndex('down', 0)).setOrigin(0.5, ORIGIN_Y).setDepth(s.y);
       else if (s.name === 'obj.campfire') this.add.sprite(s.x, s.y, 'campfire').setOrigin(0.5, 0.85).setDepth(s.y).play('fire');
+      else this.markers.set(s.name, this.marker(s));
     }
 
     this.player = this.physics.add.sprite(spawn.x ?? 0, spawn.y ?? 0, 'player', frameIndex('down', 0));
@@ -261,7 +282,9 @@ export class WorldScene extends Phaser.Scene {
 
     let spot: Spot | null = null;
     let best = INTERACT_RANGE;
-    for (const s of this.spots) {
+    for (const [name, m] of this.markers) m.setVisible(this.isLive(name));
+    const live = this.spots.filter((s) => this.isLive(s.name));
+    for (const s of live) {
       const d = Phaser.Math.Distance.Between(this.player.x, this.player.y, s.x, s.y);
       if (d <= best) { best = d; spot = s; }
     }
@@ -269,11 +292,11 @@ export class WorldScene extends Phaser.Scene {
     // Тап: лише по цілі, що в зоні дії. Поза зоною нічого (без прокладання шляху, GAME-95).
     const tapped = this.tap;
     this.tap = null;
-    const tapSpot = tapped ? this.spots.find((s) => Phaser.Math.Distance.Between(this.player.x, this.player.y, s.x, s.y) <= INTERACT_RANGE && tapHitsSpot(s, tapped)) ?? null : null;
+    const tapSpot = tapped ? live.find((s) => Phaser.Math.Distance.Between(this.player.x, this.player.y, s.x, s.y) <= INTERACT_RANGE && tapHitsSpot(s, tapped)) ?? null : null;
     const target = tapSpot ?? spot;
     if (this.gate(held.has('interact') || tapSpot !== null, time) && target) {
       if (target.kind === 'npc') this.onNpc(target.name);
-      else this.bridge.send({ type: 'Interact', targetId: target.name });
+      else this.onObject(target.name);
     }
 
     const box = this.player.getBounds();

@@ -41,6 +41,8 @@ export interface InteractionDef {
   readonly grantId: string;
   readonly moneyCents: number;
   readonly items?: readonly { readonly itemId: string; readonly qty: number }[];
+  /** Прапорці, які ставить взаємодія (GAME-170, зріз 2: добра справа «чужі пакети біля води» → f.litter-cleaned-ch1). */
+  readonly flags?: readonly string[];
 }
 
 /** Умова `when` контенту (TD-006): збіг із вибором гравця. Порожнього списку валідатор не пропускає. */
@@ -287,7 +289,7 @@ export function checkDefs(defs: CoreDefs): { code: DefsCode; where: string }[] {
     if (d.gear && (!(GEAR_KINDS as readonly string[]).includes(d.gear.kind) || !Number.isSafeInteger(d.gear.tier) || d.gear.tier < 1 || d.gear.tier > 3)) out.push({ code: 'DEFS_BAD_AMOUNT', where: `${id}.gear` });
   }
   for (const [id, d] of Object.entries(defs.interactions)) {
-    if (!ID.test(id) || !ID.test(d.grantId) || (d.items ?? []).some((i) => !ID.test(i.itemId))) out.push({ code: 'DEFS_BAD_ID', where: id });
+    if (!ID.test(id) || !ID.test(d.grantId) || (d.items ?? []).some((i) => !ID.test(i.itemId)) || (d.flags ?? []).some((f) => !ID.test(f))) out.push({ code: 'DEFS_BAD_ID', where: id });
     if (!isCents(d.moneyCents) || (d.items ?? []).some((i) => !Number.isSafeInteger(i.qty) || i.qty < 1)) out.push({ code: 'DEFS_BAD_AMOUNT', where: id });
   }
   for (const [id, r] of Object.entries(defs.repairs ?? {})) {

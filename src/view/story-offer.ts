@@ -22,7 +22,9 @@ import { CONTENT, memorableFacts } from '../content/story';
 import { moves, progressKey, type Move } from '../content/moves';
 import items from '../../content/items.json';
 import { daySummary, daysEnded, NIGHT_PREFIX } from '../core/day-summary';
-import type { OfferAction, OfferCharacter, OfferPacking, OfferSummary, StoryOffer } from '../ui/story-types';
+import type { OfferAction, OfferCharacter, OfferPacking, OfferSummary, OfferWave, StoryOffer } from '../ui/story-types';
+import { RAW_WAVES } from '../content/waves';
+import { waveView } from '../core/wave';
 
 const NO_ANIMAL = 'animal.none';
 
@@ -212,6 +214,15 @@ export function summaryOffer(sim: SimState, defs: CoreDefs): { daysEnded: number
   };
 }
 
+/** Картка мети (GAME-170, зріз 2): жива хвиля з ядра (waveView — хвилини за годинником симуляції) і тексти з content/waves.json. */
+export function waveOffer(sim: SimState): OfferWave | null {
+  const v = waveView(sim.game, sim.clock.minutes);
+  if (!v) return null;
+  const raw = RAW_WAVES.find((w) => w.id === v.waveId);
+  const tasks = v.tasks.map((t) => ({ id: t.id, textKey: raw?.tasks.find((x) => x.id === t.id)?.textKey ?? t.id, remainingMin: t.remainingMin, outcome: t.outcome }));
+  return { titleKey: raw?.titleKey ?? v.waveId, done: tasks.filter((t) => t.outcome === 'done').length, total: tasks.length, tasks };
+}
+
 export function storyOffer(sim: SimState, defs: CoreDefs): Offered {
   const s = sim.game;
   const st = defs.story as StoryDefs;
@@ -224,7 +235,7 @@ export function storyOffer(sim: SimState, defs: CoreDefs): Offered {
   }));
   const weather = todayWeather(sim);
   const lastTrip = [...sim.journal].reverse().find((e) => e.type === 'Visit')?.commandId ?? null;
-  const base = { moneyCents: s.moneyCents, inventory, journal, lastTrip, weather, forecast: todayForecast(sim), day: dayOf(sim.clock) + 1, timeMinutes: sim.clock.minutes % DAY_MINUTES, ...summaryOffer(sim, defs) };
+  const base = { moneyCents: s.moneyCents, inventory, journal, lastTrip, weather, forecast: todayForecast(sim), day: dayOf(sim.clock) + 1, timeMinutes: sim.clock.minutes % DAY_MINUTES, wave: waveOffer(sim), ...summaryOffer(sim, defs) };
 
   if (!s.player) {
     const choices = characterChoices(defs);

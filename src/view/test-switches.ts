@@ -20,14 +20,18 @@ export interface TestSwitches {
   /** ?holdToast=1 — GAME-98: тост-підказка не зникає за таймером (лише від дії гравця), щоб e2e міряв її контраст і на
    *  повільному CI, де від старту до готовності сторінки минає більше за 5 с. */
   readonly holdToast?: boolean;
+  /** ?hideUi=wave — негативний контроль GAME-170: без картки мети e2e хвилі мусить почервоніти. */
+  readonly hideUi: readonly string[];
+  /** ?breakSpot=task.firewood — негативний контроль GAME-170: названий об'єкт мапи стає німим (дотик нічого не шле) — прохід мусить почервоніти. */
+  readonly breakSpot: readonly string[];
 }
 
 export function testSwitches(search: string, mode: string): TestSwitches {
-  if (mode !== 'e2e') return { hideTouch: [], hideAct: [] };
+  if (mode !== 'e2e') return { hideTouch: [], hideAct: [], hideUi: [], breakSpot: [] };
   const q = new URLSearchParams(search);
   const list = (k: string): string[] => (q.get(k) ?? '').split(',').filter(Boolean);
   const seed = Number(q.get('seed'));
   const lag = Number(q.get('frameLagMs'));
   const boot = Number(q.get('bootDelayMs'));
-  return { ...(Number.isInteger(boot) && boot >= 1 && boot <= 5000 ? { bootDelayMs: boot } : {}), ...(Number.isInteger(lag) && lag >= 1 && lag <= 190 ? { frameLagMs: lag } : {}), hideTouch: list('hideTouch'), hideAct: list('hideAct'), ...(q.get('noAutosave') === '1' ? { noAutosave: true } : {}), ...(q.get('holdToast') === '1' ? { holdToast: true } : {}), ...(q.get('freshSeed') === '1' ? { freshSeed: true } : {}), ...(q.has('seed') && Number.isSafeInteger(seed) && seed >= 0 ? { seed } : {}) };
+  return { ...(Number.isInteger(boot) && boot >= 1 && boot <= 5000 ? { bootDelayMs: boot } : {}), ...(Number.isInteger(lag) && lag >= 1 && lag <= 190 ? { frameLagMs: lag } : {}), hideTouch: list('hideTouch'), hideAct: list('hideAct'), hideUi: list('hideUi'), breakSpot: list('breakSpot'), ...(q.get('noAutosave') === '1' ? { noAutosave: true } : {}), ...(q.get('holdToast') === '1' ? { holdToast: true } : {}), ...(q.get('freshSeed') === '1' ? { freshSeed: true } : {}), ...(q.has('seed') && Number.isSafeInteger(seed) && seed >= 0 ? { seed } : {}) };
 }

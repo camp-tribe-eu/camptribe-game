@@ -20,6 +20,7 @@ import { storyOffer } from './view/story-offer';
 import { testSwitches } from './view/test-switches';
 import { addFrameLag, bootDelay, onFirstFrame } from './view/frame-lag';
 import type { StoryOffer } from './ui/story-types';
+import { liveSpot, spotMove, storyMoves } from './content/director';
 
 const app = document.querySelector<HTMLElement>('#app');
 if (!app) throw new Error('#app is missing');
@@ -48,7 +49,10 @@ const shown = (o: StoryOffer): StoryOffer => (hiddenActs.length === 0 ? o : {
   dialogue: o.dialogue && { ...o.dialogue, answers: o.dialogue.answers.filter((a) => !hiddenActs.includes(a.kind)) },
 });
 const storyListeners = new Set<() => void>();
-const storyChanged = (): void => { for (const l of storyListeners) l(); };
+// GAME-170 зріз 2 · режисер: перед кожним оновленням екрана — ходи СЮЖЕТУ (StartWave на етапі хвилі). Ядро — сторож законності;
+// режисер шле лише те, що ядро прийме, і рівно раз (після прийняття pendingWave порожній; відмова видна в processed).
+const direct = (): void => { for (const m of storyMoves(bridge.state, GAME_DEFS)) bridge.send(m); };
+const storyChanged = (): void => { direct(); for (const l of storyListeners) l(); };
 const openListeners = new Set<() => void>();
 /** Розмова з NPC на мапі: команда в ядро (ядро саме відмовить, якщо гравець не тут), і екран подорожі —
  *  там видно розмову або те, чого бракує (немає персонажа, не та локація). */
@@ -56,6 +60,16 @@ const talkOnMap = (npcId: string): void => {
   bridge.send({ type: 'Talk', npcId });
   storyChanged();
   for (const l of openListeners) l();
+};
+/** Дотик до об'єкта мапи: режисер каже, що це зараз (справа хвилі → CompleteTask; вогнище на етапі вечора → StartScene, і екран подорожі
+ *  відкривається з репліками; інакше Interact). ?breakSpot=<назва> (лише збірка e2e) робить об'єкт німим — негативний контроль. */
+const actOnMap = (name: string): void => {
+  if (switches.breakSpot.includes(name)) return;
+  const m = spotMove(bridge.state, name);
+  if (!m) return;
+  bridge.send(m);
+  storyChanged();
+  if (m.type === 'StartScene') for (const l of openListeners) l();
 };
 const saves = createSaveSession(bridge, saveBackend, { story: STORY, ...(GAME_DEFS.life ? { life: GAME_DEFS.life } : {}), contentRev: STORY_REV, viable: (g) => saveViable(g, GAME_DEFS) });
 // Тестовий хук Playwright: лише ЧИТАННЯ — знімок стану копією, місток назовні не віддається
@@ -99,7 +113,7 @@ const game = new Phaser.Game({
   // 150 px порожнечі між HUD і мапою; тепер мапа стоїть під HUD, а вільне місце внизу — де й так лежать дотикові кнопки.
   scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_HORIZONTALLY },
   physics: { default: 'arcade', arcade: { debug: false } },
-  scene: [new WorldScene(bridge, input, probe, worldArt, talkOnMap)],
+  scene: [new WorldScene(bridge, input, probe, worldArt, talkOnMap, actOnMap, (name) => liveSpot(bridge.state, name))],
 });
 // ?frameLagMs — лише збірка e2e (GAME-97): штучно довгий кадр.
 if (switches.frameLagMs) addFrameLag(game, switches.frameLagMs);
@@ -125,6 +139,7 @@ render(h(Shell, {
   build: buildLabel(__GAME_VERSION__, __GAME_COMMIT__),   // GAME-91: підпис збірки — у меню паузи, не на екрані гри
   ...(langOverride ? { langOverride } : {}),
   ...(switches.holdToast ? { holdToast: true } : {}),
+  hideUi: switches.hideUi,
   credits,
   port: {
     save: () => saves.save(),
