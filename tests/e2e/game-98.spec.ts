@@ -164,8 +164,8 @@ test('844×390 дотик: підсумок дня → «Продовжити» 
   const tap = async (loc: Locator): Promise<void> => { await loc.scrollIntoViewIfNeeded(); await loc.tap(); await page.waitForTimeout(400); };   // GAME-80: панель глуха ~350 мс
   await tap(page.locator('[data-touch="story"]'));
   await tap(panel.locator('[data-act="create"]', { hasText: /Авто|Car/ }).first());
-  for (const [k, key] of [['complete', 'q.st-001'], ['complete', 'q.st-002'], ['visit', 'loc.shop'], ['pickup', 'item.tent'], ['pickup', 'item.sleeping-bag'],
-    ['complete', 'q.st-003'], ['visit', 'loc.road']] as const) await tap(panel.locator(`[data-act="${k}"][data-key="${key}"]`));
+  for (const [k, key] of [['complete', 'q.prologue-home-001'], ['complete', 'q.st-001'], ['complete', 'q.st-002'], ['visit', 'loc.shop'], ['pickup', 'item.tent'], ['pickup', 'item.sleeping-bag'],
+    ['complete', 'q.st-003'], ['visit', 'loc.home'], ['complete', 'q.ch1-home-001'], ['visit', 'loc.road']] as const) await tap(panel.locator(`[data-act="${k}"][data-key="${key}"]`));
   if (await panel.locator('[data-key="dlg.road-apples.box.c1"]').isVisible({ timeout: 400 }).catch(() => false)) {
     await tap(panel.locator('[data-key="dlg.road-apples.box.c1"]'));
     await tap(panel.locator('[data-act="continue"]'));
