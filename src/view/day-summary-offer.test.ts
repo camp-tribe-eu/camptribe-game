@@ -57,7 +57,13 @@ describe('підсумок на екрані = підсумок ядра (GAME-1
 
   it('без події в дорозі — секції «У дорозі» на екрані немає; з подією — є, і саме її назва', () => {
     for (const s of without) expect(summaryOffer(s, GAME_DEFS).summary?.sections.some((x) => x.kind === 'events')).toBe(false);
-    for (const s of withEvent) expect(summaryOffer(s, GAME_DEFS).summary?.sections.find((x) => x.kind === 'events')?.keys).toEqual(['dlg.road-apples.title']);
+    // GAME-108: подій на дорозі десять — назва та, що в журналі ядра (а не завжди «Яблука»).
+    for (const s of withEvent) {
+      const fired = s.journal.filter((e) => e.type === 'RoadEvent').map((e) => `${String(e.ref)}.title`);
+      expect(fired).toHaveLength(1);
+      expect(summaryOffer(s, GAME_DEFS).summary?.sections.find((x) => x.kind === 'events')?.keys).toEqual(fired);
+    }
+    expect(new Set(withEvent.map((s) => s.journal.find((e) => e.type === 'RoadEvent')?.ref)).size, 'серед 16 зерен — різні події').toBeGreaterThan(1);
   });
 
   it('до кінця дня підсумку на екрані немає (daysEnded 0)', () => {

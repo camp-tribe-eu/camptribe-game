@@ -127,6 +127,8 @@ export interface EventTriggerDef {
   readonly at: readonly string[];
   /** Відсоток 1…100. Лише 100 — «гарантовано»: доказ «тупиків немає» не покладається на везіння (SIM-EV-003). */
   readonly chance: number;
+  /** Кому подія може трапитись (GAME-108): профіль × транспорт × тварина, як `when` квесту. Немає — усім. */
+  readonly when?: WhenDef;
 }
 
 /**

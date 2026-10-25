@@ -199,7 +199,8 @@ describe('GAME-138 · Спосіб перевірки 1: бот і реплей 
     const ended = runs.filter((r) => r.final.quests['ST-005']?.status === 'completed');
     expect(ended.length).toBeGreaterThan(N / 10);                                       // перевірка бачила саме дійшлі до кінця дня 1 прогони
     expect(ended.some((r) => r.trace.some(({ m }) => m.type === 'RoadEvent'))).toBe(true);   // і з яблуками, і без
-    expect(ended.some((r) => !r.trace.some(({ m }) => m.type === 'RoadEvent'))).toBe(true);
+    // GAME-108: подія дня 2 (її можна зустріти на дорозі вдень 2) — не порушення порядку дня 1; рахуємо лише події до межі дня 1.
+    expect(ended.some((r) => !r.trace.some(({ m, before }) => m.type === 'RoadEvent' && before.quests['ST-005']?.status !== 'completed'))).toBe(true);
   });
 
   it('реплей-еталон (tests/replays, симуляція з годинником і кидками): журнал іде порядком дня 1, підсумок дня 1 завершено на ST-005', () => {

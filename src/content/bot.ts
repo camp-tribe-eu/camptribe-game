@@ -117,8 +117,13 @@ export function runBot(defs: CoreDefs, variant: Variant, seed: number, memo: End
     const on = m.type === 'CompleteQuest' ? 'complete' : 'decline';   // рецензія: шукати перехід саме цього виду
     return !!defs.story?.quests[m.questId]?.transitions.find((t) => t.on === on && t.to === m.to)?.choice;
   };
+  // Подія в дорозі — як у симуляції (sim.roadEvent): лише одразу після приїзду і щонайбільше одна на приїзд (GAME-108).
+  // Без цього бот на дорозі з десятьма подіями «викликав» у середньому ~5 подій за прогін: і хвилини моделі часу, і кроки
+  // прогону йшли на те, чого гравець ніколи не побачить.
+  let arrived = false;
   for (; steps < opts.maxSteps && !s.campaignEnded; steps++) {
     const options = moves(s, defs)
+      .filter((m) => !(isLuckMove(m) && !arrived))
       // Ставлення до бічної гілки: «skip» не бере переходів-виборів (лише шлях за замовчуванням).
       .filter((m) => !(variant.side === 'skip' && isChoice(m)))
       .map((m) => ({ m, n: tryMove(s, m, defs) })).filter((o): o is { m: Move; n: GameState } => o.n !== null);
@@ -127,6 +132,7 @@ export function runBot(defs: CoreDefs, variant: Variant, seed: number, memo: End
     rng = p.rng;
     if (p.value.m.type === 'BuyItem' && s.grants.length === 0) purchases++;
     opts.trace?.(p.value.m, s, p.value.n);
+    arrived = p.value.m.type === 'Visit' && p.value.n.player?.locationId !== s.player?.locationId;
     s = p.value.n;
   }
   if (s.campaignEnded) return { seed, variant, steps, purchases, verdict: 'ended', final: s };

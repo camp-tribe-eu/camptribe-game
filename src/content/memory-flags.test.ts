@@ -17,6 +17,7 @@ import uk from '../../content/locales/uk.json';
 import { GAME_DEFS } from './slice-defs';
 import { CONTENT, STORY, memorableFacts, type RawContent } from './story';
 import { exploreView, type Move } from './moves';
+import { leaveMove } from './road-events.test.helpers';
 
 const CTX = { defs: GAME_DEFS };
 const START_MONEY = 5_000;          // як у createBridge
@@ -113,6 +114,8 @@ function play(pick: Pick5, tamper?: Tamper): Run {
   go({ type: 'CompleteQuest', questId: 'ST-003' }); go({ type: 'Visit', locationId: 'loc.home' }); go({ type: 'CompleteQuest', questId: 'CH1-HOME-001' });
   // Вибір 2 — яблука. Подію може кинути сама симуляція після дороги; не кинула — шлемо її, як шле симуляція.
   go({ type: 'Visit', locationId: 'loc.road' });
+  // GAME-108: кидок міг відкрити іншу з десяти подій — доводимо її до кінця, як гравець.
+  for (let m = leaveMove(s.game, STORY); m && s.game.dialogue?.id !== 'dlg.road-apples'; m = leaveMove(s.game, STORY)) go(m);
   if (s.game.dialogue?.id !== 'dlg.road-apples') go({ type: 'RoadEvent', eventId: 'dlg.road-apples' });
   go({ type: 'Choose', choice: pick.apple }); go({ type: 'Continue' });
   go({ type: 'CompleteQuest', questId: 'ST-004', to: 'ST-005' });

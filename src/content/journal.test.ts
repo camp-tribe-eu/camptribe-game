@@ -27,7 +27,10 @@ describe('журнал подорожі (GAME-32)', () => {
           expected++;
           const before = s.clock.minutes;
           s = step(s, i, CTX);
-          expect(s.journal.at(-1)).toMatchObject({ at: before, commandId: i.command.commandId, type: i.command.type });
+          // GAME-108: приїзд на дорогу може відкрити подію (кидок симуляції) — її запис іде одразу за приїздом.
+          const event = i.command.type === 'Visit' && s.journal.at(-1)?.type === 'RoadEvent' ? 1 : 0;
+          expected += event;
+          expect(s.journal.at(-1 - event)).toMatchObject({ at: before, commandId: i.command.commandId, type: i.command.type });
           continue;
         }
         if (r.ok && !r.repeated && i.command.type === 'Choose') {

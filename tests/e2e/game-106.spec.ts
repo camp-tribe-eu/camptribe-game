@@ -38,11 +38,9 @@ for (const mode of MODES) {
       const b = panel(page).locator(`[data-act="${kind}"][data-key="${key}"]`);
       if (!(await b.isVisible({ timeout: 5_000 }).catch(() => false))) throw new Error(`крок «${kind} ${key}»: кнопки немає`);
       await press(b);
-      // На дорозі з шансом 50 % — подія (GAME-31): відповідаємо, як гравець.
-      if (kind === 'visit' && key === 'loc.road' && await panel(page).locator('[data-key="dlg.road-apples.box.c2"]').isVisible({ timeout: 400 }).catch(() => false)) {
-        await press(panel(page).locator('[data-key="dlg.road-apples.box.c2"]'));
-        await press(panel(page).locator('[data-act="continue"]'));
-      }
+      // На дорозі з шансом — подія (GAME-31): відповідаємо, як гравець. GAME-108: на дорозі одна з десяти подій — з будь-якої виходимо останньою відповіддю (у подій дороги вона безумовна).
+      const dlg = panel(page).locator('[data-ui="dialogue"]');
+      for (let i = 0; kind === 'visit' && key === 'loc.road' && i < 6 && await dlg.isVisible({ timeout: 400 }).catch(() => false); i++) await press(dlg.locator('[data-act]').last());
     };
 
     // День 1 автом: Пролог до ST-005 — так само, як tests/e2e/story.spec.ts (кроки меню; до Елізи — «Поговорити» в меню).
@@ -78,7 +76,8 @@ for (const mode of MODES) {
     // Подія в дорозі (кидок RNG): секція «У дорозі» — рівно коли в журналі ядра є RoadEvent.
     const hadEvent = c.journal.some((e) => e.type === 'RoadEvent');
     expect(kinds.includes('events')).toBe(hadEvent);
-    if (hadEvent) expect(await keys('events')).toEqual(['dlg.road-apples.title']);
+    // GAME-108: подій на дорозі десять — назва та, що в журналі ядра.
+    if (hadEvent) expect(await keys('events')).toEqual(c.journal.filter((e) => e.type === 'RoadEvent').map((e) => `${String(e.ref)}.title`));
     // Гроші: 50 € на старті (START_MONEY_CENTS) + 10 € за «Прибуття» (ST-005) — і в ядрі те саме.
     await expect(summary(page).locator('[data-ui="summary-money"]')).toHaveAttribute('data-start', '5000');
     await expect(summary(page).locator('[data-ui="summary-money"]')).toHaveAttribute('data-end', String(c.game.moneyCents));
@@ -139,10 +138,8 @@ test('«Продовжити» — назад на мапу; день 2 до «�
   await click('[data-act="create"]:has-text("Авто")');
   for (const [k, key] of [['complete', 'q.prologue-home-001'], ['complete', 'q.st-001'], ['complete', 'q.st-002'], ['visit', 'loc.shop'], ['pickup', 'item.tent'], ['pickup', 'item.sleeping-bag'],
     ['complete', 'q.st-003'], ['visit', 'loc.home'], ['complete', 'q.ch1-home-001'], ['visit', 'loc.road']] as const) await click(`[data-act="${k}"][data-key="${key}"]`);
-  if (await panel(page).locator('[data-key="dlg.road-apples.box.c1"]').isVisible({ timeout: 400 }).catch(() => false)) {
-    await click('[data-key="dlg.road-apples.box.c1"]');
-    await click('[data-act="continue"]');
-  }
+  // GAME-108: на дорозі одна з десяти подій — з будь-якої виходимо останньою відповіддю (у подій дороги вона безумовна).
+  for (let i = 0; i < 6 && await panel(page).locator('[data-ui="dialogue"]').isVisible({ timeout: 400 }).catch(() => false); i++) await click('[data-ui="dialogue"] [data-act] >> nth=-1');
   for (const [k, key] of [['complete', 'q.st-004'], ['visit', 'loc.camp.lake'], ['talk', 'npc.elise'], ['choose', 'dlg.elise-greeting.hello.c2'], ['continue', ''],
     ['choose', 'dlg.elise-greeting.spot.c1'], ['continue', ''], ['pickup', 'item.firewood'], ['complete', 'q.st-005']] as const) await click(`[data-act="${k}"][data-key="${key}"]`);
   await expect(summary(page)).toBeVisible();

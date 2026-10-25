@@ -276,7 +276,7 @@ describe('GAME-141 · сумісність сейвів: старий кінец
   });
   const CTX_OLD = { defs: OLD };
   const oldEnded = (): SimState => {
-    let sim = newSim(11, 5_000);
+    let sim = newSim(28, 5_000);   // GAME-108: сід без події в дорозі (шанс події 82 %)
     const ms: Move[] = [{ type: 'CreateCharacter', profileId: 'profile.solo-explorer', transportId: 'transport.bike' } as Move, ...DAY1_HEAD, ...toLake];
     for (const m of ms) sim = step(sim, { kind: 'command', command: { ...m, commandId: `o${n++}` } as Command }, CTX_OLD);
     for (let i = 0; sim.game.dialogue && i < 10; i++) sim = step(sim, { kind: 'command', command: { type: 'Continue', commandId: `o${n++}` } }, CTX_OLD);
@@ -307,7 +307,7 @@ describe('GAME-141 · сумісність сейвів: старий кінец
 
   /** Старий сейв посеред дня 1: велосипедист обрав велозону з ST-004 (старий контент) і стоїть біля озера; ST-005 ще не було. */
   const oldMidZone = (): SimState => {
-    let sim = newSim(12, 5_000);
+    let sim = newSim(28, 5_000);   // GAME-108: сід без події в дорозі
     const ms: Move[] = [{ type: 'CreateCharacter', profileId: 'profile.solo-explorer', transportId: 'transport.bike' } as Move, ...DAY1_HEAD,
       done('CH1-HOME-001'), { type: 'Visit', locationId: 'loc.road' }];
     for (const m of ms) sim = step(sim, { kind: 'command', command: { ...m, commandId: `o${n++}` } as Command }, CTX_OLD);

@@ -345,14 +345,16 @@ describe('пакування (GAME-109): усі підмножини речей 
     return s.campaignEnded;
   }
 
-  /** Прапорці f.pack-*, які читає хоч одна умова діалогів (flag/notFlag, у т. ч. у all/any). */
+  /** Прапорці f.pack-*, які читає хоч одна умова розмов з NPC (flag/notFlag, у т. ч. у all/any). */
   const readPackFlags = (st: typeof STORY): Set<string> => {
     const out = new Set<string>();
     const walk = (c: CondDef): void => {
       if ('flag' in c) out.add(c.flag); else if ('notFlag' in c) out.add(c.notFlag);
       else if ('all' in c) c.all.forEach(walk); else if ('any' in c) c.any.forEach(walk);
     };
-    for (const d of Object.values(st.dialogues)) for (const n of Object.values(d.nodes)) for (const ch of n.choices ?? []) if (ch.when) walk(ch.when);
+    // Події в дорозі (trigger) — поза класами (GAME-108): у них заходять лише ходом везіння, а свідок його не бере, тож
+    // прапорець, який читає лише подія (f.pack-lantern-2 у «Трьох однакових ліхтарях»), шляху свідка не змінює.
+    for (const d of Object.values(st.dialogues)) if (!d.trigger) for (const n of Object.values(d.nodes)) for (const ch of n.choices ?? []) if (ch.when) walk(ch.when);
     return new Set([...out].filter((f) => f.startsWith('f.pack-')));
   };
 

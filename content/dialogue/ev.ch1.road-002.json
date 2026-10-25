@@ -1,0 +1,10 @@
+{
+  "id": "dlg.ev.ch1.road-002",
+  "trigger": {"at": ["loc.road"], "chance": 6, "titleKey": "dlg.ev.ch1.road-002.title"},
+  "start": "rain",
+  "nodes": [
+    {"id": "rain", "speaker": "player", "textKey": "dlg.ev.ch1.road-002.rain", "choices": [{"textKey": "dlg.ev.ch1.road-002.rain.c1", "next": "sprinkler"}, {"textKey": "dlg.ev.ch1.road-002.rain.c2", "next": "dash"}]},
+    {"id": "sprinkler", "speaker": "player", "textKey": "dlg.ev.ch1.road-002.sprinkler", "end": true},
+    {"id": "dash", "speaker": "player", "textKey": "dlg.ev.ch1.road-002.dash", "end": true}
+  ]
+}

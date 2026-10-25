@@ -1,6 +1,6 @@
 {
   "id": "dlg.road-apples",
-  "trigger": { "at": ["loc.road"], "chance": 50, "titleKey": "dlg.road-apples.title" },
+  "trigger": { "at": ["loc.road"], "chance": 40, "titleKey": "dlg.road-apples.title" },
   "start": "box",
   "nodes": [
     {

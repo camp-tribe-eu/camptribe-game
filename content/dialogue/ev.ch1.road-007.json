@@ -1,0 +1,10 @@
+{
+  "id": "dlg.ev.ch1.road-007",
+  "trigger": {"at": ["loc.road"], "chance": 6, "titleKey": "dlg.ev.ch1.road-007.title"},
+  "start": "view",
+  "nodes": [
+    {"id": "view", "speaker": "player", "textKey": "dlg.ev.ch1.road-007.view", "choices": [{"textKey": "dlg.ev.ch1.road-007.view.c1", "next": "photo"}, {"textKey": "dlg.ev.ch1.road-007.view.c2", "next": "glance"}]},
+    {"id": "photo", "speaker": "player", "textKey": "dlg.ev.ch1.road-007.photo", "end": true},
+    {"id": "glance", "speaker": "player", "textKey": "dlg.ev.ch1.road-007.glance", "end": true}
+  ]
+}

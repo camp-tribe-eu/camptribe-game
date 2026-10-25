@@ -1,0 +1,10 @@
+{
+  "id": "dlg.ev.ch1.road-009",
+  "trigger": {"at": ["loc.road"], "chance": 6, "titleKey": "dlg.ev.ch1.road-009.title"},
+  "start": "shop",
+  "nodes": [
+    {"id": "shop", "speaker": "player", "textKey": "dlg.ev.ch1.road-009.shop", "choices": [{"textKey": "dlg.ev.ch1.road-009.shop.c1", "next": "window"}, {"textKey": "dlg.ev.ch1.road-009.shop.c2", "next": "pass"}]},
+    {"id": "window", "speaker": "player", "textKey": "dlg.ev.ch1.road-009.window", "end": true},
+    {"id": "pass", "speaker": "player", "textKey": "dlg.ev.ch1.road-009.pass", "end": true}
+  ]
+}
