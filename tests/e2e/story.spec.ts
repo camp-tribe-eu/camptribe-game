@@ -426,7 +426,7 @@ const KEY_CODE = { ArrowLeft: 37, ArrowUp: 38, ArrowRight: 39, ArrowDown: 40 } a
  *  CI PR #53: цикл «клавіша з Playwright → probe → клавіша» мав затримку в сотні мс на кожен обмін, і персонаж проскакував
  *  зону Елізи то по X, то по Y. Тут обміну через CDP між кроками немає. Подія — як справжня клавіша (keyCode), як у world.spec. */
 async function walkInPage(page: Page, key: keyof typeof KEY_CODE, axis: 'playerX' | 'playerY', target: number, lead: number): Promise<void> {
-  await page.evaluate(({ code, key, axis, target }) => new Promise<void>((resolve) => {
+  await page.evaluate(({ code, key, axis, target, lead }) => new Promise<void>((resolve) => {
     const g = (window as unknown as { __game: { probe: { playerX: number; playerY: number; nearObject: string | null } } }).__game;
     const fire = (type: string): void => {
       const e = new KeyboardEvent(type, { key, code: key, bubbles: true, cancelable: true });
@@ -436,13 +436,24 @@ async function walkInPage(page: Page, key: keyof typeof KEY_CODE, axis: 'playerX
     const neg = key === 'ArrowLeft' || key === 'ArrowUp';
     const done = (): boolean => g.probe.nearObject === 'npc.elise' || (neg ? g.probe[axis] <= target + lead : g.probe[axis] >= target - lead);
     const start = performance.now();
-    fire('keydown');
     const tick = (): void => {
-      if (done() || performance.now() - start > 8_000) { fire('keyup'); resolve(); } else requestAnimationFrame(tick);
+      if (done() || performance.now() - start > 8_000) { fire('keyup'); settle(); } else requestAnimationFrame(tick);
     };
+    // keyup доходить до сцени через кілька кадрів (при ~6 fps — 150–300 мс), а персонаж ще їде: міряємо проскок лише коли
+    // позиція простояла ~700 мс (раніше було waitForTimeout(100) — менше одного кадру, lead вчився з недобору й не збігався).
+    const settle = (): void => {
+      let last = g.probe[axis];
+      let since = performance.now();
+      const watch = (): void => {
+        const now = performance.now();
+        if (g.probe[axis] !== last) { last = g.probe[axis]; since = now; }
+        if (now - since > 700 || now - start > 12_000) resolve(); else requestAnimationFrame(watch);
+      };
+      requestAnimationFrame(watch);
+    };
+    fire('keydown');
     requestAnimationFrame(tick);
   }), { code: KEY_CODE[key], key, axis, target, lead });
-  await page.waitForTimeout(100);
 }
 async function walkToElise(page: Page): Promise<void> {
   const map = JSON.parse(readFileSync('public/maps/camp-lake.tmj', 'utf8')) as { layers: { objects?: { name: string; x: number; y: number }[] }[] };
@@ -453,7 +464,7 @@ async function walkToElise(page: Page): Promise<void> {
   // Випередження (CI PR #53, шлях 48↔101 навколо x=80 при 0,7–7 fps): keyup доходить до сцени через кілька кадрів, і персонаж
   // проскакує ще ~50 px. Відпускаємо клавішу за `lead` px до цілі; lead вчиться з власного проскоку на кожній осі.
   const lead = { playerX: 0, playerY: 0 };
-  for (let i = 0; i < 16 && (await probe(page)).nearObject !== 'npc.elise'; i++) {
+  for (let i = 0; i < 10 && (await probe(page)).nearObject !== 'npc.elise'; i++) {
     const p = await probe(page);
     trail.push(`${Math.round(p.playerX)},${Math.round(p.playerY)}@${p.fps.toFixed(1)}fps`);
     // Допуск по X — 32 px: при x ± 32 хорда зони Ø 96 по Y ≈ 71 px, більше за проскок ~53 px на CI; ±16 при кроці ~53 px
@@ -472,6 +483,7 @@ async function walkToElise(page: Page): Promise<void> {
 
 test.describe('Еліза на мапі (клавіатура)', () => {
   test.use({ viewport: { width: 1280, height: 800 }, hasTouch: false, isMobile: false });
+  test.setTimeout(120_000);   // ходьба на CI при 0,7–7 fps: keyup доходить до сцени за сотні мс, довертань кілька
 
   test('у кемпінгу: дійти пішки, натиснути дію — відкривається розмова з нею', async ({ page }) => {
     await open(page);
