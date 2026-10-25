@@ -252,16 +252,25 @@ for (const vp of VIEWPORTS) {
       const map = JSON.parse(readFileSync('public/maps/camp-lake.tmj', 'utf8')) as { layers: { objects?: { name: string; x: number; y: number }[] }[] };
       expect(map.layers.flatMap((l) => l.objects ?? []).find((o) => o.name === 'npc.elise')?.y, 'Еліза на мапі зсунулась — онови ELISE_Y').toBe(ELISE_Y);
       const ELISE_X = map.layers.flatMap((l) => l.objects ?? []).find((o) => o.name === 'npc.elise')?.x ?? 80;
-      // По обох осях: на повільному CI стік ліворуч проскакував і по X — тоді корекція лише по Y зони не давала.
+      // CI PR #53 (0,7–7 fps): після відпускання стіка персонаж їде ще кілька кадрів, а проскок мірявся зарано. Тому: відпускаємо
+      // стік за `lead` px до цілі (lead вчиться з власного проскоку на осі), міряємо лише коли позиція простояла 700 мс,
+      // по X допуск 32 px (хорда зони Ø 96 по Y ≈ 71 px більша за проскок). Усе — справжнім дотиком по джойстику.
+      const lead = { playerX: 0, playerY: 0 };
       for (let i = 0; i < 12 && (await probe(page)).nearObject !== 'npc.elise'; i++) {
         const p0 = await probe(page);
-        if (Math.abs(p0.playerX - ELISE_X) > 16) {
-          const dir = p0.playerX > ELISE_X ? 'left' : 'right';
-          expect(await holdTouch(page, dir, (p) => p.nearObject === 'npc.elise' || (dir === 'left' ? p.playerX <= ELISE_X : p.playerX >= ELISE_X), 4_000)).toBe(true);
-        } else {
-          const dir = p0.playerY > ELISE_Y ? 'up' : 'down';
-          expect(await holdTouch(page, dir, (p) => p.nearObject === 'npc.elise' || (dir === 'up' ? p.playerY <= ELISE_Y : p.playerY >= ELISE_Y), 4_000)).toBe(true);
+        const axis = Math.abs(p0.playerX - ELISE_X) > 32 ? 'playerX' : 'playerY';
+        const target = axis === 'playerX' ? ELISE_X : ELISE_Y;
+        const neg = p0[axis] > target;
+        const dir = axis === 'playerX' ? (neg ? 'left' : 'right') : (neg ? 'up' : 'down');
+        const l = lead[axis];
+        expect(await holdTouch(page, dir, (p) => p.nearObject === 'npc.elise' || (neg ? p[axis] <= target + l : p[axis] >= target - l), 6_000)).toBe(true);
+        let last = (await probe(page))[axis];
+        for (let since = Date.now(), t0 = since; Date.now() - since < 700 && Date.now() - t0 < 12_000; await page.waitForTimeout(50)) {
+          const v = (await probe(page))[axis];
+          if (v !== last) { last = v; since = Date.now(); }
         }
+        const overshoot = neg ? target - last : last - target;   // > 0 — проскочили ціль
+        lead[axis] = Math.min(80, Math.max(0, l + overshoot));
       }
       expect((await probe(page)).nearObject).toBe('npc.elise');
       expect(await holdTouch(page, 'interact', () => true, 100)).toBe(true);
