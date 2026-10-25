@@ -12,7 +12,7 @@ import type { SimState } from '../core/sim';
 import type { GameState } from '../core/state';
 import { matches } from '../core/story';
 import { taskOutcome, tasksFor } from '../core/wave';
-import { FIREPLACE_SCENE, startFireplace } from './fireplace';
+import { FIREPLACE_SCENE, fireplaceFacts } from './fireplace';
 import type { Move } from './moves';
 import { WAVE_CH1_EVENING } from './waves';
 
@@ -52,12 +52,12 @@ export function fireplaceDue(sim: SimState): boolean {
 
 /** Команда сцени з фактами ЛИШЕ з наслідків хвилі W4 (не вигадувати факт, якого не було). */
 export function fireplaceMove(game: GameState): Move {
-  const { commandId: _drop, ...move } = startFireplace('x', {
+  const facts = fireplaceFacts({
     fireAllowed: taskOutcome(game, WAVE_CH1_EVENING, 'firewood') === 'done',
     dinnerDone: taskOutcome(game, WAVE_CH1_EVENING, 'dinner') === 'done',
     photoTaken: false,
   });
-  return move as Move;
+  return { type: 'StartScene', sceneId: FIREPLACE_SCENE, facts };
 }
 
 /** Що робить дотик до об'єкта мапи (тригера) зараз. null — об'єкт зараз нічого не робить. */

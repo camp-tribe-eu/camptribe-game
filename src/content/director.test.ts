@@ -9,7 +9,7 @@
 //    поки хвиля жива чи сцену вже грали — вогнище лише гріє (Interact);
 //  * кінець розділу від хвилі не залежить: CompleteQuest CH1-D2-FIRE-001 приймається з живою хвилею;
 //  * пакети біля води: прапорець, запис журналу, вдруге — GRANT_ALREADY_GIVEN і об'єкт німий.
-import { readFileSync } from 'node:fs';
+import campLake from '../../public/maps/camp-lake.tmj?raw';
 import { describe, expect, it } from 'vitest';
 import type { Command } from '../core/commands';
 import { newSim, step, type SimState } from '../core/sim';
@@ -23,7 +23,7 @@ const CTX = { defs: GAME_DEFS };
 const CAMP = 'CH1-D2-CAMP-001';
 let n = 0;
 const send = (s: SimState, m: Move): SimState => step(s, { kind: 'command', command: { ...m, commandId: `dir-${n++}` } as Command }, CTX);
-const last = (s: SimState): { ok: boolean; code?: string } => {
+const last = (s: SimState): { ok: boolean; code?: string | undefined } => {
   const r = s.game.processed[`dir-${n - 1}`];
   if (!r) throw new Error('команду не оброблено');
   return r.ok ? { ok: true } : { ok: false, code: r.code };
@@ -125,7 +125,7 @@ describe('режисер W4: стартер хвилі (GAME-170, зріз 2)', 
 });
 
 describe('режисер W4: цілі на мапі', () => {
-  const map = JSON.parse(readFileSync('public/maps/camp-lake.tmj', 'utf8')) as { layers: { name: string; objects?: { name: string; type: string }[] }[] };
+  const map = JSON.parse(campLake) as { layers: { name: string; objects?: { name: string; type: string }[] }[] };
   const triggers = (map.layers.find((l) => l.name === 'objects')?.objects ?? []).filter((o) => o.type === 'trigger').map((o) => o.name);
 
   it('кожна справа кожної хвилі має ціль task.<id> на мапі табору, і кожна ціль task.* — справа хвилі', () => {
