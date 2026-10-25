@@ -43,7 +43,7 @@ function cmd(s: SimState, defs: CoreDefs, n: { v: number }, command: Record<stri
 
 /** Прохід Прологу до ST-002 (відкриває крамницю) — лише дійсними командами, як у gear.test (atShop). */
 const PROLOGUE: Record<string, unknown>[] = [
-  { type: 'Visit', locationId: 'loc.home' }, { type: 'CompleteQuest', questId: 'ST-001' },
+  { type: 'Visit', locationId: 'loc.home' }, { type: 'CompleteQuest', questId: 'PROLOGUE-HOME-001' }, { type: 'CompleteQuest', questId: 'ST-001' },
   { type: 'Visit', locationId: 'loc.home' }, { type: 'CompleteQuest', questId: 'ST-002' },
 ];
 

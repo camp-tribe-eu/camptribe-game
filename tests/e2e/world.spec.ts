@@ -230,8 +230,8 @@ for (const vp of VIEWPORTS) {
       const story = page.locator('[data-ui="story"]');
       await story.locator('[data-act="create"]', { hasText: /Велосипед|Bike/ }).first().tap();
       await page.waitForTimeout(400);   // GAME-80: панель глуха ~350 мс після дії
-      for (const [kind, key] of [['complete', 'q.st-001'], ['complete', 'q.st-002'], ['visit', 'loc.shop'],
-        ['pickup', 'item.tent'], ['pickup', 'item.sleeping-bag'], ['complete', 'q.st-003'], ['visit', 'loc.road'], ['complete', 'q.st-004'], ['visit', 'loc.camp.lake']] as const) {
+      for (const [kind, key] of [['complete', 'q.prologue-home-001'], ['complete', 'q.st-001'], ['complete', 'q.st-002'], ['visit', 'loc.shop'],
+        ['pickup', 'item.tent'], ['pickup', 'item.sleeping-bag'], ['complete', 'q.st-003'], ['visit', 'loc.home'], ['complete', 'q.ch1-home-001'], ['visit', 'loc.road'], ['complete', 'q.st-004'], ['visit', 'loc.camp.lake']] as const) {
         await story.locator(`[data-act="${kind}"][data-key="${key}"]`).tap();
         await page.waitForTimeout(400);   // GAME-80: панель глуха ~350 мс після дії
         // На дорозі з шансом 50 % — подія (GAME-31): відповідаємо дотиком, як гравець.
@@ -249,11 +249,28 @@ for (const vp of VIEWPORTS) {
       // сама точка Елізи з мапи (public/maps/camp-lake.tmj, y = 272): тримаємо стік до перетину цієї лінії й довертаємо
       // назад за координатою; промах від центру < 48 px лишає нас у зоні. Кожне утримання — не довше 4 с.
       const ELISE_Y = 272;
-      const map = JSON.parse(readFileSync('public/maps/camp-lake.tmj', 'utf8')) as { layers: { objects?: { name: string; y: number }[] }[] };
+      const map = JSON.parse(readFileSync('public/maps/camp-lake.tmj', 'utf8')) as { layers: { objects?: { name: string; x: number; y: number }[] }[] };
       expect(map.layers.flatMap((l) => l.objects ?? []).find((o) => o.name === 'npc.elise')?.y, 'Еліза на мапі зсунулась — онови ELISE_Y').toBe(ELISE_Y);
-      for (let i = 0; i < 8 && (await probe(page)).nearObject !== 'npc.elise'; i++) {
-        const dir = (await probe(page)).playerY > ELISE_Y ? 'up' : 'down';
-        expect(await holdTouch(page, dir, (p) => p.nearObject === 'npc.elise' || (dir === 'up' ? p.playerY <= ELISE_Y : p.playerY >= ELISE_Y), 4_000)).toBe(true);
+      const ELISE_X = map.layers.flatMap((l) => l.objects ?? []).find((o) => o.name === 'npc.elise')?.x ?? 80;
+      // CI PR #53 (0,7–7 fps): після відпускання стіка персонаж їде ще кілька кадрів, а проскок мірявся зарано. Тому: відпускаємо
+      // стік за `lead` px до цілі (lead вчиться з власного проскоку на осі), міряємо лише коли позиція простояла 700 мс,
+      // по X допуск 32 px (хорда зони Ø 96 по Y ≈ 71 px більша за проскок). Усе — справжнім дотиком по джойстику.
+      const lead = { playerX: 0, playerY: 0 };
+      for (let i = 0; i < 12 && (await probe(page)).nearObject !== 'npc.elise'; i++) {
+        const p0 = await probe(page);
+        const axis = Math.abs(p0.playerX - ELISE_X) > 32 ? 'playerX' : 'playerY';
+        const target = axis === 'playerX' ? ELISE_X : ELISE_Y;
+        const neg = p0[axis] > target;
+        const dir = axis === 'playerX' ? (neg ? 'left' : 'right') : (neg ? 'up' : 'down');
+        const l = lead[axis];
+        expect(await holdTouch(page, dir, (p) => p.nearObject === 'npc.elise' || (neg ? p[axis] <= target + l : p[axis] >= target - l), 6_000)).toBe(true);
+        let last = (await probe(page))[axis];
+        for (let since = Date.now(), t0 = since; Date.now() - since < 700 && Date.now() - t0 < 12_000; await page.waitForTimeout(50)) {
+          const v = (await probe(page))[axis];
+          if (v !== last) { last = v; since = Date.now(); }
+        }
+        const overshoot = neg ? target - last : last - target;   // > 0 — проскочили ціль
+        lead[axis] = Math.min(80, Math.max(0, l + overshoot));
       }
       expect((await probe(page)).nearObject).toBe('npc.elise');
       expect(await holdTouch(page, 'interact', () => true, 100)).toBe(true);

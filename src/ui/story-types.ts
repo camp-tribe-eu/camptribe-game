@@ -68,6 +68,8 @@ export interface StoryOffer {
   readonly timeMinutes: number;
   /** Погода сьогодні (GAME-46, SIM-WX-005). */
   readonly weather: 'sunny' | 'cloudy' | 'rain';
+  /** Прогноз на сьогодні (GAME-131, R1-12): лише підказка, може не справдитись; ефекти беруть тільки `weather`. */
+  readonly forecast: 'sunny' | 'cloudy' | 'rain';
   /** Ідентичність останньої завершеної подорожі (GAME-94): commandId останнього запису журналу «Visit»; null — ще не їздили.
    *  Похідна від стану ядра, тож однакова після перезавантаження; журнал обрізається з голови, а id лишається унікальним. */
   readonly lastTrip: string | null;

@@ -18,7 +18,7 @@ import en from '../../content/locales/en.json';
 import { JOURNAL_TYPES } from '../core/sim';
 import { JOURNAL_LABELS } from '../ui/StoryPanel';
 import { characterChoices, menuMoves, outcomeKey, storyOffer } from './story-offer';
-import { DAY_MINUTES, WEATHERS, tripMinutes, weatherOf, type Weather } from '../core/weather';
+import { DAY_MINUTES, WEATHERS, forecastOf, tripMinutes, weatherOf, type Weather } from '../core/weather';
 import { WEATHER_LABELS } from '../ui/StoryPanel';
 import ukUi from '../i18n/uk.json';
 import enUi from '../i18n/en.json';
@@ -235,7 +235,7 @@ describe('storyOffer: знімок для UI', () => {
     // GAME-84 №1: удома, на старті, «Піти: Дім» не пропонується: ціль «озирнись удома» виконана самим стартом.
     // (Повний перебір «ніде не пропонується піти туди, де стоїш» — src/content/menu-here.test.ts.)
     expect(realMenu(g).some((o) => o.move.type === 'Visit' && o.move.locationId === 'loc.home')).toBe(false);
-    expect(realMenu(g).some((o) => o.move.type === 'CompleteQuest' && o.move.questId === 'ST-001')).toBe(true);
+    expect(realMenu(g).some((o) => o.move.type === 'CompleteQuest' && o.move.questId === 'PROLOGUE-HOME-001')).toBe(true);
   });
 
   it('у розмові id відповіді прив\'язаний до вузла: той самий номер відповіді в іншому вузлі — інший id', () => {
@@ -297,5 +297,26 @@ describe('storyOffer: погода дня (GAME-46)', () => {
     }
     expect(ukUi['ui.weather']).toBeTruthy();
     expect(enUi['ui.weather']).toBeTruthy();
+  });
+});
+
+describe('storyOffer: прогноз на сьогодні окремо від факту (GAME-169, GAME-131)', () => {
+  const simAt = (day: number): SimState => ({ ...newSim(4), clock: { minutes: day * DAY_MINUTES, accMs: 0, paused: false } });
+  it('знімок несе forecastOf(зерно, день) у `forecast`, а не погоду; є день, де вони різні, і день, де збігаються', () => {
+    const days = Array.from({ length: 60 }, (_, d) => d);
+    for (const d of days) {
+      const { offer } = storyOffer(simAt(d), DEFS);
+      expect(offer.forecast, `day ${d}`).toBe(forecastOf(4, d));
+      expect(offer.weather, `day ${d}`).toBe(weatherOf(4, d));
+    }
+    // Зерно 4, день 0: факт — сонячно, прогноз — хмарно (саме його бере e2e game-169.spec.ts).
+    expect(storyOffer(simAt(0), DEFS).offer).toMatchObject({ weather: 'sunny', forecast: 'cloudy' });
+    expect(days.some((d) => storyOffer(simAt(d), DEFS).offer.forecast === storyOffer(simAt(d), DEFS).offer.weather)).toBe(true);
+  });
+  it('підпис прогнозу є в обох мовах і містить слово «прогноз», відмінне від підпису погоди', () => {
+    expect(ukUi['ui.forecast.today']).toMatch(/прогноз/i);
+    expect(enUi['ui.forecast.today']).toMatch(/forecast/i);
+    expect(ukUi['ui.forecast.today']).not.toBe(ukUi['ui.weather']);
+    expect(enUi['ui.forecast.today']).not.toBe(enUi['ui.weather']);
   });
 });

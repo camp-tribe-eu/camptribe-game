@@ -32,6 +32,7 @@ async function start(browser: import('@playwright/test').Browser, viewport: { wi
   await page.locator('[data-touch="story"]').click();
   await panel(page).locator('[data-act="create"]', { hasText: 'Велосипед' }).first().click();
   await page.waitForTimeout(400);
+  await act(page, 'complete', 'q.prologue-home-001');
   await act(page, 'complete', 'q.st-001');
   await act(page, 'complete', 'q.st-002');
   return { ctx, page };
@@ -137,6 +138,7 @@ for (const viewport of [{ width: 390, height: 844 }, { width: 844, height: 390 }
       await page.locator('[data-ui="confirm-new-yes"]').click();
       await panel(page).locator('[data-act="create"]', { hasText: 'Велосипед' }).first().click();
       await page.waitForTimeout(400);
+      await act(page, 'complete', 'q.prologue-home-001');
       await act(page, 'complete', 'q.st-001');
       await act(page, 'complete', 'q.st-002');
       await act(page, 'visit', 'loc.shop');

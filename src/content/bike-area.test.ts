@@ -28,9 +28,9 @@ function play(moves: readonly Move[], from: GameState, defs = GAME_DEFS): GameSt
 /** Велосипедист: Пролог до виїзду на дорогу, ST-004 → бічний квест, у озера, перша розмова з Елізою щойно почалась. */
 const TO_ELISE: readonly Move[] = [
   { type: 'CreateCharacter', profileId: 'profile.solo-explorer', transportId: 'transport.bike' } as Move,
-  { type: 'CompleteQuest', questId: 'ST-001' }, { type: 'CompleteQuest', questId: 'ST-002' },
+  { type: 'CompleteQuest', questId: 'PROLOGUE-HOME-001' }, { type: 'CompleteQuest', questId: 'ST-001' }, { type: 'CompleteQuest', questId: 'ST-002' },
   { type: 'Visit', locationId: 'loc.shop' }, { type: 'Pickup', itemId: 'item.tent' }, { type: 'Pickup', itemId: 'item.sleeping-bag' },
-  { type: 'CompleteQuest', questId: 'ST-003' }, { type: 'Visit', locationId: 'loc.road' }, { type: 'CompleteQuest', questId: 'ST-004', to: QUEST },
+  { type: 'CompleteQuest', questId: 'ST-003' }, { type: 'Visit', locationId: 'loc.home' }, { type: 'CompleteQuest', questId: 'CH1-HOME-001' }, { type: 'Visit', locationId: 'loc.road' }, { type: 'CompleteQuest', questId: 'ST-004', to: QUEST },
   { type: 'Visit', locationId: 'loc.camp.lake' },
 ];
 const atLake = (defs = GAME_DEFS): GameState => play(TO_ELISE, initialState(5_000), defs);

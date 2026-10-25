@@ -235,6 +235,9 @@ test.describe('тап по об\'єкту на канві', () => {
     // На старті Eліза поза кадром (портрет): підходимо ліворуч так, щоб її було видно, але вона ще далеко від зони дії.
     await driveUntil(page, cdp, -50, 0, (p) => p.playerX <= 165);
     await driveUntil(page, cdp, 0, 50, (p) => p.playerY >= 215);
+    // Спершу дочекатися, поки персонаж зупиниться: на повільному CI він ще котився після відпускання стіка, і зсув
+    // «після тапу» був інерцією, а не ходом до Елізи (CI PR #65 і #69). Те саме очікування, що й у world.spec.
+    await expect.poll(async () => { const a = await probe(page); await page.waitForTimeout(120); const b = await probe(page); return Math.hypot(a.playerX - b.playerX, a.playerY - b.playerY); }, { timeout: 10_000 }).toBeLessThan(0.1);
     const p0 = await probe(page);
     expect(p0.nearObject, 'Елізи поруч нема').toBeNull();
     const at = await screenOf(page, ELISE.x, ELISE.y - 24);

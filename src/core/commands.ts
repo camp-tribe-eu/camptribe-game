@@ -247,6 +247,7 @@ function apply(cmd: Command, d: Draft, defs: CoreDefs, guard: Safeguards, today:
     case 'Choose':
     case 'Continue':
     case 'RoadEvent':
+    case 'StartScene':
       return applyStory(cmd, d, defs.story, isContentId, guard.grantId);
     default:
       return 'INVALID_COMMAND';

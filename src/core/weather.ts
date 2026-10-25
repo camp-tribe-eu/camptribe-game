@@ -33,6 +33,24 @@ export function weatherOf(worldSeed: number, day: number): Weather {
   return 'rain';
 }
 
+/**
+ * Прогноз (GAME-131, R1-12 forecast_weather ≠ current_weather): що синоптик обіцяв на день `day`.
+ * Окремий детермінований кидок із зерна світу (інша сіль, ніж у weatherOf): у FORECAST_HIT_PERCENT днів
+ * прогноз збігається з фактом, в інші — названо ІНШУ погоду. Прогноз — лише підказка для гравця:
+ * жоден ефект (дорога, мокре спорядження, «висушити») його не читає, тільки weatherOf. Ні годинника
+ * браузера, ні RNG стану, ні поля в сейві — похідна від (зерно, день), як і сама погода.
+ */
+export const FORECAST_HIT_PERCENT = 70;
+
+export function forecastOf(worldSeed: number, day: number): Weather {
+  const actual = weatherOf(worldSeed, day);   // кидає RangeError на некоректний день — той самий договір
+  const h = mix32(mix32(worldSeed ^ 0x7f4a7c15) ^ Math.imul(day + 1, 0x165667b1));
+  if (h % 100 < FORECAST_HIT_PERCENT) return actual;
+  // Промах: одна з двох інших погод, вибір — окремим бітом того ж слова (не залежить від частки влучань).
+  const others = WEATHERS.filter((w) => w !== actual);
+  return others[(h >>> 16) & 1] as Weather;
+}
+
 /** Дощ сповільнює велосипед: ×1.5 з округленням угору (SIM-WX-007). Авто, гроші — без змін. */
 export function tripMinutes(minutes: number, transportId: string, weather: Weather): number {
   return weather === 'rain' && transportId === 'transport.bike' ? Math.ceil((minutes * 3) / 2) : minutes;
