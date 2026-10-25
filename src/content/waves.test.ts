@@ -7,6 +7,7 @@ import { checkDefs, type CoreDefs } from '../core/defs';
 import { canonical } from '../core/hash';
 import type { Command } from '../core/commands';
 import { newSim, step, type SimState } from '../core/sim';
+type Cmd = Command extends infer C ? (C extends Command ? Omit<C, 'commandId'> : never) : never;
 import { tasksFor, waveView } from '../core/wave';
 import { enumerateCombos } from '../../scripts/validator/combos.mjs';
 import { GAME_DEFS } from './slice-defs';
@@ -18,7 +19,7 @@ const CTX = { defs: DEFS };
 const W = WAVES.waves[WAVE_CH1_EVENING];
 if (!W) throw new Error('хвилі W4 немає в контенті');
 
-const cmd = (s: SimState, c: Omit<Command, 'commandId'>): SimState => step(s, { kind: 'command', command: { ...c, commandId: `w${s.game.seq}` } as Command }, CTX);
+const cmd = (s: SimState, c: Cmd): SimState => step(s, { kind: 'command', command: { ...c, commandId: `w${s.game.seq}` } as Command }, CTX);
 const ok = (s: SimState): boolean => s.game.processed[`w${s.game.seq - 1}`]?.ok === true;
 const started = (k: { profile: string | null; transport: string | null; animal: string }): SimState => {
   let s = cmd(newSim(7, 5_000), { type: 'CreateCharacter', profileId: k.profile ?? '', transportId: k.transport ?? '', ...(k.animal === 'animal.none' ? {} : { animalId: k.animal }) });
@@ -27,6 +28,9 @@ const started = (k: { profile: string | null; transport: string | null; animal: 
   if (!ok(s)) throw new Error(`StartWave відмовив: ${JSON.stringify(s.game.processed[`w${s.game.seq - 1}`])}`);
   return s;
 };
+const must = <T>(v: T | null | undefined, what: string): T => { if (v === null || v === undefined) throw new Error(`немає ${what}`); return v; };
+const view = (s: SimState) => must(waveView(s.game, s.clock.minutes), 'живої хвилі');
+const past = (s: SimState) => must(s.game.wave?.past[WAVE_CH1_EVENING], 'наслідків хвилі');
 const ended = (s: SimState): boolean => s.game.wave?.active === null && s.game.wave.past[WAVE_CH1_EVENING] !== undefined;
 
 describe('W4 «Вечір на трьох фронтах» у симуляції (GAME-170)', () => {
@@ -45,19 +49,19 @@ describe('W4 «Вечір на трьох фронтах» у симуляції
       expect(ids.includes('cover-bikes')).toBe(k.transport === 'transport.bike');
       expect(ids.length).toBeGreaterThanOrEqual(2);
       expect(ids.length).toBeLessThanOrEqual(4);
-      expect(ids).toEqual(tasksFor(W, s.game.player!).map((t) => t.id));
+      expect(ids).toEqual(tasksFor(W, must(s.game.player, 'гравця')).map((t) => t.id));
     });
 
     it(`${label}: «усе вчасно» → усі done; «усе проігноровано» → усі late; обидва — кінець хвилі, розділ не зламано`, () => {
       let s = started(k);
-      const ids = waveView(s.game, s.clock.minutes)!.tasks.map((t) => t.id);
+      const ids = view(s).tasks.map((t) => t.id);
       for (const id of ids) { s = cmd(s, { type: 'CompleteTask', taskId: id }); expect(ok(s), id).toBe(true); }
       expect(ended(s)).toBe(true);
-      expect(Object.values(s.game.wave!.past[WAVE_CH1_EVENING]!)).toEqual(ids.map(() => 'done'));
+      expect(Object.values(past(s))).toEqual(ids.map(() => 'done'));
       let i = started(k);
       i = step(i, { kind: 'frame', realMs: 61 * 1000 }, CTX);  // довше за найдовший строк (60 хв = 60 с)
       expect(ended(i)).toBe(true);
-      expect(Object.values(i.game.wave!.past[WAVE_CH1_EVENING]!)).toEqual(ids.map(() => 'late'));
+      expect(Object.values(past(i))).toEqual(ids.map(() => 'late'));
       expect(i.game.campaignEnded).toBe(false);
       expect(Object.keys(i.game.quests)).toEqual(['ST-001']);     // хвиля сюжету не торкнулась
     });
@@ -70,14 +74,14 @@ describe('W4 «Вечір на трьох фронтах» у симуляції
       let finals = 0;
       for (let s = queue.shift(); s; s = queue.shift()) {
         if (ended(s)) { finals++; continue; }
-        const view = waveView(s.game, s.clock.minutes)!;
+        const v = view(s);
         const next: SimState[] = [];
-        for (const t of view.tasks) if (t.outcome === 'open') {
+        for (const t of v.tasks) if (t.outcome === 'open') {
           const n = cmd(s, { type: 'CompleteTask', taskId: t.id });
           expect(ok(n), `${t.id} за ${t.remainingMin} хв до строку`).toBe(true);
           next.push(n);
         }
-        const soonest = Math.min(...view.tasks.filter((t) => t.outcome === 'open').map((t) => t.remainingMin));
+        const soonest = Math.min(...v.tasks.filter((t) => t.outcome === 'open').map((t) => t.remainingMin));
         next.push(step(s, { kind: 'advance', minutes: soonest + 1 }, CTX));
         next.push(step(s, { kind: 'advance', minutes: soonest }, CTX));   // рівно на межі: ще можна встигнути
         for (const n of next) { const h = key(n); if (!seen.has(h)) { seen.set(h, n); queue.push(n); } }
@@ -85,7 +89,7 @@ describe('W4 «Вечір на трьох фронтах» у симуляції
       }
       expect(finals).toBeGreaterThan(1);
       // кожен стан, що не кінець, має хід далі — перебір дійшов до кінця з усіх (інакше впав би вище)
-      for (const s of seen.values()) if (!ended(s)) expect(waveView(s.game, s.clock.minutes)!.tasks.some((t) => t.outcome === 'open')).toBe(true);
+      for (const s of seen.values()) if (!ended(s)) expect(view(s).tasks.some((t) => t.outcome === 'open')).toBe(true);
     });
 
     it(`${label}: пауза не рухає строки; помічник не шукає Мію`, () => {
@@ -105,10 +109,10 @@ describe('W4 «Вечір на трьох фронтах» у симуляції
   }
 
   it('контент: строки кожної справи 30–60 ігрових хв (≈ с); Мія лише в безпечних місцях і лише в руках лідера; кінець розділу від хвиль не залежить', () => {
-    const raw = RAW_WAVES.find((w) => w.id === WAVE_CH1_EVENING)!;
+    const raw = must(RAW_WAVES.find((w) => w.id === WAVE_CH1_EVENING), 'W4');
     for (const t of raw.tasks) expect(t.limitMin, t.id).toBeGreaterThanOrEqual(30);
     for (const t of raw.tasks) expect(t.limitMin, t.id).toBeLessThanOrEqual(60);
-    const mia = raw.tasks.find((t) => t.id === 'find-mia')!;
+    const mia = must(raw.tasks.find((t) => t.id === 'find-mia'), 'справи find-mia');
     expect(mia.leaderOnly).toBe(true);
     expect(mia.targets?.length).toBeGreaterThan(0);
     expect(mia.targets?.every((x) => x.safe)).toBe(true);

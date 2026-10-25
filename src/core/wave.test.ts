@@ -5,6 +5,7 @@ import { dispatch, type Command } from './commands';
 import { checkDefs, type CoreDefs } from './defs';
 import { fromSave, serialize } from './save';
 import { newSim, step, type SimState } from './sim';
+type Cmd = Command extends infer C ? (C extends Command ? Omit<C, 'commandId'> : never) : never;
 import { initialState, type GameState } from './state';
 import { settleWave, taskOutcome, waveView } from './wave';
 
@@ -31,7 +32,7 @@ const DEFS: CoreDefs = {
   },
 };
 const CTX = { defs: DEFS };
-const cmd = (s: SimState, command: Omit<Command, 'commandId'>): SimState => step(s, { kind: 'command', command: { ...command, commandId: `c${s.game.seq}` } as Command }, CTX);
+const cmd = (s: SimState, command: Cmd): SimState => step(s, { kind: 'command', command: { ...command, commandId: `c${s.game.seq}` } as Command }, CTX);
 const minutes = (s: SimState, n: number): SimState => step(s, { kind: 'frame', realMs: n * 1000 }, CTX);
 const start = (animal?: string): SimState => cmd(newSim(1), { type: 'CreateCharacter', profileId: 'profile.a', transportId: 'transport.car', ...(animal ? { animalId: animal } : {}) });
 const code = (s: SimState): string | undefined => { const r = s.game.processed[`c${s.game.seq - 1}`]; return r?.ok ? 'ok' : r?.code; };
@@ -40,7 +41,8 @@ describe('хвиля напруги: строки й пауза (GAME-170)', () 
   it('каталог хвиль чистий; без годинника StartWave — INVALID_COMMAND (мовчазної «хвилини 0» немає)', () => {
     expect(checkDefs(DEFS)).toEqual([]);
     const g = start().game;
-    expect(dispatch(g, { type: 'StartWave', commandId: 'x', waveId: 'wave.dusk' }, DEFS).code).toBe('INVALID_COMMAND');
+    const noClock = dispatch(g, { type: 'StartWave', commandId: 'x', waveId: 'wave.dusk' }, DEFS);
+    expect(noClock.ok ? 'ok' : noClock.code).toBe('INVALID_COMMAND');
     expect(dispatch(g, { type: 'StartWave', commandId: 'x', waveId: 'wave.dusk' }, DEFS, undefined, undefined, undefined, 5).ok).toBe(true);
   });
 
@@ -138,7 +140,7 @@ describe('хвиля напруги: строки й пауза (GAME-170)', () 
       const r = fromSave(JSON.stringify(file));
       return r.ok ? 'ok' : r.code;
     };
-    expect(bad((g) => { (g.wave as { active: { tasks: Record<string, { outcome: string }> } }).active.tasks.wood!.outcome = 'won'; })).toBe('SAVE_SHAPE');
+    expect(bad((g) => { (g.wave as { active: { tasks: Record<string, { outcome: string }> } }).active.tasks = { wood: { outcome: 'won' } }; })).toBe('SAVE_SHAPE');
     expect(bad((g) => { (g.wave as { past: Record<string, unknown> }).past['wave.x'] = { wood: 'open' }; })).toBe('SAVE_SHAPE');
     expect(bad((g) => { g.wave = 'yes'; })).toBe('SAVE_SHAPE');
     expect(bad(() => {})).toBe('ok');
