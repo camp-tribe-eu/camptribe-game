@@ -27,7 +27,9 @@ export function moves(s: GameState, defs: CoreDefs): Move[] {
     if (!s.inventory[id]) out.push({ type: 'BuyItem', itemId: id }); // лише перший примірник — інакше простір станів нескінченний
     out.push({ type: 'SellItem', itemId: id });
   }
-  for (const id of Object.keys(defs.interactions)) out.push({ type: 'Interact', targetId: id });
+  // Добра справа з прапорцем (GAME-170 зріз 2: obj.litter) — хід МАПИ, не меню: тут його навмисно немає, бо незалежний прапорець
+  // подвоював би простір станів повного перебору (shop.test > 50 000); його законність доводить director.test на справжньому шляху.
+  for (const [id, d] of Object.entries(defs.interactions)) if (!d.flags?.length) out.push({ type: 'Interact', targetId: id });
   // Висушити (GAME-73) — лише те, що мокре: інакше кожен стан мав би ще вісім заздалегідь марних спроб. Намокає спорядження
   // лише в дорозі симуляції (sim.step), тож у повному переборі ядра (без погоди) цих ходів немає — їх доводить gear.test.
   for (const [id, g] of Object.entries(s.gear)) if (g.wet) out.push({ type: 'DryGear', itemId: id });
