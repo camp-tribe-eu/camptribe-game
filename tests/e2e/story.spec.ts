@@ -425,7 +425,7 @@ const KEY_CODE = { ArrowLeft: 37, ArrowUp: 38, ArrowRight: 39, ArrowDown: 40 } a
 /** Ходьба до координати, яку стереже сама сторінка: keydown, перевірка позиції кожен кадр (rAF), keyup одразу на цілі.
  *  CI PR #53: цикл «клавіша з Playwright → probe → клавіша» мав затримку в сотні мс на кожен обмін, і персонаж проскакував
  *  зону Елізи то по X, то по Y. Тут обміну через CDP між кроками немає. Подія — як справжня клавіша (keyCode), як у world.spec. */
-async function walkInPage(page: Page, key: keyof typeof KEY_CODE, axis: 'playerX' | 'playerY', target: number): Promise<void> {
+async function walkInPage(page: Page, key: keyof typeof KEY_CODE, axis: 'playerX' | 'playerY', target: number, lead: number): Promise<void> {
   await page.evaluate(({ code, key, axis, target }) => new Promise<void>((resolve) => {
     const g = (window as unknown as { __game: { probe: { playerX: number; playerY: number; nearObject: string | null } } }).__game;
     const fire = (type: string): void => {
@@ -434,14 +434,14 @@ async function walkInPage(page: Page, key: keyof typeof KEY_CODE, axis: 'playerX
       window.dispatchEvent(e);
     };
     const neg = key === 'ArrowLeft' || key === 'ArrowUp';
-    const done = (): boolean => g.probe.nearObject === 'npc.elise' || (neg ? g.probe[axis] <= target : g.probe[axis] >= target);
+    const done = (): boolean => g.probe.nearObject === 'npc.elise' || (neg ? g.probe[axis] <= target + lead : g.probe[axis] >= target - lead);
     const start = performance.now();
     fire('keydown');
     const tick = (): void => {
       if (done() || performance.now() - start > 8_000) { fire('keyup'); resolve(); } else requestAnimationFrame(tick);
     };
     requestAnimationFrame(tick);
-  }), { code: KEY_CODE[key], key, axis, target });
+  }), { code: KEY_CODE[key], key, axis, target, lead });
   await page.waitForTimeout(100);
 }
 async function walkToElise(page: Page): Promise<void> {
@@ -450,11 +450,19 @@ async function walkToElise(page: Page): Promise<void> {
   expect({ x: o?.x, y: o?.y }, 'Еліза на мапі зсунулась — онови ELISE').toEqual(ELISE);
   // Довертаємо за координатою по обох осях: X до ±16 px, потім Y до точки Елізи (зона дії Ø 96 px).
   const trail: string[] = [];   // шлях у тексті падіння: CI червонів без даних, локально (і при CPU ×8) зелений
-  for (let i = 0; i < 12 && (await probe(page)).nearObject !== 'npc.elise'; i++) {
+  // Випередження (CI PR #53, шлях 48↔101 навколо x=80 при 0,7–7 fps): keyup доходить до сцени через кілька кадрів, і персонаж
+  // проскакує ще ~50 px. Відпускаємо клавішу за `lead` px до цілі; lead вчиться з власного проскоку на кожній осі.
+  const lead = { playerX: 0, playerY: 0 };
+  for (let i = 0; i < 16 && (await probe(page)).nearObject !== 'npc.elise'; i++) {
     const p = await probe(page);
     trail.push(`${Math.round(p.playerX)},${Math.round(p.playerY)}@${p.fps.toFixed(1)}fps`);
-    if (Math.abs(p.playerX - ELISE.x) > 16) await walkInPage(page, p.playerX > ELISE.x ? 'ArrowLeft' : 'ArrowRight', 'playerX', ELISE.x);
-    else await walkInPage(page, p.playerY > ELISE.y ? 'ArrowUp' : 'ArrowDown', 'playerY', ELISE.y);
+    const axis = Math.abs(p.playerX - ELISE.x) > 16 ? 'playerX' : 'playerY';
+    const target = axis === 'playerX' ? ELISE.x : ELISE.y;
+    const neg = p[axis] > target;
+    await walkInPage(page, axis === 'playerX' ? (neg ? 'ArrowLeft' : 'ArrowRight') : (neg ? 'ArrowUp' : 'ArrowDown'), axis, target, lead[axis]);
+    const after = (await probe(page))[axis];
+    const overshoot = neg ? target - after : after - target;   // > 0 — проскочили ціль
+    lead[axis] = Math.min(80, Math.max(0, lead[axis] + overshoot));
   }
   const last = await probe(page);
   expect(last.nearObject, `шлях до Елізи: ${trail.join(' → ')} → ${Math.round(last.playerX)},${Math.round(last.playerY)}`).toBe('npc.elise');
