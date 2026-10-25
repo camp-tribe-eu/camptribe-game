@@ -211,7 +211,7 @@ test.describe('№8 текст 200 % на десктопі: завдання й 
         await page.waitForTimeout(400);
       }
     }
-    await act(page, 'complete', 'q.elise-bike-area.choice');
+    await act(page, 'complete', 'q.st-004');                                   // GAME-141: велозона — на дні 2, не з ST-004
     await act(page, 'visit', 'loc.camp.lake');
     await act(page, 'talk', 'npc.elise');
     const dlg = await rectOf(page, '[data-ui="dialogue"]');

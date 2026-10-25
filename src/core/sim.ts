@@ -10,7 +10,7 @@ import { payroll } from './life';
 import { eventEligible, route } from './story';
 import { nextInt, seedRng, type RngState } from './rng';
 import { initialState, type GameState } from './state';
-import { dayOf, tripMinutes, weatherOf, type Weather } from './weather';
+import { dayOf, forecastOf, tripMinutes, weatherOf, type Weather } from './weather';
 
 export interface SimState {
   readonly game: GameState;
@@ -42,7 +42,7 @@ export interface JournalEntry {
  * Repair (GAME-72) поки ні: ремонтів у контенті немає. Додати сюди разом із першим ремонтом у content/.
  * `Memory` (GAME-110) — не команда, а пам'ятний вибір: вибір у розмові поставив факт зі `story.memorable`; ref — назва факту.
  */
-export const JOURNAL_TYPES = ['CreateCharacter', 'Visit', 'Pickup', 'BuyItem', 'SellItem', 'Interact', 'CompleteQuest', 'DeclineQuest', 'RoadEvent', 'PackItem', 'UnpackItem', 'AutoPack', 'Memory'] as const;
+export const JOURNAL_TYPES = ['CreateCharacter', 'Visit', 'Pickup', 'BuyItem', 'SellItem', 'Interact', 'CompleteQuest', 'DeclineQuest', 'RoadEvent', 'StartScene', 'PackItem', 'UnpackItem', 'AutoPack', 'Memory'] as const;
 export type JournalType = (typeof JOURNAL_TYPES)[number];
 export const isJournalType = (t: unknown): t is JournalType => (JOURNAL_TYPES as readonly unknown[]).includes(t);
 
@@ -59,7 +59,7 @@ export const changedGame = (a: GameState, b: GameState): boolean =>
 
 function refOf(c: Command): string | null {
   const r = c as unknown as Record<string, unknown>;
-  const v = r.questId ?? r.locationId ?? r.itemId ?? r.targetId ?? r.profileId ?? r.eventId;
+  const v = r.questId ?? r.locationId ?? r.itemId ?? r.targetId ?? r.profileId ?? r.eventId ?? r.sceneId;
   return typeof v === 'string' ? v : null;
 }
 
@@ -82,6 +82,12 @@ function travelMinutes(s: SimState, r: ReturnType<typeof dispatch>, ctx: StepCtx
 /** Погода поточного дня симуляції (SIM-WX-005). Підміна — лише для тестів (StepCtx.weather). */
 export const todayWeather = (s: Pick<SimState, 'worldSeed' | 'clock'>, ctx: StepCtx = {}): Weather =>
   (ctx.weather?.of ?? weatherOf)(s.worldSeed, dayOf(s.clock));
+
+/**
+ * Прогноз на поточний день (GAME-131) — лише для показу гравцеві. Ефекти симуляції його НЕ читають:
+ * дощ у прогнозі при ясному факті не мочить спорядження і не сповільнює дорогу (src/core/forecast.test.ts).
+ */
+export const todayForecast = (s: Pick<SimState, 'worldSeed' | 'clock'>): Weather => forecastOf(s.worldSeed, dayOf(s.clock));
 
 /**
  * Подія в дорозі (GAME-31): після приїзду — один кидок RNG стану серед подій, доречних тут (eventEligible),

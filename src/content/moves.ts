@@ -15,6 +15,8 @@ export function moves(s: GameState, defs: CoreDefs): Move[] {
   for (const id of Object.keys(st.npcs)) out.push({ type: 'Talk', npcId: id });
   // Подія в дорозі — хід СЕРЕДОВИЩА (кидок симуляції), а не гравця: перебір бачить і «сталась», і «ні».
   for (const [id, d] of Object.entries(st.dialogues)) if (d.trigger) out.push({ type: 'RoadEvent', eventId: id });
+  // StartScene — хід СЮЖЕТУ (гачок кінця дня), не гравця; тут його навмисно немає: 16 проходжень сцени множили б простір станів
+  // (shop.test вибухає), а законність доводять fireplace.test і day2.test на справжньому шляху.
   if (s.dialogue) {
     const node = st.dialogues[s.dialogue.id]?.nodes[s.dialogue.node];
     (node?.choices ?? []).forEach((_, i) => out.push({ type: 'Choose', choice: i }));

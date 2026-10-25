@@ -14,9 +14,8 @@ const tally = (runs: readonly BotRun[]) => runs.reduce<Record<string, number>>((
 describe(`бот: ${N} прогонів, зерно ${SEED} (GAME-37)`, () => {
   // У beforeAll, а не під час збору тестів: тайм-аути діють, виняток — провал тесту, а не збою збирання.
   let runs: BotRun[] = [];
-  // 240 с (GAME-108): дев'ять нових подій дороги — довші прогони; бот сам по собі ~100 с, під паралельним навантаженням
-  // набору 120 с давало хибне червоне. Межа — щоб тест не висів, а не щоб міряти швидкість (vite.config.ts).
-  beforeAll(() => { runs = campaign(GAME_DEFS, N, SEED); }, 240_000);
+  // GAME-141: з днем 2 прогін довший (~70 мс замість ~40) — 2000 прогонів не вміщались у 120 с.
+  beforeAll(() => { runs = campaign(GAME_DEFS, N, SEED); }, 300_000);
 
   it('кожен прогін доходить до фіналу або фінал досяжний з місця зупинки; тупиків і «не знаю» — 0', () => {
     const t = tally(runs);
@@ -40,26 +39,48 @@ describe(`бот: ${N} прогонів, зерно ${SEED} (GAME-37)`, () => {
   });
 });
 
-describe('навмисно зламаний квест (вимкнений перехід ST-004 → ST-005)', () => {
-  const broken = structuredClone(CONTENT);
-  const st004 = broken.quests.find((q) => q.id === 'ST-004');
-  if (st004) st004.transitions = st004.transitions.filter((t) => t.to !== 'ST-005');
+// GAME-141: велозона тепер — вибір із CH1-D2-ELISE-001 (день 2), тож обхідна бічна гілка є саме там. Ламаємо перехід за
+// замовчуванням CH1-D2-ELISE-001 → CH1-D2-CAMP-001: водій застряє, велосипедист доходить через велозону.
+// GAME-141: розділ дводенний — за 80 ходів основної кампанії прогулянка майже ніколи не доходить до кінця (лише «досяжно»).
+// Окрема кампанія з довшою прогулянкою доводить, що бот справді проходить день 2 до кінця розділу, а не лише бачить його пошуком.
+// GAME-108: 260 ходів, не 200 — дев'ять подій дороги забирають ходи, а велозона з кінцем розділу має лишитись у вибірці.
+describe('бот справді проходить день 2 (300 прогонів × 260 ходів)', () => {
   let runs: BotRun[] = [];
-  beforeAll(() => { runs = campaign({ ...GAME_DEFS, story: compileStory(broken) }, 300, SEED); }, 120_000);
+  beforeAll(() => { runs = campaign(GAME_DEFS, 300, SEED, { maxSteps: 260, cap: 20_000 }); }, 300_000);
 
-  it('бот ловить тупик і показує стан: ST-004 активний, виходу немає', () => {
+  it('кінець розділу — щонайменше в 5 % прогонів; тупиків і «не знаю» 0; день 2 пройдено й велосипедом із велозоною, і авто', () => {
+    const ended = runs.filter((r) => r.verdict === 'ended');
+    expect(ended.length, JSON.stringify(tally(runs))).toBeGreaterThanOrEqual(runs.length / 20);
+    expect(runs.filter((r) => r.verdict === 'softlock' || r.verdict === 'unknown')).toEqual([]);
+    expect(ended.every((r) => r.final.quests['CH1-D2-FIRE-001']?.status === 'completed')).toBe(true);
+    expect(ended.some((r) => r.final.quests['q.elise-bike-area'] !== undefined)).toBe(true);
+    expect(ended.some((r) => r.variant.transport === 'transport.car')).toBe(true);
+  });
+});
+
+describe('навмисно зламаний квест (вимкнений перехід CH1-D2-ELISE-001 → CH1-D2-CAMP-001)', () => {
+  const broken = structuredClone(CONTENT);
+  const elise = broken.quests.find((q) => q.id === 'CH1-D2-ELISE-001');
+  if (elise) elise.transitions = elise.transitions.filter((t) => t.to !== 'CH1-D2-CAMP-001');
+  let runs: BotRun[] = [];
+  beforeAll(() => { runs = campaign({ ...GAME_DEFS, story: compileStory(broken) }, 300, SEED); }, 300_000);
+
+  it('бот ловить тупик і показує стан: CH1-D2-ELISE-001 активний, виходу немає', () => {
     const locks = runs.filter((r) => r.verdict === 'softlock');
     expect(locks.length).toBeGreaterThan(0);
-    expect(locks[0]?.stuck?.quests['ST-004']?.status).toBe('active');
+    expect(locks.some((r) => r.stuck?.quests['CH1-D2-ELISE-001']?.status === 'active')).toBe(true);
     // тупик лише там, де немає бічної гілки Еліз — авто (пошук ігнорує звичку бота «skip», тож
     // велосипедист зі «skip» має досяжний кінець через Еліз) — рецензія GAME-37
     expect(locks.every((r) => r.variant.transport === 'transport.car')).toBe(true);
   });
 
   it('вісь «бічна гілка» змінює поведінку: велосипедист «take» доходить до кінця, «skip» — ніколи', () => {
+    // GAME-141: розділ тепер дводенний — за 80 ходів прогулянка рідко доходить до кінця, тож вісь видно по самій гілці:
+    // «take» заходить у велозону (і далі кінець досяжний), «skip» — ніколи не заходить і ніколи не закінчує розділ.
     const bike = runs.filter((r) => r.variant.transport === 'transport.bike');
-    expect(bike.some((r) => r.variant.side === 'take' && r.verdict === 'ended')).toBe(true);
-    expect(bike.filter((r) => r.variant.side === 'skip').every((r) => r.verdict !== 'ended')).toBe(true);
+    const entered = (r: BotRun): boolean => r.final.quests['q.elise-bike-area'] !== undefined;
+    expect(bike.some((r) => r.variant.side === 'take' && entered(r) && (r.verdict === 'ended' || r.verdict === 'end-reachable'))).toBe(true);
+    expect(bike.filter((r) => r.variant.side === 'skip').every((r) => !entered(r) && r.verdict !== 'ended')).toBe(true);
   });
 
   it('ліміт пошуку вичерпано — чесне «unknown», а не «досяжно» (рецензія GAME-37)', () => {
@@ -69,7 +90,7 @@ describe('навмисно зламаний квест (вимкнений пе�
 
   it('виправлений (справжній) контент — тупиків 0 (той самий запуск зеленіє)', () => {
     expect(campaign(GAME_DEFS, 300, SEED).filter((r) => r.verdict === 'softlock')).toEqual([]);
-  });
+  }, 300_000);
 });
 
 // GAME-31 · SIM-EV-003: кінець розділу не сміє триматись на везінні. Подія в дорозі — хід середовища:

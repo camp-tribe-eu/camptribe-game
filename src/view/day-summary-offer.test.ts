@@ -24,8 +24,8 @@ function carDay(seed: number): SimState {
   return s;
 }
 
-const expected = (sim: SimState) => {
-  const sum = daySummary(sim, 1, GAME_DEFS);
+const expected = (sim: SimState, day = 1) => {
+  const sum = daySummary(sim, day, GAME_DEFS);
   return sum && sum.sections.map((x) => ({ kind: x.kind, keys: x.ids.map((id) => (x.kind === 'night' ? `sum.night.${id.slice(NIGHT_PREFIX.length)}` : nameKey(id))) }));
 };
 
@@ -35,18 +35,22 @@ describe('підсумок на екрані = підсумок ядра (GAME-1
   const without = days.filter((s) => !s.journal.some((e) => e.type === 'RoadEvent'));
 
   it('обидва випадки є серед зерен: подія в дорозі сталась і не сталась; день 1 завершено в кожному', () => {
-    expect(days.every((s) => s.game.campaignEnded)).toBe(true);
+    // GAME-141: ST-005 — межа дня 1, а не кінець розділу: день 1 завершено, розділ триває (день 2).
+    expect(days.every((s) => daySummary(s, 1, GAME_DEFS)?.ended === true && !s.game.campaignEnded && s.game.quests['CH1-D2-001']?.status === 'active')).toBe(true);
     expect(withEvent.length).toBeGreaterThan(0);
     expect(without.length).toBeGreaterThan(0);
   });
 
   it('кожна секція й кожен ключ — з ядра; ключ назви існує (не null); гроші ті самі', () => {
-    for (const s of [...days, (() => { let p = newSim(SEED, START_MONEY); for (const i of PROLOGUE_BIKE) p = step(p, i, CTX); return p; })()]) {
+    // Реплей-сценарій (GAME-141) проходить обидва дні: на екрані — підсумок ОСТАННЬОГО завершеного дня, тобто дня 2.
+    const full = (() => { let p = newSim(SEED, START_MONEY); for (const i of PROLOGUE_BIKE) p = step(p, i, CTX); return p; })();
+    for (const [s, day] of [...days.map((d) => [d, 1] as const), [full, 2] as const]) {
       const o = summaryOffer(s, GAME_DEFS);
-      expect(o.daysEnded).toBe(1);
-      expect(o.summary?.sections).toEqual(expected(s));
+      expect(o.daysEnded).toBe(day);
+      expect(o.summary?.day).toBe(day);
+      expect(o.summary?.sections).toEqual(expected(s, day));
       expect(o.summary?.sections.flatMap((x) => x.keys).includes(null as never)).toBe(false);
-      expect(o.summary?.money).toEqual(daySummary(s, 1, GAME_DEFS)?.money);
+      expect(o.summary?.money).toEqual(daySummary(s, day, GAME_DEFS)?.money);
       expect(storyOffer(s, GAME_DEFS).offer.summary).toEqual(o.summary);   // той самий підсумок іде в знімок для UI
     }
   });

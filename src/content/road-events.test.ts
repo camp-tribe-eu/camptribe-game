@@ -321,7 +321,7 @@ describe('GAME-108 · чесність ключа перебору: f.seen-* ч�
   });
   it('мутація: відповідь з умовою { notFlag: f.seen-ev.ch1.road-002 } — червоне', () => {
     const mut = structuredClone(raw);
-    mut[0]?.nodes[0]?.choices?.push({ when: { any: [{ notFlag: 'f.seen-ev.ch1.road-002' }] } });
+    mut.flatMap((d) => d.nodes).find((n) => n.choices !== undefined)?.choices?.push({ when: { any: [{ notFlag: 'f.seen-ev.ch1.road-002' }] } });
     expect(seenReaders(mut)).toHaveLength(1);
   });
   it('exploreView ховає рівно f.seen-* подій і пам’ятні факти; інший прапорець лишається в ключі', () => {

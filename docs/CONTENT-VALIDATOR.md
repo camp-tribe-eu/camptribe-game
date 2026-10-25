@@ -19,7 +19,7 @@ node scripts/mutate-validator.mjs               # довести, що само�
 | `packing.json` | пакування (GAME-109), один об'єкт: `openAfter` (квест), `at` (локації), `capacity` (`transport`, `units`), `items` (`item`, `group` `needed`/`useful`/`leave`, `units`, `when`), `notes` (підпис, коли речі бракує). Прапорець упакованої речі — `f.pack-<id без item.>`, його ставить ядро, діалоги читають | — |
 | `transports.json` | транспорт | `transport.назва` |
 | `animals.json` | тварини (`animal.none` зарезервовано за «без тварини»); `transports` — чим тварину можна везти | `animal.назва` |
-| `quests.json` | етапи кампанії: `optional`, `end`, `requires`, `objectives`, `transitions`, `reward` | основний — канонічний id сценарію `ST-001`, `PROLOGUE-HOME-001`, `CH1-HOME-001` (великі літери, дефіси, три цифри в кінці; GAME-138); бічний — `q.назва` |
+| `quests.json` | етапи кампанії: `optional`, `end` (кінець розділу), `dayEnd` (межа дня історії: її завершення закриває день і показує підсумок дня, GAME-141; кінець розділу теж закриває день), `requires`, `objectives`, `transitions`, `reward` | основний — канонічний id сценарію `ST-001`, `PROLOGUE-HOME-001`, `CH1-HOME-001` (великі літери, дефіси, три цифри в кінці; GAME-138); бічний — `q.назва` |
 | `items.json` | предмети. Спорядження (GAME-73, DC-023) — з `kind` (`tent`/`sleeping-bag`) і повною карткою: `tier` 1–3, `weightG`, `volumeL`, `waterproofMm`, `comfortC` (нижня температура комфорту, °C), `sleeps`, `priceCents`, `resaleCents`; перевірка `gear` | `item.назва` |
 | `npcs.json` | NPC: `locationId`, `unlockedBy`, `sells` | `npc.назва` |
 | `locations.json` | локації: `unlockedBy`, `items` | `loc.назва` |
@@ -84,6 +84,13 @@ Effect    = { setFlag: "f.…" } | { startQuest: "<id квесту>" } | { compl
   змінює лише ефект `remember` (ядро: `npcMemory` у стані, сейв v2); подія в дорозі NPC не має, тож
   `remember` у ній — `EVENT_EFFECT_UNSUPPORTED`. `remembers` і `notRemembers` того самого факту в одному
   `all` — `DIALOGUE_COND_CONTRADICTION`.
+* **Сцена сюжету й автоматичні гілки (GAME-142).** Третій власник діалогу — `scene: { titleKey, facts }`: діалог без NPC
+  і без кидка RNG, який відкриває команда ядра `StartScene` (шле сюжет, напр. гачок кінця дня; точка старту вогнища —
+  `src/content/fireplace.ts`). `facts` — bool-прапорці, які стартер може поставити в мить старту; вони рахуються сетерами
+  (`settable`) і вжитками реєстру (`FLAG_UNREGISTERED`). Як і подія, сцена лише ставить прапорці (`EVENT_EFFECT_UNSUPPORTED`).
+  Вузол із `next` може мати `branches: [{ when, next }]` — «Далі» йде в першу гілку, чия умова виконана, інакше в `next`.
+  Гілка — умовний вихід: досяжність її рахує, `DIALOGUE_DEAD_END` — ні; `branches` без `next` — `SCHEMA_INVALID`;
+  умови гілок читає `dialogue-flags` (зокрема `DIALOGUE_COND_CONTRADICTION`) і реєстр.
 * Наявні перевірки розширено: `id-format` (`dlg.…`, id вузла, прапорець `f.…`, факт `m.…` — без `_`),
   `id-unique` (id діалогу, id вузла в діалозі), `locale-keys` (`textKey` вузлів і виборів →
   `LOCALE_MISSING`).
@@ -151,6 +158,7 @@ Effect    = { setFlag: "f.…" } | { startQuest: "<id квесту>" } | { compl
 | `requires-deadlock` | `REQUIRES_CYCLE` | §3 немає взаємного блокування |
 | `optional-decline` | `OPTIONAL_NO_DECLINE` | §3 відмова лишає шлях уперед |
 | `branch-next` | `BRANCH_NO_NEXT` | §3 кожна гілка має наступний етап або кінець |
+| `day-end` | `DAY_END_OPTIONAL` | GAME-141: межа дня (`dayEnd`) — лише на основному етапі |
 | `dialogue-refs` | `DIALOGUE_REF_MISSING` | §2 посилання діалогу ведуть на існуючі записи |
 | `dialogue-reachable` | `DIALOGUE_NODE_UNREACHABLE` | §3 кожен вузол діалогу досяжний |
 | `dialogue-dead-end` | `DIALOGUE_DEAD_END` | §3 з кожного вузла діалогу є безумовний шлях до кінця |

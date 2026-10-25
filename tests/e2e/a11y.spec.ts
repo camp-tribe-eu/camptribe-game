@@ -109,7 +109,7 @@ async function openDialogue(page: Page): Promise<void> {
   await story(page).locator('[data-act="create"]', { hasText: /Велосипед|Bike/ }).first().click();
   await page.waitForTimeout(400);   // GAME-80: панель глуха ~350 мс після дії
   for (const [kind, key] of [['complete', 'q.prologue-home-001'], ['complete', 'q.st-001'], ['complete', 'q.st-002'], ['visit', 'loc.shop'],
-    ['pickup', 'item.tent'], ['pickup', 'item.sleeping-bag'], ['complete', 'q.st-003'], ['visit', 'loc.home'], ['complete', 'q.ch1-home-001'], ['visit', 'loc.road'], ['complete', 'q.elise-bike-area.choice'],
+    ['pickup', 'item.tent'], ['pickup', 'item.sleeping-bag'], ['complete', 'q.st-003'], ['visit', 'loc.home'], ['complete', 'q.ch1-home-001'], ['visit', 'loc.road'], ['complete', 'q.st-004'],   // GAME-141: велозона — на дні 2
     ['visit', 'loc.camp.lake'], ['talk', 'npc.elise']] as const) {
     await story(page).locator(`[data-act="${kind}"][data-key="${key}"]`).click();
     await page.waitForTimeout(400);   // GAME-80: панель глуха ~350 мс після дії

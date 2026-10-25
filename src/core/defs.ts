@@ -76,7 +76,14 @@ export interface RewardDef {
 
 export interface QuestDef {
   readonly optional: boolean;
+  /** Кінець розділу: завершення ставить campaignEnded. */
   readonly end: boolean;
+  /**
+   * Межа дня історії (GAME-141): завершення закриває день (підсумок дня, лічильник днів), розділ триває. Поле є лише зі
+   * значенням true — сюжет без меж днів (і його відбиток STORY_REV) лишається тим самим. Кінець розділу (`end`) теж
+   * закриває день: останній день розділу без власної межі не лишається відкритим (dayEndQuests у day-summary.ts).
+   */
+  readonly dayEnd?: true;
   readonly locationId?: string;
   readonly when?: WhenDef;
   readonly requires?: { readonly quests: readonly string[]; readonly items: readonly string[] };
@@ -107,6 +114,11 @@ export type EffectDef =
 export interface DialogueNodeDef {
   readonly end?: true;
   readonly next?: string;
+  /**
+   * GAME-142: автоматична розвилка вузла з `next` — «Далі» веде в першу гілку, чия умова виконана, інакше в `next`.
+   * Гравець нічого не обирає: так сцена показує «вогнище чи ліхтар», «є фото чи ні» за фактами стану.
+   */
+  readonly branches?: readonly { readonly when: CondDef; readonly next: string }[];
   readonly choices?: readonly { readonly next: string; readonly when?: CondDef; readonly effects: readonly EffectDef[] }[];
 }
 
@@ -119,10 +131,21 @@ export interface EventTriggerDef {
   readonly when?: WhenDef;
 }
 
-/** Діалог має рівно одного «власника»: NPC (розмова) або trigger (подія в дорозі). */
+/**
+ * Сцена сюжету (GAME-142): діалог без NPC і без кидка RNG — його відкриває команда StartScene, яку шле сюжет
+ * (наприклад, кінець дня). `facts` — bool-прапорці, які стартер може поставити в мить старту; інших ядро не прийме.
+ */
+export interface SceneDef {
+  readonly facts: readonly string[];
+  /** Сцену можна почати лише поки цей квест активний (і розділ не закінчено); ніде більше — QUEST_NOT_ACTIVE. Немає — без обмеження. */
+  readonly atQuest?: string;
+}
+
+/** Діалог має рівно одного «власника»: NPC (розмова), trigger (подія в дорозі) або scene (сцена сюжету). */
 export interface DialogueDef {
   readonly npcId?: string;
   readonly trigger?: EventTriggerDef;
+  readonly scene?: SceneDef;
   readonly start: string;
   readonly nodes: Readonly<Record<string, DialogueNodeDef>>;
 }
@@ -318,7 +341,7 @@ function checkStory(st: StoryDefs): { code: DefsCode; where: string }[] {
   }
   const npcsWithDialogue = new Set<string>();
   for (const [id, d] of Object.entries(st.dialogues)) {
-    if ((d.npcId === undefined) === (d.trigger === undefined)) out.push({ code: 'DEFS_BAD_REF', where: `${id}: exactly one of npcId or trigger` });
+    if ([d.npcId, d.trigger, d.scene].filter((x) => x !== undefined).length !== 1) out.push({ code: 'DEFS_BAD_REF', where: `${id}: exactly one of npcId, trigger or scene` });
     if (d.npcId !== undefined) {
       if (!has(st.npcs, d.npcId) || npcsWithDialogue.has(d.npcId)) out.push({ code: 'DEFS_BAD_REF', where: `${id}.npcId` });
       npcsWithDialogue.add(d.npcId);
@@ -329,7 +352,8 @@ function checkStory(st: StoryDefs): { code: DefsCode; where: string }[] {
     }
     if (!has(d.nodes, d.start)) out.push({ code: 'DEFS_BAD_REF', where: `${id}.start` });
     for (const [nid, n] of Object.entries(d.nodes)) {
-      for (const next of [n.next, ...(n.choices ?? []).map((c) => c.next)]) if (!has(d.nodes, next)) out.push({ code: 'DEFS_BAD_REF', where: `${id}/${nid}→${String(next)}` });
+      for (const next of [n.next, ...(n.choices ?? []).map((c) => c.next), ...(n.branches ?? []).map((b) => b.next)]) if (!has(d.nodes, next)) out.push({ code: 'DEFS_BAD_REF', where: `${id}/${nid}→${String(next)}` });
+      if (n.branches && n.next === undefined) out.push({ code: 'DEFS_BAD_REF', where: `${id}/${nid}: branches without next` });
       for (const e of (n.choices ?? []).flatMap((c) => c.effects)) {
         // Пам'ять належить NPC розмови; у події в дорозі NPC немає — запам'ятати нікому (валідатор: EVENT_EFFECT_UNSUPPORTED).
         if ('remember' in e && d.npcId === undefined) out.push({ code: 'DEFS_BAD_REF', where: `${id}/${nid}: remember without npcId` });

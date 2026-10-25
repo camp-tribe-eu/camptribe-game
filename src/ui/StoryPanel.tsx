@@ -15,7 +15,7 @@ const ACT: Readonly<Record<Exclude<OfferAction['kind'], 'choose' | 'continue'>, 
 // Записи журналу: тип команди → підпис. Перелік той самий, що JOURNAL_TYPES ядра (звіряє src/view/story-offer.test.ts).
 const JR: Readonly<Record<string, Key>> = {
   CreateCharacter: 'jr.CreateCharacter', Visit: 'jr.Visit', Pickup: 'jr.Pickup', BuyItem: 'jr.BuyItem', SellItem: 'jr.SellItem',
-  Interact: 'jr.Interact', CompleteQuest: 'jr.CompleteQuest', DeclineQuest: 'jr.DeclineQuest', RoadEvent: 'jr.RoadEvent',
+  Interact: 'jr.Interact', CompleteQuest: 'jr.CompleteQuest', DeclineQuest: 'jr.DeclineQuest', RoadEvent: 'jr.RoadEvent', StartScene: 'jr.StartScene',
   PackItem: 'jr.PackItem', UnpackItem: 'jr.UnpackItem', AutoPack: 'jr.AutoPack', Memory: 'jr.Memory',
 };
 export const JOURNAL_LABELS = JR;
@@ -93,6 +93,11 @@ export function StoryPanel({ offer, lang, t, act, close, children }: { offer: St
       )}
       {offer.stage !== 'create' && (
         <p class="ui-status" data-ui="where" tabIndex={-1} role="status" data-weather={offer.weather}>{`${t('ui.here')}: ${ct(lang, offer.locationKey)} · ${t('ui.money')}: ${money(lang, offer.moneyCents)} · ${t('ui.weather')}: ${t(WX[offer.weather])}`}</p>
+      )}
+      {offer.stage !== 'create' && (
+        // GAME-169: прогноз на сьогодні (GAME-131) — окремим рядком від факту й зі словом «прогноз»: він може не збутись,
+        // і гравець має бачити обидва. Та сама лексика підписів, що й у погоди (WX). Не кнопка — без цілі 44 px.
+        <p class="ui-status" data-ui="forecast" data-forecast={offer.forecast} data-hit={offer.forecast === offer.weather ? 'yes' : 'no'}>{`${t('ui.forecast.today')}: ${t(WX[offer.forecast])}`}</p>
       )}
       {offer.stage === 'ended' && <p class="ui-status" data-ui="ended" role="status">{t('ui.ended')}</p>}
       {offer.quests.map((q) => (

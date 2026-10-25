@@ -41,21 +41,28 @@ const effect = union({
   remember: obj({ remember: req(str) }),
 });
 const choice = obj({ textKey: req(str), next: req(str), when: cond, effects: arr(effect) });
+// GAME-142: автоматична розвилка вузла з `next` — перша гілка, чия умова виконана, веде далі замість `next`.
+// Гравець нічого не обирає: так сцена показує «вогнище чи ліхтар», «є фото чи ні» за фактами, а не за кліком.
+// `next` лишається обов'язковим безумовним запасним виходом (без нього — SCHEMA_INVALID нижче).
+const branch = obj({ when: req(cond), next: req(str) });
 const node = obj({
   id: req(str), speaker: req(en('npc', 'player')), textKey: req(str),
-  end: bool, next: str, choices: { t: 'array', of: choice, min: 1 },
+  end: bool, next: str, branches: { t: 'array', of: branch, min: 1 }, choices: { t: 'array', of: choice, min: 1 },
 });
 
 const reward = obj({ grantId: req(str), items: arr(obj({ item: req(str), qty: req(int1) })), money: int0, once: bool });
 
 // content/dialogue/<назва>.json — один діалог на файл; завантажувач складає їх у content.dialogues.
 // У SCHEMAS як `dialogues` (DC-011), але НЕ в COLLECTIONS: це тека файлів, а не один <колекція>.json.
-// Власник діалогу — рівно один: npcId (розмова) або trigger (подія в дорозі, GAME-31). «Рівно один» стереже
-// перевірка dialogue-owner власним кодом, а не загальний SCHEMA_INVALID.
-// when (GAME-108) — кому подія взагалі може трапитись (профіль × транспорт × тварина), як when квесту: «скрип
-// велосипеда» — лише велосипедистові, «тиша в машині» — лише родині в авто.
+// Власник діалогу — рівно один: npcId (розмова), trigger (подія в дорозі, GAME-31) або scene (сцена сюжету, GAME-142).
+// «Рівно один» стереже перевірка dialogue-owner власним кодом, а не загальний SCHEMA_INVALID.
+// when (GAME-108) — кому подія взагалі може трапитись (профіль × транспорт × тварина), як when квесту.
 const trigger = obj({ at: req(ids), chance: req({ t: 'int', min: 1, max: 100 }), titleKey: req(str), when });
-export const DIALOGUE_SCHEMA = obj({ id: req(str), npcId: str, trigger, start: req(str), nodes: req({ t: 'array', of: node, min: 1 }) });
+// Сцена (GAME-142): діалог, який відкриває сюжет командою ядра StartScene — без NPC і без кидка RNG. `facts` — bool-прапорці,
+// які стартер сцени може поставити в мить старту (напр. «вогнище дозволене»): ядро приймає лише їх. `atQuest` — квест, поки який
+// активний, сцену дозволено починати (і ніде більше); немає — без обмеження.
+const scene = obj({ titleKey: req(str), facts: arr(str), atQuest: str });
+export const DIALOGUE_SCHEMA = obj({ id: req(str), npcId: str, trigger, scene, start: req(str), nodes: req({ t: 'array', of: node, min: 1 }) });
 
 export const SCHEMAS = {
   dialogues: DIALOGUE_SCHEMA,
@@ -97,7 +104,7 @@ export const SCHEMAS = {
   npcs: obj({ id: req(str), nameKey: req(str), locationId: req(str), unlockedBy: str, sells: arr(str), when }),
   locations: obj({ id: req(str), nameKey: req(str), unlockedBy: str, items: arr(str), sheltered: bool, when }),
   quests: obj({
-    id: req(str), titleKey: req(str), optional: req(bool), end: bool,
+    id: req(str), titleKey: req(str), optional: req(bool), end: bool, dayEnd: bool,
     giverId: str, locationId: str, when,
     requires: obj({ quests: arr(str), items: arr(str) }),
     objectives: req(arr(obj({
@@ -200,6 +207,7 @@ export function checkSchema(content) {
       for (const n of d.nodes) {
         const ways = [n.end === true, n.next !== undefined, n.choices !== undefined].filter(Boolean).length;
         if (ways > 1) out.push({ code: 'SCHEMA_INVALID', where: `${where}/${n.id}`, msg: 'вузол має більше одного способу виходу: лише одне з end | next | choices' });
+        if (n.branches !== undefined && n.next === undefined) out.push({ code: 'SCHEMA_INVALID', where: `${where}/${n.id}.branches`, msg: 'branches — лише разом із next: next — безумовний запасний вихід, коли жодна гілка не збіглась' });
       }
     });
   }

@@ -29,6 +29,9 @@ import { saveViable } from './viability';
 
 /** Етапи дня 1 у порядку картки, з тим, як кожен видно в журналі ядра. */
 const ORDER_QUESTS = ['PROLOGUE-HOME-001', 'ST-001', 'ST-002', 'ST-003', 'CH1-HOME-001', 'ST-004', 'ST-005'] as const;
+/** GAME-141: основні етапи дня 2 — після межі дня 1; їхній порядок стереже src/content/day2.test.ts. */
+const DAY2_QUESTS = ['CH1-D2-001', 'CH1-D2-ELISE-001', 'CH1-D2-CAMP-001', 'CH1-D2-FIRE-001'] as const;
+const isDay2 = (q: string): boolean => (DAY2_QUESTS as readonly string[]).includes(q);
 const APPLE = 'dlg.road-apples';   // EV-APPLE-001
 const NO_ANIMAL = 'animal.none';
 
@@ -40,7 +43,7 @@ type Entry = Pick<JournalEntry, 'type' | 'ref'>;
  */
 function orderViolations(journal: readonly Entry[], ended: boolean): string[] {
   const out: string[] = [];
-  const done = journal.filter((e) => e.type === 'CompleteQuest' && e.ref !== null && MAIN_QUEST_ID.test(e.ref)).map((e) => e.ref as string);
+  const done = journal.filter((e) => e.type === 'CompleteQuest' && e.ref !== null && MAIN_QUEST_ID.test(e.ref) && !isDay2(e.ref)).map((e) => e.ref as string);
   const want = ended ? [...ORDER_QUESTS] : ORDER_QUESTS.slice(0, done.length);
   if (done.join(' → ') !== want.join(' → ')) out.push(`етапи: ${done.join(' → ')} ≠ ${want.join(' → ')}`);
   // EV-APPLE-001 — між ST-004 (дорога відкрита лише після CH1-HOME-001) і ST-005.
@@ -48,7 +51,8 @@ function orderViolations(journal: readonly Entry[], ended: boolean): string[] {
   const apple = journal.findIndex((e) => e.type === 'RoadEvent' && e.ref === APPLE);
   if (apple >= 0) {
     if (at('CH1-HOME-001') < 0 || apple < at('CH1-HOME-001')) out.push('яблука — раніше за CH1-HOME-001 (до дороги ST-004)');
-    if (at('ST-005') >= 0 && apple > at('ST-005')) out.push('яблука — після ST-005');
+    // GAME-141: після ST-005 розділ не закінчується — день 2 на тій самій мапі, і подію, що не випала вдень 1, можна зустріти
+    // на дорозі вдень 2 (раз за гру, f.seen-*). Це вже подія дня 2 (її показує підсумок дня 2), а не порушення порядку дня 1.
   }
   return out;
 }
@@ -62,7 +66,10 @@ function summaryViolations(sim: Pick<SimState, 'game' | 'journal'>, defs: CoreDe
   if (!ended) return [];
   const quests = sum.sections.find((x) => x.kind === 'quests')?.ids ?? [];
   if (quests.at(-1) !== 'ST-005') return [`межа дня 1 — ${String(quests.at(-1))}, а не ST-005`];
-  if (daySummary(sim, 2, defs) !== null) return ['після ST-005 одразу почався день 2'];
+  // GAME-141: після ST-005 іде день 2, але жоден етап дня 1 у нього не перетікає.
+  const day2 = daySummary(sim, 2, defs)?.sections.find((x) => x.kind === 'quests')?.ids ?? [];
+  const leaked = day2.filter((q) => (ORDER_QUESTS as readonly string[]).includes(q));
+  if (leaked.length) return [`етапи дня 1 у дні 2: ${leaked.join(', ')}`];
   return [];
 }
 
@@ -81,7 +88,7 @@ function journalOf(v: Variant, startCents: number, trace: readonly { m: Move; be
 interface TracedRun { variant: Variant; verdict: string; final: GameState; trace: { m: Move; before: GameState; after: GameState }[] }
 
 /** Кампанія бота з трасою: той самий генератор варіантів і зерно, що й у bot.test (GAME-37). */
-function campaign(defs: CoreDefs, n: number, seed: number, only?: (v: Variant) => boolean): TracedRun[] {
+function campaign(defs: CoreDefs, n: number, seed: number, only?: (v: Variant) => boolean, maxSteps = 120): TracedRun[] {
   const variants = variantsFor(enumerateCombos(CONTENT)).filter((v) => !only || only(v));
   const memo: EndMemo = new Map();
   let rng = seedRng(seed);
@@ -91,7 +98,7 @@ function campaign(defs: CoreDefs, n: number, seed: number, only?: (v: Variant) =
     rng = r.state;
     const variant = variants[r.value] as Variant;
     const trace: TracedRun['trace'] = [];
-    const run = runBot(defs, variant, seed + i, memo, { maxSteps: 120, cap: 20_000, trace: (m, before, after) => trace.push({ m, before, after }) });
+    const run = runBot(defs, variant, seed + i, memo, { maxSteps, cap: 20_000, trace: (m, before, after) => trace.push({ m, before, after }) });
     out.push({ variant, verdict: run.verdict, final: run.final, trace });
   }
   return out;
@@ -151,7 +158,7 @@ function withCampsiteAgain(c: RawContent): RawContent {
 }
 
 describe('GAME-138 · порядок дня 1 у контенті', () => {
-  it('усі етапи порядку є, основні й без умов; перший — старт гри; межа дня — ST-005', () => {
+  it('усі етапи порядку є, основні й без умов; перший — старт гри; межа дня — ST-005 (далі день 2, GAME-141)', () => {
     expect(STORY.start).toBe('PROLOGUE-HOME-001');
     for (const q of ORDER_QUESTS) {
       expect(STORY.quests[q], q).toBeDefined();
@@ -165,8 +172,9 @@ describe('GAME-138 · порядок дня 1 у контенті', () => {
       if (!next) break;
       chain.push(next);
     }
-    expect(chain).toEqual([...ORDER_QUESTS]);
-    expect([...dayEndQuests(GAME_DEFS)]).toEqual(['ST-005']);
+    expect(chain).toEqual([...ORDER_QUESTS, ...DAY2_QUESTS]);
+    expect([...dayEndQuests(GAME_DEFS)]).toEqual(['ST-005', 'CH1-D2-FIRE-001']);
+    expect(STORY.quests['ST-005']?.end).toBe(false);                                     // межа дня 1 — не кінець розділу
     // EV-APPLE-001 — подія лише на дорозі, а дорога відкривається після CH1-HOME-001: яблука не трапляються раніше за ST-004.
     expect(STORY.dialogues[APPLE]?.trigger?.at).toEqual(['loc.road']);
     expect(STORY.locations['loc.road']?.unlockedBy).toBe('CH1-HOME-001');
@@ -181,15 +189,18 @@ describe('GAME-138 · порядок дня 1 у контенті', () => {
 describe('GAME-138 · Спосіб перевірки 1: бот і реплей проходять порядок дня 1', () => {
   const N = 600;
   let runs: TracedRun[] = [];
-  beforeAll(() => { runs = campaign(GAME_DEFS, N, 20261023); }, 120_000);
+  beforeAll(() => { runs = campaign(GAME_DEFS, N, 20261023); }, 300_000);
 
   it(`бот (${N} прогонів, усі варіанти): порядок етапів, яблука між ST-004 і ST-005, підсумок дня 1 — на ST-005; тупиків 0`, () => {
     expect(campaignViolations(runs, GAME_DEFS).slice(0, 5)).toEqual([]);
     expect(runs.filter((r) => r.verdict === 'softlock' || r.verdict === 'unknown')).toEqual([]);
-    const ended = runs.filter((r) => r.final.campaignEnded);
-    expect(ended.length).toBeGreaterThan(N / 10);                                       // перевірка бачила саме дійшлі до кінця прогони
+    // GAME-141: розділ дводенний — за 120 ходів прогулянка доходить до кінця дня 1, а кінця розділу — рідко. Порядок дня 1
+    // перевіряється саме на прогонах, що пройшли межу дня 1.
+    const ended = runs.filter((r) => r.final.quests['ST-005']?.status === 'completed');
+    expect(ended.length).toBeGreaterThan(N / 10);                                       // перевірка бачила саме дійшлі до кінця дня 1 прогони
     expect(ended.some((r) => r.trace.some(({ m }) => m.type === 'RoadEvent'))).toBe(true);   // і з яблуками, і без
-    expect(ended.some((r) => !r.trace.some(({ m }) => m.type === 'RoadEvent'))).toBe(true);
+    // GAME-108: подія дня 2 (її можна зустріти на дорозі вдень 2) — не порушення порядку дня 1; рахуємо лише події до межі дня 1.
+    expect(ended.some((r) => !r.trace.some(({ m, before }) => m.type === 'RoadEvent' && before.quests['ST-005']?.status !== 'completed'))).toBe(true);
   });
 
   it('реплей-еталон (tests/replays, симуляція з годинником і кидками): журнал іде порядком дня 1, підсумок дня 1 завершено на ST-005', () => {
@@ -247,7 +258,9 @@ describe('GAME-138 · Спосіб перевірки 1: бот і реплей 
     let s = newSim(SEED, START_MONEY);
     for (const i of PROLOGUE_BIKE) s = step(s, i, { defs: GAME_DEFS });
     const story = GAME_DEFS.story as StoryDefs;
-    const shifted: CoreDefs = { ...GAME_DEFS, story: { ...story, quests: { ...story.quests, 'ST-005': { ...(story.quests['ST-005'] as StoryDefs['quests'][string]), end: false }, 'ST-004': { ...(story.quests['ST-004'] as StoryDefs['quests'][string]), end: true } } } };
+    const st005: StoryDefs['quests'][string] = { ...(story.quests['ST-005'] as StoryDefs['quests'][string]) };
+    delete (st005 as { dayEnd?: true }).dayEnd;
+    const shifted: CoreDefs = { ...GAME_DEFS, story: { ...story, quests: { ...story.quests, 'ST-005': st005, 'ST-004': { ...(story.quests['ST-004'] as StoryDefs['quests'][string]), dayEnd: true } } } };
     expect(summaryViolations(s, shifted).length).toBeGreaterThan(0);
   });
 });
@@ -340,13 +353,13 @@ describe('GAME-138 · Спосіб перевірки 3: 0 € на старті
   });
 
   it('бот без грошей (лише варіанти money=none): жодної покупки, тупиків 0, і до кінця доходить', () => {
-    const runs = campaign(GAME_DEFS, 200, 20261024, (v) => v.money === 'none');
+    const runs = campaign(GAME_DEFS, 200, 20261024, (v) => v.money === 'none', 220);   // GAME-141: два дні — довша прогулянка
     expect(runs.every((r) => r.variant.money === 'none')).toBe(true);
     expect(runs.flatMap((r) => r.trace.filter(({ m }) => m.type === 'BuyItem'))).toEqual([]);
     expect(runs.filter((r) => r.verdict === 'softlock' || r.verdict === 'unknown')).toEqual([]);
     expect(runs.some((r) => r.final.campaignEnded && r.final.quests['ST-003']?.status === 'completed')).toBe(true);
     expect(campaignViolations(runs, GAME_DEFS).slice(0, 3)).toEqual([]);
-  }, 120_000);
+  }, 300_000);
 
   it('МУТАЦІЯ: без безкоштовного шляху ST-003 з 0 € кінець недосяжний у кожній комбінації; з 100 € — досяжний (саме гроші, а не зламаний сюжет)', () => {
     const defs = paidOnly();

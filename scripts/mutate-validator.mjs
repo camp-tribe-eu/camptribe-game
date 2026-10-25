@@ -24,6 +24,7 @@ const COMBOS_FILE = 'validator/combos.mjs';
 // 1. Вимкнення кожної перевірки цілком. 2. Точкові мутації логіки, де помилка найдорожча.
 const mutations = [
   ...CHECKS.map((c) => ({ name: `вимкнено перевірку ${c.id}`, file: CHECKS_FILE, from: `// @check:${c.id}\n`, to: `// @check:${c.id}\n      return [];\n` })),
+  { name: 'формат id основного етапу — будь-що (рецензія PR #62)', file: CHECKS_FILE, from: 'quests: /^(?:(?:[A-Z][A-Z0-9]*-)+\\d{3}|', to: 'quests: /^(?:.+|' },
   { name: 'відмова рахується як завершення', file: CHECKS_FILE, from: "u === X && tr.on === 'complete'", to: 'u === X' },
   { name: 'transition-gate: джерело зараховано й при відмові', file: CHECKS_FILE, from: "if (tr.on === 'complete') done.add(uid);", to: 'done.add(uid);' },
   { name: 'transition-gate: локація рахується відкритою на вході в ціль, а не на джерелі', file: CHECKS_FILE, from: 'l.items?.includes(it) && avail(l, uid)', to: 'l.items?.includes(it) && avail(l, tr.to)' },
@@ -68,6 +69,18 @@ const mutations = [
   { name: '[діалог] тека dialogue/ не читається', file: 'validator/load.mjs', from: 'content.dialogues.push(v);', to: '' },
   { name: '[діалог] недосяжність не рахує старт', file: CHECKS_FILE, from: 'const seen = new Set([d.start]);', to: 'const seen = new Set();' },
   // діалоги, рецензія GAME-28: кожна гілка, яку самотест раніше не вмів почервонити
+  // сцени й автоматичні гілки (GAME-142)
+  { name: '[сцена] власник scene не рахується', file: CHECKS_FILE, from: 'd.trigger !== undefined, d.scene !== undefined].filter(Boolean)', to: 'd.trigger !== undefined].filter(Boolean)' },
+  { name: '[сцена] сцені дозволено стартувати квест', file: CHECKS_FILE, from: 'if (d.trigger === undefined && d.scene === undefined) continue;', to: 'if (d.trigger === undefined) continue;' },
+  { name: '[сцена] факти сцени не ставлять прапорців', file: CHECKS_FILE, from: 'for (const f of d.scene?.facts ?? []) set.add(f);', to: 'for (const f of d.scene?.facts ?? []) void f;' },
+  { name: '[сцена] факти сцени не звіряються з реєстром', file: CHECKS_FILE, from: "(d.scene?.facts ?? []).forEach((f, i) => out.push([`${d.id}.scene.facts[${i}]`, f]));", to: '' },
+  { name: '[сцена] назва сцени не йде в перевірку локалізації', file: CHECKS_FILE, from: 'add(d.scene?.titleKey, `${d.id}.scene`)', to: 'add(undefined, `${d.id}.scene`)' },
+  { name: '[гілка] next гілки не звіряється з вузлами', file: CHECKS_FILE, from: 'if (!nodes.has(b.next)) miss(', to: 'if (false) miss(' },
+  { name: '[гілка] гілка рахується безумовним виходом', file: CHECKS_FILE, from: 'if (!onlyUnconditional) for (const b of n.branches ?? []) out.push(b.next);', to: 'for (const b of n.branches ?? []) out.push(b.next);' },
+  { name: '[гілка] гілки не ведуть до досяжності', file: CHECKS_FILE, from: 'if (!onlyUnconditional) for (const b of n.branches ?? []) out.push(b.next);', to: '' },
+  { name: '[гілка] умови гілок не читаються', file: CHECKS_FILE, from: "(n.branches ?? []).forEach((b, i) => { for (const leaf of condLeaves(b.when)) out.push(", to: "(n.branches ?? []).forEach((b, i) => { for (const leaf of []) out.push(" },
+  { name: '[гілка] суперечність умови гілки не помічається', file: CHECKS_FILE, from: 'for (const [where, ch] of [...choices, ...dialogueBranches(c.content)]) {', to: 'for (const [where, ch] of choices) {' },
+  { name: '[гілка] гілки без next дозволено', file: 'validator/schema.mjs', from: 'if (n.branches !== undefined && n.next === undefined) out.push', to: 'if (false) out.push' },
   { name: '[діалог] next вузла не звіряється з вузлами', file: CHECKS_FILE, from: 'if (n.next !== undefined && !nodes.has(n.next)) miss(', to: 'if (false) miss(' },
   { name: '[діалог] completeObjective на неіснуючий квест не звіряється', file: CHECKS_FILE, from: 'if (co && !by.quests.has(co.quest)) miss(where, `квесту «${co.quest}» не існує`);', to: 'if (false) {}' },
   { name: '[діалог] формат id вузла не перевіряється', file: CHECKS_FILE, from: 'if (!OBJECTIVE_ID.test(n.id)) out.push', to: 'if (false) out.push' },

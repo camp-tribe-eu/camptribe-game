@@ -58,8 +58,20 @@ function walk(intent: Move, label: string): Visited {
   }
   return out;
 }
-/** Стан і ТІЛЬКИ місце останнього Visit у журналі: інакше довжина журналу множила б простір безкінечно. */
-const key = (s: SimState): string => `${outcomeKey(s.game)}|${s.journal.filter((e) => e.type === 'Visit').at(-1)?.ref}`;
+/**
+ * Стан і ТІЛЬКИ місце останнього Visit у журналі: інакше довжина журналу множила б простір безкінечно. GAME-141: після межі
+ * дня 1 (ST-005) ключ не розрізняє прапорців і пам'яті NPC — пам'ятні вибори дня 1 (місце, яблука, план, ролі, порада)
+ * множили день 2 у ~8 разів (50 тис. станів, 140 с), а пункти цього тесту (меню «Піти», журнал «Прибуття», цілі кішки, кінець)
+ * від них не залежать: день 2 перебирається від першого представника кожного класу (квести, місце, розмова, речі).
+ * Стирається ВСЕ з flags і npcMemory — і не пам'ятне теж (m.came-by-bike, f.night-*, f.pack-*, m.bikezone-helped): два стани
+ * дня 2, що різняться лише ними, тут зливаються, і другий не перебирається. Тупик за таким прапорцем цей тест НЕ побачить;
+ * його стережуть інші: повний перебір дня 2 з усіма прапорцями (src/content/day2.test.ts), бот із пошуком «кінець досяжний» на
+ * повному ключі (bot.test.ts) і перебір меню story-offer.test.ts (outcomeKey без злиття).
+ */
+const key = (s: SimState): string => {
+  const g = s.game.quests['ST-005']?.status === 'completed' ? { ...s.game, flags: [], npcMemory: {} } : s.game;
+  return `${outcomeKey(g)}|${s.journal.filter((e) => e.type === 'Visit').at(-1)?.ref}`;
+};
 
 const COMBOS = characterChoices(DEFS);
 const RUNS = COMBOS.map((c) => walk(c.intent, `${(c.intent as { transportId: string }).transportId}+${(c.intent as { animalId?: string }).animalId ?? 'none'}+${(c.intent as { profileId: string }).profileId}`));
@@ -87,7 +99,7 @@ describe('перебір меню на справжньому контенті (
   });
 
   it('№4 кішка: цілі про неї бачить лише гравець із кішкою — і бачить обидві (дорога й табір); без кішки — жодної', () => {
-    const CAT = ['q.st-004.o2', 'q.st-005.o4'];
+    const CAT = ['q.st-004.o2', 'q.st-005.o4', 'q.ch1-d2-001.o2', 'q.ch1-d2-camp-001.o2'];   // GAME-141: і дві цілі дня 2
     for (const r of RUNS) {
       for (const k of CAT) expect(r.objectives.has(k), `${r.label} ${k}`).toBe(hasCat(r));
     }
