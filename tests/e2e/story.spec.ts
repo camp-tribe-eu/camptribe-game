@@ -456,7 +456,9 @@ async function walkToElise(page: Page): Promise<void> {
   for (let i = 0; i < 16 && (await probe(page)).nearObject !== 'npc.elise'; i++) {
     const p = await probe(page);
     trail.push(`${Math.round(p.playerX)},${Math.round(p.playerY)}@${p.fps.toFixed(1)}fps`);
-    const axis = Math.abs(p.playerX - ELISE.x) > 16 ? 'playerX' : 'playerY';
+    // Допуск по X — 32 px: при x ± 32 хорда зони Ø 96 по Y ≈ 71 px, більше за проскок ~53 px на CI; ±16 при кроці ~53 px
+    // недосяжне (шлях 48↔101 вище).
+    const axis = Math.abs(p.playerX - ELISE.x) > 32 ? 'playerX' : 'playerY';
     const target = axis === 'playerX' ? ELISE.x : ELISE.y;
     const neg = p[axis] > target;
     await walkInPage(page, axis === 'playerX' ? (neg ? 'ArrowLeft' : 'ArrowRight') : (neg ? 'ArrowUp' : 'ArrowDown'), axis, target, lead[axis]);
