@@ -184,6 +184,7 @@ export const CHECKS = [
         ref('quests', l.unlockedBy, `${l.id}.unlockedBy`);
         (l.items ?? []).forEach((i) => ref('items', i, `${l.id}.items`));
       }
+      for (const d of c.content.dialogues ?? []) ref('quests', d.scene?.atQuest, `${d.id}.scene.atQuest`);
       for (const q of by.quests.values()) {
         ref('npcs', q.giverId, `${q.id}.giverId`);
         ref('locations', q.locationId, `${q.id}.locationId`);
@@ -567,6 +568,16 @@ export const CHECKS = [
       return [...c.ix.by.quests.values()]
         .filter((q) => !q.end && q.transitions.length === 0)
         .map((q) => I('BRANCH_NO_NEXT', q.id, 'не кінець і не має наступного етапу'));
+    },
+  },
+  {
+    id: 'day-end',
+    run(c) { // @check:day-end
+      // GAME-141: межа дня (`dayEnd`) — лише на основному етапі. Бічний квест можна відхилити, а відмова не завершує:
+      // день, межа якого відхилена, не закінчився б ніколи — ні підсумку дня, ні наступного дня в лічильнику.
+      return [...c.ix.by.quests.values()]
+        .filter((q) => q.dayEnd === true && q.optional)
+        .map((q) => I('DAY_END_OPTIONAL', q.id, 'межа дня на необов\u2019язковому квесті: відмова лишила б день незавершеним'));
     },
   },
   // ---------- діалоги (GAME-28) ----------

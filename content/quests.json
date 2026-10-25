@@ -44,10 +44,7 @@
       { "id": "road-to-lake", "textKey": "q.st-004.o1", "kind": "visit", "target": "loc.road", "required": true },
       { "id": "cat-on-road", "textKey": "q.st-004.o2", "kind": "visit", "target": "loc.road", "required": false, "when": { "animals": ["animal.cat"] } }
     ],
-    "transitions": [
-      { "on": "complete", "to": "ST-005" },
-      { "on": "complete", "to": "q.elise-bike-area", "choiceKey": "q.elise-bike-area.choice", "when": { "transports": ["transport.bike"] } }
-    ]
+    "transitions": [{ "on": "complete", "to": "ST-005" }]
   },
   {
     "id": "q.elise-bike-area", "titleKey": "q.elise-bike-area", "optional": true, "giverId": "npc.elise", "locationId": "loc.camp.lake",
@@ -56,20 +53,53 @@
       { "id": "talk-elise", "textKey": "q.elise-bike-area.o1", "kind": "talk", "target": "npc.elise", "required": true, "byDialogue": true }
     ],
     "transitions": [
-      { "on": "complete", "to": "ST-005" },
-      { "on": "decline", "to": "ST-005", "choiceKey": "q.elise-bike-area.decline" }
+      { "on": "complete", "to": "CH1-D2-CAMP-001" },
+      { "on": "decline", "to": "CH1-D2-CAMP-001", "choiceKey": "q.elise-bike-area.decline" }
     ],
     "reward": { "grantId": "rw.q-elise-bike-area", "money": 500 }
   },
   {
-    "id": "ST-005", "titleKey": "q.st-005", "optional": false, "end": true, "giverId": "npc.elise", "locationId": "loc.camp.lake",
+    "id": "ST-005", "titleKey": "q.st-005", "optional": false, "dayEnd": true, "giverId": "npc.elise", "locationId": "loc.camp.lake",
     "objectives": [
       { "id": "meet-elise", "textKey": "q.st-005.o1", "kind": "talk", "target": "npc.elise", "required": true },
       { "id": "pitch-tent", "textKey": "q.st-005.o2", "kind": "talk", "target": "npc.elise", "required": true, "byDialogue": true },
       { "id": "gather-firewood", "textKey": "q.st-005.o3", "kind": "collect", "target": "item.firewood", "required": true },
       { "id": "cat-looks-around", "textKey": "q.st-005.o4", "kind": "visit", "target": "loc.camp.lake", "required": false, "when": { "animals": ["animal.cat"] } }
     ],
-    "transitions": [],
+    "transitions": [{ "on": "complete", "to": "CH1-D2-001" }],
     "reward": { "grantId": "rw.st-005", "money": 1000 }
+  },
+  {
+    "id": "CH1-D2-001", "titleKey": "q.ch1-d2-001", "optional": false, "locationId": "loc.camp.lake",
+    "objectives": [
+      { "id": "morning", "textKey": "q.ch1-d2-001.o1", "kind": "visit", "target": "loc.camp.lake", "required": true },
+      { "id": "cat-morning", "textKey": "q.ch1-d2-001.o2", "kind": "visit", "target": "loc.camp.lake", "required": false, "when": { "animals": ["animal.cat"] } }
+    ],
+    "transitions": [{ "on": "complete", "to": "CH1-D2-ELISE-001" }]
+  },
+  {
+    "id": "CH1-D2-ELISE-001", "titleKey": "q.ch1-d2-elise-001", "optional": false, "giverId": "npc.elise", "locationId": "loc.camp.lake",
+    "objectives": [
+      { "id": "talk-elise", "textKey": "q.ch1-d2-elise-001.o1", "kind": "talk", "target": "npc.elise", "required": true, "byDialogue": true }
+    ],
+    "transitions": [
+      { "on": "complete", "to": "CH1-D2-CAMP-001" },
+      { "on": "complete", "to": "q.elise-bike-area", "choiceKey": "q.elise-bike-area.choice", "when": { "transports": ["transport.bike"] } }
+    ]
+  },
+  {
+    "id": "CH1-D2-CAMP-001", "titleKey": "q.ch1-d2-camp-001", "optional": false, "locationId": "loc.camp.lake",
+    "objectives": [
+      { "id": "dinner", "textKey": "q.ch1-d2-camp-001.o1", "kind": "talk", "target": "npc.elise", "required": true, "byDialogue": true },
+      { "id": "cat-sun", "textKey": "q.ch1-d2-camp-001.o2", "kind": "visit", "target": "loc.camp.lake", "required": false, "when": { "animals": ["animal.cat"] } }
+    ],
+    "transitions": [{ "on": "complete", "to": "CH1-D2-FIRE-001" }]
+  },
+  {
+    "id": "CH1-D2-FIRE-001", "titleKey": "q.ch1-d2-fire-001", "optional": false, "end": true, "dayEnd": true, "locationId": "loc.camp.lake",
+    "objectives": [
+      { "id": "evening", "textKey": "q.ch1-d2-fire-001.o1", "kind": "visit", "target": "loc.camp.lake", "required": true }
+    ],
+    "transitions": []
   }
 ]

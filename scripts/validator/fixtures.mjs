@@ -369,6 +369,8 @@ export const FIXTURES = [
     q(c, 'ST-002').transitions.push({ on: 'complete', to: 'ST-005', choiceKey: 'q.st-002' });
   } },
   { name: 'фінал втратив позначку кінця', expect: ['BRANCH_NO_NEXT', 'NO_PATH_TO_END'], patch(c) { q(c, 'ST-004').end = false; } },
+  { name: 'межа дня на необов\u2019язковому квесті', expect: ['DAY_END_OPTIONAL'], patch(c) { q(c, 'ST-003').dayEnd = true; } },
+  { name: 'межа дня на основному етапі — коректно', expect: [], patch(c) { q(c, 'ST-002').dayEnd = true; } },
 
   // ---- діалоги (GAME-28) ----
   { name: '[діалог] контроль: умовні гілки без безумовної альтернативи, але з fallback — коректно', expect: [], patch(c) {

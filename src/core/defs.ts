@@ -76,7 +76,14 @@ export interface RewardDef {
 
 export interface QuestDef {
   readonly optional: boolean;
+  /** Кінець розділу: завершення ставить campaignEnded. */
   readonly end: boolean;
+  /**
+   * Межа дня історії (GAME-141): завершення закриває день (підсумок дня, лічильник днів), розділ триває. Поле є лише зі
+   * значенням true — сюжет без меж днів (і його відбиток STORY_REV) лишається тим самим. Кінець розділу (`end`) теж
+   * закриває день: останній день розділу без власної межі не лишається відкритим (dayEndQuests у day-summary.ts).
+   */
+  readonly dayEnd?: true;
   readonly locationId?: string;
   readonly when?: WhenDef;
   readonly requires?: { readonly quests: readonly string[]; readonly items: readonly string[] };
@@ -126,7 +133,11 @@ export interface EventTriggerDef {
  * Сцена сюжету (GAME-142): діалог без NPC і без кидка RNG — його відкриває команда StartScene, яку шле сюжет
  * (наприклад, кінець дня). `facts` — bool-прапорці, які стартер може поставити в мить старту; інших ядро не прийме.
  */
-export interface SceneDef { readonly facts: readonly string[] }
+export interface SceneDef {
+  readonly facts: readonly string[];
+  /** Сцену можна почати лише поки цей квест активний (і розділ не закінчено); ніде більше — QUEST_NOT_ACTIVE. Немає — без обмеження. */
+  readonly atQuest?: string;
+}
 
 /** Діалог має рівно одного «власника»: NPC (розмова), trigger (подія в дорозі) або scene (сцена сюжету). */
 export interface DialogueDef {

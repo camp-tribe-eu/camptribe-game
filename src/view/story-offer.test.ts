@@ -25,7 +25,8 @@ import enUi from '../i18n/en.json';
 
 // Повний перебір — свідомо важкий (велосипедна гілка з подією й пам'яттю ≈ 5 с локально, на CI довше): власна межа
 // часу замість типових 5 с, щоб падіння означало «доказ не вкладається», а не «повільна машина».
-const EXHAUSTIVE_MS = 60_000;
+// GAME-141: день 2 (ранок, порада, велозона, вечеря) — простір меню у кілька разів більший; 60 с під повним навантаженням не вистачало.
+const EXHAUSTIVE_MS = 240_000;
 
 const DEFS: CoreDefs = GAME_DEFS;
 type Menu = (s: GameState) => { move: Move; next: GameState }[];
@@ -103,21 +104,21 @@ describe('меню сюжету: з кожного стану, досяжног�
     const r = deadEnds(create(first.intent), (s) => realMenu(s).filter((o) => o.move.type !== 'CompleteQuest'));
     expect(r.ended).toBe(0);
     expect(r.stuck.length).toBeGreaterThan(0);
-  });
+  }, EXHAUSTIVE_MS);
 
   it('сцена справді додає стани (інакше «меню + сцена» нічого не доводить)', () => {
     const first = choices[0];
     if (!first) throw new Error('no characters');
     const g = create(first.intent);
     expect(deadEnds(g, realMenu).states).toBeGreaterThan(deadEnds(g, realMenu, () => []).states);
-  });
+  }, EXHAUSTIVE_MS);   // GAME-141: два повні перебори з днем 2 — на CI 30 с за замовчуванням не вистачило
 
   it('негативний контроль: розмова без відповідей (лише «далі») — застрягає в діалозі', () => {
     const first = choices[0];
     if (!first) throw new Error('no characters');
     const r = deadEnds(create(first.intent), (s) => realMenu(s).filter((o) => o.move.type !== 'Choose'));
     expect(r.stuck.some((s) => s.dialogue !== null)).toBe(true);
-  });
+  }, EXHAUSTIVE_MS);
 });
 
 describe('тексти меню: кожен ключ існує в обох мовах', () => {

@@ -58,8 +58,9 @@ const reward = obj({ grantId: req(str), items: arr(obj({ item: req(str), qty: re
 // «Рівно один» стереже перевірка dialogue-owner власним кодом, а не загальний SCHEMA_INVALID.
 const trigger = obj({ at: req(ids), chance: req({ t: 'int', min: 1, max: 100 }), titleKey: req(str) });
 // Сцена (GAME-142): діалог, який відкриває сюжет командою ядра StartScene — без NPC і без кидка RNG. `facts` — bool-прапорці,
-// які стартер сцени може поставити в мить старту (напр. «вогнище дозволене»): ядро приймає лише їх.
-const scene = obj({ titleKey: req(str), facts: arr(str) });
+// які стартер сцени може поставити в мить старту (напр. «вогнище дозволене»): ядро приймає лише їх. `atQuest` — квест, поки який
+// активний, сцену дозволено починати (і ніде більше); немає — без обмеження.
+const scene = obj({ titleKey: req(str), facts: arr(str), atQuest: str });
 export const DIALOGUE_SCHEMA = obj({ id: req(str), npcId: str, trigger, scene, start: req(str), nodes: req({ t: 'array', of: node, min: 1 }) });
 
 export const SCHEMAS = {
@@ -102,7 +103,7 @@ export const SCHEMAS = {
   npcs: obj({ id: req(str), nameKey: req(str), locationId: req(str), unlockedBy: str, sells: arr(str), when }),
   locations: obj({ id: req(str), nameKey: req(str), unlockedBy: str, items: arr(str), sheltered: bool, when }),
   quests: obj({
-    id: req(str), titleKey: req(str), optional: req(bool), end: bool,
+    id: req(str), titleKey: req(str), optional: req(bool), end: bool, dayEnd: bool,
     giverId: str, locationId: str, when,
     requires: obj({ quests: arr(str), items: arr(str) }),
     objectives: req(arr(obj({

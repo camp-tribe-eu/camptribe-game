@@ -13,7 +13,7 @@ export const BOT_SEED = 20261023;
 export const BOT_N = 2000;
 
 /** n прогонів: варіант кожного — з RNG зерна, зерно прогону — seed + i. Перші k прогонів — завжди ті самі (префікс). */
-export function campaign(defs: CoreDefs, n: number, seed: number): BotRun[] {
+export function campaign(defs: CoreDefs, n: number, seed: number, opts?: { maxSteps: number; cap: number }): BotRun[] {
   const variants = variantsFor(enumerateCombos(CONTENT));
   const memo: EndMemo = new Map();
   let rng = seedRng(seed);
@@ -21,7 +21,7 @@ export function campaign(defs: CoreDefs, n: number, seed: number): BotRun[] {
   for (let i = 0; i < n; i++) {
     const r = nextInt(rng, variants.length);
     rng = r.state;
-    runs.push(runBot(defs, variants[r.value] as Variant, seed + i, memo));
+    runs.push(runBot(defs, variants[r.value] as Variant, seed + i, memo, opts));
   }
   return runs;
 }

@@ -2,14 +2,19 @@
 // факт; порожніх секцій немає. Чиста функція: той самий стан → той самий підсумок (детерміновано, без годинника браузера).
 //
 // Що таке «день» тут. Ігровий годинник (dayOf) — не день історії: вільна прогулянка мапою (1 с = 1 хв) може перегорнути
-// добу посеред Прологу. День історії закінчується завершенням квесту-межі дня; поки в контенті один день (Пролог до ST-005),
-// межа — квест із `end: true`. День N — записи журналу після межі дня N−1 до межі дня N включно; день, межі якого ще не було, —
-// відкритий (ended: false) і тягнеться до останнього запису.
+// добу посеред Прологу. День історії закінчується завершенням квесту-межі дня (GAME-141): квест із `dayEnd: true` — межа дня,
+// розділ триває; квест із `end: true` — кінець розділу, і він теж закриває день (останній день розділу не лишається відкритим).
+// Розділ 1 зараз: день 1 — до ST-005 (`dayEnd`), день 2 — до CH1-D2-FIRE-001 (`end` + `dayEnd`; день 3 — GAME-144). День N —
+// записи журналу після межі дня N−1 до межі дня N включно; день, межі якого ще не було, — відкритий (ended: false) і тягнеться
+// до останнього запису. Сейв до GAME-141, де ST-005 мав `end`, рахує ті самі межі: ST-005 у журналі — межа дня 1 і тепер.
 //
 // Прапорці (`f.night-*`, `f.pack-*`) часу не мають — це стан «зараз». Тому секції з них (ночівля, пакування) належать лише
 // ОСТАННЬОМУ ЗАВЕРШЕНОМУ дню (а поки жоден не завершився — відкритому дню 1): для раніших днів їх не довести, а відкритий день
-// після межі ще не мав своєї ночі — підсумок їх там не показує. Коли з'явиться день 2 із власною
-// ночівлею, прапорець ночівлі мусить отримати день (наприклад `f.night-d2-…`) — інакше підсумок дня 2 повторить ніч дня 1.
+// після межі ще не мав своєї ночі — підсумок їх там не показує. Ночівля (`f.night-*`) — у чому родина ночує на ЦЬОМУ кемпінгу
+// (ставиться раз на ST-005 і лишається до кінця перебування), тож підсумок дня 2 на тому ж кемпінгу показує її як нинішню
+// (GAME-141). Коли з'явиться інша ночівля (новий кемпінг, день 3 — GAME-144), прапорець мусить отримати день чи місце. Спаковане
+// (`f.pack-*`) — лише в день, коли пакували: день 1 (CreateCharacter складає багаж за замовчуванням, GAME-109) або день, у журналі
+// якого є PackItem/UnpackItem/AutoPack. Інакше підсумок дня 2 повторив би пакування дня 1.
 import type { CoreDefs } from './defs';
 import { packedOf } from './packing';
 import type { JournalEntry, SimState } from './sim';
@@ -32,9 +37,9 @@ export interface DaySummary {
 /** Прапорець ночівлі: `f.night-tent` — ніч у наметі. */
 export const NIGHT_PREFIX = 'f.night-';
 
-/** Квести-межі дня: поки — квести з `end: true` (кінець розділу = кінець дня 1). */
+/** Квести-межі дня (GAME-141): `dayEnd: true` (межа дня) і `end: true` (кінець розділу закриває й день). */
 export const dayEndQuests = (defs: CoreDefs): ReadonlySet<string> =>
-  new Set(Object.entries(defs.story?.quests ?? {}).filter(([, q]) => q.end).map(([id]) => id));
+  new Set(Object.entries(defs.story?.quests ?? {}).filter(([, q]) => q.dayEnd === true || q.end).map(([id]) => id));
 
 const isDayEnd = (e: JournalEntry, ends: ReadonlySet<string>): boolean => e.type === 'CompleteQuest' && e.ref !== null && ends.has(e.ref);
 
@@ -74,7 +79,8 @@ export function daySummary(sim: Pick<SimState, 'game' | 'journal'>, day: number,
   const latest = ended > 0 ? day === ended : day === 1;
   const p = sim.game.player;
   const night = latest ? sim.game.flags.filter((f) => f.startsWith(NIGHT_PREFIX)) : [];
-  const packed = latest && p && defs.packing ? packedOf(sim.game.flags, defs.packing, p) : [];
+  const packedToday = r.from === 0 || entries.some((e) => e.type === 'PackItem' || e.type === 'UnpackItem' || e.type === 'AutoPack');
+  const packed = latest && packedToday && p && defs.packing ? packedOf(sim.game.flags, defs.packing, p) : [];
   // Нагорода предметами — факт лише тоді, коли квест завершено САМЕ цього дня й нагороду справді видано (grantId у стані).
   const quests = refs('CompleteQuest');
   const rewards = quests.flatMap((q) => {
