@@ -1,6 +1,6 @@
 {
   "id": "dlg.ch1-fire",
-  "scene": {"titleKey": "dlg.ch1-fire.title", "facts": ["f.fire-allowed", "f.fire-dinner-done", "f.fire-photo-tent"]},
+  "scene": {"titleKey": "dlg.ch1-fire.title", "facts": ["f.fire-allowed", "f.fire-dinner-done", "f.fire-photo-tent"], "atQuest": "CH1-D2-FIRE-001"},
   "start": "open",
   "nodes": [
     {"id": "open", "speaker": "player", "textKey": "dlg.ch1-fire.open", "next": "lantern", "branches": [{"when": {"all": [{"flag": "f.fire-allowed"}, {"flag": "f.fire-dinner-done"}]}, "next": "fire"}]},

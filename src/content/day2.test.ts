@@ -343,6 +343,20 @@ describe('GAME-141 · сумісність сейвів: старий кінец
     expect(s.quests['ST-005']).toBeUndefined();                                                // день 1 і «Прибуття» пропущено
   });
 
+  it('GAME-141: вогнище (StartScene) у дні 2 — законне лише коли активний CH1-D2-FIRE-001; до нього й після кінця розділу — відмова', () => {
+    const fire: Move = { type: 'StartScene', sceneId: 'dlg.ch1-fire', facts: ['f.fire-allowed'] };
+    const upToCamp: Move[] = [done('CH1-D2-001'), talk, choose(10), choose(1), next, done('CH1-D2-ELISE-001'), talk, choose(13), choose(0), next, next];
+    const mid = play(upToCamp, startOf('car-cat'));
+    expect(mid.quests['CH1-D2-CAMP-001']?.status).toBe('active');
+    expect(() => play([fire], mid)).toThrow(/QUEST_NOT_ACTIVE/);
+    const atFire = play([done('CH1-D2-CAMP-001')], mid);
+    expect(atFire.quests['CH1-D2-FIRE-001']?.status).toBe('active');
+    expect(play([fire], atFire).dialogue).toEqual({ id: 'dlg.ch1-fire', node: 'open' });
+    const ended = play([done('CH1-D2-FIRE-001')], atFire);
+    expect(ended.campaignEnded).toBe(true);
+    expect(() => play([fire], ended)).toThrow(/QUEST_NOT_ACTIVE/);
+  });
+
   it('розділ, закінчений на НИНІШНЬОМУ кінці, не відкривається знову; незакінчений — не змінюється', () => {
     const now = play([done('CH1-D2-001'), talk, choose(10), choose(1), next, done('CH1-D2-ELISE-001'), talk, choose(13), choose(0), next, next, done('CH1-D2-CAMP-001'), done('CH1-D2-FIRE-001')], startOf('car-cat'));
     expect(now.campaignEnded).toBe(true);

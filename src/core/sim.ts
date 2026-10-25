@@ -42,7 +42,7 @@ export interface JournalEntry {
  * Repair (GAME-72) поки ні: ремонтів у контенті немає. Додати сюди разом із першим ремонтом у content/.
  * `Memory` (GAME-110) — не команда, а пам'ятний вибір: вибір у розмові поставив факт зі `story.memorable`; ref — назва факту.
  */
-export const JOURNAL_TYPES = ['CreateCharacter', 'Visit', 'Pickup', 'BuyItem', 'SellItem', 'Interact', 'CompleteQuest', 'DeclineQuest', 'RoadEvent', 'PackItem', 'UnpackItem', 'AutoPack', 'Memory'] as const;
+export const JOURNAL_TYPES = ['CreateCharacter', 'Visit', 'Pickup', 'BuyItem', 'SellItem', 'Interact', 'CompleteQuest', 'DeclineQuest', 'RoadEvent', 'StartScene', 'PackItem', 'UnpackItem', 'AutoPack', 'Memory'] as const;
 export type JournalType = (typeof JOURNAL_TYPES)[number];
 export const isJournalType = (t: unknown): t is JournalType => (JOURNAL_TYPES as readonly unknown[]).includes(t);
 
@@ -59,7 +59,7 @@ export const changedGame = (a: GameState, b: GameState): boolean =>
 
 function refOf(c: Command): string | null {
   const r = c as unknown as Record<string, unknown>;
-  const v = r.questId ?? r.locationId ?? r.itemId ?? r.targetId ?? r.profileId ?? r.eventId;
+  const v = r.questId ?? r.locationId ?? r.itemId ?? r.targetId ?? r.profileId ?? r.eventId ?? r.sceneId;
   return typeof v === 'string' ? v : null;
 }
 

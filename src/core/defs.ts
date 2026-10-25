@@ -133,7 +133,11 @@ export interface EventTriggerDef {
  * Сцена сюжету (GAME-142): діалог без NPC і без кидка RNG — його відкриває команда StartScene, яку шле сюжет
  * (наприклад, кінець дня). `facts` — bool-прапорці, які стартер може поставити в мить старту; інших ядро не прийме.
  */
-export interface SceneDef { readonly facts: readonly string[] }
+export interface SceneDef {
+  readonly facts: readonly string[];
+  /** Сцену можна почати лише поки цей квест активний (і розділ не закінчено); ніде більше — QUEST_NOT_ACTIVE. Немає — без обмеження. */
+  readonly atQuest?: string;
+}
 
 /** Діалог має рівно одного «власника»: NPC (розмова), trigger (подія в дорозі) або scene (сцена сюжету). */
 export interface DialogueDef {

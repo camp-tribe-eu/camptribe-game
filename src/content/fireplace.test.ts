@@ -27,9 +27,13 @@ function fresh(defs: CoreDefs): GameState {
   return r.state;
 }
 
+const FIRE_QUEST = 'CH1-D2-FIRE-001';
+/** Стан на своєму етапі (GAME-141): CH1-D2-FIRE-001 активний — єдине місце, де сцену вогнища дозволено починати. */
+const atFireQuest = (s: GameState): GameState => ({ ...s, quests: { ...s.quests, [FIRE_QUEST]: { status: 'active', done: [] } } });
+
 /** Провести сцену ядром: «Далі», доки є next; на вузлі з вибором — A (0) чи B (1). Повертає вузли по черзі. */
 function play(defs: CoreDefs, setup: FireplaceSetup, pick: 0 | 1): string[] {
-  let s = fresh(defs);
+  let s = atFireQuest(fresh(defs));
   const send = (cmd: Command) => {
     const r = dispatch(s, cmd, defs);
     if (!r.ok) throw new Error(`${cmd.type}: ${r.code}`);
@@ -135,7 +139,7 @@ describe('GAME-142 · команда StartScene і точка старту дл�
   });
 
   it('ядро не приймає вигаданого факту, чужого діалогу чи старту посеред розмови', () => {
-    const s = fresh(GAME_DEFS);
+    const s = atFireQuest(fresh(GAME_DEFS));
     const bad = dispatch(s, { type: 'StartScene', commandId: 'x1', sceneId: FIREPLACE_SCENE, facts: ['f.road-apple'] }, GAME_DEFS);
     expect(bad.ok ? 'ok' : bad.code).toBe('INVALID_CHOICE');
     expect(bad.state.flags).not.toContain('f.road-apple');
@@ -151,6 +155,7 @@ describe('GAME-142 · команда StartScene і точка старту дл�
     let sim = newSim(20261024, 5_000);
     const ctx = { defs: GAME_DEFS };
     sim = step(sim, { kind: 'command', command: { type: 'CreateCharacter', commandId: nextCommandId(sim.game), profileId: 'profile.family-teen', transportId: 'transport.car', animalId: 'animal.cat' } }, ctx);
+    sim = { ...sim, game: atFireQuest(sim.game) };
     sim = step(sim, { kind: 'command', command: startFireplace(nextCommandId(sim.game), { fireAllowed: true, dinnerDone: true, photoTaken: false }) }, ctx);
     expect(sim.game.dialogue).toEqual({ id: FIREPLACE_SCENE, node: 'open' });
     for (let i = 0; i < 50 && sim.game.dialogue; i++) {
@@ -160,6 +165,44 @@ describe('GAME-142 · команда StartScene і точка старту дл�
     expect(sim.game.dialogue).toBeNull();
     expect(sim.game.flags).toEqual(expect.arrayContaining(['f.fire-allowed', 'f.fire-dinner-done']));
     expect(sim.game.flags).not.toContain('f.fire-photo-tent');
+  });
+
+  it('GAME-141: StartScene вогнища законний лише на CH1-D2-FIRE-001 — до нього й після кінця розділу відмова, без змін стану', () => {
+    const start = (s: GameState) => dispatch(s, startFireplace('z1', { fireAllowed: true, dinnerDone: true, photoTaken: false }), GAME_DEFS);
+    const before = fresh(GAME_DEFS);
+    const early = start(before);
+    expect(early.ok ? 'ok' : early.code).toBe('QUEST_NOT_ACTIVE');
+    expect(early.state.dialogue).toBeNull();
+    expect(early.state.flags).toEqual(before.flags);
+    const camp = start({ ...before, quests: { ...before.quests, 'CH1-D2-CAMP-001': { status: 'active', done: [] } } });
+    expect(camp.ok ? 'ok' : camp.code).toBe('QUEST_NOT_ACTIVE');
+    const finished = start({ ...before, campaignEnded: true, quests: { ...before.quests, [FIRE_QUEST]: { status: 'completed', done: ['evening'] } } });
+    expect(finished.ok ? 'ok' : finished.code).toBe('QUEST_NOT_ACTIVE');
+    const endedOnly = start({ ...atFireQuest(before), campaignEnded: true });
+    expect(endedOnly.ok ? 'ok' : endedOnly.code).toBe('QUEST_NOT_ACTIVE');
+    expect(start(atFireQuest(before)).ok).toBe(true);
+  });
+
+  it('GAME-141: прийнятий StartScene — у журналі (тип StartScene, ref — сцена); відмова — ні', () => {
+    const ctx = { defs: GAME_DEFS };
+    let sim = newSim(20261025, 5_000);
+    sim = step(sim, { kind: 'command', command: { type: 'CreateCharacter', commandId: nextCommandId(sim.game), profileId: 'profile.family-teen', transportId: 'transport.car', animalId: 'animal.cat' } }, ctx);
+    const n = sim.journal.length;
+    sim = step(sim, { kind: 'command', command: startFireplace(nextCommandId(sim.game), { fireAllowed: true, dinnerDone: true, photoTaken: false }) }, ctx);
+    expect(sim.journal).toHaveLength(n);
+    expect(sim.game.dialogue).toBeNull();
+    sim = { ...sim, game: atFireQuest(sim.game) };
+    sim = step(sim, { kind: 'command', command: startFireplace(nextCommandId(sim.game), { fireAllowed: true, dinnerDone: true, photoTaken: false }) }, ctx);
+    expect(sim.journal.slice(n).map((e) => [e.type, e.ref])).toEqual([['StartScene', FIREPLACE_SCENE]]);
+  });
+
+  it('GAME-141: мутація «сцена законна всюди» (atQuest прибрано) → тести законності червоніють', () => {
+    const c = structuredClone(CONTENT);
+    delete ((c.dialogues.find((x) => x.id === FIREPLACE_SCENE) as RawContent['dialogues'][number]).scene as { atQuest?: string }).atQuest;
+    const defs: CoreDefs = { ...GAME_DEFS, story: compileStory(c) };
+    const r = dispatch(fresh(defs), startFireplace('m1', { fireAllowed: true, dinnerDone: true, photoTaken: false }), defs);
+    expect(r.ok).toBe(true); // у справжньому контенті тут була б відмова QUEST_NOT_ACTIVE — отже оракул «до етапу» вміє червоніти
+    expect(RAW.scene?.atQuest).toBe(FIRE_QUEST);
   });
 
   it('тексти: кожна репліка є в uk і en, не довша за 140 знаків', () => {

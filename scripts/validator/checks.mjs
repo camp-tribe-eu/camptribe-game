@@ -184,6 +184,7 @@ export const CHECKS = [
         ref('quests', l.unlockedBy, `${l.id}.unlockedBy`);
         (l.items ?? []).forEach((i) => ref('items', i, `${l.id}.items`));
       }
+      for (const d of c.content.dialogues ?? []) ref('quests', d.scene?.atQuest, `${d.id}.scene.atQuest`);
       for (const q of by.quests.values()) {
         ref('npcs', q.giverId, `${q.id}.giverId`);
         ref('locations', q.locationId, `${q.id}.locationId`);

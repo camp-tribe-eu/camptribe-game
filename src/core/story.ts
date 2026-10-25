@@ -397,6 +397,8 @@ export function applyStory(cmd: StoryCommand, d: StoryDraft, st: StoryDefs | und
       const sc = own(st.dialogues, cmd.sceneId);
       if (!sc?.scene) return 'UNKNOWN_TARGET';
       if (liveDialogue(st, d)) return 'IN_DIALOGUE';
+      // Законний хід лише на своєму етапі (GAME-141): квест сцени активний, а розділ ще не закінчено.
+      if (sc.scene.atQuest !== undefined && (d.campaignEnded || own(d.quests, sc.scene.atQuest)?.status !== 'active')) return 'QUEST_NOT_ACTIVE';
       const facts = cmd.facts ?? [];
       if (!Array.isArray(facts) || facts.some((f) => typeof f !== 'string' || !sc.scene?.facts.includes(f))) return 'INVALID_CHOICE';
       if (facts.length) d.flags = [...new Set([...d.flags, ...facts])].sort();
