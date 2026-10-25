@@ -85,7 +85,8 @@ async function playBikeProlog(page: Page): Promise<void> {
 async function finishDay(page: Page, reopen: boolean): Promise<void> {
   await expect(page.locator('[data-ui="summary"]')).toBeVisible();
   await page.locator('[data-ui="summary-continue"]').click();
-  await expect(page.locator('[data-ui="summary"]')).toHaveCount(0);
+  // 15 с: на CI PR #53 сторінка під навантаженням 5 с не відповідала на запит лічильника («Received: undefined»).
+  await expect(page.locator('[data-ui="summary"]')).toHaveCount(0, { timeout: 15_000 });
   if (reopen) await page.locator('[data-touch="story"]').click();
 }
 
@@ -175,6 +176,7 @@ async function toRoad(browser: Browser, seed: number): Promise<{ page: Page; fir
 }
 
 test('подія в дорозі не трапилась — дорога триває: жодної розмови, далі звичайні дії', async ({ browser }) => {
+  test.setTimeout(480_000);   // до 16 зерен, кожне — новий контекст і кроки пролога; на CI одне зерно 15–20 с (CI PR #53: 180 с замало)
   for (let seed = 1; seed <= 16; seed++) {
     const r = await toRoad(browser, seed);
     if (!r.fired) {
@@ -189,6 +191,7 @@ test('подія в дорозі не трапилась — дорога три
 });
 
 test('подія в дорозі (GAME-31): трапляється на дорозі, читається, відповідь — у ядрі й у журналі', async ({ browser }) => {
+  test.setTimeout(480_000);   // до 16 зерен, кожне — новий контекст і кроки пролога; на CI одне зерно 15–20 с (CI PR #53: 180 с замало)
   // Шанс 50 %, різні зерна, кожне — у чистому контексті.
   let page: Page | null = null;
   for (let seed = 1; seed <= 16 && !page; seed++) {
@@ -417,25 +420,74 @@ test('прохід керується лише кліками й клавіша�
 });
 
 // GAME-32 · Еліза стоїть на мапі кемпінгу: до неї доходять пішки й заговорюють клавішею дії.
-interface Probe { playerX: number; playerY: number; nearObject: string | null }
+interface Probe { playerX: number; playerY: number; nearObject: string | null; fps: number }
 const probe = (page: Page): Promise<Probe> => page.evaluate(() => ({ ...(window as unknown as { __game: { probe: Probe } }).__game.probe }));
-async function walk(page: Page, key: string, until: (p: Probe) => boolean): Promise<Probe> {
-  await page.keyboard.down(key);
-  const start = Date.now();
-  let p = await probe(page);
-  while (!until(p) && Date.now() - start < 5_000) { await page.waitForTimeout(16); p = await probe(page); }
-  await page.keyboard.up(key);
-  await page.waitForTimeout(50);
-  return probe(page);
+/** Точка Елізи з мапи (public/maps/camp-lake.tmj) — ціль за координатою, як у world.spec (CI PR #53: кроки за годинником
+ *  на повільному CI то не доходили, то проскакували зону Ø 96 px). Звірка з мапою — нижче, щоб константа не застаріла. */
+const ELISE = { x: 80, y: 272 };
+const KEY_CODE = { ArrowLeft: 37, ArrowUp: 38, ArrowRight: 39, ArrowDown: 40 } as const;
+/** Ходьба до координати, яку стереже сама сторінка: keydown, перевірка позиції кожен кадр (rAF), keyup одразу на цілі.
+ *  CI PR #53: цикл «клавіша з Playwright → probe → клавіша» мав затримку в сотні мс на кожен обмін, і персонаж проскакував
+ *  зону Елізи то по X, то по Y. Тут обміну через CDP між кроками немає. Подія — як справжня клавіша (keyCode), як у world.spec. */
+async function walkInPage(page: Page, key: keyof typeof KEY_CODE, axis: 'playerX' | 'playerY', target: number, lead: number): Promise<void> {
+  await page.evaluate(({ code, key, axis, target, lead }) => new Promise<void>((resolve) => {
+    const g = (window as unknown as { __game: { probe: { playerX: number; playerY: number; nearObject: string | null } } }).__game;
+    const fire = (type: string): void => {
+      const e = new KeyboardEvent(type, { key, code: key, bubbles: true, cancelable: true });
+      Object.defineProperty(e, 'keyCode', { get: () => code });
+      window.dispatchEvent(e);
+    };
+    const neg = key === 'ArrowLeft' || key === 'ArrowUp';
+    const done = (): boolean => g.probe.nearObject === 'npc.elise' || (neg ? g.probe[axis] <= target + lead : g.probe[axis] >= target - lead);
+    const start = performance.now();
+    const tick = (): void => {
+      if (done() || performance.now() - start > 8_000) { fire('keyup'); settle(); } else requestAnimationFrame(tick);
+    };
+    // keyup доходить до сцени через кілька кадрів (при ~6 fps — 150–300 мс), а персонаж ще їде: міряємо проскок лише коли
+    // позиція простояла ~700 мс (раніше було waitForTimeout(100) — менше одного кадру, lead вчився з недобору й не збігався).
+    const settle = (): void => {
+      let last = g.probe[axis];
+      let since = performance.now();
+      const watch = (): void => {
+        const now = performance.now();
+        if (g.probe[axis] !== last) { last = g.probe[axis]; since = now; }
+        if (now - since > 700 || now - start > 12_000) resolve(); else requestAnimationFrame(watch);
+      };
+      requestAnimationFrame(watch);
+    };
+    fire('keydown');
+    requestAnimationFrame(tick);
+  }), { code: KEY_CODE[key], key, axis, target, lead });
 }
 async function walkToElise(page: Page): Promise<void> {
-  await walk(page, 'ArrowLeft', (p) => p.playerX <= 88);
-  const p = await walk(page, 'ArrowDown', (q) => q.nearObject === 'npc.elise');
-  expect(p.nearObject).toBe('npc.elise');
+  const map = JSON.parse(readFileSync('public/maps/camp-lake.tmj', 'utf8')) as { layers: { objects?: { name: string; x: number; y: number }[] }[] };
+  const o = map.layers.flatMap((l) => l.objects ?? []).find((n) => n.name === 'npc.elise');
+  expect({ x: o?.x, y: o?.y }, 'Еліза на мапі зсунулась — онови ELISE').toEqual(ELISE);
+  // Довертаємо за координатою по обох осях: X до ±16 px, потім Y до точки Елізи (зона дії Ø 96 px).
+  const trail: string[] = [];   // шлях у тексті падіння: CI червонів без даних, локально (і при CPU ×8) зелений
+  // Випередження (CI PR #53, шлях 48↔101 навколо x=80 при 0,7–7 fps): keyup доходить до сцени через кілька кадрів, і персонаж
+  // проскакує ще ~50 px. Відпускаємо клавішу за `lead` px до цілі; lead вчиться з власного проскоку на кожній осі.
+  const lead = { playerX: 0, playerY: 0 };
+  for (let i = 0; i < 10 && (await probe(page)).nearObject !== 'npc.elise'; i++) {
+    const p = await probe(page);
+    trail.push(`${Math.round(p.playerX)},${Math.round(p.playerY)}@${p.fps.toFixed(1)}fps`);
+    // Допуск по X — 32 px: при x ± 32 хорда зони Ø 96 по Y ≈ 71 px, більше за проскок ~53 px на CI; ±16 при кроці ~53 px
+    // недосяжне (шлях 48↔101 вище).
+    const axis = Math.abs(p.playerX - ELISE.x) > 32 ? 'playerX' : 'playerY';
+    const target = axis === 'playerX' ? ELISE.x : ELISE.y;
+    const neg = p[axis] > target;
+    await walkInPage(page, axis === 'playerX' ? (neg ? 'ArrowLeft' : 'ArrowRight') : (neg ? 'ArrowUp' : 'ArrowDown'), axis, target, lead[axis]);
+    const after = (await probe(page))[axis];
+    const overshoot = neg ? target - after : after - target;   // > 0 — проскочили ціль
+    lead[axis] = Math.min(80, Math.max(0, lead[axis] + overshoot));
+  }
+  const last = await probe(page);
+  expect(last.nearObject, `шлях до Елізи: ${trail.join(' → ')} → ${Math.round(last.playerX)},${Math.round(last.playerY)}`).toBe('npc.elise');
 }
 
 test.describe('Еліза на мапі (клавіатура)', () => {
   test.use({ viewport: { width: 1280, height: 800 }, hasTouch: false, isMobile: false });
+  test.setTimeout(120_000);   // ходьба на CI при 0,7–7 fps: keyup доходить до сцени за сотні мс, довертань кілька
 
   test('у кемпінгу: дійти пішки, натиснути дію — відкривається розмова з нею', async ({ page }) => {
     await open(page);
