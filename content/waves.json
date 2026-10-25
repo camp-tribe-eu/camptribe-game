@@ -1,0 +1,19 @@
+[
+  {
+    "id": "wave.ch1-day2-evening", "titleKey": "wave.ch1-day2-evening", "hookKey": "wave.ch1-day2-evening.hook", "stage": "CH1-D2-CAMP-001",
+    "fallback": { "textKey": "wave.ch1-day2-evening.fallback" },
+    "allDone": { "textKey": "wave.ch1-day2-evening.all-done" },
+    "tasks": [
+      { "id": "dinner", "textKey": "wave.ch1-day2-evening.dinner", "limitMin": 45,
+        "done": { "textKey": "wave.ch1-day2-evening.dinner.done" }, "late": { "textKey": "wave.ch1-day2-evening.dinner.late" } },
+      { "id": "firewood", "textKey": "wave.ch1-day2-evening.firewood", "limitMin": 40,
+        "done": { "textKey": "wave.ch1-day2-evening.firewood.done" }, "late": { "textKey": "wave.ch1-day2-evening.firewood.late" } },
+      { "id": "find-mia", "textKey": "wave.ch1-day2-evening.find-mia", "limitMin": 60, "leaderOnly": true, "animal": "animal.cat",
+        "when": { "animals": ["animal.cat"] },
+        "targets": [{ "id": "spot.pines", "safe": true }, { "id": "spot.bench", "safe": true }, { "id": "spot.bike-shed", "safe": true }],
+        "done": { "textKey": "wave.ch1-day2-evening.find-mia.done" }, "late": { "textKey": "wave.ch1-day2-evening.find-mia.late" } },
+      { "id": "cover-bikes", "textKey": "wave.ch1-day2-evening.cover-bikes", "limitMin": 50, "when": { "transports": ["transport.bike"] },
+        "done": { "textKey": "wave.ch1-day2-evening.cover-bikes.done" }, "late": { "textKey": "wave.ch1-day2-evening.cover-bikes.late" } }
+    ]
+  }
+]

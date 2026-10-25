@@ -110,6 +110,16 @@ function shapeError(sim: unknown): string | null {
   if (!isObj(life) || !isInt(life.paydays) || !Array.isArray(life.leave) || life.leave.some((e, i) => !isObj(e) || !isInt(e.from) || !isInt(e.days, 1)
     || !isInt(e.vacation) || (e.vacation as number) > (e.days as number)
     || (i > 0 && (e.from as number) < ((life.leave as Record<string, number>[])[i - 1]?.from ?? 0) + ((life.leave as Record<string, number>[])[i - 1]?.days ?? 0)))) return 'game: life';
+  // Хвилі напруги (GAME-170): поле необов'язкове (сейви до GAME-170 його не мають); є — жива хвиля зі строками-цілими й
+  // наслідками open/done/late, минулі — лише done/late (так пише лише ядро).
+  const wv = game.wave;
+  const outcome = (o: unknown, open: boolean): boolean => o === 'done' || o === 'late' || (open && o === 'open');
+  if (wv !== undefined) {
+    if (!isObj(wv) || !isObj(wv.past) || !(wv.active === null || isObj(wv.active))) return 'game: wave';
+    const a = wv.active;
+    if (a && (typeof a.waveId !== 'string' || !isInt(a.startedAt) || !isObj(a.tasks) || Object.values(a.tasks).some((t) => !isObj(t) || !isInt(t.dueAt) || !outcome(t.outcome, true)))) return 'game: wave.active';
+    if (Object.values(wv.past).some((w) => !isObj(w) || Object.values(w).some((o) => !outcome(o, false)))) return 'game: wave.past';
+  }
   const dl = game.dialogue;
   if (dl !== null && (!isObj(dl) || typeof dl.id !== 'string' || typeof dl.node !== 'string')) return 'game: dialogue';
   const p = game.player;

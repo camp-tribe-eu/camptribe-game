@@ -259,5 +259,21 @@
   "dlg.ch1-fire.l12-plain": "Matthew: “Great. Let's call tonight ‘The Meeting That Accidentally Became a Holiday.’”",
   "dlg.ch1-fire.b1": "Matthew: “I can take a photo of the lake. No speech required.”",
   "dlg.ch1-fire.b2": "George: “Deal. Finally, a task without nine steps.”",
-  "dlg.ch1-fire.b3": "Victoria: “Our places differ, and so do our habits. But this evening is ours to share.”"
+  "dlg.ch1-fire.b3": "Victoria: “Our places differ, and so do our habits. But this evening is ours to share.”",
+  "wave.ch1-day2-evening": "Evening on Three Fronts",
+  "wave.ch1-day2-evening.hook": "The fire has just caught, and dinner is not ready yet.",
+  "wave.ch1-day2-evening.fallback": "Tonight it's a talk by the lantern. The evening is no worse for it.",
+  "wave.ch1-day2-evening.all-done": "Everything in time. The fire is roaring, dinner is on the table — sit down.",
+  "wave.ch1-day2-evening.dinner": "Dinner — hand it to Victoria.",
+  "wave.ch1-day2-evening.dinner.done": "Victoria: “Dinner's ready, the gear is drying. Finally the ‘rest’ item on the plan.”",
+  "wave.ch1-day2-evening.dinner.late": "Dinner a little later than planned. Nobody is hungry enough to argue.",
+  "wave.ch1-day2-evening.firewood": "Firewood before the fire dies: buy from Elise or gather brushwood where allowed. Hand it to Matthew.",
+  "wave.ch1-day2-evening.firewood.done": "The fire is roaring. Wood stacked, sparks flying up.",
+  "wave.ch1-day2-evening.firewood.late": "Matthew: “An evening without a fire can be photographed too. If there's light.”",
+  "wave.ch1-day2-evening.find-mia": "Mia is “on a tour”. Find her: by the pines, under the bench or by the bike shelter.",
+  "wave.ch1-day2-evening.find-mia.done": "Mia found under the bench. Displeased that the tour was interrupted.",
+  "wave.ch1-day2-evening.find-mia.late": "Mia comes back on her own and settles on the blanket. Matthew: “Tour over. Without us.”",
+  "wave.ch1-day2-evening.cover-bikes": "Cover the bikes for the night.",
+  "wave.ch1-day2-evening.cover-bikes.done": "Bikes under the tarp. Anna sent a photo: Mia at home, in her spot.",
+  "wave.ch1-day2-evening.cover-bikes.late": "The bikes get wet till morning — we'll wipe them down. Anna sent a photo of Mia anyway."
 }
