@@ -98,6 +98,7 @@
   "jr.PackItem": "Покладено",
   "jr.UnpackItem": "Дістали з багажу",
   "jr.AutoPack": "Багаж складено за списком",
+  "jr.CompleteTask": "Справа зроблена",
   "jr.Memory": "Запам'ятали",
   "sum.title": "Підсумок дня",
   "sum.night": "Ночівля",

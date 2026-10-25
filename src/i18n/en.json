@@ -98,6 +98,7 @@
   "jr.PackItem": "Packed",
   "jr.UnpackItem": "Taken out of the luggage",
   "jr.AutoPack": "Luggage packed by the list",
+  "jr.CompleteTask": "Task done",
   "jr.Memory": "Remembered",
   "sum.title": "Day summary",
   "sum.night": "Night",

@@ -200,7 +200,40 @@ export interface PackingDefs {
   readonly notes: readonly { readonly missing: string; readonly transports?: readonly string[]; readonly textKey: string }[];
 }
 
+/**
+ * Хвиля напруги (GAME-170, рішення власника 24–25.10): 2–4 одночасні справи з власним лімітом в ІГРОВИХ хвилинах
+ * (пауза зупиняє годинник — і таймери). Кожна справа має два наслідки: встиг (`done`) і не встиг (`late`) — м'якший,
+ * ніколи не поразка. Хвиля унікальна для свого етапу (`stage`) і на іншому не повторюється. `when` хвилі й справи —
+ * варіанти за транспортом/профілем/твариною. Кінець розділу від хвиль не залежить (fallback: хвиля завжди закінчується).
+ */
+export interface WaveOutcomeDef { readonly effects: readonly string[] }
+export interface WaveTaskDef {
+  readonly id: string;
+  /** Межа в ігрових хвилинах, ціле ≥ 1. */
+  readonly limitMin: number;
+  /** Лише лідер (гравець) може закрити справу; помічники — пізніше (GAME-170). */
+  readonly leaderOnly?: boolean;
+  /** Справа про тварину (`animal.cat`): її ціль ніколи не біля води чи вогню — валідатор WAVE_ANIMAL_UNSAFE. */
+  readonly animal?: string;
+  readonly when?: WhenDef;
+  readonly done: WaveOutcomeDef;
+  readonly late: WaveOutcomeDef;
+}
+export interface WaveDef {
+  readonly stage: string;
+  readonly when?: WhenDef;
+  readonly tasks: readonly WaveTaskDef[];
+  /** Прапорці, які ставить ядро, коли КОЖНА справа встигла. */
+  readonly allDone?: WaveOutcomeDef;
+}
+export interface WaveDefs { readonly waves: Readonly<Record<string, WaveDef>> }
+
+/** Найбільша межа справи (ігрові хвилини ≈ реальні секунди вільної сцени, SIM-TIME-002): хвиля триває 30–60 с. */
+export const WAVE_MAX_LIMIT = 60;
+
 export interface CoreDefs {
+  /** Хвилі напруги (GAME-170, content/waves.json). Немає — StartWave/CompleteTask відмовляють (UNKNOWN_TARGET). */
+  readonly waves?: WaveDefs;
   readonly items: Readonly<Record<string, ItemDef>>;
   readonly interactions: Readonly<Record<string, InteractionDef>>;
   /** Ремонти за id цілі (GAME-72). У контенті гри їх поки немає: команду доводять тести ядра. */
@@ -258,6 +291,17 @@ export function checkDefs(defs: CoreDefs): { code: DefsCode; where: string }[] {
       if (pk.openAfter !== undefined && !Object.hasOwn(defs.story.quests, pk.openAfter)) out.push({ code: 'DEFS_BAD_REF', where: 'packing.openAfter' });
       for (const l of pk.at) if (!Object.hasOwn(defs.story.locations, l)) out.push({ code: 'DEFS_BAD_REF', where: `packing.at.${l}` });
       for (const t of Object.keys(pk.capacity)) if (!defs.story.transports.includes(t)) out.push({ code: 'DEFS_BAD_REF', where: `packing.capacity.${t}` });
+    }
+  }
+  for (const [id, w] of Object.entries(defs.waves?.waves ?? {})) {
+    // GAME-170: етап існує, справ ≥ 2, межа — ціле 1…WAVE_MAX_LIMIT; повну семантику (варіанти, унікальність) доводить валідатор.
+    if (!ID.test(id) || w.tasks.some((t) => !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(t.id))) out.push({ code: 'DEFS_BAD_ID', where: id });
+    if (defs.story && !Object.hasOwn(defs.story.quests, w.stage)) out.push({ code: 'DEFS_BAD_REF', where: `${id}.stage` });
+    if (w.tasks.length < 2) out.push({ code: 'DEFS_BAD_AMOUNT', where: `${id}.tasks` });
+    for (const t of w.tasks) {
+      if (!Number.isSafeInteger(t.limitMin) || t.limitMin < 1 || t.limitMin > WAVE_MAX_LIMIT) out.push({ code: 'DEFS_BAD_AMOUNT', where: `${id}/${t.id}.limitMin` });
+      if (t.animal !== undefined && defs.story && !Object.hasOwn(defs.story.animals, t.animal)) out.push({ code: 'DEFS_BAD_REF', where: `${id}/${t.id}.animal` });
+      for (const f of [...t.done.effects, ...t.late.effects, ...(w.allDone?.effects ?? [])]) if (!ID.test(f)) out.push({ code: 'DEFS_BAD_ID', where: `${id}/${t.id}` });
     }
   }
   if (defs.story) {

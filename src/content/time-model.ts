@@ -43,6 +43,8 @@ export function moveSeconds(m: Move): number {
     case 'Choose': return SECONDS.choice + SECONDS.line;
     case 'RoadEvent': return SECONDS.line;                         // подія в дорозі відкривається рядком
     case 'StartScene': return SECONDS.line;                        // сцена сюжету (GAME-142) — так само
+    case 'StartWave': return SECONDS.line;                         // хвиля напруги (GAME-170) відкривається рядком-зачіпкою
+    case 'CompleteTask': return SECONDS.walkOnMap + SECONDS.menuTap; // підійти до справи й зробити її
     case 'Pickup': case 'BuyItem': case 'SellItem': case 'DryGear':
     case 'PackItem': case 'UnpackItem': case 'AutoPack':
     case 'BookLeave': case 'CancelLeave':

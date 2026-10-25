@@ -15,6 +15,7 @@ import type { GameEvent } from './commands';
 import type { GearState } from './gear';
 import { startSkills } from './skills';
 import type { GameState, PlayerState, QuestProgress, RejectCode } from './state';
+import type { WaveState } from './wave';
 
 export const NO_ANIMAL = 'animal.none';
 
@@ -56,6 +57,8 @@ export interface StoryDraft {
   gear: Readonly<Record<string, GearState>>;
   life: LifeState;
   dialogue: { readonly id: string; readonly node: string } | null;
+  /** Хвилі напруги (GAME-170); поля немає — хвиль не було. */
+  wave?: WaveState;
 }
 
 const own = <T>(o: Readonly<Record<string, T>>, k: string): T | undefined => (Object.hasOwn(o, k) ? o[k] : undefined);

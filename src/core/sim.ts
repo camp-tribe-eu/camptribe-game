@@ -11,6 +11,7 @@ import { eventEligible, route } from './story';
 import { nextInt, seedRng, type RngState } from './rng';
 import { initialState, type GameState } from './state';
 import { dayOf, forecastOf, tripMinutes, weatherOf, type Weather } from './weather';
+import { settleWave } from './wave';
 
 export interface SimState {
   readonly game: GameState;
@@ -42,7 +43,7 @@ export interface JournalEntry {
  * Repair (GAME-72) поки ні: ремонтів у контенті немає. Додати сюди разом із першим ремонтом у content/.
  * `Memory` (GAME-110) — не команда, а пам'ятний вибір: вибір у розмові поставив факт зі `story.memorable`; ref — назва факту.
  */
-export const JOURNAL_TYPES = ['CreateCharacter', 'Visit', 'Pickup', 'BuyItem', 'SellItem', 'Interact', 'CompleteQuest', 'DeclineQuest', 'RoadEvent', 'PackItem', 'UnpackItem', 'AutoPack', 'Memory'] as const;
+export const JOURNAL_TYPES = ['CreateCharacter', 'Visit', 'Pickup', 'BuyItem', 'SellItem', 'Interact', 'CompleteQuest', 'DeclineQuest', 'RoadEvent', 'PackItem', 'UnpackItem', 'AutoPack', 'Memory', 'CompleteTask'] as const;
 export type JournalType = (typeof JOURNAL_TYPES)[number];
 export const isJournalType = (t: unknown): t is JournalType => (JOURNAL_TYPES as readonly unknown[]).includes(t);
 
@@ -59,7 +60,7 @@ export const changedGame = (a: GameState, b: GameState): boolean =>
 
 function refOf(c: Command): string | null {
   const r = c as unknown as Record<string, unknown>;
-  const v = r.questId ?? r.locationId ?? r.itemId ?? r.targetId ?? r.profileId ?? r.eventId;
+  const v = r.questId ?? r.locationId ?? r.itemId ?? r.targetId ?? r.profileId ?? r.eventId ?? r.taskId;
   return typeof v === 'string' ? v : null;
 }
 
@@ -175,19 +176,29 @@ const paid = (s: SimState, ctx: StepCtx): SimState => {
   return game === s.game ? s : { ...s, game };
 };
 
+/**
+ * Хвиля напруги (GAME-170): після кожного кроку, що міг рухнути годинник, — справи зі строком, що минув, спізнились
+ * (settleWave). Пауза годинник не рухає — і строки стоять. Ідемпотентно: вирішена справа вдруге не вирішується.
+ */
+const settled = (s: SimState, ctx: StepCtx): SimState => {
+  const game = settleWave(s.game, s.clock.minutes, ctx.defs?.waves);
+  return game === s.game ? s : { ...s, game };
+};
+const afterClock = (s: SimState, ctx: StepCtx): SimState => settled(paid(s, ctx), ctx);
+
 export function step(s: SimState, input: Input, ctx: StepCtx = {}): SimState {
   const systems = ctx.systems ?? [findsSystem];
   switch (input.kind) {
     case 'frame': {
       const t = tick(s.clock, input.realMs);
-      return paid(systems.reduce((acc, sys) => sys(acc, t.steps), { ...s, clock: t.clock }), ctx);
+      return afterClock(systems.reduce((acc, sys) => sys(acc, t.steps), { ...s, clock: t.clock }), ctx);
     }
     case 'command': {
       // Спершу — дні виплати, що вже настали за годинником ДО команди (SIM-LIFE-007). У грі їх нуль: кожен крок, що
       // рухає годинник, платить сам. Але стан, який прийшов не з кроку (старий сейв, тест), міг минути дні виплати:
       // якщо перша команда — CreateCharacter, без цього кроку зарплата за час до персонажа прийшла б йому заднім числом.
-      s = paid(s, ctx);
-      const r = dispatch(s.game, input.command, ctx.defs ?? EMPTY_DEFS, undefined, dayOf(s.clock), todayWeather(s, ctx));
+      s = afterClock(s, ctx);
+      const r = dispatch(s.game, input.command, ctx.defs ?? EMPTY_DEFS, undefined, dayOf(s.clock), todayWeather(s, ctx), s.clock.minutes);
       const travelled = travelMinutes(s, r, ctx);
       // Спорядження в дорозі (GAME-73, SIM-GEAR-002/003): погода дня ВИЇЗДУ, як і для хвилин дороги (SIM-WX-007).
       const tripWeather = travelled > 0 ? todayWeather(s, ctx) : null;
@@ -199,12 +210,12 @@ export function step(s: SimState, input: Input, ctx: StepCtx = {}): SimState {
         const entry: JournalEntry = { at: s.clock.minutes - travelled, commandId: input.command.commandId, type: input.command.type, ref: refOf(input.command), cents: r.state.moneyCents };
         next = { ...next, journal: [...s.journal, entry].slice(-JOURNAL_LIMIT) };
       }
-      if (r.ok && !r.repeated && input.command.type === 'Choose') next = { ...next, journal: [...next.journal, ...remembered(s.game, r.state, ctx, input.command.commandId, s.clock.minutes)].slice(-JOURNAL_LIMIT) };
+      if (r.ok && !r.repeated && (input.command.type === 'Choose' || input.command.type === 'CompleteTask')) next = { ...next, journal: [...next.journal, ...remembered(s.game, r.state, ctx, input.command.commandId, s.clock.minutes)].slice(-JOURNAL_LIMIT) };
       if (tripWeather) next = { ...next, game: wearAfterTrip(next.game, (ctx.defs ?? EMPTY_DEFS).items, tripWeather) };
-      return paid(travelled > 0 ? roadEvent(next, ctx) : next, ctx);
+      return afterClock(travelled > 0 ? roadEvent(next, ctx) : next, ctx);
     }
     case 'advance':
-      return paid({ ...s, clock: advance(s.clock, input.minutes) }, ctx);
+      return afterClock({ ...s, clock: advance(s.clock, input.minutes) }, ctx);
     case 'pause':
       return { ...s, clock: pause(s.clock) };
     case 'resume':

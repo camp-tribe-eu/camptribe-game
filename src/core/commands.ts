@@ -10,11 +10,14 @@ import { bookLeave, cancelLeave } from './life';
 import { autoPack, capacityOf, packFlag, packingOpen, packItemsFor, usedUnits, withPacked } from './packing';
 import type { Weather } from './weather';
 import { applyStory, questNeedsItem, type StoryCommand, type StoryDraft } from './story';
+import { applyWave, type WaveCommand } from './wave';
 
 export type { StoryCommand } from './story';
+export type { WaveCommand } from './wave';
 
 export type Command =
   | StoryCommand
+  | WaveCommand
   | { readonly type: 'BuyItem'; readonly commandId: string; readonly itemId: string }
   | { readonly type: 'SellItem'; readonly commandId: string; readonly itemId: string }
   | { readonly type: 'Interact'; readonly commandId: string; readonly targetId: string }
@@ -97,8 +100,12 @@ function fingerprint(cmd: Command): string {
   return h.toString(16).padStart(8, '0');
 }
 
-function apply(cmd: Command, d: Draft, defs: CoreDefs, guard: Safeguards, today: number | undefined, weather: Weather | undefined): RejectCode | null {
+function apply(cmd: Command, d: Draft, defs: CoreDefs, guard: Safeguards, today: number | undefined, weather: Weather | undefined, now: number | undefined): RejectCode | null {
   switch (cmd.type) {
+    case 'StartWave':
+    case 'CompleteTask':
+      // GAME-170: строки справ — в ігрових хвилинах, які знає лише симуляція (`now`); без годинника — INVALID_COMMAND.
+      return applyWave(cmd, d, defs.waves, now, isContentId);
     case 'BuyItem': {
       if (!isContentId(cmd.itemId)) return 'INVALID_COMMAND';
       const def = own(defs.items, cmd.itemId);
@@ -311,8 +318,9 @@ function remember(processed: Readonly<Record<string, CommandRecord>>, id: string
  * `weather` (GAME-88) — погода дня, теж лише від симуляції: у дощ DryGear просто неба — CANNOT_DRY_HERE. Без неї дощу немає.
  * Повний перебір і бот кличуть dispatch без годинника — команд календаря в їхніх ходах немає (moves.ts). Без `today`
  * BookLeave/CancelLeave — INVALID_COMMAND (рецензія GAME-71): мовчазний «день 0» дозволив би бронювати в минулому.
+ * `now` (GAME-170) — ігрова хвилина годинника, лише від симуляції: строки справ хвилі; без неї StartWave/CompleteTask — INVALID_COMMAND.
  */
-export function dispatch(state: GameState, cmd: Command, defs: CoreDefs, guard: Safeguards = SAFE, today?: number, weather?: Weather): DispatchResult {
+export function dispatch(state: GameState, cmd: Command, defs: CoreDefs, guard: Safeguards = SAFE, today?: number, weather?: Weather, now?: number): DispatchResult {
   if (!cmd || typeof cmd !== 'object' || !isCommandId(cmd.commandId)) {
     return { ok: false, state, code: 'INVALID_COMMAND', repeated: false, events: [] };
   }
@@ -329,8 +337,9 @@ export function dispatch(state: GameState, cmd: Command, defs: CoreDefs, guard: 
     moneyCents: state.moneyCents, inventory: { ...state.inventory }, grants: [...state.grants], events: [],
     player: state.player, quests: state.quests, campaignEnded: state.campaignEnded, flags: [...state.flags], npcMemory: state.npcMemory,
     skills: state.skills, practice: state.practice, gear: state.gear, life: state.life, dialogue: state.dialogue,
+    ...(state.wave !== undefined ? { wave: state.wave } : {}),
   };
-  const code = apply(cmd, draft, defs, guard, today, weather);
+  const code = apply(cmd, draft, defs, guard, today, weather, now);
   // Стан спорядження — лише для того, що в руках (продали останній — запис зникає), і лише відхилення від нового.
   if (!code) draft.gear = pruneGear(draft.gear, draft.inventory);
   if (!code) practiseAfter(cmd, state, draft, defs);
