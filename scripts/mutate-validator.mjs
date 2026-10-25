@@ -190,7 +190,7 @@ const mutations = [
   { name: '[реєстр] journal дозволено будь-якому рядку', file: CHECKS_FILE, from: "if (e.journal === true && (!core ||", to: "if (false && (!core ||" },
   { name: '[реєстр] прапорець ядра може стартувати true', file: CHECKS_FILE, from: '(core && init !== false)', to: 'false' },
   { name: '[реєстр] «unset» дозволено серед значень enum', file: CHECKS_FILE, from: "if (!ENUM_VALUE.test(v) || v === 'unset') inv(", to: 'if (!ENUM_VALUE.test(v)) inv(' },
-  { name: '[реєстр] завантажувач і схема не знають flags.json', file: 'validator/schema.mjs', from: "'facts', 'roads', 'flags'];", to: "'facts', 'roads'];" },
+  { name: '[реєстр] завантажувач і схема не знають flags.json', file: 'validator/schema.mjs', from: "'facts', 'roads', 'flags', 'waves'];", to: "'facts', 'roads', 'waves'];" },
   { name: '[реєстр] id реєстру не звіряються з форматом', file: CHECKS_FILE, from: "if (!ok) out.push(I('ID_FORMAT', `flags:${e.id}`", to: "if (false) out.push(I('ID_FORMAT', `flags:${e.id}`" },
   { name: '[реєстр] дублі id реєстру не звітуються', file: CHECKS_FILE, from: "for (const t of [...Object.keys(ID_PATTERNS), 'flags']) dup(", to: 'for (const t of Object.keys(ID_PATTERNS)) dup(' },
   // GAME-170: хвилі напруги

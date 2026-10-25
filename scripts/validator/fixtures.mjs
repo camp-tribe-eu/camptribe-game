@@ -308,10 +308,9 @@ export const FIXTURES = [
     wave(c).tasks[1].when = { transports: [T_BIKE] };
     wave(c).tasks.push(waveTask('tea', { id: 'cover', when: { transports: [T_CAR] } }));
   } },
-  { base: 'combo', name: '[хвиля] хвиля лише для власника собаки — комбінації без собаки не рахуються', expect: [], patch(c) {
+  { base: 'combo', name: '[хвиля] хвиля лише для власника собаки — комбінації без собаки (де видно одну справу) не рахуються', expect: [], patch(c) {
     wave(c).when = { animals: [DOG] };
-    wave(c).tasks[1].when = { transports: [T_BIKE] };
-    wave(c).tasks.push(waveTask('tea', { id: 'cover', when: { transports: [T_CAR] } }));
+    wave(c).tasks[1].when = { animals: [DOG] };
   } },
   { base: 'combo', name: '[хвиля] when справи поза when хвилі — нездійсненна', expect: ['WHEN_UNSATISFIABLE'], patch(c) {
     wave(c).when = { transports: [T_CAR] };
