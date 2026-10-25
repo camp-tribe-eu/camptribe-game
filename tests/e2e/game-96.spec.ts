@@ -109,8 +109,14 @@ for (const c of ASPECTS) {
   test(`${c.name}: нічого не вилізло за екран, цілі ≥ 44 px, персонаж рухається`, async ({ browser }) => {
     const { page, cdp } = await open(browser, c.vp, c.touch);
     // Масштаб полотна Phaser оновлює не миттєво, а під навантаженням і з запізненням: чекаємо стійкого стану, а не фіксовану паузу.
-    await expect.poll(async () => (await rect(page, '#stage canvas')).bottom, { timeout: 15_000 }).toBeLessThanOrEqual(c.vp.height + 0.5);
-    const sels = ['[data-touch="story"]', '[data-touch="pause"]', '[data-ui="hud"]', '#stage canvas', ...(c.touch ? ['[data-touch="stick"]', '[data-touch="interact"]'] : [])];
+    // GAME-96: полотно = ⌈поле / zoom⌉ · zoom — може виступати за поле на < zoom px, це ховає overflow #stage (видимого виступу немає).
+    const zoom = async (): Promise<number> => page.locator('#stage canvas').evaluate((el) => el.getBoundingClientRect().width / (el as HTMLCanvasElement).width);
+    await expect.poll(async () => (await rect(page, '#stage canvas')).bottom - (await zoom()), { timeout: 15_000 }).toBeLessThanOrEqual(c.vp.height + 0.5);
+    const cv = await rect(page, '#stage canvas');
+    expect(cv.right, 'полотно не виступає за поле більше ніж на zoom px').toBeLessThanOrEqual(c.vp.width + (await zoom()));
+    expect(cv.left).toBeGreaterThanOrEqual(-0.5);
+    expect(await page.locator('#stage').evaluate((el) => getComputedStyle(el).overflow), '#stage ховає виступ').toBe('hidden');
+    const sels = ['[data-touch="story"]', '[data-touch="pause"]', '[data-ui="hud"]', ...(c.touch ? ['[data-touch="stick"]', '[data-touch="interact"]'] : [])];
     for (const sel of sels) {
       const r = await rect(page, sel);
       expect(r.left, `${sel} ліворуч`).toBeGreaterThanOrEqual(-0.5);
@@ -162,3 +168,93 @@ test('поворот сторч → вбік → сторч: стан живий
   }
   await page.screenshot({ path: `${SHOTS}/game-96-390x844-game.png` });
 });
+
+// GAME-96 продовження (смак власника 25.10): вбік і на десктопі мапа на ВСЮ ширину екрана — без чорних смуг з боків; керування
+// поверх мапи; камера в межах мапи (порожнечі немає); пікселі чіткі (цілий zoom, image-rendering: pixelated).
+// Негативний контроль (мутація, звіт картки): старий кадр 640×352 під FIT → «≥ 99 % ширини» і «край — мапа» червоніють.
+const BG = new Set(['27,31,35', '0,0,0']);   // тло сторінки #1b1f23 і тло Phaser #000000 — те, що видно у смугах
+const FULL: { vp: Vp; touch: boolean }[] = [
+  ...LANDSCAPE.map((vp) => ({ vp, touch: true })),
+  { vp: { width: 1280, height: 800 }, touch: false }, { vp: { width: 1920, height: 1080 }, touch: false }, { vp: { width: 1280, height: 720 }, touch: false },
+];
+/** Колір пікселя скріншота сторінки (CSS px) у вигляді «r,g,b». */
+async function pixels(page: Page, pts: readonly (readonly [number, number])[]): Promise<string[]> {
+  const shot = await page.screenshot();
+  return page.evaluate(async ([b64, list]) => {
+    const img = new Image();
+    img.src = `data:image/png;base64,${b64}`;
+    await img.decode();
+    const c = document.createElement('canvas');
+    c.width = img.width; c.height = img.height;
+    const ctx = c.getContext('2d');
+    if (!ctx) return [];
+    ctx.drawImage(img, 0, 0);
+    return list.map(([x, y]) => { const d = ctx.getImageData(x, y, 1, 1).data; return `${d[0]},${d[1]},${d[2]}`; });
+  }, [shot.toString('base64'), pts] as const);
+}
+for (const c of FULL) {
+  test(`${c.vp.width}×${c.vp.height}${c.touch ? ' дотик' : ' десктоп'}: полотно ≥ 99 % ширини, краї — мапа, а не тло; керування не перетинається, цілі ≥ 44; камера в межах мапи; пікселі чіткі`, async ({ browser }) => {
+    const { page } = await open(browser, c.vp, c.touch);
+    const vp = c.vp;
+    await expect.poll(async () => (await rect(page, '#stage canvas')).width / vp.width, { message: 'полотно ≥ 99 % ширини', timeout: 15_000 }).toBeGreaterThanOrEqual(0.99);
+    await expect.poll(async () => (await rect(page, '#stage canvas')).height / vp.height, { message: 'полотно ≥ 99 % висоти', timeout: 15_000 }).toBeGreaterThanOrEqual(0.99);
+    const cv = await rect(page, '#stage canvas');
+    expect(cv.left, 'лівий край полотна на краю екрана').toBeLessThanOrEqual(0.5);
+    expect(cv.top, 'верхній край полотна на краю екрана').toBeLessThanOrEqual(0.5);
+    // Чіткі пікселі: цілий масштаб буфера → екран і nearest-neighbour.
+    const buf = await page.locator('#stage canvas').evaluate((el) => ({ w: (el as HTMLCanvasElement).width, h: (el as HTMLCanvasElement).height, ir: getComputedStyle(el).imageRendering }));
+    const k = cv.width / buf.w;
+    expect(Math.abs(k - Math.round(k)), `масштаб ${k} цілий`).toBeLessThan(0.001);
+    expect(buf.ir, 'image-rendering: pixelated').toBe('pixelated');
+    // Порожнечі немає: кадр не більший за мапу 640×384, і камера з межами мапи не може показати поза нею.
+    expect(buf.w, 'кадр не ширший за мапу').toBeLessThanOrEqual(640);
+    expect(buf.h, 'кадр не вищий за мапу').toBeLessThanOrEqual(384);
+    // Краї екрана (середина висоти, чверть і три чверті) — пікселі мапи, не тло смуг. Хоч один із трьох на кожному боці не тло
+    // (тіні дерев на мапі бувають темні, але не три поспіль у колір тла).
+    const ys = [0.25, 0.5, 0.75].map((f) => Math.round(vp.height * f));
+    const px = await pixels(page, [...ys.map((y) => [1, y] as const), ...ys.map((y) => [vp.width - 2, y] as const)]);
+    expect(px.length).toBe(6);
+    expect(px.slice(0, 3).filter((p) => !BG.has(p)).length, `лівий край — мапа: ${px.slice(0, 3).join(' | ')}`).toBeGreaterThanOrEqual(2);
+    expect(px.slice(3).filter((p) => !BG.has(p)).length, `правий край — мапа: ${px.slice(3).join(' | ')}`).toBeGreaterThanOrEqual(2);
+    // Керування поверх мапи: ☰ зліва вгорі, рамка справа вгорі, ‖ під рамкою, джойстик знизу зліва, дія знизу справа; ніщо не перетинається, цілі ≥ 44.
+    const sels = ['[data-touch="story"]', '[data-ui="hud"]', '[data-touch="pause"]', ...(c.touch ? ['[data-touch="stick"]', '[data-touch="interact"]'] : [])];
+    const rects = await Promise.all(sels.map((s) => rect(page, s)));
+    const pairs = rects.flatMap((a, i) => rects.slice(i + 1).map((b, j) => ({ a, b, name: `${sels[i]} ∩ ${sels[i + 1 + j]}` })));
+    for (const { a, b, name } of pairs) expect(intersects(a, b), name).toBe(false);
+    for (const [i, r] of rects.entries()) {
+      expect(r.left, `${sels[i]} ліворуч`).toBeGreaterThanOrEqual(-0.5);
+      expect(r.right, `${sels[i]} праворуч`).toBeLessThanOrEqual(vp.width + 0.5);
+      expect(r.bottom, `${sels[i]} унизу`).toBeLessThanOrEqual(vp.height + 0.5);
+      if (sels[i] !== '[data-ui="hud"]') expect(Math.min(r.width, r.height), `${sels[i]} ≥ 44`).toBeGreaterThanOrEqual(44);
+    }
+    const [story, hud, pause] = rects as [Rect, Rect, Rect, ...Rect[]];
+    expect(story.right, '☰ у лівій половині').toBeLessThanOrEqual(vp.width / 2);
+    expect(hud.left, 'рамка в правій половині').toBeGreaterThanOrEqual(vp.width / 2);
+    expect(pause.top, '‖ під рамкою').toBeGreaterThanOrEqual(hud.bottom);
+    expect(pause.left, '‖ у правій половині').toBeGreaterThanOrEqual(vp.width / 2);
+    if (c.touch) {
+      const [, , , stick, act] = rects as [Rect, Rect, Rect, Rect, Rect];
+      expect(stick.right, 'джойстик зліва').toBeLessThanOrEqual(vp.width / 2);
+      expect(stick.top, 'джойстик унизу').toBeGreaterThanOrEqual(vp.height / 2);
+      expect(act.left, 'дія справа').toBeGreaterThanOrEqual(vp.width / 2);
+      expect(act.top, 'дія внизу').toBeGreaterThanOrEqual(vp.height / 2);
+    }
+    // Камера в межах мапи: їдемо вниз і вправо, доки є куди; scroll ніколи не виходить за [0, мапа − кадр].
+    const scroll = (): Promise<{ x: number; y: number }> => page.evaluate(() => { const p = (window as unknown as { __game: { probe: { cameraScrollX: number; cameraScrollY: number } } }).__game.probe; return { x: p.cameraScrollX, y: p.cameraScrollY }; });
+    const maxX = 640 - buf.w; const maxY = 384 - buf.h;
+    for (const [key, dir] of [['ArrowDown', 'y'], ['ArrowRight', 'x']] as const) {
+      await page.keyboard.down(key);
+      const t0 = Date.now();
+      while (Date.now() - t0 < 6_000) {
+        const s = await scroll();
+        expect(s.x, `scrollX ∈ [0, ${maxX}]`).toBeGreaterThanOrEqual(0); expect(s.x).toBeLessThanOrEqual(maxX + 0.01);
+        expect(s.y, `scrollY ∈ [0, ${maxY}]`).toBeGreaterThanOrEqual(0); expect(s.y).toBeLessThanOrEqual(maxY + 0.01);
+        if (s[dir] >= (dir === 'x' ? maxX : maxY) - 0.01) break;
+      }
+      await page.keyboard.up(key);
+    }
+    const end = await scroll();
+    if (maxY > 0) expect(end.y, 'камера дійшла до нижньої межі мапи (тест доводить межу)').toBeGreaterThan(0);
+    if (vp.width === 1920 && vp.height === 1080) await page.screenshot({ path: `${SHOTS}/game-96-1920x1080-game.png` });
+  });
+}

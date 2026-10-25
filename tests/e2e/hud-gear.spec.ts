@@ -198,9 +198,15 @@ for (const vp of VIEWPORTS) for (const scale of [100, 200] as const) {
     const stage = await rectOf(page, '#stage');
     const menu = await rectOf(page, '[data-touch="story"]');
     const pauseBtn = await rectOf(page, '[data-touch="pause"]');
-    expect(meets(h, stage), 'HUD не перекриває #stage').toBe(false);
-    // Phaser перераховує масштаб полотна сам, раз на 0,5 с, — чекаємо, а не міряємо миттєво.
-    await expect.poll(async () => meets(h, await rectOf(page, '#stage canvas')), { message: 'HUD не перекриває полотно' }).toBe(false);
+    if (vp.width > vp.height) {
+      // GAME-96 (смак власника 25.10): вбік і на десктопі HUD лежить ПОВЕРХ мапи, а полотно — на всю ширину екрана.
+      await expect.poll(async () => (await rectOf(page, '#stage canvas')).right, { message: 'полотно на всю ширину' }).toBeGreaterThanOrEqual(vp.width);
+      expect(meets(h, stage), 'HUD поверх поля').toBe(true);
+    } else {
+      expect(meets(h, stage), 'HUD не перекриває #stage').toBe(false);
+      // Phaser перераховує масштаб полотна сам, раз на 0,5 с, — чекаємо, а не міряємо миттєво.
+      await expect.poll(async () => meets(h, await rectOf(page, '#stage canvas')), { message: 'HUD не перекриває полотно' }).toBe(false);
+    }
     const canvas = await rectOf(page, '#stage canvas');
     expect(meets(h, menu), 'HUD не перекриває ☰').toBe(false);
     expect(meets(h, pauseBtn), 'HUD не перекриває ‖').toBe(false);

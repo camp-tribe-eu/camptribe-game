@@ -124,9 +124,9 @@ test.describe('клавіатура (десктоп)', () => {
     const p0 = await probe(page);
     // GAME-97: за умовою, а не за часом; далі тиснемо, доки камера не впреться в край, — інакше межа нижче нічого не доводить.
     await holdKey(page, 'ArrowDown', (q) => q.cameraScrollY > p0.cameraScrollY);
-    const p1 = await holdKey(page, 'ArrowDown', (q) => q.cameraScrollY >= 384 - 352);
+    const p1 = await holdKey(page, 'ArrowDown', (q) => q.cameraScrollY >= 384 - 267);
     expect(p1.cameraScrollY).toBeGreaterThan(p0.cameraScrollY);
-    expect(p1.cameraScrollY).toBeLessThanOrEqual(384 - 352);   // GAME-93: мапа 384 px, широкий кадр 352
+    expect(p1.cameraScrollY).toBeLessThanOrEqual(384 - 267);   // GAME-96: мапа 384 px, кадр 267 на 1280×800 (було 352)
   });
 
   test('дія біля об’єкта — рівно одна команда; подвійне натискання — одна; в ядрі нагорода одна', async ({ page }) => {
