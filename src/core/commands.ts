@@ -160,6 +160,9 @@ function apply(cmd: Command, d: Draft, defs: CoreDefs, guard: Safeguards, today:
       }
       d.grants.push(def.grantId);
       d.grants.sort();
+      // Прапорці взаємодії (GAME-170, зріз 2): нагорода разова за grantId, тож і прапорець ставиться разом із нею.
+      const newFlags = (def.flags ?? []).filter((f) => !d.flags.includes(f));
+      if (newFlags.length) d.flags = [...d.flags, ...newFlags].sort();
       d.events.push({
         type: 'RewardGranted', commandId: cmd.commandId, targetId: cmd.targetId,
         grantId: def.grantId, moneyCents: def.moneyCents, items: (def.items ?? []).map((i) => ({ ...i })),

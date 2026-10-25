@@ -43,6 +43,8 @@ export const SLICE_DEFS: CoreDefs = {
   },
   interactions: {
     'obj.campfire': { grantId: 'rw.campfire-warmth', moneyCents: 0 },
+    // GAME-170 зріз 2: чужі пакети біля води — добра справа без строку й поза хвилею; журнал пише запис (Interact), Еліза дякує зранку дня 3 (GAME-144).
+    'obj.litter': { grantId: 'rw.litter-cleaned', moneyCents: 0, flags: ['f.litter-cleaned-ch1'] },
   },
 };
 

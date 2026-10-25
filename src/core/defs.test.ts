@@ -35,6 +35,21 @@ const cases: [DefsCode, string, CoreDefs][] = [
   ['DEFS_BAD_AMOUNT', 'нульова кількість у нагороді квесту', withStory(quest('q.end', { reward: { grantId: 'rw.end', moneyCents: 0, items: [{ itemId: 'item.x', qty: 0 }] } }))],
 ];
 
+const KINDS = { 'f.good': 'interaction', 'f.fire-allowed': undefined };
+const withFlag = (f: string): CoreDefs => ({ items: {}, interactions: { 'obj.x': { grantId: 'rw.x', moneyCents: 0, flags: [f] } } });
+
+describe('checkDefs: прапорці взаємодій — з реєстру й лише добрі справи', () => {
+  it('позитивний контроль: прапорець з позначкою interaction — добре', () => {
+    expect(checkDefs(withFlag('f.good'), KINDS)).toEqual([]);
+  });
+  it('невідомий прапорець (bogus) → DEFS_BAD_REF', () => {
+    expect(checkDefs(withFlag('f.bogus'), KINDS)).toEqual([{ code: 'DEFS_BAD_REF', where: 'obj.x.flags.f.bogus' }]);
+  });
+  it('системний прапорець (f.fire-allowed, без позначки) → DEFS_BAD_REF', () => {
+    expect(checkDefs(withFlag('f.fire-allowed'), KINDS).map((f) => f.code)).toEqual(['DEFS_BAD_REF']);
+  });
+});
+
 describe('checkDefs: каталог цілий до гри', () => {
   it('кожен код має приклад', () => {
     expect([...new Set(cases.map(([c]) => c))].sort()).toEqual([...DEFS_CODES].sort());

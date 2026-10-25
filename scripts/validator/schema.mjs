@@ -146,7 +146,7 @@ export const SCHEMAS = {
   flags: obj({
     id: req(str), type: req(en('bool', 'enum', 'number', 'item', 'location')), initial: req({ t: 'scalar' }), owner: req(str), note: str,
     values: { t: 'array', of: str, min: 1 }, valuesFrom: en('transports'), generatedFrom: en(...Object.keys(FLAG_FAMILIES)),
-    reserved: bool, aka: arr(str), journal: bool,
+    reserved: bool, kind: en('interaction'), aka: arr(str), journal: bool,
   }),
 };
 

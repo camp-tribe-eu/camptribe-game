@@ -3,10 +3,10 @@ import { testSwitches } from './test-switches';
 
 describe('перемикачі e2e (рецензія GAME-36)', () => {
   it('у збірці e2e — працюють', () => {
-    expect(testSwitches('?hideAct=complete&hideTouch=interact,stick', 'e2e')).toEqual({ hideAct: ['complete'], hideTouch: ['interact', 'stick'] });
+    expect(testSwitches('?hideAct=complete&hideTouch=interact,stick', 'e2e')).toEqual({ hideAct: ['complete'], hideTouch: ['interact', 'stick'], hideUi: [], breakSpot: [] });
   });
   it('у звичайній збірці (production, development) — вимкнені', () => {
-    for (const mode of ['production', 'development']) expect(testSwitches('?hideAct=complete&hideTouch=interact&seed=7', mode)).toEqual({ hideAct: [], hideTouch: [] });
+    for (const mode of ['production', 'development']) expect(testSwitches('?hideAct=complete&hideTouch=interact&seed=7', mode)).toEqual({ hideAct: [], hideTouch: [], hideUi: [], breakSpot: [] });
   });
   it('зерно: лише ціле невід’ємне; інакше — без зерна', () => {
     expect(testSwitches('?seed=7', 'e2e').seed).toBe(7);

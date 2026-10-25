@@ -1076,6 +1076,66 @@
      "point": true,
      "rotation": 0,
      "visible": true
+    },
+    {
+     "id": 4,
+     "name": "task.dinner",
+     "type": "trigger",
+     "x": 144,
+     "y": 240,
+     "width": 0,
+     "height": 0,
+     "point": true,
+     "rotation": 0,
+     "visible": true
+    },
+    {
+     "id": 5,
+     "name": "task.firewood",
+     "type": "trigger",
+     "x": 272,
+     "y": 80,
+     "width": 0,
+     "height": 0,
+     "point": true,
+     "rotation": 0,
+     "visible": true
+    },
+    {
+     "id": 6,
+     "name": "task.find-mia",
+     "type": "trigger",
+     "x": 48,
+     "y": 208,
+     "width": 0,
+     "height": 0,
+     "point": true,
+     "rotation": 0,
+     "visible": true
+    },
+    {
+     "id": 7,
+     "name": "task.cover-bikes",
+     "type": "trigger",
+     "x": 272,
+     "y": 144,
+     "width": 0,
+     "height": 0,
+     "point": true,
+     "rotation": 0,
+     "visible": true
+    },
+    {
+     "id": 8,
+     "name": "obj.litter",
+     "type": "trigger",
+     "x": 304,
+     "y": 208,
+     "width": 0,
+     "height": 0,
+     "point": true,
+     "rotation": 0,
+     "visible": true
     }
    ]
   }

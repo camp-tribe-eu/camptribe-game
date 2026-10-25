@@ -41,6 +41,8 @@ export interface InteractionDef {
   readonly grantId: string;
   readonly moneyCents: number;
   readonly items?: readonly { readonly itemId: string; readonly qty: number }[];
+  /** Прапорці, які ставить взаємодія (GAME-170, зріз 2: добра справа «чужі пакети біля води» → f.litter-cleaned-ch1). */
+  readonly flags?: readonly string[];
 }
 
 /** Умова `when` контенту (TD-006): збіг із вибором гравця. Порожнього списку валідатор не пропускає. */
@@ -278,7 +280,7 @@ const isRank = (n: unknown): boolean => typeof n === 'number' && Number.isSafeIn
  * Каталог має бути цілим ДО гри: ціни — цілі центи ≥ 0, викуп ≤ купівлі (SIM-INV-004, інакше
  * купи-продай — нескінченні гроші), id — у форматі контенту. Повертає знахідки; порожньо — добре.
  */
-export function checkDefs(defs: CoreDefs): { code: DefsCode; where: string }[] {
+export function checkDefs(defs: CoreDefs, flagKinds?: Readonly<Record<string, string | undefined>>): { code: DefsCode; where: string }[] {
   const out: { code: DefsCode; where: string }[] = [];
   for (const [id, d] of Object.entries(defs.items)) {
     if (!ID.test(id)) out.push({ code: 'DEFS_BAD_ID', where: id });
@@ -287,8 +289,11 @@ export function checkDefs(defs: CoreDefs): { code: DefsCode; where: string }[] {
     if (d.gear && (!(GEAR_KINDS as readonly string[]).includes(d.gear.kind) || !Number.isSafeInteger(d.gear.tier) || d.gear.tier < 1 || d.gear.tier > 3)) out.push({ code: 'DEFS_BAD_AMOUNT', where: `${id}.gear` });
   }
   for (const [id, d] of Object.entries(defs.interactions)) {
-    if (!ID.test(id) || !ID.test(d.grantId) || (d.items ?? []).some((i) => !ID.test(i.itemId))) out.push({ code: 'DEFS_BAD_ID', where: id });
+    if (!ID.test(id) || !ID.test(d.grantId) || (d.items ?? []).some((i) => !ID.test(i.itemId)) || (d.flags ?? []).some((f) => !ID.test(f))) out.push({ code: 'DEFS_BAD_ID', where: id });
     if (!isCents(d.moneyCents) || (d.items ?? []).some((i) => !Number.isSafeInteger(i.qty) || i.qty < 1)) out.push({ code: 'DEFS_BAD_AMOUNT', where: id });
+    // Прапорець взаємодії — лише з реєстру content/flags.json і лише з позначкою kind: 'interaction' (добра справа на мапі). Системний
+    // (f.fire-allowed — його ставить сцена), хвильовий чи квестовий став би «тихим» перемикачем сюжету в обхід своїх воріт.
+    if (flagKinds) for (const f of d.flags ?? []) if (flagKinds[f] !== 'interaction') out.push({ code: 'DEFS_BAD_REF', where: `${id}.flags.${f}` });
   }
   for (const [id, r] of Object.entries(defs.repairs ?? {})) {
     if (!ID.test(id) || !ID.test(r.tool) || (r.part !== undefined && !ID.test(r.part)) || !ID.test(r.flag)) out.push({ code: 'DEFS_BAD_ID', where: id });

@@ -148,15 +148,28 @@ def build_grid():
     old = {r * W + c for r in range(H) for c in range(W) if r in (0, 11) or c == 10}   # заблоковані клітинки до GAME-93
     lost = sorted(k for k in old if not walls[k])
     assert not lost, f'стіни старої мапи без колізії: {[(k % W, k // W) for k in lost]}'
-    for name, c, r in (('spawn', 6, 5), ('вогнище', 3, 4), ('Еліза', 2, 8)):
+    for name, c, r in (('spawn', 6, 5), ('вогнище', 3, 4), ('Еліза', 2, 8), *((n, x // 32, y // 32) for n, x, y in TASK_SPOTS)):
         assert not walls[r * W + c], f'{name} у клітинці ({c},{r}) замуровано'
     return g
+
+
+# GAME-170 зріз 2 (W4 «Вечір на трьох фронтах»): цілі справ і добра справа — точки на прохідних клітинках лівої галявини.
+# task.<справа> закриває справу хвилі дотиком; obj.litter — чужі пакети біля води (очерет озера починається з x=10).
+# Мія (task.find-mia) — під лавкою (1,6): від вогнища (3,4) ≥ 2 клітинки, від води — 8; валідатор мап доводить досяжність пішки.
+TASK_SPOTS = [
+    ('task.dinner', 144, 240),      # (4,7) стіл біля Елізи
+    ('task.firewood', 272, 80),     # (8,2) купа дров
+    ('task.find-mia', 48, 208),     # (1,6) лавка
+    ('task.cover-bikes', 272, 144), # (8,4) велонавіс
+    ('obj.litter', 304, 208),       # (9,6) пакети біля води
+]
 
 
 def objects():
     # Центри клітинок (піксель = тайл × 32 + 16 по x; по y — ноги персонажа на нижньому краї рядка-центра).
     # Було (16 px): spawn (104, 88), вогнище (56, 72), Еліза (40, 136) — подвоєно: клітинки ті самі.
-    pts = [(1, 's.camp', 'spawn', 208, 176), (2, 'obj.campfire', 'trigger', 112, 144), (3, 'npc.elise', 'npc', 80, 272)]
+    pts = [(1, 's.camp', 'spawn', 208, 176), (2, 'obj.campfire', 'trigger', 112, 144), (3, 'npc.elise', 'npc', 80, 272),
+           *((4 + i, n, 'trigger', x, y) for i, (n, x, y) in enumerate(TASK_SPOTS))]
     return [{'id': i, 'name': n, 'type': t, 'x': x, 'y': y, 'width': 0, 'height': 0, 'point': True, 'rotation': 0, 'visible': True}
             for i, n, t, x, y in pts]
 
