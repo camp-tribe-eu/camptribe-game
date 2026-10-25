@@ -172,7 +172,7 @@ describe('хвиля напруги: кінець етапу і волога (GA
   it('квест етапу завершено — на наступному кроці годинника всі відкриті справи late, хвиля закінчена (строки ще не минули)', () => {
     const s = cmd(start(), { type: 'StartWave', waveId: 'wave.dusk' });
     expect(s.game.wave?.active).not.toBeNull();
-    const over = { ...s, game: { ...s.game, quests: { 'q.start': { status: 'done' as const, done: [] } } } };
+    const over = { ...s, game: { ...s.game, quests: { 'q.start': { status: 'completed' as const, done: [] } } } };
     const next = minutes(over, 0);
     expect(next.game.wave?.active).toBeNull();
     expect(next.game.wave?.past['wave.dusk']).toEqual({ wood: 'late', tea: 'late' });

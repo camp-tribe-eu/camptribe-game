@@ -51,11 +51,14 @@ describe('W5 «Не залишати слідів до 11:00» — дані дн
   });
 
   it('ядро: для кожної комбінації W5 стартує на етапі-заглушці, варіант за сценарієм, повний перебір без тупиків, усе-late без поразки', () => {
-    const DEFS: CoreDefs = { ...GAME_DEFS, waves: compileWaves([...RAW_WAVES, W5]), story: { ...GAME_DEFS.story!, quests: { ...GAME_DEFS.story!.quests, [bundle.stage.id]: { optional: false, end: false, locationId: 'loc.camp.lake', objectives: [], transitions: [] } } } };
+    const story = GAME_DEFS.story;
+    if (!story) throw new Error('немає сюжету');
+    const DEFS: CoreDefs = { ...GAME_DEFS, waves: compileWaves([...RAW_WAVES, W5]), story: { ...story, quests: { ...story.quests, [bundle.stage.id]: { optional: false, end: false, locationId: 'loc.camp.lake', objectives: [], transitions: [] } } } };
     const CTX = { defs: DEFS };
     const cmd = (s: SimState, c: Cmd): SimState => step(s, { kind: 'command', command: { ...c, commandId: `d${s.game.seq}` } as Command }, CTX);
     const ok = (s: SimState): boolean => s.game.processed[`d${s.game.seq - 1}`]?.ok === true;
-    const W = DEFS.waves!.waves[W5.id]!;
+    const W = DEFS.waves?.waves[W5.id];
+    if (!W) throw new Error('W5 не скомпільовано');
     const ended = (s: SimState): boolean => s.game.wave?.active === null && s.game.wave.past[W5.id] !== undefined;
     let combosTried = 0;
     for (const k of enumerateCombos(CONTENT)) {
@@ -84,7 +87,8 @@ describe('W5 «Не залишати слідів до 11:00» — дані дн
       let finals = 0;
       for (let cur = queue.shift(); cur; cur = queue.shift()) {
         if (ended(cur)) { finals++; continue; }
-        const v = waveView(cur.game, cur.clock.minutes)!;
+        const v = waveView(cur.game, cur.clock.minutes);
+        if (!v) throw new Error('живої хвилі немає, хоч вона не закінчена');
         const open = v.tasks.filter((t) => t.outcome === 'open');
         expect(open.length).toBeGreaterThan(0);
         const next: SimState[] = open.map((t) => { const n = cmd(cur as SimState, { type: 'CompleteTask', taskId: t.id }); expect(ok(n), t.id).toBe(true); return n; });
