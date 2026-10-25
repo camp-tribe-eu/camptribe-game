@@ -28,9 +28,9 @@ const tryMove = (s: GameState, m: Move) => dispatch(s, { ...m, commandId: `mt${n
 
 /** Від створення персонажа до першої розмови з Елізою (Пролог за замовчуванням, як у реплеї). */
 const TO_ELISE: readonly Move[] = [
-  { type: 'CompleteQuest', questId: 'ST-001' }, { type: 'CompleteQuest', questId: 'ST-002' },   // GAME-84 №1: «Піти: Дім» удома не потрібне
+  { type: 'CompleteQuest', questId: 'PROLOGUE-HOME-001' }, { type: 'CompleteQuest', questId: 'ST-001' }, { type: 'CompleteQuest', questId: 'ST-002' },   // GAME-84 №1: «Піти: Дім» удома не потрібне
   { type: 'Visit', locationId: 'loc.shop' }, { type: 'Pickup', itemId: 'item.tent' }, { type: 'Pickup', itemId: 'item.sleeping-bag' },
-  { type: 'CompleteQuest', questId: 'ST-003' }, { type: 'Visit', locationId: 'loc.road' }, { type: 'CompleteQuest', questId: 'ST-004', to: 'ST-005' },
+  { type: 'CompleteQuest', questId: 'ST-003' }, { type: 'Visit', locationId: 'loc.home' }, { type: 'CompleteQuest', questId: 'CH1-HOME-001' }, { type: 'Visit', locationId: 'loc.road' }, { type: 'CompleteQuest', questId: 'ST-004', to: 'ST-005' },
   { type: 'Visit', locationId: 'loc.camp.lake' }, { type: 'Talk', npcId: 'npc.elise' },
 ];
 const atElise = (transportId: string): GameState =>

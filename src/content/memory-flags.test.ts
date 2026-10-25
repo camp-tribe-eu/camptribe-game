@@ -39,7 +39,7 @@ type Pick5 = { readonly [K in keyof typeof CHOICES]: 0 | 1 };
 const MIN = {
   moneyCents: START_MONEY + 1_000,
   items: ['item.tent', 'item.sleeping-bag', 'item.firewood'],
-  quests: ['ST-001', 'ST-002', 'ST-003', 'ST-004', 'ST-005'],
+  quests: ['CH1-HOME-001', 'PROLOGUE-HOME-001', 'ST-001', 'ST-002', 'ST-003', 'ST-004', 'ST-005'],
 } as const;
 
 type Cond = Record<string, unknown>;
@@ -108,9 +108,9 @@ function play(pick: Pick5, tamper?: Tamper): Run {
   go({ type: 'Choose', choice: pick.gear }); go({ type: 'Continue' });
   go({ type: 'Choose', choice: pick.roles }); go({ type: 'Continue' }); go({ type: 'Continue' });
   expect(s.game.dialogue).toBeNull();
-  go({ type: 'CompleteQuest', questId: 'ST-001' }); go({ type: 'CompleteQuest', questId: 'ST-002' });
+  go({ type: 'CompleteQuest', questId: 'PROLOGUE-HOME-001' }); go({ type: 'CompleteQuest', questId: 'ST-001' }); go({ type: 'CompleteQuest', questId: 'ST-002' });
   go({ type: 'Visit', locationId: 'loc.shop' }); go({ type: 'Pickup', itemId: 'item.tent' }); go({ type: 'Pickup', itemId: 'item.sleeping-bag' });
-  go({ type: 'CompleteQuest', questId: 'ST-003' });
+  go({ type: 'CompleteQuest', questId: 'ST-003' }); go({ type: 'Visit', locationId: 'loc.home' }); go({ type: 'CompleteQuest', questId: 'CH1-HOME-001' });
   // Вибір 2 — яблука. Подію може кинути сама симуляція після дороги; не кинула — шлемо її, як шле симуляція.
   go({ type: 'Visit', locationId: 'loc.road' });
   if (s.game.dialogue?.id !== 'dlg.road-apples') go({ type: 'RoadEvent', eventId: 'dlg.road-apples' });

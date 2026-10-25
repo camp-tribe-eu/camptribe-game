@@ -85,7 +85,7 @@ describe('daySummary: кожна секція — лише при факті (GA
     expect(unbacked(sum as DaySummary, s)).toEqual([]);
     expect(ids(sum, 'night')).toEqual(['f.night-tent']);
     expect(ids(sum, 'packed')).toEqual(expect.arrayContaining(['item.tent', 'item.sleeping-bag']));
-    expect(ids(sum, 'quests')).toEqual(['ST-001', 'ST-002', 'ST-003', 'ST-004', 'q.elise-bike-area', 'ST-005']);
+    expect(ids(sum, 'quests')).toEqual(['PROLOGUE-HOME-001', 'ST-001', 'ST-002', 'ST-003', 'CH1-HOME-001', 'ST-004', 'q.elise-bike-area', 'ST-005']);
     expect(ids(sum, 'bought')).toEqual(['item.sleeping-bag-synthetic']);
     expect(ids(sum, 'got')).toEqual(['item.tent', 'item.sleeping-bag', 'item.firewood']);
     expect(kinds(sum)).not.toContain('sold');                // нічого не продано — секції немає
@@ -137,6 +137,7 @@ describe('daySummary: кожна секція — лише при факті (GA
   it('продаж — секція «продано» з’являється лише після продажу', () => {
     let s = newSim(3, 20_000);
     s = cmd(s, { type: 'CreateCharacter', profileId: 'profile.solo-explorer', transportId: 'transport.car' });
+    s = cmd(s, { type: 'CompleteQuest', questId: 'PROLOGUE-HOME-001' });
     s = cmd(s, { type: 'CompleteQuest', questId: 'ST-001' });
     s = cmd(s, { type: 'CompleteQuest', questId: 'ST-002' });
     s = closeDialogue(cmd(s, { type: 'Visit', locationId: 'loc.shop' }));

@@ -274,7 +274,7 @@ describe('пакування (GAME-109): усі підмножини речей 
       s = r.state;
     };
     run({ type: 'CreateCharacter', profileId: k.profile ?? '', transportId: k.transport ?? '', ...(k.animal === NO_ANIMAL ? {} : { animalId: k.animal ?? '' }) } as Move);
-    run({ type: 'CompleteQuest', questId: 'ST-001' });
+    run({ type: 'CompleteQuest', questId: 'PROLOGUE-HOME-001' }); run({ type: 'CompleteQuest', questId: 'ST-001' });
     run({ type: 'CompleteQuest', questId: 'ST-002' });
     run({ type: 'Visit', locationId: 'loc.shop' });
     run({ type: 'Pickup', itemId: 'item.tent' });

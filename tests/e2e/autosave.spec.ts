@@ -24,6 +24,7 @@ async function start(page: Page, url = '/'): Promise<void> {
   await loaded(page, url);
   await page.locator('[data-touch="story"]').click();
   await act(page, 'create');
+  await act(page, 'complete', 'q.prologue-home-001');
   await act(page, 'complete', 'q.st-001');
   await act(page, 'complete', 'q.st-002');
 }
@@ -48,7 +49,7 @@ test('F5 без паузи після двох квестів: персонаж,
 for (const place of ['loc.shop', 'loc.road']) {
   test(`F5 без паузи на місці ${place}: гравець там само, прогрес не втрачено`, async ({ page }) => {
     await start(page);
-    if (place === 'loc.road') { await act(page, 'visit', 'loc.shop'); await act(page, 'pickup', 'item.tent'); await act(page, 'pickup', 'item.sleeping-bag'); await act(page, 'complete', 'q.st-003'); }
+    if (place === 'loc.road') { await act(page, 'visit', 'loc.shop'); await act(page, 'pickup', 'item.tent'); await act(page, 'pickup', 'item.sleeping-bag'); await act(page, 'complete', 'q.st-003'); await act(page, 'visit', 'loc.home'); await act(page, 'complete', 'q.ch1-home-001'); }
     await act(page, 'visit', place);
     const before = await core(page);
     expect(before.game.player?.locationId).toBe(place);

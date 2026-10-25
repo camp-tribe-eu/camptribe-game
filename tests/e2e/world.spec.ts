@@ -230,8 +230,8 @@ for (const vp of VIEWPORTS) {
       const story = page.locator('[data-ui="story"]');
       await story.locator('[data-act="create"]', { hasText: /Велосипед|Bike/ }).first().tap();
       await page.waitForTimeout(400);   // GAME-80: панель глуха ~350 мс після дії
-      for (const [kind, key] of [['complete', 'q.st-001'], ['complete', 'q.st-002'], ['visit', 'loc.shop'],
-        ['pickup', 'item.tent'], ['pickup', 'item.sleeping-bag'], ['complete', 'q.st-003'], ['visit', 'loc.road'], ['complete', 'q.st-004'], ['visit', 'loc.camp.lake']] as const) {
+      for (const [kind, key] of [['complete', 'q.prologue-home-001'], ['complete', 'q.st-001'], ['complete', 'q.st-002'], ['visit', 'loc.shop'],
+        ['pickup', 'item.tent'], ['pickup', 'item.sleeping-bag'], ['complete', 'q.st-003'], ['visit', 'loc.home'], ['complete', 'q.ch1-home-001'], ['visit', 'loc.road'], ['complete', 'q.st-004'], ['visit', 'loc.camp.lake']] as const) {
         await story.locator(`[data-act="${kind}"][data-key="${key}"]`).tap();
         await page.waitForTimeout(400);   // GAME-80: панель глуха ~350 мс після дії
         // На дорозі з шансом 50 % — подія (GAME-31): відповідаємо дотиком, як гравець.

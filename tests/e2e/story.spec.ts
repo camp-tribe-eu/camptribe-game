@@ -42,12 +42,15 @@ async function act(page: Page, kind: string, key = '', timeout = 5_000): Promise
 async function playBikeProlog(page: Page): Promise<void> {
   await panel(page).locator('[data-act="create"]', { hasText: 'Велосипед' }).first().click();
   await page.waitForTimeout(400);   // GAME-80: панель глуха ~350 мс після дії
+  await act(page, 'complete', 'q.prologue-home-001');
   await act(page, 'complete', 'q.st-001');
   await act(page, 'complete', 'q.st-002');
   await act(page, 'visit', 'loc.shop');
   await act(page, 'pickup', 'item.tent');
   await act(page, 'pickup', 'item.sleeping-bag');
   await act(page, 'complete', 'q.st-003');
+  await act(page, 'visit', 'loc.home');
+  await act(page, 'complete', 'q.ch1-home-001');
   await act(page, 'visit', 'loc.road');
   await act(page, 'complete', 'q.elise-bike-area.choice');
   await act(page, 'visit', 'loc.camp.lake');
@@ -141,7 +144,7 @@ for (const [seed, weather, label, minutes] of [[2, 'sunny', 'сонячно', 25
     const where = panel(page).locator('[data-ui="where"]');
     await expect(where).toHaveAttribute('data-weather', weather);
     await expect(where).toContainText(`Погода: ${label}`);
-    for (const [k, key] of [['complete', 'q.st-001'], ['complete', 'q.st-002']] as const) await act(page, k, key);
+    for (const [k, key] of [['complete', 'q.prologue-home-001'], ['complete', 'q.st-001'], ['complete', 'q.st-002']] as const) await act(page, k, key);
     const shop = panel(page).locator('[data-act="visit"][data-key="loc.shop"]');
     await expect(shop).toContainText(`${minutes} хв`);                // велосипедом дім → крамниця
     const m0 = (await core(page)).clock.minutes;
@@ -164,8 +167,8 @@ async function toRoad(browser: Browser, seed: number): Promise<{ page: Page; fir
   await open(page, `?seed=${seed}`);
   await panel(page).locator('[data-act="create"]', { hasText: 'Велосипед' }).first().click();
   await page.waitForTimeout(400);   // GAME-80: панель глуха ~350 мс після дії
-  for (const [k, key] of [['complete', 'q.st-001'], ['complete', 'q.st-002'], ['visit', 'loc.shop'],
-    ['pickup', 'item.tent'], ['pickup', 'item.sleeping-bag'], ['complete', 'q.st-003']] as const) await act(page, k, key);
+  for (const [k, key] of [['complete', 'q.prologue-home-001'], ['complete', 'q.st-001'], ['complete', 'q.st-002'], ['visit', 'loc.shop'],
+    ['pickup', 'item.tent'], ['pickup', 'item.sleeping-bag'], ['complete', 'q.st-003'], ['visit', 'loc.home'], ['complete', 'q.ch1-home-001']] as const) await act(page, k, key);
   await panel(page).locator('[data-act="visit"][data-key="loc.road"]').click();
   await page.waitForTimeout(400);   // GAME-80: панель глуха ~350 мс після дії
   const fired = await panel(page).locator('[data-ui="dialogue"]').isVisible({ timeout: 400 }).catch(() => false);
@@ -217,8 +220,8 @@ test('автівкою — без бічного квесту й без відп
   await open(page);
   await panel(page).locator('[data-act="create"]', { hasText: 'Авто' }).first().click();
   await page.waitForTimeout(400);   // GAME-80: панель глуха ~350 мс після дії
-  for (const [k, key] of [['complete', 'q.st-001'], ['complete', 'q.st-002'], ['visit', 'loc.shop'],
-    ['pickup', 'item.tent'], ['pickup', 'item.sleeping-bag'], ['complete', 'q.st-003'], ['visit', 'loc.road']] as const) await act(page, k, key);
+  for (const [k, key] of [['complete', 'q.prologue-home-001'], ['complete', 'q.st-001'], ['complete', 'q.st-002'], ['visit', 'loc.shop'],
+    ['pickup', 'item.tent'], ['pickup', 'item.sleeping-bag'], ['complete', 'q.st-003'], ['visit', 'loc.home'], ['complete', 'q.ch1-home-001'], ['visit', 'loc.road']] as const) await act(page, k, key);
   await expect(panel(page).locator('[data-key="q.elise-bike-area.choice"]')).toHaveCount(0);
   await act(page, 'complete', 'q.st-004');
   await act(page, 'visit', 'loc.camp.lake');
@@ -246,8 +249,8 @@ test('автівкою — без бічного квесту й без відп
 async function carToCamp(page: Page): Promise<void> {
   await panel(page).locator('[data-act="create"]', { hasText: 'Авто' }).first().click();
   await page.waitForTimeout(400);   // GAME-80: панель глуха ~350 мс після дії
-  for (const [k, key] of [['complete', 'q.st-001'], ['complete', 'q.st-002'], ['visit', 'loc.shop'],
-    ['pickup', 'item.tent'], ['pickup', 'item.sleeping-bag'], ['complete', 'q.st-003'], ['visit', 'loc.road']] as const) await act(page, k, key);
+  for (const [k, key] of [['complete', 'q.prologue-home-001'], ['complete', 'q.st-001'], ['complete', 'q.st-002'], ['visit', 'loc.shop'],
+    ['pickup', 'item.tent'], ['pickup', 'item.sleeping-bag'], ['complete', 'q.st-003'], ['visit', 'loc.home'], ['complete', 'q.ch1-home-001'], ['visit', 'loc.road']] as const) await act(page, k, key);
   await act(page, 'complete', 'q.st-004');
   await act(page, 'visit', 'loc.camp.lake');
   await expect(panel(page).locator('[data-act="pickup"][data-key="item.firewood"]')).toBeVisible();
@@ -356,6 +359,7 @@ test('кожна ціль екрана подорожі ≥ 44×44 CSS px і н�
   await panel(page).locator('[data-act="create"]').first().click();
   await page.waitForTimeout(400);   // GAME-80: панель глуха ~350 мс після дії
   // GAME-81: удома більше немає кнопок «Купити» — для щільного екрана йдемо в крамницю (три «Узяти», дорога, квест).
+  await act(page, 'complete', 'q.prologue-home-001');
   await act(page, 'complete', 'q.st-001');
   await act(page, 'complete', 'q.st-002');
   await act(page, 'visit', 'loc.shop');
@@ -377,7 +381,7 @@ test('кожна ціль екрана подорожі ≥ 44×44 CSS px і н�
 test('негативний контроль: прихована кнопка «Завершити» — прохід червоніє з назвою кроку', async ({ page }) => {
   await open(page, '?hideAct=complete');
   await expect(panel(page).locator('[data-act="create"]').first()).toBeVisible();  // екран живий, сховано лише «Завершити»
-  await expect(playBikeProlog(page)).rejects.toThrow('крок «complete q.st-001»');
+  await expect(playBikeProlog(page)).rejects.toThrow('крок «complete q.prologue-home-001»');
 });
 
 test('прохід керується лише кліками й клавішами: без приватного API гри та без імпортів ядра', () => {
@@ -489,8 +493,8 @@ test.describe('Еліза на мапі (клавіатура)', () => {
     await open(page);
     await panel(page).locator('[data-act="create"]', { hasText: 'Велосипед' }).first().click();
     await page.waitForTimeout(400);   // GAME-80: панель глуха ~350 мс після дії
-    for (const [k, key] of [['complete', 'q.st-001'], ['complete', 'q.st-002'], ['visit', 'loc.shop'],
-      ['pickup', 'item.tent'], ['pickup', 'item.sleeping-bag'], ['complete', 'q.st-003'], ['visit', 'loc.road'], ['complete', 'q.st-004'], ['visit', 'loc.camp.lake']] as const) await act(page, k, key);
+    for (const [k, key] of [['complete', 'q.prologue-home-001'], ['complete', 'q.st-001'], ['complete', 'q.st-002'], ['visit', 'loc.shop'],
+      ['pickup', 'item.tent'], ['pickup', 'item.sleeping-bag'], ['complete', 'q.st-003'], ['visit', 'loc.home'], ['complete', 'q.ch1-home-001'], ['visit', 'loc.road'], ['complete', 'q.st-004'], ['visit', 'loc.camp.lake']] as const) await act(page, k, key);
     await page.locator('[data-ui="story-close"]').click();
     await walkToElise(page);
     await page.keyboard.press('Space');

@@ -6,6 +6,10 @@
       "url": "https://creativecommons.org/licenses/by-sa/3.0/",
       "drm_ok": false
     },
+    "CC-BY-SA 4.0": {
+      "url": "https://creativecommons.org/licenses/by-sa/4.0/",
+      "drm_ok": false
+    },
     "CC0": {
       "url": "https://creativecommons.org/publicdomain/zero/1.0/",
       "drm_ok": true
@@ -27,6 +31,42 @@
       ],
       "sources": [
         "https://opengameart.org/content/lpc-tile-atlas"
+      ]
+    },
+    {
+      "name": "Anamaris",
+      "files": [
+        "tiles/home_windows_doors.png"
+      ],
+      "licences": [
+        "CC-BY-SA 3.0"
+      ],
+      "sources": [
+        "https://opengameart.org/content/lpc-windows-doors"
+      ]
+    },
+    {
+      "name": "AntumDeluge",
+      "files": [
+        "tiles/home_shelf.png"
+      ],
+      "licences": [
+        "CC-BY-SA 3.0"
+      ],
+      "sources": [
+        "https://opengameart.org/content/lpc-shelves-rework"
+      ]
+    },
+    {
+      "name": "Arthur Carvalho",
+      "files": [
+        "tiles/home_floor.png"
+      ],
+      "licences": [
+        "CC-BY-SA 4.0"
+      ],
+      "sources": [
+        "https://opengameart.org/content/lpc-floors"
       ]
     },
     {
@@ -59,6 +99,21 @@
       ]
     },
     {
+      "name": "bleutailfly",
+      "files": [
+        "tiles/home_floor.png",
+        "tiles/home_walls.png"
+      ],
+      "licences": [
+        "CC-BY-SA 3.0",
+        "CC-BY-SA 4.0"
+      ],
+      "sources": [
+        "https://opengameart.org/content/lpc-floors",
+        "https://opengameart.org/content/lpc-walls"
+      ]
+    },
+    {
       "name": "Blue Moon Bear",
       "files": [
         "tiles/camp_car.png"
@@ -81,45 +136,91 @@
         "characters/head/heads/human/male/walk.png",
         "characters/legs/pants/male/walk.png",
         "characters/legs/pants/thin/walk.png",
-        "characters/torso/clothes/longsleeve/longsleeve/female/walk.png"
+        "characters/torso/clothes/longsleeve/longsleeve/female/walk.png",
+        "characters/torso/clothes/shortsleeve/shortsleeve/teen/walk.png",
+        "sprites/cat_mia.png",
+        "tiles/home_floor.png",
+        "tiles/home_furniture.png",
+        "tiles/home_walls.png",
+        "tiles/home_windows_doors.png"
       ],
       "licences": [
-        "CC-BY-SA 3.0"
+        "CC-BY-SA 3.0",
+        "CC-BY-SA 4.0",
+        "OGA-BY 3.0"
       ],
       "sources": [
         "http://opengameart.org/content/lpc-clothing-updates",
+        "http://opengameart.org/content/lpc-revised-character-basics",
         "https://github.com/ElizaWy/LPC/tree/main/Characters/Clothing",
         "https://gitlab.com/vagabondgame/lpc-characters",
         "https://opengameart.org/content/",
         "https://opengameart.org/content/liberated-pixel-cup-lpc-base-assets-sprites-map-tiles",
         "https://opengameart.org/content/lpc-7-womens-shirts",
         "https://opengameart.org/content/lpc-be-seated",
+        "https://opengameart.org/content/lpc-cats-and-dogs",
         "https://opengameart.org/content/lpc-character-bases",
         "https://opengameart.org/content/lpc-expanded-pants",
         "https://opengameart.org/content/lpc-expanded-simple-shirts",
         "https://opengameart.org/content/lpc-expanded-sit-run-jump-more",
         "https://opengameart.org/content/lpc-expanded-socks-shoes",
+        "https://opengameart.org/content/lpc-floors",
         "https://opengameart.org/content/lpc-jump-expanded",
         "https://opengameart.org/content/lpc-ladies",
         "https://opengameart.org/content/lpc-male-jumping-animation-by-durrani",
         "https://opengameart.org/content/lpc-medieval-fantasy-character-sprites",
+        "https://opengameart.org/content/lpc-revised-base-object-kit",
         "https://opengameart.org/content/lpc-revised-character-basics",
         "https://opengameart.org/content/lpc-runcycle-and-diagonal-walkcycle",
         "https://opengameart.org/content/lpc-runcycle-for-male-muscular-and-pregnant-character-bases-with-modular-heads",
-        "https://opengameart.org/content/lpc-teen-unisex-base-clothes"
+        "https://opengameart.org/content/lpc-teen-androgynous-short-sleeve-shirt",
+        "https://opengameart.org/content/lpc-teen-unisex-base-clothes",
+        "https://opengameart.org/content/lpc-walls",
+        "https://opengameart.org/content/lpc-windows-doors"
+      ]
+    },
+    {
+      "name": "Bonsaiheldin",
+      "files": [
+        "tiles/home_floor.png"
+      ],
+      "licences": [
+        "CC-BY-SA 4.0"
+      ],
+      "sources": [
+        "https://opengameart.org/content/lpc-floors"
+      ]
+    },
+    {
+      "name": "Buch",
+      "files": [
+        "tiles/home_floor.png"
+      ],
+      "licences": [
+        "CC-BY-SA 4.0"
+      ],
+      "sources": [
+        "https://opengameart.org/content/lpc-floors"
       ]
     },
     {
       "name": "Casper Nilsson",
       "files": [
         "tiles/base_out_atlas.png",
+        "tiles/home_floor.png",
+        "tiles/home_walls.png",
+        "tiles/home_windows_doors.png",
         "tiles/terrain_atlas.png"
       ],
       "licences": [
-        "CC-BY-SA 3.0"
+        "CC-BY-SA 3.0",
+        "CC-BY-SA 4.0"
       ],
       "sources": [
-        "https://opengameart.org/content/lpc-tile-atlas"
+        "https://opengameart.org/content/lpc-floors",
+        "https://opengameart.org/content/lpc-tile-atlas",
+        "https://opengameart.org/content/lpc-walls",
+        "https://opengameart.org/content/lpc-windows-doors"
       ]
     },
     {
@@ -136,16 +237,59 @@
       ]
     },
     {
+      "name": "Chris Hamons",
+      "files": [
+        "tiles/home_floor.png"
+      ],
+      "licences": [
+        "CC-BY-SA 4.0"
+      ],
+      "sources": [
+        "https://opengameart.org/content/lpc-floors"
+      ]
+    },
+    {
+      "name": "Cougarmint",
+      "files": [
+        "tiles/home_floor.png",
+        "tiles/home_walls.png"
+      ],
+      "licences": [
+        "CC-BY-SA 3.0",
+        "CC-BY-SA 4.0"
+      ],
+      "sources": [
+        "https://opengameart.org/content/lpc-floors",
+        "https://opengameart.org/content/lpc-walls"
+      ]
+    },
+    {
       "name": "Daniel Armstrong (HughSpectrum)",
       "files": [
         "tiles/base_out_atlas.png",
+        "tiles/home_walls.png",
+        "tiles/home_windows_doors.png",
         "tiles/terrain_atlas.png"
       ],
       "licences": [
         "CC-BY-SA 3.0"
       ],
       "sources": [
-        "https://opengameart.org/content/lpc-tile-atlas"
+        "https://opengameart.org/content/lpc-tile-atlas",
+        "https://opengameart.org/content/lpc-walls",
+        "https://opengameart.org/content/lpc-windows-doors"
+      ]
+    },
+    {
+      "name": "Daniel Cook",
+      "files": [
+        "tiles/home_walls.png"
+      ],
+      "licences": [
+        "CC-BY-SA 3.0"
+      ],
+      "sources": [
+        "https://opengameart.org/content/lpc-walls"
       ]
     },
     {
@@ -196,7 +340,10 @@
         "characters/head/heads/human/male_small/walk.png",
         "characters/legs/pants/male/walk.png",
         "characters/legs/pants/thin/walk.png",
-        "characters/torso/clothes/longsleeve/longsleeve/female/walk.png"
+        "characters/torso/clothes/longsleeve/longsleeve/female/walk.png",
+        "characters/torso/clothes/shortsleeve/shortsleeve/teen/walk.png",
+        "tiles/home_furniture.png",
+        "tiles/home_office.png"
       ],
       "licences": [
         "CC-BY-SA 3.0",
@@ -204,6 +351,7 @@
       ],
       "sources": [
         "http://opengameart.org/content/lpc-clothing-updates",
+        "http://opengameart.org/content/lpc-revised-character-basics",
         "https://github.com/ElizaWy/LPC/tree/main/Characters/Clothing",
         "https://github.com/LiberatedPixelCup/Universal-LPC-Spritesheet-Character-Generator",
         "https://gitlab.com/vagabondgame/lpc-characters",
@@ -218,9 +366,12 @@
         "https://opengameart.org/content/lpc-ladies",
         "https://opengameart.org/content/lpc-male-jumping-animation-by-durrani",
         "https://opengameart.org/content/lpc-medieval-fantasy-character-sprites",
+        "https://opengameart.org/content/lpc-revised-base-object-kit",
         "https://opengameart.org/content/lpc-revised-character-basics",
+        "https://opengameart.org/content/lpc-revised-the-office",
         "https://opengameart.org/content/lpc-runcycle-and-diagonal-walkcycle",
         "https://opengameart.org/content/lpc-runcycle-for-male-muscular-and-pregnant-character-bases-with-modular-heads",
+        "https://opengameart.org/content/lpc-teen-androgynous-short-sleeve-shirt",
         "https://opengameart.org/content/lpc-teen-unisex-base-clothes"
       ]
     },
@@ -251,25 +402,83 @@
       ]
     },
     {
+      "name": "Gaurav Munjal",
+      "files": [
+        "tiles/home_floor.png"
+      ],
+      "licences": [
+        "CC-BY-SA 4.0"
+      ],
+      "sources": [
+        "https://opengameart.org/content/lpc-floors"
+      ]
+    },
+    {
+      "name": "Guido Bos",
+      "files": [
+        "tiles/home_walls.png",
+        "tiles/home_windows_doors.png"
+      ],
+      "licences": [
+        "CC-BY-SA 3.0"
+      ],
+      "sources": [
+        "https://opengameart.org/content/lpc-walls",
+        "https://opengameart.org/content/lpc-windows-doors"
+      ]
+    },
+    {
+      "name": "Guilherme Vieira (n2liquid)",
+      "files": [
+        "tiles/home_floor.png"
+      ],
+      "licences": [
+        "CC-BY-SA 4.0"
+      ],
+      "sources": [
+        "https://opengameart.org/content/lpc-floors"
+      ]
+    },
+    {
+      "name": "Hyptosis",
+      "files": [
+        "tiles/home_floor.png",
+        "tiles/home_furniture.png",
+        "tiles/home_walls.png"
+      ],
+      "licences": [
+        "CC-BY-SA 3.0",
+        "CC-BY-SA 4.0"
+      ],
+      "sources": [
+        "https://opengameart.org/content/lpc-floors",
+        "https://opengameart.org/content/lpc-revised-base-object-kit",
+        "https://opengameart.org/content/lpc-walls"
+      ]
+    },
+    {
       "name": "JaidynReiman",
       "files": [
         "characters/body/bodies/male/walk.png",
         "characters/feet/shoes/basic/male/walk.png",
         "characters/feet/shoes/basic/thin/walk.png",
         "characters/hair/messy1/adult/walk.png",
+        "characters/hair/pixie/adult/walk.png",
         "characters/hair/plain/adult/walk.png",
         "characters/hair/ponytail/adult/bg/walk.png",
         "characters/hair/ponytail/adult/fg/walk.png",
         "characters/legs/pants/male/walk.png",
         "characters/legs/pants/thin/walk.png",
         "characters/torso/clothes/longsleeve/longsleeve/female/walk.png",
-        "characters/torso/clothes/longsleeve/longsleeve/male/walk.png"
+        "characters/torso/clothes/longsleeve/longsleeve/male/walk.png",
+        "characters/torso/clothes/shortsleeve/shortsleeve/teen/walk.png"
       ],
       "licences": [
         "CC-BY-SA 3.0"
       ],
       "sources": [
         "http://opengameart.org/content/lpc-clothing-updates",
+        "http://opengameart.org/content/lpc-revised-character-basics",
         "https://github.com/ElizaWy/LPC/tree/main/Characters/Clothing",
         "https://opengameart.org/content/liberated-pixel-cup-lpc-base-assets-sprites-map-tiles",
         "https://opengameart.org/content/lpc-7-womens-shirts",
@@ -286,7 +495,32 @@
         "https://opengameart.org/content/lpc-revised-character-basics",
         "https://opengameart.org/content/lpc-runcycle-and-diagonal-walkcycle",
         "https://opengameart.org/content/lpc-runcycle-for-male-muscular-and-pregnant-character-bases-with-modular-heads",
+        "https://opengameart.org/content/lpc-teen-androgynous-short-sleeve-shirt",
         "https://opengameart.org/content/ponytail-and-plain-hairstyles"
+      ]
+    },
+    {
+      "name": "jestan",
+      "files": [
+        "tiles/home_floor.png"
+      ],
+      "licences": [
+        "CC-BY-SA 4.0"
+      ],
+      "sources": [
+        "https://opengameart.org/content/lpc-floors"
+      ]
+    },
+    {
+      "name": "Jetrel",
+      "files": [
+        "tiles/home_floor.png"
+      ],
+      "licences": [
+        "CC-BY-SA 4.0"
+      ],
+      "sources": [
+        "https://opengameart.org/content/lpc-floors"
       ]
     },
     {
@@ -360,22 +594,85 @@
       ]
     },
     {
-      "name": "Lanea Zimmerman (Sharm)",
+      "name": "keith karnage",
       "files": [
-        "tiles/base_out_atlas.png",
-        "tiles/terrain_atlas.png"
+        "tiles/home_floor.png"
+      ],
+      "licences": [
+        "CC-BY-SA 4.0"
+      ],
+      "sources": [
+        "https://opengameart.org/content/lpc-floors"
+      ]
+    },
+    {
+      "name": "Keith Karnage",
+      "files": [
+        "tiles/home_windows_doors.png"
       ],
       "licences": [
         "CC-BY-SA 3.0"
       ],
       "sources": [
-        "https://opengameart.org/content/lpc-tile-atlas"
+        "https://opengameart.org/content/lpc-windows-doors"
+      ]
+    },
+    {
+      "name": "KnoblePersona",
+      "files": [
+        "tiles/home_walls.png"
+      ],
+      "licences": [
+        "CC-BY-SA 3.0"
+      ],
+      "sources": [
+        "https://opengameart.org/content/lpc-walls"
+      ]
+    },
+    {
+      "name": "Krusmira",
+      "files": [
+        "tiles/home_windows_doors.png"
+      ],
+      "licences": [
+        "CC-BY-SA 3.0"
+      ],
+      "sources": [
+        "https://opengameart.org/content/lpc-windows-doors"
+      ]
+    },
+    {
+      "name": "Lanea Zimmerman (Sharm)",
+      "files": [
+        "tiles/base_out_atlas.png",
+        "tiles/home_floor.png",
+        "tiles/home_furniture.png",
+        "tiles/home_office.png",
+        "tiles/home_shelf.png",
+        "tiles/home_walls.png",
+        "tiles/home_windows_doors.png",
+        "tiles/terrain_atlas.png"
+      ],
+      "licences": [
+        "CC-BY-SA 3.0",
+        "CC-BY-SA 4.0",
+        "OGA-BY 3.0"
+      ],
+      "sources": [
+        "https://opengameart.org/content/lpc-floors",
+        "https://opengameart.org/content/lpc-revised-base-object-kit",
+        "https://opengameart.org/content/lpc-revised-the-office",
+        "https://opengameart.org/content/lpc-shelves-rework",
+        "https://opengameart.org/content/lpc-tile-atlas",
+        "https://opengameart.org/content/lpc-walls",
+        "https://opengameart.org/content/lpc-windows-doors"
       ]
     },
     {
       "name": "Manuel Riecke (MrBeast)",
       "files": [
         "characters/hair/messy1/adult/walk.png",
+        "characters/hair/pixie/adult/walk.png",
         "characters/hair/plain/adult/walk.png",
         "characters/hair/ponytail/adult/bg/walk.png",
         "characters/hair/ponytail/adult/fg/walk.png",
@@ -420,6 +717,18 @@
       ]
     },
     {
+      "name": "Matthew Nash",
+      "files": [
+        "tiles/home_walls.png"
+      ],
+      "licences": [
+        "CC-BY-SA 3.0"
+      ],
+      "sources": [
+        "https://opengameart.org/content/lpc-walls"
+      ]
+    },
+    {
       "name": "MuffinElZangano",
       "files": [
         "characters/body/bodies/female/walk.png",
@@ -446,6 +755,40 @@
       ]
     },
     {
+      "name": "NaRNeRZz",
+      "files": [
+        "tiles/home_floor.png",
+        "tiles/home_walls.png"
+      ],
+      "licences": [
+        "CC-BY-SA 3.0",
+        "CC-BY-SA 4.0"
+      ],
+      "sources": [
+        "https://opengameart.org/content/lpc-floors",
+        "https://opengameart.org/content/lpc-walls"
+      ]
+    },
+    {
+      "name": "Nyom",
+      "files": [
+        "characters/torso/clothes/shortsleeve/shortsleeve/teen/walk.png"
+      ],
+      "licences": [
+        "CC-BY-SA 3.0"
+      ],
+      "sources": [
+        "http://opengameart.org/content/lpc-clothing-updates",
+        "http://opengameart.org/content/lpc-revised-character-basics",
+        "https://github.com/ElizaWy/LPC/tree/main/Characters/Clothing",
+        "https://opengameart.org/content/liberated-pixel-cup-lpc-base-assets-sprites-map-tiles",
+        "https://opengameart.org/content/lpc-7-womens-shirts",
+        "https://opengameart.org/content/lpc-expanded-simple-shirts",
+        "https://opengameart.org/content/lpc-expanded-sit-run-jump-more",
+        "https://opengameart.org/content/lpc-teen-androgynous-short-sleeve-shirt"
+      ]
+    },
+    {
       "name": "Pierre Vigier (pvigier)",
       "files": [
         "characters/body/bodies/female/walk.png",
@@ -469,6 +812,45 @@
       ]
     },
     {
+      "name": "Reemax",
+      "files": [
+        "tiles/home_floor.png",
+        "tiles/home_walls.png"
+      ],
+      "licences": [
+        "CC-BY-SA 3.0",
+        "CC-BY-SA 4.0"
+      ],
+      "sources": [
+        "https://opengameart.org/content/lpc-floors",
+        "https://opengameart.org/content/lpc-walls"
+      ]
+    },
+    {
+      "name": "Silveira Neto",
+      "files": [
+        "tiles/home_floor.png"
+      ],
+      "licences": [
+        "CC-BY-SA 4.0"
+      ],
+      "sources": [
+        "https://opengameart.org/content/lpc-floors"
+      ]
+    },
+    {
+      "name": "Sir Spummington",
+      "files": [
+        "tiles/home_walls.png"
+      ],
+      "licences": [
+        "CC-BY-SA 3.0"
+      ],
+      "sources": [
+        "https://opengameart.org/content/lpc-walls"
+      ]
+    },
+    {
       "name": "Skyler Robert Colladay (FeralFantom)",
       "files": [
         "tiles/base_out_atlas.png",
@@ -479,6 +861,21 @@
       ],
       "sources": [
         "https://opengameart.org/content/lpc-tile-atlas"
+      ]
+    },
+    {
+      "name": "SpiderDave",
+      "files": [
+        "tiles/home_floor.png",
+        "tiles/home_walls.png"
+      ],
+      "licences": [
+        "CC-BY-SA 3.0",
+        "CC-BY-SA 4.0"
+      ],
+      "sources": [
+        "https://opengameart.org/content/lpc-floors",
+        "https://opengameart.org/content/lpc-walls"
       ]
     },
     {
@@ -493,15 +890,20 @@
         "characters/legs/pants/male/walk.png",
         "characters/legs/pants/thin/walk.png",
         "characters/torso/clothes/longsleeve/longsleeve/female/walk.png",
+        "characters/torso/clothes/shortsleeve/shortsleeve/teen/walk.png",
         "tiles/base_out_atlas.png",
+        "tiles/home_floor.png",
+        "tiles/home_walls.png",
         "tiles/terrain_atlas.png"
       ],
       "licences": [
         "CC-BY-SA 3.0",
+        "CC-BY-SA 4.0",
         "OGA-BY 3.0"
       ],
       "sources": [
         "http://opengameart.org/content/lpc-clothing-updates",
+        "http://opengameart.org/content/lpc-revised-character-basics",
         "https://github.com/ElizaWy/LPC/tree/main/Characters/Clothing",
         "https://github.com/LiberatedPixelCup/Universal-LPC-Spritesheet-Character-Generator",
         "https://gitlab.com/vagabondgame/lpc-characters",
@@ -513,6 +915,7 @@
         "https://opengameart.org/content/lpc-expanded-pants",
         "https://opengameart.org/content/lpc-expanded-simple-shirts",
         "https://opengameart.org/content/lpc-expanded-sit-run-jump-more",
+        "https://opengameart.org/content/lpc-floors",
         "https://opengameart.org/content/lpc-jump-expanded",
         "https://opengameart.org/content/lpc-ladies",
         "https://opengameart.org/content/lpc-male-jumping-animation-by-durrani",
@@ -520,16 +923,82 @@
         "https://opengameart.org/content/lpc-revised-character-basics",
         "https://opengameart.org/content/lpc-runcycle-and-diagonal-walkcycle",
         "https://opengameart.org/content/lpc-runcycle-for-male-muscular-and-pregnant-character-bases-with-modular-heads",
+        "https://opengameart.org/content/lpc-teen-androgynous-short-sleeve-shirt",
         "https://opengameart.org/content/lpc-teen-unisex-base-clothes",
-        "https://opengameart.org/content/lpc-tile-atlas"
+        "https://opengameart.org/content/lpc-tile-atlas",
+        "https://opengameart.org/content/lpc-walls"
       ]
     },
     {
-      "name": "TheraHedwig",
+      "name": "Talosaurus",
+      "files": [
+        "tiles/home_windows_doors.png"
+      ],
+      "licences": [
+        "CC-BY-SA 3.0"
+      ],
+      "sources": [
+        "https://opengameart.org/content/lpc-windows-doors"
+      ]
+    },
+    {
+      "name": "The Open Surge team",
+      "files": [
+        "tiles/home_floor.png"
+      ],
+      "licences": [
+        "CC-BY-SA 4.0"
+      ],
+      "sources": [
+        "https://opengameart.org/content/lpc-floors"
+      ]
+    },
+    {
+      "name": "Tuomo Untinen",
+      "files": [
+        "tiles/home_shelf.png"
+      ],
+      "licences": [
+        "CC-BY-SA 3.0"
+      ],
+      "sources": [
+        "https://opengameart.org/content/lpc-shelves-rework"
+      ]
+    },
+    {
+      "name": "Tyler Olsen (Roots)",
+      "files": [
+        "tiles/home_floor.png"
+      ],
+      "licences": [
+        "CC-BY-SA 4.0"
+      ],
+      "sources": [
+        "https://opengameart.org/content/lpc-floors"
+      ]
+    },
+    {
+      "name": "William Thompson (William.Thompsonj)",
+      "files": [
+        "tiles/home_floor.png",
+        "tiles/home_walls.png"
+      ],
+      "licences": [
+        "CC-BY-SA 3.0",
+        "CC-BY-SA 4.0"
+      ],
+      "sources": [
+        "https://opengameart.org/content/lpc-floors",
+        "https://opengameart.org/content/lpc-walls"
+      ]
+    },
+    {
+      "name": "Wolthera van Hövell tot Westerflier (TheraHedwig)",
       "files": [
         "characters/body/bodies/female/walk.png",
         "characters/body/bodies/male/walk.png",
-        "characters/body/bodies/teen/walk.png"
+        "characters/body/bodies/teen/walk.png",
+        "tiles/home_walls.png"
       ],
       "licences": [
         "CC-BY-SA 3.0"
@@ -547,7 +1016,8 @@
         "https://opengameart.org/content/lpc-revised-character-basics",
         "https://opengameart.org/content/lpc-runcycle-and-diagonal-walkcycle",
         "https://opengameart.org/content/lpc-runcycle-for-male-muscular-and-pregnant-character-bases-with-modular-heads",
-        "https://opengameart.org/content/lpc-teen-unisex-base-clothes"
+        "https://opengameart.org/content/lpc-teen-unisex-base-clothes",
+        "https://opengameart.org/content/lpc-walls"
       ]
     },
     {
@@ -565,13 +1035,15 @@
     {
       "name": "Zabin",
       "files": [
-        "sprites/campfire.png"
+        "sprites/campfire.png",
+        "tiles/home_walls.png"
       ],
       "licences": [
         "CC-BY-SA 3.0"
       ],
       "sources": [
-        "https://opengameart.org/content/camp-fire-animation-for-rpgs-finished"
+        "https://opengameart.org/content/camp-fire-animation-for-rpgs-finished",
+        "https://opengameart.org/content/lpc-walls"
       ]
     }
   ],
@@ -581,7 +1053,7 @@
       "authors": [
         "Benjamin K. Smith (BenCreating)",
         "bluecarrot16",
-        "TheraHedwig",
+        "Wolthera van Hövell tot Westerflier (TheraHedwig)",
         "Evert",
         "MuffinElZangano",
         "Durrani",
@@ -614,7 +1086,7 @@
         "Benjamin K. Smith (BenCreating)",
         "Evert",
         "Eliza Wyatt (ElizaWy)",
-        "TheraHedwig",
+        "Wolthera van Hövell tot Westerflier (TheraHedwig)",
         "MuffinElZangano",
         "Durrani",
         "Johannes Sjölund (wulax)",
@@ -639,7 +1111,7 @@
       "authors": [
         "bluecarrot16",
         "Evert",
-        "TheraHedwig",
+        "Wolthera van Hövell tot Westerflier (TheraHedwig)",
         "Benjamin K. Smith (BenCreating)",
         "MuffinElZangano",
         "Durrani",
@@ -696,6 +1168,19 @@
     },
     {
       "file": "characters/hair/messy1/adult/walk.png",
+      "authors": [
+        "JaidynReiman",
+        "Manuel Riecke (MrBeast)"
+      ],
+      "licence": "CC-BY-SA 3.0",
+      "sources": [
+        "https://opengameart.org/content/liberated-pixel-cup-lpc-base-assets-sprites-map-tiles",
+        "https://opengameart.org/content/lpc-expanded-hair"
+      ],
+      "modified": "no"
+    },
+    {
+      "file": "characters/hair/pixie/adult/walk.png",
       "authors": [
         "JaidynReiman",
         "Manuel Riecke (MrBeast)"
@@ -864,6 +1349,28 @@
       "modified": "no"
     },
     {
+      "file": "characters/torso/clothes/shortsleeve/shortsleeve/teen/walk.png",
+      "authors": [
+        "Nyom",
+        "bluecarrot16",
+        "Eliza Wyatt (ElizaWy)",
+        "JaidynReiman",
+        "Stephen Challener (Redshrike)"
+      ],
+      "licence": "CC-BY-SA 3.0",
+      "sources": [
+        "https://opengameart.org/content/liberated-pixel-cup-lpc-base-assets-sprites-map-tiles",
+        "https://opengameart.org/content/lpc-7-womens-shirts",
+        "http://opengameart.org/content/lpc-revised-character-basics",
+        "http://opengameart.org/content/lpc-clothing-updates",
+        "https://opengameart.org/content/lpc-teen-androgynous-short-sleeve-shirt",
+        "https://github.com/ElizaWy/LPC/tree/main/Characters/Clothing",
+        "https://opengameart.org/content/lpc-expanded-sit-run-jump-more",
+        "https://opengameart.org/content/lpc-expanded-simple-shirts"
+      ],
+      "modified": "no"
+    },
+    {
       "file": "sprites/campfire.png",
       "authors": [
         "Zabin"
@@ -873,6 +1380,17 @@
         "https://opengameart.org/content/camp-fire-animation-for-rpgs-finished"
       ],
       "modified": "recoloured onto the base palette (scripts/palette/quantize.py), alpha made binary; frames unchanged"
+    },
+    {
+      "file": "sprites/cat_mia.png",
+      "authors": [
+        "bluecarrot16"
+      ],
+      "licence": "OGA-BY 3.0",
+      "sources": [
+        "https://opengameart.org/content/lpc-cats-and-dogs"
+      ],
+      "modified": "cropped the brown tabby cat (columns 8–11 -> 128×160, 5 rows: walk right/up/down/left 3 frames + lying, sit); its 3 brown tones recoloured to LPC-palette greys (#858481, #6d6c69, #514647); other pixels quantized to the palette"
     },
     {
       "file": "tiles/base_out_atlas.png",
@@ -915,6 +1433,126 @@
         "https://opengameart.org/content/tent-3"
       ],
       "modified": "scaled 2x with nearest-neighbour, set on a 96x64 canvas, one outline colour recoloured onto the base palette (scripts/palette/quantize.py)"
+    },
+    {
+      "file": "tiles/home_floor.png",
+      "authors": [
+        "bluecarrot16",
+        "Lanea Zimmerman (Sharm)",
+        "William Thompson (William.Thompsonj)",
+        "Hyptosis",
+        "SpiderDave",
+        "Cougarmint",
+        "Stephen Challener (Redshrike)",
+        "Bonsaiheldin",
+        "Tyler Olsen (Roots)",
+        "Jetrel",
+        "jestan",
+        "The Open Surge team",
+        "Gaurav Munjal",
+        "Reemax",
+        "Silveira Neto",
+        "bleutailfly",
+        "Casper Nilsson",
+        "NaRNeRZz",
+        "Buch",
+        "keith karnage",
+        "Arthur Carvalho",
+        "Guilherme Vieira (n2liquid)",
+        "Chris Hamons"
+      ],
+      "licence": "CC-BY-SA 4.0",
+      "sources": [
+        "https://opengameart.org/content/lpc-floors"
+      ],
+      "modified": "two 32x32 tiles (oak plank, cream diamond tile) cropped from floors.png onto a 64x32 sheet, recoloured onto the base palette (scripts/palette/quantize.py)"
+    },
+    {
+      "file": "tiles/home_furniture.png",
+      "authors": [
+        "Eliza Wyatt (ElizaWy)",
+        "Lanea Zimmerman (Sharm)",
+        "bluecarrot16",
+        "Hyptosis"
+      ],
+      "licence": "CC-BY-SA 3.0",
+      "sources": [
+        "https://opengameart.org/content/lpc-revised-base-object-kit"
+      ],
+      "modified": "sofa 2x1, two dining chairs, coffee table 2x1, double bed 2x3 assembled from headboard + pillows + mattress, wardrobe 1x3, set dining table 2x1, nightstand, wall shelf, countertop 3x2, bottles, cutting board, floor lamp 1x2, planter 1x3 and one painting 2x1 cropped from the kit sheets onto a 448x96 sheet, recoloured onto the base palette (scripts/palette/quantize.py)"
+    },
+    {
+      "file": "tiles/home_office.png",
+      "authors": [
+        "Eliza Wyatt (ElizaWy)",
+        "Lanea Zimmerman (Sharm)"
+      ],
+      "licence": "OGA-BY 3.0",
+      "sources": [
+        "https://opengameart.org/content/lpc-revised-the-office"
+      ],
+      "modified": "ornate desk 3x2, one laptop and one coffee maker cropped onto a 128x64 sheet, recoloured onto the base palette (scripts/palette/quantize.py)"
+    },
+    {
+      "file": "tiles/home_shelf.png",
+      "authors": [
+        "Lanea Zimmerman (Sharm)",
+        "Tuomo Untinen",
+        "AntumDeluge"
+      ],
+      "licence": "CC-BY-SA 3.0",
+      "sources": [
+        "https://opengameart.org/content/lpc-shelves-rework"
+      ],
+      "modified": "left bookshelf 2x3 cropped from bookshelf-brown_0.png, recoloured onto the base palette (scripts/palette/quantize.py)"
+    },
+    {
+      "file": "tiles/home_walls.png",
+      "authors": [
+        "bluecarrot16",
+        "Lanea Zimmerman (Sharm)",
+        "Daniel Armstrong (HughSpectrum)",
+        "William Thompson (William.Thompsonj)",
+        "Hyptosis",
+        "Zabin",
+        "Daniel Cook",
+        "Guido Bos",
+        "SpiderDave",
+        "Cougarmint",
+        "Stephen Challener (Redshrike)",
+        "Matthew Nash",
+        "Wolthera van Hövell tot Westerflier (TheraHedwig)",
+        "Reemax",
+        "bleutailfly",
+        "NaRNeRZz",
+        "Sir Spummington",
+        "Casper Nilsson",
+        "KnoblePersona"
+      ],
+      "licence": "CC-BY-SA 3.0",
+      "sources": [
+        "https://opengameart.org/content/lpc-walls"
+      ],
+      "modified": "light-blue plain wall block 3x3 tiles and a cream wall-top column 1x3 (end cap, middle, bottom cap) cropped from walls.png onto a 128x96 sheet, recoloured onto the base palette (scripts/palette/quantize.py)"
+    },
+    {
+      "file": "tiles/home_windows_doors.png",
+      "authors": [
+        "bluecarrot16",
+        "Lanea Zimmerman (Sharm)",
+        "Daniel Armstrong (HughSpectrum)",
+        "Casper Nilsson",
+        "Anamaris",
+        "Krusmira",
+        "Keith Karnage",
+        "Guido Bos",
+        "Talosaurus"
+      ],
+      "licence": "CC-BY-SA 3.0",
+      "sources": [
+        "https://opengameart.org/content/lpc-windows-doors"
+      ],
+      "modified": "one white 2-tile window (cropped from x=16 so it sits on the tile grid) and one white door (shifted 16 px down so it stands on the floor line) cropped from windows-doors.png onto a 96x96 sheet, recoloured onto the base palette (scripts/palette/quantize.py)"
     },
     {
       "file": "tiles/terrain_atlas.png",

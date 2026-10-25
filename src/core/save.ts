@@ -149,6 +149,27 @@ export function danglingRefs(game: SimState['game'], st: StoryDefs): string[] {
 }
 
 /**
+ * Ворота, що з'явились після випуску сейву (GAME-138: `loc.road` тепер відкриває CH1-HOME-001, раніше ST-003).
+ * Старий сейв, що вже стоїть за воротами (квест тієї локації активний/завершений або гравець там), ворота не проходив:
+ * без ремонту дорога зачинена, а помилки завантаження немає — тихий тупик. Квест-ключ, якого в сейві зовсім немає,
+ * зараховуємо завершеним (done — усі обов'язкові цілі). Детерміновано й ідемпотентно: наявний запис не чіпаємо,
+ * свіжий сейв (за воротами нікого) не змінюється.
+ */
+function openPassedGates(game: SimState['game'], st: StoryDefs): SimState['game'] {
+  let quests = game.quests;
+  for (const [locId, loc] of Object.entries(st.locations)) {
+    const key = loc.unlockedBy;
+    if (key === undefined || Object.hasOwn(quests, key) || !Object.hasOwn(st.quests, key)) continue;
+    const beyond = game.player?.locationId === locId
+      || Object.entries(quests).some(([q, pr]) => pr.status !== 'declined' && Object.hasOwn(st.quests, q) && st.quests[q]?.locationId === locId);
+    if (!beyond) continue;
+    const done = (st.quests[key]?.objectives ?? []).filter((o) => o.required).map((o) => o.id).sort();
+    quests = { ...quests, [key]: { status: 'completed', done } };
+  }
+  return quests === game.quests ? game : { ...game, quests };
+}
+
+/**
  * `story` — перевірити посилання сейву проти нинішнього сюжету; `life` — календар нинішньої гри для міграції v2 → v3
  * (без нього дні виплати, що минули до старого сейву, лічильник не зараховує — див. MIGRATIONS[2]).
  */
@@ -176,6 +197,8 @@ export function fromSave(text: string, opts: { readonly story?: StoryDefs; reado
   const bad = shapeError(sim);
   if (bad) return { ok: false, code: 'SAVE_SHAPE', detail: bad };
   if (opts.story) {
+    const g = openPassedGates((sim as SimState).game, opts.story);
+    if (g !== (sim as SimState).game) sim = { ...(sim as SimState), game: g };
     const missing = danglingRefs((sim as SimState).game, opts.story);
     if (missing.length) return { ok: false, code: 'SAVE_CONTENT_MISMATCH', detail: `not in current content: ${missing.join(', ')}` };
   }

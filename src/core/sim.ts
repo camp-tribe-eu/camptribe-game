@@ -10,7 +10,7 @@ import { payroll } from './life';
 import { eventEligible, route } from './story';
 import { nextInt, seedRng, type RngState } from './rng';
 import { initialState, type GameState } from './state';
-import { dayOf, tripMinutes, weatherOf, type Weather } from './weather';
+import { dayOf, forecastOf, tripMinutes, weatherOf, type Weather } from './weather';
 
 export interface SimState {
   readonly game: GameState;
@@ -82,6 +82,12 @@ function travelMinutes(s: SimState, r: ReturnType<typeof dispatch>, ctx: StepCtx
 /** Погода поточного дня симуляції (SIM-WX-005). Підміна — лише для тестів (StepCtx.weather). */
 export const todayWeather = (s: Pick<SimState, 'worldSeed' | 'clock'>, ctx: StepCtx = {}): Weather =>
   (ctx.weather?.of ?? weatherOf)(s.worldSeed, dayOf(s.clock));
+
+/**
+ * Прогноз на поточний день (GAME-131) — лише для показу гравцеві. Ефекти симуляції його НЕ читають:
+ * дощ у прогнозі при ясному факті не мочить спорядження і не сповільнює дорогу (src/core/forecast.test.ts).
+ */
+export const todayForecast = (s: Pick<SimState, 'worldSeed' | 'clock'>): Weather => forecastOf(s.worldSeed, dayOf(s.clock));
 
 /**
  * Подія в дорозі (GAME-31): після приїзду — один кидок RNG стану серед подій, доречних тут (eventEligible),
