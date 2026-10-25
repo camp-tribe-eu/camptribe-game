@@ -114,7 +114,7 @@
       .ui-reminder > span, .ui-reminder > textarea { flex: 1 1 200px; min-width: 0; }
       .ui-status { margin: 4px 0 0; width: 100%; font-size: 0.75rem; }
       .ui-story [tabindex="-1"]:focus { outline: 2px solid currentColor; outline-offset: 2px; }
-      .ui-overlay { overflow-y: auto; }
+      .ui-overlay { overflow-y: auto; grid-auto-rows: max-content; /* рядки не стискаються під висоту екрана: при 200 % кнопка з line-height 1.5 вилазила з бокса на сусідів (axe elmPartiallyObscured) */ }
       /* Натиснута кнопка: #386228 дає 5.7:1 зі світлим текстом (було #4f7a3a — 4.0:1, axe color-contrast, GAME-39). */
       .ui-btn[aria-pressed="true"] { background: #386228; }
       /* GAME-106: підсумок дня — секції ліворуч, ширина як у квестів; кнопки в ряд, на вузькому — під одною. */
