@@ -124,6 +124,7 @@ const langOverride = new URLSearchParams(location.search).get('lang') === 'pseud
 render(h(Shell, {
   build: buildLabel(__GAME_VERSION__, __GAME_COMMIT__),   // GAME-91: підпис збірки — у меню паузи, не на екрані гри
   ...(langOverride ? { langOverride } : {}),
+  ...(switches.holdToast ? { holdToast: true } : {}),
   credits,
   port: {
     save: () => saves.save(),
