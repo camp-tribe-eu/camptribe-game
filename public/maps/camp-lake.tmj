@@ -1136,6 +1136,54 @@
      "point": true,
      "rotation": 0,
      "visible": true
+    },
+    {
+     "id": 9,
+     "name": "task.pick-spot",
+     "type": "trigger",
+     "x": 48,
+     "y": 144,
+     "width": 0,
+     "height": 0,
+     "point": true,
+     "rotation": 0,
+     "visible": true
+    },
+    {
+     "id": 10,
+     "name": "task.pitch-tent",
+     "type": "trigger",
+     "x": 144,
+     "y": 80,
+     "width": 0,
+     "height": 0,
+     "point": true,
+     "rotation": 0,
+     "visible": true
+    },
+    {
+     "id": 11,
+     "name": "task.gear-shelter",
+     "type": "trigger",
+     "x": 208,
+     "y": 208,
+     "width": 0,
+     "height": 0,
+     "point": true,
+     "rotation": 0,
+     "visible": true
+    },
+    {
+     "id": 12,
+     "name": "task.mia-car",
+     "type": "trigger",
+     "x": 176,
+     "y": 272,
+     "width": 0,
+     "height": 0,
+     "point": true,
+     "rotation": 0,
+     "visible": true
     }
    ]
   }

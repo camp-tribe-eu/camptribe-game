@@ -181,7 +181,7 @@ const paid = (s: SimState, ctx: StepCtx): SimState => {
  * (settleWave). Пауза годинник не рухає — і строки стоять. Ідемпотентно: вирішена справа вдруге не вирішується.
  */
 const settled = (s: SimState, ctx: StepCtx): SimState => {
-  const game = settleWave(s.game, s.clock.minutes, ctx.defs?.waves);
+  const game = settleWave(s.game, s.clock.minutes, ctx.defs?.waves, ctx.defs?.items);
   return game === s.game ? s : { ...s, game };
 };
 const afterClock = (s: SimState, ctx: StepCtx): SimState => settled(paid(s, ctx), ctx);
