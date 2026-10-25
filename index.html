@@ -94,8 +94,9 @@
       .ui-journal summary { list-style: none; display: inline-block; cursor: pointer; }
       .ui-overlay h2 { margin: 0 0 8px; font-size: 1.5rem; }
       .ui-overlay fieldset { border: 1px solid #e8e6e355; border-radius: 8px; display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; max-width: min(92vw, 640px); }
+      /* line-height: кнопка не успадковує його (UA: normal) — у піксельного шрифту рядки підпису злипалися (відгук власника). */
       .ui-btn { font-family: inherit; font-size: 0.75rem; max-width: 92vw; white-space: normal; min-width: 52px; min-height: 48px; padding: 8px 16px; border-radius: 10px; border: 2px solid #e8e6e3aa;
-        background: #2a2f35; color: #e8e6e3; font-size: 1rem; }
+        background: #2a2f35; color: #e8e6e3; font-size: 1rem; line-height: 1.5; }
       .ui-overlay, .ui-overlay * { box-sizing: border-box; }
             .ui-code { width: 100%; max-width: 560px; font: 0.7rem monospace; background: #111; color: #e8e6e3; border: 1px solid #e8e6e355; border-radius: 6px; padding: 6px; }
       /* GAME-94: нагадування про код відновлення — тихий рядок під шапкою ПОВЕРХ поля (як тост GAME-95): поле гри не
