@@ -90,11 +90,13 @@ export const CODES = {
 
   // хвилі напруги, GAME-170 (content/waves.json; рішення власника 24–25.10 і контракт хвилі в сценарії, §6)
   WAVE_TOO_FEW_TASKS:     { check: 'waves', spec: 'GAME-170: хвиля — 2–4 одночасні справи; одна справа — не напруга, а черга' },
+  WAVE_TOO_MANY_TASKS:    { check: 'waves', spec: 'GAME-170: хвиля — 2–4 одночасні справи; п’ять і більше — не напруга, а шум, який гравець не охопить' },
   WAVE_LIMIT_INVALID:     { check: 'waves', spec: 'GAME-170: кожна справа має строк в ігрових хвилинах — ціле 1…WAVE_MAX_LIMIT (хвиля триває 30–60 с)' },
   WAVE_OUTCOME_MISSING:   { check: 'waves', spec: 'GAME-170: у кожної справи обидва наслідки — встиг (done) і не встиг (late); без late гра карала б мовчанням' },
   WAVE_VARIANT_INCOMPLETE:{ check: 'waves', spec: 'GAME-170: у кожній дозволеній комбінації (авто / вело / соло), яку хвиля адресує, видно ≥ 2 справи з текстом' },
   WAVE_REPEATED:          { check: 'waves', spec: 'GAME-170: хвиля унікальна для етапу — той самий набір справ на двох етапах не повторюється' },
   WAVE_ANIMAL_UNSAFE:     { check: 'waves', spec: 'GAME-170: Мія завжди в безпеці — ціль справи про тварину ніколи не біля води чи вогню (кожна ціль safe: true)' },
+  WAVE_FLAG_GATES_QUEST:  { check: 'waves', spec: 'GAME-170: кінець розділу від хвиль не залежить — діалог не рухає квест (startQuest/completeObjective) за умовою на прапорець, який ставить наслідок хвилі' },
   WAVE_ANIMAL_HELPER:     { check: 'waves', spec: 'GAME-170: справу про тварину робить лише лідер (leaderOnly) — помічники шукати Мію не можуть' },
 
   // комбінації профіль × транспорт × тварина
@@ -123,8 +125,11 @@ export const FLAG_FAMILIES = {
   'dialogues.trigger': { prefix: 'f.seen-', gen: (content) => (content.dialogues ?? []).filter((d) => d.trigger).map((d) => `f.seen-${String(d.id).replace(/^dlg\./, '')}`) },
 };
 
-// GAME-170: найбільший строк справи хвилі, ігрові хвилини (1 хв ≈ 1 с вільної сцени, SIM-TIME-002). Той самий — WAVE_MAX_LIMIT ядра.
+// GAME-170: найбільший строк справи хвилі, ігрові хвилини (1 хв ≈ 1 с вільної сцени, SIM-TIME-002). Дзеркало WAVE_MAX_LIMIT ядра (src/core/defs.ts): рівність стереже src/content/waves.test.ts.
 export const WAVE_MAX_LIMIT = 60;
+// Скільки справ у хвилі (GAME-170). Дзеркало WAVE_MIN_TASKS/WAVE_MAX_TASKS ядра (src/core/defs.ts); рівність стереже src/content/waves.test.ts.
+export const WAVE_MIN_TASKS = 2;
+export const WAVE_MAX_TASKS = 4;
 
 export const FACT_KINDS = ['regulation', 'geography', 'price', 'schedule', 'culture'];
 

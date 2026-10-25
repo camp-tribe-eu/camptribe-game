@@ -243,6 +243,9 @@ export interface WaveDefs { readonly waves: Readonly<Record<string, WaveDef>> }
 
 /** Найбільша межа справи (ігрові хвилини ≈ реальні секунди вільної сцени, SIM-TIME-002): хвиля триває 30–60 с. */
 export const WAVE_MAX_LIMIT = 60;
+/** Скільки справ у хвилі: 2–4 (одна — черга, п'ять — шум). */
+export const WAVE_MIN_TASKS = 2;
+export const WAVE_MAX_TASKS = 4;
 
 export interface CoreDefs {
   /** Хвилі напруги (GAME-170, content/waves.json). Немає — StartWave/CompleteTask відмовляють (UNKNOWN_TARGET). */
@@ -307,10 +310,10 @@ export function checkDefs(defs: CoreDefs): { code: DefsCode; where: string }[] {
     }
   }
   for (const [id, w] of Object.entries(defs.waves?.waves ?? {})) {
-    // GAME-170: етап існує, справ ≥ 2, межа — ціле 1…WAVE_MAX_LIMIT; повну семантику (варіанти, унікальність) доводить валідатор.
+    // GAME-170: етап існує, справ 2–4, межа — ціле 1…WAVE_MAX_LIMIT; повну семантику (варіанти, унікальність) доводить валідатор.
     if (!ID.test(id) || w.tasks.some((t) => !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(t.id))) out.push({ code: 'DEFS_BAD_ID', where: id });
     if (defs.story && !Object.hasOwn(defs.story.quests, w.stage)) out.push({ code: 'DEFS_BAD_REF', where: `${id}.stage` });
-    if (w.tasks.length < 2) out.push({ code: 'DEFS_BAD_AMOUNT', where: `${id}.tasks` });
+    if (w.tasks.length < WAVE_MIN_TASKS || w.tasks.length > WAVE_MAX_TASKS) out.push({ code: 'DEFS_BAD_AMOUNT', where: `${id}.tasks` });
     for (const t of w.tasks) {
       if (!Number.isSafeInteger(t.limitMin) || t.limitMin < 1 || t.limitMin > WAVE_MAX_LIMIT) out.push({ code: 'DEFS_BAD_AMOUNT', where: `${id}/${t.id}.limitMin` });
       if (t.animal !== undefined && defs.story && !Object.hasOwn(defs.story.animals, t.animal)) out.push({ code: 'DEFS_BAD_REF', where: `${id}/${t.id}.animal` });

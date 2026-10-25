@@ -13,6 +13,10 @@ declare module '*/validator/codes.mjs' {
   export const GEAR_FIELDS: string[];
   /** Сімейства прапорців ядра (GAME-115): f.pack-*, f.seen-* — префікс і породжувач із контенту. */
   export const FLAG_FAMILIES: Record<'packing.items' | 'dialogues.trigger', { prefix: string; gen: (content: unknown) => string[] }>;
+  /** Межі хвилі напруги (GAME-170) — мусять збігатися з defs.ts ядра. */
+  export const WAVE_MAX_LIMIT: number;
+  export const WAVE_MIN_TASKS: number;
+  export const WAVE_MAX_TASKS: number;
 }
 declare module '*/validator/load.mjs' {
   export function loadContent(dir: string, opts?: { allowMissing?: boolean }): { status: string; content: Record<string, unknown> | null; issues: { code: string; where: string; msg: string }[] };

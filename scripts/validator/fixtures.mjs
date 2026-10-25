@@ -45,6 +45,8 @@ export const TODAY = '2026-10-22';
 // Хвиля напруги-еталон (GAME-170): дві справи зі строком і обома наслідками на етапі ST-002.
 const WV = (k) => `wave.fixture-dusk.${k}`;
 const waveTask = (id, extra = {}) => ({ id, textKey: WV(id), limitMin: 20, done: { textKey: WV(`${id}.done`) }, late: { textKey: WV(`${id}.late`) }, ...extra });
+// Додаткова справа хвилі з уже наявними ключами локалізації (як у контролі нижче): без нових рядків у locales.
+const extraTask = (id, extra = {}) => ({ id, textKey: WV('wood'), limitMin: 20, done: { textKey: WV('wood.done') }, late: { textKey: WV('wood.late') }, ...extra });
 function duskWave() {
   return { id: 'wave.fixture-dusk', titleKey: WV('title'), hookKey: WV('hook'), stage: 'ST-002', fallback: { textKey: WV('fallback') }, tasks: [waveTask('wood'), waveTask('tea')] };
 }
@@ -269,6 +271,17 @@ function withScene(c) {
 }
 const sceneNode = (c, id) => c.dialogues.find((d) => d.id === 'dlg.fixture-fire').nodes.find((n) => n.id === id);
 
+// Вибір «c2» базового діалогу стартує квест; умова на прапорець f.fixture-helped (його ставить c1). Із `byWave` той самий прапорець
+// ставить ще й наслідок «встиг» хвилі — тоді розділ залежав би від хвилі.
+function waveGate(c, byWave) {
+  const dlg = c.dialogues.find((d) => d.npcId);
+  const hello = dlg.nodes.find((n) => n.choices?.some((x) => x.next === 'bye' && x.effects?.some((e) => e.startQuest)));
+  const gated = hello.choices.find((x) => x.effects?.some((e) => e.startQuest));
+  gated.when = { flag: 'f.fixture-helped' };
+  hello.choices.push({ textKey: gated.textKey, next: 'bye' }); // безумовний вихід, щоб умовний вибір не лишив діалог у глухому куті
+  if (byWave) wave(c).tasks[0].done.effects = [{ setFlag: 'f.fixture-helped' }];
+}
+
 export const FIXTURES = [
   // Хвилі напруги (GAME-170). Еталон уже має хвилю з двома справами — «еталон коректний» нижче є позитивним контролем.
   { name: '[хвиля] контроль: три справи, одна лише для лідера з безпечною ціллю для тварини — коректно', expect: [], patch(c) {
@@ -276,6 +289,15 @@ export const FIXTURES = [
     wave(c).tasks.push(waveTask('wood', { id: 'cat', textKey: WV('wood'), done: { textKey: WV('wood.done') }, late: { textKey: WV('wood.late') }, animal: 'animal.fixture-cat', leaderOnly: true, targets: [{ id: 'spot.pines', safe: true }] }));
   } },
   { name: '[хвиля] одна справа', expect: ['WAVE_TOO_FEW_TASKS'], patch(c) { wave(c).tasks.pop(); } },
+  { name: '[хвиля] п’ять справ — забагато', expect: ['WAVE_TOO_MANY_TASKS'], patch(c) { for (const id of ['a', 'b', 'c']) wave(c).tasks.push(extraTask(id)); } },
+  { name: '[хвиля] контроль: чотири справи (межа) — коректно', expect: [], patch(c) { for (const id of ['a', 'b']) wave(c).tasks.push(extraTask(id)); } },
+  { name: '[хвиля] справа про Мію без поля animal і з небезпечною ціллю', expect: ['WAVE_ANIMAL_UNSAFE'], patch(c) { wave(c).tasks.push(extraTask('find-mia', { leaderOnly: true, targets: [{ id: 'spot.shore', safe: false }] })); } },
+  { name: '[хвиля] справа про Мію без поля animal і без цілей', expect: ['WAVE_ANIMAL_UNSAFE'], patch(c) { wave(c).tasks.push(extraTask('find-mia', { leaderOnly: true })); } },
+  { name: '[хвиля] справа про кота без поля animal — помічник', expect: ['WAVE_ANIMAL_HELPER'], patch(c) { wave(c).tasks.push(extraTask('feed-cat', { targets: [{ id: 'spot.pines', safe: true }] })); } },
+  { name: '[хвиля] ціль npc.mia без поля animal — небезпечна й для помічника', expect: ['WAVE_ANIMAL_UNSAFE', 'WAVE_ANIMAL_HELPER'], patch(c) { wave(c).tasks.push(extraTask('look', { targets: [{ id: 'npc.mia', safe: false }] })); } },
+  { name: '[хвиля] контроль: справа про Мію без поля animal, але безпечна й лише для лідера — коректно', expect: [], patch(c) { wave(c).tasks.push(extraTask('find-mia', { leaderOnly: true, targets: [{ id: 'spot.pines', safe: true }] })); } },
+  { name: '[хвиля] діалог рухає квест за прапорцем наслідку хвилі', expect: ['WAVE_FLAG_GATES_QUEST'], patch(c) { waveGate(c, true); } },
+  { name: '[хвиля] контроль: діалог рухає квест за тим самим прапорцем, якого хвиля не ставить — коректно', expect: [], patch(c) { waveGate(c, false); } },
   { name: '[хвиля] строк 0', expect: ['WAVE_LIMIT_INVALID'], patch(c) { wave(c).tasks[0].limitMin = 0; } },
   { name: '[хвиля] строку немає', expect: ['WAVE_LIMIT_INVALID'], patch(c) { delete wave(c).tasks[0].limitMin; } },
   { name: '[хвиля] строк довший за хвилю (61)', expect: ['WAVE_LIMIT_INVALID'], patch(c) { wave(c).tasks[1].limitMin = 61; } },

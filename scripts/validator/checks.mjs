@@ -3,7 +3,7 @@
 // Не прибирай і не дублюй маркери — мутаційний прогін звіряє їх із реєстром CHECKS.
 
 import { checkSchema } from './schema.mjs';
-import { FACT_KINDS, FACT_STALE_DAYS, FLAG_FAMILIES, GEAR_FIELDS, isWarning, SKILL_IDS, WAVE_MAX_LIMIT } from './codes.mjs';
+import { FACT_KINDS, FACT_STALE_DAYS, FLAG_FAMILIES, GEAR_FIELDS, isWarning, SKILL_IDS, WAVE_MAX_LIMIT, WAVE_MAX_TASKS, WAVE_MIN_TASKS } from './codes.mjs';
 import { checkCombos, checkOptions, comboLabel, enumerateCombos, matches, NO_ANIMAL } from './combos.mjs';
 
 const I = (code, where, msg) => ({ code, where, msg });
@@ -998,19 +998,21 @@ export const CHECKS = [
       const combos = enumerateCombos(c.content);
       const signatures = new Map();
       for (const w of waves) {
-        if (w.tasks.length < 2) out.push(I('WAVE_TOO_FEW_TASKS', w.id, `справ ${w.tasks.length}, а хвиля — це 2–4 одночасні справи`));
+        if (w.tasks.length < WAVE_MIN_TASKS) out.push(I('WAVE_TOO_FEW_TASKS', w.id, `справ ${w.tasks.length}, а хвиля — це ${WAVE_MIN_TASKS}–${WAVE_MAX_TASKS} одночасні справи`));
+        if (w.tasks.length > WAVE_MAX_TASKS) out.push(I('WAVE_TOO_MANY_TASKS', w.id, `справ ${w.tasks.length}, а хвиля — це ${WAVE_MIN_TASKS}–${WAVE_MAX_TASKS} одночасні справи: прибери зайве чи розбий на дві хвилі`));
         for (const t of w.tasks) {
           const where = `${w.id}/${t.id}`;
           if (!Number.isInteger(t.limitMin) || t.limitMin < 1 || t.limitMin > WAVE_MAX_LIMIT) out.push(I('WAVE_LIMIT_INVALID', `${where}.limitMin`, `строк ${JSON.stringify(t.limitMin)}: ціле 1…${WAVE_MAX_LIMIT} ігрових хвилин`));
           for (const k of ['done', 'late']) if (t[k] === undefined) out.push(I('WAVE_OUTCOME_MISSING', `${where}.${k}`, `немає наслідку «${k}»: у справи завжди два виходи — встиг і не встиг`));
-          if (t.animal !== undefined) {
+          // Справа «про кота» визначається не лише полем animal (воно необов’язкове): ще й ціллю animal.* / npc.mia* та словом mia/cat в id справи.
+          if (isAnimalTask(t)) {
             if (!t.targets?.length || t.targets.some((x) => x.safe !== true)) out.push(I('WAVE_ANIMAL_UNSAFE', `${where}.targets`, 'справа про тварину: кожна ціль мусить бути safe: true (ніколи біля води чи вогню), і хоч одна ціль є'));
             if (t.leaderOnly !== true) out.push(I('WAVE_ANIMAL_HELPER', `${where}.leaderOnly`, 'справу про тварину робить лише лідер — постав leaderOnly: true'));
           }
         }
         // Варіанти: у кожній дозволеній комбінації, яку хвиля адресує, після відбору справ за їхнім when лишається ≥ 2.
         // Хвиля з < 2 справ уже звітує WAVE_TOO_FEW_TASKS — варіанти не дублюють першопричину.
-        for (const k of w.tasks.length < 2 ? [] : combos) {
+        for (const k of w.tasks.length < WAVE_MIN_TASKS ? [] : combos) {
           if (!matches(w.when, k)) continue;
           const visible = w.tasks.filter((t) => matches(t.when, k));
           if (visible.length < 2) out.push(I('WAVE_VARIANT_INCOMPLETE', `${w.id} @ ${comboLabel(k)}`, `у цій комбінації видно лише ${visible.length} справ (${visible.map((t) => t.id).join(', ') || '—'}): дай варіант справи або звузь when хвилі`));
@@ -1020,6 +1022,7 @@ export const CHECKS = [
         if (prev && prev.stage !== w.stage) out.push(I('WAVE_REPEATED', w.id, `той самий набір справ (${sig}) уже є у «${prev.id}» на етапі ${prev.stage} — хвиля не повторюється на іншому етапі`));
         else if (!prev) signatures.set(sig, w);
       }
+      out.push(...waveFlagGates(c.content));
       return out;
     },
   },
@@ -1199,6 +1202,44 @@ function flagUses(content) {
   for (const [where, e] of dialogueEffects(content)) if (e.setFlag !== undefined) out.push([where, e.setFlag]);
   for (const d of content.dialogues ?? []) (d.scene?.facts ?? []).forEach((f, i) => out.push([`${d.id}.scene.facts[${i}]`, f]));
   for (const [where, f] of waveEffects(content)) out.push([where, f]);
+  return out;
+}
+
+/** Справа про тварину (Мія): є поле animal, або ціль — animal.* / npc.mia*, або слово mia/cat в id справи. */
+function isAnimalTask(t) {
+  return t.animal !== undefined || (t.targets ?? []).some((x) => /^(animal\.|npc\.mia)/.test(x.id)) || /(^|-)(mia|cat)(-|$)/.test(t.id);
+}
+
+/**
+ * Кінець розділу не залежить від хвиль: прапорці наслідків хвилі не можуть умовою рухати квест. У квестах умови
+ * прапорців немає зовсім (схема), тож єдиний шлях — діалог: гілка чи вибір з умовою на «хвильовий» прапорець, з якого
+ * (чи за яким у діалозі далі) досяжний ефект startQuest / completeObjective. Ціна хибного спрацювання (закон 5) — автор
+ * прибирає умову чи розбиває діалог; ціна пропуску — розділ, який не закінчується, бо гравець не встиг.
+ */
+function waveFlagGates(content) {
+  const out = [];
+  const waveFlags = new Set(waveEffects(content).map(([, f]) => f));
+  if (!waveFlags.size) return out;
+  const reads = (cond) => cond !== undefined && condLeaves(cond).some((x) => waveFlags.has(x.flag) || waveFlags.has(x.notFlag));
+  const moves = (e) => e.startQuest !== undefined || e.completeObjective !== undefined;
+  for (const d of content.dialogues ?? []) {
+    const byId = new Map(d.nodes.map((n) => [n.id, n]));
+    const reach = (from) => { // ефекти квестів у вузлах, досяжних з from
+      const seen = new Set(); const stack = [from]; let hit = false;
+      while (stack.length) {
+        const n = byId.get(stack.pop());
+        if (!n || seen.has(n.id)) continue;
+        seen.add(n.id);
+        for (const ch of n.choices ?? []) if ((ch.effects ?? []).some(moves)) hit = true;
+        stack.push(...exits(n, false));
+      }
+      return hit;
+    };
+    for (const n of d.nodes) {
+      (n.branches ?? []).forEach((b, i) => { if (reads(b.when) && reach(b.next)) out.push(I('WAVE_FLAG_GATES_QUEST', `${d.id}/${n.id}.branches[${i}].when`, 'гілка за прапорцем наслідку хвилі веде до зсуву квесту: кінець розділу не може залежати від хвилі')); });
+      (n.choices ?? []).forEach((ch, i) => { if (reads(ch.when) && ((ch.effects ?? []).some(moves) || reach(ch.next))) out.push(I('WAVE_FLAG_GATES_QUEST', `${d.id}/${n.id}.choices[${i}].when`, 'вибір за прапорцем наслідку хвилі веде до зсуву квесту: кінець розділу не може залежати від хвилі')); });
+    }
+  }
   return out;
 }
 

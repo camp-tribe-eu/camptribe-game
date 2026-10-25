@@ -45,6 +45,7 @@ export type WaveCommand =
 export interface WaveDraft {
   player: PlayerState | null;
   flags: string[];
+  quests: GameState['quests'];
   wave?: WaveState;
 }
 
@@ -79,6 +80,8 @@ export function applyWave(cmd: WaveCommand, d: WaveDraft, defs: WaveDefs | undef
     const w = own(defs.waves, cmd.waveId);
     if (!w) return 'UNKNOWN_TARGET';
     if (!matches(w.when, p)) return 'CONDITION_FAILED';
+    // Хвиля живе лише на своєму етапі: сюжет шле StartWave, але ядро не вірить, що етап уже/ще активний.
+    if (own(d.quests, w.stage)?.status !== 'active') return 'WAVE_STAGE_INACTIVE';
     if (state.active) return 'WAVE_ACTIVE';
     if (own(state.past, cmd.waveId)) return 'WAVE_SEEN';
     const tasks = tasksFor(w, p);
@@ -113,7 +116,7 @@ export function settleWave(game: GameState, now: number, defs: WaveDefs | undefi
   const w = own(defs?.waves ?? {}, a.waveId);
   const expired = Object.entries(a.tasks).filter(([, t]) => t.outcome === 'open' && now > t.dueAt).map(([id]) => id);
   if (expired.length === 0) return game;
-  const d: WaveDraft = { player: game.player, flags: [...game.flags], wave: { ...game.wave, active: { ...a, tasks: { ...a.tasks, ...Object.fromEntries(expired.map((id) => [id, { ...(a.tasks[id] as WaveTaskState), outcome: 'late' as const }])) } }, past: game.wave?.past ?? {} } };
+  const d: WaveDraft = { player: game.player, flags: [...game.flags], quests: game.quests, wave: { ...game.wave, active: { ...a, tasks: { ...a.tasks, ...Object.fromEntries(expired.map((id) => [id, { ...(a.tasks[id] as WaveTaskState), outcome: 'late' as const }])) } }, past: game.wave?.past ?? {} } };
   setFlags(d, expired.flatMap((id) => w?.tasks.find((t) => t.id === id)?.late.effects ?? []));
   finishIfResolved(d, defs);
   return { ...game, flags: d.flags, ...(d.wave ? { wave: d.wave } : {}) };

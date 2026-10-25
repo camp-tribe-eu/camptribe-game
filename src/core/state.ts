@@ -139,6 +139,7 @@ export const REJECT_CODES = [
   'WAVE_SEEN',
   'TASK_NOT_OPEN',
   'TASK_LEADER_ONLY',
+  'WAVE_STAGE_INACTIVE',
 ] as const;
 
 export type RejectCode = (typeof REJECT_CODES)[number];

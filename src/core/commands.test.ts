@@ -228,6 +228,7 @@ describe('коди відмов: кожен код із реєстру має т
     // GAME-170: хвилі напруги.
     ['WAVE_ACTIVE', waving, { type: 'StartWave', commandId: 's32', waveId: 'wave.w' }, WAVE_DEFS],
     ['WAVE_SEEN', waved, { type: 'StartWave', commandId: 's33', waveId: 'wave.w' }, WAVE_DEFS],
+    ['WAVE_STAGE_INACTIVE', { ...play([DRIVER]), quests: {} }, { type: 'StartWave', commandId: 's36', waveId: 'wave.w' }, WAVE_DEFS],
     ['TASK_NOT_OPEN', play([DRIVER]), { type: 'CompleteTask', commandId: 's34', taskId: 'a' }, WAVE_DEFS],
     ['TASK_LEADER_ONLY', waving, { type: 'CompleteTask', commandId: 's35', taskId: 'a', actor: 'helper' }, WAVE_DEFS],
   ];

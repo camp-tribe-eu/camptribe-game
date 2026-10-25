@@ -3,13 +3,14 @@
 // доходить до кінця хвилі з кожного стану (тупиків 0); «усе вчасно» й «усе проігноровано» — обидва закінчують хвилю без
 // поразки; пауза не рухає строки; варіанти авто/вело/кішка — саме ті; лише-лідер — лише лідер. Кінець розділу від хвилі не залежить.
 import { describe, expect, it } from 'vitest';
-import { checkDefs, type CoreDefs } from '../core/defs';
+import { checkDefs, WAVE_MAX_LIMIT, WAVE_MAX_TASKS, WAVE_MIN_TASKS, type CoreDefs } from '../core/defs';
 import { canonical } from '../core/hash';
 import type { Command } from '../core/commands';
 import { newSim, step, type SimState } from '../core/sim';
 type Cmd = Command extends infer C ? (C extends Command ? Omit<C, 'commandId'> : never) : never;
 import { tasksFor, waveView } from '../core/wave';
 import { enumerateCombos } from '../../scripts/validator/combos.mjs';
+import * as REGISTRY from '../../scripts/validator/codes.mjs';
 import { GAME_DEFS } from './slice-defs';
 import { CONTENT } from './story';
 import { RAW_WAVES, WAVE_CH1_EVENING, WAVES } from './waves';
@@ -24,6 +25,8 @@ const ok = (s: SimState): boolean => s.game.processed[`w${s.game.seq - 1}`]?.ok 
 const started = (k: { profile: string | null; transport: string | null; animal: string }): SimState => {
   let s = cmd(newSim(7, 5_000), { type: 'CreateCharacter', profileId: k.profile ?? '', transportId: k.transport ?? '', ...(k.animal === 'animal.none' ? {} : { animalId: k.animal }) });
   s = step(s, { kind: 'advance', minutes: 2 * 1440 + 19 * 60 }, CTX); // вечір дня 2
+  // Ядро (GAME-170, рецензія) не стартує хвилю, поки її етап не активний; тут сюжет «дійшов» до етапу прямою підстановкою.
+  s = { ...s, game: { ...s.game, quests: { ...s.game.quests, [W.stage]: { status: 'active', done: [] } } } };
   s = cmd(s, { type: 'StartWave', waveId: WAVE_CH1_EVENING });
   if (!ok(s)) throw new Error(`StartWave відмовив: ${JSON.stringify(s.game.processed[`w${s.game.seq - 1}`])}`);
   return s;
@@ -63,7 +66,7 @@ describe('W4 «Вечір на трьох фронтах» у симуляції
       expect(ended(i)).toBe(true);
       expect(Object.values(past(i))).toEqual(ids.map(() => 'late'));
       expect(i.game.campaignEnded).toBe(false);
-      expect(Object.keys(i.game.quests)).toEqual(['PROLOGUE-HOME-001']);     // хвиля сюжету не торкнулась
+      expect(Object.keys(i.game.quests).sort()).toEqual(['PROLOGUE-HOME-001', W.stage].sort());     // хвиля сюжету не торкнулась (лише етап, який ми підставили)
     });
 
     it(`${label}: повний перебір «зробити» × «дочекатись строку» — з кожного стану хвиля закінчується, тупиків 0`, () => {
@@ -118,5 +121,17 @@ describe('W4 «Вечір на трьох фронтах» у симуляції
     expect(mia.targets?.every((x) => x.safe)).toBe(true);
     // Жоден квест не знає про хвилі: схема квестів не має такого поля, і в контенті немає посилань на wave.*.
     expect(JSON.stringify(CONTENT.quests)).not.toContain('wave.');
+  });
+});
+
+describe('межі хвилі: одне значення в ядрі й у реєстрі валідатора (GAME-170)', () => {
+  it('WAVE_MAX_LIMIT, WAVE_MIN_TASKS, WAVE_MAX_TASKS збігаються з codes.mjs', () => {
+    expect([REGISTRY.WAVE_MAX_LIMIT, REGISTRY.WAVE_MIN_TASKS, REGISTRY.WAVE_MAX_TASKS]).toEqual([WAVE_MAX_LIMIT, WAVE_MIN_TASKS, WAVE_MAX_TASKS]);
+  });
+  it('каталог ядра відхиляє п’яту справу (DEFS_BAD_AMOUNT)', () => {
+    const w = W;
+    const task = (id: string) => ({ ...(w.tasks[0] as (typeof w.tasks)[number]), id });
+    const five = { ...DEFS, waves: { waves: { ...WAVES.waves, [WAVE_CH1_EVENING]: { ...w, tasks: ['a', 'b', 'c', 'd', 'e'].map(task) } } } };
+    expect(checkDefs(five).map((i) => i.code)).toContain('DEFS_BAD_AMOUNT');
   });
 });
