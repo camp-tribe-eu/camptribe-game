@@ -85,7 +85,7 @@ GDD — приватний (`brain/Передача/00-dzherelo-lezhyt-lokalno.m
 `tags`, `completed`, `progress`. Хочеш нове поле — спершу картка на схему, потім контент.
 
 **Файли.** У `content/` лише: `meta.json`, `profiles.json`, `transports.json`, `animals.json`,
-`items.json`, `npcs.json`, `locations.json`, `quests.json`, `events.json`, `facts.json`, `flags.json` (реєстр прапорців, GAME-115), тека
+`items.json`, `npcs.json`, `locations.json`, `quests.json`, `events.json`, `facts.json`, `flags.json` (реєстр прапорців, GAME-115), `waves.json` (хвилі напруги, GAME-170), тека
 `locales/` з `<мова>.json` і тека `dialogue/` з `<назва>.json` (один діалог на файл). Більше нічого (жодних `README.json`, `quests-draft.json`, `lint/` усередині).
 
 **id — лише малі латинські літери, цифри, `.` і `-`. Підкреслення `_` і великі літери — ніколи.**
@@ -102,6 +102,7 @@ GDD — приватний (`brain/Передача/00-dzherelo-lezhyt-lokalno.m
 | `quests.json` | **`id`**, **`titleKey`**, **`optional`**, **`objectives`**, **`transitions`**, `end` (кінець розділу), `dayEnd` (межа дня історії, GAME-141), `giverId`, `locationId`, `when`, `requires`, `reward` | основний — канонічний id сценарію `ST-006`, `CH1-HOME-001` (ключ тексту — `q.ch1-home-001`), бічний `q.nora-walk` |
 | `events.json` | **`id`**, **`titleKey`**, **`repeatable`**, `locationId`, `reward` | `ev.neighbours-firewood` |
 | `facts.json` | **`id`**, **`claimKey`**, `source`, `checkedAt`, `kind` | `fact.de-quiet-hours` |
+| `waves.json` | хвиля напруги (GAME-170): **`id`** (`wave.ch1-day2-evening`), **`titleKey`**, **`hookKey`**, **`stage`** (квест), `when`, **`tasks`** (2–4: **`id`**, **`textKey`**, **`limitMin`** 1–60 ігрових хв, `leaderOnly`, `animal` + `targets[{id, safe}]`, `when`, **`done`**/**`late`** `{ textKey, effects: [{ setFlag }] }`), `allDone`, `fallback` | `wave.назва` |
 | `flags.json` | **`id`**, **`type`** (`bool` \| `enum` \| `number` \| `item` \| `location`), **`initial`**, **`owner`** (хто ставить), `note`, `values` (enum), `valuesFrom` (enum факту стану), `generatedFrom` (сімейство ядра), `reserved`, `aka` (назви з реєстру радника), `journal` (вибір пишеться в журнал подорожі, GAME-110) | `f.elise-met`, `f.night`, `f.pack-*`, `m.came-by-bike`, `s.transport` |
 
 * **Ціль квесту:** **`id`** (`pitch-tent` — без крапок, лише `a-z0-9` і `-`), **`textKey`**,
@@ -269,6 +270,17 @@ GDD — приватний (`brain/Передача/00-dzherelo-lezhyt-lokalno.m
 - `FLAG_NEVER_READ` — прапорець `f.*` чи факт пам'яті `m.*` ставить ефект (`setFlag`/`remember`), але жодна умова його не читає (enum — жодне значення): вибір «пам'ятається» без жодного наслідку (GAME-110). Не допустити: разом із сетером напиши пізнішу репліку з умовою `flag`/`notFlag` чи `remembers`/`notRemembers` (поруч — безумовний вихід); прапорець для майбутнього розділу — `"reserved": true` і без сетера. Рядок із `"journal": true` ще й вимагає текст запису `journal.<id>` (enum — `journal.<id>-<значення>` на кожне значення) в `uk` і `en`.
 - `FLAG_REGISTERED_UNUSED` — рядок реєстру, якого не вживає жодна умова чи ефект, а для сімейства — порожній породжувач. Помилка, не попередження: мертві рядки інакше накопичуються мовчки. Не допустити: вживи прапорець, прибери рядок або, якщо він для майбутнього розділу, познач `"reserved": true`.
 - `FLAG_REGISTRY_INVALID` — рядок реєстру сам собі суперечить: `initial` не того типу (bool `f.*`/`m.*` — лише `false`, enum `f.*` — лише `"unset"`, `s.*` — `"unset"` чи дозволене значення, number — ціле, location/item — існуючий id чи `"unset"`); enum без `values` (або `valuesFrom` не у `s.*`); `unset`, дубль чи `_` у `values`; `values` у не-enum; `m.*` не bool; `f.*` типу number/item/location без `reserved`; сімейство без `generatedFrom` чи з чужим префіксом; `generatedFrom` у звичайного прапорця; `reserved`, але вже вжитий; bool `f.x-y`, що збігається зі значенням enum `f.x`. Не допустити: заповнюй рядок за таблицею з розділу 7 і знімай `reserved`, щойно прапорець з'явився в діалозі.
+
+**Хвилі напруги** (GAME-170, `content/waves.json`)
+- `WAVE_TOO_FEW_TASKS` — у хвилі менше двох справ: одна справа — не напруга, а черга. Не допустити: 2–4 справи на хвилю; одну справу роби звичайною ціллю квесту.
+- `WAVE_TOO_MANY_TASKS` — у хвилі більше чотирьох справ. Не допустити: 2–4 справи; зайву прибери або розбий на дві хвилі.
+- `WAVE_LIMIT_INVALID` — `limitMin` справи відсутній, не ціле, 0 або більше за 60. Не допустити: кожній справі строк 1–60 ігрових хвилин (1 хв ≈ 1 с вільної сцени: хвиля триває 30–60 с); пауза зупиняє годинник, тож строки в реальних секундах не пиши.
+- `WAVE_OUTCOME_MISSING` — у справи немає `done` або `late`. Не допустити: обидва наслідки з текстом; `late` — м'якший (менше затишку, мокрі речі, інша репліка), ніколи не поразка й не штраф.
+- `WAVE_VARIANT_INCOMPLETE` — у якійсь дозволеній комбінації (авто / вело / соло / з кішкою), яку хвиля адресує, видно менше двох справ. Не допустити: справа лише для одного транспорту чи тварини (`when`) — дай пару для інших (`cover-bikes` замість `find-mia` на велосипеді) або звузь `when` хвилі.
+- `WAVE_REPEATED` — той самий набір id справ на двох різних етапах: хвиля не повторюється. Не допустити: кожна хвиля унікальна для свого `stage`; нова хвиля — нові справи, не копія.
+- `WAVE_ANIMAL_UNSAFE` — справа про тварину (поле `animal`, ціль `animal.*`/`npc.mia*` чи слово mia/cat в id справи) без `targets` або з ціллю `safe: false`. Не допустити: Мію шукають лише в безпечних місцях (сосни, лавка, велонавіс) — кожна ціль `safe: true`; біля води чи вогню — ніколи.
+- `WAVE_ANIMAL_HELPER` — справа про тварину (так само визначена) без `leaderOnly: true`. Не допустити: тварину шукає лише лідер — постав `leaderOnly: true` (помічники прийдуть пізніше, правило вже діє в ядрі: `TASK_LEADER_ONLY`).
+- `WAVE_FLAG_GATES_QUEST` — діалог рухає квест (`startQuest`/`completeObjective`) за умовою на прапорець, який ставить наслідок хвилі. Не допустити: кінець розділу від хвиль не залежить — умову на «хвильовий» прапорець не став там, звідки досяжний зсув квесту.
 
 **Комбінації профіль × транспорт × тварина**
 - `COMBO_NO_START` — стартовий квест має `when`, що виключає частину гравців. Не допустити: на `meta.start` ніколи не став `when`.

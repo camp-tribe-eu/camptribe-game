@@ -47,6 +47,14 @@ export interface OfferSummary {
   readonly money: { readonly start: number; readonly end: number } | null;
 }
 
+/** Жива хвиля напруги (GAME-170, зріз 2) для картки мети: заголовок, «зроблено/усього», хвилини ІГРОВОГО часу, що лишились. */
+export interface OfferWave {
+  readonly titleKey: string;
+  readonly done: number;
+  readonly total: number;
+  readonly tasks: readonly { readonly id: string; readonly textKey: string; readonly remainingMin: number; readonly outcome: 'open' | 'done' | 'late' }[];
+}
+
 export interface StoryOffer {
   /** create — персонажа ще немає; play — гра йде; ended — кінець розділу. */
   readonly stage: 'create' | 'play' | 'ended';
@@ -79,4 +87,6 @@ export interface StoryOffer {
   readonly summary: OfferSummary | null;
   /** Журнал подорожі, від старого до нового. */
   readonly journal: readonly { readonly type: string; readonly key: string | null; readonly at: number }[];
+  /** Жива хвиля напруги або null (GAME-170). */
+  readonly wave: OfferWave | null;
 }

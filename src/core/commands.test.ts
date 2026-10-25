@@ -163,6 +163,12 @@ describe('команда — намір, а не ефект (рецензія TL
 
 describe('коди відмов: кожен код із реєстру має тест, на якому він повертається', () => {
   const s = initialState(1000);
+  // GAME-170: хвиля з двома справами, одна — лише для лідера. Старт — прямим dispatch із годинником (now = 0).
+  const WAVE_DEFS: CoreDefs = { ...STORY_DEFS, waves: { waves: { 'wave.w': { stage: 'q.start', tasks: [
+    { id: 'a', limitMin: 5, leaderOnly: true, done: { effects: [] }, late: { effects: [] } }, { id: 'b', limitMin: 5, done: { effects: [] }, late: { effects: [] } }] } } } };
+  const startWave: Command = { type: 'StartWave', commandId: 'sw', waveId: 'wave.w' };
+  const waving = dispatch(play([DRIVER]), startWave, WAVE_DEFS, undefined, 0, undefined, 0).state;
+  const waved: GameState = { ...play([DRIVER]), wave: { active: null, past: { 'wave.w': { a: 'late', b: 'late' } } } };
   const reused = dispatch(s, { type: 'BuyItem', commandId: 'u1', itemId: 'item.lamp' }, DEFS);
   const granted = dispatch(s, { type: 'Interact', commandId: 'g1', targetId: 'obj.ranger' }, DEFS);
   const brokenDefs: CoreDefs = { items: { 'item.bad': { buyCents: 1.5 } }, interactions: {} };
@@ -219,6 +225,12 @@ describe('коди відмов: кожен код із реєстру має т
     ['PACK_FULL', play([DRIVER, { type: 'CompleteQuest', questId: 'q.start' }, { type: 'UnpackItem', itemId: 'item.bag' }, { type: 'PackItem', itemId: 'item.chair' }], initialState(0), PACK_DEFS), { type: 'PackItem', commandId: 's29', itemId: 'item.bag' }, PACK_DEFS],
     ['PACK_ALREADY', play([DRIVER, { type: 'CompleteQuest', questId: 'q.start' }], initialState(0), PACK_DEFS), { type: 'PackItem', commandId: 's30', itemId: 'item.tent' }, PACK_DEFS],
     ['PACK_NOT_PACKED', play([DRIVER, { type: 'CompleteQuest', questId: 'q.start' }, { type: 'UnpackItem', itemId: 'item.tent' }], initialState(0), PACK_DEFS), { type: 'UnpackItem', commandId: 's31', itemId: 'item.tent' }, PACK_DEFS],
+    // GAME-170: хвилі напруги.
+    ['WAVE_ACTIVE', waving, { type: 'StartWave', commandId: 's32', waveId: 'wave.w' }, WAVE_DEFS],
+    ['WAVE_SEEN', waved, { type: 'StartWave', commandId: 's33', waveId: 'wave.w' }, WAVE_DEFS],
+    ['WAVE_STAGE_INACTIVE', { ...play([DRIVER]), quests: {} }, { type: 'StartWave', commandId: 's36', waveId: 'wave.w' }, WAVE_DEFS],
+    ['TASK_NOT_OPEN', play([DRIVER]), { type: 'CompleteTask', commandId: 's34', taskId: 'a' }, WAVE_DEFS],
+    ['TASK_LEADER_ONLY', waving, { type: 'CompleteTask', commandId: 's35', taskId: 'a', actor: 'helper' }, WAVE_DEFS],
   ];
 
   it('кожен код реєстру покрито рівно одним прикладом', () => {
@@ -227,7 +239,7 @@ describe('коди відмов: кожен код із реєстру має т
 
   for (const [code, state, cmd, defs, weather] of cases) {
     it(`повертає ${code}`, () => {
-      const r = dispatch(state, cmd, defs, undefined, 0, weather);
+      const r = dispatch(state, cmd, defs, undefined, 0, weather, 0);
       expect(r.ok).toBe(false);
       expect(r.ok ? null : r.code).toBe(code);
       expect(r.state.moneyCents).toBe(state.moneyCents);

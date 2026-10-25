@@ -9,6 +9,7 @@ const LOCALE_KEYS = [
   'q.st-001', 'q.st-001.o1', 'q.st-002', 'q.st-002.o1', 'q.st-002.o2', 'q.st-002.o3',
   'q.st-003', 'q.st-003.o1', 'q.st-003.o2', 'q.st-004', 'q.st-004.o1',
   'ev.rain', 'ev.lost-dog', 'fact.fixture-campfire',
+  ...['title', 'hook', 'fallback', 'wood', 'wood.done', 'wood.late', 'tea', 'tea.done', 'tea.late'].map((k) => `wave.fixture-dusk.${k}`),
   ...['hello', 'hello.c1', 'hello.c2', 'help', 'help.c1', 'help.c2', 'thanks', 'bye'].map((k) => `dlg.fixture-ranger.${k}`),
 ];
 
@@ -40,6 +41,15 @@ function rangerDialogue() {
 }
 
 export const TODAY = '2026-10-22';
+
+// Хвиля напруги-еталон (GAME-170): дві справи зі строком і обома наслідками на етапі ST-002.
+const WV = (k) => `wave.fixture-dusk.${k}`;
+const waveTask = (id, extra = {}) => ({ id, textKey: WV(id), limitMin: 20, done: { textKey: WV(`${id}.done`) }, late: { textKey: WV(`${id}.late`) }, ...extra });
+// Додаткова справа хвилі з уже наявними ключами локалізації (як у контролі нижче): без нових рядків у locales.
+const extraTask = (id, extra = {}) => ({ id, textKey: WV('wood'), limitMin: 20, done: { textKey: WV('wood.done') }, late: { textKey: WV('wood.late') }, ...extra });
+function duskWave() {
+  return { id: 'wave.fixture-dusk', titleKey: WV('title'), hookKey: WV('hook'), stage: 'ST-002', fallback: { textKey: WV('fallback') }, tasks: [waveTask('wood'), waveTask('tea')] };
+}
 
 export function baseline() {
   return {
@@ -98,6 +108,7 @@ export function baseline() {
       { id: 'fact.fixture-campfire', claimKey: 'fact.fixture-campfire', source: 'https://example.org/fixture-only', checkedAt: '2026-10-01', kind: 'regulation' },
     ],
     dialogues: [rangerDialogue()],
+    waves: [duskWave()],
     // GAME-115: реєстр — рівно ті прапорці, які вживає еталон (зайвий рядок — FLAG_REGISTERED_UNUSED).
     flags: [
       { id: 'f.fixture-helped', type: 'bool', initial: false, owner: 'dlg.fixture-ranger/hello' },
@@ -111,6 +122,7 @@ export function baseline() {
 }
 
 const q = (c, id) => c.quests.find((x) => x.id === id);
+const wave = (c) => c.waves[0];
 
 // Подія в дорозі (GAME-31): діалог без NPC, відкривається сам у лісі з шансом 50 %.
 const EV = (k) => `dlg.fixture-rain.${k}`;
@@ -259,7 +271,81 @@ function withScene(c) {
 }
 const sceneNode = (c, id) => c.dialogues.find((d) => d.id === 'dlg.fixture-fire').nodes.find((n) => n.id === id);
 
+// Вибір «c2» базового діалогу стартує квест; умова на прапорець f.fixture-helped (його ставить c1). Із `byWave` той самий прапорець
+// ставить ще й наслідок «встиг» хвилі — тоді розділ залежав би від хвилі.
+function waveGate(c, byWave) {
+  const dlg = c.dialogues.find((d) => d.npcId);
+  const hello = dlg.nodes.find((n) => n.choices?.some((x) => x.next === 'bye' && x.effects?.some((e) => e.startQuest)));
+  const gated = hello.choices.find((x) => x.effects?.some((e) => e.startQuest));
+  gated.when = { flag: 'f.fixture-helped' };
+  hello.choices.push({ textKey: gated.textKey, next: 'bye' }); // безумовний вихід, щоб умовний вибір не лишив діалог у глухому куті
+  if (byWave) wave(c).tasks[0].done.effects = [{ setFlag: 'f.fixture-helped' }];
+}
+
 export const FIXTURES = [
+  // Хвилі напруги (GAME-170). Еталон уже має хвилю з двома справами — «еталон коректний» нижче є позитивним контролем.
+  { name: '[хвиля] контроль: три справи, одна лише для лідера з безпечною ціллю для тварини — коректно', expect: [], patch(c) {
+    c.animals = [{ id: 'animal.fixture-cat', nameKey: 'npc.ranger' }];
+    wave(c).tasks.push(waveTask('wood', { id: 'cat', textKey: WV('wood'), done: { textKey: WV('wood.done') }, late: { textKey: WV('wood.late') }, animal: 'animal.fixture-cat', leaderOnly: true, targets: [{ id: 'spot.pines', safe: true }] }));
+  } },
+  { name: '[хвиля] одна справа', expect: ['WAVE_TOO_FEW_TASKS'], patch(c) { wave(c).tasks.pop(); } },
+  { name: '[хвиля] п’ять справ — забагато', expect: ['WAVE_TOO_MANY_TASKS'], patch(c) { for (const id of ['a', 'b', 'c']) wave(c).tasks.push(extraTask(id)); } },
+  { name: '[хвиля] контроль: чотири справи (межа) — коректно', expect: [], patch(c) { for (const id of ['a', 'b']) wave(c).tasks.push(extraTask(id)); } },
+  { name: '[хвиля] справа про Мію без поля animal і з небезпечною ціллю', expect: ['WAVE_ANIMAL_UNSAFE'], patch(c) { wave(c).tasks.push(extraTask('find-mia', { leaderOnly: true, targets: [{ id: 'spot.shore', safe: false }] })); } },
+  { name: '[хвиля] справа про Мію без поля animal і без цілей', expect: ['WAVE_ANIMAL_UNSAFE'], patch(c) { wave(c).tasks.push(extraTask('find-mia', { leaderOnly: true })); } },
+  { name: '[хвиля] справа про кота без поля animal — помічник', expect: ['WAVE_ANIMAL_HELPER'], patch(c) { wave(c).tasks.push(extraTask('feed-cat', { targets: [{ id: 'spot.pines', safe: true }] })); } },
+  { name: '[хвиля] ціль npc.mia без поля animal — небезпечна й для помічника', expect: ['WAVE_ANIMAL_UNSAFE', 'WAVE_ANIMAL_HELPER'], patch(c) { wave(c).tasks.push(extraTask('look', { targets: [{ id: 'npc.mia', safe: false }] })); } },
+  { name: '[хвиля] контроль: справа про Мію без поля animal, але безпечна й лише для лідера — коректно', expect: [], patch(c) { wave(c).tasks.push(extraTask('find-mia', { leaderOnly: true, targets: [{ id: 'spot.pines', safe: true }] })); } },
+  { name: '[хвиля] діалог рухає квест за прапорцем наслідку хвилі', expect: ['WAVE_FLAG_GATES_QUEST'], patch(c) { waveGate(c, true); } },
+  { name: '[хвиля] контроль: діалог рухає квест за тим самим прапорцем, якого хвиля не ставить — коректно', expect: [], patch(c) { waveGate(c, false); } },
+  { name: '[хвиля] строк 0', expect: ['WAVE_LIMIT_INVALID'], patch(c) { wave(c).tasks[0].limitMin = 0; } },
+  { name: '[хвиля] строку немає', expect: ['WAVE_LIMIT_INVALID'], patch(c) { delete wave(c).tasks[0].limitMin; } },
+  { name: '[хвиля] строк довший за хвилю (61)', expect: ['WAVE_LIMIT_INVALID'], patch(c) { wave(c).tasks[1].limitMin = 61; } },
+  { name: '[хвиля] контроль: строк рівно на межі (60) — коректно', expect: [], patch(c) { wave(c).tasks[1].limitMin = 60; } },
+  { name: '[хвиля] немає наслідку «не встиг»', expect: ['WAVE_OUTCOME_MISSING'], patch(c) { delete wave(c).tasks[0].late; } },
+  { name: '[хвиля] немає наслідку «встиг»', expect: ['WAVE_OUTCOME_MISSING'], patch(c) { delete wave(c).tasks[1].done; } },
+  { name: '[хвиля] наслідок без тексту', expect: ['SCHEMA_INVALID'], patch(c) { delete wave(c).tasks[0].late.textKey; } },
+  { name: '[хвиля] текст справи без перекладу', expect: ['LOCALE_MISSING'], patch(c) { delete c.locales.en[WV('tea.late')]; } },
+  { name: '[хвиля] етап, якого немає', expect: ['REF_MISSING'], patch(c) { wave(c).stage = 'ST-099'; } },
+  { name: '[хвиля] той самий набір справ на іншому етапі', expect: ['WAVE_REPEATED'], patch(c) { c.waves.push({ ...duskWave(), id: 'wave.fixture-dawn', stage: 'ST-003' }); } },
+  { name: '[хвиля] контроль: той самий набір справ на тому ж етапі — не повтор між етапами', expect: [], patch(c) { c.waves.push({ ...duskWave(), id: 'wave.fixture-dawn' }); } },
+  { name: '[хвиля] та сама хвиля двічі на двох етапах', expect: ['ID_DUPLICATE', 'WAVE_REPEATED'], patch(c) { c.waves.push({ ...duskWave(), stage: 'ST-003' }); } },
+  { name: '[хвиля] дубль id справи', expect: ['ID_DUPLICATE'], patch(c) { wave(c).tasks[1].id = 'wood'; } },
+  { name: '[хвиля] id справи з підкресленням', expect: ['ID_FORMAT'], patch(c) { wave(c).tasks[1].id = 'hot_tea'; } },
+  { name: '[хвиля] справа про тварину з ціллю біля води', expect: ['WAVE_ANIMAL_UNSAFE'], patch(c) {
+    c.animals = [{ id: 'animal.fixture-cat', nameKey: 'npc.ranger' }];
+    Object.assign(wave(c).tasks[0], { animal: 'animal.fixture-cat', leaderOnly: true, targets: [{ id: 'spot.pines', safe: true }, { id: 'spot.shore', safe: false }] });
+  } },
+  { name: '[хвиля] справа про тварину без жодної цілі', expect: ['WAVE_ANIMAL_UNSAFE'], patch(c) {
+    c.animals = [{ id: 'animal.fixture-cat', nameKey: 'npc.ranger' }];
+    Object.assign(wave(c).tasks[0], { animal: 'animal.fixture-cat', leaderOnly: true });
+  } },
+  { name: '[хвиля] справу про тварину може робити помічник', expect: ['WAVE_ANIMAL_HELPER'], patch(c) {
+    c.animals = [{ id: 'animal.fixture-cat', nameKey: 'npc.ranger' }];
+    Object.assign(wave(c).tasks[0], { animal: 'animal.fixture-cat', targets: [{ id: 'spot.pines', safe: true }] });
+  } },
+  { name: '[хвиля] тварина, якої немає', expect: ['REF_MISSING'], patch(c) { Object.assign(wave(c).tasks[0], { animal: 'animal.ghost', leaderOnly: true, targets: [{ id: 'spot.pines', safe: true }] }); } },
+  { base: 'combo', name: '[хвиля] справа лише для велосипеда — водієві видно одну', expect: ['WAVE_VARIANT_INCOMPLETE'], count: { code: 'WAVE_VARIANT_INCOMPLETE', n: 4 }, patch(c) { wave(c).tasks[1].when = { transports: [T_BIKE] }; } },
+  { base: 'combo', name: '[хвиля] контроль: варіант справи для кожного транспорту — коректно', expect: [], patch(c) {
+    wave(c).tasks[1].when = { transports: [T_BIKE] };
+    wave(c).tasks.push(waveTask('tea', { id: 'cover', when: { transports: [T_CAR] } }));
+  } },
+  { base: 'combo', name: '[хвиля] хвиля лише для власника собаки — комбінації без собаки (де видно одну справу) не рахуються', expect: [], patch(c) {
+    wave(c).when = { animals: [DOG] };
+    wave(c).tasks[1].when = { animals: [DOG] };
+  } },
+  { base: 'combo', name: '[хвиля] when справи поза when хвилі — нездійсненна', expect: ['WHEN_UNSATISFIABLE'], patch(c) {
+    wave(c).when = { transports: [T_CAR] };
+    wave(c).tasks.push(waveTask('tea', { id: 'cover', when: { transports: [T_BIKE] } }));
+  } },
+  { name: '[хвиля] наслідок ставить незареєстрований прапорець', expect: ['FLAG_UNREGISTERED'], patch(c) { wave(c).tasks[0].done.effects = [{ setFlag: 'f.fixture-ghost' }]; } },
+  { name: '[хвиля] контроль: наслідок ставить прапорець, який читає розмова, — коректно (сетер хвилі зараховано)', expect: [], patch(c) {
+    reg(c, 'f.fixture-warm');
+    wave(c).tasks[0].done.effects = [{ setFlag: 'f.fixture-warm' }];
+    node(c, 'help').choices.push({ textKey: K('help.c1'), next: 'bye', when: { flag: 'f.fixture-warm' } });
+  } },
+  { name: '[хвиля] наслідок стартує квест', expect: ['SCHEMA_INVALID'], patch(c) { wave(c).tasks[0].late.effects = [{ startQuest: 'ST-003' }]; } },
+  { name: '[хвиля] стан проходження у хвилі', expect: ['SCHEMA_UNKNOWN_FIELD'], patch(c) { wave(c).tasks[0].outcome = 'done'; } },
   // ---- позитивні контролі: перевірки не сміють стріляти по коректному ----
   { name: 'еталон коректний', expect: [], patch() {} },
   { name: 'цикл із виходом — коректний', expect: [], patch(c) { q(c, 'ST-003').transitions = [{ on: 'complete', to: 'ST-002' }, { on: 'decline', to: 'ST-004' }]; } },

@@ -78,7 +78,9 @@ export function mapContentProblems(map: TiledMap, defs: CoreDefs): string[] {
   const npcs = objects.filter((o) => typeOf(o) === 'npc').map((o) => o.name);
   for (const n of npcs) if (!st.npcs[n]) out.push(`NPC ${n} — немає в content/npcs.json`);
   for (const n of npcs) if (st.npcs[n] && st.npcs[n]?.locationId !== loc) out.push(`NPC ${n} живе в ${st.npcs[n]?.locationId}, а мапа — ${String(loc)}`);
-  for (const t of objects.filter((o) => typeOf(o) === 'trigger')) if (!defs.interactions[t.name]) out.push(`тригер ${t.name} — немає серед взаємодій каталогу`);
+  // Тригер — взаємодія каталогу або ціль справи хвилі task.<id> (GAME-170 зріз 2): справа з content/waves.json, інакше дотик нікуди не веде.
+  const taskIds = new Set(Object.values(defs.waves?.waves ?? {}).flatMap((w) => w.tasks.map((t) => `task.${t.id}`)));
+  for (const t of objects.filter((o) => typeOf(o) === 'trigger')) if (!defs.interactions[t.name] && !taskIds.has(t.name)) out.push(`тригер ${t.name} — немає серед взаємодій каталогу й справ хвиль`);
   for (const [id, n] of Object.entries(st.npcs)) if (n.locationId === loc && !npcs.includes(id)) out.push(`NPC ${id} локації ${String(loc)} не має місця на мапі`);
   return out;
 }

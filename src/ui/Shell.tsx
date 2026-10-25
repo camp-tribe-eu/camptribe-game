@@ -13,7 +13,7 @@ import type { OfferSummary, StoryOffer } from './story-types';
 /** Скільки тост-підказка висить на екрані (мс), якщо гравець нічого не зробив (GAME-95). Картка: ≤ 6 с. */
 const TOAST_MS = 5000;
 
-export function Shell({ port, langOverride, credits, build, holdToast = false }: { port: UiPort; langOverride?: AnyLang; credits: Credits; build: string; holdToast?: boolean }) {
+export function Shell({ port, langOverride, credits, build, holdToast = false, hideUi = [] }: { port: UiPort; langOverride?: AnyLang; credits: Credits; build: string; holdToast?: boolean; hideUi?: readonly string[] }) {
   const [paused, setPaused] = useState(false);
   // Підтвердження «Нової гри» (GAME-82): окремий діалог замість меню паузи; Escape — «Ні», а не закрити паузу.
   const [confirmNew, setConfirmNew] = useState(false);
@@ -213,6 +213,18 @@ export function Shell({ port, langOverride, credits, build, holdToast = false }:
           {offer.stage === 'ended' && <span class="ui-hint" data-ui="ended-hint" role="status">{t('ui.endedHint')}</span>}
         </div>
         <button type="button" class="ui-pause-btn" data-touch="pause" aria-label={t('ui.pause')} onClick={() => toggle(true)}>{'‖'}</button>
+        {/* GAME-170 зріз 2: картка поточної мети — жива хвиля напруги: «назва · зроблено/усього» і хвилини ІГРОВОГО часу на кожну справу
+            (з годинника ядра: пауза й панелі його зупиняють — і числа стоять). Окремий ряд сітки під ☰ · HUD · ‖, тож кнопок не торкається. */}
+        {offer.wave && !hideUi.includes('wave') && <div class="ui-wave" data-ui="wave" data-done={offer.wave.done} data-total={offer.wave.total} role="group" aria-label={t('ui.wave')}>
+          <span class="ui-wave-title" data-ui="wave-title">{`${ct(lang, offer.wave.titleKey)} · ${offer.wave.done}/${offer.wave.total}`}</span>
+          <span class="ui-wave-tasks">
+            {offer.wave.tasks.map((tk) => (
+              <span class="ui-wave-task" key={tk.id} data-ui="wave-task" data-task={tk.id} data-outcome={tk.outcome} data-remaining={tk.remainingMin} title={ct(lang, tk.textKey)}>
+                {t(`ui.wave.task.${tk.id}` as Key)}{' '}{tk.outcome === 'open' ? `${tk.remainingMin} ${t('ui.wave.min')}` : t(`ui.wave.${tk.outcome}` as Key)}
+              </span>
+            ))}
+          </span>
+        </div>}
         {reminder}
       </header>}
       {storyOpen && <StoryPanel offer={offer} lang={lang} t={t} act={storyAct} close={() => story(false)}>{staleNotice}</StoryPanel>}

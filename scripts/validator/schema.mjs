@@ -64,8 +64,21 @@ const trigger = obj({ at: req(ids), chance: req({ t: 'int', min: 1, max: 100 }),
 const scene = obj({ titleKey: req(str), facts: arr(str), atQuest: str });
 export const DIALOGUE_SCHEMA = obj({ id: req(str), npcId: str, trigger, scene, start: req(str), nodes: req({ t: 'array', of: node, min: 1 }) });
 
+// Хвилі напруги (GAME-170, рішення власника 24–25.10): 2–4 одночасні справи зі строком в ігрових хвилинах; наслідки «встиг»
+// і «не встиг» — обидва, і жоден не поразка. limitMin, done/late навмисно НЕ required тут: їх стереже перевірка waves власними
+// кодами (WAVE_LIMIT_INVALID, WAVE_OUTCOME_MISSING), щоб забутий строк не ховався під загальним SCHEMA_INVALID.
+// Ефект наслідку — лише setFlag: хвиля не рухає сюжет (кінець розділу від хвиль не залежить, fallback — завжди).
+const waveEffect = union({ setFlag: obj({ setFlag: req(str) }) });
+const waveOutcome = obj({ textKey: req(str), effects: arr(waveEffect) });
+const waveTask = obj({
+  id: req(str), textKey: req(str), limitMin: { t: 'int' }, leaderOnly: bool, animal: str,
+  targets: { t: 'array', of: obj({ id: req(str), safe: req(bool) }), min: 1 }, when, done: waveOutcome, late: waveOutcome,
+});
+export const WAVE_SCHEMA = obj({ id: req(str), titleKey: req(str), hookKey: req(str), stage: req(str), when, tasks: req(arr(waveTask)), allDone: waveOutcome, fallback: obj({ textKey: req(str) }) });
+
 export const SCHEMAS = {
   dialogues: DIALOGUE_SCHEMA,
+  waves: WAVE_SCHEMA,
   meta: obj({ start: req(str), locales: req(arr(str)) }),
   // transports — з якими транспортами сумісний запис; немає поля — з усіма. Несумісні комбінації
   // не перебираються: гравець не може їх обрати, тож тупик у них — не тупик (закон 5).
@@ -133,12 +146,12 @@ export const SCHEMAS = {
   flags: obj({
     id: req(str), type: req(en('bool', 'enum', 'number', 'item', 'location')), initial: req({ t: 'scalar' }), owner: req(str), note: str,
     values: { t: 'array', of: str, min: 1 }, valuesFrom: en('transports'), generatedFrom: en(...Object.keys(FLAG_FAMILIES)),
-    reserved: bool, aka: arr(str), journal: bool,
+    reserved: bool, kind: en('interaction'), aka: arr(str), journal: bool,
   }),
 };
 
 
-export const COLLECTIONS = ['profiles', 'transports', 'animals', 'items', 'npcs', 'locations', 'quests', 'events', 'facts', 'roads', 'flags'];
+export const COLLECTIONS = ['profiles', 'transports', 'animals', 'items', 'npcs', 'locations', 'quests', 'events', 'facts', 'roads', 'flags', 'waves'];
 
 function typeOk(s, v) {
   switch (s.t) {

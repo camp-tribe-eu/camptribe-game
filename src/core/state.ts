@@ -2,6 +2,7 @@
 // серіалізувався в сейв без втрат і порівнювався побайтно.
 import type { GearState } from './gear';
 import type { LifeState } from './life';
+import type { WaveState } from './wave';
 import { zeroSkills } from './skills';
 
 export interface CommandRecord {
@@ -75,6 +76,11 @@ export interface GameState {
   readonly life: LifeState;
   /** Відкритий діалог і вузол; null — розмови немає. */
   readonly dialogue: { readonly id: string; readonly node: string } | null;
+  /**
+   * Хвилі напруги (GAME-170): жива хвиля зі строками справ (ігрові хвилини) і наслідки минулих хвиль. Поля немає —
+   * хвиль ще не було (сейви v3 до GAME-170 читаються без міграції: відсутність ≡ «нічого не було»).
+   */
+  readonly wave?: WaveState;
 }
 
 export const REJECT_CODES = [
@@ -128,6 +134,12 @@ export const REJECT_CODES = [
   'PACK_FULL',
   'PACK_ALREADY',
   'PACK_NOT_PACKED',
+  // GAME-170 · хвилі напруги
+  'WAVE_ACTIVE',
+  'WAVE_SEEN',
+  'TASK_NOT_OPEN',
+  'TASK_LEADER_ONLY',
+  'WAVE_STAGE_INACTIVE',
 ] as const;
 
 export type RejectCode = (typeof REJECT_CODES)[number];
