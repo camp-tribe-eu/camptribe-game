@@ -219,13 +219,13 @@ for (const c of FULL) {
     // Порожнечі немає: кадр не більший за мапу 640×384, і камера з межами мапи не може показати поза нею.
     expect(buf.w, 'кадр не ширший за мапу').toBeLessThanOrEqual(640);
     expect(buf.h, 'кадр не вищий за мапу').toBeLessThanOrEqual(384);
-    // Краї екрана (середина висоти, чверть і три чверті) — пікселі мапи, не тло смуг. Хоч один із трьох на кожному боці не тло
-    // (тіні дерев на мапі бувають темні, але не три поспіль у колір тла).
+    // Краї екрана (чверть, середина і три чверті висоти) — пікселі мапи, не тло смуг: УСІ шість точок (рецензія PR #77: «≥ 2 з 3»
+    // пропускало б смугу в дві третини висоти). Якщо тінь дерева колись впаде на край — це червоний тест і привід підвинути точку, не послабити.
     const ys = [0.25, 0.5, 0.75].map((f) => Math.round(vp.height * f));
     const px = await pixels(page, [...ys.map((y) => [1, y] as const), ...ys.map((y) => [vp.width - 2, y] as const)]);
     expect(px.length).toBe(6);
-    expect(px.slice(0, 3).filter((p) => !BG.has(p)).length, `лівий край — мапа: ${px.slice(0, 3).join(' | ')}`).toBeGreaterThanOrEqual(2);
-    expect(px.slice(3).filter((p) => !BG.has(p)).length, `правий край — мапа: ${px.slice(3).join(' | ')}`).toBeGreaterThanOrEqual(2);
+    expect(px.slice(0, 3).filter((p) => BG.has(p)).length, `лівий край — мапа: ${px.slice(0, 3).join(' | ')}`).toBe(0);
+    expect(px.slice(3).filter((p) => BG.has(p)).length, `правий край — мапа: ${px.slice(3).join(' | ')}`).toBe(0);
     // Керування поверх мапи: ☰ зліва вгорі, рамка справа вгорі, ‖ під рамкою, джойстик знизу зліва, дія знизу справа; ніщо не перетинається, цілі ≥ 44.
     const sels = ['[data-touch="story"]', '[data-ui="hud"]', '[data-touch="pause"]', ...(c.touch ? ['[data-touch="stick"]', '[data-touch="interact"]'] : [])];
     const rects = await Promise.all(sels.map((s) => rect(page, s)));
@@ -251,22 +251,125 @@ for (const c of FULL) {
       expect(act.left, 'дія справа').toBeGreaterThanOrEqual(vp.width / 2);
       expect(act.top, 'дія внизу').toBeGreaterThanOrEqual(vp.height / 2);
     }
-    // Камера в межах мапи: їдемо вниз і вправо, доки є куди; scroll ніколи не виходить за [0, мапа − кадр].
+    // Камера в межах мапи: їдемо вниз і вправо, доки камера не дійде до межі (чекаємо СТАН, а не час); кожен зразок scroll ∈ [0, мапа − кадр].
+    // Без setBounds камера йшла б за персонажем за межу мапи і зразок вийшов би з проміжку; без обмеження кадру мапою maxX/maxY < 0.
     const scroll = (): Promise<{ x: number; y: number }> => page.evaluate(() => { const p = (window as unknown as { __game: { probe: { cameraScrollX: number; cameraScrollY: number } } }).__game.probe; return { x: p.cameraScrollX, y: p.cameraScrollY }; });
     const maxX = 640 - buf.w; const maxY = 384 - buf.h;
+    const seen: { x: number; y: number }[] = [];
     for (const [key, dir] of [['ArrowDown', 'y'], ['ArrowRight', 'x']] as const) {
       await page.keyboard.down(key);
-      const t0 = Date.now();
-      while (Date.now() - t0 < 6_000) {
-        const s = await scroll();
-        expect(s.x, `scrollX ∈ [0, ${maxX}]`).toBeGreaterThanOrEqual(0); expect(s.x).toBeLessThanOrEqual(maxX + 0.01);
-        expect(s.y, `scrollY ∈ [0, ${maxY}]`).toBeGreaterThanOrEqual(0); expect(s.y).toBeLessThanOrEqual(maxY + 0.01);
-        if (s[dir] >= (dir === 'x' ? maxX : maxY) - 0.01) break;
-      }
+      // Стан, не час: камера дійшла до межі АБО персонаж упёрся в перешкоду (10 однакових зразків поспіль) — далі їхати нікуди.
+      let still = 0; let anchor = await pos(page);
+      await expect.poll(async () => {
+        const s = await scroll(); seen.push(s);
+        const p = await pos(page);
+        if (Math.hypot(p.x - anchor.x, p.y - anchor.y) < 0.5) still++; else { still = 0; anchor = p; }   // дрижання колізії < 0,5 px — теж «стоїть
+        return s[dir] >= (dir === 'x' ? maxX : maxY) - 0.01 || still >= 10;
+      }, { message: `камера дійшла до межі ${dir} або персонаж упёрся`, timeout: 20_000, intervals: [50] }).toBe(true);
       await page.keyboard.up(key);
+    }
+    for (const s of seen) {
+      expect(s.x, `scrollX ∈ [0, ${maxX}]`).toBeGreaterThanOrEqual(0); expect(s.x, `scrollX ∈ [0, ${maxX}]`).toBeLessThanOrEqual(maxX + 0.01);
+      expect(s.y, `scrollY ∈ [0, ${maxY}]`).toBeGreaterThanOrEqual(0); expect(s.y, `scrollY ∈ [0, ${maxY}]`).toBeLessThanOrEqual(maxY + 0.01);
     }
     const end = await scroll();
     if (maxY > 0) expect(end.y, 'камера дійшла до нижньої межі мапи (тест доводить межу)').toBeGreaterThan(0);
     if (vp.width === 1920 && vp.height === 1080) await page.screenshot({ path: `${SHOTS}/game-96-1920x1080-game.png` });
+  });
+}
+
+// GAME-96, рецензія PR #77 №3: сторч затверджено «як було на main» — полотно заповнює поле так само. Було (FIT) і є (NONE + zoom):
+// полотно від лівого верхнього кута поля, ширина = ⌊поле / k⌋·k (≥ поле − k), висота = min(мапа, поле / k)·k; нижче полотна — вільне місце під
+// дотикові кнопки (GAME-89 №4), це тло сторінки за задумом. Сторож: полотно не менше за задум, і ВСІ краї ПОЛОТНА (низ, право) — мапа.
+// Негативний контроль (мутація): zoom 1 у вузькій гілці frameSize → полотно удвічі менше → червоніє.
+const PORTRAIT: Vp[] = [{ width: 390, height: 844 }, { width: 375, height: 667 }, { width: 360, height: 800 }, { width: 412, height: 915 }];
+for (const vp of PORTRAIT) {
+  test(`сторч ${vp.width}×${vp.height}: полотно заповнює поле як на main, краї полотна — мапа, а не тло`, async ({ browser }) => {
+    const { page } = await open(browser, vp, true);
+    const k = Math.max(1, Math.round((await rect(page, '#stage')).height / 384));
+    const st = await rect(page, '#stage');
+    const want = { w: Math.floor(vp.width / k) * k, h: Math.min(384, Math.floor(st.height / k)) * k };
+    await expect.poll(async () => { const c = await rect(page, '#stage canvas'); return c.width >= want.w - 1 && c.height >= want.h - 1; }, { message: `полотно ≥ ${want.w}×${want.h}`, timeout: 15_000 }).toBe(true);
+    const c = await rect(page, '#stage canvas');
+    expect(c.left, 'зліва від краю поля').toBeLessThanOrEqual(0.5);
+    expect(c.top - st.top, 'зверху від краю поля').toBeLessThanOrEqual(0.5);
+    expect(c.right, 'вправо — ширина поля з точністю до k px').toBeGreaterThanOrEqual(vp.width - k - 0.5);
+    // Смуга тла вздовж краю була б ~100 % точок; поодинокі темні пікселі спрайтів на краю (контур об'єкта = колір тла) — ні: тож рахуємо частку по всій довжині краю.
+    const along = (from: number, len: number): number[] => Array.from({ length: Math.floor(len / 6) - 1 }, (_, i) => Math.round(from + 3 + i * 6));
+    const px = await pixels(page, [...along(c.left, c.width).map((x) => [x, Math.floor(c.bottom) - 2] as const), ...along(c.top, c.height).map((y) => [Math.floor(c.right) - 2, y] as const)]);
+    const nb = along(c.left, c.width).length;
+    const bgShare = (a: string[]): number => a.filter((p) => BG.has(p)).length / a.length;
+    expect(bgShare(px.slice(0, nb)), `низ полотна — мапа, частка тла ${bgShare(px.slice(0, nb))}`).toBeLessThan(0.15);
+    expect(bgShare(px.slice(nb)), `правий край полотна — мапа, частка тла ${bgShare(px.slice(nb))}`).toBeLessThan(0.15);
+    if (vp.width === 390) await page.screenshot({ path: `${SHOTS}/game-96-390x844-portrait.png` });
+  });
+}
+
+// GAME-96, рецензія PR #77 №5: при zoom ≥ 2 тап і джойстик працюють у СВІТОВИХ координатах (getWorldPoint / displayScale), а не в екранних.
+// 844×390 → zoom 2, 1920×1080 → zoom 3. Тап по Елізі в зоні дії відкриває розмову, тап по ній ПОЗА зоною — нічого; джойстик веде куди тягнеш.
+// Мутація: тап береться в екранних координатах, а не getWorldPoint (камера + zoom ігноруються) → «відкриває розмову» червоніє.
+const ZOOMED: Vp[] = [{ width: 844, height: 390 }, { width: 1920, height: 1080 }];
+interface Pr { playerX: number; playerY: number; nearObject: string | null; commandsSent: number; cameraScrollX: number; cameraScrollY: number }
+const probeOf = (page: Page): Promise<Pr> => page.evaluate(() => ({ ...(window as unknown as { __game: { probe: Pr } }).__game.probe }));
+const ELISE = { x: 80, y: 272 };   // public/maps/camp-lake.tmj, npc.elise (ноги)
+async function stickDrive(page: Page, cdp: CDPSession, dx: number, dy: number, until: (p: Pr) => boolean): Promise<void> {
+  const y0 = Math.round((page.viewportSize()?.height ?? 800) * 0.5);
+  await touchEv(cdp, 'touchStart', 70, y0);
+  await touchEv(cdp, 'touchMove', 70 + dx, y0 + dy);
+  try { await expect.poll(async () => until(await probeOf(page)), { timeout: 12_000, intervals: [16] }).toBe(true); }
+  finally { await touchEv(cdp, 'touchEnd'); }
+  await expect.poll(async () => { const a = await probeOf(page); await page.waitForTimeout(120); const b = await probeOf(page); return Math.hypot(a.playerX - b.playerX, a.playerY - b.playerY); }, { timeout: 10_000 }).toBeLessThan(0.1);
+}
+const screenOfWorld = async (page: Page, wx: number, wy: number): Promise<{ x: number; y: number }> => {
+  const p = await probeOf(page);
+  const c = await page.locator('#stage canvas').evaluate((el) => { const r = el.getBoundingClientRect(); return { left: r.left, top: r.top, k: r.width / (el as HTMLCanvasElement).width }; });
+  return { x: c.left + (wx - p.cameraScrollX) * c.k, y: c.top + (wy - p.cameraScrollY) * c.k };
+};
+for (const vp of ZOOMED) {
+  test.describe(`zoom ≥ 2, ${vp.width}×${vp.height}`, () => {
+    test('джойстик веде в той бік, куди тягнеш (вліво, вниз, вправо, вгору)', async ({ browser }) => {
+      const { page, cdp } = await open(browser, vp, true);
+      const k = (await rect(page, '#stage canvas')).width / (await page.locator('#stage canvas').evaluate((el) => (el as HTMLCanvasElement).width));
+      expect(k, 'zoom ≥ 2').toBeGreaterThanOrEqual(2);
+      for (const [dx, dy, axis, sign] of [[-50, 0, 'playerX', -1], [0, 50, 'playerY', 1], [50, 0, 'playerX', 1], [0, -50, 'playerY', -1]] as const) {
+        const p0 = await probeOf(page);
+        const need = (p: Pr): boolean => sign * (p[axis] - (axis === 'playerX' ? p0.playerX : p0.playerY)) > 12;
+        await touchEv(cdp, 'touchStart', 70, Math.round(vp.height * 0.5));
+        await touchEv(cdp, 'touchMove', 70 + dx, Math.round(vp.height * 0.5) + dy);
+        await expect.poll(async () => need(await probeOf(page)), { message: `${axis} ${sign > 0 ? 'росте' : 'спадає'}`, timeout: 10_000, intervals: [30] }).toBe(true);
+        await touchEv(cdp, 'touchEnd');
+        const p1 = await probeOf(page);
+        const other = axis === 'playerX' ? 'playerY' : 'playerX';
+        expect(Math.abs(p1[other] - p0[other]), `ортогональна вісь майже не зсунулась (${other})`).toBeLessThan(Math.abs(p1[axis] - p0[axis]));
+        await expect.poll(async () => { const a = await probeOf(page); await page.waitForTimeout(120); const b = await probeOf(page); return Math.hypot(a.playerX - b.playerX, a.playerY - b.playerY); }, { timeout: 10_000 }).toBeLessThan(0.1);
+      }
+    });
+
+    test('тап по Елізі в зоні дії відкриває розмову; тап по ній поза зоною — нічого', async ({ browser }) => {
+      // Поза зоною: підходимо так, щоб Еліза була в кадрі, але далеко від зони дії.
+      const out = await open(browser, vp, true);
+      await stickDrive(out.page, out.cdp, -50, 0, (p) => p.playerX <= 165);
+      await stickDrive(out.page, out.cdp, 0, 50, (p) => p.playerY >= 215);
+      const o0 = await probeOf(out.page);
+      expect(o0.nearObject, 'Елізи поруч нема').toBeNull();
+      const far = await screenOfWorld(out.page, ELISE.x, ELISE.y - 24);
+      expect(far.x, 'Еліза в кадрі').toBeGreaterThan(0); expect(far.x).toBeLessThan(vp.width); expect(far.y).toBeLessThan(vp.height);
+      await out.page.touchscreen.tap(far.x, far.y);
+      await out.page.waitForTimeout(400);   // нічого не станеться — чекати нема на що, крім відсутності події
+      expect((await probeOf(out.page)).commandsSent, 'тап поза зоною: команд нема').toBe(o0.commandsSent);
+      await expect(out.page.locator('[data-ui="story"]')).toHaveCount(0);
+      await out.page.context().close();
+      // В зоні.
+      const inn = await open(browser, vp, true);
+      await stickDrive(inn.page, inn.cdp, -50, 0, (p) => p.playerX <= 88);
+      for (let i = 0; i < 6 && (await probeOf(inn.page)).nearObject !== 'npc.elise'; i++) await stickDrive(inn.page, inn.cdp, 0, i % 2 === 0 ? 50 : -50, (p) => p.nearObject === 'npc.elise');
+      expect((await probeOf(inn.page)).nearObject).toBe('npc.elise');
+      const n0 = await probeOf(inn.page);
+      const at = await screenOfWorld(inn.page, ELISE.x, ELISE.y - 24);
+      await inn.page.touchscreen.tap(at.x, at.y);
+      await expect(inn.page.locator('[data-ui="story"]')).toBeVisible();
+      expect((await probeOf(inn.page)).commandsSent - n0.commandsSent, 'тап: рівно одна команда (Talk)').toBe(1);
+      await inn.page.context().close();
+    });
   });
 }
