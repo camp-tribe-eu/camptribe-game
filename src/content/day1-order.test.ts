@@ -230,7 +230,7 @@ describe('GAME-138 · Спосіб перевірки 1: бот і реплей 
     const bad = campaign(defs, 300, 20261023, (v) => v.side === 'take');
     expect(repeatViolations(bad).length).toBeGreaterThan(0);
     expect(campaignViolations(bad, defs).length).toBeGreaterThan(0);
-  }, 120_000);
+  }, 300_000);   // GAME-144: розділ триденний — 300 прогонів бота з пошуком кінця з мутованого графа заміряно > 120 с під навантаженням
 
   it('МУТАЦІЯ: привітання Елізи без умови «ще не знайомі» (hello.c2 без notFlag f.elise-met) — бот бачить друге знайомство', () => {
     const mut = structuredClone(CONTENT);
