@@ -5,7 +5,7 @@ import { expect, test, type Page } from '@playwright/test';
 type Dir = 'up' | 'left' | 'down' | 'right';
 interface Probe {
   ready: boolean; playerX: number; playerY: number; playerFrame: number; playerDir: Dir; playerMoving: boolean;
-  playerDepth: number; coveredTiles: number; behindTiles: number; cameraScrollY: number;
+  playerDepth: number; coveredTiles: number; behindTiles: number; cameraScrollX: number; cameraScrollY: number;
 }
 const ROW: Record<Dir, number> = { up: 0, left: 1, down: 2, right: 3 };   // рядки листа LPC
 const COLS = 9;
@@ -100,12 +100,15 @@ test.describe('LPC на сцені (десктоп 1280×800)', () => {
     expect(back.coveredTiles, 'позаду намету дах закриває кадр персонажа').toBeGreaterThan(0);
   });
 
-  test('мапа 32 px: камера їде за персонажем лише по вертикалі (кадр 640 завширшки = мапа), у межах 384 − 352', async ({ page }) => {
+  test('мапа 32 px: камера їде за персонажем у межах мапи 640×384 (GAME-96: кадр 427×267 на 1280×800 — по обох осях, порожнечі немає)', async ({ page }) => {
     await open(page);
-    // GAME-97: за умовою, а не за часом; далі ще тиснемо, щоб камера дійшла до краю і межа ≤ 32 щось доводила.
+    // GAME-97: за умовою, а не за часом; далі ще тиснемо, щоб камера дійшла до краю і межа ≤ 384 − 267 щось доводила.
     await hold(page, 'ArrowDown', (q) => q.cameraScrollY > 0, 10_000);
-    const p = (await hold(page, 'ArrowDown', (q) => q.cameraScrollY >= 32, 10_000)).end;
+    const p = (await hold(page, 'ArrowDown', (q) => q.cameraScrollY >= 384 - 267, 10_000)).end;
     expect(p.cameraScrollY).toBeGreaterThan(0);
-    expect(p.cameraScrollY).toBeLessThanOrEqual(32);
+    expect(p.cameraScrollY).toBeLessThanOrEqual(384 - 267);
+    const r = (await hold(page, 'ArrowRight', (q) => q.cameraScrollX >= 640 - 427, 10_000)).end;
+    expect(r.cameraScrollX).toBeGreaterThanOrEqual(0);
+    expect(r.cameraScrollX).toBeLessThanOrEqual(640 - 427);
   });
 });

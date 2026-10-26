@@ -110,9 +110,10 @@ const game = new Phaser.Game({
   // (кадр без обмеження 60 Гц: 70 → 102 fps на тій самій сцені). Усі зміни GAME-97 разом: ≈100 → ≈142 fps без обмеження.
   render: { maxTextures: 1 },
   backgroundColor: '#000000',
-  // GAME-89 №4: по вертикалі кадр НЕ центруємо. На телефоні сторч мапа нижча за поле (кадр ≤ 192 px), і центрування клало
-  // 150 px порожнечі між HUD і мапою; тепер мапа стоїть під HUD, а вільне місце внизу — де й так лежать дотикові кнопки.
-  scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_HORIZONTALLY },
+  // GAME-96 (смак власника 25.10): масштаб рахуємо самі (frameSize: цілий zoom, кадр = ⌈поле / zoom⌉), Phaser лише множить —
+  // режим NONE + zoom. Полотно стоїть у лівому верхньому куті поля (GAME-89 №4: по вертикалі не центруємо — мапа під HUD) і покриває
+  // поле по ширині: вбік і на десктопі смуг з боків немає; зайве (< zoom px) ховає overflow поля. FIT із кадром 640×352 давав смуги.
+  scale: { mode: Phaser.Scale.NONE, autoCenter: Phaser.Scale.NO_CENTER, zoom: frame0.zoom },
   physics: { default: 'arcade', arcade: { debug: false } },
   scene: [new WorldScene(bridge, input, probe, worldArt, talkOnMap, actOnMap, (name) => liveSpot(bridge.state, name))],
 });
@@ -122,13 +123,17 @@ if (switches.frameLagMs) addFrameLag(game, switches.frameLagMs);
 onFirstFrame(game, (ms) => { probe.firstFrameMs = ms; });
 
 // Поле змінило розмір (поворот телефону, смуга HUD, текст 200 %) — кадр підлаштовується під його форму.
-new ResizeObserver(() => {
+const applyFrame = (): void => {
   const f = frameSize(stage.clientWidth, stage.clientHeight);
-  if (f.width !== game.scale.gameSize.width || f.height !== game.scale.gameSize.height) game.scale.setGameSize(f.width, f.height);
-  // GAME-96: розмір кадру міг не змінитись (широкий 640×352 на будь-якій висоті), а поле — змінилось (шапка з'явилась, поворот): FIT міряє
-  // батьківський блок лише по події, тож без refresh() полотно лишалось завбільшки з поле ДО появи шапки і вилазило за екран (1280×720: 704 у полі 648).
-  game.scale.refresh();
-}).observe(stage);
+  if (f.zoom !== game.scale.zoom) game.scale.setZoom(f.zoom);
+  if (f.width !== game.scale.gameSize.width || f.height !== game.scale.gameSize.height) game.scale.resize(f.width, f.height);
+  // Phaser (NONE) пише style лише коли zoom ≠ 1 або zoom щойно змінився: при поверненні до zoom 1 лишався б старий розмір. Ставимо самі, завжди.
+  const canvas = game.canvas;
+  canvas.style.width = `${f.width * f.zoom}px`;
+  canvas.style.height = `${f.height * f.zoom}px`;
+  game.scale.refresh();   // межі полотна й displayScale для вводу — з нового style
+};
+new ResizeObserver(applyFrame).observe(stage);
 
 // Оболонка UI (GAME-25): пауза зупиняє і сцену, і ігровий годинник ядра.
 const ui = document.createElement('div');
