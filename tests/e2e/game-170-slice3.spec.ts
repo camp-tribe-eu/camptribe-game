@@ -204,7 +204,7 @@ test.describe('(b) вбік 844×390, дотик: одна справа тапо
     await cardLayout(page, VP);
     await page.screenshot({ path: 'test-results/game-170-slice3-landscape-w1.png' });
     const t0 = Date.now();
-    const m0 = (await core(page)).clock.minutes;
+    const m0 = (await core(page)).game.wave?.active?.startedAt ?? Number.NaN; // game minute the wave started (deterministic, not sampled after the fact)
     await expect.poll(async () => (await core(page)).game.wave?.active === null, { timeout: 90_000, intervals: [500] }).toBe(true);
     const w1 = (Date.now() - t0) / 1000;
     const c1 = await core(page);
