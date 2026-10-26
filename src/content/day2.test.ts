@@ -91,7 +91,8 @@ function explore(start: GameState, defs: CoreDefs = GAME_DEFS, cap = 200_000): E
   for (let cur = queue.shift(); cur; cur = queue.shift()) {
     const { s, h } = cur;
     out.states++;
-    if (s.campaignEnded) { out.ended++; continue; }
+    // GAME-144: межа дня 2 (вогнище завершено) — кінець перебору дня 2; що далі є день 3 і кінець розділу, доводить day3.test.
+    if (s.campaignEnded || s.quests['CH1-D2-FIRE-001']?.status === 'completed') { out.ended++; continue; }
     for (const m of moves(s, defs)) {
       if (!DAY_MOVES.has(m.type)) continue;
       const r = dispatch(s, { ...m, commandId: `x${n++}` } as Command, defs);
@@ -133,16 +134,17 @@ const eliseNode = (c: RawContent, id: string): RawNode | undefined =>
   (c.dialogues.find((d) => d.id === 'dlg.elise-greeting')?.nodes as unknown as RawNode[] | undefined)?.find((x) => x.id === id);
 
 describe('GAME-141 · межа дня й кінець розділу — різні речі', () => {
-  it('ST-005 — межа дня 1, не кінець; кінець розділу й межа дня 2 — CH1-D2-FIRE-001 (вечір біля вогнища)', () => {
+  it('ST-005 — межа дня 1, не кінець; межа дня 2 — CH1-D2-FIRE-001 (вечір біля вогнища); кінець розділу — удома в день 3 (GAME-144)', () => {
     expect(STORY.quests['ST-005']).toMatchObject({ dayEnd: true, end: false });
-    expect(STORY.quests['CH1-D2-FIRE-001']).toMatchObject({ dayEnd: true, end: true });
-    expect([...dayEndQuests(GAME_DEFS)]).toEqual(['ST-005', 'CH1-D2-FIRE-001']);
-    expect(Object.entries(STORY.quests).filter(([, q]) => q.end).map(([id]) => id)).toEqual(['CH1-D2-FIRE-001']);
+    expect(STORY.quests['CH1-D2-FIRE-001']).toMatchObject({ dayEnd: true, end: false });
+    expect([...dayEndQuests(GAME_DEFS)]).toEqual(['ST-005', 'CH1-D2-FIRE-001', 'CH1-D3-HOME-001']);
+    expect(Object.entries(STORY.quests).filter(([, q]) => q.end).map(([id]) => id)).toEqual(['CH1-D3-HOME-001']);
   });
 
   it('порядок дня 2 за замовчуванням: ST-005 → CH1-D2-001 → CH1-D2-ELISE-001 → CH1-D2-CAMP-001 → CH1-D2-FIRE-001; велозона — лише вибір велосипедиста', () => {
     const chain: string[] = ['ST-005'];
-    for (let q = STORY.quests['ST-005']; q && !q.end; q = STORY.quests[chain.at(-1) as string]) {
+    // GAME-144: ланцюг дня 2 — до межі дня 2 (вогнище); далі день 3 (day3.test).
+    for (let q = STORY.quests['ST-005']; q && chain.at(-1) !== 'CH1-D2-FIRE-001' && chain.length < 10; q = STORY.quests[chain.at(-1) as string]) {
       const to = q.transitions.find((t) => t.on === 'complete' && !t.choice && !t.when)?.to;
       if (!to) break;
       chain.push(to);
@@ -156,7 +158,7 @@ describe('GAME-141 · межа дня й кінець розділу — різ�
 
   it('гачок вогнища (GAME-142) — один етап CH1-D2-FIRE-001: після вечері, останній перед підсумком дня 2, і поки без сцени', () => {
     expect(STORY.quests['CH1-D2-CAMP-001']?.transitions).toEqual([{ on: 'complete', to: 'CH1-D2-FIRE-001', choice: false }]);
-    expect(STORY.quests['CH1-D2-FIRE-001']?.transitions).toEqual([]);
+    expect(STORY.quests['CH1-D2-FIRE-001']?.transitions).toEqual([{ on: 'complete', to: 'CH1-D3-001', choice: false }]);   // GAME-144: далі ранок дня 3
     // Вечеря (ціль dinner CH1-D2-CAMP-001) — до вогнища: canon «вогнище — коли вечеря завершена».
     expect(STORY.quests['CH1-D2-CAMP-001']?.objectives.find((o) => o.id === 'dinner')?.required).toBe(true);
     // Ціль «вечір» — візит табору (гравець уже тут): GAME-142 замінить її на сцену, не чіпаючи межі дня.
@@ -164,7 +166,7 @@ describe('GAME-141 · межа дня й кінець розділу — різ�
     expect((flags as { id: string }[]).filter((f) => f.id.startsWith('f.fire')).map((f) => f.id).sort()).toEqual(['f.fire-allowed', 'f.fire-dinner-done', 'f.fire-photo-tent']);   // прапорці вогнища принесла GAME-142 (#66)
   });
 
-  it('підсумок дня: «день 1» закінчується на ST-005, «день 2» — на CH1-D2-FIRE-001 (повний прохід авто)', () => {
+  it('підсумок дня: «день 1» закінчується на ST-005, «день 2» — на CH1-D2-FIRE-001, розділ триває (повний прохід авто)', () => {
     const CTX = { defs: GAME_DEFS };
     let sim = newSim(7, 5_000);
     const sendAll = (ms: readonly Move[]): void => { for (const m of ms) sim = step(sim, { kind: 'command', command: { ...m, commandId: `s${n++}` } as Command }, CTX); };
@@ -175,7 +177,8 @@ describe('GAME-141 · межа дня й кінець розділу — різ�
     expect(daySummary(sim, 1, GAME_DEFS)?.sections.find((x) => x.kind === 'quests')?.ids.at(-1)).toBe('ST-005');
     expect(sim.game.campaignEnded).toBe(false);
     sendAll([done('CH1-D2-001'), talk, choose(10), choose(1), next, done('CH1-D2-ELISE-001'), talk, choose(13), choose(0), next, next, done('CH1-D2-CAMP-001'), done('CH1-D2-FIRE-001')]);
-    expect(sim.game.campaignEnded).toBe(true);
+    expect(sim.game.campaignEnded).toBe(false);                 // GAME-144: межа дня 2, розділ триває
+    expect(sim.game.quests['CH1-D3-001']?.status).toBe('active');
     expect(daysEnded(sim, GAME_DEFS)).toBe(2);
     expect(daySummary(sim, 2, GAME_DEFS)?.sections.find((x) => x.kind === 'quests')?.ids).toEqual([...DAY2]);
   });
@@ -353,12 +356,15 @@ describe('GAME-141 · сумісність сейвів: старий кінец
     expect(atFire.quests['CH1-D2-FIRE-001']?.status).toBe('active');
     expect(play([fire], atFire).dialogue).toEqual({ id: 'dlg.ch1-fire', node: 'open' });
     const ended = play([done('CH1-D2-FIRE-001')], atFire);
-    expect(ended.campaignEnded).toBe(true);
+    expect(ended.campaignEnded).toBe(false);                    // GAME-144: етап вогнища минув, розділ триває — сцена все одно не відкривається
     expect(() => play([fire], ended)).toThrow(/QUEST_NOT_ACTIVE/);
   });
 
   it('розділ, закінчений на НИНІШНЬОМУ кінці, не відкривається знову; незакінчений — не змінюється', () => {
-    const now = play([done('CH1-D2-001'), talk, choose(10), choose(1), next, done('CH1-D2-ELISE-001'), talk, choose(13), choose(0), next, next, done('CH1-D2-CAMP-001'), done('CH1-D2-FIRE-001')], startOf('car-cat'));
+    // GAME-144: нинішній кінець — удома в день 3.
+    const now = play([done('CH1-D2-001'), talk, choose(10), choose(1), next, done('CH1-D2-ELISE-001'), talk, choose(13), choose(0), next, next, done('CH1-D2-CAMP-001'), done('CH1-D2-FIRE-001'),
+      done('CH1-D3-001'), done('CH1-D3-GEAR-001'), talk, choose(14), next, choose(0), next, next, done('CH1-D3-ELISE-001'),
+      { type: 'Visit', locationId: 'loc.road' }, done('CH1-D3-RETURN-001'), { type: 'Visit', locationId: 'loc.home' }, done('CH1-D3-HOME-001')], startOf('car-cat'));
     expect(now.campaignEnded).toBe(true);
     expect(reopenChapter(now, STORY)).toBe(now);
     const mid = startOf('bike');

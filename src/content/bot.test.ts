@@ -52,7 +52,7 @@ describe('бот справді проходить день 2 (300 прогон�
     const ended = runs.filter((r) => r.verdict === 'ended');
     expect(ended.length, JSON.stringify(tally(runs))).toBeGreaterThanOrEqual(runs.length / 20);
     expect(runs.filter((r) => r.verdict === 'softlock' || r.verdict === 'unknown')).toEqual([]);
-    expect(ended.every((r) => r.final.quests['CH1-D2-FIRE-001']?.status === 'completed')).toBe(true);
+    expect(ended.every((r) => r.final.quests['CH1-D2-FIRE-001']?.status === 'completed' && r.final.quests['CH1-D3-HOME-001']?.status === 'completed')).toBe(true);   // GAME-144: кінець — удома
     expect(ended.some((r) => r.final.quests['q.elise-bike-area'] !== undefined)).toBe(true);
     expect(ended.some((r) => r.variant.transport === 'transport.car')).toBe(true);
   });

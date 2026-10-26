@@ -16,6 +16,7 @@ declare module '*/validator/codes.mjs' {
   /** Межі хвилі напруги (GAME-170) — мусять збігатися з defs.ts ядра. */
   export const WAVE_MAX_LIMIT: number;
   export const WAVE_MIN_TASKS: number;
+  export const GEAR_CHECK_VARIANTS: readonly string[];
   export const WAVE_MAX_TASKS: number;
 }
 declare module '*/validator/load.mjs' {

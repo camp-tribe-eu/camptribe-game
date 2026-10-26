@@ -17,7 +17,7 @@ interface RawWhen { profiles?: string[]; transports?: string[]; animals?: string
 interface RawQuest {
   id: string; optional: boolean; end?: boolean; dayEnd?: boolean; locationId?: string; when?: RawWhen;
   requires?: { quests?: string[]; items?: string[] };
-  objectives: { id: string; kind: string; target: string; required: boolean; byDialogue?: boolean; when?: RawWhen }[];
+  objectives: { id: string; kind: string; target: string; required: boolean; byDialogue?: boolean; gearCheck?: boolean; when?: RawWhen }[];
   transitions: { on: string; to: string; choiceKey?: string; when?: RawWhen }[];
   reward?: { grantId: string; money?: number; items?: { item: string; qty: number }[]; once?: boolean };
 }

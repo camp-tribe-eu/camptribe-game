@@ -140,7 +140,8 @@ describe('збірка сюжету з content/ (src/content/story.ts)', () => {
     expect(STORY.quests['ST-004']?.transitions.map((t) => [t.to, t.choice])).toEqual([['ST-005', false]]);
     // GAME-141: межа дня й кінець розділу — різні поля; ST-005 — лише межа дня 1.
     expect([STORY.quests['ST-005']?.dayEnd, STORY.quests['ST-005']?.end]).toEqual([true, false]);
-    expect([STORY.quests['CH1-D2-FIRE-001']?.dayEnd, STORY.quests['CH1-D2-FIRE-001']?.end]).toEqual([true, true]);
+    expect([STORY.quests['CH1-D2-FIRE-001']?.dayEnd, STORY.quests['CH1-D2-FIRE-001']?.end]).toEqual([true, false]);   // GAME-144: межа дня 2, кінець — удома в день 3
+    expect([STORY.quests['CH1-D3-HOME-001']?.dayEnd, STORY.quests['CH1-D3-HOME-001']?.end]).toEqual([true, true]);
     expect(STORY.quests['ST-004'] && 'dayEnd' in STORY.quests['ST-004']).toBe(false);   // поле лише зі значенням true
     expect(STORY.quests['ST-005']?.reward?.moneyCents).toBe(1_000);
     const c = structuredClone(CONTENT);

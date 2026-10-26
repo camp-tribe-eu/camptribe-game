@@ -19,7 +19,8 @@
         { "textKey": "dlg.elise-greeting.hello.c11", "next": "morning", "when": { "quest": "CH1-D2-ELISE-001", "status": "active" }, "effects": [{ "completeObjective": { "quest": "CH1-D2-ELISE-001", "objective": "talk-elise" } }] },
         { "textKey": "dlg.elise-greeting.hello.c12", "next": "bikezone", "when": { "all": [{ "quest": "q.elise-bike-area", "status": "active" }, { "remembers": "m.came-by-bike" }] } },
         { "textKey": "dlg.elise-greeting.hello.c13", "next": "bikezone-thanks", "when": { "remembers": "m.bikezone-helped" } },
-        { "textKey": "dlg.elise-greeting.hello.c14", "next": "dinner", "when": { "quest": "CH1-D2-CAMP-001", "status": "active" } }
+        { "textKey": "dlg.elise-greeting.hello.c14", "next": "dinner", "when": { "quest": "CH1-D2-CAMP-001", "status": "active" } },
+        { "textKey": "dlg.elise-greeting.hello.c15", "next": "farewell", "when": { "quest": "CH1-D3-ELISE-001", "status": "active" }, "effects": [{ "completeObjective": { "quest": "CH1-D3-ELISE-001", "objective": "goodbye" } }] }
       ]
     },
     { "id": "bike", "speaker": "npc", "textKey": "dlg.elise-greeting.bike", "next": "intro" },
@@ -116,6 +117,20 @@
     },
     { "id": "dinner-together", "speaker": "npc", "textKey": "dlg.elise-greeting.dinner-together", "next": "bye" },
     { "id": "dinner-simple", "speaker": "npc", "textKey": "dlg.elise-greeting.dinner-simple", "next": "bye" },
+    {
+      "id": "farewell", "speaker": "npc", "textKey": "dlg.elise-greeting.farewell", "next": "goodbye",
+      "branches": [{ "when": { "flag": "f.litter-cleaned-ch1" }, "next": "goodbye-litter" }]
+    },
+    { "id": "goodbye-litter", "speaker": "npc", "textKey": "dlg.elise-greeting.goodbye-litter", "next": "goodbye" },
+    {
+      "id": "goodbye", "speaker": "npc", "textKey": "dlg.elise-greeting.goodbye",
+      "choices": [
+        { "textKey": "dlg.elise-greeting.goodbye.c1", "next": "goodbye-road" },
+        { "textKey": "dlg.elise-greeting.goodbye.c2", "next": "goodbye-quiet" }
+      ]
+    },
+    { "id": "goodbye-road", "speaker": "npc", "textKey": "dlg.elise-greeting.goodbye-road", "next": "bye" },
+    { "id": "goodbye-quiet", "speaker": "npc", "textKey": "dlg.elise-greeting.goodbye-quiet", "next": "bye" },
     { "id": "bye", "speaker": "npc", "textKey": "dlg.elise-greeting.bye", "end": true }
   ]
 }

@@ -307,6 +307,18 @@ for (const vp of VIEWPORTS) {
       await expect(page.locator('[data-ui="summary"] h2')).toHaveText('Підсумок дня 2');
       await page.locator('[data-ui="summary-continue"]').tap();
       await page.locator('[data-touch="story"]').tap();
+      await expect(story.locator('[data-ui="ended"]')).toHaveCount(0);   // GAME-144: після дня 2 розділ триває
+      // День 3 (GAME-144) тим самим дотиком: ранок, речі, прощання, дорога (подія в дорозі — останньою відповіддю), дім — і підсумок дня 3.
+      for (const [k, key] of [['complete', 'q.ch1-d3-001'], ['complete', 'q.ch1-d3-gear-001'], ['talk', 'npc.elise'], ['choose', 'dlg.elise-greeting.hello.c15'], ['continue', ''],
+        ['choose', 'dlg.elise-greeting.goodbye.c1'], ['continue', ''], ['continue', ''], ['complete', 'q.ch1-d3-elise-001'], ['visit', 'loc.road']] as const) await tapAct(k, key);
+      for (let i = 0; i < 6 && await story.locator('[data-ui="dialogue"]').isVisible({ timeout: 400 }).catch(() => false); i++) {
+        await story.locator('[data-ui="dialogue"] [data-act]').last().tap();
+        await page.waitForTimeout(400);
+      }
+      for (const [k, key] of [['complete', 'q.ch1-d3-return-001'], ['visit', 'loc.home'], ['complete', 'q.ch1-d3-home-001']] as const) await tapAct(k, key);
+      await expect(page.locator('[data-ui="summary"] h2')).toHaveText('Підсумок дня 3');
+      await page.locator('[data-ui="summary-continue"]').tap();
+      await page.locator('[data-touch="story"]').tap();
       await expect(story.locator('[data-ui="ended"]')).toBeVisible();
       expect((await page.evaluate(() => (window as unknown as { __game: { read: () => { game: { campaignEnded: boolean } } } }).__game.read().game.campaignEnded))).toBe(true);
     });

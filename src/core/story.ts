@@ -276,6 +276,17 @@ function leave(st: StoryDefs, d: StoryDraft, p: PlayerState, cmd: { commandId: s
   return null;
 }
 
+/**
+ * Розділ пройдено (GAME-144, `chapter1_complete` сценарію) — ПОХІДНЕ від квестів: завершено квест-кінець (`end: true`,
+ * для розділу 1 — CH1-D3-HOME-001). Окремого прапорця немає й не буде: прапорець можна поставити без квесту, а квест —
+ * єдине джерело правди. `campaignEnded` ядро ставить лише в мить завершення такого квесту (leave), а сейв, де він стоїть без
+ * завершеного кінця, reopenChapter знову відкриває; рівність `campaignEnded === chapterComplete` на всіх досяжних станах
+ * доводить src/content/day3.test.ts.
+ */
+export function chapterComplete(game: Pick<GameState, 'quests'>, st: Pick<StoryDefs, 'quests'>): boolean {
+  return Object.entries(st.quests).some(([id, q]) => q.end && own(game.quests, id)?.status === 'completed');
+}
+
 /** Чи пам'ятає NPC факт (GAME-48). Без NPC (подія в дорозі) — ніхто нічого не пам'ятає. */
 export function remembers(d: Pick<StoryDraft, 'npcMemory'>, npcId: string | undefined, fact: string): boolean {
   return npcId !== undefined && (own(d.npcMemory, npcId) ?? []).includes(fact);

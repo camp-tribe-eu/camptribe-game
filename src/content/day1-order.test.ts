@@ -31,6 +31,8 @@ import { saveViable } from './viability';
 const ORDER_QUESTS = ['PROLOGUE-HOME-001', 'ST-001', 'ST-002', 'ST-003', 'CH1-HOME-001', 'ST-004', 'ST-005'] as const;
 /** GAME-141: основні етапи дня 2 — після межі дня 1; їхній порядок стереже src/content/day2.test.ts. */
 const DAY2_QUESTS = ['CH1-D2-001', 'CH1-D2-ELISE-001', 'CH1-D2-CAMP-001', 'CH1-D2-FIRE-001'] as const;
+// GAME-144: день 3 — ланцюг до кінця розділу (CH1-D3-HOME-001).
+const DAY3_QUESTS = ['CH1-D3-001', 'CH1-D3-GEAR-001', 'CH1-D3-ELISE-001', 'CH1-D3-RETURN-001', 'CH1-D3-HOME-001'] as const;
 const isDay2 = (q: string): boolean => (DAY2_QUESTS as readonly string[]).includes(q);
 const APPLE = 'dlg.road-apples';   // EV-APPLE-001
 const NO_ANIMAL = 'animal.none';
@@ -172,8 +174,8 @@ describe('GAME-138 · порядок дня 1 у контенті', () => {
       if (!next) break;
       chain.push(next);
     }
-    expect(chain).toEqual([...ORDER_QUESTS, ...DAY2_QUESTS]);
-    expect([...dayEndQuests(GAME_DEFS)]).toEqual(['ST-005', 'CH1-D2-FIRE-001']);
+    expect(chain).toEqual([...ORDER_QUESTS, ...DAY2_QUESTS, ...DAY3_QUESTS]);
+    expect([...dayEndQuests(GAME_DEFS)]).toEqual(['ST-005', 'CH1-D2-FIRE-001', 'CH1-D3-HOME-001']);   // GAME-144: три межі дня
     expect(STORY.quests['ST-005']?.end).toBe(false);                                     // межа дня 1 — не кінець розділу
     // EV-APPLE-001 — подія лише на дорозі, а дорога відкривається після CH1-HOME-001: яблука не трапляються раніше за ST-004.
     expect(STORY.dialogues[APPLE]?.trigger?.at).toEqual(['loc.road']);

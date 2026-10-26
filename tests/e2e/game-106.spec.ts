@@ -128,7 +128,7 @@ for (const mode of MODES) {
   });
 }
 
-test('«Продовжити» — назад на мапу; день 2 до «Підсумку дня 2» і кінця розділу; світ іде далі, фокус на полі гри (миша)', async ({ browser }) => {
+test('«Продовжити» — назад на мапу; день 2 до «Підсумку дня 2», день 3 до «Підсумку дня 3» і кінця розділу (GAME-144); світ іде далі, фокус на полі гри (миша)', async ({ browser }) => {
   const ctx = await browser.newContext({ viewport: { width: 1280, height: 800 } });
   const page = await ctx.newPage();
   await page.goto('/?seed=2');
@@ -159,6 +159,23 @@ test('«Продовжити» — назад на мапу; день 2 до «�
   expect(await summary(page).locator('[data-kind="quests"] li').evaluateAll((els) => els.map((e) => (e as HTMLElement).dataset.key)))
     .toEqual(['q.ch1-d2-001', 'q.ch1-d2-elise-001', 'q.ch1-d2-camp-001', 'q.ch1-d2-fire-001']);
   await expect(summary(page).locator('[data-kind="packed"]')).toHaveCount(0);   // пакування дня 1 не повторюється
+  expect(await summary(page).textContent()).not.toContain('⟦');
+  await summary(page).locator('[data-ui="summary-continue"]').click();
+  await expect(summary(page)).toHaveCount(0);
+  await expect(panel(page)).toHaveCount(0);
+  await expect(page.locator('[data-ui="ended-hint"]')).toHaveCount(0);   // GAME-144: після дня 2 розділ триває — попереду день 3
+  // День 3 (GAME-144): ранок → речі → прощання з Елізою → дорога → дім; «Підсумок дня 3» — і лише тоді кінець розділу.
+  await page.locator('[data-touch="story"]').click();
+  for (const [k, key] of [['complete', 'q.ch1-d3-001'], ['complete', 'q.ch1-d3-gear-001'], ['talk', 'npc.elise'], ['choose', 'dlg.elise-greeting.hello.c15'], ['continue', ''],
+    ['choose', 'dlg.elise-greeting.goodbye.c1'], ['continue', ''], ['continue', ''], ['complete', 'q.ch1-d3-elise-001'], ['visit', 'loc.road']] as const) await click(`[data-act="${k}"][data-key="${key}"]`);
+  for (let i = 0; i < 6 && await panel(page).locator('[data-ui="dialogue"]').isVisible({ timeout: 400 }).catch(() => false); i++) await click('[data-ui="dialogue"] [data-act] >> nth=-1');
+  for (const [k, key] of [['complete', 'q.ch1-d3-return-001'], ['visit', 'loc.home']] as const) await click(`[data-act="${k}"][data-key="${key}"]`);
+  await expect(summary(page)).toHaveCount(0);                                // контроль: до межі дня 3 підсумку немає
+  await click('[data-act="complete"][data-key="q.ch1-d3-home-001"]');
+  await expect(summary(page)).toBeVisible();
+  await expect(summary(page).locator('h2')).toHaveText('Підсумок дня 3');
+  expect(await summary(page).locator('[data-kind="quests"] li').evaluateAll((els) => els.map((e) => (e as HTMLElement).dataset.key)))
+    .toEqual(['q.ch1-d3-001', 'q.ch1-d3-gear-001', 'q.ch1-d3-elise-001', 'q.ch1-d3-return-001', 'q.ch1-d3-home-001']);
   expect(await summary(page).textContent()).not.toContain('⟦');
   await summary(page).locator('[data-ui="summary-continue"]').click();
   await expect(summary(page)).toHaveCount(0);

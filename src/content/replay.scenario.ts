@@ -1,6 +1,7 @@
 // Сценарій для еталонного реплею (GAME-34): справжній Пролог на справжньому каталозі гри (GAME_DEFS),
 // велосипедист з побічною гілкою Еліз, з кадрами між діями — годинник і RNG теж у хеші. GAME-141: день 1 закінчується на
-// ST-005 (межа дня, не кінець розділу), далі день 2 — ранок, порада Елізи, велозона (тепер на дні 2), вечеря — до кінця розділу.
+// ST-005 (межа дня, не кінець розділу), далі день 2 — ранок, порада Елізи, велозона (тепер на дні 2), вечеря; GAME-144: день 3 — речі,
+// прощання з Елізою, дорога додому — до кінця розділу (CH1-D3-HOME-001).
 import type { Command } from '../core/commands';
 import type { Input } from '../core/sim';
 
@@ -46,5 +47,14 @@ export const PROLOGUE_BIKE: readonly Input[] = [
   c({ type: 'Talk', npcId: 'npc.elise' }), c({ type: 'Choose', choice: 12 }), c({ type: 'Continue' }), c({ type: 'Continue' }),
   c({ type: 'Talk', npcId: 'npc.elise' }), c({ type: 'Choose', choice: 13 }), c({ type: 'Choose', choice: 1 }), c({ type: 'Continue' }), c({ type: 'Continue' }),
   c({ type: 'CompleteQuest', questId: 'CH1-D2-CAMP-001' }),
-  c({ type: 'CompleteQuest', questId: 'CH1-D2-FIRE-001' }), ...frames(8),               // вечір біля вогнища (гачок GAME-142): межа дня 2 і кінець розділу
+  c({ type: 'CompleteQuest', questId: 'CH1-D2-FIRE-001' }), ...frames(8),               // вечір біля вогнища (гачок GAME-142): межа дня 2
+  // День 3 (GAME-144): ранок → речі (спорядження сухе — нейтральна сцена) → прощання з Елізою (питання про тишу) → дорога → дім = кінець розділу.
+  c({ type: 'CompleteQuest', questId: 'CH1-D3-001' }),
+  c({ type: 'CompleteQuest', questId: 'CH1-D3-GEAR-001' }),
+  c({ type: 'Talk', npcId: 'npc.elise' }), c({ type: 'Choose', choice: 14 }), c({ type: 'Continue' }), c({ type: 'Choose', choice: 1 }), c({ type: 'Continue' }), c({ type: 'Continue' }),
+  c({ type: 'CompleteQuest', questId: 'CH1-D3-ELISE-001' }),
+  c({ type: 'Visit', locationId: 'loc.road' }), ...frames(6, 1000),
+  c({ type: 'CompleteQuest', questId: 'CH1-D3-RETURN-001' }),
+  c({ type: 'Visit', locationId: 'loc.home' }), ...frames(4, 1000),
+  c({ type: 'CompleteQuest', questId: 'CH1-D3-HOME-001' }), ...frames(8),              // знову вдома: межа дня 3 і кінець розділу
 ];

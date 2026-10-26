@@ -103,7 +103,7 @@ describe('daySummary: кожна секція — лише при факті (GA
     expect(sum?.money).toEqual({ start: START_MONEY, end: START_MONEY - 8_900 + 1_000 });
   });
 
-  it('GAME-141 · день 2 реплей-сценарію: завершено кінцем розділу; квести дня 2, ночівля нинішня, пакування дня 1 не повторюється', () => {
+  it('GAME-141 · день 2 реплей-сценарію (GAME-144: розділ закінчується днем 3); квести дня 2, ночівля нинішня, пакування дня 1 не повторюється', () => {
     const s = prologue();
     expect(s.game.campaignEnded).toBe(true);
     const sum = daySummary(s, 2, GAME_DEFS);
@@ -116,7 +116,12 @@ describe('daySummary: кожна секція — лише при факті (GA
     // Гроші дня 2: від кінця дня 1 + 5 € за велозону.
     expect(sum?.money).toEqual({ start: START_MONEY - 8_900 + 1_000, end: START_MONEY - 8_900 + 1_000 + 500 });
     expect(s.game.moneyCents).toBe(START_MONEY - 8_900 + 500 + 1_000);
-    expect(daySummary(s, 3, GAME_DEFS)).toBeNull();          // дня 3 ще немає (GAME-144)
+    // GAME-144: день 3 — речі, прощання, дорога, дім; грошей день не міняє.
+    const d3 = daySummary(s, 3, GAME_DEFS);
+    expect(d3?.ended).toBe(true);
+    expect(ids(d3, 'quests')).toEqual(['CH1-D3-001', 'CH1-D3-GEAR-001', 'CH1-D3-ELISE-001', 'CH1-D3-RETURN-001', 'CH1-D3-HOME-001']);
+    expect(d3?.money).toEqual({ start: START_MONEY - 8_900 + 1_000 + 500, end: START_MONEY - 8_900 + 1_000 + 500 });
+    expect(daySummary(s, 4, GAME_DEFS)).toBeNull();
   });
 
   it('МУТАЦІЯ межі дня: ST-005 без dayEnd — день 1 не закінчується на ST-005 (підсумок дня 1 тягнеться до кінця розділу)', () => {

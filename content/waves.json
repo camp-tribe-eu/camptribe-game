@@ -1,19 +1,161 @@
 [
   {
-    "id": "wave.ch1-day2-evening", "titleKey": "wave.ch1-day2-evening", "hookKey": "wave.ch1-day2-evening.hook", "stage": "CH1-D2-CAMP-001",
-    "fallback": { "textKey": "wave.ch1-day2-evening.fallback" },
-    "allDone": { "textKey": "wave.ch1-day2-evening.all-done" },
+    "id": "wave.ch1-day2-evening",
+    "titleKey": "wave.ch1-day2-evening",
+    "hookKey": "wave.ch1-day2-evening.hook",
+    "stage": "CH1-D2-CAMP-001",
+    "fallback": {
+      "textKey": "wave.ch1-day2-evening.fallback"
+    },
+    "allDone": {
+      "textKey": "wave.ch1-day2-evening.all-done"
+    },
     "tasks": [
-      { "id": "dinner", "textKey": "wave.ch1-day2-evening.dinner", "limitMin": 45,
-        "done": { "textKey": "wave.ch1-day2-evening.dinner.done" }, "late": { "textKey": "wave.ch1-day2-evening.dinner.late" } },
-      { "id": "firewood", "textKey": "wave.ch1-day2-evening.firewood", "limitMin": 40,
-        "done": { "textKey": "wave.ch1-day2-evening.firewood.done" }, "late": { "textKey": "wave.ch1-day2-evening.firewood.late" } },
-      { "id": "find-mia", "textKey": "wave.ch1-day2-evening.find-mia", "limitMin": 60, "leaderOnly": true, "animal": "animal.cat",
-        "when": { "animals": ["animal.cat"] },
-        "targets": [{ "id": "spot.pines", "safe": true }, { "id": "spot.bench", "safe": true }, { "id": "spot.bike-shed", "safe": true }],
-        "done": { "textKey": "wave.ch1-day2-evening.find-mia.done" }, "late": { "textKey": "wave.ch1-day2-evening.find-mia.late" } },
-      { "id": "cover-bikes", "textKey": "wave.ch1-day2-evening.cover-bikes", "limitMin": 50, "when": { "transports": ["transport.bike"] },
-        "done": { "textKey": "wave.ch1-day2-evening.cover-bikes.done" }, "late": { "textKey": "wave.ch1-day2-evening.cover-bikes.late" } }
+      {
+        "id": "dinner",
+        "textKey": "wave.ch1-day2-evening.dinner",
+        "limitMin": 45,
+        "done": {
+          "textKey": "wave.ch1-day2-evening.dinner.done"
+        },
+        "late": {
+          "textKey": "wave.ch1-day2-evening.dinner.late"
+        }
+      },
+      {
+        "id": "firewood",
+        "textKey": "wave.ch1-day2-evening.firewood",
+        "limitMin": 40,
+        "done": {
+          "textKey": "wave.ch1-day2-evening.firewood.done"
+        },
+        "late": {
+          "textKey": "wave.ch1-day2-evening.firewood.late"
+        }
+      },
+      {
+        "id": "find-mia",
+        "textKey": "wave.ch1-day2-evening.find-mia",
+        "limitMin": 60,
+        "leaderOnly": true,
+        "animal": "animal.cat",
+        "when": {
+          "animals": [
+            "animal.cat"
+          ]
+        },
+        "targets": [
+          {
+            "id": "spot.pines",
+            "safe": true
+          },
+          {
+            "id": "spot.bench",
+            "safe": true
+          },
+          {
+            "id": "spot.bike-shed",
+            "safe": true
+          }
+        ],
+        "done": {
+          "textKey": "wave.ch1-day2-evening.find-mia.done"
+        },
+        "late": {
+          "textKey": "wave.ch1-day2-evening.find-mia.late"
+        }
+      },
+      {
+        "id": "cover-bikes",
+        "textKey": "wave.ch1-day2-evening.cover-bikes",
+        "limitMin": 50,
+        "when": {
+          "transports": [
+            "transport.bike"
+          ]
+        },
+        "done": {
+          "textKey": "wave.ch1-day2-evening.cover-bikes.done"
+        },
+        "late": {
+          "textKey": "wave.ch1-day2-evening.cover-bikes.late"
+        }
+      }
+    ]
+  },
+  {
+    "id": "wave.ch1-day3-checkout",
+    "titleKey": "wave.ch1-day3-checkout",
+    "hookKey": "wave.ch1-day3-checkout.hook",
+    "stage": "CH1-D3-001",
+    "fallback": {
+      "textKey": "wave.ch1-day3-checkout.fallback"
+    },
+    "allDone": {
+      "textKey": "wave.ch1-day3-checkout.all-done"
+    },
+    "tasks": [
+      {
+        "id": "walk-site",
+        "textKey": "wave.ch1-day3-checkout.walk-site",
+        "limitMin": 45,
+        "done": {
+          "textKey": "wave.ch1-day3-checkout.walk-site.done"
+        },
+        "late": {
+          "textKey": "wave.ch1-day3-checkout.walk-site.late"
+        }
+      },
+      {
+        "id": "clean-up",
+        "textKey": "wave.ch1-day3-checkout.clean-up",
+        "limitMin": 50,
+        "done": {
+          "textKey": "wave.ch1-day3-checkout.clean-up.done"
+        },
+        "late": {
+          "textKey": "wave.ch1-day3-checkout.clean-up.late"
+        }
+      },
+      {
+        "id": "pack-tent",
+        "textKey": "wave.ch1-day3-checkout.pack-tent",
+        "limitMin": 55,
+        "done": {
+          "textKey": "wave.ch1-day3-checkout.pack-tent.done"
+        },
+        "late": {
+          "textKey": "wave.ch1-day3-checkout.pack-tent.late"
+        }
+      },
+      {
+        "id": "mia-carrier-home",
+        "textKey": "wave.ch1-day3-checkout.mia-carrier-home",
+        "limitMin": 40,
+        "leaderOnly": true,
+        "animal": "animal.cat",
+        "when": {
+          "animals": [
+            "animal.cat"
+          ]
+        },
+        "targets": [
+          {
+            "id": "spot.tent-mat",
+            "safe": true
+          },
+          {
+            "id": "spot.car",
+            "safe": true
+          }
+        ],
+        "done": {
+          "textKey": "wave.ch1-day3-checkout.mia-carrier-home.done"
+        },
+        "late": {
+          "textKey": "wave.ch1-day3-checkout.mia-carrier-home.late"
+        }
+      }
     ]
   }
 ]

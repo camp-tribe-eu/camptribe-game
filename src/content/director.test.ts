@@ -206,7 +206,8 @@ describe('режисер W4: цілі на мапі', () => {
     expect(fireplaceDue(s)).toBe(false);
     expect(spotMove(s, 'obj.campfire')).toEqual({ type: 'Interact', targetId: 'obj.campfire' });
     s = must(s, done(FIRE_STAGE));
-    expect(s.game.campaignEnded).toBe(true);
+    expect(s.game.campaignEnded).toBe(false);                     // GAME-144: вогнище — межа дня 2, далі ранок дня 3
+    expect(s.game.quests['CH1-D3-001']?.status).toBe('active');
   });
 
   it('дрова спізнились (решта встигли) → факт f.fire-allowed не ставиться, сцена йде гілкою lantern', () => {
@@ -231,8 +232,11 @@ describe('режисер W4: цілі на мапі', () => {
     expect(fireplaceDue(s)).toBe(false);
     expect(spotMove(s, 'obj.campfire')).toEqual({ type: 'Interact', targetId: 'obj.campfire' });
     const ended = must(s, done(FIRE_STAGE));
-    expect(ended.game.campaignEnded).toBe(true);
-    expect(ended.game.wave?.active).not.toBeNull();
+    expect(ended.game.quests['CH1-D3-001']?.status).toBe('active');   // GAME-144: межа дня 2 пройдена з живою хвилею — хвиля не блокує
+    // GAME-144: етап хвилі минув — симуляція вирішила її тим самим кроком (усе відкрите late), сцени вогнища більше немає.
+    expect(ended.game.wave?.active).toBeNull();
+    expect(ended.game.wave?.past[WAVE_CH1_EVENING]).toEqual({ dinner: 'late', firewood: 'late', 'cover-bikes': 'late' });
+    expect(fireplaceDue(ended)).toBe(false);
     // А якщо дочекатись: хвиля згасла (усе late) — сцена відкривається, з ліхтарем.
     const waited = minutes(s, 61);
     expect(fireplaceDue(waited)).toBe(true);
