@@ -222,8 +222,11 @@ const mutations = [
   { name: '[хвиля] when справи не успадковує when хвилі', file: CHECKS_FILE, from: 'for (const t of w.tasks) if (t.when) out.push([`${w.id}/${t.id}`, t.when, w.when]);', to: 'for (const t of w.tasks) if (t.when) out.push([`${w.id}/${t.id}`, t.when]);' },
   { name: '[хвиля] id справ не звіряються з форматом', file: CHECKS_FILE, from: "if (!OBJECTIVE_ID.test(t.id)) out.push(I('ID_FORMAT', `${w.id}/${t.id}`", to: "if (false) out.push(I('ID_FORMAT', `${w.id}/${t.id}`" },
   { name: '[хвиля] дубль id справи не звітується', file: CHECKS_FILE, from: 'for (const w of c.content.waves ?? []) dup(w.tasks.map((t) => t.id), `${w.id}.tasks`);', to: '' },
-  { name: '[хвиля] схема дозволяє наслідку стартувати квест', file: 'validator/schema.mjs', from: 'const waveEffect = union({ setFlag: obj({ setFlag: req(str) }), wetGear: obj({ wetGear: req(bool) }) });', to: 'const waveEffect = effect;' },
-  { name: '[хвиля] схема не знає wetGear', file: 'validator/schema.mjs', from: 'const waveEffect = union({ setFlag: obj({ setFlag: req(str) }), wetGear: obj({ wetGear: req(bool) }) });', to: 'const waveEffect = union({ setFlag: obj({ setFlag: req(str) }) });' },
+  { name: '[хвиля] схема дозволяє наслідку стартувати квест', file: 'validator/schema.mjs', from: "const waveEffect = union({ setFlag: obj({ setFlag: req(str) }), wetGear: obj({ wetGear: req({ t: 'boolean', only: true }) }) });", to: 'const waveEffect = effect;' },
+  { name: '[хвиля] схема приймає wetGear: false', file: 'validator/schema.mjs', from: "wetGear: obj({ wetGear: req({ t: 'boolean', only: true }) })", to: 'wetGear: obj({ wetGear: req(bool) })' },
+  { name: '[хвиля] перекриття when хвиль одного етапу не звітується', file: CHECKS_FILE, from: "if (k) out.push(I('WAVE_STAGE_OVERLAP'", to: "if (false) out.push(I('WAVE_STAGE_OVERLAP'" },
+  { name: '[хвиля] хвилі одного етапу вважаються перекритими й без спільної комбінації', file: CHECKS_FILE, from: "const k = combos.find((x) => matches(a.when, x) && matches(b.when, x));", to: "const k = combos[0];" },
+  { name: '[хвиля] схема не знає wetGear', file: 'validator/schema.mjs', from: "const waveEffect = union({ setFlag: obj({ setFlag: req(str) }), wetGear: obj({ wetGear: req({ t: 'boolean', only: true }) }) });", to: 'const waveEffect = union({ setFlag: obj({ setFlag: req(str) }) });' },
   { name: '[хвиля] завантажувач і схема не знають waves.json', file: 'validator/schema.mjs', from: "'facts', 'roads', 'flags', 'waves'];", to: "'facts', 'roads', 'flags'];" },
   // GAME-56: давність факту — попередження, не помилка
   { name: '[факт] поріг давності включно (>= замість >)', file: CHECKS_FILE, from: 'if (age > FACT_STALE_DAYS)', to: 'if (age >= FACT_STALE_DAYS)' },

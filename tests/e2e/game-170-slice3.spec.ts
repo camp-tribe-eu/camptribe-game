@@ -8,7 +8,7 @@
 import { readFileSync } from 'node:fs';
 import { expect, test, type Browser, type CDPSession, type Page } from '@playwright/test';
 
-interface Core { game: { campaignEnded: boolean; quests: Record<string, { status: string }>; gear: Record<string, { wet: boolean }>; wave?: { active: { waveId: string; tasks: Record<string, { dueAt: number; outcome: string }> } | null; past: Record<string, Record<string, string>> } }; clock: { minutes: number } }
+interface Core { game: { campaignEnded: boolean; quests: Record<string, { status: string }>; gear: Record<string, { wet: boolean }>; wave?: { active: { waveId: string; startedAt: number; tasks: Record<string, { dueAt: number; outcome: string }> } | null; past: Record<string, Record<string, string>> } }; clock: { minutes: number } }
 interface Probe { playerX: number; playerY: number; nearObject: string | null; commandsSent: number }
 interface Rect { left: number; top: number; right: number; bottom: number; width: number; height: number }
 const core = (page: Page): Promise<Core> => page.evaluate(() => (window as unknown as { __game: { read: () => Core } }).__game.read());

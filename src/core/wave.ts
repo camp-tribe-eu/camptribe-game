@@ -7,7 +7,7 @@
 // не стартує (WAVE_SEEN) — унікальна для свого етапу. Кінець розділу від хвиль не залежить: хвиля завжди закінчується
 // сама, щойно годинник мине найдовший строк (settleWave), і нічого не блокує.
 import type { ItemDef, WaveDef, WaveDefs, WaveTaskDef } from './defs';
-import { wearAfterTrip } from './gear';
+import { wetGearOnly } from './gear';
 import { matches } from './story';
 import type { GameState, PlayerState, RejectCode } from './state';
 
@@ -110,7 +110,9 @@ export function applyWave(cmd: WaveCommand, d: WaveDraft, defs: WaveDefs | undef
  * Годинник минув строк — справа спізнилась: наслідок `late`, його прапорці; коли вирішено все — хвиля закінчується.
  * Зріз 3: етап хвилі минув (квест уже не активний — гравець поїхав, доба закрилась) — усе ще відкрите спізнилось так само:
  * хвиля живе лише на своєму етапі, і наступна хвиля (інший етап) не чекає, поки годинник домине чужі строки.
- * `late.wetGear` — спорядження вологе (система дощу GAME-73; `items` каже, що є спорядженням; без них — нічого не мокне).
+ * `late.wetGear` — спорядження вологе, і лише вологе (wetGearOnly: стан не знімається, повторне спізнення чи дощ нічого не додають;
+ * DryGear повертає все; система дощу GAME-73; `items` каже, що є спорядженням; без них — нічого не мокне).
+ * Кінець етапу — теж спізнення (хвиля вже стартувала й жила на етапі): рішення зрізу 3, без окремого винятку; наслідок м'який.
  * Чиста функція над станом гри: симуляція кличе її після кожного кроку, що рухав годинник. Нічого не змінилось —
  * повертає той самий об'єкт (сейв і відбиток стану без хвиль не змінюються).
  */
@@ -126,7 +128,7 @@ export function settleWave(game: GameState, now: number, defs: WaveDefs | undefi
   setFlags(d, lates.flatMap((l) => l.effects));
   finishIfResolved(d, defs);
   const next: GameState = { ...game, flags: d.flags, ...(d.wave ? { wave: d.wave } : {}) };
-  return lates.some((l) => l.wetGear === true) ? wearAfterTrip(next, items ?? {}, 'rain') : next;
+  return lates.some((l) => l.wetGear === true) ? wetGearOnly(next, items ?? {}) : next;
 }
 
 /** Жива хвиля для екрана: кожна справа з хвилинами, що лишились (0 — строк саме зараз; від'ємних не буває). */
