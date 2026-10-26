@@ -55,6 +55,7 @@ export const PROLOGUE_BIKE: readonly Input[] = [
   c({ type: 'CompleteQuest', questId: 'CH1-D3-ELISE-001' }),
   c({ type: 'Visit', locationId: 'loc.road' }), ...frames(6, 1000),
   c({ type: 'CompleteQuest', questId: 'CH1-D3-RETURN-001' }),
+  c({ type: 'Choose', choice: 1 }), c({ type: 'Continue' }),                             // дорогою додому випала скринька з яблуками (кидок кадрів): махнути рукою й далі
   c({ type: 'Visit', locationId: 'loc.home' }), ...frames(4, 1000),
   c({ type: 'CompleteQuest', questId: 'CH1-D3-HOME-001' }), ...frames(8),              // знову вдома: межа дня 3 і кінець розділу
 ];

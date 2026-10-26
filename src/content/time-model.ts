@@ -67,15 +67,47 @@ export const minutesOf = (ms: readonly Move[], cost: (m: Move) => number = moveS
  * Найкоротший за часом людини шлях до кінця розділу з `start` (Дейкстра на ходах, без подій-удачі): нижня межа розділу для
  * гравця, що йде просто до мети. null — кінця не знайдено в межах `cap` станів.
  */
-export function fastestPath(start: GameState, defs: CoreDefs, cost: (m: Move) => number = moveSeconds, cap = 50_000): Move[] | null {
-  const dist = new Map<string, number>([[progressKey(start), 0]]);
+export function fastestPath(start: GameState, defs: CoreDefs, cost: (m: Move) => number = moveSeconds, cap = 100_000): Move[] | null {
+  const k0 = progressKey(start);
+  const dist = new Map<string, number>([[k0, 0]]);
   const prev = new Map<string, { from: string; move: Move }>();
-  const states = new Map<string, GameState>([[progressKey(start), start]]);
+  const states = new Map<string, GameState>([[k0, start]]);
   const done = new Set<string>();
-  for (;;) {
-    let cur: string | null = null;
-    for (const [k, d] of dist) if (!done.has(k) && (cur === null || d < (dist.get(cur) as number) || (d === dist.get(cur) && k < cur))) cur = k;
-    if (cur === null || done.size > cap) return null;
+  // GAME-144: розділ триденний — велосипедний простір станів ≈ 100 000; лінійний пошук мінімуму (O(n²)) ішов 6 хв. Двійкова купа
+  // з «лінивим» викиданням застарілих записів: O(n log n). Нічия — за ключем (детермінований порядок, як і раніше).
+  const heap: { d: number; k: string }[] = [{ d: 0, k: k0 }];
+  const less = (a: { d: number; k: string }, b: { d: number; k: string }): boolean => a.d < b.d || (a.d === b.d && a.k < b.k);
+  const push = (e: { d: number; k: string }): void => {
+    heap.push(e);
+    for (let i = heap.length - 1; i > 0;) {
+      const p = (i - 1) >> 1;
+      if (!less(heap[i] as { d: number; k: string }, heap[p] as { d: number; k: string })) break;
+      [heap[i], heap[p]] = [heap[p] as { d: number; k: string }, heap[i] as { d: number; k: string }];
+      i = p;
+    }
+  };
+  const pop = (): { d: number; k: string } | undefined => {
+    const top = heap[0];
+    const last = heap.pop();
+    if (heap.length > 0 && last !== undefined) {
+      heap[0] = last;
+      for (let i = 0;;) {
+        const l = 2 * i + 1;
+        const r = l + 1;
+        let m = i;
+        if (l < heap.length && less(heap[l] as { d: number; k: string }, heap[m] as { d: number; k: string })) m = l;
+        if (r < heap.length && less(heap[r] as { d: number; k: string }, heap[m] as { d: number; k: string })) m = r;
+        if (m === i) break;
+        [heap[i], heap[m]] = [heap[m] as { d: number; k: string }, heap[i] as { d: number; k: string }];
+        i = m;
+      }
+    }
+    return top;
+  };
+  for (let e = pop(); e !== undefined; e = pop()) {
+    const cur = e.k;
+    if (done.has(cur) || e.d !== dist.get(cur)) continue;   // застарілий запис купи
+    if (done.size > cap) return null;
     done.add(cur);
     const s = states.get(cur) as GameState;
     if (s.campaignEnded) {
@@ -88,11 +120,13 @@ export function fastestPath(start: GameState, defs: CoreDefs, cost: (m: Move) =>
       const r = dispatch(s, { ...m, commandId: nextCommandId(s) } as Command, defs);
       if (!r.ok) continue;
       const k = progressKey(r.state);
-      const d = (dist.get(cur) as number) + cost(m);
+      const d = e.d + cost(m);
       if (k === cur || (dist.has(k) && (dist.get(k) as number) <= d)) continue;
       dist.set(k, d);
       prev.set(k, { from: cur, move: m });
       states.set(k, r.state);
+      push({ d, k });
     }
   }
+  return null;
 }

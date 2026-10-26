@@ -812,9 +812,24 @@
   {
    "kind": "command",
    "command": {
+    "type": "Choose",
+    "choice": 1,
+    "commandId": "r68"
+   }
+  },
+  {
+   "kind": "command",
+   "command": {
+    "type": "Continue",
+    "commandId": "r69"
+   }
+  },
+  {
+   "kind": "command",
+   "command": {
     "type": "Visit",
     "locationId": "loc.home",
-    "commandId": "r68"
+    "commandId": "r70"
    }
   },
   {
@@ -838,7 +853,7 @@
    "command": {
     "type": "CompleteQuest",
     "questId": "CH1-D3-HOME-001",
-    "commandId": "r69"
+    "commandId": "r71"
    }
   },
   {
@@ -1013,19 +1028,21 @@
   "dcace45f",
   "782b5990",
   "81163b24",
-  "3f292403",
-  "9f6b114a",
-  "db7bef42",
-  "2472c577",
-  "0ee6db2c",
-  "57ecb7aa",
-  "2b411c37",
-  "9e06fd59",
-  "64a3c2da",
-  "6536cfde",
-  "46a76b49",
-  "f88984a3",
-  "b4bec1d2",
-  "8ac98a0e"
+  "6cc9d1f0",
+  "07d8ad3e",
+  "5ce9b924",
+  "1b946b6a",
+  "fabac82a",
+  "1a8f7c65",
+  "d5aae1ba",
+  "d5e11762",
+  "09bd9ccf",
+  "00e309db",
+  "c4a1477c",
+  "a60e8a88",
+  "df1d254b",
+  "fc798cba",
+  "085e8bef",
+  "2c0a1fd3"
  ]
 }

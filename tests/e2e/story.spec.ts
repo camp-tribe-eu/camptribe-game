@@ -116,16 +116,20 @@ async function playBikeDay2(page: Page): Promise<void> {
 }
 
 /**
- * GAME-144 · день 3 велосипедиста після підсумку дня 2 (екран подорожі відкрито): ранок, речі (спорядження сухе й ціле —
- * нейтральна сцена, «висушити» на екрані немає), прощання з Елізою (без подяки за пакети — їх не прибирали), дорога додому,
- * дім — кінець розділу.
+ * GAME-144 · день 3 велосипедиста після підсумку дня 2 (екран подорожі відкрито): ранок, речі, прощання з Елізою (без подяки
+ * за пакети — їх не прибирали), дорога додому, дім — кінець розділу. Сталий сід e2e 20261022: день 0 дощовий, тож намет і
+ * спальник мокрі ще з дороги, а стан намету впав — сцена «Збираємо речі» каже саме про це (R1-04: проблема за ФАКТИЧНИМ станом),
+ * і поруч — справжня дія «висушити», після якої сцена міняється. Сонячний день 0 і нейтральну сцену проходить game-106.spec (?seed=2).
  */
 async function playBikeDay3(page: Page): Promise<void> {
   await act(page, 'complete', 'q.ch1-d3-001');
   const gear = panel(page).locator('[data-ui="quest"]', { hasText: 'Збираємо речі' });
-  await expect(gear).toContainText('Спорядження сухе й ціле');
+  await expect(gear).toContainText('Намет вологий');
+  await act(page, 'dry', 'item.tent');
+  await expect(gear).toContainText('пом\'явся');                      // сухий, але стан після дощової дороги впав: «зношений», не «вологий»
   await expect(gear).not.toContainText('вологий');
-  await expect(panel(page).locator('[data-act="dry"]')).toHaveCount(0);
+  await act(page, 'dry', 'item.sleeping-bag');
+  await expect(panel(page).locator('[data-act="dry"]')).toHaveCount(0);   // сушити більше нічого — кнопки без дії немає
   await act(page, 'complete', 'q.ch1-d3-gear-001');
   await act(page, 'talk', 'npc.elise');
   await act(page, 'choose', 'dlg.elise-greeting.hello.c15');
@@ -159,6 +163,7 @@ test('пролог від вибору персонажа до кінця роз
   const errors = await open(page);
   await expect(panel(page).locator('[data-ui="create"]')).toBeVisible();
   expect((await core(page)).game.player).toBeNull();
+  const t0 = Date.now();   // GAME-144: реальний час усього розділу кліками (3 дні, без хвиль — вони на мапі, не на екрані подорожі)
   await playBikeProlog(page);
   await finishDay(page, true);
   // GAME-141: ST-005 — межа дня 1, не кінець розділу: далі ранок дня 2.
@@ -172,7 +177,7 @@ test('пролог від вибору персонажа до кінця роз
   const t3 = Date.now();
   await playBikeDay3(page);
   await finishDay(page, true, 3);
-  console.log(`GAME-144: день 3 кліками за ${((Date.now() - t3) / 1000).toFixed(1)} с реального часу`);
+  console.log(`GAME-144: день 3 кліками за ${((Date.now() - t3) / 1000).toFixed(1)} с, увесь розділ (3 дні) за ${((Date.now() - t0) / 1000).toFixed(1)} с реального часу; ігрових хвилин ${(await core(page)).clock.minutes}`);
   await expect(panel(page).locator('[data-ui="ended"]')).toBeVisible();
   // GAME-84 №6: на екрані кінця — що далі (Розділ I) і що зробити, щоб не загубити гру (зберегти в паузі).
   await expect(panel(page).locator('[data-ui="ended"]')).toContainText('Розділ I');

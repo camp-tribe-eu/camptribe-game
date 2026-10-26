@@ -166,7 +166,11 @@ test('«Продовжити» — назад на мапу; день 2 до «�
   await expect(page.locator('[data-ui="ended-hint"]')).toHaveCount(0);   // GAME-144: після дня 2 розділ триває — попереду день 3
   // День 3 (GAME-144): ранок → речі → прощання з Елізою → дорога → дім; «Підсумок дня 3» — і лише тоді кінець розділу.
   await page.locator('[data-touch="story"]').click();
-  for (const [k, key] of [['complete', 'q.ch1-d3-001'], ['complete', 'q.ch1-d3-gear-001'], ['talk', 'npc.elise'], ['choose', 'dlg.elise-greeting.hello.c15'], ['continue', ''],
+  await click('[data-act="complete"][data-key="q.ch1-d3-001"]');
+  // ?seed=2: день 0 сонячний — спорядження сухе й ціле: нейтральна сцена, «висушити» немає (R1-04).
+  await expect(panel(page).locator('[data-ui="quest"]', { hasText: 'Збираємо речі' })).toContainText('усе сухе й ціле');
+  await expect(panel(page).locator('[data-act="dry"]')).toHaveCount(0);
+  for (const [k, key] of [['complete', 'q.ch1-d3-gear-001'], ['talk', 'npc.elise'], ['choose', 'dlg.elise-greeting.hello.c15'], ['continue', ''],
     ['choose', 'dlg.elise-greeting.goodbye.c1'], ['continue', ''], ['continue', ''], ['complete', 'q.ch1-d3-elise-001'], ['visit', 'loc.road']] as const) await click(`[data-act="${k}"][data-key="${key}"]`);
   for (let i = 0; i < 6 && await panel(page).locator('[data-ui="dialogue"]').isVisible({ timeout: 400 }).catch(() => false); i++) await click('[data-ui="dialogue"] [data-act] >> nth=-1');
   for (const [k, key] of [['complete', 'q.ch1-d3-return-001'], ['visit', 'loc.home']] as const) await click(`[data-act="${k}"][data-key="${key}"]`);

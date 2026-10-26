@@ -161,6 +161,8 @@ function play(pick: Pick5, tamper?: Tamper): Run {
   go({ type: 'Talk', npcId: 'npc.elise' }); go({ type: 'Choose', choice: 14 }); go({ type: 'Continue' }); go({ type: 'Choose', choice: 0 }); go({ type: 'Continue' }); go({ type: 'Continue' });
   go({ type: 'CompleteQuest', questId: 'CH1-D3-ELISE-001' });
   go({ type: 'Visit', locationId: 'loc.road' }); go({ type: 'CompleteQuest', questId: 'CH1-D3-RETURN-001' });
+  // Дорогою додому кидок міг відкрити подію дороги — виходимо з неї, як гравець (остання відповідь безумовна).
+  for (let m = leaveMove(s.game, STORY); m; m = leaveMove(s.game, STORY)) go(m);
   go({ type: 'Visit', locationId: 'loc.home' }); go({ type: 'CompleteQuest', questId: 'CH1-D3-HOME-001' });
   expect(s.game.campaignEnded).toBe(true);
   return { pick, sim: s, readerNodes };

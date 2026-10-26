@@ -33,7 +33,8 @@ const ORDER_QUESTS = ['PROLOGUE-HOME-001', 'ST-001', 'ST-002', 'ST-003', 'CH1-HO
 const DAY2_QUESTS = ['CH1-D2-001', 'CH1-D2-ELISE-001', 'CH1-D2-CAMP-001', 'CH1-D2-FIRE-001'] as const;
 // GAME-144: день 3 — ланцюг до кінця розділу (CH1-D3-HOME-001).
 const DAY3_QUESTS = ['CH1-D3-001', 'CH1-D3-GEAR-001', 'CH1-D3-ELISE-001', 'CH1-D3-RETURN-001', 'CH1-D3-HOME-001'] as const;
-const isDay2 = (q: string): boolean => (DAY2_QUESTS as readonly string[]).includes(q);
+/** Етапи після межі дня 1 (дні 2 і 3) — порядок дня 1 їх не стосується. */
+const isDay2 = (q: string): boolean => (DAY2_QUESTS as readonly string[]).includes(q) || (DAY3_QUESTS as readonly string[]).includes(q);
 const APPLE = 'dlg.road-apples';   // EV-APPLE-001
 const NO_ANIMAL = 'animal.none';
 

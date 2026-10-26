@@ -312,22 +312,22 @@ describe('W5 «Не залишати слідів до 11:00» — на етап
     expect(pendingWave(after, GAME_DEFS)).toBeNull();
   });
 
-  it('етап минув (CH1-D3-001 завершено) → незроблене спізнилось на наступному кроці годинника, хвиля закінчена; кінець розділу не чекає', () => {
+  it('хвиля не блокує: кінець розділу досяжний і з живою хвилею, і після того, як годинник вирішив справи', () => {
     const sim = simOf(afterDay2(FAMILY));
     const live = cmd(sim, storyMoves(sim, GAME_DEFS)[0] as Move);
     expect(live.game.wave?.active?.waveId).toBe(W5);
-    const over = cmd(live, done('CH1-D3-001'));                                // симуляція вирішує хвилю тим самим кроком
-    expect(over.game.wave?.active).toBeNull();
-    expect(over.game.wave?.past[W5]).toEqual({ 'walk-site': 'late', 'clean-up': 'late', 'pack-tent': 'late', 'mia-carrier-home': 'late' });
+    // Етап завершено — хвиля ще жива (ядро нині гасить її лише годинником; «етап минув → усе late» несе GAME-170 зріз 3),
+    // і вона нічого не блокує: кінець розділу досяжний з живою хвилею.
+    const over = cmd(live, done('CH1-D3-001'));
+    expect(over.game.wave?.active?.waveId).toBe(W5);
     expect(over.game.campaignEnded).toBe(false);
     expect(play(DAY3_MOVES.slice(1), over.game).campaignEnded).toBe(true);
-    // Контроль: одна справа встигла до кінця етапу — вона done, решта late; і без вирішення (чисте ядро, без годинника) хвиля жива,
-    // а кінець розділу все одно досяжний — хвиля нічого не блокує.
+    // Годинник минув найдовший строк (55 хв) — усе незроблене late, хвиля закінчена; одна зроблена справа — done.
     const one = cmd(live, { type: 'CompleteTask', taskId: 'pack-tent' });
-    expect(cmd(one, done('CH1-D3-001')).game.wave?.past[W5]).toMatchObject({ 'pack-tent': 'done', 'clean-up': 'late' });
-    const raw = play([done('CH1-D3-001')], live.game);
-    expect(raw.wave?.active?.waveId).toBe(W5);
-    expect(play(DAY3_MOVES.slice(1), raw).campaignEnded).toBe(true);
+    const settled = step(one, { kind: 'advance', minutes: 56 }, { defs: GAME_DEFS });
+    expect(settled.game.wave?.active).toBeNull();
+    expect(settled.game.wave?.past[W5]).toEqual({ 'walk-site': 'late', 'clean-up': 'late', 'pack-tent': 'done', 'mia-carrier-home': 'late' });
+    expect(play(DAY3_MOVES, settled.game).campaignEnded).toBe(true);
   });
 });
 

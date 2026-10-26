@@ -114,10 +114,7 @@ export function settleWave(game: GameState, now: number, defs: WaveDefs | undefi
   const a = game.wave?.active;
   if (!a || !game.player) return game;
   const w = own(defs?.waves ?? {}, a.waveId);
-  // GAME-144: етап хвилі минув (квест уже не активний — гравець завершив етап чи поїхав) — усе ще відкрите спізнилось так само:
-  // хвиля живе лише на своєму етапі, і сцена наступного етапу не чекає, поки годинник домине чужі строки.
-  const stageOver = w !== undefined && own(game.quests, w.stage)?.status !== 'active';
-  const expired = Object.entries(a.tasks).filter(([, t]) => t.outcome === 'open' && (stageOver || now > t.dueAt)).map(([id]) => id);
+  const expired = Object.entries(a.tasks).filter(([, t]) => t.outcome === 'open' && now > t.dueAt).map(([id]) => id);
   if (expired.length === 0) return game;
   const d: WaveDraft = { player: game.player, flags: [...game.flags], quests: game.quests, wave: { ...game.wave, active: { ...a, tasks: { ...a.tasks, ...Object.fromEntries(expired.map((id) => [id, { ...(a.tasks[id] as WaveTaskState), outcome: 'late' as const }])) } }, past: game.wave?.past ?? {} } };
   setFlags(d, expired.flatMap((id) => w?.tasks.find((t) => t.id === id)?.late.effects ?? []));
