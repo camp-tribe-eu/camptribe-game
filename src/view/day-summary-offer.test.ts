@@ -42,9 +42,9 @@ describe('підсумок на екрані = підсумок ядра (GAME-1
   });
 
   it('кожна секція й кожен ключ — з ядра; ключ назви існує (не null); гроші ті самі', () => {
-    // Реплей-сценарій (GAME-141) проходить обидва дні: на екрані — підсумок ОСТАННЬОГО завершеного дня, тобто дня 2.
+    // Реплей-сценарій (GAME-141/GAME-144) проходить усі три дні: на екрані — підсумок ОСТАННЬОГО завершеного дня, тобто дня 3.
     const full = (() => { let p = newSim(SEED, START_MONEY); for (const i of PROLOGUE_BIKE) p = step(p, i, CTX); return p; })();
-    for (const [s, day] of [...days.map((d) => [d, 1] as const), [full, 2] as const]) {
+    for (const [s, day] of [...days.map((d) => [d, 1] as const), [full, 3] as const]) {
       const o = summaryOffer(s, GAME_DEFS);
       expect(o.daysEnded).toBe(day);
       expect(o.summary?.day).toBe(day);
