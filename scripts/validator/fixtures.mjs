@@ -282,6 +282,20 @@ function waveGate(c, byWave) {
   if (byWave) wave(c).tasks[0].done.effects = [{ setFlag: 'f.fixture-helped' }];
 }
 
+
+// GAME-111: Мія в еталоні комбінацій. `transports` не заданий — як у справжньому контенті, де його забули.
+const MIA = 'animal.cat';
+function addMia(c, transports) {
+  c.animals.push({ id: MIA, nameKey: MIA, ...(transports ? { transports } : {}) });
+  for (const lang of c.meta.locales) c.locales[lang][MIA] = `[${lang}] ${MIA}`;
+}
+const miaCarrierRow = (extra) => ({ item: 'item.mia-carrier', group: 'useful', units: 1, ...extra });
+function addMiaItem(c) {
+  c.items.push({ id: 'item.mia-carrier', nameKey: 'item.mia-carrier' });
+  for (const lang of c.meta.locales) c.locales[lang]['item.mia-carrier'] = `[${lang}] item.mia-carrier`;
+}
+const miaTask = (extra) => extraTask('find-mia', { leaderOnly: true, targets: [{ id: 'spot.pines', safe: true }], ...extra });
+
 export const FIXTURES = [
   // Хвилі напруги (GAME-170). Еталон уже має хвилю з двома справами — «еталон коректний» нижче є позитивним контролем.
   { name: '[хвиля] контроль: три справи, одна лише для лідера з безпечною ціллю для тварини — коректно', expect: [], patch(c) {
@@ -1035,6 +1049,32 @@ export const FIXTURES = [
     c.profiles[0].transports = [T_CAR];
     c.npcs[1].when = { profiles: [P_A], transports: [T_BIKE] };
     q(c, 'ST-001').when = { profiles: [P_A] };
+  } },
+
+  // GAME-111 · Мія й велосипед (рішення власника 24.10): кішка не їде велосипедом, а контент про неї бачить лише той, хто їде з нею.
+  // Мія — animal.cat (єдина тварина гри); у еталоні комбінацій є велосипед (T_BIKE), тож «Мія + велосипед» тут справжня комбінація.
+  { base: 'combo', name: '[Мія] контроль: кішка лише в авто, справа про неї з умовою на кішку — коректно', expect: [], patch(c) {
+    addMia(c, [T_CAR]); wave(c).tasks.push(miaTask({ when: { animals: [MIA] } }));
+  } },
+  { base: 'combo', name: '[Мія] кішка без transports — їде будь-чим, велосипедом теж', expect: ['MIA_ON_BIKE'], patch(c) { addMia(c, undefined); } },
+  { base: 'combo', name: '[Мія] кішка дозволена на велосипеді', expect: ['MIA_ON_BIKE'], patch(c) { addMia(c, [T_CAR, T_BIKE]); } },
+  { base: 'combo', name: '[Мія] справа про Мію без умови на кішку — була б і без неї', expect: ['MIA_CONTENT_UNGATED'], patch(c) {
+    addMia(c, [T_CAR]); wave(c).tasks.push(miaTask({}));
+  } },
+  { base: 'combo', name: '[Мія] умова справи про Мію допускає й «без тварини»', expect: ['MIA_CONTENT_UNGATED'], patch(c) {
+    addMia(c, [T_CAR]); wave(c).tasks.push(miaTask({ when: { animals: [MIA, 'animal.none'] } }));
+  } },
+  { base: 'combo', name: '[Мія] подія в дорозі про Мію без умови на кішку', expect: ['MIA_CONTENT_UNGATED'], patch(c) {
+    addMia(c, [T_CAR]); const d = withRoadEvent(c); d.id = 'dlg.fixture-mia-box';
+  } },
+  { base: 'combo', name: '[Мія] контроль: переноска Мії в пакуванні з умовою на кішку — коректно', expect: [], patch(c) {
+    addMia(c, [T_CAR]); withPacking(c).packing.items.push(miaCarrierRow({ when: { animals: [MIA] } })); addMiaItem(c);
+  } },
+  { base: 'combo', name: '[Мія] переноска Мії в пакуванні без умови на кішку', expect: ['MIA_CONTENT_UNGATED'], patch(c) {
+    addMia(c, [T_CAR]); withPacking(c).packing.items.push(miaCarrierRow({})); addMiaItem(c);
+  } },
+  { base: 'combo', name: '[Мія] ціль квесту про Мію без умови на кішку', expect: ['MIA_CONTENT_UNGATED'], patch(c) {
+    addMia(c, [T_CAR]); q(c, 'q.dog-walk').objectives.push({ id: 'mia-look', textKey: 'q.dog-walk.o1', kind: 'visit', target: 'loc.dog-park', required: false });
   } },
 ];
 
