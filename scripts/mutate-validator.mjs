@@ -58,6 +58,15 @@ const mutations = [
   { name: 'when без жодної дозволеної комбінації пропускається', file: COMBOS_FILE, from: "if (!all.some((k) => matches(w, k) && matches(parent, k))) out.push", to: 'if (false) out.push' },
   { name: 'умова квесту не успадковується ціллю', file: COMBOS_FILE, from: '&& matches(parent, k)', to: '' },
   { name: 'combo-options біжить і на брудному контенті', file: CHECKS_FILE, from: "const LATE = ['combo-options', 'combos'];", to: "const LATE = ['combos'];" },
+  // GAME-70: сторож довжини реплік — межі й вимкнення розбору
+  { name: '[репліка] нижня межа вимкнена', file: CHECKS_FILE, from: 'sl.words < LINE_MIN_WORDS || ', to: '' },
+  { name: '[репліка] верхня межа вимкнена', file: CHECKS_FILE, from: ' || sl.words > LINE_MAX_WORDS', to: '' },
+  { name: '[репліка] нижня межа зсунута на 3', file: CHECKS_FILE, from: 'export const LINE_MIN_WORDS = 4;', to: 'export const LINE_MIN_WORDS = 3;' },
+  { name: '[репліка] верхня межа зсунута на 16', file: CHECKS_FILE, from: 'export const LINE_MAX_WORDS = 15;', to: 'export const LINE_MAX_WORDS = 16;' },
+  { name: '[репліка] вузли NPC не перевіряються', file: CHECKS_FILE, from: "if (n.speaker === 'npc') npcKeys.add(n.textKey);", to: 'void 0;' },
+  { name: '[репліка] вузли гравця теж рахуються репліками', file: CHECKS_FILE, from: "if (n.speaker === 'npc') npcKeys.add", to: 'npcKeys.add' },
+  { name: '[репліка] будь-яке слово з великої — мовець (Табличка:)', file: CHECKS_FILE, from: '.filter((m) => cast.includes(m[1]))', to: '' },
+  { name: '[репліка] en не перевіряється', file: CHECKS_FILE, from: 'for (const lang of c.content.meta.locales) {\n        const table = c.content.locales', to: "for (const lang of ['uk']) {\n        const table = c.content.locales" },
   // діалоги (GAME-28)
   { name: '[діалог] умовний вибір рахується як гарантований вихід', file: CHECKS_FILE, from: 'if (!onlyUnconditional || !ch.when) out.push', to: 'out.push' },
   { name: '[діалог] умови всередині any не перевіряються', file: CHECKS_FILE, from: 'else if (cond.any) cond.any.forEach((x) => condLeaves(x, out));', to: 'else if (cond.any) {}' },

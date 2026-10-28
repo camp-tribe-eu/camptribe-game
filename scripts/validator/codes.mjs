@@ -59,6 +59,7 @@ export const CODES = {
   FACT_DATE_INVALID:    { check: 'fact-source', spec: '§2 зовнішній факт має дату перевірки' },
   FACT_KIND_INVALID:    { check: 'fact-source', spec: '§2 зовнішній факт має тип' },
   // GAME-56: давність — попередження, не помилка (severity: 'warning' — запуск не червоніє).
+  LINE_LENGTH:          { check: 'line-length', spec: 'GAME-70: репліка героя в лапках після «Ім\u2019я:» — 4–15 слів, у кожній мові' },
   FACT_STALE:           { check: 'fact-stale', spec: 'GAME-56: факт, звірений понад FACT_STALE_DAYS днів тому, треба перезвірити', severity: 'warning' },
 
   // перевірник графа квестів, §3

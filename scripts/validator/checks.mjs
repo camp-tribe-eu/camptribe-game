@@ -114,6 +114,19 @@ const isCycle = (comp, next) => comp.length > 1 || next(comp[0]).includes(comp[0
 
 // ---------- перевірки ----------
 
+// GAME-70: вимовлена репліка = «Ім'я: «текст»» (також “…” і "…"); ім'я з великої літери на початку рядка чи після
+// розділового знака. Слово — токен, у якому є буква чи цифра (тире й дужки самі не рахуються).
+export const LINE_MIN_WORDS = 4;
+export const LINE_MAX_WORDS = 15;
+const SPOKEN = /(?:^|[\s.!?…—-])(\p{Lu}[\p{L}'\u02bc\u2019-]*): ?[«\u201c"]([^»\u201d"]*)[»\u201d"]/gu;
+// Мовець — лише з відомого складу: канонічна родина (OD-011) + імена NPC з npcs.json у цій мові. «Табличка: «…»», «Увага: «…»» — не репліки.
+export const CAST = ['Джордж', 'Вікторія', 'Метью', 'Мія', 'George', 'Victoria', 'Matthew', 'Mia'];
+export function spokenLines(text, cast = CAST) {
+  if (typeof text !== 'string') return [];
+  return [...text.matchAll(SPOKEN)].filter((m) => cast.includes(m[1])).map((m) => ({ speaker: m[1], text: m[2].trim(), words: countWords(m[2]) }));
+}
+const countWords = (t) => t.split(/\s+/).filter((w) => /[\p{L}\p{N}]/u.test(w)).length;
+
 export const CHECKS = [
   {
     id: 'schema',
@@ -1098,6 +1111,37 @@ export const CHECKS = [
         if (d.trigger && isMiaId(d.id) && !gated(d.trigger.when)) out.push(I('MIA_CONTENT_UNGATED', `${d.id}.trigger.when`, 'подія про Мію без when.animals = [animal.cat]: випала б і велосипедисту без кішки'));
       }
       (c.content.packing?.items ?? []).forEach((x, i) => { if (isMiaId(x.item) && !gated(x.when)) out.push(I('MIA_CONTENT_UNGATED', `packing.items[${i}]`, `річ «${x.item}» для Мії без when.animals = [animal.cat]`)); });
+      return out;
+    },
+  },
+  {
+    // GAME-70: сторож довжини реплік героїв (рішення власника 24.10): репліка 4–15 слів.
+    // «Репліка» — лише вимовлена частина у лапках після імені мовця: «Джордж: «…»» (uk), George: “…” (en).
+    // Кнопки, підписи й оповідь поза лапками, а також лапки без «Ім'я:» (табличка, назва) — не репліки.
+    id: 'line-length',
+    run(c) { // @check:line-length
+      const out = [];
+      // Вузли діалогу з speaker 'npc': весь рядок — репліка (структура, не евристика). Вузол, де вже є «Ім'я: «…»», рахується
+      // лише за вимовленою частиною. speaker 'player' — кнопки вибору, не рахуються.
+      const npcKeys = new Set();
+      for (const d of c.content.dialogues ?? []) for (const n of d.nodes) if (n.speaker === 'npc') npcKeys.add(n.textKey);
+      for (const lang of c.content.meta.locales) {
+        const table = c.content.locales?.[lang] ?? {};
+        const cast = [...CAST, ...(c.content.npcs ?? []).map((n) => table[n.nameKey]).filter((x) => typeof x === 'string')];
+        for (const k of npcKeys) {
+          const v = table[k];
+          if (typeof v !== 'string' || spokenLines(v, cast).length) continue;
+          const words = countWords(v);
+          if (words < LINE_MIN_WORDS || words > LINE_MAX_WORDS) out.push(I('LINE_LENGTH', k, `[${lang}] репліка NPC має слів: ${words}, треба ${LINE_MIN_WORDS}–${LINE_MAX_WORDS}: «${v}»`));
+        }
+        for (const [k, v] of Object.entries(table)) {
+          for (const sl of spokenLines(v, cast)) {
+            if (sl.words < LINE_MIN_WORDS || sl.words > LINE_MAX_WORDS) {
+              out.push(I('LINE_LENGTH', k, `[${lang}] репліка ${sl.speaker} має слів: ${sl.words}, треба ${LINE_MIN_WORDS}–${LINE_MAX_WORDS}: «${sl.text}»`));
+            }
+          }
+        }
+      }
       return out;
     },
   },

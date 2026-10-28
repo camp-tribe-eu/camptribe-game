@@ -3,6 +3,8 @@
 // ТОЧНИЙ набір кодів, які мають спрацювати: ні менше (перевірка сліпа), ні більше (перевірка
 // стріляє по сусідах). Знайшов дефект контенту в грі — додай сюди приклад, інакше він повернеться.
 
+// GAME-70: рядки вузлів NPC (dlg.*) — репліки, тож еталон дає їм 4+ слів; решта — короткі заглушки.
+const lineText = (lang, k) => (k.startsWith('dlg.') ? `[${lang}] ${k} one two three four` : `[${lang}] ${k}`);
 const LOCALE_KEYS = [
   'item.map', 'item.firewood', 'item.gift', 'item.ticket',
   'npc.ranger', 'npc.shopkeeper', 'loc.camp', 'loc.forest', 'loc.lake',
@@ -115,8 +117,8 @@ export function baseline() {
       { id: 'f.fixture-met', type: 'bool', initial: false, owner: 'dlg.fixture-ranger/hello' },
     ],
     locales: {
-      uk: Object.fromEntries(LOCALE_KEYS.map((k) => [k, `[uk] ${k}`])),
-      en: Object.fromEntries(LOCALE_KEYS.map((k) => [k, `[en] ${k}`])),
+      uk: Object.fromEntries(LOCALE_KEYS.map((k) => [k, lineText('uk', k)])),
+      en: Object.fromEntries(LOCALE_KEYS.map((k) => [k, lineText('en', k)])),
     },
   };
 }
@@ -446,6 +448,20 @@ export const FIXTURES = [
   { name: 'немає ключа в одній мові', expect: ['LOCALE_MISSING'], patch(c) { delete c.locales.en['q.st-003']; } },
   { name: 'порожній переклад', expect: ['LOCALE_MISSING'], patch(c) { c.locales.uk['npc.ranger'] = '  '; } },
   { name: 'підтримувана мова без файлу', expect: ['LOCALE_MISSING'], patch(c) { c.meta.locales.push('de'); } },
+  // GAME-70: довжина реплік героїв — 4–15 слів усередині лапок після «Ім'я:». Межі й обидві сторони доведені на самому коді.
+  { name: '[репліка] коротша за 4 слова (3) — червоне', expect: ['LINE_LENGTH'], count: { code: 'LINE_LENGTH', n: 1 }, patch(c) { c.locales.uk['item.map'] = 'Карта. Джордж: «Для темряви. Логічно».'; } },
+  { name: '[репліка] довша за 15 слів (16) — червоне', expect: ['LINE_LENGTH'], count: { code: 'LINE_LENGTH', n: 1 }, patch(c) { c.locales.uk['item.map'] = 'Карта. Вікторія: «Раз два три чотири п\u2019ять шість сім вісім дев\u2019ять десять один два три чотири п\u2019ять шість».'; } },
+  { name: '[репліка] коротка лише в en — червоне саме в цій мові', expect: ['LINE_LENGTH'], count: { code: 'LINE_LENGTH', n: 1 }, patch(c) { c.locales.en['item.map'] = 'Map. Matthew: “Fine, thanks.”'; } },
+  { name: '[репліка] контроль: рівно 4 і рівно 15 слів (межі) — коректно', expect: [], patch(c) { c.locales.uk['item.map'] = 'Карта. Метью: «Раз два три чотири». Джордж: «Раз два три чотири п\u2019ять шість сім вісім дев\u2019ять десять один два три чотири п\u2019ять».'; } },
+  { name: '[репліка] вузол NPC із 16 слів (без префікса) — червоне', expect: ['LINE_LENGTH'], count: { code: 'LINE_LENGTH', n: 1 }, patch(c) { c.locales.uk[K('bye')] = 'Раз два три чотири п\u2019ять шість сім вісім дев\u2019ять десять один два три чотири п\u2019ять шість'; } },
+  { name: '[репліка] вузол NPC із 15 слів — коректно', expect: [], patch(c) { c.locales.uk[K('bye')] = 'Раз два три чотири п\u2019ять шість сім вісім дев\u2019ять десять один два три чотири п\u2019ять'; } },
+  { name: '[репліка] вузол гравця із 16 слів (кнопка) — не рахується', expect: [], patch(c) { c.locales.uk[K('thanks')] = 'Раз два три чотири п\u2019ять шість сім вісім дев\u2019ять десять один два три чотири п\u2019ять шість'; } },
+  { name: '[репліка] контроль: «Табличка: «…»» і «Увага: «…»» — не репліки, бо не з відомого складу', expect: [], patch(c) { c.locales.uk['item.map'] = 'Табличка: «Зайти»'; c.locales.uk['item.gift'] = 'Увага: «Так»'; c.locales.en['item.gift'] = 'Sign: “Back soon”'; } },
+  { name: '[репліка] ім\u2019я NPC з npcs.json — мовець (коротка репліка Ranger — червоне)', expect: ['LINE_LENGTH'], count: { code: 'LINE_LENGTH', n: 1 }, patch(c) { c.locales.uk['npc.ranger'] = 'Ranger'; c.locales.uk['item.map'] = 'Ranger: «Ні».'; } },
+  { name: '[репліка] контроль: кнопка, підпис, табличка й назва в лапках без «Ім\u2019я:» — не репліки', expect: [], patch(c) {
+    c.locales.uk['item.map'] = 'Ок'; c.locales.uk['item.gift'] = 'На дверях: «Зайти». Табличка тут: «Вхід»'; c.locales.uk['item.ticket'] = 'Назва «Так» і ще «Ні»';
+    c.locales.en['item.gift'] = 'Sign on the door: “Back soon”'; c.locales.uk['npc.shopkeeper'] = 'Кнопка: Далі';
+  } },
   // GAME-144: прапорець взаємодії (kind: interaction) ставить ядро на дотик до об'єкта мапи — умова в діалозі його читати може;
   // без kind валідатор не знає сетера й червоніє (Еліза дякує за пакети лише тим, хто їх прибрав).
   { name: 'прапорець взаємодії (kind: interaction) — умова в діалозі читає його, хоч ставить ядро', expect: [], patch(c) {
