@@ -17,7 +17,8 @@ import { progressKey, moves, type Move } from './moves';
 import { GAME_DEFS } from './slice-defs';
 import { RAW_WAVES, WAVE_CH1_ARRIVAL, WAVE_CH1_CHECKOUT, WAVE_CH1_DEPARTURE, WAVE_CH1_EVENING, WAVE_CH1_ROAD, WAVE_CH1_ROAD_BIKE } from './waves';
 import { FIRE_STAGE, MAP_LOCATION, TASK_SPOT, fireplaceDue, fireplacePlayed, liveSpot, menuTasks, pendingWave, spotMove, storyMoves, waveLocation } from './director';
-import { CONTENT } from './story';
+import { leaveMove } from './road-events.test.helpers';
+import { CONTENT, STORY } from './story';
 import { waveOffer } from '../view/story-offer';
 
 const CTX = { defs: GAME_DEFS };
@@ -46,7 +47,11 @@ function toStage(kind: 'bike' | 'car-cat', stage: string): SimState {
   for (const m of [create, done('PROLOGUE-HOME-001'), done('ST-001'), done('ST-002'), { type: 'Visit', locationId: 'loc.shop' } as Move,
     { type: 'Pickup', itemId: 'item.tent' } as Move, { type: 'Pickup', itemId: 'item.sleeping-bag' } as Move, done('ST-003'), { type: 'Visit', locationId: 'loc.home' } as Move,
     done('CH1-HOME-001'), { type: 'Visit', locationId: 'loc.road' } as Move, done('ST-004'), { type: 'Visit', locationId: 'loc.camp.lake' } as Move,
-    ...meet, { type: 'Pickup', itemId: 'item.firewood' } as Move, done('ST-005')]) s = must(s, m);
+    ...meet, { type: 'Pickup', itemId: 'item.firewood' } as Move, done('ST-005')]) {
+    s = must(s, m);
+    // Дорога могла відкрити подію (у тому числі момент Мії, GAME-111): виходимо з неї, сюжет дня від неї не залежить.
+    if (m.type === 'Visit' && m.locationId === 'loc.road') for (let leave = leaveMove(s.game, STORY); leave; leave = leaveMove(s.game, STORY)) s = must(s, leave);
+  }
   // Пошук у ширину серед розмов і завершень квестів (без ходів, що ведуть у бік: велозона/відмова), доки етап не стане активним.
   const seen = new Set<string>([progressKey(s.game)]);
   const queue: SimState[] = [s];
@@ -322,7 +327,7 @@ describe('режисер W1–W3: стартер за локацією етап�
     s = must(s, done('CH1-HOME-001'));                     // виїзд: ST-004 активний, гравець ще вдома
     expect(storyMoves(s, GAME_DEFS), 'W2 не стартує вдома').toEqual([]);
     s = must(s, { type: 'Visit', locationId: 'loc.road' }); // дорога рухає годинник → W1 закрита: Мія done, решта late
-    while (s.game.dialogue) s = must(s, { type: 'Continue' }); // можлива подія в дорозі
+    for (let leave = leaveMove(s.game, STORY); leave; leave = leaveMove(s.game, STORY)) s = must(s, leave); // можлива подія в дорозі
     expect(s.game.wave?.past[WAVE_CH1_DEPARTURE]).toEqual({ 'mia-carrier': 'done', 'map-to-luggage': 'late', 'lights-window': 'late' });
     expect(storyMoves(s, GAME_DEFS)).toEqual([{ type: 'StartWave', waveId: WAVE_CH1_ROAD }]);
     s = direct(s);

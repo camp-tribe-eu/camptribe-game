@@ -99,6 +99,13 @@ export function StoryPanel({ offer, lang, t, act, close, children }: { offer: St
         // і гравець має бачити обидва. Та сама лексика підписів, що й у погоди (WX). Не кнопка — без цілі 44 px.
         <p class="ui-status" data-ui="forecast" data-forecast={offer.forecast} data-hit={offer.forecast === offer.weather ? 'yes' : 'no'}>{`${t('ui.forecast.today')}: ${t(WX[offer.forecast])}`}</p>
       )}
+      {offer.stage !== 'create' && offer.mia && (
+        // GAME-111: Мія — два текстові стани й жодного числа чи шкали (сторож DOM: tests/e2e/game-111.spec.ts).
+        <section class="ui-mia" data-ui="mia" data-state={offer.mia} aria-label={t('ui.mia')}>
+          <h3>{t('ui.mia')}</h3>
+          <p data-ui="mia-state" role="status">{t(offer.mia === 'pause' ? 'ui.mia.pause' : 'ui.mia.settled')}</p>
+        </section>
+      )}
       {offer.stage === 'ended' && <p class="ui-status" data-ui="ended" role="status">{t('ui.ended')}</p>}
       {offer.quests.map((q) => (
         <section class="ui-quest" data-ui="quest" key={q.key}>

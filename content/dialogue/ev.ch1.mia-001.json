@@ -1,0 +1,10 @@
+{
+  "id": "dlg.ev.ch1.mia-001",
+  "trigger": {"at": ["loc.road"], "chance": 3, "titleKey": "dlg.ev.ch1.mia-001.title", "when": {"animals": ["animal.cat"]}},
+  "start": "scene",
+  "nodes": [
+    {"id": "scene", "speaker": "player", "textKey": "dlg.ev.ch1.mia-001.scene", "choices": [{"textKey": "dlg.ev.ch1.mia-001.scene.c1", "next": "a"}, {"textKey": "dlg.ev.ch1.mia-001.scene.c2", "next": "b"}]},
+    {"id": "a", "speaker": "player", "textKey": "dlg.ev.ch1.mia-001.a", "end": true},
+    {"id": "b", "speaker": "player", "textKey": "dlg.ev.ch1.mia-001.b", "end": true}
+  ]
+}

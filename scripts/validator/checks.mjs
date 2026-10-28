@@ -1071,6 +1071,37 @@ export const CHECKS = [
     },
   },
   {
+    id: 'mia-bike',
+    run(c) { // @check:mia-bike
+      // GAME-111, рішення власника 24.10: Мія НІКОЛИ не їде велосипедом (у поїздку велосипедом вона лишається вдома з Анною).
+      // Два шляхи, якими вона могла б опинитись на велосипеді: (1) сама тварина дозволяє його (немає `transports` = усі транспорти);
+      // (2) контент про Мію (ціль квесту, справа хвилі, подія в дорозі, річ у пакуванні) без умови `animals: [animal.cat]` показався б
+      // і тому, хто їде без неї. Ціна хибного спрацювання (закон 5): автор додає одну умову `when.animals` — копійки; ціна пропуску —
+      // репліка «Мія в переносці» велосипедисту без кішки.
+      const out = [];
+      const bikes = (c.content.transports ?? []).map((t) => t.id).filter(isBikeId);
+      const mia = (c.content.animals ?? []).find((a) => a.id === MIA);
+      if (mia) {
+        const allowed = mia.transports ?? (c.content.transports ?? []).map((t) => t.id);
+        const bad = allowed.filter((t) => isBikeId(t) || bikes.includes(t));
+        if (bad.length) out.push(I('MIA_ON_BIKE', `animals.${MIA}.transports`, mia.transports ? `Мія дозволена на «${bad.join(', ')}»: вона не їде велосипедом` : 'у Мії немає transports, тож вона їде будь-чим, і велосипедом теж: випиши лише transport.car'));
+      }
+      if (!mia) return out; // без Мії в animals.json вимагати умову на неї нема чого
+      const gated = (...whens) => whens.some(onlyMia);
+      for (const q of c.content.quests ?? []) {
+        for (const o of q.objectives ?? []) if (isMiaId(o.id) && !gated(o.when, q.when)) out.push(I('MIA_CONTENT_UNGATED', `${q.id}/${o.id}`, 'ціль про Мію без when.animals = [animal.cat]: її побачить і велосипедист без кішки'));
+      }
+      for (const w of c.content.waves ?? []) {
+        for (const t of w.tasks ?? []) if ((isMiaId(t.id) || t.animal === MIA) && !gated(t.when, w.when)) out.push(I('MIA_CONTENT_UNGATED', `${w.id}/${t.id}`, 'справа про Мію без when.animals = [animal.cat]: вона була б і в варіанті без кішки'));
+      }
+      for (const d of c.content.dialogues ?? []) {
+        if (d.trigger && isMiaId(d.id) && !gated(d.trigger.when)) out.push(I('MIA_CONTENT_UNGATED', `${d.id}.trigger.when`, 'подія про Мію без when.animals = [animal.cat]: випала б і велосипедисту без кішки'));
+      }
+      (c.content.packing?.items ?? []).forEach((x, i) => { if (isMiaId(x.item) && !gated(x.when)) out.push(I('MIA_CONTENT_UNGATED', `packing.items[${i}]`, `річ «${x.item}» для Мії без when.animals = [animal.cat]`)); });
+      return out;
+    },
+  },
+  {
     id: 'combo-options',
     run(c) { // @check:combo-options
       return checkOptions(c.content, whens(c.content));
@@ -1250,6 +1281,13 @@ function flagUses(content) {
   for (const [where, f] of waveEffects(content)) out.push([where, f]);
   return out;
 }
+
+/** Мія — єдина тварина гри (OD-011); велосипедом вона не їде ніколи (GAME-111). */
+const MIA = 'animal.cat';
+const isBikeId = (id) => /(^|[.-])bike$/.test(id ?? '');
+const isMiaId = (id) => /(^|[.-])(mia|cat)([.-]|$)/.test(id ?? '');
+/** Умова вже обмежує тварину лише кішкою (інше значення чи порожньо — ні). */
+const onlyMia = (w) => Array.isArray(w?.animals) && w.animals.length > 0 && w.animals.every((a) => a === MIA);
 
 /** Справа про тварину (Мія): є поле animal, або ціль — animal.* / npc.mia*, або слово mia/cat в id справи. */
 function isAnimalTask(t) {
