@@ -36,6 +36,7 @@ export const CHECKS = [
   })],
   ['CL_NOT_NEWEST', ({ entries }) => entries.slice(1).some((e) => SEMVER.test(e.version) && SEMVER.test(entries[0].version) && cmp(e.version, entries[0].version) > 0)],
   ['VERSION_MISMATCH', ({ pkg, entries }) => entries.length > 0 && pkg.version !== entries[0].version],
+  ['LOCK_MISSING', ({ lock }) => lock == null],
   ['LOCK_MISMATCH', ({ pkg, lock }) => lock != null && (lock.version !== pkg.version || lock.packages?.['']?.version !== pkg.version)],
 ];
 
@@ -50,18 +51,20 @@ export function evaluate({ pkg, changelog, lock = null }, skip = new Set()) {
 }
 
 const GOOD_CL = '# Журнал змін\n\n## [0.2.0] — 2026-11-01\n\n- щось\n\n## [0.1.0] — 2026-10-28 (попередній)\n\n- інше\n';
+const lockOf = (v) => ({ version: v, packages: { '': { version: v } } });
 const good = (over = {}) => ({ pkg: { version: '0.2.0' }, changelog: GOOD_CL, lock: { version: '0.2.0', packages: { '': { version: '0.2.0' } } }, ...over });
 // [назва, вхід, очікуваний код або null для позитивного контролю]
 export const FIXTURES = [
   ['позитивний контроль: все збігається', good(), null],
-  ['позитивний контроль: пре-реліз 1.0.0-rc.1', good({ pkg: { version: '1.0.0-rc.1' }, changelog: '## [1.0.0-rc.1] — 2026-11-01\n', lock: null }), null],
-  ['версії немає в package.json', good({ pkg: {}, lock: null }), 'PKG_VERSION_MISSING'],
-  ['версія в package.json не semver', good({ pkg: { version: '0.2' }, changelog: '## [0.2] — 2026-11-01\n', lock: null }), 'PKG_NOT_SEMVER'],
+  ['позитивний контроль: пре-реліз 1.0.0-rc.1', good({ pkg: { version: '1.0.0-rc.1' }, changelog: '## [1.0.0-rc.1] — 2026-11-01\n', lock: lockOf('1.0.0-rc.1') }), null],
+  ['версії немає в package.json', good({ pkg: {}, lock: lockOf(undefined) }), 'PKG_VERSION_MISSING'],
+  ['версія в package.json не semver', good({ pkg: { version: '0.2' }, changelog: '## [0.2] — 2026-11-01\n', lock: lockOf('0.2') }), 'PKG_NOT_SEMVER'],
   ['у CHANGELOG немає жодного запису', good({ changelog: '# Журнал змін\n' }), 'CL_NO_ENTRY'],
   ['запис CHANGELOG не semver', good({ pkg: { version: '0.2.0' }, changelog: GOOD_CL + '\n## [сьогодні] — 2026-10-01\n' }), 'CL_NOT_SEMVER'],
   ['запис без дати чи з неіснуючою датою', good({ changelog: GOOD_CL.replace('2026-11-01', '2026-02-30') }), 'CL_BAD_DATE'],
-  ['верхній запис старіший за нижній', good({ pkg: { version: '0.1.0' }, changelog: '## [0.1.0] — 2026-10-28\n\n## [0.2.0] — 2026-11-01\n', lock: null }), 'CL_NOT_NEWEST'],
-  ['версія ≠ верхній запис (мутація картки)', good({ pkg: { version: '0.3.0' }, lock: null }), 'VERSION_MISMATCH'],
+  ['верхній запис старіший за нижній', good({ pkg: { version: '0.1.0' }, changelog: '## [0.1.0] — 2026-10-28\n\n## [0.2.0] — 2026-11-01\n', lock: lockOf('0.1.0') }), 'CL_NOT_NEWEST'],
+  ['версія ≠ верхній запис (мутація картки)', good({ pkg: { version: '0.3.0' }, lock: lockOf('0.3.0') }), 'VERSION_MISMATCH'],
+  ['package-lock.json відсутній (тиша — не зелене)', good({ lock: null }), 'LOCK_MISSING'],
   ['package-lock.json відстав від package.json', good({ lock: { version: '0.1.0', packages: { '': { version: '0.2.0' } } } }), 'LOCK_MISMATCH'],
 ];
 
@@ -98,7 +101,7 @@ function main() {
   }
   const pkgText = readOrNull(join(ROOT, 'package.json'));
   const changelog = readOrNull(join(ROOT, 'CHANGELOG.md'));
-  const lockText = readOrNull(join(ROOT, 'package-lock.json'));
+  const lockText = readOrNull(join(ROOT, 'package-lock.json'));   // відсутній → LOCK_MISSING, не тиша
   if (!pkgText || !changelog || !changelog.trim()) {
     console.log(`::error::RELEASE FAIL · ${!pkgText ? 'package.json' : 'CHANGELOG.md'} відсутній або порожній`);
     process.exit(1);
