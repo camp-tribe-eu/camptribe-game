@@ -85,17 +85,17 @@ export function targetProblems(
   const seen = new Set<string>();
   for (const id of day1) {
     const q = quests.find((x) => x.id === id);
-    if (!q) { out.push(`NO_MAP_QUEST ${id}: квесту дня 1 немає в контенті`); continue; }
+    if (!q) { out.push(`NO_MAP_QUEST ${id}: day-1 quest missing from content`); continue; }
     for (const o of q.objectives) {
       if (o.kind !== 'visit' && o.kind !== 'collect') continue;
       const key = `${id}.${o.id}`;
       seen.add(key);
       const t = Object.hasOwn(targets, key) ? targets[key] : undefined;
-      if (!t) out.push(`NO_MAP_TARGET ${key}: ціль ${o.kind} без об'єкта мапи й без «лише розмова»`);
-      else if ('spot' in t && !(spots[t.map] as readonly string[]).includes(t.spot)) out.push(`MAP_TARGET_UNKNOWN ${key}: об'єкта ${t.spot} немає на мапі ${t.map}`);
+      if (!t) out.push(`NO_MAP_TARGET ${key}: ${o.kind} objective has no map object and is not talk-only`);
+      else if ('spot' in t && !(spots[t.map] as readonly string[]).includes(t.spot)) out.push(`MAP_TARGET_UNKNOWN ${key}: object ${t.spot} not on map ${t.map}`);
     }
   }
-  for (const key of Object.keys(targets)) if (!seen.has(key)) out.push(`MAP_TARGET_ORPHAN ${key}: рядок таблиці без цілі visit/collect у квестах дня 1`);
+  for (const key of Object.keys(targets)) if (!seen.has(key)) out.push(`MAP_TARGET_ORPHAN ${key}: table row has no visit/collect objective in day-1 quests`);
   return out;
 }
 
