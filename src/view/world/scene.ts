@@ -16,7 +16,7 @@ import { FOLLOW_SPEED_FACTOR, SPEED, centerOf, gridFromWalls, restPoints, stepFo
 import type { MapKey } from '../../content/map-first';
 import { playUi } from '../../audio/ui-sounds';
 import { MapFx, type Needs } from './map-fx';
-import { FEEDBACK_S, RING_IDLE, stepRing, type Ring } from './proximity';
+import { FEEDBACK_S, RING_IDLE, ringMayTake, stepRing, type Ring } from './proximity';
 import { IDLE_AFTER_S, LEISURE_BY_MAP, assignLeisure, leisureFromObjects, type LeisureSpot } from './leisure';
 
 export const TILE = 32;
@@ -618,7 +618,8 @@ export class WorldScene extends Phaser.Scene {
     // Кільце наближення: вийшов із зони — об'єкт знову «озброєний». Авто їде лише коли все потрібне вже в багажнику (а не повз нього) і герой стоїть.
     for (const n of [...this.fired]) { const f = this.spots.find((x) => x.name === n); if (!f || Phaser.Math.Distance.Between(this.player.x, this.player.y, f.x, f.y) > INTERACT_RANGE) this.fired.delete(n); }
     // Спакована річ удома сама не «розпаковується» від проходу повз: її дістають лише E/тап (чи сітка).
-    const autoNear = spot && best <= AUTO_RANGE ? near : null;
+    // Проходячи повз зайву річ (ліхтар, подушка), гравець її не підбирає сам: кільце рахує лише поточну ціль підказки; решту беруть E/тап — інакше «лишити» зайняло б місце потрібному.
+    const autoNear = spot && best <= AUTO_RANGE && ringMayTake(near, this.hooks.target()) ? near : null;
     const ready = (autoNear !== 'obj.vehicle' || (!carrying && needs.small + needs.bulky === 0)) && !(autoNear?.startsWith('pack.') && this.hooks.look(autoNear) === 'trunk');
     const r = stepRing(this.ring, atCar && carrying ? null : autoNear, !this.fired.has(autoNear ?? '') && ready, autoNear !== 'obj.vehicle' || !moving, dt);
     this.ring = r.ring;

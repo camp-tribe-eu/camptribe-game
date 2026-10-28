@@ -23,7 +23,7 @@ import { addFrameLag, bootDelay, onFirstFrame } from './view/frame-lag';
 import type { StoryOffer } from './ui/story-types';
 import { uiSounds } from './audio/ui-sounds';
 import { liveSpot, spotMove, storyMoves } from './content/director';
-import { isBulky, isMapFirstSpot, mapKeyFor, needsLeft, nextTarget, resolveSpot, spotLook } from './content/map-first';
+import { isBulky, isMapFirstSpot, mapKeyFor, needsLeft, nextTarget, resolveSpot, spotLook, unpackMoves } from './content/map-first';
 import { packFlag } from './core/packing';
 import type { GameState } from './core/state';
 
@@ -74,7 +74,13 @@ const openListeners = new Set<() => void>();
 // GAME-175: розмова, яку почала не дія гравця на мапі, а гра (подія в дорозі після виїзду), мусить бути видна: об'єкти мапи під час розмови мовчать, тож без
 // екрана подорожі гравець завис би. Розмова щойно з'явилась (раніше її не було) — екран відкривається сам.
 let hadDialogue = false;
+let unpackedOnce = false;
 const storyChanged = (): void => {
+  // GAME-175: мапа-перша гра — спакований «за порадою» набір розкладається, коли гравець удома; речі він переносить ногами (раз за гру).
+  if (!switches.panelActs && !unpackedOnce) {
+    const moves = unpackMoves(bridge.state, GAME_DEFS);
+    if (moves.length > 0) { unpackedOnce = true; for (const m of moves) bridge.send(m); }
+  }
   direct();
   for (const l of storyListeners) l();
   const talking = bridge.state.game.dialogue !== null;
@@ -227,6 +233,7 @@ render(h(Shell, {
     save: () => saves.save(),
     newGame: async () => {
       backpack.length = 0;
+      unpackedOnce = false;
       const ok = await saves.newGame();
       storyChanged();
       return ok;
@@ -236,6 +243,7 @@ render(h(Shell, {
     dismissStale: () => saves.dismissStale(),
     importCode: async (code: string) => {
       backpack.length = 0;
+      unpackedOnce = false;
       const r = await saves.adopt(await decodeRestoreCode(code));
       storyChanged();
       return r;

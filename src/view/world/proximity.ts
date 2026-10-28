@@ -22,3 +22,6 @@ export function stepRing(r: Ring, near: string | null, armed: boolean, hold: boo
   const t = (r.name === near ? r.t : 0) + dt / RING_S;
   return t >= 1 ? { ring: RING_IDLE, fire: near } : { ring: { name: near, t }, fire: null };
 }
+
+/** Чи кільце може взяти об'єкт `near` само: річ на полиці — лише коли вона поточна ціль підказки (повз зайву річ іти можна); решта автооб'єктів — як є. */
+export const ringMayTake = (near: string | null, target: string | null): boolean => near !== null && (!near.startsWith('pack.') || near === target);

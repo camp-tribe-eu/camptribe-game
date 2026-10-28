@@ -10,7 +10,7 @@
 // можна завжди: або ногами, або (як було) кнопкою. Що саме ногами — доводить map-first.test.ts повним перебором.
 import { dispatch, nextCommandId, type Command } from '../core/commands';
 import type { CoreDefs } from '../core/defs';
-import { packFlag, packItemsFor, packingOpen } from '../core/packing';
+import { autoPack, packFlag, packItemsFor, packedOf, packingOpen } from '../core/packing';
 import type { SimState } from '../core/sim';
 import type { GameState } from '../core/state';
 import { matches } from '../core/story';
@@ -302,4 +302,20 @@ export function needsLeft(sim: SimState, defs: CoreDefs, carried: readonly strin
   const pk = defs.packing;
   if (!p || !pk || !packingOpen(pk, g) || !active(g, 'CH1-HOME-001')) return [];
   return packItemsFor(pk, p).filter((i) => i.group === 'needed' && !g.flags.includes(packFlag(i.itemId)) && !carried.includes(i.itemId)).map((i) => i.itemId);
+}
+
+/**
+ * Пакування ходьбою: ядро на старті вважає все «спакованим як радить гра» (GAME-109), тож удома нічого було б носити. Коли гравець повернувся з крамниці
+ * і пакування відкрилось, а набір ще точно дорівнює порадженому (ніхто не торкався) — розкладаємо його назад по місцях: ті самі команди UnpackItem, що
+ * знімають річ з багажника. Далі речі треба знову віднести ногами. Порожньо, коли не вдома, не ця справа чи набір уже змінено.
+ */
+export function unpackMoves(sim: SimState, defs: CoreDefs): Move[] {
+  const g = sim.game;
+  const p = g.player;
+  const pk = defs.packing;
+  if (!p || !pk || p.locationId !== MAP_LOCATION.home || !quest(g, 'CH1-HOME-001') || !packingOpen(pk, g)) return [];
+  const have = packedOf(g.flags, pk, p);
+  const want = autoPack(pk, p);
+  if (have.length === 0 || have.length !== want.length || !have.every((i) => want.includes(i))) return [];
+  return have.map((itemId) => ({ type: 'UnpackItem' as const, itemId }));
 }

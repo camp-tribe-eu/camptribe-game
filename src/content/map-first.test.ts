@@ -13,7 +13,7 @@ import { GAME_DEFS } from './slice-defs';
 import { CONTENT } from './story';
 import { progressKey, type Move } from './moves';
 import { enumerateCombos } from '../../scripts/validator/combos.mjs';
-import { isBulky, needsLeft, DAY1_QUESTS, DAY1_TARGETS, MAP_LOCATION, MAP_SPOTS, coveredKeys, liveMapSpot, mapKeyFor, moveKey, nextTarget, resolveSpot, spotLabel, targetProblems, type MapTarget } from './map-first';
+import { isBulky, needsLeft, DAY1_QUESTS, DAY1_TARGETS, MAP_LOCATION, MAP_SPOTS, coveredKeys, liveMapSpot, mapKeyFor, moveKey, nextTarget, resolveSpot, spotLabel, targetProblems, unpackMoves, type MapTarget } from './map-first';
 
 const DEFS: CoreDefs = GAME_DEFS;
 const MAP_VIEW: StoryView = { mapFirst: true, trunk: false, near: null };
@@ -273,5 +273,45 @@ describe('рюкзак і потреби (GAME-175: дрібне — в рюкз
   it('НЕГАТИВНИЙ КОНТРОЛЬ: поза пакуванням (до крамниці) потреб немає, а рюкзак підказку не міняє', () => {
     const s = create((CHOICES[0] as { intent: Move }).intent);
     expect(nextTarget(s, DEFS, ['item.water'])?.key).not.toBe('next.unload');
+  });
+});
+
+describe('пакування ходьбою: удома спакований «за порадою» набір розкладається, і його треба віднести ногами (GAME-175)', () => {
+  const toHome = (intent: Move): SimState => {
+    let s = create(intent);
+    for (let i = 0; i < 30 && !(s.game.quests['CH1-HOME-001']?.status === 'active' && s.game.player?.locationId === 'loc.home'); i++) {
+      const next = nextTarget(s, DEFS);
+      const spot = progressSpots(s).find((p) => p.name === next?.spot) ?? progressSpots(s)[0];
+      if (!spot) throw new Error('шлях обірвано');
+      s = applyAll(s, spot.moves);
+    }
+    return s;
+  };
+  for (const c of CHOICES) {
+    it(`${c.offer.transportKey} · ${c.offer.animalKey ?? 'без тварини'}: розкладено → бракує потрібного, мала річ є (рюкзак), ногами все складається назад і дорога відкрита`, () => {
+      let s = toHome(c.intent);
+      const moves = unpackMoves(s, DEFS);
+      expect(moves.length, 'є що розкласти').toBeGreaterThan(0);
+      expect(needsLeft(s, DEFS)).toEqual([]);   // до розкладання все на місці
+      s = applyAll(s, moves);
+      const left = needsLeft(s, DEFS);
+      expect(left.length, 'після розкладання бракує потрібного').toBeGreaterThan(0);
+      expect(left.some((i) => !isBulky(DEFS, i)), 'є дрібне — піде в рюкзак').toBe(true);
+      expect(left.some((i) => isBulky(DEFS, i)), 'є громіздке — в багажник').toBe(true);
+      expect(unpackMoves(s, DEFS), 'повторно не розкладається').toEqual([]);
+      for (const i of left) { const r = resolveSpot(s, DEFS, `pack.${i}`); expect(r, `pack.${i} живий`).not.toBeNull(); s = applyAll(s, (r as { moves: readonly Move[] }).moves); }
+      expect(needsLeft(s, DEFS)).toEqual([]);
+      expect(nextTarget(s, DEFS)?.spot).toBe('obj.vehicle');
+      const out = applyAll(s, (resolveSpot(s, DEFS, 'obj.vehicle') as { moves: readonly Move[] }).moves);
+      expect(ROAD_GOAL(out), 'виїзд після пакування ногами').toBe(true);
+    });
+  }
+  it('НЕГАТИВНІ КОНТРОЛІ: на старті (пакування закрите) і в крамниці нічого не розкладається; змінений набір (ніхто не «чистий») не чіпається', () => {
+    expect(unpackMoves(create((CHOICES[0] as { intent: Move }).intent), DEFS)).toEqual([]);
+    const s = toHome((CHOICES[0] as { intent: Move }).intent);
+    const shop = { ...s, game: { ...s.game, player: { ...(s.game.player as NonNullable<typeof s.game.player>), locationId: 'loc.shop' } } };
+    expect(unpackMoves(shop, DEFS)).toEqual([]);
+    const tweaked = applyAll(s, [{ type: 'UnpackItem', itemId: 'item.snacks' } as Move]);
+    expect(unpackMoves(tweaked, DEFS)).toEqual([]);
   });
 });

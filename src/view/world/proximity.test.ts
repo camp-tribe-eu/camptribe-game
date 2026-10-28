@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { RING_IDLE, RING_S, isAutoSpot, stepRing } from './proximity';
+import { RING_IDLE, RING_S, isAutoSpot, ringMayTake, stepRing } from './proximity';
 
 function run(near: string | null, armed: boolean, hold: boolean, seconds: number, dt = 1 / 60): string | null {
   let r = RING_IDLE;
@@ -25,6 +25,13 @@ describe('кільце наближення (GAME-175)', () => {
     for (let i = 0; i < 30; i++) r = stepRing(r, 'step.ST-001', true, true, 1 / 60).ring;
     const s = stepRing(r, 'step.ST-002', true, true, 1 / 60);
     expect(s.ring.t).toBeLessThan(0.05);
+  });
+  it('повз зайву річ на полиці іти можна: кільце бере лише поточну ціль (ringMayTake)', () => {
+    expect(ringMayTake('pack.item.lantern-3', 'pack.item.water')).toBe(false);
+    expect(ringMayTake('pack.item.water', 'pack.item.water')).toBe(true);
+    expect(ringMayTake('step.ST-001', null)).toBe(true);
+    expect(ringMayTake('obj.vehicle', 'pack.item.water')).toBe(true);
+    expect(ringMayTake(null, null)).toBe(false);
   });
   it('isAutoSpot', () => { expect(isAutoSpot('pack.item.water')).toBe(true); expect(isAutoSpot('task.firewood')).toBe(false); });
 });

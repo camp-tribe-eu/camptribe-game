@@ -41,11 +41,13 @@ export class MapFx {
   drawBackpack(on: boolean, x: number, y: number, facing: Dir): void {
     const g = this.pack.clear();
     if (!on) return;
-    const side = facing === 'left' ? 5 : facing === 'right' ? -5 : 0;
-    const bx = x + side - 5;
-    g.fillStyle(0x7a4b25, 1).fillRoundedRect(bx, y - 36, 10, 13, 2);
-    g.fillStyle(0xb67a3d, 1).fillRect(bx + 1, y - 34, 8, 3);
-    g.lineStyle(1, 0x1b1f23, 1).strokeRoundedRect(bx, y - 36, 10, 13, 2);
+    // Рюкзак на спині: ззаду (дивиться вниз/вбік) він виглядає з-за плечей широкими краями й верхом; спиною до глядача — перед героєм.
+    const side = facing === 'left' ? 4 : facing === 'right' ? -4 : 0;
+    const bx = x + side - 7;
+    g.fillStyle(0x7a4b25, 1).fillRoundedRect(bx, y - 38, 14, 16, 3);
+    g.fillStyle(0xb67a3d, 1).fillRect(bx + 2, y - 36, 10, 4);
+    g.fillStyle(0xd9a441, 1).fillRect(bx + 6, y - 31, 2, 3);
+    g.lineStyle(1, 0x1b1f23, 1).strokeRoundedRect(bx, y - 38, 14, 16, 3);
     g.setDepth(facing === 'up' ? y + 0.5 : y - 0.5);
   }
 

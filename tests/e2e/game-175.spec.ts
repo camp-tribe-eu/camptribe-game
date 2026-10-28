@@ -93,7 +93,14 @@ async function goAndDo(page: Page, car: boolean, shot?: string): Promise<string>
   const key = MAPS[(c.game.player?.locationId ?? 'loc.home') as keyof typeof MAPS];
   if (!key) throw new Error(`локація ${c.game.player?.locationId} — не мапа зрізу 1`);
   const before = await signature(page);
-  const walking = walk(page, route(key, [p.playerX, p.playerY], target, car));
+  // Під навантаженням (паралельні збірки) кадри повільні й одна ходьба може не дійти за 45 с: перераховуємо шлях із поточної точки до трьох разів.
+  const walking = (async (): Promise<void> => {
+    for (let t = 0; t < 3; t++) {
+      const q = t === 0 ? p : await probe(page);
+      await walk(page, route(key, [q.playerX, q.playerY], target, car));
+      if ((await signature(page)) !== before) return;
+    }
+  })();
   if (shot) {   // кадр із кільцем, що заповнюється, і стрілкою до мети (картка PR)
     await page.waitForFunction(() => { const f = (window as unknown as { __game: { probe: { fx: Fx } } }).__game.probe.fx; return f.ring > 0.4; }, null, { timeout: 15_000 });
     await page.screenshot({ path: shot });
@@ -132,14 +139,21 @@ const VARIANTS = [{ name: 'соло на велосипеді', pick: /Вело�
 for (const v of VIEWS) {
   for (const k of VARIANTS) {
     test(`день 1 лише ходьбою до дороги: ${k.name}, ${v.name}`, async ({ browser }) => {
-      test.setTimeout(300_000);
+      test.setTimeout(540_000);
       const ctx = await browser.newContext({ viewport: { width: v.w, height: v.h }, hasTouch: true, isMobile: true });
       const page = await ctx.newPage();
       const errors = await start(page, k.pick);
       const done: string[] = [];
+      let bpShot = false;
       for (let i = 0; i < 40; i++) {
         const c = await core(page);
         if (c.game.player?.locationId === 'loc.road') break;
+        if (!bpShot && (await probe(page)).fx.backpack > 0) {   // рюкзак героя непорожній: дрібну річ узято ногами й ще не віднесено до авто
+          bpShot = true;
+          await page.locator('[data-ui="recovery-close"]').click({ timeout: 1_000 }).catch(() => undefined);   // нагадування про код відновлення не закриває мапу на знімку
+          await page.waitForTimeout(300);
+          if (k.car) await page.screenshot({ path: `research/visual-audit/mapfirst-${v.name === 'портрет' ? 'portrait' : 'landscape'}-backpack.png` });
+        }
         const shot = i === 2 && !k.car ? `research/visual-audit/mapfirst-${v.name === 'портрет' ? 'portrait' : 'landscape'}-ring.png` : undefined;
         done.push(await goAndDo(page, k.car, shot));
       }
@@ -151,6 +165,8 @@ for (const v of VIEWS) {
       const p = await probe(page);
       expect(p.fx.auto, 'дії від наближення').toBeGreaterThanOrEqual(6);
       expect(p.fx.pops, 'сплив «+1»/«OK» на кожну дію').toBeGreaterThanOrEqual(6);
+      expect(bpShot, 'дрібна річ пройшла через рюкзак (герой ніс її до авто)').toBe(true);
+      expect(done.filter((d) => d.startsWith('pack.')).length, 'речі пакувалися ногами: ' + done.join(' → ')).toBeGreaterThanOrEqual(3);
       expect(done).toContain('obj.vehicle');
       expect(errors).toEqual([]);
       await ctx.close();
