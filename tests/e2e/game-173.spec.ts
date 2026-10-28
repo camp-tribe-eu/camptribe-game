@@ -11,12 +11,12 @@ interface Probe { ready: boolean; playerX: number; playerY: number; followers: P
 const probe = (page: Page): Promise<Probe> => page.evaluate(() => JSON.parse(JSON.stringify((window as unknown as { __game: { probe: Probe } }).__game.probe)) as Probe);
 
 const TILE = 32;
-/** Незалежний від коду гри список точок дозвілля мапи кемпінгу (c,r): вогнище ×3, берег, намет, лавка. */
-const LEISURE_TILES = new Set(['2,4', '4,4', '3,5', '8,9', '6,4', '8,6']);
-interface TiledMap { width: number; height: number; layers: { name: string; data?: number[]; objects?: { name: string; x: number; y: number }[] }[] }
+/** Незалежний від коду гри список точок дозвілля мапи кемпінгу (c,r): вогнище ×3, берег, намет, лавка (стара галявина). */
+const LEISURE_TILES = new Set(['2,4', '4,4', '3,5', '8,9', '6,4', '8,6', '14,7', '26,8', '20,18']);   // GAME-172: + лавка біля рецепції, берег біля води, лавка на лісовій галявині
+interface TiledMap { width: number; height: number; layers: { name: string; data?: number[]; objects?: { name: string; type?: string; x: number; y: number }[] }[] }
 const MAP = JSON.parse(readFileSync(new URL('../../public/maps/camp-lake.tmj', import.meta.url), 'utf8')) as TiledMap;
 const WALLS = MAP.layers.find((l) => l.name === 'walls')?.data ?? [];
-const TARGETS = new Set((MAP.layers.find((l) => l.name === 'objects')?.objects ?? []).filter((o) => !o.name.startsWith('s')).map((o) => `${Math.floor(o.x / TILE)},${Math.floor(o.y / TILE)}`));
+const TARGETS = new Set((MAP.layers.find((l) => l.name === 'objects')?.objects ?? []).filter((o) => !o.name.startsWith('s') && o.type !== 'leisure').map((o) => `${Math.floor(o.x / TILE)},${Math.floor(o.y / TILE)}`));
 const inWall = (p: Pt): boolean => { const c = Math.floor(p.x / TILE); const r = Math.floor(p.y / TILE); return c < 0 || r < 0 || c >= MAP.width || r >= MAP.height || (WALLS[r * MAP.width + c] ?? 0) > 0; };
 const key = (p: Pt): string => `${Math.floor(p.x / TILE)},${Math.floor(p.y / TILE)}`;
 const SHOTS = process.env.SHOTS === '1';

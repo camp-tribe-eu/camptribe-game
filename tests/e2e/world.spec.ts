@@ -113,10 +113,12 @@ test.describe('клавіатура (десктоп)', () => {
     // GAME-97: дійти до стіни — за умовою, а не за 2,5 с. Аркадна фізика робить крок 1/60 с на кадр від згладженої дельти
     // Phaser, тож під навантаженням CI персонаж проходить за ті самі секунди менше (main 2e1b7c8: 250,7 замість > 280).
     // Дійшов — ще 1,5 с тиснемо в стіну: це й є «60+ кадрів поштовху».
-    await holdKey(page, 'ArrowRight', (q) => q.playerX > 280, 10_000);
-    const p = await holdKey(page, 'ArrowRight', () => false, 1500);
-    expect(p.playerX).toBeGreaterThan(280);                  // дійшов до стіни…
-    expect(p.playerX + 8).toBeLessThanOrEqual(320 + 0.5);    // …і не пройшов (ліва грань стіни x=320; GAME-93: тайл 32 px, тіло 16 px, координати ×2)
+    // GAME-172: мапа більша, і в східній стіні старого табору тепер ворота (рядки 5–8), тож «стіна справа» зникла. Тиснемо вгору від точки появи
+    // (стовпець 6, рядок 5): над нею намет — стіна, нижня грань якої y=128 (рядок 3, стовпці 5–7). Перевірка та сама: дійшов і не пройшов.
+    await holdKey(page, 'ArrowUp', (q) => q.playerY < 150, 10_000);
+    const p = await holdKey(page, 'ArrowUp', () => false, 1500);
+    expect(p.playerY).toBeLessThan(160);                     // дійшов до стіни…
+    expect(p.playerY).toBeGreaterThanOrEqual(128);           // …і не пройшов (нижня грань стіни y=128)
   });
 
   test('камера йде за персонажем у межах мапи', async ({ page }) => {
@@ -124,9 +126,9 @@ test.describe('клавіатура (десктоп)', () => {
     const p0 = await probe(page);
     // GAME-97: за умовою, а не за часом; далі тиснемо, доки камера не впреться в край, — інакше межа нижче нічого не доводить.
     await holdKey(page, 'ArrowDown', (q) => q.cameraScrollY > p0.cameraScrollY);
-    const p1 = await holdKey(page, 'ArrowDown', (q) => q.cameraScrollY >= 384 - 267);
+    const p1 = await holdKey(page, 'ArrowDown', (q) => q.cameraScrollY >= 768 - 267, 4_000);
     expect(p1.cameraScrollY).toBeGreaterThan(p0.cameraScrollY);
-    expect(p1.cameraScrollY).toBeLessThanOrEqual(384 - 267);   // GAME-96: мапа 384 px, кадр 267 на 1280×800 (було 352)
+    expect(p1.cameraScrollY).toBeLessThanOrEqual(768 - 267);   // GAME-96/172: мапа 768 px (було 384), кадр 267 на 1280×800
   });
 
   test('дія біля об’єкта — рівно одна команда; подвійне натискання — одна; в ядрі нагорода одна', async ({ page }) => {

@@ -88,8 +88,39 @@ export const ANNA_LOOK: readonly LayerSpec[] = [
   { url: bodyFemale }, { url: headFemale }, { url: shoesThin, tint: rgb(60, 70, 50) }, { url: pantsThin, tint: rgb(95, 85, 60) },
   { url: shirtFemale, tint: rgb(60, 130, 120) }, { url: hairPixie, tint: rgb(200, 170, 100) },
 ];
+/**
+ * GAME-172 · фонові мешканці табору (ambient.ts) — ті самі шари LPC, що вже в грі (нової графіки немає), інші забарвлення й зачіски.
+ * Кожен відрізняється від родини й NPC або волоссям, або сорочкою на ≥ 60 (looks.test).
+ */
+export const RESIDENT_LOOKS = {
+  nora: [
+    { url: ponytailBack, tint: rgb(100, 55, 35) }, { url: bodyFemale }, { url: headFemale }, { url: shoesThin, tint: rgb(50, 50, 55) },
+    { url: pantsThin, tint: rgb(80, 60, 50) }, { url: shirtFemale, tint: rgb(95, 185, 230) }, { url: ponytailFront, tint: rgb(100, 55, 35) },
+  ],
+  luc: [
+    { url: bodyMale }, { url: headMale }, { url: shoesMale, tint: rgb(60, 45, 35) }, { url: pantsMale, tint: rgb(70, 70, 75) },
+    { url: shirtMale, tint: rgb(205, 90, 40) }, { url: hairPlain, tint: rgb(150, 150, 150) },
+  ],
+  ingrid: [
+    { url: bodyFemale }, { url: headFemale }, { url: shoesThin, tint: rgb(90, 70, 60) }, { url: pantsThin, tint: rgb(90, 80, 70) },
+    { url: shirtFemale, tint: rgb(130, 90, 160) }, { url: hairPixie, tint: rgb(225, 225, 225) },
+  ],
+  sarah: [
+    { url: ponytailBack, tint: rgb(225, 190, 90) }, { url: bodyFemale }, { url: headFemale }, { url: shoesThin, tint: rgb(70, 50, 40) },
+    { url: pantsThin, tint: rgb(60, 60, 70) }, { url: shirtFemale, tint: rgb(70, 100, 190) }, { url: ponytailFront, tint: rgb(225, 190, 90) },
+  ],
+  claire: [
+    { url: bodyFemale }, { url: headFemale }, { url: shoesThin, tint: rgb(60, 60, 60) }, { url: pantsThin, tint: rgb(110, 100, 90) },
+    { url: shirtFemale, tint: rgb(45, 55, 110) }, { url: hairMessy, tint: rgb(170, 80, 50) },
+  ],
+  amina: [
+    { url: ponytailBack, tint: rgb(50, 30, 28) }, { url: bodyFemale }, { url: headFemale }, { url: shoesThin, tint: rgb(40, 40, 50) },
+    { url: pantsThin, tint: rgb(60, 60, 80) }, { url: shirtFemale, tint: rgb(225, 225, 215) }, { url: ponytailFront, tint: rgb(50, 30, 28) },
+  ],
+} as const satisfies Readonly<Record<string, readonly LayerSpec[]>>;
+
 /** Усі NPC зі своїм виглядом: сторож looks.test порівнює їх із родиною. */
-export const NPC_LOOKS: Readonly<Record<string, readonly LayerSpec[]>> = { elise: ELISE_LOOK, anna: ANNA_LOOK };
+export const NPC_LOOKS: Readonly<Record<string, readonly LayerSpec[]>> = { elise: ELISE_LOOK, anna: ANNA_LOOK, ...RESIDENT_LOOKS };
 
 /**
  * Mia, сіра смугаста кішка родини (GAME-147): готовий аркуш assets/sprites/cat_mia.png із «[LPC] Cats and Dogs» (ART-020; ART-010…015 зайняті GAME-146), не
@@ -104,6 +135,8 @@ export interface WorldArt {
   readonly tilesets: Readonly<Record<string, HTMLImageElement>>;
   readonly campfire: HTMLImageElement;
   readonly sheets: { readonly player: HTMLCanvasElement; readonly elise: HTMLCanvasElement; readonly victoria: HTMLCanvasElement; readonly matthew: HTMLCanvasElement };
+  /** GAME-172: листи ходьби фонових мешканців за ключем RESIDENT_LOOKS. */
+  readonly residents: Readonly<Record<string, HTMLCanvasElement>>;
 }
 
 /**
@@ -112,9 +145,11 @@ export interface WorldArt {
  */
 export async function loadWorldArt(): Promise<WorldArt> {
   const names = Object.keys(TILESET_IMAGES);
-  const [images, campfireImg, player, elise, victoria, matthew] = await Promise.all([
+  const residentNames = Object.keys(RESIDENT_LOOKS) as (keyof typeof RESIDENT_LOOKS)[];
+  const [images, campfireImg, player, elise, victoria, matthew, residentSheets] = await Promise.all([
     Promise.all(names.map((n) => loadImage(TILESET_IMAGES[n] ?? ''))),
     loadImage(CAMPFIRE_SHEET), composeSheet(PLAYER_LOOK), composeSheet(ELISE_LOOK), composeSheet(FAMILY_LOOKS.victoria), composeSheet(FAMILY_LOOKS.matthew),
+    Promise.all(residentNames.map((n) => composeSheet(RESIDENT_LOOKS[n]))),
   ]);
-  return { tilesets: Object.fromEntries(names.map((n, i) => [n, images[i] as HTMLImageElement])), campfire: campfireImg, sheets: { player, elise, victoria, matthew } };
+  return { tilesets: Object.fromEntries(names.map((n, i) => [n, images[i] as HTMLImageElement])), campfire: campfireImg, sheets: { player, elise, victoria, matthew }, residents: Object.fromEntries(residentNames.map((n, i) => [n, residentSheets[i] as HTMLCanvasElement])) };
 }

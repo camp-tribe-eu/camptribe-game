@@ -1,6 +1,11 @@
 // GAME-93 · графіка LPC на живій сцені: ходьба в чотири боки (кадр змінюється, стоїть — кадр спокою), 3/4-глибина
 // (позаду намету — дах закриває персонажа, перед наметом — ні), мапа з тайлами 32 px.
 import { expect, test, type Page } from '@playwright/test';
+import { readFileSync } from 'node:fs';
+/** Розмір мапи кемпінгу, px (GAME-172: 40×24 клітинки по 32 — було 640×384); з файлу мапи, а не числом у тесті. */
+const CAMP = JSON.parse(readFileSync(new URL('../../public/maps/camp-lake.tmj', import.meta.url), 'utf8')) as { width: number; height: number; tilewidth: number; tileheight: number };
+const MAP_W = CAMP.width * CAMP.tilewidth;
+const MAP_H = CAMP.height * CAMP.tileheight;
 
 type Dir = 'up' | 'left' | 'down' | 'right';
 interface Probe {
@@ -74,13 +79,13 @@ test.describe('LPC на сцені (десктоп 1280×800)', () => {
   test('упертий у стіну персонаж не «йде на місці»: кадр спокою, напрямок до стіни зберігається', async ({ page }) => {
     await open(page);
     // GAME-97: до стіни — за умовою (крок фізики йде від згладженої дельти, під навантаженням CI повільніше), далі тиснемо.
-    await hold(page, 'ArrowRight', (q) => q.playerX > 280, 10_000);
+    await hold(page, 'ArrowRight', (q) => q.playerX > 390, 10_000);   // GAME-172: стіна старого табору (стовпець 13) — на x ≈ 408; було 280 у мапі 20×12
     const { end } = await hold(page, 'ArrowRight', () => false, 1000);
     await page.keyboard.down('ArrowRight');
     await page.waitForTimeout(400);
     const p = await probe(page);
     await page.keyboard.up('ArrowRight');
-    expect(end.playerX).toBeGreaterThan(280);
+    expect(end.playerX).toBeGreaterThan(390);
     expect(p.playerMoving).toBe(false);
     expect(p.playerFrame).toBe(ROW.right * COLS);
   });
@@ -100,15 +105,15 @@ test.describe('LPC на сцені (десктоп 1280×800)', () => {
     expect(back.coveredTiles, 'позаду намету дах закриває кадр персонажа').toBeGreaterThan(0);
   });
 
-  test('мапа 32 px: камера їде за персонажем у межах мапи 640×384 (GAME-96: кадр 427×267 на 1280×800 — по обох осях, порожнечі немає)', async ({ page }) => {
+  test('мапа 32 px: камера їде за персонажем у межах мапи (GAME-172: 1280×768 із файлу; було 640×384) (GAME-96: кадр 427×267 на 1280×800 — по обох осях, порожнечі немає)', async ({ page }) => {
     await open(page);
     // GAME-97: за умовою, а не за часом; далі ще тиснемо, щоб камера дійшла до краю і межа ≤ 384 − 267 щось доводила.
     await hold(page, 'ArrowDown', (q) => q.cameraScrollY > 0, 10_000);
-    const p = (await hold(page, 'ArrowDown', (q) => q.cameraScrollY >= 384 - 267, 10_000)).end;
+    const p = (await hold(page, 'ArrowDown', (q) => q.cameraScrollY >= MAP_H - 267, 10_000)).end;
     expect(p.cameraScrollY).toBeGreaterThan(0);
-    expect(p.cameraScrollY).toBeLessThanOrEqual(384 - 267);
-    const r = (await hold(page, 'ArrowRight', (q) => q.cameraScrollX >= 640 - 427, 10_000)).end;
+    expect(p.cameraScrollY).toBeLessThanOrEqual(MAP_H - 267);
+    const r = (await hold(page, 'ArrowRight', (q) => q.cameraScrollX >= MAP_W - 427, 10_000)).end;
     expect(r.cameraScrollX).toBeGreaterThanOrEqual(0);
-    expect(r.cameraScrollX).toBeLessThanOrEqual(640 - 427);
+    expect(r.cameraScrollX).toBeLessThanOrEqual(MAP_W - 427);
   });
 });

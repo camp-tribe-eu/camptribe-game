@@ -110,6 +110,8 @@ export const FIXTURES = [
   { name: 'одруківка в типі об’єкта (spwan)', patch: (m) => addObj(m, point(9, 's.typo', 'spwan', 3, 3)), expect: ['OBJECT_INVALID'] },
   { name: 'тригер без імені', patch: (m) => { obj(m, 't.gate').name = ''; }, expect: ['OBJECT_INVALID'] },
   { name: 'type і class суперечать', patch: (m) => { obj(m, 'npc.ranger').class = 'trigger'; }, expect: ['OBJECT_INVALID'] },
+  { name: '[GAME-172] два anchor з одним іменем', patch: (m) => { addObj(m, point(20, 'obj.water', 'anchor', 5, 3)); addObj(m, point(21, 'obj.water', 'anchor', 6, 3)); }, expect: ['OBJECT_INVALID'] },
+  { name: '[GAME-172] anchor у замкненому куті — недосяжний', patch: (m) => { addObj(m, point(20, 'obj.pile', 'anchor', 4, 5)); setCell(m, 'walls', 3, 5, WALL); setCell(m, 'walls', 4, 4, WALL); }, expect: ['TARGET_UNREACHABLE'] },
   { name: 'два NPC з одним іменем', patch: (m) => addObj(m, point(9, 'npc.ranger', 'npc', 7, 4)), expect: ['OBJECT_INVALID'] },
 
   // ---------- структура ----------

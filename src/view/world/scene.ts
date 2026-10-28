@@ -7,6 +7,7 @@
 // 3/4-глибина: верхівки дерев і дах намету малюються над персонажем, коли той стоїть ПОЗАД об'єктом (див. `bands`).
 import Phaser from 'phaser';
 import { bindPhaser } from '../../audio';
+import { STEP_MS } from '../../core/clock';
 import { KEY_BINDINGS, KEY_CODES, TAP_MAX_MOVE, TAP_MAX_MS, actionTarget, consumeFrame, createActionGate, moveVector, press, release, tapHitsSpot, type Action, type ActionTarget, type InputState } from './actions';
 import type { Bridge } from './bridge';
 import type { WorldArt } from './art';
@@ -18,6 +19,8 @@ import { playUi } from '../../audio/ui-sounds';
 import { MapFx, type Needs } from './map-fx';
 import { FEEDBACK_S, RING_IDLE, ringMayTake, stepRing, type Ring } from './proximity';
 import { IDLE_AFTER_S, LEISURE_BY_MAP, assignLeisure, leisureFromObjects, type LeisureSpot } from './leisure';
+import { BARK_RANGE, RESIDENTS, buildTimeline, placeAt, residentGrid, type Timeline } from './ambient';
+import type { Key } from '../../i18n';
 
 export const TILE = 32;
 const INTERACT_RANGE = TILE * 1.5;
@@ -34,6 +37,9 @@ const DIRS: readonly Dir[] = ['up', 'left', 'down', 'right'];
 const FOLLOWERS = ['victoria', 'matthew'] as const;
 /** Довгий кадр (згорнута вкладка) не телепортує слідувачів: крок обмежений 0,1 с. */
 const MAX_FOLLOW_DT = 0.1;
+/** GAME-172: репліка мешканця висить стільки мс, і той самий мешканець озветься знову не раніше ніж за стільки. */
+const BARK_SHOW_MS = 4000;
+const BARK_COOLDOWN_MS = 25_000;
 
 /** Об'єкт мапи, з яким можна взаємодіяти: тригер (Interact у ядро) чи NPC (розмова). */
 interface Spot { readonly name: string; readonly kind: 'trigger' | 'npc'; readonly x: number; readonly y: number }
@@ -110,6 +116,11 @@ export interface WorldProbe {
   leisure: ({ kind: string; c: number; r: number } | null)[];
   /** GAME-112 (лише для e2e): де стоять слідувачі (ноги, піксельні координати мапи) — у порядку ланцюжка. */
   followers: Pt[];
+  /** GAME-172 (лише для e2e): де стоять фонові мешканці табору (ноги, піксельні координати мапи) і чи йдуть. */
+  residents: { id: string; x: number; y: number; moving: boolean }[];
+  /** GAME-172: ключ репліки, що зараз над головою мешканця (null — тиша), і скільки реплік уже прозвучало. */
+  bark: string | null;
+  barkCount: number;
   /** GAME-38: мс від початку навігації до першого намальованого кадру Phaser; 0, доки кадру не було (ставить main.ts). */
   firstFrameMs: number;
   /** GAME-99 (лише для e2e): ефект «день і ніч» — що зараз намальовано. `on` — ефект увімкнено; `visible` — прямокутник/пляма видимі (вдень — ні). */
@@ -127,6 +138,7 @@ const FPS_WINDOW_MS = 3000;
 export class WorldScene extends Phaser.Scene {
   private player!: Phaser.Types.Physics.Arcade.SpriteWithDynamicBody;
   private readonly gate = createActionGate();
+  private anchors: Pt[] = [];
   private spots: Spot[] = [];
   private bands: Band[] = [];
   private facing: Dir = 'down';
@@ -135,6 +147,13 @@ export class WorldScene extends Phaser.Scene {
   private chain: Pt[] = [];
   private followSprites: Phaser.GameObjects.Sprite[] = [];
   private followFacing: Dir[] = [];
+  /** GAME-172: фонові мешканці — розклад (чиста функція ігрового часу), спрайти, останній напрямок, репліка. */
+  private residentLines: Timeline[] = [];
+  private residentSprites: Phaser.GameObjects.Sprite[] = [];
+  private residentFacing: Dir[] = [];
+  private residentBark: { text: Phaser.GameObjects.Text; until: number; npc: number } | null = null;
+  private barkNext: number[] = [];
+  private barkReadyAt: number[] = [];
   /** GAME-173: скільки секунд герой стоїть; точки дозвілля родини (null — у строю) і всі точки мапи; напрямок руху героя для строю. */
   private idleS = 0;
   private leisure: (LeisureSpot | null)[] | null = null;
@@ -169,7 +188,7 @@ export class WorldScene extends Phaser.Scene {
 
   /** art — графіка, декодована до старту гри (loadWorldArt); hooks — усе, що сцена просить у гри (див. WorldHooks). */
   constructor(private readonly bridge: Bridge, private readonly controls: InputState, private readonly probe: WorldProbe, private readonly art: WorldArt,
-    private readonly hooks: WorldHooks, private readonly daylightOn = true) {
+    private readonly hooks: WorldHooks, private readonly daylightOn = true, private readonly barkText: (key: Key) => string = () => '') {
     super('world');
   }
 
@@ -223,6 +242,7 @@ export class WorldScene extends Phaser.Scene {
     this.addSheet('player', this.art.sheets.player);
     this.addSheet('elise', this.art.sheets.elise);
     for (const name of FOLLOWERS) this.addSheet(name, this.art.sheets[name]);
+    for (const [name, canvas] of Object.entries(this.art.residents)) this.addSheet(`res-${name}`, canvas);
 
     this.anims.create({ key: 'fire', frames: this.anims.generateFrameNumbers('campfire', { start: 0, end: 4 }), frameRate: 8, repeat: -1 });
     for (const dir of DIRS) {
@@ -234,6 +254,14 @@ export class WorldScene extends Phaser.Scene {
     // Слідувачі — лише картинки: без тіла фізики й без інтерактивності, тож тап і кнопка дії їх «не бачать» (GAME-112, цілі взаємодії).
     this.followFacing = FOLLOWERS.map(() => 'down' as Dir);
     this.followSprites = FOLLOWERS.map((name) => this.add.sprite(0, 0, name, frameIndex('down', 0)).setOrigin(0.5, ORIGIN_Y));
+    for (const res of RESIDENTS) {
+      for (const dir of DIRS) this.anims.create({ key: `walk-res-${res.look}-${dir}`, frames: Array.from({ length: COLS - 1 }, (_, i) => ({ key: `res-${res.look}`, frame: frameIndex(dir, i + 1) })), frameRate: WALK_FPS, repeat: -1 });
+    }
+    this.residentFacing = RESIDENTS.map(() => 'down' as Dir);
+    this.barkNext = RESIDENTS.map(() => 0);
+    this.barkReadyAt = RESIDENTS.map(() => 0);
+    this.residentSprites = RESIDENTS.map((res) => this.add.sprite(0, 0, `res-${res.look}`, frameIndex('down', 0)).setOrigin(0.5, ORIGIN_Y).setVisible(false));
+    this.events.on(Phaser.Scenes.Events.PAUSE, () => { this.hideBark(); });
     this.player = this.physics.add.sprite(0, 0, 'player', frameIndex('down', 0));
     this.player.setOrigin(0.5, ORIGIN_Y);
     this.player.body.setSize(BODY.w, BODY.h);
@@ -355,6 +383,23 @@ export class WorldScene extends Phaser.Scene {
     this.followSprites.forEach((sp, i) => sp.setPosition(this.chain[i]?.x ?? 0, this.chain[i]?.y ?? 0).setDepth(this.chain[i]?.y ?? 0));
     this.probe.followers = this.chain.map((p) => ({ x: p.x, y: p.y }));
     this.probe.leisure = this.chain.map(() => null);
+    // GAME-172: мешканці живуть лише в таборі; на мапах дня 1 (двір, крамниця) їх нема. Шляхи — по сітці стін без клітинок цілей; розклад мусить будуватись (інакше мапа зламана — голосно).
+    this.anchors = objects.filter((o) => typeOf(o) === 'anchor').map((o) => ({ x: o.x ?? 0, y: o.y ?? 0 }));
+    this.hideBark();
+    if (key === 'camp') {
+      const walkGrid = residentGrid(this.grid, [...this.spots, ...this.anchors]);
+      this.residentLines = RESIDENTS.map((res) => {
+        const tl = buildTimeline(walkGrid, res);
+        if (!tl) throw new Error(`ambient: ${res.id} has no path between its stops`);
+        return tl;
+      });
+      this.probe.residents = RESIDENTS.map((res) => ({ id: res.id, x: 0, y: 0, moving: false }));
+    } else {
+      this.residentLines = [];
+      this.probe.residents = [];
+    }
+    this.residentSprites.forEach((sp) => sp.setVisible(key === 'camp'));
+    this.moveResidents(0);
     const fromMap = leisureFromObjects(objects as never, TILE);
     this.leisureSpots = fromMap.length > 0 ? fromMap : [...(LEISURE_BY_MAP[key === 'camp' ? 'camp-lake' : key] ?? [])];
     this.idleS = 0;
@@ -536,6 +581,65 @@ export class WorldScene extends Phaser.Scene {
     });
   }
 
+  /** GAME-172: мешканці стають туди, де їх ставить розклад о цей ігровий час; тиша, поки годинник стоїть (пауза). */
+  private moveResidents(time: number): void {
+    const clock = this.bridge.state.clock;
+    const minutes = clock.minutes + clock.accMs / STEP_MS;
+    this.residentLines.forEach((tl, i) => {
+      const s = this.residentSprites[i];
+      const out = this.probe.residents[i];
+      if (!s || !out) return;
+      const p = placeAt(this.grid, tl, minutes);
+      const moved = Math.hypot(p.x - s.x, p.y - s.y) > 0.05;
+      const dir = p.moving ? p.dir : this.residentFacing[i] ?? 'down';
+      this.residentFacing[i] = dir;
+      if (moved && p.moving) s.anims.play(`walk-res-${tl.resident.look}-${dir}`, true);
+      else { s.anims.stop(); s.setFrame(frameIndex(dir, 0)); }
+      s.setPosition(p.x, p.y).setDepth(p.y);
+      out.x = p.x;
+      out.y = p.y;
+      out.moving = moved && p.moving;
+    });
+    if (this.player) this.updateBark(time);   // в create героя ще нема — лише розставляємо мешканців
+  }
+
+  private hideBark(): void {
+    this.residentBark?.text.destroy();
+    this.residentBark = null;
+    this.probe.bark = null;
+  }
+
+  /** Репліка над головою мешканця, коли герой підійшов ближче за BARK_RANGE: одна за раз, по колу, раз на BARK_COOLDOWN_MS на мешканця. */
+  private updateBark(time: number): void {
+    const bark = this.residentBark;
+    if (bark) {
+      const s = this.residentSprites[bark.npc];
+      // Герой пішов геть — репліка зникає (не висить над порожнім місцем); край кадру не обрізає її.
+      if (!s || time >= bark.until || Math.hypot(this.player.x - s.x, this.player.y - s.y) > BARK_RANGE * 1.6) { this.hideBark(); return; }
+      const view = this.cameras.main.worldView;
+      const half = bark.text.width / 2 + 2;
+      bark.text.setPosition(Math.round(Phaser.Math.Clamp(s.x, view.x + half, view.right - half)), Math.round(Math.max(s.y - 52, view.y + bark.text.height + 2)));
+      return;
+    }
+    if (this.residentLines.length === 0) return;
+    for (let i = 0; i < RESIDENTS.length; i++) {
+      const s = this.residentSprites[i];
+      const res = RESIDENTS[i];
+      if (!s || !res || time < (this.barkReadyAt[i] ?? 0)) continue;
+      if (Math.hypot(this.player.x - s.x, this.player.y - s.y) > BARK_RANGE) continue;
+      const n = this.barkNext[i] ?? 0;
+      const key = res.barks[n % res.barks.length] as Key;
+      this.barkNext[i] = n + 1;
+      this.barkReadyAt[i] = time + BARK_COOLDOWN_MS;
+      const text = this.add.text(s.x, s.y - 52, this.barkText(key), { fontFamily: 'CampPixel, monospace', fontSize: '8px', color: '#f4f1e8', backgroundColor: '#1b1f23dd', padding: { x: 4, y: 3 }, wordWrap: { width: 140 }, align: 'center' })
+        .setOrigin(0.5, 1).setDepth(DEPTH.always + 1);
+      this.residentBark = { text, until: time + BARK_SHOW_MS, npc: i };
+      this.probe.bark = key;
+      this.probe.barkCount++;
+      return;
+    }
+  }
+
   /** Межа паузи: зупинити тіло, інакше фізика дотягує стару швидкість після продовження (рецензія PR #13). */
   haltPlayer(): void {
     if (!this.player) return;
@@ -645,6 +749,7 @@ export class WorldScene extends Phaser.Scene {
 
     this.moveFollowers(delta, time, moving || v.x !== 0 || v.y !== 0);
     this.updateDaylight(time);
+    this.moveResidents(time);
 
     const box = this.player.getBounds();
     let covered = 0;

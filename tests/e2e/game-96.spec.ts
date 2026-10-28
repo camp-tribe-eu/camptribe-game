@@ -4,6 +4,11 @@
 //    гра керується. 3) Поворот сторч → вбік → сторч: стан живий, годинник іде, пауза не ставиться.
 // Сторч-розкладку тримають game-91/92/95 без змін. Негативні контролі (мутації) — у звіті картки.
 import { expect, test, type Browser, type CDPSession, type Page } from '@playwright/test';
+import { readFileSync } from 'node:fs';
+/** Розмір мапи кемпінгу, px (GAME-172: 40×24 клітинки по 32 — було 640×384); з файлу мапи, а не числом у тесті. */
+const CAMP = JSON.parse(readFileSync(new URL('../../public/maps/camp-lake.tmj', import.meta.url), 'utf8')) as { width: number; height: number; tilewidth: number; tileheight: number };
+const MAP_W = CAMP.width * CAMP.tilewidth;
+const MAP_H = CAMP.height * CAMP.tileheight;
 
 const SHOTS = process.env.SHOT_DIR ?? 'test-results';   // скріншоти для звіту картки
 const SETTINGS_KEY = 'camplife.settings.v1';
@@ -254,7 +259,7 @@ for (const c of FULL) {
     // Камера в межах мапи: їдемо вниз і вправо, доки камера не дійде до межі (чекаємо СТАН, а не час); кожен зразок scroll ∈ [0, мапа − кадр].
     // Без setBounds камера йшла б за персонажем за межу мапи і зразок вийшов би з проміжку; без обмеження кадру мапою maxX/maxY < 0.
     const scroll = (): Promise<{ x: number; y: number }> => page.evaluate(() => { const p = (window as unknown as { __game: { probe: { cameraScrollX: number; cameraScrollY: number } } }).__game.probe; return { x: p.cameraScrollX, y: p.cameraScrollY }; });
-    const maxX = 640 - buf.w; const maxY = 384 - buf.h;
+    const maxX = MAP_W - buf.w; const maxY = MAP_H - buf.h;   // GAME-172: мапа з файлу (1280×768)
     const seen: { x: number; y: number }[] = [];
     for (const [key, dir] of [['ArrowDown', 'y'], ['ArrowRight', 'x']] as const) {
       await page.keyboard.down(key);
