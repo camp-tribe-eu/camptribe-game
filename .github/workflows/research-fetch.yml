@@ -141,7 +141,7 @@ jobs:
             case "$n" in
               pack-*)
                 # Без ліцензії, процитованої з першоджерела, не комітимо (aggregator-does-not-license).
-                [ -s "$d/LICENSE-from-page.txt" ] && ! grep -q '^NOT FOUND' "$d/LICENSE-from-page.txt" || {
+                [ -s "$d/LICENSE-from-page.txt" ] && [ -s "$d/SOURCE.txt" ] && ! grep -q '^NOT FOUND' "$d/LICENSE-from-page.txt" || {
                   echo "::warning::$n: ліцензію не знайдено — не комічу"
                   # Лише фрагмент розмітки блоку ліцензії, щоб бачити причину (не арт).
                   mkdir -p research/debug; cp "$d/page.html.lic-snippet.txt" "research/debug/$n.txt" 2>/dev/null || true
