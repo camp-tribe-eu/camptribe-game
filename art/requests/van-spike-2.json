@@ -1,0 +1,52 @@
+{
+ "batch": [
+  {
+   "name": "hull2_recraft0",
+   "endpoint": "fal-ai/recraft/v3/text-to-image",
+   "payload": {
+    "prompt": "Dollhouse cutaway of an EMPTY unbranded high-roof panel van: the ENTIRE near side wall and the whole roof of the cargo area are removed so the empty interior is fully visible from above, empty cargo box with light oak plank floor, white insulated far wall with one window, rear doors closed, wheel arches visible inside, cab at the front with two seats, nothing in the cargo area. clean modern digital illustration, isometric three-quarter view from the front-left and above, soft daylight from top-left, soft ambient occlusion shadows, crisp outlines, brochure style like a professional campervan conversion render, unbranded generic vehicle, no logos, no badges. White background, no text.",
+    "image_size": "landscape_4_3",
+    "style": "digital_illustration"
+   }
+  },
+  {
+   "name": "hull2_recraft1",
+   "endpoint": "fal-ai/recraft/v3/text-to-image",
+   "payload": {
+    "prompt": "Dollhouse cutaway of an EMPTY unbranded high-roof panel van: the ENTIRE near side wall and the whole roof of the cargo area are removed so the empty interior is fully visible from above, empty cargo box with light oak plank floor, white insulated far wall with one window, rear doors closed, wheel arches visible inside, cab at the front with two seats, nothing in the cargo area. clean modern digital illustration, isometric three-quarter view from the front-left and above, soft daylight from top-left, soft ambient occlusion shadows, crisp outlines, brochure style like a professional campervan conversion render, unbranded generic vehicle, no logos, no badges. White background, no text.",
+    "image_size": "landscape_4_3",
+    "style": "digital_illustration"
+   }
+  },
+  {
+   "name": "hull2_flux",
+   "endpoint": "fal-ai/flux/dev",
+   "payload": {
+    "prompt": "Dollhouse cutaway of an EMPTY unbranded high-roof panel van: the ENTIRE near side wall and the whole roof of the cargo area are removed so the empty interior is fully visible from above, empty cargo box with light oak plank floor, white insulated far wall with one window, rear doors closed, wheel arches visible inside, cab at the front with two seats, nothing in the cargo area. clean modern digital illustration, isometric three-quarter view from the front-left and above, soft daylight from top-left, soft ambient occlusion shadows, crisp outlines, brochure style like a professional campervan conversion render, unbranded generic vehicle, no logos, no badges. White background, no text.",
+    "image_size": "landscape_4_3",
+    "num_images": 4,
+    "num_inference_steps": 28,
+    "guidance_scale": 3.5,
+    "seed": 7
+   }
+  },
+  {
+   "name": "hero2_recraft0",
+   "endpoint": "fal-ai/recraft/v3/text-to-image",
+   "payload": {
+    "prompt": "Dollhouse cutaway of an unbranded high-roof panel van camper conversion: near side wall and roof removed, interior fully visible: rear transverse bed with sage green blanket, glass shower cabin, oak kitchen block with sink and hob, small fridge, dinette with bench seats and table, swivel cab seats, oak floor. clean modern digital illustration, isometric three-quarter view from the front-left and above, soft daylight from top-left, soft ambient occlusion shadows, crisp outlines, brochure style like a professional campervan conversion render, unbranded generic vehicle, no logos, no badges. White background, no text, no dimension lines.",
+    "image_size": "landscape_4_3",
+    "style": "digital_illustration"
+   }
+  },
+  {
+   "name": "hero2_recraft1",
+   "endpoint": "fal-ai/recraft/v3/text-to-image",
+   "payload": {
+    "prompt": "Dollhouse cutaway of an unbranded high-roof panel van camper conversion: near side wall and roof removed, interior fully visible: rear transverse bed with sage green blanket, glass shower cabin, oak kitchen block with sink and hob, small fridge, dinette with bench seats and table, swivel cab seats, oak floor. clean modern digital illustration, isometric three-quarter view from the front-left and above, soft daylight from top-left, soft ambient occlusion shadows, crisp outlines, brochure style like a professional campervan conversion render, unbranded generic vehicle, no logos, no badges. White background, no text, no dimension lines.",
+    "image_size": "landscape_4_3",
+    "style": "digital_illustration"
+   }
+  }
+ ]
+}
