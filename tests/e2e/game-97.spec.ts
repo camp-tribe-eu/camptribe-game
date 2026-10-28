@@ -9,7 +9,7 @@ import { budget } from './budgets';
 test.describe.configure({ mode: 'serial' });
 
 const FLOOR_FPS = 20;
-interface Probe { ready: boolean; fps: number; fpsWindows: number; followers: { x: number; y: number }[] }
+interface Probe { ready: boolean; fps: number; fpsWindows: number; followers: { x: number; y: number }[]; daylight: { visible: boolean } }
 const probe = (page: Page): Promise<Probe> => page.evaluate(() => ({ ...(window as unknown as { __game: { probe: Probe } }).__game.probe }));
 
 for (const vp of [{ width: 1280, height: 800 }, { width: 390, height: 844 }]) {
@@ -65,6 +65,8 @@ async function medianFps(page: Page, walk: boolean): Promise<{ samples: number[]
   await page.waitForFunction(() => (window as unknown as { __game?: { probe: { ready: boolean } } }).__game?.probe.ready === true, null, { timeout: 30_000 });
   // GAME-112: еталонна сцена — З РОДИНОЮ (два слідувачі); без них fps міряв би сцену без найдорожчого, що в ній додалось.
   expect((await probe(page)).followers.length, 'у еталонній сцені нема слідувачів родини').toBeGreaterThanOrEqual(2);
+  // GAME-99: старт гри — о 00:00, тож еталонна сцена нічна; fps міряється З ефектом «день і ніч» (маска + пляма), а не без нього.
+  expect((await probe(page)).daylight.visible, 'ефект день-ніч не намальовано — fps міряв би сцену без нього').toBe(true);
   let walking = walk;
   let travelled = 0;   // сумарний шлях слідувачів за вимір (тайлів-пікселів): герой ходить туди-сюди, тож «початок ≠ кінець» нічого б не доводило
   let prevPos = (await probe(page)).followers;

@@ -11,6 +11,7 @@ import { decodeRestoreCode, encodeRestoreCode } from './platform/save-code';
 import { saveBackend } from './platform/save-backend';
 import { createSaveSession } from './platform/save-session';
 import credits from '../assets/credits.json';
+import { step } from './core/sim';
 import { createBridge } from './view/world/bridge';
 import { WorldScene, type WorldProbe } from './view/world/scene';
 import { loadWorldArt } from './view/world/art';
@@ -27,7 +28,8 @@ const app = document.querySelector<HTMLElement>('#app');
 if (!app) throw new Error('#app is missing');
 
 const probe: WorldProbe = { ready: false, playerX: 0, playerY: 0, nearObject: null, nearKind: null, commandsSent: 0, cameraScrollX: 0, cameraScrollY: 0, clockMinutes: 0, saveLoaded: false, cameraLerp: [0, 0], followers: [],
-  playerFrame: 0, playerDir: 'down', playerMoving: false, playerDepth: 0, coveredTiles: 0, behindTiles: 0, fps: 0, fpsWindows: 0, firstFrameMs: 0 };
+  playerFrame: 0, playerDir: 'down', playerMoving: false, playerDepth: 0, coveredTiles: 0, behindTiles: 0, fps: 0, fpsWindows: 0, firstFrameMs: 0,
+  daylight: { on: false, visible: false, minuteOfDay: 0, darkness: 0, color: 0xffffff, glow: 0 } };
 // GAME-86: кожна команда ядру (дія екрана, розмова, взаємодія на мапі) → автозбереження одразу, а не лише на паузі.
 // GAME-89 №2: сід світу (а з ним погода дня 1) — свіжий для кожної гри, з crypto на межі; ядро лишається детермінованим,
 // бо сід записується в worldSeed сейву. ?seed=N (лише збірка e2e) закріплює сід — для відтворюваних тестів.
@@ -38,6 +40,8 @@ const randomSeed = (): number => crypto.getRandomValues(new Uint32Array(1))[0] ?
 const pinnedSeed = seedSwitches.seed ?? (import.meta.env.MODE === 'e2e' && !seedSwitches.freshSeed ? DEFAULT_SEED : undefined);
 const newSeed = (): number => pinnedSeed ?? randomSeed();
 const bridge = createBridge(newSeed(), GAME_DEFS, () => { if (!switches.noAutosave) saves.autosave(); }, newSeed);
+// GAME-99: ?atMinute=N (лише збірка e2e) — старт о N-й хвилині доби, щоб e2e бачив і день, і ніч без очікування.
+if (seedSwitches.atMinute) bridge.load(step(bridge.state, { kind: 'advance', minutes: seedSwitches.atMinute }));
 const input = newInput();
 // Екран подорожі (GAME-32): знімок сюжету з поточного стану; дію шукаємо в СВІЖОМУ знімку за id —
 // якщо стан тим часом змінився і дії вже немає, нічого не надсилаємо.
@@ -117,7 +121,7 @@ const game = new Phaser.Game({
   // поле по ширині: вбік і на десктопі смуг з боків немає; зайве (< zoom px) ховає overflow поля. FIT із кадром 640×352 давав смуги.
   scale: { mode: Phaser.Scale.NONE, autoCenter: Phaser.Scale.NO_CENTER, zoom: frame0.zoom },
   physics: { default: 'arcade', arcade: { debug: false } },
-  scene: [new WorldScene(bridge, input, probe, worldArt, talkOnMap, actOnMap, (name) => liveSpot(bridge.state, name))],
+  scene: [new WorldScene(bridge, input, probe, worldArt, talkOnMap, actOnMap, (name) => liveSpot(bridge.state, name), !switches.noDaylight)],
 });
 // ?frameLagMs — лише збірка e2e (GAME-97): штучно довгий кадр.
 if (switches.frameLagMs) addFrameLag(game, switches.frameLagMs);
