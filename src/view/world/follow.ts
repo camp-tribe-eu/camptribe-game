@@ -3,13 +3,20 @@
 // Чиста логіка без Phaser: сітка тайлів із шару `walls` мапи, пошук шляху в обхід стін (BFS, 4 напрямки — без зрізання кутів),
 // «місце стоянки» біля того, за ким ідуть, і крок руху. Сцена лише малює те, що тут пораховано; тест ганяє це на трьох мапах.
 
+/** Швидкість героя, px/с — 4 тайли за секунду (як було при 16 px: 64 px/с). Одне число для сцени й для сторожа слідувачів. */
+export const SPEED = 128;
+
 export interface Pt { x: number; y: number }
 export interface Tile { readonly c: number; readonly r: number }
 
 /** Сітка проходимості: solid[r * cols + c] — стіна (будь-який непорожній тайл шару `walls`, як у сцені). */
 export interface Grid { readonly cols: number; readonly rows: number; readonly tile: number; readonly solid: readonly boolean[] }
 
+/** Межа розміру сітки: пошук шляху — BFS по всій мапі, кешований по парах тайлів. Більша мапа мусить упасти голосно, а не тихо просісти по fps. */
+export const MAX_GRID_TILES = 4096;
+
 export function gridFromWalls(cols: number, rows: number, tile: number, wallsData: readonly number[]): Grid {
+  if (cols * rows > MAX_GRID_TILES) throw new Error(`follow: map ${cols}x${rows} exceeds ${MAX_GRID_TILES} tiles — rework the pathing (chunking) before using it`);
   return { cols, rows, tile, solid: Array.from({ length: cols * rows }, (_, i) => (wallsData[i] ?? 0) > 0) };
 }
 
@@ -67,6 +74,34 @@ function restTile(g: Grid, target: Tile, taken: ReadonlySet<number>, avoid: Read
   return target;   // навколо немає жодного вільного тайла (мапа з однієї клітинки) — лишаємось на місці
 }
 
+// Кеші на сітку (сітка незмінна): шлях і місце стоянки залежать лише від тайлів, а не від кадру, тож на кадрах, де ніхто не змінив тайла,
+// BFS не біжить зовсім. Пар тайлів не більше MAX_GRID_TILES², але реально — одиниці сотень (ходять лише по мапі героя).
+const PATHS = new WeakMap<Grid, Map<number, Tile[] | null>>();
+const RESTS = new WeakMap<Grid, Map<string, Tile>>();
+const CACHE_CAP = 20_000;
+const memo = <K, V>(store: WeakMap<Grid, Map<K, V>>, g: Grid): Map<K, V> => {
+  let m = store.get(g);
+  if (!m || m.size > CACHE_CAP) { m = new Map(); store.set(g, m); }
+  return m;
+};
+function cachedPath(g: Grid, from: Tile, to: Tile): Tile[] | null {
+  const m = memo(PATHS, g);
+  const k = idx(g, from) * g.cols * g.rows + idx(g, to);
+  if (m.has(k)) return m.get(k) ?? null;
+  const p = findPath(g, from, to);
+  m.set(k, p);
+  return p;
+}
+function cachedRest(g: Grid, target: Tile, taken: ReadonlySet<number>, avoid: ReadonlySet<number>): Tile {
+  const m = memo(RESTS, g);
+  const k = `${idx(g, target)}|${[...taken].join(',')}|${[...avoid].join(',')}`;
+  const hit = m.get(k);
+  if (hit) return hit;
+  const t = restTile(g, target, taken, avoid);
+  m.set(k, t);
+  return t;
+}
+
 const avoidSet = (g: Grid, spots: readonly Pt[]): Set<number> => new Set(spots.map((s) => idx(g, tileOf(g, s))));
 
 /** Початкові місця стоянки n слідувачів ланцюжка за лідером (поява на мапі). */
@@ -91,12 +126,12 @@ export function stepFollowers(g: Grid, leader: Pt, chain: Pt[], dt: number, spee
   for (const f of chain) {
     const own = tileOf(g, f);
     const target = tileOf(g, ahead);
-    const route = findPath(g, own, target);
+    const route = cachedPath(g, own, target);
     // Стоїть, якщо вже поруч (≤ GAP_STEPS кроків) і не на зайнятому чи «цільовому» тайлі; інакше — до місця стоянки біля цілі.
     const settled = route !== null && route.length - 1 <= GAP_STEPS && !taken.has(idx(g, own)) && !avoid.has(idx(g, own));
     if (!settled) {
-      const goal = restTile(g, target, taken, avoid);
-      const way = findPath(g, own, goal);
+      const goal = cachedRest(g, target, taken, avoid);
+      const way = cachedPath(g, own, goal);
       // Наступна точка — центр наступного тайла шляху (на місці — центр власного): відрізок до неї лежить у двох сусідніх вільних тайлах.
       const next = way && way.length > 1 ? way[1] : way?.[0];
       if (next) {

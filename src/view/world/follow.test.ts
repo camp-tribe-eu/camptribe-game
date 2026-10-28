@@ -5,10 +5,8 @@
 //  3) слідувач не стоїть на тайлі цілі взаємодії.
 // Мутації (кожна робить свій тест червоним, див. PR): `findPath` без стін; `restTile` без `avoid`; крок без руху.
 import { describe, expect, it } from 'vitest';
-import sceneSource from './scene.ts?raw';
-import { FOLLOW_SPEED_FACTOR, centerOf, findPath, gridFromWalls, isSolid, restPoints, stepFollowers, tileOf, type Grid, type Pt, type Tile } from './follow';
+import { FOLLOW_SPEED_FACTOR, SPEED, centerOf, findPath, gridFromWalls, isSolid, restPoints, stepFollowers, tileOf, type Grid, type Pt, type Tile } from './follow';
 
-const SPEED = Number(/export const SPEED = (\d+)/.exec(sceneSource)?.[1]);
 const TILE = 32;
 /** N з картки: найдальший слідувач (третій у ланцюжку) на кінці — не далі стількох тайлів від лідера. Заміряно ≤ 4,7 на трьох мапах; поріг із запасом. */
 export const N_TILES = 5;

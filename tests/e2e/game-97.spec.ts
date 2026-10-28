@@ -66,8 +66,10 @@ async function medianFps(page: Page, walk: boolean): Promise<{ samples: number[]
   // GAME-112: еталонна сцена — З РОДИНОЮ (два слідувачі); без них fps міряв би сцену без найдорожчого, що в ній додалось.
   expect((await probe(page)).followers.length, 'у еталонній сцені нема слідувачів родини').toBeGreaterThanOrEqual(2);
   let walking = walk;
-  const walker = (async (): Promise<void> => {   // рядок 5 мапи (спавн): вільно від x≈16 до x≈300; 0,6 с ходу ≈ 77 px — не впирається в стіни
-    for (let left = true; walking; left = !left) { await page.keyboard.down(left ? 'ArrowLeft' : 'ArrowRight'); await page.waitForTimeout(600); await page.keyboard.up(left ? 'ArrowLeft' : 'ArrowRight'); }
+  let travelled = 0;   // сумарний шлях слідувачів за вимір (тайлів-пікселів): герой ходить туди-сюди, тож «початок ≠ кінець» нічого б не доводило
+  let prevPos = (await probe(page)).followers;
+  const walker = (async (): Promise<void> => {   // рядок 5 мапи (спавн): вільно від x≈16 до x≈300; 1,5 с ходу ≈ 192 px (6 тайлів, далі за GAP слідувачів) — не впирається в стіни
+    for (let left = true; walking; left = !left) { await page.keyboard.down(left ? 'ArrowLeft' : 'ArrowRight'); await page.waitForTimeout(750); const now = (await probe(page)).followers; travelled += now.reduce((a, f, i) => a + Math.hypot(f.x - (prevPos[i]?.x ?? f.x), f.y - (prevPos[i]?.y ?? f.y)), 0); prevPos = now; await page.waitForTimeout(750); await page.keyboard.up(left ? 'ArrowLeft' : 'ArrowRight'); }
   })();
   const nextWindow = async (after: number): Promise<Probe> => {
     await page.waitForFunction((n) => (window as unknown as { __game: { probe: Probe } }).__game.probe.fpsWindows > n, after, { timeout: 15_000, polling: 100 });
@@ -75,7 +77,6 @@ async function medianFps(page: Page, walk: boolean): Promise<{ samples: number[]
   };
   // Вікно, відкрите ще до готовності сторінки, відкидаємо: воно не повністю в нашому вимірі.
   let last = (await nextWindow((await probe(page)).fpsWindows)).fpsWindows;
-  const start = await probe(page);
   const samples: number[] = [];
   while (samples.length < FPS_SAMPLES) {
     const p = await nextWindow(last);   // кожен замір — окреме закрите вікно (fpsWindows зріс), не повтор того самого числа
@@ -84,10 +85,7 @@ async function medianFps(page: Page, walk: boolean): Promise<{ samples: number[]
   }
   walking = false;
   await walker;
-  if (walk) {   // ходьба справді була: слідувачі зрушили з місця (інакше «з ходьбою» нічого б не доводило)
-    const end = await probe(page);
-    expect(end.followers.some((f, i) => Math.hypot(f.x - (start.followers[i]?.x ?? f.x), f.y - (start.followers[i]?.y ?? f.y)) > 8), 'слідувачі стояли — ходьби не було').toBe(true);
-  }
+  if (walk) expect(travelled, 'слідувачі стояли — ходьби не було').toBeGreaterThan(100);   // ≥ 100 px сумарно (за вимір ≈ 15 с — сотні)
   const sorted = [...samples].sort((a, b) => a - b);
   const mid = sorted.length >> 1;
   const at = (i: number): number => sorted[i] ?? Number.NaN;   // NaN, а не 0: порожній список не пройде порогу тихо

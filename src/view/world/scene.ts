@@ -10,10 +10,9 @@ import { KEY_BINDINGS, KEY_CODES, TAP_MAX_MOVE, TAP_MAX_MS, actionTarget, consum
 import type { Bridge } from './bridge';
 import type { WorldArt } from './art';
 import { COLS, FRAME, frameIndex, type Dir } from './character';
-import { FOLLOW_SPEED_FACTOR, gridFromWalls, restPoints, stepFollowers, type Grid, type Pt } from './follow';
+import { FOLLOW_SPEED_FACTOR, SPEED, gridFromWalls, restPoints, stepFollowers, type Grid, type Pt } from './follow';
 
 export const TILE = 32;
-export const SPEED = 128; // px/с — 4 тайли за секунду (як було при 16 px: 64 px/с)
 const INTERACT_RANGE = TILE * 1.5;
 /** Ноги персонажа — на 0,9 висоти кадру 64 px; тіло колізії (16×10) стоїть на ногах. y ноги = y спрайта = глибина сортування. */
 const ORIGIN_Y = 0.9;
