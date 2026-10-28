@@ -271,6 +271,9 @@ test.describe('(c) негативні контролі', () => {
     for (const [k, key] of [['complete', 'q.ch1-home-001'], ['visit', 'loc.road'], ['complete', 'q.st-004'], ['visit', 'loc.camp.lake']] as const) await act(page, k, key);
     expect((await core(page)).game.wave?.active?.waveId).toBe(W3);
     await panel(page).locator('[data-ui="story-close"]').click();
+    // Проба оновлюється кадром сцени, а поки відкрита панель подорожі, кадрів немає: щойно після story-close вона ще стара (у CI — 0 замість 18,
+    // тож різниця «набігала» 18 хибних команд). Чекаємо свіжої проби: до цього кроку надіслано ≥ 1 команди, нуль у пробі — застарілий.
+    await expect.poll(async () => (await probe(page)).commandsSent, { message: 'проба оновилась кадром після закриття панелі' }).toBeGreaterThan(0);
     const sent0 = (await probe(page)).commandsSent;
     await goAndPress(page, 'task.pick-spot');
     expect((await probe(page)).commandsSent - sent0).toBe(0);
