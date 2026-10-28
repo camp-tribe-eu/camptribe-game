@@ -102,6 +102,44 @@ function cachedRest(g: Grid, target: Tile, taken: ReadonlySet<number>, avoid: Re
   return t;
 }
 
+/** Крок точки `f` уздовж шляху `way` (центр наступного тайла; на місці — центр власного): відрізок лежить у двох сусідніх вільних тайлах. */
+export function moveToward(g: Grid, f: Pt, way: readonly Tile[] | null, dt: number, speed: number): void {
+  const next = way && way.length > 1 ? way[1] : way?.[0];
+  if (!next) return;
+  const to = centerOf(g, next);
+  const dx = to.x - f.x;
+  const dy = to.y - f.y;
+  const d = Math.hypot(dx, dy);
+  const k = d <= speed * dt || d === 0 ? 1 : (speed * dt) / d;
+  f.x += dx * k;
+  f.y += dy * k;
+}
+
+/** Крок `f` до тайла `goal` найкоротшим шляхом у обхід стін (кешований). true — вже в центрі цього тайла. */
+export function stepTo(g: Grid, f: Pt, goal: Tile, dt: number, speed: number): boolean {
+  const c = centerOf(g, goal);
+  if (Math.hypot(c.x - f.x, c.y - f.y) < 0.5) return true;
+  const own = tileOf(g, f);
+  if (own.c === goal.c && own.r === goal.r) { f.x = c.x; f.y = c.y; moveToward(g, f, [goal], dt, speed); return true; }
+  moveToward(g, f, cachedPath(g, own, goal), dt, speed);
+  return false;
+}
+
+/** Слот у вільному строю (GAME-173): не позаду в одну лінію, а клином — по черзі ліворуч і праворуч від напрямку руху, на крок-два позаду. */
+export function slotTile(g: Grid, leader: Tile, heading: Pt, i: number): Tile {
+  const hx = Math.abs(heading.x) >= Math.abs(heading.y) ? Math.sign(heading.x) : 0;
+  const hy = hx === 0 ? Math.sign(heading.y) : 0;
+  if (hx === 0 && hy === 0) return leader;
+  const side = i % 2 === 0 ? 1 : -1;
+  const back = 1 + Math.floor(i / 2);
+  const tries: Tile[] = [
+    { c: leader.c - hx * back - hy * side, r: leader.r - hy * back + hx * side },
+    { c: leader.c - hx * back, r: leader.r - hy * back },
+  ];
+  // Слот по той бік стіни (шлях до нього довший за «клин» на крок-два) не годиться: слідувач пішов би в обхід замість стати поруч.
+  return tries.find((t) => !isSolid(g, t) && (cachedPath(g, leader, t)?.length ?? Infinity) - 1 <= 2 + back) ?? leader;
+}
+
 const avoidSet = (g: Grid, spots: readonly Pt[]): Set<number> => new Set(spots.map((s) => idx(g, tileOf(g, s))));
 
 /** Початкові місця стоянки n слідувачів ланцюжка за лідером (поява на мапі). */
@@ -119,30 +157,23 @@ export function restPoints(g: Grid, leader: Pt, n: number, spots: readonly Pt[])
 }
 
 /** Один крок: кожен слідувач іде за попереднім у ланцюжку (перший — за лідером). Змінює `chain` на місці. dt — секунди. */
-export function stepFollowers(g: Grid, leader: Pt, chain: Pt[], dt: number, speed: number, spots: readonly Pt[]): void {
+export function stepFollowers(g: Grid, leader: Pt, chain: Pt[], dt: number, speed: number, spots: readonly Pt[], heading?: Pt): void {
   const avoid = avoidSet(g, spots);
   const taken = new Set<number>([idx(g, tileOf(g, leader))]);
   let ahead: Pt = leader;
-  for (const f of chain) {
+  for (const [i, f] of chain.entries()) {
     const own = tileOf(g, f);
-    const target = tileOf(g, ahead);
+    // GAME-173: з напрямком руху — слот клином біля героя (вільний стрій); без нього — старий ланцюжок «за попереднім».
+    const target = heading ? slotTile(g, tileOf(g, leader), heading, i) : tileOf(g, ahead);
     const route = cachedPath(g, own, target);
     // Стоїть, якщо вже поруч (≤ GAP_STEPS кроків) і не на зайнятому чи «цільовому» тайлі; інакше — до місця стоянки біля цілі.
-    const settled = route !== null && route.length - 1 <= GAP_STEPS && !taken.has(idx(g, own)) && !avoid.has(idx(g, own));
+    const settled = route !== null && route.length - 1 <= (heading ? 0 : GAP_STEPS) && !taken.has(idx(g, own)) && !avoid.has(idx(g, own));
     if (!settled) {
-      const goal = cachedRest(g, target, taken, avoid);
+      // Вільний строй: стають саме на свій слот (restTile пропускає цілі тайл — він шукав би сусіда й повертав би до лінії героя).
+      const goal = heading && !taken.has(idx(g, target)) && !avoid.has(idx(g, target)) ? target : cachedRest(g, target, taken, avoid);
       const way = cachedPath(g, own, goal);
       // Наступна точка — центр наступного тайла шляху (на місці — центр власного): відрізок до неї лежить у двох сусідніх вільних тайлах.
-      const next = way && way.length > 1 ? way[1] : way?.[0];
-      if (next) {
-        const to = centerOf(g, next);
-        const dx = to.x - f.x;
-        const dy = to.y - f.y;
-        const d = Math.hypot(dx, dy);
-        const k = d <= speed * dt || d === 0 ? 1 : (speed * dt) / d;
-        f.x += dx * k;
-        f.y += dy * k;
-      }
+      moveToward(g, f, way, dt, speed);
     }
     taken.add(idx(g, tileOf(g, f)));
     ahead = f;
