@@ -18,6 +18,10 @@ declare module '*/validator/codes.mjs' {
   export const WAVE_MIN_TASKS: number;
   export const GEAR_CHECK_VARIANTS: readonly string[];
   export const WAVE_MAX_TASKS: number;
+  /** Стартові гроші гри в центах (GAME-113) — мусять збігатися з мостом (START_MONEY_CENTS). */
+  export const ECON_FLOOR_CENTS: number;
+  /** Слова позики в id/типах контенту (GAME-113). */
+  export const LOAN_RE: RegExp;
 }
 declare module '*/validator/load.mjs' {
   export function loadContent(dir: string, opts?: { allowMissing?: boolean }): { status: string; content: Record<string, unknown> | null; issues: { code: string; where: string; msg: string }[] };
@@ -27,5 +31,6 @@ declare module '*/validator/checks.mjs' {
   /** remembered — факти пам'яті, які може знати NPC цієї розмови (GAME-48); без нього — жодних. */
   export function satisfiable(cond: unknown, known: Set<string>, remembered?: Set<string>): boolean;
   export function contradictions(cond: unknown): Set<string>;
+  export const CHECKS: { id: string; run: (ctx: { content: unknown; today?: string }) => { code: string; where: string; msg: string }[] }[];
   export function validate(content: unknown, opts: { today: string }): { code: string; where: string; msg: string }[];
 }

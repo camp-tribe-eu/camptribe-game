@@ -41,6 +41,10 @@ export const CODES = {
   GEAR_FIELD_MISSING:   { check: 'gear', spec: 'GAME-73: предмет спорядження (kind) має всі поля: tier, weightG, volumeL, waterproofMm, comfortC, sleeps, priceCents, resaleCents' },
   GEAR_RESALE_ABOVE_PRICE: { check: 'gear', spec: 'SIM-INV-004: викуп уживаного (resaleCents) не дорожчий за купівлю (priceCents) — інакше купи-продай дає гроші з нічого' },
   GEAR_DOMINATED:       { check: 'gear', spec: 'SIM-INV-005: річ корисна у своїй ситуації — немає іншої речі того ж виду, не гіршої ні в чому (вага, об’єм, вологостійкість, тепло, місця, ціна)' },
+  // GAME-113: економіка розділу 1 — брак грошей має дешевший вихід, позик немає.
+  ECON_NO_CHEAPER_ALTERNATIVE: { check: 'economy', spec: 'GAME-113: кожна річ тиру 2+ має дешевшу річ нижчого тиру того ж виду — брак грошей не глухий кут (рішення власника 24.10)' },
+  ECON_NO_BASELINE:     { check: 'economy', spec: 'GAME-113: кожен вид спорядження має річ тиру 1 не дорожчу за стартові гроші (ECON_FLOOR_CENTS) — дешевий вихід досяжний з нуля' },
+  ECON_LOAN_FORBIDDEN:  { check: 'economy', spec: 'GAME-113: у розділі 1 немає позик, боргу й кредиту — жоден id, тип чи ефект у контенті їх не називає (рішення власника 24.10)' },
   // GAME-71: календар життя — справжні дати, канікули без перетинів, календар є, коли профіль працює чи має школяра.
   CALENDAR_MISSING:     { check: 'calendar', spec: 'GAME-71: профіль із роботою (job) чи школярем (childInSchool) потребує content/calendar.json — без нього ні зарплати, ні канікул' },
   CALENDAR_BAD_DATE:    { check: 'calendar', spec: 'GAME-71: start — справжня дата YYYY-MM-DD; свята й межі канікул — справжні MM-DD, що є щороку (не 02-30 і не 02-29)' },
@@ -117,6 +121,12 @@ export const SKILL_IDS = ['skill.planning', 'skill.camping', 'skill.mechanics', 
 
 // GAME-73: поля картки спорядження (крім kind — він і робить предмет спорядженням).
 export const GEAR_FIELDS = ['tier', 'weightG', 'volumeL', 'waterproofMm', 'comfortC', 'sleeps', 'priceCents', 'resaleCents'];
+
+// GAME-113: стартові гроші гри в центах (createBridge: START_MONEY_CENTS у src/view/world/bridge.ts) — база кожного виду
+// спорядження мусить бути не дорожчою. Рівність із мостом стереже src/content/economy-ch1.test.ts.
+export const ECON_FLOOR_CENTS = 5000;
+// GAME-113: слова позики в id/типах контенту (латиницею; id — лише a-z0-9.-).
+export const LOAN_RE = /loan|debt|credit|borrow|mortgage|overdraft/i;
 
 // GAME-144: варіанти сцени «перевірка спорядження» (ціль із `gearCheck: true`): вид спорядження × стан. Ціль показує
 // `<textKey>.<варіант>`, коли ядро бачить таку проблему (gearIssue у src/core/gear.ts), і сам `textKey` — нейтральну сцену,
