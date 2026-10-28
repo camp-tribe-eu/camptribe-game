@@ -15,8 +15,9 @@ import type { Command } from '../core/commands';
 import { newSim, step, type SimState } from '../core/sim';
 import { progressKey, moves, type Move } from './moves';
 import { GAME_DEFS } from './slice-defs';
-import { RAW_WAVES, WAVE_CH1_EVENING } from './waves';
-import { FIRE_STAGE, TASK_SPOT, fireplaceDue, fireplacePlayed, liveSpot, pendingWave, spotMove, storyMoves } from './director';
+import { RAW_WAVES, WAVE_CH1_ARRIVAL, WAVE_CH1_CHECKOUT, WAVE_CH1_DEPARTURE, WAVE_CH1_EVENING, WAVE_CH1_ROAD, WAVE_CH1_ROAD_BIKE } from './waves';
+import { FIRE_STAGE, MAP_LOCATION, TASK_SPOT, fireplaceDue, fireplacePlayed, liveSpot, menuTasks, pendingWave, spotMove, storyMoves, waveLocation } from './director';
+import { CONTENT } from './story';
 import { waveOffer } from '../view/story-offer';
 
 const CTX = { defs: GAME_DEFS };
@@ -155,9 +156,12 @@ describe('режисер W4: цілі на мапі', () => {
   const map = JSON.parse(campLake) as { layers: { name: string; objects?: { name: string; type: string }[] }[] };
   const triggers = (map.layers.find((l) => l.name === 'objects')?.objects ?? []).filter((o) => o.type === 'trigger').map((o) => o.name);
 
-  it('кожна справа кожної хвилі має ціль task.<id> на мапі табору, і кожна ціль task.* — справа хвилі', () => {
-    const tasks = RAW_WAVES.flatMap((w) => w.tasks.map((t) => spot(t.id))).sort();
-    expect(tasks.length).toBeGreaterThanOrEqual(3);
+  it('кожна справа кожної хвилі ТАБОРУ має ціль task.<id> на мапі, і кожна ціль task.* — справа хвилі табору (хвилі дому й дороги — з екрана подорожі)', () => {
+    const stageAt = (stage: string): string | undefined => CONTENT.quests.find((q) => q.id === stage)?.locationId;
+    const camp = RAW_WAVES.filter((w) => stageAt(w.stage) === MAP_LOCATION);
+    expect(camp.map((w) => w.id).sort()).toEqual([WAVE_CH1_ARRIVAL, WAVE_CH1_CHECKOUT, WAVE_CH1_EVENING].sort());
+    const tasks = camp.flatMap((w) => w.tasks.map((t) => spot(t.id))).sort();
+    expect(tasks.length).toBeGreaterThanOrEqual(7);
     expect(triggers.filter((t) => t.startsWith(TASK_SPOT)).sort()).toEqual(tasks);
     expect(triggers).toContain('obj.litter');
   });
@@ -224,20 +228,19 @@ describe('режисер W4: цілі на мапі', () => {
     expect(s.game.dialogue?.node).toBe('lantern');
   });
 
-  it('CAMP-001 завершено, поки хвиля ще жива: вогнище лише гріє, доки хвиля не закінчиться; кінець розділу хвилі не чекає', () => {
+  it('CAMP-001 завершено, поки хвиля ще жива (зріз 3): етап минув — на наступному кроці незроблене спізнилось, хвиля закінчена; вогнище з ліхтарем; кінець розділу хвилі не чекає', () => {
     const at = toStage('bike', CAMP);
     let s = send(at, storyMoves(at, GAME_DEFS)[0] as Move);
+    s = must(s, spotMove(s, spot('dinner')) as Move);
     s = must(dinnerTalk(s), done(CAMP));
-    expect(s.game.wave?.active).not.toBeNull();
-    expect(fireplaceDue(s)).toBe(false);
-    expect(spotMove(s, 'obj.campfire')).toEqual({ type: 'Interact', targetId: 'obj.campfire' });
+    const next = s;   // крок команди закінчується кроком годинника (afterClock) — хвиля вже закрита
+    expect(next.game.wave?.active).toBeNull();
+    expect(next.game.wave?.past[WAVE_CH1_EVENING]).toEqual({ dinner: 'done', firewood: 'late', 'cover-bikes': 'late' });
+    expect(fireplaceDue(next)).toBe(true);
+    expect(spotMove(next, 'obj.campfire')).toEqual({ type: 'StartScene', sceneId: 'dlg.ch1-fire', facts: ['f.fire-dinner-done'] });
     const ended = must(s, done(FIRE_STAGE));
-    expect(ended.game.quests['CH1-D3-001']?.status).toBe('active');   // GAME-144: межа дня 2 пройдена з живою хвилею — хвиля не блокує
-    expect(ended.game.wave?.active).not.toBeNull();
-    // А якщо дочекатись: хвиля згасла (усе late) — сцена відкривається, з ліхтарем.
-    const waited = minutes(s, 61);
-    expect(fireplaceDue(waited)).toBe(true);
-    expect(spotMove(waited, 'obj.campfire')).toEqual({ type: 'StartScene', sceneId: 'dlg.ch1-fire', facts: [] });
+    expect(ended.game.quests['CH1-D3-001']?.status).toBe('active');   // GAME-144: межа дня 2 → день 3 (раніше тут кінець кампанії, GAME-170)
+    expect(ended.game.campaignEnded).toBeFalsy();
   });
 
   it('пакети біля води: прапорець f.litter-cleaned-ch1, запис журналу Interact; вдруге — GRANT_ALREADY_GIVEN, об\'єкт німий', () => {
@@ -249,5 +252,118 @@ describe('режисер W4: цілі на мапі', () => {
     expect(s.journal.at(-1)).toMatchObject({ type: 'Interact', ref: 'obj.litter' });
     expect(liveSpot(s, 'obj.litter')).toBe(false);
     expect(last(send(s, { type: 'Interact', targetId: 'obj.litter' }))).toEqual({ ok: false, code: 'GRANT_ALREADY_GIVEN' });
+  });
+});
+
+// Зріз 3 · W1 «Виїзд о шостій» (дім), W2 «Небо темнішає» (зупинка в дорозі, авто / вело), W3 «Встигнути до зливи» (приїзд у табір) —
+// на справжньому шляху гри: стартер лише в локації етапу, рівно раз; варіанти; справи дому й дороги — кнопки екрана подорожі,
+// справи табору — цілі мапи; етап минув — незроблене спізнилось, і наступна хвиля стартує; «не встигли до дощу» — спорядження вологе.
+describe('режисер W1–W3: стартер за локацією етапу (GAME-170, зріз 3)', () => {
+  const create = (kind: 'bike' | 'car-cat' | 'car'): Move => kind === 'bike'
+    ? { type: 'CreateCharacter', profileId: 'profile.solo-explorer', transportId: 'transport.bike' }
+    : { type: 'CreateCharacter', profileId: 'profile.family-teen', transportId: 'transport.car', ...(kind === 'car-cat' ? { animalId: 'animal.cat' } : {}) };
+  /** Крамниця з наметом і спальником; останній хід — завершення ST-003: CH1-HOME-001 активний, гравець ще в крамниці. */
+  const toShopDone = (kind: 'bike' | 'car-cat' | 'car'): SimState => {
+    let s = newSim(7, 5_000);
+    for (const m of [create(kind), done('PROLOGUE-HOME-001'), done('ST-001'), done('ST-002'), { type: 'Visit', locationId: 'loc.shop' } as Move,
+      { type: 'Pickup', itemId: 'item.tent' } as Move, { type: 'Pickup', itemId: 'item.sleeping-bag' } as Move, done('ST-003')]) s = must(s, m);
+    return s;
+  };
+  /** Режисер + ядро: усі ходи сюжету для стану (як main.ts direct()). */
+  const direct = (s: SimState): SimState => storyMoves(s, GAME_DEFS).reduce((acc, m) => must(acc, m), s);
+  const open = (s: SimState): string[] => Object.entries(s.game.wave?.active?.tasks ?? {}).filter(([, t]) => t.outcome === 'open').map(([id]) => id).sort();
+
+  it('W1: CH1-HOME-001 активний у крамниці — режисер мовчить; удома — рівно один StartWave; варіанти: авто+Мія = Мія+карта+світло, вело = карта+світло+Анна', () => {
+    const shop = toShopDone('car-cat');
+    expect(shop.game.quests['CH1-HOME-001']?.status).toBe('active');
+    expect(storyMoves(shop, GAME_DEFS)).toEqual([]);
+    const home = must(shop, { type: 'Visit', locationId: 'loc.home' });
+    expect(storyMoves(home, GAME_DEFS)).toEqual([{ type: 'StartWave', waveId: WAVE_CH1_DEPARTURE }]);
+    const s = direct(home);
+    expect(taskIds(s)).toEqual(['lights-window', 'map-to-luggage', 'mia-carrier']);
+    expect(storyMoves(s, GAME_DEFS)).toEqual([]);
+    expect(waveLocation(s.game, GAME_DEFS)).toBe('loc.home');
+    const bike = direct(must(toShopDone('bike'), { type: 'Visit', locationId: 'loc.home' }));
+    expect(taskIds(bike)).toEqual(['anna-goodbye', 'lights-window', 'map-to-luggage']);
+    const car = direct(must(toShopDone('car'), { type: 'Visit', locationId: 'loc.home' }));
+    expect(taskIds(car)).toEqual(['lights-window', 'map-to-luggage']);
+  });
+
+  it('W1: справи дому — кнопки екрана подорожі (menuTasks → CompleteTask), не цілі мапи; закрита справа зникає з меню; помічник не садить Мію', () => {
+    const s = direct(must(toShopDone('car-cat'), { type: 'Visit', locationId: 'loc.home' }));
+    expect(menuTasks(s, GAME_DEFS).map((m) => (m.type === 'CompleteTask' ? m.taskId : m.type)).sort()).toEqual(['lights-window', 'map-to-luggage', 'mia-carrier']);
+    expect(liveSpot(s, spot('mia-carrier')), 'мапа — табір, а гравець удома: ціль німа').toBe(false);
+    const offer = waveOffer(s);
+    expect(offer).toMatchObject({ titleKey: WAVE_CH1_DEPARTURE, done: 0, total: 3 });
+    const helper = send(s, { type: 'CompleteTask', taskId: 'mia-carrier', actor: 'helper' });
+    expect(last(helper)).toEqual({ ok: false, code: 'TASK_LEADER_ONLY' });
+    const s1 = must(s, { type: 'CompleteTask', taskId: 'mia-carrier' });
+    expect(menuTasks(s1, GAME_DEFS).map((m) => (m.type === 'CompleteTask' ? m.taskId : m.type)).sort()).toEqual(['lights-window', 'map-to-luggage']);
+    expect(waveOffer(s1)).toMatchObject({ done: 1, total: 3 });
+    // Строк минув — справа зникає з меню ще до запису late (хвилина dueAt + 1).
+    const late = minutes(s1, 41);
+    expect(menuTasks(late, GAME_DEFS).map((m) => (m.type === 'CompleteTask' ? m.taskId : m.type))).toEqual(['lights-window']);
+    expect(late.game.wave?.active?.tasks['map-to-luggage']?.outcome).toBe('late');
+  });
+
+  it('W1 → W2 → W3: етап минув — незроблене спізнилось на наступному кроці, і хвиля наступного етапу стартує лише на місці (зупинка, табір)', () => {
+    let s = direct(must(toShopDone('car-cat'), { type: 'Visit', locationId: 'loc.home' }));
+    s = must(s, { type: 'CompleteTask', taskId: 'mia-carrier' });
+    s = must(s, done('CH1-HOME-001'));                     // виїзд: ST-004 активний, гравець ще вдома
+    expect(storyMoves(s, GAME_DEFS), 'W2 не стартує вдома').toEqual([]);
+    s = must(s, { type: 'Visit', locationId: 'loc.road' }); // дорога рухає годинник → W1 закрита: Мія done, решта late
+    while (s.game.dialogue) s = must(s, { type: 'Continue' }); // можлива подія в дорозі
+    expect(s.game.wave?.past[WAVE_CH1_DEPARTURE]).toEqual({ 'mia-carrier': 'done', 'map-to-luggage': 'late', 'lights-window': 'late' });
+    expect(storyMoves(s, GAME_DEFS)).toEqual([{ type: 'StartWave', waveId: WAVE_CH1_ROAD }]);
+    s = direct(s);
+    expect(taskIds(s)).toEqual(['check-route', 'fix-luggage', 'mia-water-blanket']);
+    expect(menuTasks(s, GAME_DEFS)).toHaveLength(3);
+    expect(open(s)).toEqual(['check-route', 'fix-luggage', 'mia-water-blanket']);
+    s = must(s, { type: 'CompleteTask', taskId: 'check-route' });
+    s = must(s, done('ST-004'));
+    expect(storyMoves(s, GAME_DEFS), 'W3 не стартує на зупинці').toEqual([]);
+    s = must(s, { type: 'Visit', locationId: 'loc.camp.lake' });
+    while (s.game.dialogue) s = must(s, { type: 'Continue' });
+    expect(s.game.wave?.past[WAVE_CH1_ROAD]).toEqual({ 'check-route': 'done', 'fix-luggage': 'late', 'mia-water-blanket': 'late' });
+    // «Багаж з'їхав» (fix-luggage late, wetGear) — намет і спальник вологі (дощ дороги теж міг намочити — чисту причину доводить тест вело нижче).
+    expect(s.game.gear['item.tent']?.wet).toBe(true);
+    expect(s.game.gear['item.sleeping-bag']?.wet).toBe(true);
+    expect(storyMoves(s, GAME_DEFS)).toEqual([{ type: 'StartWave', waveId: WAVE_CH1_ARRIVAL }]);
+    s = direct(s);
+    expect(taskIds(s)).toEqual(['gear-shelter', 'mia-car', 'pick-spot', 'pitch-tent']);
+    expect(menuTasks(s, GAME_DEFS), 'справи табору — цілі мапи, не меню').toEqual([]);
+    for (const id of ['pick-spot', 'pitch-tent', 'gear-shelter', 'mia-car']) expect(liveSpot(s, spot(id)), id).toBe(true);
+    expect(spotMove(s, spot('pick-spot'))).toEqual({ type: 'CompleteTask', taskId: 'pick-spot' });
+    const helper = send(s, { type: 'CompleteTask', taskId: 'pick-spot', actor: 'helper' });
+    expect(last(helper)).toEqual({ ok: false, code: 'TASK_LEADER_ONLY' });
+    for (const id of ['pick-spot', 'pitch-tent', 'gear-shelter', 'mia-car']) s = must(minutes(s, 3), spotMove(s, spot(id)) as Move);
+    expect(s.game.wave?.active).toBeNull();
+    expect(Object.values(s.game.wave?.past[WAVE_CH1_ARRIVAL] ?? {})).toEqual(['done', 'done', 'done', 'done']);
+    expect(s.game.campaignEnded).toBe(false);
+  });
+
+  it('W2 вело: друга хвиля того ж етапу — колесо, чохли, шлях; Мії немає; W1 без Мії; «усе проігноровано» → усе late, нічого не зламано', () => {
+    let s = direct(must(toShopDone('bike'), { type: 'Visit', locationId: 'loc.home' }));
+    expect(s.game.wave?.active?.waveId).toBe(WAVE_CH1_DEPARTURE);
+    s = must(s, done('CH1-HOME-001'));
+    s = must(s, { type: 'Visit', locationId: 'loc.road' });
+    while (s.game.dialogue) s = must(s, { type: 'Continue' });
+    expect(Object.values(s.game.wave?.past[WAVE_CH1_DEPARTURE] ?? {})).toEqual(['late', 'late', 'late']);
+    expect(storyMoves(s, GAME_DEFS)).toEqual([{ type: 'StartWave', waveId: WAVE_CH1_ROAD_BIKE }]);
+    s = direct(s);
+    expect(taskIds(s)).toEqual(['bag-covers', 'patch-tyre', 'pick-path']);
+    s = { ...s, game: { ...s.game, gear: {} } };   // сухе спорядження: далі годинник іде без дороги, тож волога — лише від wetGear
+    const gone = minutes(s, 61);
+    expect(gone.game.wave?.active).toBeNull();
+    expect(Object.values(gone.game.wave?.past[WAVE_CH1_ROAD_BIKE] ?? {})).toEqual(['late', 'late', 'late']);
+    expect(gone.game.gear['item.tent']?.wet, 'чохли спізнились → вологе').toBe(true);
+    expect(storyMoves(gone, GAME_DEFS)).toEqual([]);
+    expect(last(must(gone, done('ST-004'))).ok).toBe(true);
+  });
+
+  it('W3 закривається, коли ST-005 завершено (кінець дня), і W4 стартує на своєму етапі — хвилі не наздоганяють одна одну', () => {
+    const at = toStage('car-cat', CAMP);   // шлях toStage іде без режисера: W1–W3 не стартували — у past їх немає
+    expect(Object.keys(at.game.wave?.past ?? {})).toEqual([]);
+    expect(storyMoves(at, GAME_DEFS)).toEqual([{ type: 'StartWave', waveId: WAVE_CH1_EVENING }]);
   });
 });

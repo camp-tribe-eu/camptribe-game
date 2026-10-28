@@ -1,161 +1,100 @@
 [
   {
-    "id": "wave.ch1-day2-evening",
-    "titleKey": "wave.ch1-day2-evening",
-    "hookKey": "wave.ch1-day2-evening.hook",
-    "stage": "CH1-D2-CAMP-001",
-    "fallback": {
-      "textKey": "wave.ch1-day2-evening.fallback"
-    },
-    "allDone": {
-      "textKey": "wave.ch1-day2-evening.all-done"
-    },
+    "id": "wave.ch1-home-departure", "titleKey": "wave.ch1-home-departure", "hookKey": "wave.ch1-home-departure.hook", "stage": "CH1-HOME-001",
+    "fallback": { "textKey": "wave.ch1-home-departure.fallback" },
+    "allDone": { "textKey": "wave.ch1-home-departure.all-done" },
     "tasks": [
-      {
-        "id": "dinner",
-        "textKey": "wave.ch1-day2-evening.dinner",
-        "limitMin": 45,
-        "done": {
-          "textKey": "wave.ch1-day2-evening.dinner.done"
-        },
-        "late": {
-          "textKey": "wave.ch1-day2-evening.dinner.late"
-        }
-      },
-      {
-        "id": "firewood",
-        "textKey": "wave.ch1-day2-evening.firewood",
-        "limitMin": 40,
-        "done": {
-          "textKey": "wave.ch1-day2-evening.firewood.done"
-        },
-        "late": {
-          "textKey": "wave.ch1-day2-evening.firewood.late"
-        }
-      },
-      {
-        "id": "find-mia",
-        "textKey": "wave.ch1-day2-evening.find-mia",
-        "limitMin": 60,
-        "leaderOnly": true,
-        "animal": "animal.cat",
-        "when": {
-          "animals": [
-            "animal.cat"
-          ]
-        },
-        "targets": [
-          {
-            "id": "spot.pines",
-            "safe": true
-          },
-          {
-            "id": "spot.bench",
-            "safe": true
-          },
-          {
-            "id": "spot.bike-shed",
-            "safe": true
-          }
-        ],
-        "done": {
-          "textKey": "wave.ch1-day2-evening.find-mia.done"
-        },
-        "late": {
-          "textKey": "wave.ch1-day2-evening.find-mia.late"
-        }
-      },
-      {
-        "id": "cover-bikes",
-        "textKey": "wave.ch1-day2-evening.cover-bikes",
-        "limitMin": 50,
-        "when": {
-          "transports": [
-            "transport.bike"
-          ]
-        },
-        "done": {
-          "textKey": "wave.ch1-day2-evening.cover-bikes.done"
-        },
-        "late": {
-          "textKey": "wave.ch1-day2-evening.cover-bikes.late"
-        }
-      }
+      { "id": "mia-carrier", "textKey": "wave.ch1-home-departure.mia-carrier", "limitMin": 50, "leaderOnly": true, "animal": "animal.cat",
+        "when": { "animals": ["animal.cat"] },
+        "targets": [{ "id": "spot.sofa", "safe": true }, { "id": "spot.box", "safe": true }, { "id": "spot.windowsill", "safe": true }],
+        "done": { "textKey": "wave.ch1-home-departure.mia-carrier.done" }, "late": { "textKey": "wave.ch1-home-departure.mia-carrier.late" } },
+      { "id": "map-to-luggage", "textKey": "wave.ch1-home-departure.map-to-luggage", "limitMin": 40,
+        "done": { "textKey": "wave.ch1-home-departure.map-to-luggage.done" }, "late": { "textKey": "wave.ch1-home-departure.map-to-luggage.late" } },
+      { "id": "lights-window", "textKey": "wave.ch1-home-departure.lights-window", "limitMin": 45,
+        "done": { "textKey": "wave.ch1-home-departure.lights-window.done" }, "late": { "textKey": "wave.ch1-home-departure.lights-window.late" } },
+      { "id": "anna-goodbye", "textKey": "wave.ch1-home-departure.anna-goodbye", "limitMin": 50, "leaderOnly": true, "when": { "transports": ["transport.bike"] },
+        "done": { "textKey": "wave.ch1-home-departure.anna-goodbye.done" }, "late": { "textKey": "wave.ch1-home-departure.anna-goodbye.late" } }
     ]
   },
   {
-    "id": "wave.ch1-day3-checkout",
-    "titleKey": "wave.ch1-day3-checkout",
-    "hookKey": "wave.ch1-day3-checkout.hook",
-    "stage": "CH1-D3-001",
-    "fallback": {
-      "textKey": "wave.ch1-day3-checkout.fallback"
-    },
-    "allDone": {
-      "textKey": "wave.ch1-day3-checkout.all-done"
-    },
+    "id": "wave.ch1-day1-road", "titleKey": "wave.ch1-day1-road", "hookKey": "wave.ch1-day1-road.hook", "stage": "ST-004",
+    "when": { "transports": ["transport.car"] },
+    "fallback": { "textKey": "wave.ch1-day1-road.fallback" },
+    "allDone": { "textKey": "wave.ch1-day1-road.all-done" },
     "tasks": [
-      {
-        "id": "walk-site",
-        "textKey": "wave.ch1-day3-checkout.walk-site",
-        "limitMin": 45,
-        "done": {
-          "textKey": "wave.ch1-day3-checkout.walk-site.done"
-        },
-        "late": {
-          "textKey": "wave.ch1-day3-checkout.walk-site.late"
-        }
-      },
-      {
-        "id": "clean-up",
-        "textKey": "wave.ch1-day3-checkout.clean-up",
-        "limitMin": 50,
-        "done": {
-          "textKey": "wave.ch1-day3-checkout.clean-up.done"
-        },
-        "late": {
-          "textKey": "wave.ch1-day3-checkout.clean-up.late"
-        }
-      },
-      {
-        "id": "pack-tent",
-        "textKey": "wave.ch1-day3-checkout.pack-tent",
-        "limitMin": 55,
-        "done": {
-          "textKey": "wave.ch1-day3-checkout.pack-tent.done"
-        },
-        "late": {
-          "textKey": "wave.ch1-day3-checkout.pack-tent.late"
-        }
-      },
-      {
-        "id": "mia-carrier-home",
-        "textKey": "wave.ch1-day3-checkout.mia-carrier-home",
-        "limitMin": 40,
-        "leaderOnly": true,
-        "animal": "animal.cat",
-        "when": {
-          "animals": [
-            "animal.cat"
-          ]
-        },
-        "targets": [
-          {
-            "id": "spot.tent-mat",
-            "safe": true
-          },
-          {
-            "id": "spot.car",
-            "safe": true
-          }
-        ],
-        "done": {
-          "textKey": "wave.ch1-day3-checkout.mia-carrier-home.done"
-        },
-        "late": {
-          "textKey": "wave.ch1-day3-checkout.mia-carrier-home.late"
-        }
-      }
+      { "id": "fix-luggage", "textKey": "wave.ch1-day1-road.fix-luggage", "limitMin": 45,
+        "done": { "textKey": "wave.ch1-day1-road.fix-luggage.done" }, "late": { "textKey": "wave.ch1-day1-road.fix-luggage.late", "effects": [{ "wetGear": true }] } },
+      { "id": "mia-water-blanket", "textKey": "wave.ch1-day1-road.mia-water-blanket", "limitMin": 40, "leaderOnly": true, "animal": "animal.cat",
+        "when": { "animals": ["animal.cat"] },
+        "targets": [{ "id": "spot.carrier", "safe": true }],
+        "done": { "textKey": "wave.ch1-day1-road.mia-water-blanket.done" }, "late": { "textKey": "wave.ch1-day1-road.mia-water-blanket.late" } },
+      { "id": "check-route", "textKey": "wave.ch1-day1-road.check-route", "limitMin": 50, "leaderOnly": true,
+        "done": { "textKey": "wave.ch1-day1-road.check-route.done" }, "late": { "textKey": "wave.ch1-day1-road.check-route.late" } }
+    ]
+  },
+  {
+    "id": "wave.ch1-day1-road-bike", "titleKey": "wave.ch1-day1-road-bike", "hookKey": "wave.ch1-day1-road-bike.hook", "stage": "ST-004",
+    "when": { "transports": ["transport.bike"] },
+    "fallback": { "textKey": "wave.ch1-day1-road-bike.fallback" },
+    "allDone": { "textKey": "wave.ch1-day1-road-bike.all-done" },
+    "tasks": [
+      { "id": "patch-tyre", "textKey": "wave.ch1-day1-road-bike.patch-tyre", "limitMin": 45,
+        "done": { "textKey": "wave.ch1-day1-road-bike.patch-tyre.done" }, "late": { "textKey": "wave.ch1-day1-road-bike.patch-tyre.late" } },
+      { "id": "bag-covers", "textKey": "wave.ch1-day1-road-bike.bag-covers", "limitMin": 40,
+        "done": { "textKey": "wave.ch1-day1-road-bike.bag-covers.done" }, "late": { "textKey": "wave.ch1-day1-road-bike.bag-covers.late", "effects": [{ "wetGear": true }] } },
+      { "id": "pick-path", "textKey": "wave.ch1-day1-road-bike.pick-path", "limitMin": 50, "leaderOnly": true,
+        "done": { "textKey": "wave.ch1-day1-road-bike.pick-path.done" }, "late": { "textKey": "wave.ch1-day1-road-bike.pick-path.late" } }
+    ]
+  },
+  {
+    "id": "wave.ch1-day1-arrival", "titleKey": "wave.ch1-day1-arrival", "hookKey": "wave.ch1-day1-arrival.hook", "stage": "ST-005",
+    "fallback": { "textKey": "wave.ch1-day1-arrival.fallback" },
+    "allDone": { "textKey": "wave.ch1-day1-arrival.all-done" },
+    "tasks": [
+      { "id": "pick-spot", "textKey": "wave.ch1-day1-arrival.pick-spot", "limitMin": 50, "leaderOnly": true,
+        "done": { "textKey": "wave.ch1-day1-arrival.pick-spot.done" }, "late": { "textKey": "wave.ch1-day1-arrival.pick-spot.late" } },
+      { "id": "pitch-tent", "textKey": "wave.ch1-day1-arrival.pitch-tent", "limitMin": 55,
+        "done": { "textKey": "wave.ch1-day1-arrival.pitch-tent.done" }, "late": { "textKey": "wave.ch1-day1-arrival.pitch-tent.late", "effects": [{ "wetGear": true }] } },
+      { "id": "gear-shelter", "textKey": "wave.ch1-day1-arrival.gear-shelter", "limitMin": 45,
+        "done": { "textKey": "wave.ch1-day1-arrival.gear-shelter.done" }, "late": { "textKey": "wave.ch1-day1-arrival.gear-shelter.late" } },
+      { "id": "mia-car", "textKey": "wave.ch1-day1-arrival.mia-car", "limitMin": 40, "leaderOnly": true, "animal": "animal.cat",
+        "when": { "animals": ["animal.cat"] },
+        "targets": [{ "id": "spot.car", "safe": true }],
+        "done": { "textKey": "wave.ch1-day1-arrival.mia-car.done" }, "late": { "textKey": "wave.ch1-day1-arrival.mia-car.late" } }
+    ]
+  },
+  {
+    "id": "wave.ch1-day2-evening", "titleKey": "wave.ch1-day2-evening", "hookKey": "wave.ch1-day2-evening.hook", "stage": "CH1-D2-CAMP-001",
+    "fallback": { "textKey": "wave.ch1-day2-evening.fallback" },
+    "allDone": { "textKey": "wave.ch1-day2-evening.all-done" },
+    "tasks": [
+      { "id": "dinner", "textKey": "wave.ch1-day2-evening.dinner", "limitMin": 45,
+        "done": { "textKey": "wave.ch1-day2-evening.dinner.done" }, "late": { "textKey": "wave.ch1-day2-evening.dinner.late" } },
+      { "id": "firewood", "textKey": "wave.ch1-day2-evening.firewood", "limitMin": 40,
+        "done": { "textKey": "wave.ch1-day2-evening.firewood.done" }, "late": { "textKey": "wave.ch1-day2-evening.firewood.late" } },
+      { "id": "find-mia", "textKey": "wave.ch1-day2-evening.find-mia", "limitMin": 60, "leaderOnly": true, "animal": "animal.cat",
+        "when": { "animals": ["animal.cat"] },
+        "targets": [{ "id": "spot.pines", "safe": true }, { "id": "spot.bench", "safe": true }, { "id": "spot.bike-shed", "safe": true }],
+        "done": { "textKey": "wave.ch1-day2-evening.find-mia.done" }, "late": { "textKey": "wave.ch1-day2-evening.find-mia.late" } },
+      { "id": "cover-bikes", "textKey": "wave.ch1-day2-evening.cover-bikes", "limitMin": 50, "when": { "transports": ["transport.bike"] },
+        "done": { "textKey": "wave.ch1-day2-evening.cover-bikes.done" }, "late": { "textKey": "wave.ch1-day2-evening.cover-bikes.late" } }
+    ]
+  },
+  {
+    "id": "wave.ch1-day3-checkout", "titleKey": "wave.ch1-day3-checkout", "hookKey": "wave.ch1-day3-checkout.hook", "stage": "CH1-D3-001",
+    "fallback": { "textKey": "wave.ch1-day3-checkout.fallback" },
+    "allDone": { "textKey": "wave.ch1-day3-checkout.all-done" },
+    "tasks": [
+      { "id": "walk-site", "textKey": "wave.ch1-day3-checkout.walk-site", "limitMin": 45,
+        "done": { "textKey": "wave.ch1-day3-checkout.walk-site.done" }, "late": { "textKey": "wave.ch1-day3-checkout.walk-site.late" } },
+      { "id": "clean-up", "textKey": "wave.ch1-day3-checkout.clean-up", "limitMin": 50,
+        "done": { "textKey": "wave.ch1-day3-checkout.clean-up.done" }, "late": { "textKey": "wave.ch1-day3-checkout.clean-up.late" } },
+      { "id": "pack-tent", "textKey": "wave.ch1-day3-checkout.pack-tent", "limitMin": 55,
+        "done": { "textKey": "wave.ch1-day3-checkout.pack-tent.done" }, "late": { "textKey": "wave.ch1-day3-checkout.pack-tent.late" } },
+      { "id": "mia-carrier-home", "textKey": "wave.ch1-day3-checkout.mia-carrier-home", "limitMin": 40, "leaderOnly": true, "animal": "animal.cat",
+        "when": { "animals": ["animal.cat"] },
+        "targets": [{ "id": "spot.tent-mat", "safe": true }, { "id": "spot.car", "safe": true }],
+        "done": { "textKey": "wave.ch1-day3-checkout.mia-carrier-home.done" }, "late": { "textKey": "wave.ch1-day3-checkout.mia-carrier-home.late" } }
     ]
   }
 ]

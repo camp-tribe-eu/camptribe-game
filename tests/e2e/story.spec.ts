@@ -336,6 +336,25 @@ test('автівкою — без бічного квесту й без відп
   await act(page, 'complete', 'q.ch1-d2-camp-001');
   await act(page, 'complete', 'q.ch1-d2-fire-001');
   await finishDay(page, true, 2);
+  // День 3 автом (GAME-144): кінець розділу — лише тепер; усе на ядрі, без вибору велозони.
+  await expect(panel(page).locator('[data-ui="ended"]')).toHaveCount(0);
+  expect((await core(page)).game.campaignEnded).toBe(false);
+  await act(page, 'complete', 'q.ch1-d3-001');
+  await act(page, 'dry', 'item.tent');                                // сталий сід e2e: дощ — і в авто намет із спальником вологі
+  await act(page, 'dry', 'item.sleeping-bag');
+  await act(page, 'complete', 'q.ch1-d3-gear-001');
+  await act(page, 'talk', 'npc.elise');
+  await act(page, 'choose', 'dlg.elise-greeting.hello.c15');
+  await act(page, 'continue');
+  await act(page, 'choose', 'dlg.elise-greeting.goodbye.c2');
+  await act(page, 'continue');
+  await act(page, 'continue');
+  await act(page, 'complete', 'q.ch1-d3-elise-001');
+  await act(page, 'visit', 'loc.road');
+  await act(page, 'complete', 'q.ch1-d3-return-001');
+  await act(page, 'visit', 'loc.home');
+  await act(page, 'complete', 'q.ch1-d3-home-001');
+  await finishDay(page, true, 3);
   await expect(panel(page).locator('[data-ui="ended"]')).toBeVisible();
   const c = await core(page);
   expect(c.game.campaignEnded).toBe(true);
@@ -420,7 +439,9 @@ test('сейв після прологу: перезавантаження — �
   await playBikeProlog(page);
   await finishDay(page, true);
   await playBikeDay2(page);
-  await finishDay(page, false, 2);
+  await finishDay(page, true, 2);
+  await playBikeDay3(page);
+  await finishDay(page, false, 3);
   await page.locator('[data-touch="pause"]').click();
   await page.locator('[data-ui="save"]').click();
   await expect(page.locator('[data-ui="status"]')).toBeVisible();
@@ -437,10 +458,13 @@ test('кінець розділу видно поза ☰: підказка в H
   await finishDay(page, true);
   await expect(page.locator('[data-ui="ended-hint"]')).toHaveCount(0);   // GAME-141: межа дня 1 — ще не кінець
   await playBikeDay2(page);
-  await finishDay(page, false, 2);
+  await finishDay(page, true, 2);
+  await expect(page.locator('[data-ui="ended-hint"]')).toHaveCount(0);   // GAME-144: межа дня 2 — теж ще не кінець
+  await playBikeDay3(page);
+  await finishDay(page, false, 3);
   const hint = page.locator('[data-ui="ended-hint"]');
   await expect(hint).toBeVisible();
-  await expect(hint).toContainText('Кінець дня 2');
+  await expect(hint).toContainText('Кінець дня 3');
   await expect(hint).toContainText('☰');
   await expect(page.locator('[data-touch="story"]')).toHaveAttribute('data-hint', 'yes');
   // Мапа лишається придатною: відведений убік джойстик зсуває персонажа.

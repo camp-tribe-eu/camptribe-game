@@ -221,7 +221,11 @@ export interface PackingDefs {
  * ніколи не поразка. Хвиля унікальна для свого етапу (`stage`) і на іншому не повторюється. `when` хвилі й справи —
  * варіанти за транспортом/профілем/твариною. Кінець розділу від хвиль не залежить (fallback: хвиля завжди закінчується).
  */
-export interface WaveOutcomeDef { readonly effects: readonly string[] }
+export interface WaveOutcomeDef {
+  readonly effects: readonly string[];
+  /** Зріз 3: спорядження в наплічнику стає вологим (та сама система, що дощ у дорозі, GAME-73) — м'який наслідок «не встигли до дощу». */
+  readonly wetGear?: true;
+}
 export interface WaveTaskDef {
   readonly id: string;
   /** Межа в ігрових хвилинах, ціле ≥ 1. */

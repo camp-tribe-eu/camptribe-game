@@ -1024,6 +1024,16 @@ export const CHECKS = [
         if (prev && prev.stage !== w.stage) out.push(I('WAVE_REPEATED', w.id, `той самий набір справ (${sig}) уже є у «${prev.id}» на етапі ${prev.stage} — хвиля не повторюється на іншому етапі`));
         else if (!prev) signatures.set(sig, w);
       }
+      // Дві хвилі на одному етапі з перекритим when (існує дозволена комбінація, яку приймають обидві) — гравець у ній
+      // отримав би дві хвилі підряд на одному етапі; pendingWave бере першу, друга мовчки лишилась би мертвою чи зайвою.
+      for (let i = 0; i < waves.length; i++) {
+        for (let j = i + 1; j < waves.length; j++) {
+          const a = waves[i], b = waves[j];
+          if (a.stage !== b.stage) continue;
+          const k = combos.find((x) => matches(a.when, x) && matches(b.when, x));
+          if (k) out.push(I('WAVE_STAGE_OVERLAP', `${a.id} + ${b.id}`, `обидві хвилі на етапі ${a.stage} діють у комбінації ${comboLabel(k)}: розведи їхні when (профіль/транспорт/тварина), щоб на етапі була одна хвиля`));
+        }
+      }
       out.push(...waveFlagGates(c.content));
       return out;
     },

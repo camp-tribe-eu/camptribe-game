@@ -1,0 +1,232 @@
+{
+ "batch": [
+  {
+   "name": "hero_a_recraft",
+   "endpoint": "fal-ai/recraft/v3/text-to-image",
+   "payload": {
+    "prompt": "Cutaway illustration of a modern silver-white high-roof panel van (Sprinter / Hyundai H350 type) camper conversion, the side wall and roof removed to show the interior: rear bed with green blanket and pillows, glass shower cabin, kitchen block with sink and induction hob, small fridge, dinette with two bench seats and table, swivel cab seats, warm wood floor, windows. clean modern digital illustration, isometric three-quarter view from the front-left and above, soft daylight from top-left, soft ambient occlusion shadows, light oak plywood and white furniture, muted sage green and beige textiles, crisp outlines, brochure style like a professional campervan conversion render. White background, no text, no labels, no dimension lines.",
+    "image_size": "landscape_4_3",
+    "style": "digital_illustration"
+   }
+  },
+  {
+   "name": "hero_b_recraft",
+   "endpoint": "fal-ai/recraft/v3/text-to-image",
+   "payload": {
+    "prompt": "Cutaway illustration of a modern silver-white high-roof panel van (Sprinter / Hyundai H350 type) camper conversion, the side wall and roof removed to show the interior: rear transverse bed with green blanket and pillows, glass shower cabin, kitchen block with sink and induction hob, small fridge, dinette with two bench seats and table, swivel cab seats, warm wood floor, windows. clean modern digital illustration, isometric three-quarter view from the front-left and above, soft daylight from top-left, soft ambient occlusion shadows, light oak plywood and white furniture, muted sage green and beige textiles, crisp outlines, brochure style like a professional campervan conversion render. White background, no text, no labels, no dimension lines.",
+    "image_size": "landscape_4_3",
+    "style": "digital_illustration"
+   }
+  },
+  {
+   "name": "hero_flux",
+   "endpoint": "fal-ai/flux/dev",
+   "payload": {
+    "prompt": "Cutaway illustration of a modern silver-white high-roof panel van (Sprinter / Hyundai H350 type) camper conversion, the side wall and roof removed to show the interior: rear bed with green blanket and pillows, glass shower cabin, kitchen block with sink and induction hob, small fridge, dinette with two bench seats and table, swivel cab seats, warm wood floor, windows. clean modern digital illustration, isometric three-quarter view from the front-left and above, soft daylight from top-left, soft ambient occlusion shadows, light oak plywood and white furniture, muted sage green and beige textiles, crisp outlines, brochure style like a professional campervan conversion render. White background, no text, no labels, no dimension lines.",
+    "image_size": "landscape_4_3",
+    "num_images": 2,
+    "num_inference_steps": 28,
+    "guidance_scale": 3.5,
+    "seed": 20261028
+   }
+  },
+  {
+   "name": "hull_a_recraft",
+   "endpoint": "fal-ai/recraft/v3/text-to-image",
+   "payload": {
+    "prompt": "Cutaway illustration of an EMPTY a modern silver-white high-roof panel van (Sprinter / Hyundai H350 type), the near side wall and roof removed, empty cargo area with light wood floor, white insulated walls, two side windows, cab with two seats and dashboard visible, nothing inside the cargo area. clean modern digital illustration, isometric three-quarter view from the front-left and above, soft daylight from top-left, soft ambient occlusion shadows, light oak plywood and white furniture, muted sage green and beige textiles, crisp outlines, brochure style like a professional campervan conversion render. White background, no text, no labels.",
+    "image_size": "landscape_4_3",
+    "style": "digital_illustration"
+   }
+  },
+  {
+   "name": "hull_b_recraft",
+   "endpoint": "fal-ai/recraft/v3/text-to-image",
+   "payload": {
+    "prompt": "Cutaway illustration of an EMPTY a modern silver-white high-roof panel van (Sprinter / Hyundai H350 type), the near side wall and roof removed, empty cargo area with light wood floor, white insulated walls, two side windows, cab with two seats and dashboard visible, nothing inside the cargo area. clean modern digital illustration, isometric three-quarter view from the front-left and above, soft daylight from top-left, soft ambient occlusion shadows, light oak plywood and white furniture, muted sage green and beige textiles, crisp outlines, brochure style like a professional campervan conversion render. White background, no text, no labels.",
+    "image_size": "landscape_4_3",
+    "style": "digital_illustration"
+   }
+  },
+  {
+   "name": "hull_flux",
+   "endpoint": "fal-ai/flux/dev",
+   "payload": {
+    "prompt": "Cutaway illustration of an EMPTY a modern silver-white high-roof panel van (Sprinter / Hyundai H350 type), the near side wall and roof removed, empty cargo area with light wood floor, white insulated walls, two side windows, cab with two seats and dashboard visible, nothing inside the cargo area. clean modern digital illustration, isometric three-quarter view from the front-left and above, soft daylight from top-left, soft ambient occlusion shadows, light oak plywood and white furniture, muted sage green and beige textiles, crisp outlines, brochure style like a professional campervan conversion render. White background, no text, no labels.",
+    "image_size": "landscape_4_3",
+    "num_images": 2,
+    "num_inference_steps": 28,
+    "guidance_scale": 3.5,
+    "seed": 20261028
+   }
+  },
+  {
+   "name": "obj_bed_recraft",
+   "endpoint": "fal-ai/recraft/v3/text-to-image",
+   "payload": {
+    "prompt": "Single object: a campervan bed platform of oak plywood with storage drawers underneath, mattress with sage green blanket and two white pillows. clean modern digital illustration, isometric three-quarter view from the front-left and above, soft daylight from top-left, soft ambient occlusion shadows, light oak plywood and white furniture, muted sage green and beige textiles, crisp outlines, brochure style like a professional campervan conversion render. Isolated, centered, on a plain pure white background, no floor, no text.",
+    "image_size": "square_hd",
+    "style": "digital_illustration"
+   }
+  },
+  {
+   "name": "obj_bed_flux",
+   "endpoint": "fal-ai/flux/dev",
+   "payload": {
+    "prompt": "Single object: a campervan bed platform of oak plywood with storage drawers underneath, mattress with sage green blanket and two white pillows. clean modern digital illustration, isometric three-quarter view from the front-left and above, soft daylight from top-left, soft ambient occlusion shadows, light oak plywood and white furniture, muted sage green and beige textiles, crisp outlines, brochure style like a professional campervan conversion render. Isolated, centered, on a plain pure white background, no floor, no text.",
+    "image_size": "square_hd",
+    "num_images": 1,
+    "num_inference_steps": 28,
+    "guidance_scale": 3.5,
+    "seed": 20261028
+   }
+  },
+  {
+   "name": "obj_kitchen_recraft",
+   "endpoint": "fal-ai/recraft/v3/text-to-image",
+   "payload": {
+    "prompt": "Single object: a campervan kitchen block: white cabinets with oak worktop, stainless steel sink with tap, two-zone induction hob, drawers with small handles. clean modern digital illustration, isometric three-quarter view from the front-left and above, soft daylight from top-left, soft ambient occlusion shadows, light oak plywood and white furniture, muted sage green and beige textiles, crisp outlines, brochure style like a professional campervan conversion render. Isolated, centered, on a plain pure white background, no floor, no text.",
+    "image_size": "square_hd",
+    "style": "digital_illustration"
+   }
+  },
+  {
+   "name": "obj_kitchen_flux",
+   "endpoint": "fal-ai/flux/dev",
+   "payload": {
+    "prompt": "Single object: a campervan kitchen block: white cabinets with oak worktop, stainless steel sink with tap, two-zone induction hob, drawers with small handles. clean modern digital illustration, isometric three-quarter view from the front-left and above, soft daylight from top-left, soft ambient occlusion shadows, light oak plywood and white furniture, muted sage green and beige textiles, crisp outlines, brochure style like a professional campervan conversion render. Isolated, centered, on a plain pure white background, no floor, no text.",
+    "image_size": "square_hd",
+    "num_images": 1,
+    "num_inference_steps": 28,
+    "guidance_scale": 3.5,
+    "seed": 20261028
+   }
+  },
+  {
+   "name": "obj_shower_recraft",
+   "endpoint": "fal-ai/recraft/v3/text-to-image",
+   "payload": {
+    "prompt": "Single object: a compact campervan shower cabin with clear glass door, white tray, chrome shower head. clean modern digital illustration, isometric three-quarter view from the front-left and above, soft daylight from top-left, soft ambient occlusion shadows, light oak plywood and white furniture, muted sage green and beige textiles, crisp outlines, brochure style like a professional campervan conversion render. Isolated, centered, on a plain pure white background, no floor, no text.",
+    "image_size": "square_hd",
+    "style": "digital_illustration"
+   }
+  },
+  {
+   "name": "obj_shower_flux",
+   "endpoint": "fal-ai/flux/dev",
+   "payload": {
+    "prompt": "Single object: a compact campervan shower cabin with clear glass door, white tray, chrome shower head. clean modern digital illustration, isometric three-quarter view from the front-left and above, soft daylight from top-left, soft ambient occlusion shadows, light oak plywood and white furniture, muted sage green and beige textiles, crisp outlines, brochure style like a professional campervan conversion render. Isolated, centered, on a plain pure white background, no floor, no text.",
+    "image_size": "square_hd",
+    "num_images": 1,
+    "num_inference_steps": 28,
+    "guidance_scale": 3.5,
+    "seed": 20261028
+   }
+  },
+  {
+   "name": "obj_fridge_recraft",
+   "endpoint": "fal-ai/recraft/v3/text-to-image",
+   "payload": {
+    "prompt": "Single object: a compact 40 litre compressor fridge built into an oak plywood cabinet. clean modern digital illustration, isometric three-quarter view from the front-left and above, soft daylight from top-left, soft ambient occlusion shadows, light oak plywood and white furniture, muted sage green and beige textiles, crisp outlines, brochure style like a professional campervan conversion render. Isolated, centered, on a plain pure white background, no floor, no text.",
+    "image_size": "square_hd",
+    "style": "digital_illustration"
+   }
+  },
+  {
+   "name": "obj_fridge_flux",
+   "endpoint": "fal-ai/flux/dev",
+   "payload": {
+    "prompt": "Single object: a compact 40 litre compressor fridge built into an oak plywood cabinet. clean modern digital illustration, isometric three-quarter view from the front-left and above, soft daylight from top-left, soft ambient occlusion shadows, light oak plywood and white furniture, muted sage green and beige textiles, crisp outlines, brochure style like a professional campervan conversion render. Isolated, centered, on a plain pure white background, no floor, no text.",
+    "image_size": "square_hd",
+    "num_images": 1,
+    "num_inference_steps": 28,
+    "guidance_scale": 3.5,
+    "seed": 20261028
+   }
+  },
+  {
+   "name": "obj_dinette_recraft",
+   "endpoint": "fal-ai/recraft/v3/text-to-image",
+   "payload": {
+    "prompt": "Single object: a campervan dinette: two small bench seats with beige cushions and a green pillow, oak table between them. clean modern digital illustration, isometric three-quarter view from the front-left and above, soft daylight from top-left, soft ambient occlusion shadows, light oak plywood and white furniture, muted sage green and beige textiles, crisp outlines, brochure style like a professional campervan conversion render. Isolated, centered, on a plain pure white background, no floor, no text.",
+    "image_size": "square_hd",
+    "style": "digital_illustration"
+   }
+  },
+  {
+   "name": "obj_dinette_flux",
+   "endpoint": "fal-ai/flux/dev",
+   "payload": {
+    "prompt": "Single object: a campervan dinette: two small bench seats with beige cushions and a green pillow, oak table between them. clean modern digital illustration, isometric three-quarter view from the front-left and above, soft daylight from top-left, soft ambient occlusion shadows, light oak plywood and white furniture, muted sage green and beige textiles, crisp outlines, brochure style like a professional campervan conversion render. Isolated, centered, on a plain pure white background, no floor, no text.",
+    "image_size": "square_hd",
+    "num_images": 1,
+    "num_inference_steps": 28,
+    "guidance_scale": 3.5,
+    "seed": 20261028
+   }
+  },
+  {
+   "name": "obj_water_recraft",
+   "endpoint": "fal-ai/recraft/v3/text-to-image",
+   "payload": {
+    "prompt": "Single object: a blue 60 litre fresh water tank with a small 12 V water pump and hoses. clean modern digital illustration, isometric three-quarter view from the front-left and above, soft daylight from top-left, soft ambient occlusion shadows, light oak plywood and white furniture, muted sage green and beige textiles, crisp outlines, brochure style like a professional campervan conversion render. Isolated, centered, on a plain pure white background, no floor, no text.",
+    "image_size": "square_hd",
+    "style": "digital_illustration"
+   }
+  },
+  {
+   "name": "obj_water_flux",
+   "endpoint": "fal-ai/flux/dev",
+   "payload": {
+    "prompt": "Single object: a blue 60 litre fresh water tank with a small 12 V water pump and hoses. clean modern digital illustration, isometric three-quarter view from the front-left and above, soft daylight from top-left, soft ambient occlusion shadows, light oak plywood and white furniture, muted sage green and beige textiles, crisp outlines, brochure style like a professional campervan conversion render. Isolated, centered, on a plain pure white background, no floor, no text.",
+    "image_size": "square_hd",
+    "num_images": 1,
+    "num_inference_steps": 28,
+    "guidance_scale": 3.5,
+    "seed": 20261028
+   }
+  },
+  {
+   "name": "obj_battery_recraft",
+   "endpoint": "fal-ai/recraft/v3/text-to-image",
+   "payload": {
+    "prompt": "Single object: a 12 V LiFePO4 battery box with an inverter and a solar charge controller mounted on an oak board, red and black cables. clean modern digital illustration, isometric three-quarter view from the front-left and above, soft daylight from top-left, soft ambient occlusion shadows, light oak plywood and white furniture, muted sage green and beige textiles, crisp outlines, brochure style like a professional campervan conversion render. Isolated, centered, on a plain pure white background, no floor, no text.",
+    "image_size": "square_hd",
+    "style": "digital_illustration"
+   }
+  },
+  {
+   "name": "obj_battery_flux",
+   "endpoint": "fal-ai/flux/dev",
+   "payload": {
+    "prompt": "Single object: a 12 V LiFePO4 battery box with an inverter and a solar charge controller mounted on an oak board, red and black cables. clean modern digital illustration, isometric three-quarter view from the front-left and above, soft daylight from top-left, soft ambient occlusion shadows, light oak plywood and white furniture, muted sage green and beige textiles, crisp outlines, brochure style like a professional campervan conversion render. Isolated, centered, on a plain pure white background, no floor, no text.",
+    "image_size": "square_hd",
+    "num_images": 1,
+    "num_inference_steps": 28,
+    "guidance_scale": 3.5,
+    "seed": 20261028
+   }
+  },
+  {
+   "name": "obj_toilet_recraft",
+   "endpoint": "fal-ai/recraft/v3/text-to-image",
+   "payload": {
+    "prompt": "Single object: a compact white cassette toilet for a campervan. clean modern digital illustration, isometric three-quarter view from the front-left and above, soft daylight from top-left, soft ambient occlusion shadows, light oak plywood and white furniture, muted sage green and beige textiles, crisp outlines, brochure style like a professional campervan conversion render. Isolated, centered, on a plain pure white background, no floor, no text.",
+    "image_size": "square_hd",
+    "style": "digital_illustration"
+   }
+  },
+  {
+   "name": "obj_toilet_flux",
+   "endpoint": "fal-ai/flux/dev",
+   "payload": {
+    "prompt": "Single object: a compact white cassette toilet for a campervan. clean modern digital illustration, isometric three-quarter view from the front-left and above, soft daylight from top-left, soft ambient occlusion shadows, light oak plywood and white furniture, muted sage green and beige textiles, crisp outlines, brochure style like a professional campervan conversion render. Isolated, centered, on a plain pure white background, no floor, no text.",
+    "image_size": "square_hd",
+    "num_images": 1,
+    "num_inference_steps": 28,
+    "guidance_scale": 3.5,
+    "seed": 20261028
+   }
+  }
+ ]
+}

@@ -316,10 +316,11 @@ describe('W5 «Не залишати слідів до 11:00» — на етап
     const sim = simOf(afterDay2(FAMILY));
     const live = cmd(sim, storyMoves(sim, GAME_DEFS)[0] as Move);
     expect(live.game.wave?.active?.waveId).toBe(W5);
-    // Етап завершено — хвиля ще жива (ядро нині гасить її лише годинником; «етап минув → усе late» несе GAME-170 зріз 3),
-    // і вона нічого не блокує: кінець розділу досяжний з живою хвилею.
+    // Етап завершено — етап минув, тож на кроці команди (його закінчує крок годинника) незроблене late, а хвиля закрита (GAME-170
+    // зріз 3, 3dc7cae); вона нічого не блокує: кінець розділу досяжний.
     const over = cmd(live, done('CH1-D3-001'));
-    expect(over.game.wave?.active?.waveId).toBe(W5);
+    expect(over.game.wave?.active).toBeNull();
+    expect(over.game.wave?.past[W5]).toEqual({ 'walk-site': 'late', 'clean-up': 'late', 'pack-tent': 'late', 'mia-carrier-home': 'late' });
     expect(over.game.campaignEnded).toBe(false);
     expect(play(DAY3_MOVES.slice(1), over.game).campaignEnded).toBe(true);
     // Годинник минув найдовший строк (55 хв) — усе незроблене late, хвиля закінчена; одна зроблена справа — done.

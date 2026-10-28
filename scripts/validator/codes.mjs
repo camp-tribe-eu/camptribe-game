@@ -97,6 +97,7 @@ export const CODES = {
   WAVE_REPEATED:          { check: 'waves', spec: 'GAME-170: хвиля унікальна для етапу — той самий набір справ на двох етапах не повторюється' },
   WAVE_ANIMAL_UNSAFE:     { check: 'waves', spec: 'GAME-170: Мія завжди в безпеці — ціль справи про тварину ніколи не біля води чи вогню (кожна ціль safe: true)' },
   WAVE_FLAG_GATES_QUEST:  { check: 'waves', spec: 'GAME-170: кінець розділу від хвиль не залежить — діалог не рухає квест (startQuest/completeObjective) за умовою на прапорець, який ставить наслідок хвилі' },
+  WAVE_STAGE_OVERLAP:     { check: 'waves', spec: 'GAME-170: на етапі в кожній комбінації діє не більше однієї хвилі — when двох хвиль одного етапу не перекриваються' },
   WAVE_ANIMAL_HELPER:     { check: 'waves', spec: 'GAME-170: справу про тварину робить лише лідер (leaderOnly) — помічники шукати Мію не можуть' },
 
   // комбінації профіль × транспорт × тварина

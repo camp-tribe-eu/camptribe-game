@@ -4,7 +4,8 @@
 /** Що можна зробити зараз. `key` — ключ тексту контенту (content/locales), `null` — без назви. */
 export interface OfferAction {
   readonly id: string;
-  readonly kind: 'visit' | 'talk' | 'pickup' | 'buy' | 'sell' | 'dry' | 'complete' | 'decline' | 'choose' | 'continue' | 'pack' | 'unpack' | 'autopack';
+  /** `task` — справа живої хвилі з екрана подорожі (GAME-170 зріз 3: дім, зупинка в дорозі — локації без мапи). */
+  readonly kind: 'visit' | 'talk' | 'pickup' | 'buy' | 'sell' | 'dry' | 'complete' | 'decline' | 'choose' | 'continue' | 'pack' | 'unpack' | 'autopack' | 'task';
   readonly key: string | null;
   readonly priceCents?: number;
   /** Скільки хвилин займе дорога (GAME-31); немає — дія на місці. */
