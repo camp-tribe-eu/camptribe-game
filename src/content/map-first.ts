@@ -259,9 +259,9 @@ export function nextTarget(sim: SimState, defs: CoreDefs, carried: readonly stri
   // Пакування: «потрібне» ще не в багажнику (рукою дістали) — до нього; усе на місці — у дорогу.
   const pk = defs.packing;
   if (quest(g, 'CH1-HOME-001') && pk && packingOpen(pk, g)) {
-    if (carried.length > 0) return { key: 'next.unload', spot: 'obj.vehicle' };   // рюкзак повний — до авто, розвантажити
+    if (carried.length > 0) return { key: car ? 'next.unload' : 'next.unload.bike', spot: 'obj.vehicle' };   // рюкзак повний — до авто, розвантажити
     const missing = packItemsFor(pk, p).find((i) => i.group === 'needed' && !g.flags.includes(packFlag(i.itemId)) && !carried.includes(i.itemId));
-    if (missing) return { key: 'next.pack', spot: `pack.${missing.itemId}` };
+    if (missing) return { key: car ? 'next.pack' : 'next.pack.bike', spot: `pack.${missing.itemId}` };
   }
   return { key: car ? 'next.depart.car' : 'next.depart.bike', spot: 'obj.vehicle' };
 }
@@ -279,7 +279,7 @@ export function spotLabel(sim: SimState, defs: CoreDefs, name: string): SpotLabe
     const itemId = name.slice(SPOT_PREFIX.pack.length);
     return { label: sim.game.flags.includes(packFlag(itemId)) ? 'pack.out' : 'pack.in', ref: itemId };
   }
-  if (name === 'obj.trunk') return { label: 'near.trunk', ref: null };
+  if (name === 'obj.trunk') return { label: car ? 'near.trunk' : 'near.trunk.bike', ref: null };
   if (name === 'obj.vehicle') return { label: car ? 'near.vehicle.car' : 'near.vehicle.bike', ref: null };
   if (name.startsWith('npc.')) return { label: 'act.talk', ref: name };
   return null;

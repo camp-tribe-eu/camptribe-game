@@ -63,8 +63,7 @@
       .ui-wave-task { white-space: nowrap; color: #cfcbc7; }
       .ui-wave-task[data-outcome="done"] { color: #9be28f; }
       .ui-wave-task[data-outcome="late"] { color: #ffd54a; }
-      /* GAME-175: рядок «Далі: …» / підпис дії біля об'єкта — сторч: накладка під шапкою на мапі, НЕ в потоці (інакше поле нижче на ряд і кадр мапи стрибає з zoom 2 на 1, game-91);  вбік — під ☰, як картка мети (вони не бувають разом:
-         картка — у таборі, цей рядок — удома, в крамниці й на дорозі). Не ловить дотик: карта під ним лишається тапабельною. */
+      /* GAME-175: рядок «Далі: …» / підпис дії біля об'єкта — сторч: накладка під шапкою на мапі, НЕ в потоці (інакше поле нижче на ряд і кадр мапи стрибає з zoom 2 на 1, game-91);  вбік — під ☰, як картка мети (вони БУВАЮТЬ разом — картка «збір удома» йде під час пакування: вбік рядок має свій третій ряд шапки, сторч він під усією шапкою). Не ловить дотик: карта під ним лишається тапабельною. */
       .ui-next { position: absolute; left: 8px; right: 8px; top: 100%; margin-top: 4px; z-index: 1; padding: 3px 8px; box-sizing: border-box; border-radius: 8px; background: #2a2f36; color: #ffd54a; font-size: 0.8125rem;
         line-height: var(--hud-lh); min-width: 0; overflow-wrap: anywhere; pointer-events: none; }
       .ui-next[data-kind="near"] { color: #9be28f; }
@@ -172,7 +171,7 @@
         .ui-toast { left: auto; right: calc(100% + 8px); top: 0; width: max-content; max-width: 40vw; padding: 4px 8px; border-radius: 8px; }
         /* Картка мети вбік: другий ряд ліворуч (під ☰), ‖ лишається праворуч у тому ж ряду; дотики проходять крізь неї на поле. */
         .ui-wave { grid-area: 2 / 1 / 3 / 3; justify-self: start; max-width: 70vw; margin-top: 0; background: #1b1f23d9; pointer-events: none; }
-        .ui-next { position: static; grid-area: 2 / 1 / 3 / 3; justify-self: start; max-width: 70vw; margin-top: 0; background: #1b1f23d9; }
+        .ui-next { position: static; grid-area: 3 / 1 / 4 / 3; justify-self: start; max-width: 70vw; margin-top: 0; background: #1b1f23d9; }
       }
       /* GAME-39 #3: гравець попросив менше руху — жодних анімацій і переходів в інтерфейсі, навіть доданих пізніше
          чи вписаних у style (!important перебиває інлайн). Перевірка — tests/e2e/a11y.spec.ts. */
