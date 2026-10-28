@@ -22,6 +22,11 @@
 | ART-020 | [LPC] Cats and Dogs (bluecarrot16) — аркуш кішок `cat_0.png` | https://opengameart.org/content/lpc-cats-and-dogs | "License(s): CC-BY 3.0", "CC-BY-SA 3.0", "GPL 3.0", "GPL 2.0", "OGA-BY 3.0" — обрано "OGA-BY 3.0" (цитата зі сторінки: `research/packs/pack-lpc-cats-dogs/page.html.lic-snippet.txt`, прогін 40116768691) | так, титри; **змінено**: вирізано руду-смугасту кішку (колонки 8–11, 128×160), три руді тони перефарбовано в сірі з палітри основи, решту квантовано на палітру | 24.10.2026 | `assets/sprites/cat_mia.png` — кішка Mia, 32 px, ходьба 3 кадри × 4 напрямки + лежить + сидить (GAME-147) |
 | FONT-001 | Press Start 2P (CodeMan38) | https://github.com/google/fonts/tree/main/ofl/pressstart2p | "This Font Software is licensed under the SIL Open Font License, Version 1.1." (OFL.txt першоджерела) | так — текст ліцензії поруч: `public/fonts/PressStart2P-OFL.txt` | 22.10.2026 | `public/fonts/PressStart2P-Regular.ttf` — шрифт UI (GAME-26), без змін |
 
+**TODO GAME-40 (звуки — NOT DONE):** жодного звукового файлу в грі ще немає, рядків `SND-NNN` теж. Kenney недоступний із
+сесії; потрібен прогін `research-fetch`: у `research/fetch.txt` рядок `pack-kenney-interface-sounds<TAB>kenney:interface-sounds`
+(CC0), далі 2–4 короткі `.ogg` кладуться в `public/audio/` і кожен вноситься рядком `SND-001…` із цитатою ліцензії
+зі сторінки. Звук без рядка в цьому реєстрі червоний: `check-assets` (`PUBLIC_NO_REGISTER_ROW`; у `assets/` — `ASSET_UNKNOWN_FILE`).
+
 **Не брати без окремого рішення:** CraftPix (ліцензія відкликувана, заборона навчання ШІ),
 chuckiecatt (CC BY 4.0 — обов'язкова атрибуція), MrBeast OGA (CC-BY 3.0 / GPL 2.0).
 

@@ -72,6 +72,18 @@ test('налаштування переживають перезавантаже
   await expect(page.locator('[data-ui="text-150"]')).toHaveAttribute('aria-pressed', 'true');
 });
 
+test('гучність (GAME-40): повзунок і mute переживають перезавантаження сторінки', async ({ page }) => {
+  await open(page);
+  await page.keyboard.press('Escape');
+  await page.locator('[data-ui="vol-master"]').fill('35');
+  await page.locator('[data-ui="mute"]').click();
+  await page.reload();
+  await page.waitForFunction(() => (window as unknown as { __game?: { probe: Probe } }).__game?.probe.ready === true);
+  await page.keyboard.press('Escape');
+  await expect(page.locator('[data-ui="vol-master"]')).toHaveValue('35');
+  await expect(page.locator('[data-ui="mute"]')).toHaveAttribute('aria-pressed', 'true');
+});
+
 test.describe('дотик: пауза без клавіатури (телефон)', () => {
   test.use({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true });
   test('кнопка ‖ ставить паузу, «Продовжити» знімає', async ({ page }) => {

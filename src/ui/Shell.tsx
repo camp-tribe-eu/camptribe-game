@@ -1,6 +1,7 @@
 // Оболонка UI над канвою (GAME-25): пауза й налаштування. Preact, DOM — для кирилиці, масштабу тексту
 // й екранного читача (TD-003).
 import { useEffect, useLayoutEffect, useRef, useState } from 'preact/hooks';
+import { mixer } from '../audio';
 import { DEFAULT_SETTINGS, TEXT_SCALES, loadSettings, saveSettings, type Settings } from '../platform/settings';
 import type { Credits, UiPort } from './port';
 import { t as tr, type AnyLang, type Key } from '../i18n';
@@ -140,6 +141,7 @@ export function Shell({ port, langOverride, credits, build, holdToast = false, h
   const update = (next: Settings): void => {
     setSettings(next);
     saveSettings(next);
+    mixer.apply(next.audio);
   };
 
   // До малювання (useLayoutEffect): екранний читач не застає кнопки без підпису (рецензія).
@@ -254,6 +256,17 @@ export function Shell({ port, langOverride, credits, build, holdToast = false, h
               <button type="button" class="ui-btn" data-ui={`lang-${l}`} aria-pressed={settings.language === l}
                 onClick={() => update({ ...settings, language: l })}>{l.toUpperCase()}</button>
             ))}
+          </fieldset>
+          <fieldset data-ui="audio">
+            <legend>{t('ui.audio')}</legend>
+            {(['master', 'sfx', 'music'] as const).map((ch) => (
+              <label key={ch}>{t(ch === 'master' ? 'ui.volMaster' : ch === 'sfx' ? 'ui.volSfx' : 'ui.volMusic')}
+                <input type="range" min="0" max="100" step="5" data-ui={`vol-${ch}`} value={Math.round(settings.audio[ch] * 100)}
+                  onInput={(e) => update({ ...settings, audio: { ...settings.audio, [ch]: Number(e.currentTarget.value) / 100 } })} />
+              </label>
+            ))}
+            <button type="button" class="ui-btn" data-ui="mute" aria-pressed={settings.audio.muted}
+              onClick={() => update({ ...settings, audio: { ...settings.audio, muted: !settings.audio.muted } })}>{t('ui.mute')}</button>
           </fieldset>
           {staleNotice}
           <fieldset>
