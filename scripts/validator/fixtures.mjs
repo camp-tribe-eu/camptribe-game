@@ -446,6 +446,15 @@ export const FIXTURES = [
   { name: 'немає ключа в одній мові', expect: ['LOCALE_MISSING'], patch(c) { delete c.locales.en['q.st-003']; } },
   { name: 'порожній переклад', expect: ['LOCALE_MISSING'], patch(c) { c.locales.uk['npc.ranger'] = '  '; } },
   { name: 'підтримувана мова без файлу', expect: ['LOCALE_MISSING'], patch(c) { c.meta.locales.push('de'); } },
+  // GAME-70: довжина реплік героїв — 4–15 слів усередині лапок після «Ім'я:». Межі й обидві сторони доведені на самому коді.
+  { name: '[репліка] коротша за 4 слова (3) — червоне', expect: ['LINE_LENGTH'], count: { code: 'LINE_LENGTH', n: 1 }, patch(c) { c.locales.uk['item.map'] = 'Карта. Джордж: «Для темряви. Логічно».'; } },
+  { name: '[репліка] довша за 15 слів (16) — червоне', expect: ['LINE_LENGTH'], count: { code: 'LINE_LENGTH', n: 1 }, patch(c) { c.locales.uk['item.map'] = 'Карта. Вікторія: «Раз два три чотири п\u2019ять шість сім вісім дев\u2019ять десять один два три чотири п\u2019ять шість».'; } },
+  { name: '[репліка] коротка лише в en — червоне саме в цій мові', expect: ['LINE_LENGTH'], count: { code: 'LINE_LENGTH', n: 1 }, patch(c) { c.locales.en['item.map'] = 'Map. Matthew: “Fine, thanks.”'; } },
+  { name: '[репліка] контроль: рівно 4 і рівно 15 слів (межі) — коректно', expect: [], patch(c) { c.locales.uk['item.map'] = 'Карта. Метью: «Раз два три чотири». Джордж: «Раз два три чотири п\u2019ять шість сім вісім дев\u2019ять десять один два три чотири п\u2019ять».'; } },
+  { name: '[репліка] контроль: кнопка, підпис, табличка й назва в лапках без «Ім\u2019я:» — не репліки', expect: [], patch(c) {
+    c.locales.uk['item.map'] = 'Ок'; c.locales.uk['item.gift'] = 'На дверях: «Зайти». Табличка тут: «Вхід»'; c.locales.uk['item.ticket'] = 'Назва «Так» і ще «Ні»';
+    c.locales.en['item.gift'] = 'Sign on the door: “Back soon”'; c.locales.uk['npc.shopkeeper'] = 'Кнопка: Далі';
+  } },
   // GAME-144: прапорець взаємодії (kind: interaction) ставить ядро на дотик до об'єкта мапи — умова в діалозі його читати може;
   // без kind валідатор не знає сетера й червоніє (Еліза дякує за пакети лише тим, хто їх прибрав).
   { name: 'прапорець взаємодії (kind: interaction) — умова в діалозі читає його, хоч ставить ядро', expect: [], patch(c) {
