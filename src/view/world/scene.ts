@@ -17,7 +17,7 @@ import { FOLLOW_SPEED_FACTOR, SPEED, centerOf, gridFromWalls, restPoints, stepFo
 import type { MapKey } from '../../content/map-first';
 import { playUi } from '../../audio/ui-sounds';
 import { MapFx, type Needs } from './map-fx';
-import { FEEDBACK_S, RING_IDLE, ringMayTake, stepRing, type Ring } from './proximity';
+import { FEEDBACK_S, RING_IDLE, ringMayTake, stepRing, vehicleReady, type Insets, type Ring } from './proximity';
 import { IDLE_AFTER_S, LEISURE_BY_MAP, assignLeisure, leisureFromObjects, type LeisureSpot } from './leisure';
 import { BARK_RANGE, RESIDENTS, buildTimeline, placeAt, residentGrid, type Timeline } from './ambient';
 import type { Key } from '../../i18n';
@@ -180,6 +180,8 @@ export class WorldScene extends Phaser.Scene {
   private carParts: { destroy(): void }[] = [];
   private carFor = '';
   private fx: MapFx | null = null;
+  private insets: Insets = { top: 24, bottom: 0, left: 0, right: 0 };
+  private insetsAt = -1e9;
   private ring: Ring = RING_IDLE;
   /** Об'єкти, що вже спрацювали в цьому заході в зону: поки гравець не вийде з неї, самі не повторюються. */
   private fired = new Set<string>();
@@ -212,20 +214,57 @@ export class WorldScene extends Phaser.Scene {
     const g = this.add.graphics({ x: s.x, y: s.y });
     g.setDepth(s.y);
     const m: Marker = { g, look: '' };
-    this.draw(m, s.name, this.hooks.look(s.name));
+    this.draw(m, s.name, this.hooks.look(s.name), s.name === 'obj.vehicle' || s.name === 'obj.trunk' ? `${this.hooks.look(s.name)}|${this.hooks.transport() ?? ''}` : this.hooks.look(s.name));
     g.setVisible(this.hooks.isLive(s.name));
     return m;
   }
 
-  private draw(m: Marker, name: string, look: 'room' | 'trunk'): void {
+  private draw(m: Marker, name: string, look: 'room' | 'trunk', sig: string): void {
     const family = name.startsWith('task.') ? 'task' : name.startsWith('step.') ? 'step' : name.startsWith('pack.') || name.startsWith('take.') ? (look === 'trunk' ? 'itemTrunk' : 'item')
       : name === 'obj.vehicle' || name === 'obj.trunk' ? 'vehicle' : 'other';
-    m.look = look;
+    m.look = sig;
     const g = m.g.clear();
     g.fillStyle(0x000000, 0.35).fillEllipse(0, 0, 22, 10);
+    if (name === 'obj.vehicle' && this.hooks.transport() === 'transport.bike') { this.drawBike(g); return; }
+    if (name === 'obj.trunk' && this.hooks.transport() === 'transport.bike') {   // велосипед: «багажник» — місце, де речі пристібають до рами: скатка зі стяжкою
+      g.fillStyle(0x3f7f5a, 1).fillRoundedRect(-10, -14, 20, 9, 4);
+      g.lineStyle(1, 0x1b1f23, 1).strokeRoundedRect(-10, -14, 20, 9, 4);
+      g.fillStyle(0xd9a441, 1).fillRect(-5, -14, 2, 9).fillRect(3, -14, 2, 9);
+      return;
+    }
     g.fillStyle(MARKER_COLOR[family], 1).fillRoundedRect(-7, -16, 14, 14, 3);
     g.lineStyle(1, 0x1b1f23, 1).strokeRoundedRect(-7, -16, 14, 14, 3);
     if (family === 'itemTrunk') g.lineStyle(2, 0x1b1f23, 1).beginPath().moveTo(-3, -9).lineTo(-1, -6).lineTo(3, -12).strokePath();   // галочка: уже в багажнику
+  }
+
+  /** Велосипед пікселями палітри гри (LPC-набір його не має): два колеса, рама, кермо, сідло, багажник-«рюкзак» ззаду; ноги — на (0,0). */
+  private drawBike(g: Phaser.GameObjects.Graphics): void {
+    const OUT = 0x1b1f23;
+    g.lineStyle(3, OUT, 1).strokeCircle(-10, -7, 7).strokeCircle(10, -7, 7);   // обідок-обводка
+    g.lineStyle(1.5, 0xe8e6e3, 1).strokeCircle(-10, -7, 6).strokeCircle(10, -7, 6);
+    g.lineStyle(3, OUT, 1).beginPath().moveTo(-10, -7).lineTo(-3, -16).lineTo(6, -16).lineTo(10, -7).moveTo(-3, -16).lineTo(2, -7).lineTo(-10, -7).moveTo(6, -16).lineTo(8, -21).strokePath();
+    g.lineStyle(1.5, 0x2f6fb0, 1).beginPath().moveTo(-10, -7).lineTo(-3, -16).lineTo(6, -16).lineTo(10, -7).moveTo(-3, -16).lineTo(2, -7).lineTo(-10, -7).moveTo(6, -16).lineTo(8, -21).strokePath();
+    g.fillStyle(OUT, 1).fillRect(-7, -20, 9, 3).fillRect(5, -23, 7, 2);   // сідло й кермо
+    g.fillStyle(0xe8e6e3, 1).fillRect(-6, -19, 7, 1).fillRect(6, -22, 5, 1);
+    g.fillStyle(0xd9a441, 1).fillCircle(-10, -7, 1.5).fillCircle(10, -7, 1.5);   // втулки
+  }
+
+  /** Безпечна зона для стрілки (світові одиниці): без шапки HUD, рядка «Далі» і нижньої дотикової смуги (джойстик + кнопка дії). Міряємо DOM раз на ~0,3 с. */
+  private safeInsets(time: number): Insets {
+    if (time - this.insetsAt < 300) return this.insets;
+    this.insetsAt = time;
+    const cv = this.game.canvas.getBoundingClientRect();
+    const z = this.cameras.main.zoom || 1;
+    let topPx = 0;
+    for (const sel of ['.ui-header', '.ui-next']) { const e = document.querySelector(sel); if (e) topPx = Math.max(topPx, e.getBoundingClientRect().bottom - cv.top); }
+    let botPx = 0;
+    for (const sel of ['.touch-stick', '.touch-interact']) {
+      const e = document.querySelector<HTMLElement>(sel);
+      if (!e || e.hidden || e.offsetParent === null) continue;
+      botPx = Math.max(botPx, cv.bottom - e.getBoundingClientRect().top);
+    }
+    this.insets = { top: Math.max(0, topPx + 4) / z, bottom: Math.max(0, botPx + 4) / z, left: 0, right: 0 };
+    return this.insets;
   }
 
   /** Складений лист ходьби як текстура з 36 кадрами (ключ кадру — номер). */
@@ -693,7 +732,8 @@ export class WorldScene extends Phaser.Scene {
       m.g.setVisible(on);
       if (!on) continue;
       const look = this.hooks.look(name);
-      if (look !== m.look) this.draw(m, name, look);
+      const sig = name === 'obj.vehicle' || name === 'obj.trunk' ? `${look}|${this.hooks.transport() ?? ''}` : look;
+      if (sig !== m.look) this.draw(m, name, look, sig);
       m.g.setScale(name === target ? 1 + 0.2 * Math.abs(Math.sin(time / 280)) : 1);   // ціль підказки «Далі:» — пульсує
     }
     for (const [name, sp] of this.npcSprites) sp.setVisible(this.hooks.isLive(name));
@@ -724,7 +764,7 @@ export class WorldScene extends Phaser.Scene {
     // Спакована річ удома сама не «розпаковується» від проходу повз: її дістають лише E/тап (чи сітка).
     // Проходячи повз зайву річ (ліхтар, подушка), гравець її не підбирає сам: кільце рахує лише поточну ціль підказки; решту беруть E/тап — інакше «лишити» зайняло б місце потрібному.
     const autoNear = spot && best <= AUTO_RANGE && ringMayTake(near, this.hooks.target()) ? near : null;
-    const ready = (autoNear !== 'obj.vehicle' || (!carrying && needs.small + needs.bulky === 0)) && !(autoNear?.startsWith('pack.') && this.hooks.look(autoNear) === 'trunk');
+    const ready = (autoNear !== 'obj.vehicle' || vehicleReady(carrying, needs)) && !(autoNear?.startsWith('pack.') && this.hooks.look(autoNear) === 'trunk');
     const r = stepRing(this.ring, atCar && carrying ? null : autoNear, !this.fired.has(autoNear ?? '') && ready, autoNear !== 'obj.vehicle' || !moving, dt);
     this.ring = r.ring;
     if (r.fire) {
@@ -745,7 +785,7 @@ export class WorldScene extends Phaser.Scene {
     this.fx?.drawNeeds(veh?.x ?? 0, (veh?.y ?? 0) - 40, veh && this.hooks.isLive('obj.vehicle') ? needs : null);
     const tn = this.hooks.target();
     const ts = tn ? this.spots.find((x) => x.name === tn) : undefined;
-    this.fx?.drawGuide({ x: this.player.x, y: this.player.y }, ts && this.hooks.isLive(ts.name) ? { x: ts.x, y: ts.y } : null, this.cameras.main.worldView, INTERACT_RANGE * 1.2, time);
+    this.fx?.drawGuide({ x: this.player.x, y: this.player.y }, ts && this.hooks.isLive(ts.name) ? { x: ts.x, y: ts.y } : null, this.cameras.main.worldView, this.safeInsets(time), INTERACT_RANGE * 1.2, time);
 
     this.moveFollowers(delta, time, moving || v.x !== 0 || v.y !== 0);
     this.updateDaylight(time);

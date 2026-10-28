@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { RING_IDLE, RING_S, isAutoSpot, ringMayTake, stepRing } from './proximity';
+import { RING_IDLE, RING_S, edgeArrow, inSafeZone, isAutoSpot, ringMayTake, stepRing, vehicleReady } from './proximity';
 
 function run(near: string | null, armed: boolean, hold: boolean, seconds: number, dt = 1 / 60): string | null {
   let r = RING_IDLE;
@@ -34,4 +34,38 @@ describe('кільце наближення (GAME-175)', () => {
     expect(ringMayTake(null, null)).toBe(false);
   });
   it('isAutoSpot', () => { expect(isAutoSpot('pack.item.water')).toBe(true); expect(isAutoSpot('task.firewood')).toBe(false); });
+});
+
+describe('авто їде лише коли все потрібне вкладене (GAME-175, закон 1)', () => {
+  it('готове: рюкзак порожній і нічого не бракує', () => { expect(vehicleReady(false, { small: 0, bulky: 0 })).toBe(true); });
+  it('НЕГАТИВНІ: бракує дрібного, бракує громіздкого, рюкзак непорожній — не готове', () => {
+    expect(vehicleReady(false, { small: 1, bulky: 0 })).toBe(false);
+    expect(vehicleReady(false, { small: 0, bulky: 1 })).toBe(false);
+    expect(vehicleReady(true, { small: 0, bulky: 0 })).toBe(false);
+  });
+});
+
+describe('стрілка на краї не лізе під шапку й дотикову панель (GAME-175)', () => {
+  const view = { x: 100, y: 200, width: 320, height: 640 };   // портретний кадр у світових одиницях
+  const ins = { top: 30, bottom: 90, left: 0, right: 0 };
+  const R = 16;
+  const targets = [-2000, -300, 0, 260, 2000].flatMap((dx) => [-2000, -300, 0, 500, 2000].map((dy) => ({ x: view.x + 160 + dx, y: view.y + 320 + dy })));
+  it('для будь-якої цілі точка в безпечній зоні з урахуванням радіуса', () => {
+    for (const t of targets) {
+      const a = edgeArrow(view, t, ins, R);
+      expect(a.x, JSON.stringify(t)).toBeGreaterThanOrEqual(view.x + ins.left + R - 1e-6);
+      expect(a.x).toBeLessThanOrEqual(view.x + view.width - ins.right - R + 1e-6);
+      expect(a.y).toBeGreaterThanOrEqual(view.y + ins.top + R - 1e-6);
+      expect(a.y).toBeLessThanOrEqual(view.y + view.height - ins.bottom - R + 1e-6);
+    }
+  });
+  it('ціль під нижнім краєм дає стрілку над джойстиком, а не на самому краю', () => {
+    const a = edgeArrow(view, { x: view.x + 40, y: view.y + 5000 }, ins, R);
+    expect(a.y).toBeCloseTo(view.y + view.height - ins.bottom - R, 6);
+  });
+  it('inSafeZone: ціль у смузі джойстика — поза безпечною зоною', () => {
+    expect(inSafeZone(view, { x: view.x + 160, y: view.y + 320 }, ins, 10)).toBe(true);
+    expect(inSafeZone(view, { x: view.x + 160, y: view.y + view.height - 40 }, ins, 10)).toBe(false);
+    expect(inSafeZone(view, { x: view.x + 160, y: view.y + 12 }, ins, 10)).toBe(false);
+  });
 });

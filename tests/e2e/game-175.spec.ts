@@ -86,6 +86,9 @@ const signature = async (page: Page): Promise<string> => {
 
 /** Один «заход» гравця: куди каже йти стрілка → дійти → дочекатись дії. Повертає назву цілі. */
 async function goAndDo(page: Page, car: boolean, shot?: string): Promise<string> {
+  // Мета з'являється з кадром сцени після зміни стану (розмова закрилась, мапа змінилась): на повільному CI (CI #40782312273) разовий зонд іноді
+  // ловив порожню мету. Чекаємо до 20 с; якщо мети так і нема — це справжній тупик, і помилка та сама.
+  await expect.poll(async () => (await probe(page)).fx.target, { timeout: 20_000 }).not.toBeNull().catch(() => undefined);
   const p = await probe(page);
   const target = p.fx.target;
   if (!target) throw new Error('стрілка не вказує мети (nextTarget порожній) — гравець не знає, що далі');
@@ -133,6 +136,25 @@ async function start(page: Page, pick: RegExp, query = ''): Promise<string[]> {
   return errors;
 }
 
+/** Картка мети (wave) і рядок «Далі» бувають на екрані разом (збір удома): їхні рамки не мусять перетинатися. Повертає, чи були обидва, і чи перетнулись. */
+const hudBoxes = (page: Page): Promise<{ both: boolean; overlap: number }> => page.evaluate(() => {
+  const a = document.querySelector('[data-ui="wave"]')?.getBoundingClientRect();
+  const b = document.querySelector('[data-ui="next-hint"]')?.getBoundingClientRect();
+  if (!a || !b || a.width === 0 || b.width === 0) return { both: false, overlap: 0 };
+  const w = Math.min(a.right, b.right) - Math.max(a.left, b.left);
+  const h = Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top);
+  return { both: true, overlap: w > 0 && h > 0 ? Math.round(w * h) : 0 };
+});
+
+/** Герой дивиться вниз (як за замовчуванням): коротке натискання ↓, знімок робимо, коли напрямок уже «down». */
+async function faceDown(page: Page): Promise<void> {
+  await page.evaluate(() => {
+    const e = (type: string): void => { const ev = new KeyboardEvent(type, { key: 'ArrowDown', code: 'ArrowDown', bubbles: true, cancelable: true }); Object.defineProperty(ev, 'keyCode', { get: () => 40 }); window.dispatchEvent(ev); };
+    e('keydown'); setTimeout(() => e('keyup'), 90);
+  });
+  await page.waitForFunction(() => { const p = (window as unknown as { __game: { probe: { playerDir: string; playerMoving: boolean } } }).__game.probe; return p.playerDir === 'down' && !p.playerMoving; }, null, { timeout: 5_000 });
+}
+
 const VIEWS = [{ name: 'портрет', w: 390, h: 844 }, { name: 'ландшафт', w: 844, h: 390 }] as const;
 const VARIANTS = [{ name: 'соло на велосипеді', pick: /Велосипед|Bike/, car: false }, { name: 'родина в авто', pick: /Авто|Car/, car: true }] as const;
 
@@ -145,6 +167,8 @@ for (const v of VIEWS) {
       const errors = await start(page, k.pick);
       const done: string[] = [];
       let bpShot = false;
+      let bikeShot = k.car;
+      let coexist = 0;
       for (let i = 0; i < 40; i++) {
         const c = await core(page);
         if (c.game.player?.locationId === 'loc.road') break;
@@ -152,7 +176,18 @@ for (const v of VIEWS) {
           bpShot = true;
           await page.locator('[data-ui="recovery-close"]').click({ timeout: 1_000 }).catch(() => undefined);   // нагадування про код відновлення не закриває мапу на знімку
           await page.waitForTimeout(300);
-          if (k.car) await page.screenshot({ path: `research/visual-audit/mapfirst-${v.name === 'портрет' ? 'portrait' : 'landscape'}-backpack.png` });
+          const side = v.name === 'портрет' ? 'portrait' : 'landscape';
+          if (k.car) await page.screenshot({ path: `research/visual-audit/mapfirst-${side}-backpack.png` });
+          if (k.car) { await faceDown(page); await page.screenshot({ path: `research/visual-audit/mapfirst-${side}-backpack-down.png` }); }
+        }
+        const hb = await hudBoxes(page);
+        if (hb.both) coexist++;
+        expect(hb.overlap, 'картка мети й рядок «Далі» не налазять одне на одне').toBe(0);
+        if (!bikeShot && bpShot && (await probe(page)).fx.target === 'obj.vehicle') {   // велосипед із бульбашкою потреб і героєм із рюкзаком біля нього
+          bikeShot = true;
+          const q = await probe(page);
+          await walk(page, route('home', [q.playerX, q.playerY], 'obj.vehicle', false));
+          await page.screenshot({ path: `research/visual-audit/mapfirst-${v.name === 'портрет' ? 'portrait' : 'landscape'}-bike.png` });
         }
         const shot = i === 2 && !k.car ? `research/visual-audit/mapfirst-${v.name === 'портрет' ? 'portrait' : 'landscape'}-ring.png` : undefined;
         done.push(await goAndDo(page, k.car, shot));
@@ -165,6 +200,7 @@ for (const v of VIEWS) {
       const p = await probe(page);
       expect(p.fx.auto, 'дії від наближення').toBeGreaterThanOrEqual(6);
       expect(p.fx.pops, 'сплив «+1»/«OK» на кожну дію').toBeGreaterThanOrEqual(6);
+      expect(coexist, 'картка мети й рядок «Далі» справді були разом (інакше перевірка нічого не міряє)').toBeGreaterThan(0);
       expect(bpShot, 'дрібна річ пройшла через рюкзак (герой ніс її до авто)').toBe(true);
       expect(done.filter((d) => d.startsWith('pack.')).length, 'речі пакувалися ногами: ' + done.join(' → ')).toBeGreaterThanOrEqual(3);
       expect(done).toContain('obj.vehicle');

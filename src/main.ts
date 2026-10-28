@@ -162,6 +162,9 @@ const worldArt = await loadWorldArt();
 let targetFor: GameState | null = null;
 let targetPack = -1;
 let targetSpot: string | null = null;
+let needsFor: GameState | null = null;
+let needsPack = -1;
+let needsMemo = { small: 0, bulky: 0 };
 const worldHooks: WorldHooks = {
   onNpc: talkOnMap,
   onObject: actOnMap,
@@ -169,9 +172,14 @@ const worldHooks: WorldHooks = {
   backpack: () => backpack.length,
   unload: unloadOne,
   needs: () => {
-    const left = needsLeft(bridge.state, GAME_DEFS, backpack);
-    const bulky = left.filter((i) => isBulky(GAME_DEFS, i)).length;
-    return { small: left.length - bulky, bulky };
+    // Раз на стан ядра й вміст рюкзака, а не на кадр: годинник стан не міняє, тож скрізь між діями це той самий об'єкт.
+    if (needsFor !== bridge.state.game || needsPack !== backpack.length) {
+      needsFor = bridge.state.game; needsPack = backpack.length;
+      const left = needsLeft(bridge.state, GAME_DEFS, backpack);
+      const bulky = left.filter((i) => isBulky(GAME_DEFS, i)).length;
+      needsMemo = { small: left.length - bulky, bulky };
+    }
+    return needsMemo;
   },
   look: (name) => spotLook(bridge.state, name),
   target: () => {

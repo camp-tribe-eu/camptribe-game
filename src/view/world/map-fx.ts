@@ -2,9 +2,11 @@
 // сплив «+1». Лише малювання (Phaser Graphics/Text) — рішення й команди в сцені/main.ts. Усе з простих пікселів палітри гри.
 import Phaser from 'phaser';
 import type { Dir } from './character';
+import { edgeArrow, inSafeZone, type Insets } from './proximity';
 
 const FONT = { fontFamily: "CampPixel, monospace", fontSize: '8px', color: '#ffd54a', stroke: '#1b1f23', strokeThickness: 3 };
 const POP_S = 0.6;
+const GUIDE_R = 16;   // радіус стрілки-покажчика, світові px (≈ 32–48 екранних px)
 const TOP = 100_010;   // над усім, що в світі (DEPTH.always у scene.ts = 100_000)
 
 export interface Needs { readonly small: number; readonly bulky: number }
@@ -37,18 +39,42 @@ export class MapFx {
     g.lineStyle(3, 0xffd54a, 1).beginPath().arc(x, y - 34, 9, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * Math.min(1, t)).strokePath();
   }
 
-  /** Рюкзак на спині героя (з'являється, коли в ньому щось є): ззаду, а коли герой іде вгору — видно збоку-спереду. */
+  /**
+   * Рюкзак героя (з'являється, коли в ньому щось є) — видно в КОЖНОМУ напрямку:
+   * спиною до глядача (up) — повний рюкзак поверх спини; збоку — профіль рюкзака на спині героя (спереду по глибині);
+   * обличчям до глядача (down) — рюкзак за плечима визирає з боків і над головою-плечима, а на грудях лежать лямки.
+   */
   drawBackpack(on: boolean, x: number, y: number, facing: Dir): void {
     const g = this.pack.clear();
     if (!on) return;
-    // Рюкзак на спині: ззаду (дивиться вниз/вбік) він виглядає з-за плечей широкими краями й верхом; спиною до глядача — перед героєм.
-    const side = facing === 'left' ? 4 : facing === 'right' ? -4 : 0;
-    const bx = x + side - 7;
-    g.fillStyle(0x7a4b25, 1).fillRoundedRect(bx, y - 38, 14, 16, 3);
-    g.fillStyle(0xb67a3d, 1).fillRect(bx + 2, y - 36, 10, 4);
-    g.fillStyle(0xd9a441, 1).fillRect(bx + 6, y - 31, 2, 3);
-    g.lineStyle(1, 0x1b1f23, 1).strokeRoundedRect(bx, y - 38, 14, 16, 3);
-    g.setDepth(facing === 'up' ? y + 0.5 : y - 0.5);
+    const OUT = 0x1b1f23;
+    const body = 0x7a4b25;
+    const flap = 0xb67a3d;
+    const buckle = 0xd9a441;
+    if (facing === 'up') {
+      g.fillStyle(body, 1).fillRoundedRect(x - 8, y - 38, 16, 17, 3);
+      g.fillStyle(flap, 1).fillRect(x - 6, y - 36, 12, 5);
+      g.fillStyle(buckle, 1).fillRect(x - 1, y - 30, 2, 3);
+      g.lineStyle(1, OUT, 1).strokeRoundedRect(x - 8, y - 38, 16, 17, 3);
+      g.setDepth(y + 0.5);
+    } else if (facing === 'down') {
+      // Рюкзак позаду: краї над плечима й з боків (глибина позаду тіла) + лямки на грудях (глибина попереду). Дві частини: цей Graphics — спереду, лямки й краї малюємо разом, краї виступають за тіло.
+      g.fillStyle(body, 1).fillRoundedRect(x - 11, y - 36, 5, 13, 2).fillRoundedRect(x + 6, y - 36, 5, 13, 2);
+      g.lineStyle(1, OUT, 1).strokeRoundedRect(x - 11, y - 36, 5, 13, 2).strokeRoundedRect(x + 6, y - 36, 5, 13, 2);
+      g.fillStyle(flap, 1).fillRect(x - 9, y - 38, 18, 3).lineStyle(1, OUT, 1).strokeRect(x - 9, y - 38, 18, 3);
+      g.fillStyle(body, 1).fillRect(x - 5, y - 33, 3, 11).fillRect(x + 2, y - 33, 3, 11);
+      g.fillStyle(buckle, 1).fillRect(x - 5, y - 28, 10, 2);
+      g.setDepth(y + 0.5);
+    } else {
+      const back = facing === 'left' ? 1 : -1;   // спина — з протилежного боку від напрямку погляду
+      const bx = back > 0 ? x + 1 : x - 12;
+      g.fillStyle(body, 1).fillRoundedRect(bx, y - 37, 11, 16, 3);
+      g.fillStyle(flap, 1).fillRect(bx + 1, y - 36, 9, 4);
+      g.fillStyle(buckle, 1).fillRect(bx + (back > 0 ? 7 : 2), y - 30, 2, 3);
+      g.lineStyle(1, OUT, 1).strokeRoundedRect(bx, y - 37, 11, 16, 3);
+      g.fillStyle(body, 1).fillRect(x - 2, y - 33, 4, 2);   // лямка через плече
+      g.setDepth(y + 0.5);
+    }
   }
 
   /** Бульбашка потреб над авто: рюкзак × дрібного, намет × громіздкого. Нічого не бракує — не показується. */
@@ -77,17 +103,15 @@ export class MapFx {
   }
 
   /**
-   * Стрілка до мети: ціль на екрані — крапки від героя і гойдалка над ціллю; поза екраном — стрілка на краю в її бік.
-   * `from` — герой, `to` — ціль (світові координати), `view` — видима частина світу.
+   * Стрілка до мети: ціль у безпечній зоні екрана — крапки від героя і гойдалка над ціллю; поза нею — велика пульсуюча стрілка на межі безпечної зони
+   * (не під шапкою HUD і не під джойстиком/кнопкою дії — `ins` у світових одиницях). `from` — герой, `to` — ціль, `view` — видима частина світу.
    */
-  drawGuide(from: { x: number; y: number }, to: { x: number; y: number } | null, view: Phaser.Geom.Rectangle, near: number, time: number): void {
+  drawGuide(from: { x: number; y: number }, to: { x: number; y: number } | null, view: Phaser.Geom.Rectangle, ins: Insets, near: number, time: number): void {
     const g = this.guide.clear();
     this.guideMode = 'none';
     if (!to || Math.hypot(to.x - from.x, to.y - from.y) < near) return;
-    const m = 14;
-    const inside = to.x > view.x + m && to.x < view.right - m && to.y > view.y + m + 24 && to.y < view.bottom - m;
     g.fillStyle(0xffd54a, 1).lineStyle(1, 0x1b1f23, 1);
-    if (inside) {
+    if (inSafeZone(view, { x: to.x, y: to.y - 52 }, ins, 14)) {
       this.guideMode = 'line';
       const d = Math.hypot(to.x - from.x, to.y - from.y);
       const n = Math.floor(d / 14);
@@ -100,19 +124,14 @@ export class MapFx {
       return;
     }
     this.guideMode = 'edge';
-    const cx = view.centerX;
-    const cy = view.centerY;
-    const dx = to.x - cx;
-    const dy = to.y - cy;
-    const k = Math.min((view.width / 2 - m) / Math.max(Math.abs(dx), 1e-6), (view.height / 2 - m - 24) / Math.max(Math.abs(dy), 1e-6), 1);
-    const px = cx + dx * k;
-    const py = cy + dy * k;
-    const a = Math.atan2(dy, dx);
-    const pt = (r: number, da: number): [number, number] => [px + Math.cos(a + da) * r, py + Math.sin(a + da) * r];
-    const [x1, y1] = pt(9, 0);
-    const [x2, y2] = pt(7, 2.5);
-    const [x3, y3] = pt(7, -2.5);
-    g.fillTriangle(x1, y1, x2, y2, x3, y3).strokeTriangle(x1, y1, x2, y2, x3, y3);
+    const R = GUIDE_R * (1 + 0.15 * Math.abs(Math.sin(time / 240)));   // пульсує: око ловить рух
+    const a = edgeArrow(view, to, ins, GUIDE_R * 1.15);
+    const pt = (r: number, da: number): [number, number] => [a.x + Math.cos(a.angle + da) * r, a.y + Math.sin(a.angle + da) * r];
+    const [x1, y1] = pt(R, 0);
+    const [x2, y2] = pt(R * 0.8, 2.5);
+    const [x3, y3] = pt(R * 0.8, -2.5);
+    g.fillStyle(0x1b1f23, 0.55).fillCircle(a.x, a.y, R * 0.95);   // темна підкладка: стрілка читається на будь-якому тлі
+    g.fillStyle(0xffd54a, 1).lineStyle(2, 0x1b1f23, 1).fillTriangle(x1, y1, x2, y2, x3, y3).strokeTriangle(x1, y1, x2, y2, x3, y3);
   }
 
   /** Сплив над героєм: «+1»/«OK» піднімається й гасне (≈0,6 с; рухає tick — без таймерів реального часу). */

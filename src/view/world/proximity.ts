@@ -25,3 +25,34 @@ export function stepRing(r: Ring, near: string | null, armed: boolean, hold: boo
 
 /** Чи кільце може взяти об'єкт `near` само: річ на полиці — лише коли вона поточна ціль підказки (повз зайву річ іти можна); решта автооб'єктів — як є. */
 export const ringMayTake = (near: string | null, target: string | null): boolean => near !== null && (!near.startsWith('pack.') || near === target);
+
+/**
+ * Авто/велосипед рушає лише тоді, коли ВСЕ потрібне вже вкладене: рюкзак порожній і немає жодної потрібної речі поза багажником
+ * (ні дрібної, ні громіздкої). Поки чогось бракує — кільце біля авто не заповнюється, їхати «повз» речі не можна.
+ */
+export const vehicleReady = (carrying: boolean, needs: { readonly small: number; readonly bulky: number }): boolean => !carrying && needs.small + needs.bulky === 0;
+
+/** Відступи безпечної зони від країв видимої частини світу (світові одиниці): верх — під шапкою HUD, низ — над джойстиком і кнопкою дії. */
+export interface Insets { readonly top: number; readonly bottom: number; readonly left: number; readonly right: number }
+export interface View { readonly x: number; readonly y: number; readonly width: number; readonly height: number }
+
+/**
+ * Куди ставити стрілку-покажчик, коли ціль поза безпечною зоною: точка на межі зони (стиснутої на радіус стрілки `r`) по променю від центру зони до цілі,
+ * і кут стрілки. Чиста функція: шапка й дотикова панель стрілку не закривають за будь-якого положення цілі.
+ */
+export function edgeArrow(view: View, to: { readonly x: number; readonly y: number }, ins: Insets, r: number): { x: number; y: number; angle: number } {
+  const left = view.x + ins.left + r;
+  const right = view.x + view.width - ins.right - r;
+  const top = view.y + ins.top + r;
+  const bottom = view.y + view.height - ins.bottom - r;
+  const cx = (left + right) / 2;
+  const cy = (top + bottom) / 2;
+  const dx = to.x - cx;
+  const dy = to.y - cy;
+  const k = Math.min((right - left) / 2 / Math.max(Math.abs(dx), 1e-6), (bottom - top) / 2 / Math.max(Math.abs(dy), 1e-6), 1);
+  return { x: cx + dx * k, y: cy + dy * k, angle: Math.atan2(dy, dx) };
+}
+
+/** Чи ціль у безпечній зоні (тоді показуємо пунктир і гойдалку над нею, а не стрілку на краї). */
+export const inSafeZone = (view: View, p: { readonly x: number; readonly y: number }, ins: Insets, margin: number): boolean =>
+  p.x > view.x + ins.left + margin && p.x < view.x + view.width - ins.right - margin && p.y > view.y + ins.top + margin && p.y < view.y + view.height - ins.bottom - margin;
