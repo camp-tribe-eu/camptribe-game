@@ -356,7 +356,7 @@ export class WorldScene extends Phaser.Scene {
     this.probe.followers = this.chain.map((p) => ({ x: p.x, y: p.y }));
     this.probe.leisure = this.chain.map(() => null);
     const fromMap = leisureFromObjects(objects as never, TILE);
-    this.leisureSpots = fromMap.length > 0 ? fromMap : [...(LEISURE_BY_MAP[key] ?? [])];
+    this.leisureSpots = fromMap.length > 0 ? fromMap : [...(LEISURE_BY_MAP[key === 'camp' ? 'camp-lake' : key] ?? [])];
     this.idleS = 0;
     this.leisure = null;
     if (this.daylightOn) this.makeGlow(spawnFire(this.spots));
