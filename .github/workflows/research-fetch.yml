@@ -36,15 +36,15 @@ jobs:
               kenney:*)
                 slug="${src#kenney:}"
                 page=$(curl -sfL "https://kenney.nl/assets/$slug") || { echo "::error::$name: сторінка $slug недоступна"; fail=1; continue; }
-                printf '%s' "$page" | grep -oiE 'Creative Commons[^<"]{0,40}' | head -3 > "$d/LICENSE-from-page.txt"
+                printf '%s' "$page" | grep -oiE 'Creative Commons[^<"]{0,40}' | head -3 > "$d/LICENSE-from-page.txt" || true
                 printf '%s' "$page" > "$d/page.html"
                 # Посилання може бути абсолютним, відносним (/media/...), у лапках '' або з \/ (JSON) — шукаємо всі форми.
-                zip=$(sed 's#\\/#/#g' "$d/page.html" | grep -oiE "(https://(www\.)?kenney\.nl)?/media/[^\"' <>)]+\.zip" | head -1)
+                zip=$(sed 's#\\/#/#g' "$d/page.html" | grep -oiE "(https://(www\.)?kenney\.nl)?/media/[^\"' <>)]+\.zip" | head -1 || true)
                 if [ -z "$zip" ]; then
                   echo "::error::$name: zip не знайдено на сторінці"; fail=1
                   # Фрагмент розмітки навколо download/zip, щоб бачити причину (не арт).
                   mkdir -p research/debug
-                  { echo "page bytes: $(wc -c < "$d/page.html")"; grep -oiE '.{0,120}(\.zip|download|/media/).{0,160}' "$d/page.html" | head -25; } > "research/debug/$name.txt"
+                  { echo "page bytes: $(wc -c < "$d/page.html")"; grep -oiE '.{0,120}(\.zip|download|/media/).{0,160}' "$d/page.html" | head -25 || true; } > "research/debug/$name.txt"
                   continue
                 fi
                 case "$zip" in /*) zip="https://kenney.nl$zip";; esac
