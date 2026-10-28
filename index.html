@@ -103,6 +103,9 @@
       .ui-journal summary { list-style: none; display: inline-block; cursor: pointer; }
       .ui-overlay h2 { margin: 0 0 8px; font-size: 1.5rem; }
       .ui-overlay fieldset { border: 1px solid #e8e6e355; border-radius: 8px; display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; max-width: min(92vw, 640px); }
+      /* GAME-40: повзунки гучності — ціль дотику ≥ 44×44 (world.spec «кожна ціль … ≥ 44×44»). */
+      .ui-overlay fieldset[data-ui="audio"] label { display: flex; align-items: center; gap: 8px; }
+      .ui-overlay input[type="range"] { min-width: 160px; min-height: 48px; margin: 0; accent-color: #6fa84f; }
       /* line-height: кнопка не успадковує його (UA: normal) — у піксельного шрифту рядки підпису злипалися (відгук власника). */
       .ui-btn { font-family: inherit; font-size: 0.75rem; max-width: 92vw; white-space: normal; min-width: 52px; min-height: 48px; padding: 8px 16px; border-radius: 10px; border: 2px solid #e8e6e3aa;
         background: #2a2f35; color: #e8e6e3; font-size: 1rem; line-height: 1.5; }
