@@ -67,8 +67,10 @@ describe('недоступні купівлі, HUD і спорядження в 
   it('HUD: день з 1 і час доби з годинника симуляції', () => {
     const s = inShop(0);
     const at = (minutes: number) => storyOffer({ ...s, clock: { ...s.clock, minutes } }, GAME_DEFS).offer;
-    expect([at(0).day, at(0).timeMinutes]).toEqual([1, 0]);
-    expect([at(1440 + 75).day, at(1440 + 75).timeMinutes]).toEqual([2, 75]);
+    // GAME-99: показ часу зсунуто на DAY_START_MINUTE (08:00 на старті), ядро не чіпали
+    expect([at(0).day, at(0).timeMinutes]).toEqual([1, 8 * 60]);
+    expect([at(1440 + 75).day, at(1440 + 75).timeMinutes]).toEqual([2, 8 * 60 + 75]);
+    expect(at(16 * 60).timeMinutes).toBe(0);   // 16 год після старту — північ показу
   });
   it('інвентар: спорядження зі станом і «мокре», решта речей без gear', () => {
     const s = withGame((g) => ({ ...g, inventory: { 'item.tent': 1, 'item.firewood': 1 }, gear: { 'item.tent': { condition: 80, wet: true } } }));

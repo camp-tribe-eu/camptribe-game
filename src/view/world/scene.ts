@@ -11,6 +11,7 @@ import { KEY_BINDINGS, KEY_CODES, TAP_MAX_MOVE, TAP_MAX_MS, actionTarget, consum
 import type { Bridge } from './bridge';
 import type { WorldArt } from './art';
 import { COLS, FRAME, frameIndex, type Dir } from './character';
+import { FIRE_CORE, FIRE_GLOW, ambientAt, glowAlpha, timeOfDay } from './daylight';
 import { FOLLOW_SPEED_FACTOR, SPEED, gridFromWalls, restPoints, stepFollowers, type Grid, type Pt } from './follow';
 
 export const TILE = 32;
@@ -64,7 +65,12 @@ export interface WorldProbe {
   followers: Pt[];
   /** GAME-38: мс від початку навігації до першого намальованого кадру Phaser; 0, доки кадру не було (ставить main.ts). */
   firstFrameMs: number;
+  /** GAME-99 (лише для e2e): ефект «день і ніч» — що зараз намальовано. `on` — ефект увімкнено; `visible` — прямокутник/пляма видимі (вдень — ні). */
+  daylight: { on: boolean; visible: boolean; minuteOfDay: number; darkness: number; color: number; glow: number };
 }
+
+/** Точка вогнища (об'єкт мапи obj.campfire) — центр світлої плями; нема — плями нема. */
+const spawnFire = (spots: readonly Spot[]): Pt | null => { const f = spots.find((s) => s.name === 'obj.campfire'); return f ? { x: f.x, y: f.y } : null; };
 
 /** Вікно вимірювання fps, мс. */
 const FPS_WINDOW_MS = 3000;
@@ -84,6 +90,9 @@ export class WorldScene extends Phaser.Scene {
   private fpsStart = -1;
   /** Тап по канві (GAME-95): світова точка, чекає на кадр update, де її звіряють із цілями в зоні дії. */
   private tap: { x: number; y: number } | null = null;
+  /** GAME-99: нічна маска (на весь екран, MULTIPLY) і світла пляма вогнища (ADD); null, якщо ефект вимкнено. */
+  private night: Phaser.GameObjects.Rectangle | null = null;
+  private glow: Phaser.GameObjects.Image | null = null;
 
   /** Позначки цілей хвилі й доброї справи (GAME-170 зріз 2) — за назвою об'єкта; видимі лише поки об'єкт «живий» (isLive). */
   private markers = new Map<string, Phaser.GameObjects.GameObject & { setVisible(v: boolean): unknown }>();
@@ -91,7 +100,8 @@ export class WorldScene extends Phaser.Scene {
   /** art — графіка, декодована до старту гри (loadWorldArt); onNpc — гравець заговорив із NPC на мапі (розмову веде екран подорожі);
    *  onObject — дотик до тригера (режисер вирішує: справа хвилі, сцена біля вогнища чи Interact); isLive — чи об'єкт зараз діє й видимий. */
   constructor(private readonly bridge: Bridge, private readonly controls: InputState, private readonly probe: WorldProbe, private readonly art: WorldArt, private readonly onNpc: (npcId: string) => void = () => {},
-    private readonly onObject: (name: string) => void = (name) => { bridge.send({ type: 'Interact', targetId: name }); }, private readonly isLive: (name: string) => boolean = () => true) {
+    private readonly onObject: (name: string) => void = (name) => { bridge.send({ type: 'Interact', targetId: name }); }, private readonly isLive: (name: string) => boolean = () => true,
+    private readonly daylightOn = true) {
     super('world');
   }
 
@@ -184,6 +194,7 @@ export class WorldScene extends Phaser.Scene {
     this.followFacing = FOLLOWERS.map(() => 'down' as Dir);
     this.followSprites = FOLLOWERS.map((name, i) => this.add.sprite(this.chain[i]?.x ?? 0, this.chain[i]?.y ?? 0, name, frameIndex('down', 0)).setOrigin(0.5, ORIGIN_Y));
     this.probe.followers = this.chain.map((p) => ({ x: p.x, y: p.y }));
+    if (this.daylightOn) this.makeDaylight(spawnFire(this.spots));
 
     this.player = this.physics.add.sprite(spawn.x ?? 0, spawn.y ?? 0, 'player', frameIndex('down', 0));
     this.player.setOrigin(0.5, ORIGIN_Y);
@@ -269,6 +280,45 @@ export class WorldScene extends Phaser.Scene {
     return this.add.image(0, 0, key).setOrigin(0, 0);
   }
 
+  /**
+   * GAME-99: день і ніч. Нічна маска — прямокутник на весь екран (scrollFactor 0), що множить кадр на синій; світла пляма вогнища — радіальний
+   * градієнт з канви (без файлів), ADD над маскою. Обидва вище за все в світі. Вдень приховані (`visible` у update).
+   */
+  private makeDaylight(fire: Pt | null): void {
+    const cam = this.cameras.main;   // розмір маски — з вікна камери (оновлюється в updateDaylight при зміні кадру), а не стала: 4K при zoom 1 теж покрито
+    this.night = this.add.rectangle(0, 0, cam.width, cam.height, 0xffffff).setOrigin(0, 0).setScrollFactor(0).setDepth(DEPTH.always + 1).setBlendMode(Phaser.BlendModes.MULTIPLY).setVisible(false);
+    if (!fire) return;
+    const R = 80;
+    const tex = this.textures.createCanvas('fire-glow', R * 2, R * 2);
+    if (!tex) throw new Error('texture fire-glow failed');
+    const ctx = tex.getContext();
+    const css = (c: number): string => `#${c.toString(16).padStart(6, '0')}`;
+    const g = ctx.createRadialGradient(R, R, 0, R, R, R);
+    g.addColorStop(0, `${css(FIRE_CORE)}ff`);
+    g.addColorStop(0.35, `${css(FIRE_GLOW)}99`);
+    g.addColorStop(1, `${css(FIRE_GLOW)}00`);
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, R * 2, R * 2);
+    tex.refresh();
+    this.glow = this.add.image(fire.x, fire.y - 12, 'fire-glow').setDepth(DEPTH.always + 2).setBlendMode(Phaser.BlendModes.ADD).setVisible(false);
+  }
+
+  private updateDaylight(time: number): void {
+    const d = this.probe.daylight;
+    d.on = this.daylightOn;
+    if (!this.night) return;
+    const cam = this.cameras.main;
+    if (this.night.width !== cam.width || this.night.height !== cam.height) this.night.setSize(cam.width, cam.height);
+    const minuteOfDay = timeOfDay(this.bridge.state.clock.minutes);
+    const a = ambientAt(minuteOfDay);
+    const visible = a.darkness > 0;
+    const glow = glowAlpha(a.darkness, time);
+    this.night.setVisible(visible);
+    if (visible) this.night.setFillStyle(a.color, 1);
+    this.glow?.setVisible(visible).setAlpha(glow);
+    Object.assign(d, { visible, minuteOfDay, darkness: a.darkness, color: a.color, glow: this.glow ? glow : 0 });
+  }
+
   /** GAME-112: ланцюжок слідувачів іде за героєм у обхід стін; анімація й напрямок — з їхнього зсуву за кадр. */
   private moveFollowers(deltaMs: number): void {
     const before = this.chain.map((p) => ({ x: p.x, y: p.y }));
@@ -351,6 +401,7 @@ export class WorldScene extends Phaser.Scene {
     }
 
     this.moveFollowers(delta);
+    this.updateDaylight(time);
 
     const box = this.player.getBounds();
     let covered = 0;

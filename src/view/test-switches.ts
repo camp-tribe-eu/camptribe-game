@@ -20,6 +20,10 @@ export interface TestSwitches {
   /** ?holdToast=1 — GAME-98: тост-підказка не зникає за таймером (лише від дії гравця), щоб e2e міряв її контраст і на
    *  повільному CI, де від старту до готовності сторінки минає більше за 5 с. */
   readonly holdToast?: boolean;
+  /** ?daylight=off — GAME-99: вимкнути ефект «день і ніч» (A/B для вимірів fps і негативний контроль e2e). */
+  readonly noDaylight?: boolean;
+  /** ?atMinute=N (0…1439) — GAME-99: гра стартує о N-й хвилині доби (годинник 1 хв/с, до полудня за 12 хв не дочекаєшся); лише для e2e-знімків і перевірки ефекту. */
+  readonly atMinute?: number;
   /** ?hideUi=wave — негативний контроль GAME-170: без картки мети e2e хвилі мусить почервоніти. */
   readonly hideUi: readonly string[];
   /** ?breakSpot=task.firewood — негативний контроль GAME-170: названий об'єкт мапи стає німим (дотик нічого не шле) — прохід мусить почервоніти. */
@@ -33,5 +37,6 @@ export function testSwitches(search: string, mode: string): TestSwitches {
   const seed = Number(q.get('seed'));
   const lag = Number(q.get('frameLagMs'));
   const boot = Number(q.get('bootDelayMs'));
-  return { ...(Number.isInteger(boot) && boot >= 1 && boot <= 5000 ? { bootDelayMs: boot } : {}), ...(Number.isInteger(lag) && lag >= 1 && lag <= 190 ? { frameLagMs: lag } : {}), hideTouch: list('hideTouch'), hideAct: list('hideAct'), hideUi: list('hideUi'), breakSpot: list('breakSpot'), ...(q.get('noAutosave') === '1' ? { noAutosave: true } : {}), ...(q.get('holdToast') === '1' ? { holdToast: true } : {}), ...(q.get('freshSeed') === '1' ? { freshSeed: true } : {}), ...(q.has('seed') && Number.isSafeInteger(seed) && seed >= 0 ? { seed } : {}) };
+  const at = Number(q.get('atMinute'));
+  return { ...(Number.isInteger(boot) && boot >= 1 && boot <= 5000 ? { bootDelayMs: boot } : {}), ...(Number.isInteger(lag) && lag >= 1 && lag <= 190 ? { frameLagMs: lag } : {}), hideTouch: list('hideTouch'), hideAct: list('hideAct'), hideUi: list('hideUi'), breakSpot: list('breakSpot'), ...(q.get('noAutosave') === '1' ? { noAutosave: true } : {}), ...(q.get('holdToast') === '1' ? { holdToast: true } : {}), ...((q.get('atMinute') ?? '') !== '' && Number.isInteger(at) && at >= 0 && at <= 1439 ? { atMinute: at } : {}), ...(q.get('daylight') === 'off' ? { noDaylight: true } : {}), ...(q.get('freshSeed') === '1' ? { freshSeed: true } : {}), ...(q.has('seed') && Number.isSafeInteger(seed) && seed >= 0 ? { seed } : {}) };
 }
