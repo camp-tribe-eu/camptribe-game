@@ -258,14 +258,28 @@ ANCHORS = [
 ]
 
 
+# GAME-173/172: точки дозвілля родини (type=leisure, name leisure.<вид>.<n>, property face). Мапа їх має — тож вони мають перевагу над LEISURE_BY_MAP у leisure.ts.
+# Ліва галявина (клітинки ті самі, що були в LEISURE_BY_MAP) + нові зони: лавка біля рецепції, берег біля води, лавка на лісовій галявині.
+LEISURE = [
+    ('leisure.campfire.1', 2, 4, 'right'), ('leisure.campfire.2', 4, 4, 'left'), ('leisure.campfire.3', 3, 5, 'up'),
+    ('leisure.shore.1', 8, 9, 'right'), ('leisure.tent.1', 6, 4, 'up'), ('leisure.bench.1', 8, 6, 'left'),
+    ('leisure.bench.2', 14, 7, 'up'), ('leisure.shore.2', 26, 8, 'right'), ('leisure.bench.3', 20, 18, 'right'),
+]
+
+
 def objects():
     # Центри клітинок (піксель = тайл × 32 + 16 по x; по y — ноги персонажа на нижньому краї рядка-центра).
     # Було (16 px): spawn (104, 88), вогнище (56, 72), Еліза (40, 136) — подвоєно: клітинки ті самі.
     pts = [(1, 's.camp', 'spawn', 208, 176), (2, 'obj.campfire', 'trigger', 112, 144), (3, 'npc.elise', 'npc', 80, 272),
            *((4 + i, n, 'trigger', x, y) for i, (n, x, y) in enumerate(TASK_SPOTS))]
     pts += [(4 + len(TASK_SPOTS) + i, n, 'anchor', c * T + 16, r * T + 16) for i, (n, c, r) in enumerate(ANCHORS)]
-    return [{'id': i, 'name': n, 'type': t, 'x': x, 'y': y, 'width': 0, 'height': 0, 'point': True, 'rotation': 0, 'visible': True}
-            for i, n, t, x, y in pts]
+    base = 4 + len(TASK_SPOTS) + len(ANCHORS)
+    pts += [(base + i, n, 'leisure', c * T + 16, r * T + 16) for i, (n, c, r, _f) in enumerate(LEISURE)]
+    out = [{'id': i, 'name': n, 'type': t, 'x': x, 'y': y, 'width': 0, 'height': 0, 'point': True, 'rotation': 0, 'visible': True}
+           for i, n, t, x, y in pts]
+    for o, f in zip(out[-len(LEISURE):], (l[3] for l in LEISURE)):
+        o['properties'] = [{'name': 'face', 'type': 'string', 'value': f}]
+    return out
 
 
 def tile_layer(i, name, data, props=None):
@@ -280,7 +294,7 @@ def tmj(g):
            'margin': 0, 'spacing': 0, 'columns': cols, 'tilecount': count} for n, img, cols, count, f in TILESETS]
     return {
         'type': 'map', 'version': '1.10', 'tiledversion': '1.11.0', 'orientation': 'orthogonal', 'renderorder': 'right-down',
-        'width': W, 'height': H, 'tilewidth': T, 'tileheight': T, 'infinite': False, 'nextlayerid': 7, 'nextobjectid': 17,
+        'width': W, 'height': H, 'tilewidth': T, 'tileheight': T, 'infinite': False, 'nextlayerid': 7, 'nextobjectid': 4 + len(TASK_SPOTS) + len(ANCHORS) + len(LEISURE),
         'layers': [
             tile_layer(1, 'ground', g.layers['ground']),
             tile_layer(2, 'decor', g.layers['decor']),

@@ -10,7 +10,7 @@
  "tileheight": 32,
  "infinite": false,
  "nextlayerid": 7,
- "nextobjectid": 17,
+ "nextobjectid": 34,
  "layers": [
   {
    "id": 1,
@@ -4208,6 +4208,177 @@
      "point": true,
      "rotation": 0,
      "visible": true
+    },
+    {
+     "id": 25,
+     "name": "leisure.campfire.1",
+     "type": "leisure",
+     "x": 80,
+     "y": 144,
+     "width": 0,
+     "height": 0,
+     "point": true,
+     "rotation": 0,
+     "visible": true,
+     "properties": [
+      {
+       "name": "face",
+       "type": "string",
+       "value": "right"
+      }
+     ]
+    },
+    {
+     "id": 26,
+     "name": "leisure.campfire.2",
+     "type": "leisure",
+     "x": 144,
+     "y": 144,
+     "width": 0,
+     "height": 0,
+     "point": true,
+     "rotation": 0,
+     "visible": true,
+     "properties": [
+      {
+       "name": "face",
+       "type": "string",
+       "value": "left"
+      }
+     ]
+    },
+    {
+     "id": 27,
+     "name": "leisure.campfire.3",
+     "type": "leisure",
+     "x": 112,
+     "y": 176,
+     "width": 0,
+     "height": 0,
+     "point": true,
+     "rotation": 0,
+     "visible": true,
+     "properties": [
+      {
+       "name": "face",
+       "type": "string",
+       "value": "up"
+      }
+     ]
+    },
+    {
+     "id": 28,
+     "name": "leisure.shore.1",
+     "type": "leisure",
+     "x": 272,
+     "y": 304,
+     "width": 0,
+     "height": 0,
+     "point": true,
+     "rotation": 0,
+     "visible": true,
+     "properties": [
+      {
+       "name": "face",
+       "type": "string",
+       "value": "right"
+      }
+     ]
+    },
+    {
+     "id": 29,
+     "name": "leisure.tent.1",
+     "type": "leisure",
+     "x": 208,
+     "y": 144,
+     "width": 0,
+     "height": 0,
+     "point": true,
+     "rotation": 0,
+     "visible": true,
+     "properties": [
+      {
+       "name": "face",
+       "type": "string",
+       "value": "up"
+      }
+     ]
+    },
+    {
+     "id": 30,
+     "name": "leisure.bench.1",
+     "type": "leisure",
+     "x": 272,
+     "y": 208,
+     "width": 0,
+     "height": 0,
+     "point": true,
+     "rotation": 0,
+     "visible": true,
+     "properties": [
+      {
+       "name": "face",
+       "type": "string",
+       "value": "left"
+      }
+     ]
+    },
+    {
+     "id": 31,
+     "name": "leisure.bench.2",
+     "type": "leisure",
+     "x": 464,
+     "y": 240,
+     "width": 0,
+     "height": 0,
+     "point": true,
+     "rotation": 0,
+     "visible": true,
+     "properties": [
+      {
+       "name": "face",
+       "type": "string",
+       "value": "up"
+      }
+     ]
+    },
+    {
+     "id": 32,
+     "name": "leisure.shore.2",
+     "type": "leisure",
+     "x": 848,
+     "y": 272,
+     "width": 0,
+     "height": 0,
+     "point": true,
+     "rotation": 0,
+     "visible": true,
+     "properties": [
+      {
+       "name": "face",
+       "type": "string",
+       "value": "right"
+      }
+     ]
+    },
+    {
+     "id": 33,
+     "name": "leisure.bench.3",
+     "type": "leisure",
+     "x": 656,
+     "y": 592,
+     "width": 0,
+     "height": 0,
+     "point": true,
+     "rotation": 0,
+     "visible": true,
+     "properties": [
+      {
+       "name": "face",
+       "type": "string",
+       "value": "right"
+      }
+     ]
     }
    ]
   }

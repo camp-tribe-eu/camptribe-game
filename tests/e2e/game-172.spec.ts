@@ -150,3 +150,22 @@ test.describe('GAME-172 живий кемпінг', () => {
     expect(heard?.barkCount).toBeGreaterThanOrEqual(1);
   });
 });
+
+// Знімки для research/visual-audit (SHOTS=1): п'ять місць табору в обох орієнтаціях телефона, героя ведуть клавіші. У звичайному прогоні — пропуск.
+const SHOT_SPOTS: [string, { c: number; r: number }][] = [['spawn', { c: 6, r: 5 }], ['reception', { c: 15, r: 6 }], ['pier', { c: 35, r: 7 }], ['tents-south', { c: 4, r: 16 }], ['clearing', { c: 21, r: 18 }]];
+for (const [orient, viewport] of [['portrait', { width: 390, height: 844 }], ['landscape', { width: 844, height: 390 }]] as const) {
+  test.describe(`знімки ${orient}`, () => {
+    test.use({ viewport, deviceScaleFactor: 2 });
+    test(`camp-* ${orient}`, async ({ page }) => {
+      test.skip(process.env.SHOTS !== '1', 'лише SHOTS=1');
+      test.setTimeout(240_000);
+      await open(page);
+      for (const [name, to] of SHOT_SPOTS) {
+        await walkTo(page, to, 40_000);
+        await page.waitForTimeout(600);
+        await page.screenshot({ path: `research/visual-audit/camp-${name}-${orient}.png` });
+      }
+    });
+  });
+}
+

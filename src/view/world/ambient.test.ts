@@ -66,6 +66,20 @@ describe('мапа табору: площа й зони', () => {
     for (const a of anchors) expect(findPath(grid, tileOf(grid, spawn), tileOf(grid, { x: a.x, y: a.y })), `${a.name} недосяжний`).not.toBeNull();
   });
 
+  // GAME-173 × GAME-172: мапа тепер має власні точки дозвілля (type=leisure); вони мають перевагу над LEISURE_BY_MAP. Мутація: поставити leisure.* у стіну / на ціль — червоніє.
+  it('точки дозвілля родини на мапі: прохідні, досяжні зі старту, не на цілях взаємодії, у новій частині табору теж', () => {
+    const lz = objs.filter((o) => kind(o) === 'leisure');
+    expect(lz.length, 'нема точок дозвілля на мапі').toBeGreaterThanOrEqual(6);
+    const targets = new Set(spots.map((s) => { const t = tileOf(grid, s); return t.r * grid.cols + t.c; }));
+    for (const o of lz) {
+      const t = tileOf(grid, { x: o.x, y: o.y });
+      expect(isSolid(grid, t), `${o.name} у стіні (${t.c},${t.r})`).toBe(false);
+      expect(targets.has(t.r * grid.cols + t.c), `${o.name} на цілі взаємодії`).toBe(false);
+      expect(findPath(grid, tileOf(grid, spawn), t), `${o.name} недосяжна`).not.toBeNull();
+    }
+    expect(lz.some((o) => o.x >= 20 * TILE), 'жодної точки дозвілля у новій частині мапи').toBe(true);
+  });
+
   it('кожна ціль взаємодії (тригер, NPC, anchor) досяжна, і вона не в стіні', () => {
     for (const s of spots) {
       const t = tileOf(grid, s);

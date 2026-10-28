@@ -15,7 +15,7 @@ export const CODES = {
   MAP_PARSE:            { check: 'loader', spec: 'файл мапи читається як Tiled JSON (.tmj)' },
   MAP_STRUCTURE:        { check: 'structure', spec: 'ортогональна скінченна мапа, вбудовані тайлсети, дані шарів масивом' },
   TILE_OUT_OF_TILESET:  { check: 'tiles', spec: 'кожен gid належить якомусь тайлсету' },
-  OBJECT_INVALID:       { check: 'objects', spec: 'об’єкт шару objects — spawn | trigger | npc | anchor з унікальним іменем' },
+  OBJECT_INVALID:       { check: 'objects', spec: 'об’єкт шару objects — spawn | trigger | npc | anchor | leisure з унікальним іменем' },
   OBJECT_OUT_OF_BOUNDS: { check: 'bounds', spec: 'об’єкт лежить у межах мапи' },
   MAP_NO_SPAWN:         { check: 'spawn-present', spec: 'на мапі є точка появи' },
   SPAWN_BLOCKED:        { check: 'spawn-free', spec: 'точка появи не на стіні й не замурована' },
@@ -30,7 +30,7 @@ export const CODES = {
 };
 
 export const OBJECT_LAYER = 'objects';
-export const KINDS = ['spawn', 'trigger', 'npc', 'anchor'];   // GAME-172: anchor — іменована точка під майбутню дію (не тригер)
+export const KINDS = ['spawn', 'trigger', 'npc', 'anchor', 'leisure'];   // GAME-172: anchor — іменована точка під майбутню дію (не тригер); leisure — точка дозвілля родини (GAME-173, не ціль)
 const TARGET_KINDS = ['trigger', 'npc', 'anchor'];
 
 // ---------- розкладка (GAME-146): словник видів меблів ----------
