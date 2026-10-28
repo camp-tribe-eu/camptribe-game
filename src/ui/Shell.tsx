@@ -2,6 +2,7 @@
 // й екранного читача (TD-003).
 import { useEffect, useLayoutEffect, useRef, useState } from 'preact/hooks';
 import { mixer } from '../audio';
+import { playUi, soundForButton } from '../audio/ui-sounds';
 import { DEFAULT_SETTINGS, TEXT_SCALES, loadSettings, saveSettings, type Settings } from '../platform/settings';
 import type { Credits, UiPort } from './port';
 import { t as tr, type AnyLang, type Key } from '../i18n';
@@ -117,11 +118,23 @@ export function Shell({ port, langOverride, credits, build, holdToast = false, h
   // Розмова з NPC на мапі відкриває екран подорожі (якщо не відкрите меню паузи).
   useEffect(() => port.onOpenStory(() => { if (!paused && !storyOpen) story(true); }), [paused, storyOpen]);
 
+  // GAME-40: звук натискання кнопки UI — один делегований слухач (капча), а не виклик у кожному обробнику; вибір звуку — soundForButton.
+  useEffect(() => {
+    const onClick = (e: MouseEvent): void => {
+      const b = e.target instanceof Element ? e.target.closest('button') : null;
+      if (!b || !b.closest('#ui') || b.getAttribute('aria-disabled') === 'true' || (b as HTMLButtonElement).disabled) return;
+      playUi(soundForButton(b.dataset.ui));
+    };
+    document.addEventListener('click', onClick, true);
+    return () => document.removeEventListener('click', onClick, true);
+  }, []);
+
   // useLayoutEffect: слухач Escape має бачити confirmNew до наступного кадру (інакше швидкий Escape закривав паузу).
   useLayoutEffect(() => {
     const onKey = (e: KeyboardEvent): void => {
       if (e.code !== 'Escape') return;
       e.preventDefault();
+      if (confirmNew || summary || storyOpen || paused) playUi('back');   // Escape закрив/скасував — «назад»; відкриття паузи звуку не має
       if (confirmNew) setConfirmNew(false); else if (summary) summaryContinue(); else if (storyOpen) story(false); else toggle(!paused);
     };
     window.addEventListener('keydown', onKey);
@@ -272,7 +285,7 @@ export function Shell({ port, langOverride, credits, build, holdToast = false, h
           <fieldset>
             <legend>{t('ui.saveGroup')}</legend>
             <button type="button" class="ui-btn" data-ui="save"
-              onClick={() => { void port.save().then((ok) => setStatus(ok ? 'ui.saved' : 'ui.saveFailed')); }}>{t('ui.save')}</button>
+              onClick={() => { void port.save().then((ok) => { setStatus(ok ? 'ui.saved' : 'ui.saveFailed'); if (ok) playUi('confirm'); }); }}>{t('ui.save')}</button>
             <button type="button" class="ui-btn" data-ui="code-export"
               onClick={() => { void port.exportCode().then(setCodeOut); }}>{t('ui.exportCode')}</button>
             {codeOut && <textarea class="ui-code" data-ui="code-out" readOnly rows={3} aria-label={t('ui.exportCode')} value={codeOut}

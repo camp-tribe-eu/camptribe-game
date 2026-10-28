@@ -6,6 +6,7 @@
 // GAME-93: графіка LPC (OD-013) — тайли 32 px, персонаж із шарів (ходьба 9 кадрів × 4 напрямки), анімоване вогнище,
 // 3/4-глибина: верхівки дерев і дах намету малюються над персонажем, коли той стоїть ПОЗАД об'єктом (див. `bands`).
 import Phaser from 'phaser';
+import { bindPhaser } from '../../audio';
 import { KEY_BINDINGS, KEY_CODES, TAP_MAX_MOVE, TAP_MAX_MS, actionTarget, consumeFrame, createActionGate, moveVector, press, release, tapHitsSpot, type Action, type ActionTarget, type InputState } from './actions';
 import type { Bridge } from './bridge';
 import type { WorldArt } from './art';
@@ -86,6 +87,11 @@ export class WorldScene extends Phaser.Scene {
 
   preload(): void {
     this.load.tilemapTiledJSON('camp', 'maps/camp-lake.tmj');
+    // GAME-40: три UI-звуки (SND-001…003). Літерали тут, бо сторож check-scene-refs перевіряє існування файлів лише за літералами в
+    // this.load.*; відповідність ключів/шляхів таблиці UI_SOUND_FILES доводить src/audio/ui-sounds.test.ts.
+    this.load.audio('ui-click', 'audio/ui-click_001.ogg');
+    this.load.audio('ui-confirmation', 'audio/ui-confirmation_001.ogg');
+    this.load.audio('ui-back', 'audio/ui-back_001.ogg');
   }
 
   /**
@@ -111,6 +117,7 @@ export class WorldScene extends Phaser.Scene {
   }
 
   create(): void {
+    bindPhaser(this.sound);   // GAME-40: мікшер отримує вихід Phaser (звуки вже в кеші після preload)
     for (const [name, img] of Object.entries(this.art.tilesets)) this.textures.addImage(name, img);
     this.textures.addSpriteSheet('campfire', this.art.campfire, { frameWidth: FRAME, frameHeight: FRAME });
     this.addSheet('player', this.art.sheets.player);

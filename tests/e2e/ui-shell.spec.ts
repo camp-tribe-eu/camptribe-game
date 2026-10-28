@@ -134,3 +134,18 @@ test.describe('рецензія PR #13: клавіатура в діалозі �
     expect((await probe(page)).playerX).toBeCloseTo(x0, 0);
   });
 });
+
+// GAME-40: UI-звуки йдуть через мікшер (сцена звʼязала Phaser; кнопки → ключі). __game.sounds() — що мікшер прийняв до відтворення.
+const sounds = (page: Page): Promise<string[]> => page.evaluate(() => (window as unknown as { __game: { sounds: () => string[] } }).__game.sounds());
+test('кнопки UI грають звуки через мікшер: пауза → «Продовжити» = confirm; mute → тиша', async ({ page }) => {
+  await open(page);
+  expect(await sounds(page)).toEqual([]);
+  await page.locator('.ui-pause-btn').click();                       // кнопка ‖: клік
+  await page.locator('[data-ui="resume"]').click();                  // «Продовжити»: підтвердження
+  expect(await sounds(page)).toEqual(['ui-click', 'ui-confirmation']);
+  await page.keyboard.press('Escape');                               // відкрити паузу: без звуку
+  await page.locator('[data-ui="mute"]').click();                    // сам клик по mute ще чує (mute вмикається після нього)
+  const afterMute = (await sounds(page)).length;
+  await page.locator('[data-ui="resume"]').click();                  // mute → мікшер нічого не приймає
+  expect((await sounds(page)).length).toBe(afterMute);
+});
