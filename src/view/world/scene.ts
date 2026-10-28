@@ -11,7 +11,7 @@ import { KEY_BINDINGS, KEY_CODES, TAP_MAX_MOVE, TAP_MAX_MS, actionTarget, consum
 import type { Bridge } from './bridge';
 import type { WorldArt } from './art';
 import { COLS, FRAME, frameIndex, type Dir } from './character';
-import { DAY_MINUTES, FIRE_CORE, FIRE_GLOW, ambientAt, glowAlpha } from './daylight';
+import { FIRE_CORE, FIRE_GLOW, ambientAt, glowAlpha, timeOfDay } from './daylight';
 import { FOLLOW_SPEED_FACTOR, SPEED, gridFromWalls, restPoints, stepFollowers, type Grid, type Pt } from './follow';
 
 export const TILE = 32;
@@ -285,8 +285,8 @@ export class WorldScene extends Phaser.Scene {
    * градієнт з канви (без файлів), ADD над маскою. Обидва вище за все в світі. Вдень приховані (`visible` у update).
    */
   private makeDaylight(fire: Pt | null): void {
-    const SIZE = 2048;   // з запасом на найбільший кадр (кадр ≤ ⌈поле / zoom⌉, ≈ 1280×800 при zoom 1 не трапляється: zoom ≥ 2 на десктопі)
-    this.night = this.add.rectangle(0, 0, SIZE, SIZE, 0xffffff).setOrigin(0, 0).setScrollFactor(0).setDepth(DEPTH.always + 1).setBlendMode(Phaser.BlendModes.MULTIPLY).setVisible(false);
+    const cam = this.cameras.main;   // розмір маски — з вікна камери (оновлюється в updateDaylight при зміні кадру), а не стала: 4K при zoom 1 теж покрито
+    this.night = this.add.rectangle(0, 0, cam.width, cam.height, 0xffffff).setOrigin(0, 0).setScrollFactor(0).setDepth(DEPTH.always + 1).setBlendMode(Phaser.BlendModes.MULTIPLY).setVisible(false);
     if (!fire) return;
     const R = 80;
     const tex = this.textures.createCanvas('fire-glow', R * 2, R * 2);
@@ -307,7 +307,9 @@ export class WorldScene extends Phaser.Scene {
     const d = this.probe.daylight;
     d.on = this.daylightOn;
     if (!this.night) return;
-    const minuteOfDay = this.bridge.state.clock.minutes % DAY_MINUTES;
+    const cam = this.cameras.main;
+    if (this.night.width !== cam.width || this.night.height !== cam.height) this.night.setSize(cam.width, cam.height);
+    const minuteOfDay = timeOfDay(this.bridge.state.clock.minutes);
     const a = ambientAt(minuteOfDay);
     const visible = a.darkness > 0;
     const glow = glowAlpha(a.darkness, time);

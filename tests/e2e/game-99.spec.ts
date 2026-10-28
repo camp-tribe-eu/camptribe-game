@@ -1,3 +1,4 @@
+// atMinute — хвилини ЯДРА від старту; на екрані час = +8 год (DAY_START_MINUTE): ядро 0 = 08:00, 240 = 12:00, 720 = 20:00, 960 = 00:00.
 // GAME-99 · ефект 1: день і ніч (нічна маска + тепла пляма вогнища). Доводимо ПІКСЕЛЯМИ справжньої сцени, а не лише числами зонда:
 // середня яскравість полотна вночі помітно нижча, ніж удень; біля вогнища — яскравіша, ніж далі; з ?daylight=off (негативний контроль) ночі на екрані нема.
 // Мутації (по одній, кожна червонить свій тест, див. research/visual-audit.md): MAX_DARKNESS → 0; glowAlpha → 0; прибрати updateDaylight із update.
@@ -41,8 +42,8 @@ async function luminance(page: Page): Promise<{ avg: number; fire: number }> {
 }
 
 test.describe('GAME-99 день і ніч', () => {
-  test('вночі (00:00, старт гри) маска й пляма видимі, затемнення = максимум', async ({ page }) => {
-    await open(page, 'atMinute=0');
+  test('вночі (00:00 на екрані) маска й пляма видимі, затемнення = максимум', async ({ page }) => {
+    await open(page, 'atMinute=960');
     const d = (await probe(page)).daylight;
     expect(d.on).toBe(true);
     expect(d.visible).toBe(true);
@@ -50,8 +51,18 @@ test.describe('GAME-99 день і ніч', () => {
     expect(d.glow).toBeGreaterThan(0.5);
   });
 
+  test('перший кадр нової гри (без atMinute) — день 08:00: маска й пляма приховані (BLOCKER рецензії PR #91)', async ({ page }) => {
+    await open(page, '');
+    const d = (await probe(page)).daylight;
+    expect(d.minuteOfDay).toBeGreaterThanOrEqual(480);
+    expect(d.minuteOfDay).toBeLessThan(500);
+    expect(d.visible).toBe(false);
+    expect(d.darkness).toBe(0);
+    await expect(page.locator('[data-ui="hud-time"]')).toContainText('08:');
+  });
+
   test('опівдні — маска й пляма приховані (кадр ідентичний до ефекту), затемнення 0', async ({ page }) => {
-    await open(page, 'atMinute=720');
+    await open(page, 'atMinute=240');
     const d = (await probe(page)).daylight;
     expect(d.minuteOfDay).toBeGreaterThanOrEqual(720);
     expect(d.visible).toBe(false);
@@ -60,16 +71,16 @@ test.describe('GAME-99 день і ніч', () => {
   });
 
   test('сутінки (20:00) — між днем і ніччю', async ({ page }) => {
-    await open(page, 'atMinute=1200');
+    await open(page, 'atMinute=720');
     const d = (await probe(page)).daylight;
     expect(d.darkness).toBeGreaterThan(0.1);
     expect(d.darkness).toBeLessThan(0.8);
   });
 
   test('піксельно: ніч темніша за день щонайменше на 35 %, а біля вогнища світліше, ніж загалом', async ({ page }) => {
-    await open(page, 'atMinute=720');
+    await open(page, 'atMinute=240');
     const day = await luminance(page);
-    await open(page, 'atMinute=0');
+    await open(page, 'atMinute=960');
     const night = await luminance(page);
     console.log(`GAME-99 яскравість: день ${day.avg.toFixed(1)}, ніч ${night.avg.toFixed(1)} (вогнище: день ${day.fire.toFixed(1)}, ніч ${night.fire.toFixed(1)})`);
     expect(night.avg).toBeLessThan(day.avg * 0.65);
@@ -78,9 +89,9 @@ test.describe('GAME-99 день і ніч', () => {
   });
 
   test('негативний контроль: ?daylight=off — вночі кадр не темнішає і зонд каже on=false', async ({ page }) => {
-    await open(page, 'atMinute=720');
+    await open(page, 'atMinute=240');
     const day = await luminance(page);
-    await open(page, 'atMinute=0&daylight=off');
+    await open(page, 'atMinute=960&daylight=off');
     const off = await luminance(page);
     expect((await probe(page)).daylight.on).toBe(false);
     expect((await probe(page)).daylight.visible).toBe(false);
@@ -90,7 +101,7 @@ test.describe('GAME-99 день і ніч', () => {
   // Знімки для власника (смак): лише з GAME99_SHOTS=<тека>; у звичайному прогоні пропущено (NOT RUN, не PASS).
   const shots = process.env.GAME99_SHOTS;
   for (const [name, vp] of [['portrait-390x844', { width: 390, height: 844 }], ['landscape-844x390', { width: 844, height: 390 }]] as const) {
-    for (const [phase, q] of [['day', 'atMinute=720'], ['dusk', 'atMinute=1200'], ['night', 'atMinute=0'], ['before-no-effect', 'atMinute=0&daylight=off']] as const) {
+    for (const [phase, q] of [['day', ''], ['dusk', 'atMinute=720'], ['night', 'atMinute=960'], ['before-no-effect', 'atMinute=960&daylight=off']] as const) {
       test(`знімок ${phase} ${name}`, async ({ page }) => {
         test.skip(!shots, 'GAME99_SHOTS не задано');
         await open(page, q, vp);

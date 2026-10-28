@@ -4,6 +4,11 @@
 // Гармонія (закон «новий ефект доводиться до палітри основного набору»): КЛЮЧОВІ кольори — з art/palette/lpc.json (daylight.test.ts
 // це доводить); проміжні — пряма інтерполяція між ключами.
 export const DAY_MINUTES = 1440;
+/** Час доби на старті гри (08:00, «Ранок» першого квесту). Ядро стартує з clock.minutes = 0 і не змінюється (детермінізм, записані програвання, сейви) —
+ *  зсув лише для ВІДОБРАЖЕННЯ: і ефект день-ніч, і час у HUD беруть доби через `timeOfDay`. */
+export const DAY_START_MINUTE = 8 * 60;
+/** Хвилина доби для показу (0…1439) з годинника ядра. */
+export const timeOfDay = (clockMinutes: number): number => (clockMinutes + DAY_START_MINUTE) % DAY_MINUTES;
 
 /** Ключові кольори (є в палітрі LPC). Множення: білий — без змін; темно-синій — ніч; теплий жовтогарячий — сутінки/світанок. */
 export const NIGHT_TINT = 0x474ea5;
@@ -18,7 +23,7 @@ export const MAX_DARKNESS = 0.8;
 /** Опорні точки доби: хвилина → { тип кольору, сила }. Між ними — лінійно. */
 interface Key { readonly at: number; readonly tint: number; readonly strength: number }
 const KEYS: readonly Key[] = [
-  { at: 0, tint: NIGHT_TINT, strength: MAX_DARKNESS },        // 00:00 глибока ніч (старт гри — о 00:00, тож перший кадр нічний)
+  { at: 0, tint: NIGHT_TINT, strength: MAX_DARKNESS },        // 00:00 глибока ніч (показ: гра стартує о 08:00 — DAY_START_MINUTE)
   { at: 5 * 60, tint: NIGHT_TINT, strength: MAX_DARKNESS },    // 05:00
   { at: 6 * 60 + 30, tint: DUSK_TINT, strength: 0.45 },        // 06:30 світанок
   { at: 8 * 60, tint: DUSK_TINT, strength: 0 },                // 08:00 день
@@ -52,6 +57,9 @@ export function ambientAt(minuteOfDay: number): Ambient {
   const tint = lerpColor(a.tint, b.tint, t);
   return { color: lerpColor(0xffffff, tint, strength), darkness: strength };
 }
+
+/** Освітлення за годинником ядра: старт гри (clock.minutes = 0) — 08:00, день. */
+export const ambientAtClock = (clockMinutes: number): Ambient => ambientAt(timeOfDay(clockMinutes));
 
 /** Яскравість світлої плями вогнища: гасне вдень (0), повна вночі; дрібне мерехтіння — від часу сцени (мс кадру, не годинник). */
 export function glowAlpha(darkness: number, timeMs: number): number {

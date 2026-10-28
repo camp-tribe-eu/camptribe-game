@@ -1,12 +1,20 @@
 // GAME-99 · день і ніч: чиста функція освітлення. Кожен тест тут має мутацію, що його червонить (див. research/visual-audit.md).
 import { describe, expect, it } from 'vitest';
-import { DAY_MINUTES, MAX_DARKNESS, PALETTE_COLORS, ambientAt, glowAlpha } from './daylight';
+import { DAY_MINUTES, DAY_START_MINUTE, MAX_DARKNESS, PALETTE_COLORS, ambientAt, ambientAtClock, glowAlpha, timeOfDay } from './daylight';
 
 const LPC = import.meta.glob<string>('../../../art/palette/lpc.json', { query: '?raw', import: 'default', eager: true });
 const palette = new Set((JSON.parse(Object.values(LPC)[0] ?? '{}') as { colors?: string[] }).colors ?? []);
 const hex = (c: number): string => `#${c.toString(16).padStart(6, '0')}`;
 
 describe('день і ніч (GAME-99)', () => {
+  it('перший кадр нової гри (clock.minutes = 0) — день: 08:00, затемнення 0 (BLOCKER рецензії PR #91)', () => {
+    expect(DAY_START_MINUTE).toBe(8 * 60);
+    expect(timeOfDay(0)).toBe(8 * 60);
+    expect(ambientAtClock(0).darkness).toBe(0);
+    expect(ambientAtClock(0).color).toBe(0xffffff);
+    expect(ambientAtClock(16 * 60).darkness).toBe(MAX_DARKNESS);   // 00:00 показу — ніч настає за 16 ігрових годин (≈ 16 реальних хвилин)
+  });
+
   it('палітра прочитана (інакше перевірка кольорів порожня)', () => {
     expect(palette.size).toBeGreaterThan(400);
   });

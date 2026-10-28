@@ -17,7 +17,8 @@ import { todayForecast, todayWeather, type SimState } from '../core/sim';
 import { initialState, type GameState } from '../core/state';
 import { chapterComplete, matches, route } from '../core/story';
 import { capacityOf, packedOf, packFlag, packingOpen, packItemsFor, usedUnits } from '../core/packing';
-import { DAY_MINUTES, dayOf, tripMinutes, type Weather } from '../core/weather';
+import { timeOfDay } from './world/daylight';
+import { dayOf, tripMinutes, type Weather } from '../core/weather';
 import { CONTENT, memorableFacts } from '../content/story';
 import { moves, progressKey, type Move } from '../content/moves';
 import items from '../../content/items.json';
@@ -248,7 +249,7 @@ export function storyOffer(sim: SimState, defs: CoreDefs): Offered {
   }));
   const weather = todayWeather(sim);
   const lastTrip = [...sim.journal].reverse().find((e) => e.type === 'Visit')?.commandId ?? null;
-  const base = { moneyCents: s.moneyCents, inventory, journal, lastTrip, weather, forecast: todayForecast(sim), day: dayOf(sim.clock) + 1, timeMinutes: sim.clock.minutes % DAY_MINUTES, wave: waveOffer(sim), ...summaryOffer(sim, defs) };
+  const base = { moneyCents: s.moneyCents, inventory, journal, lastTrip, weather, forecast: todayForecast(sim), day: dayOf(sim.clock) + 1, timeMinutes: timeOfDay(sim.clock.minutes), wave: waveOffer(sim), ...summaryOffer(sim, defs) };
 
   if (!s.player) {
     const choices = characterChoices(defs);
