@@ -8,6 +8,8 @@ name: research-fetch
 #   url                 — будь-який файл як є
 # 🔴 Комітиться в research/packs/<назва>/ ЛИШЕ те, у чого назва починається з `pack-`, і ЛИШЕ разом
 #    із ліцензією, процитованою зі сторінки першоджерела. Чужі скриншоти ігор (steam:) не комітяться ніколи.
+#    Звук (ogg/wav, кожен файл < 300 КБ) комітиться ЛИШЕ для наборів, назва яких починається з `pack-sfx-`;
+#    для решти `pack-*` — без звуку, як і раніше.
 on:
   push:
     paths: ['research/fetch.txt', '.github/workflows/research-fetch.yml']
@@ -34,10 +36,28 @@ jobs:
               kenney:*)
                 slug="${src#kenney:}"
                 page=$(curl -sfL "https://kenney.nl/assets/$slug") || { echo "::error::$name: сторінка $slug недоступна"; fail=1; continue; }
-                printf '%s' "$page" | grep -oiE 'Creative Commons[^<"]{0,40}' | head -3 > "$d/LICENSE-from-page.txt"
-                zip=$(printf '%s' "$page" | grep -oE 'https://kenney\.nl/media/[^"]+\.zip' | head -1)
-                [ -z "$zip" ] && { echo "::error::$name: zip не знайдено на сторінці"; fail=1; continue; }
-                echo "$zip" > "$d/SOURCE.txt"
+                printf '%s' "$page" | grep -oiE 'Creative Commons[^<"]{0,60}|CC0[^<"]{0,60}|public domain[^<"]{0,40}' | head -3 > "$d/LICENSE-from-page.txt" || true
+                printf '%s' "$page" > "$d/page.html"
+                # Сторінка Kenney віддає zip через підписане посилання: кнопка «Continue without donating» має
+                # data-download-id, а fetch('https://kenney.nl/download-link/<id>') повертає свіже посилання.
+                # Спершу шукаємо пряме .zip на сторінці, далі — цей шлях (відповідь: JSON або голий URL).
+                zip=$(sed 's#\\/#/#g' "$d/page.html" | grep -oiE "(https://(www\.)?kenney\.nl)?/media/[^\"' <>)]+\.zip" | head -1 || true)
+                if [ -z "$zip" ]; then
+                  did=$(grep -oE "data-download-id='[0-9a-f]+'" "$d/page.html" | head -1 | cut -d"'" -f2 || true)
+                  if [ -n "$did" ]; then
+                    curl -sfL -H 'Accept: application/json, text/plain, */*' -H "Referer: https://kenney.nl/assets/$slug" "https://kenney.nl/download-link/$did" -o "$d/dl.json" || echo "::warning::$name: download-link не відповів"
+                    zip=$(sed 's#\\/#/#g' "$d/dl.json" 2>/dev/null | grep -oiE 'https?://[^"'"'"' <>)\\]+' | head -1 || true)
+                  fi
+                fi
+                if [ -z "$zip" ]; then
+                  echo "::error::$name: zip не знайдено на сторінці"; fail=1
+                  # Фрагмент розмітки навколо download/zip, щоб бачити причину (не арт).
+                  mkdir -p research/debug
+                  { echo "page bytes: $(wc -c < "$d/page.html")"; echo "id: ${did:-none}"; echo "dl.json: $(head -c 400 "$d/dl.json" 2>/dev/null)"; grep -oiE '.{0,120}(\.zip|licen[sc]e|cc0).{0,160}' "$d/page.html" | head -25 || true; } > "research/debug/$name.txt"
+                  continue
+                fi
+                case "$zip" in /*) zip="https://kenney.nl$zip";; esac
+                echo "https://kenney.nl/assets/$slug" > "$d/SOURCE.txt"   # сторінка першоджерела (підписане посилання на zip не зберігаємо)
                 curl -sfL "$zip" -o "$d/pack.zip" && unzip -q "$d/pack.zip" -d "$d/pack" && rm "$d/pack.zip"
                 ;;
               oga:*)
@@ -130,7 +150,7 @@ jobs:
             case "$n" in
               pack-*)
                 # Без ліцензії, процитованої з першоджерела, не комітимо (aggregator-does-not-license).
-                [ -s "$d/LICENSE-from-page.txt" ] && ! grep -q '^NOT FOUND' "$d/LICENSE-from-page.txt" || {
+                [ -s "$d/LICENSE-from-page.txt" ] && [ -s "$d/SOURCE.txt" ] && ! grep -q '^NOT FOUND' "$d/LICENSE-from-page.txt" || {
                   echo "::warning::$n: ліцензію не знайдено — не комічу"
                   # Лише фрагмент розмітки блоку ліцензії, щоб бачити причину (не арт).
                   mkdir -p research/debug; cp "$d/page.html.lic-snippet.txt" "research/debug/$n.txt" 2>/dev/null || true
@@ -139,6 +159,11 @@ jobs:
                 cp "$d/LICENSE-from-page.txt" "$d/SOURCE.txt" "research/packs/$n/"
                 # Лише PNG і текстові ліцензії/титри, без zip і без звуку.
                 # Kenney має 1700 окремих тайлів — беремо лише зведені аркуші.
+                if [[ "$n" == pack-sfx-* ]]; then
+                  (cd "$d" && find . -type f \( -iname '*.ogg' -o -iname '*.wav' \) -size -300k) | while read -r f; do
+                    mkdir -p "research/packs/$n/$(dirname "$f")"; cp "$d/$f" "research/packs/$n/$f"
+                  done
+                fi
                 case "$n" in pack-kenney*) filt=( \( -ipath '*sheet*' -o -ipath '*tilemap*' \) -iname '*.png' -o -iname '*licen*' ) ;; *) filt=( -iname '*.png' -o -iname '*licen*' -o -iname '*credit*' -o -iname '*.txt' ) ;; esac
                 (cd "$d" && find . -type f \( "${filt[@]}" \) -size -3M) | while read -r f; do
                   mkdir -p "research/packs/$n/$(dirname "$f")"; cp "$d/$f" "research/packs/$n/$f"
