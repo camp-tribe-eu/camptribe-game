@@ -3,7 +3,8 @@ import { testSwitches } from './test-switches';
 
 describe('перемикачі e2e (рецензія GAME-36)', () => {
   it('у збірці e2e — працюють', () => {
-    expect(testSwitches('?hideAct=complete&hideTouch=interact,stick', 'e2e')).toEqual({ hideAct: ['complete'], hideTouch: ['interact', 'stick'], hideUi: [], breakSpot: [] });
+    expect(testSwitches('?hideAct=complete&hideTouch=interact,stick', 'e2e')).toEqual({ hideAct: ['complete'], hideTouch: ['interact', 'stick'], hideUi: [], breakSpot: [], panelActs: true });
+    expect(testSwitches('?mapFirst=1', 'e2e').panelActs).toBeUndefined();   // GAME-175: справжня поведінка — мапа першою
   });
   it('у звичайній збірці (production, development) — вимкнені', () => {
     for (const mode of ['production', 'development']) expect(testSwitches('?hideAct=complete&hideTouch=interact&seed=7', mode)).toEqual({ hideAct: [], hideTouch: [], hideUi: [], breakSpot: [] });

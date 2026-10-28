@@ -240,6 +240,16 @@ export function Shell({ port, langOverride, credits, build, holdToast = false, h
             ))}
           </span>
         </div>}
+        {/* GAME-175: рядок «Далі: …» — куди йти зараз (мапа першою, а не панель); біля об'єкта міняється на підпис дії («● Сісти в авто»). Один рядок
+            у шапці під ☰ · HUD · ‖; тост-підказка про ☰ (GAME-95) його не заступає — вона лише на екрані вибору героя, де цього рядка немає. */}
+        {offer.stage !== 'create' && (offer.hint.near || offer.hint.next || offer.hint.backpack > 0) && !hideUi.includes('next') && (
+          <div class="ui-next" data-ui="next-hint" data-kind={offer.hint.near ? 'near' : 'next'} data-spot={offer.hint.near ? undefined : offer.hint.nextSpot ?? undefined}>
+            {offer.hint.near
+              ? `● ${t(offer.hint.near.label)}${offer.hint.near.itemKey ? ` ${ct(lang, offer.hint.near.itemKey)}` : ''}`
+              : `${offer.hint.next ? `${t('ui.next')} ${t(offer.hint.next as Key)}` : ''}`}
+            {offer.hint.backpack > 0 && <span data-ui="backpack">{` · ${t('ui.backpack')}: ${offer.hint.backpack}`}</span>}
+          </div>
+        )}
         {reminder}
       </header>}
       {storyOpen && <StoryPanel offer={offer} lang={lang} t={t} act={storyAct} close={() => story(false)}>{staleNotice}</StoryPanel>}

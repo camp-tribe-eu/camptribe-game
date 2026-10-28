@@ -26,6 +26,7 @@ import { daySummary, daysEnded, NIGHT_PREFIX } from '../core/day-summary';
 import type { OfferAction, OfferCharacter, OfferPacking, OfferSummary, OfferWave, StoryOffer } from '../ui/story-types';
 import { RAW_WAVES } from '../content/waves';
 import { menuTasks } from '../content/director';
+import { coveredKeys, moveKey, nextTarget, spotLabel } from '../content/map-first';
 import { waveView } from '../core/wave';
 import { miaState } from '../content/mia';
 
@@ -238,7 +239,16 @@ export function objectiveKey(raw: { textKey?: string; gearCheck?: boolean } | un
   return issue ? `${raw.textKey}.${gearSceneVariant(issue)}` : raw.textKey;
 }
 
-export function storyOffer(sim: SimState, defs: CoreDefs): Offered {
+/**
+ * GAME-175 · вигляд екрана подорожі при мапі-першій грі. `mapFirst` — ховати дії, які мапа вже дає руками (кнопка зникає лише
+ * там, де об'єкт мапи живий і шле ту саму команду — src/content/map-first.ts); `trunk` — відкрито багажник (сітка пакування показана
+ * лише біля авто); `near` — об'єкт мапи, до якого гравець підійшов (підпис дії). Без вигляду (тести, режим `?panelActs=1`) — як було.
+ */
+export interface StoryView { readonly mapFirst: boolean; readonly trunk: boolean; readonly near: string | null; readonly backpack?: readonly string[] }
+export const PANEL_VIEW: StoryView = { mapFirst: false, trunk: true, near: null };
+const NO_KEYS: ReadonlySet<string> = new Set();
+
+export function storyOffer(sim: SimState, defs: CoreDefs, view: StoryView = PANEL_VIEW): Offered {
   const s = sim.game;
   const st = defs.story as StoryDefs;
   const intents = new Map<string, Move>();
@@ -250,7 +260,10 @@ export function storyOffer(sim: SimState, defs: CoreDefs): Offered {
   }));
   const weather = todayWeather(sim);
   const lastTrip = [...sim.journal].reverse().find((e) => e.type === 'Visit')?.commandId ?? null;
-  const base = { moneyCents: s.moneyCents, inventory, journal, lastTrip, weather, forecast: todayForecast(sim), day: dayOf(sim.clock) + 1, timeMinutes: timeOfDay(sim.clock.minutes), wave: waveOffer(sim), mia: miaState(s, defs), ...summaryOffer(sim, defs) };
+  const nextT = s.player && view.mapFirst ? nextTarget(sim, defs, view.backpack ?? []) : null;
+  const nearL = s.player && view.mapFirst && view.near !== null ? spotLabel(sim, defs, view.near) : null;
+  const hint = { backpack: view.backpack?.length ?? 0, next: nextT?.key ?? null, nextSpot: nextT?.spot ?? null, near: nearL ? { label: nearL.label, itemKey: nearL.ref ? nameKey(nearL.ref) : null } : null };
+  const base = { hint, moneyCents: s.moneyCents, inventory, journal, lastTrip, weather, forecast: todayForecast(sim), day: dayOf(sim.clock) + 1, timeMinutes: timeOfDay(sim.clock.minutes), wave: waveOffer(sim), mia: miaState(s, defs), ...summaryOffer(sim, defs) };
 
   if (!s.player) {
     const choices = characterChoices(defs);
@@ -282,7 +295,10 @@ export function storyOffer(sim: SimState, defs: CoreDefs): Offered {
     intents.set(a.id, move);
     offered.push(a);
   }
+  // GAME-175: дії, які мапа дає руками, панель не показує — лише там, де об'єкт мапи живий (тож нічого не зникає без заміни).
+  const covered = view.mapFirst ? coveredKeys(sim, defs) : NO_KEYS;
   for (const { move } of menuMoves(s, defs, weather)) {
+    if (covered.has(moveKey(move))) continue;
     const a: OfferAction = { id: idOf(move, s), ...describe(move, defs, s, weather) };
     intents.set(a.id, move);
     offered.push(a);
@@ -310,7 +326,7 @@ export function storyOffer(sim: SimState, defs: CoreDefs): Offered {
       quests,
       dialogue,
       actions: dialogue ? [] : offered,
-      packing: dialogue ? null : packingOffer(s, defs, intents),
+      packing: dialogue || (view.mapFirst && !view.trunk) ? null : packingOffer(s, defs, intents),
       locked,
     },
   };

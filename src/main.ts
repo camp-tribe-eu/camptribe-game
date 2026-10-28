@@ -15,16 +15,19 @@ import { createSaveSession } from './platform/save-session';
 import credits from '../assets/credits.json';
 import { step } from './core/sim';
 import { createBridge } from './view/world/bridge';
-import { WorldScene, type WorldProbe } from './view/world/scene';
+import { WorldScene, type WorldHooks, type WorldProbe } from './view/world/scene';
 import { loadWorldArt } from './view/world/art';
 import { mountTouchControls, setActionTarget } from './view/world/touch';
 import { frameSize } from './view/world/frame';
-import { storyOffer } from './view/story-offer';
+import { storyOffer, type StoryView } from './view/story-offer';
 import { testSwitches } from './view/test-switches';
 import { addFrameLag, bootDelay, onFirstFrame } from './view/frame-lag';
 import type { StoryOffer } from './ui/story-types';
 import { uiSounds } from './audio/ui-sounds';
 import { liveSpot, spotMove, storyMoves } from './content/director';
+import { isBulky, isMapFirstSpot, mapKeyFor, needsLeft, nextTarget, resolveSpot, spotLook, unpackMoves } from './content/map-first';
+import { packFlag } from './core/packing';
+import type { GameState } from './core/state';
 
 const app = document.querySelector<HTMLElement>('#app');
 if (!app) throw new Error('#app is missing');
@@ -32,7 +35,8 @@ if (!app) throw new Error('#app is missing');
 const probe: WorldProbe = { ready: false, playerX: 0, playerY: 0, nearObject: null, nearKind: null, commandsSent: 0, cameraScrollX: 0, cameraScrollY: 0, clockMinutes: 0, saveLoaded: false, cameraLerp: [0, 0], followers: [], leisure: [],
   playerFrame: 0, playerDir: 'down', playerMoving: false, playerDepth: 0, coveredTiles: 0, behindTiles: 0, fps: 0, fpsWindows: 0, firstFrameMs: 0,
   residents: [], bark: null, barkCount: 0,
-  daylight: { on: false, visible: false, minuteOfDay: 0, darkness: 0, color: 0xffffff, glow: 0 } };
+  daylight: { on: false, visible: false, minuteOfDay: 0, darkness: 0, color: 0xffffff, glow: 0 },
+  fx: { target: null, ring: 0, ringName: null, backpack: 0, guide: 'none', pops: 0, auto: 0 } };
 // GAME-86: кожна команда ядру (дія екрана, розмова, взаємодія на мапі) → автозбереження одразу, а не лише на паузі.
 // GAME-89 №2: сід світу (а з ним погода дня 1) — свіжий для кожної гри, з crypto на межі; ядро лишається детермінованим,
 // бо сід записується в worldSeed сейву. ?seed=N (лише збірка e2e) закріплює сід — для відтворюваних тестів.
@@ -57,12 +61,35 @@ const shown = (o: StoryOffer): StoryOffer => (hiddenActs.length === 0 ? o : {
   dialogue: o.dialogue && { ...o.dialogue, answers: o.dialogue.answers.filter((a) => !hiddenActs.includes(a.kind)) },
 });
 const storyListeners = new Set<() => void>();
+// GAME-175: вигляд екрана подорожі при мапі-першій грі. Багажник (сітка пакування) відкривається лише біля авто й закривається, коли екран закрито;
+// `near` — об'єкт мапи, до якого гравець підійшов (підпис дії в HUD). Це стан ПОКАЗУ, не гри: ядро й сейв його не знають.
+let trunkOpen = false;
+let nearSpot: string | null = null;
+// GAME-175: рюкзак героя — дрібні речі, які він підібрав удома, але ще не розвантажив в авто. Стан ПОКАЗУ (ядро й сейв його не знають; перезавантаження
+// повертає речі на місця). Громіздке (намет, спальник) іде одразу в багажник.
+const backpack: string[] = [];
+const viewOf = (): StoryView => ({ mapFirst: !switches.panelActs, trunk: trunkOpen, near: nearSpot, backpack });
 // GAME-170 зріз 2 · режисер: перед кожним оновленням екрана — ходи СЮЖЕТУ (StartWave на етапі хвилі). Ядро — сторож законності;
 // режисер шле лише те, що ядро прийме, і рівно раз (після прийняття pendingWave порожній; відмова видна в processed).
 // Завантаження збереження на CH1-D2-CAMP-001 без хвилі стартує її тут же, строки — від годинника завантаження (прийнято, див. director.ts).
 const direct = (): void => { for (const m of storyMoves(bridge.state, GAME_DEFS)) bridge.send(m); };
-const storyChanged = (): void => { direct(); for (const l of storyListeners) l(); };
 const openListeners = new Set<() => void>();
+// GAME-175: розмова, яку почала не дія гравця на мапі, а гра (подія в дорозі після виїзду), мусить бути видна: об'єкти мапи під час розмови мовчать, тож без
+// екрана подорожі гравець завис би. Розмова щойно з'явилась (раніше її не було) — екран відкривається сам.
+let hadDialogue = false;
+let unpackedOnce = false;
+const storyChanged = (): void => {
+  // GAME-175: мапа-перша гра — спакований «за порадою» набір розкладається, коли гравець удома; речі він переносить ногами (раз за гру).
+  if (!switches.panelActs && !unpackedOnce) {
+    const moves = unpackMoves(bridge.state, GAME_DEFS);
+    if (moves.length > 0) { unpackedOnce = true; for (const m of moves) bridge.send(m); }
+  }
+  direct();
+  for (const l of storyListeners) l();
+  const talking = bridge.state.game.dialogue !== null;
+  if (talking && !hadDialogue) for (const l of openListeners) l();
+  hadDialogue = talking;
+};
 /** Розмова з NPC на мапі: команда в ядро (ядро саме відмовить, якщо гравець не тут), і екран подорожі —
  *  там видно розмову або те, чого бракує (немає персонажа, не та локація). */
 const talkOnMap = (npcId: string): void => {
@@ -74,11 +101,36 @@ const talkOnMap = (npcId: string): void => {
  *  відкривається з репліками; інакше Interact). ?breakSpot=<назва> (лише збірка e2e) робить об'єкт німим — негативний контроль. */
 const actOnMap = (name: string): void => {
   if (switches.breakSpot.includes(name)) return;
+  // GAME-175: об'єкти дня 1 удома (крок, річ, полиця, авто, багажник) — ті самі команди ядра, що були кнопками панелі (src/content/map-first.ts).
+  if (isMapFirstSpot(name)) {
+    const r = resolveSpot(bridge.state, GAME_DEFS, name);
+    if (!r) return;
+    const first = r.moves[0];
+    // Дрібна річ удома: у рюкзак (команда пакування піде при розвантаженні біля авто), без розмови ядра.
+    if (first?.type === 'PackItem' && !isBulky(GAME_DEFS, first.itemId)) { backpack.push(first.itemId); storyChanged(); return; }
+    for (const move of r.moves) bridge.send(move);
+    if (r.ui === 'trunk') trunkOpen = true;
+    storyChanged();
+    if (r.ui === 'trunk') for (const l of openListeners) l();
+    return;
+  }
   const m = spotMove(bridge.state, name);
   if (!m) return;
   bridge.send(m);
   storyChanged();
   if (m.type === 'StartScene') for (const l of openListeners) l();
+};
+/** Розвантаження: одна річ з рюкзака в багажник (та сама команда PackItem). Не вмістилась — лишається не взятою (відкривається сітка), рюкзак порожніє на цю річ. */
+const unloadOne = (): 'ok' | 'full' | 'none' => {
+  const id = backpack.shift();
+  if (id === undefined) return 'none';
+  if (bridge.state.game.flags.includes(packFlag(id))) { storyChanged(); return 'ok'; }   // уже вкладена через сітку
+  const before = bridge.state.game.flags.length;
+  bridge.send({ type: 'PackItem', itemId: id });
+  const done = bridge.state.game.flags.length > before;
+  if (!done) { trunkOpen = true; for (const l of openListeners) l(); }
+  storyChanged();
+  return done ? 'ok' : 'full';
 };
 const saves = createSaveSession(bridge, saveBackend, { story: STORY, ...(GAME_DEFS.life ? { life: GAME_DEFS.life } : {}), contentRev: STORY_REV, viable: (g) => saveViable(g, GAME_DEFS) });
 // Тестовий хук Playwright: лише ЧИТАННЯ — знімок стану копією, місток назовні не віддається
@@ -106,6 +158,38 @@ if (seedSwitches.bootDelayMs) bootDelay(seedSwitches.bootDelayMs);
 
 // GAME-93: картинки LPC (assets/, титри) і шари персонажів декодуємо до гри — сцена будується синхронно в create().
 const worldArt = await loadWorldArt();
+// Що сцена просить у гри (GAME-175). Ціль підказки рахуємо раз на стан ядра (не на кадр): годинник стану не міняє.
+let targetFor: GameState | null = null;
+let targetPack = -1;
+let targetSpot: string | null = null;
+let needsFor: GameState | null = null;
+let needsPack = -1;
+let needsMemo = { small: 0, bulky: 0 };
+const worldHooks: WorldHooks = {
+  onNpc: talkOnMap,
+  onObject: actOnMap,
+  isLive: (name) => liveSpot(bridge.state, name, GAME_DEFS) && !(name.startsWith('pack.') && backpack.includes(name.slice(5))),
+  backpack: () => backpack.length,
+  unload: unloadOne,
+  needs: () => {
+    // Раз на стан ядра й вміст рюкзака, а не на кадр: годинник стан не міняє, тож скрізь між діями це той самий об'єкт.
+    if (needsFor !== bridge.state.game || needsPack !== backpack.length) {
+      needsFor = bridge.state.game; needsPack = backpack.length;
+      const left = needsLeft(bridge.state, GAME_DEFS, backpack);
+      const bulky = left.filter((i) => isBulky(GAME_DEFS, i)).length;
+      needsMemo = { small: left.length - bulky, bulky };
+    }
+    return needsMemo;
+  },
+  look: (name) => spotLook(bridge.state, name),
+  target: () => {
+    if (targetFor !== bridge.state.game || targetPack !== backpack.length) { targetFor = bridge.state.game; targetPack = backpack.length; targetSpot = nextTarget(bridge.state, GAME_DEFS, backpack)?.spot ?? null; }
+    return targetSpot;
+  },
+  // Збірка e2e без ?mapFirst=1 — як до GAME-175: завжди табір (старі e2e ходять по ньому й перевіряють не прохід дня 1).
+  mapKey: () => switches.map ?? (switches.panelActs ? 'camp' : mapKeyFor(bridge.state.game.player?.locationId)),
+  transport: () => bridge.state.game.player?.transportId ?? null,
+};
 const frame0 = frameSize(stage.clientWidth, stage.clientHeight);
 
 const game = new Phaser.Game({
@@ -124,7 +208,7 @@ const game = new Phaser.Game({
   // поле по ширині: вбік і на десктопі смуг з боків немає; зайве (< zoom px) ховає overflow поля. FIT із кадром 640×352 давав смуги.
   scale: { mode: Phaser.Scale.NONE, autoCenter: Phaser.Scale.NO_CENTER, zoom: frame0.zoom },
   physics: { default: 'arcade', arcade: { debug: false } },
-  scene: [new WorldScene(bridge, input, probe, worldArt, talkOnMap, actOnMap, (name) => liveSpot(bridge.state, name), !switches.noDaylight, (key) => t(langOverride ?? loadSettings().language, key))],
+  scene: [new WorldScene(bridge, input, probe, worldArt, worldHooks, !switches.noDaylight, (key) => t(langOverride ?? loadSettings().language, key))],
 });
 // ?frameLagMs — лише збірка e2e (GAME-97): штучно довгий кадр.
 if (switches.frameLagMs) addFrameLag(game, switches.frameLagMs);
@@ -159,6 +243,8 @@ render(h(Shell, {
   port: {
     save: () => saves.save(),
     newGame: async () => {
+      backpack.length = 0;
+      unpackedOnce = false;
       const ok = await saves.newGame();
       storyChanged();
       return ok;
@@ -167,13 +253,15 @@ render(h(Shell, {
     staleCode: () => (saves.stale ? encodeRestoreCode(saves.stale) : Promise.resolve(null)),
     dismissStale: () => saves.dismissStale(),
     importCode: async (code: string) => {
+      backpack.length = 0;
+      unpackedOnce = false;
       const r = await saves.adopt(await decodeRestoreCode(code));
       storyChanged();
       return r;
     },
-    story: () => shown(storyOffer(bridge.state, GAME_DEFS).offer),
+    story: () => shown(storyOffer(bridge.state, GAME_DEFS, viewOf()).offer),
     act(id: string) {
-      const intent = storyOffer(bridge.state, GAME_DEFS).intents.get(id);
+      const intent = storyOffer(bridge.state, GAME_DEFS, viewOf()).intents.get(id);
       if (!intent) return;
       bridge.send(intent);
       storyChanged();
@@ -191,6 +279,7 @@ render(h(Shell, {
       // інакше клавіша «залипає» і персонаж іде сам (рецензія PR #13).
       input.held.clear();
       input.tapped.clear();
+      if (!paused) trunkOpen = false;   // екран подорожі (і багажник) закрито — наступного разу ☰ без багажника
       (game.scene.getScene('world') as WorldScene | null)?.haltPlayer();
       bridge.setPaused(paused);
       if (paused) saves.autosave(); // автозбереження на паузі
@@ -207,6 +296,7 @@ render(h(Shell, {
 let lastMinute = bridge.state.clock.minutes;
 game.events.on(Phaser.Core.Events.POST_STEP, () => {
   setActionTarget(pad, probe.nearKind);   // GAME-95: кнопка дії знає, що поруч (talk/fire/object) чи нічого (idle)
+  if (probe.nearObject !== nearSpot) { nearSpot = probe.nearObject; storyChanged(); }   // GAME-175: підпис дії біля об'єкта в HUD
   const m = bridge.state.clock.minutes;
   if (m === lastMinute) return;
   lastMinute = m;
