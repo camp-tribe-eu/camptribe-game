@@ -61,3 +61,5 @@ pack-lpc-cats-dogs	oga:lpc-cats-and-dogs
 list-lpc-cats	ogasearch:lpc cats dogs
 # GAME-147: сорочка підлітка shortsleeve/teen — єдина сторінка рядка генератора, якої ще не звірено.
 lic-lpc-teen-androgynous-short-sleeve-shirt	page:https://opengameart.org/content/lpc-teen-androgynous-short-sleeve-shirt
+# GAME-40: UI-звуки CC0 для мікшера.
+pack-kenney-interface-sounds	kenney:interface-sounds
