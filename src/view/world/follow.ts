@@ -115,12 +115,12 @@ export function moveToward(g: Grid, f: Pt, way: readonly Tile[] | null, dt: numb
   f.y += dy * k;
 }
 
-/** Крок `f` до тайла `goal` найкоротшим шляхом у обхід стін (кешований). true — вже в центрі цього тайла. */
+/** Крок `f` до тайла `goal` найкоротшим шляхом у обхід стін (кешований). true — уже на цьому тайлі (далі плавно доходить до центру, без стрибка). */
 export function stepTo(g: Grid, f: Pt, goal: Tile, dt: number, speed: number): boolean {
   const c = centerOf(g, goal);
   if (Math.hypot(c.x - f.x, c.y - f.y) < 0.5) return true;
   const own = tileOf(g, f);
-  if (own.c === goal.c && own.r === goal.r) { f.x = c.x; f.y = c.y; moveToward(g, f, [goal], dt, speed); return true; }
+  if (own.c === goal.c && own.r === goal.r) { moveToward(g, f, [goal], dt, speed); return true; }
   moveToward(g, f, cachedPath(g, own, goal), dt, speed);
   return false;
 }

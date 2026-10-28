@@ -1,5 +1,5 @@
 // GAME-173 · розклад родини по точках дозвілля: різні тайли, не в стінах, не на цілях взаємодії, не на героєві, шлях існує.
-// Мутації (кожна — червоний тест, перевірено; див. PR): без `reach.delete(best)` (двоє на одній точці); без перевірки `isSolid`; без перевірки `avoidTiles`.
+// Мутації (кожна — червоний тест, перевірено; див. PR): без `reach.delete(best)` (двоє на одній точці); без перевірки `avoidTiles`. Стіну відсіює сам `findPath` (null для твердого тайла), окремої перевірки немає.
 import { describe, expect, it } from 'vitest';
 import { gridFromWalls, tileOf } from './follow';
 import { LEISURE_BY_MAP, assignLeisure, leisureFromObjects } from './leisure';

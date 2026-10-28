@@ -2,7 +2,7 @@
 // випадковості нема — вибір точок повністю визначається мапою, героєм і порядком родини).
 // Поки герой стоїть > IDLE_AFTER_S, кожен член родини іде до власної «точки дозвілля» (вогнище, берег, намет, лавка) і там стоїть зверненим
 // до справи, трохи погойдуючись; щойно герой рушає — вертається у строй (follow.ts). Нової графіки нема: той самий спрайт, кадр «стоїть».
-import { findPath, isSolid, tileOf, type Grid, type Pt, type Tile } from './follow';
+import { findPath, tileOf, type Grid, type Pt, type Tile } from './follow';
 
 export type LeisureKind = 'campfire' | 'shore' | 'tent' | 'bench';
 export type Facing = 'up' | 'left' | 'down' | 'right';
@@ -56,7 +56,7 @@ export function assignLeisure(g: Grid, hero: Pt, n: number, spots: readonly Leis
   const reach = new Map<LeisureSpot, number>();
   for (const s of spots) {
     const t: Tile = { c: s.c, r: s.r };
-    if (isSolid(g, t) || avoidTiles.has(t.r * g.cols + t.c) || (t.c === heroTile.c && t.r === heroTile.r)) continue;
+    if (avoidTiles.has(t.r * g.cols + t.c) || (t.c === heroTile.c && t.r === heroTile.r)) continue;
     const way = findPath(g, heroTile, t);
     if (way && way.length - 1 >= MIN_LEISURE_STEPS && way.length - 1 <= MAX_LEISURE_STEPS) reach.set(s, way.length - 1);
   }
