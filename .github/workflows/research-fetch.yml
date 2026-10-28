@@ -36,19 +36,28 @@ jobs:
               kenney:*)
                 slug="${src#kenney:}"
                 page=$(curl -sfL "https://kenney.nl/assets/$slug") || { echo "::error::$name: сторінка $slug недоступна"; fail=1; continue; }
-                printf '%s' "$page" | grep -oiE 'Creative Commons[^<"]{0,40}' | head -3 > "$d/LICENSE-from-page.txt" || true
+                printf '%s' "$page" | grep -oiE 'Creative Commons[^<"]{0,60}|CC0[^<"]{0,60}|public domain[^<"]{0,40}' | head -3 > "$d/LICENSE-from-page.txt" || true
                 printf '%s' "$page" > "$d/page.html"
-                # Посилання може бути абсолютним, відносним (/media/...), у лапках '' або з \/ (JSON) — шукаємо всі форми.
+                # Сторінка Kenney віддає zip через підписане посилання: кнопка «Continue without donating» має
+                # data-download-id, а fetch('https://kenney.nl/download-link/<id>') повертає свіже посилання.
+                # Спершу шукаємо пряме .zip на сторінці, далі — цей шлях (відповідь: JSON або голий URL).
                 zip=$(sed 's#\\/#/#g' "$d/page.html" | grep -oiE "(https://(www\.)?kenney\.nl)?/media/[^\"' <>)]+\.zip" | head -1 || true)
+                if [ -z "$zip" ]; then
+                  did=$(grep -oE "data-download-id='[0-9a-f]+'" "$d/page.html" | head -1 | cut -d"'" -f2 || true)
+                  if [ -n "$did" ]; then
+                    curl -sfL -H 'Accept: application/json, text/plain, */*' -H "Referer: https://kenney.nl/assets/$slug" "https://kenney.nl/download-link/$did" -o "$d/dl.json" || echo "::warning::$name: download-link не відповів"
+                    zip=$(sed 's#\\/#/#g' "$d/dl.json" 2>/dev/null | grep -oiE 'https?://[^"'"'"' <>)\\]+' | head -1 || true)
+                  fi
+                fi
                 if [ -z "$zip" ]; then
                   echo "::error::$name: zip не знайдено на сторінці"; fail=1
                   # Фрагмент розмітки навколо download/zip, щоб бачити причину (не арт).
                   mkdir -p research/debug
-                  { echo "page bytes: $(wc -c < "$d/page.html")"; grep -oiE '.{0,120}(\.zip|download|/media/).{0,160}' "$d/page.html" | head -25 || true; } > "research/debug/$name.txt"
+                  { echo "page bytes: $(wc -c < "$d/page.html")"; echo "id: ${did:-none}"; echo "dl.json: $(head -c 400 "$d/dl.json" 2>/dev/null)"; grep -oiE '.{0,120}(\.zip|licen[sc]e|cc0).{0,160}' "$d/page.html" | head -25 || true; } > "research/debug/$name.txt"
                   continue
                 fi
                 case "$zip" in /*) zip="https://kenney.nl$zip";; esac
-                echo "$zip" > "$d/SOURCE.txt"
+                echo "https://kenney.nl/assets/$slug" > "$d/SOURCE.txt"   # сторінка першоджерела (підписане посилання на zip не зберігаємо)
                 curl -sfL "$zip" -o "$d/pack.zip" && unzip -q "$d/pack.zip" -d "$d/pack" && rm "$d/pack.zip"
                 ;;
               oga:*)
