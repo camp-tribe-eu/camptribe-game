@@ -26,6 +26,11 @@ export interface TestSwitches {
   readonly atMinute?: number;
   /** ?hideUi=wave — негативний контроль GAME-170: без картки мети e2e хвилі мусить почервоніти. */
   readonly hideUi: readonly string[];
+  /** GAME-175: у збірці e2e панель ☰ за замовчуванням показує всі дії (старі e2e проходять кнопками); ?mapFirst=1 вмикає справжню поведінку — мапа першою (game-175.spec). Панель ☰ показує ВСІ дії, як до мапи-першої гри (кнопки «Піти:», «Узяти:», «Виконати»). Для e2e, що перевіряє не прохід дня 1, а
+   *  свою річ і лише швидко доходить до потрібного стану; сам прохід дня 1 (game-175.spec) іде без цього перемикача — лише рухом і дією на мапі. */
+  readonly panelActs?: boolean;
+  /** ?map=camp|home|shop — GAME-175: показати мапу незалежно від локації гравця (e2e механіки руху на мапі табору без персонажа). */
+  readonly map?: 'camp' | 'home' | 'shop';
   /** ?breakSpot=task.firewood — негативний контроль GAME-170: названий об'єкт мапи стає німим (дотик нічого не шле) — прохід мусить почервоніти. */
   readonly breakSpot: readonly string[];
 }
@@ -38,5 +43,5 @@ export function testSwitches(search: string, mode: string): TestSwitches {
   const lag = Number(q.get('frameLagMs'));
   const boot = Number(q.get('bootDelayMs'));
   const at = Number(q.get('atMinute'));
-  return { ...(Number.isInteger(boot) && boot >= 1 && boot <= 5000 ? { bootDelayMs: boot } : {}), ...(Number.isInteger(lag) && lag >= 1 && lag <= 190 ? { frameLagMs: lag } : {}), hideTouch: list('hideTouch'), hideAct: list('hideAct'), hideUi: list('hideUi'), breakSpot: list('breakSpot'), ...(q.get('noAutosave') === '1' ? { noAutosave: true } : {}), ...(q.get('holdToast') === '1' ? { holdToast: true } : {}), ...((q.get('atMinute') ?? '') !== '' && Number.isInteger(at) && at >= 0 && at <= 1439 ? { atMinute: at } : {}), ...(q.get('daylight') === 'off' ? { noDaylight: true } : {}), ...(q.get('freshSeed') === '1' ? { freshSeed: true } : {}), ...(q.has('seed') && Number.isSafeInteger(seed) && seed >= 0 ? { seed } : {}) };
+  return { ...(Number.isInteger(boot) && boot >= 1 && boot <= 5000 ? { bootDelayMs: boot } : {}), ...(Number.isInteger(lag) && lag >= 1 && lag <= 190 ? { frameLagMs: lag } : {}), hideTouch: list('hideTouch'), hideAct: list('hideAct'), hideUi: list('hideUi'), breakSpot: list('breakSpot'), ...(q.get('noAutosave') === '1' ? { noAutosave: true } : {}), ...(q.get('holdToast') === '1' ? { holdToast: true } : {}), ...((q.get('atMinute') ?? '') !== '' && Number.isInteger(at) && at >= 0 && at <= 1439 ? { atMinute: at } : {}), ...(q.get('daylight') === 'off' ? { noDaylight: true } : {}), ...(q.get('mapFirst') !== '1' ? { panelActs: true } : {}), ...(['camp', 'home', 'shop'].includes(q.get('map') ?? '') ? { map: q.get('map') as 'camp' | 'home' | 'shop' } : {}), ...(q.get('freshSeed') === '1' ? { freshSeed: true } : {}), ...(q.has('seed') && Number.isSafeInteger(seed) && seed >= 0 ? { seed } : {}) };
 }

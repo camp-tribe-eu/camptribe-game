@@ -17,6 +17,7 @@ import type { GameState } from '../core/state';
 import { matches } from '../core/story';
 import { taskOutcome, tasksFor } from '../core/wave';
 import { FIREPLACE_SCENE, fireplaceFacts } from './fireplace';
+import { isMapFirstSpot, liveMapSpot } from './map-first';
 import type { Move } from './moves';
 import { WAVE_CH1_EVENING } from './waves';
 
@@ -101,7 +102,9 @@ export function spotMove(sim: SimState, name: string): Move | null {
 }
 
 /** Чи об'єкт мапи зараз «живий» (видимий і діє): ціль справи — лише поки справа відкрита; пакети — доки не прибрані. */
-export function liveSpot(sim: SimState, name: string): boolean {
+export function liveSpot(sim: SimState, name: string, defs?: CoreDefs): boolean {
+  // GAME-175: об'єкти дня 1 удома веде map-first.ts (потрібен каталог — звідки ядру відомі речі пакування й сюжет); без каталогу вони мертві.
+  if (isMapFirstSpot(name)) return defs !== undefined && liveMapSpot(sim, defs, name);
   if (name.startsWith(TASK_SPOT)) {
     const t = sim.game.wave?.active?.tasks[name.slice(TASK_SPOT.length)];
     return t !== undefined && t.outcome === 'open' && sim.clock.minutes <= t.dueAt && sim.game.player?.locationId === MAP_LOCATION;

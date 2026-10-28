@@ -1,5 +1,6 @@
 // Знімок сюжету для UI (GAME-32): лише дані й ключі текстів. Команд у ньому немає — UI просить дію
 // за її `id`, а що це за команда, знає тільки шар view (src/view/story-offer.ts).
+import type { Key } from '../i18n';
 
 /** Що можна зробити зараз. `key` — ключ тексту контенту (content/locales), `null` — без назви. */
 export interface OfferAction {
@@ -56,6 +57,18 @@ export interface OfferWave {
   readonly tasks: readonly { readonly id: string; readonly textKey: string; readonly remainingMin: number; readonly outcome: 'open' | 'done' | 'late' }[];
 }
 
+/**
+ * GAME-175: підказки над мапою. `next` — рядок «Далі: …» (ключ UI; null — підказки немає), `nextSpot` — об'єкт мапи, на який він вказує
+ * (сцена підсвічує його), `near` — що зробить дія біля найближчого об'єкта (ключ UI; для речі чи NPC ще й ключ назви з контенту).
+ */
+export interface OfferHint {
+  /** Скільки речей у рюкзаку героя (дрібне, ще не розвантажене в авто). */
+  readonly backpack: number;
+  readonly next: Key | null;
+  readonly nextSpot: string | null;
+  readonly near: { readonly label: Key; readonly itemKey: string | null } | null;
+}
+
 export interface StoryOffer {
   /** create — персонажа ще немає; play — гра йде; ended — кінець розділу. */
   readonly stage: 'create' | 'play' | 'ended';
@@ -92,4 +105,6 @@ export interface StoryOffer {
   readonly wave: OfferWave | null;
   /** Стан Мії (GAME-111): два текстові стани, без чисел; null — кішки в грі немає. */
   readonly mia: 'settled' | 'pause' | null;
+  /** Підказки на мапі (GAME-175). */
+  readonly hint: OfferHint;
 }

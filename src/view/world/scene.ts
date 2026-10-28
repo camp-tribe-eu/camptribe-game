@@ -13,9 +13,15 @@ import type { WorldArt } from './art';
 import { COLS, FRAME, frameIndex, type Dir } from './character';
 import { FIRE_CORE, FIRE_GLOW, ambientAt, glowAlpha, timeOfDay } from './daylight';
 import { FOLLOW_SPEED_FACTOR, SPEED, gridFromWalls, restPoints, stepFollowers, type Grid, type Pt } from './follow';
+import type { MapKey } from '../../content/map-first';
+import { playUi } from '../../audio/ui-sounds';
+import { MapFx, type Needs } from './map-fx';
+import { FEEDBACK_S, RING_IDLE, stepRing, type Ring } from './proximity';
 
 export const TILE = 32;
 const INTERACT_RANGE = TILE * 1.5;
+/** Зона кільця наближення тісніша за зону E/тапа: пройти повз (≈ 0,5 с у зоні) не спрацьовує, треба стати. */
+const AUTO_RANGE = TILE * 1.1;
 /** Ноги персонажа — на 0,9 висоти кадру 64 px; тіло колізії (16×10) стоїть на ногах. y ноги = y спрайта = глибина сортування. */
 const ORIGIN_Y = 0.9;
 const BODY = { w: 16, h: 10 };
@@ -30,6 +36,44 @@ const MAX_FOLLOW_DT = 0.1;
 
 /** Об'єкт мапи, з яким можна взаємодіяти: тригер (Interact у ядро) чи NPC (розмова). */
 interface Spot { readonly name: string; readonly kind: 'trigger' | 'npc'; readonly x: number; readonly y: number }
+
+/**
+ * Що сцена просить у гри (main.ts), а не знає сама (GAME-175): куди ведуть дотики, що зараз «живе», яка мапа за локацією гравця.
+ * Сцена лише показує те, що тут відповіли, — ядра й сюжету вона не бачить.
+ */
+export interface WorldHooks {
+  /** Гравець заговорив із NPC на мапі (розмову веде екран подорожі). */
+  onNpc(npcId: string): void;
+  /** Дотик до тригера: режисер вирішує, що це зараз. */
+  onObject(name: string): void;
+  /** Чи об'єкт зараз діє й видимий. */
+  isLive(name: string): boolean;
+  /** Вигляд об'єкта-речі: лежить удома чи вже в багажнику (маркер міняє колір). */
+  look(name: string): 'room' | 'trunk';
+  /** Об'єкт, на який вказує підказка «Далі: …» (маркер пульсує); null — жоден. */
+  target(): string | null;
+  /** Яку мапу показувати зараз (за локацією гравця; ?map= — лише в збірці e2e). */
+  mapKey(): MapKey;
+  /** Рюкзак героя: скільки дрібних речей несе (0 — рюкзака на спині немає). */
+  backpack(): number;
+  /** Одна річ з рюкзака — в багажник (та сама команда ядра); 'full' — не вмістилась, відкрито сітку. */
+  unload(): 'ok' | 'full' | 'none';
+  /** Чого ще бракує в дорогу — для бульбашки над авто. */
+  needs(): Needs;
+  /** Транспорт гравця (авто малюється спрайтом на подвір'ї, велосипед — маркером). */
+  transport(): string | null;
+}
+
+/** Хто з NPC якого листа ходьби має (лист — в art.ts); решта — як Еліза. */
+const NPC_SHEET: Readonly<Record<string, string>> = { 'npc.george': 'player' };
+/** Де стоїть авто відносно точки посадки `obj.vehicle` (ноги авто = нижній центр спрайта): праворуч-вниз; його колізія — нижня смуга. */
+const CAR_OFFSET = { x: 16, y: 80 };
+const CAR_BLOCK = { w: 104, h: 30 };
+/** Маркери: колір за родом об'єкта. */
+const MARKER_COLOR = { step: 0xffd54a, task: 0xffd54a, item: 0xe0a458, itemTrunk: 0x9be28f, vehicle: 0x6ec1ff, other: 0x9be28f } as const;
+
+/** Маркер цілі: графіка і вигляд, у якому вона намальована зараз (перемальовується, коли вигляд міняється). */
+interface Marker { readonly g: Phaser.GameObjects.Graphics; look: string }
 
 /** Смуга шару `above`: тайли верхівок, що мають одну «базову» лінію (низ стовбура під ними). */
 interface Band { readonly layer: Phaser.Tilemaps.TilemapLayer; readonly depth: number }
@@ -67,6 +111,8 @@ export interface WorldProbe {
   firstFrameMs: number;
   /** GAME-99 (лише для e2e): ефект «день і ніч» — що зараз намальовано. `on` — ефект увімкнено; `visible` — прямокутник/пляма видимі (вдень — ні). */
   daylight: { on: boolean; visible: boolean; minuteOfDay: number; darkness: number; color: number; glow: number };
+  /** GAME-175 (лише для e2e): кільце наближення (0..1, об'єкт), рюкзак, стрілка до мети (none/line/edge), лічильник спливів, дії-від-наближення. */
+  fx: { target: string | null; ring: number; ringName: string | null; backpack: number; guide: 'none' | 'line' | 'edge'; pops: number; auto: number };
 }
 
 /** Точка вогнища (об'єкт мапи obj.campfire) — центр світлої плями; нема — плями нема. */
@@ -94,19 +140,35 @@ export class WorldScene extends Phaser.Scene {
   private night: Phaser.GameObjects.Rectangle | null = null;
   private glow: Phaser.GameObjects.Image | null = null;
 
-  /** Позначки цілей хвилі й доброї справи (GAME-170 зріз 2) — за назвою об'єкта; видимі лише поки об'єкт «живий» (isLive). */
-  private markers = new Map<string, Phaser.GameObjects.GameObject & { setVisible(v: boolean): unknown }>();
+  /** Позначки цілей (GAME-170 зріз 2; GAME-175: речі, кроки, авто) — за назвою об'єкта; видимі лише поки об'єкт «живий» (isLive). */
+  private markers = new Map<string, Marker>();
+  /** NPC на мапі: видимі лише поки живі (Джордж — лише в профілі, де він є). */
+  private npcSprites = new Map<string, Phaser.GameObjects.Sprite>();
+  /** GAME-175: мапа, що зараз побудована, і все, що до неї належить (знищується при переході): шари, картинки, маркери, колізії. */
+  private current: MapKey | null = null;
+  private tilemap: Phaser.Tilemaps.Tilemap | null = null;
+  private owned: { destroy(): void }[] = [];
+  private wallCollider: Phaser.Physics.Arcade.Collider | null = null;
+  /** Авто на подвір'ї: спрайт і невидима колізія — окремо від мапи (залежать від транспорту гравця, а не від мапи). */
+  private carParts: { destroy(): void }[] = [];
+  private carFor = '';
+  private fx: MapFx | null = null;
+  private ring: Ring = RING_IDLE;
+  /** Об'єкти, що вже спрацювали в цьому заході в зону: поки гравець не вийде з неї, самі не повторюються. */
+  private fired = new Set<string>();
+  private unloadT = FEEDBACK_S * 0.4;
+  private autoCount = 0;
 
-  /** art — графіка, декодована до старту гри (loadWorldArt); onNpc — гравець заговорив із NPC на мапі (розмову веде екран подорожі);
-   *  onObject — дотик до тригера (режисер вирішує: справа хвилі, сцена біля вогнища чи Interact); isLive — чи об'єкт зараз діє й видимий. */
-  constructor(private readonly bridge: Bridge, private readonly controls: InputState, private readonly probe: WorldProbe, private readonly art: WorldArt, private readonly onNpc: (npcId: string) => void = () => {},
-    private readonly onObject: (name: string) => void = (name) => { bridge.send({ type: 'Interact', targetId: name }); }, private readonly isLive: (name: string) => boolean = () => true,
-    private readonly daylightOn = true) {
+  /** art — графіка, декодована до старту гри (loadWorldArt); hooks — усе, що сцена просить у гри (див. WorldHooks). */
+  constructor(private readonly bridge: Bridge, private readonly controls: InputState, private readonly probe: WorldProbe, private readonly art: WorldArt,
+    private readonly hooks: WorldHooks, private readonly daylightOn = true) {
     super('world');
   }
 
   preload(): void {
     this.load.tilemapTiledJSON('camp', 'maps/camp-lake.tmj');
+    this.load.tilemapTiledJSON('home', 'maps/home.tmj');
+    this.load.tilemapTiledJSON('shop', 'maps/shop.tmj');
     // GAME-40: три UI-звуки (SND-001…003). Літерали тут, бо сторож check-scene-refs перевіряє існування файлів лише за літералами в
     // this.load.*; відповідність ключів/шляхів таблиці UI_SOUND_FILES доводить src/audio/ui-sounds.test.ts.
     this.load.audio('ui-click', 'audio/ui-click_001.ogg');
@@ -115,18 +177,28 @@ export class WorldScene extends Phaser.Scene {
   }
 
   /**
-   * Позначка цілі (GAME-170 зріз 2): тимчасова графіка замість спрайтів LPC (купа дров, лавка, велонавіс, пакети — прогалини набору,
-   * OD-013: спершу доведення наявних спрайтів; скіл game-art-sources). Малюється на точці об'єкта (ноги), глибина — її y.
+   * Позначка цілі (GAME-170 зріз 2): тимчасова графіка замість спрайтів LPC (купа дров, лавка, велонавіс, пакети, речі для пакування,
+   * полиці — прогалини набору, OD-013: спершу доведення наявних спрайтів; скіл game-art-sources). Малюється на точці об'єкта (ноги),
+   * глибина — її y. Колір — за родом: крок/справа — золотий, річ — бурштиновий (зелений, коли вже в багажнику), авто — блакитний.
    */
-  private marker(s: Spot): Phaser.GameObjects.Graphics {
-    const color = s.name.startsWith('task.') ? 0xffd54a : 0x9be28f;
+  private marker(s: Spot): Marker {
     const g = this.add.graphics({ x: s.x, y: s.y });
-    g.fillStyle(0x000000, 0.35).fillEllipse(0, 0, 22, 10);
-    g.fillStyle(color, 1).fillRoundedRect(-7, -16, 14, 14, 3);
-    g.lineStyle(1, 0x1b1f23, 1).strokeRoundedRect(-7, -16, 14, 14, 3);
     g.setDepth(s.y);
-    g.setVisible(this.isLive(s.name));
-    return g;
+    const m: Marker = { g, look: '' };
+    this.draw(m, s.name, this.hooks.look(s.name));
+    g.setVisible(this.hooks.isLive(s.name));
+    return m;
+  }
+
+  private draw(m: Marker, name: string, look: 'room' | 'trunk'): void {
+    const family = name.startsWith('task.') ? 'task' : name.startsWith('step.') ? 'step' : name.startsWith('pack.') || name.startsWith('take.') ? (look === 'trunk' ? 'itemTrunk' : 'item')
+      : name === 'obj.vehicle' || name === 'obj.trunk' ? 'vehicle' : 'other';
+    m.look = look;
+    const g = m.g.clear();
+    g.fillStyle(0x000000, 0.35).fillEllipse(0, 0, 22, 10);
+    g.fillStyle(MARKER_COLOR[family], 1).fillRoundedRect(-7, -16, 14, 14, 3);
+    g.lineStyle(1, 0x1b1f23, 1).strokeRoundedRect(-7, -16, 14, 14, 3);
+    if (family === 'itemTrunk') g.lineStyle(2, 0x1b1f23, 1).beginPath().moveTo(-3, -9).lineTo(-1, -6).lineTo(3, -12).strokePath();   // галочка: уже в багажнику
   }
 
   /** Складений лист ходьби як текстура з 36 кадрами (ключ кадру — номер). */
@@ -144,67 +216,24 @@ export class WorldScene extends Phaser.Scene {
     this.addSheet('elise', this.art.sheets.elise);
     for (const name of FOLLOWERS) this.addSheet(name, this.art.sheets[name]);
 
-    const map = this.make.tilemap({ key: 'camp' });
-    const tilesets = Object.keys(this.art.tilesets).map((name) => {
-      const ts = map.addTilesetImage(name, name, TILE, TILE, 0, 0);
-      if (!ts) throw new Error(`tileset ${name} is missing in the map`);
-      return ts;
-    });
-    const need = (name: string): Phaser.Tilemaps.TilemapLayer => {
-      const layer = map.createLayer(name, tilesets);
-      if (!layer || !(layer instanceof Phaser.Tilemaps.TilemapLayer)) throw new Error(`layer ${name} is missing`);
-      return layer;
-    };
-    const ground = need('ground').setDepth(DEPTH.ground);
-    const decor = need('decor').setDepth(DEPTH.decor);
-    const walls = need('walls').setDepth(DEPTH.walls);
-    walls.setCollisionByExclusion([-1]);
-    this.bands = this.makeBands(map, tilesets);
-    // GAME-97: шари мапи статичні, а кожен тайловий шар у Phaser 4 коштує дорого (під SwiftShader JS кадру — 0,4 мс, а тайлові шари — ≈ 7 з 10 мс
-    // GPU-часу; під навантаженням паралельного e2e гра падала до 8 fps). Тому земля, декор і стіни один раз запікаються в одну текстуру. Шар `walls`
-    // лишається лише як дані колізій (невидимий). Смуги `above` НЕ запікаємо: вони розріджені (34 тайли), а повнокадрова картинка коштувала б дорожче за тайли.
-    this.bake('bake-base', map, [ground, decor, walls]).setDepth(DEPTH.ground);
-    for (const layer of [ground, decor, walls]) layer.setVisible(false);
-
-    const objects = map.getObjectLayer('objects')?.objects ?? [];
-    const typeOf = (o: Phaser.Types.Tilemaps.TiledObject): string => String(o.type || (o as { class?: string }).class || '');
-    const spawn = objects.find((o) => typeOf(o) === 'spawn');
-    if (!spawn) throw new Error('maps/camp-lake.tmj: no spawn in layer objects');
-    this.spots = objects.filter((o) => typeOf(o) === 'trigger' || typeOf(o) === 'npc')
-      .map((o) => ({ name: o.name, kind: typeOf(o) as Spot['kind'], x: o.x ?? 0, y: o.y ?? 0 }));
-
     this.anims.create({ key: 'fire', frames: this.anims.generateFrameNumbers('campfire', { start: 0, end: 4 }), frameRate: 8, repeat: -1 });
     for (const dir of DIRS) {
       this.anims.create({ key: `walk-${dir}`, frames: Array.from({ length: COLS - 1 }, (_, i) => ({ key: 'player', frame: frameIndex(dir, i + 1) })), frameRate: WALK_FPS, repeat: -1 });
     }
-    for (const s of this.spots) {
-      // Точка об'єкта — ноги/основа: спрайт стоїть на ній, а глибина сортування — її y.
-      if (s.kind === 'npc') this.add.sprite(s.x, s.y, 'elise', frameIndex('down', 0)).setOrigin(0.5, ORIGIN_Y).setDepth(s.y);
-      else if (s.name === 'obj.campfire') this.add.sprite(s.x, s.y, 'campfire').setOrigin(0.5, 0.85).setDepth(s.y).play('fire');
-      else this.markers.set(s.name, this.marker(s));
-    }
-
     for (const name of FOLLOWERS) {
       for (const dir of DIRS) this.anims.create({ key: `walk-${name}-${dir}`, frames: Array.from({ length: COLS - 1 }, (_, i) => ({ key: name, frame: frameIndex(dir, i + 1) })), frameRate: WALK_FPS, repeat: -1 });
     }
     // Слідувачі — лише картинки: без тіла фізики й без інтерактивності, тож тап і кнопка дії їх «не бачать» (GAME-112, цілі взаємодії).
-    const wallsData = map.getLayer('walls')?.data.flatMap((row) => row.map((t) => t.index)) ?? [];
-    this.grid = gridFromWalls(map.width, map.height, TILE, wallsData);
-    this.chain = restPoints(this.grid, { x: spawn.x ?? 0, y: spawn.y ?? 0 }, FOLLOWERS.length, this.spots);
     this.followFacing = FOLLOWERS.map(() => 'down' as Dir);
-    this.followSprites = FOLLOWERS.map((name, i) => this.add.sprite(this.chain[i]?.x ?? 0, this.chain[i]?.y ?? 0, name, frameIndex('down', 0)).setOrigin(0.5, ORIGIN_Y));
-    this.probe.followers = this.chain.map((p) => ({ x: p.x, y: p.y }));
-    if (this.daylightOn) this.makeDaylight(spawnFire(this.spots));
-
-    this.player = this.physics.add.sprite(spawn.x ?? 0, spawn.y ?? 0, 'player', frameIndex('down', 0));
+    this.followSprites = FOLLOWERS.map((name) => this.add.sprite(0, 0, name, frameIndex('down', 0)).setOrigin(0.5, ORIGIN_Y));
+    this.player = this.physics.add.sprite(0, 0, 'player', frameIndex('down', 0));
     this.player.setOrigin(0.5, ORIGIN_Y);
     this.player.body.setSize(BODY.w, BODY.h);
     this.player.body.setOffset(FRAME / 2 - BODY.w / 2, FRAME * ORIGIN_Y - BODY.h / 2);
     this.player.setCollideWorldBounds(true);
-    this.physics.world.setBounds(0, 0, map.widthInPixels, map.heightInPixels);
-    this.physics.add.collider(this.player, walls);
+    if (this.daylightOn) this.makeNight();
+    this.fx = new MapFx(this);
 
-    this.cameras.main.setBounds(0, 0, map.widthInPixels, map.heightInPixels);
     // lerp 1, 1 — камера стоїть на персонажі в тому ж кадрі, без згладженого «доїзду». Тож руху, який
     // треба гасити за prefers-reduced-motion, тут немає (GAME-39 #3); e2e читає lerp з живої камери.
     this.cameras.main.startFollow(this.player, true, 1, 1);
@@ -234,10 +263,125 @@ export class WorldScene extends Phaser.Scene {
     // Тап, що не дочекався кадру до паузи, після «Продовжити» не мусить спрацювати сам (рецензія GAME-95).
     this.events.on(Phaser.Scenes.Events.PAUSE, () => { this.tap = null; });
     this.events.on(Phaser.Scenes.Events.RESUME, () => { this.tap = null; });
+
+    this.enterMap(this.hooks.mapKey(), false);
     this.last = { x: this.player.x, y: this.player.y };
     // Зонд має правдиві значення вже в момент ready, а не після першого update.
     Object.assign(this.probe, { playerX: this.player.x, playerY: this.player.y, playerFrame: frameIndex(this.facing, 0), playerDir: this.facing, playerMoving: false, playerDepth: this.player.y });
     this.probe.ready = true;
+  }
+
+  /** Знищити все, що належить поточній мапі (шари, картинки, маркери, колізії) — перед побудовою наступної. */
+  private teardown(): void {
+    for (const o of this.owned) o.destroy();
+    this.owned = [];
+    this.wallCollider?.destroy();
+    this.wallCollider = null;
+    this.tilemap?.destroy();
+    this.tilemap = null;
+    for (const m of this.markers.values()) m.g.destroy();
+    this.markers.clear();
+    this.npcSprites.clear();   // самі спрайти — у `owned`
+    for (const p of this.carParts) p.destroy();
+    this.carParts = [];
+    this.carFor = '';
+    this.glow = null;
+    this.bands = [];
+  }
+
+  /**
+   * Побудувати мапу `key` і поставити героя на точку появи: `s.car` — коли він приїхав сюди (перехід із іншої мапи), інакше `s.start`
+   * (старт гри, завантаження) чи перша точка появи (табір). Слідувачі стають поруч. Зонд і камера — на нову мапу.
+   */
+  private enterMap(key: MapKey, arrived: boolean): void {
+    this.teardown();
+    this.current = key;
+    const map = this.make.tilemap({ key });
+    this.tilemap = map;
+    const tilesets = map.tilesets.map((t) => {
+      const ts = map.addTilesetImage(t.name, t.name, TILE, TILE, 0, 0);
+      if (!ts) throw new Error(`tileset ${t.name} is missing in the scene art`);
+      return ts;
+    });
+    const need = (name: string): Phaser.Tilemaps.TilemapLayer => {
+      const layer = map.createLayer(name, tilesets);
+      if (!layer || !(layer instanceof Phaser.Tilemaps.TilemapLayer)) throw new Error(`layer ${name} is missing`);
+      return layer;
+    };
+    const bakeKey = `bake-${key}`;
+    const baked = this.textures.exists(bakeKey);   // повернення на мапу, що вже запікалась, не коштує нового запікання
+    const ground = baked ? null : need('ground').setDepth(DEPTH.ground);
+    const decor = baked ? null : need('decor').setDepth(DEPTH.decor);
+    const walls = need('walls').setDepth(DEPTH.walls);
+    walls.setCollisionByExclusion([-1]);
+    this.bands = this.makeBands(map, tilesets);
+    // GAME-97: шари мапи статичні, а кожен тайловий шар у Phaser 4 коштує дорого (під SwiftShader JS кадру — 0,4 мс, а тайлові шари — ≈ 7 з 10 мс
+    // GPU-часу; під навантаженням паралельного e2e гра падала до 8 fps). Тому земля, декор і стіни один раз запікаються в одну текстуру. Шар `walls`
+    // лишається лише як дані колізій (невидимий). Смуги `above` НЕ запікаємо: вони розріджені (34 тайли), а повнокадрова картинка коштувала б дорожче за тайли.
+    if (ground && decor) this.bake(bakeKey, map, [ground, decor, walls]);
+    this.owned.push(this.add.image(0, 0, bakeKey).setOrigin(0, 0).setDepth(DEPTH.ground));
+    for (const layer of [ground, decor, walls]) layer?.setVisible(false);
+
+    const objects = map.getObjectLayer('objects')?.objects ?? [];
+    const typeOf = (o: Phaser.Types.Tilemaps.TiledObject): string => String(o.type || (o as { class?: string }).class || '');
+    const spawns = objects.filter((o) => typeOf(o) === 'spawn');
+    const spawn = (arrived ? spawns.find((o) => o.name === 's.car') : spawns.find((o) => o.name === 's.start')) ?? spawns[0];
+    if (!spawn) throw new Error(`map ${key}: no spawn in layer objects`);
+    this.spots = objects.filter((o) => typeOf(o) === 'trigger' || typeOf(o) === 'npc')
+      .map((o) => ({ name: o.name, kind: typeOf(o) as Spot['kind'], x: o.x ?? 0, y: o.y ?? 0 }));
+
+    for (const s of this.spots) {
+      // Точка об'єкта — ноги/основа: спрайт стоїть на ній, а глибина сортування — її y.
+      if (s.kind === 'npc') {
+        const sp = this.add.sprite(s.x, s.y, NPC_SHEET[s.name] ?? 'elise', frameIndex('down', 0)).setOrigin(0.5, ORIGIN_Y).setDepth(s.y).setVisible(this.hooks.isLive(s.name));
+        this.npcSprites.set(s.name, sp);
+        this.owned.push(sp);
+      } else if (s.name === 'obj.campfire') this.owned.push(this.add.sprite(s.x, s.y, 'campfire').setOrigin(0.5, 0.85).setDepth(s.y).play('fire'));
+      else this.markers.set(s.name, this.marker(s));
+    }
+
+    // Слідувачі: нова сітка проходимості мапи й місця стоянки біля точки появи.
+    const wallsData = map.getLayer('walls')?.data.flatMap((row) => row.map((t) => t.index)) ?? [];
+    this.grid = gridFromWalls(map.width, map.height, TILE, wallsData);
+    this.chain = restPoints(this.grid, { x: spawn.x ?? 0, y: spawn.y ?? 0 }, FOLLOWERS.length, this.spots);
+    this.followSprites.forEach((sp, i) => sp.setPosition(this.chain[i]?.x ?? 0, this.chain[i]?.y ?? 0).setDepth(this.chain[i]?.y ?? 0));
+    this.probe.followers = this.chain.map((p) => ({ x: p.x, y: p.y }));
+    if (this.daylightOn) this.makeGlow(spawnFire(this.spots));
+
+    this.player.setPosition(spawn.x ?? 0, spawn.y ?? 0);
+    this.player.body.reset(spawn.x ?? 0, spawn.y ?? 0);
+    this.physics.world.setBounds(0, 0, map.widthInPixels, map.heightInPixels);
+    this.wallCollider = this.physics.add.collider(this.player, walls);
+    this.cameras.main.setBounds(0, 0, map.widthInPixels, map.heightInPixels);
+    this.cameras.main.centerOn(this.player.x, this.player.y);
+    this.last = { x: this.player.x, y: this.player.y };
+    this.placeCar();
+    // Щойно з'явився поруч з об'єктом (приїхав, завантажив гру) — не діє, поки не відійде: інакше авто везло б назад саме.
+    this.fired = new Set(this.spots.filter((sp) => Phaser.Math.Distance.Between(spawn.x ?? 0, spawn.y ?? 0, sp.x, sp.y) <= INTERACT_RANGE).map((sp) => sp.name));
+    this.ring = RING_IDLE;
+  }
+
+  /**
+   * Авто (GAME-175): якщо гравець на авто й на мапі є точка посадки `obj.vehicle` — спрайт авто з тайлсету camp-car (LPC, як у таборі) стоїть
+   * поруч, а його нижня смуга — непрохідна. Велосипед — лише маркер точки посадки. Спрайт залежить від транспорту, тож ставиться окремо від мапи
+   * (створили персонажа — авто з'являється без перезавантаження мапи).
+   */
+  private placeCar(): void {
+    const t = this.hooks.transport();
+    const want = `${this.current}|${t ?? ''}`;
+    if (want === this.carFor) return;
+    for (const p of this.carParts) p.destroy();
+    this.carParts = [];
+    this.carFor = want;
+    const v = this.spots.find((s) => s.name === 'obj.vehicle');
+    if (!v || t !== 'transport.car') return;
+    const x = v.x + CAR_OFFSET.x;
+    const y = v.y + CAR_OFFSET.y;
+    this.carParts.push(this.add.image(x, y, 'camp-car').setOrigin(0.5, 1).setDepth(y));
+    const block = this.add.zone(x, y - CAR_BLOCK.h / 2, CAR_BLOCK.w, CAR_BLOCK.h);
+    this.physics.add.existing(block, true);
+    const col = this.physics.add.collider(this.player, block);
+    this.carParts.push(block, col);
   }
 
   /**
@@ -272,35 +416,41 @@ export class WorldScene extends Phaser.Scene {
   }
 
   /** Запекти шари мапи (у заданому порядку) в одну статичну картинку на всю мапу: піксель у піксель те, що малювали б самі шари. */
-  private bake(key: string, map: Phaser.Tilemaps.Tilemap, layers: Phaser.Tilemaps.TilemapLayer[]): Phaser.GameObjects.Image {
+  private bake(key: string, map: Phaser.Tilemaps.Tilemap, layers: Phaser.Tilemaps.TilemapLayer[]): void {
     const tex = this.textures.addDynamicTexture(key, map.widthInPixels, map.heightInPixels);
     if (!tex) throw new Error(`bake texture ${key} failed`);
     tex.draw(layers);
     tex.render();
-    return this.add.image(0, 0, key).setOrigin(0, 0);
   }
 
   /**
    * GAME-99: день і ніч. Нічна маска — прямокутник на весь екран (scrollFactor 0), що множить кадр на синій; світла пляма вогнища — радіальний
    * градієнт з канви (без файлів), ADD над маскою. Обидва вище за все в світі. Вдень приховані (`visible` у update).
    */
-  private makeDaylight(fire: Pt | null): void {
+  private makeNight(): void {
     const cam = this.cameras.main;   // розмір маски — з вікна камери (оновлюється в updateDaylight при зміні кадру), а не стала: 4K при zoom 1 теж покрито
     this.night = this.add.rectangle(0, 0, cam.width, cam.height, 0xffffff).setOrigin(0, 0).setScrollFactor(0).setDepth(DEPTH.always + 1).setBlendMode(Phaser.BlendModes.MULTIPLY).setVisible(false);
+  }
+
+  /** Світла пляма вогнища — лише на мапі, де є вогнище (табір); текстура одна на всі входи в табір. */
+  private makeGlow(fire: Pt | null): void {
     if (!fire) return;
-    const R = 80;
-    const tex = this.textures.createCanvas('fire-glow', R * 2, R * 2);
-    if (!tex) throw new Error('texture fire-glow failed');
-    const ctx = tex.getContext();
-    const css = (c: number): string => `#${c.toString(16).padStart(6, '0')}`;
-    const g = ctx.createRadialGradient(R, R, 0, R, R, R);
-    g.addColorStop(0, `${css(FIRE_CORE)}ff`);
-    g.addColorStop(0.35, `${css(FIRE_GLOW)}99`);
-    g.addColorStop(1, `${css(FIRE_GLOW)}00`);
-    ctx.fillStyle = g;
-    ctx.fillRect(0, 0, R * 2, R * 2);
-    tex.refresh();
+    if (!this.textures.exists('fire-glow')) {
+      const R = 80;
+      const tex = this.textures.createCanvas('fire-glow', R * 2, R * 2);
+      if (!tex) throw new Error('texture fire-glow failed');
+      const ctx = tex.getContext();
+      const css = (c: number): string => `#${c.toString(16).padStart(6, '0')}`;
+      const g = ctx.createRadialGradient(R, R, 0, R, R, R);
+      g.addColorStop(0, `${css(FIRE_CORE)}ff`);
+      g.addColorStop(0.35, `${css(FIRE_GLOW)}99`);
+      g.addColorStop(1, `${css(FIRE_GLOW)}00`);
+      ctx.fillStyle = g;
+      ctx.fillRect(0, 0, R * 2, R * 2);
+      tex.refresh();
+    }
     this.glow = this.add.image(fire.x, fire.y - 12, 'fire-glow').setDepth(DEPTH.always + 2).setBlendMode(Phaser.BlendModes.ADD).setVisible(false);
+    this.owned.push(this.glow);
   }
 
   private updateDaylight(time: number): void {
@@ -317,6 +467,20 @@ export class WorldScene extends Phaser.Scene {
     if (visible) this.night.setFillStyle(a.color, 1);
     this.glow?.setVisible(visible).setAlpha(glow);
     Object.assign(d, { visible, minuteOfDay, darkness: a.darkness, color: a.color, glow: this.glow ? glow : 0 });
+  }
+
+  /** Сплив і звук на дію: підібрав/поклав — «+1» і клацання, крок/авто — «OK» і підтвердження. */
+  private feedback(name: string): void {
+    const pick = name.startsWith('take.') || name.startsWith('pack.');
+    this.fx?.pop(this.player.x, this.player.y, pick ? '+1' : 'OK');
+    playUi(pick ? 'press' : 'confirm');
+  }
+
+  private unloadOne(): void {
+    const res = this.hooks.unload();
+    if (res === 'none') return;
+    this.fx?.pop(this.player.x, this.player.y, res === 'ok' ? '+1' : '!');
+    playUi(res === 'ok' ? 'press' : 'back');
   }
 
   /** GAME-112: ланцюжок слідувачів іде за героєм у обхід стін; анімація й напрямок — з їхнього зсуву за кадр. */
@@ -367,6 +531,10 @@ export class WorldScene extends Phaser.Scene {
     this.bridge.frame(this.game.loop.rawDelta);
     this.countFps(time);
     if (!this.player) return;   // update може випередити create лише в першому кадрі завантаження
+    // GAME-175: локація гравця змінилась (приїхав у крамницю, повернувся додому) — інша мапа; той самий кадр уже на ній.
+    const want = this.hooks.mapKey();
+    if (want !== this.current) this.enterMap(want, true);
+    else this.placeCar();
     const held = consumeFrame(this.controls);
     const v = moveVector(held);
     // Рухається той, хто справді зсунувся з минулого кадру (по зсуву, а не по швидкості — вона лишається, коли тіло вперлося в стіну): упертий у стіну персонаж стоїть, а не «іде на місці».
@@ -383,8 +551,17 @@ export class WorldScene extends Phaser.Scene {
 
     let spot: Spot | null = null;
     let best = INTERACT_RANGE;
-    for (const [name, m] of this.markers) m.setVisible(this.isLive(name));
-    const live = this.spots.filter((s) => this.isLive(s.name));
+    const target = this.hooks.target();
+    for (const [name, m] of this.markers) {
+      const on = this.hooks.isLive(name);
+      m.g.setVisible(on);
+      if (!on) continue;
+      const look = this.hooks.look(name);
+      if (look !== m.look) this.draw(m, name, look);
+      m.g.setScale(name === target ? 1 + 0.2 * Math.abs(Math.sin(time / 280)) : 1);   // ціль підказки «Далі:» — пульсує
+    }
+    for (const [name, sp] of this.npcSprites) sp.setVisible(this.hooks.isLive(name));
+    const live = this.spots.filter((s) => this.hooks.isLive(s.name));
     for (const s of live) {
       const d = Phaser.Math.Distance.Between(this.player.x, this.player.y, s.x, s.y);
       if (d <= best) { best = d; spot = s; }
@@ -394,11 +571,44 @@ export class WorldScene extends Phaser.Scene {
     const tapped = this.tap;
     this.tap = null;
     const tapSpot = tapped ? live.find((s) => Phaser.Math.Distance.Between(this.player.x, this.player.y, s.x, s.y) <= INTERACT_RANGE && tapHitsSpot(s, tapped)) ?? null : null;
-    const target = tapSpot ?? spot;
-    if (this.gate(held.has('interact') || tapSpot !== null, time) && target) {
-      if (target.kind === 'npc') this.onNpc(target.name);
-      else this.onObject(target.name);
+    const act = tapSpot ?? spot;
+    const dt = Math.min(delta / 1000, MAX_FOLLOW_DT);
+    const carrying = this.hooks.backpack() > 0;
+    this.fx?.tick(dt);
+    const atCar = near === 'obj.vehicle' || near === 'obj.trunk';
+    const needs = this.hooks.needs();
+    // Скорочення E/тап — миттєво. Біля авто з рюкзаком воно розвантажує (а не їде).
+    if (this.gate(held.has('interact') || tapSpot !== null, time) && act) {
+      if (act.kind === 'npc') this.hooks.onNpc(act.name);
+      else if (carrying && (act.name === 'obj.vehicle' || act.name === 'obj.trunk')) this.unloadOne();
+      else { this.hooks.onObject(act.name); this.feedback(act.name); }
     }
+    // Кільце наближення: вийшов із зони — об'єкт знову «озброєний». Авто їде лише коли все потрібне вже в багажнику (а не повз нього) і герой стоїть.
+    for (const n of [...this.fired]) { const f = this.spots.find((x) => x.name === n); if (!f || Phaser.Math.Distance.Between(this.player.x, this.player.y, f.x, f.y) > INTERACT_RANGE) this.fired.delete(n); }
+    // Спакована річ удома сама не «розпаковується» від проходу повз: її дістають лише E/тап (чи сітка).
+    const autoNear = spot && best <= AUTO_RANGE ? near : null;
+    const ready = (autoNear !== 'obj.vehicle' || (!carrying && needs.small + needs.bulky === 0)) && !(autoNear?.startsWith('pack.') && this.hooks.look(autoNear) === 'trunk');
+    const r = stepRing(this.ring, atCar && carrying ? null : autoNear, !this.fired.has(autoNear ?? '') && ready, autoNear !== 'obj.vehicle' || !moving, dt);
+    this.ring = r.ring;
+    if (r.fire) {
+      this.fired.add(r.fire);
+      this.autoCount++;
+      this.hooks.onObject(r.fire);
+      this.feedback(r.fire);
+    }
+    // Розвантаження: у зоні авто з рюкзаком — одна річ кожні ~0,5 с з сплеском і звуком.
+    if (atCar && carrying) {
+      this.unloadT += dt;
+      if (this.unloadT >= FEEDBACK_S) { this.unloadT = 0; this.unloadOne(); }
+    } else this.unloadT = FEEDBACK_S * 0.4;
+    const ringAt = this.ring.name ? this.spots.find((x) => x.name === this.ring.name) : undefined;
+    this.fx?.drawRing(ringAt?.x ?? 0, ringAt?.y ?? 0, ringAt ? this.ring.t : 0);
+    this.fx?.drawBackpack(this.hooks.backpack() > 0, this.player.x, this.player.y, this.facing);
+    const veh = this.spots.find((x) => x.name === 'obj.vehicle');
+    this.fx?.drawNeeds(veh?.x ?? 0, (veh?.y ?? 0) - 40, veh && this.hooks.isLive('obj.vehicle') ? needs : null);
+    const tn = this.hooks.target();
+    const ts = tn ? this.spots.find((x) => x.name === tn) : undefined;
+    this.fx?.drawGuide({ x: this.player.x, y: this.player.y }, ts && this.hooks.isLive(ts.name) ? { x: ts.x, y: ts.y } : null, this.cameras.main.worldView, INTERACT_RANGE * 1.2, time);
 
     this.moveFollowers(delta);
     this.updateDaylight(time);
@@ -426,6 +636,7 @@ export class WorldScene extends Phaser.Scene {
       playerDepth: this.player.depth,
       coveredTiles: covered,
       behindTiles: behind,
+      fx: { target: tn, ring: this.ring.name ? this.ring.t : 0, ringName: this.ring.name, backpack: this.hooks.backpack(), guide: this.fx?.guideMode ?? 'none', pops: this.fx?.pops ?? 0, auto: this.autoCount },
     });
   }
 }

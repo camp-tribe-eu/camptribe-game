@@ -5,6 +5,12 @@
 import terrain from '../../../assets/tiles/terrain_atlas.png';
 import tent from '../../../assets/tiles/camp_tent.png';
 import car from '../../../assets/tiles/camp_car.png';
+import homeWalls from '../../../assets/tiles/home_walls.png';
+import homeFloor from '../../../assets/tiles/home_floor.png';
+import homeWindowsDoors from '../../../assets/tiles/home_windows_doors.png';
+import homeFurniture from '../../../assets/tiles/home_furniture.png';
+import homeOffice from '../../../assets/tiles/home_office.png';
+import homeShelf from '../../../assets/tiles/home_shelf.png';
 import campfire from '../../../assets/sprites/campfire.png';
 import bodyMale from '../../../assets/characters/body/bodies/male/walk.png';
 import bodyFemale from '../../../assets/characters/body/bodies/female/walk.png';
@@ -27,8 +33,21 @@ import hairPixie from '../../../assets/characters/hair/pixie/adult/walk.png';
 import catMia from '../../../assets/sprites/cat_mia.png';
 import { composeSheet, loadImage, type LayerSpec } from './character';
 
-/** Тайлсети мапи: ім'я в camp-lake.tmj → картинка. Мапа й сцена мусять мати рівно ці імена (перевіряє map-content.test). */
-export const TILESET_IMAGES: Readonly<Record<string, string>> = { 'lpc-terrain': terrain, 'camp-tent': tent, 'camp-car': car };
+/**
+ * Тайлсети мап: ім'я в .tmj → картинка. Сцена реєструє їх усі; кожна мапа використовує свій набір (MAP_TILESETS) — рівно ці імена
+ * звіряє map-content.test. GAME-175: дім і крамниця — тайлсети home-* (проба GAME-146) і двір з terrain/camp-car.
+ */
+export const TILESET_IMAGES: Readonly<Record<string, string>> = {
+  'lpc-terrain': terrain, 'camp-tent': tent, 'camp-car': car,
+  'home-walls': homeWalls, 'home-floor': homeFloor, 'home-windows-doors': homeWindowsDoors, 'home-furniture': homeFurniture, 'home-office': homeOffice, 'home-shelf': homeShelf,
+};
+const HOME_SETS = ['home-walls', 'home-floor', 'home-windows-doors', 'home-furniture', 'home-office', 'home-shelf', 'lpc-terrain', 'camp-car'] as const;
+/** Які тайлсети має кожна мапа гри (ключ — як у scene.ts і map-first.ts). */
+export const MAP_TILESETS: Readonly<Record<'camp' | 'home' | 'shop', readonly string[]>> = {
+  camp: ['lpc-terrain', 'camp-tent', 'camp-car'],
+  home: HOME_SETS,
+  shop: HOME_SETS,
+};
 export const CAMPFIRE_SHEET = campfire;
 
 const rgb = (r: number, g: number, b: number): readonly [number, number, number] => [r, g, b];
