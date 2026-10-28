@@ -12,11 +12,12 @@ import type { Bridge } from './bridge';
 import type { WorldArt } from './art';
 import { COLS, FRAME, frameIndex, type Dir } from './character';
 import { FIRE_CORE, FIRE_GLOW, ambientAt, glowAlpha, timeOfDay } from './daylight';
-import { FOLLOW_SPEED_FACTOR, SPEED, gridFromWalls, restPoints, stepFollowers, type Grid, type Pt } from './follow';
+import { FOLLOW_SPEED_FACTOR, SPEED, centerOf, gridFromWalls, restPoints, stepFollowers, stepTo, tileOf, type Grid, type Pt } from './follow';
 import type { MapKey } from '../../content/map-first';
 import { playUi } from '../../audio/ui-sounds';
 import { MapFx, type Needs } from './map-fx';
 import { FEEDBACK_S, RING_IDLE, stepRing, type Ring } from './proximity';
+import { IDLE_AFTER_S, LEISURE_BY_MAP, assignLeisure, leisureFromObjects, type LeisureSpot } from './leisure';
 
 export const TILE = 32;
 const INTERACT_RANGE = TILE * 1.5;
@@ -105,6 +106,8 @@ export interface WorldProbe {
   fps: number;
   /** Скільки вікон fps уже закрито (тест чекає на нове вікно, а не читає застаріле число). */
   fpsWindows: number;
+  /** GAME-173 (лише для e2e): на якій точці дозвілля стоїть кожен слідувач (вид і тайл), null — у строю чи ще в дорозі. */
+  leisure: ({ kind: string; c: number; r: number } | null)[];
   /** GAME-112 (лише для e2e): де стоять слідувачі (ноги, піксельні координати мапи) — у порядку ланцюжка. */
   followers: Pt[];
   /** GAME-38: мс від початку навігації до першого намальованого кадру Phaser; 0, доки кадру не було (ставить main.ts). */
@@ -132,6 +135,11 @@ export class WorldScene extends Phaser.Scene {
   private chain: Pt[] = [];
   private followSprites: Phaser.GameObjects.Sprite[] = [];
   private followFacing: Dir[] = [];
+  /** GAME-173: скільки секунд герой стоїть; точки дозвілля родини (null — у строю) і всі точки мапи; напрямок руху героя для строю. */
+  private idleS = 0;
+  private leisure: (LeisureSpot | null)[] | null = null;
+  private leisureSpots: LeisureSpot[] = [];
+  private heading: Pt = { x: 0, y: 0 };
   private fpsFrames = 0;
   private fpsStart = -1;
   /** Тап по канві (GAME-95): світова точка, чекає на кадр update, де її звіряють із цілями в зоні дії. */
@@ -346,6 +354,11 @@ export class WorldScene extends Phaser.Scene {
     this.chain = restPoints(this.grid, { x: spawn.x ?? 0, y: spawn.y ?? 0 }, FOLLOWERS.length, this.spots);
     this.followSprites.forEach((sp, i) => sp.setPosition(this.chain[i]?.x ?? 0, this.chain[i]?.y ?? 0).setDepth(this.chain[i]?.y ?? 0));
     this.probe.followers = this.chain.map((p) => ({ x: p.x, y: p.y }));
+    this.probe.leisure = this.chain.map(() => null);
+    const fromMap = leisureFromObjects(objects as never, TILE);
+    this.leisureSpots = fromMap.length > 0 ? fromMap : [...(LEISURE_BY_MAP[key] ?? [])];
+    this.idleS = 0;
+    this.leisure = null;
     if (this.daylightOn) this.makeGlow(spawnFire(this.spots));
 
     this.player.setPosition(spawn.x ?? 0, spawn.y ?? 0);
@@ -483,25 +496,43 @@ export class WorldScene extends Phaser.Scene {
     playUi(res === 'ok' ? 'press' : 'back');
   }
 
-  /** GAME-112: ланцюжок слідувачів іде за героєм у обхід стін; анімація й напрямок — з їхнього зсуву за кадр. */
-  private moveFollowers(deltaMs: number): void {
+  /** GAME-112: родина йде за героєм у обхід стін (GAME-173: вільним строєм); поки він стоїть — кожен на своїй точці дозвілля. Анімація й напрямок — з зсуву за кадр. */
+  private moveFollowers(deltaMs: number, time: number, moving: boolean): void {
+    const dt = Math.min(deltaMs / 1000, MAX_FOLLOW_DT);
     const before = this.chain.map((p) => ({ x: p.x, y: p.y }));
-    stepFollowers(this.grid, { x: this.player.x, y: this.player.y }, this.chain, Math.min(deltaMs / 1000, MAX_FOLLOW_DT), SPEED * FOLLOW_SPEED_FACTOR, this.spots);
+    const hero = { x: this.player.x, y: this.player.y };
+    // Дозвілля: герой простояв IDLE_AFTER_S — точки роздаються один раз (до наступного руху), без випадковості.
+    if (moving) { this.idleS = 0; this.leisure = null; } else this.idleS += dt;
+    if (!this.leisure && this.idleS >= IDLE_AFTER_S) {
+      const avoid = new Set(this.spots.map((s) => { const t = tileOf(this.grid, s); return t.r * this.grid.cols + t.c; }));
+      this.leisure = assignLeisure(this.grid, hero, this.chain.length, this.leisureSpots, avoid);
+    }
+    const plan = this.leisure;
+    const rest = this.chain.filter((_, i) => !plan?.[i]);
+    const parked = (plan ?? []).flatMap((l) => (l ? [centerOf(this.grid, l)] : []));
+    if (rest.length > 0) stepFollowers(this.grid, hero, rest, dt, SPEED * FOLLOW_SPEED_FACTOR, [...this.spots, ...parked], this.heading);
     this.chain.forEach((p, i) => {
       const s = this.followSprites[i];
       const b = before[i];
       const out = this.probe.followers[i];
       const name = FOLLOWERS[i];
       if (!s || !b || !out || !name) return;
+      const spot = plan?.[i] ?? null;
+      let arrived = false;
+      if (spot) arrived = stepTo(this.grid, p, spot, dt, SPEED * FOLLOW_SPEED_FACTOR);
       const dx = p.x - b.x;
       const dy = p.y - b.y;
       if (dx !== 0 || dy !== 0) this.followFacing[i] = Math.abs(dx) > Math.abs(dy) ? (dx < 0 ? 'left' : 'right') : (dy < 0 ? 'up' : 'down');
+      if (arrived && spot) this.followFacing[i] = spot.face;
       const dir = this.followFacing[i] ?? 'down';
       if (dx !== 0 || dy !== 0) s.anims.play(`walk-${name}-${dir}`, true);
       else { s.anims.stop(); s.setFrame(frameIndex(dir, 0)); }
-      s.setPosition(p.x, p.y).setDepth(p.y);
+      // Лише картинка гойдається на 1 px (проба й глибина — по справжній точці).
+      const bob = arrived ? Math.round(Math.sin(time / 380 + i * 2.1)) : 0;
+      s.setPosition(p.x, p.y + bob).setDepth(p.y);
       out.x = p.x;
       out.y = p.y;
+      this.probe.leisure[i] = arrived && spot ? { kind: spot.kind, c: spot.c, r: spot.r } : null;
     });
   }
 
@@ -539,6 +570,7 @@ export class WorldScene extends Phaser.Scene {
     const v = moveVector(held);
     // Рухається той, хто справді зсунувся з минулого кадру (по зсуву, а не по швидкості — вона лишається, коли тіло вперлося в стіну): упертий у стіну персонаж стоїть, а не «іде на місці».
     const moving = Math.hypot(this.player.x - this.last.x, this.player.y - this.last.y) > 0.25;
+    if (moving) this.heading = { x: this.player.x - this.last.x, y: this.player.y - this.last.y };
     this.last = { x: this.player.x, y: this.player.y };
     this.player.setVelocity(v.x * SPEED, v.y * SPEED);
     if (v.x !== 0 || v.y !== 0) {
@@ -610,7 +642,7 @@ export class WorldScene extends Phaser.Scene {
     const ts = tn ? this.spots.find((x) => x.name === tn) : undefined;
     this.fx?.drawGuide({ x: this.player.x, y: this.player.y }, ts && this.hooks.isLive(ts.name) ? { x: ts.x, y: ts.y } : null, this.cameras.main.worldView, INTERACT_RANGE * 1.2, time);
 
-    this.moveFollowers(delta);
+    this.moveFollowers(delta, time, moving || v.x !== 0 || v.y !== 0);
     this.updateDaylight(time);
 
     const box = this.player.getBounds();

@@ -12,7 +12,7 @@ export const pairs = (md: string): string[] => md.split(/^### /m).filter((s) => 
 export const effectRows = (md: string): string[][] => md.split('\n').filter((l) => /^\|\s*\d+\s*\|/.test(l)).map((l) => l.split('|').slice(1, -1).map((c) => c.trim()));
 /** Знімки нашої сцени, названі в тексті. */
 export const shotsIn = (s: string): string[] => [...s.matchAll(/research\/visual-audit\/([\w.-]+\.png)/g)].map((m) => m[1] ?? '');
-export const OURS = /^((day|dusk|night|before-no-effect)-(portrait-390x844|landscape-844x390)|mapfirst-(portrait|landscape)-ring)\.png$/;   // GAME-175: два знімки дня 1 на мапі (e2e game-175.spec)
+export const OURS = /^((day|dusk|night|before-no-effect)-(portrait-390x844|landscape-844x390)|family-(idle|walking-to-spots)|mapfirst-(portrait|landscape)-ring)\.png$/;   // GAME-173 родина; GAME-175 день 1 на мапі
 
 describe('research/visual-audit.md (GAME-99)', () => {
   it('файл прочитано', () => { expect(MD.length).toBeGreaterThan(500); });
