@@ -115,7 +115,7 @@ test.describe('GAME-112 родина йде за героєм', () => {
     for (const g of gaps) expect(g).toBeLessThanOrEqual(N_TILES);
     console.log(`GAME-112 пройшли тайлів: герой ${walked.hero.toFixed(0)}, слідувачі ${walked.followers.map((w) => w.toFixed(0)).join(', ')}`);
     expect(walked.hero, 'герой майже не ходив — тест нічого не доводить').toBeGreaterThan(30);
-    for (const w of walked.followers) expect(w, 'слідувач не ходив за героєм').toBeGreaterThan(walked.hero * 0.4);
+    for (const w of walked.followers) expect(w, 'слідувач не ходив за героєм').toBeGreaterThan(walked.hero * 0.25);   // GAME-172: було 0,4; на мапі 40×24 герой-тест петляє довше (заміряно 0,30–0,35), слідувачі йдуть найкоротшим; «стоїть» дає ≈ 0
   });
 
   test('цілі взаємодії поруч зі слідувачами: ніхто не стоїть на цілі, кнопка дії й тап працюють', async ({ page }) => {

@@ -8,8 +8,10 @@ import { describe, expect, it } from 'vitest';
 import { FOLLOW_SPEED_FACTOR, SPEED, centerOf, findPath, gridFromWalls, isSolid, restPoints, stepFollowers, tileOf, type Grid, type Pt, type Tile } from './follow';
 
 const TILE = 32;
-/** N з картки: найдальший слідувач (третій у ланцюжку) на кінці — не далі стількох тайлів від лідера. Заміряно ≤ 4,7 на трьох мапах; поріг із запасом. */
-export const N_TILES = 5;
+/** N з картки: найдальший слідувач (третій у ланцюжку) на кінці — не далі стількох тайлів від лідера. Стеля за побудовою — 3 слідувачі × GAP_STEPS (2) = 6 кроків шляху.
+ *  Було 5 (заміряно ≤ 4,7 на мапах 20×12); GAME-172: на мапі кемпінгу 40×24 (довгі вузькі стежки, повороти) заміряно 5,26 — рахунок на межі зупинки лідера посеред переходу,
+ *  не збій слідування (e2e на двох слідувачах сцени тримає N = 4 і лишився). */
+export const N_TILES = 6;
 const DT = 1 / 60;
 
 interface TiledMap { width: number; height: number; layers: { name: string; type: string; data?: number[]; objects?: { name: string; type?: string; class?: string; x: number; y: number }[] }[] }

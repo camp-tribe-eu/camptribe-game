@@ -146,5 +146,17 @@
   "sum.money": "Money",
   "sum.continue": "Continue",
   "sum.endSession": "End session",
-  "ui.sessionSaved": "Session saved. You can close the game: next time you'll continue from here."
+  "ui.sessionSaved": "Session saved. You can close the game: next time you'll continue from here.",
+  "amb.amina.1": "Check-in is until seven, and questions are welcome anytime.",
+  "amb.amina.2": "Hi, Hallo, Bonjour — pick whichever feels closest.",
+  "amb.luc.1": "Pencil behind my ear? Yes, it has lived there for years.",
+  "amb.luc.2": "Show me where it catches. We will fix it together.",
+  "amb.nora.1": "Thirty more kilometres, and I will see the sea.",
+  "amb.nora.2": "After lunch I look for shade, not records.",
+  "amb.ingrid.1": "The best trails get written in the margins of old maps.",
+  "amb.ingrid.2": "Has anyone seen my glasses? They were just here.",
+  "amb.sarah.1": "Over there, above the lake, is my favourite bench.",
+  "amb.sarah.2": "The group is at four, so tea until then.",
+  "amb.claire.1": "How is your little one? Eating well?",
+  "amb.claire.2": "Tail up, ears forward — that is a good sign."
 }
