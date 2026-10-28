@@ -126,7 +126,8 @@ export const GEAR_FIELDS = ['tier', 'weightG', 'volumeL', 'waterproofMm', 'comfo
 // спорядження мусить бути не дорожчою. Рівність із мостом стереже src/content/economy-ch1.test.ts.
 export const ECON_FLOOR_CENTS = 5000;
 // GAME-113: слова позики в id/типах контенту (латиницею; id — лише a-z0-9.-).
-export const LOAN_RE = /loan|debt|credit|borrow|mortgage|overdraft/i;
+// Межі слова (id ділиться на «.» і «-»): `credit-note` — позика, а `credits` (обов'язкові титри) — ні (закон 5: хибне спрацювання).
+export const LOAN_RE = /\b(?:loans?|debts?|credit|borrow|mortgage|overdraft)\b/i;
 
 // GAME-144: варіанти сцени «перевірка спорядження» (ціль із `gearCheck: true`): вид спорядження × стан. Ціль показує
 // `<textKey>.<варіант>`, коли ядро бачить таку проблему (gearIssue у src/core/gear.ts), і сам `textKey` — нейтральну сцену,

@@ -8,7 +8,7 @@ import { initialState, type GameState } from '../core/state';
 import { play } from '../core/story.fixture';
 import { enumerateCombos } from '../../scripts/validator/combos.mjs';
 import { CHECKS, validate } from '../../scripts/validator/checks.mjs';
-import { ECON_FLOOR_CENTS, LOAN_RE } from '../../scripts/validator/codes.mjs';
+import { ECON_FLOOR_CENTS } from '../../scripts/validator/codes.mjs';
 import { loadContent } from '../../scripts/validator/load.mjs';
 import commandsSrc from '../core/commands.ts?raw';
 import storySrc from '../core/story.ts?raw';
@@ -22,6 +22,8 @@ const TODAY = '2026-10-23';
 const START_MONEY = 5_000; // як у createBridge
 const econ = CHECKS.find((c) => c.id === 'economy') as (typeof CHECKS)[number];
 const codes = (items: unknown[], extra: Record<string, unknown> = {}) => econ.run({ content: { items, ...extra } }).map((i) => i.code);
+/** Імена команд — camelCase; `ShowCredits` (титри) не позика. */
+const LOAN_TYPE_RE = /(?:^|[a-z])(?:Loan|Debt|Credit|Borrow|Mortgage|Overdraft)(?![a-z])/;
 const combos = enumerateCombos(CONTENT) as { profile: string; transport: string; animal: string }[];
 
 describe('GAME-113 №3 · позик у розділі 1 немає', () => {
@@ -33,6 +35,8 @@ describe('GAME-113 №3 · позик у розділі 1 немає', () => {
     expect(codes([], { items2: 1, quests: [{ id: 'q.loan-office' }] })).toEqual(['ECON_LOAN_FORBIDDEN']);
     expect(codes([], { dialogues: [{ id: 'dlg.x', nodes: [{ choices: [{ effects: [{ setFlag: 'f.credit-taken' }] }] }] }] })).toEqual(['ECON_LOAN_FORBIDDEN']);
     expect(codes([{ id: 'item.debt-note' }])).toEqual(['ECON_LOAN_FORBIDDEN']);
+    expect(codes([{ id: 'item.credit-note' }])).toEqual(['ECON_LOAN_FORBIDDEN']);
+    expect(codes([{ id: 'q.credits' }, { id: 'scene.credits' }])).toEqual([]); // титри — не позика (закон 5)
   });
 
   const commandTypes = (src: string): string[] => [...src.matchAll(/type: '([A-Za-z]+)'/g)].map((m) => m[1] as string);
@@ -40,8 +44,8 @@ describe('GAME-113 №3 · позик у розділі 1 немає', () => {
   it('у ядрі немає команди позики; невідома команда TakeLoan відхиляється без зміни грошей', () => {
     const types = commandTypes(SRC);
     expect(types.length).toBeGreaterThan(15); // сторож бачить команди (закон 4: порожнє — не «чисто»)
-    expect(types.filter((t) => LOAN_RE.test(t))).toEqual([]);
-    expect(commandTypes(`${SRC}\n| { readonly type: 'TakeLoan' }`).filter((t) => LOAN_RE.test(t))).toEqual(['TakeLoan']); // контроль
+    expect(types.filter((t) => LOAN_TYPE_RE.test(t))).toEqual([]);
+    expect(commandTypes(`${SRC}\n| { readonly type: 'TakeLoan' }`).filter((t) => LOAN_TYPE_RE.test(t))).toEqual(['TakeLoan']); // контроль
     const s = initialState(START_MONEY);
     const r = dispatch(s, { type: 'TakeLoan', commandId: 'l1', cents: 100_000 } as never, GAME_DEFS);
     expect(r.ok).toBe(false);
@@ -102,14 +106,17 @@ describe('GAME-113 №2 · брак грошей → дешевша альтер
 describe('GAME-113 №2 · бот проходить розділ 1 без позик і без мінуса', () => {
   const MAX = { maxSteps: 260, cap: 20_000 };
   const memo: EndMemo = new Map();
-  /** Прогін з трасою: найменші гроші за шлях і зроблені ходи, схожі на позику. */
-  function run(v: Variant, seed: number): { r: BotRun; minMoney: number; loanMoves: string[] } {
-    let minMoney = Infinity; const loanMoves: string[] = [];
-    const r = runBot(GAME_DEFS, v, seed, memo, { ...MAX, trace: (m, before, after) => {
-      minMoney = Math.min(minMoney, before.moneyCents, after.moneyCents);
-      if (LOAN_RE.test(m.type)) loanMoves.push(m.type);
-    } });
-    return { r, minMoney: Math.min(minMoney, r.final.moneyCents), loanMoves };
+  type Step = { type: string; before: number; after: number };
+  /** Порушення на трасі: хід, схожий на позику, або гроші < 0 до/після ходу. Одна функція і для справжньої траси, і для контролю. */
+  const violations = (trace: readonly Step[]): string[] => trace.flatMap((t) => [
+    ...(LOAN_TYPE_RE.test(t.type) ? [`позика: ${t.type}`] : []),
+    ...(t.before < 0 || t.after < 0 ? [`мінус: ${t.type} ${t.before}→${t.after}`] : []),
+  ]);
+  /** Прогін з трасою: кожен зроблений ботом хід із грошима до й після. */
+  function run(v: Variant, seed: number): { r: BotRun; trace: Step[] } {
+    const trace: Step[] = [];
+    const r = runBot(GAME_DEFS, v, seed, memo, { ...MAX, trace: (m, before, after) => { trace.push({ type: m.type, before: before.moneyCents, after: after.moneyCents }); } });
+    return { r, trace };
   }
 
   it('кожен варіант (профіль × транспорт × тварина × гілка × гроші): тупика 0, гроші ≥ 0, позик 0; з нуля розділ доходить до кінця', () => {
@@ -117,10 +124,10 @@ describe('GAME-113 №2 · бот проходить розділ 1 без по�
     let ended = 0;
     for (const v of variants) {
       for (let seed = 1; seed <= 3; seed++) {
-        const { r, minMoney, loanMoves } = run(v, 20261113 + seed);
+        const { r, trace } = run(v, 20261113 + seed);
         expect(['softlock', 'unknown'], JSON.stringify(v)).not.toContain(r.verdict);
-        expect(minMoney, JSON.stringify(v)).toBeGreaterThanOrEqual(0);
-        expect(loanMoves).toEqual([]);
+        expect(trace.length, JSON.stringify(v)).toBeGreaterThan(0); // траса справжня, не порожня (закон 4)
+        expect(violations(trace), JSON.stringify(v)).toEqual([]);
         if (r.verdict === 'ended') ended++;
       }
     }
@@ -135,9 +142,13 @@ describe('GAME-113 №2 · бот проходить розділ 1 без по�
     }
   }, 600_000);
 
-  it('негативні контролі: трасу з позикою й мінусом предикат ловить', () => {
-    const loans: string[] = []; const probe = (type: string, money: number) => { if (LOAN_RE.test(type)) loans.push(type); return money; };
-    expect(probe('TakeLoan', -100)).toBeLessThan(0);
-    expect(loans).toEqual(['TakeLoan']);
+  it('негативний контроль: та сама перевірка на СПРАВЖНІЙ трасі бота червоніє, коли в ній з\u2019являється позика чи мінус', () => {
+    const v: Variant = { profile: (combos[0] as (typeof combos)[number]).profile, transport: (combos[0] as (typeof combos)[number]).transport, animal: 'animal.none', side: 'take', money: 'some' };
+    const { trace } = run(v, 20261114);
+    expect(trace.length).toBeGreaterThan(5);
+    expect(violations(trace)).toEqual([]);
+    const last = trace.length - 1;
+    expect(violations(trace.map((t, i) => (i === last ? { ...t, type: 'TakeLoan' } : t)))).toEqual(['позика: TakeLoan']);
+    expect(violations(trace.map((t, i) => (i === 2 ? { ...t, after: -1 } : t))).length).toBe(1);
   });
 });

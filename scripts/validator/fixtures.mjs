@@ -730,6 +730,8 @@ export const FIXTURES = [
   } },
   { name: '[економіка] вид без бази тиру 1 за стартові гроші', expect: ['ECON_NO_BASELINE'], count: { code: 'ECON_NO_BASELINE', n: 1 }, patch(c) { const t = tents(); t[0].priceCents = 5001; withGear(c, t); } },
   { name: '[економіка] позика в id предмета', expect: ['ECON_LOAN_FORBIDDEN'], count: { code: 'ECON_LOAN_FORBIDDEN', n: 1 }, patch(c) { c.items.push({ id: 'item.loan-card', nameKey: 'item.map' }); } },
+  { name: '[економіка] контроль: титри (credits) — не позика', expect: [], patch(c) { c.items.push({ id: 'item.credits', nameKey: 'item.map' }); } },
+  { name: '[економіка] credit-note — позика', expect: ['ECON_LOAN_FORBIDDEN'], count: { code: 'ECON_LOAN_FORBIDDEN', n: 1 }, patch(c) { c.items.push({ id: 'item.credit-note', nameKey: 'item.map' }); } },
   { name: '[економіка] кредит у прапорці ефекту діалогу', expect: ['ECON_LOAN_FORBIDDEN', 'FLAG_UNREGISTERED'], patch(c) { node(c, 'bye'); c.dialogues[0].nodes[0].choices[0].effects.push({ setFlag: 'f.credit-taken' }); } },
   // GAME-71: календар життя.
   { base: 'combo', name: '[календар] контроль: календар, робота й школяр — коректно', expect: [], patch(c) { withLife(c); } },
