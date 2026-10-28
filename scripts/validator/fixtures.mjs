@@ -711,7 +711,7 @@ export const FIXTURES = [
   } },
   { name: '[спорядження] немає ціни викупу', expect: ['GEAR_FIELD_MISSING'], count: { code: 'GEAR_FIELD_MISSING', n: 1 }, patch(c) { const t = tents(); delete t[1].resaleCents; withGear(c, t); } },
   { name: '[спорядження] немає ваги', expect: ['GEAR_FIELD_MISSING'], count: { code: 'GEAR_FIELD_MISSING', n: 1 }, patch(c) { const t = tents(); delete t[2].weightG; withGear(c, t); } },
-  { name: '[спорядження] є ціна, але немає виду', expect: ['GEAR_FIELD_MISSING'], count: { code: 'GEAR_FIELD_MISSING', n: 1 }, patch(c) { const t = tents(); delete t[0].kind; withGear(c, t); } },
+  { name: '[спорядження] є ціна, але немає виду', expect: ['GEAR_FIELD_MISSING', 'ECON_NO_BASELINE', 'ECON_NO_CHEAPER_ALTERNATIVE'], count: { code: 'GEAR_FIELD_MISSING', n: 1 }, patch(c) { const t = tents(); delete t[0].kind; withGear(c, t); } },
   { name: '[спорядження] викуп дорожчий за купівлю', expect: ['GEAR_RESALE_ABOVE_PRICE'], count: { code: 'GEAR_RESALE_ABOVE_PRICE', n: 1 }, patch(c) { const t = tents(); t[1].resaleCents = t[1].priceCents + 1; withGear(c, t); } },
   { name: '[спорядження] намет, не кращий ні в чому за інший', expect: ['GEAR_DOMINATED'], count: { code: 'GEAR_DOMINATED', n: 1 }, patch(c) {
     withGear(c, [...tents(), tentCard('item.fixture-tent-worse', { weightG: 4500, priceCents: 5000 })]);
@@ -722,6 +722,17 @@ export const FIXTURES = [
   } },
   { name: '[спорядження] тир поза 1…3', expect: ['SCHEMA_INVALID'], count: { code: 'SCHEMA_INVALID', n: 1 }, patch(c) { const t = tents(); t[2].tier = 4; withGear(c, t); } },
   { name: '[спорядження] вигаданий вид', expect: ['SCHEMA_INVALID'], count: { code: 'SCHEMA_INVALID', n: 1 }, patch(c) { const t = tents(); t[0].kind = 'hammock'; withGear(c, t); } },
+  // GAME-113: економіка — дешевша альтернатива, база не дорожча за стартові гроші, позик немає.
+  { name: '[економіка] контроль: намет тиру 1 дешевший за тир 2 і 3 — коректно', expect: [], patch(c) { withGear(c, tents()); } },
+  { name: '[економіка] контроль: база рівно за стартові гроші (5000) — межа дозволена', expect: [], patch(c) { const t = tents(); t[0].priceCents = 5000; withGear(c, t); } },
+  { name: '[економіка] намет тиру 2 без дешевшого вихідця — усе однаково дороге', expect: ['ECON_NO_CHEAPER_ALTERNATIVE'], count: { code: 'ECON_NO_CHEAPER_ALTERNATIVE', n: 1 }, patch(c) {
+    const t = tents(); t[1].priceCents = 5000; t[1].resaleCents = 1500; withGear(c, t.slice(0, 2)); // тир 2 за ту саму ціну, що й база: не «дешевший»
+  } },
+  { name: '[економіка] вид без бази тиру 1 за стартові гроші', expect: ['ECON_NO_BASELINE'], count: { code: 'ECON_NO_BASELINE', n: 1 }, patch(c) { const t = tents(); t[0].priceCents = 5001; withGear(c, t); } },
+  { name: '[економіка] позика в id предмета', expect: ['ECON_LOAN_FORBIDDEN'], count: { code: 'ECON_LOAN_FORBIDDEN', n: 1 }, patch(c) { c.items.push({ id: 'item.loan-card', nameKey: 'item.map' }); } },
+  { name: '[економіка] контроль: титри (credits) — не позика', expect: [], patch(c) { c.items.push({ id: 'item.credits', nameKey: 'item.map' }); } },
+  { name: '[економіка] credit-note — позика', expect: ['ECON_LOAN_FORBIDDEN'], count: { code: 'ECON_LOAN_FORBIDDEN', n: 1 }, patch(c) { c.items.push({ id: 'item.credit-note', nameKey: 'item.map' }); } },
+  { name: '[економіка] кредит у прапорці ефекту діалогу', expect: ['ECON_LOAN_FORBIDDEN', 'FLAG_UNREGISTERED'], patch(c) { node(c, 'bye'); c.dialogues[0].nodes[0].choices[0].effects.push({ setFlag: 'f.credit-taken' }); } },
   // GAME-71: календар життя.
   { base: 'combo', name: '[календар] контроль: календар, робота й школяр — коректно', expect: [], patch(c) { withLife(c); } },
   { base: 'combo', name: '[календар] контроль: рахунки дорівнюють зарплаті — межа дозволена', expect: [], patch(c) { withLife(c); c.profiles[0].job.billsCents = c.profiles[0].job.salaryCents; } },

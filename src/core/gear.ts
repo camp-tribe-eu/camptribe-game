@@ -111,3 +111,19 @@ export function gearIssue(game: Pick<GameState, 'inventory' | 'gear'>, items: Re
   }
   return null;
 }
+
+/**
+ * Дешевші альтернативи речі (GAME-113): речі того ж виду нижчого тиру, що вже в руках або коштують менше. Річ без ціни —
+ * стартова річ сюжету (намет і спальник тиру 1 лежать у крамниці задарма, compileGear), тож для неї ціна — 0.
+ * Порожньо — «брак грошей» глухий кут: валідатор (ECON_NO_CHEAPER_ALTERNATIVE) і тест economy-ch1 стережуть, що так не буває.
+ * Без позик: це лише перелік речей, гроші не змінюються.
+ */
+export function cheaperAlternatives(items: Readonly<Record<string, ItemDef>>, inventory: Readonly<Record<string, number>>, itemId: string): string[] {
+  const a = own(items, itemId);
+  if (!a?.gear || a.buyCents === undefined) return [];
+  return Object.keys(items).sort().filter((id) => {
+    const b = own(items, id);
+    if (id === itemId || !b?.gear || b.gear.kind !== a.gear?.kind || b.gear.tier >= a.gear.tier) return false;
+    return (own(inventory, id) ?? 0) > 0 || (b.buyCents ?? 0) < (a.buyCents as number);
+  });
+}

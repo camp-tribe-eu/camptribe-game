@@ -3,7 +3,7 @@
 // Не прибирай і не дублюй маркери — мутаційний прогін звіряє їх із реєстром CHECKS.
 
 import { checkSchema } from './schema.mjs';
-import { FACT_KINDS, FACT_STALE_DAYS, FLAG_FAMILIES, GEAR_CHECK_VARIANTS, GEAR_FIELDS, isWarning, SKILL_IDS, WAVE_MAX_LIMIT, WAVE_MAX_TASKS, WAVE_MIN_TASKS } from './codes.mjs';
+import { ECON_FLOOR_CENTS, FACT_KINDS, FACT_STALE_DAYS, FLAG_FAMILIES, GEAR_CHECK_VARIANTS, GEAR_FIELDS, isWarning, LOAN_RE, SKILL_IDS, WAVE_MAX_LIMIT, WAVE_MAX_TASKS, WAVE_MIN_TASKS } from './codes.mjs';
 import { checkCombos, checkOptions, comboLabel, enumerateCombos, matches, NO_ANIMAL } from './combos.mjs';
 
 const I = (code, where, msg) => ({ code, where, msg });
@@ -270,6 +270,38 @@ export const CHECKS = [
         const b = complete.find((x) => x !== a && x.kind === a.kind && notWorse(x, a) && (!same(x, a) || complete.indexOf(x) < complete.indexOf(a)));
         if (b) out.push(I('GEAR_DOMINATED', a.id, `«${b.id}» не гірший ні в чому — у «${a.id}» немає своєї ситуації (SIM-INV-005)`));
       }
+      return out;
+    },
+  },
+  {
+    id: 'economy',
+    run(c) { // @check:economy
+      // GAME-113 (економіка розділу 1): грошей бракує — є дешевший вихід, позик немає.
+      const out = [];
+      // 1) Дешевша альтернатива: кожна річ тиру 2+ має дешевшу річ нижчого тиру того ж виду, а кожен вид — базу тиру 1
+      //    не дорожчу за стартові гроші. Без цього «не вистачає грошей» було б глухим кутом (закон 5: ціна хибного спрацювання — нуль).
+      const gear = (c.content.items ?? []).filter((i) => i.kind !== undefined && GEAR_FIELDS.every((f) => i[f] !== undefined));
+      for (const a of gear) {
+        if (a.tier >= 2 && !gear.some((x) => x.kind === a.kind && x.tier < a.tier && x.priceCents < a.priceCents)) {
+          out.push(I('ECON_NO_CHEAPER_ALTERNATIVE', a.id, `для «${a.id}» (тир ${a.tier}, ${a.priceCents} центів) немає дешевшої речі нижчого тиру виду «${a.kind}»`));
+        }
+      }
+      for (const kind of new Set(gear.map((i) => i.kind))) {
+        if (!gear.some((i) => i.kind === kind && i.tier === 1 && i.priceCents <= ECON_FLOOR_CENTS)) {
+          out.push(I('ECON_NO_BASELINE', kind, `вид «${kind}» не має речі тиру 1 за ≤ ${ECON_FLOOR_CENTS} центів (стартові гроші)`));
+        }
+      }
+      // 2) Позик немає: жоден id, тип, вид чи прапорець у контенті не називає позику, борг чи кредит (тексти — не скануємо).
+      const ID_KEYS = new Set(['id', 'type', 'kind', 'grantId', 'item', 'command', 'setFlag', 'remember', 'startQuest', 'skill']);
+      const walk = (v, path) => {
+        if (Array.isArray(v)) { v.forEach((x, i) => walk(x, `${path}[${i}]`)); return; }
+        if (v === null || typeof v !== 'object') return;
+        for (const [k, x] of Object.entries(v)) {
+          if (typeof x === 'string' && ID_KEYS.has(k) && LOAN_RE.test(x)) out.push(I('ECON_LOAN_FORBIDDEN', `${path}.${k}`, `«${x}»: позик, боргу й кредиту в розділі 1 немає (рішення власника 24.10)`));
+          else walk(x, `${path}.${k}`);
+        }
+      };
+      for (const [file, v] of Object.entries(c.content)) if (file !== 'locales') walk(v, file);
       return out;
     },
   },
