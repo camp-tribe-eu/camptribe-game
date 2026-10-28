@@ -119,10 +119,13 @@ const isCycle = (comp, next) => comp.length > 1 || next(comp[0]).includes(comp[0
 export const LINE_MIN_WORDS = 4;
 export const LINE_MAX_WORDS = 15;
 const SPOKEN = /(?:^|[\s.!?…—-])(\p{Lu}[\p{L}'\u02bc\u2019-]*): ?[«\u201c"]([^»\u201d"]*)[»\u201d"]/gu;
-export function spokenLines(text) {
+// Мовець — лише з відомого складу: канонічна родина (OD-011) + імена NPC з npcs.json у цій мові. «Табличка: «…»», «Увага: «…»» — не репліки.
+export const CAST = ['Джордж', 'Вікторія', 'Метью', 'Мія', 'George', 'Victoria', 'Matthew', 'Mia'];
+export function spokenLines(text, cast = CAST) {
   if (typeof text !== 'string') return [];
-  return [...text.matchAll(SPOKEN)].map((m) => ({ speaker: m[1], text: m[2].trim(), words: m[2].split(/\s+/).filter((w) => /[\p{L}\p{N}]/u.test(w)).length }));
+  return [...text.matchAll(SPOKEN)].filter((m) => cast.includes(m[1])).map((m) => ({ speaker: m[1], text: m[2].trim(), words: countWords(m[2]) }));
 }
+const countWords = (t) => t.split(/\s+/).filter((w) => /[\p{L}\p{N}]/u.test(w)).length;
 
 export const CHECKS = [
   {
@@ -1118,9 +1121,21 @@ export const CHECKS = [
     id: 'line-length',
     run(c) { // @check:line-length
       const out = [];
+      // Вузли діалогу з speaker 'npc': весь рядок — репліка (структура, не евристика). Вузол, де вже є «Ім'я: «…»», рахується
+      // лише за вимовленою частиною. speaker 'player' — кнопки вибору, не рахуються.
+      const npcKeys = new Set();
+      for (const d of c.content.dialogues ?? []) for (const n of d.nodes) if (n.speaker === 'npc') npcKeys.add(n.textKey);
       for (const lang of c.content.meta.locales) {
-        for (const [k, v] of Object.entries(c.content.locales?.[lang] ?? {})) {
-          for (const sl of spokenLines(v)) {
+        const table = c.content.locales?.[lang] ?? {};
+        const cast = [...CAST, ...(c.content.npcs ?? []).map((n) => table[n.nameKey]).filter((x) => typeof x === 'string')];
+        for (const k of npcKeys) {
+          const v = table[k];
+          if (typeof v !== 'string' || spokenLines(v, cast).length) continue;
+          const words = countWords(v);
+          if (words < LINE_MIN_WORDS || words > LINE_MAX_WORDS) out.push(I('LINE_LENGTH', k, `[${lang}] репліка NPC має слів: ${words}, треба ${LINE_MIN_WORDS}–${LINE_MAX_WORDS}: «${v}»`));
+        }
+        for (const [k, v] of Object.entries(table)) {
+          for (const sl of spokenLines(v, cast)) {
             if (sl.words < LINE_MIN_WORDS || sl.words > LINE_MAX_WORDS) {
               out.push(I('LINE_LENGTH', k, `[${lang}] репліка ${sl.speaker} має слів: ${sl.words}, треба ${LINE_MIN_WORDS}–${LINE_MAX_WORDS}: «${sl.text}»`));
             }

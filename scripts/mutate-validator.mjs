@@ -63,8 +63,10 @@ const mutations = [
   { name: '[репліка] верхня межа вимкнена', file: CHECKS_FILE, from: ' || sl.words > LINE_MAX_WORDS', to: '' },
   { name: '[репліка] нижня межа зсунута на 3', file: CHECKS_FILE, from: 'export const LINE_MIN_WORDS = 4;', to: 'export const LINE_MIN_WORDS = 3;' },
   { name: '[репліка] верхня межа зсунута на 16', file: CHECKS_FILE, from: 'export const LINE_MAX_WORDS = 15;', to: 'export const LINE_MAX_WORDS = 16;' },
-  { name: '[репліка] en не перевіряється', file: CHECKS_FILE, from: "for (const lang of c.content.meta.locales) {\n        for (const [k, v] of Object.entries(c.content.locales?.[lang] ?? {})) {\n          for (const sl", to: "for (const lang of ['uk']) {\n        for (const [k, v] of Object.entries(c.content.locales?.[lang] ?? {})) {\n          for (const sl" },
-  { name: '[репліка] будь-які лапки без імені рахуються реплікою (закон 5)', file: CHECKS_FILE, from: "(?:^|[\\s.!?…—-])(\\p{Lu}[\\p{L}'\\u02bc\\u2019-]*): ?", to: "(?:^|[\\s.!?…—-])(?:(\\p{Lu}[\\p{L}'\\u02bc\\u2019-]*): ?|)" },
+  { name: '[репліка] вузли NPC не перевіряються', file: CHECKS_FILE, from: "if (n.speaker === 'npc') npcKeys.add(n.textKey);", to: 'void 0;' },
+  { name: '[репліка] вузли гравця теж рахуються репліками', file: CHECKS_FILE, from: "if (n.speaker === 'npc') npcKeys.add", to: 'npcKeys.add' },
+  { name: '[репліка] будь-яке слово з великої — мовець (Табличка:)', file: CHECKS_FILE, from: '.filter((m) => cast.includes(m[1]))', to: '' },
+  { name: '[репліка] en не перевіряється', file: CHECKS_FILE, from: 'for (const lang of c.content.meta.locales) {\n        const table = c.content.locales', to: "for (const lang of ['uk']) {\n        const table = c.content.locales" },
   // діалоги (GAME-28)
   { name: '[діалог] умовний вибір рахується як гарантований вихід', file: CHECKS_FILE, from: 'if (!onlyUnconditional || !ch.when) out.push', to: 'out.push' },
   { name: '[діалог] умови всередині any не перевіряються', file: CHECKS_FILE, from: 'else if (cond.any) cond.any.forEach((x) => condLeaves(x, out));', to: 'else if (cond.any) {}' },
