@@ -2,15 +2,68 @@
 // 844×390, мишею на 1280×800. Кожна дія — справжній клік (дотик), команда йде в ядро; факти підсумку звіряємо з ядром (window.__game).
 // «Завершити сесію» → перезавантаження → прогрес на місці, підсумок не нав'язується вдруге. GAME-141: ST-005 — межа дня 1, а не
 // кінець розділу; день 2 закінчується «Підсумком дня 2» і кінцем розділу (останній тест).
-import { mkdirSync } from 'node:fs';
+import { mkdirSync, readFileSync } from 'node:fs';
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Locator, type Page } from '@playwright/test';
 
-interface Core { game: { campaignEnded: boolean; moneyCents: number; flags: string[] }; journal: { type: string; ref: string | null }[] }
+interface Core { game: { campaignEnded: boolean; moneyCents: number; flags: string[]; wave?: { past: Record<string, Record<string, string>> } }; journal: { type: string; ref: string | null }[] }
 const core = (page: Page): Promise<Core> => page.evaluate(() => (window as unknown as { __game: { read: () => Core } }).__game.read());
 const panel = (page: Page) => page.locator('[data-ui="story"]');
 const summary = (page: Page) => page.locator('[data-ui="summary"]');
 const SHOTS = process.env.GAME106_SHOTS;
+
+// GAME-144 · хвилі табору (GAME-170, 3dc7cae): справа, яку не зроблено до кінця етапу, спізнюється, а «pitch-tent» і «fix-luggage»
+// мочать спорядження. Щоб день 3 справді мав сухе спорядження, шлях тут робить обидві справи вчасно: «fix-luggage» — кнопкою
+// екрана подорожі (дорога), «pitch-tent» — пішки до цілі на мапі й дією (як гравець; ходьба — як у story.spec.ts, з випередженням).
+const KEY_CODE = { ArrowLeft: 37, ArrowUp: 38, ArrowRight: 39, ArrowDown: 40 } as const;
+type Probe = { playerX: number; playerY: number; nearObject: string | null };
+const probeOf = (page: Page): Promise<Probe> => page.evaluate(() => ({ ...(window as unknown as { __game: { probe: Probe } }).__game.probe }));
+async function walkAxis(page: Page, key: keyof typeof KEY_CODE, axis: 'playerX' | 'playerY', target: number, lead: number, spot: string): Promise<void> {
+  await page.evaluate(({ code, key, axis, target, lead, spot }) => new Promise<void>((resolve) => {
+    const g = (window as unknown as { __game: { probe: Probe } }).__game;
+    const fire = (type: string): void => {
+      const e = new KeyboardEvent(type, { key, code: key, bubbles: true, cancelable: true });
+      Object.defineProperty(e, 'keyCode', { get: () => code });
+      window.dispatchEvent(e);
+    };
+    const neg = key === 'ArrowLeft' || key === 'ArrowUp';
+    const done = (): boolean => g.probe.nearObject === spot || (neg ? g.probe[axis] <= target + lead : g.probe[axis] >= target - lead);
+    const start = performance.now();
+    const settle = (): void => {
+      let last = g.probe[axis];
+      let since = performance.now();
+      const watch = (): void => {
+        const now = performance.now();
+        if (g.probe[axis] !== last) { last = g.probe[axis]; since = now; }
+        if (now - since > 700 || now - start > 12_000) resolve(); else requestAnimationFrame(watch);
+      };
+      requestAnimationFrame(watch);
+    };
+    const tick = (): void => { if (done() || performance.now() - start > 8_000) { fire('keyup'); settle(); } else requestAnimationFrame(tick); };
+    fire('keydown');
+    requestAnimationFrame(tick);
+  }), { code: KEY_CODE[key], key, axis, target, lead, spot });
+}
+/** Пішки до цілі мапи й дія (Space); поле гри мусить бути відкрите (екран подорожі закрито). */
+async function doSpotTask(page: Page, spot: string): Promise<void> {
+  const map = JSON.parse(readFileSync('public/maps/camp-lake.tmj', 'utf8')) as { layers: { objects?: { name: string; x: number; y: number }[] }[] };
+  const o = map.layers.flatMap((l) => l.objects ?? []).find((n) => n.name === spot);
+  if (!o) throw new Error(`на мапі немає ${spot}`);
+  const lead = { playerX: 0, playerY: 0 };
+  for (let i = 0; i < 12 && (await probeOf(page)).nearObject !== spot; i++) {
+    const p = await probeOf(page);
+    const axis = Math.abs(p.playerX - o.x) > 32 ? 'playerX' : 'playerY';
+    const target = axis === 'playerX' ? o.x : o.y;
+    const neg = p[axis] > target;
+    await walkAxis(page, axis === 'playerX' ? (neg ? 'ArrowLeft' : 'ArrowRight') : (neg ? 'ArrowUp' : 'ArrowDown'), axis, target, lead[axis], spot);
+    const after = (await probeOf(page))[axis];
+    lead[axis] = Math.min(80, Math.max(0, lead[axis] + (neg ? target - after : after - target)));
+  }
+  const last = await probeOf(page);
+  expect(last.nearObject, `шлях до ${spot}: ${Math.round(last.playerX)},${Math.round(last.playerY)}`).toBe(spot);
+  await page.keyboard.press('Space');
+  await page.waitForTimeout(400);
+}
 
 const MODES = [
   { id: 'portrait', name: 'дотик 390×844 (вертикально)', viewport: { width: 390, height: 844 }, touch: true },
@@ -140,7 +193,13 @@ test('«Продовжити» — назад на мапу; день 2 до «�
     ['complete', 'q.st-003'], ['visit', 'loc.home'], ['complete', 'q.ch1-home-001'], ['visit', 'loc.road']] as const) await click(`[data-act="${k}"][data-key="${key}"]`);
   // GAME-108: на дорозі одна з десяти подій — з будь-якої виходимо останньою відповіддю (у подій дороги вона безумовна).
   for (let i = 0; i < 6 && await panel(page).locator('[data-ui="dialogue"]').isVisible({ timeout: 400 }).catch(() => false); i++) await click('[data-ui="dialogue"] [data-act] >> nth=-1');
-  for (const [k, key] of [['complete', 'q.st-004'], ['visit', 'loc.camp.lake'], ['talk', 'npc.elise'], ['choose', 'dlg.elise-greeting.hello.c2'], ['continue', ''],
+  await click('[data-act="task"][data-key="wave.ch1-day1-road.fix-luggage"]');   // вчасно: інакше late → намет мокне (wetGear)
+  for (const [k, key] of [['complete', 'q.st-004'], ['visit', 'loc.camp.lake']] as const) await click(`[data-act="${k}"][data-key="${key}"]`);
+  // Табір: «Поставити намет» (хвиля W3) — пішки до цілі на мапі, поки строк не минув; далі знайомство з Елізою.
+  await panel(page).locator('[data-ui="story-close"]').click();
+  await doSpotTask(page, 'task.pitch-tent');
+  await page.locator('[data-touch="story"]').click();
+  for (const [k, key] of [['talk', 'npc.elise'], ['choose', 'dlg.elise-greeting.hello.c2'], ['continue', ''],
     ['choose', 'dlg.elise-greeting.spot.c1'], ['continue', ''], ['pickup', 'item.firewood'], ['complete', 'q.st-005']] as const) await click(`[data-act="${k}"][data-key="${key}"]`);
   await expect(summary(page)).toBeVisible();
   await expect(summary(page).locator('h2')).toHaveText('Підсумок дня 1');
@@ -167,7 +226,8 @@ test('«Продовжити» — назад на мапу; день 2 до «�
   // День 3 (GAME-144): ранок → речі → прощання з Елізою → дорога → дім; «Підсумок дня 3» — і лише тоді кінець розділу.
   await page.locator('[data-touch="story"]').click();
   await click('[data-act="complete"][data-key="q.ch1-d3-001"]');
-  // ?seed=2: день 0 сонячний — спорядження сухе й ціле: нейтральна сцена, «висушити» немає (R1-04).
+  expect((await core(page)).game.wave?.past['wave.ch1-day1-arrival']?.['pitch-tent'], 'контроль: намет поставлено вчасно').toBe('done');
+  // ?seed=2: день 0 сонячний, а справи хвиль зроблено вчасно — спорядження сухе й ціле: нейтральна сцена, «висушити» немає (R1-04).
   await expect(panel(page).locator('[data-ui="quest"]', { hasText: 'Збираємо речі' })).toContainText('усе сухе й ціле');
   await expect(panel(page).locator('[data-act="dry"]')).toHaveCount(0);
   for (const [k, key] of [['complete', 'q.ch1-d3-gear-001'], ['talk', 'npc.elise'], ['choose', 'dlg.elise-greeting.hello.c15'], ['continue', ''],

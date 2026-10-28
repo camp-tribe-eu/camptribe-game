@@ -240,7 +240,17 @@ describe('режисер W4: цілі на мапі', () => {
     expect(spotMove(next, 'obj.campfire')).toEqual({ type: 'StartScene', sceneId: 'dlg.ch1-fire', facts: ['f.fire-dinner-done'] });
     const ended = must(s, done(FIRE_STAGE));
     expect(ended.game.quests['CH1-D3-001']?.status).toBe('active');   // GAME-144: межа дня 2 → день 3 (раніше тут кінець кампанії, GAME-170)
-    expect(ended.game.campaignEnded).toBeFalsy();
+    expect(ended.game.campaignEnded).toBe(false);
+  });
+
+  it('вечеря спізнилась (справу не зроблено до кінця етапу): вогнище відкривається, але без факту f.fire-dinner-done', () => {
+    const at = toStage('bike', CAMP);
+    let s = send(at, storyMoves(at, GAME_DEFS)[0] as Move);
+    s = must(dinnerTalk(s), done(CAMP));   // етап завершено розмовою; справу «dinner» на мапі не зроблено
+    expect(s.game.wave?.active).toBeNull();
+    expect(s.game.wave?.past[WAVE_CH1_EVENING]).toEqual({ dinner: 'late', firewood: 'late', 'cover-bikes': 'late' });
+    expect(fireplaceDue(s)).toBe(true);
+    expect(spotMove(s, 'obj.campfire')).toEqual({ type: 'StartScene', sceneId: 'dlg.ch1-fire', facts: [] });
   });
 
   it('пакети біля води: прапорець f.litter-cleaned-ch1, запис журналу Interact; вдруге — GRANT_ALREADY_GIVEN, об\'єкт німий', () => {
