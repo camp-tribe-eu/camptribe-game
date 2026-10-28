@@ -1,0 +1,55 @@
+{
+ "batch": [
+  {
+   "name": "edit_bed",
+   "endpoint": "fal-ai/flux-pro/kontext",
+   "payload": {
+    "prompt": "Add a transverse bed platform at the rear of the cargo area, right in front of the rear doors: light oak plywood base with drawers, mattress with a sage green blanket and two white pillows. Keep the van body, camera angle, lighting and illustration style exactly the same. No text, no logos.",
+    "image_url": "https://raw.githubusercontent.com/camp-tribe-eu/camptribe-game/main/art/out/van-spike-2/hull2_flux_0.webp",
+    "guidance_scale": 3.5,
+    "num_images": 1
+   }
+  },
+  {
+   "name": "edit_kitchen",
+   "endpoint": "fal-ai/flux-pro/kontext",
+   "payload": {
+    "prompt": "Add a kitchen block along the far wall under the window in the middle of the cargo area: light oak cabinets with white doors, oak worktop, stainless sink with tap and a two-zone induction hob. Keep the van body, camera angle, lighting and illustration style exactly the same. No text, no logos.",
+    "image_url": "https://raw.githubusercontent.com/camp-tribe-eu/camptribe-game/main/art/out/van-spike-2/hull2_flux_0.webp",
+    "guidance_scale": 3.5,
+    "num_images": 1
+   }
+  },
+  {
+   "name": "edit_shower",
+   "endpoint": "fal-ai/flux-pro/kontext",
+   "payload": {
+    "prompt": "Add a compact glass shower cabin with white tray in the far corner next to the rear doors. Keep the van body, camera angle, lighting and illustration style exactly the same. No text, no logos.",
+    "image_url": "https://raw.githubusercontent.com/camp-tribe-eu/camptribe-game/main/art/out/van-spike-2/hull2_flux_0.webp",
+    "guidance_scale": 3.5,
+    "num_images": 1
+   }
+  },
+  {
+   "name": "edit_full",
+   "endpoint": "fal-ai/flux-pro/kontext",
+   "payload": {
+    "prompt": "Furnish the empty cargo area as a cosy camper: transverse bed with sage green blanket at the rear, glass shower cabin next to it on the far wall, oak kitchen with sink and hob under the far window, small dinette with two benches and a table behind the cab seats. Keep the van body, camera angle, lighting and illustration style exactly the same. No text, no logos.",
+    "image_url": "https://raw.githubusercontent.com/camp-tribe-eu/camptribe-game/main/art/out/van-spike-2/hull2_flux_0.webp",
+    "guidance_scale": 3.5,
+    "num_images": 1
+   }
+  },
+  {
+   "name": "edit_full_b",
+   "endpoint": "fal-ai/flux-pro/kontext",
+   "payload": {
+    "prompt": "Furnish the empty cargo area as a cosy camper: transverse bed with sage green blanket at the rear, glass shower cabin next to it on the far wall, oak kitchen with sink and hob under the far window, small dinette with two benches and a table behind the cab seats. Keep the van body, camera angle, lighting and illustration style exactly the same. No text, no logos.",
+    "image_url": "https://raw.githubusercontent.com/camp-tribe-eu/camptribe-game/main/art/out/van-spike-2/hull2_flux_0.webp",
+    "guidance_scale": 5,
+    "num_images": 1,
+    "seed": 11
+   }
+  }
+ ]
+}

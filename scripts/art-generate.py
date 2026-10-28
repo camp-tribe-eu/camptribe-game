@@ -29,6 +29,43 @@ def generate(endpoint, payload, out_path):
     return out_path
 
 
+def generate_batch(spec, name):
+    """Пакет: кожен пункт — окремий виклик, усі зображення зберігаються як WebP.
+
+    Падіння одного пункту не зупиняє решту, але порожній результат — помилка
+    (закон 4: мовчання на межі — не факт).
+    """
+    key = os.environ.get("FAL_KEY")
+    if not key:
+        sys.exit("FAL_KEY не заданий у середовищі")
+    out_dir = f"art/out/{name}"
+    os.makedirs(out_dir, exist_ok=True)
+    saved, failed = 0, []
+    for item in spec["batch"]:
+        endpoint = item.get("endpoint", spec.get("endpoint", "fal-ai/flux/schnell"))
+        try:
+            req = urllib.request.Request(
+                FAL + endpoint, data=json.dumps(item["payload"]).encode(),
+                headers={"Authorization": f"Key {key}", "Content-Type": "application/json"})
+            d = json.load(urllib.request.urlopen(req, timeout=300))
+            imgs = d.get("images") or [d.get("image")]
+            for i, img in enumerate(imgs):
+                tmp = f"{out_dir}/_tmp.png"
+                urllib.request.urlretrieve(img["url"], tmp)
+                Image.open(tmp).convert("RGB").save(f"{out_dir}/{item['name']}_{i}.webp", quality=88)
+                os.remove(tmp)
+                saved += 1
+            print(f"OK   {item['name']}: {len(imgs)} шт. ({endpoint})")
+        except Exception as e:  # noqa: BLE001 — звіт про будь-який збій пункту
+            failed.append(item["name"])
+            print(f"FAIL {item['name']}: {type(e).__name__}: {str(e)[:200]}")
+    print(f"збережено {saved}, впало {len(failed)}: {failed}")
+    if saved == 0:
+        sys.exit("жодного зображення — пакет провалено")
+    if failed:
+        print(f"::warning::пакет неповний: впало {len(failed)} пунктів — {failed}")
+
+
 def seam_report(a):
     """Шов проти внутрішнього шуму + зсув рамки.
 
@@ -81,6 +118,10 @@ def main():
     spec = json.load(open(sys.argv[1]))
     name = os.path.splitext(os.path.basename(sys.argv[1]))[0]
     os.makedirs("art/out", exist_ok=True)
+    if "batch" in spec:
+        generate_batch(spec, name)
+        print("ГОТОВО")
+        return
     raw = f"art/out/{name}_raw.png"
 
     generate(spec.get("endpoint", "fal-ai/flux/schnell"), spec["payload"], raw)
