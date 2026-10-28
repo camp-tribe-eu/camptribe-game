@@ -58,12 +58,12 @@ export class MapFx {
       g.lineStyle(1, OUT, 1).strokeRoundedRect(x - 8, y - 38, 16, 17, 3);
       g.setDepth(y + 0.5);
     } else if (facing === 'down') {
-      // Рюкзак позаду: краї над плечима й з боків (глибина позаду тіла) + лямки на грудях (глибина попереду). Дві частини: цей Graphics — спереду, лямки й краї малюємо разом, краї виступають за тіло.
-      g.fillStyle(body, 1).fillRoundedRect(x - 11, y - 36, 5, 13, 2).fillRoundedRect(x + 6, y - 36, 5, 13, 2);
-      g.lineStyle(1, OUT, 1).strokeRoundedRect(x - 11, y - 36, 5, 13, 2).strokeRoundedRect(x + 6, y - 36, 5, 13, 2);
-      g.fillStyle(flap, 1).fillRect(x - 9, y - 38, 18, 3).lineStyle(1, OUT, 1).strokeRect(x - 9, y - 38, 18, 3);
-      g.fillStyle(body, 1).fillRect(x - 5, y - 33, 3, 11).fillRect(x + 2, y - 33, 3, 11);
-      g.fillStyle(buckle, 1).fillRect(x - 5, y - 28, 10, 2);
+      // Обличчям до глядача: рюкзак за спиною визирає лише з боків тулуба, а на грудях — дві лямки з пряжкою.
+      // Усе на тулубі (від y−19): над плечима нічого не малюємо, щоб не закрити обличчя.
+      g.fillStyle(body, 1).fillRoundedRect(x - 12, y - 19, 4, 11, 2).fillRoundedRect(x + 8, y - 19, 4, 11, 2);
+      g.lineStyle(1, OUT, 1).strokeRoundedRect(x - 12, y - 19, 4, 11, 2).strokeRoundedRect(x + 8, y - 19, 4, 11, 2);
+      g.fillStyle(body, 1).fillRect(x - 5, y - 19, 2, 9).fillRect(x + 3, y - 19, 2, 9);
+      g.fillStyle(buckle, 1).fillRect(x - 5, y - 14, 10, 2);
       g.setDepth(y + 0.5);
     } else {
       const back = facing === 'left' ? 1 : -1;   // спина — з протилежного боку від напрямку погляду
