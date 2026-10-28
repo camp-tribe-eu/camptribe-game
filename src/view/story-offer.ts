@@ -27,6 +27,7 @@ import type { OfferAction, OfferCharacter, OfferPacking, OfferSummary, OfferWave
 import { RAW_WAVES } from '../content/waves';
 import { menuTasks } from '../content/director';
 import { waveView } from '../core/wave';
+import { miaState } from '../content/mia';
 
 const NO_ANIMAL = 'animal.none';
 
@@ -249,7 +250,7 @@ export function storyOffer(sim: SimState, defs: CoreDefs): Offered {
   }));
   const weather = todayWeather(sim);
   const lastTrip = [...sim.journal].reverse().find((e) => e.type === 'Visit')?.commandId ?? null;
-  const base = { moneyCents: s.moneyCents, inventory, journal, lastTrip, weather, forecast: todayForecast(sim), day: dayOf(sim.clock) + 1, timeMinutes: timeOfDay(sim.clock.minutes), wave: waveOffer(sim), ...summaryOffer(sim, defs) };
+  const base = { moneyCents: s.moneyCents, inventory, journal, lastTrip, weather, forecast: todayForecast(sim), day: dayOf(sim.clock) + 1, timeMinutes: timeOfDay(sim.clock.minutes), wave: waveOffer(sim), mia: miaState(s, defs), ...summaryOffer(sim, defs) };
 
   if (!s.player) {
     const choices = characterChoices(defs);

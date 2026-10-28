@@ -90,4 +90,6 @@ export interface StoryOffer {
   readonly journal: readonly { readonly type: string; readonly key: string | null; readonly at: number }[];
   /** Жива хвиля напруги або null (GAME-170). */
   readonly wave: OfferWave | null;
+  /** Стан Мії (GAME-111): два текстові стани, без чисел; null — кішки в грі немає. */
+  readonly mia: 'settled' | 'pause' | null;
 }

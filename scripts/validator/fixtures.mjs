@@ -282,6 +282,20 @@ function waveGate(c, byWave) {
   if (byWave) wave(c).tasks[0].done.effects = [{ setFlag: 'f.fixture-helped' }];
 }
 
+
+// GAME-111: Мія в еталоні комбінацій. `transports` не заданий — як у справжньому контенті, де його забули.
+const MIA = 'animal.cat';
+function addMia(c, transports) {
+  c.animals.push({ id: MIA, nameKey: MIA, ...(transports ? { transports } : {}) });
+  for (const lang of c.meta.locales) c.locales[lang][MIA] = `[${lang}] ${MIA}`;
+}
+const miaCarrierRow = (extra) => ({ item: 'item.mia-carrier', group: 'useful', units: 1, ...extra });
+function addMiaItem(c) {
+  c.items.push({ id: 'item.mia-carrier', nameKey: 'item.mia-carrier' });
+  for (const lang of c.meta.locales) c.locales[lang]['item.mia-carrier'] = `[${lang}] item.mia-carrier`;
+}
+const miaTask = (extra) => extraTask('find-mia', { leaderOnly: true, targets: [{ id: 'spot.pines', safe: true }], ...extra });
+
 export const FIXTURES = [
   // Хвилі напруги (GAME-170). Еталон уже має хвилю з двома справами — «еталон коректний» нижче є позитивним контролем.
   { name: '[хвиля] контроль: три справи, одна лише для лідера з безпечною ціллю для тварини — коректно', expect: [], patch(c) {
@@ -711,7 +725,7 @@ export const FIXTURES = [
   } },
   { name: '[спорядження] немає ціни викупу', expect: ['GEAR_FIELD_MISSING'], count: { code: 'GEAR_FIELD_MISSING', n: 1 }, patch(c) { const t = tents(); delete t[1].resaleCents; withGear(c, t); } },
   { name: '[спорядження] немає ваги', expect: ['GEAR_FIELD_MISSING'], count: { code: 'GEAR_FIELD_MISSING', n: 1 }, patch(c) { const t = tents(); delete t[2].weightG; withGear(c, t); } },
-  { name: '[спорядження] є ціна, але немає виду', expect: ['GEAR_FIELD_MISSING'], count: { code: 'GEAR_FIELD_MISSING', n: 1 }, patch(c) { const t = tents(); delete t[0].kind; withGear(c, t); } },
+  { name: '[спорядження] є ціна, але немає виду', expect: ['GEAR_FIELD_MISSING', 'ECON_NO_BASELINE', 'ECON_NO_CHEAPER_ALTERNATIVE'], count: { code: 'GEAR_FIELD_MISSING', n: 1 }, patch(c) { const t = tents(); delete t[0].kind; withGear(c, t); } },
   { name: '[спорядження] викуп дорожчий за купівлю', expect: ['GEAR_RESALE_ABOVE_PRICE'], count: { code: 'GEAR_RESALE_ABOVE_PRICE', n: 1 }, patch(c) { const t = tents(); t[1].resaleCents = t[1].priceCents + 1; withGear(c, t); } },
   { name: '[спорядження] намет, не кращий ні в чому за інший', expect: ['GEAR_DOMINATED'], count: { code: 'GEAR_DOMINATED', n: 1 }, patch(c) {
     withGear(c, [...tents(), tentCard('item.fixture-tent-worse', { weightG: 4500, priceCents: 5000 })]);
@@ -722,6 +736,17 @@ export const FIXTURES = [
   } },
   { name: '[спорядження] тир поза 1…3', expect: ['SCHEMA_INVALID'], count: { code: 'SCHEMA_INVALID', n: 1 }, patch(c) { const t = tents(); t[2].tier = 4; withGear(c, t); } },
   { name: '[спорядження] вигаданий вид', expect: ['SCHEMA_INVALID'], count: { code: 'SCHEMA_INVALID', n: 1 }, patch(c) { const t = tents(); t[0].kind = 'hammock'; withGear(c, t); } },
+  // GAME-113: економіка — дешевша альтернатива, база не дорожча за стартові гроші, позик немає.
+  { name: '[економіка] контроль: намет тиру 1 дешевший за тир 2 і 3 — коректно', expect: [], patch(c) { withGear(c, tents()); } },
+  { name: '[економіка] контроль: база рівно за стартові гроші (5000) — межа дозволена', expect: [], patch(c) { const t = tents(); t[0].priceCents = 5000; withGear(c, t); } },
+  { name: '[економіка] намет тиру 2 без дешевшого вихідця — усе однаково дороге', expect: ['ECON_NO_CHEAPER_ALTERNATIVE'], count: { code: 'ECON_NO_CHEAPER_ALTERNATIVE', n: 1 }, patch(c) {
+    const t = tents(); t[1].priceCents = 5000; t[1].resaleCents = 1500; withGear(c, t.slice(0, 2)); // тир 2 за ту саму ціну, що й база: не «дешевший»
+  } },
+  { name: '[економіка] вид без бази тиру 1 за стартові гроші', expect: ['ECON_NO_BASELINE'], count: { code: 'ECON_NO_BASELINE', n: 1 }, patch(c) { const t = tents(); t[0].priceCents = 5001; withGear(c, t); } },
+  { name: '[економіка] позика в id предмета', expect: ['ECON_LOAN_FORBIDDEN'], count: { code: 'ECON_LOAN_FORBIDDEN', n: 1 }, patch(c) { c.items.push({ id: 'item.loan-card', nameKey: 'item.map' }); } },
+  { name: '[економіка] контроль: титри (credits) — не позика', expect: [], patch(c) { c.items.push({ id: 'item.credits', nameKey: 'item.map' }); } },
+  { name: '[економіка] credit-note — позика', expect: ['ECON_LOAN_FORBIDDEN'], count: { code: 'ECON_LOAN_FORBIDDEN', n: 1 }, patch(c) { c.items.push({ id: 'item.credit-note', nameKey: 'item.map' }); } },
+  { name: '[економіка] кредит у прапорці ефекту діалогу', expect: ['ECON_LOAN_FORBIDDEN', 'FLAG_UNREGISTERED'], patch(c) { node(c, 'bye'); c.dialogues[0].nodes[0].choices[0].effects.push({ setFlag: 'f.credit-taken' }); } },
   // GAME-71: календар життя.
   { base: 'combo', name: '[календар] контроль: календар, робота й школяр — коректно', expect: [], patch(c) { withLife(c); } },
   { base: 'combo', name: '[календар] контроль: рахунки дорівнюють зарплаті — межа дозволена', expect: [], patch(c) { withLife(c); c.profiles[0].job.billsCents = c.profiles[0].job.salaryCents; } },
@@ -1035,6 +1060,32 @@ export const FIXTURES = [
     c.profiles[0].transports = [T_CAR];
     c.npcs[1].when = { profiles: [P_A], transports: [T_BIKE] };
     q(c, 'ST-001').when = { profiles: [P_A] };
+  } },
+
+  // GAME-111 · Мія й велосипед (рішення власника 24.10): кішка не їде велосипедом, а контент про неї бачить лише той, хто їде з нею.
+  // Мія — animal.cat (єдина тварина гри); у еталоні комбінацій є велосипед (T_BIKE), тож «Мія + велосипед» тут справжня комбінація.
+  { base: 'combo', name: '[Мія] контроль: кішка лише в авто, справа про неї з умовою на кішку — коректно', expect: [], patch(c) {
+    addMia(c, [T_CAR]); wave(c).tasks.push(miaTask({ when: { animals: [MIA] } }));
+  } },
+  { base: 'combo', name: '[Мія] кішка без transports — їде будь-чим, велосипедом теж', expect: ['MIA_ON_BIKE'], patch(c) { addMia(c, undefined); } },
+  { base: 'combo', name: '[Мія] кішка дозволена на велосипеді', expect: ['MIA_ON_BIKE'], patch(c) { addMia(c, [T_CAR, T_BIKE]); } },
+  { base: 'combo', name: '[Мія] справа про Мію без умови на кішку — була б і без неї', expect: ['MIA_CONTENT_UNGATED'], patch(c) {
+    addMia(c, [T_CAR]); wave(c).tasks.push(miaTask({}));
+  } },
+  { base: 'combo', name: '[Мія] умова справи про Мію допускає й «без тварини»', expect: ['MIA_CONTENT_UNGATED'], patch(c) {
+    addMia(c, [T_CAR]); wave(c).tasks.push(miaTask({ when: { animals: [MIA, 'animal.none'] } }));
+  } },
+  { base: 'combo', name: '[Мія] подія в дорозі про Мію без умови на кішку', expect: ['MIA_CONTENT_UNGATED'], patch(c) {
+    addMia(c, [T_CAR]); const d = withRoadEvent(c); d.id = 'dlg.fixture-mia-box';
+  } },
+  { base: 'combo', name: '[Мія] контроль: переноска Мії в пакуванні з умовою на кішку — коректно', expect: [], patch(c) {
+    addMia(c, [T_CAR]); withPacking(c).packing.items.push(miaCarrierRow({ when: { animals: [MIA] } })); addMiaItem(c);
+  } },
+  { base: 'combo', name: '[Мія] переноска Мії в пакуванні без умови на кішку', expect: ['MIA_CONTENT_UNGATED'], patch(c) {
+    addMia(c, [T_CAR]); withPacking(c).packing.items.push(miaCarrierRow({})); addMiaItem(c);
+  } },
+  { base: 'combo', name: '[Мія] ціль квесту про Мію без умови на кішку', expect: ['MIA_CONTENT_UNGATED'], patch(c) {
+    addMia(c, [T_CAR]); q(c, 'q.dog-walk').objectives.push({ id: 'mia-look', textKey: 'q.dog-walk.o1', kind: 'visit', target: 'loc.dog-park', required: false });
   } },
 ];
 
