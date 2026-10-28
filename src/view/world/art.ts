@@ -84,7 +84,7 @@ export const PET_SHEETS = {
 export interface WorldArt {
   readonly tilesets: Readonly<Record<string, HTMLImageElement>>;
   readonly campfire: HTMLImageElement;
-  readonly sheets: { readonly player: HTMLCanvasElement; readonly elise: HTMLCanvasElement };
+  readonly sheets: { readonly player: HTMLCanvasElement; readonly elise: HTMLCanvasElement; readonly victoria: HTMLCanvasElement; readonly matthew: HTMLCanvasElement };
 }
 
 /**
@@ -93,9 +93,9 @@ export interface WorldArt {
  */
 export async function loadWorldArt(): Promise<WorldArt> {
   const names = Object.keys(TILESET_IMAGES);
-  const [images, campfireImg, player, elise] = await Promise.all([
+  const [images, campfireImg, player, elise, victoria, matthew] = await Promise.all([
     Promise.all(names.map((n) => loadImage(TILESET_IMAGES[n] ?? ''))),
-    loadImage(CAMPFIRE_SHEET), composeSheet(PLAYER_LOOK), composeSheet(ELISE_LOOK),
+    loadImage(CAMPFIRE_SHEET), composeSheet(PLAYER_LOOK), composeSheet(ELISE_LOOK), composeSheet(FAMILY_LOOKS.victoria), composeSheet(FAMILY_LOOKS.matthew),
   ]);
-  return { tilesets: Object.fromEntries(names.map((n, i) => [n, images[i] as HTMLImageElement])), campfire: campfireImg, sheets: { player, elise } };
+  return { tilesets: Object.fromEntries(names.map((n, i) => [n, images[i] as HTMLImageElement])), campfire: campfireImg, sheets: { player, elise, victoria, matthew } };
 }
