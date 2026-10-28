@@ -1,2 +1,2 @@
-# Тимчасова гілка GAME-40: лише звуки (інші рядки — у main).
-pack-kenney-interface-sounds	kenney:interface-sounds
+# Тимчасова гілка GAME-40: лише звуки.
+pack-sfx-kenney-interface	kenney:interface-sounds
