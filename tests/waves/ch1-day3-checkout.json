@@ -1,0 +1,63 @@
+{
+  "note": "GAME-170 зріз 3 · W5 «Не залишати слідів до 11:00» (день 3, від'їзд). Етап CH1-D3-001 ще не в main (GAME-144 — чернетка), тож хвиля лежить тут як дані з власним тестом (src/content/waves-day3.test.ts), а в content/waves.json переїде разом із етапом дня 3.",
+  "stage": { "id": "CH1-D3-001", "titleKey": "q.ch1-d3-001", "optional": false, "locationId": "loc.camp.lake",
+    "objectives": [{ "id": "checkout", "textKey": "q.ch1-d3-001.o1", "kind": "visit", "target": "loc.camp.lake", "required": true }],
+    "transitions": [] },
+  "wave": {
+    "id": "wave.ch1-day3-checkout", "titleKey": "wave.ch1-day3-checkout", "hookKey": "wave.ch1-day3-checkout.hook", "stage": "CH1-D3-001",
+    "fallback": { "textKey": "wave.ch1-day3-checkout.fallback" },
+    "allDone": { "textKey": "wave.ch1-day3-checkout.all-done" },
+    "tasks": [
+      { "id": "walk-site", "textKey": "wave.ch1-day3-checkout.walk-site", "limitMin": 45,
+        "done": { "textKey": "wave.ch1-day3-checkout.walk-site.done" }, "late": { "textKey": "wave.ch1-day3-checkout.walk-site.late" } },
+      { "id": "clean-up", "textKey": "wave.ch1-day3-checkout.clean-up", "limitMin": 50,
+        "done": { "textKey": "wave.ch1-day3-checkout.clean-up.done" }, "late": { "textKey": "wave.ch1-day3-checkout.clean-up.late" } },
+      { "id": "pack-tent", "textKey": "wave.ch1-day3-checkout.pack-tent", "limitMin": 55,
+        "done": { "textKey": "wave.ch1-day3-checkout.pack-tent.done" }, "late": { "textKey": "wave.ch1-day3-checkout.pack-tent.late" } },
+      { "id": "mia-carrier-home", "textKey": "wave.ch1-day3-checkout.mia-carrier-home", "limitMin": 40, "leaderOnly": true, "animal": "animal.cat",
+        "when": { "animals": ["animal.cat"] },
+        "targets": [{ "id": "spot.tent-mat", "safe": true }, { "id": "spot.car", "safe": true }],
+        "done": { "textKey": "wave.ch1-day3-checkout.mia-carrier-home.done" }, "late": { "textKey": "wave.ch1-day3-checkout.mia-carrier-home.late" } }
+    ]
+  },
+  "locales": {
+    "uk": {
+      "q.ch1-d3-001": "День 3: від'їзд", "q.ch1-d3-001.o1": "Залишити ділянку чистою",
+      "wave.ch1-day3-checkout": "Не залишати слідів до 11:00",
+      "wave.ch1-day3-checkout.hook": "Еліза: «Об одинадцятій на ділянку приїде нова родина».",
+      "wave.ch1-day3-checkout.fallback": "Еліза дає ще пів години: «Нічого. Нова родина теж любить спати довше».",
+      "wave.ch1-day3-checkout.all-done": "Еліза: «Дякую, що залишили місце чистим. Гарна подорож закінчується так само уважно, як починається». Табір залишено охайним.",
+      "wave.ch1-day3-checkout.walk-site": "Обійти ділянку й зібрати свої речі. Доручити Метью.",
+      "wave.ch1-day3-checkout.walk-site.done": "Метью: «Я знайшов обгортку. Вона не входить до колекції».",
+      "wave.ch1-day3-checkout.walk-site.late": "Джордж: «Перевіримо ще раз. Я не хочу, щоб наші шкарпетки стали місцевою пам'яткою».",
+      "wave.ch1-day3-checkout.clean-up": "Прибрати: кілочки, сміття, вугілля. Будь-хто — лідер підтверджує. Ключ — Елізі.",
+      "wave.ch1-day3-checkout.clean-up.done": "Ділянка чиста, ключ у Елізи. Вікторія: «Прибирати за собою — теж частина подорожі».",
+      "wave.ch1-day3-checkout.clean-up.late": "Останній кілочок знайшовся вже біля авто. Повернулись, віддали ключ — пізніше, ніж планували.",
+      "wave.ch1-day3-checkout.pack-tent": "Скласти намет. Мокрий — десять хвилин під навісом або везти мокрим. Справа Джорджа.",
+      "wave.ch1-day3-checkout.pack-tent.done": "Намет складений. Джордж: «Сухий. Майже. Удома досушимо».",
+      "wave.ch1-day3-checkout.pack-tent.late": "Намет поїхав мокрим. Удома доведеться розкласти його ще раз — на балконі.",
+      "wave.ch1-day3-checkout.mia-carrier-home": "Мія — у переноску перед дорогою додому. Лише лідер.",
+      "wave.ch1-day3-checkout.mia-carrier-home.done": "Мія в переносці. Дивиться на озеро так, ніби щось тут лишила.",
+      "wave.ch1-day3-checkout.mia-carrier-home.late": "Мія сама залізла в переноску, коли побачила, що намет зникає. Вона все зрозуміла раніше за нас."
+    },
+    "en": {
+      "q.ch1-d3-001": "Day 3: leaving", "q.ch1-d3-001.o1": "Leave the pitch clean",
+      "wave.ch1-day3-checkout": "Leave No Trace by 11:00",
+      "wave.ch1-day3-checkout.hook": "Elise: \"At eleven a new family arrives at your pitch.\"",
+      "wave.ch1-day3-checkout.fallback": "Elise gives you another half hour: \"It's fine. The new family likes to sleep in too.\"",
+      "wave.ch1-day3-checkout.all-done": "Elise: \"Thank you for leaving the place clean. A good trip ends as carefully as it begins.\" Camp left tidy.",
+      "wave.ch1-day3-checkout.walk-site": "Walk the pitch and gather your things. Ask Matthew.",
+      "wave.ch1-day3-checkout.walk-site.done": "Matthew: \"I found a wrapper. It's not part of the collection.\"",
+      "wave.ch1-day3-checkout.walk-site.late": "George: \"Let's check once more. I don't want our socks to become a local landmark.\"",
+      "wave.ch1-day3-checkout.clean-up": "Clean up: pegs, litter, charcoal. Anyone — the leader confirms. Key back to Elise.",
+      "wave.ch1-day3-checkout.clean-up.done": "Pitch clean, key with Elise. Victoria: \"Cleaning up after yourself is part of the trip too.\"",
+      "wave.ch1-day3-checkout.clean-up.late": "The last peg turned up by the car. Went back, returned the key — later than planned.",
+      "wave.ch1-day3-checkout.pack-tent": "Pack the tent. If wet — ten minutes under the shelter, or carry it wet. George's job.",
+      "wave.ch1-day3-checkout.pack-tent.done": "Tent packed. George: \"Dry. Almost. We'll finish at home.\"",
+      "wave.ch1-day3-checkout.pack-tent.late": "The tent travelled wet. At home it will have to go up once more — on the balcony.",
+      "wave.ch1-day3-checkout.mia-carrier-home": "Mia into the carrier before the drive home. Leader only.",
+      "wave.ch1-day3-checkout.mia-carrier-home.done": "Mia is in the carrier. Looking at the lake as if she left something here.",
+      "wave.ch1-day3-checkout.mia-carrier-home.late": "Mia climbed into the carrier herself when she saw the tent disappearing. She understood before we did."
+    }
+  }
+}

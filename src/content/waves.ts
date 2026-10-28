@@ -4,13 +4,16 @@
 import type { WaveDef, WaveDefs, WaveTaskDef, WhenDef } from '../core/defs';
 import waves from '../../content/waves.json';
 
-interface RawOutcome { textKey: string; effects?: { setFlag: string }[] }
+interface RawOutcome { textKey: string; effects?: ({ setFlag: string } | { wetGear: boolean })[] }
 export interface RawWave {
   id: string; titleKey: string; hookKey: string; stage: string; when?: WhenDef; fallback?: { textKey: string }; allDone?: RawOutcome;
   tasks: { id: string; textKey: string; limitMin: number; leaderOnly?: boolean; animal?: string; when?: WhenDef; targets?: { id: string; safe: boolean }[]; done: RawOutcome; late: RawOutcome }[];
 }
 
-const outcome = (o: RawOutcome | undefined) => ({ effects: (o?.effects ?? []).map((e) => e.setFlag) });
+const outcome = (o: RawOutcome | undefined) => ({
+  effects: (o?.effects ?? []).flatMap((e) => ('setFlag' in e ? [e.setFlag] : [])),
+  ...((o?.effects ?? []).some((e) => 'wetGear' in e && e.wetGear) ? { wetGear: true as const } : {}),
+});
 
 function wave(w: RawWave): WaveDef {
   return {
@@ -35,3 +38,8 @@ export const RAW_WAVES: readonly RawWave[] = waves as RawWave[];
 export const WAVES: WaveDefs = compileWaves(RAW_WAVES);
 /** Хвиля W4 «Вечір на трьох фронтах» (день 2, вечір). Стартує її сюжет (зріз 2); тут — id для стартера й тестів. */
 export const WAVE_CH1_EVENING = 'wave.ch1-day2-evening';
+/** Зріз 3: W1 «Виїзд о шостій» (пролог, дім), W2 «Небо темнішає» (день 1, зупинка; авто / вело — дві хвилі одного етапу), W3 «Встигнути до зливи» (день 1, табір). */
+export const WAVE_CH1_DEPARTURE = 'wave.ch1-home-departure';
+export const WAVE_CH1_ROAD = 'wave.ch1-day1-road';
+export const WAVE_CH1_ROAD_BIKE = 'wave.ch1-day1-road-bike';
+export const WAVE_CH1_ARRIVAL = 'wave.ch1-day1-arrival';

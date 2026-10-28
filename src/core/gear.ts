@@ -49,6 +49,24 @@ export function pruneGear(gear: Readonly<Record<string, GearState>>, inventory: 
 }
 
 /**
+ * Лише вологість (late.wetGear хвилі напруги, GAME-170): спорядження в руках стає вологим, стан НЕ знімається — наслідок
+ * спізнення м'який і відновний (DryGear). Ідемпотентно: уже вологе — без змін (два спізнення чи дощ не складаються в втрату).
+ * Чиста функція; нічого не змінилось — той самий об'єкт стану.
+ */
+export function wetGearOnly(game: GameState, items: Readonly<Record<string, ItemDef>>): GameState {
+  let changed = false;
+  const next: Record<string, GearState> = { ...game.gear };
+  for (const id of Object.keys(game.inventory).sort()) {
+    if (!own(items, id)?.gear || (own(game.inventory, id) ?? 0) < 1) continue;
+    const cur = gearOf(game.gear, id);
+    if (cur.wet) continue;
+    next[id] = { condition: cur.condition, wet: true };
+    changed = true;
+  }
+  return changed ? { ...game, gear: pruneGear(next, game.inventory) } : game;
+}
+
+/**
  * Дорога зі спорядженням (SIM-GEAR-002, -003): спершу мокре з минулого разу втрачає WET_WEAR стану (не нижче 0) і лишається
  * мокрим, потім дощ дня виїзду мочить усе спорядження в руках. Сухе в сонце — без змін: звичайного зносу v1 немає.
  * Чиста функція; нічого не змінилось — той самий об'єкт стану.

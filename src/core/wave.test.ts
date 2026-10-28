@@ -151,3 +151,82 @@ describe('хвиля напруги: строки й пауза (GAME-170)', () 
     expect('wave' in g).toBe(false);
   });
 });
+
+// Зріз 3: етап минув — незроблене спізнилось; «не встигли до дощу» (late.wetGear) — спорядження вологе через систему дощу (GAME-73).
+describe('хвиля напруги: кінець етапу і волога (GAME-170, зріз 3)', () => {
+  const GEAR_DEFS: CoreDefs = {
+    ...DEFS,
+    items: { 'item.tent': { gear: { kind: 'tent', tier: 1 } as never }, 'item.mug': {} },
+    waves: { waves: { 'wave.dusk': { stage: 'q.start', tasks: [
+      { id: 'wood', limitMin: 10, done: { effects: [] }, late: { effects: [], wetGear: true } },
+      { id: 'tea', limitMin: 20, done: { effects: [] }, late: { effects: [] } },
+    ] } } },
+  };
+  const gctx = { defs: GEAR_DEFS };
+  const withTent = (s: SimState): SimState => ({ ...s, game: { ...s.game, inventory: { 'item.tent': 1, 'item.mug': 1 } } });
+  const startG = (): SimState => {
+    const s = withTent(step(newSim(1), { kind: 'command', command: { type: 'CreateCharacter', profileId: 'profile.a', transportId: 'transport.car', commandId: 'g0' } }, gctx));
+    return step(s, { kind: 'command', command: { type: 'StartWave', waveId: 'wave.dusk', commandId: 'g1' } }, gctx);
+  };
+
+  it('квест етапу завершено — на наступному кроці годинника всі відкриті справи late, хвиля закінчена (строки ще не минули)', () => {
+    const s = cmd(start(), { type: 'StartWave', waveId: 'wave.dusk' });
+    expect(s.game.wave?.active).not.toBeNull();
+    const over = { ...s, game: { ...s.game, quests: { 'q.start': { status: 'completed' as const, done: [] } } } };
+    const next = minutes(over, 0);
+    expect(next.game.wave?.active).toBeNull();
+    expect(next.game.wave?.past['wave.dusk']).toEqual({ wood: 'late', tea: 'late' });
+    expect(next.game.flags).toContain('f.wood-late');
+    // Негативний контроль: той самий крок, етап активний — нічого не спізнилось.
+    expect(minutes(s, 0).game.wave?.active?.tasks['wood']?.outcome).toBe('open');
+  });
+
+  it('late.wetGear: строк минув — спорядження (і лише спорядження) вологе; без items ядро нічого не мочить; done — не мочить', () => {
+    const s = startG();
+    expect(s.game.gear['item.tent']).toBeUndefined();
+    const late = step(s, { kind: 'advance', minutes: 11 }, gctx);
+    expect(late.game.wave?.active?.tasks['wood']?.outcome).toBe('late');
+    expect(late.game.gear['item.tent']?.wet).toBe(true);
+    expect(late.game.gear['item.mug']).toBeUndefined();
+    expect(settleWave(s.game, s.clock.minutes + 11, GEAR_DEFS.waves).gear['item.tent']).toBeUndefined();   // без items — сухо
+    const done = step(s, { kind: 'command', command: { type: 'CompleteTask', taskId: 'wood', commandId: 'g2' } }, gctx);
+    expect(step(done, { kind: 'advance', minutes: 11 }, gctx).game.gear['item.tent']).toBeUndefined();
+    // «tea» (без wetGear) спізнилась — сухо.
+    expect(step(done, { kind: 'advance', minutes: 21 }, gctx).game.gear['item.tent']).toBeUndefined();
+  });
+
+  // Закон 1: тест мусить уміти почервоніти — повернеш wearAfterTrip у wetGear, і друге спізнення зніме стан.
+  it('late.wetGear м\'який: уже вологе + W2 late + W3 late → стан не змінився, wet=true, DryGear повертає суху річ', () => {
+    const two: CoreDefs = { ...GEAR_DEFS, waves: { waves: {
+      'wave.w2': { stage: 'q.start', tasks: [
+        { id: 'wood', limitMin: 10, done: { effects: [] }, late: { effects: [], wetGear: true } },
+        { id: 'tea', limitMin: 20, done: { effects: [] }, late: { effects: [] } },
+      ] },
+      'wave.w3': { stage: 'q.start', tasks: [
+        { id: 'pitch', limitMin: 10, done: { effects: [] }, late: { effects: [], wetGear: true } },
+        { id: 'tea3', limitMin: 20, done: { effects: [] }, late: { effects: [] } },
+      ] },
+    } } };
+    const c2 = { defs: two };
+    let s = withTent(step(newSim(1), { kind: 'command', command: { type: 'CreateCharacter', profileId: 'profile.a', transportId: 'transport.car', commandId: 'm0' } }, c2));
+    s = { ...s, game: { ...s.game, gear: { 'item.tent': { condition: 70, wet: true } } } };   // уже вологе з дороги (GAME-73)
+    for (const [id, n] of [['wave.w2', 'm1'], ['wave.w3', 'm2']] as const) {
+      s = step(s, { kind: 'command', command: { type: 'StartWave', waveId: id, commandId: n } }, c2);
+      s = step(s, { kind: 'advance', minutes: 25 }, c2);
+      expect(s.game.wave?.active).toBeNull();
+      expect(s.game.gear['item.tent']).toEqual({ condition: 70, wet: true });
+    }
+    const dried = step(s, { kind: 'command', command: { type: 'DryGear', itemId: 'item.tent', commandId: 'm3' } }, c2);
+    expect(dried.game.gear['item.tent']).toEqual({ condition: 70, wet: false });
+  });
+
+  it('етап закрито командою, що годинник не рухає: хвилю вирішено в тому ж кроці — pendingWave не заблокований', () => {
+    const s = cmd(start(), { type: 'StartWave', waveId: 'wave.dusk' });
+    expect(s.game.wave?.active).not.toBeNull();
+    const n = step(s, { kind: 'command', command: { type: 'CompleteQuest', questId: 'q.start', commandId: 'z2' } }, CTX);
+    expect(n.game.quests['q.start']?.status).toBe('completed');   // команду прийнято (інакше тест нічого не доводить)
+    expect(n.clock.minutes).toBe(s.clock.minutes);
+    expect(n.game.wave?.active).toBeNull();
+    expect(n.game.wave?.past['wave.dusk']).toEqual({ wood: 'late', tea: 'late' });
+  });
+});

@@ -9,7 +9,7 @@ import type { OfferAction, StoryOffer } from './story-types';
 
 const ACT: Readonly<Record<Exclude<OfferAction['kind'], 'choose' | 'continue'>, Key>> = {
   visit: 'act.visit', talk: 'act.talk', pickup: 'act.pickup', buy: 'act.buy', sell: 'act.sell', dry: 'act.dry', complete: 'act.complete', decline: 'act.decline',
-  pack: 'pack.in', unpack: 'pack.out', autopack: 'pack.auto',
+  pack: 'pack.in', unpack: 'pack.out', autopack: 'pack.auto', task: 'act.task',
 };
 
 // Записи журналу: тип команди → підпис. Перелік той самий, що JOURNAL_TYPES ядра (звіряє src/view/story-offer.test.ts).

@@ -26,7 +26,7 @@ node scripts/mutate-validator.mjs               # довести, що само�
 | `roads.json` | дороги між локаціями: `from`, `to`, `twoWay`, `ways[]` (транспорт, хвилини, центи, необов'язковий `risk` 0–3 — GAME-72: небезпека дороги, навичка її не знижує); перевірка `roads`: кожна локація досяжна від дому й назад для кожного транспорту (`ROAD_UNREACHABLE`, `ROAD_NO_RETURN`), одне ребро на пару в кожен бік (`ROAD_DUPLICATE`) | `road.назва` |
 | `events.json` | події: `repeatable`, `reward` | `ev.назва` |
 | `facts.json` | зовнішні факти: `source`, `checkedAt` (РРРР-ММ-ДД), `kind` | `fact.назва` |
-| `waves.json` | хвилі напруги (GAME-170, DC-016): `stage`, `when`, `tasks[]` зі строком `limitMin` (ігрові хвилини 1–60), `leaderOnly`, `animal` + `targets[{id, safe}]`, наслідками `done`/`late` (лише `setFlag`), `allDone`, `fallback`; перевірка `waves` (розділ «Хвилі напруги») | `wave.назва` |
+| `waves.json` | хвилі напруги (GAME-170, DC-016): `stage`, `when`, `tasks[]` зі строком `limitMin` (ігрові хвилини 1–60), `leaderOnly`, `animal` + `targets[{id, safe}]`, наслідками `done`/`late` (`setFlag` або `wetGear` — спорядження вологе), `allDone`, `fallback`; перевірка `waves` (розділ «Хвилі напруги») | `wave.назва` |
 | `flags.json` | реєстр прапорців і фактів стану (GAME-115, DC-015, розділ «Реєстр прапорців»): `id`, `type`, `initial`, `owner`, `note`, `values`, `valuesFrom`, `generatedFrom`, `reserved`, `aka`, `journal` | `f.назва`, `f.префікс-*`, `m.назва`, `s.назва` |
 | `locales/<мова>.json` | ключ → переклад | — |
 | `dialogue/<назва>.json` | один діалог-граф на файл (розділ «Діалоги») | `dlg.назва` |

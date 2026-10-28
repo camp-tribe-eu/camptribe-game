@@ -6,7 +6,8 @@
 // «гра не карає»). Хвиля закінчується, коли кожна справа вирішена; наслідки лишаються в `past`, і та сама хвиля вдруге
 // не стартує (WAVE_SEEN) — унікальна для свого етапу. Кінець розділу від хвиль не залежить: хвиля завжди закінчується
 // сама, щойно годинник мине найдовший строк (settleWave), і нічого не блокує.
-import type { WaveDef, WaveDefs, WaveTaskDef } from './defs';
+import type { ItemDef, WaveDef, WaveDefs, WaveTaskDef } from './defs';
+import { wetGearOnly } from './gear';
 import { matches } from './story';
 import type { GameState, PlayerState, RejectCode } from './state';
 
@@ -107,19 +108,27 @@ export function applyWave(cmd: WaveCommand, d: WaveDraft, defs: WaveDefs | undef
 
 /**
  * Годинник минув строк — справа спізнилась: наслідок `late`, його прапорці; коли вирішено все — хвиля закінчується.
+ * Зріз 3: етап хвилі минув (квест уже не активний — гравець поїхав, доба закрилась) — усе ще відкрите спізнилось так само:
+ * хвиля живе лише на своєму етапі, і наступна хвиля (інший етап) не чекає, поки годинник домине чужі строки.
+ * `late.wetGear` — спорядження вологе, і лише вологе (wetGearOnly: стан не знімається, повторне спізнення чи дощ нічого не додають;
+ * DryGear повертає все; система дощу GAME-73; `items` каже, що є спорядженням; без них — нічого не мокне).
+ * Кінець етапу — теж спізнення (хвиля вже стартувала й жила на етапі): рішення зрізу 3, без окремого винятку; наслідок м'який.
  * Чиста функція над станом гри: симуляція кличе її після кожного кроку, що рухав годинник. Нічого не змінилось —
  * повертає той самий об'єкт (сейв і відбиток стану без хвиль не змінюються).
  */
-export function settleWave(game: GameState, now: number, defs: WaveDefs | undefined): GameState {
+export function settleWave(game: GameState, now: number, defs: WaveDefs | undefined, items?: Readonly<Record<string, ItemDef>>): GameState {
   const a = game.wave?.active;
   if (!a || !game.player) return game;
   const w = own(defs?.waves ?? {}, a.waveId);
-  const expired = Object.entries(a.tasks).filter(([, t]) => t.outcome === 'open' && now > t.dueAt).map(([id]) => id);
+  const stageOver = w !== undefined && own(game.quests, w.stage)?.status !== 'active';
+  const expired = Object.entries(a.tasks).filter(([, t]) => t.outcome === 'open' && (stageOver || now > t.dueAt)).map(([id]) => id);
   if (expired.length === 0) return game;
   const d: WaveDraft = { player: game.player, flags: [...game.flags], quests: game.quests, wave: { ...game.wave, active: { ...a, tasks: { ...a.tasks, ...Object.fromEntries(expired.map((id) => [id, { ...(a.tasks[id] as WaveTaskState), outcome: 'late' as const }])) } }, past: game.wave?.past ?? {} } };
-  setFlags(d, expired.flatMap((id) => w?.tasks.find((t) => t.id === id)?.late.effects ?? []));
+  const lates = expired.flatMap((id) => { const t = w?.tasks.find((x) => x.id === id); return t ? [t.late] : []; });
+  setFlags(d, lates.flatMap((l) => l.effects));
   finishIfResolved(d, defs);
-  return { ...game, flags: d.flags, ...(d.wave ? { wave: d.wave } : {}) };
+  const next: GameState = { ...game, flags: d.flags, ...(d.wave ? { wave: d.wave } : {}) };
+  return lates.some((l) => l.wetGear === true) ? wetGearOnly(next, items ?? {}) : next;
 }
 
 /** Жива хвиля для екрана: кожна справа з хвилинами, що лишились (0 — строк саме зараз; від'ємних не буває). */

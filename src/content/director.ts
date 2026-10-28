@@ -7,6 +7,10 @@
 //    факти сцени — лише з наслідків хвилі (дрова встигли → вогнище дозволене; вечеря встигла → вечеря завершена). Спізнились —
 //    той самий вечір під навісом із ліхтарем (гілка lantern). Фото намету — GAME-140, доки його немає: false.
 //  * Кінець розділу від цього не залежить: CompleteQuest CH1-D2-FIRE-001 лишається ходом меню завжди (day2.test, тут — director.test).
+//  * Зріз 3 (W1–W3): хвиля стартує лише коли гравець У ЛОКАЦІЇ свого етапу (CH1-HOME-001 стає активним ще в крамниці — W1 чекає
+//    повернення додому; ST-005 — приїзду в табір). Мапа в грі одна — табір біля озера (scene.ts, MAP_LOCATION), тож справи хвиль
+//    інших локацій (дім, зупинка в дорозі) закриваються кнопками екрана подорожі (menuTasks → story-offer), а справи табору — цілями
+//    task.* на мапі. Екран подорожі зупиняє годинник (Shell: story(open) → pause), тож строки W1/W2 ідуть лише поки гравець на мапі.
 import type { CoreDefs } from '../core/defs';
 import type { SimState } from '../core/sim';
 import type { GameState } from '../core/state';
@@ -17,6 +21,8 @@ import type { Move } from './moves';
 import { WAVE_CH1_EVENING } from './waves';
 
 export const FIRE_STAGE = 'CH1-D2-FIRE-001';
+/** Локація єдиної мапи гри (public/maps/camp-lake.tmj, властивість locationId). Хвилі інших локацій граються з екрана подорожі. */
+export const MAP_LOCATION = 'loc.camp.lake';
 /** Префікс об'єкта мапи, дотик до якого закриває справу хвилі: task.<id справи>. */
 export const TASK_SPOT = 'task.';
 
@@ -33,6 +39,8 @@ export function pendingWave(game: GameState, defs: CoreDefs): string | null {
   if (!p || game.campaignEnded || game.wave?.active) return null;
   for (const [id, w] of Object.entries(defs.waves?.waves ?? {})) {
     if (own(game.quests, w.stage)?.status !== 'active') continue;
+    const where = own(defs.story?.quests ?? {}, w.stage)?.locationId;
+    if (where !== undefined && where !== p.locationId) continue;
     if (own(game.wave?.past ?? {}, id)) continue;
     if (!matches(w.when, p) || tasksFor(w, p).length === 0) continue;
     return id;
@@ -44,6 +52,26 @@ export function pendingWave(game: GameState, defs: CoreDefs): string | null {
 export function storyMoves(sim: SimState, defs: CoreDefs): Move[] {
   const waveId = pendingWave(sim.game, defs);
   return waveId ? [{ type: 'StartWave', waveId }] : [];
+}
+
+/** Локація етапу живої хвилі (звідки й де її справи): квест етапу без локації — null. */
+export function waveLocation(game: GameState, defs: CoreDefs): string | null {
+  const a = game.wave?.active;
+  const w = a ? own(defs.waves?.waves ?? {}, a.waveId) : undefined;
+  return (w && own(defs.story?.quests ?? {}, w.stage)?.locationId) ?? null;
+}
+
+/**
+ * Справи живої хвилі, які закриває екран подорожі (зріз 3): лише коли етап хвилі НЕ в локації мапи — там справи є цілями task.*
+ * (одна справа не має двох дверей). Відкриті й у строку, гравець на місці етапу, розмови немає.
+ */
+export function menuTasks(sim: SimState, defs: CoreDefs): Move[] {
+  const g = sim.game;
+  const a = g.wave?.active;
+  if (!a || !g.player || g.dialogue !== null) return [];
+  const where = waveLocation(g, defs);
+  if (where === null || where === MAP_LOCATION || where !== g.player.locationId) return [];
+  return Object.entries(a.tasks).filter(([, t]) => t.outcome === 'open' && sim.clock.minutes <= t.dueAt).map(([taskId]) => ({ type: 'CompleteTask', taskId }));
 }
 
 /** Сцену біля вогнища вже грали (запис StartScene у журналі) — удруге вона не відкривається. */
@@ -76,7 +104,7 @@ export function spotMove(sim: SimState, name: string): Move | null {
 export function liveSpot(sim: SimState, name: string): boolean {
   if (name.startsWith(TASK_SPOT)) {
     const t = sim.game.wave?.active?.tasks[name.slice(TASK_SPOT.length)];
-    return t !== undefined && t.outcome === 'open' && sim.clock.minutes <= t.dueAt;
+    return t !== undefined && t.outcome === 'open' && sim.clock.minutes <= t.dueAt && sim.game.player?.locationId === MAP_LOCATION;
   }
   if (name === 'obj.litter') return !sim.game.flags.includes('f.litter-cleaned-ch1');
   return true;

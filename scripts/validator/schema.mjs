@@ -67,8 +67,9 @@ export const DIALOGUE_SCHEMA = obj({ id: req(str), npcId: str, trigger, scene, s
 // Хвилі напруги (GAME-170, рішення власника 24–25.10): 2–4 одночасні справи зі строком в ігрових хвилинах; наслідки «встиг»
 // і «не встиг» — обидва, і жоден не поразка. limitMin, done/late навмисно НЕ required тут: їх стереже перевірка waves власними
 // кодами (WAVE_LIMIT_INVALID, WAVE_OUTCOME_MISSING), щоб забутий строк не ховався під загальним SCHEMA_INVALID.
-// Ефект наслідку — лише setFlag: хвиля не рухає сюжет (кінець розділу від хвиль не залежить, fallback — завжди).
-const waveEffect = union({ setFlag: obj({ setFlag: req(str) }) });
+// Ефект наслідку — лише setFlag або wetGear (зріз 3: «не встигли до дощу» — спорядження вологе через наявну систему вологи GAME-73);
+// хвиля не рухає сюжет (кінець розділу від хвиль не залежить, fallback — завжди).
+const waveEffect = union({ setFlag: obj({ setFlag: req(str) }), wetGear: obj({ wetGear: req({ t: 'boolean', only: true }) }) });
 const waveOutcome = obj({ textKey: req(str), effects: arr(waveEffect) });
 const waveTask = obj({
   id: req(str), textKey: req(str), limitMin: { t: 'int' }, leaderOnly: bool, animal: str,
@@ -156,7 +157,7 @@ export const COLLECTIONS = ['profiles', 'transports', 'animals', 'items', 'npcs'
 function typeOk(s, v) {
   switch (s.t) {
     case 'string': return typeof v === 'string' && (!s.enum || s.enum.includes(v));
-    case 'boolean': return typeof v === 'boolean';
+    case 'boolean': return typeof v === 'boolean' && (s.only === undefined || v === s.only);
     case 'scalar': return typeof v === 'string' || typeof v === 'boolean' || Number.isFinite(v);
     case 'int': return Number.isInteger(v) && v >= (s.min ?? -Infinity) && v <= (s.max ?? Infinity);
     case 'array': return Array.isArray(v) && v.length >= (s.min ?? 0);
@@ -167,7 +168,7 @@ function typeOk(s, v) {
 
 function walk(s, v, where, out) {
   if (!typeOk(s, v)) {
-    const want = s.enum ? `одне з ${s.enum.join('|')}` : s.t + (s.min != null ? (s.t === 'array' ? ` довжини >= ${s.min}` : ` >= ${s.min}`) : '') + (s.max != null ? ` <= ${s.max}` : '');
+    const want = s.enum ? `одне з ${s.enum.join('|')}` : (s.only !== undefined ? `${s.t} ${s.only}` : s.t) + (s.min != null ? (s.t === 'array' ? ` довжини >= ${s.min}` : ` >= ${s.min}`) : '') + (s.max != null ? ` <= ${s.max}` : '');
     out.push({ code: 'SCHEMA_INVALID', where, msg: `очікується ${want}, отримано ${JSON.stringify(v)}` });
     return;
   }

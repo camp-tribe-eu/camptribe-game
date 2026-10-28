@@ -24,6 +24,7 @@ import items from '../../content/items.json';
 import { daySummary, daysEnded, NIGHT_PREFIX } from '../core/day-summary';
 import type { OfferAction, OfferCharacter, OfferPacking, OfferSummary, OfferWave, StoryOffer } from '../ui/story-types';
 import { RAW_WAVES } from '../content/waves';
+import { menuTasks } from '../content/director';
 import { waveView } from '../core/wave';
 
 const NO_ANIMAL = 'animal.none';
@@ -258,6 +259,15 @@ export function storyOffer(sim: SimState, defs: CoreDefs): Offered {
   });
 
   const offered: OfferAction[] = [];
+  // Справи живої хвилі на екрані подорожі (GAME-170 зріз 3: дім, зупинка в дорозі — локацій без мапи): першими, бо в них строк.
+  // Текст — textKey справи з content/waves.json; команда — CompleteTask (ядро саме звірить строк і «лише лідер»).
+  const raw = RAW_WAVES.find((w) => w.id === s.wave?.active?.waveId);
+  for (const move of menuTasks(sim, defs)) {
+    if (move.type !== 'CompleteTask') continue;
+    const a: OfferAction = { id: idOf(move, s), kind: 'task', key: raw?.tasks.find((t) => t.id === move.taskId)?.textKey ?? null };
+    intents.set(a.id, move);
+    offered.push(a);
+  }
   for (const { move } of menuMoves(s, defs, weather)) {
     const a: OfferAction = { id: idOf(move, s), ...describe(move, defs, s, weather) };
     intents.set(a.id, move);
