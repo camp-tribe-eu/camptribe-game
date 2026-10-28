@@ -10,6 +10,7 @@ import { KEY_BINDINGS, KEY_CODES, TAP_MAX_MOVE, TAP_MAX_MS, actionTarget, consum
 import type { Bridge } from './bridge';
 import type { WorldArt } from './art';
 import { COLS, FRAME, frameIndex, type Dir } from './character';
+import { FOLLOW_SPEED_FACTOR, gridFromWalls, restPoints, stepFollowers, type Grid, type Pt } from './follow';
 
 export const TILE = 32;
 export const SPEED = 128; // px/с — 4 тайли за секунду (як було при 16 px: 64 px/с)
@@ -21,6 +22,10 @@ const WALK_FPS = 12;
 /** Глибини: земля, декор і стіни (стовбури, намети) — завжди під персонажем; спрайти сортуються за y ніг; верхівки — смугами. */
 const DEPTH = { ground: -300, decor: -200, walls: -100, always: 100_000 } as const;
 const DIRS: readonly Dir[] = ['up', 'left', 'down', 'right'];
+/** GAME-112: родина, що йде за героєм (герой — George). Порядок — порядок у ланцюжку. */
+const FOLLOWERS = ['victoria', 'matthew'] as const;
+/** Довгий кадр (згорнута вкладка) не телепортує слідувачів: крок обмежений 0,1 с. */
+const MAX_FOLLOW_DT = 0.1;
 
 /** Об'єкт мапи, з яким можна взаємодіяти: тригер (Interact у ядро) чи NPC (розмова). */
 interface Spot { readonly name: string; readonly kind: 'trigger' | 'npc'; readonly x: number; readonly y: number }
@@ -55,6 +60,8 @@ export interface WorldProbe {
   fps: number;
   /** Скільки вікон fps уже закрито (тест чекає на нове вікно, а не читає застаріле число). */
   fpsWindows: number;
+  /** GAME-112 (лише для e2e): де стоять слідувачі (ноги, піксельні координати мапи) — у порядку ланцюжка. */
+  followers: Pt[];
   /** GAME-38: мс від початку навігації до першого намальованого кадру Phaser; 0, доки кадру не було (ставить main.ts). */
   firstFrameMs: number;
 }
@@ -69,6 +76,10 @@ export class WorldScene extends Phaser.Scene {
   private bands: Band[] = [];
   private facing: Dir = 'down';
   private last = { x: 0, y: 0 };
+  private grid!: Grid;
+  private chain: Pt[] = [];
+  private followSprites: Phaser.GameObjects.Sprite[] = [];
+  private followFacing: Dir[] = [];
   private fpsFrames = 0;
   private fpsStart = -1;
   /** Тап по канві (GAME-95): світова точка, чекає на кадр update, де її звіряють із цілями в зоні дії. */
@@ -115,6 +126,7 @@ export class WorldScene extends Phaser.Scene {
     this.textures.addSpriteSheet('campfire', this.art.campfire, { frameWidth: FRAME, frameHeight: FRAME });
     this.addSheet('player', this.art.sheets.player);
     this.addSheet('elise', this.art.sheets.elise);
+    for (const name of FOLLOWERS) this.addSheet(name, this.art.sheets[name]);
 
     const map = this.make.tilemap({ key: 'camp' });
     const tilesets = Object.keys(this.art.tilesets).map((name) => {
@@ -155,6 +167,17 @@ export class WorldScene extends Phaser.Scene {
       else if (s.name === 'obj.campfire') this.add.sprite(s.x, s.y, 'campfire').setOrigin(0.5, 0.85).setDepth(s.y).play('fire');
       else this.markers.set(s.name, this.marker(s));
     }
+
+    for (const name of FOLLOWERS) {
+      for (const dir of DIRS) this.anims.create({ key: `walk-${name}-${dir}`, frames: Array.from({ length: COLS - 1 }, (_, i) => ({ key: name, frame: frameIndex(dir, i + 1) })), frameRate: WALK_FPS, repeat: -1 });
+    }
+    // Слідувачі — лише картинки: без тіла фізики й без інтерактивності, тож тап і кнопка дії їх «не бачать» (GAME-112, цілі взаємодії).
+    const wallsData = map.getLayer('walls')?.data.flatMap((row) => row.map((t) => t.index)) ?? [];
+    this.grid = gridFromWalls(map.width, map.height, TILE, wallsData);
+    this.chain = restPoints(this.grid, { x: spawn.x ?? 0, y: spawn.y ?? 0 }, FOLLOWERS.length, this.spots);
+    this.followFacing = FOLLOWERS.map(() => 'down' as Dir);
+    this.followSprites = FOLLOWERS.map((name, i) => this.add.sprite(this.chain[i]?.x ?? 0, this.chain[i]?.y ?? 0, name, frameIndex('down', 0)).setOrigin(0.5, ORIGIN_Y));
+    this.probe.followers = this.chain.map((p) => ({ x: p.x, y: p.y }));
 
     this.player = this.physics.add.sprite(spawn.x ?? 0, spawn.y ?? 0, 'player', frameIndex('down', 0));
     this.player.setOrigin(0.5, ORIGIN_Y);
@@ -240,6 +263,28 @@ export class WorldScene extends Phaser.Scene {
     return this.add.image(0, 0, key).setOrigin(0, 0);
   }
 
+  /** GAME-112: ланцюжок слідувачів іде за героєм у обхід стін; анімація й напрямок — з їхнього зсуву за кадр. */
+  private moveFollowers(deltaMs: number): void {
+    const before = this.chain.map((p) => ({ x: p.x, y: p.y }));
+    stepFollowers(this.grid, { x: this.player.x, y: this.player.y }, this.chain, Math.min(deltaMs / 1000, MAX_FOLLOW_DT), SPEED * FOLLOW_SPEED_FACTOR, this.spots);
+    this.chain.forEach((p, i) => {
+      const s = this.followSprites[i];
+      const b = before[i];
+      const out = this.probe.followers[i];
+      const name = FOLLOWERS[i];
+      if (!s || !b || !out || !name) return;
+      const dx = p.x - b.x;
+      const dy = p.y - b.y;
+      if (dx !== 0 || dy !== 0) this.followFacing[i] = Math.abs(dx) > Math.abs(dy) ? (dx < 0 ? 'left' : 'right') : (dy < 0 ? 'up' : 'down');
+      const dir = this.followFacing[i] ?? 'down';
+      if (dx !== 0 || dy !== 0) s.anims.play(`walk-${name}-${dir}`, true);
+      else { s.anims.stop(); s.setFrame(frameIndex(dir, 0)); }
+      s.setPosition(p.x, p.y).setDepth(p.y);
+      out.x = p.x;
+      out.y = p.y;
+    });
+  }
+
   /** Межа паузи: зупинити тіло, інакше фізика дотягує стару швидкість після продовження (рецензія PR #13). */
   haltPlayer(): void {
     if (!this.player) return;
@@ -259,7 +304,7 @@ export class WorldScene extends Phaser.Scene {
     this.fpsStart = time;
   }
 
-  override update(time: number): void {
+  override update(time: number, delta: number): void {
     // GAME-97: годинник ядра — від сирої дельти кадру, а не від згладженої. Phaser 120 кадрів після старту (і поза фокусом)
     // ріже дельту до 16,7 мс, а понад 200 мс підміняє останньою «нормальною»: при 8 fps годинник ішов у 8 разів повільніше
     // за реальний час. Межу кадру (згорнута вкладка) тримає сам міст — MAX_FRAME_MS.
@@ -298,6 +343,8 @@ export class WorldScene extends Phaser.Scene {
       if (target.kind === 'npc') this.onNpc(target.name);
       else this.onObject(target.name);
     }
+
+    this.moveFollowers(delta);
 
     const box = this.player.getBounds();
     let covered = 0;

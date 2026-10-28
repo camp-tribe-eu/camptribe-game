@@ -9,7 +9,7 @@ import { budget } from './budgets';
 test.describe.configure({ mode: 'serial' });
 
 const FLOOR_FPS = 20;
-interface Probe { ready: boolean; fps: number; fpsWindows: number }
+interface Probe { ready: boolean; fps: number; fpsWindows: number; followers: { x: number; y: number }[] }
 const probe = (page: Page): Promise<Probe> => page.evaluate(() => ({ ...(window as unknown as { __game: { probe: Probe } }).__game.probe }));
 
 for (const vp of [{ width: 1280, height: 800 }, { width: 390, height: 844 }]) {
@@ -58,28 +58,48 @@ const FPS_MEDIAN_MIN = budget('fpsMedianMin');
 const FPS_SAMPLES = budget('fpsSamples');
 const fpsLag = Number(process.env.GAME38_FRAME_LAG_MS ?? 0);
 
-test(`GAME-38 медіана fps еталонної сцени ≥ ${FPS_MEDIAN_MIN} з ≥ ${FPS_SAMPLES} замірів`, async ({ page }) => {
-  test.setTimeout(30_000 + FPS_SAMPLES * 10_000);
+/** Медіана з FPS_SAMPLES закритих вікон fps. `walk` — герой ходить туди-сюди весь вимір (слідувачі рухаються й анімуються — найважчий випадок). */
+async function medianFps(page: Page, walk: boolean): Promise<{ samples: number[]; median: number }> {
   await page.setViewportSize({ width: 1280, height: 800 });
   await page.goto(`/?seed=2${fpsLag ? `&frameLagMs=${fpsLag}` : ''}`);
   await page.waitForFunction(() => (window as unknown as { __game?: { probe: { ready: boolean } } }).__game?.probe.ready === true, null, { timeout: 30_000 });
+  // GAME-112: еталонна сцена — З РОДИНОЮ (два слідувачі); без них fps міряв би сцену без найдорожчого, що в ній додалось.
+  expect((await probe(page)).followers.length, 'у еталонній сцені нема слідувачів родини').toBeGreaterThanOrEqual(2);
+  let walking = walk;
+  const walker = (async (): Promise<void> => {   // рядок 5 мапи (спавн): вільно від x≈16 до x≈300; 0,6 с ходу ≈ 77 px — не впирається в стіни
+    for (let left = true; walking; left = !left) { await page.keyboard.down(left ? 'ArrowLeft' : 'ArrowRight'); await page.waitForTimeout(600); await page.keyboard.up(left ? 'ArrowLeft' : 'ArrowRight'); }
+  })();
   const nextWindow = async (after: number): Promise<Probe> => {
     await page.waitForFunction((n) => (window as unknown as { __game: { probe: Probe } }).__game.probe.fpsWindows > n, after, { timeout: 15_000, polling: 100 });
     return probe(page);
   };
   // Вікно, відкрите ще до готовності сторінки, відкидаємо: воно не повністю в нашому вимірі.
   let last = (await nextWindow((await probe(page)).fpsWindows)).fpsWindows;
+  const start = await probe(page);
   const samples: number[] = [];
   while (samples.length < FPS_SAMPLES) {
     const p = await nextWindow(last);   // кожен замір — окреме закрите вікно (fpsWindows зріс), не повтор того самого числа
     samples.push(p.fps);
     last = p.fpsWindows;
   }
+  walking = false;
+  await walker;
+  if (walk) {   // ходьба справді була: слідувачі зрушили з місця (інакше «з ходьбою» нічого б не доводило)
+    const end = await probe(page);
+    expect(end.followers.some((f, i) => Math.hypot(f.x - (start.followers[i]?.x ?? f.x), f.y - (start.followers[i]?.y ?? f.y)) > 8), 'слідувачі стояли — ходьби не було').toBe(true);
+  }
   const sorted = [...samples].sort((a, b) => a - b);
   const mid = sorted.length >> 1;
   const at = (i: number): number => sorted[i] ?? Number.NaN;   // NaN, а не 0: порожній список не пройде порогу тихо
-  const median = sorted.length % 2 ? at(mid) : (at(mid - 1) + at(mid)) / 2;
-  console.log(`GAME-38 fps median ${median.toFixed(1)} з ${samples.length} замірів [${samples.map((s) => s.toFixed(1)).join(', ')}] (поріг ${FPS_MEDIAN_MIN}${fpsLag ? `, frameLagMs ${fpsLag}` : ''})`);
-  expect(samples.length).toBeGreaterThanOrEqual(FPS_SAMPLES);
-  expect(median).toBeGreaterThanOrEqual(FPS_MEDIAN_MIN);
-});
+  return { samples, median: sorted.length % 2 ? at(mid) : (at(mid - 1) + at(mid)) / 2 };
+}
+
+for (const walk of [false, true]) {
+  test(`GAME-38 медіана fps еталонної сцени з родиною${walk ? ' під час ходьби (GAME-112)' : ''} ≥ ${FPS_MEDIAN_MIN} з ≥ ${FPS_SAMPLES} замірів`, async ({ page }) => {
+    test.setTimeout(30_000 + FPS_SAMPLES * 10_000);
+    const { samples, median } = await medianFps(page, walk);
+    console.log(`GAME-38 fps median ${median.toFixed(1)}${walk ? ' (ходьба)' : ''} з ${samples.length} замірів [${samples.map((s) => s.toFixed(1)).join(', ')}] (поріг ${FPS_MEDIAN_MIN}${fpsLag ? `, frameLagMs ${fpsLag}` : ''})`);
+    expect(samples.length).toBeGreaterThanOrEqual(FPS_SAMPLES);
+    expect(median).toBeGreaterThanOrEqual(FPS_MEDIAN_MIN);
+  });
+}
