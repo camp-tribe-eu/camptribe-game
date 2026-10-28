@@ -1,0 +1,23 @@
+page bytes: 18711
+		<meta property='og:image'	content='https://kenney.nl/media/pages/assets/interface-sounds/428fc5f14c-1677589445/preview_interface.png' /><meta property='og:description' content='Download this package (100 assets) for fre
+g/sparkles.svg' height='20px' style='vertical-align: bottom; margin-right:0.25em' /> Get Kenney Game Assets All-in-1 to download <em>everything</em> at once, plus free updates!</a>
+				<p class='mobile-text-center no-select margin-top medium'><a href='#inline-download' class='button button-wide' data-lity>Download</a> <a href='https://kenney.itch.io/kenney-game-assets' target='_blank' class='button dark button-wide'>Get All-
+ame' target='_blank' href='https://store.steampowered.com/app/2338630'><img class='fluid rounded' src='https://kenney.nl/media/pages/assets/interface-sounds/124ba50b7d-1761220366/2338630.jpg'/></a></div></div></div>				
+							<a class='screenshot large' href='https://kenney.nl/media/pages/assets/interface-sounds/428fc5f14c-1677589445/preview_interface.png' data-lity><img class='fluid rounded' src='https://kenney.nl/media/pages/assets/interf
+					<audio controls style="width:100%"><source src="https://kenney.nl/media/pages/assets/interface-sounds/f84eee9fab-1677589472/preview.ogg" type="audio/ogg">Audio not supported.</audio>				
+							<div class='cover' style='background-image:url("https://kenney.nl/media/pages/assets/fantasy-ui-borders/ac36214d33-1701602364/sample-400x.png")'></div>
+							<div class='cover' style='background-image:url("https://kenney.nl/media/pages/assets/board-game-info/a096a78505-1674933044/preview-400x.png")'></div>
+							<div class='cover' style='background-image:url("https://kenney.nl/media/pages/assets/board-game-icons/d5c5bd2f28-1674933139/preview-400x.png")'></div>
+							<div class='cover' style='background-image:url("https://kenney.nl/media/pages/assets/input-prompts-pixel/018cdb0d79-1677495486/preview-400x.png")'></div>
+<div id='inline-download' class='lity-pop lity-hide text-center'>
+				<p style='margin-bottom:2em'>The game assets you're about to download are available for free, thanks to the generosity of our amazing community. If you'd like to support and help keep them free for everyone, consider making a sma
+				<p class='margin-top bold'><a id='donate-text' href='#' data-download-id='6173736574732f696e746572666163652d736f756e6473' onclick='return initiateDownload(this)'>Continue without donating...</a></p>
+				<h1>Thanks for downloading</h1>
+		document.getElementById("donate-text").innerHTML = "Continue downloading...";
+	function initiateDownload(_el){
+		var _id = _el.getAttribute('data-download-id');
+		// Request a fresh signed link and start the download
+		fetch('https://kenney.nl/download-link/' + _id, { credentials: 'same-origin', cache: 'no-store' })
+					alert('Download unavailable, please reload the page and try again.');
+				alert('Download unavailable, please reload the page and try again.');
+class='floating-promotion no-select' style='background-color:#8e64f6 !important; background-image:url("https://kenney.nl/media/pages/home/75cfd7d709-1790163677/all-in-1-wishlist.png")'><h1>Coming to Steam!</h1><p>Add to wishlist to support</p></a>
