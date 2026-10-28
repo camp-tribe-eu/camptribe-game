@@ -17,6 +17,7 @@ const GUARDS = [
   ['node', 'scripts/assets/check-assets.mjs'],
   ['node', 'scripts/i18n/check-i18n.mjs'],
   ['node', 'scripts/skills/check-skill-codes.mjs'],
+  ['node', 'scripts/bible/check-bible.mjs'],
   ['node', 'scripts/campsites/check-campsites.mjs'],
   ['node', 'scripts/replay/check-builds.mjs'],
   ['node', 'scripts/pages/verify.mjs'],
