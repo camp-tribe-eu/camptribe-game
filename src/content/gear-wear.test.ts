@@ -79,6 +79,8 @@ export function regressions(base: GameState, got: GameState): string[] {
   for (const [npc, ms] of Object.entries(base.npcMemory)) for (const m of ms) if (!(got.npcMemory[npc] ?? []).includes(m)) out.push(`пам'ять ${npc}/${m}`);
   for (const [k, v] of Object.entries(base.skills)) if ((got.skills[k] ?? 0) < v) out.push(`навичка ${k}`);
   for (const [k, v] of Object.entries(base.practice)) if ((got.practice[k] ?? 0) < v) out.push(`практика ${k}`);
+  // Зношена чи зламана річ лишається у гравця (не зникає зі спорядження) — рецензія Fable до #87.
+  for (const id of Object.keys(base.gear)) if (!(id in got.gear)) out.push(`річ ${id}`);
   if (got.moneyCents < base.moneyCents) out.push('гроші');
   if (base.campaignEnded && !got.campaignEnded) out.push('кінець розділу');
   return out;
@@ -149,6 +151,12 @@ describe('GAME-107 №1 · стан спорядження × профіль × 
     expect(base.grants.length).toBeGreaterThan(0);
     expect(base.flags.length).toBeGreaterThan(0);
     for (const [what, m] of mutants) expect(regressions(base, m).join(), what).toContain(what.split(' ')[0] as string);
+    // Річ зі спорядження зникла (не лише зносилась) — теж втрата прогресу.
+    const worn = withAllGear(base, 'worn');
+    const gearId = Object.keys(worn.gear)[0] as string;
+    expect(gearId, 'стан «зношене» має спорядження').toBeDefined();
+    const lostItem = { ...worn, gear: Object.fromEntries(Object.entries(worn.gear).filter(([k]) => k !== gearId)) };
+    expect(regressions(worn, lostItem).join()).toContain(`річ ${gearId}`);
   });
 });
 
