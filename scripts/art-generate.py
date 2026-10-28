@@ -62,6 +62,8 @@ def generate_batch(spec, name):
     print(f"збережено {saved}, впало {len(failed)}: {failed}")
     if saved == 0:
         sys.exit("жодного зображення — пакет провалено")
+    if failed:
+        print(f"::warning::пакет неповний: впало {len(failed)} пунктів — {failed}")
 
 
 def seam_report(a):
