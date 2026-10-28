@@ -20,6 +20,7 @@ import { storyOffer } from './view/story-offer';
 import { testSwitches } from './view/test-switches';
 import { addFrameLag, bootDelay, onFirstFrame } from './view/frame-lag';
 import type { StoryOffer } from './ui/story-types';
+import { uiSounds } from './audio/ui-sounds';
 import { liveSpot, spotMove, storyMoves } from './content/director';
 
 const app = document.querySelector<HTMLElement>('#app');
@@ -75,8 +76,9 @@ const actOnMap = (name: string): void => {
 const saves = createSaveSession(bridge, saveBackend, { story: STORY, ...(GAME_DEFS.life ? { life: GAME_DEFS.life } : {}), contentRev: STORY_REV, viable: (g) => saveViable(g, GAME_DEFS) });
 // Тестовий хук Playwright: лише ЧИТАННЯ — знімок стану копією, місток назовні не віддається
 // (рецензія PR #13: раніше скрипт сторінки міг надіслати команду в ядро).
-(window as unknown as { __game: { probe: WorldProbe; read: () => unknown } }).__game = {
+(window as unknown as { __game: { probe: WorldProbe; read: () => unknown; sounds: () => readonly string[] } }).__game = {
   probe,
+  sounds: () => [...uiSounds.played],   // GAME-40: що мікшер прийняв до відтворення (лише читання)
   read: () => JSON.parse(JSON.stringify(bridge.state)) as unknown,
 };
 
