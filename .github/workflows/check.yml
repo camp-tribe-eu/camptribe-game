@@ -16,7 +16,7 @@ concurrency:
 jobs:
   check:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 25  # 15 хв не вистачало Node 22 на main і в #93: мутаційні самотести валідатора ростуть (~0,85 с кожен, послідовно)
     strategy:
       fail-fast: false
       matrix:
