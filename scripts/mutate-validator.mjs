@@ -8,10 +8,10 @@
 // Мутації робляться в тимчасовій КОПІЇ scripts/, оригінал не чіпається.
 
 import { cpSync, mkdtempSync, readFileSync, writeFileSync, rmSync } from 'node:fs';
-import { tmpdir } from 'node:os';
+import { tmpdir, availableParallelism } from 'node:os';
 import { join, dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { spawnSync } from 'node:child_process';
+import { spawn, spawnSync } from 'node:child_process';
 import { CHECKS } from './validator/checks.mjs';
 import { cli } from './lib/cli.mjs';
 
@@ -265,6 +265,28 @@ function selfTestIn(dir) {
   return { code: r.status, out: (r.stdout ?? '') + (r.stderr ?? '') };
 }
 
+// GAME-176: кожна мутація живе у власній тимчасовій копії, тож їх можна жати паралельно.
+// Пул обмежений; результати збираються за індексом і друкуються в початковому порядку.
+const POOL = Math.max(1, Math.min(8, availableParallelism()));
+function selfTestAsync(dir) {
+  return new Promise((res) => {
+    const c = spawn(process.execPath, [join(dir, 'validate-content.mjs'), '--self-test']);
+    let out = '';
+    c.stdout.on('data', (d) => { out += d; });
+    c.stderr.on('data', (d) => { out += d; });
+    c.on('error', (e) => res({ code: null, out: String(e) }));
+    c.on('close', (code) => res({ code, out }));
+  });
+}
+async function pool(items, fn) {
+  const results = new Array(items.length);
+  let next = 0;
+  await Promise.all(Array.from({ length: Math.min(POOL, items.length) }, async () => {
+    while (next < items.length) { const i = next++; results[i] = await fn(items[i]); }
+  }));
+  return results;
+}
+
 // 0. Немутований код мусить бути зеленим — інакше «спіймані» мутації нічого не значать.
 const clean = selfTestIn(scripts);
 if (clean.code !== 0) { console.log(clean.out); console.log('MUTATION: ABORT — немутований самотест не зелений'); process.exit(1); }
@@ -280,7 +302,7 @@ if (JSON.stringify(markers) !== JSON.stringify(registry)) {
 
 let caught = 0;
 const fails = [];
-for (const m of mutations) {
+async function runMutation(m) {
   const tmp = mkdtempSync(join(tmpdir(), 'ct-mut-'));
   try {
     cpSync(scripts, tmp, { recursive: true });
@@ -288,13 +310,16 @@ for (const m of mutations) {
     const text = readFileSync(path, 'utf8');
     const hits = text.split(m.from).length - 1;
     // Мутація, що не знайшла свого рядка, звітує як «пережила» — тому вимагаємо рівно одне входження.
-    if (hits !== 1) { fails.push(`${m.name}: рядок мутації знайдено ${hits} разів, а не 1`); continue; }
+    if (hits !== 1) return { fail: `${m.name}: рядок мутації знайдено ${hits} разів, а не 1` };
     writeFileSync(path, text.replace(m.from, m.to));
-    const r = selfTestIn(tmp);
+    const r = await selfTestAsync(tmp);
     const asSelfTest = /SELF-TEST: FAILED \d+ of \d+/.test(r.out);
-    if (r.code !== 0 && asSelfTest) { caught++; console.log(`спіймано  ${m.name}`); }
-    else fails.push(`${m.name}: ${r.code === 0 ? 'самотест ЗЕЛЕНИЙ — мутація пережила' : 'самотест не дійшов до вердикту (впав як модуль)'}`);
+    if (r.code !== 0 && asSelfTest) return { ok: `спіймано  ${m.name}` };
+    return { fail: `${m.name}: ${r.code === 0 ? 'самотест ЗЕЛЕНИЙ — мутація пережила' : 'самотест не дійшов до вердикту (впав як модуль)'}` };
   } finally { rmSync(tmp, { recursive: true, force: true }); }
+}
+for (const r of await pool(mutations, runMutation)) {
+  if (r.ok) { caught++; console.log(r.ok); } else fails.push(r.fail);
 }
 
 // Нешкідливий контроль (закон 1, звірка GAME-17/18): змінено лише текст повідомлення — коди ті самі,
@@ -303,18 +328,21 @@ const HARMLESS = [
   { name: 'текст повідомлення WHEN_UNSATISFIABLE', file: 'validator/combos.mjs', from: 'умові не відповідає жодна з', to: 'умові не відповідає ні одна з' },
 ];
 let survived = 0;
-for (const m of HARMLESS) {
+async function runHarmless(m) {
   const tmp = mkdtempSync(join(tmpdir(), 'ct-mut-'));
   try {
     cpSync(scripts, tmp, { recursive: true });
     const path = join(tmp, m.file);
     const text = readFileSync(path, 'utf8');
-    if (text.split(m.from).length - 1 !== 1) { fails.push(`контроль «${m.name}»: рядок не знайдено рівно раз`); continue; }
+    if (text.split(m.from).length - 1 !== 1) return { fail: `контроль «${m.name}»: рядок не знайдено рівно раз` };
     writeFileSync(path, text.replace(m.from, m.to));
-    const r = selfTestIn(tmp);
-    if (r.code === 0) { survived++; console.log(`пережила  [контроль, так і треба] ${m.name}`); }
-    else fails.push(`контроль «${m.name}»: нешкідливу мутацію «спіймано» — харнес червоний без дефекту`);
+    const r = await selfTestAsync(tmp);
+    if (r.code === 0) return { ok: `пережила  [контроль, так і треба] ${m.name}` };
+    return { fail: `контроль «${m.name}»: нешкідливу мутацію «спіймано» — харнес червоний без дефекту` };
   } finally { rmSync(tmp, { recursive: true, force: true }); }
+}
+for (const r of await pool(HARMLESS, runHarmless)) {
+  if (r.ok) { survived++; console.log(r.ok); } else fails.push(r.fail);
 }
 
 for (const f of fails) console.log(`ПЕРЕЖИЛА  ${f}`);
