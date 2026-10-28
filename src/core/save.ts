@@ -7,7 +7,7 @@
 // * контрольна сума — над станом у ТІЙ версії, у якій його записано (до міграцій);
 // * кожна випущена версія лишається фікстурою в tests/saves/ назавжди.
 import type { StoryDefs } from './defs';
-import { exitsFor, matches } from './story';
+import { chapterComplete, exitsFor, matches } from './story';
 import { stateHash } from './hash';
 import { isJournalType, type SimState } from './sim';
 import { CONDITION_MAX } from './gear';
@@ -169,13 +169,15 @@ export function danglingRefs(game: SimState['game'], st: StoryDefs): string[] {
  * замовчуванням (ST-005 → CH1-D2-001 для випадку 1, ST-004 → ST-005 для випадку 2); цілі `visit` місця, де гравець стоїть, —
  * виконані, як при звичайному вході в квест (GAME-84). Бічні квести переходів не відкривають (відмова від велозони не
  * відкриє табірний день повз ранок). Розділ, завершений на нинішньому кінці, і звичайний сейв посеред гри не чіпаються.
+ * GAME-144: те саме вдруге — кінець розділу переїхав із CH1-D2-FIRE-001 (день 2) на CH1-D3-HOME-001 (день 3); «старий кінець» —
+ * будь-який campaignEnded без завершеного квесту-кінця (chapterComplete), тож сейв, що закінчив день 2, відкривається в день 3.
  */
 export function reopenChapter(game: SimState['game'], st: StoryDefs): SimState['game'] {
   const p = game.player;
   if (!p) return game;
   const own = (id: string) => (Object.hasOwn(st.quests, id) ? st.quests[id] : undefined);
   const status = (id: string) => (Object.hasOwn(game.quests, id) ? game.quests[id]?.status : undefined);
-  const endedOld = game.campaignEnded && !Object.keys(st.quests).some((id) => own(id)?.end && status(id) === 'completed');
+  const endedOld = game.campaignEnded && !chapterComplete(game, st);
   if (game.campaignEnded && !endedOld) return game;
   // Хто може відкрити квест: перехід із завершеного/відхиленого квесту або startQuest у будь-якій розмові.
   const started = new Set(Object.values(st.dialogues).flatMap((d) => Object.values(d.nodes).flatMap((n) => (n.choices ?? []).flatMap((c) => c.effects.flatMap((e) => ('startQuest' in e ? [e.startQuest] : []))))));

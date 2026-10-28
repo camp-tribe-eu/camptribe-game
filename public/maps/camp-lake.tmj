@@ -10,7 +10,7 @@
  "tileheight": 32,
  "infinite": false,
  "nextlayerid": 7,
- "nextobjectid": 4,
+ "nextobjectid": 13,
  "layers": [
   {
    "id": 1,
@@ -1119,6 +1119,54 @@
      "type": "trigger",
      "x": 272,
      "y": 144,
+     "width": 0,
+     "height": 0,
+     "point": true,
+     "rotation": 0,
+     "visible": true
+    },
+    {
+     "id": 9,
+     "name": "task.walk-site",
+     "type": "trigger",
+     "x": 112,
+     "y": 272,
+     "width": 0,
+     "height": 0,
+     "point": true,
+     "rotation": 0,
+     "visible": true
+    },
+    {
+     "id": 10,
+     "name": "task.clean-up",
+     "type": "trigger",
+     "x": 240,
+     "y": 144,
+     "width": 0,
+     "height": 0,
+     "point": true,
+     "rotation": 0,
+     "visible": true
+    },
+    {
+     "id": 11,
+     "name": "task.pack-tent",
+     "type": "trigger",
+     "x": 208,
+     "y": 208,
+     "width": 0,
+     "height": 0,
+     "point": true,
+     "rotation": 0,
+     "visible": true
+    },
+    {
+     "id": 12,
+     "name": "task.mia-carrier-home",
+     "type": "trigger",
+     "x": 176,
+     "y": 272,
      "width": 0,
      "height": 0,
      "point": true,

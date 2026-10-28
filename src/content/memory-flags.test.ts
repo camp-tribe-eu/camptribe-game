@@ -35,12 +35,13 @@ type Pick5 = { readonly [K in keyof typeof CHOICES]: 0 | 1 };
 
 /**
  * Мінімум кінця розділу 1 (для PR): стартові 50 € + нагорода «Прибуття» (rw.st-005, 10 €) = 60 €; у руках намет, спальник і
- * дрова; ST-001…ST-005 і сцени дня 2 (GAME-141) завершено, розділ закінчено. Жодна комбінація не сміє бути гіршою — і всі мусять бути однаковими.
+ * дрова; ST-001…ST-005, сцени дня 2 (GAME-141) і дня 3 (GAME-144) завершено, розділ закінчено. Жодна комбінація не сміє бути гіршою — і всі мусять бути однаковими.
  */
 const MIN = {
   moneyCents: START_MONEY + 1_000,
   items: ['item.tent', 'item.sleeping-bag', 'item.firewood'],
-  quests: ['CH1-HOME-001', 'PROLOGUE-HOME-001', 'ST-001', 'ST-002', 'ST-003', 'ST-004', 'ST-005', 'CH1-D2-001', 'CH1-D2-ELISE-001', 'CH1-D2-CAMP-001', 'CH1-D2-FIRE-001'],
+  quests: ['CH1-HOME-001', 'PROLOGUE-HOME-001', 'ST-001', 'ST-002', 'ST-003', 'ST-004', 'ST-005', 'CH1-D2-001', 'CH1-D2-ELISE-001', 'CH1-D2-CAMP-001', 'CH1-D2-FIRE-001',
+    'CH1-D3-001', 'CH1-D3-GEAR-001', 'CH1-D3-ELISE-001', 'CH1-D3-RETURN-001', 'CH1-D3-HOME-001'],
 } as const;
 
 type Cond = Record<string, unknown>;
@@ -154,6 +155,15 @@ function play(pick: Pick5, tamper?: Tamper): Run {
   go({ type: 'CompleteQuest', questId: 'CH1-D2-ELISE-001' });
   go({ type: 'Talk', npcId: 'npc.elise' }); go({ type: 'Choose', choice: 13 }); go({ type: 'Choose', choice: 0 }); go({ type: 'Continue' }); go({ type: 'Continue' });
   go({ type: 'CompleteQuest', questId: 'CH1-D2-CAMP-001' }); go({ type: 'CompleteQuest', questId: 'CH1-D2-FIRE-001' });
+  expect(s.game.campaignEnded).toBe(false);                     // GAME-144: вогнище — межа дня 2; кінець розділу — удома в день 3
+  // День 3 (GAME-144) — однаково для всіх: ранок, речі, прощання з Елізою (hello.c15 → goodbye.c1), дорога, дім.
+  go({ type: 'CompleteQuest', questId: 'CH1-D3-001' }); go({ type: 'CompleteQuest', questId: 'CH1-D3-GEAR-001' });
+  go({ type: 'Talk', npcId: 'npc.elise' }); go({ type: 'Choose', choice: 14 }); go({ type: 'Continue' }); go({ type: 'Choose', choice: 0 }); go({ type: 'Continue' }); go({ type: 'Continue' });
+  go({ type: 'CompleteQuest', questId: 'CH1-D3-ELISE-001' });
+  go({ type: 'Visit', locationId: 'loc.road' }); go({ type: 'CompleteQuest', questId: 'CH1-D3-RETURN-001' });
+  // Дорогою додому кидок міг відкрити подію дороги — виходимо з неї, як гравець (остання відповідь безумовна).
+  for (let m = leaveMove(s.game, STORY); m; m = leaveMove(s.game, STORY)) go(m);
+  go({ type: 'Visit', locationId: 'loc.home' }); go({ type: 'CompleteQuest', questId: 'CH1-D3-HOME-001' });
   expect(s.game.campaignEnded).toBe(true);
   return { pick, sim: s, readerNodes };
 }

@@ -3,7 +3,7 @@
 // Не прибирай і не дублюй маркери — мутаційний прогін звіряє їх із реєстром CHECKS.
 
 import { checkSchema } from './schema.mjs';
-import { FACT_KINDS, FACT_STALE_DAYS, FLAG_FAMILIES, GEAR_FIELDS, isWarning, SKILL_IDS, WAVE_MAX_LIMIT, WAVE_MAX_TASKS, WAVE_MIN_TASKS } from './codes.mjs';
+import { FACT_KINDS, FACT_STALE_DAYS, FLAG_FAMILIES, GEAR_CHECK_VARIANTS, GEAR_FIELDS, isWarning, SKILL_IDS, WAVE_MAX_LIMIT, WAVE_MAX_TASKS, WAVE_MIN_TASKS } from './codes.mjs';
 import { checkCombos, checkOptions, comboLabel, enumerateCombos, matches, NO_ANIMAL } from './combos.mjs';
 
 const I = (code, where, msg) => ({ code, where, msg });
@@ -479,6 +479,8 @@ export const CHECKS = [
       for (const q of ct.quests ?? []) {
         add(q.titleKey, q.id);
         q.objectives.forEach((o) => add(o.textKey, `${q.id}/${o.id}`));
+        // GAME-144: ціль «перевірка спорядження» має текст на кожну проблему, яку може показати ядро (gearIssue).
+        for (const o of q.objectives) if (o.gearCheck === true) for (const v of GEAR_CHECK_VARIANTS) add(`${o.textKey}.${v}`, `${q.id}/${o.id}.gearCheck`);
         q.transitions.forEach((t) => add(t.choiceKey, `${q.id}.transitions`));
       }
       (ct.events ?? []).forEach((e) => add(e.titleKey, e.id));
@@ -1149,6 +1151,8 @@ function settable(c) {
   for (const d of c.content.dialogues ?? []) for (const f of d.scene?.facts ?? []) set.add(f);
   // Наслідки хвиль (GAME-170) ставить ядро, щойно справа встигла чи спізнилась, — так само без вибору в діалозі.
   for (const [, f] of waveEffects(c.content)) set.add(f);
+  // Прапорці взаємодії (kind: interaction, GAME-170 зріз 2 / GAME-144) ставить ядро на дотик до об'єкта мапи (src/content/slice-defs.ts).
+  for (const e of c.content.flags ?? []) if (e.kind === 'interaction' && !e.id.endsWith('-*')) set.add(e.id);
   const memory = new Map();
   const mem = (npc) => memory.get(npc) ?? NONE;
   const choices = dialogueChoices(c.content);

@@ -1,10 +1,9 @@
-// GAME-170 зріз 3 · W5 «Не залишати слідів до 11:00» (день 3) — ДАНІ БЕЗ ПІДКЛЮЧЕННЯ: етапу дня 3 ще немає в main (GAME-144 —
-// чернетка), тож хвиля лежить у tests/waves/ch1-day3-checkout.json разом зі своїм етапом-заглушкою й текстами. Тут доводиться, що
-// в день, коли етап з'явиться, хвилю можна перенести в content/waves.json без правок: валідатор на справжньому контенті + W5 чистий
-// (0 помилок, і контроль: зламана W5 — червона), а ядро проходить її для кожної комбінації без тупиків.
+// GAME-170 зріз 3 · W5 «Не залишати слідів до 11:00» (день 3). Спершу (зріз 3) вона лежала поза content/waves.json у
+// tests/waves/ch1-day3-checkout.json з етапом-заглушкою; GAME-144 підключив етап CH1-D3-001 і саму хвилю в content/waves.json
+// (пакет-заглушку видалено). Тут доводиться те саме, вже на справжньому контенті: валідатор з W5 чистий (0 помилок, і контроль:
+// зламана W5 — червона), а ядро проходить її для кожної комбінації без тупиків.
 import { describe, expect, it } from 'vitest';
 import type { Command } from '../core/commands';
-import type { CoreDefs } from '../core/defs';
 import { canonical } from '../core/hash';
 import { newSim, step, type SimState } from '../core/sim';
 import { matches } from '../core/story';
@@ -12,13 +11,13 @@ import { waveView } from '../core/wave';
 import { validate } from '../../scripts/validator/checks.mjs';
 import { enumerateCombos } from '../../scripts/validator/combos.mjs';
 import { loadContent } from '../../scripts/validator/load.mjs';
-import bundle from '../../tests/waves/ch1-day3-checkout.json';
 import { GAME_DEFS } from './slice-defs';
 import { CONTENT } from './story';
-import { compileWaves, RAW_WAVES, type RawWave } from './waves';
+import { RAW_WAVES, type RawWave } from './waves';
 type Cmd = Command extends infer C ? (C extends Command ? Omit<C, 'commandId'> : never) : never;
 
-const W5 = bundle.wave as RawWave;
+const STAGE = 'CH1-D3-001';
+const W5 = RAW_WAVES.find((w) => w.id === 'wave.ch1-day3-checkout') as RawWave;
 const TODAY = new Date().toISOString().slice(0, 10);
 type Content = Record<string, unknown> & { waves?: unknown[]; quests: unknown[]; locales: Record<string, Record<string, string>> };
 
@@ -26,34 +25,28 @@ function merged(patch: (w: RawWave) => RawWave = (w) => w): Content {
   const loaded = loadContent('content');
   if (!loaded.content) throw new Error(`контент не завантажився: ${JSON.stringify(loaded.issues)}`);
   const c = structuredClone(loaded.content) as Content;
-  const locales = Object.fromEntries(Object.entries(c.locales).map(([lang, dict]) => [lang, { ...dict, ...(bundle.locales as Record<string, Record<string, string>>)[lang] }]));
-  return { ...c, quests: [...c.quests, bundle.stage], waves: [...(c.waves ?? []), patch(structuredClone(W5))], locales };
+  return { ...c, waves: (c.waves as RawWave[] | undefined ?? []).map((w) => (w.id === W5.id ? patch(structuredClone(w)) : w)) };
 }
-// Етап-заглушка навмисно не вшитий у ланцюг квестів (це зробить GAME-144), тож три знахідки про сам етап (недосяжний зі старту,
-// без шляху до кінця, без наступного етапу) — очікувані й лише про CH1-D3-001; усе інше — про хвилю, і його мусить бути 0.
-const STUB_ONLY = ['NODE_UNREACHABLE', 'NO_PATH_TO_END', 'BRANCH_NO_NEXT'];
-const codes = (c: Content): string[] => validate(c, { today: TODAY }).filter((i) => !(i.where === bundle.stage.id && STUB_ONLY.includes(i.code))).map((i) => i.code).sort();
+const codes = (c: Content): string[] => validate(c, { today: TODAY }).map((i) => i.code).sort();
 
 describe('W5 «Не залишати слідів до 11:00» — дані дня 3 без підключення (GAME-170, зріз 3)', () => {
-  it('W5 ще не в content/waves.json (етапу CH1-D3-001 немає в main); у пакеті — етап-заглушка в локації табору', () => {
-    expect(RAW_WAVES.some((w) => w.id === W5.id)).toBe(false);
-    expect(GAME_DEFS.story?.quests[bundle.stage.id]).toBeUndefined();
-    expect(bundle.stage.locationId).toBe('loc.camp.lake');
+  it('W5 у content/waves.json на етапі CH1-D3-001, який є в ядрі й стоїть у локації табору', () => {
+    expect(W5).toBeDefined();
+    expect(W5.stage).toBe(STAGE);
+    expect(GAME_DEFS.story?.quests[STAGE]).toBeDefined();
+    expect(CONTENT.quests.find((q) => q.id === STAGE)?.locationId).toBe('loc.camp.lake');
   });
 
-  it('валідатор: справжній контент + етап-заглушка + W5 — 0 помилок; контроль: без наслідку late / з Мією біля води — червоно', () => {
+  it('валідатор: справжній контент з W5 — 0 помилок; контроль: без наслідку late / з Мією біля води — червоно', () => {
     expect(codes(merged())).toEqual([]);
-    expect(validate(merged(), { today: TODAY }).map((i) => i.code).sort()).toEqual([...STUB_ONLY].sort());   // саме ці три, і лише про заглушку
     expect(codes(merged((w) => ({ ...w, tasks: w.tasks.map((t) => (t.id === 'clean-up' ? { ...t, late: undefined as never } : t)) })))).toContain('WAVE_OUTCOME_MISSING');
     expect(codes(merged((w) => ({ ...w, tasks: w.tasks.map((t) => (t.id === 'mia-carrier-home' ? { ...t, targets: [{ id: 'spot.shore', safe: false }] } : t)) })))).toContain('WAVE_ANIMAL_UNSAFE');
     // Набір справ W5 не повторює жодної хвилі розділу 1 (WAVE_REPEATED мовчить), а строки — 30–60 хв (≈ с).
     for (const t of W5.tasks) { expect(t.limitMin).toBeGreaterThanOrEqual(30); expect(t.limitMin).toBeLessThanOrEqual(60); }
   });
 
-  it('ядро: для кожної комбінації W5 стартує на етапі-заглушці, варіант за сценарієм, повний перебір без тупиків, усе-late без поразки', () => {
-    const story = GAME_DEFS.story;
-    if (!story) throw new Error('немає сюжету');
-    const DEFS: CoreDefs = { ...GAME_DEFS, waves: compileWaves([...RAW_WAVES, W5]), story: { ...story, quests: { ...story.quests, [bundle.stage.id]: { optional: false, end: false, locationId: 'loc.camp.lake', objectives: [], transitions: [] } } } };
+  it('ядро: для кожної комбінації W5 стартує на етапі CH1-D3-001, варіант за сценарієм, повний перебір без тупиків, усе-late без поразки', () => {
+    const DEFS = GAME_DEFS;
     const CTX = { defs: DEFS };
     const cmd = (s: SimState, c: Cmd): SimState => step(s, { kind: 'command', command: { ...c, commandId: `d${s.game.seq}` } as Command }, CTX);
     const ok = (s: SimState): boolean => s.game.processed[`d${s.game.seq - 1}`]?.ok === true;
@@ -67,7 +60,7 @@ describe('W5 «Не залишати слідів до 11:00» — дані дн
       combosTried++;
       let s = cmd(newSim(3, 5_000), { type: 'CreateCharacter', profileId: k.profile ?? '', transportId: k.transport ?? '', ...(k.animal === 'animal.none' ? {} : { animalId: k.animal }) });
       s = step(s, { kind: 'advance', minutes: 3 * 1440 + 10 * 60 }, CTX);
-      s = { ...s, game: { ...s.game, quests: { ...s.game.quests, [bundle.stage.id]: { status: 'active', done: [] } } } };
+      s = { ...s, game: { ...s.game, quests: { ...s.game.quests, [STAGE]: { status: 'active', done: [] } } } };
       s = cmd(s, { type: 'StartWave', waveId: W5.id });
       expect(ok(s), `${k.profile} ${k.transport} ${k.animal}`).toBe(true);
       const ids = (waveView(s.game, s.clock.minutes)?.tasks.map((t) => t.id) ?? []).sort();

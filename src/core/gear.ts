@@ -85,3 +85,29 @@ export function wearAfterTrip(game: GameState, items: Readonly<Record<string, It
   }
   return changed ? { ...game, gear: pruneGear(next, game.inventory) } : game;
 }
+
+type GearKind = NonNullable<ItemDef['gear']>['kind'];
+
+/**
+ * Проблема спорядження для сцени «Не зовсім за планом» (GAME-144, R1-04) — лише з ФАКТИЧНОГО стану речей у руках, без кидка
+ * й без зміни стану. Мокре — `wet`; сухе, але вже з втратою стану — `worn`. Порядок: спершу намет, потім спальник, у межах
+ * виду мокре раніше за зношене, далі за id. Ліхтар стану в ядрі не має (простий предмет, не спорядження — GAME-73), тож
+ * проблеми ліхтаря немає: canon — «лише якщо стан підтримується грою». null — усе сухе й ціле: нейтральна сцена.
+ */
+export interface GearIssue { readonly itemId: string; readonly kind: GearKind; readonly state: 'wet' | 'worn' }
+
+/** Варіанти сцени: вид × стан. Той самий перелік — GEAR_CHECK_VARIANTS у scripts/validator/codes.mjs (звірка — day3.test). */
+export const GEAR_SCENE_VARIANTS = ['tent-wet', 'tent-worn', 'sleeping-bag-wet', 'sleeping-bag-worn'] as const;
+export const gearSceneVariant = (i: GearIssue): (typeof GEAR_SCENE_VARIANTS)[number] => `${i.kind}-${i.state}`;
+
+export function gearIssue(game: Pick<GameState, 'inventory' | 'gear'>, items: Readonly<Record<string, ItemDef>>): GearIssue | null {
+  const held = Object.keys(game.inventory).filter((id) => (own(game.inventory, id) ?? 0) > 0 && own(items, id)?.gear).sort();
+  for (const kind of ['tent', 'sleeping-bag'] as const) {
+    const mine = held.filter((id) => own(items, id)?.gear?.kind === kind);
+    const wet = mine.find((id) => gearOf(game.gear, id).wet);
+    if (wet) return { itemId: wet, kind, state: 'wet' };
+    const worn = mine.find((id) => gearOf(game.gear, id).condition < CONDITION_MAX);
+    if (worn) return { itemId: worn, kind, state: 'worn' };
+  }
+  return null;
+}

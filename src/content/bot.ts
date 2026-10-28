@@ -128,7 +128,18 @@ export function runBot(defs: CoreDefs, variant: Variant, seed: number, memo: End
       .filter((m) => !(variant.side === 'skip' && isChoice(m)))
       .map((m) => ({ m, n: tryMove(s, m, defs) })).filter((o): o is { m: Move; n: GameState } => o.n !== null);
     if (options.length === 0) break;
-    const p = pick(rng, options);
+    // GAME-144: розділ — три дні (~45 сюжетних кроків), а чиста випадкова прогулянка серед ~30 ходів доходила до кінця лише за
+    // 126+ ходів (за 80 — 0 із 2000). Гравець-людина, бачачи готовий крок сюжету, зазвичай його й робить: якщо є хід, що рухає
+    // квести (ціль виконано, квест завершено чи відхилено), бот підкидає монету — орел: обирає серед таких ходів, решка: серед
+    // усіх, як раніше. Бічна гілка, відмови, купівлі й розмови лишаються випадковими; «дійшов» — лише справжній стан кінця.
+    const ahead = options.filter((o) => o.n.quests !== s.quests);
+    let pool = options;
+    if (ahead.length > 0) {
+      const coin = nextInt(rng, 2);
+      rng = coin.state;
+      if (coin.value === 0) pool = ahead;
+    }
+    const p = pick(rng, pool);
     rng = p.rng;
     if (p.value.m.type === 'BuyItem' && s.grants.length === 0) purchases++;
     opts.trace?.(p.value.m, s, p.value.n);

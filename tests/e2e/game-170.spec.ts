@@ -83,7 +83,11 @@ async function playFireplace(page: Page, branchText: string): Promise<void> {
   await expect(page.locator('[data-ui="summary"] h2')).toHaveText('Підсумок дня 2');
   await page.locator('[data-ui="summary-continue"]').click();
   await expect(page.locator('[data-ui="summary"]')).toHaveCount(0, { timeout: 15_000 });
-  expect((await core(page)).game.campaignEnded).toBe(true);
+  // GAME-144: вогнище — межа дня 2; розділ триває (ранок дня 3), і на ньому режисер уже відкрив W5 «Не залишати слідів».
+  const c = await core(page);
+  expect(c.game.campaignEnded).toBe(false);
+  expect(c.game.quests['CH1-D3-001']?.status).toBe('active');
+  expect(Object.keys(c.game.wave?.active?.tasks ?? {}).sort()).toEqual(['clean-up', 'pack-tent', 'walk-site']);
 }
 /** Розкладка картки — числами: в екрані, не перетинає ☰, ‖, HUD; сторч — полотно гри починається під нею. */
 async function cardLayout(page: Page, vp: { width: number; height: number }): Promise<void> {

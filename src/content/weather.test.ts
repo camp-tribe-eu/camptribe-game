@@ -37,13 +37,19 @@ function simBot(v: Variant, seed: number, ctx: StepCtx, memo: EndMemo): Outcome 
   try {
     send({ type: 'CreateCharacter', profileId: v.profile, transportId: v.transport, ...(v.animal === 'animal.none' ? {} : { animalId: v.animal }) });
     for (let k = 0; k < 200 && !s.game.campaignEnded; k++) {   // GAME-141: розділ дводенний — 80 ходів до кінця не вистачало
-      const ok = moves(s.game, GAME_DEFS)
+      const tried = moves(s.game, GAME_DEFS)
         .filter((m) => m.type !== 'RoadEvent')     // подія — хід середовища: її кидає сама симуляція
-        .filter((m) => dispatch(s.game, { ...m, commandId: nextCommandId(s.game) } as Command, GAME_DEFS).ok);
-      if (ok.length === 0) break;
-      const r = nextInt(rng, ok.length);
+        .map((m) => ({ m, r: dispatch(s.game, { ...m, commandId: nextCommandId(s.game) } as Command, GAME_DEFS) }))
+        .filter((o) => o.r.ok);
+      if (tried.length === 0) break;
+      // GAME-144: розділ триденний — чиста випадкова прогулянка за 200 ходів не доходила до кінця (0 із 120; за 400 — 19 із 120, 285 с).
+      // Та сама монета, що в боті (src/content/bot.ts): орел — хід, який рухає квести, решка — будь-який.
+      const ahead = tried.filter((o) => o.r.ok && o.r.state.quests !== s.game.quests);
+      let pool = tried;
+      if (ahead.length > 0) { const coin = nextInt(rng, 2); rng = coin.state; if (coin.value === 0) pool = ahead; }
+      const r = nextInt(rng, pool.length);
       rng = r.state;
-      send(ok[r.value] as object);
+      send((pool[r.value] as { m: object }).m);
     }
   } catch {
     return { verdict: 'blocked', minutes: s.clock.minutes };

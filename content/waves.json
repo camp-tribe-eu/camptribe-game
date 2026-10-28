@@ -79,5 +79,22 @@
       { "id": "cover-bikes", "textKey": "wave.ch1-day2-evening.cover-bikes", "limitMin": 50, "when": { "transports": ["transport.bike"] },
         "done": { "textKey": "wave.ch1-day2-evening.cover-bikes.done" }, "late": { "textKey": "wave.ch1-day2-evening.cover-bikes.late" } }
     ]
+  },
+  {
+    "id": "wave.ch1-day3-checkout", "titleKey": "wave.ch1-day3-checkout", "hookKey": "wave.ch1-day3-checkout.hook", "stage": "CH1-D3-001",
+    "fallback": { "textKey": "wave.ch1-day3-checkout.fallback" },
+    "allDone": { "textKey": "wave.ch1-day3-checkout.all-done" },
+    "tasks": [
+      { "id": "walk-site", "textKey": "wave.ch1-day3-checkout.walk-site", "limitMin": 45,
+        "done": { "textKey": "wave.ch1-day3-checkout.walk-site.done" }, "late": { "textKey": "wave.ch1-day3-checkout.walk-site.late" } },
+      { "id": "clean-up", "textKey": "wave.ch1-day3-checkout.clean-up", "limitMin": 50,
+        "done": { "textKey": "wave.ch1-day3-checkout.clean-up.done" }, "late": { "textKey": "wave.ch1-day3-checkout.clean-up.late" } },
+      { "id": "pack-tent", "textKey": "wave.ch1-day3-checkout.pack-tent", "limitMin": 55,
+        "done": { "textKey": "wave.ch1-day3-checkout.pack-tent.done" }, "late": { "textKey": "wave.ch1-day3-checkout.pack-tent.late" } },
+      { "id": "mia-carrier-home", "textKey": "wave.ch1-day3-checkout.mia-carrier-home", "limitMin": 40, "leaderOnly": true, "animal": "animal.cat",
+        "when": { "animals": ["animal.cat"] },
+        "targets": [{ "id": "spot.tent-mat", "safe": true }, { "id": "spot.car", "safe": true }],
+        "done": { "textKey": "wave.ch1-day3-checkout.mia-carrier-home.done" }, "late": { "textKey": "wave.ch1-day3-checkout.mia-carrier-home.late" } }
+    ]
   }
 ]

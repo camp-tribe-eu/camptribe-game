@@ -156,6 +156,10 @@ describe('тексти меню: кожен ключ існує в обох мо
             ...o.journal.flatMap((e) => (e.key === null ? [] : [e.key])),
             ...[...o.actions, ...(o.dialogue?.answers ?? [])].filter((a) => a.kind !== 'continue').map((a) => a.key)];
           for (const key of keys) if (!has(key)) missing.add(String(key));
+          // GAME-144: розділ триденний — кожен стан інвентаря днів 1–2 помножений на ланцюг дня 3 переваливав за 50 000 станів
+          // (навіть без покупок у дні 3). Обхід меню — до межі дня 2 включно (стан після вогнища відвідано, далі не розгортаємо);
+          // ключі дня 3 (цілі з варіантами спорядження, прощання Елізи, W5) стереже валідатор (LOCALE_MISSING) і day3.test.
+          if (sim.game.quests['CH1-D2-FIRE-001']?.status === 'completed') continue;
           for (const { move } of realMenu(sim.game)) next.push(step(sim, { kind: 'command', command: { ...move, commandId: nextCommandId(sim.game) } as Command }, ctx));
         }
         frontier = next;
@@ -235,7 +239,7 @@ describe('storyOffer: знімок для UI', () => {
       expect(r.states).toBeGreaterThan(50);                                   // обхід справді пройшов гру, а не впав на старті
       expect(menuShows(create(c.intent), 'dlg.elise-greeting.hello.c2').shown).toBe(true);   // позитивний контроль тим самим обходом
     }
-  });
+  }, EXHAUSTIVE_MS);   // GAME-144: обхід водія — увесь триденний розділ (відповіді c3 там немає ніде), 30 с під навантаженням не вистачало
 
   it('дія, що повторює наслідок іншої, показана один раз', () => {
     const g = create((choices[0] as { intent: Move }).intent);

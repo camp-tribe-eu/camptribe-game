@@ -15,7 +15,7 @@ import type { Command } from '../core/commands';
 import { newSim, step, type SimState } from '../core/sim';
 import { progressKey, moves, type Move } from './moves';
 import { GAME_DEFS } from './slice-defs';
-import { RAW_WAVES, WAVE_CH1_ARRIVAL, WAVE_CH1_DEPARTURE, WAVE_CH1_EVENING, WAVE_CH1_ROAD, WAVE_CH1_ROAD_BIKE } from './waves';
+import { RAW_WAVES, WAVE_CH1_ARRIVAL, WAVE_CH1_CHECKOUT, WAVE_CH1_DEPARTURE, WAVE_CH1_EVENING, WAVE_CH1_ROAD, WAVE_CH1_ROAD_BIKE } from './waves';
 import { FIRE_STAGE, MAP_LOCATION, TASK_SPOT, fireplaceDue, fireplacePlayed, liveSpot, menuTasks, pendingWave, spotMove, storyMoves, waveLocation } from './director';
 import { CONTENT } from './story';
 import { waveOffer } from '../view/story-offer';
@@ -159,7 +159,7 @@ describe('режисер W4: цілі на мапі', () => {
   it('кожна справа кожної хвилі ТАБОРУ має ціль task.<id> на мапі, і кожна ціль task.* — справа хвилі табору (хвилі дому й дороги — з екрана подорожі)', () => {
     const stageAt = (stage: string): string | undefined => CONTENT.quests.find((q) => q.id === stage)?.locationId;
     const camp = RAW_WAVES.filter((w) => stageAt(w.stage) === MAP_LOCATION);
-    expect(camp.map((w) => w.id).sort()).toEqual([WAVE_CH1_ARRIVAL, WAVE_CH1_EVENING].sort());
+    expect(camp.map((w) => w.id).sort()).toEqual([WAVE_CH1_ARRIVAL, WAVE_CH1_CHECKOUT, WAVE_CH1_EVENING].sort());
     const tasks = camp.flatMap((w) => w.tasks.map((t) => spot(t.id))).sort();
     expect(tasks.length).toBeGreaterThanOrEqual(7);
     expect(triggers.filter((t) => t.startsWith(TASK_SPOT)).sort()).toEqual(tasks);
@@ -210,7 +210,8 @@ describe('режисер W4: цілі на мапі', () => {
     expect(fireplaceDue(s)).toBe(false);
     expect(spotMove(s, 'obj.campfire')).toEqual({ type: 'Interact', targetId: 'obj.campfire' });
     s = must(s, done(FIRE_STAGE));
-    expect(s.game.campaignEnded).toBe(true);
+    expect(s.game.campaignEnded).toBe(false);                     // GAME-144: вогнище — межа дня 2, далі ранок дня 3
+    expect(s.game.quests['CH1-D3-001']?.status).toBe('active');
   });
 
   it('дрова спізнились (решта встигли) → факт f.fire-allowed не ставиться, сцена йде гілкою lantern', () => {
@@ -238,7 +239,18 @@ describe('режисер W4: цілі на мапі', () => {
     expect(fireplaceDue(next)).toBe(true);
     expect(spotMove(next, 'obj.campfire')).toEqual({ type: 'StartScene', sceneId: 'dlg.ch1-fire', facts: ['f.fire-dinner-done'] });
     const ended = must(s, done(FIRE_STAGE));
-    expect(ended.game.campaignEnded).toBe(true);
+    expect(ended.game.quests['CH1-D3-001']?.status).toBe('active');   // GAME-144: межа дня 2 → день 3 (раніше тут кінець кампанії, GAME-170)
+    expect(ended.game.campaignEnded).toBe(false);
+  });
+
+  it('вечеря спізнилась (справу не зроблено до кінця етапу): вогнище відкривається, але без факту f.fire-dinner-done', () => {
+    const at = toStage('bike', CAMP);
+    let s = send(at, storyMoves(at, GAME_DEFS)[0] as Move);
+    s = must(dinnerTalk(s), done(CAMP));   // етап завершено розмовою; справу «dinner» на мапі не зроблено
+    expect(s.game.wave?.active).toBeNull();
+    expect(s.game.wave?.past[WAVE_CH1_EVENING]).toEqual({ dinner: 'late', firewood: 'late', 'cover-bikes': 'late' });
+    expect(fireplaceDue(s)).toBe(true);
+    expect(spotMove(s, 'obj.campfire')).toEqual({ type: 'StartScene', sceneId: 'dlg.ch1-fire', facts: [] });
   });
 
   it('пакети біля води: прапорець f.litter-cleaned-ch1, запис журналу Interact; вдруге — GRANT_ALREADY_GIVEN, об\'єкт німий', () => {

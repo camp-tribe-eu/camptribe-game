@@ -699,6 +699,194 @@
   {
    "kind": "frame",
    "realMs": 250
+  },
+  {
+   "kind": "command",
+   "command": {
+    "type": "CompleteQuest",
+    "questId": "CH1-D3-001",
+    "commandId": "r57"
+   }
+  },
+  {
+   "kind": "command",
+   "command": {
+    "type": "CompleteQuest",
+    "questId": "CH1-D3-GEAR-001",
+    "commandId": "r58"
+   }
+  },
+  {
+   "kind": "command",
+   "command": {
+    "type": "Talk",
+    "npcId": "npc.elise",
+    "commandId": "r59"
+   }
+  },
+  {
+   "kind": "command",
+   "command": {
+    "type": "Choose",
+    "choice": 14,
+    "commandId": "r60"
+   }
+  },
+  {
+   "kind": "command",
+   "command": {
+    "type": "Continue",
+    "commandId": "r61"
+   }
+  },
+  {
+   "kind": "command",
+   "command": {
+    "type": "Choose",
+    "choice": 1,
+    "commandId": "r62"
+   }
+  },
+  {
+   "kind": "command",
+   "command": {
+    "type": "Continue",
+    "commandId": "r63"
+   }
+  },
+  {
+   "kind": "command",
+   "command": {
+    "type": "Continue",
+    "commandId": "r64"
+   }
+  },
+  {
+   "kind": "command",
+   "command": {
+    "type": "CompleteQuest",
+    "questId": "CH1-D3-ELISE-001",
+    "commandId": "r65"
+   }
+  },
+  {
+   "kind": "command",
+   "command": {
+    "type": "Visit",
+    "locationId": "loc.road",
+    "commandId": "r66"
+   }
+  },
+  {
+   "kind": "frame",
+   "realMs": 1000
+  },
+  {
+   "kind": "frame",
+   "realMs": 1000
+  },
+  {
+   "kind": "frame",
+   "realMs": 1000
+  },
+  {
+   "kind": "frame",
+   "realMs": 1000
+  },
+  {
+   "kind": "frame",
+   "realMs": 1000
+  },
+  {
+   "kind": "frame",
+   "realMs": 1000
+  },
+  {
+   "kind": "command",
+   "command": {
+    "type": "CompleteQuest",
+    "questId": "CH1-D3-RETURN-001",
+    "commandId": "r67"
+   }
+  },
+  {
+   "kind": "command",
+   "command": {
+    "type": "Choose",
+    "choice": 1,
+    "commandId": "r68"
+   }
+  },
+  {
+   "kind": "command",
+   "command": {
+    "type": "Continue",
+    "commandId": "r69"
+   }
+  },
+  {
+   "kind": "command",
+   "command": {
+    "type": "Visit",
+    "locationId": "loc.home",
+    "commandId": "r70"
+   }
+  },
+  {
+   "kind": "frame",
+   "realMs": 1000
+  },
+  {
+   "kind": "frame",
+   "realMs": 1000
+  },
+  {
+   "kind": "frame",
+   "realMs": 1000
+  },
+  {
+   "kind": "frame",
+   "realMs": 1000
+  },
+  {
+   "kind": "command",
+   "command": {
+    "type": "CompleteQuest",
+    "questId": "CH1-D3-HOME-001",
+    "commandId": "r71"
+   }
+  },
+  {
+   "kind": "frame",
+   "realMs": 250
+  },
+  {
+   "kind": "frame",
+   "realMs": 250
+  },
+  {
+   "kind": "frame",
+   "realMs": 250
+  },
+  {
+   "kind": "frame",
+   "realMs": 250
+  },
+  {
+   "kind": "frame",
+   "realMs": 250
+  },
+  {
+   "kind": "frame",
+   "realMs": 250
+  },
+  {
+   "kind": "frame",
+   "realMs": 250
+  },
+  {
+   "kind": "frame",
+   "realMs": 250
   }
  ],
  "hashes": [
@@ -814,14 +1002,47 @@
   "b7812a6c",
   "7417a2fb",
   "b837036d",
-  "ac647c46",
-  "0a8dd413",
-  "9b2666a0",
-  "e541bdd5",
-  "122ff559",
-  "c95efa50",
-  "41998ff6",
-  "53445949",
-  "227d9db5"
+  "b369a0ed",
+  "57bd418e",
+  "5307c6d3",
+  "fe135cfc",
+  "dad369d8",
+  "be6650a3",
+  "0ebf3a8d",
+  "8ef45f68",
+  "4442e8dc",
+  "e1f23aa7",
+  "1f0a5859",
+  "03cf1bf2",
+  "14930761",
+  "c300d1dd",
+  "82d1f034",
+  "2d3e6bf1",
+  "d083b10e",
+  "00a6f60b",
+  "eba16732",
+  "bb6b4b72",
+  "a2d8054e",
+  "98859d45",
+  "9263b0f3",
+  "dcace45f",
+  "782b5990",
+  "81163b24",
+  "6cc9d1f0",
+  "07d8ad3e",
+  "5ce9b924",
+  "1b946b6a",
+  "fabac82a",
+  "1a8f7c65",
+  "d5aae1ba",
+  "d5e11762",
+  "09bd9ccf",
+  "00e309db",
+  "c4a1477c",
+  "a60e8a88",
+  "df1d254b",
+  "fc798cba",
+  "085e8bef",
+  "2c0a1fd3"
  ]
 }

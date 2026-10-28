@@ -15,7 +15,7 @@ import { enumerateCombos } from '../../scripts/validator/combos.mjs';
 import * as REGISTRY from '../../scripts/validator/codes.mjs';
 import { GAME_DEFS } from './slice-defs';
 import { CONTENT } from './story';
-import { RAW_WAVES, WAVE_CH1_ARRIVAL, WAVE_CH1_DEPARTURE, WAVE_CH1_EVENING, WAVE_CH1_ROAD, WAVE_CH1_ROAD_BIKE, WAVES } from './waves';
+import { RAW_WAVES, WAVE_CH1_ARRIVAL, WAVE_CH1_CHECKOUT, WAVE_CH1_DEPARTURE, WAVE_CH1_EVENING, WAVE_CH1_ROAD, WAVE_CH1_ROAD_BIKE, WAVES } from './waves';
 
 const DEFS: CoreDefs = GAME_DEFS;
 const CTX = { defs: DEFS };
@@ -44,16 +44,17 @@ const EXPECTED: Record<string, (k: Combo) => string[]> = {
   [WAVE_CH1_ROAD]: (k) => ['fix-luggage', 'check-route', ...(k.animal === 'animal.cat' ? ['mia-water-blanket'] : [])],
   [WAVE_CH1_ROAD_BIKE]: () => ['patch-tyre', 'bag-covers', 'pick-path'],
   [WAVE_CH1_ARRIVAL]: (k) => ['pick-spot', 'pitch-tent', 'gear-shelter', ...(k.animal === 'animal.cat' ? ['mia-car'] : [])],
+  [WAVE_CH1_CHECKOUT]: (k) => ['walk-site', 'clean-up', 'pack-tent', ...(k.animal === 'animal.cat' ? ['mia-carrier-home'] : [])],
   [WAVE_CH1_EVENING]: (k) => ['dinner', 'firewood', ...(k.animal === 'animal.cat' ? ['find-mia'] : []), ...(k.transport === 'transport.bike' ? ['cover-bikes'] : [])],
 };
 
 describe('хвилі розділу 1 у симуляції (GAME-170)', () => {
   const combos = enumerateCombos(CONTENT) as Combo[];
-  it('каталог гри з хвилями чистий; комбінацій > 1; хвиль 5 (W1, W2 авто, W2 вело, W3, W4), кожна описана в EXPECTED', () => {
+  it('каталог гри з хвилями чистий; комбінацій > 1; хвиль 6 (W1, W2 авто, W2 вело, W3, W4, день 3), кожна описана в EXPECTED', () => {
     expect(checkDefs(DEFS)).toEqual([]);
     expect(combos.length).toBeGreaterThan(1);
     expect(Object.keys(WAVES.waves).sort()).toEqual(Object.keys(EXPECTED).sort());
-    expect(RAW_WAVES).toHaveLength(5);
+    expect(RAW_WAVES).toHaveLength(6);
   });
 
   for (const [waveId, W] of Object.entries(WAVES.waves)) {

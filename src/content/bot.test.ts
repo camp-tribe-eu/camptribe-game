@@ -15,7 +15,8 @@ describe(`бот: ${N} прогонів, зерно ${SEED} (GAME-37)`, () => {
   // У beforeAll, а не під час збору тестів: тайм-аути діють, виняток — провал тесту, а не збою збирання.
   let runs: BotRun[] = [];
   // GAME-141: з днем 2 прогін довший (~70 мс замість ~40) — 2000 прогонів не вміщались у 120 с.
-  beforeAll(() => { runs = campaign(GAME_DEFS, N, SEED); }, 300_000);
+  // GAME-144: розділ триденний — 2000 прогонів заміряно ≈ 430 с усім файлом поодинці (у повному прогоні під навантаженням хук не вклався в 300 с).
+  beforeAll(() => { runs = campaign(GAME_DEFS, N, SEED); }, 600_000);
 
   it('кожен прогін доходить до фіналу або фінал досяжний з місця зупинки; тупиків і «не знаю» — 0', () => {
     const t = tally(runs);
@@ -46,13 +47,13 @@ describe(`бот: ${N} прогонів, зерно ${SEED} (GAME-37)`, () => {
 // GAME-108: 260 ходів, не 200 — дев'ять подій дороги забирають ходи, а велозона з кінцем розділу має лишитись у вибірці.
 describe('бот справді проходить день 2 (300 прогонів × 260 ходів)', () => {
   let runs: BotRun[] = [];
-  beforeAll(() => { runs = campaign(GAME_DEFS, 300, SEED, { maxSteps: 260, cap: 20_000 }); }, 300_000);
+  beforeAll(() => { runs = campaign(GAME_DEFS, 300, SEED, { maxSteps: 260, cap: 20_000 }); }, 600_000);
 
   it('кінець розділу — щонайменше в 5 % прогонів; тупиків і «не знаю» 0; день 2 пройдено й велосипедом із велозоною, і авто', () => {
     const ended = runs.filter((r) => r.verdict === 'ended');
     expect(ended.length, JSON.stringify(tally(runs))).toBeGreaterThanOrEqual(runs.length / 20);
     expect(runs.filter((r) => r.verdict === 'softlock' || r.verdict === 'unknown')).toEqual([]);
-    expect(ended.every((r) => r.final.quests['CH1-D2-FIRE-001']?.status === 'completed')).toBe(true);
+    expect(ended.every((r) => r.final.quests['CH1-D2-FIRE-001']?.status === 'completed' && r.final.quests['CH1-D3-HOME-001']?.status === 'completed')).toBe(true);   // GAME-144: кінець — удома
     expect(ended.some((r) => r.final.quests['q.elise-bike-area'] !== undefined)).toBe(true);
     expect(ended.some((r) => r.variant.transport === 'transport.car')).toBe(true);
   });

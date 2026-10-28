@@ -27,6 +27,9 @@ function explore(transportId: string): Seen {
   const buys: Seen['buys'] = [];
   const menuBuys: Seen['menuBuys'] = [];
   for (let s = queue.shift(); s; s = queue.shift()) {
+    // GAME-144: розділ триденний — повний перебір усіх ходів переваливав за 50 000 станів. Крамниця — зміст днів 1–2:
+    // після межі дня 2 (вогнище завершено) стани не розгортаємо; день 3 перебирає day3.test.
+    if (s.quests['CH1-D2-FIRE-001']?.status === 'completed') continue;
     for (const m of moves(s, GAME_DEFS)) {
       const r = dispatch(s, { ...m, commandId: nextCommandId(s) } as Command, GAME_DEFS);
       if (m.type === 'BuyItem' && r.ok) buys.push({ item: m.itemId, at: here(s) });

@@ -43,3 +43,5 @@ export const WAVE_CH1_DEPARTURE = 'wave.ch1-home-departure';
 export const WAVE_CH1_ROAD = 'wave.ch1-day1-road';
 export const WAVE_CH1_ROAD_BIKE = 'wave.ch1-day1-road-bike';
 export const WAVE_CH1_ARRIVAL = 'wave.ch1-day1-arrival';
+/** GAME-144: W5 «Виїзд з табору» (день 3). */
+export const WAVE_CH1_CHECKOUT = 'wave.ch1-day3-checkout';
