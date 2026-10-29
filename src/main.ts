@@ -27,7 +27,7 @@ import { uiSounds } from './audio/ui-sounds';
 import { liveSpot, spotMove, storyMoves } from './content/director';
 import { portraitFor } from './view/portraits';
 import { headCrop, sheetOf } from './view/world/portrait-art';
-import { requestMarker, requestTarget, requestsDone } from './content/requests';
+import { miaSpots, requestMarker, requestTarget, requestsDone } from './content/requests';
 import { MAP_SPOTS, isBulky, isMapFirstSpot, mapKeyFor, needsLeft, nextTarget, npcLive, resolveSpot, spotLook, unpackMoves } from './content/map-first';
 import { packFlag } from './core/packing';
 import type { GameState } from './core/state';
@@ -39,7 +39,7 @@ if (!app) throw new Error('#app is missing');
 
 const probe: WorldProbe = { ready: false, playerX: 0, playerY: 0, nearObject: null, nearKind: null, commandsSent: 0, cameraScrollX: 0, cameraScrollY: 0, clockMinutes: 0, saveLoaded: false, cameraLerp: [0, 0], followers: [], leisure: [],
   playerFrame: 0, playerDir: 'down', playerMoving: false, playerDepth: 0, coveredTiles: 0, behindTiles: 0, fps: 0, fpsWindows: 0, firstFrameMs: 0,
-  residents: [], bark: null, barkCount: 0, npcMarks: {},
+  residents: [], bark: null, barkCount: 0, npcMarks: {}, miaAt: [],
   daylight: { on: false, visible: false, minuteOfDay: 0, darkness: 0, color: 0xffffff, glow: 0 },
   fx: { target: null, ring: 0, ringName: null, backpack: 0, guide: 'none', pops: 0, auto: 0, rewards: 0, rewardLast: '' } };
 // GAME-86: кожна команда ядру (дія екрана, розмова, взаємодія на мапі) → автозбереження одразу, а не лише на паузі.
@@ -234,6 +234,7 @@ const worldHooks: WorldHooks = {
   },
   look: (name) => spotLook(bridge.state, name),
   requestsDone: () => requestsDone(bridge.state.game),
+  pets: () => miaSpots(bridge.state.game),
   target: () => {
     if (targetFor !== bridge.state.game || targetPack !== backpack.length || targetMin !== bridge.state.clock.minutes) { targetFor = bridge.state.game; targetPack = backpack.length; targetMin = bridge.state.clock.minutes; // GAME-183: прохання в роботі (вибір гравця) — перше; далі крок сюжету. Збірка e2e без ?mapFirst=1 табір веде як раніше (лише прохання): ☰ там ще дає кроки.
       const at = bridge.state.game.player?.locationId;

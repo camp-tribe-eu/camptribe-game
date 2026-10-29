@@ -35,7 +35,7 @@ import { waveView } from '../core/wave';
 import type { Key } from '../i18n';
 import { liveRequestSpot as liveSpotFor } from '../content/requests';
 import { miaState } from '../content/mia';
-import { isRequestSpot, REQUESTS, requestOf, requestStatus, requestDoneFlags, requestTarget, trackerRows } from '../content/requests';
+import { isRequestSpot, offerNodeOf, REQUESTS, requestOf, requestStatus, requestDoneFlags, requestTarget, trackerRows } from '../content/requests';
 
 const NO_ANIMAL = 'animal.none';
 
@@ -378,8 +378,8 @@ export function storyOffer(sim: SimState, defs: CoreDefs, view: StoryView = PANE
     // GAME-179: хто говорить — для портрета. Репліка гравця — 'player' (його голова), подія в дорозі й сцена без NPC — оповідач (null).
     const speakerId = npcId === undefined ? null : node?.speaker === 'npc' ? npcId : 'player';
     // GAME-180: вузол `offer` розмови з просильником, поки прохання ще не взято, — картка прохання (цілі-картинки й нагорода) над кнопками «Беруся» / «Пізніше».
-    const rq = npcId !== undefined && s.dialogue.node === 'offer' ? requestOf(npcId) : undefined;
-    const card = rq && requestStatus(s.flags, rq) === 'available'
+    const rq = npcId !== undefined ? requestOf(npcId, REQUESTS, s.flags) : undefined;
+    const card = rq && s.dialogue.node === offerNodeOf(rq) && requestStatus(s.flags, rq) === 'available'
       ? { id: rq.id, titleKey: rq.titleKey, goalKey: rq.goalKey, goals: rq.targets.map((t) => ({ icon: t.icon, labelKey: t.labelKey })), reward: rq.reward }
       : undefined;
     dialogue = { speakerKey, speakerId, key: node?.textKey ?? null, answers: offered, ...(card ? { request: card } : {}) };

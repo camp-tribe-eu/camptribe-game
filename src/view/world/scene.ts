@@ -10,7 +10,7 @@ import { bindPhaser } from '../../audio';
 import { STEP_MS } from '../../core/clock';
 import { KEY_BINDINGS, KEY_CODES, TAP_MAX_MOVE, TAP_MAX_MS, actionTarget, consumeFrame, createActionGate, moveVector, press, release, tapHitsSpot, type Action, type ActionTarget, type InputState } from './actions';
 import type { Bridge } from './bridge';
-import type { WorldArt } from './art';
+import { PET_SHEETS, type WorldArt } from './art';
 import { COLS, FRAME, frameIndex, type Dir } from './character';
 import { FIRE_CORE, FIRE_GLOW, ambientAt, glowAlpha, timeOfDay } from './daylight';
 import { FOLLOW_SPEED_FACTOR, SPEED, centerOf, gridFromWalls, restPoints, stepFollowers, stepTo, tileOf, type Grid, type Pt } from './follow';
@@ -74,6 +74,8 @@ export interface WorldHooks {
   needs(): Needs;
   /** GAME-180: скільки прохань сусідів уже здано (по зростанню сцена показує «+» над героєм). Немає — прохань у грі нема. */
   requestsDone?(): number;
+  /** GAME-184: цілі прохань, біля яких зараз стоїть Мія (лише коли гравець їде з кішкою). Немає — кішки на мапі нема. */
+  pets?(): readonly string[];
   /** Транспорт гравця (авто малюється спрайтом на подвір'ї, велосипед — маркером). */
   transport(): string | null;
   /** GAME-181: підпис нагороди («+15 XP +10 ОМ»), що ще не показана над героєм; забирає її (наступний виклик — null). */
@@ -138,6 +140,8 @@ export interface WorldProbe {
   fx: { target: string | null; ring: number; ringName: string | null; backpack: number; guide: 'none' | 'line' | 'edge'; pops: number; auto: number; rewards: number; rewardLast: string };
   /** GAME-179 (лише для e2e): які маркери зараз над головами NPC — id → chat («…») / request («!»). */
   npcMarks: Record<string, NpcMarker>;
+  /** GAME-184: цілі прохань, біля яких намальована Мія (видимі спрайти). */
+  miaAt: string[];
 }
 
 /** Точка вогнища (об'єкт мапи obj.campfire) — центр світлої плями; нема — плями нема. */
@@ -182,6 +186,8 @@ export class WorldScene extends Phaser.Scene {
   private barkReadyAt: number[] = [];
   /** GAME-179: маркери «…»/«!» над NPC (малюнок і вид, за який він намальований) і NPC, що зараз дивиться на героя (повертається вниз, коли той відійде). */
   private doneSeen = -1;
+  /** GAME-184: Мія біля цілі прохання (за назвою об'єкта); створюється, коли потрібна. */
+  private miaSprites = new Map<string, Phaser.GameObjects.Sprite>();
   private npcMarks = new Map<string, { g: Phaser.GameObjects.Graphics; kind: NpcMarker | null }>();
   private faced: string | null = null;
   /** GAME-173: скільки секунд герой стоїть; точки дозвілля родини (null — у строю) і всі точки мапи; напрямок руху героя для строю. */
@@ -309,6 +315,7 @@ export class WorldScene extends Phaser.Scene {
     bindPhaser(this.sound);   // GAME-40: мікшер отримує вихід Phaser (звуки вже в кеші після preload)
     for (const [name, img] of Object.entries(this.art.tilesets)) this.textures.addImage(name, img);
     this.textures.addSpriteSheet('campfire', this.art.campfire, { frameWidth: FRAME, frameHeight: FRAME });
+    this.textures.addSpriteSheet('mia', this.art.mia, { frameWidth: PET_SHEETS.mia.frame, frameHeight: PET_SHEETS.mia.frame });   // GAME-147/184: кішка Мія (ART-020)
     this.addSheet('player', this.art.sheets.player);
     this.addSheet('elise', this.art.sheets.elise);
     for (const name of FOLLOWERS) this.addSheet(name, this.art.sheets[name]);
@@ -891,6 +898,13 @@ export class WorldScene extends Phaser.Scene {
     this.fx?.drawBackpack(this.hooks.backpack() > 0, this.player.x, this.player.y, this.facing);
     const veh = this.spots.find((x) => x.name === 'obj.vehicle');
     this.fx?.drawNeeds(veh?.x ?? 0, (veh?.y ?? 0) - 40, veh && this.hooks.isLive('obj.vehicle') ? needs : null);
+    const miaAt = new Set(this.hooks.pets?.() ?? []);
+    for (const name of new Set([...miaAt, ...this.miaSprites.keys()])) {
+      let sp = this.miaSprites.get(name);
+      const at = this.spots.find((x) => x.name === name);
+      if (!sp && miaAt.has(name) && at) { sp = this.add.sprite(at.x + 10, at.y, 'mia', name.includes('camera') ? 3 : 16).setOrigin(0.5, ORIGIN_Y).setDepth(at.y); this.miaSprites.set(name, sp); }   // лежить на камері / сидить із частиною карти
+      sp?.setVisible(miaAt.has(name));
+    }
     const doneNow = this.hooks.requestsDone?.() ?? 0;
     if (this.doneSeen >= 0 && doneNow > this.doneSeen) { this.fx?.pop(this.player.x, this.player.y, '+'); playUi('confirm'); }   // GAME-180: прохання здано — «+» над героєм
     this.doneSeen = doneNow;
@@ -929,6 +943,7 @@ export class WorldScene extends Phaser.Scene {
       playerDepth: this.player.depth,
       coveredTiles: covered,
       behindTiles: behind,
+      miaAt: [...this.miaSprites].flatMap(([n, sp]) => (sp.visible ? [n] : [])),
       npcMarks: Object.fromEntries([...this.npcMarks].flatMap(([id, m]) => (m.g.visible && m.kind ? [[id, m.kind] as const] : []))),
       fx: { target: tn, ring: this.ring.name ? this.ring.t : 0, ringName: this.ring.name, backpack: this.hooks.backpack(), guide: this.fx?.guideMode ?? 'none', pops: this.fx?.pops ?? 0, auto: this.autoCount, rewards: this.rewardPops, rewardLast: this.rewardLast },
     });

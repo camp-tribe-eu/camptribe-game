@@ -10,18 +10,18 @@ import requestsRaw from '../../content/requests.json';
 import type { InteractionDef } from '../core/defs';
 import type { GameState } from '../core/state';
 
-export interface RequestTarget { readonly id: string; readonly spot: string; readonly icon: RequestIcon; readonly labelKey: string; readonly flag: string }
+export interface RequestTarget { readonly id: string; readonly spot: string; readonly icon: RequestIcon; readonly labelKey: string; readonly flag: string; /** GAME-184: у кого їде Мія, вона лежить/сидить біля цієї цілі (спрайт у сцені); решті — та сама ціль без неї. */ readonly mia?: boolean }
 export interface RequestReward { readonly xp: number; readonly om: number; readonly skills: readonly string[] }
 export interface RequestDef {
-  readonly id: string; readonly giver: string; readonly titleKey: string; readonly goalKey: string; readonly trackKey: string;
+  readonly id: string; readonly giver: string; readonly after?: string; readonly titleKey: string; readonly goalKey: string; readonly trackKey: string;
   readonly targets: readonly RequestTarget[]; readonly reward: RequestReward; readonly takenFlag: string; readonly doneFlag: string;
 }
-export const REQUEST_ICONS = ['litter', 'bird', 'chain', 'lantern', 'cookie', 'apple'] as const;
+export const REQUEST_ICONS = ['litter', 'bird', 'chain', 'lantern', 'cookie', 'apple', 'camera', 'star', 'wire'] as const;
 export type RequestIcon = (typeof REQUEST_ICONS)[number];
 
 interface RawRequest {
-  id: string; giver: string; titleKey: string; goalKey: string; trackKey: string;
-  targets: { id: string; spot: string; icon: RequestIcon; labelKey: string }[]; reward: RequestReward;
+  id: string; giver: string; after?: string; titleKey: string; goalKey: string; trackKey: string;
+  targets: { id: string; spot: string; icon: RequestIcon; labelKey: string; mia?: boolean }[]; reward: RequestReward;
 }
 
 /** Прапорець прохання: `req.nora-shore` + `taken` → `f.req-nora-shore-taken` (той самий формат у розмовах і в реєстрі). */
@@ -50,20 +50,30 @@ export function requestInteractions(rs: readonly RequestDef[] = REQUESTS): Recor
   return Object.fromEntries(rs.flatMap((r) => r.targets.map((t) => [t.spot, { grantId: `rw.${t.spot.replace(/\./g, '-')}`, moneyCents: 0, flags: [t.flag] }] as const)));
 }
 
-export type RequestStatus = 'available' | 'active' | 'ready' | 'done';
-export function requestStatus(flags: readonly string[], r: RequestDef): RequestStatus {
+/** `locked` (GAME-184): продовження арки, чия попередниця ще не здана — його не видно ні в «!», ні в розмові. */
+export type RequestStatus = 'locked' | 'available' | 'active' | 'ready' | 'done';
+export function requestStatus(flags: readonly string[], r: RequestDef, rs: readonly RequestDef[] = REQUESTS): RequestStatus {
   if (flags.includes(r.doneFlag)) return 'done';
+  const before = r.after === undefined ? undefined : rs.find((x) => x.id === r.after);
+  if (before && !flags.includes(before.doneFlag)) return 'locked';
   if (!flags.includes(r.takenFlag)) return 'available';
   return r.targets.every((t) => flags.includes(t.flag)) ? 'ready' : 'active';
 }
 
-export const requestOf = (npcId: string, rs: readonly RequestDef[] = REQUESTS): RequestDef | undefined => rs.find((r) => r.giver === npcId);
+/** Вузол розмови з пропозицією: перше прохання просильника — `offer`, його продовження (`after`) — `offer2` (GAME-184; дзеркало перевірки requests). */
+export const offerNodeOf = (r: RequestDef): string => (r.after === undefined ? 'offer' : 'offer2');
+/** Поточне прохання просильника: перше, що ще не здане й не заблоковане; усі здано — останнє. Без `flags` (старі виклики) — перше. */
+export function requestOf(npcId: string, rs: readonly RequestDef[] = REQUESTS, flags?: readonly string[]): RequestDef | undefined {
+  const mine = rs.filter((r) => r.giver === npcId);
+  if (flags === undefined) return mine[0];
+  return mine.find((r) => { const st = requestStatus(flags, r, rs); return st !== 'done' && st !== 'locked'; }) ?? mine[mine.length - 1];
+}
 
 /** Над просильником «!»: прохання можна взяти або вже можна здати. */
 export function requestMarker(g: GameState, npcId: string, rs: readonly RequestDef[] = REQUESTS): boolean {
-  const r = requestOf(npcId, rs);
+  const r = requestOf(npcId, rs, g.flags);
   if (!r || g.player?.locationId !== REQUEST_LOCATION) return false;
-  const s = requestStatus(g.flags, r);
+  const s = requestStatus(g.flags, r, rs);
   return s === 'available' || s === 'ready';
 }
 
@@ -83,7 +93,7 @@ export interface TrackerRow { readonly id: string; readonly trackKey: string; re
 export function trackerRows(g: GameState, rs: readonly RequestDef[] = REQUESTS): TrackerRow[] {
   if (g.player?.locationId !== REQUEST_LOCATION) return [];
   return rs.flatMap((r) => {
-    const s = requestStatus(g.flags, r);
+    const s = requestStatus(g.flags, r, rs);
     if (s !== 'active' && s !== 'ready') return [];
     return [{ id: r.id, trackKey: r.trackKey, done: r.targets.filter((t) => g.flags.includes(t.flag)).length, total: r.targets.length, ready: s === 'ready' }];
   });
@@ -93,7 +103,7 @@ export function trackerRows(g: GameState, rs: readonly RequestDef[] = REQUESTS):
 export function requestTarget(g: GameState, rs: readonly RequestDef[] = REQUESTS): string | null {
   if (g.player?.locationId !== REQUEST_LOCATION || g.dialogue !== null) return null;
   for (const r of rs) {
-    const s = requestStatus(g.flags, r);
+    const s = requestStatus(g.flags, r, rs);
     if (s === 'ready') return r.giver;
     if (s === 'active') return r.targets.find((t) => !g.flags.includes(t.flag))?.spot ?? null;
   }
@@ -105,3 +115,9 @@ export const requestsDone = (g: GameState, rs: readonly RequestDef[] = REQUESTS)
 
 /** Нагорода прохання (дані; видає ядро при здачі). */
 export const requestReward = (id: string, rs: readonly RequestDef[] = REQUESTS): RequestReward | null => rs.find((r) => r.id === id)?.reward ?? null;
+
+/** GAME-184: цілі, біля яких стоїть Мія, — лише коли гравець їде з кішкою й ціль жива (прохання взято, ціль не зроблена). Імена об'єктів мапи для сцени. */
+export function miaSpots(g: GameState, rs: readonly RequestDef[] = REQUESTS): string[] {
+  if (g.player?.animalId !== 'animal.cat' || g.player.locationId !== REQUEST_LOCATION) return [];
+  return rs.flatMap((r) => r.targets.filter((t) => t.mia === true && g.flags.includes(r.takenFlag) && !g.flags.includes(r.doneFlag) && !g.flags.includes(t.flag)).map((t) => t.spot));
+}
