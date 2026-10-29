@@ -9,6 +9,7 @@ import { t as tr, type AnyLang, type Key } from '../i18n';
 import { ct } from '../i18n/content';
 import { StoryPanel, money } from './StoryPanel';
 import { DaySummary } from './DaySummary';
+import { DialogueBox } from './DialogueBox';
 import { trapTab } from './focus-trap';
 import type { OfferSummary, StoryOffer } from './story-types';
 
@@ -28,6 +29,8 @@ export function Shell({ port, langOverride, credits, build, holdToast = false, h
   const [staleCode, setStaleCode] = useState<string | null>(null);
   // Екран подорожі (GAME-32): поки відкритий, світ на паузі — як і в меню паузи.
   const [storyOpen, setStoryOpen] = useState(false);
+  // Рамка розмови (GAME-179): розмова з NPC на мапі йде внизу екрана, а не екраном подорожі. Світ на паузі, поки вона відкрита.
+  const [talk, setTalk] = useState(false);
   const [offer, setOffer] = useState<StoryOffer>(() => port.story());
   useEffect(() => port.onStory(() => setOffer(port.story())), []);
   // Підсумок дня (GAME-106): з'являється, коли ДІЯ гравця завершила день (daysEnded зріс саме на ній), а не при завантаженні
@@ -40,6 +43,7 @@ export function Shell({ port, langOverride, credits, build, holdToast = false, h
     const after = port.story();
     if (after.daysEnded > before && after.summary) {
       setStoryOpen(false);   // екран подорожі ховається без відпускання паузи: підсумок тримає її далі
+      setTalk(false);        // так само рамка розмови: розмова привела до кінця дня
       setSummary(after.summary);
     }
   };
@@ -115,6 +119,24 @@ export function Shell({ port, langOverride, credits, build, holdToast = false, h
     port.setPaused(open);
   };
 
+  // GAME-179: заговорили з NPC на мапі. Ядро прийняло розмову — рамка внизу; не прийняло (NPC не тут, ще закритий) — екран подорожі, де видно чому.
+  useEffect(() => port.onTalk(() => {
+    if (paused || storyOpen || talk) return;
+    const now = port.story();
+    if (!now.dialogue) { story(true); return; }
+    acted();
+    setOffer(now);
+    setTalk(true);
+    port.setPaused(true);
+  }), [paused, storyOpen, talk]);
+  // Розмова скінчилась (остання репліка прийнята) — рамка зникає, світ іде далі.
+  useEffect(() => {
+    if (!talk || offer.dialogue) return;
+    setTalk(false);
+    port.setPaused(false);
+    focusStage();
+  }, [talk, offer]);
+
   // Розмова з NPC на мапі відкриває екран подорожі (якщо не відкрите меню паузи).
   useEffect(() => port.onOpenStory(() => { if (!paused && !storyOpen) story(true); }), [paused, storyOpen]);
 
@@ -134,12 +156,12 @@ export function Shell({ port, langOverride, credits, build, holdToast = false, h
     const onKey = (e: KeyboardEvent): void => {
       if (e.code !== 'Escape') return;
       e.preventDefault();
-      if (confirmNew || summary || storyOpen || paused) playUi('back');   // Escape закрив/скасував — «назад»; відкриття паузи звуку не має
-      if (confirmNew) setConfirmNew(false); else if (summary) summaryContinue(); else if (storyOpen) story(false); else toggle(!paused);
+      if (confirmNew || summary || talk || storyOpen || paused) playUi('back');   // Escape закрив/скасував — «назад»; відкриття паузи звуку не має
+      if (confirmNew) setConfirmNew(false); else if (summary) summaryContinue(); else if (talk) { setTalk(false); story(true); } else if (storyOpen) story(false); else toggle(!paused);
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [paused, storyOpen, confirmNew, summary]);
+  }, [paused, storyOpen, confirmNew, summary, talk]);
 
   // Фокус — у діалог, щоб клавіатура й екранний читач починали з «Продовжити».
   useEffect(() => {
@@ -172,10 +194,10 @@ export function Shell({ port, langOverride, credits, build, holdToast = false, h
 
   useEffect(() => {
     const trip = offer.lastTrip;
-    if (paused || storyOpen || summary || offer.stage === 'create' || trip === null || trip === settings.remindedTrip || remind?.trip === trip) return;
+    if (paused || storyOpen || talk || summary || offer.stage === 'create' || trip === null || trip === settings.remindedTrip || remind?.trip === trip) return;
     setRemind({ trip, state: 'ask', code: '' });
     update({ ...settings, remindedTrip: trip });
-  }, [paused, storyOpen, summary, offer, settings.remindedTrip]);
+  }, [paused, storyOpen, talk, summary, offer, settings.remindedTrip]);
   const copyCode = (): void => {
     void port.exportCode().then(async (code) => {
       try {
@@ -186,7 +208,7 @@ export function Shell({ port, langOverride, credits, build, holdToast = false, h
       }
     }).catch(() => setRemind((r) => r && { ...r, state: 'manual', code: '' }));   // код не зібрано — хоч не мовчимо
   };
-  const reminder = remind && remind.trip === offer.lastTrip && !paused && !storyOpen && !summary && (
+  const reminder = remind && remind.trip === offer.lastTrip && !paused && !storyOpen && !talk && !summary && (
     <div class="ui-reminder" data-ui="recovery-reminder" role="status">
       <span data-ui="recovery-text">{t(remind.state === 'done' ? 'ui.remind.done' : remind.state === 'manual' ? 'ui.remind.manual' : 'ui.remind.text')}</span>
       {remind.state === 'manual' && <textarea class="ui-code" data-ui="recovery-code" readOnly rows={2} aria-label={t('ui.exportCode')} value={remind.code}
@@ -211,13 +233,14 @@ export function Shell({ port, langOverride, credits, build, holdToast = false, h
   const hh = String(Math.floor(offer.timeMinutes / 60)).padStart(2, '0');
   const mm = String(offer.timeMinutes % 60).padStart(2, '0');
   const showHint = !settings.hintSeen && offer.stage === 'create';
+  const portrait = (id: string | null, sprite?: boolean) => port.portrait(id, sprite);
 
   return (
     <>
       {/* GAME-91: шапка — ☰ ліворуч, ‖ праворуч, текст (HUD) між ними. Усе в одному ряду потоку, а не абсолютом: кнопки
           ніколи не лежать на тексті, при 200 % текст переноситься в середній колонці. Під діалогом шапки немає: дані HUD є
           в самому діалозі, а схована смуга під ним збивала вимірювання контрасту (axe). */}
-      {!paused && !storyOpen && !summary && <header class="ui-header">
+      {!paused && !storyOpen && !talk && !summary && <header class="ui-header">
         <button type="button" class="ui-story-btn" data-hint={showHint || offer.stage === 'ended' ? 'yes' : undefined} data-touch="story" aria-label={t('ui.story')} onClick={() => story(true)}>{'☰'}</button>
         <div class="ui-hud" data-ui="hud" role="group" aria-label={t('ui.hud')}>
           <span data-ui="hud-place">{offer.locationKey ? ct(lang, offer.locationKey) : t('ui.noPlace')}</span>
@@ -252,7 +275,8 @@ export function Shell({ port, langOverride, credits, build, holdToast = false, h
         )}
         {reminder}
       </header>}
-      {storyOpen && <StoryPanel offer={offer} lang={lang} t={t} act={storyAct} close={() => story(false)}>{staleNotice}</StoryPanel>}
+      {storyOpen && <StoryPanel offer={offer} lang={lang} t={t} act={storyAct} close={() => story(false)} portrait={portrait}>{staleNotice}</StoryPanel>}
+      {talk && !paused && !storyOpen && !summary && offer.dialogue && <DialogueBox dialogue={offer.dialogue} lang={lang} t={t} act={storyAct} portrait={portrait} />}
       {summary && !paused && <DaySummary summary={summary} lang={lang} t={t} onContinue={summaryContinue} onEnd={summaryEnd} />}
       {paused && confirmNew && (
         <div class="ui-overlay" role="dialog" aria-modal="true" aria-label={t('ui.newGame')} data-ui="confirm-new" onKeyDown={(e) => trapTab(e, e.currentTarget)}>

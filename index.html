@@ -105,6 +105,43 @@
       .ui-answers { display: grid; gap: 8px; }
       .ui-journal { max-width: min(92vw, 640px); font-size: 0.7rem; text-align: left; }
       .ui-journal summary { list-style: none; display: inline-block; cursor: pointer; }
+      /* GAME-179: портрет (голова по плечі) і хто дав завдання / говорить — у панелі подорожі. Піксельні спрайти — без згладжування. */
+      .ui-portrait { display: block; flex: none; image-rendering: pixelated; border: 2px solid #1b1f23; border-radius: 6px; background: #4a5a63; box-sizing: border-box; }
+      .ui-portrait-icon { shape-rendering: crispEdges; }
+      .ui-portrait-sm { width: 40px; height: 40px; }
+      .ui-portrait-lg { width: 120px; height: 120px; }
+      .ui-giver { display: flex; align-items: center; gap: 10px; margin: 0 0 6px; font-size: 0.75rem; color: #cfcbc7; text-align: left; }
+      .ui-giver h3 { margin: 0; }
+      /* GAME-179: рамка розмови внизу екрана (Stardew Valley / Eastward). Нижній край і боки — з урахуванням вирізів (--edge-*); мапа над рамкою лишається видно.
+         Рамка — непрозора й ВИЩА за дотикові кнопки (джойстик, дія): під час розмови вони не потрібні, і дотик у них не влучає. */
+      .ui-talk { position: absolute; inset: 0; z-index: 30; display: flex; align-items: flex-end; justify-content: center; pointer-events: none; box-sizing: border-box;
+        padding: 0 var(--edge-right) var(--edge-bottom) var(--edge-left); font-family: 'CampPixel', system-ui, sans-serif; color: #f4f1e8; text-align: left; }
+      .ui-talk-box { pointer-events: auto; position: relative; display: flex; align-items: flex-start; gap: 14px; width: min(100%, 780px); max-height: min(64%, 100%); box-sizing: border-box;
+        padding: 22px 14px 14px; border: 3px solid #f1d9a0; border-radius: 10px; background: #2a2f35; box-shadow: 0 0 0 3px #1b1f23, 0 6px 0 3px #0009; cursor: pointer; }
+      .ui-talk-box .ui-portrait-lg { box-shadow: 0 0 0 2px #f1d9a0; margin-top: 2px; }
+      /* Табличка з іменем лежить на верхній рамці, праворуч від портрета — як у Stardew. */
+      .ui-talk-name { position: absolute; top: -17px; left: 150px; margin: 0; max-width: calc(100% - 170px); padding: 4px 12px; border: 3px solid #1b1f23; border-radius: 6px; background: #ffd54a; color: #1b1f23;
+        font-size: 0.8rem; line-height: 1.3; overflow-wrap: anywhere; }
+      .ui-talk-main { flex: 1 1 0; min-width: 0; align-self: stretch; display: flex; flex-direction: column; gap: 10px; overflow-y: auto; max-height: 100%; }
+      .ui-talk-line { margin: 0; font-size: 0.8rem; line-height: 1.75; outline-offset: 4px; overflow-wrap: anywhere; }
+      .ui-talk-line:focus { outline: none; }
+      /* Ще не надруковане — на місці, але невидиме: рамка не стрибає, поки рядок дописується, а читач і тест бачать увесь текст. */
+      .ui-ghost { opacity: 0; }
+      .ui-talk-answers { display: grid; gap: 6px; justify-items: stretch; }
+      .ui-talk-answers .ui-btn { text-align: left; min-height: 44px; padding: 6px 12px; max-width: 100%; font-size: 0.75rem; line-height: 1.5; }
+      .ui-talk-answers .ui-btn[data-act="continue"] { justify-self: end; text-align: center; min-width: 120px; }
+      .ui-talk-answers .ui-btn[data-act="continue"]::before { content: '\25BC  '; }
+      .ui-talk-answers .ui-btn:focus-visible { outline: 3px solid #ffd54a; outline-offset: 2px; }
+      /* Телефон вбік (844×390): рамка низька, портрет менший (80 = ×2 від обрізка 40 px), відповіді в два стовпці. */
+      @media (max-height: 500px) {
+        .ui-talk-box { gap: 10px; padding: 18px 10px 10px; max-height: 78%; }
+        .ui-portrait-lg { width: 80px; height: 80px; }
+        .ui-talk-name { left: 108px; max-width: calc(100% - 128px); font-size: 0.7rem; padding: 3px 10px; }
+        .ui-talk-line { font-size: 0.72rem; line-height: 1.6; }
+        .ui-talk-main { gap: 6px; }
+        .ui-talk-answers { grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
+      }
+      @media (min-width: 900px) and (min-height: 700px) { .ui-portrait-lg { width: 160px; height: 160px; } .ui-talk-name { left: 190px; } .ui-talk-line { font-size: 0.9rem; } }
       .ui-overlay h2 { margin: 0 0 8px; font-size: 1.5rem; }
       .ui-overlay fieldset { border: 1px solid #e8e6e355; border-radius: 8px; display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; max-width: min(92vw, 640px); }
       /* GAME-40: повзунки гучності — ціль дотику ≥ 44×44 (world.spec «кожна ціль … ≥ 44×44»). */

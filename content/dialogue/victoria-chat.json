@@ -1,0 +1,18 @@
+{
+  "id": "dlg.victoria-chat",
+  "npcId": "npc.victoria",
+  "start": "hello",
+  "nodes": [
+    {
+      "id": "hello", "speaker": "npc", "textKey": "dlg.victoria-chat.hello",
+      "choices": [
+        { "textKey": "dlg.victoria-chat.hello.c1", "next": "a" },
+        { "textKey": "dlg.victoria-chat.hello.c2", "next": "b" },
+        { "textKey": "dlg.victoria-chat.hello.c3", "next": "bye" }
+      ]
+    },
+    { "id": "a", "speaker": "npc", "textKey": "dlg.victoria-chat.a", "end": true },
+    { "id": "b", "speaker": "npc", "textKey": "dlg.victoria-chat.b", "end": true },
+    { "id": "bye", "speaker": "npc", "textKey": "dlg.victoria-chat.bye", "end": true }
+  ]
+}

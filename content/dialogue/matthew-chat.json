@@ -1,0 +1,18 @@
+{
+  "id": "dlg.matthew-chat",
+  "npcId": "npc.matthew",
+  "start": "hello",
+  "nodes": [
+    {
+      "id": "hello", "speaker": "npc", "textKey": "dlg.matthew-chat.hello",
+      "choices": [
+        { "textKey": "dlg.matthew-chat.hello.c1", "next": "a" },
+        { "textKey": "dlg.matthew-chat.hello.c2", "next": "b" },
+        { "textKey": "dlg.matthew-chat.hello.c3", "next": "bye" }
+      ]
+    },
+    { "id": "a", "speaker": "npc", "textKey": "dlg.matthew-chat.a", "end": true },
+    { "id": "b", "speaker": "npc", "textKey": "dlg.matthew-chat.b", "end": true },
+    { "id": "bye", "speaker": "npc", "textKey": "dlg.matthew-chat.bye", "end": true }
+  ]
+}

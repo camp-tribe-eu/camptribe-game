@@ -57,7 +57,8 @@ const mutations = [
   { name: 'обмеження транспорту тварини ігнорується', file: COMBOS_FILE, from: "if (allows('animals', animal, transport)) out.push", to: 'out.push' },
   { name: 'when без жодної дозволеної комбінації пропускається', file: COMBOS_FILE, from: "if (!all.some((k) => matches(w, k) && matches(parent, k))) out.push", to: 'if (false) out.push' },
   { name: 'умова квесту не успадковується ціллю', file: COMBOS_FILE, from: '&& matches(parent, k)', to: '' },
-  { name: 'combo-options біжить і на брудному контенті', file: CHECKS_FILE, from: "const LATE = ['combo-options', 'combos'];", to: "const LATE = ['combos'];" },
+  { name: 'combo-options біжить і на брудному контенті', file: CHECKS_FILE, from: "const LATE = ['combo-options', 'combos', 'npc-has-dialogue'];", to: "const LATE = ['combos', 'npc-has-dialogue'];" },
+  { name: 'npc-has-dialogue біжить і на брудному контенті (GAME-179)', file: CHECKS_FILE, from: "const LATE = ['combo-options', 'combos', 'npc-has-dialogue'];", to: "const LATE = ['combo-options', 'combos'];" },
   // GAME-70: сторож довжини реплік — межі й вимкнення розбору
   { name: '[репліка] нижня межа вимкнена', file: CHECKS_FILE, from: 'sl.words < LINE_MIN_WORDS || ', to: '' },
   { name: '[репліка] верхня межа вимкнена', file: CHECKS_FILE, from: ' || sl.words > LINE_MAX_WORDS', to: '' },

@@ -274,7 +274,7 @@ export function storyOffer(sim: SimState, defs: CoreDefs, view: StoryView = PANE
   const p = s.player;
   const quests = Object.entries(s.quests).filter(([, q]) => q.status === 'active').map(([qid, q]) => {
     const def = st.quests[qid];
-    const raw = CONTENT.quests.find((x) => x.id === qid) as { objectives: { id: string; textKey?: string; gearCheck?: boolean }[] } | undefined;
+    const raw = CONTENT.quests.find((x) => x.id === qid) as { giverId?: string; objectives: { id: string; textKey?: string; gearCheck?: boolean }[] } | undefined;
     const objectives = (def?.objectives ?? [])
       .filter((o) => matches(o.when, p))
       .map((o) => ({
@@ -282,7 +282,8 @@ export function storyOffer(sim: SimState, defs: CoreDefs, view: StoryView = PANE
         required: o.required,
         done: o.kind === 'collect' ? (s.inventory[o.target] ?? 0) >= 1 : q.done.includes(o.id),
       }));
-    return { key: nameKey(qid) ?? qid, objectives };
+    // GAME-179: хто дав завдання (портрет і ім'я в панелі); завдання без giverId — від оповідача (нейтральна іконка).
+    return { key: nameKey(qid) ?? qid, objectives, giver: raw?.giverId ? { id: raw.giverId, key: nameKey(raw.giverId) } : null };
   });
 
   const offered: OfferAction[] = [];
@@ -313,7 +314,9 @@ export function storyOffer(sim: SimState, defs: CoreDefs, view: StoryView = PANE
     const npcId = st.dialogues[s.dialogue.id]?.npcId;
     // Розмова з NPC — його ім'я; подія в дорозі — її назва.
     const speakerKey = npcId === undefined ? nameKey(s.dialogue.id) : node?.speaker === 'npc' ? nameKey(npcId) : null;
-    dialogue = { speakerKey, key: node?.textKey ?? null, answers: offered };
+    // GAME-179: хто говорить — для портрета. Репліка гравця — 'player' (його голова), подія в дорозі й сцена без NPC — оповідач (null).
+    const speakerId = npcId === undefined ? null : node?.speaker === 'npc' ? npcId : 'player';
+    dialogue = { speakerKey, speakerId, key: node?.textKey ?? null, answers: offered };
   }
 
   return {

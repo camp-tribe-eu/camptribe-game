@@ -1,0 +1,18 @@
+{
+  "id": "dlg.ingrid-chat",
+  "npcId": "npc.ingrid",
+  "start": "hello",
+  "nodes": [
+    {
+      "id": "hello", "speaker": "npc", "textKey": "dlg.ingrid-chat.hello",
+      "choices": [
+        { "textKey": "dlg.ingrid-chat.hello.c1", "next": "a" },
+        { "textKey": "dlg.ingrid-chat.hello.c2", "next": "b" },
+        { "textKey": "dlg.ingrid-chat.hello.c3", "next": "bye" }
+      ]
+    },
+    { "id": "a", "speaker": "npc", "textKey": "dlg.ingrid-chat.a", "end": true },
+    { "id": "b", "speaker": "npc", "textKey": "dlg.ingrid-chat.b", "end": true },
+    { "id": "bye", "speaker": "npc", "textKey": "dlg.ingrid-chat.bye", "end": true }
+  ]
+}

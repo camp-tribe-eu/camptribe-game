@@ -1,0 +1,18 @@
+{
+  "id": "dlg.sarah-chat",
+  "npcId": "npc.sarah",
+  "start": "hello",
+  "nodes": [
+    {
+      "id": "hello", "speaker": "npc", "textKey": "dlg.sarah-chat.hello",
+      "choices": [
+        { "textKey": "dlg.sarah-chat.hello.c1", "next": "a" },
+        { "textKey": "dlg.sarah-chat.hello.c2", "next": "b" },
+        { "textKey": "dlg.sarah-chat.hello.c3", "next": "bye" }
+      ]
+    },
+    { "id": "a", "speaker": "npc", "textKey": "dlg.sarah-chat.a", "end": true },
+    { "id": "b", "speaker": "npc", "textKey": "dlg.sarah-chat.b", "end": true },
+    { "id": "bye", "speaker": "npc", "textKey": "dlg.sarah-chat.bye", "end": true }
+  ]
+}
