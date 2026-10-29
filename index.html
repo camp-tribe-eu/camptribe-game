@@ -214,7 +214,9 @@
           grid-template-columns: auto minmax(0, 1fr) auto auto; row-gap: 8px; column-gap: 8px; }
         .ui-header button { pointer-events: auto; }
         /* GAME-94: рядок нагадування лежить усередині шапки — без цього поле з кодом (запас) не можна було б торкнутися. */
-        .ui-reminder { pointer-events: auto; }
+        /* GAME-181: шапка вбік стала вищою (ціль + «Далі» — ряди сітки), тож рядок нагадування лежить нижче й міг накрити місце, де гравець кладе палець на джойстик (game-170-slice3). Сам рядок дотику не ловить — лише кнопки й поле коду. */
+        .ui-reminder { pointer-events: none; }
+        .ui-reminder button, .ui-reminder textarea { pointer-events: auto; }
         .ui-story-btn { grid-area: 1 / 1; }
         .ui-hud { grid-area: 1 / 3; align-self: center; align-items: flex-end; text-align: right; min-height: 0; padding: 4px 10px; border-radius: 8px; background: #1b1f23d9; }
         /* Назву місця сховано лише з екрана — скрінрідер її читає (рецензія PR #53). */
