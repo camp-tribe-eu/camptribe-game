@@ -239,13 +239,13 @@
         .ui-story-btn, .ui-pause-btn { background: #000000aa; }
         /* Тост-підказка — ліворуч від рамки. */
         .ui-toast { left: auto; right: calc(100% + 8px); top: 0; width: max-content; max-width: 40vw; padding: 4px 8px; border-radius: 8px; }
-        /* Картка мети вбік: другий ряд ліворуч (під ☰), ‖ лишається праворуч у тому ж ряду; дотики проходять крізь неї на поле. */
-        .ui-wave { grid-area: 2 / 1 / 3 / 3; justify-self: start; max-width: 70vw; margin-top: 0; background: #1b1f23d9; pointer-events: none; }
-        .ui-next { position: static; grid-area: 5 / 1 / 6 / 3; justify-self: start; max-width: 70vw; margin-top: 0; background: #1b1f23d9; }
-        /* GAME-181: смуга вбік розчиняється в сітці шапки: ціль — третій ряд ліворуч (під карткою мети), «Далі» — четвертий. */
-        .ui-strip { display: contents; }
-        .ui-goal { grid-area: 3 / 1 / 4 / 3; justify-self: start; max-width: 70vw; background: #1b1f23d9; }
-        .ui-reqs { grid-area: 4 / 1 / 5 / 3; justify-self: start; max-width: 70vw; background: #1b1f23d9; }
+        /* GAME-185: вбік HUD не лежить на героєві й родині. Верхній ряд — ☰ · картка мети · час і гроші · ‖ (один ряд 44 px замість стовпчика з п'яти); ціль, прохання й «Далі: …» —
+           смугою внизу по центру, між джойстиком і кнопкою дії (там поле зазвичай порожнє; герой і родина стоять посередині висоти). Дотики проходять крізь них на поле. */
+        .ui-wave { grid-area: 1 / 2 / 2 / 3; justify-self: start; align-self: center; max-width: 100%; margin-top: 0; background: #1b1f23d9; pointer-events: none; }
+        .ui-strip { position: fixed; top: auto; margin: 0; left: var(--edge-left); right: var(--edge-right); bottom: calc(var(--edge-bottom) + 4px); align-items: center; }
+        @media (any-pointer: coarse) { .ui-strip { left: calc(var(--edge-left) + var(--stick-size) + 16px); right: calc(var(--edge-right) + var(--action-size) + 16px); } }
+        .ui-strip > * { max-width: 100%; background: #1b1f23d9; }
+        .ui-strip .ui-next { max-width: 100%; }
       }
       /* GAME-182: вступ (дощовий вечір) і Атлас. Вступ — на весь екран, над усім (рамка розмови всередині нього — ті самі .ui-talk-*). Дощ — лише градієнтні смужки, що повільно
          зсуваються; «менше руху» (нижче) їх зупиняє. Книжка вгорі й лист — піксельні, без файлів. Сторінка Атласу — сітка 4×4: 12 слотів і печатка 2×2 в центрі. */

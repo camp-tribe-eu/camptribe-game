@@ -191,6 +191,8 @@ function vehicleMoves(g: GameState, defs: CoreDefs): { moves: Move[]; options?: 
   }
   if (p.locationId === MAP_LOCATION.road) {
     // Дорога: приїхали на місце — квест веде до табору (ST-005) чи додому (CH1-D3-HOME-001) і більше нікуди; інакше вибір із відкритих.
+    // GAME-185: поки активний ST-004, авто везе ВПЕРЕД: завершує «У дорогу» й їде до табору (назад — дім чи крамниця — губить хвилю: там вибору немає).
+    if (active(g, 'ST-004') && chain(g, defs, [{ type: 'CompleteQuest', questId: 'ST-004' }, { type: 'Visit', locationId: MAP_LOCATION.camp }])) return { moves: [{ type: 'CompleteQuest', questId: 'ST-004' }, { type: 'Visit', locationId: MAP_LOCATION.camp }] };
     const lead = active(g, 'ST-005') ? MAP_LOCATION.camp : active(g, 'CH1-D3-HOME-001') ? MAP_LOCATION.home : null;
     const m: Move | null = lead === null ? null : { type: 'Visit', locationId: lead };
     if (m && accepted(g, defs, m)) return { moves: [m] };
@@ -249,7 +251,12 @@ function compute(sim: SimState, defs: CoreDefs, name: string): Resolved | null {
     // Ядро звіряє строк за годинником симуляції (`now`): без нього CompleteTask — INVALID_COMMAND.
     return t !== undefined && t.outcome === 'open' && sim.clock.minutes <= t.dueAt && dispatch(g, asCommand(g, m), defs, undefined, undefined, undefined, sim.clock.minutes).ok ? { moves: [m] } : null;
   }
-  if (name === 'obj.buy') return choice(acceptedOf(g, defs, Object.keys(defs.items).flatMap((itemId): Move[] => [{ type: 'BuyItem', itemId }, { type: 'SellItem', itemId }])));
+  if (name === 'obj.buy') {
+    // GAME-185: прилавок ЗАВЖДИ питає «Що беремо?» (навіть з одним варіантом) і живий, поки є що купити хоч би й на недостатні гроші: недоступні рядки з причиною додає storyOffer.
+    const list = acceptedOf(g, defs, Object.keys(defs.items).flatMap((itemId): Move[] => [{ type: 'BuyItem', itemId }, { type: 'SellItem', itemId }]));
+    const short = Object.keys(defs.items).some((itemId) => { const r = dispatch(g, asCommand(g, { type: 'BuyItem', itemId }), defs); return !r.ok && r.code === 'INSUFFICIENT_FUNDS'; });
+    return list.length === 0 && !short ? null : { moves: [], options: list };
+  }
   if (name === 'obj.drying') return choice(acceptedOf(g, defs, Object.entries(g.gear).filter(([, x]) => x.wet).map(([itemId]): Move => ({ type: 'DryGear', itemId }))));
   if (name === 'obj.sell') return choice(acceptedOf(g, defs, Object.keys(defs.items).map((itemId): Move => ({ type: 'SellItem', itemId }))));
   if (name.startsWith(SPOT_PREFIX.take)) {

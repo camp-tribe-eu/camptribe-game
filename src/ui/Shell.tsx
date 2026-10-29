@@ -176,7 +176,7 @@ export function Shell({ port, langOverride, credits, build, holdToast = false, h
       e.preventDefault();
       if (atlasOpen) { playUi('back'); closeAtlas(); return; }
       if (confirmNew || summary || talk || storyOpen || paused) playUi('back');   // Escape закрив/скасував — «назад»; відкриття паузи звуку не має
-      if (confirmNew) setConfirmNew(false); else if (summary) summaryContinue(); else if (talk) { if (offer.dialogue?.ui) storyAct(offer.dialogue.answers.find((a) => a.kind === 'cancel')?.id ?? ''); else { setTalk(false); story(true); } } else if (storyOpen) story(false); else toggle(!paused);
+      if (confirmNew) setConfirmNew(false); else if (summary) summaryContinue(); else if (talk) { if (offer.dialogue?.ui) storyAct(offer.dialogue.answers.find((a) => a.kind === 'cancel')?.id ?? ''); else if (!offer.mapFirst) { setTalk(false); story(true); } /* GAME-185: у мапі-першій Escape не відкриває ☰ з відповідями розмови — рамка лишається */ } else if (storyOpen) story(false); else toggle(!paused);
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
@@ -326,7 +326,7 @@ export function Shell({ port, langOverride, credits, build, holdToast = false, h
           <span>{ct(lang, `title.${titleUp.index + 1}.family`)}</span>
         </div>
       )}
-      {storyOpen && <StoryPanel offer={offer} lang={lang} t={t} act={storyAct} close={() => story(false)} portrait={portrait} footer={offer.stage !== 'create' && <button type="button" class="ui-btn" data-ui="atlas-open" onClick={openAtlas}>{`${t('ui.atlas')}: ${offer.atlas.count}/${offer.atlas.total}`}</button>}>{staleNotice}</StoryPanel>}
+      {storyOpen && <StoryPanel offer={offer} lang={lang} t={t} act={storyAct} close={() => story(false)} portrait={portrait} settings={() => { setStoryOpen(false); toggle(true); }} footer={offer.stage !== 'create' && <button type="button" class="ui-btn" data-ui="atlas-open" onClick={openAtlas}>{`${t('ui.atlas')}: ${offer.atlas.count}/${offer.atlas.total}`}</button>}>{staleNotice}</StoryPanel>}
       {atlasOpen && <AtlasPanel atlas={offer.atlas} lang={lang} t={t} close={closeAtlas} />}
       {intro && <Intro offer={offer} lang={lang} t={t} act={storyAct} portrait={portrait} onDone={endIntro} />}
       {talk && !paused && !storyOpen && !summary && offer.dialogue && <DialogueBox dialogue={offer.dialogue} lang={lang} t={t} act={storyAct} portrait={portrait} />}

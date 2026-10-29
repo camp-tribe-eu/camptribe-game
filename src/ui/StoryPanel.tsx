@@ -1,7 +1,7 @@
 // Екран подорожі (GAME-32): вибір персонажа, завдання, розмова, дії й журнал. Лише показує знімок
 // сюжету й просить дію за id — що це за команда, знає шар view (src/view/story-offer.ts).
 import type { ComponentChildren } from 'preact';
-import { useEffect, useRef } from 'preact/hooks';
+import { useEffect, useRef, useState } from 'preact/hooks';
 import { ct } from '../i18n/content';
 import type { AnyLang, Key } from '../i18n';
 import { trapTab } from './focus-trap';
@@ -55,8 +55,13 @@ export function actionLabel(lang: AnyLang, t: (k: Key) => string, a: OfferAction
   return `${t(ACT[a.kind])} ${ct(lang, a.key)}${extras.length ? ` (${extras.join(', ')})` : ''}`;
 }
 
-export function StoryPanel({ offer, lang, t, act, close, portrait, children, footer }: { offer: StoryOffer; lang: AnyLang; t: (k: Key) => string; act: (id: string) => void; close: () => void; portrait: PortraitLookup; children?: ComponentChildren; footer?: ComponentChildren }) {
+export function StoryPanel({ offer, lang, t, act, close, portrait, children, footer, settings }: { offer: StoryOffer; lang: AnyLang; t: (k: Key) => string; act: (id: string) => void; close: () => void; portrait: PortraitLookup; children?: ComponentChildren; settings?: () => void; footer?: ComponentChildren }) {
   const root = useRef<HTMLDivElement>(null);
+  // GAME-185: у мапі-першій грі ☰ — лише меню; квести, навички, речі й журнал — на екрані «Журнал» (page === 'journal').
+  const [page, setPage] = useState<'menu' | 'journal'>('menu');
+  const compact = offer.mapFirst && offer.stage !== 'create';
+  const showRest = !compact || page === 'journal';   // квести, прогрес, навички, речі, журнал
+
   // GAME-80: після дії кнопки перебудовуються, і друге натискання (дотик чи Enter) через ~150 мс влучало б
   // в нову першу кнопку — дорогу покупку чи дорогу додому. Тому: (а) фокус після зміни йде на СТАБІЛЬНИЙ
   // рядок стану (де ти, гроші, погода), а не на кнопку; (б) панель ігнорує активації ще ACT_COOLDOWN_MS
@@ -68,7 +73,7 @@ export function StoryPanel({ offer, lang, t, act, close, portrait, children, foo
     // а панель повертається на початок — гравець бачить заголовок, де він і що змінилось.
     (el?.querySelector<HTMLElement>('[data-ui="where"]') ?? el?.querySelector<HTMLElement>('h2'))?.focus({ preventScroll: true });
     if (el) el.scrollTop = 0;
-  }, [offer]);
+  }, [offer, page]);
   const guarded = (id: string) => (e: Event): void => {
     if (e.timeStamp - lastAct.current < ACT_COOLDOWN_MS) return;
     lastAct.current = e.timeStamp;
@@ -90,7 +95,7 @@ export function StoryPanel({ offer, lang, t, act, close, portrait, children, foo
     // Затиснутий Enter/Space (автоповтор) не «пробігає» кроки: фокус після кожної дії стрибає на нову першу
     // кнопку, і повтор клавіші влучав би вже в неї (рецензія GAME-32). Свідомі натискання — без затримки.
     <div ref={root} onKeyDown={(e) => { if (e.repeat && (e.key === 'Enter' || e.key === ' ')) e.preventDefault(); if (root.current) trapTab(e, root.current); }} class="ui-overlay ui-story" role="dialog" aria-modal="true" aria-label={t('ui.story')} data-ui="story">
-      <h2 tabIndex={-1}>{t('ui.story')}</h2>
+      <h2 tabIndex={-1}>{compact && page === 'journal' ? t('ui.journal') : t('ui.story')}</h2>
       {children}
       {offer.stage === 'create' && (
         <fieldset data-ui="create">
@@ -105,19 +110,19 @@ export function StoryPanel({ offer, lang, t, act, close, portrait, children, foo
       {offer.stage !== 'create' && (
         <p class="ui-status" data-ui="where" tabIndex={-1} role="status" data-weather={offer.weather}>{`${t('ui.here')}: ${ct(lang, offer.locationKey)} · ${t('ui.money')}: ${money(lang, offer.moneyCents)} · ${t('ui.weather')}: ${t(WX[offer.weather])}`}</p>
       )}
-      {offer.stage !== 'create' && (
+      {offer.stage !== 'create' && showRest && (
         // GAME-169: прогноз на сьогодні (GAME-131) — окремим рядком від факту й зі словом «прогноз»: він може не збутись,
         // і гравець має бачити обидва. Та сама лексика підписів, що й у погоди (WX). Не кнопка — без цілі 44 px.
         <p class="ui-status" data-ui="forecast" data-forecast={offer.forecast} data-hit={offer.forecast === offer.weather ? 'yes' : 'no'}>{`${t('ui.forecast.today')}: ${t(WX[offer.forecast])}`}</p>
       )}
-      {offer.stage !== 'create' && offer.mia && (
+      {offer.stage !== 'create' && showRest && offer.mia && (
         // GAME-111: Мія — два текстові стани й жодного числа чи шкали (сторож DOM: tests/e2e/game-111.spec.ts).
         <section class="ui-mia" data-ui="mia" data-state={offer.mia} aria-label={t('ui.mia')}>
           <h3>{t('ui.mia')}</h3>
           <p data-ui="mia-state" role="status">{t(offer.mia === 'pause' ? 'ui.mia.pause' : 'ui.mia.settled')}</p>
         </section>
       )}
-      {offer.stage !== 'create' && (
+      {offer.stage !== 'create' && showRest && (
         // GAME-181: звання, XP й ОМ — один рядок і смужка до наступного звання. ОМ — лише на косметику (крамниця пізніше); гроші (€) окремо, у рядку вище.
         <section class="ui-progress" data-ui="progress" data-xp={offer.progress.xp} data-om={offer.progress.om} data-title={offer.progress.title.index + 1} aria-label={t('ui.progress')}>
           <p class="ui-status" data-ui="title">{`${t('ui.title')}: ${ct(lang, offer.progress.title.key)} · ${offer.progress.xp} ${t('ui.xp')} · ${offer.progress.om} ${t('ui.om')}`}</p>
@@ -127,7 +132,7 @@ export function StoryPanel({ offer, lang, t, act, close, portrait, children, foo
         </section>
       )}
       {offer.stage === 'ended' && <p class="ui-status" data-ui="ended" role="status">{t('ui.ended')}</p>}
-      {offer.quests.map((q) => (
+      {showRest && offer.quests.map((q) => (
         <section class="ui-quest" data-ui="quest" key={q.key}>
           {/* GAME-179: від кого завдання — портрет і ім'я; без giverId — оповідач (нейтральна іконка). */}
           <div class="ui-giver" data-ui="giver" data-npc={q.giver?.id ?? 'narrator'}>
@@ -144,7 +149,7 @@ export function StoryPanel({ offer, lang, t, act, close, portrait, children, foo
           </ul>
         </section>
       ))}
-      {offer.dialogue && (
+      {offer.dialogue && !compact && (
         <section class="ui-dialogue" data-ui="dialogue" aria-live="polite">
           <div class="ui-giver" data-ui="speaker-head" data-npc={offer.dialogue.speakerId ?? 'narrator'}>
             <Portrait id={offer.dialogue.speakerId} lookup={portrait} size="sm" />
@@ -154,7 +159,7 @@ export function StoryPanel({ offer, lang, t, act, close, portrait, children, foo
           <div class="ui-answers">{offer.dialogue.answers.map(button)}</div>
         </section>
       )}
-      {offer.packing && !offer.dialogue && (
+      {offer.packing && !offer.dialogue && !compact && (
         <fieldset data-ui="packing">
           <legend>{t('pack.title')}</legend>
           <p class="ui-status" data-ui="pack-space" data-used={offer.packing.used} data-capacity={offer.packing.capacity} role="status">
@@ -176,14 +181,14 @@ export function StoryPanel({ offer, lang, t, act, close, portrait, children, foo
           {offer.packing.noteKey && <p class="ui-status" data-ui="pack-note">{ct(lang, offer.packing.noteKey)}</p>}
         </fieldset>
       )}
-      {(offer.actions.length > 0 || offer.locked.length > 0) && (
+      {!compact && (offer.actions.length > 0 || offer.locked.length > 0) && (
         <fieldset data-ui="actions">
           <legend>{t('ui.actions')}</legend>
           {offer.actions.map(button)}
           {!offer.dialogue && offer.locked.map(lockedButton)}
         </fieldset>
       )}
-      {offer.inventory.length > 0 && (
+      {showRest && offer.inventory.length > 0 && (
         <p class="ui-status" data-ui="inventory">{`${t('ui.inventory')}: `}
           {offer.inventory.map((i, n) => (
             // Спорядження — зі станом і позначкою «мокре» (GAME-83); решта речей — як і було.
@@ -194,7 +199,7 @@ export function StoryPanel({ offer, lang, t, act, close, portrait, children, foo
           ))}
         </p>
       )}
-      {offer.stage !== 'create' && (
+      {offer.stage !== 'create' && showRest && (
         // GAME-181: вісім навичок — ранг (назва з контенту), смужка до наступного рангу й що відкриє наступний. З рангу 3 практика далі не веде: наступний ранг — урок наставника.
         <section class="ui-skills" data-ui="skills" aria-label={t('ui.skills')}>
           <h3>{t('ui.skills')}</h3>
@@ -214,13 +219,26 @@ export function StoryPanel({ offer, lang, t, act, close, portrait, children, foo
           </ul>
         </section>
       )}
-      <details class="ui-journal" data-ui="journal">
+      {compact && page === 'journal' && (
+        <section class="ui-journal" data-ui="journal-log" aria-label={t('ui.journal')}>
+          {offer.journal.length === 0
+            ? <p>{t('ui.journalEmpty')}</p>
+            : <ol>{offer.journal.map((e, i) => <li key={i} data-type={e.type}>{`${t(JR[e.type] ?? 'ui.journal')}${e.key ? `: ${ct(lang, e.key)}` : ''}`}</li>)}</ol>}
+        </section>
+      )}
+      {!compact && <details class="ui-journal" data-ui="journal">
         <summary class="ui-btn">{t('ui.journal')}</summary>
         {offer.journal.length === 0
           ? <p>{t('ui.journalEmpty')}</p>
           : <ol>{offer.journal.map((e, i) => <li key={i} data-type={e.type}>{`${t(JR[e.type] ?? 'ui.journal')}${e.key ? `: ${ct(lang, e.key)}` : ''}`}</li>)}</ol>}
-      </details>
-      {footer}
+      </details>}
+      {compact && page === 'menu' && <>
+        {footer}
+        <button type="button" class="ui-btn" data-ui="journal" onClick={() => setPage('journal')}>{t('ui.journal')}</button>
+        {settings && <button type="button" class="ui-btn" data-ui="settings-open" onClick={settings}>{t('ui.settingsOpen')}</button>}
+      </>}
+      {!compact && footer}
+      {compact && page === 'journal' && <button type="button" class="ui-btn" data-ui="journal-back" onClick={() => setPage('menu')}>{t('ui.journalBack')}</button>}
       <button type="button" class="ui-btn" data-ui="story-close" onClick={close}>{t('ui.storyClose')}</button>
     </div>
   );
