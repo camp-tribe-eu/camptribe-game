@@ -15,9 +15,6 @@ export interface OfferAction {
   readonly shortCents?: number;
 }
 
-/** id відповіді «Не зараз» у рамці вибору дії на мапі (GAME-183): команди не має — гра лише закриває рамку. */
-export const CHOICE_CANCEL_ID = 'choice|cancel';
-
 export interface OfferCharacter {
   readonly id: string;
   readonly profileKey: string;

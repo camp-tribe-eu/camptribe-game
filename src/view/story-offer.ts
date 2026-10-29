@@ -27,7 +27,7 @@ import { CONTENT, memorableFacts } from '../content/story';
 import { moves, progressKey, type Move } from '../content/moves';
 import items from '../../content/items.json';
 import { daySummary, daysEnded, NIGHT_PREFIX } from '../core/day-summary';
-import { CHOICE_CANCEL_ID, type OfferAction, type OfferAtlas, type OfferCharacter, type OfferPacking, type OfferProgress, type OfferSummary, type OfferWave, type StoryOffer } from '../ui/story-types';
+import { type OfferAction, type OfferAtlas, type OfferCharacter, type OfferPacking, type OfferProgress, type OfferSummary, type OfferWave, type StoryOffer } from '../ui/story-types';
 import { RAW_WAVES } from '../content/waves';
 import { menuTasks } from '../content/director';
 import { coveredKeys, moveKey, nextTarget, resolveSpot, spotLabel } from '../content/map-first';
@@ -294,6 +294,8 @@ export interface StoryView {
   readonly choice?: string | null;
 }
 /** Питання рамки вибору за об'єктом (ключі UI). */
+/** id відповіді «Не зараз» у рамці вибору дії на мапі (GAME-183): команди не має — гра лише закриває рамку. */
+export const CHOICE_CANCEL_ID = 'choice|cancel';
 export const choicePrompt = (spot: string): Key => (spot === 'obj.vehicle' ? 'choice.where' : spot === 'obj.drying' ? 'choice.dry' : spot === 'obj.sell' ? 'choice.sell' : 'choice.step');
 export const PANEL_VIEW: StoryView = { mapFirst: false, trunk: true, near: null };
 const NO_KEYS: ReadonlySet<string> = new Set();

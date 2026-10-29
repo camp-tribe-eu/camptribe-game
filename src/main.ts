@@ -19,10 +19,10 @@ import { WorldScene, type WorldHooks, type WorldProbe } from './view/world/scene
 import { loadWorldArt } from './view/world/art';
 import { mountTouchControls, setActionTarget } from './view/world/touch';
 import { frameSize } from './view/world/frame';
-import { storyOffer, type StoryView } from './view/story-offer';
+import { CHOICE_CANCEL_ID, storyOffer, type StoryView } from './view/story-offer';
 import { testSwitches } from './view/test-switches';
 import { addFrameLag, bootDelay, onFirstFrame } from './view/frame-lag';
-import { CHOICE_CANCEL_ID, type StoryOffer } from './ui/story-types';
+import type { StoryOffer } from './ui/story-types';
 import { uiSounds } from './audio/ui-sounds';
 import { liveSpot, spotMove, storyMoves } from './content/director';
 import { portraitFor } from './view/portraits';
