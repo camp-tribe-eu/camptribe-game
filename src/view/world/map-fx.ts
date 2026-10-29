@@ -135,9 +135,9 @@ export class MapFx {
   }
 
   /** Сплив над героєм: «+1»/«OK» піднімається й гасне (≈0,6 с; рухає tick — без таймерів реального часу). */
-  pop(x: number, y: number, text: string): void {
+  pop(x: number, y: number, text: string, lift = 0): void {
     this.pops++;
-    this.floaters.push({ t: this.scene.add.text(x, y - 44, text, FONT).setOrigin(0.5, 1).setDepth(TOP), y0: y - 44, age: 0 });
+    this.floaters.push({ t: this.scene.add.text(x, y - 44 - lift, text, FONT).setOrigin(0.5, 1).setDepth(TOP), y0: y - 44 - lift, age: 0 });
   }
 
   /** Кадр: спливи пливуть угору й гаснуть за час гри (dt — секунди кадру). */

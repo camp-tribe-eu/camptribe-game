@@ -39,9 +39,9 @@ const key = (s: GameState): string => stateHash(exploreView(s, STORY));
 
 /** Той самий стан, але з навичками на рангах 5 і без практики — контроль «навички не змінюють жодного ходу». */
 const MAXED = Object.fromEntries(SKILL_IDS.map((id) => [id, RANK_XP[5] as number]));
-const maxed = (s: GameState): GameState => ({ ...s, skills: MAXED, practice: {} });
+const maxed = (s: GameState): GameState => ({ ...s, skills: MAXED, practice: {}, progress: { xp: 99_999, om: 99_999, keys: ['quest:everything'], cosmetics: [] } });   // GAME-181: і звання на максимумі
 /** І з нулями: стан, до якого перебір дійшов першим, міг уже мати поріг, якого інший шлях до того ж ключа не має (рецензія fbd9c56). */
-const zeroed = (s: GameState): GameState => ({ ...s, skills: zeroSkills(), practice: {} });
+const zeroed = (s: GameState): GameState => ({ ...s, skills: zeroSkills(), practice: {}, progress: { xp: 0, om: 0, keys: [], cosmetics: [] } });
 
 /**
  * Ті самі сюжетні поля (усе, крім лічильників команд і навичок — як progressView). Дешевше за повний key:
@@ -50,7 +50,7 @@ const zeroed = (s: GameState): GameState => ({ ...s, skills: zeroSkills(), pract
 const IGNORED: ReadonlySet<string> = new Set(PROGRESS_IGNORED);
 const sameProgress = (a: GameState, b: GameState): boolean => (Object.keys(a) as (keyof GameState)[])
   .every((k) => IGNORED.has(k) || a[k] === b[k] || canonical(a[k]) === canonical(b[k]))
-  && Object.keys(a).length === Object.keys(b).length;
+  && Object.keys(a).filter((k) => !IGNORED.has(k)).length === Object.keys(b).filter((k) => !IGNORED.has(k)).length;   // GAME-181: progress у стані необов'язковий — число ключів рахуємо без ігнорованих
 
 /** Розбіжності «той самий хід, інші навички — інший сюжетний наслідок». Порожньо — проєкція key чесна. */
 type SkillLeak = { move: Move; base: string; maxed: string };
@@ -225,15 +225,17 @@ describe('дороги справжнього контенту: ядро ≡ в�
 describe('ключ перебору ховає рівно лічильники й навички (рецензія fbd9c56)', () => {
   // Сторож витоку вище доводить чесність ключа лише для полів, які він сам пропускає. Якщо progressView почне
   // ховати ще щось (прапорці, пам'ять NPC), сторож цього не побачить — тож список закріплено тут.
-  it('PROGRESS_IGNORED — саме processed, seq, skills, practice', () => {
-    expect([...PROGRESS_IGNORED].sort()).toEqual(['practice', 'processed', 'seq', 'skills']);
+  it('PROGRESS_IGNORED — саме processed, seq, skills, practice, progress (GAME-181)', () => {
+    expect([...PROGRESS_IGNORED].sort()).toEqual(['practice', 'processed', 'progress', 'seq', 'skills']);
   });
   it('progressView обнуляє саме PROGRESS_IGNORED, решта полів стану — без змін', () => {
     const s = initialState(START_MONEY);
     const v = progressView(s) as Record<string, unknown>;
     expect(Object.keys(v).sort()).toEqual(Object.keys(s).sort());
     const hidden = Object.keys(s).filter((k) => v[k] !== (s as unknown as Record<string, unknown>)[k]).sort();
-    expect(hidden).toEqual([...PROGRESS_IGNORED].sort());
+    expect(hidden).toEqual([...PROGRESS_IGNORED].filter((k) => k in s).sort());   // progress у чистому стані немає — і ключ його не вигадує
+    const earned = { ...s, progress: { xp: 5, om: 5, keys: ['i:x'], cosmetics: [] } };
+    expect((progressView(earned) as Record<string, unknown>).progress).toBeNull();   // є — ключ його не бачить
   });
 });
 

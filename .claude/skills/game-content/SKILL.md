@@ -99,7 +99,7 @@ GDD — приватний (`brain/Передача/00-dzherelo-lezhyt-lokalno.m
 | `items.json` | **`id`**, **`nameKey`** | `item.sleeping-bag` |
 | `npcs.json` | **`id`**, **`nameKey`**, **`locationId`**, `unlockedBy`, `sells`, `when` | `npc.elise` |
 | `locations.json` | **`id`**, **`nameKey`**, `unlockedBy`, `items`, `when` | `loc.camp.lake` |
-| `quests.json` | **`id`**, **`titleKey`**, **`optional`**, **`objectives`**, **`transitions`**, `end` (кінець розділу), `dayEnd` (межа дня історії, GAME-141), `giverId`, `locationId`, `when`, `requires`, `reward` | основний — канонічний id сценарію `ST-006`, `CH1-HOME-001` (ключ тексту — `q.ch1-home-001`), бічний `q.nora-walk` |
+| `quests.json` | **`id`**, **`titleKey`**, **`optional`**, **`xp`** (XP мандрівника: крок головного 10–20, побічка 15, GAME-181), **`objectives`**, **`transitions`**, `end` (кінець розділу), `dayEnd` (межа дня історії, GAME-141), `giverId`, `locationId`, `when`, `requires`, `reward` | основний — канонічний id сценарію `ST-006`, `CH1-HOME-001` (ключ тексту — `q.ch1-home-001`), бічний `q.nora-walk` |
 | `events.json` | **`id`**, **`titleKey`**, **`repeatable`**, `locationId`, `reward` | `ev.neighbours-firewood` |
 | `facts.json` | **`id`**, **`claimKey`**, `source`, `checkedAt`, `kind` | `fact.de-quiet-hours` |
 | `waves.json` | хвиля напруги (GAME-170): **`id`** (`wave.ch1-day2-evening`), **`titleKey`**, **`hookKey`**, **`stage`** (квест), `when`, **`tasks`** (2–4: **`id`**, **`textKey`**, **`limitMin`** 1–60 ігрових хв, `leaderOnly`, `animal` + `targets[{id, safe}]`, `when`, **`done`**/**`late`** `{ textKey, effects: [{ setFlag }] \| [{ wetGear: true }] }`), `allDone`, `fallback`. Хвиля стартує лише в локації етапу; дві хвилі одного етапу — через `when` (W2 авто / вело); етап минув — незроблене спізнилось. Справи етапів поза мапою табору (дім, дорога) — кнопки екрана подорожі, табору — цілі `task.<id>` на `camp-lake.tmj` (`scripts/maps/build_camp_lake.py`, TASK_SPOTS) і підпис `ui.wave.task.<id>` у `src/i18n` | `wave.назва` |
@@ -226,6 +226,8 @@ GDD — приватний (`brain/Передача/00-dzherelo-lezhyt-lokalno.m
 - `REQUIRES_CYCLE` — квести вимагають один одного в `requires.quests`. Не допустити: `requires` дивиться лише назад по сюжету; ніколи A → B і B → A.
 - `OPTIONAL_NO_DECLINE` — `"optional": true` без переходу `decline`. Не допустити: завжди `{ "on": "decline", "to": "ST-…", "choiceKey": "q.x.decline" }` поруч із `complete`.
 - `BRANCH_NO_NEXT` — квест не `end` і має `"transitions": []`. Не допустити: або хоча б один перехід, або `"end": true` (лише фінал розділу).
+- `QUEST_NO_XP` — квест без `xp` або з нулем (GAME-181): крок не рухає звання мандрівника, і гравець не бачить, що просувається. Не допустити: кожному квесту — `"xp"` одразу в рядку з `optional`; крок головного — 10…20, побічка — 15; нову картку квесту без XP не здавай.
+- `QUEST_XP_RANGE` — `xp` головного квесту поза 10…20 або побічного не 15 (GAME-181, scenario §2.1): шкала звань пливе. Не допустити: крок головного — від 10 до 20 (важчий крок — більше), побічка — завжди 15; межі дня (+10) і розділу (+30) додає ядро, у квест їх не вписуй.
 - `DAY_END_OPTIONAL` — `"dayEnd": true` на необов'язковому квесті (GAME-141): відмова не завершує квест, тож день не закінчився б ніколи — ні підсумку дня, ні наступного дня. Не допустити: межа дня — лише на основному етапі (`"optional": false`), останньому в дні; бічний квест дня повертається в основний сюжет до межі.
 
 **Діалоги**

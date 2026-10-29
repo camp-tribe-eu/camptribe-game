@@ -67,6 +67,25 @@
       .ui-next { position: absolute; left: 8px; right: 8px; top: 100%; margin-top: 4px; z-index: 1; padding: 3px 8px; box-sizing: border-box; border-radius: 8px; background: #2a2f36; color: #ffd54a; font-size: 0.8125rem;
         line-height: var(--hud-lh); min-width: 0; overflow-wrap: anywhere; pointer-events: none; }
       .ui-next[data-kind="near"] { color: #9be28f; }
+      /* GAME-181: смуга під шапкою (накладка на мапі, як .ui-next у GAME-175): ціль зверху, «Далі: …» під нею, між ними проміжок. Сторч — у стовпчик; вбік — рядки сітки шапки (див. @media нижче). */
+      .ui-strip { position: absolute; left: 8px; right: 8px; top: 100%; margin-top: 4px; z-index: 1; display: flex; flex-direction: column; align-items: flex-start; gap: 4px; pointer-events: none; }
+      .ui-strip .ui-next { position: static; margin-top: 0; }
+      .ui-goal { box-sizing: border-box; max-width: 100%; padding: 3px 8px; border-radius: 8px; background: #2a2f36; color: #e8e6e3; font-size: 0.8125rem; line-height: var(--hud-lh); min-width: 0; overflow-wrap: anywhere; pointer-events: none; }
+      .ui-goal[data-ended="yes"] { color: #9be28f; }
+      /* GAME-181: банер нового звання — посередині поля, не ловить дотик, гасне сам. Рамка жовта (як цілі), текст світлий: контраст ≥ 4,5 на темному тлі. */
+      .ui-titleup { position: fixed; left: 50%; top: 50%; transform: translate(-50%, -50%); z-index: 20; box-sizing: border-box; width: max-content; max-width: min(88vw, 520px); display: grid; gap: 4px; padding: 10px 14px;
+        border: 2px solid #ffd54a; border-radius: 12px; background: #1b1f23f2; color: #e8e6e3; font-family: 'CampPixel', system-ui, sans-serif; font-size: 0.875rem; line-height: 1.5; text-align: center; overflow-wrap: anywhere; pointer-events: none; }
+      .ui-titleup strong { color: #ffd54a; }
+      /* GAME-181: смужки прогресу й блок навичок у ☰. */
+      .ui-progress, .ui-skills { max-width: min(92vw, 640px); width: 100%; text-align: left; font-size: 0.75rem; }
+      .ui-progress .ui-status { margin: 0 0 4px; }
+      .ui-skills h3 { margin: 0 0 4px; font-size: 0.9rem; }
+      .ui-skills ul { margin: 0; padding: 0; list-style: none; display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 8px 16px; }
+      .ui-skills li { display: grid; gap: 2px; align-content: start; }
+      .ui-skill-next { color: #cfcbc7; }
+      .ui-bar { height: 8px; border-radius: 4px; background: #2a2f35; border: 1px solid #e8e6e355; overflow: hidden; }
+      .ui-bar > span { display: block; height: 100%; background: #6fa84f; }
+      .ui-summary-reward { font-size: 0.9rem; color: #ffd54a; }
       .ui-btn-locked { border-style: dashed; color: #cfcbc7; background: #22262b; cursor: not-allowed; }
       #stage canvas { image-rendering: pixelated; }
       /* GAME-91: підпис збірки — у меню паузи (див. Shell.tsx), у діалозі він на своєму тлі. */
@@ -195,7 +214,9 @@
           grid-template-columns: auto minmax(0, 1fr) auto auto; row-gap: 8px; column-gap: 8px; }
         .ui-header button { pointer-events: auto; }
         /* GAME-94: рядок нагадування лежить усередині шапки — без цього поле з кодом (запас) не можна було б торкнутися. */
-        .ui-reminder { pointer-events: auto; }
+        /* GAME-181: шапка вбік стала вищою (ціль + «Далі» — ряди сітки), тож рядок нагадування лежить нижче й міг накрити місце, де гравець кладе палець на джойстик (game-170-slice3). Сам рядок дотику не ловить — лише кнопки й поле коду. */
+        .ui-reminder { pointer-events: none; }
+        .ui-reminder button, .ui-reminder textarea { pointer-events: auto; }
         .ui-story-btn { grid-area: 1 / 1; }
         .ui-hud { grid-area: 1 / 3; align-self: center; align-items: flex-end; text-align: right; min-height: 0; padding: 4px 10px; border-radius: 8px; background: #1b1f23d9; }
         /* Назву місця сховано лише з екрана — скрінрідер її читає (рецензія PR #53). */
@@ -208,7 +229,10 @@
         .ui-toast { left: auto; right: calc(100% + 8px); top: 0; width: max-content; max-width: 40vw; padding: 4px 8px; border-radius: 8px; }
         /* Картка мети вбік: другий ряд ліворуч (під ☰), ‖ лишається праворуч у тому ж ряду; дотики проходять крізь неї на поле. */
         .ui-wave { grid-area: 2 / 1 / 3 / 3; justify-self: start; max-width: 70vw; margin-top: 0; background: #1b1f23d9; pointer-events: none; }
-        .ui-next { position: static; grid-area: 3 / 1 / 4 / 3; justify-self: start; max-width: 70vw; margin-top: 0; background: #1b1f23d9; }
+        .ui-next { position: static; grid-area: 4 / 1 / 5 / 3; justify-self: start; max-width: 70vw; margin-top: 0; background: #1b1f23d9; }
+        /* GAME-181: смуга вбік розчиняється в сітці шапки: ціль — третій ряд ліворуч (під карткою мети), «Далі» — четвертий. */
+        .ui-strip { display: contents; }
+        .ui-goal { grid-area: 3 / 1 / 4 / 3; justify-self: start; max-width: 70vw; background: #1b1f23d9; }
       }
       /* GAME-39 #3: гравець попросив менше руху — жодних анімацій і переходів в інтерфейсі, навіть доданих пізніше
          чи вписаних у style (!important перебиває інлайн). Перевірка — tests/e2e/a11y.spec.ts. */

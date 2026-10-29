@@ -12,6 +12,7 @@ import { stateHash } from './hash';
 import { isJournalType, type SimState } from './sim';
 import { CONDITION_MAX } from './gear';
 import { PRACTICE_SATURATION, SKILL_IDS, zeroSkills } from './skills';
+import { backfillProgress } from './progress';
 import { REJECT_CODES } from './state';
 import { paydaysThrough, type LifeDefs } from './life';
 import { DAY_MINUTES } from './weather';
@@ -120,6 +121,10 @@ function shapeError(sim: unknown): string | null {
     if (a && (typeof a.waveId !== 'string' || !isInt(a.startedAt) || !isObj(a.tasks) || Object.values(a.tasks).some((t) => !isObj(t) || !isInt(t.dueAt) || !outcome(t.outcome, true)))) return 'game: wave.active';
     if (Object.values(wv.past).some((w) => !isObj(w) || Object.values(w).some((o) => !outcome(o, false)))) return 'game: wave.past';
   }
+  // Прогресія (GAME-181): поле необов'язкове (сейви до GAME-181 його не мають); є — XP й ОМ цілі ≥ 0, ключі й косметика — відсортовані рядки без повторів (так пише лише ядро).
+  const pg = game.progress;
+  const sortedUniq = (a: unknown): boolean => Array.isArray(a) && a.every((x, i) => typeof x === 'string' && (i === 0 || ((a[i - 1] as string) < x)));
+  if (pg !== undefined && (!isObj(pg) || !isInt(pg.xp) || !isInt(pg.om) || !sortedUniq(pg.keys) || !sortedUniq(pg.cosmetics))) return 'game: progress';
   const dl = game.dialogue;
   if (dl !== null && (!isObj(dl) || typeof dl.id !== 'string' || typeof dl.node !== 'string')) return 'game: dialogue';
   const p = game.player;
@@ -257,6 +262,9 @@ export function fromSave(text: string, opts: { readonly story?: StoryDefs; reado
     if (missing.length) return { ok: false, code: 'SAVE_CONTENT_MISMATCH', detail: `not in current content: ${missing.join(', ')}` };
     const game = reopenChapter((sim as SimState).game, opts.story);
     if (game !== (sim as SimState).game) sim = { ...(sim as SimState), game };
+    // GAME-181: сейв до прогресії — те, що вже завершено, зараховується (після reopenChapter: квести вже в остаточному вигляді).
+    const filled = backfillProgress((sim as SimState).game, opts.story);
+    if (filled !== (sim as SimState).game) sim = { ...(sim as SimState), game: filled };
   }
   const contentRev = typeof raw.contentRev === 'string' ? raw.contentRev : null;
   return { ok: true, sim: sim as SimState, fromVersion: version as number, contentRev };

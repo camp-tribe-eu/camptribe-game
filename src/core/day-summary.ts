@@ -17,6 +17,7 @@
 // якого є PackItem/UnpackItem/AutoPack. Інакше підсумок дня 2 повторив би пакування дня 1.
 import type { CoreDefs } from './defs';
 import { packedOf } from './packing';
+import { awardsFor, progressOf } from './progress';
 import type { JournalEntry, SimState } from './sim';
 
 /** Порядок секцій на екрані. */
@@ -32,6 +33,8 @@ export interface DaySummary {
   readonly sections: readonly { readonly kind: SummaryKind; readonly ids: readonly string[] }[];
   /** Баланс на початку й у кінці дня (центи); null — у журналі цього факту немає (обрізаний журнал, сейв до GAME-106). */
   readonly money: { readonly start: number; readonly end: number } | null;
+  /** GAME-181: що день дав прогресії (XP й ОМ) — лише нагороди, які справді видано (ключ є в `progress.keys`) за записи цього дня. */
+  readonly reward: { readonly xp: number; readonly om: number };
 }
 
 /** Прапорець ночівлі: `f.night-tent` — ніч у наметі. */
@@ -104,10 +107,24 @@ export function daySummary(sim: Pick<SimState, 'game' | 'journal'>, day: number,
   const end = r.ended ? sim.journal[r.to]?.cents : sim.game.moneyCents;
   const money = start !== undefined && end !== undefined ? { start, end } : null;
 
+  // Нагороди дня — з тих самих записів, що й секції: що журнал бачить за день, те й порахували, і лише видане (ключ у стані).
+  const given = new Set(progressOf(sim.game).keys);
+  const seen = new Set<string>();
+  const reward = { xp: 0, om: 0 };
+  for (const e of entries) {
+    for (const a of awardsFor(e.type, e.ref, defs)) {
+      if (!given.has(a.key) || seen.has(a.key)) continue;
+      seen.add(a.key);
+      reward.xp += a.xp;
+      reward.om += a.om;
+    }
+  }
+
   return {
     day,
     ended: r.ended,
     sections: SUMMARY_KINDS.filter((k) => sections[k].length > 0).map((kind) => ({ kind, ids: sections[kind] })),
     money,
+    reward,
   };
 }

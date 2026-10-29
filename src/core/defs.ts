@@ -43,7 +43,11 @@ export interface InteractionDef {
   readonly items?: readonly { readonly itemId: string; readonly qty: number }[];
   /** Прапорці, які ставить взаємодія (GAME-170, зріз 2: добра справа «чужі пакети біля води» → f.litter-cleaned-ch1). */
   readonly flags?: readonly string[];
+  /** GAME-181: що ця взаємодія дає прогресії — `secret` (+5 XP, раз) чи `clean` (чистий табір, +10 ОМ, раз). Немає — нічого. */
+  readonly award?: (typeof INTERACTION_AWARDS)[number];
 }
+/** Види прогресії взаємодії (GAME-181). */
+export const INTERACTION_AWARDS = ['secret', 'clean'] as const;
 
 /** Умова `when` контенту (TD-006): збіг із вибором гравця. Порожнього списку валідатор не пропускає. */
 export interface WhenDef {
@@ -86,6 +90,8 @@ export interface QuestDef {
    * закриває день: останній день розділу без власної межі не лишається відкритим (dayEndQuests у day-summary.ts).
    */
   readonly dayEnd?: true;
+  /** GAME-181: XP мандрівника за завершення (крок головного 10–20, побічка 15; валідатор: QUEST_NO_XP). Немає — XP за крок немає. */
+  readonly xp?: number;
   readonly locationId?: string;
   readonly when?: WhenDef;
   readonly requires?: { readonly quests: readonly string[]; readonly items: readonly string[] };
@@ -294,6 +300,7 @@ export function checkDefs(defs: CoreDefs, flagKinds?: Readonly<Record<string, st
   }
   for (const [id, d] of Object.entries(defs.interactions)) {
     if (!ID.test(id) || !ID.test(d.grantId) || (d.items ?? []).some((i) => !ID.test(i.itemId)) || (d.flags ?? []).some((f) => !ID.test(f))) out.push({ code: 'DEFS_BAD_ID', where: id });
+    if (d.award !== undefined && !(INTERACTION_AWARDS as readonly string[]).includes(d.award)) out.push({ code: 'DEFS_BAD_AMOUNT', where: `${id}.award` });
     if (!isCents(d.moneyCents) || (d.items ?? []).some((i) => !Number.isSafeInteger(i.qty) || i.qty < 1)) out.push({ code: 'DEFS_BAD_AMOUNT', where: id });
     // Прапорець взаємодії — лише з реєстру content/flags.json і лише з позначкою kind: 'interaction' (добра справа на мапі). Системний
     // (f.fire-allowed — його ставить сцена), хвильовий чи квестовий став би «тихим» перемикачем сюжету в обхід своїх воріт.

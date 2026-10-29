@@ -2,6 +2,9 @@
 // до стану ядра (TD-003, сторож — eslint.config.js, блок GAME-25).
 import type { StoryOffer } from './story-types';
 
+/** GAME-181: що щойно нараховано. `title` — індекс нового звання (0…9), якщо воно з'явилось саме зараз; інакше null. */
+export interface RewardEvent { readonly xp: number; readonly om: number; readonly title: number | null }
+
 export interface UiPort {
   setPaused(paused: boolean): void;
   /** Записати сейв у сховище браузера (GAME-33). */
@@ -25,6 +28,8 @@ export interface UiPort {
   act(id: string): void;
   /** Підписка на зміни сюжету; повертає відписку. */
   onStory(listener: () => void): () => void;
+  /** GAME-181: гравець щось заробив (XP, ОМ) чи дістав нове звання; повертає відписку. Початок гри й завантаження сейву нагородою не вважаються. */
+  onReward(listener: (r: RewardEvent) => void): () => void;
   /** GAME-179: гравець заговорив із NPC на мапі: рамка розмови (якщо ядро прийняло розмову) або екран подорожі (якщо ні — там видно чому); повертає відписку. */
   onTalk(listener: () => void): () => void;
   /**
