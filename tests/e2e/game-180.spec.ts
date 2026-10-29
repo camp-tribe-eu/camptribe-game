@@ -248,24 +248,35 @@ async function playRequest(page: Page, r: Req, opts: { later?: boolean; shot?: s
 }
 
 const ORIENTATIONS = [
-  { name: 'portrait', viewport: { width: 390, height: 844 }, reqs: ['nora', 'elise'] },
-  { name: 'landscape', viewport: { width: 844, height: 390 }, reqs: ['luc', 'sarah'] },
+  { name: 'portrait', viewport: { width: 390, height: 844 } },
+  { name: 'landscape', viewport: { width: 844, height: 390 } },
 ] as const;
+// Усі 5 прохань у КОЖНІЙ орієнтації (картка GAME-180), розбито на дві групи, щоб шарди балансувались; кожна група — свіжа гра.
+const GROUPS = [['nora', 'ingrid', 'luc'], ['sarah', 'elise']] as const;
+/** Стеля «5–10 хв на перші два прохання» (реальний час ходьби ≈ ігровий). Щедра: вимір друкується в звіті. */
+const FIRST_TWO_MAX_MS = 300_000;
 
 for (const o of ORIENTATIONS) {
   test.describe(`GAME-180 прохання — ${o.name} ${o.viewport.width}×${o.viewport.height}`, () => {
     test.use({ viewport: o.viewport, hasTouch: false, isMobile: false });
     test.setTimeout(600_000);
 
-    test(`«!» → картка → ціль → здача, лише ногами: ${o.reqs.join(' + ')}`, async ({ page }) => {
-      const errors = await toCamp(page);
-      // Дві з п'яти: над кожним просильником «!» ще до розмови.
-      for (const [i, key] of o.reqs.entries()) {
-        const r = REQS[key] as Req;
-        await playRequest(page, r, { later: key === 'nora' || key === 'luc', ...(i === 0 && SHOTS ? { shot: o.name } : {}) });
-      }
-      expect(errors, 'без помилок у консолі').toEqual([]);
-    });
+    for (const [gi, group] of GROUPS.entries()) {
+      test(`«!» → картка → ціль → здача, лише ногами: ${group.join(' + ')}`, async ({ page }) => {
+        const errors = await toCamp(page);
+        const t0 = Date.now();
+        for (const [i, key] of group.entries()) {
+          const r = REQS[key] as Req;
+          await playRequest(page, r, { later: key === 'nora' || key === 'luc', ...(gi === 0 && i === 0 && SHOTS ? { shot: o.name } : {}) });
+          if (gi === 0 && i === 1) {
+            const ms = Date.now() - t0;
+            console.log(`GAME-180 TIMING ${o.name}: перші 2 прохання (${group.slice(0, 2).join('+')}) ногами, від виходу на мапу табору до здачі: ${ms} мс (${(ms / 60000).toFixed(2)} хв); стеля ${FIRST_TWO_MAX_MS} мс`);
+            expect(ms, 'перші 2 прохання — у межах відчуття 5–10 хв').toBeLessThan(FIRST_TWO_MAX_MS);
+          }
+        }
+        expect(errors, 'без помилок у консолі').toEqual([]);
+      });
+    }
   });
 }
 
@@ -294,5 +305,17 @@ test.describe('GAME-180 негативні контролі', () => {
     await page.waitForTimeout(450);
     await closeTalk(page);
     await expect(page.locator(`[data-ui="req-row"][data-request="${r.id}"]`)).toHaveCount(0);
+  });
+
+  test('німий причал Інгрід (?breakSpot) → ціль «птахи» не береться: прохід червоніє', async ({ page }) => {
+    await toCamp(page, '&breakSpot=req.ingrid-birds.t1');
+    const r = REQS.ingrid as Req;
+    await openTalk(page, r);
+    await toCard(page, r);
+    await panel(page).locator('[data-act="choose"]', { hasText: 'Беруся' }).click();
+    await page.waitForTimeout(450);
+    await closeTalk(page);
+    await expect(doTarget(page, r, 'req.ingrid-birds.t1', 0), 'ціль німа — прапорець не стане').rejects.toThrow();
+    expect((await core(page)).game.flags).not.toContain(flag(r.id, 't1'));
   });
 });
