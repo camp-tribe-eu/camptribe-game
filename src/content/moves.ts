@@ -8,11 +8,33 @@ import { eventSeenFlag } from '../core/story';
 
 export type Move = Command extends infer C ? (C extends Command ? Omit<C, 'commandId'> : never) : never;
 
+const chatMemo = new WeakMap<StoryDefs, ReadonlySet<string>>();
+/**
+ * GAME-179 · NPC «лише побалакати»: його діалог не ставить жодного прапорця й не рухає жодного квесту, і сам він не ціль завдань. Така розмова
+ * не змінює сюжету, тож не входить у перелік спроб перебору й бота (інакше кожен із цих NPC множив би простір станів: shop.test вибухає), а меню ☰ не
+ * засмічується кнопками — говорять із ними на мапі. Ядро розмову приймає як завжди (Talk), а що вона справді нічого не чіпає, доводить npc-talk.test.
+ */
+export function chatOnlyNpcs(st: StoryDefs): ReadonlySet<string> {
+  const hit = chatMemo.get(st);
+  if (hit) return hit;
+  const involved = new Set<string>();
+  for (const q of Object.values(st.quests)) for (const o of q.objectives) { involved.add(o.target); }
+  const out = new Set<string>();
+  for (const d of Object.values(st.dialogues)) {
+    if (d.npcId === undefined || involved.has(d.npcId)) continue;
+    const inert = Object.values(d.nodes).every((n) => (n.choices ?? []).every((c) => c.effects.length === 0) && !n.branches);
+    if (inert) out.add(d.npcId);
+  }
+  chatMemo.set(st, out);
+  return out;
+}
+
 export function moves(s: GameState, defs: CoreDefs): Move[] {
   const st = defs.story as StoryDefs;
   const out: Record<string, unknown>[] = [];
+  const chat = chatOnlyNpcs(st);
   for (const id of Object.keys(st.locations)) out.push({ type: 'Visit', locationId: id });
-  for (const id of Object.keys(st.npcs)) out.push({ type: 'Talk', npcId: id });
+  for (const id of Object.keys(st.npcs)) if (!chat.has(id)) out.push({ type: 'Talk', npcId: id });
   // Подія в дорозі — хід СЕРЕДОВИЩА (кидок симуляції), а не гравця: перебір бачить і «сталась», і «ні».
   for (const [id, d] of Object.entries(st.dialogues)) if (d.trigger) out.push({ type: 'RoadEvent', eventId: id });
   // StartScene — хід СЮЖЕТУ (гачок кінця дня), не гравця; тут його навмисно немає: 16 проходжень сцени множили б простір станів

@@ -83,6 +83,7 @@ export const CODES = {
   OBJECTIVE_BY_DIALOGUE_OPEN:   { check: 'dialogue-objective-gate', spec: 'GAME-87: ціль byDialogue мусить мати репліку, що її закриває' },
   OBJECTIVE_BY_DIALOGUE_ALWAYS: { check: 'dialogue-objective-gate', spec: 'GAME-87: репліка-закривач не лежить на кожному шляху діалогу (інакше це будь-яка розмова)' },
   DIALOGUE_OBJECTIVE_KIND:   { check: 'dialogue-objective-kind', spec: '§2 розмова закриває лише ціль talk із цим самим NPC' },
+  NPC_NO_DIALOGUE:            { check: 'npc-has-dialogue', spec: 'GAME-179: кожен NPC на мапі має діалог (вихід із нього стереже DIALOGUE_DEAD_END) — інакше розмова нічого не дає' },
   DIALOGUE_NPC_DUPLICATE:    { check: 'dialogue-npc-unique', spec: '§2 один діалог на NPC — інакше рушій не знає, який запускати' },
 
   // реєстр прапорців і фактів стану, GAME-115 (content/flags.json)

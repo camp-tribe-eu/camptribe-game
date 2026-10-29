@@ -13,6 +13,7 @@ import { MAP_LOCATION, MAP_SPOTS, isMapFirstSpot, type MapKey } from '../../cont
 const WORLD_SOURCES = import.meta.glob<string>(['./**/*.ts', '!./**/*.test.ts'], { query: '?raw', import: 'default', eager: true });
 import type { CoreDefs } from '../../core/defs';
 import { GAME_DEFS } from '../../content/slice-defs';
+import { MOBILE_TALKERS } from '../portraits';
 
 interface TiledObject { name: string; type?: string; class?: string; point?: boolean; gid?: number }
 interface TiledLayer {
@@ -93,7 +94,7 @@ export function mapContentProblems(map: TiledMap, defs: CoreDefs, key: MapKey = 
     for (const n of known) if (!onMap.includes(n)) out.push(`об'єкт ${n} із MAP_SPOTS.${key} немає на мапі`);
     for (const n of onMap) if (!known.includes(n)) out.push(`об'єкт ${n} на мапі ${key} не описано в MAP_SPOTS`);
   }
-  for (const [id, n] of Object.entries(st.npcs)) if (n.locationId === loc && !npcs.includes(id)) out.push(`NPC ${id} локації ${String(loc)} не має місця на мапі`);
+  for (const [id, n] of Object.entries(st.npcs)) if (n.locationId === loc && !npcs.includes(id) && !MOBILE_TALKERS.has(id)) out.push(`NPC ${id} локації ${String(loc)} не має місця на мапі`);
   return out;
 }
 

@@ -25,7 +25,10 @@ import { addFrameLag, bootDelay, onFirstFrame } from './view/frame-lag';
 import type { StoryOffer } from './ui/story-types';
 import { uiSounds } from './audio/ui-sounds';
 import { liveSpot, spotMove, storyMoves } from './content/director';
-import { isBulky, isMapFirstSpot, mapKeyFor, needsLeft, nextTarget, resolveSpot, spotLook, unpackMoves } from './content/map-first';
+import { portraitFor } from './view/portraits';
+import { headCrop, sheetOf } from './view/world/portrait-art';
+import { REQUEST_NPCS } from './view/npc-talk';
+import { isBulky, isMapFirstSpot, mapKeyFor, needsLeft, nextTarget, npcLive, resolveSpot, spotLook, unpackMoves } from './content/map-first';
 import { packFlag } from './core/packing';
 import type { GameState } from './core/state';
 
@@ -34,7 +37,7 @@ if (!app) throw new Error('#app is missing');
 
 const probe: WorldProbe = { ready: false, playerX: 0, playerY: 0, nearObject: null, nearKind: null, commandsSent: 0, cameraScrollX: 0, cameraScrollY: 0, clockMinutes: 0, saveLoaded: false, cameraLerp: [0, 0], followers: [], leisure: [],
   playerFrame: 0, playerDir: 'down', playerMoving: false, playerDepth: 0, coveredTiles: 0, behindTiles: 0, fps: 0, fpsWindows: 0, firstFrameMs: 0,
-  residents: [], bark: null, barkCount: 0,
+  residents: [], bark: null, barkCount: 0, npcMarks: {},
   daylight: { on: false, visible: false, minuteOfDay: 0, darkness: 0, color: 0xffffff, glow: 0 },
   fx: { target: null, ring: 0, ringName: null, backpack: 0, guide: 'none', pops: 0, auto: 0 } };
 // GAME-86: кожна команда ядру (дія екрана, розмова, взаємодія на мапі) → автозбереження одразу, а не лише на паузі.
@@ -74,6 +77,9 @@ const viewOf = (): StoryView => ({ mapFirst: !switches.panelActs, trunk: trunkOp
 // Завантаження збереження на CH1-D2-CAMP-001 без хвилі стартує її тут же, строки — від годинника завантаження (прийнято, див. director.ts).
 const direct = (): void => { for (const m of storyMoves(bridge.state, GAME_DEFS)) bridge.send(m); };
 const openListeners = new Set<() => void>();
+// GAME-179: розмова з NPC на мапі відкривається рамкою розмови, а не екраном подорожі: свої слухачі, і `mapTalk` глушить автовідкриття панелі.
+const talkListeners = new Set<() => void>();
+let mapTalk = false;
 // GAME-175: розмова, яку почала не дія гравця на мапі, а гра (подія в дорозі після виїзду), мусить бути видна: об'єкти мапи під час розмови мовчать, тож без
 // екрана подорожі гравець завис би. Розмова щойно з'явилась (раніше її не було) — екран відкривається сам.
 let hadDialogue = false;
@@ -87,15 +93,18 @@ const storyChanged = (): void => {
   direct();
   for (const l of storyListeners) l();
   const talking = bridge.state.game.dialogue !== null;
-  if (talking && !hadDialogue) for (const l of openListeners) l();
+  if (talking && !hadDialogue && !mapTalk) for (const l of openListeners) l();
   hadDialogue = talking;
 };
 /** Розмова з NPC на мапі: команда в ядро (ядро саме відмовить, якщо гравець не тут), і екран подорожі —
  *  там видно розмову або те, чого бракує (немає персонажа, не та локація). */
 const talkOnMap = (npcId: string): void => {
-  bridge.send({ type: 'Talk', npcId });
-  storyChanged();
-  for (const l of openListeners) l();
+  mapTalk = true;
+  try {
+    bridge.send({ type: 'Talk', npcId });
+    storyChanged();
+  } finally { mapTalk = false; }
+  for (const l of talkListeners) l();   // рамка розмови, якщо ядро прийняло розмову; інакше UI сам відкриє екран подорожі
 };
 /** Дотик до об'єкта мапи: режисер каже, що це зараз (справа хвилі → CompleteTask; вогнище на етапі вечора → StartScene, і екран подорожі
  *  відкривається з репліками; інакше Interact). ?breakSpot=<назва> (лише збірка e2e) робить об'єкт німим — негативний контроль. */
@@ -167,6 +176,8 @@ let needsPack = -1;
 let needsMemo = { small: 0, bulky: 0 };
 const worldHooks: WorldHooks = {
   onNpc: talkOnMap,
+  // GAME-179: з ким можна говорити саме зараз — те саме, що прийме ядро (NPC тут, відкритий, розмови нема); «!» — гачок прохань GAME-180.
+  talk: (id) => (npcLive(bridge.state.game, GAME_DEFS, id) ? { request: REQUEST_NPCS.has(id) } : null),
   onObject: actOnMap,
   isLive: (name) => liveSpot(bridge.state, name, GAME_DEFS) && !(name.startsWith('pack.') && backpack.includes(name.slice(5))),
   backpack: () => backpack.length,
@@ -190,6 +201,8 @@ const worldHooks: WorldHooks = {
   mapKey: () => switches.map ?? (switches.panelActs ? 'camp' : mapKeyFor(bridge.state.game.player?.locationId)),
   transport: () => bridge.state.game.player?.transportId ?? null,
 };
+/** GAME-179: запасні портрети — обрізки спрайтів, зроблені раз на лист. */
+const spriteCrops = new Map<string, string>();
 const frame0 = frameSize(stage.clientWidth, stage.clientHeight);
 
 const game = new Phaser.Game({
@@ -269,6 +282,23 @@ render(h(Shell, {
     onStory(listener: () => void) {
       storyListeners.add(listener);
       return () => { storyListeners.delete(listener); };
+    },
+    onTalk(listener: () => void) {
+      talkListeners.add(listener);
+      return () => { talkListeners.delete(listener); };
+    },
+    portrait(npcId: string | null, sprite = false) {
+      if (switches.hideUi.includes('portrait')) return null;   // ?hideUi=portrait — лише збірка e2e: негативний контроль (game-179.spec)
+      const p = portraitFor(npcId, sprite ? {} : undefined);
+      if (!p) return null;
+      if (p.kind === 'file') return { src: p.url, kind: 'file' as const };
+      const hit = spriteCrops.get(p.sheet);
+      if (hit) return { src: hit, kind: 'sprite' as const };
+      const sheet = sheetOf(worldArt, p.sheet);
+      if (!sheet) return null;
+      const src = headCrop(sheet);
+      spriteCrops.set(p.sheet, src);
+      return { src, kind: 'sprite' as const };
     },
     onOpenStory(listener: () => void) {
       openListeners.add(listener);

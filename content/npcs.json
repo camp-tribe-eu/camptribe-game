@@ -1,4 +1,12 @@
 [
   { "id": "npc.elise", "nameKey": "npc.elise", "locationId": "loc.camp.lake", "unlockedBy": "ST-004" },
-  { "id": "npc.george", "nameKey": "npc.george", "locationId": "loc.home", "when": { "profiles": ["profile.family-teen"] } }
+  { "id": "npc.george", "nameKey": "npc.george", "locationId": "loc.home", "when": { "profiles": ["profile.family-teen"] } },
+  { "id": "npc.amina", "nameKey": "npc.amina", "locationId": "loc.camp.lake", "unlockedBy": "ST-004" },
+  { "id": "npc.luc", "nameKey": "npc.luc", "locationId": "loc.camp.lake", "unlockedBy": "ST-004" },
+  { "id": "npc.nora", "nameKey": "npc.nora", "locationId": "loc.camp.lake", "unlockedBy": "ST-004" },
+  { "id": "npc.ingrid", "nameKey": "npc.ingrid", "locationId": "loc.camp.lake", "unlockedBy": "ST-004" },
+  { "id": "npc.sarah", "nameKey": "npc.sarah", "locationId": "loc.camp.lake", "unlockedBy": "ST-004" },
+  { "id": "npc.claire", "nameKey": "npc.claire", "locationId": "loc.camp.lake", "unlockedBy": "ST-004" },
+  { "id": "npc.victoria", "nameKey": "npc.victoria", "locationId": "loc.camp.lake", "unlockedBy": "ST-004" },
+  { "id": "npc.matthew", "nameKey": "npc.matthew", "locationId": "loc.camp.lake", "unlockedBy": "ST-004" }
 ]

@@ -5,6 +5,7 @@ import { useEffect, useRef } from 'preact/hooks';
 import { ct } from '../i18n/content';
 import type { AnyLang, Key } from '../i18n';
 import { trapTab } from './focus-trap';
+import { Portrait, type PortraitLookup } from './Portrait';
 import type { OfferAction, StoryOffer } from './story-types';
 
 const ACT: Readonly<Record<Exclude<OfferAction['kind'], 'choose' | 'continue'>, Key>> = {
@@ -36,7 +37,18 @@ export function money(lang: AnyLang, cents: number): string {
   return new Intl.NumberFormat(lang === 'uk' ? 'uk-UA' : 'en-IE', { style: 'currency', currency: 'EUR' }).format(cents / 100).replace(/[\u00a0\u202f]/g, ' ');
 }
 
-export function StoryPanel({ offer, lang, t, act, close, children }: { offer: StoryOffer; lang: AnyLang; t: (k: Key) => string; act: (id: string) => void; close: () => void; children?: ComponentChildren }) {
+/** Підпис дії-кнопки (панель подорожі й рамка розмови, GAME-179): однаково скрізь. */
+export function actionLabel(lang: AnyLang, t: (k: Key) => string, a: OfferAction): string {
+  if (a.kind === 'continue') return t('ui.continue');
+  if (a.kind === 'choose') return ct(lang, a.key);
+  const extras = [
+    ...(a.minutes !== undefined ? [`${a.minutes} ${t('ui.minutes')}`] : []),
+    ...(a.priceCents !== undefined ? [money(lang, a.priceCents)] : []),
+  ];
+  return `${t(ACT[a.kind])} ${ct(lang, a.key)}${extras.length ? ` (${extras.join(', ')})` : ''}`;
+}
+
+export function StoryPanel({ offer, lang, t, act, close, portrait, children }: { offer: StoryOffer; lang: AnyLang; t: (k: Key) => string; act: (id: string) => void; close: () => void; portrait: PortraitLookup; children?: ComponentChildren }) {
   const root = useRef<HTMLDivElement>(null);
   // GAME-80: після дії кнопки перебудовуються, і друге натискання (дотик чи Enter) через ~150 мс влучало б
   // в нову першу кнопку — дорогу покупку чи дорогу додому. Тому: (а) фокус після зміни йде на СТАБІЛЬНИЙ
@@ -56,15 +68,7 @@ export function StoryPanel({ offer, lang, t, act, close, children }: { offer: St
     act(id);
   };
 
-  const label = (a: OfferAction): string => {
-    if (a.kind === 'continue') return t('ui.continue');
-    if (a.kind === 'choose') return ct(lang, a.key);
-    const extras = [
-      ...(a.minutes !== undefined ? [`${a.minutes} ${t('ui.minutes')}`] : []),
-      ...(a.priceCents !== undefined ? [money(lang, a.priceCents)] : []),
-    ];
-    return `${t(ACT[a.kind])} ${ct(lang, a.key)}${extras.length ? ` (${extras.join(', ')})` : ''}`;
-  };
+  const label = (a: OfferAction): string => actionLabel(lang, t, a);
   // Недоступна купівля (GAME-83): aria-disabled, а не disabled — лишається в порядку Tab, тож екранний читач
   // чує назву, ціну й причину; активація нічого не робить. Причина — частина доступного імені кнопки.
   const lockedButton = (a: OfferAction) => (
@@ -109,6 +113,11 @@ export function StoryPanel({ offer, lang, t, act, close, children }: { offer: St
       {offer.stage === 'ended' && <p class="ui-status" data-ui="ended" role="status">{t('ui.ended')}</p>}
       {offer.quests.map((q) => (
         <section class="ui-quest" data-ui="quest" key={q.key}>
+          {/* GAME-179: від кого завдання — портрет і ім'я; без giverId — оповідач (нейтральна іконка). */}
+          <div class="ui-giver" data-ui="giver" data-npc={q.giver?.id ?? 'narrator'}>
+            <Portrait id={q.giver?.id ?? null} lookup={portrait} size="sm" />
+            <span data-ui="giver-name">{q.giver?.key ? `${t('ui.questFrom')}: ${ct(lang, q.giver.key)}` : t('ui.narrator')}</span>
+          </div>
           <h3>{`${t('ui.quest')}: ${ct(lang, q.key)}`}</h3>
           <ul>
             {q.objectives.map((o) => (
@@ -121,7 +130,10 @@ export function StoryPanel({ offer, lang, t, act, close, children }: { offer: St
       ))}
       {offer.dialogue && (
         <section class="ui-dialogue" data-ui="dialogue" aria-live="polite">
-          <h3>{offer.dialogue.speakerKey ? ct(lang, offer.dialogue.speakerKey) : t('ui.dialogue')}</h3>
+          <div class="ui-giver" data-ui="speaker-head" data-npc={offer.dialogue.speakerId ?? 'narrator'}>
+            <Portrait id={offer.dialogue.speakerId} lookup={portrait} size="sm" />
+            <h3>{offer.dialogue.speakerKey ? ct(lang, offer.dialogue.speakerKey) : t('ui.dialogue')}</h3>
+          </div>
           <p data-ui="line">{ct(lang, offer.dialogue.key)}</p>
           <div class="ui-answers">{offer.dialogue.answers.map(button)}</div>
         </section>

@@ -75,9 +75,13 @@ export interface StoryOffer {
   readonly characters: readonly OfferCharacter[];
   readonly locationKey: string | null;
   readonly moneyCents: number;
-  readonly quests: readonly { readonly key: string; readonly objectives: readonly OfferObjective[] }[];
+  readonly quests: readonly { readonly key: string; readonly objectives: readonly OfferObjective[];
+    /** GAME-179: хто дав завдання (id NPC для портрета й ключ імені); null — оповідач. */
+    readonly giver: { readonly id: string; readonly key: string | null } | null }[];
   /** Відкрита розмова: репліка й відповіді (лише ті, що ядро прийме). */
-  readonly dialogue: { readonly speakerKey: string | null; readonly key: string | null; readonly answers: readonly OfferAction[] } | null;
+  readonly dialogue: { readonly speakerKey: string | null;
+    /** GAME-179: хто говорить: id NPC; 'player' — репліка героя; null — оповідач (подія в дорозі, сцена). Від нього портрет у рамці розмови. */
+    readonly speakerId: string | null; readonly key: string | null; readonly answers: readonly OfferAction[] } | null;
   readonly actions: readonly OfferAction[];
   /** Пакування перед дорогою; null — зараз закрите. */
   readonly packing: OfferPacking | null;
