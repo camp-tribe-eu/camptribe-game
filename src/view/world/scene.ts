@@ -69,6 +69,8 @@ export interface WorldHooks {
   needs(): Needs;
   /** Транспорт гравця (авто малюється спрайтом на подвір'ї, велосипед — маркером). */
   transport(): string | null;
+  /** GAME-181: підпис нагороди («+15 XP +10 ОМ»), що ще не показана над героєм; забирає її (наступний виклик — null). */
+  takeReward(): string | null;
 }
 
 /** Хто з NPC якого листа ходьби має (лист — в art.ts); решта — як Еліза. */
@@ -126,7 +128,7 @@ export interface WorldProbe {
   /** GAME-99 (лише для e2e): ефект «день і ніч» — що зараз намальовано. `on` — ефект увімкнено; `visible` — прямокутник/пляма видимі (вдень — ні). */
   daylight: { on: boolean; visible: boolean; minuteOfDay: number; darkness: number; color: number; glow: number };
   /** GAME-175 (лише для e2e): кільце наближення (0..1, об'єкт), рюкзак, стрілка до мети (none/line/edge), лічильник спливів, дії-від-наближення. */
-  fx: { target: string | null; ring: number; ringName: string | null; backpack: number; guide: 'none' | 'line' | 'edge'; pops: number; auto: number };
+  fx: { target: string | null; ring: number; ringName: string | null; backpack: number; guide: 'none' | 'line' | 'edge'; pops: number; auto: number; rewards: number; rewardLast: string };
 }
 
 /** Точка вогнища (об'єкт мапи obj.campfire) — центр світлої плями; нема — плями нема. */
@@ -136,6 +138,9 @@ const spawnFire = (spots: readonly Spot[]): Pt | null => { const f = spots.find(
 const FPS_WINDOW_MS = 3000;
 
 export class WorldScene extends Phaser.Scene {
+  /** GAME-181 (для e2e): скільки спливів нагороди показано й який був останній. */
+  private rewardPops = 0;
+  private rewardLast = '';
   private player!: Phaser.Types.Physics.Arcade.SpriteWithDynamicBody;
   private readonly gate = createActionGate();
   private anchors: Pt[] = [];
@@ -751,6 +756,8 @@ export class WorldScene extends Phaser.Scene {
     const dt = Math.min(delta / 1000, MAX_FOLLOW_DT);
     const carrying = this.hooks.backpack() > 0;
     this.fx?.tick(dt);
+    const reward = this.hooks.takeReward();
+    if (reward) { this.fx?.pop(this.player.x, this.player.y, reward, 14); this.rewardPops++; this.rewardLast = reward; }   // GAME-181: «+N» за нагороду — над сплавом «+1/OK» дії
     const atCar = near === 'obj.vehicle' || near === 'obj.trunk';
     const needs = this.hooks.needs();
     // Скорочення E/тап — миттєво. Біля авто з рюкзаком воно розвантажує (а не їде).
@@ -814,7 +821,7 @@ export class WorldScene extends Phaser.Scene {
       playerDepth: this.player.depth,
       coveredTiles: covered,
       behindTiles: behind,
-      fx: { target: tn, ring: this.ring.name ? this.ring.t : 0, ringName: this.ring.name, backpack: this.hooks.backpack(), guide: this.fx?.guideMode ?? 'none', pops: this.fx?.pops ?? 0, auto: this.autoCount },
+      fx: { target: tn, ring: this.ring.name ? this.ring.t : 0, ringName: this.ring.name, backpack: this.hooks.backpack(), guide: this.fx?.guideMode ?? 'none', pops: this.fx?.pops ?? 0, auto: this.autoCount, rewards: this.rewardPops, rewardLast: this.rewardLast },
     });
   }
 }

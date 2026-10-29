@@ -3,6 +3,7 @@
 import type { GearState } from './gear';
 import type { LifeState } from './life';
 import type { WaveState } from './wave';
+import type { ProgressState } from './progress';
 import { zeroSkills } from './skills';
 
 export interface CommandRecord {
@@ -81,6 +82,11 @@ export interface GameState {
    * хвиль ще не було (сейви v3 до GAME-170 читаються без міграції: відсутність ≡ «нічого не було»).
    */
   readonly wave?: WaveState;
+  /**
+   * Прогресія мандрівника (GAME-181): XP звань, ОМ і ключі вже виданих нагород. Поля немає — нічого ще не нараховано (сейви до GAME-181 читаються без
+   * міграції версії: fromSave дорахує його із завершених квестів, backfillProgress).
+   */
+  readonly progress?: ProgressState;
 }
 
 export const REJECT_CODES = [

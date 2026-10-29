@@ -14,6 +14,8 @@ import type { OfferSummary, StoryOffer } from './story-types';
 
 /** Скільки тост-підказка висить на екрані (мс), якщо гравець нічого не зробив (GAME-95). Картка: ≤ 6 с. */
 const TOAST_MS = 5000;
+/** Скільки ігрових хвилин (≈ секунд живої гри) банер нового звання висить на мапі. */
+const TITLE_UP_MIN = 6;
 
 export function Shell({ port, langOverride, credits, build, holdToast = false, hideUi = [] }: { port: UiPort; langOverride?: AnyLang; credits: Credits; build: string; holdToast?: boolean; hideUi?: readonly string[] }) {
   const [paused, setPaused] = useState(false);
@@ -30,6 +32,10 @@ export function Shell({ port, langOverride, credits, build, holdToast = false, h
   const [storyOpen, setStoryOpen] = useState(false);
   const [offer, setOffer] = useState<StoryOffer>(() => port.story());
   useEffect(() => port.onStory(() => setOffer(port.story())), []);
+  // GAME-181: нове звання — маленьке свято: банер (назва + рядок родини) і звук підтвердження через єдиний мікшер. Банер не ловить дотики й гасне сам.
+  // Гасне за ІГРОВИМ годинником (TITLE_UP_MIN хвилин, ≈ секунд живої гри): пауза й панелі його зупиняють — банер не зникає, поки його не видно; таймерів реального часу немає.
+  const [titleUp, setTitleUp] = useState<{ index: number; at: number } | null>(null);
+  useEffect(() => port.onReward((r) => { if (r.title !== null) { const o = port.story(); setTitleUp({ index: r.title, at: o.day * 1440 + o.timeMinutes }); playUi('confirm'); } }), []);
   // Підсумок дня (GAME-106): з'являється, коли ДІЯ гравця завершила день (daysEnded зріс саме на ній), а не при завантаженні
   // сейву вже завершеного дня — після «Завершити сесію» й перезавантаження гравець повертається на мапу, а не в підсумок.
   // Поки він відкритий, світ на паузі (як на екрані подорожі).
@@ -211,6 +217,11 @@ export function Shell({ port, langOverride, credits, build, holdToast = false, h
   const hh = String(Math.floor(offer.timeMinutes / 60)).padStart(2, '0');
   const mm = String(offer.timeMinutes % 60).padStart(2, '0');
   const showHint = !settings.hintSeen && offer.stage === 'create';
+  // Банер — лише на мапі (не поверх екрана подорожі, паузи чи підсумку дня) і лише поки не минуло TITLE_UP_MIN ігрових хвилин.
+  const sinceUp = titleUp ? offer.day * 1440 + offer.timeMinutes - titleUp.at : -1;
+  const titleUpShown = titleUp !== null && sinceUp >= 0 && sinceUp < TITLE_UP_MIN && !paused && !storyOpen && !summary;
+  const goalShown = offer.stage !== 'create' && (offer.goal !== null || offer.stage === 'ended') && !hideUi.includes('goal');
+  const nextShown = offer.stage !== 'create' && (offer.hint.near || offer.hint.next || offer.hint.backpack > 0) && !hideUi.includes('next');
 
   return (
     <>
@@ -242,16 +253,29 @@ export function Shell({ port, langOverride, credits, build, holdToast = false, h
         </div>}
         {/* GAME-175: рядок «Далі: …» — куди йти зараз (мапа першою, а не панель); біля об'єкта міняється на підпис дії («● Сісти в авто»). Один рядок
             у шапці під ☰ · HUD · ‖; тост-підказка про ☰ (GAME-95) його не заступає — вона лише на екрані вибору героя, де цього рядка немає. */}
-        {offer.stage !== 'create' && (offer.hint.near || offer.hint.next || offer.hint.backpack > 0) && !hideUi.includes('next') && (
-          <div class="ui-next" data-ui="next-hint" data-kind={offer.hint.near ? 'near' : 'next'} data-spot={offer.hint.near ? undefined : offer.hint.nextSpot ?? undefined}>
-            {offer.hint.near
-              ? `● ${t(offer.hint.near.label)}${offer.hint.near.itemKey ? ` ${ct(lang, offer.hint.near.itemKey)}` : ''}`
-              : `${offer.hint.next ? `${t('ui.next')} ${t(offer.hint.next as Key)}` : ''}`}
-            {offer.hint.backpack > 0 && <span data-ui="backpack">{` · ${t('ui.backpack')}: ${offer.hint.backpack}`}</span>}
+        {/* GAME-181: ОДНА коротка поточна ціль (крок головного квесту) — завжди на екрані, обидві орієнтації. Лежить ВГОРІ смуги під шапкою, а «Далі: …» (GAME-175) — під нею:
+            дві підказки одна на одній не стоять (картка мети — у потоці шапки вище). Не ловить дотик. */}
+        {(goalShown || nextShown) && (
+          <div class="ui-strip">
+            {goalShown && <div class="ui-goal" data-ui="goal" data-ended={offer.stage === 'ended' ? 'yes' : undefined}>{`${t('ui.goal')}: ${offer.goal ? ct(lang, offer.goal.key) : t('ui.goal.ended')}`}</div>}
+            {nextShown && (
+              <div class="ui-next" data-ui="next-hint" data-kind={offer.hint.near ? 'near' : 'next'} data-spot={offer.hint.near ? undefined : offer.hint.nextSpot ?? undefined}>
+                {offer.hint.near
+                  ? `● ${t(offer.hint.near.label)}${offer.hint.near.itemKey ? ` ${ct(lang, offer.hint.near.itemKey)}` : ''}`
+                  : `${offer.hint.next ? `${t('ui.next')} ${t(offer.hint.next as Key)}` : ''}`}
+                {offer.hint.backpack > 0 && <span data-ui="backpack">{` · ${t('ui.backpack')}: ${offer.hint.backpack}`}</span>}
+              </div>
+            )}
           </div>
         )}
         {reminder}
       </header>}
+      {titleUpShown && titleUp && (
+        <div class="ui-titleup" data-ui="title-up" data-title={titleUp.index + 1} role="status">
+          <strong>{`${t('ui.titleUp')}: ${ct(lang, `title.${titleUp.index + 1}`)}`}</strong>
+          <span>{ct(lang, `title.${titleUp.index + 1}.family`)}</span>
+        </div>
+      )}
       {storyOpen && <StoryPanel offer={offer} lang={lang} t={t} act={storyAct} close={() => story(false)}>{staleNotice}</StoryPanel>}
       {summary && !paused && <DaySummary summary={summary} lang={lang} t={t} onContinue={summaryContinue} onEnd={summaryEnd} />}
       {paused && confirmNew && (

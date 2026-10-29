@@ -12,7 +12,7 @@ export const pairs = (md: string): string[] => md.split(/^### /m).filter((s) => 
 export const effectRows = (md: string): string[][] => md.split('\n').filter((l) => /^\|\s*\d+\s*\|/.test(l)).map((l) => l.split('|').slice(1, -1).map((c) => c.trim()));
 /** Знімки нашої сцени, названі в тексті. */
 export const shotsIn = (s: string): string[] => [...s.matchAll(/research\/visual-audit\/([\w.-]+\.png)/g)].map((m) => m[1] ?? '');
-export const OURS = /^((day|dusk|night|before-no-effect)-(portrait-390x844|landscape-844x390)|family-(idle|walking-to-spots)|camp-(spawn|pier|tents-south|reception|clearing)-(portrait|landscape)|mapfirst-(portrait|landscape)-(ring|backpack|backpack-down|bike))\.png$/;   // GAME-173 родина; GAME-172 camp-* живий кемпінг; GAME-175 день 1 на мапі
+export const OURS = /^((day|dusk|night|before-no-effect)-(portrait-390x844|landscape-844x390)|family-(idle|walking-to-spots)|camp-(spawn|pier|tents-south|reception|clearing)-(portrait|landscape)|mapfirst-(portrait|landscape)-(ring|backpack|backpack-down|bike)|progress-(portrait|landscape)-(goal|titleup|skills|summary))\.png$/;   // GAME-173 родина; GAME-172 camp-* живий кемпінг; GAME-175 день 1 на мапі; GAME-181 прогресія
 
 describe('research/visual-audit.md (GAME-99)', () => {
   it('файл прочитано', () => { expect(MD.length).toBeGreaterThan(500); });

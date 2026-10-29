@@ -72,13 +72,13 @@ export function baseline() {
     ],
     quests: [
       {
-        id: 'ST-001', titleKey: 'q.st-001', optional: false, giverId: 'npc.ranger',
+        id: 'ST-001', titleKey: 'q.st-001', optional: false, xp: 10, giverId: 'npc.ranger',
         objectives: [{ id: 'talk-ranger', textKey: 'q.st-001.o1', kind: 'talk', target: 'npc.ranger', required: true }],
         transitions: [{ on: 'complete', to: 'ST-002' }],
         reward: { grantId: 'rw.st-001', items: [{ item: 'item.map', qty: 1 }] },
       },
       {
-        id: 'ST-002', titleKey: 'q.st-002', optional: false, requires: { items: ['item.map'] },
+        id: 'ST-002', titleKey: 'q.st-002', optional: false, xp: 10, requires: { items: ['item.map'] },
         objectives: [
           { id: 'visit-forest', textKey: 'q.st-002.o1', kind: 'visit', target: 'loc.forest', required: true },
           { id: 'collect-wood', textKey: 'q.st-002.o2', kind: 'collect', target: 'item.firewood', required: true },
@@ -88,7 +88,7 @@ export function baseline() {
         reward: { grantId: 'rw.st-002', money: 10 },
       },
       {
-        id: 'ST-003', titleKey: 'q.st-003', optional: true,
+        id: 'ST-003', titleKey: 'q.st-003', optional: true, xp: 15,
         objectives: [
           { id: 'visit-lake', textKey: 'q.st-003.o1', kind: 'visit', target: 'loc.lake', required: true },
           { id: 'buy-gift', textKey: 'q.st-003.o2', kind: 'collect', target: 'item.gift', required: false },
@@ -97,7 +97,7 @@ export function baseline() {
         reward: { grantId: 'rw.st-003', money: 5 },
       },
       {
-        id: 'ST-004', titleKey: 'q.st-004', optional: false, end: true, requires: { quests: ['ST-002'] },
+        id: 'ST-004', titleKey: 'q.st-004', optional: false, xp: 10, end: true, requires: { quests: ['ST-002'] },
         objectives: [{ id: 'talk-ranger', textKey: 'q.st-004.o1', kind: 'talk', target: 'npc.ranger', required: true }],
         transitions: [],
       },
@@ -156,7 +156,7 @@ export function comboBaseline() {
   c.animals = [{ id: DOG, nameKey: DOG }];
   c.locations.push({ id: 'loc.dog-park', nameKey: 'loc.dog-park', when: { animals: [DOG] } });
   c.quests.push({
-    id: 'q.dog-walk', titleKey: 'q.dog-walk', optional: true, when: { animals: [DOG] },
+    id: 'q.dog-walk', titleKey: 'q.dog-walk', optional: true, xp: 15, when: { animals: [DOG] },
     objectives: [{ id: 'visit-park', textKey: 'q.dog-walk.o1', kind: 'visit', target: 'loc.dog-park', required: true }],
     transitions: [{ on: 'complete', to: 'ST-004' }, { on: 'decline', to: 'ST-004' }],
     reward: { grantId: 'rw.dog-walk', money: 2 },
@@ -495,7 +495,7 @@ export const FIXTURES = [
 
   // ---- граф квестів ----
   { name: 'вузол, у який не веде жоден перехід', expect: ['NODE_UNREACHABLE'], patch(c) {
-    c.quests.push({ id: 'ST-009', titleKey: 'q.st-004', optional: false, objectives: [], transitions: [{ on: 'complete', to: 'ST-004' }] });
+    c.quests.push({ id: 'ST-009', titleKey: 'q.st-004', optional: false, xp: 10, objectives: [], transitions: [{ on: 'complete', to: 'ST-004' }] });
   } },
   // DIALOGUE_QUEST_GATE тут — справжня друга знахідка: рейнджер безумовно стартує ST-003, а той тепер чогось вимагає.
   { name: 'два квести вимагають один одного', expect: ['REQUIRES_CYCLE', 'MAIN_GATE_NOT_GUARANTEED', 'DIALOGUE_QUEST_GATE', 'TRANSITION_REQUIRES_NOT_READY'], patch(c) {
@@ -505,12 +505,18 @@ export const FIXTURES = [
   { name: 'квест вимагає сам себе', expect: ['REQUIRES_CYCLE', 'DIALOGUE_QUEST_GATE', 'TRANSITION_REQUIRES_NOT_READY'], patch(c) { q(c, 'ST-003').requires = { quests: ['ST-003'] }; } },
   { name: 'необов\u2019язковий квест без відмови', expect: ['OPTIONAL_NO_DECLINE'], patch(c) { q(c, 'ST-003').transitions = [{ on: 'complete', to: 'ST-004' }]; } },
   { name: 'гілка без наступного етапу', expect: ['BRANCH_NO_NEXT', 'NO_PATH_TO_END'], patch(c) {
-    c.quests.push({ id: 'ST-005', titleKey: 'q.st-004', optional: false, objectives: [], transitions: [] });
+    c.quests.push({ id: 'ST-005', titleKey: 'q.st-004', optional: false, xp: 10, objectives: [], transitions: [] });
     q(c, 'ST-002').transitions.push({ on: 'complete', to: 'ST-005', choiceKey: 'q.st-002' });
   } },
   { name: 'фінал втратив позначку кінця', expect: ['BRANCH_NO_NEXT', 'NO_PATH_TO_END'], patch(c) { q(c, 'ST-004').end = false; } },
   { name: 'межа дня на необов\u2019язковому квесті', expect: ['DAY_END_OPTIONAL'], patch(c) { q(c, 'ST-003').dayEnd = true; } },
   { name: 'межа дня на основному етапі — коректно', expect: [], patch(c) { q(c, 'ST-002').dayEnd = true; } },
+  { name: '[xp] квест без XP', expect: ['QUEST_NO_XP'], patch(c) { delete q(c, 'ST-002').xp; } },
+  { name: '[xp] XP нуль', expect: ['QUEST_NO_XP'], patch(c) { q(c, 'ST-002').xp = 0; } },
+  { name: '[xp] XP кроку головного квесту завеликий', expect: ['QUEST_XP_RANGE'], patch(c) { q(c, 'ST-002').xp = 21; } },
+  { name: '[xp] XP кроку головного квесту замалий', expect: ['QUEST_XP_RANGE'], patch(c) { q(c, 'ST-002').xp = 9; } },
+  { name: '[xp] побічка не 15', expect: ['QUEST_XP_RANGE'], patch(c) { q(c, 'ST-003').xp = 10; } },
+  { name: '[xp] межі 10 і 20 для головного та 15 для побічки — коректно', expect: [], patch(c) { q(c, 'ST-001').xp = 20; q(c, 'ST-002').xp = 10; } },
 
   // ---- діалоги (GAME-28) ----
   { name: '[діалог] контроль: умовні гілки без безумовної альтернативи, але з fallback — коректно', expect: [], patch(c) {
@@ -1052,7 +1058,7 @@ export const FIXTURES = [
   { base: 'combo', name: '[сумісн.] перехід без when із квесту для собаки у квест для велосипеда, а собаку возять лише авто', expect: ['WHEN_UNSATISFIABLE'], count: { code: 'WHEN_UNSATISFIABLE', n: 1 }, patch(c) {
     c.animals[0].transports = [T_CAR];
     c.quests.push({
-      id: 'q.bike-loop', titleKey: 'q.st-003', optional: true, when: { transports: [T_BIKE] },
+      id: 'q.bike-loop', titleKey: 'q.st-003', optional: true, xp: 15, when: { transports: [T_BIKE] },
       objectives: [{ id: 'visit-lake', textKey: 'q.st-003.o1', kind: 'visit', target: 'loc.lake', required: true }],
       transitions: [{ on: 'complete', to: 'ST-004' }, { on: 'decline', to: 'ST-004' }],
     });

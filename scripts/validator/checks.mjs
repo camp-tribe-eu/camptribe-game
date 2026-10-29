@@ -640,6 +640,19 @@ export const CHECKS = [
         .map((q) => I('DAY_END_OPTIONAL', q.id, 'межа дня на необов\u2019язковому квесті: відмова лишила б день незавершеним'));
     },
   },
+  {
+    id: 'quest-xp',
+    run(c) { // @check:quest-xp
+      // GAME-181: кожен квест дає XP мандрівника. Крок головного — 10…20, побічка — 15 (scenario §2.1). Без цього звання стоять на місці,
+      // а гравець не бачить, що крок щось дав; діапазон не дає тихо роздути чи занулити шкалу звань.
+      const out = [];
+      for (const q of c.ix.by.quests.values()) {
+        if (!Number.isInteger(q.xp) || q.xp < 1) out.push(I('QUEST_NO_XP', q.id, 'квест без XP мандрівника'));
+        else if (q.optional ? q.xp !== 15 : q.xp < 10 || q.xp > 20) out.push(I('QUEST_XP_RANGE', q.id, `XP ${q.xp}: крок головного квесту — 10…20, побічного — 15`));
+      }
+      return out;
+    },
+  },
   // ---------- діалоги (GAME-28) ----------
   {
     id: 'roads',

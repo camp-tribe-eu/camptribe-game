@@ -80,7 +80,7 @@ describe('daySummary: кожна секція — лише при факті (GA
     const sum = daySummary(s, 1, GAME_DEFS);
     const p = s.game.player;
     if (!p || !GAME_DEFS.packing) throw new Error('немає персонажа чи пакування');
-    expect(sum).toEqual({ day: 1, ended: false, sections: [{ kind: 'packed', ids: packedOf(s.game.flags, GAME_DEFS.packing, p) }], money: { start: 5_000, end: 5_000 } });
+    expect(sum).toEqual({ day: 1, ended: false, sections: [{ kind: 'packed', ids: packedOf(s.game.flags, GAME_DEFS.packing, p) }], money: { start: 5_000, end: 5_000 }, reward: { xp: 0, om: 0 } });
     // Без пакувальних прапорців — і секції немає (сторона «лише при факті»).
     expect(kinds(daySummary({ ...s, game: { ...s.game, flags: s.game.flags.filter((f) => !f.startsWith('f.pack-')) } }, 1, GAME_DEFS))).toEqual([]);
     expect(daySummary(s, 2, GAME_DEFS)).toBeNull();          // дня 2 ще немає
