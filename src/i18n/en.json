@@ -207,5 +207,21 @@
   "sum.reward": "Today",
   "sum.next": "Next time",
   "sum.nextEnded": "a new adventure is coming",
-  "sum.safe": "Progress is saved. Come back whenever you like."
+  "sum.safe": "Progress is saved. Come back whenever you like.",
+  "ui.req.reward": "Reward",
+  "ui.req.xp": "XP",
+  "ui.req.om": "OM",
+  "ui.req.goals": "What you need",
+  "ui.req.tracker": "Requests",
+  "next.req.target": "head for the marker on the map",
+  "next.req.giver": "go back to whoever asked",
+  "ui.req.skill.planning": "planning",
+  "ui.req.skill.camping": "camping",
+  "ui.req.skill.mechanics": "mechanics",
+  "ui.req.skill.electrics": "electrics",
+  "ui.req.skill.cooking": "cooking",
+  "ui.req.skill.finance": "finance",
+  "ui.req.skill.endurance": "endurance",
+  "ui.req.skill.communication": "communication",
+  "near.req": "Do:"
 }

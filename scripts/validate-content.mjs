@@ -13,7 +13,7 @@
 
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { loadContent } from './validator/load.mjs';
+import { loadContent, loadMapObjects } from './validator/load.mjs';
 import { validate } from './validator/checks.mjs';
 import { selfTest } from './validator/self-test.mjs';
 import { enumerateCombos } from './validator/combos.mjs';
@@ -39,7 +39,7 @@ if (loaded.status === 'NOT_RUN') {
   process.exit(0);
 }
 
-const issues = loaded.issues.length ? loaded.issues : validate(loaded.content, { today: new Date().toISOString().slice(0, 10) });
+const issues = loaded.issues.length ? loaded.issues : validate(loaded.content, { today: new Date().toISOString().slice(0, 10), maps: loadMapObjects(resolve(repo, 'public/maps')) });
 // GAME-56: попередження (давній факт) друкуються як ::warning:: і код виходу не псують.
 const { exitCode, errors, warnings } = verdict(issues);
 for (const i of warnings) console.log(`::warning::${i.code} · ${i.where} · ${i.msg}`);

@@ -20,7 +20,8 @@
         { "textKey": "dlg.elise-greeting.hello.c12", "next": "bikezone", "when": { "all": [{ "quest": "q.elise-bike-area", "status": "active" }, { "remembers": "m.came-by-bike" }] } },
         { "textKey": "dlg.elise-greeting.hello.c13", "next": "bikezone-thanks", "when": { "remembers": "m.bikezone-helped" } },
         { "textKey": "dlg.elise-greeting.hello.c14", "next": "dinner", "when": { "quest": "CH1-D2-CAMP-001", "status": "active" } },
-        { "textKey": "dlg.elise-greeting.hello.c15", "next": "farewell", "when": { "quest": "CH1-D3-ELISE-001", "status": "active" }, "effects": [{ "completeObjective": { "quest": "CH1-D3-ELISE-001", "objective": "goodbye" } }] }
+        { "textKey": "dlg.elise-greeting.hello.c15", "next": "farewell", "when": { "quest": "CH1-D3-ELISE-001", "status": "active" }, "effects": [{ "completeObjective": { "quest": "CH1-D3-ELISE-001", "objective": "goodbye" } }] },
+        { "textKey": "dlg.elise-greeting.hello.req0", "next": "req", "when": { "notFlag": "f.req-elise-lantern-done" } }
       ]
     },
     { "id": "bike", "speaker": "npc", "textKey": "dlg.elise-greeting.bike", "next": "intro" },
@@ -117,10 +118,7 @@
     },
     { "id": "dinner-together", "speaker": "npc", "textKey": "dlg.elise-greeting.dinner-together", "next": "bye" },
     { "id": "dinner-simple", "speaker": "npc", "textKey": "dlg.elise-greeting.dinner-simple", "next": "bye" },
-    {
-      "id": "farewell", "speaker": "npc", "textKey": "dlg.elise-greeting.farewell", "next": "goodbye",
-      "branches": [{ "when": { "flag": "f.litter-cleaned-ch1" }, "next": "goodbye-litter" }]
-    },
+    { "id": "farewell", "speaker": "npc", "textKey": "dlg.elise-greeting.farewell", "next": "goodbye", "branches": [{ "when": { "flag": "f.litter-cleaned-ch1" }, "next": "goodbye-litter" }] },
     { "id": "goodbye-litter", "speaker": "npc", "textKey": "dlg.elise-greeting.goodbye-litter", "next": "goodbye" },
     {
       "id": "goodbye", "speaker": "npc", "textKey": "dlg.elise-greeting.goodbye",
@@ -131,6 +129,24 @@
     },
     { "id": "goodbye-road", "speaker": "npc", "textKey": "dlg.elise-greeting.goodbye-road", "next": "bye" },
     { "id": "goodbye-quiet", "speaker": "npc", "textKey": "dlg.elise-greeting.goodbye-quiet", "next": "bye" },
-    { "id": "bye", "speaker": "npc", "textKey": "dlg.elise-greeting.bye", "end": true }
+    { "id": "bye", "speaker": "npc", "textKey": "dlg.elise-greeting.bye", "end": true },
+    { "id": "req", "speaker": "npc", "textKey": "dlg.elise-greeting.req", "next": "bye", "branches": [{ "when": { "all": [{ "flag": "f.req-elise-lantern-t1" }, { "notFlag": "f.req-elise-lantern-done" }] }, "next": "turnin" }, { "when": { "all": [{ "flag": "f.req-elise-lantern-taken" }, { "notFlag": "f.req-elise-lantern-done" }] }, "next": "reminder" }, { "when": { "all": [{ "notFlag": "f.req-elise-lantern-taken" }, { "notFlag": "f.req-elise-lantern-done" }] }, "next": "offer" }] },
+    {
+      "id": "offer", "speaker": "npc", "textKey": "dlg.elise-greeting.offer",
+      "choices": [
+        { "textKey": "dlg.elise-greeting.offer.c1", "next": "accepted", "effects": [{ "setFlag": "f.req-elise-lantern-taken" }] },
+        { "textKey": "dlg.elise-greeting.offer.c2", "next": "later" }
+      ]
+    },
+    { "id": "accepted", "speaker": "npc", "textKey": "dlg.elise-greeting.accepted", "end": true },
+    { "id": "later", "speaker": "npc", "textKey": "dlg.elise-greeting.later", "end": true },
+    { "id": "reminder", "speaker": "npc", "textKey": "dlg.elise-greeting.reminder", "end": true },
+    {
+      "id": "turnin", "speaker": "npc", "textKey": "dlg.elise-greeting.turnin",
+      "choices": [
+        { "textKey": "dlg.elise-greeting.turnin.c1", "next": "closing", "effects": [{ "setFlag": "f.req-elise-lantern-done" }] }
+      ]
+    },
+    { "id": "closing", "speaker": "npc", "textKey": "dlg.elise-greeting.closing", "end": true }
   ]
 }

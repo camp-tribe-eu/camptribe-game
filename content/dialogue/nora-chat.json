@@ -1,8 +1,9 @@
 {
   "id": "dlg.nora-chat",
   "npcId": "npc.nora",
-  "start": "hello",
+  "start": "gate",
   "nodes": [
+    { "id": "gate", "speaker": "npc", "textKey": "dlg.nora-chat.gate", "next": "hello", "branches": [{ "when": { "all": [{ "flag": "f.req-nora-shore-t1" }, { "flag": "f.req-nora-shore-t2" }, { "flag": "f.req-nora-shore-t3" }, { "notFlag": "f.req-nora-shore-done" }] }, "next": "turnin" }, { "when": { "all": [{ "flag": "f.req-nora-shore-taken" }, { "notFlag": "f.req-nora-shore-done" }] }, "next": "reminder" }, { "when": { "all": [{ "notFlag": "f.req-nora-shore-taken" }, { "notFlag": "f.req-nora-shore-done" }] }, "next": "offer" }] },
     {
       "id": "hello", "speaker": "npc", "textKey": "dlg.nora-chat.hello",
       "choices": [
@@ -13,6 +14,23 @@
     },
     { "id": "a", "speaker": "npc", "textKey": "dlg.nora-chat.a", "end": true },
     { "id": "b", "speaker": "npc", "textKey": "dlg.nora-chat.b", "end": true },
-    { "id": "bye", "speaker": "npc", "textKey": "dlg.nora-chat.bye", "end": true }
+    { "id": "bye", "speaker": "npc", "textKey": "dlg.nora-chat.bye", "end": true },
+    {
+      "id": "offer", "speaker": "npc", "textKey": "dlg.nora-chat.offer",
+      "choices": [
+        { "textKey": "dlg.nora-chat.offer.c1", "next": "accepted", "effects": [{ "setFlag": "f.req-nora-shore-taken" }] },
+        { "textKey": "dlg.nora-chat.offer.c2", "next": "later" }
+      ]
+    },
+    { "id": "accepted", "speaker": "npc", "textKey": "dlg.nora-chat.accepted", "end": true },
+    { "id": "later", "speaker": "npc", "textKey": "dlg.nora-chat.later", "end": true },
+    { "id": "reminder", "speaker": "npc", "textKey": "dlg.nora-chat.reminder", "end": true },
+    {
+      "id": "turnin", "speaker": "npc", "textKey": "dlg.nora-chat.turnin",
+      "choices": [
+        { "textKey": "dlg.nora-chat.turnin.c1", "next": "closing", "effects": [{ "setFlag": "f.req-nora-shore-done" }] }
+      ]
+    },
+    { "id": "closing", "speaker": "npc", "textKey": "dlg.nora-chat.closing", "end": true }
   ]
 }

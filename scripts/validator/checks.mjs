@@ -2,6 +2,9 @@
 // scripts/mutate-validator.mjs вставляє після нього `return [];` і доводить, що самотест червоніє.
 // Не прибирай і не дублюй маркери — мутаційний прогін звіряє їх із реєстром CHECKS.
 
+import { dirname, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { loadMapObjects } from './load.mjs';
 import { checkSchema } from './schema.mjs';
 import { ECON_FLOOR_CENTS, FACT_KINDS, FACT_STALE_DAYS, FLAG_FAMILIES, GEAR_CHECK_VARIANTS, GEAR_FIELDS, isWarning, LOAN_RE, SKILL_IDS, WAVE_MAX_LIMIT, WAVE_MAX_TASKS, WAVE_MIN_TASKS } from './codes.mjs';
 import { checkCombos, checkOptions, comboLabel, enumerateCombos, matches, NO_ANIMAL } from './combos.mjs';
@@ -21,6 +24,7 @@ const ID_PATTERNS = {
   facts: /^fact\.[a-z0-9]+(?:[.-][a-z0-9]+)*$/,
   dialogues: /^dlg\.[a-z0-9]+(?:[.-][a-z0-9]+)*$/,
   roads: /^road\.[a-z0-9]+(?:[.-][a-z0-9]+)*$/,
+  requests: /^req\.[a-z0-9]+(?:[.-][a-z0-9]+)*$/,
   waves: /^wave\.[a-z0-9]+(?:[.-][a-z0-9]+)*$/,
 };
 const FLAG_ID = /^f\.[a-z0-9]+(?:[.-][a-z0-9]+)*$/;
@@ -532,6 +536,12 @@ export const CHECKS = [
       for (const w of ct.waves ?? []) {
         add(w.titleKey, w.id); add(w.hookKey, `${w.id}.hookKey`); add(w.fallback?.textKey, `${w.id}.fallback`); add(w.allDone?.textKey, `${w.id}.allDone`);
         for (const t of w.tasks) { add(t.textKey, `${w.id}/${t.id}`); add(t.done?.textKey, `${w.id}/${t.id}.done`); add(t.late?.textKey, `${w.id}/${t.id}.late`); }
+      }
+      // GAME-180: прохання сусідів — назва, рядок «що зробити», підпис у трекері, підписи цілей і запис журналу про здачу.
+      for (const r of ct.requests ?? []) {
+        add(r.titleKey, r.id); add(r.goalKey, `${r.id}.goalKey`); add(r.trackKey, `${r.id}.trackKey`);
+        (r.targets ?? []).forEach((t) => add(t.labelKey, `${r.id}/${t.id}`));
+        add(`journal.${requestFlag(r.id, 'done')}`, `${r.id}.journal`);
       }
       (ct.facts ?? []).forEach((f) => add(f.claimKey, f.id));
       (ct.packing?.notes ?? []).forEach((n, i) => add(n.textKey, `packing.notes[${i}]`));
@@ -1063,6 +1073,89 @@ export const CHECKS = [
     },
   },
   {
+    // GAME-180: прохання сусідів («!» над мешканцем). Прохання — не квест: його стан — прапорці, а крок робиться ногами на мапі.
+    // Сторож стереже п'ять речей: у прохання є просильник з діалогом; є хоч одна ціль, що справді існує на мапі; є вихід «Пізніше» без наслідків;
+    // є здача, яка вимагає КОЖНУ ціль; сюжет від прохань не залежить (відмова нічого не коштує й нічого не блокує).
+    id: 'requests',
+    run(c) { // @check:requests
+      const out = [];
+      const rs = c.content.requests ?? [];
+      if (rs.length === 0) return out;
+      const ct = c.content;
+      const maps = c.maps;
+      if (!Array.isArray(maps)) return [I('INTERNAL_ERROR', 'requests', 'не передано імена об’єктів мапи (validate(content, { today, maps })): без них «ціль існує на мапі» не перевірити — це збій, не PASS')];
+      const npcs = new Map((ct.npcs ?? []).map((n) => [n.id, n]));
+      const seenSpots = new Map();
+      for (const r of rs) {
+        const where = r.id;
+        const npc = npcs.get(r.giver);
+        const d = (ct.dialogues ?? []).find((x) => x.npcId === r.giver);
+        if (!npc) out.push(I('REQUEST_GIVER_INVALID', where, `просильник «${r.giver}» — немає такого NPC у npcs.json`));
+        else if (!d) out.push(I('REQUEST_GIVER_INVALID', where, `просильник «${r.giver}» не має діалогу: «!» вів би в порожнечу`));
+        const targets = r.targets ?? [];
+        if (targets.length === 0) out.push(I('REQUEST_NO_TARGET', where, 'у прохання немає жодної цілі на мапі: «зроби щось» без місця, де це робити'));
+        for (const t of targets) {
+          if (!maps.includes(t.spot)) out.push(I('REQUEST_TARGET_NO_MAP', `${where}/${t.id}`, `ціль «${t.spot}» не існує серед об’єктів мапи: до неї не дійти пішки, прохання не виконати`));
+          if (seenSpots.has(t.spot)) out.push(I('REQUEST_TARGET_NO_MAP', `${where}/${t.id}`, `об’єкт мапи «${t.spot}» уже є ціллю ${seenSpots.get(t.spot)}: один об’єкт — одна дія`));
+          else seenSpots.set(t.spot, where);
+        }
+        for (const sk of r.reward?.skills ?? []) if (!SKILL_IDS.includes(sk)) out.push(I('REQUEST_REWARD_INVALID', where, `навичка «${sk}» не з восьми напрямів (SKILL_IDS)`));
+        if (!d) continue;
+        const taken = requestFlag(r.id, 'taken');
+        const done = requestFlag(r.id, 'done');
+        const byId = new Map(d.nodes.map((n) => [n.id, n]));
+        const sets = (ch, f) => (ch.effects ?? []).some((e) => e.setFlag === f);
+        // Пропозиція: вузол `offer` з вибором «Беруся» (ставить taken) і виходом «Пізніше» — вибір БЕЗ наслідків, що безумовно доходить до кінця розмови.
+        const offer = byId.get('offer');
+        const reachesEnd = (from) => {
+          const seen = new Set(); const st = [from];
+          while (st.length) { const id = st.pop(); if (seen.has(id)) continue; seen.add(id); const n = byId.get(id); if (!n) continue; if (n.end === true) return true; st.push(...exits(n, true)); }
+          return false;
+        };
+        const accept = (offer?.choices ?? []).find((ch) => sets(ch, taken));
+        const later = (offer?.choices ?? []).find((ch) => (ch.effects ?? []).length === 0 && !ch.when && reachesEnd(ch.next));
+        if (!offer || !accept) out.push(I('REQUEST_NO_LATER', where, `у діалозі ${d.id} немає вузла «offer» з вибором, що ставить ${taken}: прохання не взяти`));
+        else if (!later) out.push(I('REQUEST_NO_LATER', where, `вузол «offer» діалогу ${d.id} не має виходу «Пізніше»: вибір без наслідків, що безумовно веде до кінця розмови. Відмова мусить бути безкоштовною`));
+        // Здача: вибір, що ставить done, лежить за умовою (гілка чи вибір), яка вимагає КОЖНУ ціль, і не вимагає нічого понад ціль-прапорці й «ще не здано».
+        const needs = targets.map((t) => requestFlag(r.id, t.id));
+        const reachable = (from) => { const seen = new Set(); const st = [from]; while (st.length) { const id = st.pop(); if (seen.has(id)) continue; seen.add(id); const n = byId.get(id); if (n) st.push(...exits(n, false)); } return seen; };
+        const doneNodes = new Set(d.nodes.filter((n) => (n.choices ?? []).some((ch) => sets(ch, done))).map((n) => n.id));
+        const guards = [];
+        for (const n of d.nodes) {
+          for (const b of n.branches ?? []) guards.push([b.when, b.next]);
+          for (const ch of n.choices ?? []) if (ch.when) guards.push([ch.when, ch.next]);
+        }
+        const hasTurnIn = needs.length > 0 && guards.some(([when, next]) => {
+          const have = new Set(conjuncts(when).map((x) => x.flag).filter((x) => x !== undefined));
+          return needs.every((f) => have.has(f)) && [...reachable(next)].some((id) => doneNodes.has(id));
+        });
+        if (!hasTurnIn) out.push(I('REQUEST_NO_TURNIN', where, `у діалозі ${d.id} немає здачі: вибір із setFlag ${done} за умовою, що вимагає КОЖНУ ціль (${needs.join(', ')}) — без цього прохання не завершити або завершується без роботи`));
+      }
+      // Сюжет від прохань не залежить: умова на f.req-* (у виборі чи в автоматичній гілці) не стоїть перед жодним ефектом, крім setFlag власних f.req-* прапорців
+      // (startQuest, completeObjective, remember, setFlag чужого прапорця — червоніють; для гілки — по всьому, що з неї досяжне).
+      const readsReq = (when) => condLeaves(when).map((x) => x.flag ?? x.notFlag).find((f) => typeof f === 'string' && f.startsWith('f.req-'));
+      const foreign = (effects) => (effects ?? []).filter((e) => !(e.setFlag !== undefined && e.setFlag.startsWith('f.req-')));
+      for (const [where, ch, dd] of dialogueChoices(ct)) {
+        const bad = ch.when ? readsReq(ch.when) : undefined;
+        const fx = foreign(ch.effects);
+        if (bad && fx.length) out.push(I('REQUEST_GATES_QUEST', where, `${dd.id}: вибір за умовою на прапорець прохання ${bad} має ефект поза прапорцями прохань (${JSON.stringify(fx[0])}) — сюжет не може залежати від необов\u2019язкової допомоги сусідам`));
+      }
+      for (const [where, br, dd] of dialogueBranches(ct)) {
+        const bad = readsReq(br.when);
+        if (!bad) continue;
+        const byId = new Map(dd.nodes.map((n) => [n.id, n]));
+        const seen = new Set(); const st = [br.next];
+        while (st.length) {
+          const id = st.pop(); if (seen.has(id)) continue; seen.add(id);
+          const n = byId.get(id); if (!n) continue;
+          for (const ch of n.choices ?? []) { const fx = foreign(ch.effects); if (fx.length) { out.push(I('REQUEST_GATES_QUEST', where, `${dd.id}: гілка за умовою на ${bad} веде до ефекту поза прапорцями прохань (${JSON.stringify(fx[0])}) у вузлі «${id}»`)); st.length = 0; break; } }
+          st.push(...exits(n, false));
+        }
+      }
+      return out;
+    },
+  },
+  {
     id: 'waves',
     run(c) { // @check:waves
       // GAME-170: хвиля напруги — 2–4 справи зі строком, обидва наслідки, варіант для кожної комбінації, унікальність між
@@ -1345,6 +1438,9 @@ export function journalKeys(f) {
   return f.type === 'enum' ? (f.values ?? []).map((v) => `journal.${f.id}-${v}`) : [`journal.${f.id}`];
 }
 
+/** Прапорець прохання: `req.nora-shore` + `taken` → `f.req-nora-shore-taken` (дзеркало src/content/requests.ts requestFlag). */
+const requestFlag = (id, part) => `f.${id.replace(/\./g, '-')}-${part}`;
+
 function flagUses(content) {
   const out = [];
   for (const [where, leaf] of condLeavesAll(content)) { const f = leaf.flag ?? leaf.notFlag; if (f !== undefined) out.push([where, f]); }
@@ -1429,10 +1525,12 @@ function rewards(content) {
 const isIsoDay = (d) => typeof d === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(d)
   && !Number.isNaN(Date.parse(`${d}T00:00:00Z`)) && new Date(`${d}T00:00:00Z`).toISOString().slice(0, 10) === d;
 
-export function validate(content, { today }) {
+// Об'єкти мап гри за замовчуванням (GAME-180): виклик без `maps` (тести на справжньому контенті) бачить справжні мапи репозиторію, а не порожній список.
+const REPO_MAPS = resolve(dirname(fileURLToPath(import.meta.url)), '../../public/maps');
+export function validate(content, { today, maps = loadMapObjects(REPO_MAPS) }) {
   // Без «сьогодні» давність і майбутні дати фактів мовчки вимикаються (NaN > 365 — завжди false) — це збій, не PASS (закон 4).
   if (!isIsoDay(today)) return [I('INTERNAL_ERROR', 'today', `«сьогодні» не дата YYYY-MM-DD: ${JSON.stringify(today)}`)];
-  const ctx = { content, today, ix: null };
+  const ctx = { content, today, maps, ix: null };
   const issues = [];
   const runOne = (chk) => {
     try { return chk.run(ctx); }

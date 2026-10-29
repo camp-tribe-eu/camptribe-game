@@ -85,7 +85,7 @@ GDD — приватний (`brain/Передача/00-dzherelo-lezhyt-lokalno.m
 `tags`, `completed`, `progress`. Хочеш нове поле — спершу картка на схему, потім контент.
 
 **Файли.** У `content/` лише: `meta.json`, `profiles.json`, `transports.json`, `animals.json`,
-`items.json`, `npcs.json`, `locations.json`, `quests.json`, `events.json`, `facts.json`, `flags.json` (реєстр прапорців, GAME-115), `waves.json` (хвилі напруги, GAME-170), тека
+`items.json`, `npcs.json`, `locations.json`, `quests.json`, `events.json`, `facts.json`, `flags.json` (реєстр прапорців, GAME-115), `waves.json` (хвилі напруги, GAME-170), `requests.json` (прохання сусідів, GAME-180), тека
 `locales/` з `<мова>.json` і тека `dialogue/` з `<назва>.json` (один діалог на файл). Більше нічого (жодних `README.json`, `quests-draft.json`, `lint/` усередині).
 
 **id — лише малі латинські літери, цифри, `.` і `-`. Підкреслення `_` і великі літери — ніколи.**
@@ -103,6 +103,7 @@ GDD — приватний (`brain/Передача/00-dzherelo-lezhyt-lokalno.m
 | `events.json` | **`id`**, **`titleKey`**, **`repeatable`**, `locationId`, `reward` | `ev.neighbours-firewood` |
 | `facts.json` | **`id`**, **`claimKey`**, `source`, `checkedAt`, `kind` | `fact.de-quiet-hours` |
 | `waves.json` | хвиля напруги (GAME-170): **`id`** (`wave.ch1-day2-evening`), **`titleKey`**, **`hookKey`**, **`stage`** (квест), `when`, **`tasks`** (2–4: **`id`**, **`textKey`**, **`limitMin`** 1–60 ігрових хв, `leaderOnly`, `animal` + `targets[{id, safe}]`, `when`, **`done`**/**`late`** `{ textKey, effects: [{ setFlag }] \| [{ wetGear: true }] }`), `allDone`, `fallback`. Хвиля стартує лише в локації етапу; дві хвилі одного етапу — через `when` (W2 авто / вело); етап минув — незроблене спізнилось. Справи етапів поза мапою табору (дім, дорога) — кнопки екрана подорожі, табору — цілі `task.<id>` на `camp-lake.tmj` (`scripts/maps/build_camp_lake.py`, TASK_SPOTS) і підпис `ui.wave.task.<id>` у `src/i18n` | `wave.назва` |
+| `requests.json` | прохання сусідів (GAME-180): **`id`** (`req.nora-shore`), **`giver`** (NPC з діалогом), **`titleKey`**, **`goalKey`** (що зробити, 1 рядок), **`trackKey`** (підпис у трекері HUD), **`targets`** (**`id`**, **`spot`** — об'єкт мапи `req.<прохання>.<ціль>`, **`icon`**, **`labelKey`**), **`reward`** `{ xp, om, skills[] }` (гачок для GAME-181). Стан — лише прапорці `f.req-<прохання>-taken/-<ціль>/-done` (реєстр; цілі — `kind: interaction`). Розмова просильника: вузол `offer` («Беруся» ставить `taken`, «Пізніше» — без наслідків), гілка здачі за всіма цілями. Мапа: цілі — `TASK_SPOTS` у `scripts/maps/build_camp_lake.py` | `req.назва` |
 | `flags.json` | **`id`**, **`type`** (`bool` \| `enum` \| `number` \| `item` \| `location`), **`initial`**, **`owner`** (хто ставить), `note`, `values` (enum), `valuesFrom` (enum факту стану), `generatedFrom` (сімейство ядра), `reserved`, `aka` (назви з реєстру радника), `journal` (вибір пишеться в журнал подорожі, GAME-110) | `f.elise-met`, `f.night`, `f.pack-*`, `m.came-by-bike`, `s.transport` |
 
 * **Ціль квесту:** **`id`** (`pitch-tent` — без крапок, лише `a-z0-9` і `-`), **`textKey`**,
@@ -293,6 +294,15 @@ GDD — приватний (`brain/Передача/00-dzherelo-lezhyt-lokalno.m
 **Мія і велосипед** (GAME-111, рішення власника 24.10: Мія ніколи не їде велосипедом; у поїздку велосипедом вона лишається вдома з Анною)
 - `MIA_ON_BIKE` — `animal.cat` у `animals.json` без `transports` (тоді вона їде всім) або з `transport.bike` у списку. Не допустити: рядок кішки — `"transports": ["transport.car"]`; нові транспорти до неї не додавай, а шлях «велосипед без Мії» тримай окремим контентом.
 - `MIA_CONTENT_UNGATED` — ціль квесту, справа хвилі (`animal: animal.cat` чи mia/cat в id), подія в дорозі (`dlg.…mia-…`) або річ пакування `item.mia-*` без `when.animals`, що містить лише `animal.cat` (`["animal.cat", "animal.none"]` теж червоне). Не допустити: кожному запису про Мію — `"when": { "animals": ["animal.cat"] }`; у подіях це `trigger.when`. Кішка — лише в авто, тож умова ще й відсікає велосипедиста.
+
+**Прохання сусідів** (GAME-180, `content/requests.json`)
+- `REQUEST_GIVER_INVALID` — `giver` прохання не NPC з `npcs.json` або в NPC немає діалогу. Не допустити: просильник — наявний NPC; його діалог (`dialogue/<npc>-chat.json`) має вузол `offer`; «!» над NPC без розмови веде в порожнечу.
+- `REQUEST_NO_TARGET` — у прохання немає цілей (`targets: []`). Не допустити: щонайменше одна ціль `{ id, spot, icon, labelKey }`; прохання без місця дії — не прохання.
+- `REQUEST_TARGET_NO_MAP` — `spot` цілі не існує серед тригерів/NPC шару `objects` мапи (`public/maps/*.tmj`) або той самий об'єкт — ціль двох прохань. Не допустити: спершу об'єкт у `scripts/maps/build_camp_lake.py` (`TASK_SPOTS`) і перегенерувати мапу, потім ціль; ім'я об'єкта дослівно `req.<прохання>.<ціль>`; один об'єкт — одна дія.
+- `REQUEST_NO_LATER` — у розмові немає вузла `offer` з вибором «Беруся» (`setFlag f.req-<прохання>-taken`) або немає безкоштовного виходу «Пізніше»: вибір без `effects` і без `when`, що безумовно веде до `end`. Не допустити: відмова нічого не ставить і нічого не коштує (закон гри «не карає»); після відмови просильник пропонує те саме знову.
+- `REQUEST_NO_TURNIN` — немає здачі: вибір із `setFlag f.req-<прохання>-done` за гілкою чи вибором, чия умова вимагає КОЖЕН прапорець цілі (`f.req-<прохання>-<ціль>`). Не допустити: гілка `ready` у стартовому вузлі `all: [усі цілі…, notFlag done]` → вузол подяки з вибором, що ставить `done`; прапорці цілей — рядки реєстру `kind: interaction`.
+- `REQUEST_REWARD_INVALID` — `reward.skills` називає навичку не з восьми напрямів. Не допустити: `skill.planning`…`skill.communication`; `xp` і `om` — цілі ≥ 0. Нагороду (XP, ОМ, навички) нараховує GAME-181 — тут лише дані.
+- `REQUEST_GATES_QUEST` — вибір чи автоматична гілка за умовою на `f.req-*` веде до ефекту, що не є `setFlag` власного `f.req-*` (`startQuest`, `completeObjective`, `remember`, чужий прапорець). Не допустити: сюжет не залежить від допомоги сусідам; прапорці прохань лише в розмовах самого прохання.
 
 **Комбінації профіль × транспорт × тварина**
 - `COMBO_NO_START` — стартовий квест має `when`, що виключає частину гравців. Не допустити: на `meta.start` ніколи не став `when`.

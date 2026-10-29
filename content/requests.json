@@ -1,0 +1,134 @@
+[
+  {
+    "id": "req.nora-shore",
+    "giver": "npc.nora",
+    "titleKey": "req.nora-shore",
+    "goalKey": "req.nora-shore.goal",
+    "trackKey": "req.nora-shore.track",
+    "targets": [
+      {
+        "id": "t1",
+        "spot": "req.nora-shore.t1",
+        "icon": "litter",
+        "labelKey": "req.nora-shore.t1"
+      },
+      {
+        "id": "t2",
+        "spot": "req.nora-shore.t2",
+        "icon": "litter",
+        "labelKey": "req.nora-shore.t2"
+      },
+      {
+        "id": "t3",
+        "spot": "req.nora-shore.t3",
+        "icon": "litter",
+        "labelKey": "req.nora-shore.t3"
+      }
+    ],
+    "reward": {
+      "xp": 15,
+      "om": 10,
+      "skills": [
+        "skill.mechanics",
+        "skill.communication"
+      ]
+    }
+  },
+  {
+    "id": "req.ingrid-birds",
+    "giver": "npc.ingrid",
+    "titleKey": "req.ingrid-birds",
+    "goalKey": "req.ingrid-birds.goal",
+    "trackKey": "req.ingrid-birds.track",
+    "targets": [
+      {
+        "id": "t1",
+        "spot": "req.ingrid-birds.t1",
+        "icon": "bird",
+        "labelKey": "req.ingrid-birds.t1"
+      }
+    ],
+    "reward": {
+      "xp": 15,
+      "om": 10,
+      "skills": [
+        "skill.communication",
+        "skill.planning"
+      ]
+    }
+  },
+  {
+    "id": "req.luc-chain",
+    "giver": "npc.luc",
+    "titleKey": "req.luc-chain",
+    "goalKey": "req.luc-chain.goal",
+    "trackKey": "req.luc-chain.track",
+    "targets": [
+      {
+        "id": "t1",
+        "spot": "req.luc-chain.t1",
+        "icon": "chain",
+        "labelKey": "req.luc-chain.t1"
+      }
+    ],
+    "reward": {
+      "xp": 15,
+      "om": 10,
+      "skills": [
+        "skill.mechanics"
+      ]
+    }
+  },
+  {
+    "id": "req.elise-lantern",
+    "giver": "npc.elise",
+    "titleKey": "req.elise-lantern",
+    "goalKey": "req.elise-lantern.goal",
+    "trackKey": "req.elise-lantern.track",
+    "targets": [
+      {
+        "id": "t1",
+        "spot": "req.elise-lantern.t1",
+        "icon": "lantern",
+        "labelKey": "req.elise-lantern.t1"
+      }
+    ],
+    "reward": {
+      "xp": 15,
+      "om": 10,
+      "skills": [
+        "skill.electrics",
+        "skill.camping"
+      ]
+    }
+  },
+  {
+    "id": "req.sarah-snack",
+    "giver": "npc.sarah",
+    "titleKey": "req.sarah-snack",
+    "goalKey": "req.sarah-snack.goal",
+    "trackKey": "req.sarah-snack.track",
+    "targets": [
+      {
+        "id": "t1",
+        "spot": "req.sarah-snack.t1",
+        "icon": "cookie",
+        "labelKey": "req.sarah-snack.t1"
+      },
+      {
+        "id": "t2",
+        "spot": "req.sarah-snack.t2",
+        "icon": "apple",
+        "labelKey": "req.sarah-snack.t2"
+      }
+    ],
+    "reward": {
+      "xp": 15,
+      "om": 10,
+      "skills": [
+        "skill.finance",
+        "skill.cooking"
+      ]
+    }
+  }
+]

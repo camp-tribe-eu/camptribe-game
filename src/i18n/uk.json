@@ -207,5 +207,21 @@
   "sum.reward": "За день",
   "sum.next": "Наступного разу",
   "sum.nextEnded": "нова пригода — скоро",
-  "sum.safe": "Прогрес збережено. Повертайся, коли буде час."
+  "sum.safe": "Прогрес збережено. Повертайся, коли буде час.",
+  "ui.req.reward": "Нагорода",
+  "ui.req.xp": "досвіду",
+  "ui.req.om": "ОМ",
+  "ui.req.goals": "Що потрібно",
+  "ui.req.tracker": "Прохання",
+  "next.req.target": "іди до позначки на мапі",
+  "next.req.giver": "поверни прохання тому, хто просив",
+  "ui.req.skill.planning": "планування",
+  "ui.req.skill.camping": "табір",
+  "ui.req.skill.mechanics": "механіка",
+  "ui.req.skill.electrics": "електрика",
+  "ui.req.skill.cooking": "кухня",
+  "ui.req.skill.finance": "фінанси",
+  "ui.req.skill.endurance": "витривалість",
+  "ui.req.skill.communication": "спілкування",
+  "near.req": "Зробити:"
 }

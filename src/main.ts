@@ -27,7 +27,7 @@ import { uiSounds } from './audio/ui-sounds';
 import { liveSpot, spotMove, storyMoves } from './content/director';
 import { portraitFor } from './view/portraits';
 import { headCrop, sheetOf } from './view/world/portrait-art';
-import { REQUEST_NPCS } from './view/npc-talk';
+import { requestMarker, requestTarget, requestsDone } from './content/requests';
 import { isBulky, isMapFirstSpot, mapKeyFor, needsLeft, nextTarget, npcLive, resolveSpot, spotLook, unpackMoves } from './content/map-first';
 import { packFlag } from './core/packing';
 import type { GameState } from './core/state';
@@ -207,7 +207,7 @@ let needsMemo = { small: 0, bulky: 0 };
 const worldHooks: WorldHooks = {
   onNpc: talkOnMap,
   // GAME-179: з ким можна говорити саме зараз — те саме, що прийме ядро (NPC тут, відкритий, розмови нема); «!» — гачок прохань GAME-180.
-  talk: (id) => (npcLive(bridge.state.game, GAME_DEFS, id) ? { request: REQUEST_NPCS.has(id) } : null),
+  talk: (id) => (npcLive(bridge.state.game, GAME_DEFS, id) ? { request: requestMarker(bridge.state.game, id) } : null),
   onObject: actOnMap,
   isLive: (name) => liveSpot(bridge.state, name, GAME_DEFS) && !(name.startsWith('pack.') && backpack.includes(name.slice(5))),
   backpack: () => backpack.length,
@@ -223,8 +223,9 @@ const worldHooks: WorldHooks = {
     return needsMemo;
   },
   look: (name) => spotLook(bridge.state, name),
+  requestsDone: () => requestsDone(bridge.state.game),
   target: () => {
-    if (targetFor !== bridge.state.game || targetPack !== backpack.length) { targetFor = bridge.state.game; targetPack = backpack.length; targetSpot = nextTarget(bridge.state, GAME_DEFS, backpack)?.spot ?? null; }
+    if (targetFor !== bridge.state.game || targetPack !== backpack.length) { targetFor = bridge.state.game; targetPack = backpack.length; targetSpot = nextTarget(bridge.state, GAME_DEFS, backpack)?.spot ?? requestTarget(bridge.state.game); }
     return targetSpot;
   },
   // Збірка e2e без ?mapFirst=1 — як до GAME-175: завжди табір (старі e2e ходять по ньому й перевіряють не прохід дня 1).

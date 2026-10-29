@@ -72,6 +72,8 @@ export interface WorldHooks {
   unload(): 'ok' | 'full' | 'none';
   /** Чого ще бракує в дорогу — для бульбашки над авто. */
   needs(): Needs;
+  /** GAME-180: скільки прохань сусідів уже здано (по зростанню сцена показує «+» над героєм). Немає — прохань у грі нема. */
+  requestsDone?(): number;
   /** Транспорт гравця (авто малюється спрайтом на подвір'ї, велосипед — маркером). */
   transport(): string | null;
   /** GAME-181: підпис нагороди («+15 XP +10 ОМ»), що ще не показана над героєм; забирає її (наступний виклик — null). */
@@ -179,6 +181,7 @@ export class WorldScene extends Phaser.Scene {
   private barkNext: number[] = [];
   private barkReadyAt: number[] = [];
   /** GAME-179: маркери «…»/«!» над NPC (малюнок і вид, за який він намальований) і NPC, що зараз дивиться на героя (повертається вниз, коли той відійде). */
+  private doneSeen = -1;
   private npcMarks = new Map<string, { g: Phaser.GameObjects.Graphics; kind: NpcMarker | null }>();
   private faced: string | null = null;
   /** GAME-173: скільки секунд герой стоїть; точки дозвілля родини (null — у строю) і всі точки мапи; напрямок руху героя для строю. */
@@ -247,7 +250,7 @@ export class WorldScene extends Phaser.Scene {
   }
 
   private draw(m: Marker, name: string, look: 'room' | 'trunk', sig: string): void {
-    const family = name.startsWith('task.') ? 'task' : name.startsWith('step.') ? 'step' : name.startsWith('pack.') || name.startsWith('take.') ? (look === 'trunk' ? 'itemTrunk' : 'item')
+    const family = name.startsWith('task.') ? 'task' : name.startsWith('step.') ? 'step' : name.startsWith('pack.') || name.startsWith('take.') || name.startsWith('req.') ? (look === 'trunk' ? 'itemTrunk' : 'item')
       : name === 'obj.vehicle' || name === 'obj.trunk' ? 'vehicle' : 'other';
     m.look = sig;
     const g = m.g.clear();
@@ -886,9 +889,15 @@ export class WorldScene extends Phaser.Scene {
     this.fx?.drawBackpack(this.hooks.backpack() > 0, this.player.x, this.player.y, this.facing);
     const veh = this.spots.find((x) => x.name === 'obj.vehicle');
     this.fx?.drawNeeds(veh?.x ?? 0, (veh?.y ?? 0) - 40, veh && this.hooks.isLive('obj.vehicle') ? needs : null);
+    const doneNow = this.hooks.requestsDone?.() ?? 0;
+    if (this.doneSeen >= 0 && doneNow > this.doneSeen) { this.fx?.pop(this.player.x, this.player.y, '+'); playUi('confirm'); }   // GAME-180: прохання здано — «+» над героєм
+    this.doneSeen = doneNow;
     const tn = this.hooks.target();
     const ts = tn ? this.spots.find((x) => x.name === tn) : undefined;
-    this.fx?.drawGuide({ x: this.player.x, y: this.player.y }, ts && this.hooks.isLive(ts.name) ? { x: ts.x, y: ts.y } : null, this.cameras.main.worldView, this.safeInsets(time), INTERACT_RANGE * 1.2, time);
+    // GAME-180: ціль підказки — просильник (id NPC): стрілка вказує на нього, де б він зараз стояв (мешканці ходять за розкладом).
+    const tnpc = tn?.startsWith('npc.') && this.hooks.talk(tn) !== null ? this.sprite(tn)?.s : undefined;
+    const tpos = ts && this.hooks.isLive(ts.name) ? { x: ts.x, y: ts.y } : tnpc?.visible ? { x: tnpc.x, y: tnpc.y } : null;
+    this.fx?.drawGuide({ x: this.player.x, y: this.player.y }, tpos, this.cameras.main.worldView, this.safeInsets(time), INTERACT_RANGE * 1.2, time);
 
     this.moveFollowers(delta, time, moving || v.x !== 0 || v.y !== 0);
     this.updateDaylight(time);
