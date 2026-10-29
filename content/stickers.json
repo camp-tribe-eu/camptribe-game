@@ -1,0 +1,92 @@
+[
+  {
+    "id": "sticker.home",
+    "nameKey": "sticker.home",
+    "textKey": "sticker.home.text",
+    "kind": "place",
+    "icon": "home",
+    "cond": {
+      "any": [
+        {
+          "quest": "PROLOGUE-HOME-001",
+          "status": "active"
+        },
+        {
+          "quest": "PROLOGUE-HOME-001",
+          "status": "completed"
+        }
+      ]
+    }
+  },
+  {
+    "id": "sticker.plan",
+    "nameKey": "sticker.plan",
+    "textKey": "sticker.plan.text",
+    "kind": "team",
+    "icon": "plan",
+    "cond": {
+      "quest": "ST-002",
+      "status": "completed"
+    }
+  },
+  {
+    "id": "sticker.road",
+    "nameKey": "sticker.road",
+    "textKey": "sticker.road.text",
+    "kind": "place",
+    "icon": "road",
+    "cond": {
+      "quest": "ST-004",
+      "status": "completed"
+    }
+  },
+  {
+    "id": "sticker.lake",
+    "nameKey": "sticker.lake",
+    "textKey": "sticker.lake.text",
+    "kind": "place",
+    "icon": "lake",
+    "cond": {
+      "quest": "ST-005",
+      "status": "completed"
+    }
+  },
+  {
+    "id": "sticker.tent",
+    "nameKey": "sticker.tent",
+    "textKey": "sticker.tent.text",
+    "kind": "team",
+    "icon": "tent",
+    "cond": {
+      "any": [
+        {
+          "flag": "f.pitch-pines"
+        },
+        {
+          "flag": "f.pitch-lake-view"
+        }
+      ]
+    }
+  },
+  {
+    "id": "sticker.apple",
+    "nameKey": "sticker.apple",
+    "textKey": "sticker.apple.text",
+    "kind": "people",
+    "icon": "apple",
+    "cond": {
+      "flag": "f.road-apple"
+    }
+  },
+  {
+    "id": "sticker.fire",
+    "nameKey": "sticker.fire",
+    "textKey": "sticker.fire.text",
+    "kind": "team",
+    "icon": "fire",
+    "cond": {
+      "quest": "CH1-D2-FIRE-001",
+      "status": "completed"
+    }
+  }
+]

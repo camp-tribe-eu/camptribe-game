@@ -3,6 +3,7 @@
 // Каталог збирається з перевіреного content/ (валідатор) — ядро його не змінює.
 import { isSkillId, MAX_RANK, type SkillId } from './skills';
 import type { LifeDefs } from './life';
+import type { StickerDefs } from './stickers';
 
 export interface ItemDef {
   /** Ціна купівлі, центи; немає — предмет не продається. */
@@ -281,6 +282,8 @@ export interface CoreDefs {
   readonly life?: LifeDefs;
   /** Пакування (GAME-109, content/packing.json). Немає — команди пакування відмовляють (UNKNOWN_TARGET), персонаж стартує без прапорців. */
   readonly packing?: PackingDefs;
+  /** Наклейки Атласу (GAME-182, content/stickers.json): умови видачі. Немає — наклейок немає. */
+  readonly stickers?: StickerDefs;
 }
 
 export const EMPTY_DEFS: CoreDefs = { items: {}, interactions: {} };

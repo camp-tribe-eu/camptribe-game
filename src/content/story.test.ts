@@ -225,8 +225,8 @@ describe('дороги справжнього контенту: ядро ≡ в�
 describe('ключ перебору ховає рівно лічильники й навички (рецензія fbd9c56)', () => {
   // Сторож витоку вище доводить чесність ключа лише для полів, які він сам пропускає. Якщо progressView почне
   // ховати ще щось (прапорці, пам'ять NPC), сторож цього не побачить — тож список закріплено тут.
-  it('PROGRESS_IGNORED — саме processed, seq, skills, practice, progress (GAME-181)', () => {
-    expect([...PROGRESS_IGNORED].sort()).toEqual(['practice', 'processed', 'progress', 'seq', 'skills']);
+  it('PROGRESS_IGNORED — саме processed, seq, skills, practice, progress, stickers (GAME-181, GAME-182)', () => {
+    expect([...PROGRESS_IGNORED].sort()).toEqual(['practice', 'processed', 'progress', 'seq', 'skills', 'stickers']);
   });
   it('progressView обнуляє саме PROGRESS_IGNORED, решта полів стану — без змін', () => {
     const s = initialState(START_MONEY);

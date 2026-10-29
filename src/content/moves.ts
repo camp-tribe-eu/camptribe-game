@@ -89,7 +89,7 @@ export function moves(s: GameState, defs: CoreDefs, withRequests = false): Move[
 /** Поля, яких не бачить ключ перебору. Єдине джерело і для progressView, і для сторожа витоку в story.test. */
 // GAME-181: `progress` (XP, ОМ, ключі нагород) — похідне від уже відстежуваного (квести, взаємодії, події в дорозі) і не читається жодним ходом; без цього ОМ за
 // кожну подію в дорозі множили б стани перебору, як f.seen-* (див. seenFlags). Що жоден хід від нього не залежить, доводить сторож витоку в story.test (варіанти maxed/zeroed).
-export const PROGRESS_IGNORED = ['processed', 'seq', 'skills', 'practice', 'progress'] as const satisfies readonly (keyof GameState)[];
+export const PROGRESS_IGNORED = ['processed', 'seq', 'skills', 'practice', 'progress', 'stickers'] as const satisfies readonly (keyof GameState)[];
 // `progress` у стані необов'язкове (поля немає, доки нічого не нараховано): обнуляємо лише наявні поля — ключ не вигадує полів, яких у стані нема.
 export const progressView = (s: GameState): object => ({ ...s, ...Object.fromEntries(PROGRESS_IGNORED.filter((k) => k in s).map((k) => [k, null])) });
 export const progressKey = (s: GameState): string => canonical(progressView(s));

@@ -15,6 +15,8 @@ declare module '*/validator/codes.mjs' {
   export const FLAG_FAMILIES: Record<'packing.items' | 'dialogues.trigger', { prefix: string; gen: (content: unknown) => string[] }>;
   /** Межі хвилі напруги (GAME-170) — мусять збігатися з defs.ts ядра. */
   export const WAVE_MAX_LIMIT: number;
+  /** Слотів на сторінці Атласу (GAME-182) — мусить збігатися з STICKER_SLOTS ядра. */
+  export const STICKER_SLOTS: number;
   export const WAVE_MIN_TASKS: number;
   export const GEAR_CHECK_VARIANTS: readonly string[];
   export const WAVE_MAX_TASKS: number;

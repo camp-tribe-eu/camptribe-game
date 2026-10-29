@@ -67,6 +67,13 @@ export interface OfferSkill {
   readonly maxed: boolean;
   readonly unlockKey: string | null;
 }
+/** GAME-182: сторінка Атласу «Перша спроба» — наклейки за слотами (у порядку контенту; не отримана — силует) і лічильник; печатка господаря — місце є, самої печатки в першому розділі ще немає. */
+export interface OfferAtlas {
+  readonly slots: readonly { readonly id: string; readonly nameKey: string; readonly textKey: string; readonly kind: string; readonly icon: string; readonly owned: boolean }[];
+  /** Скільки слотів на сторінці (12). */
+  readonly total: number;
+  readonly count: number;
+}
 export interface OfferProgress { readonly xp: number; readonly om: number; readonly title: OfferTitle; readonly skills: readonly OfferSkill[] }
 
 /** Жива хвиля напруги (GAME-170, зріз 2) для картки мети: заголовок, «зроблено/усього», хвилини ІГРОВОГО часу, що лишились. */
@@ -151,4 +158,6 @@ export interface StoryOffer {
   readonly goal: { readonly key: string } | null;
   /** GAME-181: XP, ОМ, звання й навички. */
   readonly progress: OfferProgress;
+  /** GAME-182: Атлас. */
+  readonly atlas: OfferAtlas;
 }

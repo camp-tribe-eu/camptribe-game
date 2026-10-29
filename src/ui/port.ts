@@ -37,6 +37,8 @@ export interface UiPort {
    * `sprite: true` — лише обрізок (файл не завантажився).
    */
   portrait(npcId: string | null, sprite?: boolean): { readonly src: string; readonly kind: 'file' | 'sprite' } | null;
+  /** GAME-182: сейв уже прочитано (або його немає) — до цього `story().stage === 'create'` ще не означає «нова гра»: вступ чекає. */
+  loaded(): boolean;
   /** Гра просить відкрити екран подорожі (розмова з NPC на мапі); повертає відписку. */
   onOpenStory(listener: () => void): () => void;
 }

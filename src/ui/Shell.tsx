@@ -10,6 +10,8 @@ import { ct } from '../i18n/content';
 import { StoryPanel, money } from './StoryPanel';
 import { DaySummary } from './DaySummary';
 import { DialogueBox } from './DialogueBox';
+import { AtlasPanel } from './Atlas';
+import { Intro } from './Intro';
 import { trapTab } from './focus-trap';
 import type { OfferSummary, StoryOffer } from './story-types';
 
@@ -18,7 +20,7 @@ const TOAST_MS = 5000;
 /** Скільки ігрових хвилин (≈ секунд живої гри) банер нового звання висить на мапі. */
 const TITLE_UP_MIN = 6;
 
-export function Shell({ port, langOverride, credits, build, holdToast = false, hideUi = [] }: { port: UiPort; langOverride?: AnyLang; credits: Credits; build: string; holdToast?: boolean; hideUi?: readonly string[] }) {
+export function Shell({ port, langOverride, credits, build, holdToast = false, hideUi = [], intro: introOn = true }: { port: UiPort; langOverride?: AnyLang; credits: Credits; build: string; holdToast?: boolean; hideUi?: readonly string[]; intro?: boolean }) {
   const [paused, setPaused] = useState(false);
   // Підтвердження «Нової гри» (GAME-82): окремий діалог замість меню паузи; Escape — «Ні», а не закрити паузу.
   const [confirmNew, setConfirmNew] = useState(false);
@@ -34,7 +36,17 @@ export function Shell({ port, langOverride, credits, build, holdToast = false, h
   // Рамка розмови (GAME-179): розмова з NPC на мапі йде внизу екрана, а не екраном подорожі. Світ на паузі, поки вона відкрита.
   const [talk, setTalk] = useState(false);
   const [offer, setOffer] = useState<StoryOffer>(() => port.story());
-  useEffect(() => port.onStory(() => setOffer(port.story())), []);
+  // GAME-182: вступ — замість підказки «Відкрий ☰, щоб почати»: персонажа ще немає → дощовий вечір, лист і перший вибір (хто вирушає), без ☰. Світ на паузі, поки вступ іде.
+  // Сейв читається асинхронно: поки він не прочитаний, `create` ще не «нова гра» — вступ вирішуємо раз, на першому знімку ПІСЛЯ читання.
+  const [intro, setIntro] = useState(false);
+  const introChecked = useRef(false);
+  const checkIntro = (): void => {
+    if (introChecked.current || !port.loaded()) return;
+    introChecked.current = true;
+    if (introOn && port.story().stage === 'create') { setIntro(true); port.setPaused(true); }
+  };
+  useEffect(() => { checkIntro(); return port.onStory(() => { setOffer(port.story()); checkIntro(); }); }, []);
+  const [atlasOpen, setAtlasOpen] = useState(false);
   // GAME-181: нове звання — маленьке свято: банер (назва + рядок родини) і звук підтвердження через єдиний мікшер. Банер не ловить дотики й гасне сам.
   // Гасне за ІГРОВИМ годинником (TITLE_UP_MIN хвилин, ≈ секунд живої гри): пауза й панелі його зупиняють — банер не зникає, поки його не видно; таймерів реального часу немає.
   const [titleUp, setTitleUp] = useState<{ index: number; at: number } | null>(null);
@@ -73,7 +85,7 @@ export function Shell({ port, langOverride, credits, build, holdToast = false, h
   // GAME-95: підказка — тост. Зникає через TOAST_MS або на першу дію гравця (дотик чи клавіша), але лише з екрана:
   // hintSeen лишається, поки гравець не відкрив ☰ чи паузу, тож після перезавантаження підказка повертається.
   const [toastGone, setToastGone] = useState(false);
-  const toastLive = !settings.hintSeen && offer.stage === 'create' && !toastGone;
+  const toastLive = !settings.hintSeen && offer.stage === 'create' && !toastGone && !introOn;
   useEffect(() => {
     if (!toastLive) return;
     const done = (): void => setToastGone(true);
@@ -112,7 +124,7 @@ export function Shell({ port, langOverride, credits, build, holdToast = false, h
       setRemind(null);
       if (settings.remindedTrip !== null) update({ ...settings, remindedTrip: null });
       setPaused(false);
-      story(true);
+      if (introOn) { setIntro(true); port.setPaused(true); } else story(true);
     });
   };
   const story = (open: boolean): void => {
@@ -160,14 +172,20 @@ export function Shell({ port, langOverride, credits, build, holdToast = false, h
   // useLayoutEffect: слухач Escape має бачити confirmNew до наступного кадру (інакше швидкий Escape закривав паузу).
   useLayoutEffect(() => {
     const onKey = (e: KeyboardEvent): void => {
-      if (e.code !== 'Escape') return;
+      if (e.code !== 'Escape' || intro) return;   // у вступі Escape = «Пропустити» (Intro.tsx)
       e.preventDefault();
+      if (atlasOpen) { playUi('back'); closeAtlas(); return; }
       if (confirmNew || summary || talk || storyOpen || paused) playUi('back');   // Escape закрив/скасував — «назад»; відкриття паузи звуку не має
       if (confirmNew) setConfirmNew(false); else if (summary) summaryContinue(); else if (talk) { setTalk(false); story(true); } else if (storyOpen) story(false); else toggle(!paused);
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [paused, storyOpen, confirmNew, summary, talk]);
+  }, [paused, storyOpen, confirmNew, summary, talk, intro, atlasOpen]);
+
+  // GAME-182: Атлас із ☰ — окрема накладка (світ лишається на паузі); закрили — назад на екран подорожі.
+  const openAtlas = (): void => { setOffer(port.story()); setStoryOpen(false); setAtlasOpen(true); };
+  const closeAtlas = (): void => { setAtlasOpen(false); story(true); };
+  const endIntro = (): void => { setIntro(false); port.setPaused(false); acted(); focusStage(); };
 
   // Фокус — у діалог, щоб клавіатура й екранний читач починали з «Продовжити».
   useEffect(() => {
@@ -252,7 +270,7 @@ export function Shell({ port, langOverride, credits, build, holdToast = false, h
       {/* GAME-91: шапка — ☰ ліворуч, ‖ праворуч, текст (HUD) між ними. Усе в одному ряду потоку, а не абсолютом: кнопки
           ніколи не лежать на тексті, при 200 % текст переноситься в середній колонці. Під діалогом шапки немає: дані HUD є
           в самому діалозі, а схована смуга під ним збивала вимірювання контрасту (axe). */}
-      {!paused && !storyOpen && !talk && !summary && <header class="ui-header">
+      {!paused && !storyOpen && !talk && !summary && !intro && !atlasOpen && <header class="ui-header">
         <button type="button" class="ui-story-btn" data-hint={showHint || offer.stage === 'ended' ? 'yes' : undefined} data-touch="story" aria-label={t('ui.story')} onClick={() => story(true)}>{'☰'}</button>
         <div class="ui-hud" data-ui="hud" role="group" aria-label={t('ui.hud')}>
           <span data-ui="hud-place">{offer.locationKey ? ct(lang, offer.locationKey) : t('ui.noPlace')}</span>
@@ -308,7 +326,9 @@ export function Shell({ port, langOverride, credits, build, holdToast = false, h
           <span>{ct(lang, `title.${titleUp.index + 1}.family`)}</span>
         </div>
       )}
-      {storyOpen && <StoryPanel offer={offer} lang={lang} t={t} act={storyAct} close={() => story(false)} portrait={portrait}>{staleNotice}</StoryPanel>}
+      {storyOpen && <StoryPanel offer={offer} lang={lang} t={t} act={storyAct} close={() => story(false)} portrait={portrait} footer={offer.stage !== 'create' && <button type="button" class="ui-btn" data-ui="atlas-open" onClick={openAtlas}>{`${t('ui.atlas')}: ${offer.atlas.count}/${offer.atlas.total}`}</button>}>{staleNotice}</StoryPanel>}
+      {atlasOpen && <AtlasPanel atlas={offer.atlas} lang={lang} t={t} close={closeAtlas} />}
+      {intro && <Intro offer={offer} lang={lang} t={t} act={storyAct} portrait={portrait} onDone={endIntro} />}
       {talk && !paused && !storyOpen && !summary && offer.dialogue && <DialogueBox dialogue={offer.dialogue} lang={lang} t={t} act={storyAct} portrait={portrait} />}
       {summary && !paused && <DaySummary summary={summary} lang={lang} t={t} onContinue={summaryContinue} onEnd={summaryEnd} />}
       {paused && confirmNew && (

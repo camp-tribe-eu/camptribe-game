@@ -85,7 +85,7 @@ GDD — приватний (`brain/Передача/00-dzherelo-lezhyt-lokalno.m
 `tags`, `completed`, `progress`. Хочеш нове поле — спершу картка на схему, потім контент.
 
 **Файли.** У `content/` лише: `meta.json`, `profiles.json`, `transports.json`, `animals.json`,
-`items.json`, `npcs.json`, `locations.json`, `quests.json`, `events.json`, `facts.json`, `flags.json` (реєстр прапорців, GAME-115), `waves.json` (хвилі напруги, GAME-170), `requests.json` (прохання сусідів, GAME-180), тека
+`items.json`, `npcs.json`, `locations.json`, `quests.json`, `events.json`, `facts.json`, `flags.json` (реєстр прапорців, GAME-115), `waves.json` (хвилі напруги, GAME-170), `stickers.json` (наклейки Атласу, GAME-182), `requests.json` (прохання сусідів, GAME-180), тека
 `locales/` з `<мова>.json` і тека `dialogue/` з `<назва>.json` (один діалог на файл). Більше нічого (жодних `README.json`, `quests-draft.json`, `lint/` усередині).
 
 **id — лише малі латинські літери, цифри, `.` і `-`. Підкреслення `_` і великі літери — ніколи.**
@@ -294,6 +294,13 @@ GDD — приватний (`brain/Передача/00-dzherelo-lezhyt-lokalno.m
 **Мія і велосипед** (GAME-111, рішення власника 24.10: Мія ніколи не їде велосипедом; у поїздку велосипедом вона лишається вдома з Анною)
 - `MIA_ON_BIKE` — `animal.cat` у `animals.json` без `transports` (тоді вона їде всім) або з `transport.bike` у списку. Не допустити: рядок кішки — `"transports": ["transport.car"]`; нові транспорти до неї не додавай, а шлях «велосипед без Мії» тримай окремим контентом.
 - `MIA_CONTENT_UNGATED` — ціль квесту, справа хвилі (`animal: animal.cat` чи mia/cat в id), подія в дорозі (`dlg.…mia-…`) або річ пакування `item.mia-*` без `when.animals`, що містить лише `animal.cat` (`["animal.cat", "animal.none"]` теж червоне). Не допустити: кожному запису про Мію — `"when": { "animals": ["animal.cat"] }`; у подіях це `trigger.when`. Кішка — лише в авто, тож умова ще й відсікає велосипедиста.
+
+**Наклейки Атласу** (GAME-182, `content/stickers.json`)
+- `STICKER_NO_COND` — у наклейки немає умови видачі `cond`: слот не заповнити ніколи або заповнити даром. Не допустити: кожна наклейка — `{ id, nameKey, textKey, kind, icon, cond }`; `cond` — об'єкт умови (`flag`, `notFlag`, `quest`+`status`, `all`, `any`), напр. `{ "quest": "ST-005", "status": "completed" }`.
+- `STICKER_COND_UNSUPPORTED` — умова наклейки за транспортом чи пам'яттю NPC (`transport`, `remembers`, `notRemembers`): ядро наклейок їх не обчислює, наклейка не видалась би ніколи. Не допустити: лише прапорець, статус квесту, `all`/`any`.
+- `STICKER_COND_REF` — квест з умови наклейки не існує в `quests.json`. Не допустити: id квесту копіюй дослівно з `quests.json`.
+- `STICKER_FLAG_NEVER_SET` — прапорець з умови наклейки не ставить жоден `setFlag` (діалог, сцена, наслідок хвилі): наклейка недосяжна. Не допустити: спершу ефект `setFlag` у діалозі, потім наклейка; enum — конкретне значення `f.pitch-pines`.
+- `STICKER_TOO_MANY` — наклейок більше за 12 слотів сторінки Атласу. Не допустити: сторінка — 12 слотів (сценарій §2.1); нова сторінка — окрема картка; тексти `nameKey`/`textKey` — у `uk` і `en` одночасно (інакше `LOCALE_MISSING`).
 
 **Прохання сусідів** (GAME-180, `content/requests.json`)
 - `REQUEST_GIVER_INVALID` — `giver` прохання не NPC з `npcs.json` або в NPC немає діалогу. Не допустити: просильник — наявний NPC; його діалог (`dialogue/<npc>-chat.json`) має вузол `offer`; «!» над NPC без розмови веде в порожнечу.

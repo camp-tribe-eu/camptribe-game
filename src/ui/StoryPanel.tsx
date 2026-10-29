@@ -54,7 +54,7 @@ export function actionLabel(lang: AnyLang, t: (k: Key) => string, a: OfferAction
   return `${t(ACT[a.kind])} ${ct(lang, a.key)}${extras.length ? ` (${extras.join(', ')})` : ''}`;
 }
 
-export function StoryPanel({ offer, lang, t, act, close, portrait, children }: { offer: StoryOffer; lang: AnyLang; t: (k: Key) => string; act: (id: string) => void; close: () => void; portrait: PortraitLookup; children?: ComponentChildren }) {
+export function StoryPanel({ offer, lang, t, act, close, portrait, children, footer }: { offer: StoryOffer; lang: AnyLang; t: (k: Key) => string; act: (id: string) => void; close: () => void; portrait: PortraitLookup; children?: ComponentChildren; footer?: ComponentChildren }) {
   const root = useRef<HTMLDivElement>(null);
   // GAME-80: після дії кнопки перебудовуються, і друге натискання (дотик чи Enter) через ~150 мс влучало б
   // в нову першу кнопку — дорогу покупку чи дорогу додому. Тому: (а) фокус після зміни йде на СТАБІЛЬНИЙ
@@ -219,6 +219,7 @@ export function StoryPanel({ offer, lang, t, act, close, portrait, children }: {
           ? <p>{t('ui.journalEmpty')}</p>
           : <ol>{offer.journal.map((e, i) => <li key={i} data-type={e.type}>{`${t(JR[e.type] ?? 'ui.journal')}${e.key ? `: ${ct(lang, e.key)}` : ''}`}</li>)}</ol>}
       </details>
+      {footer}
       <button type="button" class="ui-btn" data-ui="story-close" onClick={close}>{t('ui.storyClose')}</button>
     </div>
   );

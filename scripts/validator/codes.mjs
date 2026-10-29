@@ -117,6 +117,13 @@ export const CODES = {
   WAVE_STAGE_OVERLAP:     { check: 'waves', spec: 'GAME-170: на етапі в кожній комбінації діє не більше однієї хвилі — when двох хвиль одного етапу не перекриваються' },
   WAVE_ANIMAL_HELPER:     { check: 'waves', spec: 'GAME-170: справу про тварину робить лише лідер (leaderOnly) — помічники шукати Мію не можуть' },
 
+  // наклейки Атласу, GAME-182 (content/stickers.json; сценарій §2.1: сторінка — 12 слотів)
+  STICKER_NO_COND:        { check: 'stickers', spec: 'GAME-182: кожна наклейка має умову видачі (cond) — без неї слот не заповнити або заповнити даром' },
+  STICKER_COND_UNSUPPORTED:{ check: 'stickers', spec: 'GAME-182: умова наклейки — лише flag, notFlag, quest, all, any; транспорт і пам’ять NPC ядро для наклейок не обчислює' },
+  STICKER_COND_REF:       { check: 'stickers', spec: 'GAME-182: квест в умові наклейки існує в quests.json' },
+  STICKER_FLAG_NEVER_SET: { check: 'stickers', spec: 'GAME-182: прапорець в умові наклейки ставить хоч один ефект setFlag, сцена чи хвиля — інакше наклейка недосяжна' },
+  STICKER_TOO_MANY:       { check: 'stickers', spec: 'GAME-182: на сторінці Атласу 12 слотів — наклейок не більше' },
+
   // Мія і велосипед, GAME-111 (рішення власника 24.10: Мія ніколи не їде велосипедом)
   MIA_ON_BIKE:          { check: 'mia-bike', spec: 'GAME-111: тварина Мія не дозволена на велосипеді — немає ні дії, ні події з Мією в дорозі велосипедом' },
   MIA_CONTENT_UNGATED:  { check: 'mia-bike', spec: 'GAME-111: контент про Мію (ціль, справа хвилі, подія, річ пакування) показується лише тому, хто їде з кішкою — умова when.animals = [animal.cat]' },
@@ -161,6 +168,8 @@ export const FLAG_FAMILIES = {
 
 // GAME-170: найбільший строк справи хвилі, ігрові хвилини (1 хв ≈ 1 с вільної сцени, SIM-TIME-002). Дзеркало WAVE_MAX_LIMIT ядра (src/core/defs.ts): рівність стереже src/content/waves.test.ts.
 export const WAVE_MAX_LIMIT = 60;
+// GAME-182: слотів на сторінці Атласу. Дзеркало STICKER_SLOTS ядра (src/core/stickers.ts): рівність стереже src/content/stickers.test.ts.
+export const STICKER_SLOTS = 12;
 // Скільки справ у хвилі (GAME-170). Дзеркало WAVE_MIN_TASKS/WAVE_MAX_TASKS ядра (src/core/defs.ts); рівність стереже src/content/waves.test.ts.
 export const WAVE_MIN_TASKS = 2;
 export const WAVE_MAX_TASKS = 4;

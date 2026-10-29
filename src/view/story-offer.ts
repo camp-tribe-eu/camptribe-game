@@ -17,6 +17,8 @@ import { todayForecast, todayWeather, type SimState } from '../core/sim';
 import { initialState, type GameState } from '../core/state';
 import { MAX_RANK, SKILL_IDS, skillStep } from '../core/skills';
 import { TITLE_COUNT, progressOf, titleStep } from '../core/progress';
+import { STICKER_SLOTS, stickersOf } from '../core/stickers';
+import { STICKER_META } from '../content/stickers';
 import { chapterComplete, matches, route } from '../core/story';
 import { capacityOf, packedOf, packFlag, packingOpen, packItemsFor, usedUnits } from '../core/packing';
 import { timeOfDay } from './world/daylight';
@@ -25,7 +27,7 @@ import { CONTENT, memorableFacts } from '../content/story';
 import { moves, progressKey, type Move } from '../content/moves';
 import items from '../../content/items.json';
 import { daySummary, daysEnded, NIGHT_PREFIX } from '../core/day-summary';
-import type { OfferAction, OfferCharacter, OfferPacking, OfferProgress, OfferSummary, OfferWave, StoryOffer } from '../ui/story-types';
+import type { OfferAction, OfferAtlas, OfferCharacter, OfferPacking, OfferProgress, OfferSummary, OfferWave, StoryOffer } from '../ui/story-types';
 import { RAW_WAVES } from '../content/waves';
 import { menuTasks } from '../content/director';
 import { coveredKeys, moveKey, nextTarget, spotLabel } from '../content/map-first';
@@ -253,6 +255,13 @@ export function progressOffer(s: GameState): OfferProgress {
   };
 }
 
+/** GAME-182 · сторінка Атласу: слоти — наклейки з content/stickers.json у порядку контенту, отримані (ядро: state.stickers) — кольорові, решта — силуети. */
+export function atlasOffer(s: GameState): OfferAtlas {
+  const have = stickersOf(s);
+  const slots = STICKER_META.map((m) => ({ ...m, owned: have.includes(m.id) }));
+  return { slots, total: STICKER_SLOTS, count: slots.filter((x) => x.owned).length };
+}
+
 /** Картка мети (GAME-170, зріз 2): жива хвиля з ядра (waveView — хвилини за годинником симуляції) і тексти з content/waves.json. */
 export function waveOffer(sim: SimState): OfferWave | null {
   const v = waveView(sim.game, sim.clock.minutes);
@@ -307,7 +316,7 @@ export function storyOffer(sim: SimState, defs: CoreDefs, view: StoryView = PANE
     nextSpot: nextT?.spot ?? reqT,
     near: nearL ? { label: nearL.label, itemKey: nearL.ref ? nameKey(nearL.ref) : null } : reqNear ? { label: 'near.req' as Key, itemKey: reqNear.labelKey } : null,
   };
-  const base = { hint, requests: trackerRows(s), goal: goalOf(s, st), progress: progressOffer(s), moneyCents: s.moneyCents, inventory, journal, lastTrip, weather, forecast: todayForecast(sim), day: dayOf(sim.clock) + 1, timeMinutes: timeOfDay(sim.clock.minutes), wave: waveOffer(sim), mia: miaState(s, defs), ...summaryOffer(sim, defs) };
+  const base = { hint, requests: trackerRows(s), goal: goalOf(s, st), progress: progressOffer(s), atlas: atlasOffer(s), moneyCents: s.moneyCents, inventory, journal, lastTrip, weather, forecast: todayForecast(sim), day: dayOf(sim.clock) + 1, timeMinutes: timeOfDay(sim.clock.minutes), wave: waveOffer(sim), mia: miaState(s, defs), ...summaryOffer(sim, defs) };
 
   if (!s.player) {
     const choices = characterChoices(defs);

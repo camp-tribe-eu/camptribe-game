@@ -68,6 +68,8 @@ export interface StoryDraft {
   wave?: WaveState;
   /** Прогресія (GAME-181); поля немає — нічого не нараховано. */
   progress?: ProgressState;
+  /** Наклейки Атласу (GAME-182); поля немає — жодної ще немає. */
+  stickers?: readonly string[];
 }
 
 const own = <T>(o: Readonly<Record<string, T>>, k: string): T | undefined => (Object.hasOwn(o, k) ? o[k] : undefined);

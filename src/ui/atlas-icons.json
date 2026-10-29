@@ -1,0 +1,105 @@
+{
+ "palette": {
+  "k": "#2b2f36",
+  "r": "#c4482e",
+  "o": "#e8913d",
+  "y": "#f2d25a",
+  "g": "#4f9a52",
+  "b": "#4a86c5",
+  "w": "#f4f1e8",
+  "n": "#8a5a34",
+  "s": "#8a8f94"
+ },
+ "icons": {
+  "home": [
+   "...rr...",
+   "..rrrr..",
+   ".rrrrrr.",
+   "rrrrrrrr",
+   ".wwwwww.",
+   ".wwkkww.",
+   ".wwkkww.",
+   ".wwkkww."
+  ],
+  "plan": [
+   ".wwwwww.",
+   ".wkkkkw.",
+   ".wwwwww.",
+   ".wkkkkw.",
+   ".wwwwww.",
+   ".wkkkww.",
+   ".wwwwww.",
+   ".wwwwww."
+  ],
+  "road": [
+   "bbbbbbbb",
+   "bbbbbbbb",
+   "gggssggg",
+   "ggsssggg",
+   "gsswsssg",
+   "gsswssgg",
+   "ssswssss",
+   "sswwwsss"
+  ],
+  "lake": [
+   "........",
+   "..gg.gg.",
+   ".gggggg.",
+   "bbbbbbbb",
+   "bwbbbwbb",
+   "bbbbbbbb",
+   "bbwbbbwb",
+   "bbbbbbbb"
+  ],
+  "tent": [
+   "...oo...",
+   "..oooo..",
+   "..oroo..",
+   ".oorroo.",
+   ".oorroo.",
+   "ooorrooo",
+   "oorkkroo",
+   "oorkkroo"
+  ],
+  "apple": [
+   "....g...",
+   "...gg...",
+   ".rrnrr..",
+   "rrrrrrr.",
+   "rrrrrrr.",
+   "rrrrrrr.",
+   ".rrrrr..",
+   "..r.rr.."
+  ],
+  "fire": [
+   "...r....",
+   "..rr.r..",
+   "..rorr..",
+   ".rooorr.",
+   ".royyor.",
+   ".royyor.",
+   "..nnnn..",
+   ".nn..nn."
+  ],
+  "atlas": [
+   ".nnnnnn.",
+   "nbbbbbbn",
+   "nbwwwwbn",
+   "nbwkkwbn",
+   "nbwwwwbn",
+   "nbwkkwbn",
+   "nbbbbbbn",
+   ".nnnnnn."
+  ],
+  "star": [
+   "...yy...",
+   "...yy...",
+   "yyyyyyyy",
+   ".yyyyyy.",
+   "..yyyy..",
+   "..yyyy..",
+   ".yy..yy.",
+   ".y....y."
+  ]
+ }
+}
