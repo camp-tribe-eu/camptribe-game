@@ -130,5 +130,97 @@
         "skill.cooking"
       ]
     }
+  },
+  {
+    "id": "req.nora-camera",
+    "giver": "npc.nora",
+    "after": "req.nora-shore",
+    "titleKey": "req.nora-camera",
+    "goalKey": "req.nora-camera.goal",
+    "trackKey": "req.nora-camera.track",
+    "targets": [
+      {
+        "id": "t1",
+        "spot": "req.nora-camera.t1",
+        "icon": "camera",
+        "labelKey": "req.nora-camera.t1",
+        "mia": true
+      }
+    ],
+    "reward": {
+      "xp": 20,
+      "om": 12,
+      "skills": [
+        "skill.communication",
+        "skill.planning"
+      ]
+    }
+  },
+  {
+    "id": "req.ingrid-starmap",
+    "giver": "npc.ingrid",
+    "after": "req.ingrid-birds",
+    "titleKey": "req.ingrid-starmap",
+    "goalKey": "req.ingrid-starmap.goal",
+    "trackKey": "req.ingrid-starmap.track",
+    "targets": [
+      {
+        "id": "t1",
+        "spot": "req.ingrid-starmap.t1",
+        "icon": "star",
+        "labelKey": "req.ingrid-starmap.t1"
+      },
+      {
+        "id": "t2",
+        "spot": "req.ingrid-starmap.t2",
+        "icon": "star",
+        "labelKey": "req.ingrid-starmap.t2"
+      },
+      {
+        "id": "t3",
+        "spot": "req.ingrid-starmap.t3",
+        "icon": "star",
+        "labelKey": "req.ingrid-starmap.t3"
+      },
+      {
+        "id": "t4",
+        "spot": "req.ingrid-starmap.t4",
+        "icon": "star",
+        "labelKey": "req.ingrid-starmap.t4",
+        "mia": true
+      }
+    ],
+    "reward": {
+      "xp": 20,
+      "om": 12,
+      "skills": [
+        "skill.planning",
+        "skill.camping"
+      ]
+    }
+  },
+  {
+    "id": "req.luc-radio",
+    "giver": "npc.luc",
+    "after": "req.luc-chain",
+    "titleKey": "req.luc-radio",
+    "goalKey": "req.luc-radio.goal",
+    "trackKey": "req.luc-radio.track",
+    "targets": [
+      {
+        "id": "t1",
+        "spot": "req.luc-radio.t1",
+        "icon": "wire",
+        "labelKey": "req.luc-radio.t1"
+      }
+    ],
+    "reward": {
+      "xp": 20,
+      "om": 12,
+      "skills": [
+        "skill.electrics",
+        "skill.mechanics"
+      ]
+    }
   }
 ]

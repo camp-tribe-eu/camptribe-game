@@ -100,6 +100,36 @@
    "..yyyy..",
    ".yy..yy.",
    ".y....y."
+  ],
+  "camera": [
+   "...kk...",
+   "kkkkkkkk",
+   "ksbbbbsk",
+   "ksbwwbsk",
+   "ksbbbbsk",
+   "kssssssk",
+   "kkkkkkkk",
+   "........"
+  ],
+  "starmap": [
+   "bbbbbbbb",
+   "bybbbbyb",
+   "bbbbbbbb",
+   "bbbywbbb",
+   "bbbbbbbb",
+   "bybbbybb",
+   "bbbbbbbb",
+   "bbbbbbyb"
+  ],
+  "radio": [
+   ".....k..",
+   "...kk...",
+   "nnnnnnnn",
+   "nkkknyrn",
+   "nkkknrrn",
+   "nkkknnnn",
+   "nnnnnnnn",
+   "k......k"
   ]
  }
 }

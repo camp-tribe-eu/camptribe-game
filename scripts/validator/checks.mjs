@@ -744,6 +744,7 @@ export const CHECKS = [
       for (const [where, leaf] of condLeavesAll(c.content)) {
         if (leaf.quest !== undefined && !by.quests.has(leaf.quest)) miss(where, `квесту «${leaf.quest}» не існує`);
         if (leaf.transport !== undefined && !by.transports.has(leaf.transport)) miss(where, `транспорту «${leaf.transport}» не існує`);
+        if (leaf.animal !== undefined && leaf.animal !== 'animal.none' && !by.animals.has(leaf.animal)) miss(where, `тварини «${leaf.animal}» не існує`);
       }
       for (const [where, e] of dialogueEffects(c.content)) {
         if (e.startQuest !== undefined && !by.quests.has(e.startQuest)) miss(where, `квесту «${e.startQuest}» не існує`);
@@ -1138,6 +1139,12 @@ export const CHECKS = [
           if (seenSpots.has(t.spot)) out.push(I('REQUEST_TARGET_NO_MAP', `${where}/${t.id}`, `об’єкт мапи «${t.spot}» уже є ціллю ${seenSpots.get(t.spot)}: один об’єкт — одна дія`));
           else seenSpots.set(t.spot, where);
         }
+        // GAME-184: продовження арки — `after` називає прохання ТОГО Ж просильника, що стоїть раніше (ланцюг без кола): інакше воно ніколи не відкриється.
+        if (r.after !== undefined) {
+          const prev = rs.find((x) => x.id === r.after);
+          if (!prev || prev.giver !== r.giver) out.push(I('REQUEST_AFTER_INVALID', where, `after «${r.after}» — ${prev ? `прохання іншого просильника (${prev.giver})` : 'такого прохання немає'}: продовження не відкриється`));
+          else { const seen = new Set([r.id]); for (let x = prev; x; x = x.after === undefined ? undefined : rs.find((y) => y.id === x.after)) { if (seen.has(x.id)) { out.push(I('REQUEST_AFTER_INVALID', where, `after утворює коло через «${x.id}»: жодне прохання кола не відкриється`)); break; } seen.add(x.id); } }
+        }
         for (const sk of r.reward?.skills ?? []) if (!SKILL_IDS.includes(sk)) out.push(I('REQUEST_REWARD_INVALID', where, `навичка «${sk}» не з восьми напрямів (SKILL_IDS)`));
         if (!d) continue;
         const taken = requestFlag(r.id, 'taken');
@@ -1145,7 +1152,8 @@ export const CHECKS = [
         const byId = new Map(d.nodes.map((n) => [n.id, n]));
         const sets = (ch, f) => (ch.effects ?? []).some((e) => e.setFlag === f);
         // Пропозиція: вузол `offer` з вибором «Беруся» (ставить taken) і виходом «Пізніше» — вибір БЕЗ наслідків, що безумовно доходить до кінця розмови.
-        const offer = byId.get('offer');
+        const offerId = r.after === undefined ? 'offer' : 'offer2';   // GAME-184: продовження арки живе у вузлі offer2 (дзеркало offerNodeOf у src/content/requests.ts)
+        const offer = byId.get(offerId);
         const reachesEnd = (from) => {
           const seen = new Set(); const st = [from];
           while (st.length) { const id = st.pop(); if (seen.has(id)) continue; seen.add(id); const n = byId.get(id); if (!n) continue; if (n.end === true) return true; st.push(...exits(n, true)); }
@@ -1153,8 +1161,8 @@ export const CHECKS = [
         };
         const accept = (offer?.choices ?? []).find((ch) => sets(ch, taken));
         const later = (offer?.choices ?? []).find((ch) => (ch.effects ?? []).length === 0 && !ch.when && reachesEnd(ch.next));
-        if (!offer || !accept) out.push(I('REQUEST_NO_LATER', where, `у діалозі ${d.id} немає вузла «offer» з вибором, що ставить ${taken}: прохання не взяти`));
-        else if (!later) out.push(I('REQUEST_NO_LATER', where, `вузол «offer» діалогу ${d.id} не має виходу «Пізніше»: вибір без наслідків, що безумовно веде до кінця розмови. Відмова мусить бути безкоштовною`));
+        if (!offer || !accept) out.push(I('REQUEST_NO_LATER', where, `у діалозі ${d.id} немає вузла «${offerId}» з вибором, що ставить ${taken}: прохання не взяти`));
+        else if (!later) out.push(I('REQUEST_NO_LATER', where, `вузол «${offerId}» діалогу ${d.id} не має виходу «Пізніше»: вибір без наслідків, що безумовно веде до кінця розмови. Відмова мусить бути безкоштовною`));
         // Здача: вибір, що ставить done, лежить за умовою (гілка чи вибір), яка вимагає КОЖНУ ціль, і не вимагає нічого понад ціль-прапорці й «ще не здано».
         const needs = targets.map((t) => requestFlag(r.id, t.id));
         const reachable = (from) => { const seen = new Set(); const st = [from]; while (st.length) { const id = st.pop(); if (seen.has(id)) continue; seen.add(id); const n = byId.get(id); if (n) st.push(...exits(n, false)); } return seen; };
@@ -1269,6 +1277,25 @@ export const CHECKS = [
       }
       for (const d of c.content.dialogues ?? []) {
         if (d.trigger && isMiaId(d.id) && !gated(d.trigger.when)) out.push(I('MIA_CONTENT_UNGATED', `${d.id}.trigger.when`, 'подія про Мію без when.animals = [animal.cat]: випала б і велосипедисту без кішки'));
+      }
+      // GAME-184: прохання бачать усі, тож їхні картка й тексти про Мію — лише в розмові за умовою { animal: animal.cat }. (1) Рядки самого прохання (назва, ціль,
+      // трекер, підписи цілей) не називають Мію ні в одній мові; (2) у діалозі просильника репліка про Мію недосяжна безумовним шляхом: кожне ребро до неї
+      // (гілка `branches` чи вибір) має в `when` кон'юнкт { animal: animal.cat }. Ціна хибного спрацювання — автор додає одну гілку; пропуску — «Мія» велосипедисту без кішки.
+      const MIA_NAME = /Мі[яїює]|Mia/u;
+      const mentions = (key) => (c.content.meta?.locales ?? []).some((lang) => MIA_NAME.test(c.content.locales?.[lang]?.[key] ?? ''));
+      const catGuard = (cond) => cond !== undefined && conjuncts(cond).some((x) => x.animal === MIA);
+      for (const r of c.content.requests ?? []) {
+        for (const key of [r.titleKey, r.goalKey, r.trackKey, ...(r.targets ?? []).map((t) => t.labelKey)]) if (mentions(key)) out.push(I('MIA_CONTENT_UNGATED', `${r.id}.${key}`, 'рядок прохання називає Мію: його бачить і той, хто їде без кішки — нейтральний текст, а Мія — у репліках за умовою { animal: animal.cat }'));
+        const d = (c.content.dialogues ?? []).find((x) => x.npcId === r.giver);
+        if (!d) continue;
+        const byId = new Map(d.nodes.map((n) => [n.id, n]));
+        const open = new Set([d.start]); const st = [d.start];
+        while (st.length) {
+          const n = byId.get(st.pop()); if (!n) continue;
+          const edges = [...(n.next !== undefined ? [[n.next, undefined]] : []), ...(n.branches ?? []).map((b) => [b.next, b.when]), ...(n.choices ?? []).map((ch) => [ch.next, ch.when])];
+          for (const [to, when] of edges) if (!open.has(to) && !catGuard(when)) { open.add(to); st.push(to); }
+        }
+        for (const id of open) { const n = byId.get(id); if (n && mentions(n.textKey)) out.push(I('MIA_CONTENT_UNGATED', `${d.id}/${id}`, `репліка про Мію досяжна без умови { animal: animal.cat }: її почує й той, хто їде без кішки`)); }
       }
       (c.content.packing?.items ?? []).forEach((x, i) => { if (isMiaId(x.item) && !gated(x.when)) out.push(I('MIA_CONTENT_UNGATED', `packing.items[${i}]`, `річ «${x.item}» для Мії без when.animals = [animal.cat]`)); });
       return out;

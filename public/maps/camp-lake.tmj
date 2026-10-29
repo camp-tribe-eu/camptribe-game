@@ -10,7 +10,7 @@
  "tileheight": 32,
  "infinite": false,
  "nextlayerid": 7,
- "nextobjectid": 57,
+ "nextobjectid": 63,
  "layers": [
   {
    "id": 1,
@@ -4211,6 +4211,78 @@
     },
     {
      "id": 25,
+     "name": "req.nora-camera.t1",
+     "type": "trigger",
+     "x": 560,
+     "y": 112,
+     "width": 0,
+     "height": 0,
+     "point": true,
+     "rotation": 0,
+     "visible": true
+    },
+    {
+     "id": 26,
+     "name": "req.ingrid-starmap.t1",
+     "type": "trigger",
+     "x": 720,
+     "y": 144,
+     "width": 0,
+     "height": 0,
+     "point": true,
+     "rotation": 0,
+     "visible": true
+    },
+    {
+     "id": 27,
+     "name": "req.ingrid-starmap.t2",
+     "type": "trigger",
+     "x": 784,
+     "y": 432,
+     "width": 0,
+     "height": 0,
+     "point": true,
+     "rotation": 0,
+     "visible": true
+    },
+    {
+     "id": 28,
+     "name": "req.ingrid-starmap.t3",
+     "type": "trigger",
+     "x": 976,
+     "y": 560,
+     "width": 0,
+     "height": 0,
+     "point": true,
+     "rotation": 0,
+     "visible": true
+    },
+    {
+     "id": 29,
+     "name": "req.ingrid-starmap.t4",
+     "type": "trigger",
+     "x": 80,
+     "y": 432,
+     "width": 0,
+     "height": 0,
+     "point": true,
+     "rotation": 0,
+     "visible": true
+    },
+    {
+     "id": 30,
+     "name": "req.luc-radio.t1",
+     "type": "trigger",
+     "x": 368,
+     "y": 624,
+     "width": 0,
+     "height": 0,
+     "point": true,
+     "rotation": 0,
+     "visible": true
+    },
+    {
+     "id": 31,
      "name": "step.ST-005",
      "type": "trigger",
      "x": 496,
@@ -4222,7 +4294,7 @@
      "visible": true
     },
     {
-     "id": 26,
+     "id": 32,
      "name": "step.CH1-D2-CAMP-001",
      "type": "trigger",
      "x": 496,
@@ -4234,7 +4306,7 @@
      "visible": true
     },
     {
-     "id": 27,
+     "id": 33,
      "name": "step.CH1-D3-001",
      "type": "trigger",
      "x": 496,
@@ -4246,7 +4318,7 @@
      "visible": true
     },
     {
-     "id": 28,
+     "id": 34,
      "name": "step.CH1-D3-GEAR-001",
      "type": "trigger",
      "x": 496,
@@ -4258,7 +4330,7 @@
      "visible": true
     },
     {
-     "id": 29,
+     "id": 35,
      "name": "step.CH1-D3-RETURN-001",
      "type": "trigger",
      "x": 496,
@@ -4270,7 +4342,7 @@
      "visible": true
     },
     {
-     "id": 30,
+     "id": 36,
      "name": "step.CH1-D3-HOME-001",
      "type": "trigger",
      "x": 496,
@@ -4282,7 +4354,7 @@
      "visible": true
     },
     {
-     "id": 31,
+     "id": 37,
      "name": "step.CH1-D2-001",
      "type": "trigger",
      "x": 1168,
@@ -4294,7 +4366,7 @@
      "visible": true
     },
     {
-     "id": 32,
+     "id": 38,
      "name": "step.CH1-D2-ELISE-001",
      "type": "trigger",
      "x": 144,
@@ -4306,7 +4378,7 @@
      "visible": true
     },
     {
-     "id": 33,
+     "id": 39,
      "name": "step.q.elise-bike-area",
      "type": "trigger",
      "x": 144,
@@ -4318,7 +4390,7 @@
      "visible": true
     },
     {
-     "id": 34,
+     "id": 40,
      "name": "step.CH1-D3-ELISE-001",
      "type": "trigger",
      "x": 144,
@@ -4330,7 +4402,7 @@
      "visible": true
     },
     {
-     "id": 35,
+     "id": 41,
      "name": "step.CH1-D2-FIRE-001",
      "type": "trigger",
      "x": 112,
@@ -4342,7 +4414,7 @@
      "visible": true
     },
     {
-     "id": 36,
+     "id": 42,
      "name": "take.item.firewood",
      "type": "trigger",
      "x": 720,
@@ -4354,7 +4426,7 @@
      "visible": true
     },
     {
-     "id": 37,
+     "id": 43,
      "name": "obj.drying",
      "type": "trigger",
      "x": 240,
@@ -4366,7 +4438,7 @@
      "visible": true
     },
     {
-     "id": 38,
+     "id": 44,
      "name": "obj.sell",
      "type": "trigger",
      "x": 528,
@@ -4378,7 +4450,7 @@
      "visible": true
     },
     {
-     "id": 39,
+     "id": 45,
      "name": "obj.vehicle",
      "type": "trigger",
      "x": 528,
@@ -4390,7 +4462,7 @@
      "visible": true
     },
     {
-     "id": 40,
+     "id": 46,
      "name": "obj.pitch-1",
      "type": "anchor",
      "x": 80,
@@ -4402,7 +4474,7 @@
      "visible": true
     },
     {
-     "id": 41,
+     "id": 47,
      "name": "obj.pitch-2",
      "type": "anchor",
      "x": 240,
@@ -4414,7 +4486,7 @@
      "visible": true
     },
     {
-     "id": 42,
+     "id": 48,
      "name": "obj.pitch-3",
      "type": "anchor",
      "x": 336,
@@ -4426,7 +4498,7 @@
      "visible": true
     },
     {
-     "id": 43,
+     "id": 49,
      "name": "obj.reception-desk",
      "type": "anchor",
      "x": 528,
@@ -4438,7 +4510,7 @@
      "visible": true
     },
     {
-     "id": 44,
+     "id": 50,
      "name": "obj.sanitary-door",
      "type": "anchor",
      "x": 784,
@@ -4450,7 +4522,7 @@
      "visible": true
     },
     {
-     "id": 45,
+     "id": 51,
      "name": "obj.firewood-pile",
      "type": "anchor",
      "x": 720,
@@ -4462,7 +4534,7 @@
      "visible": true
     },
     {
-     "id": 46,
+     "id": 52,
      "name": "obj.water",
      "type": "anchor",
      "x": 880,
@@ -4474,7 +4546,7 @@
      "visible": true
     },
     {
-     "id": 47,
+     "id": 53,
      "name": "obj.pier-end",
      "type": "anchor",
      "x": 1168,
@@ -4486,7 +4558,7 @@
      "visible": true
     },
     {
-     "id": 48,
+     "id": 54,
      "name": "leisure.campfire.1",
      "type": "leisure",
      "x": 80,
@@ -4505,7 +4577,7 @@
      ]
     },
     {
-     "id": 49,
+     "id": 55,
      "name": "leisure.campfire.2",
      "type": "leisure",
      "x": 144,
@@ -4524,7 +4596,7 @@
      ]
     },
     {
-     "id": 50,
+     "id": 56,
      "name": "leisure.campfire.3",
      "type": "leisure",
      "x": 112,
@@ -4543,7 +4615,7 @@
      ]
     },
     {
-     "id": 51,
+     "id": 57,
      "name": "leisure.shore.1",
      "type": "leisure",
      "x": 272,
@@ -4562,7 +4634,7 @@
      ]
     },
     {
-     "id": 52,
+     "id": 58,
      "name": "leisure.tent.1",
      "type": "leisure",
      "x": 208,
@@ -4581,7 +4653,7 @@
      ]
     },
     {
-     "id": 53,
+     "id": 59,
      "name": "leisure.bench.1",
      "type": "leisure",
      "x": 272,
@@ -4600,7 +4672,7 @@
      ]
     },
     {
-     "id": 54,
+     "id": 60,
      "name": "leisure.bench.2",
      "type": "leisure",
      "x": 464,
@@ -4619,7 +4691,7 @@
      ]
     },
     {
-     "id": 55,
+     "id": 61,
      "name": "leisure.shore.2",
      "type": "leisure",
      "x": 848,
@@ -4638,7 +4710,7 @@
      ]
     },
     {
-     "id": 56,
+     "id": 62,
      "name": "leisure.bench.3",
      "type": "leisure",
      "x": 656,

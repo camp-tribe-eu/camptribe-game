@@ -112,6 +112,7 @@ export const CODES = {
   REQUEST_NO_LATER:       { check: 'requests', spec: 'GAME-180: у розмові є «Беруся» і безкоштовне «Пізніше» (відмова без наслідків і без штрафу)' },
   REQUEST_NO_TURNIN:      { check: 'requests', spec: 'GAME-180: є здача, яка вимагає кожну ціль, і подяка просильника' },
   REQUEST_REWARD_INVALID: { check: 'requests', spec: 'GAME-180: нагорода-гачок (xp, om, skills) — лише існуючі напрями навичок; споживає GAME-181' },
+  REQUEST_AFTER_INVALID:  { check: 'requests', spec: 'GAME-184: продовження арки (after) називає раніше прохання того ж просильника, без кола — інакше воно не відкриється' },
   REQUEST_GATES_QUEST:    { check: 'requests', spec: 'GAME-180: сюжет від прохань не залежить — діалог не рухає квест за прапорцем прохання' },
   WAVE_FLAG_GATES_QUEST:  { check: 'waves', spec: 'GAME-170: кінець розділу від хвиль не залежить — діалог не рухає квест (startQuest/completeObjective) за умовою на прапорець, який ставить наслідок хвилі' },
   WAVE_STAGE_OVERLAP:     { check: 'waves', spec: 'GAME-170: на етапі в кожній комбінації діє не більше однієї хвилі — when двох хвиль одного етапу не перекриваються' },

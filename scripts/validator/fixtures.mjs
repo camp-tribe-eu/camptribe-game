@@ -200,7 +200,7 @@ const row = (id, extra = {}) => ({ id, type: 'bool', initial: false, owner: 'fix
 
 // Прохання сусідів (GAME-180): сусід біля табору просить дві речі — і є «Пізніше», і здача. Усе, що потрібне перевірці requests, додає цей помічник:
 // NPC з діалогом (gate → offer / reminder / turnin), два прапорці-цілі (ставить ядро на дотик до об'єкта мапи), реєстр, тексти й запис журналу.
-export const FIXTURE_MAPS = ['npc.ranger', 'req.fixture-chores.t1', 'req.fixture-chores.t2'];
+export const FIXTURE_MAPS = ['npc.ranger', 'req.fixture-chores.t1', 'req.fixture-chores.t2', 'req.fixture-more.t1'];
 const RQ = (k) => `dlg.fixture-neighbor.${k}`;
 const RF = (p) => `f.req-fixture-chores-${p}`;
 function withRequest(c) {
@@ -239,6 +239,32 @@ function withRequest(c) {
   }];
   const keys = ['npc.neighbor', 'req.fixture-chores', 'req.fixture-chores.goal', 'req.fixture-chores.track', 'req.fixture-chores.t1', 'req.fixture-chores.t2', `journal.${RF('done')}`,
     ...['gate', 'offer', 'offer.c1', 'offer.c2', 'accepted', 'later', 'reminder', 'turnin', 'turnin.c1', 'bye'].map(N)];
+  for (const lang of c.meta.locales) for (const k of keys) c.locales[lang][k] = lineText(lang, k);
+}
+// GAME-184: продовження арки того ж просильника (`after`): вузли offer2/turnin2 і гілки на початку gate. Еталон коректного продовження — чисто.
+const RF2 = (p) => `f.req-fixture-more-${p}`;
+function withFollowUp(c) {
+  withRequest(c);
+  const d = c.dialogues.find((x) => x.id === 'dlg.fixture-neighbor');
+  const gate = d.nodes.find((n) => n.id === 'gate');
+  gate.branches.unshift(
+    { when: { all: [{ flag: RF2('t1') }, { notFlag: RF2('done') }] }, next: 'turnin2' },
+    { when: { all: [{ flag: RF2('taken') }, { notFlag: RF2('done') }] }, next: 'reminder2' },
+    { when: { all: [{ flag: RF('done') }, { notFlag: RF2('taken') }, { notFlag: RF2('done') }] }, next: 'offer2' },
+  );
+  d.nodes.push(
+    { id: 'offer2', speaker: 'npc', textKey: RQ('offer2'), choices: [{ textKey: RQ('offer2.c1'), next: 'accepted2', effects: [{ setFlag: RF2('taken') }] }, { textKey: RQ('offer2.c2'), next: 'later2' }] },
+    { id: 'accepted2', speaker: 'npc', textKey: RQ('accepted2'), end: true },
+    { id: 'later2', speaker: 'npc', textKey: RQ('later2'), end: true },
+    { id: 'reminder2', speaker: 'npc', textKey: RQ('reminder2'), end: true },
+    { id: 'turnin2', speaker: 'npc', textKey: RQ('turnin2'), choices: [{ textKey: RQ('turnin2.c1'), next: 'bye', effects: [{ setFlag: RF2('done') }] }] },
+  );
+  c.flags.push(row(RF2('taken'), { owner: 'dlg.fixture-neighbor/offer2' }), row(RF2('done'), { owner: 'dlg.fixture-neighbor/turnin2' }), row(RF2('t1'), { kind: 'interaction', owner: 'взаємодія на мапі' }));
+  c.requests.push({
+    id: 'req.fixture-more', giver: 'npc.neighbor', after: 'req.fixture-chores', titleKey: 'req.fixture-more', goalKey: 'req.fixture-more.goal', trackKey: 'req.fixture-more.track',
+    targets: [{ id: 't1', spot: 'req.fixture-more.t1', icon: 'star', labelKey: 'req.fixture-more.t1' }], reward: { xp: 15, om: 10, skills: ['skill.communication'] },
+  });
+  const keys = ['req.fixture-more', 'req.fixture-more.goal', 'req.fixture-more.track', 'req.fixture-more.t1', `journal.${RF2('done')}`, ...['offer2', 'offer2.c1', 'offer2.c2', 'accepted2', 'later2', 'reminder2', 'turnin2', 'turnin2.c1'].map(RQ)];
   for (const lang of c.meta.locales) for (const k of keys) c.locales[lang][k] = lineText(lang, k);
 }
 const rqDialogue = (c) => c.dialogues.find((d) => d.id === 'dlg.fixture-neighbor');
@@ -347,6 +373,15 @@ function addMiaItem(c) {
 }
 const miaTask = (extra) => extraTask('find-mia', { leaderOnly: true, targets: [{ id: 'spot.pines', safe: true }], ...extra });
 
+/** Вузол розмови просильника з рядком про Мію: gated — лише за гілкою { animal }, інакше досяжний із next (GAME-184). */
+function withMiaLine(c, gated) {
+  const d = c.dialogues.find((x) => x.id === 'dlg.fixture-neighbor');
+  d.nodes.push({ id: 'mia-line', speaker: 'npc', textKey: RQ('mia-line'), next: 'bye' });
+  const gate = d.nodes.find((n) => n.id === 'gate');
+  if (gated) gate.branches.unshift({ when: { animal: MIA }, next: 'mia-line' });
+  else gate.branches.unshift({ when: { notFlag: RF('done') }, next: 'mia-line' });
+  for (const lang of c.meta.locales) c.locales[lang][RQ("mia-line")] = `Mia ${lang}: line one two three four five`;
+}
 export const FIXTURES = [
   // Хвилі напруги (GAME-170). Еталон уже має хвилю з двома справами — «еталон коректний» нижче є позитивним контролем.
   { name: '[хвиля] контроль: три справи, одна лише для лідера з безпечною ціллю для тварини — коректно', expect: [], patch(c) {
@@ -408,6 +443,11 @@ export const FIXTURES = [
   { name: '[прохання] немає запису журналу про здачу', expect: ['LOCALE_MISSING'], patch(c) { withRequest(c); delete c.locales.uk[`journal.${RF('done')}`]; } },
   { name: '[прохання] id не за шаблоном (похідні прапорці й тексти теж розходяться з діалогом)', expect: ['ID_FORMAT', 'LOCALE_MISSING', 'REQUEST_NO_LATER', 'REQUEST_NO_TURNIN'], patch(c) { withRequest(c); c.requests[0].id = 'req.Fixture_chores'; } },
   { name: '[прохання] іконка не з переліку', expect: ['SCHEMA_INVALID'], patch(c) { withRequest(c); c.requests[0].targets[0].icon = 'dragon'; } },
+  { name: '[прохання] контроль: продовження арки (after, вузли offer2/turnin2) — чисто', expect: [], patch(c) { withFollowUp(c); } },
+  { name: '[прохання] МУТАЦІЯ: after називає неіснуюче прохання', expect: ['REQUEST_AFTER_INVALID'], patch(c) { withFollowUp(c); c.requests[1].after = 'req.fixture-ghost'; } },
+  { name: '[прохання] after веде на прохання іншого просильника', expect: ['REQUEST_AFTER_INVALID', 'REQUEST_NO_LATER', 'REQUEST_NO_TURNIN'], patch(c) { withFollowUp(c); c.npcs.push({ id: 'npc.other', nameKey: 'npc.other', locationId: 'loc.camp' }); c.locales.uk['npc.other'] = 'x'; c.locales.en['npc.other'] = 'x'; c.requests[0].giver = 'npc.other'; c.dialogues.push({ id: 'dlg.fixture-other', npcId: 'npc.other', start: 'bye', nodes: [{ id: 'bye', speaker: 'npc', textKey: RQ('bye'), end: true }] }); } },
+  { name: '[прохання] after утворює коло', expect: ['REQUEST_AFTER_INVALID', 'REQUEST_NO_LATER'], patch(c) { withFollowUp(c); c.requests[0].after = 'req.fixture-more'; } },
+  { name: '[прохання] продовження без вузла offer2 — не взяти', expect: ['REQUEST_NO_LATER', 'DIALOGUE_NODE_UNREACHABLE', 'DIALOGUE_FLAG_NEVER_SET'], patch(c) { withFollowUp(c); const d = rqDialogue(c); d.nodes = d.nodes.filter((n) => n.id !== 'offer2'); d.nodes.find((n) => n.id === 'gate').branches = d.nodes.find((n) => n.id === 'gate').branches.filter((b) => b.next !== 'offer2'); } },
   { name: '[хвиля] та сама хвиля двічі на двох етапах', expect: ['ID_DUPLICATE', 'WAVE_REPEATED'], patch(c) { c.waves.push({ ...duskWave(), stage: 'ST-003' }); } },
   { name: '[хвиля] дубль id справи', expect: ['ID_DUPLICATE'], patch(c) { wave(c).tasks[1].id = 'wood'; } },
   { name: '[хвиля] id справи з підкресленням', expect: ['ID_FORMAT'], patch(c) { wave(c).tasks[1].id = 'hot_tea'; } },
@@ -1194,6 +1234,16 @@ export const FIXTURES = [
   } },
   { base: 'combo', name: '[Мія] ціль квесту про Мію без умови на кішку', expect: ['MIA_CONTENT_UNGATED'], patch(c) {
     addMia(c, [T_CAR]); q(c, 'q.dog-walk').objectives.push({ id: 'mia-look', textKey: 'q.dog-walk.o1', kind: 'visit', target: 'loc.dog-park', required: false });
+  } },
+  // GAME-184: Мія у проханнях — картка прохання нейтральна, репліка про Мію лише за гілкою { animal: animal.cat }.
+  { base: 'combo', name: '[Мія] контроль: репліка про Мію у проханні — лише за гілкою { animal: animal.cat } — коректно', expect: [], patch(c) {
+    addMia(c, [T_CAR]); withRequest(c); withMiaLine(c, true);
+  } },
+  { base: 'combo', name: '[Мія] МУТАЦІЯ: репліка про Мію у проханні досяжна без умови на кішку', expect: ['MIA_CONTENT_UNGATED'], patch(c) {
+    addMia(c, [T_CAR]); withRequest(c); withMiaLine(c, false);
+  } },
+  { base: 'combo', name: '[Мія] ціль прохання називає Мію (картку бачить і велосипедист)', expect: ['MIA_CONTENT_UNGATED'], patch(c) {
+    addMia(c, [T_CAR]); withRequest(c); for (const lang of c.meta.locales) c.locales[lang]['req.fixture-chores.t1'] = `Mia ${lang}`;
   } },
 ];
 
