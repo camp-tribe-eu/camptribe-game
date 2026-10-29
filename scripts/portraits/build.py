@@ -6,7 +6,7 @@
     python3 scripts/portraits/build.py post  RAWDIR OUTDIR    # ключ фону, зменшення до 96x96, палітра LPC+шкіра -> PNG
 
 Шари й кольори — ті самі, що в src/view/world/art.ts (спрайт і портрет мусять збігатися).
-Постобробка квантує на палітру art/palette/portraits.json (LPC + кілька відтінків шкіри; правило — у ній).
+Постобробка квантує на палітру LPC + art/palette/portraits-extra.json (відтінки шкіри; правило — у ній і в scripts/palette/check.py).
 """
 import base64, json, os, sys
 import numpy as np
@@ -14,7 +14,7 @@ from PIL import Image, ImageOps
 
 sys.dont_write_bytecode = True
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'palette'))
-from check import load_palette  # noqa: E402
+from check import load_palette, portrait_palette  # noqa: E402
 
 C = 'assets/characters/'
 P = {
@@ -61,6 +61,9 @@ PROMPT = ("Redraw this exact game character as a head-and-shoulders portrait bus
           "Natural peach-beige skin tones with soft rosy cheeks, not yellow. Plain solid flat magenta #FF00FF background, no text, no frame, no logo.")
 PROMPT_CAT = ("Redraw this exact game cat as a cute head-and-chest portrait for a video game dialogue box, facing the viewer. Keep the same grey fur and tan inner ears. {d}. "
               "Style: Stardew Valley-like painted pixel art with soft pixel shading and highlights, visible pixel grid, no smooth blur. Plain solid flat magenta #FF00FF background, no text, no frame, no logo.")
+
+
+SKIN_BIAS = 0.35  # квадрат відстані до відтінку шкіри множиться на це
 
 
 def tint(im, rgb):
@@ -116,7 +119,7 @@ def key_mask(im):
 
 
 def post(src, dst, size=96):
-    _, pal = load_palette('art/palette/portraits.json')
+    pal = portrait_palette(load_palette('art/palette/lpc.json')[1], 'art/palette/portraits-extra.json')
     pal_a = np.array(pal, dtype=np.int32)
     im = Image.open(src).convert('RGB')
     a = key_mask(im).astype(np.float32)
@@ -131,16 +134,48 @@ def post(src, dst, size=96):
     out = np.zeros((size, size, 4), np.uint8)
     vis = al >= 0.5
     col = (ch[vis] / al[vis][:, None]).clip(0, 255).astype(np.int32)
-    d2 = ((col[:, None, :] - pal_a[None, :, :]) ** 2).sum(2)
+    d2 = ((col[:, None, :] - pal_a[None, :, :]) ** 2).sum(2).astype(np.float64)
+    # відтінки шкіри з portraits-extra мають перевагу: інакше найближчими стають жовтуваті кольори LPC
+    extra = set(map(tuple, portrait_palette([], 'art/palette/portraits-extra.json')))
+    d2[:, [i for i, c in enumerate(pal) if tuple(c) in extra]] *= SKIN_BIAS
     out[vis, :3] = pal_a[d2.argmin(1)].astype(np.uint8)
     out[vis, 3] = 255
     Image.fromarray(out, 'RGBA').save(dst)
+
+
+def credits(portrait_dir):
+    """Рядки assets/CREDITS.csv для портретів: автори й джерела — об'єднання рядків шарів, з яких складено спрайт-референс."""
+    import csv, io
+    rows = {r['file']: r for r in csv.DictReader(open('assets/CREDITS.csv', encoding='utf-8'))}
+    out = []
+    for k, look in LOOKS.items():
+        files = ['sprites/cat_mia.png'] if look is None else ['characters/' + P[n] + '/walk.png' for n, _ in look]
+        authors, urls = [], []
+        for f in files:
+            for a in rows[f]['authors'].split('; '):
+                if a not in authors: authors.append(a)
+            for u in rows[f]['source_urls'].split():
+                if u not in urls: urls.append(u)
+        out.append({
+            'file': f'portraits/{k}.png', 'authors': '; '.join(authors), 'licence': 'CC-BY-SA 3.0', 'licences_offered': 'CC-BY-SA 3.0',
+            'source_urls': ' '.join(urls),
+            'origin': 'GAME-49: портрет згенеровано fal-ai/flux-pro/kontext за референсом — спрайтом NPC зі шарів LPC (' + ', '.join(files) + '); автори — автори цих шарів',
+            'notes': 'AI-похідний твір від спрайтів CC-BY-SA 3.0; лишається CC-BY-SA 3.0 (рішення 29.10.2026, GAME-49)',
+            'modified': 'redrawn as a 96x96 head-and-shoulders portrait by an image-editing model from the LPC sprite, background keyed out, quantized to the LPC palette plus skin tones'})
+    with open('assets/CREDITS.csv', encoding='utf-8') as f:
+        text = f.read()
+    keep = [l for l in text.splitlines(True) if not l.startswith('portraits/')]
+    buf = io.StringIO(); w = csv.writer(buf, lineterminator='\n')
+    for r in out:
+        w.writerow([r[h] for h in ['file', 'authors', 'licence', 'licences_offered', 'source_urls', 'origin', 'notes', 'modified']])
+    open('assets/CREDITS.csv', 'w', encoding='utf-8').write(''.join(keep) + buf.getvalue())
 
 
 if __name__ == '__main__':
     m = sys.argv[1]
     if m == 'refs': refs(sys.argv[2])
     elif m == 'req': req(sys.argv[2], sys.argv[3], sys.argv[4:])
+    elif m == 'credits': credits(sys.argv[2])
     elif m == 'post':
         os.makedirs(sys.argv[3], exist_ok=True)
         for f in sorted(os.listdir(sys.argv[2])):
