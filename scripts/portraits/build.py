@@ -49,9 +49,9 @@ DESC = {
     'npc.elise': 'a sturdy older woman about 55 years old with a rounder, fuller face, smile lines and crow\'s feet, black hair with a few silver strands pulled back, warm tired kind eyes, wearing a mustard-yellow sweater',
     'npc.nora': 'a woman about 33 years old with a sporty tanned look, brown ponytail, wearing a bright sky-blue sweater',
     'npc.luc': 'a man about 47 years old with short grey hair, calm focused face, wearing an orange sweater',
-    'npc.ingrid': 'an elderly woman about 68 years old with short white pixie-cut hair, thin face with wrinkles, wise eyes, wearing a purple sweater',
+    'npc.ingrid': 'an elderly woman about 68 years old with short silver-white pixie-cut hair, a thin kind face with soft fine wrinkles, wise eyes, clean smooth even natural fair skin without freckles, spots or blotches, wearing a purple sweater',
     'npc.sarah': 'a cheerful woman about 29 years old with blonde ponytail, talkative open smile, wearing a blue sweater',
-    'npc.claire': 'a woman about 38 years old with messy ginger-red hair, kind reassuring smile, wearing a navy-blue sweater',
+    'npc.claire': 'a clearly feminine woman about 38 years old with a soft rounded face, gentle features, long eyelashes, long tidy auburn-red hair worn down past her shoulders, a kind reassuring smile, wearing a navy-blue sweater',
     'npc.amina': 'a woman about 31 years old with dark brown hair in a ponytail, friendly attentive look, wearing a white-cream sweater',
     'animal.cat': 'a cute grey Scottish Fold cat with small folded ears, round face and big round eyes, head and chest portrait, no human features',
 }
