@@ -6,7 +6,7 @@ import type { Key } from '../i18n';
 export interface OfferAction {
   readonly id: string;
   /** `task` — справа живої хвилі з екрана подорожі (GAME-170 зріз 3: дім, зупинка в дорозі — локації без мапи). */
-  readonly kind: 'visit' | 'talk' | 'pickup' | 'buy' | 'sell' | 'dry' | 'complete' | 'decline' | 'choose' | 'continue' | 'pack' | 'unpack' | 'autopack' | 'task';
+  readonly kind: 'visit' | 'talk' | 'pickup' | 'buy' | 'sell' | 'dry' | 'complete' | 'decline' | 'choose' | 'continue' | 'pack' | 'unpack' | 'autopack' | 'task' | 'cancel';
   readonly key: string | null;
   readonly priceCents?: number;
   /** Скільки хвилин займе дорога (GAME-31); немає — дія на місці. */
@@ -14,6 +14,9 @@ export interface OfferAction {
   /** Лише для недоступної купівлі (GAME-83): скільки центів бракує. Така дія не має команди — клік нічого не робить. */
   readonly shortCents?: number;
 }
+
+/** id відповіді «Не зараз» у рамці вибору дії на мапі (GAME-183): команди не має — гра лише закриває рамку. */
+export const CHOICE_CANCEL_ID = 'choice|cancel';
 
 export interface OfferCharacter {
   readonly id: string;
@@ -121,6 +124,8 @@ export interface StoryOffer {
   readonly dialogue: { readonly speakerKey: string | null;
     /** GAME-179: хто говорить: id NPC; 'player' — репліка героя; null — оповідач (подія в дорозі, сцена). Від нього портрет у рамці розмови. */
     readonly speakerId: string | null; readonly key: string | null; readonly answers: readonly OfferAction[];
+    /** GAME-183: `key` — ключ UI (src/i18n), а не контенту: рамка вибору дії на мапі («Куди їдемо?»), а не репліка; остання відповідь — «Не зараз». */
+    readonly ui?: boolean;
     /** GAME-180: вузол пропозиції прохання — картка (портрет просильника є в рамці; тут що зробити, цілі-картинки й нагорода). */
     readonly request?: OfferRequestCard } | null;
   readonly actions: readonly OfferAction[];

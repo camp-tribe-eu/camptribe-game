@@ -27,10 +27,10 @@ import { CONTENT, memorableFacts } from '../content/story';
 import { moves, progressKey, type Move } from '../content/moves';
 import items from '../../content/items.json';
 import { daySummary, daysEnded, NIGHT_PREFIX } from '../core/day-summary';
-import type { OfferAction, OfferAtlas, OfferCharacter, OfferPacking, OfferProgress, OfferSummary, OfferWave, StoryOffer } from '../ui/story-types';
+import { CHOICE_CANCEL_ID, type OfferAction, type OfferAtlas, type OfferCharacter, type OfferPacking, type OfferProgress, type OfferSummary, type OfferWave, type StoryOffer } from '../ui/story-types';
 import { RAW_WAVES } from '../content/waves';
 import { menuTasks } from '../content/director';
-import { coveredKeys, moveKey, nextTarget, spotLabel } from '../content/map-first';
+import { coveredKeys, moveKey, nextTarget, resolveSpot, spotLabel } from '../content/map-first';
 import { waveView } from '../core/wave';
 import type { Key } from '../i18n';
 import { liveRequestSpot as liveSpotFor } from '../content/requests';
@@ -288,7 +288,13 @@ export function objectiveKey(raw: { textKey?: string; gearCheck?: boolean } | un
  * там, де об'єкт мапи живий і шле ту саму команду — src/content/map-first.ts); `trunk` — відкрито багажник (сітка пакування показана
  * лише біля авто); `near` — об'єкт мапи, до якого гравець підійшов (підпис дії). Без вигляду (тести, режим `?panelActs=1`) — як було.
  */
-export interface StoryView { readonly mapFirst: boolean; readonly trunk: boolean; readonly near: string | null; readonly backpack?: readonly string[] }
+export interface StoryView {
+  readonly mapFirst: boolean; readonly trunk: boolean; readonly near: string | null; readonly backpack?: readonly string[];
+  /** GAME-183: об'єкт мапи, що питає «що саме?» (авто — куди їхати, сушарка, приймальня, крок з вибором): його варіанти йдуть у рамку вибору замість ☰. Стан ПОКАЗУ. */
+  readonly choice?: string | null;
+}
+/** Питання рамки вибору за об'єктом (ключі UI). */
+export const choicePrompt = (spot: string): Key => (spot === 'obj.vehicle' ? 'choice.where' : spot === 'obj.drying' ? 'choice.dry' : spot === 'obj.sell' ? 'choice.sell' : 'choice.step');
 export const PANEL_VIEW: StoryView = { mapFirst: false, trunk: true, near: null };
 const NO_KEYS: ReadonlySet<string> = new Set();
 
@@ -375,6 +381,16 @@ export function storyOffer(sim: SimState, defs: CoreDefs, view: StoryView = PANE
       ? { id: rq.id, titleKey: rq.titleKey, goalKey: rq.goalKey, goals: rq.targets.map((t) => ({ icon: t.icon, labelKey: t.labelKey })), reward: rq.reward }
       : undefined;
     dialogue = { speakerKey, speakerId, key: node?.textKey ?? null, answers: offered, ...(card ? { request: card } : {}) };
+  }
+
+  // GAME-183: об'єкт мапи питає «що саме?» — варіанти в рамці вибору (те саме місце, що рамка розмови), а не кнопки ☰. Лише на мапі й без розмови.
+  if (!dialogue && view.mapFirst && view.choice) {
+    const options = resolveSpot(sim, defs, view.choice)?.options;
+    if (options) {
+      const answers = options.map((m): OfferAction => { const a: OfferAction = { id: idOf(m, s), ...describe(m, defs, s, weather) }; intents.set(a.id, m); return a; });
+      answers.push({ id: CHOICE_CANCEL_ID, kind: 'cancel', key: null });
+      dialogue = { speakerKey: null, speakerId: null, key: choicePrompt(view.choice), ui: true, answers };
+    }
   }
 
   return {

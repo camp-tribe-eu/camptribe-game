@@ -28,7 +28,7 @@ export function DialogueBox({ dialogue: d, lang, t, act, portrait }: { dialogue:
   // Рамка щойно з'явилась під пальцем, що натиснув «дію» на мапі: його «клік» долітає вже в рамку й обирав би відповідь. Тому відлік глухоти — від появи (час події = той самий годинник, що в event.timeStamp).
   const lastAct = useRef(new Event('open').timeStamp);
   const raf = useRef(0);
-  const text = ct(lang, d.key);
+  const text = d.ui ? t((d.key ?? 'ui.dialogue') as Key) : ct(lang, d.key);   // GAME-183: рамка вибору дії — текст UI
   const chars = Array.from(text);
   // Скільки літер уже показано. Рух зменшено (prefers-reduced-motion) — одразу весь рядок, без друку.
   const [n, setN] = useState(0);

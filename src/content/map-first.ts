@@ -10,18 +10,20 @@
 // можна завжди: або ногами, або (як було) кнопкою. Що саме ногами — доводить map-first.test.ts повним перебором.
 import { dispatch, nextCommandId, type Command } from '../core/commands';
 import type { CoreDefs } from '../core/defs';
+import { canonical } from '../core/hash';
 import { autoPack, packFlag, packItemsFor, packedOf, packingOpen } from '../core/packing';
 import type { SimState } from '../core/sim';
 import type { GameState } from '../core/state';
 import { matches } from '../core/story';
 import type { Key } from '../i18n';
+import { FIREPLACE_SCENE } from './fireplace';
 import type { Move } from './moves';
 
 export type MapKey = 'home' | 'shop' | 'camp';
 /** Локація кожної мапи гри (властивість locationId у .tmj; звіряє map-content.test). */
 export const MAP_LOCATION: Readonly<Record<MapKey, string>> = { home: 'loc.home', shop: 'loc.shop', camp: 'loc.camp.lake' };
-/** Мапи, де кроки сюжету робляться руками (зріз 1). Дорога й табір — наступні зрізи: там усе, як було. */
-export const MAP_FIRST: readonly MapKey[] = ['home', 'shop'];
+/** Мапи, де кроки сюжету робляться руками (зріз 1 — дім і крамниця; GAME-183 — табір). Дорога — наступний зріз: там усе, як було. */
+export const MAP_FIRST: readonly MapKey[] = ['home', 'shop', 'camp'];
 
 /** Мапа для локації: дім і крамниця мають свої; решта (дорога, табір) — табір біля озера. Немає персонажа (вибір героя) — дім: звідти починається гра. */
 export function mapKeyFor(locationId: string | null | undefined): MapKey {
@@ -44,7 +46,17 @@ export const MAP_SPOTS = {
     'npc.george', 'obj.vehicle', 'obj.trunk',
   ],
   shop: ['take.item.tent', 'take.item.sleeping-bag', 'take.item.lantern', 'step.ST-003', 'obj.vehicle'],
-} as const satisfies Readonly<Record<'home' | 'shop', readonly string[]>>;
+  // GAME-183 · табір: кожен крок квесту табору — об'єкт `step.<квест>` (місце — public/maps/camp-lake.tmj, scripts/maps/build_camp_lake.py CAMP_SPOTS); дрова — купа на лісовій
+  // галявині; сушарка й приймальня (продаж) — біля наметів і рецепції; авто — на стоянці. Розмова з Елізою, справи хвиль, вогнище й прохання — окремі (director.ts, requests.ts).
+  camp: [
+    'step.ST-005', 'step.CH1-D2-001', 'step.CH1-D2-ELISE-001', 'step.q.elise-bike-area', 'step.CH1-D2-CAMP-001', 'step.CH1-D2-FIRE-001',
+    'step.CH1-D3-001', 'step.CH1-D3-GEAR-001', 'step.CH1-D3-ELISE-001', 'step.CH1-D3-RETURN-001', 'step.CH1-D3-HOME-001',
+    'take.item.firewood', 'obj.drying', 'obj.sell', 'obj.vehicle',
+  ],
+} as const satisfies Readonly<Record<MapKey, readonly string[]>>;
+
+/** Квести табору, чиє завершення робиться ногами (GAME-183): сторож «кожен крок табору має місце на мапі» (camp-first.test) звіряє їх із content/quests.json. */
+export const CAMP_STEP_QUESTS: readonly string[] = (MAP_SPOTS.camp as readonly string[]).filter((n) => n.startsWith('step.')).map((n) => n.slice(5));
 
 /** Спорядження в багажнику: те, що вдома кладуть руками (ядро автоукладає його на старті; рука лише уточнює). */
 export const SPOT_PREFIX = { step: 'step.', pack: 'pack.', take: 'take.' } as const;
@@ -99,14 +111,37 @@ export function targetProblems(
   return out;
 }
 
+/**
+ * Сторож контенту (GAME-183, закон 1 — мусить уміти червоніти): кожен крок квесту табору має об'єкт `step.<квест>` у MAP_SPOTS.camp І на мапі табору, кожен об'єкт списку
+ * є на мапі, зайвих кроків немає. Квести — з content/quests.json (форма RawQuest), список і назви об'єктів — параметрами, щоб тест міг дати зламані. Порожньо — гаразд.
+ */
+export function campStepProblems(quests: readonly { id: string; locationId?: string }[], spots: readonly string[], onMap: readonly string[], steps: readonly string[] = CAMP_STEP_QUESTS): string[] {
+  const out: string[] = [];
+  for (const q of quests) {
+    // Крок табору — квест із локацією табору й квест із переліку (D3-RETURN-001 має локацію «дорога», але його завершують у таборі, якщо гравець повернувся).
+    const isStep = q.locationId === MAP_LOCATION.camp || steps.includes(q.id);
+    if (!isStep) continue;
+    if (!spots.includes(`step.${q.id}`)) out.push(`NO_CAMP_SPOT ${q.id}: quest step has no step.${q.id} in MAP_SPOTS.camp`);
+    else if (!onMap.includes(`step.${q.id}`)) out.push(`CAMP_SPOT_NOT_ON_MAP ${q.id}: step.${q.id} is not an object on camp-lake.tmj`);
+  }
+  for (const n of spots) {
+    if (!onMap.includes(n)) out.push(`CAMP_SPOT_NOT_ON_MAP ${n}: MAP_SPOTS.camp object is not on camp-lake.tmj`);
+    if (n.startsWith('step.') && !quests.some((q) => q.id === n.slice(5))) out.push(`CAMP_SPOT_ORPHAN ${n}: no such quest in content`);
+  }
+  return out;
+}
+
 /** Ключ дії для звірки «ця кнопка панелі = цей хід мапи»: тип і ціль (CompleteQuest без/з `to` — одна дія). */
 export function moveKey(m: Move): string {
   const r = m as unknown as Record<string, unknown>;
   return `${m.type}|${String(r.questId ?? r.locationId ?? r.itemId ?? r.npcId ?? '')}`;
 }
 
-/** Що робить об'єкт: ходи ядра (по порядку) і/або відкрити багажник. */
-export interface Resolved { readonly moves: readonly Move[]; readonly ui?: 'trunk' }
+/**
+ * Що робить об'єкт: ходи ядра (по порядку) і/або відкрити багажник. `options` (GAME-183) — об'єкт пропонує ВИБІР однієї з дій (куди їхати, що сушити,
+ * як завершити крок): сцена показує маленьку рамку вибору в рамці розмови замість ☰, `moves` тоді порожній. Один варіант вибору не буває — це просто `moves`.
+ */
+export interface Resolved { readonly moves: readonly Move[]; readonly ui?: 'trunk'; readonly options?: readonly Move[] }
 
 const asCommand = (g: GameState, m: Move): Command => ({ ...m, commandId: nextCommandId(g) }) as Command;
 /** Хід, який ядро прийме, → наступний стан; інакше null. */
@@ -124,28 +159,74 @@ function chain(g: GameState, defs: CoreDefs, moves: readonly Move[]): boolean {
 const own = <T>(o: Readonly<Record<string, T>>, k: string): T | undefined => (Object.hasOwn(o, k) ? o[k] : undefined);
 const active = (g: GameState, q: string): boolean => own(g.quests, q)?.status === 'active';
 
-/** Куди везе авто (велосипед) звідси зараз і які ходи для цього треба; null — нікуди. */
-function vehicleMoves(g: GameState, defs: CoreDefs): Move[] | null {
+const ROAD = 'loc.road';
+/** Усі дороги, які ядро зараз приймає звідси (куди можна поїхати): порядок — дорога, дім, крамниця, табір. */
+const openVisits = (g: GameState, defs: CoreDefs): Move[] =>
+  [ROAD, MAP_LOCATION.home, MAP_LOCATION.shop, MAP_LOCATION.camp].map((locationId): Move => ({ type: 'Visit', locationId })).filter((m) => accepted(g, defs, m) !== null && (m as { locationId: string }).locationId !== g.player?.locationId);
+
+/**
+ * Куди везе авто (велосипед) звідси зараз: ходи однієї ведучої дії (сюжет каже, куди) або вибір із відкритих напрямків (GAME-183 — «Куди їдемо?»); null — нікуди.
+ * Ведуча дія не питає (як було в зрізі 1): авто просто їде туди, куди веде квест. Вільний вибір є там, де квест не веде: удома поза сюжетом і в таборі (там навіть «додому» — вибір: дорога, дім чи крамниця, стрілка вказує на авто).
+ */
+function vehicleMoves(g: GameState, defs: CoreDefs): { moves: Move[]; options?: Move[] } | null {
   const p = g.player;
   if (!p) return null;
-  if (p.locationId === MAP_LOCATION.shop) return [{ type: 'Visit', locationId: MAP_LOCATION.home }];
-  if (p.locationId !== MAP_LOCATION.home) return null;
-  // Дім: ST-003 (крамниця) → поїхали по спорядження; CH1-HOME-001 — завершити «Ми точно все взяли?» і виїхати; далі — на дорогу.
-  if (active(g, 'ST-003')) return [{ type: 'Visit', locationId: MAP_LOCATION.shop }];
-  if (active(g, 'CH1-HOME-001')) return [{ type: 'CompleteQuest', questId: 'CH1-HOME-001' }, { type: 'Visit', locationId: 'loc.road' }];
-  const road: Move = { type: 'Visit', locationId: 'loc.road' };
-  return accepted(g, defs, road) ? [road] : null;
+  if (p.locationId === MAP_LOCATION.shop) return { moves: [{ type: 'Visit', locationId: MAP_LOCATION.home }] };
+  if (p.locationId === MAP_LOCATION.home) {
+    // Дім: ST-003 (крамниця) → поїхали по спорядження; CH1-HOME-001 — завершити «Ми точно все взяли?» і виїхати; далі — на дорогу.
+    if (active(g, 'ST-003')) return { moves: [{ type: 'Visit', locationId: MAP_LOCATION.shop }] };
+    if (active(g, 'CH1-HOME-001')) return { moves: [{ type: 'CompleteQuest', questId: 'CH1-HOME-001' }, { type: 'Visit', locationId: ROAD }] };
+  }
+  if (p.locationId !== MAP_LOCATION.home && p.locationId !== MAP_LOCATION.camp) return null;
+  const open = openVisits(g, defs);
+  if (open.length === 0) return null;
+  return open.length === 1 ? { moves: open } : { moves: [], options: open };
 }
+
+/** Варіанти завершення кроку: «Завершити» без вибору, з кожним вибором переходу, «Відмовитись» — лише ті, що ядро приймає, без дублів за наслідком (GAME-183). */
+function stepVariants(g: GameState, defs: CoreDefs, questId: string): Move[] {
+  const tos = (defs.story?.quests[questId]?.transitions ?? []).map((t) => t.to);
+  const out: Move[] = [];
+  const seen = new Set<string>();
+  for (const type of ['CompleteQuest', 'DeclineQuest'] as const) {
+    for (const to of [undefined, ...tos]) {
+      const m: Move = to === undefined ? { type, questId } : { type, questId, to };
+      const next = accepted(g, defs, m);
+      if (!next) continue;
+      const k = `${type}|${canonical(next.quests)}`;
+      if (seen.has(k)) continue;
+      seen.add(k);
+      out.push(m);
+    }
+  }
+  return out;
+}
+
+/** Ходи, які ядро приймає й які міняють стан: для сушарки (DryGear) і приймальні (SellItem). */
+const acceptedOf = (g: GameState, defs: CoreDefs, list: readonly Move[]): Move[] => list.filter((m) => accepted(g, defs, m) !== null);
+
+const choice = (list: readonly Move[]): Resolved | null => (list.length === 0 ? null : list.length === 1 ? { moves: list } : { moves: [], options: list });
 
 const memo = new WeakMap<GameState, Map<string, Resolved | null>>();
 
-function compute(g: GameState, defs: CoreDefs, name: string): Resolved | null {
+/** Сцену біля вогнища вже грали (запис StartScene у журналі): лише тоді вогнище завершує вечір (GAME-183). */
+const firePlayed = (sim: SimState): boolean => sim.journal.some((e) => e.type === 'StartScene' && e.ref === FIREPLACE_SCENE);
+
+function compute(sim: SimState, defs: CoreDefs, name: string): Resolved | null {
+  const g = sim.game;
   const p = g.player;
   if (!p) return null;
   if (name.startsWith(SPOT_PREFIX.step)) {
-    const moves: Move[] = [{ type: 'CompleteQuest', questId: name.slice(SPOT_PREFIX.step.length) }];
-    return active(g, (moves[0] as { questId: string }).questId) && chain(g, defs, moves) ? { moves } : null;
+    const questId = name.slice(SPOT_PREFIX.step.length);
+    if (!active(g, questId)) return null;
+    // Вечір дня 2: сцена біля вогнища — ПЕРШЕ (obj.campfire, director.ts), завершення — те саме вогнище, коли сцену зіграно.
+    if (questId === 'CH1-D2-FIRE-001' && !firePlayed(sim)) return null;
+    if (p.locationId === MAP_LOCATION.camp) return choice(stepVariants(g, defs, questId));
+    const moves: Move[] = [{ type: 'CompleteQuest', questId }];
+    return chain(g, defs, moves) ? { moves } : null;
   }
+  if (name === 'obj.drying') return choice(acceptedOf(g, defs, Object.entries(g.gear).filter(([, x]) => x.wet).map(([itemId]): Move => ({ type: 'DryGear', itemId }))));
+  if (name === 'obj.sell') return choice(acceptedOf(g, defs, Object.keys(defs.items).map((itemId): Move => ({ type: 'SellItem', itemId }))));
   if (name.startsWith(SPOT_PREFIX.take)) {
     const moves: Move[] = [{ type: 'Pickup', itemId: name.slice(SPOT_PREFIX.take.length) }];
     return chain(g, defs, moves) ? { moves } : null;
@@ -164,8 +245,10 @@ function compute(g: GameState, defs: CoreDefs, name: string): Resolved | null {
     return pk && packingOpen(pk, g) ? { moves: [], ui: 'trunk' } : null;
   }
   if (name === 'obj.vehicle') {
-    const moves = vehicleMoves(g, defs);
-    return moves && chain(g, defs, moves) ? { moves } : null;
+    const v = vehicleMoves(g, defs);
+    if (!v) return null;
+    if (v.options) return { moves: [], options: v.options };
+    return chain(g, defs, v.moves) ? { moves: v.moves } : null;
   }
   return null;
 }
@@ -176,11 +259,11 @@ export function resolveSpot(sim: SimState, defs: CoreDefs, name: string): Resolv
   const p = g.player;
   if (!p || g.dialogue !== null || g.campaignEnded) return null;
   const map = mapKeyFor(p.locationId);
-  if (map === 'camp' || !(MAP_SPOTS[map] as readonly string[]).includes(name) || p.locationId !== MAP_LOCATION[map]) return null;
+  if (!(MAP_SPOTS[map] as readonly string[]).includes(name) || p.locationId !== MAP_LOCATION[map]) return null;
   let byName = memo.get(g);
   if (!byName) { byName = new Map(); memo.set(g, byName); }
   if (byName.has(name)) return byName.get(name) ?? null;
-  const r = compute(g, defs, name);
+  const r = compute(sim, defs, name);
   byName.set(name, r);
   return r;
 }
@@ -198,12 +281,12 @@ export function liveMapSpot(sim: SimState, defs: CoreDefs, name: string): boolea
   const p = sim.game.player;
   if (!p) return false;
   const map = mapKeyFor(p.locationId);
-  if (map === 'camp' || !(MAP_SPOTS[map] as readonly string[]).includes(name)) return false;
+  if (!(MAP_SPOTS[map] as readonly string[]).includes(name)) return false;
   return name.startsWith('npc.') ? npcLive(sim.game, defs, name) : resolveSpot(sim, defs, name) !== null;
 }
 
 /** Чи назва — об'єкт зрізу 1 (на будь-якій з двох мап): їх веде цей модуль, решту — режисер хвиль (director.ts). */
-export const isMapFirstSpot = (name: string): boolean => MAP_FIRST.some((k) => (MAP_SPOTS[k as 'home' | 'shop'] as readonly string[]).includes(name));
+export const isMapFirstSpot = (name: string): boolean => MAP_FIRST.some((k) => (MAP_SPOTS[k] as readonly string[]).includes(name));
 
 const coveredMemo = new WeakMap<GameState, Set<string>>();
 /**
@@ -217,11 +300,19 @@ export function coveredKeys(sim: SimState, defs: CoreDefs): ReadonlySet<string> 
   const out = new Set<string>();
   const p = g.player;
   const map = mapKeyFor(p?.locationId);
-  if (p && map !== 'camp' && g.dialogue === null) {
+  // Дорога мапи не має (її малює табір), тож покриває лише гравець у локації своєї мапи.
+  if (p && p.locationId === MAP_LOCATION[map] && g.dialogue === null) {
     for (const name of MAP_SPOTS[map] as readonly string[]) {
       if (name.startsWith('npc.')) { if (npcLive(g, defs, name)) out.add(`Talk|npc.${name.slice(4)}`); continue; }
       if (name.startsWith(SPOT_PREFIX.pack)) continue;   // пакування — не серед меню панелі (ходи PackItem/UnpackItem з сітки багажника)
-      for (const m of resolveSpot(sim, defs, name)?.moves ?? []) out.add(moveKey(m));
+      const r = resolveSpot(sim, defs, name);
+      for (const m of [...(r?.moves ?? []), ...(r?.options ?? [])]) out.add(moveKey(m));
+    }
+    if (map === 'camp') {
+      // Розмова з Елізою — NPC табору на мапі (рамка розмови): та сама дія, що кнопка «Поговорити».
+      if (npcLive(g, defs, 'npc.elise')) out.add('Talk|npc.elise');
+      // Вогнище дня 2: сцена, потім завершення вечора — обидва в одного вогнища (director.spotMove), тож кнопка завершення мапою покрита й до сцени.
+      if (active(g, 'CH1-D2-FIRE-001')) out.add('CompleteQuest|CH1-D2-FIRE-001');
     }
   }
   coveredMemo.set(g, out);
@@ -232,6 +323,41 @@ export function coveredKeys(sim: SimState, defs: CoreDefs): ReadonlySet<string> 
 export interface Next { readonly key: Key; readonly spot: string | null }
 
 const quest = (g: GameState, q: string): boolean => active(g, q);
+const objDone = (g: GameState, q: string, o: string): boolean => own(g.quests, q)?.done.includes(o) ?? false;
+
+/**
+ * GAME-183 · табір: стрілка й рядок «Далі:» ЗАВЖДИ ведуть до наступної цілі на мапі — а не до ☰. Спершу справи живої хвилі (строк горить), далі — крок головного квесту:
+ * розмова з Елізою, купа дров, намет, берег озера, вогнище, авто. Квест без кроку на мапі табору — null (кінець розділу тощо); сторож camp-first.test доводить, що в жодному
+ * досяжному стані табору розділ не лишається без цілі.
+ */
+function campNext(sim: SimState, defs: CoreDefs): Next | null {
+  const g = sim.game;
+  const w = g.wave?.active;
+  const stage = w ? defs.waves?.waves[w.waveId]?.stage : undefined;
+  if (w && stage !== undefined && own(defs.story?.quests ?? {}, stage)?.locationId === MAP_LOCATION.camp) {
+    const open = Object.entries(w.tasks).find(([, t]) => t.outcome === 'open' && sim.clock.minutes <= t.dueAt);
+    if (open) return { key: 'next.camp.task', spot: `task.${open[0]}` };
+  }
+  const tent = (id: string): Next => ({ key: 'next.camp.tent', spot: `step.${id}` });
+  const elise = (id: string, o: string): Next => (objDone(g, id, o) ? { key: 'next.camp.elise.done', spot: `step.${id}` } : { key: 'next.camp.elise', spot: 'npc.elise' });
+  if (quest(g, 'ST-005')) {
+    if (!objDone(g, 'ST-005', 'meet-elise') || !objDone(g, 'ST-005', 'pitch-tent')) return { key: 'next.camp.elise', spot: 'npc.elise' };
+    if (!g.inventory['item.firewood']) return { key: 'next.camp.firewood', spot: 'take.item.firewood' };
+    return tent('ST-005');
+  }
+  if (quest(g, 'CH1-D2-001')) return { key: 'next.camp.lake', spot: 'step.CH1-D2-001' };
+  if (quest(g, 'CH1-D2-ELISE-001')) return elise('CH1-D2-ELISE-001', 'talk-elise');
+  if (quest(g, 'q.elise-bike-area')) return elise('q.elise-bike-area', 'talk-elise');
+  if (quest(g, 'CH1-D2-CAMP-001')) return objDone(g, 'CH1-D2-CAMP-001', 'dinner') ? tent('CH1-D2-CAMP-001') : { key: 'next.camp.elise', spot: 'npc.elise' };
+  if (quest(g, 'CH1-D2-FIRE-001')) return { key: 'next.camp.fire', spot: firePlayed(sim) ? 'step.CH1-D2-FIRE-001' : 'obj.campfire' };
+  if (quest(g, 'CH1-D3-001')) return tent('CH1-D3-001');
+  if (quest(g, 'CH1-D3-GEAR-001')) return tent('CH1-D3-GEAR-001');
+  if (quest(g, 'CH1-D3-ELISE-001')) return elise('CH1-D3-ELISE-001', 'goodbye');
+  // Дорога додому: повернувся в табір посеред неї (або на кінцевий квест) — знову до авто.
+  if (quest(g, 'CH1-D3-HOME-001') && objDone(g, 'CH1-D3-HOME-001', 'home')) return tent('CH1-D3-HOME-001');   // «Знову вдома» вже зараховано (був удома), а гравець у таборі — крок завершується тут
+  if (quest(g, 'CH1-D3-RETURN-001') || quest(g, 'CH1-D3-HOME-001')) return { key: 'next.camp.leave', spot: 'obj.vehicle' };
+  return null;
+}
 
 /**
  * Що робити далі (рядок «Далі:» над мапою і підсвічений об'єкт). null — підказки немає (розмова, кінець розділу, мапа не зрізу 1).
@@ -243,6 +369,7 @@ export function nextTarget(sim: SimState, defs: CoreDefs, carried: readonly stri
   if (!p || g.dialogue !== null || g.campaignEnded) return null;
   const car = p.transportId === 'transport.car';
   if (p.locationId === 'loc.road') return { key: 'next.road', spot: null };
+  if (p.locationId === MAP_LOCATION.camp) return campNext(sim, defs);
   if (p.locationId === MAP_LOCATION.shop) {
     if (quest(g, 'ST-003')) {
       if (!g.inventory['item.tent']) return { key: 'next.take-tent', spot: 'take.item.tent' };
@@ -273,7 +400,13 @@ export function spotLabel(sim: SimState, defs: CoreDefs, name: string): SpotLabe
   const p = sim.game.player;
   if (!p || !liveMapSpot(sim, defs, name)) return null;
   const car = p.transportId === 'transport.car';
-  if (name.startsWith(SPOT_PREFIX.step)) return { label: `near.step.${name.slice(SPOT_PREFIX.step.length).toLowerCase()}` as Key, ref: null };
+  if (name.startsWith(SPOT_PREFIX.step)) {
+    const q = name.slice(SPOT_PREFIX.step.length);
+    // Табір (GAME-183): один підпис «Завершити: <назва квесту>»; удома — власні підписи кроків дня 1.
+    return CAMP_STEP_QUESTS.includes(q) ? { label: 'near.finish', ref: q } : { label: `near.step.${q.toLowerCase()}` as Key, ref: null };
+  }
+  if (name === 'obj.drying') return { label: 'near.dry', ref: null };
+  if (name === 'obj.sell') return { label: 'near.sell', ref: null };
   if (name.startsWith(SPOT_PREFIX.take)) return { label: 'act.pickup', ref: name.slice(SPOT_PREFIX.take.length) };
   if (name.startsWith(SPOT_PREFIX.pack)) {
     const itemId = name.slice(SPOT_PREFIX.pack.length);

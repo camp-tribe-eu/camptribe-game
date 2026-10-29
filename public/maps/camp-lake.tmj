@@ -10,7 +10,7 @@
  "tileheight": 32,
  "infinite": false,
  "nextlayerid": 7,
- "nextobjectid": 42,
+ "nextobjectid": 57,
  "layers": [
   {
    "id": 1,
@@ -4211,6 +4211,186 @@
     },
     {
      "id": 25,
+     "name": "step.ST-005",
+     "type": "trigger",
+     "x": 496,
+     "y": 368,
+     "width": 0,
+     "height": 0,
+     "point": true,
+     "rotation": 0,
+     "visible": true
+    },
+    {
+     "id": 26,
+     "name": "step.CH1-D2-CAMP-001",
+     "type": "trigger",
+     "x": 496,
+     "y": 368,
+     "width": 0,
+     "height": 0,
+     "point": true,
+     "rotation": 0,
+     "visible": true
+    },
+    {
+     "id": 27,
+     "name": "step.CH1-D3-001",
+     "type": "trigger",
+     "x": 496,
+     "y": 368,
+     "width": 0,
+     "height": 0,
+     "point": true,
+     "rotation": 0,
+     "visible": true
+    },
+    {
+     "id": 28,
+     "name": "step.CH1-D3-GEAR-001",
+     "type": "trigger",
+     "x": 496,
+     "y": 368,
+     "width": 0,
+     "height": 0,
+     "point": true,
+     "rotation": 0,
+     "visible": true
+    },
+    {
+     "id": 29,
+     "name": "step.CH1-D3-RETURN-001",
+     "type": "trigger",
+     "x": 496,
+     "y": 368,
+     "width": 0,
+     "height": 0,
+     "point": true,
+     "rotation": 0,
+     "visible": true
+    },
+    {
+     "id": 30,
+     "name": "step.CH1-D3-HOME-001",
+     "type": "trigger",
+     "x": 496,
+     "y": 368,
+     "width": 0,
+     "height": 0,
+     "point": true,
+     "rotation": 0,
+     "visible": true
+    },
+    {
+     "id": 31,
+     "name": "step.CH1-D2-001",
+     "type": "trigger",
+     "x": 1168,
+     "y": 208,
+     "width": 0,
+     "height": 0,
+     "point": true,
+     "rotation": 0,
+     "visible": true
+    },
+    {
+     "id": 32,
+     "name": "step.CH1-D2-ELISE-001",
+     "type": "trigger",
+     "x": 144,
+     "y": 336,
+     "width": 0,
+     "height": 0,
+     "point": true,
+     "rotation": 0,
+     "visible": true
+    },
+    {
+     "id": 33,
+     "name": "step.q.elise-bike-area",
+     "type": "trigger",
+     "x": 144,
+     "y": 336,
+     "width": 0,
+     "height": 0,
+     "point": true,
+     "rotation": 0,
+     "visible": true
+    },
+    {
+     "id": 34,
+     "name": "step.CH1-D3-ELISE-001",
+     "type": "trigger",
+     "x": 144,
+     "y": 336,
+     "width": 0,
+     "height": 0,
+     "point": true,
+     "rotation": 0,
+     "visible": true
+    },
+    {
+     "id": 35,
+     "name": "step.CH1-D2-FIRE-001",
+     "type": "trigger",
+     "x": 112,
+     "y": 144,
+     "width": 0,
+     "height": 0,
+     "point": true,
+     "rotation": 0,
+     "visible": true
+    },
+    {
+     "id": 36,
+     "name": "take.item.firewood",
+     "type": "trigger",
+     "x": 720,
+     "y": 592,
+     "width": 0,
+     "height": 0,
+     "point": true,
+     "rotation": 0,
+     "visible": true
+    },
+    {
+     "id": 37,
+     "name": "obj.drying",
+     "type": "trigger",
+     "x": 240,
+     "y": 528,
+     "width": 0,
+     "height": 0,
+     "point": true,
+     "rotation": 0,
+     "visible": true
+    },
+    {
+     "id": 38,
+     "name": "obj.sell",
+     "type": "trigger",
+     "x": 528,
+     "y": 208,
+     "width": 0,
+     "height": 0,
+     "point": true,
+     "rotation": 0,
+     "visible": true
+    },
+    {
+     "id": 39,
+     "name": "obj.vehicle",
+     "type": "trigger",
+     "x": 528,
+     "y": 592,
+     "width": 0,
+     "height": 0,
+     "point": true,
+     "rotation": 0,
+     "visible": true
+    },
+    {
+     "id": 40,
      "name": "obj.pitch-1",
      "type": "anchor",
      "x": 80,
@@ -4222,7 +4402,7 @@
      "visible": true
     },
     {
-     "id": 26,
+     "id": 41,
      "name": "obj.pitch-2",
      "type": "anchor",
      "x": 240,
@@ -4234,7 +4414,7 @@
      "visible": true
     },
     {
-     "id": 27,
+     "id": 42,
      "name": "obj.pitch-3",
      "type": "anchor",
      "x": 336,
@@ -4246,7 +4426,7 @@
      "visible": true
     },
     {
-     "id": 28,
+     "id": 43,
      "name": "obj.reception-desk",
      "type": "anchor",
      "x": 528,
@@ -4258,7 +4438,7 @@
      "visible": true
     },
     {
-     "id": 29,
+     "id": 44,
      "name": "obj.sanitary-door",
      "type": "anchor",
      "x": 784,
@@ -4270,7 +4450,7 @@
      "visible": true
     },
     {
-     "id": 30,
+     "id": 45,
      "name": "obj.firewood-pile",
      "type": "anchor",
      "x": 720,
@@ -4282,7 +4462,7 @@
      "visible": true
     },
     {
-     "id": 31,
+     "id": 46,
      "name": "obj.water",
      "type": "anchor",
      "x": 880,
@@ -4294,7 +4474,7 @@
      "visible": true
     },
     {
-     "id": 32,
+     "id": 47,
      "name": "obj.pier-end",
      "type": "anchor",
      "x": 1168,
@@ -4306,7 +4486,7 @@
      "visible": true
     },
     {
-     "id": 33,
+     "id": 48,
      "name": "leisure.campfire.1",
      "type": "leisure",
      "x": 80,
@@ -4325,7 +4505,7 @@
      ]
     },
     {
-     "id": 34,
+     "id": 49,
      "name": "leisure.campfire.2",
      "type": "leisure",
      "x": 144,
@@ -4344,7 +4524,7 @@
      ]
     },
     {
-     "id": 35,
+     "id": 50,
      "name": "leisure.campfire.3",
      "type": "leisure",
      "x": 112,
@@ -4363,7 +4543,7 @@
      ]
     },
     {
-     "id": 36,
+     "id": 51,
      "name": "leisure.shore.1",
      "type": "leisure",
      "x": 272,
@@ -4382,7 +4562,7 @@
      ]
     },
     {
-     "id": 37,
+     "id": 52,
      "name": "leisure.tent.1",
      "type": "leisure",
      "x": 208,
@@ -4401,7 +4581,7 @@
      ]
     },
     {
-     "id": 38,
+     "id": 53,
      "name": "leisure.bench.1",
      "type": "leisure",
      "x": 272,
@@ -4420,7 +4600,7 @@
      ]
     },
     {
-     "id": 39,
+     "id": 54,
      "name": "leisure.bench.2",
      "type": "leisure",
      "x": 464,
@@ -4439,7 +4619,7 @@
      ]
     },
     {
-     "id": 40,
+     "id": 55,
      "name": "leisure.shore.2",
      "type": "leisure",
      "x": 848,
@@ -4458,7 +4638,7 @@
      ]
     },
     {
-     "id": 41,
+     "id": 56,
      "name": "leisure.bench.3",
      "type": "leisure",
      "x": 656,

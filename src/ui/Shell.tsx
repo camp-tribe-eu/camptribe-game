@@ -13,7 +13,7 @@ import { DialogueBox } from './DialogueBox';
 import { AtlasPanel } from './Atlas';
 import { Intro } from './Intro';
 import { trapTab } from './focus-trap';
-import type { OfferSummary, StoryOffer } from './story-types';
+import { CHOICE_CANCEL_ID, type OfferSummary, type StoryOffer } from './story-types';
 
 /** Скільки тост-підказка висить на екрані (мс), якщо гравець нічого не зробив (GAME-95). Картка: ≤ 6 с. */
 const TOAST_MS = 5000;
@@ -176,7 +176,7 @@ export function Shell({ port, langOverride, credits, build, holdToast = false, h
       e.preventDefault();
       if (atlasOpen) { playUi('back'); closeAtlas(); return; }
       if (confirmNew || summary || talk || storyOpen || paused) playUi('back');   // Escape закрив/скасував — «назад»; відкриття паузи звуку не має
-      if (confirmNew) setConfirmNew(false); else if (summary) summaryContinue(); else if (talk) { setTalk(false); story(true); } else if (storyOpen) story(false); else toggle(!paused);
+      if (confirmNew) setConfirmNew(false); else if (summary) summaryContinue(); else if (talk) { if (offer.dialogue?.ui) storyAct(CHOICE_CANCEL_ID); else { setTalk(false); story(true); } } else if (storyOpen) story(false); else toggle(!paused);
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
