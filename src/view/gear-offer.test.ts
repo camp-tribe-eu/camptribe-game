@@ -79,3 +79,28 @@ describe('недоступні купівлі, HUD і спорядження в 
     expect(inv.find((i) => i.key === 'item.firewood')?.gear).toBeUndefined();
   });
 });
+
+describe('GAME-185 · «Що беремо?» у мапі-першій: недоступні купівлі — вимкнені рядки з причиною', () => {
+  const mapShop = (money: number): SimState => withGame((g) => ({ ...g, moneyCents: money, player: g.player && { ...g.player, locationId: 'loc.shop' } }));
+  const view = { mapFirst: true, trunk: false, near: null, choice: 'obj.buy' } as const;
+  const tentTrek = GAME_DEFS.items['item.tent-trek']?.buyCents ?? 0;
+  it('рядок є, з бракуючою сумою, без наміру; перед «Не зараз»', () => {
+    const { offer, intents } = storyOffer(mapShop(tentTrek - 2_400), GAME_DEFS, view);
+    const answers = offer.dialogue?.answers ?? [];
+    const l = answers.find((a) => a.key === 'item.tent-trek' && a.shortCents !== undefined);
+    expect(l?.shortCents).toBe(2_400);
+    expect(intents.has(l?.id ?? ''), 'активувати нічим').toBe(false);
+    expect(answers.findIndex((a) => a.kind === 'cancel'), '«Не зараз» стоїть ПЕРЕД вимкненими рядками').toBeLessThan(answers.indexOf(l as NonNullable<typeof l>));
+    expect(answers.filter((a) => a.kind === 'cancel')).toHaveLength(1);
+  });
+  it('межа: грошей рівно — рядка немає, купівля звичайна', () => {
+    const answers = storyOffer(mapShop(tentTrek), GAME_DEFS, view).offer.dialogue?.answers ?? [];
+    expect(answers.some((a) => a.key === 'item.tent-trek' && a.shortCents !== undefined)).toBe(false);
+    expect(answers.some((a) => a.kind === 'buy' && a.key === 'item.tent-trek')).toBe(true);
+  });
+  it('грошей зовсім нема: рамка все одно відкривається (лише вимкнені рядки й «Не зараз»)', () => {
+    const answers = storyOffer(mapShop(0), GAME_DEFS, view).offer.dialogue?.answers ?? [];
+    expect(answers.filter((a) => a.shortCents !== undefined).length).toBeGreaterThan(0);
+    expect(answers.some((a) => a.kind === 'buy' && a.shortCents === undefined)).toBe(false);
+  });
+});
