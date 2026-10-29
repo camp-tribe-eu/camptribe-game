@@ -315,13 +315,13 @@ export function storyOffer(sim: SimState, defs: CoreDefs, view: StoryView = PANE
   const nextT = s.player && view.mapFirst ? nextTarget(sim, defs, view.backpack ?? []) : null;
   const nearL = s.player && view.mapFirst && view.near !== null ? spotLabel(sim, defs, view.near) : null;
   // GAME-180: на мапі табору підказка «Далі:» веде до прохання в роботі (ціль → просильник), а біля цілі — підпис дії.
-  const reqT = nextT ? null : requestTarget(s);
+  const reqT = requestTarget(s);
   const reqNear = view.near !== null && view.mapFirst && isRequestSpot(view.near) && liveSpotFor(s, view.near)
     ? REQUESTS.flatMap((r) => r.targets).find((t) => t.spot === view.near) : undefined;
   const hint = {
     backpack: view.backpack?.length ?? 0,
-    next: nextT?.key ?? (reqT ? (reqT.startsWith('npc.') ? 'next.req.giver' : 'next.req.target') as Key : null),
-    nextSpot: nextT?.spot ?? reqT,
+    next: reqT ? (reqT.startsWith('npc.') ? 'next.req.giver' : 'next.req.target') as Key : nextT?.key ?? null,
+    nextSpot: reqT ?? nextT?.spot ?? null,
     near: nearL ? { label: nearL.label, itemKey: nearL.ref ? nameKey(nearL.ref) : null } : reqNear ? { label: 'near.req' as Key, itemKey: reqNear.labelKey } : null,
   };
   const base = { hint, requests: trackerRows(s), goal: goalOf(s, st), progress: progressOffer(s), atlas: atlasOffer(s), moneyCents: s.moneyCents, inventory, journal, lastTrip, weather, forecast: todayForecast(sim), day: dayOf(sim.clock) + 1, timeMinutes: timeOfDay(sim.clock.minutes), wave: waveOffer(sim), mia: miaState(s, defs), ...summaryOffer(sim, defs) };

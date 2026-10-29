@@ -233,7 +233,10 @@ const worldHooks: WorldHooks = {
   look: (name) => spotLook(bridge.state, name),
   requestsDone: () => requestsDone(bridge.state.game),
   target: () => {
-    if (targetFor !== bridge.state.game || targetPack !== backpack.length) { targetFor = bridge.state.game; targetPack = backpack.length; targetSpot = nextTarget(bridge.state, GAME_DEFS, backpack)?.spot ?? requestTarget(bridge.state.game); }
+    if (targetFor !== bridge.state.game || targetPack !== backpack.length) { targetFor = bridge.state.game; targetPack = backpack.length; // GAME-183: прохання в роботі (вибір гравця) — перше; далі крок сюжету. Збірка e2e без ?mapFirst=1 табір веде як раніше (лише прохання): ☰ там ще дає кроки.
+      const inCamp = bridge.state.game.player?.locationId === 'loc.camp.lake';
+      targetSpot = requestTarget(bridge.state.game) ?? (switches.panelActs && inCamp ? null : nextTarget(bridge.state, GAME_DEFS, backpack)?.spot ?? null);
+    }
     return targetSpot;
   },
   // Збірка e2e без ?mapFirst=1 — як до GAME-175: завжди табір (старі e2e ходять по ньому й перевіряють не прохід дня 1).
