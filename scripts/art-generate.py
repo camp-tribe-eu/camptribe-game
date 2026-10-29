@@ -114,10 +114,45 @@ def to_tile(src, dst, tile=32, colors=16, crop=0.10):
     return seam_report(b)
 
 
+def generate_text(spec, name):
+    """Текст через fal-ai/any-llm (ChatGPT та інші моделі одним ключем, docs/INFRASTRUCTURE.md).
+
+    Пробує моделі по черзі; відповідь кожної — окремий файл art/out/<name>-<модель>.md.
+    Порожня відповідь від усіх — помилка (закон 4).
+    """
+    key = os.environ.get("FAL_KEY")
+    if not key:
+        sys.exit("FAL_KEY не заданий у середовищі")
+    saved = 0
+    for model in spec["models"]:
+        payload = dict(spec["payload"], model=model)
+        try:
+            req = urllib.request.Request(
+                FAL + spec.get("endpoint", "fal-ai/any-llm"), data=json.dumps(payload).encode(),
+                headers={"Authorization": f"Key {key}", "Content-Type": "application/json"})
+            d = json.load(urllib.request.urlopen(req, timeout=600))
+            out = (d.get("output") or "").strip()
+            if not out:
+                print(f"EMPTY {model}: {str(d)[:200]}")
+                continue
+            path = f"art/out/{name}-{model.replace('/', '_')}.md"
+            open(path, "w").write(out + "\n")
+            saved += 1
+            print(f"OK   {model}: {len(out)} символів → {path}")
+        except Exception as e:  # noqa: BLE001
+            print(f"FAIL {model}: {type(e).__name__}: {str(e)[:300]}")
+    if saved == 0:
+        sys.exit("жодної текстової відповіді")
+
+
 def main():
     spec = json.load(open(sys.argv[1]))
     name = os.path.splitext(os.path.basename(sys.argv[1]))[0]
     os.makedirs("art/out", exist_ok=True)
+    if spec.get("text"):
+        generate_text(spec, name)
+        print("ГОТОВО")
+        return
     if "batch" in spec:
         generate_batch(spec, name)
         print("ГОТОВО")
