@@ -12,6 +12,7 @@ import type { Weather } from './weather';
 import { applyStory, questNeedsItem, type StoryCommand, type StoryDraft } from './story';
 import { applyWave, type WaveCommand } from './wave';
 import { award, awardsFor } from './progress';
+import { grantStickers } from './stickers';
 
 export type { StoryCommand } from './story';
 export type { WaveCommand } from './wave';
@@ -350,6 +351,7 @@ export function dispatch(state: GameState, cmd: Command, defs: CoreDefs, guard: 
     skills: state.skills, practice: state.practice, gear: state.gear, life: state.life, dialogue: state.dialogue,
     ...(state.wave !== undefined ? { wave: state.wave } : {}),
     ...(state.progress !== undefined ? { progress: state.progress } : {}),
+    ...(state.stickers !== undefined ? { stickers: state.stickers } : {}),
   };
   const code = apply(cmd, draft, defs, guard, today, weather, now);
   // Стан спорядження — лише для того, що в руках (продали останній — запис зникає), і лише відхилення від нового.
@@ -359,6 +361,9 @@ export function dispatch(state: GameState, cmd: Command, defs: CoreDefs, guard: 
   if (!code) {
     const p = award(draft.progress, awardsFor(cmd.type, progressRef(cmd), defs), guard.award !== false);
     if (p !== undefined) draft.progress = p;
+    // GAME-182: наклейки Атласу, чиї умови щойно стали правдою (дані content/stickers.json).
+    const st = grantStickers(draft.stickers, defs.stickers, draft);
+    if (st !== undefined) draft.stickers = st;
   }
   const record: CommandRecord = code ? { ok: false, code, fp } : { ok: true, fp };
   const processed = remember(state.processed, cmd.commandId, record);

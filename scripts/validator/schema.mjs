@@ -77,7 +77,11 @@ const waveTask = obj({
 });
 export const WAVE_SCHEMA = obj({ id: req(str), titleKey: req(str), hookKey: req(str), stage: req(str), when, tasks: req(arr(waveTask)), allDone: waveOutcome, fallback: obj({ textKey: req(str) }) });
 
+// Наклейки Атласу (GAME-182): `cond` НЕ required тут — його відсутність стереже перевірка stickers власним кодом STICKER_NO_COND (як limitMin у хвиль), щоб забута умова не ховалась під загальним SCHEMA_INVALID.
+export const STICKER_SCHEMA = obj({ id: req(str), nameKey: req(str), textKey: req(str), kind: req(en('place', 'people', 'mia', 'team', 'gold')), icon: req(str), cond });
+
 export const SCHEMAS = {
+  stickers: STICKER_SCHEMA,
   dialogues: DIALOGUE_SCHEMA,
   waves: WAVE_SCHEMA,
   meta: obj({ start: req(str), locales: req(arr(str)) }),
@@ -152,7 +156,7 @@ export const SCHEMAS = {
 };
 
 
-export const COLLECTIONS = ['profiles', 'transports', 'animals', 'items', 'npcs', 'locations', 'quests', 'events', 'facts', 'roads', 'flags', 'waves'];
+export const COLLECTIONS = ['profiles', 'transports', 'animals', 'items', 'npcs', 'locations', 'quests', 'events', 'facts', 'roads', 'flags', 'waves', 'stickers'];
 
 function typeOk(s, v) {
   switch (s.t) {

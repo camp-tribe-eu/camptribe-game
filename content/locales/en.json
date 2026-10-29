@@ -578,5 +578,19 @@
   "skill.communication.r4": "Known to All",
   "skill.communication.r4.unlock": "Locals remember your help.",
   "skill.communication.r5": "Voice of the Group",
-  "skill.communication.r5.unlock": "Group scenes and five phrases in the local language."
+  "skill.communication.r5.unlock": "Group scenes and five phrases in the local language.",
+  "sticker.home": "Home",
+  "sticker.home.text": "Where it all starts.",
+  "sticker.plan": "One plan",
+  "sticker.plan.text": "We decided to go together, not 'someday'.",
+  "sticker.road": "On the road",
+  "sticker.road.text": "Bags packed, the road ahead.",
+  "sticker.lake": "The lake",
+  "sticker.lake.text": "Our first arrival at a campsite.",
+  "sticker.tent": "Our tent",
+  "sticker.tent.text": "We chose the tent spot ourselves.",
+  "sticker.apple": "Apple and a note",
+  "sticker.apple.text": "Took an apple from the roadside box and left a 'Thanks!'.",
+  "sticker.fire": "Campfire",
+  "sticker.fire.text": "Our first evening by the fire together."
 }

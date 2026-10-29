@@ -3,7 +3,7 @@
 // Не прибирай і не дублюй маркери — мутаційний прогін звіряє їх із реєстром CHECKS.
 
 import { checkSchema } from './schema.mjs';
-import { ECON_FLOOR_CENTS, FACT_KINDS, FACT_STALE_DAYS, FLAG_FAMILIES, GEAR_CHECK_VARIANTS, GEAR_FIELDS, isWarning, LOAN_RE, SKILL_IDS, WAVE_MAX_LIMIT, WAVE_MAX_TASKS, WAVE_MIN_TASKS } from './codes.mjs';
+import { STICKER_SLOTS, ECON_FLOOR_CENTS, FACT_KINDS, FACT_STALE_DAYS, FLAG_FAMILIES, GEAR_CHECK_VARIANTS, GEAR_FIELDS, isWarning, LOAN_RE, SKILL_IDS, WAVE_MAX_LIMIT, WAVE_MAX_TASKS, WAVE_MIN_TASKS } from './codes.mjs';
 import { checkCombos, checkOptions, comboLabel, enumerateCombos, matches, NO_ANIMAL } from './combos.mjs';
 
 const I = (code, where, msg) => ({ code, where, msg });
@@ -22,6 +22,7 @@ const ID_PATTERNS = {
   dialogues: /^dlg\.[a-z0-9]+(?:[.-][a-z0-9]+)*$/,
   roads: /^road\.[a-z0-9]+(?:[.-][a-z0-9]+)*$/,
   waves: /^wave\.[a-z0-9]+(?:[.-][a-z0-9]+)*$/,
+  stickers: /^sticker\.[a-z0-9]+(?:[.-][a-z0-9]+)*$/,
 };
 const FLAG_ID = /^f\.[a-z0-9]+(?:[.-][a-z0-9]+)*$/;
 // Факт пам'яті NPC (GAME-48): «m.» і слова через дефіс — m.came-by-bike.
@@ -533,6 +534,7 @@ export const CHECKS = [
         add(w.titleKey, w.id); add(w.hookKey, `${w.id}.hookKey`); add(w.fallback?.textKey, `${w.id}.fallback`); add(w.allDone?.textKey, `${w.id}.allDone`);
         for (const t of w.tasks) { add(t.textKey, `${w.id}/${t.id}`); add(t.done?.textKey, `${w.id}/${t.id}.done`); add(t.late?.textKey, `${w.id}/${t.id}.late`); }
       }
+      for (const s of ct.stickers ?? []) { add(s.nameKey, `${s.id}.nameKey`); add(s.textKey, `${s.id}.textKey`); }
       (ct.facts ?? []).forEach((f) => add(f.claimKey, f.id));
       (ct.packing?.notes ?? []).forEach((n, i) => add(n.textKey, `packing.notes[${i}]`));
       (ct.dialogues ?? []).forEach((d) => add(d.trigger?.titleKey, `${d.id}.trigger`));
@@ -1063,6 +1065,43 @@ export const CHECKS = [
     },
   },
   {
+    id: 'stickers',
+    run(c) { // @check:stickers
+      // GAME-182: наклейка Атласу видається ядром за умовою з content/stickers.json — без умови вона або не видалась би ніколи, або видалась би всім одразу.
+      // Ціна хибного спрацювання (закон 5): автор додає одне поле `cond`; ціна пропуску — порожній слот, який неможливо заповнити, або «Атлас повний» без жодної дії.
+      // Умова — лише прапорець, статус квесту й all/any: решту видів умов (транспорт, пам'ять NPC) ядро для наклейок не обчислює — вони завжди хибні.
+      const out = [];
+      const list = c.content.stickers ?? [];
+      const quests = new Set((c.content.quests ?? []).map((q) => q.id));
+      const set = flagSetters(c.content);
+      const leaves = (cond, acc = []) => {
+        if (cond === null || typeof cond !== 'object' || Array.isArray(cond)) return acc;
+        if (Array.isArray(cond.all)) cond.all.forEach((x) => leaves(x, acc));
+        else if (Array.isArray(cond.any)) cond.any.forEach((x) => leaves(x, acc));
+        else acc.push(cond);
+        return acc;
+      };
+      if (list.length > STICKER_SLOTS) out.push(I('STICKER_TOO_MANY', 'stickers', `${list.length} наклейок на сторінку з ${STICKER_SLOTS} слотів`));
+      for (const s of list) {
+        const where = `${s.id}.cond`;
+        if (s.cond === undefined || s.cond === null || typeof s.cond !== 'object' || Array.isArray(s.cond) || Object.keys(s.cond).length === 0) {
+          out.push(I('STICKER_NO_COND', where, 'у наклейки немає умови видачі (cond)'));
+          continue;
+        }
+        for (const leaf of leaves(s.cond)) {
+          if (leaf.transport !== undefined || leaf.remembers !== undefined || leaf.notRemembers !== undefined) {
+            out.push(I('STICKER_COND_UNSUPPORTED', where, `умова ${Object.keys(leaf)[0]} для наклейки не обчислюється: лише flag, notFlag, quest, all, any`));
+          } else if (leaf.quest !== undefined && !quests.has(leaf.quest)) {
+            out.push(I('STICKER_COND_REF', where, `квесту «${leaf.quest}» немає в quests.json`));
+          } else if (leaf.flag !== undefined && !set.has(leaf.flag)) {
+            out.push(I('STICKER_FLAG_NEVER_SET', where, `прапорець «${leaf.flag}» не ставить жоден ефект setFlag, сцена чи хвиля — наклейка недосяжна`));
+          }
+        }
+      }
+      return out;
+    },
+  },
+  {
     id: 'waves',
     run(c) { // @check:waves
       // GAME-170: хвиля напруги — 2–4 справи зі строком, обидва наслідки, варіант для кожної комбінації, унікальність між
@@ -1343,6 +1382,15 @@ function dialogueEffects(content) {
 export function journalKeys(f) {
   if (f.journal !== true) return [];
   return f.type === 'enum' ? (f.values ?? []).map((v) => `journal.${f.id}-${v}`) : [`journal.${f.id}`];
+}
+
+/** Усі прапорці, які хоч щось ставить: ефекти діалогів, факти сцен, наслідки хвиль (для наклейок: чи досяжна умова). */
+function flagSetters(content) {
+  const have = new Set();
+  for (const [, e] of dialogueEffects(content)) if (e.setFlag !== undefined) have.add(e.setFlag);
+  for (const dl of content.dialogues ?? []) for (const fact of dl.scene?.facts ?? []) have.add(fact);
+  for (const [, fl] of waveEffects(content)) have.add(fl);
+  return have;
 }
 
 function flagUses(content) {

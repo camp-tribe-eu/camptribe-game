@@ -10,7 +10,7 @@ const LOCALE_KEYS = [
   'npc.ranger', 'npc.shopkeeper', 'loc.camp', 'loc.forest', 'loc.lake',
   'q.st-001', 'q.st-001.o1', 'q.st-002', 'q.st-002.o1', 'q.st-002.o2', 'q.st-002.o3',
   'q.st-003', 'q.st-003.o1', 'q.st-003.o2', 'q.st-004', 'q.st-004.o1',
-  'ev.rain', 'ev.lost-dog', 'fact.fixture-campfire',
+  'ev.rain', 'ev.lost-dog', 'fact.fixture-campfire', 'sticker.fixture-first', 'sticker.fixture-first.text',
   ...['title', 'hook', 'fallback', 'wood', 'wood.done', 'wood.late', 'tea', 'tea.done', 'tea.late'].map((k) => `wave.fixture-dusk.${k}`),
   ...['hello', 'hello.c1', 'hello.c2', 'help', 'help.c1', 'help.c2', 'thanks', 'bye'].map((k) => `dlg.fixture-ranger.${k}`),
 ];
@@ -111,6 +111,7 @@ export function baseline() {
     ],
     dialogues: [rangerDialogue(), shopDialogue([])],   // GAME-179: у кожного NPC є діалог (NPC_NO_DIALOGUE), крамар теж
     waves: [duskWave()],
+    stickers: [{ id: 'sticker.fixture-first', nameKey: 'sticker.fixture-first', textKey: 'sticker.fixture-first.text', kind: 'place', icon: 'home', cond: { any: [{ quest: 'ST-001', status: 'active' }, { quest: 'ST-001', status: 'completed' }] } }],
     // GAME-115: реєстр — рівно ті прапорці, які вживає еталон (зайвий рядок — FLAG_REGISTERED_UNUSED).
     flags: [
       { id: 'f.fixture-helped', type: 'bool', initial: false, owner: 'dlg.fixture-ranger/hello' },
@@ -306,6 +307,17 @@ export const FIXTURES = [
     c.animals = [{ id: 'animal.fixture-cat', nameKey: 'npc.ranger' }];
     wave(c).tasks.push(waveTask('wood', { id: 'cat', textKey: WV('wood'), done: { textKey: WV('wood.done') }, late: { textKey: WV('wood.late') }, animal: 'animal.fixture-cat', leaderOnly: true, targets: [{ id: 'spot.pines', safe: true }] }));
   } },
+  // GAME-182 · наклейки Атласу
+  { name: '[наклейка] без умови видачі', expect: ['STICKER_NO_COND'], patch(c) { delete c.stickers[0].cond; } },
+  { name: '[наклейка] контроль: умова за прапорцем, який ставить діалог — коректно', expect: [], patch(c) { c.stickers[0].cond = { flag: 'f.fixture-met' }; } },
+  { name: '[наклейка] умова — порожній об’єкт (схема ловить першою)', expect: ['SCHEMA_INVALID'], patch(c) { c.stickers[0].cond = {}; } },
+  { name: '[наклейка] умова за транспортом (ядро її не обчислює)', expect: ['STICKER_COND_UNSUPPORTED'], patch(c) { c.stickers[0].cond = { transport: 'transport.x' }; } },
+  { name: '[наклейка] квесту з умови немає', expect: ['STICKER_COND_REF'], patch(c) { c.stickers[0].cond = { quest: 'ST-999', status: 'completed' }; } },
+  { name: '[наклейка] прапорця з умови ніхто не ставить', expect: ['STICKER_FLAG_NEVER_SET'], patch(c) { c.stickers[0].cond = { flag: 'f.fixture-ghost' }; } },
+  { name: '[наклейка] 13 наклейок на 12 слотів', expect: ['STICKER_TOO_MANY'], patch(c) { for (let i = 0; i < 12; i++) c.stickers.push({ ...c.stickers[0], id: `sticker.fixture-extra-${i}` }); } },
+  { name: '[наклейка] контроль: рівно 12 — коректно', expect: [], patch(c) { for (let i = 0; i < 11; i++) c.stickers.push({ ...c.stickers[0], id: `sticker.fixture-extra-${i}` }); } },
+  { name: '[наклейка] без тексту (textKey) — схема', expect: ['SCHEMA_INVALID'], patch(c) { delete c.stickers[0].textKey; } },
+  { name: '[наклейка] немає англійського тексту', expect: ['LOCALE_MISSING'], patch(c) { delete c.locales.en['sticker.fixture-first.text']; } },
   { name: '[хвиля] одна справа', expect: ['WAVE_TOO_FEW_TASKS'], patch(c) { wave(c).tasks.pop(); } },
   { name: '[хвиля] п’ять справ — забагато', expect: ['WAVE_TOO_MANY_TASKS'], patch(c) { for (const id of ['a', 'b', 'c']) wave(c).tasks.push(extraTask(id)); } },
   { name: '[хвиля] контроль: чотири справи (межа) — коректно', expect: [], patch(c) { for (const id of ['a', 'b']) wave(c).tasks.push(extraTask(id)); } },

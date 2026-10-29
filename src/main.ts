@@ -171,7 +171,7 @@ const unloadOne = (): 'ok' | 'full' | 'none' => {
   storyChanged();
   return done ? 'ok' : 'full';
 };
-const saves = createSaveSession(bridge, saveBackend, { story: STORY, ...(GAME_DEFS.life ? { life: GAME_DEFS.life } : {}), contentRev: STORY_REV, viable: (g) => saveViable(g, GAME_DEFS) });
+const saves = createSaveSession(bridge, saveBackend, { story: STORY, stickers: GAME_DEFS.stickers ?? {}, ...(GAME_DEFS.life ? { life: GAME_DEFS.life } : {}), contentRev: STORY_REV, viable: (g) => saveViable(g, GAME_DEFS) });
 // Тестовий хук Playwright: лише ЧИТАННЯ — знімок стану копією, місток назовні не віддається
 // (рецензія PR #13: раніше скрипт сторінки міг надіслати команду в ядро).
 (window as unknown as { __game: { probe: WorldProbe; read: () => unknown; sounds: () => readonly string[] } }).__game = {
@@ -283,6 +283,7 @@ render(h(Shell, {
   ...(langOverride ? { langOverride } : {}),
   ...(switches.holdToast ? { holdToast: true } : {}),
   hideUi: switches.hideUi,
+  intro: switches.intro,
   credits,
   port: {
     save: () => saves.save(),
@@ -305,6 +306,7 @@ render(h(Shell, {
       storyChanged();
       return r;
     },
+    loaded: () => probe.saveLoaded,
     story: () => shown(storyOffer(bridge.state, GAME_DEFS, viewOf()).offer),
     act(id: string) {
       const intent = storyOffer(bridge.state, GAME_DEFS, viewOf()).intents.get(id);

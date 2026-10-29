@@ -8,6 +8,7 @@ import packing from '../../content/packing.json';
 import { STORY } from './story';
 import { LIFE } from './life';
 import { WAVES } from './waves';
+import { STICKER_DEFS } from './stickers';
 
 /** Крамниця гри (GAME-81): єдина локація, де продається спорядження. Неіснуючий id ловить checkDefs (DEFS_BAD_REF). */
 export const SHOP = 'loc.shop';
@@ -70,4 +71,4 @@ export const PACKING: PackingDefs = compilePacking(packing as RawPacking);
  * Те, з чим працює гра: зріз + сюжет + календар життя (GAME-71). Перевіряється й заморожується в містку (createBridge).
  * Календар читає лише симуляція (зарплата) і команди BookLeave/CancelLeave — у ходах перебору (moves.ts) їх немає.
  */
-export const GAME_DEFS: CoreDefs = { ...SLICE_DEFS, story: STORY, life: LIFE, packing: PACKING, waves: WAVES };
+export const GAME_DEFS: CoreDefs = { ...SLICE_DEFS, story: STORY, life: LIFE, packing: PACKING, waves: WAVES, stickers: STICKER_DEFS };

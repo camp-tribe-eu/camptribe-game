@@ -87,6 +87,11 @@ export interface GameState {
    * міграції версії: fromSave дорахує його із завершених квестів, backfillProgress).
    */
   readonly progress?: ProgressState;
+  /**
+   * Наклейки Атласу (GAME-182): відсортовані id без повторів. Поля немає — жодної ще немає (сейви до GAME-182 читаються без міграції версії: fromSave дорахує їх,
+   * backfillStickers). Похідне від прапорців і квестів — у ключі ходів не бере участі (moves.ts, PROGRESS_IGNORED).
+   */
+  readonly stickers?: readonly string[];
 }
 
 export const REJECT_CODES = [

@@ -13,6 +13,7 @@ import { isJournalType, type SimState } from './sim';
 import { CONDITION_MAX } from './gear';
 import { PRACTICE_SATURATION, SKILL_IDS, zeroSkills } from './skills';
 import { backfillProgress } from './progress';
+import { backfillStickers, type StickerDefs } from './stickers';
 import { REJECT_CODES } from './state';
 import { paydaysThrough, type LifeDefs } from './life';
 import { DAY_MINUTES } from './weather';
@@ -125,6 +126,8 @@ function shapeError(sim: unknown): string | null {
   const pg = game.progress;
   const sortedUniq = (a: unknown): boolean => Array.isArray(a) && a.every((x, i) => typeof x === 'string' && (i === 0 || ((a[i - 1] as string) < x)));
   if (pg !== undefined && (!isObj(pg) || !isInt(pg.xp) || !isInt(pg.om) || !sortedUniq(pg.keys) || !sortedUniq(pg.cosmetics))) return 'game: progress';
+  // Наклейки (GAME-182): поле необов'язкове; є — відсортовані рядки без повторів (так пише лише ядро).
+  if (game.stickers !== undefined && !sortedUniq(game.stickers)) return 'game: stickers';
   const dl = game.dialogue;
   if (dl !== null && (!isObj(dl) || typeof dl.id !== 'string' || typeof dl.node !== 'string')) return 'game: dialogue';
   const p = game.player;
@@ -232,7 +235,7 @@ function openPassedGates(game: SimState['game'], st: StoryDefs): SimState['game'
  * `story` — перевірити посилання сейву проти нинішнього сюжету; `life` — календар нинішньої гри для міграції v2 → v3
  * (без нього дні виплати, що минули до старого сейву, лічильник не зараховує — див. MIGRATIONS[2]).
  */
-export function fromSave(text: string, opts: { readonly story?: StoryDefs; readonly life?: LifeDefs } = {}): LoadResult {
+export function fromSave(text: string, opts: { readonly story?: StoryDefs; readonly life?: LifeDefs; readonly stickers?: StickerDefs } = {}): LoadResult {
   let raw: unknown;
   try {
     raw = JSON.parse(text);
@@ -265,6 +268,11 @@ export function fromSave(text: string, opts: { readonly story?: StoryDefs; reado
     // GAME-181: сейв до прогресії — те, що вже завершено, зараховується (після reopenChapter: квести вже в остаточному вигляді).
     const filled = backfillProgress((sim as SimState).game, opts.story);
     if (filled !== (sim as SimState).game) sim = { ...(sim as SimState), game: filled };
+  }
+  // GAME-182: сейв до наклейок — що вже правдиве (квести, прапорці), те й наклеєно.
+  if (opts.stickers) {
+    const withStickers = backfillStickers((sim as SimState).game, opts.stickers);
+    if (withStickers !== (sim as SimState).game) sim = { ...(sim as SimState), game: withStickers };
   }
   const contentRev = typeof raw.contentRev === 'string' ? raw.contentRev : null;
   return { ok: true, sim: sim as SimState, fromVersion: version as number, contentRev };

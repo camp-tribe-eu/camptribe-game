@@ -19,6 +19,7 @@
 //   контенту бути не може, а пошук коштує сотні мс на старті.
 import type { StoryDefs } from '../core/defs';
 import type { LifeDefs } from '../core/life';
+import type { StickerDefs } from '../core/stickers';
 import { SAVE_VERSION, fromSave, serialize } from '../core/save';
 import type { SimState } from '../core/sim';
 import type { GameState } from '../core/state';
@@ -46,6 +47,8 @@ export interface SessionContent {
   readonly story?: StoryDefs;
   /** Календар життя гри (GAME-71): для міграції сейву v2 → v3 — дні виплати до старого сейву зараховує без грошей. */
   readonly life?: LifeDefs;
+  /** Наклейки Атласу (GAME-182): старий сейв отримує те, що вже правдиве. */
+  readonly stickers?: StickerDefs;
   readonly contentRev?: string | null;
   /** Чи можна дограти стан на нинішньому контенті (src/content/viability.ts). false — відкласти. */
   readonly viable?: (game: GameState) => boolean | undefined;
@@ -70,7 +73,7 @@ export function createSaveSession(bridge: SessionBridge, store: SessionStore, co
   /** Відкладені сейви для повідомлення: цієї сесії першим, далі з минулих. */
   let stales: string[] = [];
   let quarantined: Promise<unknown> = Promise.resolve();
-  const opts = { ...(content.story ? { story: content.story } : {}), ...(content.life ? { life: content.life } : {}) };
+  const opts = { ...(content.story ? { story: content.story } : {}), ...(content.life ? { life: content.life } : {}), ...(content.stickers ? { stickers: content.stickers } : {}) };
   /** Останній відданий у сховище текст. Ротація main → prev на кожен запис: дубль (F5 шле visibilitychange і pagehide
    *  підряд) зробив би prev точною копією main саме тоді, коли запасна копія потрібна (рецензія PR #24). */
   let lastJson: string | null = null;

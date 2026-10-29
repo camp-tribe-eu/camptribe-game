@@ -234,6 +234,56 @@
         .ui-strip { display: contents; }
         .ui-goal { grid-area: 3 / 1 / 4 / 3; justify-self: start; max-width: 70vw; background: #1b1f23d9; }
       }
+      /* GAME-182: вступ (дощовий вечір) і Атлас. Вступ — на весь екран, над усім (рамка розмови всередині нього — ті самі .ui-talk-*). Дощ — лише градієнтні смужки, що повільно
+         зсуваються; «менше руху» (нижче) їх зупиняє. Книжка вгорі й лист — піксельні, без файлів. Сторінка Атласу — сітка 4×4: 12 слотів і печатка 2×2 в центрі. */
+      .ui-intro { position: absolute; inset: 0; z-index: 40; display: flex; flex-direction: column; overflow: hidden; color: #f4f1e8; font-family: 'CampPixel', system-ui, sans-serif;
+        background: linear-gradient(#16202c, #26323f 70%, #3a3b36); }
+      .ui-intro-rain { position: absolute; inset: -20% 0 0 0; pointer-events: none; opacity: 0.35;
+        background: repeating-linear-gradient(100deg, #0000 0 14px, #9fb9d6 14px 15px, #0000 15px 31px); background-size: 120px 120px; animation: ui-rain 0.9s linear infinite; }
+      @keyframes ui-rain { to { background-position: -40px 120px; } }
+      .ui-intro-skip { position: absolute; z-index: 3; top: var(--edge-top); right: var(--edge-right); min-height: 44px; font-size: 0.8rem; background: #1b1f23cc; }
+      .ui-intro-stage { position: relative; z-index: 1; flex: 1 1 0; min-height: 0; display: flex; align-items: center; justify-content: center; padding: 56px var(--edge-right) 8px var(--edge-left); overflow-y: auto; }
+      .ui-intro-stage:has(> .ui-intro-book) { align-items: flex-start; padding-top: 16vh; }
+      .ui-intro-book { width: clamp(56px, 14vh, 112px); aspect-ratio: 1; height: auto; image-rendering: pixelated; filter: drop-shadow(0 6px 0 #0008); }
+      .ui-intro > .ui-talk { z-index: 2; }
+      .ui-intro .ui-talk-box { max-height: 90%; }
+      .ui-intro fieldset { border: 0; margin: 0; padding: 0; min-width: 0; display: grid; gap: 6px; justify-content: stretch; max-width: none; }
+      .ui-intro legend { padding: 0; margin-bottom: 4px; font-size: 0.75rem; color: #ffd54a; }
+      .ui-letter { max-width: min(92%, 440px); max-height: 100%; overflow-y: auto; padding: 16px 18px; border: 3px solid #6b5430; border-radius: 6px; background: #f1e6c8; color: #2b2f36; text-align: left;
+        box-shadow: 0 6px 0 #0007; display: grid; gap: 8px; justify-items: stretch; }
+      .ui-letter p { margin: 0; font-size: 0.85rem; line-height: 1.6; }
+      .ui-letter .ui-letter-from { margin: 0; font-size: 0.8rem; color: #6b3d1d; }
+      .ui-letter .ui-btn { justify-self: end; background: #2a2f35; }
+      .ui-intro-atlas { display: flex; flex-wrap: wrap; gap: 8px 20px; align-items: center; justify-content: center; max-width: 100%; }
+      .ui-intro-final { margin: 0; flex: 1 1 100%; text-align: center; font-size: 0.8rem; line-height: 1.5; }
+      .ui-intro-atlas .ui-btn { flex: none; }
+      .ui-atlas { place-content: start center; }
+      .ui-atlas-page { --sticker: clamp(40px, min(17vw, 10.5vh), 72px); display: flex; flex-wrap: wrap; gap: 8px 18px; justify-content: center; align-items: center; padding: 10px 12px; border: 3px solid #6b5430; border-radius: 8px;
+        background: #f1e6c8; color: #2b2f36; box-shadow: 0 5px 0 #0007; max-width: 100%; }
+      .ui-atlas-title { flex: 1 1 100%; margin: 0; text-align: center; font-size: 0.95rem; color: #6b3d1d; }
+      .ui-atlas-grid { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(4, var(--sticker)); grid-auto-rows: var(--sticker); gap: 6px; }
+      .ui-sticker { position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; border: 2px dashed #6b543066; border-radius: 6px; background: #fffaf0; min-width: 0; }
+      .ui-sticker-icon, .ui-intro-book { shape-rendering: crispEdges; }
+      .ui-sticker-icon { width: 62%; height: 62%; image-rendering: pixelated; }
+      .ui-sticker[data-owned="no"] .ui-sticker-icon { filter: brightness(0); opacity: 0.18; }
+      .ui-sticker[data-owned="yes"] { border-style: solid; border-color: #6b5430; background: #fff; }
+      .ui-sticker-name { font-size: 0.5rem; line-height: 1.1; text-align: center; max-width: 100%; overflow-wrap: anywhere; padding: 0 2px; color: #2b2f36; }
+      .ui-stamp { grid-column: 2 / span 2; grid-row: 2 / span 2; display: flex; align-items: center; justify-content: center; text-align: center; border: 3px double #a8452a88; border-radius: 50%; color: #a8452a;
+        font-size: 0.55rem; line-height: 1.2; padding: 6px; }
+      .ui-atlas-count { flex: 1 1 100%; margin: 0; text-align: center; font-size: 0.7rem; }
+      .ui-atlas-map { position: relative; width: clamp(110px, 38vw, 190px); }
+      .ui-atlas-map svg { display: block; width: 100%; height: auto; }
+      .ui-atlas-here { position: absolute; left: 47%; top: 22%; padding: 1px 5px; border-radius: 4px; background: #2b2f36; color: #f4f1e8; font-size: 0.55rem; line-height: 1.3; white-space: nowrap; }
+      /* Телефон вбік (844×390): сітка ліворуч, назва, лічильник і мапа — праворуч; під сторінкою рядок вступу й кнопка. */
+      @media (max-height: 500px) {
+        .ui-atlas-page { display: grid; grid-template-columns: auto minmax(0, 1fr); grid-template-areas: "grid title" "grid count" "grid map"; align-items: center; gap: 4px 16px; }
+        .ui-atlas-grid { grid-area: grid; } .ui-atlas-title { grid-area: title; } .ui-atlas-count { grid-area: count; } .ui-atlas-map { grid-area: map; justify-self: center; width: clamp(100px, 22vw, 160px); }
+        .ui-intro-stage { padding-top: 44px; } .ui-intro-atlas { flex-direction: column; flex-wrap: nowrap; gap: 6px; } .ui-intro-final { flex: none; }
+        .ui-atlas { padding-top: 8px; gap: 6px; } .ui-atlas h2 { font-size: 1.1rem; margin: 0; }
+      }
+      /* Перша наклейка «Дім» влітає на сторінку (кінець вступу); тільки рух — стан уже в ядрі. */
+      .ui-sticker[data-fly="yes"] { animation: ui-sticker-fly 0.9s cubic-bezier(.2,.8,.3,1.2) both; z-index: 2; }
+      @keyframes ui-sticker-fly { from { transform: translate(40vw, -60vh) scale(2.2) rotate(-25deg); opacity: 0; } 60% { opacity: 1; } to { transform: none; opacity: 1; } }
       /* GAME-39 #3: гравець попросив менше руху — жодних анімацій і переходів в інтерфейсі, навіть доданих пізніше
          чи вписаних у style (!important перебиває інлайн). Перевірка — tests/e2e/a11y.spec.ts. */
       @media (prefers-reduced-motion: reduce) {
