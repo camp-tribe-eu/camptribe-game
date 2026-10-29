@@ -128,7 +128,9 @@ def generate_text(spec, name):
     for model, endpoint in [(m, e) for m in spec["models"] for e in endpoints]:
         if any(os.path.exists(f"art/out/{name}-{model.replace('/', '_')}.md") for _ in [0]):
             continue  # ця модель уже відповіла через інший шлях
-        payload = dict(spec["payload"], model=model)
+        payload = dict(spec["payload"], model=model, **spec.get("model_extra", {}).get(model, {}))
+        if spec.get("prompt_file"):
+            payload["prompt"] = payload.get("prompt", "") + "\n\n" + open(spec["prompt_file"]).read()
         try:
             req = urllib.request.Request(
                 FAL + endpoint, data=json.dumps(payload).encode(),
