@@ -73,7 +73,10 @@ async function seriousViolations(page: Page, { scroll = true }: { scroll?: boole
       const d = document.querySelector<HTMLElement>('[role="dialog"]');
       if (d) d.scrollTop = (k * d.clientHeight) / 2;
     }, i);
-    await collect(await new AxeBuilder({ page }).analyze());
+    // Перша зупинка — уся сторінка; далі між зупинками змінюється лише вміст діалогу, тож міряємо тільки його
+    // (GAME-49: титри зросли на 11 портретів, повний прогін на кожній зупинці перевищував 120 с).
+    const axe = new AxeBuilder({ page });
+    await collect(await (i === 0 ? axe : axe.include('[role="dialog"]')).analyze());
   }
   // Вузол, вищий за пів екрана (довгий перелік авторів у титрах при 200 %), не влазить у жодну зупинку.
   // Його міряємо окремо у вікні, вищому за нього: ширина та сама, тож перенос рядків і кольори ті самі.
@@ -184,7 +187,8 @@ test.describe('axe-core: 0 порушень serious/critical на кожному
   for (const scale of [150, 200] as const) {
     test(`налаштування при тексті ${scale} %`, async ({ page }) => {
       // GAME-93: титри зросли на 3 рядки (22) — axe міряє перелік кроками й сам біля 60 с (50–54 с наодинці, понад 60 с у повному прогоні).
-      test.setTimeout(120_000);
+      // GAME-49: +11 портретів, у кожного ~10 посилань-джерел (вимога CC-BY-SA) — локально 1,8 хв (150 %) і 3,3 хв (200 %).
+      test.setTimeout(300_000);
       await openGame(page);
       await openPause(page);
       await page.locator(`[data-ui="text-${scale}"]`).click();
