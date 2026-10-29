@@ -40,7 +40,7 @@ MUTATIONS = [
     ('quantize keeps original colours', 'quantize.py',
      'cache[rgb] = nearest(rgb, palette)[0]', 'cache[rgb] = rgb'),
     ('quantize keeps semi-transparent pixels', 'quantize.py', 'ALPHA_THRESHOLD = 128', 'ALPHA_THRESHOLD = 1'),
-    ('portrait extras allowed in every folder', 'check.py', "return 'portraits' in os.path.normpath(path).split(os.sep)[:-1]", 'return True'),
+    ('portrait extras allowed in every folder', 'check.py', "return parent == root or os.path.dirname(parent) == root", 'return True'),
     ('walk not recursive', 'check.py', 'for d, _, files in os.walk(root):', 'for d, _, files in [next(os.walk(root))]:'),
     ('.png match case-sensitive', 'check.py', "if f.lower().endswith('.png'):", "if f.endswith('.png'):"),
     ('extract --check never sees a stale file', 'extract.py', '        if current != text:', '        if False:'),
@@ -167,8 +167,13 @@ def cases(scripts, tmp):
     c_out, o_out = chk(f'{tmp}/k/other', '--portraits-extra', ex)
     sprite(f'{tmp}/k/portraits/q.png', {(0, 0): (0x65, 0x43, 0x21)})
     c_bad, o_bad = chk(f'{tmp}/k/portraits', '--portraits-extra', ex)
-    yield 'portraits/: extra colour allowed there, red elsewhere, other foreign colour still red', (
-        c_in == 0 and c_out == 1 and c_bad == 1), o_in + o_out + o_bad
+    os.remove(f'{tmp}/k/portraits/q.png')
+    sprite(f'{tmp}/k2/portraits/p.png', {(0, 0): FOREIGN})
+    sprite(f'{tmp}/k2/sprites/portraits/p.png', {(0, 0): FOREIGN})
+    c_top, o_top = chk(f'{tmp}/k2/portraits', '--portraits-extra', ex)
+    c_deep, o_deep = chk(f'{tmp}/k2', '--portraits-extra', ex)
+    yield 'portraits/: extra colour allowed there, red elsewhere (incl. nested sprites/portraits/), other foreign colour still red', (
+        c_in == 0 and c_out == 1 and c_bad == 1 and c_top == 0 and c_deep == 1), o_in + o_out + o_bad + o_top + o_deep
 
     # J: real data — a crop of the LPC atlas is green against the committed palette
     real_pal = os.path.join(ROOT_DIR, 'art/palette/lpc.json')

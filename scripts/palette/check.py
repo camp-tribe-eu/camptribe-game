@@ -94,8 +94,16 @@ def portrait_palette(base, extra_path):
     return list(base) + [c for c in load_palette(extra_path)[1] if c not in base]
 
 
-def is_portrait(path):
-    return 'portraits' in os.path.normpath(path).split(os.sep)[:-1]
+def is_portrait(path, root):
+    """Лише файл прямо в теці portraits/, яка є перевірюваною текою або її безпосередньою підтекою (assets/portraits/).
+
+    Глибша тека з такою назвою (assets/sprites/portraits/) — НЕ портрети: рецензія PR #97.
+    """
+    parent = os.path.dirname(os.path.normpath(path))
+    if os.path.basename(parent) != 'portraits':
+        return False
+    root = os.path.normpath(root)
+    return parent == root or os.path.dirname(parent) == root
 
 
 def find_pngs(root):
@@ -139,7 +147,7 @@ def main(argv=None):
     bad_files, unreadable = 0, 0
     for p in pngs:
         try:
-            foreign = check_file(p, portrait_pal if is_portrait(p) else palette, a.tolerance)
+            foreign = check_file(p, portrait_pal if is_portrait(p, a.dir) else palette, a.tolerance)
         except Exception as e:  # noqa: BLE001 — an unreadable PNG must be red, not skipped
             unreadable += 1
             print(f'ERROR {p}: cannot read PNG: {e}')
