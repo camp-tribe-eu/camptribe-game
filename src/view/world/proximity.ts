@@ -77,8 +77,11 @@ export function pickNearest(px: number, py: number, facing: Face, spots: readonl
   let pick: Pick | null = null;
   let best = range;
   for (const follower of [false, true]) {
+    // Хтось не з родини в зоні — родину не розглядаємо. Рахунок слідувача — d мінус до FACING_BONUS: позаду героя він більший за d,
+    // тож поріг родини ширший на бонус (рецензія #109); у зону пускає лише `d > range`.
+    if (follower) { if (pick) break; best = range + FACING_BONUS; }
     for (const s of spots) {
-      if (s.follower !== follower || (follower && pick)) continue;
+      if (s.follower !== follower) continue;
       const d = Math.hypot(s.x - px, s.y - py);
       if (d > range) continue;
       const score = follower ? d - FACING_BONUS * facingDot(facing, s.x - px, s.y - py) : d;

@@ -81,6 +81,10 @@ describe('вибір співрозмовника серед слідувачі�
   it('зона все одно діє: за межами range ніхто, хоч би й попереду', () => {
     expect(pickNearest(100, 100, 'right', [{ ...M, x: 160, y: 100 }], 48)).toBeNull();
   });
+  it('один слідувач позаду, але в зоні — обраний (рецензія #109: штраф погляду не виводить його за range)', () => {
+    expect(pickNearest(100, 100, 'right', [{ ...M, x: 60, y: 100 }], 48)).toBe('npc.matthew');
+    expect(pickNearest(100, 100, 'right', [{ ...V, x: 69, y: 131 }], 48)).toBe('npc.victoria');
+  });
   it('не-родина має пріоритет над родиною, перевага погляду на неї не діє', () => {
     expect(pickNearest(100, 100, 'right', [{ ...M, x: 120, y: 100 }, { name: 'obj.fire', follower: false, x: 100, y: 146 }], 48)).toBe('obj.fire');
   });
