@@ -198,6 +198,52 @@ const useMood = (c, set = 'f.fixture-mood-calm', read = 'f.fixture-mood-calm') =
 };
 const row = (id, extra = {}) => ({ id, type: 'bool', initial: false, owner: 'fixture', ...extra });
 
+// Прохання сусідів (GAME-180): сусід біля табору просить дві речі — і є «Пізніше», і здача. Усе, що потрібне перевірці requests, додає цей помічник:
+// NPC з діалогом (gate → offer / reminder / turnin), два прапорці-цілі (ставить ядро на дотик до об'єкта мапи), реєстр, тексти й запис журналу.
+export const FIXTURE_MAPS = ['npc.ranger', 'req.fixture-chores.t1', 'req.fixture-chores.t2'];
+const RQ = (k) => `dlg.fixture-neighbor.${k}`;
+const RF = (p) => `f.req-fixture-chores-${p}`;
+function withRequest(c) {
+  const N = RQ;
+  c.npcs.push({ id: 'npc.neighbor', nameKey: 'npc.neighbor', locationId: 'loc.camp' });
+  c.dialogues.push({
+    id: 'dlg.fixture-neighbor', npcId: 'npc.neighbor', start: 'gate',
+    nodes: [
+      { id: 'gate', speaker: 'npc', textKey: N('gate'), next: 'bye', branches: [
+        { when: { all: [{ flag: RF('t1') }, { flag: RF('t2') }, { notFlag: RF('done') }] }, next: 'turnin' },
+        { when: { all: [{ flag: RF('taken') }, { notFlag: RF('done') }, { notFlag: RF('t2') }] }, next: 'reminder' },
+        { when: { all: [{ notFlag: RF('taken') }, { notFlag: RF('done') }] }, next: 'offer' },
+      ] },
+      { id: 'offer', speaker: 'npc', textKey: N('offer'), choices: [
+        { textKey: N('offer.c1'), next: 'accepted', effects: [{ setFlag: RF('taken') }] },
+        { textKey: N('offer.c2'), next: 'later' },
+      ] },
+      { id: 'accepted', speaker: 'npc', textKey: N('accepted'), end: true },
+      { id: 'later', speaker: 'npc', textKey: N('later'), end: true },
+      { id: 'reminder', speaker: 'npc', textKey: N('reminder'), end: true },
+      { id: 'turnin', speaker: 'npc', textKey: N('turnin'), choices: [{ textKey: N('turnin.c1'), next: 'bye', effects: [{ setFlag: RF('done') }] }] },
+      { id: 'bye', speaker: 'npc', textKey: N('bye'), end: true },
+    ],
+  });
+  c.flags.push(
+    row(RF('taken'), { owner: 'dlg.fixture-neighbor/offer' }), row(RF('done'), { owner: 'dlg.fixture-neighbor/turnin' }),
+    row(RF('t1'), { kind: 'interaction', owner: 'взаємодія на мапі' }), row(RF('t2'), { kind: 'interaction', owner: 'взаємодія на мапі' }),
+  );
+  c.requests = [{
+    id: 'req.fixture-chores', giver: 'npc.neighbor', titleKey: 'req.fixture-chores', goalKey: 'req.fixture-chores.goal', trackKey: 'req.fixture-chores.track',
+    targets: [
+      { id: 't1', spot: 'req.fixture-chores.t1', icon: 'litter', labelKey: 'req.fixture-chores.t1' },
+      { id: 't2', spot: 'req.fixture-chores.t2', icon: 'apple', labelKey: 'req.fixture-chores.t2' },
+    ],
+    reward: { xp: 15, om: 10, skills: ['skill.communication'] },
+  }];
+  const keys = ['npc.neighbor', 'req.fixture-chores', 'req.fixture-chores.goal', 'req.fixture-chores.track', 'req.fixture-chores.t1', 'req.fixture-chores.t2', `journal.${RF('done')}`,
+    ...['gate', 'offer', 'offer.c1', 'offer.c2', 'accepted', 'later', 'reminder', 'turnin', 'turnin.c1', 'bye'].map(N)];
+  for (const lang of c.meta.locales) for (const k of keys) c.locales[lang][k] = lineText(lang, k);
+}
+const rqDialogue = (c) => c.dialogues.find((d) => d.id === 'dlg.fixture-neighbor');
+const rqNode = (c, id) => rqDialogue(c).nodes.find((n) => n.id === id);
+
 // Другий діалог — у крамаря: «hi» → «bye» одним безумовним вибором із заданими ефектами.
 const shopDialogue = (effects) => ({
   id: 'dlg.fixture-shop', npcId: 'npc.shopkeeper', start: 'hi',
@@ -344,6 +390,24 @@ export const FIXTURES = [
   { base: 'combo', name: '[хвиля] контроль: той самий набір справ на тому ж етапі з розведеним when — не повтор і не перекриття', expect: [], patch(c) { wave(c).when = { transports: [T_CAR] }; c.waves.push({ ...duskWave(), id: 'wave.fixture-dawn', when: { transports: [T_BIKE] } }); } },
   { base: 'combo', name: '[хвиля] дві хвилі на одному етапі без when — перекриття', expect: ['WAVE_STAGE_OVERLAP'], patch(c) { c.waves.push({ ...duskWave(), id: 'wave.fixture-dawn' }); } },
   { name: '[хвиля] wetGear: false — ефект, що нічого не робить', expect: ['SCHEMA_INVALID'], patch(c) { wave(c).tasks[0].late.effects = [{ wetGear: false }]; } },
+  // Прохання сусідів (GAME-180).
+  { name: '[прохання] контроль: коректне прохання (просильник, дві цілі на мапі, «Пізніше», здача) — чисто', expect: [], patch(c) { withRequest(c); } },
+  { name: '[прохання] просильника немає серед NPC', expect: ['REQUEST_GIVER_INVALID'], patch(c) { withRequest(c); c.requests[0].giver = 'npc.nobody'; } },
+  { name: '[прохання] немає жодної цілі', expect: ['REQUEST_NO_TARGET', 'REQUEST_NO_TURNIN'], patch(c) { withRequest(c); c.requests[0].targets = []; } },
+  { name: '[прохання] МУТАЦІЯ: ціль без об’єкта на мапі', expect: ['REQUEST_TARGET_NO_MAP'], patch(c) { withRequest(c); c.requests[0].targets[1].spot = 'req.fixture-chores.ghost'; } },
+  { name: '[прохання] два прохання вказують на один об’єкт мапи', expect: ['REQUEST_TARGET_NO_MAP', 'ID_DUPLICATE'], patch(c) { withRequest(c); c.requests.push({ ...structuredClone(c.requests[0]), id: 'req.fixture-chores' }); } },
+  { name: '[прохання] «Пізніше» має наслідок (відмова не безкоштовна)', expect: ['REQUEST_NO_LATER'], patch(c) { withRequest(c); rqNode(c, 'offer').choices[1].effects = [{ setFlag: RF('taken') }]; } },
+  { name: '[прохання] немає вузла пропозиції', expect: ['REQUEST_NO_LATER', 'DIALOGUE_NODE_UNREACHABLE', 'DIALOGUE_FLAG_NEVER_SET'], patch(c) { withRequest(c); const d = rqDialogue(c); d.nodes = d.nodes.filter((n) => n.id !== 'offer'); d.nodes.find((n) => n.id === 'gate').branches.pop(); } },
+  { name: '[прохання] здача не вимагає всіх цілей', expect: ['REQUEST_NO_TURNIN'], patch(c) { withRequest(c); rqNode(c, 'gate').branches[0].when = { all: [{ flag: RF('t1') }, { notFlag: RF('done') }] }; } },
+  { name: '[прохання] немає здачі: ніхто не ставить «здано»', expect: ['REQUEST_NO_TURNIN', 'DIALOGUE_FLAG_NEVER_SET'], patch(c) { withRequest(c); rqNode(c, 'turnin').choices[0].effects = []; } },
+  { name: '[прохання] нагорода називає неіснуючу навичку', expect: ['REQUEST_REWARD_INVALID'], patch(c) { withRequest(c); c.requests[0].reward.skills = ['skill.nonsense']; } },
+  { name: '[прохання] квест рушається за прапорцем прохання', expect: ['REQUEST_GATES_QUEST'], patch(c) { withRequest(c); rqNode(c, 'turnin').choices.push({ textKey: RQ('turnin.c1'), next: 'bye', when: { flag: RF('done') }, effects: [{ startQuest: 'ST-003' }] }); } },
+  { name: '[прохання] гілка за прапорцем прохання веде до startQuest', expect: ['REQUEST_GATES_QUEST'], patch(c) { withRequest(c); rqNode(c, 'bye').end = undefined; delete rqNode(c, 'bye').end; rqNode(c, 'later').end = undefined; delete rqNode(c, 'later').end; rqNode(c, 'later').choices = [{ textKey: RQ('turnin.c1'), next: 'bye', effects: [{ startQuest: 'ST-003' }] }]; rqNode(c, 'bye').end = true; } },
+  { name: '[прохання] вибір за прапорцем прохання ставить чужий прапорець', expect: ['REQUEST_GATES_QUEST'], patch(c) { withRequest(c); rqNode(c, 'turnin').choices.push({ textKey: RQ('turnin.c1'), next: 'bye', when: { flag: RF('done') }, effects: [{ setFlag: 'f.fixture-met' }] }); } },
+  { name: '[прохання] немає тексту цілі в одній мові', expect: ['LOCALE_MISSING'], patch(c) { withRequest(c); delete c.locales.en['req.fixture-chores.t2']; } },
+  { name: '[прохання] немає запису журналу про здачу', expect: ['LOCALE_MISSING'], patch(c) { withRequest(c); delete c.locales.uk[`journal.${RF('done')}`]; } },
+  { name: '[прохання] id не за шаблоном (похідні прапорці й тексти теж розходяться з діалогом)', expect: ['ID_FORMAT', 'LOCALE_MISSING', 'REQUEST_NO_LATER', 'REQUEST_NO_TURNIN'], patch(c) { withRequest(c); c.requests[0].id = 'req.Fixture_chores'; } },
+  { name: '[прохання] іконка не з переліку', expect: ['SCHEMA_INVALID'], patch(c) { withRequest(c); c.requests[0].targets[0].icon = 'dragon'; } },
   { name: '[хвиля] та сама хвиля двічі на двох етапах', expect: ['ID_DUPLICATE', 'WAVE_REPEATED'], patch(c) { c.waves.push({ ...duskWave(), stage: 'ST-003' }); } },
   { name: '[хвиля] дубль id справи', expect: ['ID_DUPLICATE'], patch(c) { wave(c).tasks[1].id = 'wood'; } },
   { name: '[хвиля] id справи з підкресленням', expect: ['ID_FORMAT'], patch(c) { wave(c).tasks[1].id = 'hot_tea'; } },

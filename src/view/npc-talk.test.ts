@@ -12,7 +12,7 @@ import { GAME_DEFS } from '../content/slice-defs';
 import { chatOnlyNpcs, type Move } from '../content/moves';
 import { RESIDENTS } from './world/ambient';
 import { storyOffer } from './story-offer';
-import { CHAT_MARKER_RANGE, REQUEST_NPCS, facingToward, markerFor } from './npc-talk';
+import { CHAT_MARKER_RANGE, facingToward, markerFor } from './npc-talk';
 import { PORTRAIT_FILES, SPRITE_SHEET, TALKERS, portraitFor, portraitReport } from './portraits';
 
 const RAW = import.meta.glob<string>(['../../content/npcs.json', '../../content/quests.json', '../../content/dialogue/*.json', '../../content/locales/*.json', '../../public/maps/*.tmj'], { query: '?raw', import: 'default', eager: true });
@@ -83,23 +83,41 @@ describe('GAME-179 · ядро проводить кожну розмову ме
     }
     return s;
   };
-  const chat = ['npc.amina', 'npc.luc', 'npc.nora', 'npc.ingrid', 'npc.sarah', 'npc.claire', 'npc.victoria', 'npc.matthew'];
+  // GAME-180: Нора, Люк, Інгрід і Сара дають прохання: їхні розмови ставлять лише прапорці прохань (косметичні для сюжету), тож для перебору й бота вони теж «лише побалакати».
+  // Еліза рухає квести — лишається серед ходів. Розмова, що ставить щось СЮЖЕТНЕ (не f.req-*), інертною не стає — негативний контроль нижче.
+  const inert = ['npc.amina', 'npc.claire', 'npc.victoria', 'npc.matthew'];
+  const givers = ['npc.luc', 'npc.nora', 'npc.ingrid', 'npc.sarah'];
+  const chat = [...inert, ...givers];
 
-  it('«лише побалакати»: усі вісім — у переліку інертних; Еліза (рухає квести) — ні', () => {
+  it('«лише побалакати»: вісім — у переліку інертних (просильники — бо ставлять лише прапорці прохань); Еліза (рухає квести) — ні', () => {
     const set = chatOnlyNpcs(GAME_DEFS.story as never);
     for (const id of chat) expect(set.has(id), `${id} не вважається інертним`).toBe(true);
     expect(set.has('npc.elise')).toBe(false);
   });
 
+  it('негативний контроль: розмова з ефектом, що не є прапорцем прохання, робить NPC НЕ інертним (правило не сліпе)', () => {
+    const st = GAME_DEFS.story as unknown as { dialogues: Record<string, { npcId?: string; nodes: Record<string, { choices?: { effects: unknown[] }[] }> }> };
+    const nora = structuredClone(st.dialogues['dlg.nora-chat']);
+    const hello = Object.values(nora?.nodes ?? {}).find((n) => n.choices?.length) as { choices: { effects: unknown[] }[] };
+    hello.choices[0]?.effects.push({ setFlag: 'f.elise-met' });
+    const broken = { ...st, dialogues: { ...st.dialogues, 'dlg.nora-chat': nora } };
+    expect(chatOnlyNpcs(broken as never).has('npc.nora'), 'сюжетний прапорець — вже не «лише побалакати»').toBe(false);
+  });
+
   for (const id of chat) {
-    it(`${id}: Talk приймається, розмова закінчується, сюжет не змінився`, () => {
+    it(`${id}: Talk приймається, розмова закінчується, сюжет не змінився (просильник — відповідь «Пізніше» чи «Далі», без прапорців)`, () => {
       const base = atCamp();
       const before = { flags: base.game.flags, quests: base.game.quests, inventory: base.game.inventory, money: base.game.moneyCents };
       let s = send(base, { type: 'Talk', npcId: id });
       expect(ok(s), `${id}: ядро не прийняло розмову`).toBe(true);
       expect(s.game.dialogue, `${id}: діалог не відкрився`).not.toBeNull();
       let steps = 0;
-      while (s.game.dialogue && steps++ < 10) s = send(s, s.game.dialogue.node === 'hello' ? { type: 'Choose', choice: steps % 2 } : { type: 'Continue' });
+      const giver = givers.includes(id);
+      while (s.game.dialogue && steps++ < 10) {
+        const node = s.game.dialogue.node;
+        // Просильник: привітання → пропозиція → остання відповідь («Пізніше», без наслідків). Решта — як було: у вузлі hello вибір, далі «Далі».
+        s = send(s, giver ? (node === 'offer' ? { type: 'Choose', choice: 1 } : { type: 'Continue' }) : node === 'hello' ? { type: 'Choose', choice: steps % 2 } : { type: 'Continue' });
+      }
       expect(s.game.dialogue, `${id}: розмова не закінчилась за 10 кроків`).toBeNull();
       expect({ flags: s.game.flags, quests: s.game.quests, inventory: s.game.inventory, money: s.game.moneyCents }).toEqual(before);
     });
@@ -135,10 +153,6 @@ describe('GAME-179 · маркер над головою і розворот', (
     expect(markerFor(true, true, 10_000)).toBe('request');
     expect(markerFor(false, false, 0), 'не говорить — без маркера').toBeNull();
     expect(markerFor(false, true, 0), 'прохання без розмови — теж без маркера').toBeNull();
-  });
-
-  it('гачок прохань порожній, доки GAME-180 не дасть даних: жоден NPC не показує «!»', () => {
-    expect(REQUEST_NPCS.size).toBe(0);
   });
 
   it('NPC повертається до героя: вісь із більшим зсувом, нічия — по вертикалі', () => {

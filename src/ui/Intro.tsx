@@ -111,14 +111,14 @@ export function Intro({ offer, lang, t, act, portrait, onDone }: { offer: StoryO
                 <div class="ui-answers ui-talk-answers" data-ui="answers">
                   {step.kind === 'line' && nextBtn}
                   {step.kind === 'pick' && (
-                    <fieldset data-ui="create">
-                      <legend>{t('ui.createTitle')}</legend>
+                    <div class="ui-intro-pick" data-ui="create" role="group" aria-labelledby="ui-intro-pick-title">
+                      <p id="ui-intro-pick-title" class="ui-intro-pick-title">{t('ui.createTitle')}</p>
                       {offer.characters.map((c) => (
                         <button type="button" class="ui-btn" key={c.id} data-act="create" onClick={() => act(c.id)}>
                           {`${ct(lang, c.profileKey)} · ${ct(lang, c.transportKey)} · ${c.animalKey ? ct(lang, c.animalKey) : t('ui.noAnimal')}`}
                         </button>
                       ))}
-                    </fieldset>
+                    </div>
                   )}
                 </div>
               </div>

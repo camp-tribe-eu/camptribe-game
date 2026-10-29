@@ -129,7 +129,7 @@ async function talkTo(page: Page, id: string, name: string): Promise<void> {
   for (let attempt = 0; ; attempt++) {
     const near = await walkToNpc(page, id, where);
     expect(near.nearObject).toBe(id);
-    await expect.poll(async () => (await probe(page)).npcMarks[id], { message: `${id}: над головою нема «…»`, timeout: 5_000 }).toBe('chat');
+    await expect.poll(async () => (await probe(page)).npcMarks[id], { message: `${id}: над головою нема «…» чи «!»`, timeout: 5_000 }).toMatch(/^(chat|request)$/);   // GAME-180: у просильників «!»
     const still = (await probe(page)).nearObject === id;
     if (still) await page.keyboard.press('Space');
     await expect(box, `${id}: рамка розмови не відкрилась`).toBeVisible({ timeout: 8_000 }).catch(() => undefined);

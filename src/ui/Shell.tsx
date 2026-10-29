@@ -261,6 +261,7 @@ export function Shell({ port, langOverride, credits, build, holdToast = false, h
   const sinceUp = titleUp ? offer.day * 1440 + offer.timeMinutes - titleUp.at : -1;
   const titleUpShown = titleUp !== null && sinceUp >= 0 && sinceUp < TITLE_UP_MIN && !paused && !storyOpen && !summary;
   const goalShown = offer.stage !== 'create' && (offer.goal !== null || offer.stage === 'ended') && !hideUi.includes('goal');
+  const trackerShown = offer.stage !== 'create' && offer.requests.length > 0 && !hideUi.includes('requests');
   const nextShown = offer.stage !== 'create' && (offer.hint.near || offer.hint.next || offer.hint.backpack > 0) && !hideUi.includes('next');
   const portrait = (id: string | null, sprite?: boolean) => port.portrait(id, sprite);
 
@@ -296,9 +297,17 @@ export function Shell({ port, langOverride, credits, build, holdToast = false, h
             у шапці під ☰ · HUD · ‖; тост-підказка про ☰ (GAME-95) його не заступає — вона лише на екрані вибору героя, де цього рядка немає. */}
         {/* GAME-181: ОДНА коротка поточна ціль (крок головного квесту) — завжди на екрані, обидві орієнтації. Лежить ВГОРІ смуги під шапкою, а «Далі: …» (GAME-175) — під нею:
             дві підказки одна на одній не стоять (картка мети — у потоці шапки вище). Не ловить дотик. */}
-        {(goalShown || nextShown) && (
+        {(goalShown || nextShown || trackerShown) && (
           <div class="ui-strip">
             {goalShown && <div class="ui-goal" data-ui="goal" data-ended={offer.stage === 'ended' ? 'yes' : undefined}>{`${t('ui.goal')}: ${offer.goal ? ct(lang, offer.goal.key) : t('ui.goal.ended')}`}</div>}
+            {/* GAME-180: трекер прийнятих прохань — «Сміття 2/3» (окремий рядок смуги: ціль · трекер · «Далі»); стрілка на мапі веде до наступної цілі, а коли все зроблено — до просильника. */}
+            {trackerShown && (
+              <div class="ui-reqs" data-ui="req-tracker" role="group" aria-label={t('ui.req.tracker')}>
+                {offer.requests.map((r) => (
+                  <span class="ui-req-row" key={r.id} data-ui="req-row" data-request={r.id} data-done={r.done} data-total={r.total} data-ready={r.ready ? 'yes' : 'no'}>{`${ct(lang, r.trackKey)} ${r.done}/${r.total}`}</span>
+                ))}
+              </div>
+            )}
             {nextShown && (
               <div class="ui-next" data-ui="next-hint" data-kind={offer.hint.near ? 'near' : 'next'} data-spot={offer.hint.near ? undefined : offer.hint.nextSpot ?? undefined}>
                 {offer.hint.near

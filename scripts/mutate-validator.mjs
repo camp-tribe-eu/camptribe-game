@@ -205,7 +205,7 @@ const mutations = [
   { name: '[реєстр] journal дозволено будь-якому рядку', file: CHECKS_FILE, from: "if (e.journal === true && (!core ||", to: "if (false && (!core ||" },
   { name: '[реєстр] прапорець ядра може стартувати true', file: CHECKS_FILE, from: '(core && init !== false)', to: 'false' },
   { name: '[реєстр] «unset» дозволено серед значень enum', file: CHECKS_FILE, from: "if (!ENUM_VALUE.test(v) || v === 'unset') inv(", to: 'if (!ENUM_VALUE.test(v)) inv(' },
-  { name: '[реєстр] завантажувач і схема не знають flags.json', file: 'validator/schema.mjs', from: "'facts', 'roads', 'flags', 'waves', 'stickers'];", to: "'facts', 'roads', 'waves', 'stickers'];" },
+  { name: '[реєстр] завантажувач і схема не знають flags.json', file: 'validator/schema.mjs', from: "'facts', 'roads', 'flags', 'waves', 'requests', 'stickers'];", to: "'facts', 'roads', 'waves', 'requests', 'stickers'];" },
   { name: '[реєстр] id реєстру не звіряються з форматом', file: CHECKS_FILE, from: "if (!ok) out.push(I('ID_FORMAT', `flags:${e.id}`", to: "if (false) out.push(I('ID_FORMAT', `flags:${e.id}`" },
   { name: '[реєстр] дублі id реєстру не звітуються', file: CHECKS_FILE, from: "for (const t of [...Object.keys(ID_PATTERNS), 'flags']) dup(", to: 'for (const t of Object.keys(ID_PATTERNS)) dup(' },
   // GAME-170: хвилі напруги
@@ -247,7 +247,7 @@ const mutations = [
   { name: '[хвиля] перекриття when хвиль одного етапу не звітується', file: CHECKS_FILE, from: "if (k) out.push(I('WAVE_STAGE_OVERLAP'", to: "if (false) out.push(I('WAVE_STAGE_OVERLAP'" },
   { name: '[хвиля] хвилі одного етапу вважаються перекритими й без спільної комбінації', file: CHECKS_FILE, from: "const k = combos.find((x) => matches(a.when, x) && matches(b.when, x));", to: "const k = combos[0];" },
   { name: '[хвиля] схема не знає wetGear', file: 'validator/schema.mjs', from: "const waveEffect = union({ setFlag: obj({ setFlag: req(str) }), wetGear: obj({ wetGear: req({ t: 'boolean', only: true }) }) });", to: 'const waveEffect = union({ setFlag: obj({ setFlag: req(str) }) });' },
-  { name: '[хвиля] завантажувач і схема не знають waves.json', file: 'validator/schema.mjs', from: "'facts', 'roads', 'flags', 'waves', 'stickers'];", to: "'facts', 'roads', 'flags', 'stickers'];" },
+  { name: '[хвиля] завантажувач і схема не знають waves.json', file: 'validator/schema.mjs', from: "'facts', 'roads', 'flags', 'waves', 'requests', 'stickers'];", to: "'facts', 'roads', 'flags', 'requests', 'stickers'];" },
   // наклейки Атласу (GAME-182)
   { name: '[наклейка] наклейка без умови не звітується', file: CHECKS_FILE, from: "out.push(I('STICKER_NO_COND', where,", to: "void (I('STICKER_NO_COND', where," },
   { name: '[наклейка] умова за транспортом чи пам’яттю не звітується', file: CHECKS_FILE, from: "out.push(I('STICKER_COND_UNSUPPORTED',", to: "void (I('STICKER_COND_UNSUPPORTED'," },
@@ -257,6 +257,7 @@ const mutations = [
   { name: '[наклейка] 13-та наклейка проходить (межа зсунута в інший бік)', file: CHECKS_FILE, from: 'list.length > STICKER_SLOTS', to: 'list.length > STICKER_SLOTS + 1' },
   { name: '[наклейка] тексти наклейок не входять до перевірки перекладу', file: CHECKS_FILE, from: "for (const s of ct.stickers ?? []) { add(s.nameKey,", to: "for (const s of []) { add(s.nameKey," },
   { name: '[наклейка] схема не обов’язує текст наклейки', file: 'validator/schema.mjs', from: "nameKey: req(str), textKey: req(str), kind: req(en('place'", to: "nameKey: str, textKey: str, kind: req(en('place'" },
+  { name: '[прохання] завантажувач і схема не знають requests.json', file: 'validator/schema.mjs', from: "'facts', 'roads', 'flags', 'waves', 'requests', 'stickers'];", to: "'facts', 'roads', 'flags', 'waves', 'stickers'];" },
   // GAME-56: давність факту — попередження, не помилка
   { name: '[факт] поріг давності включно (>= замість >)', file: CHECKS_FILE, from: 'if (age > FACT_STALE_DAYS)', to: 'if (age >= FACT_STALE_DAYS)' },
   { name: '[факт] попередження рахується помилкою', file: 'validator/codes.mjs', from: "CODES[code]?.severity === 'warning'", to: 'false' },
@@ -265,7 +266,7 @@ const mutations = [
   // CLI (рецензія GAME-56): шлях, що справді вирішує CI.
   { name: '[факт] CLI не друкує ::warning::', file: 'validate-content.mjs', from: 'for (const i of warnings) console.log', to: 'for (const i of []) console.log' },
   { name: '[факт] CLI валить запуск на попередженні', file: 'validate-content.mjs', from: 'if (exitCode === 0 && ', to: 'if (errors.length + warnings.length === 0 && ' },
-  { name: '[факт] CLI не передає «сьогодні»', file: 'validate-content.mjs', from: "validate(loaded.content, { today: new Date().toISOString().slice(0, 10) })", to: 'validate(loaded.content, {})' },
+  { name: '[факт] CLI не передає «сьогодні»', file: 'validate-content.mjs', from: "validate(loaded.content, { today: new Date().toISOString().slice(0, 10), maps:", to: 'validate(loaded.content, { maps:' },
   { name: '[факт] --fail-on-warnings ігнорується', file: 'validate-content.mjs', from: "!(flag('--fail-on-warnings') && warnings.length)", to: 'true' },
   { name: '[факт] зламане «сьогодні» не зупиняє валідатор', file: CHECKS_FILE, from: "if (!isIsoDay(today)) return", to: 'if (false) return' },
 ];

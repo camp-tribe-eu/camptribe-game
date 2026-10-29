@@ -96,6 +96,18 @@ export interface OfferHint {
   readonly near: { readonly label: Key; readonly itemKey: string | null } | null;
 }
 
+/** Картка прохання (GAME-180): що зробити одним рядком, цілі-картинки (іконка + підпис) і нагорода (дані для GAME-181). */
+export interface OfferRequestCard {
+  readonly id: string;
+  readonly titleKey: string;
+  readonly goalKey: string;
+  readonly goals: readonly { readonly icon: string; readonly labelKey: string }[];
+  readonly reward: { readonly xp: number; readonly om: number; readonly skills: readonly string[] };
+}
+
+/** Рядок трекера прохання в HUD (GAME-180): «Сміття 2/3»; `ready` — усе зроблено, лишилось повернутись до просильника. */
+export interface OfferTracker { readonly id: string; readonly trackKey: string; readonly done: number; readonly total: number; readonly ready: boolean }
+
 export interface StoryOffer {
   /** create — персонажа ще немає; play — гра йде; ended — кінець розділу. */
   readonly stage: 'create' | 'play' | 'ended';
@@ -108,7 +120,9 @@ export interface StoryOffer {
   /** Відкрита розмова: репліка й відповіді (лише ті, що ядро прийме). */
   readonly dialogue: { readonly speakerKey: string | null;
     /** GAME-179: хто говорить: id NPC; 'player' — репліка героя; null — оповідач (подія в дорозі, сцена). Від нього портрет у рамці розмови. */
-    readonly speakerId: string | null; readonly key: string | null; readonly answers: readonly OfferAction[] } | null;
+    readonly speakerId: string | null; readonly key: string | null; readonly answers: readonly OfferAction[];
+    /** GAME-180: вузол пропозиції прохання — картка (портрет просильника є в рамці; тут що зробити, цілі-картинки й нагорода). */
+    readonly request?: OfferRequestCard } | null;
   readonly actions: readonly OfferAction[];
   /** Пакування перед дорогою; null — зараз закрите. */
   readonly packing: OfferPacking | null;
@@ -138,6 +152,8 @@ export interface StoryOffer {
   readonly mia: 'settled' | 'pause' | null;
   /** Підказки на мапі (GAME-175). */
   readonly hint: OfferHint;
+  /** Прийняті прохання сусідів у роботі (GAME-180); порожньо — жодного. */
+  readonly requests: readonly OfferTracker[];
   /** GAME-181: поточна ціль — назва активного головного квесту (ключ контенту); null — персонажа ще немає чи розділ завершено. */
   readonly goal: { readonly key: string } | null;
   /** GAME-181: XP, ОМ, звання й навички. */
