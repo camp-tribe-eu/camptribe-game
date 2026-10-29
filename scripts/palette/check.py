@@ -87,6 +87,25 @@ def check_file(path, palette, tolerance):
     return foreign
 
 
+def portrait_palette(base, extra_path):
+    """GAME-49: палітра портретів = палітра LPC + відтінки шкіри з art/palette/portraits-extra.json (лише для теки portraits/)."""
+    if not os.path.exists(extra_path):
+        return base
+    return list(base) + [c for c in load_palette(extra_path)[1] if c not in base]
+
+
+def is_portrait(path, root):
+    """Лише файл прямо в теці portraits/, яка є перевірюваною текою або її безпосередньою підтекою (assets/portraits/).
+
+    Глибша тека з такою назвою (assets/sprites/portraits/) — НЕ портрети: рецензія PR #97.
+    """
+    parent = os.path.dirname(os.path.normpath(path))
+    if os.path.basename(parent) != 'portraits':
+        return False
+    root = os.path.normpath(root)
+    return parent == root or os.path.dirname(parent) == root
+
+
 def find_pngs(root):
     out = []
     for d, _, files in os.walk(root):
@@ -100,6 +119,8 @@ def main(argv=None):
     ap = argparse.ArgumentParser(description='Palette guard: sprites must use only the base palette.')
     ap.add_argument('dir', nargs='?', default='assets')
     ap.add_argument('--palette', default='art/palette/lpc.json')
+    ap.add_argument('--portraits-extra', default='art/palette/portraits-extra.json',
+                    help='extra colours allowed ONLY for PNGs inside a portraits/ folder')
     ap.add_argument('--tolerance', type=float, default=0.0,
                     help='max Euclidean RGB distance to count as in-palette (default 0 = exact)')
     ap.add_argument('--allow-missing', action='store_true',
@@ -122,10 +143,11 @@ def main(argv=None):
         print(f'palette-guard: {status} — {a.dir} {why}; nothing was checked')
         return 0 if a.allow_missing else 1
 
+    portrait_pal = portrait_palette(palette, a.portraits_extra)
     bad_files, unreadable = 0, 0
     for p in pngs:
         try:
-            foreign = check_file(p, palette, a.tolerance)
+            foreign = check_file(p, portrait_pal if is_portrait(p, a.dir) else palette, a.tolerance)
         except Exception as e:  # noqa: BLE001 — an unreadable PNG must be red, not skipped
             unreadable += 1
             print(f'ERROR {p}: cannot read PNG: {e}')
