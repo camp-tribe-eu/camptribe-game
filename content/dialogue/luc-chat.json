@@ -3,7 +3,7 @@
   "npcId": "npc.luc",
   "start": "gate",
   "nodes": [
-    { "id": "gate", "speaker": "npc", "textKey": "dlg.luc-chat.gate", "next": "hello", "branches": [{ "when": { "all": [{ "flag": "f.req-luc-chain-t1" }, { "notFlag": "f.req-luc-chain-done" }] }, "next": "turnin" }, { "when": { "all": [{ "flag": "f.req-luc-chain-taken" }, { "notFlag": "f.req-luc-chain-done" }] }, "next": "reminder" }, { "when": { "all": [{ "notFlag": "f.req-luc-chain-taken" }, { "notFlag": "f.req-luc-chain-done" }] }, "next": "offer" }] },
+    { "id": "gate", "speaker": "npc", "textKey": "dlg.luc-chat.gate", "next": "hello", "branches": [{ "when": { "all": [{ "flag": "f.req-luc-radio-t1" }, { "notFlag": "f.req-luc-radio-done" }] }, "next": "turnin2" }, { "when": { "all": [{ "flag": "f.req-luc-radio-taken" }, { "notFlag": "f.req-luc-radio-done" }] }, "next": "reminder2" }, { "when": { "all": [{ "flag": "f.req-luc-chain-done" }, { "notFlag": "f.req-luc-radio-taken" }, { "notFlag": "f.req-luc-radio-done" }] }, "next": "offer2" }, { "when": { "all": [{ "flag": "f.req-luc-chain-t1" }, { "notFlag": "f.req-luc-chain-done" }] }, "next": "turnin" }, { "when": { "all": [{ "flag": "f.req-luc-chain-taken" }, { "notFlag": "f.req-luc-chain-done" }] }, "next": "reminder" }, { "when": { "all": [{ "notFlag": "f.req-luc-chain-taken" }, { "notFlag": "f.req-luc-chain-done" }] }, "next": "offer" }] },
     {
       "id": "hello", "speaker": "npc", "textKey": "dlg.luc-chat.hello",
       "choices": [
@@ -31,6 +31,23 @@
         { "textKey": "dlg.luc-chat.turnin.c1", "next": "closing", "effects": [{ "setFlag": "f.req-luc-chain-done" }] }
       ]
     },
-    { "id": "closing", "speaker": "npc", "textKey": "dlg.luc-chat.closing", "end": true }
+    { "id": "closing", "speaker": "npc", "textKey": "dlg.luc-chat.closing", "end": true },
+    {
+      "id": "offer2", "speaker": "npc", "textKey": "dlg.luc-chat.offer2",
+      "choices": [
+        { "textKey": "dlg.luc-chat.offer2.c1", "next": "accepted2", "effects": [{ "setFlag": "f.req-luc-radio-taken" }] },
+        { "textKey": "dlg.luc-chat.offer2.c2", "next": "later2" }
+      ]
+    },
+    { "id": "accepted2", "speaker": "npc", "textKey": "dlg.luc-chat.accepted2", "end": true },
+    { "id": "later2", "speaker": "npc", "textKey": "dlg.luc-chat.later2", "end": true },
+    { "id": "reminder2", "speaker": "npc", "textKey": "dlg.luc-chat.reminder2", "end": true },
+    {
+      "id": "turnin2", "speaker": "npc", "textKey": "dlg.luc-chat.turnin2",
+      "choices": [
+        { "textKey": "dlg.luc-chat.turnin2.c1", "next": "closing2", "effects": [{ "setFlag": "f.req-luc-radio-done" }] }
+      ]
+    },
+    { "id": "closing2", "speaker": "npc", "textKey": "dlg.luc-chat.closing2", "end": true }
   ]
 }

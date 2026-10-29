@@ -258,6 +258,9 @@ const mutations = [
   { name: '[наклейка] тексти наклейок не входять до перевірки перекладу', file: CHECKS_FILE, from: "for (const s of ct.stickers ?? []) { add(s.nameKey,", to: "for (const s of []) { add(s.nameKey," },
   { name: '[наклейка] схема не обов’язує текст наклейки', file: 'validator/schema.mjs', from: "nameKey: req(str), textKey: req(str), kind: req(en('place'", to: "nameKey: str, textKey: str, kind: req(en('place'" },
   { name: '[прохання] завантажувач і схема не знають requests.json', file: 'validator/schema.mjs', from: "'facts', 'roads', 'flags', 'waves', 'requests', 'stickers'];", to: "'facts', 'roads', 'flags', 'waves', 'stickers'];" },
+  // GAME-184: продовження арки (after) — ланцюг прохань одного просильника
+  { name: '[прохання] after на неіснуюче/чуже прохання не звітується', file: CHECKS_FILE, from: "if (!prev || prev.giver !== r.giver) out.push(I('REQUEST_AFTER_INVALID'", to: "if (false) out.push(I('REQUEST_AFTER_INVALID'" },
+  { name: '[прохання] продовження шукає пропозицію у вузлі offer (а не offer2)', file: CHECKS_FILE, from: "const offerId = r.after === undefined ? 'offer' : 'offer2';", to: "const offerId = 'offer';" },
   // GAME-56: давність факту — попередження, не помилка
   { name: '[факт] поріг давності включно (>= замість >)', file: CHECKS_FILE, from: 'if (age > FACT_STALE_DAYS)', to: 'if (age >= FACT_STALE_DAYS)' },
   { name: '[факт] попередження рахується помилкою', file: 'validator/codes.mjs', from: "CODES[code]?.severity === 'warning'", to: 'false' },

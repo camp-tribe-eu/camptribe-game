@@ -244,7 +244,9 @@ async function playRequest(page: Page, r: Req, opts: { later?: boolean; shot?: s
   await expect.poll(async () => (await probe(page)).fx.pops, { message: '«+» над героєм' }).toBeGreaterThan(pops);
   await expect(page.locator(`[data-ui="req-row"][data-request="${r.id}"]`)).toHaveCount(0);
   await page.waitForTimeout(300);
-  expect((await probe(page)).npcMarks[r.giver], 'після здачі «!» зникає').not.toBe('request');
+  // GAME-184: у Нори, Інгрід і Люка після першого прохання відкривається продовження (game-184.spec) — «!» повертається; в Елізи й Сари його нема, «!» зникає.
+  if (['npc.nora', 'npc.ingrid', 'npc.luc'].includes(r.giver)) await expect.poll(async () => (await probe(page)).npcMarks[r.giver], { message: 'після здачі першого прохання «!» веде до продовження', timeout: 5_000 }).toBe('request');
+  else expect((await probe(page)).npcMarks[r.giver], 'після здачі «!» зникає').not.toBe('request');
 }
 
 const ORIENTATIONS = [

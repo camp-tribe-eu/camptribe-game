@@ -15,6 +15,7 @@ import mapRaw from '../../public/maps/camp-lake.tmj?raw';
 import { REQUESTS, REQUEST_FLAG_PREFIX, compileRequests, liveRequestSpot, requestFlag, requestMarker, requestOf, requestReward, requestStatus, requestTarget, requestsDone, trackerRows, type RequestDef } from './requests';
 import { liveSpot } from './director';
 import { storyOffer } from '../view/story-offer';
+import { STICKER_DEFS } from './stickers';
 
 let n = 0;
 const send = (s: GameState, m: Move) => dispatch(s, { ...m, commandId: `rq${n++}` } as Command, GAME_DEFS);
@@ -69,11 +70,27 @@ const PATH: Record<string, { offer: readonly string[]; turnin: readonly string[]
   'req.luc-chain': { offer: ['n', 'offer.c1', 'n'], turnin: ['n', 'turnin.c1', 'n'] },
   'req.sarah-snack': { offer: ['n', 'offer.c1', 'n'], turnin: ['n', 'turnin.c1', 'n'] },
   'req.elise-lantern': { offer: ['hello.req0', 'n', 'offer.c1', 'n'], turnin: ['hello.req0', 'n', 'turnin.c1', 'n'] },
+  // GAME-184 · продовження арок (after): пропозиція offer2, здача turnin2 (у Інгрід — сцена біля вогнища: «Ходімо» → два «Далі» → «Назвемо його Мія»)
+  'req.nora-camera': { offer: ['n', 'offer2.c1', 'n'], turnin: ['n', 'turnin2.c1', 'n'] },
+  'req.ingrid-starmap': { offer: ['n', 'offer2.c1', 'n'], turnin: ['n', 'turnin2.c1', 'n', 'n', 'sky3.c1', 'n'] },
+  'req.luc-radio': { offer: ['n', 'offer2.c1', 'n'], turnin: ['n', 'turnin2.c1', 'n'] },
 };
+/** Перше (без `after`) прохання арки — і кроки, що ведуть до продовження (GAME-184). */
+const FIRSTS = REQUESTS.filter((r) => r.after === undefined);
+const FOLLOWS = REQUESTS.filter((r) => r.after !== undefined);
+/** Пройти прохання повністю на ядрі (розмова, цілі, здача): стан після здачі. */
+function complete(from: GameState, r: RequestDef): GameState {
+  const p = PATH[r.id] as { offer: readonly string[]; turnin: readonly string[] };
+  let s = finish(say(from, r.giver, p.offer));
+  for (const t of r.targets) s = touch(s, t.spot);
+  return finish(say(s, r.giver, p.turnin));
+}
 
 describe('GAME-180 · дані прохань', () => {
-  it('п’ять прохань сценарію: Нора, Інгрід, Люк, Еліза, Сара; кожне — просильник, ≥ 1 ціль, нагорода-гачок для GAME-181', () => {
-    expect(REQUESTS.map((r) => r.giver).sort()).toEqual(['npc.elise', 'npc.ingrid', 'npc.luc', 'npc.nora', 'npc.sarah']);
+  it('вісім прохань: п’ять сусідів (Нора, Інгрід, Люк, Еліза, Сара) і три продовження арок (GAME-184); кожне — просильник, ≥ 1 ціль, нагорода-гачок для GAME-181', () => {
+    expect(REQUESTS.map((r) => r.giver).sort()).toEqual(['npc.elise', 'npc.ingrid', 'npc.ingrid', 'npc.luc', 'npc.luc', 'npc.nora', 'npc.nora', 'npc.sarah']);
+    expect(FOLLOWS.map((r) => [r.id, r.after])).toEqual([['req.nora-camera', 'req.nora-shore'], ['req.ingrid-starmap', 'req.ingrid-birds'], ['req.luc-radio', 'req.luc-chain']]);
+    for (const r of FOLLOWS) expect(REQUESTS.find((x) => x.id === r.after)?.giver, `${r.id}: after — того ж просильника`).toBe(r.giver);
     for (const r of REQUESTS) {
       expect(STORY.npcs[r.giver], r.id).toBeDefined();
       expect(r.targets.length, r.id).toBeGreaterThanOrEqual(1);
@@ -103,7 +120,7 @@ describe('GAME-180 · дані прохань', () => {
     for (const r of REQUESTS) {
       const keys = [r.titleKey, r.goalKey, r.trackKey, ...r.targets.map((t) => t.labelKey), `journal.${r.doneFlag}`];
       const dlg = Object.keys(LOC).filter((k) => k.startsWith(`dlg.${r.giver.replace('npc.', '')}-`) || k.startsWith('dlg.elise-greeting.'));
-      for (const k of [...keys, ...dlg.filter((x) => /\.(gate|offer|accepted|later|reminder|turnin|closing)(\.c\d)?$|hello\.req0$|\.req$/.test(x))]) {
+      for (const k of [...keys, ...dlg.filter((x) => /\.(gate|offer|accepted|later|reminder|turnin|closing|offer2|accepted2|later2|reminder2|turnin2|closing2|sky\d)(\.c\d)?$|hello\.req0$|\.req$/.test(x))]) {
         for (const [lang, t] of [['uk', LOC], ['en', LOC_EN]] as const) {
           expect(typeof t[k] === 'string' && (t[k] as string).trim() !== '', `${lang}:${k}`).toBe(true);
           expect((t[k] as string).length, `${lang}:${k}`).toBeLessThanOrEqual(140);
@@ -128,7 +145,7 @@ describe('GAME-180 · дані прохань', () => {
 });
 
 describe('GAME-180 · повний шлях кожного прохання на ядрі', () => {
-  for (const r of REQUESTS) {
+  for (const r of FIRSTS) {
     it(`${r.id}: «!» → розмова → «Беруся» → ${r.targets.length} ціл. → здача → подяка → журнал`, () => {
       const p = PATH[r.id] as { offer: readonly string[]; turnin: readonly string[] };
       let s = atCamp();
@@ -156,8 +173,49 @@ describe('GAME-180 · повний шлях кожного прохання на
       expect(requestStatus(s.flags, r)).toBe('done');
       expect(trackerRows(s)).toEqual([]);
       expect(requestTarget(s)).toBeNull();
-      expect(requestMarker(s, r.giver)).toBe(false);
+      expect(requestMarker(s, r.giver), 'після першого прохання «!» лишається, якщо в арці є продовження (GAME-184)').toBe(FOLLOWS.some((f) => f.after === r.id));
       expect(requestsDone(s)).toBe(1);
+    });
+  }
+
+  for (const r of FOLLOWS) {
+    it(`GAME-184 ${r.id}: заблоковане до здачі ${r.after}; після неї — «!», «Беруся», ${r.targets.length} ціл., здача, наклейка-умова, нагорода раз`, () => {
+      const first = REQUESTS.find((x) => x.id === r.after) as RequestDef;
+      const p = PATH[r.id] as { offer: readonly string[]; turnin: readonly string[] };
+      const s0 = atCamp();
+      expect(requestStatus(s0.flags, r), 'до першого прохання — заблоковане').toBe('locked');
+      expect(requestOf(r.giver, REQUESTS, s0.flags)?.id, 'поточне прохання просильника — перше').toBe(first.id);
+      for (const t of r.targets) expect(liveRequestSpot(s0, t.spot), 'цілі продовження неживі').toBe(false);
+      let s = complete(s0, first);
+      expect(requestStatus(s.flags, r)).toBe('available');
+      expect(requestOf(r.giver, REQUESTS, s.flags)?.id).toBe(r.id);
+      expect(requestMarker(s, r.giver), '«!» повертається — продовження відкрилось').toBe(true);
+      expect(trackerRows(s)).toEqual([]);
+      // «Пізніше» продовження — без наслідків
+      const later = finish(say(s, r.giver, ['n', 'offer2.c2', 'n']));
+      expect(later.flags).toEqual(s.flags);
+      expect(requestMarker(later, r.giver)).toBe(true);
+      s = finish(say(s, r.giver, p.offer));
+      expect(s.flags).toContain(r.takenFlag);
+      expect(trackerRows(s)).toEqual([{ id: r.id, trackKey: r.trackKey, done: 0, total: r.targets.length, ready: false }]);
+      for (const [i, t] of r.targets.entries()) {
+        expect(requestTarget(s)).toBe(t.spot);
+        expect(liveRequestSpot(s, t.spot)).toBe(true);
+        s = touch(s, t.spot);
+        expect(trackerRows(s)[0]?.done).toBe(i + 1);
+      }
+      expect(requestTarget(s), 'усе зроблено — до просильника').toBe(r.giver);
+      const xp = s.progress?.xp ?? 0;
+      s = finish(say(s, r.giver, p.turnin));
+      expect(s.flags).toContain(r.doneFlag);
+      expect(s.progress?.xp, 'нагорода rw.<прохання> — раз').toBe(xp + r.reward.xp);
+      expect(s.progress?.keys).toContain(`rw.${r.id}`);
+      expect(requestMarker(s, r.giver), 'арка закрита — «!» зникає').toBe(false);
+      expect(trackerRows(s)).toEqual([]);
+      // наклейка Атласу за історію: умова — прапорець «здано»; ядро видає її при здачі
+      const sticker = Object.entries(STICKER_DEFS).find(([, d]) => JSON.stringify(d.cond) === JSON.stringify({ flag: r.doneFlag }))?.[0];
+      expect(sticker, `наклейка Атласу за ${r.id}`).toBeDefined();
+      expect(s.stickers, 'наклейка в альбомі після здачі').toContain(sticker);
     });
   }
 
@@ -193,7 +251,7 @@ describe('GAME-180 · повний шлях кожного прохання на
   });
 
   it('«Пізніше» — без наслідків і без штрафу: жодного прапорця, «!» лишається, пропозиція повертається', () => {
-    for (const r of REQUESTS) {
+    for (const r of FIRSTS) {
       const p = PATH[r.id] as { offer: readonly string[] };
       const before = atCamp();
       const pre = p.offer.slice(0, p.offer.indexOf('offer.c1'));
@@ -207,11 +265,11 @@ describe('GAME-180 · повний шлях кожного прохання на
     }
   });
 
-  it('після здачі просильник просто розмовляє (гілка «звичайна балачка»), нову пропозицію не робить', () => {
+  it('після здачі всієї арки просильник просто розмовляє (гілка «звичайна балачка»), нову пропозицію не робить; а після першого прохання пропонує продовження', () => {
     const r = requestOf('npc.luc') as RequestDef;
-    let s = finish(say(atCamp(), r.giver, ['n', 'offer.c1', 'n']));
-    s = touch(s, (r.targets[0] as { spot: string }).spot);
-    s = finish(say(s, r.giver, ['n', 'turnin.c1', 'n']));
+    const afterFirst = complete(atCamp(), r);
+    expect(play([{ type: 'Talk', npcId: r.giver }, { type: 'Continue' }], afterFirst).dialogue?.node, 'продовження арки').toBe('offer2');
+    const s = complete(afterFirst, REQUESTS.find((x) => x.after === r.id) as RequestDef);
     const t = play([{ type: 'Talk', npcId: r.giver }, { type: 'Continue' }], s);
     expect(t.dialogue?.node).toBe('hello');
   });
@@ -278,7 +336,8 @@ describe('GAME-180 · правила на ядрі й режисері', () => {
       const names = [r.takenFlag, ...r.targets.map((t) => t.flag), r.doneFlag];
       for (let mask = 0; mask < 1 << names.length; mask++) {
         const base = atCamp();
-        const s0 = { ...base, flags: [...base.flags, ...names.filter((_, i) => (mask >> i) & 1)].sort() };
+        const pre = r.after === undefined ? [] : [(REQUESTS.find((x) => x.id === r.after) as RequestDef).doneFlag];   // продовження живе, лише коли перше здано — інакше вузли offer2/turnin2 не відвідати
+        const s0 = { ...base, flags: [...base.flags, ...pre, ...names.filter((_, i) => (mask >> i) & 1)].sort() };
         // обхід: кожен стан розмови — кожна доступна відповідь; кінець — розмови немає. З КОЖНОГО вузла має бути шлях до кінця (не лише з першого).
         const edges = new Map<string, Set<string>>();
         const queue: GameState[] = [play([{ type: 'Talk', npcId: r.giver }], s0)];

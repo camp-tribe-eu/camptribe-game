@@ -3,7 +3,7 @@
   "npcId": "npc.nora",
   "start": "gate",
   "nodes": [
-    { "id": "gate", "speaker": "npc", "textKey": "dlg.nora-chat.gate", "next": "hello", "branches": [{ "when": { "all": [{ "flag": "f.req-nora-shore-t1" }, { "flag": "f.req-nora-shore-t2" }, { "flag": "f.req-nora-shore-t3" }, { "notFlag": "f.req-nora-shore-done" }] }, "next": "turnin" }, { "when": { "all": [{ "flag": "f.req-nora-shore-taken" }, { "notFlag": "f.req-nora-shore-done" }] }, "next": "reminder" }, { "when": { "all": [{ "notFlag": "f.req-nora-shore-taken" }, { "notFlag": "f.req-nora-shore-done" }] }, "next": "offer" }] },
+    { "id": "gate", "speaker": "npc", "textKey": "dlg.nora-chat.gate", "next": "hello", "branches": [{ "when": { "all": [{ "flag": "f.req-nora-camera-t1" }, { "notFlag": "f.req-nora-camera-done" }] }, "next": "turnin2" }, { "when": { "all": [{ "flag": "f.req-nora-camera-taken" }, { "notFlag": "f.req-nora-camera-done" }] }, "next": "reminder2" }, { "when": { "all": [{ "flag": "f.req-nora-shore-done" }, { "notFlag": "f.req-nora-camera-taken" }, { "notFlag": "f.req-nora-camera-done" }] }, "next": "offer2" }, { "when": { "all": [{ "flag": "f.req-nora-shore-t1" }, { "flag": "f.req-nora-shore-t2" }, { "flag": "f.req-nora-shore-t3" }, { "notFlag": "f.req-nora-shore-done" }] }, "next": "turnin" }, { "when": { "all": [{ "flag": "f.req-nora-shore-taken" }, { "notFlag": "f.req-nora-shore-done" }] }, "next": "reminder" }, { "when": { "all": [{ "notFlag": "f.req-nora-shore-taken" }, { "notFlag": "f.req-nora-shore-done" }] }, "next": "offer" }] },
     {
       "id": "hello", "speaker": "npc", "textKey": "dlg.nora-chat.hello",
       "choices": [
@@ -31,6 +31,23 @@
         { "textKey": "dlg.nora-chat.turnin.c1", "next": "closing", "effects": [{ "setFlag": "f.req-nora-shore-done" }] }
       ]
     },
-    { "id": "closing", "speaker": "npc", "textKey": "dlg.nora-chat.closing", "end": true }
+    { "id": "closing", "speaker": "npc", "textKey": "dlg.nora-chat.closing", "end": true },
+    {
+      "id": "offer2", "speaker": "npc", "textKey": "dlg.nora-chat.offer2",
+      "choices": [
+        { "textKey": "dlg.nora-chat.offer2.c1", "next": "accepted2", "effects": [{ "setFlag": "f.req-nora-camera-taken" }] },
+        { "textKey": "dlg.nora-chat.offer2.c2", "next": "later2" }
+      ]
+    },
+    { "id": "accepted2", "speaker": "npc", "textKey": "dlg.nora-chat.accepted2", "end": true },
+    { "id": "later2", "speaker": "npc", "textKey": "dlg.nora-chat.later2", "end": true },
+    { "id": "reminder2", "speaker": "npc", "textKey": "dlg.nora-chat.reminder2", "end": true },
+    {
+      "id": "turnin2", "speaker": "npc", "textKey": "dlg.nora-chat.turnin2",
+      "choices": [
+        { "textKey": "dlg.nora-chat.turnin2.c1", "next": "closing2", "effects": [{ "setFlag": "f.req-nora-camera-done" }] }
+      ]
+    },
+    { "id": "closing2", "speaker": "npc", "textKey": "dlg.nora-chat.closing2", "end": true }
   ]
 }

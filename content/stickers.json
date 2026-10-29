@@ -88,5 +88,35 @@
       "quest": "CH1-D2-FIRE-001",
       "status": "completed"
     }
+  },
+  {
+    "id": "sticker.nora-camera",
+    "nameKey": "sticker.nora-camera",
+    "textKey": "sticker.nora-camera.text",
+    "kind": "mia",
+    "icon": "camera",
+    "cond": {
+      "flag": "f.req-nora-camera-done"
+    }
+  },
+  {
+    "id": "sticker.starmap",
+    "nameKey": "sticker.starmap",
+    "textKey": "sticker.starmap.text",
+    "kind": "people",
+    "icon": "starmap",
+    "cond": {
+      "flag": "f.req-ingrid-starmap-done"
+    }
+  },
+  {
+    "id": "sticker.radio",
+    "nameKey": "sticker.radio",
+    "textKey": "sticker.radio.text",
+    "kind": "people",
+    "icon": "radio",
+    "cond": {
+      "flag": "f.req-luc-radio-done"
+    }
   }
 ]

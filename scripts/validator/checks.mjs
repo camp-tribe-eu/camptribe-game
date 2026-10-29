@@ -1138,6 +1138,12 @@ export const CHECKS = [
           if (seenSpots.has(t.spot)) out.push(I('REQUEST_TARGET_NO_MAP', `${where}/${t.id}`, `об’єкт мапи «${t.spot}» уже є ціллю ${seenSpots.get(t.spot)}: один об’єкт — одна дія`));
           else seenSpots.set(t.spot, where);
         }
+        // GAME-184: продовження арки — `after` називає прохання ТОГО Ж просильника, що стоїть раніше (ланцюг без кола): інакше воно ніколи не відкриється.
+        if (r.after !== undefined) {
+          const prev = rs.find((x) => x.id === r.after);
+          if (!prev || prev.giver !== r.giver) out.push(I('REQUEST_AFTER_INVALID', where, `after «${r.after}» — ${prev ? `прохання іншого просильника (${prev.giver})` : 'такого прохання немає'}: продовження не відкриється`));
+          else { const seen = new Set([r.id]); for (let x = prev; x; x = x.after === undefined ? undefined : rs.find((y) => y.id === x.after)) { if (seen.has(x.id)) { out.push(I('REQUEST_AFTER_INVALID', where, `after утворює коло через «${x.id}»: жодне прохання кола не відкриється`)); break; } seen.add(x.id); } }
+        }
         for (const sk of r.reward?.skills ?? []) if (!SKILL_IDS.includes(sk)) out.push(I('REQUEST_REWARD_INVALID', where, `навичка «${sk}» не з восьми напрямів (SKILL_IDS)`));
         if (!d) continue;
         const taken = requestFlag(r.id, 'taken');
@@ -1145,7 +1151,8 @@ export const CHECKS = [
         const byId = new Map(d.nodes.map((n) => [n.id, n]));
         const sets = (ch, f) => (ch.effects ?? []).some((e) => e.setFlag === f);
         // Пропозиція: вузол `offer` з вибором «Беруся» (ставить taken) і виходом «Пізніше» — вибір БЕЗ наслідків, що безумовно доходить до кінця розмови.
-        const offer = byId.get('offer');
+        const offerId = r.after === undefined ? 'offer' : 'offer2';   // GAME-184: продовження арки живе у вузлі offer2 (дзеркало offerNodeOf у src/content/requests.ts)
+        const offer = byId.get(offerId);
         const reachesEnd = (from) => {
           const seen = new Set(); const st = [from];
           while (st.length) { const id = st.pop(); if (seen.has(id)) continue; seen.add(id); const n = byId.get(id); if (!n) continue; if (n.end === true) return true; st.push(...exits(n, true)); }
@@ -1153,8 +1160,8 @@ export const CHECKS = [
         };
         const accept = (offer?.choices ?? []).find((ch) => sets(ch, taken));
         const later = (offer?.choices ?? []).find((ch) => (ch.effects ?? []).length === 0 && !ch.when && reachesEnd(ch.next));
-        if (!offer || !accept) out.push(I('REQUEST_NO_LATER', where, `у діалозі ${d.id} немає вузла «offer» з вибором, що ставить ${taken}: прохання не взяти`));
-        else if (!later) out.push(I('REQUEST_NO_LATER', where, `вузол «offer» діалогу ${d.id} не має виходу «Пізніше»: вибір без наслідків, що безумовно веде до кінця розмови. Відмова мусить бути безкоштовною`));
+        if (!offer || !accept) out.push(I('REQUEST_NO_LATER', where, `у діалозі ${d.id} немає вузла «${offerId}» з вибором, що ставить ${taken}: прохання не взяти`));
+        else if (!later) out.push(I('REQUEST_NO_LATER', where, `вузол «${offerId}» діалогу ${d.id} не має виходу «Пізніше»: вибір без наслідків, що безумовно веде до кінця розмови. Відмова мусить бути безкоштовною`));
         // Здача: вибір, що ставить done, лежить за умовою (гілка чи вибір), яка вимагає КОЖНУ ціль, і не вимагає нічого понад ціль-прапорці й «ще не здано».
         const needs = targets.map((t) => requestFlag(r.id, t.id));
         const reachable = (from) => { const seen = new Set(); const st = [from]; while (st.length) { const id = st.pop(); if (seen.has(id)) continue; seen.add(id); const n = byId.get(id); if (n) st.push(...exits(n, false)); } return seen; };

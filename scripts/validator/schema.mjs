@@ -145,8 +145,8 @@ export const SCHEMAS = {
   facts: obj({ id: req(str), claimKey: req(str), source: str, checkedAt: str, kind: str }),
   // Прохання сусідів (GAME-180): просильник, цілі на мапі (іконка + об'єкт), нагорода-гачок для GAME-181. Решту (діалог, мапу, прапорці) звіряє перевірка requests.
   requests: obj({
-    id: req(str), giver: req(str), titleKey: req(str), goalKey: req(str), trackKey: req(str),
-    targets: req(arr(obj({ id: req(str), spot: req(str), icon: req(en('litter', 'bird', 'chain', 'lantern', 'cookie', 'apple')), labelKey: req(str) }))),
+    id: req(str), giver: req(str), after: str, titleKey: req(str), goalKey: req(str), trackKey: req(str),   // after (GAME-184): продовження арки — доступне, коли здано прохання `after` того ж просильника
+    targets: req(arr(obj({ id: req(str), spot: req(str), icon: req(en('litter', 'bird', 'chain', 'lantern', 'cookie', 'apple', 'camera', 'star', 'paw', 'wire')), labelKey: req(str) }))),
     reward: req(obj({ xp: req(int0), om: req(int0), skills: arr(str) })),
   }),
   // Реєстр прапорців і фактів стану (GAME-115, DC-015): f.* — прапорці (bool або enum, закодований як f.<назва>-<значення>;
