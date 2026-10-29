@@ -946,6 +946,21 @@ export const CHECKS = [
     },
   },
   {
+    id: 'npc-has-dialogue',
+    run(c) { // @check:npc-has-dialogue
+      // GAME-179: кожен NPC, що стоїть на мапі й до якого можна підійти, мусить мати що сказати: діалог (вихід із нього — DIALOGUE_DEAD_END).
+      // Без цього гравець підходить, тисне дію — і нічого: «пустишка». Мапи не знають контенту, тож правило — для кожного NPC з npcs.json.
+      const out = [];
+      const byNpc = new Map();
+      for (const d of c.content.dialogues ?? []) if (d.npcId !== undefined) byNpc.set(d.npcId, d);
+      for (const n of c.content.npcs ?? []) {
+        // Вихід із діалогу (кожен вузол веде безумовно до `end`) стереже DIALOGUE_DEAD_END; тут — сама наявність діалогу.
+        if (!byNpc.has(n.id)) out.push(I('NPC_NO_DIALOGUE', `${n.id}`, `NPC «${n.id}» не має жодного діалогу: підійти можна, сказати нічого`));
+      }
+      return out;
+    },
+  },
+  {
     id: 'dialogue-npc-unique',
     run(c) { // @check:dialogue-npc-unique
       // Один діалог на NPC: рушій запускає діалог за npcId, і двом кандидатам немає правила вибору.
@@ -1428,7 +1443,7 @@ export function validate(content, { today }) {
   if (issues.length) return issues;
   try { ctx.ix = buildIndex(content); }
   catch (e) { return [I('INTERNAL_ERROR', 'buildIndex', e.message)]; }
-  const LATE = ['combo-options', 'combos'];
+  const LATE = ['combo-options', 'combos', 'npc-has-dialogue'];
   for (const chk of rest) if (!LATE.includes(chk.id)) issues.push(...runOne(chk));
   // Комбінації — лише на контенті, чистому в цілому: на зламаних посиланнях вони дублюють і
   // затуляють першопричину. Ціна: дефект комбінації видно після виправлення загального.

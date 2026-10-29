@@ -109,7 +109,7 @@ export function baseline() {
     facts: [
       { id: 'fact.fixture-campfire', claimKey: 'fact.fixture-campfire', source: 'https://example.org/fixture-only', checkedAt: '2026-10-01', kind: 'regulation' },
     ],
-    dialogues: [rangerDialogue()],
+    dialogues: [rangerDialogue(), shopDialogue([])],   // GAME-179: у кожного NPC є діалог (NPC_NO_DIALOGUE), крамар теж
     waves: [duskWave()],
     // GAME-115: реєстр — рівно ті прапорці, які вживає еталон (зайвий рядок — FLAG_REGISTERED_UNUSED).
     flags: [
@@ -205,6 +205,8 @@ const shopDialogue = (effects) => ({
     { id: 'bye', speaker: 'npc', textKey: K('bye'), end: true },
   ],
 });
+// Крамар уже має діалог у еталоні (GAME-179): фікстура підміняє його, а не додає другий (DIALOGUE_NPC_DUPLICATE).
+const putShop = (c, d) => { c.dialogues = c.dialogues.filter((x) => x.npcId !== 'npc.shopkeeper'); c.dialogues.push(d); };
 // Ключ, якого прототип Object має сам (`__proto__`): у JS-патчі присвоєння міняє прототип, тож
 // кладемо власну перелічувану властивість — саме таку дає JSON.parse('{"__proto__": …}').
 const ownProto = (o) => Object.defineProperty(o, '__proto__', { value: {}, enumerable: true, configurable: true, writable: true });
@@ -541,7 +543,7 @@ export const FIXTURES = [
   } },
   { name: '[діалог] notFlag на прапорець, який ніщо не ставить', expect: ['DIALOGUE_FLAG_NEVER_SET'], patch(c) { reg(c, 'f.fixture-ghost'); node(c, 'help').choices[0].when = { notFlag: 'f.fixture-ghost' }; } },
   { name: '[діалог] прапорець ставиться лише в іншому діалозі — коректно', expect: [], patch(c) { reg(c, 'f.fixture-elsewhere');
-    c.dialogues.push(shopDialogue([{ setFlag: 'f.fixture-elsewhere' }]));
+    putShop(c, shopDialogue([{ setFlag: 'f.fixture-elsewhere' }]));
     node(c, 'help').choices[0].when = { flag: 'f.fixture-elsewhere' };
   } },
   // Нерухома точка прапорців: сетер за нездійсненною умовою — не сетер.
@@ -584,7 +586,7 @@ export const FIXTURES = [
     node(c, 'help').choices[0].when.all[1].any.push({ remembers: 'm.fixture-ghost' });
   } },
   { name: '[пам’ять] факт запам’ятав крамар — рейнджер його не знає', expect: ['MEMORY_NEVER_SET'], count: { code: 'MEMORY_NEVER_SET', n: 1 }, patch(c) { reg(c, 'm.fixture-met');
-    c.dialogues.push(shopDialogue([{ remember: 'm.fixture-met' }]));
+    putShop(c, shopDialogue([{ remember: 'm.fixture-met' }]));
     node(c, 'help').choices[0].when = { remembers: 'm.fixture-met' };
   } },
   { name: '[пам’ять] факт запам’ятовує лише вибір, що сам його вимагає', expect: ['MEMORY_NEVER_SET'], count: { code: 'MEMORY_NEVER_SET', n: 1 }, patch(c) { reg(c, 'm.fixture-loop');
@@ -618,10 +620,15 @@ export const FIXTURES = [
     d.nodes[0].choices[0].effects.push({ remember: 'm.fixture-wet' });
     d.nodes[0].choices.push({ textKey: EV('rain.c1'), next: 'bye', when: { remembers: 'm.fixture-wet' } });
   } },
+  // GAME-179: «пустишка» — NPC на мапі, до якого підійшов, а сказати йому нічого.
+  { name: '[діалог] NPC без жодного діалогу (пустишка)', expect: ['NPC_NO_DIALOGUE'], count: { code: 'NPC_NO_DIALOGUE', n: 1 }, patch(c) {
+    c.dialogues = c.dialogues.filter((x) => x.npcId !== 'npc.shopkeeper');
+  } },
   // Один діалог на NPC.
   { name: '[діалог] два діалоги для одного NPC', expect: ['DIALOGUE_NPC_DUPLICATE'], patch(c) {
     const d = shopDialogue([]);
     d.npcId = 'npc.ranger';
+    d.id = 'dlg.fixture-ranger-two';
     c.dialogues.push(d);
   } },
   // completeObjective — лише talk із тим самим NPC.
@@ -629,7 +636,7 @@ export const FIXTURES = [
     node(c, 'hello').choices[0].effects[1].completeObjective = { quest: 'ST-002', objective: 'visit-forest' };
   } },
   { name: '[діалог] розмова з крамарем закриває ціль «поговорити з рейнджером»', expect: ['DIALOGUE_OBJECTIVE_KIND'], patch(c) {
-    c.dialogues.push(shopDialogue([{ completeObjective: { quest: 'ST-004', objective: 'talk-ranger' } }]));
+    putShop(c, shopDialogue([{ completeObjective: { quest: 'ST-004', objective: 'talk-ranger' } }]));
   } },
   // GAME-87: ціль byDialogue — лише репліка, і не на кожному шляху.
   { name: '[діалог] byDialogue на цілі visit', expect: ['OBJECTIVE_BY_DIALOGUE_KIND'], patch(c) {
@@ -663,11 +670,11 @@ export const FIXTURES = [
   } },
   { name: '[діалог] контроль: NPC відкривається лише після потрібного квесту — коректно', expect: [], patch(c) {
     c.npcs[1].unlockedBy = 'ST-002';
-    c.dialogues.push(shopDialogue([{ startQuest: 'ST-004' }]));
+    putShop(c, shopDialogue([{ startQuest: 'ST-004' }]));
   } },
   { name: '[діалог] NPC відкривається раніше, ніж завершено потрібний квест', expect: ['DIALOGUE_QUEST_GATE'], patch(c) {
     c.npcs[1].unlockedBy = 'ST-001';
-    c.dialogues.push(shopDialogue([{ startQuest: 'ST-004' }]));
+    putShop(c, shopDialogue([{ startQuest: 'ST-004' }]));
   } },
   { name: '[діалог] неіснуючий NPC', expect: ['DIALOGUE_REF_MISSING'], patch(c) { dlg(c).npcId = 'npc.ghost'; } },
   { name: '[діалог] умова на неіснуючий квест', expect: ['DIALOGUE_REF_MISSING'], patch(c) { node(c, 'hello').choices[0].when.quest = 'ST-099'; } },
@@ -936,7 +943,7 @@ export const FIXTURES = [
     node(c, 'help').choices.push({ textKey: K('help.c2'), next: 'bye', when: { notFlag: 'f.seen-fixture-rain' } });
   } },
   { base: 'combo', name: '[подія] діалог без власника (ні NPC, ні trigger)', expect: ['DIALOGUE_OWNER'], patch(c) { delete dlg(c).npcId; } },
-  { base: 'combo', name: '[подія] діалог і з NPC, і з trigger', expect: ['DIALOGUE_OWNER'], patch(c) { withRoadEvent(c).npcId = 'npc.shopkeeper'; } },
+  { base: 'combo', name: '[подія] діалог і з NPC, і з trigger', expect: ['DIALOGUE_OWNER'], patch(c) { c.dialogues = c.dialogues.filter((x) => x.npcId !== 'npc.shopkeeper'); withRoadEvent(c).npcId = 'npc.shopkeeper'; } },
   { base: 'combo', name: '[подія] подія стартує квест — сюжет на везінні', expect: ['EVENT_EFFECT_UNSUPPORTED'], patch(c) { withRoadEvent(c).nodes[0].choices[0].effects.push({ startQuest: 'ST-003' }); } },
   { base: 'combo', name: '[подія] у неіснуючій локації', expect: ['DIALOGUE_REF_MISSING'], patch(c) { withRoadEvent(c).trigger.at = ['loc.ghost']; } },
   { base: 'combo', name: '[подія] шанс 101 %', expect: ['SCHEMA_INVALID'], patch(c) { withRoadEvent(c).trigger.chance = 101; } },
@@ -955,7 +962,7 @@ export const FIXTURES = [
   } },
   // Сцени сюжету й автоматичні гілки (GAME-142).
   { base: 'combo', name: '[сцена] контроль: сцена з фактом стартера й гілкою за ним — коректно', expect: [], patch(c) { withScene(c); } },
-  { base: 'combo', name: '[сцена] і scene, і npcId', expect: ['DIALOGUE_OWNER'], patch(c) { withScene(c).npcId = 'npc.shopkeeper'; } },
+  { base: 'combo', name: '[сцена] і scene, і npcId', expect: ['DIALOGUE_OWNER'], patch(c) { c.dialogues = c.dialogues.filter((x) => x.npcId !== 'npc.shopkeeper'); withScene(c).npcId = 'npc.shopkeeper'; } },
   { base: 'combo', name: '[сцена] і scene, і trigger', expect: ['DIALOGUE_OWNER'], patch(c) { withScene(c).trigger = { at: ['loc.forest'], chance: 50, titleKey: SC('title') }; c.flags.push({ id: 'f.seen-*', type: 'bool', initial: false, generatedFrom: 'dialogues.trigger', owner: 'ядро' }); } },
   { base: 'combo', name: '[сцена] сцена стартує квест', expect: ['EVENT_EFFECT_UNSUPPORTED'], patch(c) { sceneNode(withScene(c) && c, 'lantern').choices[0].effects.push({ startQuest: 'ST-003' }); } },
   { base: 'combo', name: '[сцена] факт сцени не зареєстровано', expect: ['FLAG_UNREGISTERED'], patch(c) { withScene(c).scene.facts.push('f.fixture-ghost'); } },
@@ -1076,7 +1083,10 @@ export const FIXTURES = [
   } },
   { base: 'combo', name: '[сумісн.] дві незалежні мертві умови — дві знахідки, не одна', expect: ['WHEN_UNSATISFIABLE'], count: { code: 'WHEN_UNSATISFIABLE', n: 2 }, patch(c) {
     c.profiles[0].transports = [T_CAR];
-    for (const id of ['npc.hiker-a', 'npc.hiker-b']) c.npcs.push({ id, nameKey: 'npc.ranger', locationId: 'loc.camp', when: { profiles: [P_A], transports: [T_BIKE] } });
+    for (const id of ['npc.hiker-a', 'npc.hiker-b']) {
+      c.npcs.push({ id, nameKey: 'npc.ranger', locationId: 'loc.camp', when: { profiles: [P_A], transports: [T_BIKE] } });
+      c.dialogues.push({ ...shopDialogue([]), id: `dlg.fixture-${id.slice(4)}`, npcId: id });
+    }
   } },
   { base: 'combo', name: '[сумісн.] нездійсненний when не ховає тупик старту для іншого профілю', expect: ['WHEN_UNSATISFIABLE', 'COMBO_NO_START'], patch(c) {
     c.profiles[0].transports = [T_CAR];
@@ -1120,7 +1130,7 @@ export const FILE_FIXTURES = [
   { name: 'зламаний JSON діалогу', files: 'baseline', override: { 'dialogue/fixture-ranger.json': '{' }, expectStatus: 'ISSUES', expect: ['CONTENT_PARSE'] },
   { name: 'чернетка не-JSON у dialogue/', files: 'baseline', override: { 'dialogue/notes.md': '# draft' }, expectStatus: 'ISSUES', expect: ['CONTENT_UNKNOWN_FILE'] },
   { name: 'тека з назвою x.json у dialogue/', files: 'baseline', dirs: ['dialogue/x.json'], expectStatus: 'ISSUES', expect: ['CONTENT_UNKNOWN_FILE'] },
-  { name: 'назва файлу діалогу не збігається з id', files: 'baseline', override: { 'dialogue/shop.json': JSON.stringify(shopDialogue([])) }, expectStatus: 'ISSUES', expect: ['DIALOGUE_FILE_NAME'] },
+  { name: 'назва файлу діалогу не збігається з id', files: 'baseline', override: { 'dialogue/fixture-shop.json': JSON.stringify({ ...shopDialogue([]), id: 'dlg.fixture-shop-x' }) }, expectStatus: 'ISSUES', expect: ['DIALOGUE_FILE_NAME'] },
   { name: 'одруківка в назві файлу', files: 'baseline', override: { 'quest.json': '[]' }, expectStatus: 'ISSUES', expect: ['CONTENT_UNKNOWN_FILE'] },
   { name: 'calendar.json (GAME-71) — відомий файл, не одруківка', files: 'baseline', override: { 'calendar.json': JSON.stringify(calendarCard()) }, expectStatus: 'OK', expect: [] },
   { name: 'packing.json (GAME-109) — відомий файл, не одруківка', files: 'baseline', override: { 'packing.json': JSON.stringify({ at: ['loc.camp'], capacity: [{ transport: 'transport.x', units: 1 }], items: [{ item: 'item.map', group: 'needed', units: 1 }] }) }, expectStatus: 'OK', expect: [] },

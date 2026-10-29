@@ -21,6 +21,7 @@ import { FEEDBACK_S, RING_IDLE, ringMayTake, stepRing, vehicleReady, type Insets
 import { IDLE_AFTER_S, LEISURE_BY_MAP, assignLeisure, leisureFromObjects, type LeisureSpot } from './leisure';
 import { BARK_RANGE, RESIDENTS, buildTimeline, placeAt, residentGrid, type Timeline } from './ambient';
 import type { Key } from '../../i18n';
+import { facingToward, markerFor, type NpcMarker } from '../npc-talk';
 
 export const TILE = 32;
 const INTERACT_RANGE = TILE * 1.5;
@@ -35,6 +36,8 @@ const DEPTH = { ground: -300, decor: -200, walls: -100, always: 100_000 } as con
 const DIRS: readonly Dir[] = ['up', 'left', 'down', 'right'];
 /** GAME-112: родина, що йде за героєм (герой — George). Порядок — порядок у ланцюжку. */
 const FOLLOWERS = ['victoria', 'matthew'] as const;
+/** GAME-179: слідувачі як співрозмовники — id NPC у порядку FOLLOWERS. */
+const FOLLOWER_NPC = ['npc.victoria', 'npc.matthew'] as const;
 /** Довгий кадр (згорнута вкладка) не телепортує слідувачів: крок обмежений 0,1 с. */
 const MAX_FOLLOW_DT = 0.1;
 /** GAME-172: репліка мешканця висить стільки мс, і той самий мешканець озветься знову не раніше ніж за стільки. */
@@ -49,8 +52,10 @@ interface Spot { readonly name: string; readonly kind: 'trigger' | 'npc'; readon
  * Сцена лише показує те, що тут відповіли, — ядра й сюжету вона не бачить.
  */
 export interface WorldHooks {
-  /** Гравець заговорив із NPC на мапі (розмову веде екран подорожі). */
+  /** Гравець заговорив із NPC на мапі (розмову веде рамка розмови, GAME-179). */
   onNpc(npcId: string): void;
+  /** GAME-179: чи NPC зараз можна заговорити (ядро прийме розмову) і чи є в нього прохання («!»); null — мовчить, маркера нема. */
+  talk(npcId: string): { readonly request: boolean } | null;
   /** Дотик до тригера: режисер вирішує, що це зараз. */
   onObject(name: string): void;
   /** Чи об'єкт зараз діє й видимий. */
@@ -129,6 +134,8 @@ export interface WorldProbe {
   daylight: { on: boolean; visible: boolean; minuteOfDay: number; darkness: number; color: number; glow: number };
   /** GAME-175 (лише для e2e): кільце наближення (0..1, об'єкт), рюкзак, стрілка до мети (none/line/edge), лічильник спливів, дії-від-наближення. */
   fx: { target: string | null; ring: number; ringName: string | null; backpack: number; guide: 'none' | 'line' | 'edge'; pops: number; auto: number; rewards: number; rewardLast: string };
+  /** GAME-179 (лише для e2e): які маркери зараз над головами NPC — id → chat («…») / request («!»). */
+  npcMarks: Record<string, NpcMarker>;
 }
 
 /** Точка вогнища (об'єкт мапи obj.campfire) — центр світлої плями; нема — плями нема. */
@@ -136,6 +143,18 @@ const spawnFire = (spots: readonly Spot[]): Pt | null => { const f = spots.find(
 
 /** Вікно вимірювання fps, мс. */
 const FPS_WINDOW_MS = 3000;
+
+/** Бульба над головою NPC (GAME-179): біла з трьома крапками — «є про що побалакати»; жовта зі знаком оклику — «є прохання». Малюється пікселями, без шрифту. */
+function drawMarker(g: Phaser.GameObjects.Graphics, kind: NpcMarker): void {
+  const ink = 0x1b1f23;
+  const fill = kind === 'request' ? 0xffd54a : 0xf4f1e8;
+  g.clear();
+  g.fillStyle(ink, 1).fillRoundedRect(-10, -9, 20, 15, 3).fillTriangle(-4, 5, 4, 5, 0, 10);
+  g.fillStyle(fill, 1).fillRoundedRect(-9, -8, 18, 13, 2).fillTriangle(-3, 4, 3, 4, 0, 8);
+  g.fillStyle(ink, 1);
+  if (kind === 'chat') g.fillRect(-6, -3, 3, 3).fillRect(-1, -3, 3, 3).fillRect(4, -3, 3, 3);
+  else g.fillRect(-1, -6, 3, 6).fillRect(-1, 2, 3, 2);
+}
 
 export class WorldScene extends Phaser.Scene {
   /** GAME-181 (для e2e): скільки спливів нагороди показано й який був останній. */
@@ -159,6 +178,9 @@ export class WorldScene extends Phaser.Scene {
   private residentBark: { text: Phaser.GameObjects.Text; until: number; npc: number } | null = null;
   private barkNext: number[] = [];
   private barkReadyAt: number[] = [];
+  /** GAME-179: маркери «…»/«!» над NPC (малюнок і вид, за який він намальований) і NPC, що зараз дивиться на героя (повертається вниз, коли той відійде). */
+  private npcMarks = new Map<string, { g: Phaser.GameObjects.Graphics; kind: NpcMarker | null }>();
+  private faced: string | null = null;
   /** GAME-173: скільки секунд герой стоїть; точки дозвілля родини (null — у строю) і всі точки мапи; напрямок руху героя для строю. */
   private idleS = 0;
   private leisure: (LeisureSpot | null)[] | null = null;
@@ -684,6 +706,74 @@ export class WorldScene extends Phaser.Scene {
     }
   }
 
+  /** GAME-179: співрозмовники, що рухаються (мешканці табору за розкладом і родина-слідувачі): точка розмови — де вони стоять зараз. Лише ті, з ким ядро говорить. */
+  private talkers(): Spot[] {
+    const out: Spot[] = [];
+    if (this.current === 'camp') {
+      RESIDENTS.forEach((r, i) => {
+        const s = this.residentSprites[i];
+        if (s?.visible && this.hooks.talk(r.id)) out.push({ name: r.id, kind: 'npc', x: s.x, y: s.y });
+      });
+    }
+    FOLLOWER_NPC.forEach((id, i) => {
+      const s = this.followSprites[i];
+      if (s && this.hooks.talk(id)) out.push({ name: id, kind: 'npc', x: s.x, y: s.y });
+    });
+    return out;
+  }
+
+  /** Спрайт співрозмовника за id (нерухомий NPC мапи, мешканець чи слідувач) і куди записати його напрямок. */
+  private sprite(id: string): { s: Phaser.GameObjects.Sprite; face: (d: Dir) => void } | null {
+    const ri = RESIDENTS.findIndex((r) => r.id === id);
+    const rs = this.residentSprites[ri];
+    if (ri >= 0 && rs) return { s: rs, face: (d) => { this.residentFacing[ri] = d; } };
+    const fi = FOLLOWER_NPC.findIndex((n) => n === id);
+    const fs = this.followSprites[fi];
+    if (fi >= 0 && fs) return { s: fs, face: (d) => { this.followFacing[fi] = d; } };
+    const ns = this.npcSprites.get(id);
+    return ns ? { s: ns, face: () => { this.faced = id; } } : null;
+  }
+
+  /** GAME-179: заговорили — NPC повертається обличчям до героя (і зупиняє ходу: розклад мешканців стоїть разом із годинником на паузі), герой — до NPC. */
+  private faceEachOther(npc: Spot): void {
+    const sp = this.sprite(npc.name);
+    if (!sp) return;
+    const toHero = facingToward(sp.s, this.player);
+    sp.face(toHero);
+    sp.s.anims.stop();
+    sp.s.setFrame(frameIndex(toHero, 0));
+    this.facing = facingToward(this.player, sp.s);
+    this.player.anims.stop();
+    this.player.setFrame(frameIndex(this.facing, 0));
+    this.hideBark();
+  }
+
+  /** GAME-179: маркер над кожним, з ким можна говорити: «…» поруч, «!» коли є прохання. Бульба стоїть над головою, трохи гойдається; репліка-«бурчання» її заступає. */
+  private updateNpcMarks(time: number): void {
+    const hero = this.player;
+    const seen = new Set<string>();
+    const consider = (id: string, s: Phaser.GameObjects.Sprite | undefined, barking: boolean): void => {
+      if (!s || !s.visible || barking) return;
+      const t = this.hooks.talk(id);
+      const kind = markerFor(t !== null, t?.request === true, Math.hypot(hero.x - s.x, hero.y - s.y));
+      if (!kind) return;
+      seen.add(id);
+      let m = this.npcMarks.get(id);
+      if (!m) { m = { g: this.add.graphics().setDepth(DEPTH.always), kind: null }; this.npcMarks.set(id, m); }
+      if (m.kind !== kind) { drawMarker(m.g, kind); m.kind = kind; }
+      m.g.setPosition(Math.round(s.x), Math.round(s.y - 50 + Math.sin(time / 260 + s.x) * 1.5)).setVisible(true);
+    };
+    for (const [id, s] of this.npcSprites) consider(id, s, false);
+    RESIDENTS.forEach((r, i) => consider(r.id, this.current === 'camp' ? this.residentSprites[i] : undefined, this.residentBark?.npc === i));
+    FOLLOWER_NPC.forEach((id, i) => consider(id, this.followSprites[i], false));
+    for (const [id, m] of this.npcMarks) if (!seen.has(id)) m.g.setVisible(false);
+    // Нерухомий NPC, що дивився на героя, повертається «вниз», коли той відійшов.
+    if (this.faced) {
+      const f = this.npcSprites.get(this.faced);
+      if (!f || Math.hypot(hero.x - f.x, hero.y - f.y) > INTERACT_RANGE * 1.5) { f?.setFrame(frameIndex('down', 0)); this.faced = null; }
+    }
+  }
+
   /** Межа паузи: зупинити тіло, інакше фізика дотягує стару швидкість після продовження (рецензія PR #13). */
   haltPlayer(): void {
     if (!this.player) return;
@@ -742,10 +832,16 @@ export class WorldScene extends Phaser.Scene {
       m.g.setScale(name === target ? 1 + 0.2 * Math.abs(Math.sin(time / 280)) : 1);   // ціль підказки «Далі:» — пульсує
     }
     for (const [name, sp] of this.npcSprites) sp.setVisible(this.hooks.isLive(name));
-    const live = this.spots.filter((s) => this.hooks.isLive(s.name));
-    for (const s of live) {
-      const d = Phaser.Math.Distance.Between(this.player.x, this.player.y, s.x, s.y);
-      if (d <= best) { best = d; spot = s; }
+    const talkers = this.talkers();
+    const live = [...this.spots.filter((s) => this.hooks.isLive(s.name)), ...talkers];
+    // GAME-179: родина тупцює коло героя й завжди найближча — тож говорить із нею лише тоді, коли в зоні дії нікого іншого (предмета, Елізи, мешканця) нема.
+    const isFollower = (n: string): boolean => (FOLLOWER_NPC as readonly string[]).includes(n);
+    for (const pass of [false, true]) {
+      for (const s of live) {
+        if (isFollower(s.name) !== pass || (pass && spot)) continue;
+        const d = Phaser.Math.Distance.Between(this.player.x, this.player.y, s.x, s.y);
+        if (d <= best) { best = d; spot = s; }
+      }
     }
     const near = spot?.name ?? null;
     // Тап: лише по цілі, що в зоні дії. Поза зоною нічого (без прокладання шляху, GAME-95).
@@ -762,7 +858,7 @@ export class WorldScene extends Phaser.Scene {
     const needs = this.hooks.needs();
     // Скорочення E/тап — миттєво. Біля авто з рюкзаком воно розвантажує (а не їде).
     if (this.gate(held.has('interact') || tapSpot !== null, time) && act) {
-      if (act.kind === 'npc') this.hooks.onNpc(act.name);
+      if (act.kind === 'npc') { this.faceEachOther(act); this.hooks.onNpc(act.name); }
       else if (carrying && (act.name === 'obj.vehicle' || act.name === 'obj.trunk')) this.unloadOne();
       else { this.hooks.onObject(act.name); this.feedback(act.name); }
     }
@@ -797,6 +893,7 @@ export class WorldScene extends Phaser.Scene {
     this.moveFollowers(delta, time, moving || v.x !== 0 || v.y !== 0);
     this.updateDaylight(time);
     this.moveResidents(time);
+    this.updateNpcMarks(time);
 
     const box = this.player.getBounds();
     let covered = 0;
@@ -821,6 +918,7 @@ export class WorldScene extends Phaser.Scene {
       playerDepth: this.player.depth,
       coveredTiles: covered,
       behindTiles: behind,
+      npcMarks: Object.fromEntries([...this.npcMarks].flatMap(([id, m]) => (m.g.visible && m.kind ? [[id, m.kind] as const] : []))),
       fx: { target: tn, ring: this.ring.name ? this.ring.t : 0, ringName: this.ring.name, backpack: this.hooks.backpack(), guide: this.fx?.guideMode ?? 'none', pops: this.fx?.pops ?? 0, auto: this.autoCount, rewards: this.rewardPops, rewardLast: this.rewardLast },
     });
   }

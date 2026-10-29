@@ -186,7 +186,7 @@ export function resolveSpot(sim: SimState, defs: CoreDefs, name: string): Resolv
 }
 
 /** NPC зрізу на мапі: тут живе, умова профілю виконана, відкритий. */
-function npcLive(g: GameState, defs: CoreDefs, id: string): boolean {
+export function npcLive(g: GameState, defs: CoreDefs, id: string): boolean {
   const p = g.player;
   const npc = defs.story ? own(defs.story.npcs, id) : undefined;
   return !!p && !!npc && g.dialogue === null && npc.locationId === p.locationId && matches(npc.when, p)

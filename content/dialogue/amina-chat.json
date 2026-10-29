@@ -1,0 +1,18 @@
+{
+  "id": "dlg.amina-chat",
+  "npcId": "npc.amina",
+  "start": "hello",
+  "nodes": [
+    {
+      "id": "hello", "speaker": "npc", "textKey": "dlg.amina-chat.hello",
+      "choices": [
+        { "textKey": "dlg.amina-chat.hello.c1", "next": "a" },
+        { "textKey": "dlg.amina-chat.hello.c2", "next": "b" },
+        { "textKey": "dlg.amina-chat.hello.c3", "next": "bye" }
+      ]
+    },
+    { "id": "a", "speaker": "npc", "textKey": "dlg.amina-chat.a", "end": true },
+    { "id": "b", "speaker": "npc", "textKey": "dlg.amina-chat.b", "end": true },
+    { "id": "bye", "speaker": "npc", "textKey": "dlg.amina-chat.bye", "end": true }
+  ]
+}

@@ -1,0 +1,18 @@
+{
+  "id": "dlg.claire-chat",
+  "npcId": "npc.claire",
+  "start": "hello",
+  "nodes": [
+    {
+      "id": "hello", "speaker": "npc", "textKey": "dlg.claire-chat.hello",
+      "choices": [
+        { "textKey": "dlg.claire-chat.hello.c1", "next": "a" },
+        { "textKey": "dlg.claire-chat.hello.c2", "next": "b" },
+        { "textKey": "dlg.claire-chat.hello.c3", "next": "bye" }
+      ]
+    },
+    { "id": "a", "speaker": "npc", "textKey": "dlg.claire-chat.a", "end": true },
+    { "id": "b", "speaker": "npc", "textKey": "dlg.claire-chat.b", "end": true },
+    { "id": "bye", "speaker": "npc", "textKey": "dlg.claire-chat.bye", "end": true }
+  ]
+}

@@ -276,6 +276,7 @@ for (const vp of VIEWPORTS) {
       expect((await probe(page)).nearObject).toBe('npc.elise');
       expect(await holdTouch(page, 'interact', () => true, 100)).toBe(true);
       await expect(story.locator('[data-ui="dialogue"]')).toBeVisible();
+      await page.waitForTimeout(400);   // GAME-179: рамка розмови, як і панель, глуха ~350 мс після появи (клік від пальця на кнопці дії)
       await story.locator('[data-key="dlg.elise-greeting.hello.c1"]').tap();   // велосипедна відповідь
       await page.waitForTimeout(400);   // GAME-80: панель глуха ~350 мс після дії
       await story.locator('[data-act="continue"]').tap();
@@ -290,6 +291,10 @@ for (const vp of VIEWPORTS) {
       const g = await page.evaluate(() => (window as unknown as { __game: { read: () => { game: { dialogue: unknown; flags: string[] } } } }).__game.read().game);
       expect(g.dialogue).toBeNull();
       expect(g.flags).toContain('f.elise-met');                               // ефект відповіді дійшов до ядра
+      // GAME-179: розмова з мапи йде рамкою внизу і, скінчившись, повертає на мапу (панель не лишається) — далі відкриваємо ☰ дотиком.
+      await expect(story).toBeHidden();
+      await page.locator('[data-touch="story"]').tap();
+      await expect(story).toBeVisible();
       // GAME-91: далі — до кінця розділу тим самим дотиком (панель подорожі: лише тапи), без клавіатури й без миші.
       const tapAct = async (kind: string, key = ''): Promise<void> => {
         await story.locator(`[data-act="${kind}"]${key ? `[data-key="${key}"]` : ''}`).tap();
