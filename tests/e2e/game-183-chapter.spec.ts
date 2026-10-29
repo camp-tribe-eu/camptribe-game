@@ -1,7 +1,7 @@
 // GAME-183 · розділ 1 з НОВОЇ ГРИ (вступ увімкнено): вступ → дім → крамниця → дім (пакування) → дорога з подіями й справами → приїзд у табір — ☰ жодного разу не відкрита
 // (спостерігач DOM). Друга половина — від табору до кінця розділу — tests/e2e/game-183.spec.ts. Обидві орієнтації: 390×844 і 844×390. Знімки дороги → research/visual-audit/.
 import { expect, test } from '@playwright/test';
-import { core, installMenuObserver, loaded, menuSeen, playUntil, probe } from './chapter-driver';
+import { answerOne, core, installMenuObserver, loaded, menuSeen, playUntil, probe } from './chapter-driver';
 
 const VIEWS = [{ name: 'портрет', side: 'portrait', w: 390, h: 844 }, { name: 'ландшафт', side: 'landscape', w: 844, h: 390 }] as const;
 const SETTINGS_KEY = 'camplife.settings.v1';
@@ -30,10 +30,10 @@ for (const v of VIEWS) {
     const log: string[] = [];
     // До дороги: дім → крамниця → дім → виїзд.
     await playUntil(page, v.side === 'landscape', log, (c) => c.game.player?.locationId === 'loc.road', () => menuSeen(page), 80);
+    // Подія в дорозі (шанс) відкриває рамку розмови — закриваємо її відповідями, далі знімок: смуга дороги із ціллю й стрілкою.
+    for (let i = 0; i < 8 && (await page.locator('.ui-talk').count()) > 0; i++) { await answerOne(page); }
     await expect(page.locator('[data-ui="goal"]')).toBeVisible();
     await expect.poll(async () => (await probe(page)).fx.target, { timeout: 15_000 }).not.toBeNull();
-    // Подія в дорозі (шанс) може відкрити розмову — знімок після неї: смуга дороги із ціллю й стрілкою.
-    for (let i = 0; i < 6 && (await page.locator('.ui-talk').count()) > 0; i++) { await page.locator('.ui-talk [data-act]').last().click(); await page.waitForTimeout(500); }
     await page.locator('[data-ui="recovery-close"]').click({ timeout: 1_000 }).catch(() => undefined);   // нагадування про збереження — не частина кадру
     await expect.poll(async () => (await probe(page)).fx.guide, { timeout: 15_000 }).not.toBe('none');
     await expect(page.locator('[data-ui="title-up"]')).toHaveCount(0, { timeout: 60_000 });   // банер звання — лише кілька ігрових хвилин
