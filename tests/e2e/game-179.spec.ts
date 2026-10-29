@@ -44,6 +44,32 @@ function nextStep(from: { c: number; r: number }, to: { c: number; r: number }):
   return null;
 }
 
+/** Усі в кадрі стоять: позиції героя, родини й мешканців не змінились між двома пробами (300 мс) — або минуло 3 с (мешканці ходять за розкладом). */
+async function settle(page: Page): Promise<void> {
+  const snap = async (): Promise<string> => { const p = await probe(page); return JSON.stringify([p.playerX, p.playerY, p.followers]); };
+  let last = await snap();
+  for (let i = 0; i < 10; i++) {
+    await page.waitForTimeout(300);
+    const now = await snap();
+    if (now === last) return;
+    last = now;
+  }
+}
+
+/** Тихе місце: найближчий до героя вільний тайл, від центру якого далі за зону дії (48 px) і за запас — усі об'єкти мапи й усі мешканці. */
+function quietSpot(p: Probe): Pt {
+  const others: Pt[] = [...(MAP.layers.find((l) => l.name === 'objects')?.objects ?? []), ...p.residents];
+  let best: Pt = { x: p.playerX, y: p.playerY }; let bestD = Infinity;
+  for (let r = 0; r < MAP.height; r++) for (let c = 0; c < MAP.width; c++) {
+    if (solid(c, r) || solid(c - 1, r) || solid(c + 1, r) || solid(c, r - 1) || solid(c, r + 1)) continue;
+    const pt = { x: (c + 0.5) * TILE, y: (r + 0.5) * TILE };
+    if (others.some((o) => Math.hypot(o.x - pt.x, o.y - pt.y) < 96)) continue;
+    const d = Math.hypot(pt.x - p.playerX, pt.y - p.playerY);
+    if (d < bestD && nextStep(tile({ x: p.playerX, y: p.playerY }), { c, r }) !== null) { bestD = d; best = pt; }
+  }
+  return best;
+}
+
 /** Пішки до того, хто рухається: ціль перечитується щокроку; зупинка, коли найближчий співрозмовник — потрібний. */
 async function walkToNpc(page: Page, id: string, where: (p: Probe) => Pt, maxMs = 80_000, arrived?: (p: Probe) => boolean): Promise<Probe> {
   const keys = { ArrowLeft: false, ArrowRight: false, ArrowUp: false, ArrowDown: false };
@@ -54,11 +80,36 @@ async function walkToNpc(page: Page, id: string, where: (p: Probe) => Pt, maxMs 
     }
   };
   const start = Date.now();
+  let nudges = 0;
   try {
     while (Date.now() - start < maxMs) {
       const p = await probe(page);
       if (p.nearObject === id || arrived?.(p)) return p;
       const goal = where(p);
+      // GAME-186: у зоні дії, але «найближчий» — не він. Слідувачі стають слотами ПОЗАДУ героя за останнім напрямком руху (GAME-173) і перетасовуються
+      // від кожного кроку, тож «іти на того, хто тікає» — гонитва без кінця; а стоячи купкою вони різняться на 1–2 px (шум). Як гравець: стати,
+      // дати родині осісти (позиції не змінюються 300 мс), перевірити; не він — один короткий крок у іншу сторону (змінює слоти) і знову осісти.
+      if (id !== '' && Math.hypot(goal.x - p.playerX, goal.y - p.playerY) < 48) {
+        await set({});
+        await settle(page);
+        const q = await probe(page);
+        if (q.nearObject === id) return q;
+        // Поруч хтось інший (мешканець ходить за розкладом, предмет мапи) — родина поступається йому (scene.ts: другий прохід): ідемо на тихе місце.
+        if (q.nearObject !== null && !q.nearObject.startsWith('npc.victoria') && !q.nearObject.startsWith('npc.matthew')) {
+          const quiet = quietSpot(q);
+          await walkToNpc(page, '', () => quiet, 40_000, (r) => Math.hypot(r.playerX - quiet.x, r.playerY - quiet.y) < 12);
+          continue;
+        }
+        // Крок до цілі (парні спроби) чи в інший бік (непарні: змінює слоти). Слідувачі реагують не миттєво — одразу після кроку частіше опитуємо пробу.
+        const ax = goal.x - q.playerX; const ay = goal.y - q.playerY;
+        const toward = Math.abs(ax) > Math.abs(ay) ? (ax < 0 ? 'ArrowLeft' : 'ArrowRight') : (ay < 0 ? 'ArrowUp' : 'ArrowDown');
+        const dir = (nudges++ % 2 === 0 ? toward : (['ArrowUp', 'ArrowRight', 'ArrowDown', 'ArrowLeft'] as const)[(nudges >> 1) % 4]) as keyof typeof keys;
+        await set({ [dir]: true });
+        await page.waitForTimeout(60);
+        await set({});
+        for (let i = 0; i < 12; i++) { const r = await probe(page); if (r.nearObject === id) return r; await page.waitForTimeout(25); }
+        continue;
+      }
       const here = tile({ x: p.playerX, y: p.playerY });
       const to = tile(goal);
       const next = nextStep(here, to) ?? to;

@@ -25,6 +25,12 @@ import { facingToward, markerFor, type NpcMarker } from '../npc-talk';
 
 export const TILE = 32;
 const INTERACT_RANGE = TILE * 1.5;
+/** GAME-186: наскільки (px) слідувач, на якого дивиться герой, «ближчий» за того, що збоку чи позаду. */
+const FACING_BONUS = 12;
+const facingDot = (f: Dir, dx: number, dy: number): number => {
+  const d = Math.hypot(dx, dy) || 1;
+  return ((f === 'left' ? -dx : f === 'right' ? dx : 0) + (f === 'up' ? -dy : f === 'down' ? dy : 0)) / d;
+};
 /** Зона кільця наближення тісніша за зону E/тапа: пройти повз (≈ 0,5 с у зоні) не спрацьовує, треба стати. */
 const AUTO_RANGE = TILE * 1.1;
 /** Ноги персонажа — на 0,9 висоти кадру 64 px; тіло колізії (16×10) стоїть на ногах. y ноги = y спрайта = глибина сортування. */
@@ -852,7 +858,11 @@ export class WorldScene extends Phaser.Scene {
       for (const s of live) {
         if (isFollower(s.name) !== pass || (pass && spot)) continue;
         const d = Phaser.Math.Distance.Between(this.player.x, this.player.y, s.x, s.y);
-        if (d <= best) { best = d; spot = s; }
+        if (d > INTERACT_RANGE) continue;
+        // GAME-186: родина тулиться до героя на відстані в 1–2 тайли й міняється слотами від кожного кроку, тож «найближчий» із двох — майже випадковість.
+        // Між слідувачами перевага тому, на кого дивиться герой (до 12 px «знижки»): повернувся до Метью — говориш із Метью.
+        const score = pass ? d - FACING_BONUS * facingDot(this.facing, s.x - this.player.x, s.y - this.player.y) : d;
+        if (score <= best) { best = score; spot = s; }
       }
     }
     const near = spot?.name ?? null;
