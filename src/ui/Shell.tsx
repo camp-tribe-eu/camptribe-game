@@ -176,7 +176,7 @@ export function Shell({ port, langOverride, credits, build, holdToast = false, h
       e.preventDefault();
       if (atlasOpen) { playUi('back'); closeAtlas(); return; }
       if (confirmNew || summary || talk || storyOpen || paused) playUi('back');   // Escape закрив/скасував — «назад»; відкриття паузи звуку не має
-      if (confirmNew) setConfirmNew(false); else if (summary) summaryContinue(); else if (talk) { if (offer.dialogue?.ui) storyAct(offer.dialogue.answers.find((a) => a.kind === 'cancel')?.id ?? ''); else { setTalk(false); story(true); } } else if (storyOpen) story(false); else toggle(!paused);
+      if (confirmNew) setConfirmNew(false); else if (summary) summaryContinue(); else if (talk) { if (offer.dialogue?.ui) storyAct(offer.dialogue.answers.find((a) => a.kind === 'cancel')?.id ?? ''); else if (!offer.mapFirst) { setTalk(false); story(true); } /* GAME-185: у мапі-першій Escape не відкриває ☰ з відповідями розмови — рамка лишається */ } else if (storyOpen) story(false); else toggle(!paused);
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);

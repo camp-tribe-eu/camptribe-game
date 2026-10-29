@@ -149,7 +149,7 @@ export function StoryPanel({ offer, lang, t, act, close, portrait, children, foo
           </ul>
         </section>
       ))}
-      {offer.dialogue && (
+      {offer.dialogue && !compact && (
         <section class="ui-dialogue" data-ui="dialogue" aria-live="polite">
           <div class="ui-giver" data-ui="speaker-head" data-npc={offer.dialogue.speakerId ?? 'narrator'}>
             <Portrait id={offer.dialogue.speakerId} lookup={portrait} size="sm" />

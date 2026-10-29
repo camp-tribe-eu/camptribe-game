@@ -90,8 +90,8 @@ describe('GAME-185 · «Що беремо?» у мапі-першій: недо�
     const l = answers.find((a) => a.key === 'item.tent-trek' && a.shortCents !== undefined);
     expect(l?.shortCents).toBe(2_400);
     expect(intents.has(l?.id ?? ''), 'активувати нічим').toBe(false);
-    expect(answers[answers.length - 1]?.kind).toBe('cancel');
-    expect(answers.indexOf(l as NonNullable<typeof l>)).toBeLessThan(answers.length - 1);
+    expect(answers.findIndex((a) => a.kind === 'cancel'), '«Не зараз» стоїть ПЕРЕД вимкненими рядками').toBeLessThan(answers.indexOf(l as NonNullable<typeof l>));
+    expect(answers.filter((a) => a.kind === 'cancel')).toHaveLength(1);
   });
   it('межа: грошей рівно — рядка немає, купівля звичайна', () => {
     const answers = storyOffer(mapShop(tentTrek), GAME_DEFS, view).offer.dialogue?.answers ?? [];

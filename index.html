@@ -242,8 +242,8 @@
         /* GAME-185: вбік HUD не лежить на героєві й родині. Верхній ряд — ☰ · картка мети · час і гроші · ‖ (один ряд 44 px замість стовпчика з п'яти); ціль, прохання й «Далі: …» —
            смугою внизу по центру, між джойстиком і кнопкою дії (там поле зазвичай порожнє; герой і родина стоять посередині висоти). Дотики проходять крізь них на поле. */
         .ui-wave { grid-area: 1 / 2 / 2 / 3; justify-self: start; align-self: center; max-width: 100%; margin-top: 0; background: #1b1f23d9; pointer-events: none; }
-        .ui-strip { position: fixed; top: auto; margin: 0; left: calc(var(--edge-left) + var(--stick-size) + 16px); right: calc(var(--edge-right) + var(--action-size) + 16px);
-          bottom: calc(var(--edge-bottom) + 4px); align-items: center; }
+        .ui-strip { position: fixed; top: auto; margin: 0; left: var(--edge-left); right: var(--edge-right); bottom: calc(var(--edge-bottom) + 4px); align-items: center; }
+        @media (any-pointer: coarse) { .ui-strip { left: calc(var(--edge-left) + var(--stick-size) + 16px); right: calc(var(--edge-right) + var(--action-size) + 16px); } }
         .ui-strip > * { max-width: 100%; background: #1b1f23d9; }
         .ui-strip .ui-next { max-width: 100%; }
       }

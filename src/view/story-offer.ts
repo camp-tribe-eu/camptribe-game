@@ -392,7 +392,7 @@ export function storyOffer(sim: SimState, defs: CoreDefs, view: StoryView = PANE
       const answers = options.map((m): OfferAction => { const a: OfferAction = { id: idOf(m, s), ...describe(m, defs, s, weather) }; intents.set(a.id, m); return a; });
       // GAME-185: «Що беремо?» — купівлі, на які бракує грошей, лишаються вимкненими рядками з причиною (без наміру: активувати їх нічим), а не зникають.
       if (view.choice === 'obj.buy') for (const { move, shortCents } of unaffordableBuys(s, defs)) answers.push({ id: `locked|${idOf(move, s)}`, ...describe(move, defs, s, weather), shortCents });
-      answers.push({ id: CHOICE_CANCEL_ID, kind: 'cancel', key: null });
+      answers.splice(answers.findIndex((a) => a.shortCents !== undefined) < 0 ? answers.length : answers.findIndex((a) => a.shortCents !== undefined), 0, { id: CHOICE_CANCEL_ID, kind: 'cancel', key: null });
       dialogue = { speakerKey: null, speakerId: null, key: choicePrompt(view.choice), ui: true, answers };
     }
   }

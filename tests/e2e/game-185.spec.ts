@@ -170,3 +170,23 @@ test.describe('HUD вбік не лежить на героєві й родин�
     expect(errors).toEqual([]);
   });
 });
+
+test.describe('Escape у розмові з NPC не відкриває ☰ з відповідями (мапа-перша)', () => {
+  test.use({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true });
+  test('Елiза: Escape — у ☰ жодної кнопки дії (прийняти/відхилити квест недосяжні)', async ({ page }) => {
+    test.setTimeout(240_000);
+    const errors = await arriveInCamp(page);
+    for (let t = 0; t < 4 && !(await talk(page).count()); t++) {
+      const q = await probe(page);
+      await walk(page, route('camp-lake', [q.playerX, q.playerY], 'npc.elise'));
+      await page.keyboard.down('KeyE'); await page.waitForTimeout(200); await page.keyboard.up('KeyE');
+      await page.waitForTimeout(800);
+    }
+    await expect(talk(page)).toBeVisible({ timeout: 10_000 });
+    await page.keyboard.press('Escape');
+    await page.waitForTimeout(600);
+    expect(await panel(page).locator('[data-act]').count(), 'у ☰ після Escape є кнопки дії').toBe(0);
+    await expect(talk(page), 'рамка розмови лишилась').toBeVisible();
+    expect(errors).toEqual([]);
+  });
+});
