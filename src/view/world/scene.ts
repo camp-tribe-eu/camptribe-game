@@ -17,7 +17,7 @@ import { FOLLOW_SPEED_FACTOR, SPEED, centerOf, gridFromWalls, restPoints, stepFo
 import type { MapKey } from '../../content/map-first';
 import { playUi } from '../../audio/ui-sounds';
 import { MapFx, type Needs } from './map-fx';
-import { FEEDBACK_S, RING_IDLE, ringMayTake, stepRing, vehicleReady, type Insets, type Ring } from './proximity';
+import { FEEDBACK_S, RING_IDLE, pickNearest, ringMayTake, stepRing, vehicleReady, type Insets, type Ring } from './proximity';
 import { IDLE_AFTER_S, LEISURE_BY_MAP, assignLeisure, leisureFromObjects, type LeisureSpot } from './leisure';
 import { BARK_RANGE, RESIDENTS, buildTimeline, placeAt, residentGrid, type Timeline } from './ambient';
 import type { Key } from '../../i18n';
@@ -25,12 +25,6 @@ import { facingToward, markerFor, type NpcMarker } from '../npc-talk';
 
 export const TILE = 32;
 const INTERACT_RANGE = TILE * 1.5;
-/** GAME-186: наскільки (px) слідувач, на якого дивиться герой, «ближчий» за того, що збоку чи позаду. */
-const FACING_BONUS = 12;
-const facingDot = (f: Dir, dx: number, dy: number): number => {
-  const d = Math.hypot(dx, dy) || 1;
-  return ((f === 'left' ? -dx : f === 'right' ? dx : 0) + (f === 'up' ? -dy : f === 'down' ? dy : 0)) / d;
-};
 /** Зона кільця наближення тісніша за зону E/тапа: пройти повз (≈ 0,5 с у зоні) не спрацьовує, треба стати. */
 const AUTO_RANGE = TILE * 1.1;
 /** Ноги персонажа — на 0,9 висоти кадру 64 px; тіло колізії (16×10) стоїть на ногах. y ноги = y спрайта = глибина сортування. */
@@ -837,8 +831,6 @@ export class WorldScene extends Phaser.Scene {
     else { this.player.anims.stop(); this.player.setFrame(frameIndex(this.facing, 0)); }
     this.player.setDepth(this.player.y);
 
-    let spot: Spot | null = null;
-    let best = INTERACT_RANGE;
     const target = this.hooks.target();
     for (const [name, m] of this.markers) {
       const on = this.hooks.isLive(name);
@@ -852,19 +844,10 @@ export class WorldScene extends Phaser.Scene {
     for (const [name, sp] of this.npcSprites) sp.setVisible(this.hooks.isLive(name));
     const talkers = this.talkers();
     const live = [...this.spots.filter((s) => this.hooks.isLive(s.name)), ...talkers];
-    // GAME-179: родина тупцює коло героя й завжди найближча — тож говорить із нею лише тоді, коли в зоні дії нікого іншого (предмета, Елізи, мешканця) нема.
+    // GAME-179/186: родина тупцює коло героя — говорить із нею лише тоді, коли в зоні дії нікого іншого нема; між слідувачами перевага тому, на кого дивиться герой.
     const isFollower = (n: string): boolean => (FOLLOWER_NPC as readonly string[]).includes(n);
-    for (const pass of [false, true]) {
-      for (const s of live) {
-        if (isFollower(s.name) !== pass || (pass && spot)) continue;
-        const d = Phaser.Math.Distance.Between(this.player.x, this.player.y, s.x, s.y);
-        if (d > INTERACT_RANGE) continue;
-        // GAME-186: родина тулиться до героя на відстані в 1–2 тайли й міняється слотами від кожного кроку, тож «найближчий» із двох — майже випадковість.
-        // Між слідувачами перевага тому, на кого дивиться герой (до 12 px «знижки»): повернувся до Метью — говориш із Метью.
-        const score = pass ? d - FACING_BONUS * facingDot(this.facing, s.x - this.player.x, s.y - this.player.y) : d;
-        if (score <= best) { best = score; spot = s; }
-      }
-    }
+    const nearName = pickNearest(this.player.x, this.player.y, this.facing, live.map((s) => ({ name: s.name, x: s.x, y: s.y, follower: isFollower(s.name) })), INTERACT_RANGE);
+    const spot: Spot | null = nearName === null ? null : live.find((s) => s.name === nearName) ?? null;
     const near = spot?.name ?? null;
     // Тап: лише по цілі, що в зоні дії. Поза зоною нічого (без прокладання шляху, GAME-95).
     const tapped = this.tap;

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { RING_IDLE, RING_S, edgeArrow, inSafeZone, isAutoSpot, ringMayTake, stepRing, vehicleReady } from './proximity';
+import { RING_IDLE, RING_S, edgeArrow, inSafeZone, isAutoSpot, pickNearest, ringMayTake, stepRing, vehicleReady } from './proximity';
 
 function run(near: string | null, armed: boolean, hold: boolean, seconds: number, dt = 1 / 60): string | null {
   let r = RING_IDLE;
@@ -67,5 +67,21 @@ describe('стрілка на краї не лізе під шапку й дот
     expect(inSafeZone(view, { x: view.x + 160, y: view.y + 320 }, ins, 10)).toBe(true);
     expect(inSafeZone(view, { x: view.x + 160, y: view.y + view.height - 40 }, ins, 10)).toBe(false);
     expect(inSafeZone(view, { x: view.x + 160, y: view.y + 12 }, ins, 10)).toBe(false);
+  });
+});
+
+describe('вибір співрозмовника серед слідувачів (GAME-186)', () => {
+  const V = { name: 'npc.victoria', follower: true };
+  const M = { name: 'npc.matthew', follower: true };
+  it('герой дивиться на Метью, Вікторія на 1 px ближча → Метью (і навпаки)', () => {
+    // герой (100,100) дивиться праворуч: Метью попереду на 40, Вікторія позаду на 39
+    expect(pickNearest(100, 100, 'right', [{ ...V, x: 61, y: 100 }, { ...M, x: 140, y: 100 }], 48)).toBe('npc.matthew');
+    expect(pickNearest(100, 100, 'left', [{ ...V, x: 61, y: 100 }, { ...M, x: 140, y: 100 }], 48)).toBe('npc.victoria');
+  });
+  it('зона все одно діє: за межами range ніхто, хоч би й попереду', () => {
+    expect(pickNearest(100, 100, 'right', [{ ...M, x: 160, y: 100 }], 48)).toBeNull();
+  });
+  it('не-родина має пріоритет над родиною, перевага погляду на неї не діє', () => {
+    expect(pickNearest(100, 100, 'right', [{ ...M, x: 120, y: 100 }, { name: 'obj.fire', follower: false, x: 100, y: 146 }], 48)).toBe('obj.fire');
   });
 });

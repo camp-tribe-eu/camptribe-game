@@ -56,3 +56,34 @@ export function edgeArrow(view: View, to: { readonly x: number; readonly y: numb
 /** Чи ціль у безпечній зоні (тоді показуємо пунктир і гойдалку над нею, а не стрілку на краї). */
 export const inSafeZone = (view: View, p: { readonly x: number; readonly y: number }, ins: Insets, margin: number): boolean =>
   p.x > view.x + ins.left + margin && p.x < view.x + view.width - ins.right - margin && p.y > view.y + ins.top + margin && p.y < view.y + view.height - ins.bottom - margin;
+
+/** GAME-186: наскільки (px) слідувач, на якого дивиться герой, «ближчий» за того, що збоку чи позаду. */
+export const FACING_BONUS = 12;
+type Face = 'up' | 'left' | 'down' | 'right';
+export interface Pick { readonly name: string; readonly x: number; readonly y: number; readonly follower: boolean }
+
+/** Косинус між напрямком погляду й напрямком на (dx, dy): 1 — просто перед героєм, −1 — за спиною. */
+export function facingDot(f: Face, dx: number, dy: number): number {
+  const d = Math.hypot(dx, dy) || 1;
+  return ((f === 'left' ? -dx : f === 'right' ? dx : 0) + (f === 'up' ? -dy : f === 'down' ? dy : 0)) / d;
+}
+
+/**
+ * Хто «найближчий співрозмовник». Спершу всі, крім родини (предмети, Еліза, мешканці): найближчий у зоні `range`. Родина (GAME-179) — лише коли
+ * жодного іншого в зоні нема; вона тулиться до героя на 1–2 тайли й міняється слотами від кожного кроку, тож між слідувачами «найближчий» — майже
+ * випадковість. Тому їм перевага до `FACING_BONUS` px тому, на кого дивиться герой: повернувся до Метью — говориш із Метью.
+ */
+export function pickNearest(px: number, py: number, facing: Face, spots: readonly Pick[], range: number): string | null {
+  let pick: Pick | null = null;
+  let best = range;
+  for (const follower of [false, true]) {
+    for (const s of spots) {
+      if (s.follower !== follower || (follower && pick)) continue;
+      const d = Math.hypot(s.x - px, s.y - py);
+      if (d > range) continue;
+      const score = follower ? d - FACING_BONUS * facingDot(facing, s.x - px, s.y - py) : d;
+      if (score <= best) { best = score; pick = s; }
+    }
+  }
+  return pick?.name ?? null;
+}
