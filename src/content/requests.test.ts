@@ -12,7 +12,7 @@ import { exploreView, type Move } from './moves';
 import { GAME_DEFS } from './slice-defs';
 import { CONTENT, STORY } from './story';
 import mapRaw from '../../public/maps/camp-lake.tmj?raw';
-import { REQUESTS, REQUEST_FLAG_PREFIX, compileRequests, liveRequestSpot, requestFlag, requestMarker, requestOf, requestReward, requestStatus, requestTarget, requestsDone, trackerRows, type RequestDef } from './requests';
+import { REQUESTS, REQUEST_FLAG_PREFIX, miaSpots, compileRequests, liveRequestSpot, requestFlag, requestMarker, requestOf, requestReward, requestStatus, requestTarget, requestsDone, trackerRows, type RequestDef } from './requests';
 import { liveSpot } from './director';
 import { storyOffer } from '../view/story-offer';
 import { STICKER_DEFS } from './stickers';
@@ -70,9 +70,9 @@ const PATH: Record<string, { offer: readonly string[]; turnin: readonly string[]
   'req.luc-chain': { offer: ['n', 'offer.c1', 'n'], turnin: ['n', 'turnin.c1', 'n'] },
   'req.sarah-snack': { offer: ['n', 'offer.c1', 'n'], turnin: ['n', 'turnin.c1', 'n'] },
   'req.elise-lantern': { offer: ['hello.req0', 'n', 'offer.c1', 'n'], turnin: ['hello.req0', 'n', 'turnin.c1', 'n'] },
-  // GAME-184 · продовження арок (after): пропозиція offer2, здача turnin2 (у Інгрід — сцена біля вогнища: «Ходімо» → два «Далі» → «Назвемо його Мія»)
-  'req.nora-camera': { offer: ['n', 'offer2.c1', 'n'], turnin: ['n', 'turnin2.c1', 'n'] },
-  'req.ingrid-starmap': { offer: ['n', 'offer2.c1', 'n'], turnin: ['n', 'turnin2.c1', 'n', 'n', 'sky3.c1', 'n'] },
+  // GAME-184 · продовження арок (after): пропозиція offer2, здача turnin2 (у Інгрід — сцена біля вогнища: «Ходімо» → два «Далі» → «Назвемо його Мія|Метью»; у Нори перед здачею — рядок found-mia|found-bag)
+  'req.nora-camera': { offer: ['n', 'offer2.c1', 'n'], turnin: ['n', 'n', 'n', 'turnin2.c1', 'n'] },   // gate → found → found-mia|found-bag → turnin2
+  'req.ingrid-starmap': { offer: ['n', 'offer2.c1', 'n'], turnin: ['n', 'turnin2.c1', 'n', 'n', '.c1', 'n'] },
   'req.luc-radio': { offer: ['n', 'offer2.c1', 'n'], turnin: ['n', 'turnin2.c1', 'n'] },
 };
 /** Перше (без `after`) прохання арки — і кроки, що ведуть до продовження (GAME-184). */
@@ -296,6 +296,49 @@ describe('GAME-180 · повний шлях кожного прохання на
     dialogue(['n', 'turnin.c1', 'n']);
     expect(sim.journal.filter((e) => e.type === 'Memory').map((e) => e.ref)).toEqual([r.doneFlag]);
   });
+});
+
+/** GAME-184 · Мія в історіях: кожна комбінація герой × транспорт × тварина бачить когерентний варіант тієї самої історії. */
+describe('GAME-184 · варіанти історій за твариною (Мія лише з кішкою)', () => {
+  const COMBOS = [
+    { label: 'велосипед, без кішки', profileId: 'profile.solo-explorer', transportId: 'transport.bike', animalId: undefined, cat: false },
+    { label: 'авто, без кішки', profileId: 'profile.solo-explorer', transportId: 'transport.car', animalId: undefined, cat: false },
+    { label: 'авто з кішкою', profileId: 'profile.family-teen', transportId: 'transport.car', animalId: 'animal.cat', cat: true },
+  ] as const;
+  const campAs = (c: (typeof COMBOS)[number]): GameState => play([{ type: 'CreateCharacter', profileId: c.profileId, transportId: c.transportId, ...(c.animalId ? { animalId: c.animalId } : {}) } as Move, ...TO_CAMP.slice(1)], initialState(5_000));
+  const nodesOf = (from: GameState, npcId: string, maxSteps: number): string[] => {
+    let s = play([{ type: 'Talk', npcId }], from); const seen: string[] = [];
+    for (let i = 0; i < maxSteps && s.dialogue; i++) { seen.push(s.dialogue.node); const r = send(s, { type: 'Continue' }); if (!r.ok) break; s = r.state; }
+    return seen;
+  };
+  for (const c of COMBOS) {
+    it(`${c.label}: камера Нори — Мія лише з кішкою (спрайт-ціль miaSpots, репліка found-mia), інакше «рюкзак Метью»; історія та сама`, () => {
+      const first = REQUESTS.find((r) => r.id === 'req.nora-shore') as RequestDef;
+      const cam = REQUESTS.find((r) => r.id === 'req.nora-camera') as RequestDef;
+      let s = complete(campAs(c), first);
+      expect(miaSpots(s), 'до «Беруся» Мії біля цілі нема').toEqual([]);
+      s = finish(say(s, cam.giver, (PATH[cam.id] as { offer: readonly string[] }).offer));
+      expect(miaSpots(s), 'кішка є — Мія на місці цілі; нема — ніхто').toEqual(c.cat ? ['req.nora-camera.t1'] : []);
+      s = touch(s, 'req.nora-camera.t1');
+      expect(miaSpots(s), 'ціль зроблена — Мія вже не на ній').toEqual([]);
+      expect(nodesOf(s, cam.giver, 4)).toEqual(['gate', 'found', c.cat ? 'found-mia' : 'found-bag', 'turnin2']);
+      s = finish(say(s, cam.giver, (PATH[cam.id] as { turnin: readonly string[] }).turnin));
+      expect(s.flags, 'та сама історія доходить до кінця').toContain(cam.doneFlag);
+    });
+    it(`${c.label}: зоряна карта — четверта частина: Мія з кішкою, інакше Метью; сцена біля вогнища та сама`, () => {
+      const first = REQUESTS.find((r) => r.id === 'req.ingrid-birds') as RequestDef;
+      const map = REQUESTS.find((r) => r.id === 'req.ingrid-starmap') as RequestDef;
+      let s = complete(campAs(c), first);
+      s = finish(say(s, map.giver, (PATH[map.id] as { offer: readonly string[] }).offer));
+      expect(miaSpots(s)).toEqual(c.cat ? ['req.ingrid-starmap.t4'] : []);
+      for (const t of map.targets) s = touch(s, t.spot);
+      expect(miaSpots(s)).toEqual([]);
+      s = say(s, map.giver, ['n', 'turnin2.c1', 'n', 'n']);   // gate → turnin2 → «Ходімо» → sky1 → sky2 → sky3-…
+      expect(s.dialogue?.node, 'репліка про четверту частину залежить від кішки').toBe(c.cat ? 'sky3-mia' : 'sky3-matthew');
+      s = finish(play([{ type: 'Choose', choice: 0 }], s));
+      expect(s.flags, 'обидві гілки ставлять «здано»').toContain(map.doneFlag);
+    });
+  }
 });
 
 describe('GAME-180 · правила на ядрі й режисері', () => {

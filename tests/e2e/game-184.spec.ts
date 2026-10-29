@@ -7,11 +7,15 @@ import { readFileSync } from 'node:fs';
 import { expect, test, type Page } from '@playwright/test';
 
 interface Pt { x: number; y: number }
-interface Probe { saveLoaded: boolean; playerX: number; playerY: number; nearObject: string | null; residents: { id: string; x: number; y: number }[]; npcMarks: Record<string, string>; fx: { target: string | null; guide: string; pops: number } }
+interface Probe { miaAt: string[]; saveLoaded: boolean; playerX: number; playerY: number; nearObject: string | null; residents: { id: string; x: number; y: number }[]; npcMarks: Record<string, string>; fx: { target: string | null; guide: string; pops: number } }
 interface Core { game: { player: { locationId: string } | null; flags: string[]; dialogue: unknown }; journal: { type: string; ref?: string }[] }
 const probe = (page: Page): Promise<Probe> => page.evaluate(() => JSON.parse(JSON.stringify((window as unknown as { __game: { probe: Probe } }).__game.probe)) as Probe);
 const core = (page: Page): Promise<Core> => page.evaluate(() => (window as unknown as { __game: { read: () => Core } }).__game.read());
 const SHOTS = process.env.SHOTS === '1';
+const sounds = (page: Page): Promise<string[]> => page.evaluate(() => (window as unknown as { __game: { sounds: () => string[] } }).__game.sounds());
+/** Кого обирає гравець: велосипед (кішка лишається вдома з Анною — Мії в таборі нема) і авто з кішкою (Мія в таборі). */
+const VARIANTS = [{ key: 'bike', pick: /Велосипед/, cat: false }, { key: 'car-cat', pick: /Авто.*Кішка/, cat: true }] as const;
+const MIA_RE = /Мі[яїює]|Mia/u;
 const CAMP = 'loc.camp.lake';
 const SETTINGS_KEY = 'camplife.settings.v1';
 
@@ -87,7 +91,7 @@ async function act(page: Page, kind: string, key = ''): Promise<void> {
 }
 
 /** Дорога до табору — кнопками панелі (як game-180/183: екран подорожі не цей зріз); далі спостерігач ☰ і лише ноги (production mapFirst=1). */
-async function toCamp(page: Page, extra = ''): Promise<string[]> {
+async function toCamp(page: Page, extra = '', pick: RegExp = /Велосипед/): Promise<string[]> {
   const errors: string[] = [];
   page.on('pageerror', (e) => errors.push(e.message));
   page.on('console', (m) => { if (m.type() === 'error') errors.push(m.text()); });
@@ -95,7 +99,7 @@ async function toCamp(page: Page, extra = ''): Promise<string[]> {
   await page.goto('/?seed=7');
   await page.waitForFunction(() => (window as unknown as { __game?: { probe: { saveLoaded: boolean } } }).__game?.probe.saveLoaded === true, null, { timeout: 30_000 });
   await page.locator('[data-touch="story"]').click();
-  await panel(page).locator('[data-act="create"]', { hasText: /Велосипед|Bike/ }).first().click();
+  await panel(page).locator('[data-act="create"]', { hasText: pick }).first().click();
   await page.waitForTimeout(400);
   for (const [k, key] of [['complete', 'q.prologue-home-001'], ['complete', 'q.st-001'], ['complete', 'q.st-002'], ['visit', 'loc.shop'], ['pickup', 'item.tent'], ['pickup', 'item.sleeping-bag'],
     ['complete', 'q.st-003'], ['visit', 'loc.home'], ['complete', 'q.ch1-home-001'], ['visit', 'loc.road'], ['complete', 'q.st-004'], ['visit', 'loc.camp.lake']] as const) await act(page, k, key);
@@ -123,18 +127,20 @@ interface Req {
   id: string; giver: string; name: string; targets: string[]; track: string; goal: string; reward: string;
   /** кінцева відповідь здачі (кнопка, що ставить «здано») і рядок, який має прозвучати наприкінці */
   doneChoice: RegExp; closing: RegExp; shotName?: string;
+  /** ціль, біля якої стоїть Мія (лише з кішкою) */
+  miaSpot?: string;
 }
 interface Arc { key: string; first: Req; follow: Req }
 const ARCS: Arc[] = [
   {
     key: 'nora',
     first: { id: 'req.nora-shore', giver: 'npc.nora', name: 'Нора', targets: ['req.nora-shore.t1', 'req.nora-shore.t2', 'req.nora-shore.t3'], track: 'Сміття', goal: 'Збери три шматки сміття на березі.', reward: '+15 досвіду · +10 ОМ', doneChoice: /Нема за що/, closing: /Чистий берег/ },
-    follow: { id: 'req.nora-camera', giver: 'npc.nora', name: 'Нора', targets: ['req.nora-camera.t1'], track: 'Камера', goal: 'Знайди Норину камеру. Востаннє її бачили там, де лежить Мія.', reward: '+20 досвіду · +12 ОМ', doneChoice: /Мія просто охороняла/, closing: /не камеру, а мою мрію/, shotName: 'nora-camera' },
+    follow: { id: 'req.nora-camera', giver: 'npc.nora', name: 'Нора', targets: ['req.nora-camera.t1'], track: 'Камера', goal: 'Знайди Норину камеру. Востаннє її бачили на галявині.', reward: '+20 досвіду · +12 ОМ', doneChoice: /Гарний вийшов пошук/, closing: /не камеру, а мою мрію/, shotName: 'nora-camera', miaSpot: 'req.nora-camera.t1' },
   },
   {
     key: 'ingrid',
     first: { id: 'req.ingrid-birds', giver: 'npc.ingrid', name: 'Інгрід', targets: ['req.ingrid-birds.t1'], track: 'Птахи', goal: 'Постій тихо на причалі й подивись на птахів.', reward: '+15 досвіду · +10 ОМ', doneChoice: /Було тихо/, closing: /моделями/ },
-    follow: { id: 'req.ingrid-starmap', giver: 'npc.ingrid', name: 'Інгрід', targets: ['req.ingrid-starmap.t1', 'req.ingrid-starmap.t2', 'req.ingrid-starmap.t3', 'req.ingrid-starmap.t4'], track: 'Карта', goal: 'Збери чотири частини зоряної карти Інгрід. Четверту принесла Мія.', reward: '+20 досвіду · +12 ОМ', doneChoice: /Назвемо його Мія/, closing: /все небо над озером/, shotName: 'ingrid-starmap' },
+    follow: { id: 'req.ingrid-starmap', giver: 'npc.ingrid', name: 'Інгрід', targets: ['req.ingrid-starmap.t1', 'req.ingrid-starmap.t2', 'req.ingrid-starmap.t3', 'req.ingrid-starmap.t4'], track: 'Карта', goal: 'Збери чотири частини зоряної карти Інгрід.', reward: '+20 досвіду · +12 ОМ', doneChoice: /Назвемо його (Мія|Метью)/, closing: /все небо над озером/, shotName: 'ingrid-starmap', miaSpot: 'req.ingrid-starmap.t4' },
   },
   {
     key: 'luc',
@@ -185,7 +191,7 @@ async function doTarget(page: Page, r: Req, spot: string, i: number): Promise<vo
 }
 
 /** Повний шлях: «!» → розмова → картка → «Беруся» → трекер → цілі → просильник → (сцена) → здача → журнал. */
-async function playRequest(page: Page, r: Req, o: { orientation: string; follow: boolean }): Promise<void> {
+async function playRequest(page: Page, r: Req, o: { orientation: string; follow: boolean; cat?: boolean; tag?: string }): Promise<void> {
   await openTalk(page, r);
   await toCard(page);
   const card = panel(page).locator('[data-ui="req-card"]');
@@ -194,13 +200,20 @@ async function playRequest(page: Page, r: Req, o: { orientation: string; follow:
   const geo = await page.evaluate(() => { const c = document.querySelector('[data-ui="req-card"]')?.getBoundingClientRect(); return { right: c?.right ?? 0, left: c?.left ?? 0, vw: innerWidth, scrollW: document.documentElement.scrollWidth }; });
   expect(geo.scrollW, 'без горизонтальної прокрутки').toBeLessThanOrEqual(geo.vw);
   expect(geo.right <= geo.vw + 1 && geo.left >= -1, 'картка в межах екрана').toBe(true);
+  const cardText = (await card.textContent()) ?? '';
   await panel(page).locator('[data-act="choose"]', { hasText: 'Беруся' }).click();
   await page.waitForTimeout(450);
   await closeTalk(page);
   expect((await core(page)).game.flags).toContain(flag(r.id, 'taken'));
+  const shown: string[] = [cardText];   // усі рядки, які побачив гравець у цій історії: без кішки в них не буває Мії
+  if (r.miaSpot) expect((await probe(page)).miaAt, o.cat ? 'Мія намальована біля цілі (існуючий спрайт кішки)' : 'без кішки Мії на мапі нема').toEqual(o.cat ? [r.miaSpot] : []);
   const row = page.locator(`[data-ui="req-row"][data-request="${r.id}"]`);
   await expect(row, 'трекер є').toHaveText(`${r.track} 0/${r.targets.length}`);
-  for (const [i, spot] of r.targets.entries()) await doTarget(page, r, spot, i);
+  for (const [i, spot] of r.targets.entries()) {
+    await doTarget(page, r, spot, i);
+    if (r.id === 'req.luc-radio') expect(await sounds(page), 'дроти з’єднано — єдиний аудіомодуль зіграв «підтвердження»').toContain('ui-confirmation');
+  }
+  if (r.miaSpot) await expect.poll(async () => (await probe(page)).miaAt, { message: 'ціль зроблена — Мія вже не там' }).toEqual([]);
   await expect(row).toHaveAttribute('data-ready', 'yes');
   expect((await probe(page)).fx.target, 'усе зроблено — стрілка веде до просильника').toBe(r.giver);
   const pops = (await probe(page)).fx.pops;
@@ -208,11 +221,18 @@ async function playRequest(page: Page, r: Req, o: { orientation: string; follow:
   const done = panel(page).locator('[data-act="choose"]', { hasText: r.doneChoice });
   for (let i = 0; i < 10 && !(await done.isVisible()); i++) {
     const pick = panel(page).locator('[data-act="choose"]').first();
+    shown.push((await panel(page).locator('[data-ui="line"]').textContent({ timeout: 800 }).catch(() => '')) ?? '');
     if (await pick.isVisible()) await pick.click(); else await panel(page).locator('[data-act="continue"]').click();   // «Ходімо» до вогнища — вибір; решта — «Далі»
     await page.waitForTimeout(450);
   }
   await expect(done).toBeVisible();
-  if (o.follow && r.shotName && SHOTS) { await expect(box(page)).toHaveAttribute('data-typing', 'no', { timeout: 8_000 }); await page.screenshot({ path: `research/visual-audit/side-story-${r.shotName}-${o.orientation}.png` }); }
+  shown.push((await panel(page).locator('[data-ui="line"]').textContent({ timeout: 800 }).catch(() => '')) ?? '', (await done.textContent()) ?? '');
+  if (o.follow && r.miaSpot) {
+    const mia = shown.filter((t) => MIA_RE.test(t));
+    if (o.cat) expect(mia.length, 'з кішкою Мія звучить у сцені здачі').toBeGreaterThan(0);
+    else expect(mia, 'без кішки в історії жодної згадки Мії').toEqual([]);
+  }
+  if (o.follow && r.shotName && SHOTS) { await expect(box(page)).toHaveAttribute('data-typing', 'no', { timeout: 8_000 }); await page.screenshot({ path: `research/visual-audit/side-story-${r.shotName}${o.tag ?? ''}-${o.orientation}.png` }); }
   await done.click();
   await page.waitForTimeout(450);
   await expect(panel(page).locator('[data-ui="line"]')).toContainText(r.closing);
@@ -222,6 +242,7 @@ async function playRequest(page: Page, r: Req, o: { orientation: string; follow:
   expect(c.journal.some((e) => e.type === 'Memory' && e.ref === flag(r.id, 'done')), 'запис у журналі').toBe(true);
   await expect.poll(async () => (await probe(page)).fx.pops, { message: '«+» над героєм' }).toBeGreaterThan(pops);
   await expect(row).toHaveCount(0);
+  if (o.follow) await expect.poll(async () => (await probe(page)).npcMarks[r.giver], { message: 'арка закрита — «!» зник', timeout: 5_000 }).not.toBe('request');
 }
 
 const ORIENTATIONS = [
@@ -234,14 +255,14 @@ for (const o of ORIENTATIONS) {
     test.use({ viewport: o.viewport, hasTouch: false, isMobile: false });
     test.setTimeout(900_000);
 
-    for (const arc of ARCS) {
-      test(`${arc.follow.id}: перше прохання → продовження (нове «!») → цілі → здача, лише ногами, ☰ жодного разу`, async ({ page }) => {
-        const errors = await toCamp(page);
+    for (const arc of ARCS) for (const v of arc.key === 'luc' ? VARIANTS.slice(0, 1) : VARIANTS) {
+      test(`${arc.follow.id} (${v.key}): перше прохання → продовження (нове «!») → цілі → здача, лише ногами, ☰ жодного разу`, async ({ page }) => {
+        const errors = await toCamp(page, '', v.pick);
         await playRequest(page, arc.first, { orientation: o.name, follow: false });
         // Продовження відкрилось: «!» повернувся до тієї самої людини, а нових цілей до розмови ще нема.
         await expect.poll(async () => (await probe(page)).npcMarks[arc.follow.giver], { message: 'продовження: «!» повернувся', timeout: 5_000 }).toBe('request');
         expect((await core(page)).game.flags).not.toContain(flag(arc.follow.id, 'taken'));
-        await playRequest(page, arc.follow, { orientation: o.name, follow: true });
+        await playRequest(page, arc.follow, { orientation: o.name, follow: true, cat: v.cat, tag: v.cat ? '-cat' : '' });
         // Наклейка Атласу за історію: умова — прапорець «здано», показує її сторінка Атласу (журнал/Атлас у ☰ тут не відкриваємо).
         expect(await menuSeen(page), 'панель ☰ жодного разу не відкривалась, поки ішла історія').toEqual([]);
         expect(errors, 'без помилок у консолі').toEqual([]);

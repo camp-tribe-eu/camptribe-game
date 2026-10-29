@@ -143,7 +143,8 @@
         "id": "t1",
         "spot": "req.nora-camera.t1",
         "icon": "camera",
-        "labelKey": "req.nora-camera.t1"
+        "labelKey": "req.nora-camera.t1",
+        "mia": true
       }
     ],
     "reward": {
@@ -184,8 +185,9 @@
       {
         "id": "t4",
         "spot": "req.ingrid-starmap.t4",
-        "icon": "paw",
-        "labelKey": "req.ingrid-starmap.t4"
+        "icon": "star",
+        "labelKey": "req.ingrid-starmap.t4",
+        "mia": true
       }
     ],
     "reward": {

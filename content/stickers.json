@@ -93,7 +93,7 @@
     "id": "sticker.nora-camera",
     "nameKey": "sticker.nora-camera",
     "textKey": "sticker.nora-camera.text",
-    "kind": "mia",
+    "kind": "people",
     "icon": "camera",
     "cond": {
       "flag": "f.req-nora-camera-done"

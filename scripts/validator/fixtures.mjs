@@ -373,6 +373,15 @@ function addMiaItem(c) {
 }
 const miaTask = (extra) => extraTask('find-mia', { leaderOnly: true, targets: [{ id: 'spot.pines', safe: true }], ...extra });
 
+/** Вузол розмови просильника з рядком про Мію: gated — лише за гілкою { animal }, інакше досяжний із next (GAME-184). */
+function withMiaLine(c, gated) {
+  const d = c.dialogues.find((x) => x.id === 'dlg.fixture-neighbor');
+  d.nodes.push({ id: 'mia-line', speaker: 'npc', textKey: RQ('mia-line'), next: 'bye' });
+  const gate = d.nodes.find((n) => n.id === 'gate');
+  if (gated) gate.branches.unshift({ when: { animal: MIA }, next: 'mia-line' });
+  else gate.branches.unshift({ when: { notFlag: RF('done') }, next: 'mia-line' });
+  for (const lang of c.meta.locales) c.locales[lang][RQ("mia-line")] = `Mia ${lang}: line one two three four five`;
+}
 export const FIXTURES = [
   // Хвилі напруги (GAME-170). Еталон уже має хвилю з двома справами — «еталон коректний» нижче є позитивним контролем.
   { name: '[хвиля] контроль: три справи, одна лише для лідера з безпечною ціллю для тварини — коректно', expect: [], patch(c) {
@@ -1225,6 +1234,16 @@ export const FIXTURES = [
   } },
   { base: 'combo', name: '[Мія] ціль квесту про Мію без умови на кішку', expect: ['MIA_CONTENT_UNGATED'], patch(c) {
     addMia(c, [T_CAR]); q(c, 'q.dog-walk').objectives.push({ id: 'mia-look', textKey: 'q.dog-walk.o1', kind: 'visit', target: 'loc.dog-park', required: false });
+  } },
+  // GAME-184: Мія у проханнях — картка прохання нейтральна, репліка про Мію лише за гілкою { animal: animal.cat }.
+  { base: 'combo', name: '[Мія] контроль: репліка про Мію у проханні — лише за гілкою { animal: animal.cat } — коректно', expect: [], patch(c) {
+    addMia(c, [T_CAR]); withRequest(c); withMiaLine(c, true);
+  } },
+  { base: 'combo', name: '[Мія] МУТАЦІЯ: репліка про Мію у проханні досяжна без умови на кішку', expect: ['MIA_CONTENT_UNGATED'], patch(c) {
+    addMia(c, [T_CAR]); withRequest(c); withMiaLine(c, false);
+  } },
+  { base: 'combo', name: '[Мія] ціль прохання називає Мію (картку бачить і велосипедист)', expect: ['MIA_CONTENT_UNGATED'], patch(c) {
+    addMia(c, [T_CAR]); withRequest(c); for (const lang of c.meta.locales) c.locales[lang]['req.fixture-chores.t1'] = `Mia ${lang}`;
   } },
 ];
 

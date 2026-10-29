@@ -10,18 +10,18 @@ import requestsRaw from '../../content/requests.json';
 import type { InteractionDef } from '../core/defs';
 import type { GameState } from '../core/state';
 
-export interface RequestTarget { readonly id: string; readonly spot: string; readonly icon: RequestIcon; readonly labelKey: string; readonly flag: string }
+export interface RequestTarget { readonly id: string; readonly spot: string; readonly icon: RequestIcon; readonly labelKey: string; readonly flag: string; /** GAME-184: у кого їде Мія, вона лежить/сидить біля цієї цілі (спрайт у сцені); решті — та сама ціль без неї. */ readonly mia?: boolean }
 export interface RequestReward { readonly xp: number; readonly om: number; readonly skills: readonly string[] }
 export interface RequestDef {
   readonly id: string; readonly giver: string; readonly after?: string; readonly titleKey: string; readonly goalKey: string; readonly trackKey: string;
   readonly targets: readonly RequestTarget[]; readonly reward: RequestReward; readonly takenFlag: string; readonly doneFlag: string;
 }
-export const REQUEST_ICONS = ['litter', 'bird', 'chain', 'lantern', 'cookie', 'apple', 'camera', 'star', 'paw', 'wire'] as const;
+export const REQUEST_ICONS = ['litter', 'bird', 'chain', 'lantern', 'cookie', 'apple', 'camera', 'star', 'wire'] as const;
 export type RequestIcon = (typeof REQUEST_ICONS)[number];
 
 interface RawRequest {
   id: string; giver: string; after?: string; titleKey: string; goalKey: string; trackKey: string;
-  targets: { id: string; spot: string; icon: RequestIcon; labelKey: string }[]; reward: RequestReward;
+  targets: { id: string; spot: string; icon: RequestIcon; labelKey: string; mia?: boolean }[]; reward: RequestReward;
 }
 
 /** Прапорець прохання: `req.nora-shore` + `taken` → `f.req-nora-shore-taken` (той самий формат у розмовах і в реєстрі). */
@@ -115,3 +115,9 @@ export const requestsDone = (g: GameState, rs: readonly RequestDef[] = REQUESTS)
 
 /** Нагорода прохання (дані; видає ядро при здачі). */
 export const requestReward = (id: string, rs: readonly RequestDef[] = REQUESTS): RequestReward | null => rs.find((r) => r.id === id)?.reward ?? null;
+
+/** GAME-184: цілі, біля яких стоїть Мія, — лише коли гравець їде з кішкою й ціль жива (прохання взято, ціль не зроблена). Імена об'єктів мапи для сцени. */
+export function miaSpots(g: GameState, rs: readonly RequestDef[] = REQUESTS): string[] {
+  if (g.player?.animalId !== 'animal.cat' || g.player.locationId !== REQUEST_LOCATION) return [];
+  return rs.flatMap((r) => r.targets.filter((t) => t.mia === true && g.flags.includes(r.takenFlag) && !g.flags.includes(r.doneFlag) && !g.flags.includes(t.flag)).map((t) => t.spot));
+}

@@ -107,6 +107,8 @@ export type CondDef =
   | { readonly notFlag: string }
   | { readonly quest: string; readonly status: 'active' | 'completed' }
   | { readonly transport: string }
+  /** GAME-184: тварина гравця (`animal.cat` / `animal.none`). */
+  | { readonly animal: string }
   /** GAME-48: NPC, чия це розмова, пам'ятає факт (`m.назва`). У події в дорозі NPC немає — ніколи. */
   | { readonly remembers: string }
   | { readonly notRemembers: string }

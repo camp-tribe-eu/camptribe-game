@@ -308,6 +308,7 @@ export function holds(c: CondDef, d: StoryDraft, p: PlayerState, npcId?: string)
   if ('notRemembers' in c) return !remembers(d, npcId, c.notRemembers);
   if ('quest' in c) return own(d.quests, c.quest)?.status === c.status;
   if ('transport' in c) return p.transportId === c.transport;
+  if ('animal' in c) return p.animalId === c.animal;
   if ('all' in c) return c.all.every((x) => holds(x, d, p, npcId));
   return c.any.some((x) => holds(x, d, p, npcId));
 }

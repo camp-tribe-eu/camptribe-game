@@ -261,6 +261,8 @@ const mutations = [
   // GAME-184: продовження арки (after) — ланцюг прохань одного просильника
   { name: '[прохання] after на неіснуюче/чуже прохання не звітується', file: CHECKS_FILE, from: "if (!prev || prev.giver !== r.giver) out.push(I('REQUEST_AFTER_INVALID'", to: "if (false) out.push(I('REQUEST_AFTER_INVALID'" },
   { name: '[прохання] продовження шукає пропозицію у вузлі offer (а не offer2)', file: CHECKS_FILE, from: "const offerId = r.after === undefined ? 'offer' : 'offer2';", to: "const offerId = 'offer';" },
+  { name: '[Мія] гілка { animal } не вважається охороною: репліка про Мію у проханні лічиться безумовною', file: CHECKS_FILE, from: "conjuncts(cond).some((x) => x.animal === MIA)", to: "false" },
+  { name: '[Мія] рядки прохання (картка) не перевіряються на ім’я Мії', file: CHECKS_FILE, from: "if (mentions(key)) out.push(I('MIA_CONTENT_UNGATED', `${r.id}.${key}`", to: "if (false) out.push(I('MIA_CONTENT_UNGATED', `${r.id}.${key}`" },
   // GAME-56: давність факту — попередження, не помилка
   { name: '[факт] поріг давності включно (>= замість >)', file: CHECKS_FILE, from: 'if (age > FACT_STALE_DAYS)', to: 'if (age >= FACT_STALE_DAYS)' },
   { name: '[факт] попередження рахується помилкою', file: 'validator/codes.mjs', from: "CODES[code]?.severity === 'warning'", to: 'false' },

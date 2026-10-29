@@ -744,6 +744,7 @@ export const CHECKS = [
       for (const [where, leaf] of condLeavesAll(c.content)) {
         if (leaf.quest !== undefined && !by.quests.has(leaf.quest)) miss(where, `квесту «${leaf.quest}» не існує`);
         if (leaf.transport !== undefined && !by.transports.has(leaf.transport)) miss(where, `транспорту «${leaf.transport}» не існує`);
+        if (leaf.animal !== undefined && leaf.animal !== 'animal.none' && !by.animals.has(leaf.animal)) miss(where, `тварини «${leaf.animal}» не існує`);
       }
       for (const [where, e] of dialogueEffects(c.content)) {
         if (e.startQuest !== undefined && !by.quests.has(e.startQuest)) miss(where, `квесту «${e.startQuest}» не існує`);
@@ -1276,6 +1277,25 @@ export const CHECKS = [
       }
       for (const d of c.content.dialogues ?? []) {
         if (d.trigger && isMiaId(d.id) && !gated(d.trigger.when)) out.push(I('MIA_CONTENT_UNGATED', `${d.id}.trigger.when`, 'подія про Мію без when.animals = [animal.cat]: випала б і велосипедисту без кішки'));
+      }
+      // GAME-184: прохання бачать усі, тож їхні картка й тексти про Мію — лише в розмові за умовою { animal: animal.cat }. (1) Рядки самого прохання (назва, ціль,
+      // трекер, підписи цілей) не називають Мію ні в одній мові; (2) у діалозі просильника репліка про Мію недосяжна безумовним шляхом: кожне ребро до неї
+      // (гілка `branches` чи вибір) має в `when` кон'юнкт { animal: animal.cat }. Ціна хибного спрацювання — автор додає одну гілку; пропуску — «Мія» велосипедисту без кішки.
+      const MIA_NAME = /Мі[яїює]|Mia/u;
+      const mentions = (key) => (c.content.meta?.locales ?? []).some((lang) => MIA_NAME.test(c.content.locales?.[lang]?.[key] ?? ''));
+      const catGuard = (cond) => cond !== undefined && conjuncts(cond).some((x) => x.animal === MIA);
+      for (const r of c.content.requests ?? []) {
+        for (const key of [r.titleKey, r.goalKey, r.trackKey, ...(r.targets ?? []).map((t) => t.labelKey)]) if (mentions(key)) out.push(I('MIA_CONTENT_UNGATED', `${r.id}.${key}`, 'рядок прохання називає Мію: його бачить і той, хто їде без кішки — нейтральний текст, а Мія — у репліках за умовою { animal: animal.cat }'));
+        const d = (c.content.dialogues ?? []).find((x) => x.npcId === r.giver);
+        if (!d) continue;
+        const byId = new Map(d.nodes.map((n) => [n.id, n]));
+        const open = new Set([d.start]); const st = [d.start];
+        while (st.length) {
+          const n = byId.get(st.pop()); if (!n) continue;
+          const edges = [...(n.next !== undefined ? [[n.next, undefined]] : []), ...(n.branches ?? []).map((b) => [b.next, b.when]), ...(n.choices ?? []).map((ch) => [ch.next, ch.when])];
+          for (const [to, when] of edges) if (!open.has(to) && !catGuard(when)) { open.add(to); st.push(to); }
+        }
+        for (const id of open) { const n = byId.get(id); if (n && mentions(n.textKey)) out.push(I('MIA_CONTENT_UNGATED', `${d.id}/${id}`, `репліка про Мію досяжна без умови { animal: animal.cat }: її почує й той, хто їде без кішки`)); }
       }
       (c.content.packing?.items ?? []).forEach((x, i) => { if (isMiaId(x.item) && !gated(x.when)) out.push(I('MIA_CONTENT_UNGATED', `packing.items[${i}]`, `річ «${x.item}» для Мії без when.animals = [animal.cat]`)); });
       return out;

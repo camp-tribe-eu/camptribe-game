@@ -49,11 +49,17 @@
       ]
     },
     { "id": "sky1", "speaker": "npc", "textKey": "dlg.ingrid-chat.sky1", "next": "sky2" },
-    { "id": "sky2", "speaker": "npc", "textKey": "dlg.ingrid-chat.sky2", "next": "sky3" },
+    { "id": "sky2", "speaker": "npc", "textKey": "dlg.ingrid-chat.sky2", "next": "sky3-matthew", "branches": [{ "when": { "animal": "animal.cat" }, "next": "sky3-mia" }] },
     {
-      "id": "sky3", "speaker": "npc", "textKey": "dlg.ingrid-chat.sky3",
+      "id": "sky3-mia", "speaker": "npc", "textKey": "dlg.ingrid-chat.sky3-mia",
       "choices": [
-        { "textKey": "dlg.ingrid-chat.sky3.c1", "next": "closing2", "effects": [{ "setFlag": "f.req-ingrid-starmap-done" }] }
+        { "textKey": "dlg.ingrid-chat.sky3-mia.c1", "next": "closing2", "effects": [{ "setFlag": "f.req-ingrid-starmap-done" }] }
+      ]
+    },
+    {
+      "id": "sky3-matthew", "speaker": "npc", "textKey": "dlg.ingrid-chat.sky3-matthew",
+      "choices": [
+        { "textKey": "dlg.ingrid-chat.sky3-matthew.c1", "next": "closing2", "effects": [{ "setFlag": "f.req-ingrid-starmap-done" }] }
       ]
     },
     { "id": "closing2", "speaker": "npc", "textKey": "dlg.ingrid-chat.closing2", "end": true }
