@@ -43,10 +43,11 @@ export const TILESET_IMAGES: Readonly<Record<string, string>> = {
 };
 const HOME_SETS = ['home-walls', 'home-floor', 'home-windows-doors', 'home-furniture', 'home-office', 'home-shelf', 'lpc-terrain', 'camp-car'] as const;
 /** Які тайлсети має кожна мапа гри (ключ — як у scene.ts і map-first.ts). */
-export const MAP_TILESETS: Readonly<Record<'camp' | 'home' | 'shop', readonly string[]>> = {
+export const MAP_TILESETS: Readonly<Record<'camp' | 'home' | 'shop' | 'road', readonly string[]>> = {
   camp: ['lpc-terrain', 'camp-tent', 'camp-car'],
   home: HOME_SETS,
   shop: HOME_SETS,
+  road: HOME_SETS,   // GAME-183: смуга дороги — трава/стежка terrain і авто, як двір дому
 };
 export const CAMPFIRE_SHEET = campfire;
 

@@ -105,7 +105,7 @@ const byName = new Map(Object.entries(RAW).map(([k, v]) => [k.replace(/^.*\//, '
 const MAPS = [...byName.keys()].sort();
 const mapOf = (f: string): TiledMap => JSON.parse(byName.get(f) ?? 'null') as TiledMap;
 /** Файл мапи → ключ сцени. Нова мапа в public/maps/ без рядка тут — червоний тест: сцена не знає, що з нею робити. */
-const KEY_OF: Readonly<Record<string, MapKey>> = { 'camp-lake.tmj': 'camp', 'home.tmj': 'home', 'shop.tmj': 'shop' };
+const KEY_OF: Readonly<Record<string, MapKey>> = { 'camp-lake.tmj': 'camp', 'home.tmj': 'home', 'shop.tmj': 'shop', 'road.tmj': 'road' };
 const keyOf = (f: string): MapKey => { const k = KEY_OF[f]; if (!k) throw new Error(`public/maps/${f}: мапа без ключа сцени (KEY_OF у map-content.test.ts, scene.ts, map-first.ts)`); return k; };
 
 describe('мапа сцени ↔ контент (GAME-32)', () => {

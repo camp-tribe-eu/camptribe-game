@@ -127,7 +127,8 @@ const storyChanged = (): void => {
   direct();
   for (const l of storyListeners) l();
   const talking = bridge.state.game.dialogue !== null;
-  if (talking && !hadDialogue && !mapTalk) for (const l of openListeners) l();
+  // Подія в дорозі (GAME-183): у мапі-першій грі — рамка розмови з портретом оповідача (як сцена біля вогнища), а не екран ☰.
+  if (talking && !hadDialogue && !mapTalk) for (const l of switches.panelActs ? openListeners : talkListeners) l();
   hadDialogue = talking;
 };
 /** Розмова з NPC на мапі: команда в ядро (ядро саме відмовить, якщо гравець не тут), і екран подорожі —
@@ -208,6 +209,7 @@ const worldArt = await loadWorldArt();
 // Що сцена просить у гри (GAME-175). Ціль підказки рахуємо раз на стан ядра (не на кадр): годинник стану не міняє.
 let targetFor: GameState | null = null;
 let targetPack = -1;
+let targetMin = -1;   // справа хвилі спізнюється за годинником, а не за станом ядра: ціль перераховуємо й на новій хвилині
 let targetSpot: string | null = null;
 let needsFor: GameState | null = null;
 let needsPack = -1;
@@ -233,9 +235,9 @@ const worldHooks: WorldHooks = {
   look: (name) => spotLook(bridge.state, name),
   requestsDone: () => requestsDone(bridge.state.game),
   target: () => {
-    if (targetFor !== bridge.state.game || targetPack !== backpack.length) { targetFor = bridge.state.game; targetPack = backpack.length; // GAME-183: прохання в роботі (вибір гравця) — перше; далі крок сюжету. Збірка e2e без ?mapFirst=1 табір веде як раніше (лише прохання): ☰ там ще дає кроки.
-      const inCamp = bridge.state.game.player?.locationId === 'loc.camp.lake';
-      targetSpot = requestTarget(bridge.state.game) ?? (switches.panelActs && inCamp ? null : nextTarget(bridge.state, GAME_DEFS, backpack)?.spot ?? null);
+    if (targetFor !== bridge.state.game || targetPack !== backpack.length || targetMin !== bridge.state.clock.minutes) { targetFor = bridge.state.game; targetPack = backpack.length; targetMin = bridge.state.clock.minutes; // GAME-183: прохання в роботі (вибір гравця) — перше; далі крок сюжету. Збірка e2e без ?mapFirst=1 табір веде як раніше (лише прохання): ☰ там ще дає кроки.
+      const at = bridge.state.game.player?.locationId;
+      targetSpot = requestTarget(bridge.state.game) ?? (switches.panelActs && (at === 'loc.camp.lake' || at === 'loc.road') ? null : nextTarget(bridge.state, GAME_DEFS, backpack)?.spot ?? null);
     }
     return targetSpot;
   },

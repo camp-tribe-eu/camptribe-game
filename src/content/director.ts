@@ -72,7 +72,7 @@ export function menuTasks(sim: SimState, defs: CoreDefs): Move[] {
   const a = g.wave?.active;
   if (!a || !g.player || g.dialogue !== null) return [];
   const where = waveLocation(g, defs);
-  if (where === null || where === MAP_LOCATION || where !== g.player.locationId) return [];
+  if (where === null || where === MAP_LOCATION || where !== g.player.locationId) return [];   // табір — цілі task.* на мапі; дім і дорога — ті ж цілі на своїх мапах (map-first.ts), панель їх ховає, коли об'єкт живий
   return Object.entries(a.tasks).filter(([, t]) => t.outcome === 'open' && sim.clock.minutes <= t.dueAt).map(([taskId]) => ({ type: 'CompleteTask', taskId }));
 }
 

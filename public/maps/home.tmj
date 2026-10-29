@@ -2048,6 +2048,102 @@
      "point": true,
      "rotation": 0,
      "visible": true
+    },
+    {
+     "id": 21,
+     "name": "task.mia-carrier",
+     "type": "trigger",
+     "x": 112,
+     "y": 176,
+     "width": 0,
+     "height": 0,
+     "point": true,
+     "rotation": 0,
+     "visible": true
+    },
+    {
+     "id": 22,
+     "name": "task.map-to-luggage",
+     "type": "trigger",
+     "x": 464,
+     "y": 240,
+     "width": 0,
+     "height": 0,
+     "point": true,
+     "rotation": 0,
+     "visible": true
+    },
+    {
+     "id": 23,
+     "name": "task.lights-window",
+     "type": "trigger",
+     "x": 240,
+     "y": 176,
+     "width": 0,
+     "height": 0,
+     "point": true,
+     "rotation": 0,
+     "visible": true
+    },
+    {
+     "id": 24,
+     "name": "task.anna-goodbye",
+     "type": "trigger",
+     "x": 144,
+     "y": 368,
+     "width": 0,
+     "height": 0,
+     "point": true,
+     "rotation": 0,
+     "visible": true
+    },
+    {
+     "id": 25,
+     "name": "step.ST-004",
+     "type": "trigger",
+     "x": 208,
+     "y": 304,
+     "width": 0,
+     "height": 0,
+     "point": true,
+     "rotation": 0,
+     "visible": true
+    },
+    {
+     "id": 26,
+     "name": "step.CH1-D3-HOME-001",
+     "type": "trigger",
+     "x": 208,
+     "y": 304,
+     "width": 0,
+     "height": 0,
+     "point": true,
+     "rotation": 0,
+     "visible": true
+    },
+    {
+     "id": 27,
+     "name": "obj.drying",
+     "type": "trigger",
+     "x": 272,
+     "y": 432,
+     "width": 0,
+     "height": 0,
+     "point": true,
+     "rotation": 0,
+     "visible": true
+    },
+    {
+     "id": 28,
+     "name": "obj.sell",
+     "type": "trigger",
+     "x": 336,
+     "y": 464,
+     "width": 0,
+     "height": 0,
+     "point": true,
+     "rotation": 0,
+     "visible": true
     }
    ]
   },

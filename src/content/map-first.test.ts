@@ -17,8 +17,8 @@ import { isBulky, needsLeft, DAY1_QUESTS, DAY1_TARGETS, MAP_LOCATION, MAP_SPOTS,
 
 const DEFS: CoreDefs = GAME_DEFS;
 const MAP_VIEW: StoryView = { mapFirst: true, trunk: false, near: null };
-const RAW = import.meta.glob<string>('../../public/maps/{home,shop}.tmj', { query: '?raw', import: 'default', eager: true });
-const placed = (key: 'home' | 'shop'): string[] => {
+const RAW = import.meta.glob<string>('../../public/maps/{home,shop,road}.tmj', { query: '?raw', import: 'default', eager: true });
+const placed = (key: 'home' | 'shop' | 'road'): string[] => {
   const m = JSON.parse(RAW[`../../public/maps/${key}.tmj`] ?? 'null') as { layers: { name: string; objects?: { name: string; type: string }[] }[] };
   return (m.layers.find((l) => l.name === 'objects')?.objects ?? []).filter((o) => o.type === 'trigger' || o.type === 'npc').map((o) => o.name);
 };
@@ -31,8 +31,9 @@ const ROAD_GOAL = (s: SimState): boolean => s.game.player?.locationId === 'loc.r
 /** Ходи живих об'єктів мапи, що рухають сюжет (без пакування, багажника й розмови): це все, що вміє гравець руками. */
 function progressSpots(sim: SimState): { name: string; moves: readonly Move[] }[] {
   const map = mapKeyFor(sim.game.player?.locationId);
-  if (map === 'camp') return [];
-  return (MAP_SPOTS[map] as readonly string[]).filter((n) => !n.startsWith('pack.') && n !== 'obj.trunk' && !n.startsWith('npc.'))
+  if (map === 'camp' || map === 'road') return [];
+  // GAME-183: справи хвилі, сушарка, приймальня й прилавок — не рухають сюжет дня 1 (множили б простір станів): їх доводить camp-first.test повним шляхом усього розділу.
+  return (MAP_SPOTS[map] as readonly string[]).filter((n) => !n.startsWith('pack.') && !n.startsWith('task.') && !['obj.trunk', 'obj.drying', 'obj.sell', 'obj.buy', 'step.ST-004', 'step.CH1-D3-HOME-001'].includes(n) && !n.startsWith('npc.'))
     .flatMap((name) => { const r = resolveSpot(sim, DEFS, name); return r && r.moves.length > 0 ? [{ name, moves: r.moves }] : []; });
 }
 const applyAll = (sim: SimState, moves: readonly Move[]): SimState => moves.reduce(send, sim);
@@ -107,12 +108,12 @@ describe('панель ховає кнопку лише там, де мапа д
     return all.filter((id) => !kept.has(id)).map((id) => moveKey(full.intents.get(id) as Move));
   };
   /** Знахідки: схована дія, якої немає ні в живого об'єкта, ні фізично на мапі. */
-  const orphans = (sim: SimState, onMap: Readonly<Record<'home' | 'shop', readonly string[]>>): string[] => {
+  const orphans = (sim: SimState, onMap: Readonly<Record<'home' | 'shop' | 'road', readonly string[]>>): string[] => {
     const map = mapKeyFor(sim.game.player?.locationId);
-    if (map === 'camp') return hidden(sim);
-    return hidden(sim).filter((k) => !(MAP_SPOTS[map] as readonly string[]).some((n) => onMap[map].includes(n) && (resolveSpot(sim, DEFS, n)?.moves ?? []).some((m) => moveKey(m) === k) || (k.startsWith('Talk|') && onMap[map].includes(k.slice(5)))));
+    if (map === 'camp' || map === 'road') return hidden(sim);
+    return hidden(sim).filter((k) => !(MAP_SPOTS[map] as readonly string[]).some((n) => onMap[map].includes(n) && (resolveSpot(sim, DEFS, n)?.moves ?? []).some((m) => moveKey(m) === k) || (k.startsWith('Talk|') && onMap[map].includes(k.slice(5))) || (k.startsWith('Visit|') && onMap[map].includes('obj.vehicle') && resolveSpot(sim, DEFS, 'obj.vehicle') !== null)));   // GAME-183: живе авто покриває всі відкриті дороги звідси
   };
-  const real = { home: placed('home'), shop: placed('shop') };
+  const real = { home: placed('home'), shop: placed('shop'), road: placed('road') };
 
   it('на кожному стані шляху дня 1: усе сховане має живий об\'єкт, що стоїть на мапі; на дорозі й у таборі не ховається нічого', () => {
     for (const c of CHOICES) {
@@ -128,7 +129,7 @@ describe('панель ховає кнопку лише там, де мапа д
       }
       expect(ROAD_GOAL(s)).toBe(true);
       expect(hiddenSeen, 'мапа справді забрала дії з панелі').toBeGreaterThan(8);
-      expect(hidden(s), 'на дорозі панель — як була').toEqual([]);
+      expect(hidden(s).every((k) => k.startsWith('CompleteTask|') || k.startsWith('Visit|')), 'на дорозі мапа забирає лише справи хвилі й «Піти:» (GAME-183)').toBe(true);
     }
   });
 
@@ -150,8 +151,8 @@ describe('панель ховає кнопку лише там, де мапа д
     s = applyAll(s, (progressSpots(s)[0] as { moves: readonly Move[] }).moves);
     expect(coveredKeys(s, DEFS).has('CompleteQuest|ST-001')).toBe(true);
     expect(coveredKeys(s, DEFS).has('CompleteQuest|PROLOGUE-HOME-001')).toBe(false);   // уже пройдений крок — не покритий
-    const road = { ...s, game: { ...s.game, player: { ...(s.game.player as NonNullable<SimState['game']['player']>), locationId: 'loc.road' } } };
-    expect(coveredKeys(road, DEFS).size, 'на дорозі мапа нічого не забирає').toBe(0);
+    const road = { ...s, game: { ...s.game, player: { ...(s.game.player as NonNullable<SimState['game']['player']>), locationId: 'loc.elsewhere' } } };
+    expect(coveredKeys(road, DEFS).size, 'у локації без мапи (не дім, крамниця, дорога чи табір) мапа нічого не забирає').toBe(0);
   });
 });
 
@@ -231,7 +232,7 @@ describe('підказка «Далі: …»', () => {
         s = applyAll(s, (progressSpots(s).find((p) => p.name === n?.spot) as { moves: readonly Move[] }).moves);
       }
       // Подія в дорозі (шанс) відкриває розмову — тоді підказка мовчить, її веде екран подорожі; без неї — одна підказка про ☰.
-      expect(nextTarget({ ...s, game: { ...s.game, dialogue: null } }, DEFS)).toEqual({ key: 'next.road', spot: null });
+      expect(['next.road.task', 'next.road.step']).toContain(nextTarget({ ...s, game: { ...s.game, dialogue: null } }, DEFS)?.key);   // GAME-183: на дорозі стрілка — на справу зупинки
     }
   });
   it('у знімку для UI: рядок «Далі» й підпис дії біля об\'єкта; без персонажа — нічого', () => {

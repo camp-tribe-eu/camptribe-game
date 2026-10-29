@@ -21,7 +21,7 @@ import sys
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
 T = 32
 TRIAL = os.path.join(ROOT, 'public/maps/trial/home-interior.tmj')
-OUT = {'home': os.path.join(ROOT, 'public/maps/home.tmj'), 'shop': os.path.join(ROOT, 'public/maps/shop.tmj')}
+OUT = {'home': os.path.join(ROOT, 'public/maps/home.tmj'), 'shop': os.path.join(ROOT, 'public/maps/shop.tmj'), 'road': os.path.join(ROOT, 'public/maps/road.tmj')}
 
 # Тайлсети: ім'я в сцені (art.ts), файл від public/maps/, колонок, тайлів, firstgid.
 HOME_TS = [
@@ -119,6 +119,15 @@ HOME_SPOTS = [
     ('npc.george', 'npc', (3, 9)),
     ('obj.vehicle', 'trigger', (13, 12)),
     ('obj.trunk', 'trigger', (16, 14)),
+    # GAME-183 · решта дому на мапі: справи хвилі W1 «Виїзд о шостій» (task.<справа>), кроки поза основним шляхом, мотузка для сушіння й приймальня. Клітинки ≥ 2 від інших цілей.
+    ('task.mia-carrier', 'trigger', (3, 5)),          # вітальня: Мія в переноску
+    ('task.map-to-luggage', 'trigger', (14, 7)),      # кухня: карту — в багаж
+    ('task.lights-window', 'trigger', (7, 5)),        # вітальня, під вікном: вимкнути світло, зачинити вікно
+    ('task.anna-goodbye', 'trigger', (4, 11)),        # двір: попрощатись із сусідкою Анною
+    ('step.ST-004', 'trigger', (6, 9)),               # поріг: «У дорогу» (якщо повернувся додому посеред дороги)
+    ('step.CH1-D3-HOME-001', 'trigger', (6, 9)),      # поріг: кінець розділу — «Знову вдома»
+    ('obj.drying', 'trigger', (8, 13)),               # двір: мотузка (висушити мокре спорядження)
+    ('obj.sell', 'trigger', (10, 14)),                # двір: продати спорядження
 ]
 
 
@@ -154,6 +163,8 @@ SHOP_SPOTS = [
     ('take.item.lantern', 'trigger', (8, 4)),
     ('step.ST-003', 'trigger', (15, 4)),
     ('obj.vehicle', 'trigger', (13, 10)),
+    ('obj.buy', 'trigger', (12, 6)),                  # GAME-183: прилавок — купити чи продати (рамка вибору)
+    ('obj.drying', 'trigger', (4, 10)),               # біля входу: мотузка для сушіння
 ]
 
 
@@ -187,8 +198,55 @@ def build_shop():
     }
 
 
+# ---------------------------------------------------------------- дорога
+# GAME-183 · смуга-сцена «дорога»: герой їде/йде зліва направо, три зупинки зі справами хвилі, крок «У дорогу» і авто в кінці смуги (їхати далі). Лише наявні тайли terrain
+# (трава, стежка, кущі) і авто camp_car — нових картинок немає.
+ROAD_SPOTS = [
+    ('s.start', 'spawn', (1, 5)),
+    ('s.car', 'spawn', (2, 6)),
+    ('task.fix-luggage', 'trigger', (6, 3)),          # зупинка 1 (авто): поправити багаж / (велосипед) заклеїти колесо
+    ('task.patch-tyre', 'trigger', (6, 3)),
+    ('task.mia-water-blanket', 'trigger', (12, 3)),   # зупинка 2: вода для Мії / чохли на сумки
+    ('task.bag-covers', 'trigger', (12, 3)),
+    ('task.check-route', 'trigger', (19, 3)),         # зупинка 3: звірити маршрут / обрати шлях
+    ('task.pick-path', 'trigger', (19, 3)),
+    ('step.ST-004', 'trigger', (23, 6)),              # кінець дороги: «У дорогу» і подальші кроки
+    ('step.ST-005', 'trigger', (23, 6)),
+    ('step.CH1-D3-RETURN-001', 'trigger', (23, 6)),
+    ('step.CH1-D3-HOME-001', 'trigger', (23, 6)),
+    ('obj.drying', 'trigger', (12, 7)),
+    ('obj.sell', 'trigger', (16, 7)),
+    ('obj.vehicle', 'trigger', (27, 5)),              # авто (велосипед) — їхати далі
+]
+
+
+def build_road():
+    W, H = 30, 10
+    rnd = random.Random(23)
+    layers = blank_layers(W, H)
+    for r in range(H):
+        for c in range(W):
+            put(layers, W, H, 'ground', c, r, terrain(rnd.choice(GRASS)))
+    for r in (4, 5):
+        for c in range(W):
+            put(layers, W, H, 'ground', c, r, terrain(DIRT))      # стежка-дорога через усю смугу
+    for c in range(W):
+        put(layers, W, H, 'walls', c, 0, terrain(BUSH[c % 3]))    # живопліт зверху й знизу
+        put(layers, W, H, 'walls', c, H - 1, terrain(BUSH[(c + 1) % 3]))
+    objs = [point(i + 1, n, t, c) for i, (n, t, c) in enumerate(ROAD_SPOTS)]
+    return {
+        'type': 'map', 'version': '1.10', 'tiledversion': '1.11.0', 'orientation': 'orthogonal', 'renderorder': 'right-down',
+        'width': W, 'height': H, 'tilewidth': T, 'tileheight': T, 'infinite': False, 'nextlayerid': 7, 'nextobjectid': 30,
+        'layers': [tile_layer(1, 'ground', W, H, layers['ground']), tile_layer(2, 'decor', W, H, layers['decor']),
+                   tile_layer(3, 'walls', W, H, layers['walls'], True), tile_layer(4, 'above', W, H, layers['above']),
+                   {'id': 5, 'name': 'objects', 'type': 'objectgroup', 'draworder': 'topdown', 'opacity': 1, 'visible': True, 'x': 0, 'y': 0, 'objects': objs}],
+        'tilesets': tmj_tilesets(HOME_TS + YARD_TS),
+        'properties': [{'name': 'locationId', 'type': 'string', 'value': 'loc.road'}],
+    }
+
+
 def main(argv):
-    maps = {'home': build_home(), 'shop': build_shop()}
+    maps = {'home': build_home(), 'shop': build_shop(), 'road': build_road()}
     bad = False
     for name, m in maps.items():
         text = json.dumps(m, indent=1, ensure_ascii=False) + '\n'
