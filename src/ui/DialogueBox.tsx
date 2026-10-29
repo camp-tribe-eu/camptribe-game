@@ -7,7 +7,7 @@ import type { AnyLang, Key } from '../i18n';
 import { calmMotion } from '../platform/motion';
 import { Portrait, type PortraitLookup } from './Portrait';
 import { RequestCard } from './RequestCard';
-import { ACT_COOLDOWN_MS, actionLabel } from './StoryPanel';
+import { ACT_COOLDOWN_MS, actionLabel, money } from './StoryPanel';
 import { trapTab } from './focus-trap';
 import type { OfferAction, StoryOffer } from './story-types';
 
@@ -84,7 +84,7 @@ export function DialogueBox({ dialogue: d, lang, t, act, portrait }: { dialogue:
       const digit = /^(?:Digit|Numpad)([1-9])$/.exec(e.code);
       if (digit) {
         const a = answersRef.current[Number(digit[1]) - 1];
-        if (a && !(e.target instanceof Element && e.target.closest('input, textarea'))) { e.preventDefault(); guardedRef.current(e, () => act(a.id)); }
+        if (a && a.shortCents === undefined && !(e.target instanceof Element && e.target.closest('input, textarea'))) { e.preventDefault(); guardedRef.current(e, () => act(a.id)); }
         return;
       }
       if (!acting) return;
@@ -113,7 +113,12 @@ export function DialogueBox({ dialogue: d, lang, t, act, portrait }: { dialogue:
           <p ref={line} id="ui-talk-line" class="ui-talk-line" data-ui="line" tabIndex={-1}>{shown}<span class="ui-ghost">{rest}</span></p>
           {d.request && <RequestCard card={d.request} lang={lang} t={t} />}
           <div class="ui-answers ui-talk-answers" data-ui="answers">
-            {answers.map((a, i) => (
+            {answers.map((a, i) => a.shortCents !== undefined ? (
+              // GAME-185: недоступна купівля — aria-disabled (лишається в порядку Tab; причина «бракує X €» в імені), активація нічого не робить.
+              <button type="button" class="ui-btn ui-btn-locked" key={a.id} data-act="buy-locked" data-key={a.key ?? ''} aria-disabled="true" onClick={(e) => e.preventDefault()}>
+                {`${actionLabel(lang, t, a)} — ${t('ui.short')} ${money(lang, a.shortCents)}`}
+              </button>
+            ) : (
               <button type="button" class="ui-btn" key={a.id} data-act={a.kind} data-key={a.key ?? ''} onClick={(e) => guarded(e, () => act(a.id))}>
                 {a.kind === 'choose' ? `${i + 1}. ${actionLabel(lang, t, a)}` : actionLabel(lang, t, a)}
               </button>

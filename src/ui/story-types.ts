@@ -109,6 +109,8 @@ export interface OfferRequestCard {
 export interface OfferTracker { readonly id: string; readonly trackKey: string; readonly done: number; readonly total: number; readonly ready: boolean }
 
 export interface StoryOffer {
+  /** GAME-185: мапа-перша гра — ☰ це лише меню (Атлас, Журнал, налаштування, закрити), без дій сюжету; квести, навички й речі живуть на екрані «Журнал». */
+  readonly mapFirst: boolean;
   /** create — персонажа ще немає; play — гра йде; ended — кінець розділу. */
   readonly stage: 'create' | 'play' | 'ended';
   readonly characters: readonly OfferCharacter[];

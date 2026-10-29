@@ -316,3 +316,27 @@ describe('пакування ходьбою: удома спакований «�
     expect(unpackMoves(tweaked, DEFS)).toEqual([]);
   });
 });
+
+describe('GAME-185 · авто на дорозі з ST-004 везе вперед, а не назад', () => {
+  /** Герой на дорозі з активним ST-004: день 1 ногами (progressSpots) до ROAD_GOAL. */
+  const onRoad = (combo: number): SimState => {
+    let s = create((CHOICES[combo % CHOICES.length] as { intent: Move }).intent);
+    for (let i = 0; i < 40 && !ROAD_GOAL(s); i++) {
+      const n = nextTarget(s, DEFS);
+      s = applyAll(s, (progressSpots(s).find((p) => p.name === n?.spot) as { moves: readonly Move[] }).moves);
+    }
+    return s;
+  };
+  it('для кількох профілів: об\'єкт авто не питає «куди», не пропонує дім/крамницю, а завершує крок і їде до табору', () => {
+    for (const combo of [0, 3, 7]) {
+      const s = { ...onRoad(combo), game: { ...onRoad(combo).game, dialogue: null } };
+      expect(ROAD_GOAL(s), `профіль ${combo}: на дорозі з ST-004`).toBe(true);
+      const r = resolveSpot(s, DEFS, 'obj.vehicle');
+      expect(r?.options, 'вибору «назад» немає').toBeUndefined();
+      expect(r?.moves.map((m) => m.type === 'Visit' ? (m as { locationId: string }).locationId : m.type)).toEqual(['CompleteQuest', MAP_LOCATION.camp]);
+      const after = applyAll(s, r?.moves ?? []);
+      expect(after.game.player?.locationId, 'приїхали в табір').toBe(MAP_LOCATION.camp);
+      expect(after.game.quests['ST-005']?.status).toBe('active');
+    }
+  });
+});

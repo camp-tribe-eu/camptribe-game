@@ -281,14 +281,22 @@ export class WorldScene extends Phaser.Scene {
   }
 
   /** Безпечна зона для стрілки (світові одиниці): без шапки HUD, рядка «Далі» і нижньої дотикової смуги (джойстик + кнопка дії). Міряємо DOM раз на ~0,3 с. */
+  private landscape = false;
   private safeInsets(time: number): Insets {
     if (time - this.insetsAt < 300) return this.insets;
     this.insetsAt = time;
+    this.landscape = window.matchMedia('(orientation: landscape)').matches;
     const cv = this.game.canvas.getBoundingClientRect();
     const z = this.cameras.main.zoom || 1;
     let topPx = 0;
-    for (const sel of ['.ui-header', '.ui-next']) { const e = document.querySelector(sel); if (e) topPx = Math.max(topPx, e.getBoundingClientRect().bottom - cv.top); }
     let botPx = 0;
+    for (const sel of ['.ui-header', '.ui-next']) {
+      const e = document.querySelector(sel);
+      if (!e) continue;
+      const r = e.getBoundingClientRect();
+      // GAME-185: вбік «Далі: …» лежить смугою внизу (не під шапкою) — це нижня, а не верхня межа безпечної зони.
+      if (r.top - cv.top > (cv.bottom - cv.top) / 2) botPx = Math.max(botPx, cv.bottom - r.top); else topPx = Math.max(topPx, r.bottom - cv.top);
+    }
     for (const sel of ['.touch-stick', '.touch-interact']) {
       const e = document.querySelector<HTMLElement>(sel);
       if (!e || e.hidden || e.offsetParent === null) continue;
@@ -899,7 +907,10 @@ export class WorldScene extends Phaser.Scene {
     // GAME-180: ціль підказки — просильник (id NPC): стрілка вказує на нього, де б він зараз стояв (мешканці ходять за розкладом).
     const tnpc = tn?.startsWith('npc.') && this.hooks.talk(tn) !== null ? this.sprite(tn)?.s : undefined;
     const tpos = ts && this.hooks.isLive(ts.name) ? { x: ts.x, y: ts.y } : tnpc?.visible ? { x: tnpc.x, y: tnpc.y } : null;
-    this.fx?.drawGuide({ x: this.player.x, y: this.player.y }, tpos, this.cameras.main.worldView, this.safeInsets(time), INTERACT_RANGE * 1.2, time);
+    const insets = this.safeInsets(time);
+    this.fx?.drawGuide({ x: this.player.x, y: this.player.y }, tpos, this.cameras.main.worldView, insets, INTERACT_RANGE * 1.2, time);
+    // GAME-185: вбік верхній ряд HUD лежить поверх мапи — герой (а з ним слідувачі) стоїть посередині ВІЛЬНОЇ висоти, а не під ним. Сторч шапка в потоці, камера без зсуву.
+    this.cameras.main.setFollowOffset(0, this.landscape ? Math.round(insets.top / 2) : 0);
 
     this.moveFollowers(delta, time, moving || v.x !== 0 || v.y !== 0);
     this.updateDaylight(time);
