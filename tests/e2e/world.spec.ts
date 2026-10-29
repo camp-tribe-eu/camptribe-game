@@ -276,6 +276,7 @@ for (const vp of VIEWPORTS) {
       expect((await probe(page)).nearObject).toBe('npc.elise');
       expect(await holdTouch(page, 'interact', () => true, 100)).toBe(true);
       await expect(story.locator('[data-ui="dialogue"]')).toBeVisible();
+      await page.waitForTimeout(400);   // GAME-179: рамка розмови, як і панель, глуха ~350 мс після появи (клік від пальця на кнопці дії)
       await story.locator('[data-key="dlg.elise-greeting.hello.c1"]').tap();   // велосипедна відповідь
       await page.waitForTimeout(400);   // GAME-80: панель глуха ~350 мс після дії
       await story.locator('[data-act="continue"]').tap();

@@ -45,7 +45,7 @@ function nextStep(from: { c: number; r: number }, to: { c: number; r: number }):
 }
 
 /** Пішки до того, хто рухається: ціль перечитується щокроку; зупинка, коли найближчий співрозмовник — потрібний. */
-async function walkToNpc(page: Page, id: string, where: (p: Probe) => Pt, maxMs = 80_000): Promise<Probe> {
+async function walkToNpc(page: Page, id: string, where: (p: Probe) => Pt, maxMs = 80_000, arrived?: (p: Probe) => boolean): Promise<Probe> {
   const keys = { ArrowLeft: false, ArrowRight: false, ArrowUp: false, ArrowDown: false };
   const set = async (want: Partial<typeof keys>): Promise<void> => {
     for (const k of Object.keys(keys) as (keyof typeof keys)[]) {
@@ -57,7 +57,7 @@ async function walkToNpc(page: Page, id: string, where: (p: Probe) => Pt, maxMs 
   try {
     while (Date.now() - start < maxMs) {
       const p = await probe(page);
-      if (p.nearObject === id) return p;
+      if (p.nearObject === id || arrived?.(p)) return p;
       const goal = where(p);
       const here = tile({ x: p.playerX, y: p.playerY });
       const to = tile(goal);
@@ -121,6 +121,11 @@ async function talkTo(page: Page, id: string, name: string): Promise<void> {
   };
   const box = panel(page).locator('[data-ui="dialogue"]');
   // Слідувачі (родина) тупцюють коло героя: «найближчий» міг помінятись між кроком і дією — тоді розмова не з тим; закриваємо її й пробуємо ще.
+  // Родина тупцює коло героя, тому в грі розмова з нею — лише коли в зоні дії нікого іншого (вогнище, Еліза, предмет): ідемо на чисте місце — галявину.
+  if (id === 'npc.victoria' || id === 'npc.matthew') {
+    const clearing = { x: 21.5 * TILE, y: 18.5 * TILE };
+    await walkToNpc(page, '', () => clearing, 80_000, (p) => Math.hypot(p.playerX - clearing.x, p.playerY - clearing.y) < 12);
+  }
   for (let attempt = 0; ; attempt++) {
     const near = await walkToNpc(page, id, where);
     expect(near.nearObject).toBe(id);
