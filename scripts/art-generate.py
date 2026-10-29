@@ -124,11 +124,14 @@ def generate_text(spec, name):
     if not key:
         sys.exit("FAL_KEY не заданий у середовищі")
     saved = 0
-    for model in spec["models"]:
+    endpoints = spec.get("endpoints") or [spec.get("endpoint", "fal-ai/any-llm")]
+    for model, endpoint in [(m, e) for m in spec["models"] for e in endpoints]:
+        if any(os.path.exists(f"art/out/{name}-{model.replace('/', '_')}.md") for _ in [0]):
+            continue  # ця модель уже відповіла через інший шлях
         payload = dict(spec["payload"], model=model)
         try:
             req = urllib.request.Request(
-                FAL + spec.get("endpoint", "fal-ai/any-llm"), data=json.dumps(payload).encode(),
+                FAL + endpoint, data=json.dumps(payload).encode(),
                 headers={"Authorization": f"Key {key}", "Content-Type": "application/json"})
             d = json.load(urllib.request.urlopen(req, timeout=600))
             out = (d.get("output") or "").strip()
@@ -140,7 +143,8 @@ def generate_text(spec, name):
             saved += 1
             print(f"OK   {model}: {len(out)} символів → {path}")
         except Exception as e:  # noqa: BLE001
-            print(f"FAIL {model}: {type(e).__name__}: {str(e)[:300]}")
+            body = e.read().decode()[:300] if hasattr(e, "read") else ""
+            print(f"FAIL {model} @ {endpoint}: {type(e).__name__}: {str(e)[:200]} {body}")
     if saved == 0:
         sys.exit("жодної текстової відповіді")
 
