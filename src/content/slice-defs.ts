@@ -8,6 +8,7 @@ import packing from '../../content/packing.json';
 import { STORY } from './story';
 import { LIFE } from './life';
 import { WAVES } from './waves';
+import { requestInteractions } from './requests';
 
 /** Крамниця гри (GAME-81): єдина локація, де продається спорядження. Неіснуючий id ловить checkDefs (DEFS_BAD_REF). */
 export const SHOP = 'loc.shop';
@@ -45,6 +46,8 @@ export const SLICE_DEFS: CoreDefs = {
     'obj.campfire': { grantId: 'rw.campfire-warmth', moneyCents: 0 },
     // GAME-170 зріз 2: чужі пакети біля води — добра справа без строку й поза хвилею; журнал пише запис (Interact), Еліза дякує зранку дня 3 (GAME-144).
     'obj.litter': { grantId: 'rw.litter-cleaned', moneyCents: 0, flags: ['f.litter-cleaned-ch1'] },
+    // GAME-180: цілі прохань сусідів (content/requests.json) — дотик до позначки на мапі ставить прапорець цілі.
+    ...requestInteractions(),
   },
 };
 

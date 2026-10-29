@@ -188,6 +188,10 @@ export interface StoryDefs {
    * подорожі. Збирається з рядків content/flags.json із `journal: true`. Немає — журнал вибору не пише нічого.
    */
   readonly memorable?: readonly string[];
+  /** Прапорці прохань сусідів (GAME-180): косметичні для сюжету — повний перебір їх не розрізняє (moves.ts exploreView). */
+  readonly requestFlags?: readonly string[];
+  /** Прапорці, поява яких пишеться в журнал подорожі як «Запам'ятали: …» (GAME-180: прохання здано); текст — journal.<прапорець>. */
+  readonly journaled?: readonly string[];
 }
 
 /**

@@ -188,5 +188,21 @@
   "amb.sarah.1": "Он там, над озером, моя улюблена лава.",
   "amb.sarah.2": "Група о четвертій, а поки що — чай.",
   "amb.claire.1": "Як там ваша тваринка? Їсть нормально?",
-  "amb.claire.2": "Хвіст угору, вуха вперед — гарний знак."
+  "amb.claire.2": "Хвіст угору, вуха вперед — гарний знак.",
+  "ui.req.reward": "Нагорода",
+  "ui.req.xp": "досвіду",
+  "ui.req.om": "ОМ",
+  "ui.req.goals": "Що потрібно",
+  "ui.req.tracker": "Прохання",
+  "next.req.target": "іди до позначки на мапі",
+  "next.req.giver": "поверни прохання тому, хто просив",
+  "ui.req.skill.planning": "планування",
+  "ui.req.skill.camping": "табір",
+  "ui.req.skill.mechanics": "механіка",
+  "ui.req.skill.electrics": "електрика",
+  "ui.req.skill.cooking": "кухня",
+  "ui.req.skill.finance": "фінанси",
+  "ui.req.skill.endurance": "витривалість",
+  "ui.req.skill.communication": "спілкування",
+  "near.req": "Зробити:"
 }

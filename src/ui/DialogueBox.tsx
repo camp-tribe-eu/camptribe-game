@@ -6,6 +6,7 @@ import { ct } from '../i18n/content';
 import type { AnyLang, Key } from '../i18n';
 import { calmMotion } from '../platform/motion';
 import { Portrait, type PortraitLookup } from './Portrait';
+import { RequestCard } from './RequestCard';
 import { ACT_COOLDOWN_MS, actionLabel } from './StoryPanel';
 import { trapTab } from './focus-trap';
 import type { OfferAction, StoryOffer } from './story-types';
@@ -110,6 +111,7 @@ export function DialogueBox({ dialogue: d, lang, t, act, portrait }: { dialogue:
         <h3 id="ui-talk-name" class="ui-talk-name" data-ui="speaker" data-npc={d.speakerId ?? 'narrator'}>{name}</h3>
         <div class="ui-talk-main">
           <p ref={line} id="ui-talk-line" class="ui-talk-line" data-ui="line" tabIndex={-1}>{shown}<span class="ui-ghost">{rest}</span></p>
+          {d.request && <RequestCard card={d.request} lang={lang} t={t} />}
           <div class="ui-answers ui-talk-answers" data-ui="answers">
             {answers.map((a, i) => (
               <button type="button" class="ui-btn" key={a.id} data-act={a.kind} data-key={a.key ?? ''} onClick={(e) => guarded(e, () => act(a.id))}>

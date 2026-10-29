@@ -265,8 +265,16 @@ export function Shell({ port, langOverride, credits, build, holdToast = false, h
         </div>}
         {/* GAME-175: рядок «Далі: …» — куди йти зараз (мапа першою, а не панель); біля об'єкта міняється на підпис дії («● Сісти в авто»). Один рядок
             у шапці під ☰ · HUD · ‖; тост-підказка про ☰ (GAME-95) його не заступає — вона лише на екрані вибору героя, де цього рядка немає. */}
-        {offer.stage !== 'create' && (offer.hint.near || offer.hint.next || offer.hint.backpack > 0) && !hideUi.includes('next') && (
+        {offer.stage !== 'create' && (offer.hint.near || offer.hint.next || offer.hint.backpack > 0 || offer.requests.length > 0) && !hideUi.includes('next') && (
           <div class="ui-next" data-ui="next-hint" data-kind={offer.hint.near ? 'near' : 'next'} data-spot={offer.hint.near ? undefined : offer.hint.nextSpot ?? undefined}>
+            {/* GAME-180: трекер прийнятих прохань — «Сміття 2/3»; стрілка на мапі веде до наступної цілі, а коли все зроблено — до просильника. */}
+            {offer.requests.length > 0 && !hideUi.includes('requests') && (
+              <div class="ui-reqs" data-ui="req-tracker" role="group" aria-label={t('ui.req.tracker')}>
+                {offer.requests.map((r) => (
+                  <span class="ui-req-row" key={r.id} data-ui="req-row" data-request={r.id} data-done={r.done} data-total={r.total} data-ready={r.ready ? 'yes' : 'no'}>{`${ct(lang, r.trackKey)} ${r.done}/${r.total}`}</span>
+                ))}
+              </div>
+            )}
             {offer.hint.near
               ? `● ${t(offer.hint.near.label)}${offer.hint.near.itemKey ? ` ${ct(lang, offer.hint.near.itemKey)}` : ''}`
               : `${offer.hint.next ? `${t('ui.next')} ${t(offer.hint.next as Key)}` : ''}`}

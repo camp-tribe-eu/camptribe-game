@@ -10,6 +10,7 @@ import meta from '../../content/meta.json';
 import npcs from '../../content/npcs.json';
 import profiles from '../../content/profiles.json';
 import quests from '../../content/quests.json';
+import requests from '../../content/requests.json';
 import roads from '../../content/roads.json';
 import transports from '../../content/transports.json';
 
@@ -37,7 +38,11 @@ export interface RawContent {
   roads?: { id: string; from: string; to: string; twoWay?: boolean; ways: { transport: string; minutes: number; cents: number; risk?: number }[] }[];
   /** Реєстр прапорців (GAME-115); ядру з нього потрібні лише пам'ятні вибори (`journal: true`, GAME-110). */
   flags?: { id: string; type: string; values?: string[]; journal?: boolean }[];
+  /** content/requests.json (GAME-180): прохання сусідів; ядру з нього потрібні лише назви прапорців. */
+  requests?: { id: string; targets: { id: string }[] }[];
 }
+const requestFlag = (id: string, part: string): string => `f.${id.replace(/\./g, '-')}-${part}`;
+const requestFlagsOf = (rs: NonNullable<RawContent['requests']>): string[] => rs.flatMap((r) => [requestFlag(r.id, 'taken'), ...r.targets.map((t) => requestFlag(r.id, t.id)), requestFlag(r.id, 'done')]);
 
 /**
  * Пам'ятні вибори (GAME-110): конкретні назви фактів із `journal: true` — bool як є, enum — `<id>-<значення>` на кожне
@@ -111,6 +116,8 @@ export function compileStory(c: RawContent): StoryDefs {
       return r.twoWay ? [{ from: r.from, to: r.to, ways }, { from: r.to, to: r.from, ways }] : [{ from: r.from, to: r.to, ways }];
     }),
     ...(memorableFacts(c).length ? { memorable: memorableFacts(c) } : {}),
+    // GAME-180: прапорці прохань сусідів — косметичні для сюжету (перебір їх не розрізняє), «здано» ще й пишеться в журнал.
+    ...(c.requests?.length ? { requestFlags: requestFlagsOf(c.requests), journaled: c.requests.map((r) => requestFlag(r.id, 'done')) } : {}),
   };
 }
 
@@ -118,7 +125,7 @@ export function compileStory(c: RawContent): StoryDefs {
 const dialogueFiles = import.meta.glob<RawDialogue>('../../content/dialogue/*.json', { eager: true, import: 'default' });
 
 export const CONTENT: RawContent = {
-  meta, profiles, transports, animals, locations, npcs, quests: quests as RawQuest[], roads, flags: flags as NonNullable<RawContent['flags']>,
+  meta, profiles, transports, animals, locations, npcs, quests: quests as RawQuest[], roads, flags: flags as NonNullable<RawContent['flags']>, requests: requests as NonNullable<RawContent['requests']>,
   dialogues: Object.keys(dialogueFiles).sort().map((k) => dialogueFiles[k] as RawDialogue),
 };
 export const STORY: StoryDefs = compileStory(CONTENT);

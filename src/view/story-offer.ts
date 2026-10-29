@@ -28,7 +28,10 @@ import { RAW_WAVES } from '../content/waves';
 import { menuTasks } from '../content/director';
 import { coveredKeys, moveKey, nextTarget, spotLabel } from '../content/map-first';
 import { waveView } from '../core/wave';
+import type { Key } from '../i18n';
+import { liveRequestSpot as liveSpotFor } from '../content/requests';
 import { miaState } from '../content/mia';
+import { isRequestSpot, REQUESTS, requestOf, requestStatus, requestDoneFlags, requestTarget, trackerRows } from '../content/requests';
 
 const NO_ANIMAL = 'animal.none';
 
@@ -45,7 +48,7 @@ const NAMES: ReadonlyMap<string, string> = new Map([
   // Сцена сюжету (GAME-142): так само — назва сцени над репліками.
   ...CONTENT.dialogues.flatMap((d) => (d.scene ? [[d.id, d.scene.titleKey] as const] : [])),
   // Пам'ятний вибір (GAME-110): запис журналу «Запам'ятали: …» — текст journal.<факт> (валідатор: LOCALE_MISSING без нього).
-  ...memorableFacts(CONTENT).map((f) => [f, `journal.${f}`] as const),
+  ...[...memorableFacts(CONTENT), ...requestDoneFlags()].map((f) => [f, `journal.${f}`] as const),
 ]);
 export const nameKey = (id: string | null | undefined): string | null => (id ? NAMES.get(id) ?? null : null);
 
@@ -122,7 +125,7 @@ export function menuMoves(s: GameState, defs: CoreDefs, weather?: Weather): { mo
   const here = outcomeKey(s);
   const seen = new Set<string>();
   const out: { move: Move; next: GameState }[] = [];
-  for (const m of moves(s, defs)) {
+  for (const m of moves(s, defs, true)) {
     if (m.type === 'Interact' || m.type === 'RoadEvent') continue; // справа сцени й симуляції, не меню
     if (talking && m.type !== 'Choose' && m.type !== 'Continue') continue;
     const next = tryMove(s, m, defs, weather);
@@ -262,8 +265,17 @@ export function storyOffer(sim: SimState, defs: CoreDefs, view: StoryView = PANE
   const lastTrip = [...sim.journal].reverse().find((e) => e.type === 'Visit')?.commandId ?? null;
   const nextT = s.player && view.mapFirst ? nextTarget(sim, defs, view.backpack ?? []) : null;
   const nearL = s.player && view.mapFirst && view.near !== null ? spotLabel(sim, defs, view.near) : null;
-  const hint = { backpack: view.backpack?.length ?? 0, next: nextT?.key ?? null, nextSpot: nextT?.spot ?? null, near: nearL ? { label: nearL.label, itemKey: nearL.ref ? nameKey(nearL.ref) : null } : null };
-  const base = { hint, moneyCents: s.moneyCents, inventory, journal, lastTrip, weather, forecast: todayForecast(sim), day: dayOf(sim.clock) + 1, timeMinutes: timeOfDay(sim.clock.minutes), wave: waveOffer(sim), mia: miaState(s, defs), ...summaryOffer(sim, defs) };
+  // GAME-180: на мапі табору підказка «Далі:» веде до прохання в роботі (ціль → просильник), а біля цілі — підпис дії.
+  const reqT = nextT ? null : requestTarget(s);
+  const reqNear = view.near !== null && view.mapFirst && isRequestSpot(view.near) && liveSpotFor(s, view.near)
+    ? REQUESTS.flatMap((r) => r.targets).find((t) => t.spot === view.near) : undefined;
+  const hint = {
+    backpack: view.backpack?.length ?? 0,
+    next: nextT?.key ?? (reqT ? (reqT.startsWith('npc.') ? 'next.req.giver' : 'next.req.target') as Key : null),
+    nextSpot: nextT?.spot ?? reqT,
+    near: nearL ? { label: nearL.label, itemKey: nearL.ref ? nameKey(nearL.ref) : null } : reqNear ? { label: 'near.req' as Key, itemKey: reqNear.labelKey } : null,
+  };
+  const base = { hint, requests: trackerRows(s), moneyCents: s.moneyCents, inventory, journal, lastTrip, weather, forecast: todayForecast(sim), day: dayOf(sim.clock) + 1, timeMinutes: timeOfDay(sim.clock.minutes), wave: waveOffer(sim), mia: miaState(s, defs), ...summaryOffer(sim, defs) };
 
   if (!s.player) {
     const choices = characterChoices(defs);
@@ -316,7 +328,12 @@ export function storyOffer(sim: SimState, defs: CoreDefs, view: StoryView = PANE
     const speakerKey = npcId === undefined ? nameKey(s.dialogue.id) : node?.speaker === 'npc' ? nameKey(npcId) : null;
     // GAME-179: хто говорить — для портрета. Репліка гравця — 'player' (його голова), подія в дорозі й сцена без NPC — оповідач (null).
     const speakerId = npcId === undefined ? null : node?.speaker === 'npc' ? npcId : 'player';
-    dialogue = { speakerKey, speakerId, key: node?.textKey ?? null, answers: offered };
+    // GAME-180: вузол `offer` розмови з просильником, поки прохання ще не взято, — картка прохання (цілі-картинки й нагорода) над кнопками «Беруся» / «Пізніше».
+    const rq = npcId !== undefined && s.dialogue.node === 'offer' ? requestOf(npcId) : undefined;
+    const card = rq && requestStatus(s.flags, rq) === 'available'
+      ? { id: rq.id, titleKey: rq.titleKey, goalKey: rq.goalKey, goals: rq.targets.map((t) => ({ icon: t.icon, labelKey: t.labelKey })), reward: rq.reward }
+      : undefined;
+    dialogue = { speakerKey, speakerId, key: node?.textKey ?? null, answers: offered, ...(card ? { request: card } : {}) };
   }
 
   return {

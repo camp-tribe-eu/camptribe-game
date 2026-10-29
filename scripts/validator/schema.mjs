@@ -139,6 +139,12 @@ export const SCHEMAS = {
   // source/checkedAt/kind навмисно не required тут: їх стереже перевірка fact-source
   // власними кодами, щоб відсутнє джерело не ховалось під загальним SCHEMA_INVALID.
   facts: obj({ id: req(str), claimKey: req(str), source: str, checkedAt: str, kind: str }),
+  // Прохання сусідів (GAME-180): просильник, цілі на мапі (іконка + об'єкт), нагорода-гачок для GAME-181. Решту (діалог, мапу, прапорці) звіряє перевірка requests.
+  requests: obj({
+    id: req(str), giver: req(str), titleKey: req(str), goalKey: req(str), trackKey: req(str),
+    targets: req(arr(obj({ id: req(str), spot: req(str), icon: req(en('litter', 'bird', 'chain', 'lantern', 'cookie', 'apple')), labelKey: req(str) }))),
+    reward: req(obj({ xp: req(int0), om: req(int0), skills: arr(str) })),
+  }),
   // Реєстр прапорців і фактів стану (GAME-115, DC-015): f.* — прапорці (bool або enum, закодований як f.<назва>-<значення>;
   // сімейство «f.<префікс>-*» ставить ядро — generatedFrom), m.* — пам'ять NPC, s.* — факт стану гравця (транспорт, погода).
   // initial — scalar: тип звіряє перевірка flags власним кодом FLAG_REGISTRY_INVALID, не SCHEMA_INVALID.
@@ -152,7 +158,7 @@ export const SCHEMAS = {
 };
 
 
-export const COLLECTIONS = ['profiles', 'transports', 'animals', 'items', 'npcs', 'locations', 'quests', 'events', 'facts', 'roads', 'flags', 'waves'];
+export const COLLECTIONS = ['profiles', 'transports', 'animals', 'items', 'npcs', 'locations', 'quests', 'events', 'facts', 'roads', 'flags', 'waves', 'requests'];
 
 function typeOk(s, v) {
   switch (s.t) {

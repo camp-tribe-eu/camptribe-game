@@ -188,5 +188,21 @@
   "amb.sarah.1": "Over there, above the lake, is my favourite bench.",
   "amb.sarah.2": "The group is at four, so tea until then.",
   "amb.claire.1": "How is your little one? Eating well?",
-  "amb.claire.2": "Tail up, ears forward — that is a good sign."
+  "amb.claire.2": "Tail up, ears forward — that is a good sign.",
+  "ui.req.reward": "Reward",
+  "ui.req.xp": "XP",
+  "ui.req.om": "OM",
+  "ui.req.goals": "What you need",
+  "ui.req.tracker": "Requests",
+  "next.req.target": "head for the marker on the map",
+  "next.req.giver": "go back to whoever asked",
+  "ui.req.skill.planning": "planning",
+  "ui.req.skill.camping": "camping",
+  "ui.req.skill.mechanics": "mechanics",
+  "ui.req.skill.electrics": "electrics",
+  "ui.req.skill.cooking": "cooking",
+  "ui.req.skill.finance": "finance",
+  "ui.req.skill.endurance": "endurance",
+  "ui.req.skill.communication": "communication",
+  "near.req": "Do:"
 }

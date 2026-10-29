@@ -1,8 +1,9 @@
 {
   "id": "dlg.ingrid-chat",
   "npcId": "npc.ingrid",
-  "start": "hello",
+  "start": "gate",
   "nodes": [
+    { "id": "gate", "speaker": "npc", "textKey": "dlg.ingrid-chat.gate", "next": "hello", "branches": [{ "when": { "all": [{ "flag": "f.req-ingrid-birds-t1" }, { "notFlag": "f.req-ingrid-birds-done" }] }, "next": "turnin" }, { "when": { "all": [{ "flag": "f.req-ingrid-birds-taken" }, { "notFlag": "f.req-ingrid-birds-done" }] }, "next": "reminder" }, { "when": { "all": [{ "notFlag": "f.req-ingrid-birds-taken" }, { "notFlag": "f.req-ingrid-birds-done" }] }, "next": "offer" }] },
     {
       "id": "hello", "speaker": "npc", "textKey": "dlg.ingrid-chat.hello",
       "choices": [
@@ -13,6 +14,23 @@
     },
     { "id": "a", "speaker": "npc", "textKey": "dlg.ingrid-chat.a", "end": true },
     { "id": "b", "speaker": "npc", "textKey": "dlg.ingrid-chat.b", "end": true },
-    { "id": "bye", "speaker": "npc", "textKey": "dlg.ingrid-chat.bye", "end": true }
+    { "id": "bye", "speaker": "npc", "textKey": "dlg.ingrid-chat.bye", "end": true },
+    {
+      "id": "offer", "speaker": "npc", "textKey": "dlg.ingrid-chat.offer",
+      "choices": [
+        { "textKey": "dlg.ingrid-chat.offer.c1", "next": "accepted", "effects": [{ "setFlag": "f.req-ingrid-birds-taken" }] },
+        { "textKey": "dlg.ingrid-chat.offer.c2", "next": "later" }
+      ]
+    },
+    { "id": "accepted", "speaker": "npc", "textKey": "dlg.ingrid-chat.accepted", "end": true },
+    { "id": "later", "speaker": "npc", "textKey": "dlg.ingrid-chat.later", "end": true },
+    { "id": "reminder", "speaker": "npc", "textKey": "dlg.ingrid-chat.reminder", "end": true },
+    {
+      "id": "turnin", "speaker": "npc", "textKey": "dlg.ingrid-chat.turnin",
+      "choices": [
+        { "textKey": "dlg.ingrid-chat.turnin.c1", "next": "closing", "effects": [{ "setFlag": "f.req-ingrid-birds-done" }] }
+      ]
+    },
+    { "id": "closing", "speaker": "npc", "textKey": "dlg.ingrid-chat.closing", "end": true }
   ]
 }

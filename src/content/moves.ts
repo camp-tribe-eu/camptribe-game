@@ -22,14 +22,24 @@ export function chatOnlyNpcs(st: StoryDefs): ReadonlySet<string> {
   const out = new Set<string>();
   for (const d of Object.values(st.dialogues)) {
     if (d.npcId === undefined || involved.has(d.npcId)) continue;
-    const inert = Object.values(d.nodes).every((n) => (n.choices ?? []).every((c) => c.effects.length === 0) && !n.branches);
+    // GAME-180: розмова просильника ставить ЛИШЕ прапорці прохань (f.req-*) — вони косметичні для сюжету (progressView їх не розрізняє, валідатор REQUEST_GATES_QUEST
+    // забороняє квестам їх читати): ні квестів, ні предметів, ні грошей така розмова не змінює. Тож для перебору й бота вона теж «лише побалакати»: без цього чотири
+    // розмови з гілками додавали б до кожного стану табору десятки Choose/Continue — бот на 80 кроках не доходив до кінця жодного разу з 300 (save-size.test),
+    // а повний перебір дня 3 вибухав. Повний шлях кожного прохання на ядрі доводить requests.test, графи розмов — валідатор (DIALOGUE_DEAD_END, REQUEST_*).
+    const effects = Object.values(d.nodes).flatMap((n) => (n.choices ?? []).flatMap((c) => c.effects));
+    const request = effects.length > 0 && effects.every((e) => 'setFlag' in e && e.setFlag.startsWith('f.req-'));
+    const inert = Object.values(d.nodes).every((n) => (n.choices ?? []).every((c) => c.effects.length === 0 || request) && (!n.branches || request));
     if (inert) out.add(d.npcId);
   }
   chatMemo.set(st, out);
   return out;
 }
 
-export function moves(s: GameState, defs: CoreDefs): Move[] {
+/**
+ * Усі спроби гравця в стані. `withRequests` (GAME-180): чи включати вибір-хаб прохання (умова читає f.req-*). Меню й рамка розмови (story-offer) показують його —
+ * інакше прохання Елізи не взяти; перебір і бот викликають без нього (косметика, див. нижче).
+ */
+export function moves(s: GameState, defs: CoreDefs, withRequests = false): Move[] {
   const st = defs.story as StoryDefs;
   const out: Record<string, unknown>[] = [];
   const chat = chatOnlyNpcs(st);
@@ -41,7 +51,9 @@ export function moves(s: GameState, defs: CoreDefs): Move[] {
   // (shop.test вибухає), а законність доводять fireplace.test і day2.test на справжньому шляху.
   if (s.dialogue) {
     const node = st.dialogues[s.dialogue.id]?.nodes[s.dialogue.node];
-    (node?.choices ?? []).forEach((_, i) => out.push({ type: 'Choose', choice: i }));
+    // GAME-180: вибір, що відкриває прохання (умова читає f.req-*: хаб Елізи «Є щось, із чим допомогти?»), — не хід сюжету, а косметика: перебір і бот його не пропонують
+    // (як розмови просильників вище; меню гравця — з withRequests). Індекси решти виборів не міняються. Шлях прохання й відсутність тупиків у ньому доводить requests.test.
+    (node?.choices ?? []).forEach((c, i) => { if (withRequests || !JSON.stringify(c.when ?? null).includes('"f.req-')) out.push({ type: 'Choose', choice: i }); });
     out.push({ type: 'Continue' });
   }
   for (const l of Object.values(st.locations)) for (const id of l.items) out.push({ type: 'Pickup', itemId: id });
@@ -87,11 +99,13 @@ export const progressKey = (s: GameState): string => canonical(progressView(s));
  * лише ними, мають ті самі сюжетні наслідки, а самі гілки-згадки проходить той самий тест (2⁵ комбінацій до кінця розділу).
  * Меню (outcomeKey = progressKey) цього вигляду НЕ вживає: два вибори, що різняться лише пам'ятним фактом, — різні кнопки.
  */
-export function exploreView(s: GameState, st: Pick<StoryDefs, 'memorable' | 'dialogues'>): object {
-  const mem = new Set([...(st.memorable ?? []), ...seenFlags(st)]);
+export function exploreView(s: GameState, st: Pick<StoryDefs, 'memorable' | 'requestFlags' | 'dialogues'>): object {
+  const mem = new Set([...(st.memorable ?? []), ...(st.requestFlags ?? []), ...seenFlags(st)]);
   if (mem.size === 0) return progressView(s);
   const npcMemory = Object.fromEntries(Object.entries(s.npcMemory).map(([npc, facts]) => [npc, facts.filter((f) => !mem.has(f))] as const).filter(([, facts]) => facts.length > 0));
-  return { ...progressView(s), flags: s.flags.filter((f) => !mem.has(f)), npcMemory };
+  // GAME-180: дотик до цілі прохання видає разову нагороду (grantId `rw.req-…`, 0 центів) — теж косметика; без цього вісім цілей давали б 2⁸ станів у перебору «меню + сцена».
+  const grants = (st.requestFlags?.length ?? 0) > 0 ? s.grants.filter((g) => !g.startsWith('rw.req-')) : s.grants;
+  return { ...progressView(s), flags: s.flags.filter((f) => !mem.has(f)), grants, npcMemory };
 }
 
 /**

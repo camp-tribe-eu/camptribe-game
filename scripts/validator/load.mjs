@@ -61,3 +61,20 @@ export function loadContent(dir, { allowMissing = false } = {}) {
   }
   return { status: issues.length ? 'ISSUES' : 'OK', content, issues };
 }
+
+/**
+ * Об'єкти мапи табору, на які можуть вказувати цілі прохань (GAME-180): імена тригерів і NPC шару `objects` (Tiled .tmj).
+ * Немає теки/файлу — порожній список (і кожна ціль прохання червоніє REQUEST_TARGET_NO_MAP: мовчання на межі — не факт, закон 4).
+ */
+export function loadMapObjects(mapsDir) {
+  const out = [];
+  if (!existsSync(mapsDir)) return out;
+  for (const name of readdirSync(mapsDir).sort()) {
+    if (!name.endsWith('.tmj')) continue;
+    try {
+      const m = JSON.parse(readFileSync(join(mapsDir, name), 'utf8'));
+      for (const l of m.layers ?? []) if (l.type === 'objectgroup' && l.name === 'objects') for (const o of l.objects ?? []) if (o.type === 'trigger' || o.type === 'npc') out.push(o.name);
+    } catch { /* зіпсована мапа ловить validate-maps; тут — просто без її об'єктів */ }
+  }
+  return out;
+}

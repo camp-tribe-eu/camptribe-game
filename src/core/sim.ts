@@ -118,7 +118,7 @@ function roadEvent(s: SimState, ctx: StepCtx): SimState {
  * По запису на факт; у контенті один вибір ставить щонайбільше один такий факт (commandId у журналі не повторюється — journal.test).
  */
 function remembered(before: GameState, after: GameState, ctx: StepCtx, commandId: string, at: number): JournalEntry[] {
-  const facts = ctx.defs?.story?.memorable ?? [];
+  const facts = [...(ctx.defs?.story?.memorable ?? []), ...(ctx.defs?.story?.journaled ?? [])];
   if (facts.length === 0) return [];
   const known = (g: GameState): Set<string> => new Set([...g.flags, ...Object.values(g.npcMemory).flat()]);
   const was = known(before);
