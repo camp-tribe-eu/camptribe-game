@@ -211,7 +211,12 @@ async function playRequest(page: Page, r: Req, opts: { later?: boolean; shot?: s
   const tb = await row.boundingBox();
   const vp = page.viewportSize() as { width: number; height: number };
   expect(tb && tb.y >= 0 && tb.y + tb.height <= vp.height && tb.x >= 0 && tb.x + tb.width <= vp.width, `трекер у межах екрана: ${JSON.stringify(tb)}`).toBe(true);
-  await expect.poll(async () => (await probe(page)).fx.guide, { message: 'стрілка до цілі' }).not.toBe('none');
+  // Стрілка вказує на наступну ціль; а коли герой уже стоїть біля неї (просильник стоїть поруч із ціллю — розклад мешканців), стрілку навмисно сховано (відстань < 1,8 клітинки).
+  const first = OBJ.get(r.targets[0] as string) as Pt;
+  await expect.poll(async () => {
+    const p = await probe(page);
+    return p.fx.target === r.targets[0] && (p.fx.guide !== 'none' || Math.hypot(p.playerX - first.x, p.playerY - first.y) < 60);
+  }, { message: 'стрілка до першої цілі' }).toBe(true);
   for (const [i, spot] of r.targets.entries()) {
     await doTarget(page, r, spot, i);
     if (i === 0 && opts.shot) await page.screenshot({ path: `research/visual-audit/request-tracker-${opts.shot}.png` });
