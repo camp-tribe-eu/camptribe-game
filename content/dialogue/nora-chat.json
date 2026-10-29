@@ -28,7 +28,7 @@
     {
       "id": "turnin", "speaker": "npc", "textKey": "dlg.nora-chat.turnin",
       "choices": [
-        { "textKey": "dlg.nora-chat.turnin.c1", "next": "closing", "effects": [{ "setFlag": "f.req-nora-shore-done" }] }
+        { "textKey": "dlg.nora-chat.turnin.c1", "next": "closing", "effects": [] }
       ]
     },
     { "id": "closing", "speaker": "npc", "textKey": "dlg.nora-chat.closing", "end": true }
