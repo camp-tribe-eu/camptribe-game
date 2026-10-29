@@ -871,7 +871,7 @@ export class WorldScene extends Phaser.Scene {
     for (const n of [...this.fired]) { const f = this.spots.find((x) => x.name === n); if (!f || Phaser.Math.Distance.Between(this.player.x, this.player.y, f.x, f.y) > INTERACT_RANGE) this.fired.delete(n); }
     // Спакована річ удома сама не «розпаковується» від проходу повз: її дістають лише E/тап (чи сітка).
     // Проходячи повз зайву річ (ліхтар, подушка), гравець її не підбирає сам: кільце рахує лише поточну ціль підказки; решту беруть E/тап — інакше «лишити» зайняло б місце потрібному.
-    const autoNear = spot && best <= AUTO_RANGE && ringMayTake(near, this.hooks.target()) ? near : null;
+    const autoNear = spot && Phaser.Math.Distance.Between(this.player.x, this.player.y, spot.x, spot.y) <= AUTO_RANGE && ringMayTake(near, this.hooks.target()) ? near : null;
     const ready = (autoNear !== 'obj.vehicle' || vehicleReady(carrying, needs)) && !(autoNear?.startsWith('pack.') && this.hooks.look(autoNear) === 'trunk');
     const r = stepRing(this.ring, atCar && carrying ? null : autoNear, !this.fired.has(autoNear ?? '') && ready, autoNear !== 'obj.vehicle' || !moving, dt);
     this.ring = r.ring;
