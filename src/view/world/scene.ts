@@ -501,7 +501,8 @@ export class WorldScene extends Phaser.Scene {
     this.carParts = [];
     this.carFor = want;
     const v = this.spots.find((s) => s.name === 'obj.vehicle');
-    if (!v || t !== 'transport.car') return;
+    // Табір (GAME-183): авто вже намальоване тайлами стоянки (camp-car) — другого не ставимо; об'єкт мапи лише точка дії біля нього.
+    if (!v || t !== 'transport.car' || this.current === 'camp') return;
     const x = v.x + CAR_OFFSET.x;
     const y = v.y + CAR_OFFSET.y;
     this.carParts.push(this.add.image(x, y, 'camp-car').setOrigin(0.5, 1).setDepth(y));

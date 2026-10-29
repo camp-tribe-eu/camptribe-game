@@ -244,5 +244,21 @@
   "ui.req.skill.finance": "фінанси",
   "ui.req.skill.endurance": "витривалість",
   "ui.req.skill.communication": "спілкування",
-  "near.req": "Зробити:"
+  "near.req": "Зробити:",
+  "next.camp.task": "встигни зробити справу — біля позначки",
+  "next.camp.elise": "поговори з Елізою",
+  "next.camp.elise.done": "біля Елізи — заверши крок",
+  "next.camp.firewood": "лісова галявина — купа дров",
+  "next.camp.tent": "до свого намету",
+  "next.camp.lake": "край причалу — ранок біля озера",
+  "next.camp.fire": "до вогнища — вечір разом",
+  "next.camp.leave": "стоянка — авто чи велосипед, час додому",
+  "near.finish": "Завершити:",
+  "near.dry": "Висушити речі",
+  "near.sell": "Продати спорядження",
+  "choice.where": "Куди їдемо?",
+  "choice.step": "Що далі?",
+  "choice.dry": "Що сушимо?",
+  "choice.sell": "Що продаємо?",
+  "ui.notNow": "Не зараз"
 }

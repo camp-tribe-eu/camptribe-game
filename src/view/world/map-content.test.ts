@@ -94,6 +94,8 @@ export function mapContentProblems(map: TiledMap, defs: CoreDefs, key: MapKey = 
     for (const n of known) if (!onMap.includes(n)) out.push(`об'єкт ${n} із MAP_SPOTS.${key} немає на мапі`);
     for (const n of onMap) if (!known.includes(n)) out.push(`об'єкт ${n} на мапі ${key} не описано в MAP_SPOTS`);
   }
+  // Табір (GAME-183): об'єкти кроків із MAP_SPOTS.camp мусять бути на мапі (решта цілей табору — справи хвиль, прохання, вогнище — свої сторожі); повніше — camp-first.test.
+  if (key === 'camp') for (const n of MAP_SPOTS.camp) if (!objects.some((o) => o.name === n)) out.push(`об'єкт ${n} із MAP_SPOTS.camp немає на мапі`);
   for (const [id, n] of Object.entries(st.npcs)) if (n.locationId === loc && !npcs.includes(id) && !MOBILE_TALKERS.has(id)) out.push(`NPC ${id} локації ${String(loc)} не має місця на мапі`);
   return out;
 }
@@ -168,6 +170,8 @@ describe('мапа сцени ↔ контент (GAME-32)', () => {
     expect(mapContentProblems(lost, GAME_DEFS).join()).toContain('npc.elise');
     const away = structuredClone(base); const p = away.properties?.find((x) => x.name === 'locationId'); if (p) p.value = 'loc.home';
     expect(mapContentProblems(away, GAME_DEFS).join()).toContain('живе в loc.camp.lake');
+    const noCar = structuredClone(base); const nl = noCar.layers.find((x) => x.name === 'objects'); if (nl) nl.objects = objs(noCar).filter((o) => o.name !== 'obj.vehicle');
+    expect(mapContentProblems(noCar, GAME_DEFS).join(), 'GAME-183: авто табору прибрано').toContain('obj.vehicle');
   });
 
   it('GAME-175 · дім і крамниця: об\'єкти мапи = MAP_SPOTS, локація, тайлсети — негативні контролі', () => {

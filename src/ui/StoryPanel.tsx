@@ -8,7 +8,7 @@ import { trapTab } from './focus-trap';
 import { Portrait, type PortraitLookup } from './Portrait';
 import type { OfferAction, StoryOffer } from './story-types';
 
-const ACT: Readonly<Record<Exclude<OfferAction['kind'], 'choose' | 'continue'>, Key>> = {
+const ACT: Readonly<Record<Exclude<OfferAction['kind'], 'choose' | 'continue' | 'cancel'>, Key>> = {
   visit: 'act.visit', talk: 'act.talk', pickup: 'act.pickup', buy: 'act.buy', sell: 'act.sell', dry: 'act.dry', complete: 'act.complete', decline: 'act.decline',
   pack: 'pack.in', unpack: 'pack.out', autopack: 'pack.auto', task: 'act.task',
 };
@@ -46,6 +46,7 @@ function Bar({ pct, label }: { pct: number; label: string }) {
 /** Підпис дії-кнопки (панель подорожі й рамка розмови, GAME-179): однаково скрізь. */
 export function actionLabel(lang: AnyLang, t: (k: Key) => string, a: OfferAction): string {
   if (a.kind === 'continue') return t('ui.continue');
+  if (a.kind === 'cancel') return t('ui.notNow');
   if (a.kind === 'choose') return ct(lang, a.key);
   const extras = [
     ...(a.minutes !== undefined ? [`${a.minutes} ${t('ui.minutes')}`] : []),
@@ -149,7 +150,7 @@ export function StoryPanel({ offer, lang, t, act, close, portrait, children, foo
             <Portrait id={offer.dialogue.speakerId} lookup={portrait} size="sm" />
             <h3>{offer.dialogue.speakerKey ? ct(lang, offer.dialogue.speakerKey) : t('ui.dialogue')}</h3>
           </div>
-          <p data-ui="line">{ct(lang, offer.dialogue.key)}</p>
+          <p data-ui="line">{offer.dialogue.ui ? t((offer.dialogue.key ?? 'ui.dialogue') as Key) : ct(lang, offer.dialogue.key)}</p>
           <div class="ui-answers">{offer.dialogue.answers.map(button)}</div>
         </section>
       )}

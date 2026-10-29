@@ -244,5 +244,21 @@
   "ui.req.skill.finance": "finance",
   "ui.req.skill.endurance": "endurance",
   "ui.req.skill.communication": "communication",
-  "near.req": "Do:"
+  "near.req": "Do:",
+  "next.camp.task": "make the deadline — go to the marker",
+  "next.camp.elise": "talk to Elise",
+  "next.camp.elise.done": "by Elise — finish the step",
+  "next.camp.firewood": "the clearing — the firewood pile",
+  "next.camp.tent": "to your tent",
+  "next.camp.lake": "the end of the pier — a morning by the lake",
+  "next.camp.fire": "to the campfire — an evening together",
+  "next.camp.leave": "the parking spot — car or bike, time to head home",
+  "near.finish": "Finish:",
+  "near.dry": "Dry the gear",
+  "near.sell": "Sell gear",
+  "choice.where": "Where to?",
+  "choice.step": "What next?",
+  "choice.dry": "What do we dry?",
+  "choice.sell": "What do we sell?",
+  "ui.notNow": "Not now"
 }

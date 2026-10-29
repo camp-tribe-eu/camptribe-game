@@ -19,7 +19,7 @@ import { WorldScene, type WorldHooks, type WorldProbe } from './view/world/scene
 import { loadWorldArt } from './view/world/art';
 import { mountTouchControls, setActionTarget } from './view/world/touch';
 import { frameSize } from './view/world/frame';
-import { storyOffer, type StoryView } from './view/story-offer';
+import { CHOICE_CANCEL_ID, storyOffer, type StoryView } from './view/story-offer';
 import { testSwitches } from './view/test-switches';
 import { addFrameLag, bootDelay, onFirstFrame } from './view/frame-lag';
 import type { StoryOffer } from './ui/story-types';
@@ -28,7 +28,7 @@ import { liveSpot, spotMove, storyMoves } from './content/director';
 import { portraitFor } from './view/portraits';
 import { headCrop, sheetOf } from './view/world/portrait-art';
 import { requestMarker, requestTarget, requestsDone } from './content/requests';
-import { isBulky, isMapFirstSpot, mapKeyFor, needsLeft, nextTarget, npcLive, resolveSpot, spotLook, unpackMoves } from './content/map-first';
+import { MAP_SPOTS, isBulky, isMapFirstSpot, mapKeyFor, needsLeft, nextTarget, npcLive, resolveSpot, spotLook, unpackMoves } from './content/map-first';
 import { packFlag } from './core/packing';
 import type { GameState } from './core/state';
 import { progressOf, titleOf } from './core/progress';
@@ -73,7 +73,11 @@ let nearSpot: string | null = null;
 // GAME-175: рюкзак героя — дрібні речі, які він підібрав удома, але ще не розвантажив в авто. Стан ПОКАЗУ (ядро й сейв його не знають; перезавантаження
 // повертає речі на місця). Громіздке (намет, спальник) іде одразу в багажник.
 const backpack: string[] = [];
-const viewOf = (): StoryView => ({ mapFirst: !switches.panelActs, trunk: trunkOpen, near: nearSpot, backpack });
+// GAME-183: об'єкт, що питає «що саме?» (авто — куди їхати, сушарка, приймальня, крок з вибором) — його варіанти показує рамка вибору. Стан ПОКАЗУ.
+let choiceSpot: string | null = null;
+const viewOf = (): StoryView => ({ mapFirst: !switches.panelActs, trunk: trunkOpen, near: nearSpot, backpack, choice: choiceSpot });
+/** Об'єкти табору (GAME-183) живуть лише в мапі-першій грі: збірка e2e без ?mapFirst=1 (старі e2e) бачить табір, як до них — кнопки ☰, а не об'єкти. */
+const campOnly = (name: string): boolean => switches.panelActs === true && (MAP_SPOTS.camp as readonly string[]).includes(name);
 // GAME-170 зріз 2 · режисер: перед кожним оновленням екрана — ходи СЮЖЕТУ (StartWave на етапі хвилі). Ядро — сторож законності;
 // режисер шле лише те, що ядро прийме, і рівно раз (після прийняття pendingWave порожній; відмова видна в processed).
 // Завантаження збереження на CH1-D2-CAMP-001 без хвилі стартує її тут же, строки — від годинника завантаження (прийнято, див. director.ts).
@@ -144,6 +148,8 @@ const actOnMap = (name: string): void => {
   if (isMapFirstSpot(name)) {
     const r = resolveSpot(bridge.state, GAME_DEFS, name);
     if (!r) return;
+    // GAME-183: вибір із кількох дій (куди їхати, що сушити, як завершити крок) — рамка вибору, команда піде з її кнопки.
+    if (r.options) { choiceSpot = name; storyChanged(); for (const l of talkListeners) l(); return; }
     const first = r.moves[0];
     // Дрібна річ удома: у рюкзак (команда пакування піде при розвантаженні біля авто), без розмови ядра.
     if (first?.type === 'PackItem' && !isBulky(GAME_DEFS, first.itemId)) { backpack.push(first.itemId); storyChanged(); return; }
@@ -155,9 +161,11 @@ const actOnMap = (name: string): void => {
   }
   const m = spotMove(bridge.state, name);
   if (!m) return;
-  bridge.send(m);
-  storyChanged();
-  if (m.type === 'StartScene') for (const l of openListeners) l();
+  // Сцена біля вогнища: у мапі-першій грі — рамка розмови (як розмова з NPC; mapTalk глушить автовідкриття ☰), а не екран ☰.
+  const asTalk = m.type === 'StartScene' && !switches.panelActs;
+  if (asTalk) mapTalk = true;
+  try { bridge.send(m); storyChanged(); } finally { mapTalk = false; }
+  if (m.type === 'StartScene') for (const l of asTalk ? talkListeners : openListeners) l();
 };
 /** Розвантаження: одна річ з рюкзака в багажник (та сама команда PackItem). Не вмістилась — лишається не взятою (відкривається сітка), рюкзак порожніє на цю річ. */
 const unloadOne = (): 'ok' | 'full' | 'none' => {
@@ -209,7 +217,7 @@ const worldHooks: WorldHooks = {
   // GAME-179: з ким можна говорити саме зараз — те саме, що прийме ядро (NPC тут, відкритий, розмови нема); «!» — гачок прохань GAME-180.
   talk: (id) => (npcLive(bridge.state.game, GAME_DEFS, id) ? { request: requestMarker(bridge.state.game, id) } : null),
   onObject: actOnMap,
-  isLive: (name) => liveSpot(bridge.state, name, GAME_DEFS) && !(name.startsWith('pack.') && backpack.includes(name.slice(5))),
+  isLive: (name) => !campOnly(name) && liveSpot(bridge.state, name, GAME_DEFS) && !(name.startsWith('pack.') && backpack.includes(name.slice(5))),
   backpack: () => backpack.length,
   unload: unloadOne,
   needs: () => {
@@ -225,7 +233,10 @@ const worldHooks: WorldHooks = {
   look: (name) => spotLook(bridge.state, name),
   requestsDone: () => requestsDone(bridge.state.game),
   target: () => {
-    if (targetFor !== bridge.state.game || targetPack !== backpack.length) { targetFor = bridge.state.game; targetPack = backpack.length; targetSpot = nextTarget(bridge.state, GAME_DEFS, backpack)?.spot ?? requestTarget(bridge.state.game); }
+    if (targetFor !== bridge.state.game || targetPack !== backpack.length) { targetFor = bridge.state.game; targetPack = backpack.length; // GAME-183: прохання в роботі (вибір гравця) — перше; далі крок сюжету. Збірка e2e без ?mapFirst=1 табір веде як раніше (лише прохання): ☰ там ще дає кроки.
+      const inCamp = bridge.state.game.player?.locationId === 'loc.camp.lake';
+      targetSpot = requestTarget(bridge.state.game) ?? (switches.panelActs && inCamp ? null : nextTarget(bridge.state, GAME_DEFS, backpack)?.spot ?? null);
+    }
     return targetSpot;
   },
   // Збірка e2e без ?mapFirst=1 — як до GAME-175: завжди табір (старі e2e ходять по ньому й перевіряють не прохід дня 1).
@@ -310,8 +321,10 @@ render(h(Shell, {
     loaded: () => probe.saveLoaded,
     story: () => shown(storyOffer(bridge.state, GAME_DEFS, viewOf()).offer),
     act(id: string) {
+      if (id === CHOICE_CANCEL_ID) { choiceSpot = null; storyChanged(); return; }
       const intent = storyOffer(bridge.state, GAME_DEFS, viewOf()).intents.get(id);
       if (!intent) return;
+      choiceSpot = null;
       bridge.send(intent);
       storyChanged();
     },
@@ -349,7 +362,7 @@ render(h(Shell, {
       // інакше клавіша «залипає» і персонаж іде сам (рецензія PR #13).
       input.held.clear();
       input.tapped.clear();
-      if (!paused) trunkOpen = false;   // екран подорожі (і багажник) закрито — наступного разу ☰ без багажника
+      if (!paused) { trunkOpen = false; choiceSpot = null; }   // екран подорожі (і багажник) закрито — наступного разу ☰ без багажника; рамка вибору (GAME-183) закрита
       (game.scene.getScene('world') as WorldScene | null)?.haltPlayer();
       bridge.setPaused(paused);
       if (paused) saves.autosave(); // автозбереження на паузі

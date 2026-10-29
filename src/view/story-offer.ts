@@ -27,10 +27,10 @@ import { CONTENT, memorableFacts } from '../content/story';
 import { moves, progressKey, type Move } from '../content/moves';
 import items from '../../content/items.json';
 import { daySummary, daysEnded, NIGHT_PREFIX } from '../core/day-summary';
-import type { OfferAction, OfferAtlas, OfferCharacter, OfferPacking, OfferProgress, OfferSummary, OfferWave, StoryOffer } from '../ui/story-types';
+import { type OfferAction, type OfferAtlas, type OfferCharacter, type OfferPacking, type OfferProgress, type OfferSummary, type OfferWave, type StoryOffer } from '../ui/story-types';
 import { RAW_WAVES } from '../content/waves';
 import { menuTasks } from '../content/director';
-import { coveredKeys, moveKey, nextTarget, spotLabel } from '../content/map-first';
+import { coveredKeys, moveKey, nextTarget, resolveSpot, spotLabel } from '../content/map-first';
 import { waveView } from '../core/wave';
 import type { Key } from '../i18n';
 import { liveRequestSpot as liveSpotFor } from '../content/requests';
@@ -288,7 +288,15 @@ export function objectiveKey(raw: { textKey?: string; gearCheck?: boolean } | un
  * там, де об'єкт мапи живий і шле ту саму команду — src/content/map-first.ts); `trunk` — відкрито багажник (сітка пакування показана
  * лише біля авто); `near` — об'єкт мапи, до якого гравець підійшов (підпис дії). Без вигляду (тести, режим `?panelActs=1`) — як було.
  */
-export interface StoryView { readonly mapFirst: boolean; readonly trunk: boolean; readonly near: string | null; readonly backpack?: readonly string[] }
+export interface StoryView {
+  readonly mapFirst: boolean; readonly trunk: boolean; readonly near: string | null; readonly backpack?: readonly string[];
+  /** GAME-183: об'єкт мапи, що питає «що саме?» (авто — куди їхати, сушарка, приймальня, крок з вибором): його варіанти йдуть у рамку вибору замість ☰. Стан ПОКАЗУ. */
+  readonly choice?: string | null;
+}
+/** Питання рамки вибору за об'єктом (ключі UI). */
+/** id відповіді «Не зараз» у рамці вибору дії на мапі (GAME-183): команди не має — гра лише закриває рамку. */
+export const CHOICE_CANCEL_ID = 'choice|cancel';
+export const choicePrompt = (spot: string): Key => (spot === 'obj.vehicle' ? 'choice.where' : spot === 'obj.drying' ? 'choice.dry' : spot === 'obj.sell' ? 'choice.sell' : 'choice.step');
 export const PANEL_VIEW: StoryView = { mapFirst: false, trunk: true, near: null };
 const NO_KEYS: ReadonlySet<string> = new Set();
 
@@ -307,13 +315,13 @@ export function storyOffer(sim: SimState, defs: CoreDefs, view: StoryView = PANE
   const nextT = s.player && view.mapFirst ? nextTarget(sim, defs, view.backpack ?? []) : null;
   const nearL = s.player && view.mapFirst && view.near !== null ? spotLabel(sim, defs, view.near) : null;
   // GAME-180: на мапі табору підказка «Далі:» веде до прохання в роботі (ціль → просильник), а біля цілі — підпис дії.
-  const reqT = nextT ? null : requestTarget(s);
+  const reqT = requestTarget(s);
   const reqNear = view.near !== null && view.mapFirst && isRequestSpot(view.near) && liveSpotFor(s, view.near)
     ? REQUESTS.flatMap((r) => r.targets).find((t) => t.spot === view.near) : undefined;
   const hint = {
     backpack: view.backpack?.length ?? 0,
-    next: nextT?.key ?? (reqT ? (reqT.startsWith('npc.') ? 'next.req.giver' : 'next.req.target') as Key : null),
-    nextSpot: nextT?.spot ?? reqT,
+    next: reqT ? (reqT.startsWith('npc.') ? 'next.req.giver' : 'next.req.target') as Key : nextT?.key ?? null,
+    nextSpot: reqT ?? nextT?.spot ?? null,
     near: nearL ? { label: nearL.label, itemKey: nearL.ref ? nameKey(nearL.ref) : null } : reqNear ? { label: 'near.req' as Key, itemKey: reqNear.labelKey } : null,
   };
   const base = { hint, requests: trackerRows(s), goal: goalOf(s, st), progress: progressOffer(s), atlas: atlasOffer(s), moneyCents: s.moneyCents, inventory, journal, lastTrip, weather, forecast: todayForecast(sim), day: dayOf(sim.clock) + 1, timeMinutes: timeOfDay(sim.clock.minutes), wave: waveOffer(sim), mia: miaState(s, defs), ...summaryOffer(sim, defs) };
@@ -375,6 +383,16 @@ export function storyOffer(sim: SimState, defs: CoreDefs, view: StoryView = PANE
       ? { id: rq.id, titleKey: rq.titleKey, goalKey: rq.goalKey, goals: rq.targets.map((t) => ({ icon: t.icon, labelKey: t.labelKey })), reward: rq.reward }
       : undefined;
     dialogue = { speakerKey, speakerId, key: node?.textKey ?? null, answers: offered, ...(card ? { request: card } : {}) };
+  }
+
+  // GAME-183: об'єкт мапи питає «що саме?» — варіанти в рамці вибору (те саме місце, що рамка розмови), а не кнопки ☰. Лише на мапі й без розмови.
+  if (!dialogue && view.mapFirst && view.choice) {
+    const options = resolveSpot(sim, defs, view.choice)?.options;
+    if (options) {
+      const answers = options.map((m): OfferAction => { const a: OfferAction = { id: idOf(m, s), ...describe(m, defs, s, weather) }; intents.set(a.id, m); return a; });
+      answers.push({ id: CHOICE_CANCEL_ID, kind: 'cancel', key: null });
+      dialogue = { speakerKey: null, speakerId: null, key: choicePrompt(view.choice), ui: true, answers };
+    }
   }
 
   return {
