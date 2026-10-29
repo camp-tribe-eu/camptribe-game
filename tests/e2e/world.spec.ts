@@ -290,6 +290,10 @@ for (const vp of VIEWPORTS) {
       const g = await page.evaluate(() => (window as unknown as { __game: { read: () => { game: { dialogue: unknown; flags: string[] } } } }).__game.read().game);
       expect(g.dialogue).toBeNull();
       expect(g.flags).toContain('f.elise-met');                               // ефект відповіді дійшов до ядра
+      // GAME-179: розмова з мапи йде рамкою внизу і, скінчившись, повертає на мапу (панель не лишається) — далі відкриваємо ☰ дотиком.
+      await expect(story).toBeHidden();
+      await page.locator('[data-touch="story"]').tap();
+      await expect(story).toBeVisible();
       // GAME-91: далі — до кінця розділу тим самим дотиком (панель подорожі: лише тапи), без клавіатури й без миші.
       const tapAct = async (kind: string, key = ''): Promise<void> => {
         await story.locator(`[data-act="${kind}"]${key ? `[data-key="${key}"]` : ''}`).tap();

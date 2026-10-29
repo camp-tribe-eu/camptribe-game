@@ -1,4 +1,4 @@
-// GAME-179 · портрет того, хто говорить чи дає завдання: голова по плечі. Справжній (public/portraits/*.webp, GAME-49) чи запасний
+// GAME-179 · портрет того, хто говорить чи дає завдання: голова по плечі. Справжній (assets/portraits/*.png, GAME-49) чи запасний
 // обрізок спрайта ходьби — вирішує порт (src/view/portraits.ts), UI лише малює картинку. Оповідач (id = null) — нейтральна іконка книжки.
 // Картинка завжди <img>: тест бачить портрет однаково, відкіля б він не взявся (data-source: file | sprite | icon).
 import { useState } from 'preact/hooks';
@@ -26,7 +26,7 @@ function NarratorIcon({ size }: { size: 'lg' | 'sm' }) {
 }
 
 export function Portrait({ id, lookup, size }: { id: string | null; lookup: PortraitLookup; size: 'lg' | 'sm' }) {
-  // Файл не завантажився (битий webp) — один раз пробуємо обрізок спрайта; не вийшло — іконка, а не порожня рамка.
+  // Файл не завантажився (битий файл) — один раз пробуємо обрізок спрайта; не вийшло — іконка, а не порожня рамка.
   const [failed, setFailed] = useState<string | null>(null);
   const p = id === null ? null : lookup(id, failed === id);
   if (!p || id === null) return <NarratorIcon size={size} />;

@@ -24,7 +24,8 @@ function nameOf(offer: Dialogue, lang: AnyLang, t: (k: Key) => string): string {
 export function DialogueBox({ dialogue: d, lang, t, act, portrait }: { dialogue: Dialogue; lang: AnyLang; t: (k: Key) => string; act: (id: string) => void; portrait: PortraitLookup }) {
   const root = useRef<HTMLDivElement>(null);
   const line = useRef<HTMLParagraphElement>(null);
-  const lastAct = useRef(Number.NEGATIVE_INFINITY);
+  // Рамка щойно з'явилась під пальцем, що натиснув «дію» на мапі: його «клік» долітає вже в рамку й обирав би відповідь. Тому відлік глухоти — від появи (час події = той самий годинник, що в event.timeStamp).
+  const lastAct = useRef(new Event('open').timeStamp);
   const raf = useRef(0);
   const text = ct(lang, d.key);
   const chars = Array.from(text);

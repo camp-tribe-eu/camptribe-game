@@ -829,9 +829,14 @@ export class WorldScene extends Phaser.Scene {
     for (const [name, sp] of this.npcSprites) sp.setVisible(this.hooks.isLive(name));
     const talkers = this.talkers();
     const live = [...this.spots.filter((s) => this.hooks.isLive(s.name)), ...talkers];
-    for (const s of live) {
-      const d = Phaser.Math.Distance.Between(this.player.x, this.player.y, s.x, s.y);
-      if (d <= best) { best = d; spot = s; }
+    // GAME-179: родина тупцює коло героя й завжди найближча — тож говорить із нею лише тоді, коли в зоні дії нікого іншого (предмета, Елізи, мешканця) нема.
+    const isFollower = (n: string): boolean => (FOLLOWER_NPC as readonly string[]).includes(n);
+    for (const pass of [false, true]) {
+      for (const s of live) {
+        if (isFollower(s.name) !== pass || (pass && spot)) continue;
+        const d = Phaser.Math.Distance.Between(this.player.x, this.player.y, s.x, s.y);
+        if (d <= best) { best = d; spot = s; }
+      }
     }
     const near = spot?.name ?? null;
     // Тап: лише по цілі, що в зоні дії. Поза зоною нічого (без прокладання шляху, GAME-95).

@@ -30,7 +30,7 @@ export type PortraitFiles = Readonly<Record<string, string>>;
 const GLOB = import.meta.glob('../../assets/portraits/*.png', { eager: true, query: '?url', import: 'default' }) as Record<string, string>;
 export const PORTRAIT_FILES: PortraitFiles = Object.fromEntries(Object.entries(GLOB).map(([k, v]) => [(k.split('/').pop() ?? k).replace(/\.png$/, ''), v]));
 
-/** Файл портрета: повний id (`npc.elise.png`) або без префікса (`elise.png`). */
+/** Файл портрета: ім'я за повним id NPC або без префікса `npc.`. */
 const fileFor = (npcId: string, files: PortraitFiles): string | null => {
   const short = npcId.startsWith('npc.') ? npcId.slice(4) : npcId;
   return files[npcId] ?? files[short] ?? null;

@@ -28,7 +28,7 @@ export interface UiPort {
   /** GAME-179: гравець заговорив із NPC на мапі: рамка розмови (якщо ядро прийняло розмову) або екран подорожі (якщо ні — там видно чому); повертає відписку. */
   onTalk(listener: () => void): () => void;
   /**
-   * GAME-179: портрет (голова по плечі) для id NPC: готовий файл public/portraits/ або обрізок спрайта ходьби; null — оповідач чи невідомий id.
+   * GAME-179: портрет (голова по плечі) для id NPC: готовий файл assets/portraits/ або обрізок спрайта ходьби; null — оповідач чи невідомий id.
    * `sprite: true` — лише обрізок (файл не завантажився).
    */
   portrait(npcId: string | null, sprite?: boolean): { readonly src: string; readonly kind: 'file' | 'sprite' } | null;
