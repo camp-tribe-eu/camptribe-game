@@ -11,7 +11,7 @@ import quests from '../../content/quests.json';
 import campMap from '../../public/maps/camp-lake.tmj?raw';
 import { characterChoices, PANEL_VIEW, storyOffer, type StoryView } from '../view/story-offer';
 import { storyMoves, liveSpot, spotMove } from './director';
-import { CAMP_STEP_QUESTS, MAP_LOCATION, MAP_SPOTS, campStepProblems, npcLive, resolveSpot } from './map-first';
+import { CAMP_STEP_QUESTS, MAP_LOCATION, MAP_SPOTS, campStepProblems, mapKeyFor, npcLive, resolveSpot } from './map-first';
 import type { Move } from './moves';
 import { REQUESTS, liveRequestSpot } from './requests';
 import { GAME_DEFS as DEFS } from './slice-defs';
@@ -31,21 +31,26 @@ const MAP_OBJECTS = (JSON.parse(campMap) as { layers: { name: string; objects?: 
 
 interface Walk { problems: string[]; ended: boolean; campStates: number; stepsSeen: Set<string>; choicesSeen: Set<string>; moveKinds: Set<string> }
 
-/** Ходи, які гравець у таборі робить ногами: те саме, що скаже сцена (main.ts actOnMap/talkOnMap) — без жодної кнопки ☰. Вибір (options) розкладено на окремі ходи. */
+/** Ходи, які гравець робить ногами на мапі локації, де стоїть (GAME-183: дім, крамниця, дорога, табір): те саме, що скаже сцена (main.ts actOnMap/talkOnMap) — без жодної кнопки ☰. Вибір (options) розкладено на окремі ходи. */
 function campMapMoves(sim: SimState, seen: Walk): Move[] {
   const g = sim.game;
   const out: Move[] = [];
-  if (npcLive(g, DEFS, 'npc.elise')) out.push({ type: 'Talk', npcId: 'npc.elise' });
-  for (const name of [...WAVE_TASKS, 'obj.campfire', 'obj.litter']) {
-    if (!liveSpot(sim, name, DEFS)) continue;
-    const m = spotMove(sim, name);
-    if (m) out.push(m);
+  const map = mapKeyFor(g.player?.locationId);
+  if (map === 'camp') {
+    if (npcLive(g, DEFS, 'npc.elise')) out.push({ type: 'Talk', npcId: 'npc.elise' });
+    for (const name of [...WAVE_TASKS, 'obj.campfire', 'obj.litter']) {
+      if (!liveSpot(sim, name, DEFS)) continue;
+      const m = spotMove(sim, name);
+      if (m) out.push(m);
+    }
+    for (const r of REQUESTS) for (const t of r.targets) if (liveRequestSpot(g, t.spot)) out.push({ type: 'Interact', targetId: t.spot });
   }
-  for (const r of REQUESTS) for (const t of r.targets) if (liveRequestSpot(g, t.spot)) out.push({ type: 'Interact', targetId: t.spot });
-  for (const name of MAP_SPOTS.camp as readonly string[]) {
+  for (const name of MAP_SPOTS[map] as readonly string[]) {
+    if (name.startsWith('npc.')) { if (npcLive(g, DEFS, name)) out.push({ type: 'Talk', npcId: name }); continue; }
+    if (name.startsWith('pack.') || name === 'obj.trunk') continue;   // пакування — сітка багажника, не крок сюжету (доводить packing.test)
     const r = resolveSpot(sim, DEFS, name);
     if (!r) continue;
-    if (name.startsWith('step.')) seen.stepsSeen.add(name.slice(5));
+    if (name.startsWith('step.')) seen.stepsSeen.add(`${map}:${name.slice(5)}`);
     if (r.options) { seen.choicesSeen.add(`${name}:${r.options.length}`); out.push(...r.options); } else if (r.moves[0]) out.push(r.moves[0]);
   }
   return out;
@@ -62,8 +67,9 @@ function walk(seed: number, steps: number, combo: number): Walk {
     for (const m of storyMoves(sim, DEFS)) sim = send(sim, m);
     const g = sim.game;
     const atCamp = g.player?.locationId === MAP_LOCATION.camp;
+    const inMap = g.player !== null;
     let cands: Move[];
-    if (atCamp && g.dialogue === null) {
+    if (inMap && g.dialogue === null) {
       w.campStates++;
       const { offer } = storyOffer(sim, DEFS, MAP_VIEW);
       // 1) панель у таборі: жодного ходу сюжету (усе дає мапа)
@@ -75,10 +81,10 @@ function walk(seed: number, steps: number, combo: number): Walk {
       cands = campMapMoves(sim, w);
       // Авто в таборі лишає його: поки сюжет табору триває, виїжджаємо рідко (інакше прогулянка тікала б на дорогу й крок вогнища, вечір дня 2, не ставав би живим).
       const leaving = g.quests['CH1-D3-RETURN-001']?.status === 'active' || g.quests['CH1-D3-HOME-001']?.status === 'active';
-      if (!leaving && rnd(12) !== 0) { const stay = cands.filter((m) => m.type !== 'Visit'); if (stay.length > 0) cands = stay; }
+      if (atCamp && !leaving && rnd(12) !== 0) { const stay = cands.filter((m) => m.type !== 'Visit'); if (stay.length > 0) cands = stay; }
     } else {
-      // Поза табором (дім, крамниця, дорога — не цей зріз) і в розмовах: усе, що пропонує екран подорожі як було.
-      const { offer, intents } = storyOffer(sim, DEFS, PANEL_VIEW);
+      // У розмовах і на екрані вибору героя: відповіді (у розмові їх показує рамка, не панель).
+      const { offer, intents } = storyOffer(sim, DEFS, g.player ? MAP_VIEW : PANEL_VIEW);
       cands = (offer.dialogue ? offer.dialogue.answers : offer.actions).flatMap((a) => { const m = intents.get(a.id); return m ? [m] : []; });
     }
     if (cands.length === 0) { sim = step(sim, { kind: 'advance', minutes: 30 }, { defs: DEFS }); continue; }
@@ -104,12 +110,13 @@ describe('GAME-183 · табір без ☰: панель не пропонує 
     expect(all.filter((w) => w.ended).length, 'хоч більшість прогулянок доходить до кінця розділу (не застрягли)').toBeGreaterThanOrEqual(Math.ceil(SEEDS.length * 0.75));
     const seen = new Set(all.flatMap((w) => [...w.stepsSeen]));
     // Прогулянка справді торкнулась кроків табору (інакше «0 проблем» нічого не доводить).
-    for (const q of ['ST-005', 'CH1-D2-001', 'CH1-D2-ELISE-001', 'CH1-D2-CAMP-001', 'CH1-D2-FIRE-001', 'CH1-D3-001', 'CH1-D3-GEAR-001', 'CH1-D3-ELISE-001']) expect(seen.has(q), `крок ${q} жодного разу не ставав живим об'єктом`).toBe(true);
-    expect(all.reduce((n, w) => n + w.campStates, 0)).toBeGreaterThan(300);
+    for (const q of ['ST-005', 'CH1-D2-001', 'CH1-D2-ELISE-001', 'CH1-D2-CAMP-001', 'CH1-D2-FIRE-001', 'CH1-D3-001', 'CH1-D3-GEAR-001', 'CH1-D3-ELISE-001']) expect(seen.has(`camp:${q}`), `крок ${q} жодного разу не ставав живим об'єктом`).toBe(true);
+    for (const q of ['road:ST-004', 'home:CH1-D3-HOME-001', 'shop:ST-003', 'home:ST-002']) expect(seen.has(q), `крок ${q} (дім/крамниця/дорога) жодного разу не ставав живим об'єктом`).toBe(true);
+    expect(all.reduce((n, w) => n + w.campStates, 0)).toBeGreaterThan(600);
   }, 900_000);
 
   it('мутація: кожен викинутий ключ покриття повертає кнопку в панель — сторож червоніє', () => {
-    for (const key of ['Talk|npc.elise', 'CompleteQuest|ST-005', 'CompleteQuest|CH1-D3-GEAR-001', 'Visit|loc.road', 'CompleteQuest|CH1-D2-FIRE-001']) {
+    for (const key of ['Talk|npc.elise', 'CompleteQuest|ST-004', 'CompleteQuest|ST-003', 'CompleteQuest|CH1-D3-HOME-001', 'CompleteQuest|ST-005', 'CompleteQuest|CH1-D3-GEAR-001', 'Visit|loc.road', 'CompleteQuest|CH1-D2-FIRE-001']) {
       hoisted.drop = key;
       const reds = SEEDS.map((s, i) => walk(s, 900, i)).flatMap((w) => w.problems);
       expect(reds.length, `без ключа ${key} сторож лишився зеленим — він сліпий`).toBeGreaterThan(0);

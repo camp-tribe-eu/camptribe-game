@@ -296,7 +296,7 @@ export interface StoryView {
 /** Питання рамки вибору за об'єктом (ключі UI). */
 /** id відповіді «Не зараз» у рамці вибору дії на мапі (GAME-183): команди не має — гра лише закриває рамку. */
 export const CHOICE_CANCEL_ID = 'choice|cancel';
-export const choicePrompt = (spot: string): Key => (spot === 'obj.vehicle' ? 'choice.where' : spot === 'obj.drying' ? 'choice.dry' : spot === 'obj.sell' ? 'choice.sell' : 'choice.step');
+export const choicePrompt = (spot: string): Key => (spot === 'obj.vehicle' ? 'choice.where' : spot === 'obj.drying' ? 'choice.dry' : spot === 'obj.sell' ? 'choice.sell' : spot === 'obj.buy' ? 'choice.buy' : 'choice.step');
 export const PANEL_VIEW: StoryView = { mapFirst: false, trunk: true, near: null };
 const NO_KEYS: ReadonlySet<string> = new Set();
 
@@ -351,14 +351,14 @@ export function storyOffer(sim: SimState, defs: CoreDefs, view: StoryView = PANE
   // Справи живої хвилі на екрані подорожі (GAME-170 зріз 3: дім, зупинка в дорозі — локацій без мапи): першими, бо в них строк.
   // Текст — textKey справи з content/waves.json; команда — CompleteTask (ядро саме звірить строк і «лише лідер»).
   const raw = RAW_WAVES.find((w) => w.id === s.wave?.active?.waveId);
+  // GAME-175/183: дії, які мапа дає руками, панель не показує — лише там, де об'єкт мапи живий (тож нічого не зникає без заміни); справи хвиль — теж.
+  const covered = view.mapFirst ? coveredKeys(sim, defs) : NO_KEYS;
   for (const move of menuTasks(sim, defs)) {
-    if (move.type !== 'CompleteTask') continue;
+    if (move.type !== 'CompleteTask' || covered.has(moveKey(move))) continue;
     const a: OfferAction = { id: idOf(move, s), kind: 'task', key: raw?.tasks.find((t) => t.id === move.taskId)?.textKey ?? null };
     intents.set(a.id, move);
     offered.push(a);
   }
-  // GAME-175: дії, які мапа дає руками, панель не показує — лише там, де об'єкт мапи живий (тож нічого не зникає без заміни).
-  const covered = view.mapFirst ? coveredKeys(sim, defs) : NO_KEYS;
   for (const { move } of menuMoves(s, defs, weather)) {
     if (covered.has(moveKey(move))) continue;
     const a: OfferAction = { id: idOf(move, s), ...describe(move, defs, s, weather) };
@@ -367,7 +367,7 @@ export function storyOffer(sim: SimState, defs: CoreDefs, view: StoryView = PANE
   }
 
   // Недоступні купівлі: без наміру в `intents` — активувати їх нічим (і нічого не відправиться).
-  const locked: OfferAction[] = unaffordableBuys(s, defs).map(({ move, shortCents }) => ({ id: `locked|${idOf(move, s)}`, ...describe(move, defs, s, weather), shortCents }));
+  const locked: OfferAction[] = view.mapFirst ? [] : unaffordableBuys(s, defs).map(({ move, shortCents }) => ({ id: `locked|${idOf(move, s)}`, ...describe(move, defs, s, weather), shortCents }));
 
   let dialogue: StoryOffer['dialogue'] = null;
   if (s.dialogue) {

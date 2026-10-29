@@ -165,7 +165,6 @@
   "next.pack.bike": "gather what's needed: bulky to the bike, small in the backpack",
   "next.depart.car": "luggage is ready — get in the car",
   "next.depart.bike": "luggage is ready — hop on the bike",
-  "next.road": "open ☰ — the road to the lake",
   "near.step.prologue-home-001": "Look at the table",
   "near.step.st-001": "Look around",
   "near.step.st-002": "Pick a campsite",
@@ -260,5 +259,12 @@
   "choice.step": "What next?",
   "choice.dry": "What do we dry?",
   "choice.sell": "What do we sell?",
-  "ui.notNow": "Not now"
+  "ui.notNow": "Not now",
+  "next.road.task": "make the deadline — go to the marker",
+  "next.road.step": "the stop — finish the road step",
+  "next.road.go": "the vehicle at the end of the strip — drive on",
+  "next.home.end": "at home — finish the chapter by the door",
+  "near.buy": "Buy or sell",
+  "choice.buy": "What do we take?",
+  "next.camp.finish": "finish the chapter by your tent"
 }

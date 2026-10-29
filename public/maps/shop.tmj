@@ -1284,6 +1284,30 @@
      "point": true,
      "rotation": 0,
      "visible": true
+    },
+    {
+     "id": 8,
+     "name": "obj.buy",
+     "type": "trigger",
+     "x": 400,
+     "y": 208,
+     "width": 0,
+     "height": 0,
+     "point": true,
+     "rotation": 0,
+     "visible": true
+    },
+    {
+     "id": 9,
+     "name": "obj.drying",
+     "type": "trigger",
+     "x": 144,
+     "y": 336,
+     "width": 0,
+     "height": 0,
+     "point": true,
+     "rotation": 0,
+     "visible": true
     }
    ]
   }
