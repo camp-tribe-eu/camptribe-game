@@ -43,9 +43,10 @@ export const SLICE_DEFS: CoreDefs = {
     'item.lantern': {},
   },
   interactions: {
-    'obj.campfire': { grantId: 'rw.campfire-warmth', moneyCents: 0 },
+    // GAME-181: перше «погрітись» біля вогнища поза сценою — маленький секрет (+5 XP, раз).
+    'obj.campfire': { grantId: 'rw.campfire-warmth', moneyCents: 0, award: 'secret' },
     // GAME-170 зріз 2: чужі пакети біля води — добра справа без строку й поза хвилею; журнал пише запис (Interact), Еліза дякує зранку дня 3 (GAME-144).
-    'obj.litter': { grantId: 'rw.litter-cleaned', moneyCents: 0, flags: ['f.litter-cleaned-ch1'] },
+    'obj.litter': { grantId: 'rw.litter-cleaned', moneyCents: 0, flags: ['f.litter-cleaned-ch1'], award: 'clean' },
     // GAME-180: цілі прохань сусідів (content/requests.json) — дотик до позначки на мапі ставить прапорець цілі.
     ...requestInteractions(),
   },

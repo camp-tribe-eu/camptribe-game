@@ -173,6 +173,25 @@ describe('GAME-180 · повний шлях кожного прохання на
     expect(after.dialogue?.node).toBe('reminder');
   });
 
+  it('GAME-181: здача видає rw.<прохання> (15 XP, 10 ОМ, практика навичок) рівно раз; повторна здача чи перезавантаження — 0', () => {
+    const r = requestOf('npc.luc') as RequestDef;
+    const p = PATH[r.id] as { offer: readonly string[]; turnin: readonly string[] };
+    let s = finish(say(atCamp(), r.giver, p.offer));
+    s = touch(s, (r.targets[0] as { spot: string }).spot);
+    const before = { xp: s.progress?.xp ?? 0, om: s.progress?.om ?? 0, mech: s.skills['skill.mechanics'] ?? 0 };
+    const ready = s;
+    s = finish(say(s, r.giver, p.turnin));
+    expect(s.progress?.xp).toBe(before.xp + r.reward.xp);
+    expect(s.progress?.om).toBe(before.om + r.reward.om);
+    expect(s.progress?.keys).toContain('rw.req.luc-chain');
+    expect(s.skills['skill.mechanics'], 'практика навички').toBeGreaterThan(before.mech);
+    // «Перезабрати»: прапорець здачі знято, а ключ нагороди лишився (як після завантаження старого стану) — друга здача нічого не дає
+    const again = finish(say({ ...ready, ...(s.progress ? { progress: s.progress } : {}), skills: s.skills, practice: s.practice }, r.giver, p.turnin));
+    expect(again.progress?.xp).toBe(s.progress?.xp);
+    expect(again.progress?.om).toBe(s.progress?.om);
+    expect(again.practice['rw.req.luc-chain'], 'практика за прохання — раз').toBe(s.practice['rw.req.luc-chain']);
+  });
+
   it('«Пізніше» — без наслідків і без штрафу: жодного прапорця, «!» лишається, пропозиція повертається', () => {
     for (const r of REQUESTS) {
       const p = PATH[r.id] as { offer: readonly string[] };

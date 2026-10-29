@@ -4,13 +4,14 @@
 
 import { canBuyAt, type CoreDefs } from './defs';
 import type { CommandRecord, GameState, RejectCode } from './state';
-import { practise, rankOf, type SkillId } from './skills';
+import { practise, rankOf, SKILL_IDS, type SkillId } from './skills';
 import { gearOf, pruneGear, sellPriceOf } from './gear';
 import { bookLeave, cancelLeave } from './life';
 import { autoPack, capacityOf, packFlag, packingOpen, packItemsFor, usedUnits, withPacked } from './packing';
 import type { Weather } from './weather';
 import { applyStory, questNeedsItem, type StoryCommand, type StoryDraft } from './story';
 import { applyWave, type WaveCommand } from './wave';
+import { award, awardsFor } from './progress';
 
 export type { StoryCommand } from './story';
 export type { WaveCommand } from './wave';
@@ -59,6 +60,8 @@ export interface Safeguards {
   readonly commandId: boolean;
   readonly grantId: boolean;
   readonly rollback: boolean;
+  /** GAME-181: нагорода прогресії — раз за ключ. Немає поля — вмикнено; `false` лише в мутації тесту (повтор дав би XP знову). */
+  readonly award?: boolean;
 }
 
 const SAFE: Safeguards = { commandId: true, grantId: true, rollback: true };
@@ -291,6 +294,11 @@ export function practiceOf(cmd: Command, before: GameState, after: Pick<Draft, '
   }
 }
 
+/** Ціль команди для прогресії: квест, об'єкт взаємодії чи подія в дорозі (ті самі поля, що пише журнал — sim.refOf). */
+function progressRef(cmd: Command): string | null {
+  return cmd.type === 'CompleteQuest' ? cmd.questId : cmd.type === 'Interact' ? cmd.targetId : cmd.type === 'RoadEvent' ? cmd.eventId : null;
+}
+
 /** Записати практику прийнятої команди в чернетку. Без персонажа вчитись нікому — нічого. */
 function practiseAfter(cmd: Command, before: GameState, d: Draft, defs: CoreDefs): void {
   if (!d.player) return;
@@ -341,11 +349,29 @@ export function dispatch(state: GameState, cmd: Command, defs: CoreDefs, guard: 
     player: state.player, quests: state.quests, campaignEnded: state.campaignEnded, flags: [...state.flags], npcMemory: state.npcMemory,
     skills: state.skills, practice: state.practice, gear: state.gear, life: state.life, dialogue: state.dialogue,
     ...(state.wave !== undefined ? { wave: state.wave } : {}),
+    ...(state.progress !== undefined ? { progress: state.progress } : {}),
   };
   const code = apply(cmd, draft, defs, guard, today, weather, now);
   // Стан спорядження — лише для того, що в руках (продали останній — запис зникає), і лише відхилення від нового.
   if (!code) draft.gear = pruneGear(draft.gear, draft.inventory);
   if (!code) practiseAfter(cmd, state, draft, defs);
+  // GAME-181: XP й ОМ за прийняту команду — з каталогу (квест, взаємодія, подія в дорозі), раз за ключ.
+  if (!code) {
+    const p = award(draft.progress, awardsFor(cmd.type, progressRef(cmd), defs), guard.award !== false);
+    if (p !== undefined) draft.progress = p;
+  }
+  // GAME-180: прохання сусідів здано (з'явився прапорець «здано») — XP, ОМ і практика навичок за `rw.<прохання>`, раз за ключ (повторне здавання/перезавантаження — 0).
+  if (!code) {
+    for (const r of defs.story?.requestRewards ?? []) {
+      if (!draft.flags.includes(r.flag) || state.flags.includes(r.flag)) continue;
+      const before = draft.progress;
+      const p = award(draft.progress, [{ key: r.key, xp: r.xp, om: r.om }], guard.award !== false);
+      if (p !== undefined) draft.progress = p;
+      if (p === before) continue;   // уже видано раніше — і практики вдруге нема
+      const learned = practise(draft.skills, draft.practice, r.key, r.skills.filter((x): x is SkillId => (SKILL_IDS as readonly string[]).includes(x)));
+      if (learned) { draft.skills = learned.skills; draft.practice = learned.practice; }
+    }
+  }
   const record: CommandRecord = code ? { ok: false, code, fp } : { ok: true, fp };
   const processed = remember(state.processed, cmd.commandId, record);
   const seq = state.seq + 1;

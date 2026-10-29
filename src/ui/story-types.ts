@@ -47,7 +47,27 @@ export interface OfferSummary {
   readonly sections: readonly { readonly kind: 'night' | 'packed' | 'events' | 'quests' | 'bought' | 'got' | 'sold'; readonly keys: readonly string[] }[];
   /** Гроші на початку й у кінці дня (центи); null — факту немає (сейв до GAME-106). */
   readonly money: { readonly start: number; readonly end: number } | null;
+  /** GAME-181: що день дав — «+45 XP · +15 ОМ» (лише видане за записи цього дня). */
+  readonly reward: { readonly xp: number; readonly om: number };
+  /** GAME-181: «Наступного разу: …» — ключ назви активного головного квесту; null — розділ завершено. */
+  readonly nextKey: string | null;
 }
+
+/** GAME-181: звання за XP — `key` (`title.N`) і `nextKey` у content/locales; `into/span` — просування до наступного (span 0 — найвище). */
+export interface OfferTitle { readonly index: number; readonly key: string; readonly nextKey: string | null; readonly into: number; readonly span: number }
+/** GAME-181: навичка для ☰ — назва, ранг, смужка до наступного рангу, що відкриє наступний (усі ключі — content/locales). */
+export interface OfferSkill {
+  readonly id: string;
+  readonly key: string;
+  readonly rank: number;
+  readonly rankKey: string | null;
+  readonly pct: number;
+  /** Практика далі не веде — наступний ранг дає наставник. */
+  readonly mentor: boolean;
+  readonly maxed: boolean;
+  readonly unlockKey: string | null;
+}
+export interface OfferProgress { readonly xp: number; readonly om: number; readonly title: OfferTitle; readonly skills: readonly OfferSkill[] }
 
 /** Жива хвиля напруги (GAME-170, зріз 2) для картки мети: заголовок, «зроблено/усього», хвилини ІГРОВОГО часу, що лишились. */
 export interface OfferWave {
@@ -127,4 +147,8 @@ export interface StoryOffer {
   readonly hint: OfferHint;
   /** Прийняті прохання сусідів у роботі (GAME-180); порожньо — жодного. */
   readonly requests: readonly OfferTracker[];
+  /** GAME-181: поточна ціль — назва активного головного квесту (ключ контенту); null — персонажа ще немає чи розділ завершено. */
+  readonly goal: { readonly key: string } | null;
+  /** GAME-181: XP, ОМ, звання й навички. */
+  readonly progress: OfferProgress;
 }

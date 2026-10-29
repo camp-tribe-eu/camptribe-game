@@ -650,6 +650,19 @@ export const CHECKS = [
         .map((q) => I('DAY_END_OPTIONAL', q.id, 'межа дня на необов\u2019язковому квесті: відмова лишила б день незавершеним'));
     },
   },
+  {
+    id: 'quest-xp',
+    run(c) { // @check:quest-xp
+      // GAME-181: кожен квест дає XP мандрівника. Крок головного — 10…20, побічка — 15 (scenario §2.1). Без цього звання стоять на місці,
+      // а гравець не бачить, що крок щось дав; діапазон не дає тихо роздути чи занулити шкалу звань.
+      const out = [];
+      for (const q of c.ix.by.quests.values()) {
+        if (!Number.isInteger(q.xp) || q.xp < 1) out.push(I('QUEST_NO_XP', q.id, 'квест без XP мандрівника'));
+        else if (q.optional ? q.xp !== 15 : q.xp < 10 || q.xp > 20) out.push(I('QUEST_XP_RANGE', q.id, `XP ${q.xp}: крок головного квесту — 10…20, побічного — 15`));
+      }
+      return out;
+    },
+  },
   // ---------- діалоги (GAME-28) ----------
   {
     id: 'roads',
@@ -1118,11 +1131,26 @@ export const CHECKS = [
         });
         if (!hasTurnIn) out.push(I('REQUEST_NO_TURNIN', where, `у діалозі ${d.id} немає здачі: вибір із setFlag ${done} за умовою, що вимагає КОЖНУ ціль (${needs.join(', ')}) — без цього прохання не завершити або завершується без роботи`));
       }
-      // Сюжет від прохань не залежить: вибір, що рухає квест, не стоїть за прапорцем прохання.
+      // Сюжет від прохань не залежить: умова на f.req-* (у виборі чи в автоматичній гілці) не стоїть перед жодним ефектом, крім setFlag власних f.req-* прапорців
+      // (startQuest, completeObjective, remember, setFlag чужого прапорця — червоніють; для гілки — по всьому, що з неї досяжне).
+      const readsReq = (when) => condLeaves(when).map((x) => x.flag ?? x.notFlag).find((f) => typeof f === 'string' && f.startsWith('f.req-'));
+      const foreign = (effects) => (effects ?? []).filter((e) => !(e.setFlag !== undefined && e.setFlag.startsWith('f.req-')));
       for (const [where, ch, dd] of dialogueChoices(ct)) {
-        if (!ch.when || !(ch.effects ?? []).some((e) => e.startQuest !== undefined || e.completeObjective !== undefined)) continue;
-        const bad = condLeaves(ch.when).map((x) => x.flag ?? x.notFlag).find((f) => typeof f === 'string' && f.startsWith('f.req-'));
-        if (bad) out.push(I('REQUEST_GATES_QUEST', where, `${dd.id}: вибір рухає квест за умовою на прапорець прохання ${bad} — сюжет не може залежати від необов’язкової допомоги сусідам`));
+        const bad = ch.when ? readsReq(ch.when) : undefined;
+        const fx = foreign(ch.effects);
+        if (bad && fx.length) out.push(I('REQUEST_GATES_QUEST', where, `${dd.id}: вибір за умовою на прапорець прохання ${bad} має ефект поза прапорцями прохань (${JSON.stringify(fx[0])}) — сюжет не може залежати від необов\u2019язкової допомоги сусідам`));
+      }
+      for (const [where, br, dd] of dialogueBranches(ct)) {
+        const bad = readsReq(br.when);
+        if (!bad) continue;
+        const byId = new Map(dd.nodes.map((n) => [n.id, n]));
+        const seen = new Set(); const st = [br.next];
+        while (st.length) {
+          const id = st.pop(); if (seen.has(id)) continue; seen.add(id);
+          const n = byId.get(id); if (!n) continue;
+          for (const ch of n.choices ?? []) { const fx = foreign(ch.effects); if (fx.length) { out.push(I('REQUEST_GATES_QUEST', where, `${dd.id}: гілка за умовою на ${bad} веде до ефекту поза прапорцями прохань (${JSON.stringify(fx[0])}) у вузлі «${id}»`)); st.length = 0; break; } }
+          st.push(...exits(n, false));
+        }
       }
       return out;
     },

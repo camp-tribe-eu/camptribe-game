@@ -187,7 +187,8 @@ async function playRequest(page: Page, r: Req, opts: { later?: boolean; shot?: s
   await openTalk(page, r);
   await toCard(page, r);
   await checkCard(page, r);
-  if (opts.shot) await page.screenshot({ path: `research/visual-audit/request-card-${opts.shot}.png` });
+  // Друк рядка — лише краса (машинка): знімок після дописування, інакше в кадр потрапляє обірваний текст.
+  if (opts.shot) { await expect(box(page)).toHaveAttribute('data-typing', 'no', { timeout: 8_000 }); await page.screenshot({ path: `research/visual-audit/request-card-${opts.shot}.png` }); }
   if (opts.later) {
     // Відмова не коштує нічого: жодного прапорця, «!» лишається, прохання можна взяти пізніше.
     const before = (await core(page)).game.flags.filter((f) => f.startsWith('f.req-'));

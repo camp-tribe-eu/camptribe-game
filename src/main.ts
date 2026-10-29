@@ -31,6 +31,8 @@ import { requestMarker, requestTarget, requestsDone } from './content/requests';
 import { isBulky, isMapFirstSpot, mapKeyFor, needsLeft, nextTarget, npcLive, resolveSpot, spotLook, unpackMoves } from './content/map-first';
 import { packFlag } from './core/packing';
 import type { GameState } from './core/state';
+import { progressOf, titleOf } from './core/progress';
+import type { RewardEvent } from './ui/port';
 
 const app = document.querySelector<HTMLElement>('#app');
 if (!app) throw new Error('#app is missing');
@@ -39,7 +41,7 @@ const probe: WorldProbe = { ready: false, playerX: 0, playerY: 0, nearObject: nu
   playerFrame: 0, playerDir: 'down', playerMoving: false, playerDepth: 0, coveredTiles: 0, behindTiles: 0, fps: 0, fpsWindows: 0, firstFrameMs: 0,
   residents: [], bark: null, barkCount: 0, npcMarks: {},
   daylight: { on: false, visible: false, minuteOfDay: 0, darkness: 0, color: 0xffffff, glow: 0 },
-  fx: { target: null, ring: 0, ringName: null, backpack: 0, guide: 'none', pops: 0, auto: 0 } };
+  fx: { target: null, ring: 0, ringName: null, backpack: 0, guide: 'none', pops: 0, auto: 0, rewards: 0, rewardLast: '' } };
 // GAME-86: кожна команда ядру (дія екрана, розмова, взаємодія на мапі) → автозбереження одразу, а не лише на паузі.
 // GAME-89 №2: сід світу (а з ним погода дня 1) — свіжий для кожної гри, з crypto на межі; ядро лишається детермінованим,
 // бо сід записується в worldSeed сейву. ?seed=N (лише збірка e2e) закріплює сід — для відтворюваних тестів.
@@ -84,7 +86,35 @@ let mapTalk = false;
 // екрана подорожі гравець завис би. Розмова щойно з'явилась (раніше її не було) — екран відкривається сам.
 let hadDialogue = false;
 let unpackedOnce = false;
+// GAME-181 · нагороди прогресії. Порівнюємо XP/ОМ ядра з тим, що вже бачили: зросло — подія для UI (банер звання) і підпис над героєм («+15 XP +10 ОМ», його забирає сцена).
+// Базу ставить rebaseRewards: старт із сейву, нова гра й імпорт коду нагородою не вважаються (інакше завантаження святкувало б усе заробіте раніше). Це стан ПОКАЗУ, не гри.
+let seenXp = 0;
+let seenOm = 0;
+let rewardsReady = false;
+let pendingPop: { xp: number; om: number } | null = null;
+const rewardListeners = new Set<(r: RewardEvent) => void>();
+const rebaseRewards = (): void => { const p = progressOf(bridge.state.game); seenXp = p.xp; seenOm = p.om; rewardsReady = true; pendingPop = null; };
+const syncRewards = (): void => {
+  if (!rewardsReady) return;
+  const p = progressOf(bridge.state.game);
+  if (p.xp < seenXp || p.om < seenOm) { rebaseRewards(); return; }   // стан замінено (нова гра, інший сейв) — тиха нова база
+  const xp = p.xp - seenXp;
+  const om = p.om - seenOm;
+  if (xp === 0 && om === 0) return;
+  const up = titleOf(p.xp) > titleOf(seenXp) ? titleOf(p.xp) : null;
+  seenXp = p.xp; seenOm = p.om;
+  pendingPop = { xp: (pendingPop?.xp ?? 0) + xp, om: (pendingPop?.om ?? 0) + om };
+  for (const l of rewardListeners) l({ xp, om, title: up });
+};
+const takeReward = (): string | null => {
+  const r = pendingPop;
+  pendingPop = null;
+  if (!r) return null;
+  const lang = langOverride ?? loadSettings().language;
+  return [r.xp > 0 ? `+${r.xp} ${t(lang, 'ui.xp')}` : '', r.om > 0 ? `+${r.om} ${t(lang, 'ui.om')}` : ''].filter(Boolean).join(' ');
+};
 const storyChanged = (): void => {
+  syncRewards();
   // GAME-175: мапа-перша гра — спакований «за порадою» набір розкладається, коли гравець удома; речі він переносить ногами (раз за гру).
   if (!switches.panelActs && !unpackedOnce) {
     const moves = unpackMoves(bridge.state, GAME_DEFS);
@@ -201,6 +231,7 @@ const worldHooks: WorldHooks = {
   // Збірка e2e без ?mapFirst=1 — як до GAME-175: завжди табір (старі e2e ходять по ньому й перевіряють не прохід дня 1).
   mapKey: () => switches.map ?? (switches.panelActs ? 'camp' : mapKeyFor(bridge.state.game.player?.locationId)),
   transport: () => bridge.state.game.player?.transportId ?? null,
+  takeReward,
 };
 /** GAME-179: запасні портрети — обрізки спрайтів, зроблені раз на лист. */
 const spriteCrops = new Map<string, string>();
@@ -260,6 +291,7 @@ render(h(Shell, {
       backpack.length = 0;
       unpackedOnce = false;
       const ok = await saves.newGame();
+      rebaseRewards();
       storyChanged();
       return ok;
     },
@@ -270,6 +302,7 @@ render(h(Shell, {
       backpack.length = 0;
       unpackedOnce = false;
       const r = await saves.adopt(await decodeRestoreCode(code));
+      rebaseRewards();
       storyChanged();
       return r;
     },
@@ -283,6 +316,10 @@ render(h(Shell, {
     onStory(listener: () => void) {
       storyListeners.add(listener);
       return () => { storyListeners.delete(listener); };
+    },
+    onReward(listener: (r: RewardEvent) => void) {
+      rewardListeners.add(listener);
+      return () => { rewardListeners.delete(listener); };
     },
     onTalk(listener: () => void) {
       talkListeners.add(listener);
@@ -343,4 +380,4 @@ window.addEventListener('pagehide', () => saves.autosave());
 
 // Старт: підхопити останній цілий сейв. Позиція в пікселях не зберігається (DC-042):
 // після завантаження персонаж з'являється в точці появи. Правила гонок — у save-session.ts.
-void saves.start().then(() => { probe.saveLoaded = true; storyChanged(); });
+void saves.start().then(() => { probe.saveLoaded = true; rebaseRewards(); storyChanged(); });

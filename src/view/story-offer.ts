@@ -15,6 +15,8 @@ import { gearIssue, gearOf, gearSceneVariant, sellPriceOf } from '../core/gear';
 import { canonical } from '../core/hash';
 import { todayForecast, todayWeather, type SimState } from '../core/sim';
 import { initialState, type GameState } from '../core/state';
+import { MAX_RANK, SKILL_IDS, skillStep } from '../core/skills';
+import { TITLE_COUNT, progressOf, titleStep } from '../core/progress';
 import { chapterComplete, matches, route } from '../core/story';
 import { capacityOf, packedOf, packFlag, packingOpen, packItemsFor, usedUnits } from '../core/packing';
 import { timeOfDay } from './world/daylight';
@@ -23,7 +25,7 @@ import { CONTENT, memorableFacts } from '../content/story';
 import { moves, progressKey, type Move } from '../content/moves';
 import items from '../../content/items.json';
 import { daySummary, daysEnded, NIGHT_PREFIX } from '../core/day-summary';
-import type { OfferAction, OfferCharacter, OfferPacking, OfferSummary, OfferWave, StoryOffer } from '../ui/story-types';
+import type { OfferAction, OfferCharacter, OfferPacking, OfferProgress, OfferSummary, OfferWave, StoryOffer } from '../ui/story-types';
 import { RAW_WAVES } from '../content/waves';
 import { menuTasks } from '../content/director';
 import { coveredKeys, moveKey, nextTarget, spotLabel } from '../content/map-first';
@@ -208,6 +210,7 @@ function packingOffer(s: GameState, defs: CoreDefs, intents: Map<string, Move>):
  * ядро; тут лише назви. Ночівля — ключ UI `sum.night.<вид>` (наявність підписів для кожного f.night-* контенту звіряє тест).
  */
 export function summaryOffer(sim: SimState, defs: CoreDefs): { daysEnded: number; summary: OfferSummary | null } {
+  const st = defs.story;
   const ended = daysEnded(sim, defs);
   const sum = ended > 0 ? daySummary(sim, ended, defs) : null;
   if (!sum) return { daysEnded: ended, summary: null };
@@ -216,8 +219,37 @@ export function summaryOffer(sim: SimState, defs: CoreDefs): { daysEnded: number
     summary: {
       day: sum.day,
       money: sum.money,
+      reward: sum.reward,
+      nextKey: st && sim.game.player && !chapterComplete(sim.game, st) ? goalOf(sim.game, st)?.key ?? null : null,
       sections: sum.sections.map((x) => ({ kind: x.kind, keys: x.ids.map((id) => (x.kind === 'night' ? `sum.night.${id.slice(NIGHT_PREFIX.length)}` : nameKey(id) ?? id)) })),
     },
+  };
+}
+
+/**
+ * GAME-181 · поточна ціль у HUD: назва першого активного ГОЛОВНОГО квесту, доречного цьому гравцеві (бічні не рахуються: ціль одна). Немає персонажа чи розділ
+ * завершено — цілі немає. Той самий квест, що в ☰ під «Квест»: гравець бачить одне й те саме в двох місцях.
+ */
+export function goalOf(s: GameState, st: StoryDefs): { key: string } | null {
+  const p = s.player;
+  if (!p || chapterComplete(s, st)) return null;
+  const id = Object.entries(s.quests).find(([qid, q]) => q.status === 'active' && st.quests[qid] && !st.quests[qid].optional && matches(st.quests[qid].when, p))?.[0];
+  const key = id === undefined ? null : nameKey(id);
+  return key ? { key } : null;
+}
+
+/** GAME-181 · XP, ОМ, звання й навички для ☰. Назви й підписи рангів — у content/locales (`title.N`, `skill.<напрям>.r<N>`, `.unlock`). */
+export function progressOffer(s: GameState): OfferProgress {
+  const pg = progressOf(s);
+  const ts = titleStep(pg.xp);
+  return {
+    xp: pg.xp,
+    om: pg.om,
+    title: { index: ts.index, key: `title.${ts.index + 1}`, nextKey: ts.index + 1 < TITLE_COUNT ? `title.${ts.index + 2}` : null, into: ts.into, span: ts.span },
+    skills: SKILL_IDS.map((id) => {
+      const step = skillStep(Object.hasOwn(s.skills, id) ? (s.skills[id] as number) : 0);
+      return { id, key: id, rank: step.rank, rankKey: step.rank > 0 ? `${id}.r${step.rank}` : null, pct: step.pct, mentor: step.mentor, maxed: step.rank >= MAX_RANK, unlockKey: step.rank < MAX_RANK ? `${id}.r${step.rank + 1}.unlock` : null };
+    }),
   };
 }
 
@@ -275,7 +307,7 @@ export function storyOffer(sim: SimState, defs: CoreDefs, view: StoryView = PANE
     nextSpot: nextT?.spot ?? reqT,
     near: nearL ? { label: nearL.label, itemKey: nearL.ref ? nameKey(nearL.ref) : null } : reqNear ? { label: 'near.req' as Key, itemKey: reqNear.labelKey } : null,
   };
-  const base = { hint, requests: trackerRows(s), moneyCents: s.moneyCents, inventory, journal, lastTrip, weather, forecast: todayForecast(sim), day: dayOf(sim.clock) + 1, timeMinutes: timeOfDay(sim.clock.minutes), wave: waveOffer(sim), mia: miaState(s, defs), ...summaryOffer(sim, defs) };
+  const base = { hint, requests: trackerRows(s), goal: goalOf(s, st), progress: progressOffer(s), moneyCents: s.moneyCents, inventory, journal, lastTrip, weather, forecast: todayForecast(sim), day: dayOf(sim.clock) + 1, timeMinutes: timeOfDay(sim.clock.minutes), wave: waveOffer(sim), mia: miaState(s, defs), ...summaryOffer(sim, defs) };
 
   if (!s.player) {
     const choices = characterChoices(defs);

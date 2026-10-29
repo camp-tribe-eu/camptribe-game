@@ -16,7 +16,7 @@ import transports from '../../content/transports.json';
 
 interface RawWhen { profiles?: string[]; transports?: string[]; animals?: string[] }
 interface RawQuest {
-  id: string; optional: boolean; end?: boolean; dayEnd?: boolean; locationId?: string; when?: RawWhen;
+  id: string; optional: boolean; end?: boolean; dayEnd?: boolean; xp?: number; locationId?: string; when?: RawWhen;
   requires?: { quests?: string[]; items?: string[] };
   objectives: { id: string; kind: string; target: string; required: boolean; byDialogue?: boolean; gearCheck?: boolean; when?: RawWhen }[];
   transitions: { on: string; to: string; choiceKey?: string; when?: RawWhen }[];
@@ -39,7 +39,7 @@ export interface RawContent {
   /** Реєстр прапорців (GAME-115); ядру з нього потрібні лише пам'ятні вибори (`journal: true`, GAME-110). */
   flags?: { id: string; type: string; values?: string[]; journal?: boolean }[];
   /** content/requests.json (GAME-180): прохання сусідів; ядру з нього потрібні лише назви прапорців. */
-  requests?: { id: string; targets: { id: string }[] }[];
+  requests?: { id: string; targets: { id: string }[]; reward: { xp: number; om: number; skills: string[] } }[];
 }
 const requestFlag = (id: string, part: string): string => `f.${id.replace(/\./g, '-')}-${part}`;
 const requestFlagsOf = (rs: NonNullable<RawContent['requests']>): string[] => rs.flatMap((r) => [requestFlag(r.id, 'taken'), ...r.targets.map((t) => requestFlag(r.id, t.id)), requestFlag(r.id, 'done')]);
@@ -82,6 +82,7 @@ function quest(q: RawQuest): QuestDef {
     optional: q.optional,
     end: q.end === true,
     ...(q.dayEnd === true ? { dayEnd: true as const } : {}),
+    ...(q.xp !== undefined ? { xp: q.xp } : {}),
     ...(q.locationId ? { locationId: q.locationId } : {}),
     ...when(q.when),
     ...(q.requires ? { requires: { quests: q.requires.quests ?? [], items: q.requires.items ?? [] } } : {}),
@@ -117,7 +118,7 @@ export function compileStory(c: RawContent): StoryDefs {
     }),
     ...(memorableFacts(c).length ? { memorable: memorableFacts(c) } : {}),
     // GAME-180: прапорці прохань сусідів — косметичні для сюжету (перебір їх не розрізняє), «здано» ще й пишеться в журнал.
-    ...(c.requests?.length ? { requestFlags: requestFlagsOf(c.requests), journaled: c.requests.map((r) => requestFlag(r.id, 'done')) } : {}),
+    ...(c.requests?.length ? { requestFlags: requestFlagsOf(c.requests), journaled: c.requests.map((r) => requestFlag(r.id, 'done')), requestRewards: c.requests.map((r) => ({ flag: requestFlag(r.id, 'done'), key: `rw.${r.id}`, xp: r.reward.xp, om: r.reward.om, skills: r.reward.skills })) } : {}),
   };
 }
 

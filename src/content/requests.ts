@@ -5,8 +5,7 @@
 // Усе робиться ногами й дією на мапі: підійти до позначки (кільце наближення) → повернутись до просильника. Чисті функції без Phaser;
 // сцена, HUD і картка лише читають те, що тут вирішено.
 //
-// TODO(GAME-181): нагорода `reward { xp, om, skills }` лежить у контенті, але її ще ніхто не нараховує: XP, звання, навички й ОМ веде GAME-181.
-// Коли воно з'явиться, споживати requestReward(id) у момент прапорця `done` (разом із grantId `rw.<id>`), а не вигадувати нове місце.
+// Нагорода (GAME-181): при з'явленні прапорця `done` ядро видає `rw.<прохання>` — XP, ОМ і практику навичок раз за ключ (src/core/commands.ts, StoryDefs.requestRewards).
 import requestsRaw from '../../content/requests.json';
 import type { InteractionDef } from '../core/defs';
 import type { GameState } from '../core/state';
@@ -104,5 +103,5 @@ export function requestTarget(g: GameState, rs: readonly RequestDef[] = REQUESTS
 /** Скільки прохань уже здано — сцена по зростанню показує «+» над героєм. */
 export const requestsDone = (g: GameState, rs: readonly RequestDef[] = REQUESTS): number => rs.filter((r) => g.flags.includes(r.doneFlag)).length;
 
-/** Гачок для GAME-181 (див. TODO нагорі): нагорода прохання. */
+/** Нагорода прохання (дані; видає ядро при здачі). */
 export const requestReward = (id: string, rs: readonly RequestDef[] = REQUESTS): RequestReward | null => rs.find((r) => r.id === id)?.reward ?? null;

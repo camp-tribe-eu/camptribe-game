@@ -1,27 +1,27 @@
 [
   {
-    "id": "PROLOGUE-HOME-001", "titleKey": "q.prologue-home-001", "optional": false, "locationId": "loc.home",
+    "id": "PROLOGUE-HOME-001", "titleKey": "q.prologue-home-001", "optional": false, "xp": 10, "locationId": "loc.home",
     "objectives": [
       { "id": "look-around", "textKey": "q.prologue-home-001.o1", "kind": "visit", "target": "loc.home", "required": true }
     ],
     "transitions": [{ "on": "complete", "to": "ST-001" }]
   },
   {
-    "id": "ST-001", "titleKey": "q.st-001", "optional": false, "locationId": "loc.home",
+    "id": "ST-001", "titleKey": "q.st-001", "optional": false, "xp": 10, "locationId": "loc.home",
     "objectives": [
       { "id": "free-night", "textKey": "q.st-001.o1", "kind": "visit", "target": "loc.home", "required": true }
     ],
     "transitions": [{ "on": "complete", "to": "ST-002" }]
   },
   {
-    "id": "ST-002", "titleKey": "q.st-002", "optional": false, "locationId": "loc.home",
+    "id": "ST-002", "titleKey": "q.st-002", "optional": false, "xp": 10, "locationId": "loc.home",
     "objectives": [
       { "id": "pick-campsite", "textKey": "q.st-002.o1", "kind": "visit", "target": "loc.home", "required": true }
     ],
     "transitions": [{ "on": "complete", "to": "ST-003" }]
   },
   {
-    "id": "ST-003", "titleKey": "q.st-003", "optional": false, "locationId": "loc.shop",
+    "id": "ST-003", "titleKey": "q.st-003", "optional": false, "xp": 15, "locationId": "loc.shop",
     "objectives": [
       { "id": "visit-shop", "textKey": "q.st-003.o1", "kind": "visit", "target": "loc.shop", "required": true },
       { "id": "get-tent", "textKey": "q.st-003.o2", "kind": "collect", "target": "item.tent", "required": true },
@@ -31,14 +31,14 @@
     "transitions": [{ "on": "complete", "to": "CH1-HOME-001" }]
   },
   {
-    "id": "CH1-HOME-001", "titleKey": "q.ch1-home-001", "optional": false, "locationId": "loc.home",
+    "id": "CH1-HOME-001", "titleKey": "q.ch1-home-001", "optional": false, "xp": 15, "locationId": "loc.home",
     "objectives": [
       { "id": "pack-at-home", "textKey": "q.ch1-home-001.o1", "kind": "visit", "target": "loc.home", "required": true }
     ],
     "transitions": [{ "on": "complete", "to": "ST-004" }]
   },
   {
-    "id": "ST-004", "titleKey": "q.st-004", "optional": false, "locationId": "loc.road",
+    "id": "ST-004", "titleKey": "q.st-004", "optional": false, "xp": 15, "locationId": "loc.road",
     "requires": { "quests": ["ST-003"], "items": ["item.tent", "item.sleeping-bag"] },
     "objectives": [
       { "id": "road-to-lake", "textKey": "q.st-004.o1", "kind": "visit", "target": "loc.road", "required": true },
@@ -47,7 +47,7 @@
     "transitions": [{ "on": "complete", "to": "ST-005" }]
   },
   {
-    "id": "q.elise-bike-area", "titleKey": "q.elise-bike-area", "optional": true, "giverId": "npc.elise", "locationId": "loc.camp.lake",
+    "id": "q.elise-bike-area", "titleKey": "q.elise-bike-area", "optional": true, "xp": 15, "giverId": "npc.elise", "locationId": "loc.camp.lake",
     "when": { "transports": ["transport.bike"] },
     "objectives": [
       { "id": "talk-elise", "textKey": "q.elise-bike-area.o1", "kind": "talk", "target": "npc.elise", "required": true, "byDialogue": true }
@@ -59,7 +59,7 @@
     "reward": { "grantId": "rw.q-elise-bike-area", "money": 500 }
   },
   {
-    "id": "ST-005", "titleKey": "q.st-005", "optional": false, "dayEnd": true, "giverId": "npc.elise", "locationId": "loc.camp.lake",
+    "id": "ST-005", "titleKey": "q.st-005", "optional": false, "xp": 20, "dayEnd": true, "giverId": "npc.elise", "locationId": "loc.camp.lake",
     "objectives": [
       { "id": "meet-elise", "textKey": "q.st-005.o1", "kind": "talk", "target": "npc.elise", "required": true },
       { "id": "pitch-tent", "textKey": "q.st-005.o2", "kind": "talk", "target": "npc.elise", "required": true, "byDialogue": true },
@@ -70,7 +70,7 @@
     "reward": { "grantId": "rw.st-005", "money": 1000 }
   },
   {
-    "id": "CH1-D2-001", "titleKey": "q.ch1-d2-001", "optional": false, "locationId": "loc.camp.lake",
+    "id": "CH1-D2-001", "titleKey": "q.ch1-d2-001", "optional": false, "xp": 10, "locationId": "loc.camp.lake",
     "objectives": [
       { "id": "morning", "textKey": "q.ch1-d2-001.o1", "kind": "visit", "target": "loc.camp.lake", "required": true },
       { "id": "cat-morning", "textKey": "q.ch1-d2-001.o2", "kind": "visit", "target": "loc.camp.lake", "required": false, "when": { "animals": ["animal.cat"] } }
@@ -78,7 +78,7 @@
     "transitions": [{ "on": "complete", "to": "CH1-D2-ELISE-001" }]
   },
   {
-    "id": "CH1-D2-ELISE-001", "titleKey": "q.ch1-d2-elise-001", "optional": false, "giverId": "npc.elise", "locationId": "loc.camp.lake",
+    "id": "CH1-D2-ELISE-001", "titleKey": "q.ch1-d2-elise-001", "optional": false, "xp": 15, "giverId": "npc.elise", "locationId": "loc.camp.lake",
     "objectives": [
       { "id": "talk-elise", "textKey": "q.ch1-d2-elise-001.o1", "kind": "talk", "target": "npc.elise", "required": true, "byDialogue": true }
     ],
@@ -88,7 +88,7 @@
     ]
   },
   {
-    "id": "CH1-D2-CAMP-001", "titleKey": "q.ch1-d2-camp-001", "optional": false, "locationId": "loc.camp.lake",
+    "id": "CH1-D2-CAMP-001", "titleKey": "q.ch1-d2-camp-001", "optional": false, "xp": 15, "locationId": "loc.camp.lake",
     "objectives": [
       { "id": "dinner", "textKey": "q.ch1-d2-camp-001.o1", "kind": "talk", "target": "npc.elise", "required": true, "byDialogue": true },
       { "id": "cat-sun", "textKey": "q.ch1-d2-camp-001.o2", "kind": "visit", "target": "loc.camp.lake", "required": false, "when": { "animals": ["animal.cat"] } }
@@ -96,14 +96,14 @@
     "transitions": [{ "on": "complete", "to": "CH1-D2-FIRE-001" }]
   },
   {
-    "id": "CH1-D2-FIRE-001", "titleKey": "q.ch1-d2-fire-001", "optional": false, "dayEnd": true, "locationId": "loc.camp.lake",
+    "id": "CH1-D2-FIRE-001", "titleKey": "q.ch1-d2-fire-001", "optional": false, "xp": 20, "dayEnd": true, "locationId": "loc.camp.lake",
     "objectives": [
       { "id": "evening", "textKey": "q.ch1-d2-fire-001.o1", "kind": "visit", "target": "loc.camp.lake", "required": true }
     ],
     "transitions": [{ "on": "complete", "to": "CH1-D3-001" }]
   },
   {
-    "id": "CH1-D3-001", "titleKey": "q.ch1-d3-001", "optional": false, "locationId": "loc.camp.lake",
+    "id": "CH1-D3-001", "titleKey": "q.ch1-d3-001", "optional": false, "xp": 10, "locationId": "loc.camp.lake",
     "objectives": [
       { "id": "morning", "textKey": "q.ch1-d3-001.o1", "kind": "visit", "target": "loc.camp.lake", "required": true },
       { "id": "mia-list", "textKey": "q.ch1-d3-001.o2", "kind": "visit", "target": "loc.camp.lake", "required": false, "when": { "profiles": ["profile.family-teen"], "animals": ["animal.cat"] } }
@@ -111,7 +111,7 @@
     "transitions": [{ "on": "complete", "to": "CH1-D3-GEAR-001" }]
   },
   {
-    "id": "CH1-D3-GEAR-001", "titleKey": "q.ch1-d3-gear-001", "optional": false, "locationId": "loc.camp.lake",
+    "id": "CH1-D3-GEAR-001", "titleKey": "q.ch1-d3-gear-001", "optional": false, "xp": 15, "locationId": "loc.camp.lake",
     "objectives": [
       { "id": "check-gear", "textKey": "q.ch1-d3-gear-001.o1", "kind": "visit", "target": "loc.camp.lake", "required": true, "gearCheck": true, "when": { "profiles": ["profile.family-teen"] } },
       { "id": "check-gear-solo", "textKey": "q.ch1-d3-gear-001.o2", "kind": "visit", "target": "loc.camp.lake", "required": true, "gearCheck": true, "when": { "profiles": ["profile.solo-explorer"] } }
@@ -119,21 +119,21 @@
     "transitions": [{ "on": "complete", "to": "CH1-D3-ELISE-001" }]
   },
   {
-    "id": "CH1-D3-ELISE-001", "titleKey": "q.ch1-d3-elise-001", "optional": false, "giverId": "npc.elise", "locationId": "loc.camp.lake",
+    "id": "CH1-D3-ELISE-001", "titleKey": "q.ch1-d3-elise-001", "optional": false, "xp": 15, "giverId": "npc.elise", "locationId": "loc.camp.lake",
     "objectives": [
       { "id": "goodbye", "textKey": "q.ch1-d3-elise-001.o1", "kind": "talk", "target": "npc.elise", "required": true, "byDialogue": true }
     ],
     "transitions": [{ "on": "complete", "to": "CH1-D3-RETURN-001" }]
   },
   {
-    "id": "CH1-D3-RETURN-001", "titleKey": "q.ch1-d3-return-001", "optional": false, "locationId": "loc.road",
+    "id": "CH1-D3-RETURN-001", "titleKey": "q.ch1-d3-return-001", "optional": false, "xp": 15, "locationId": "loc.road",
     "objectives": [
       { "id": "road-home", "textKey": "q.ch1-d3-return-001.o1", "kind": "visit", "target": "loc.road", "required": true }
     ],
     "transitions": [{ "on": "complete", "to": "CH1-D3-HOME-001" }]
   },
   {
-    "id": "CH1-D3-HOME-001", "titleKey": "q.ch1-d3-home-001", "optional": false, "end": true, "dayEnd": true, "locationId": "loc.home",
+    "id": "CH1-D3-HOME-001", "titleKey": "q.ch1-d3-home-001", "optional": false, "xp": 20, "end": true, "dayEnd": true, "locationId": "loc.home",
     "objectives": [
       { "id": "home", "textKey": "q.ch1-d3-home-001.o1", "kind": "visit", "target": "loc.home", "required": true }
     ],

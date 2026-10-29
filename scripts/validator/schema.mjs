@@ -118,7 +118,7 @@ export const SCHEMAS = {
   npcs: obj({ id: req(str), nameKey: req(str), locationId: req(str), unlockedBy: str, sells: arr(str), when }),
   locations: obj({ id: req(str), nameKey: req(str), unlockedBy: str, items: arr(str), sheltered: bool, when }),
   quests: obj({
-    id: req(str), titleKey: req(str), optional: req(bool), end: bool, dayEnd: bool,
+    id: req(str), titleKey: req(str), optional: req(bool), end: bool, dayEnd: bool, xp: int0,
     giverId: str, locationId: str, when,
     requires: obj({ quests: arr(str), items: arr(str) }),
     objectives: req(arr(obj({

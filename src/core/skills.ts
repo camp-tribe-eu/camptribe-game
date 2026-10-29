@@ -75,3 +75,16 @@ export function practise(xp: Skills, counts: Readonly<Record<string, number>>, k
   }
   return { skills: next, practice: { ...counts, [key]: n + 1 } };
 }
+
+/**
+ * GAME-181 · де навичка зараз на шкалі рангів: для смужки «до наступного рангу» в ☰. Лише читання поверх rankOf/RANK_XP — нових порогів тут немає.
+ * `to` — поріг наступного рангу (null на найвищому); `pct` — 0…100 (ціле); `mentor` — практика далі не веде (PRACTICE_RANK_CAP): наступний ранг — урок наставника.
+ */
+export interface SkillStep { readonly rank: number; readonly from: number; readonly to: number | null; readonly pct: number; readonly mentor: boolean }
+export function skillStep(xp: number): SkillStep {
+  const rank = rankOf(xp);
+  const from = RANK_XP[rank] as number;
+  const to = rank >= MAX_RANK ? null : (RANK_XP[rank + 1] as number);
+  const pct = to === null ? 100 : Math.max(0, Math.min(100, Math.floor(((xp - from) * 100) / (to - from))));
+  return { rank, from, to, pct, mentor: to !== null && rank >= PRACTICE_RANK_CAP };
+}
