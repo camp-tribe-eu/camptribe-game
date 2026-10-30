@@ -5,7 +5,7 @@ import { calmMotion } from '../../platform/motion';
 import { playUi } from '../../audio/ui-sounds';
 import { BAND, BRANCH_AT, BRANCHES, STRIKES, WOOD_IDLE, gotCount, markerAt, startWood, stepWood, woodTarget, type WoodEvent, type WoodInput, type WoodState } from '../../content/wood-chop';
 import type { Key } from '../../i18n';
-import { FrameFx, HAND_FONT, TOP, drawMeter } from './hand-fx';
+import { FrameFx, HAND_FONT, TOP, drawMeter, meterTop } from './hand-fx';
 
 type Pt = { x: number; y: number };
 export const BRANCH_SPOT = 'wood.branch.';
@@ -147,7 +147,7 @@ export class WoodRig {
     for (let i = 0; i < n; i++) drawStick(carry, this.player.x - 5 + i * 5, this.player.y - 46 - i * 2, 0.15, 0xe0a458);
     carry.setDepth(this.player.y + 1);
     meter.clear();
-    const cx = this.player.x; const top = this.player.y + 30;
+    const cx = this.player.x; const top = meterTop(this.scene, this.player);
     let msg: string;
     if (this.s.phase === 'chop') {
       drawMeter(meter, cx, top, BAND, markerAt(this.s.t));

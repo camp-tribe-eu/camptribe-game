@@ -5,7 +5,7 @@ import { calmMotion } from '../../platform/motion';
 import { playUi } from '../../audio/ui-sounds';
 import { BAND, FIRE_IDLE, GROW_MS, LOGS, chargeAt, startFire, stepFire, type FireEvent, type FireInput, type FireState } from '../../content/campfire-light';
 import type { Key } from '../../i18n';
-import { FrameFx, HAND_FONT, TOP, drawMeter } from './hand-fx';
+import { FrameFx, HAND_FONT, TOP, drawMeter, meterTop } from './hand-fx';
 
 type Pt = { x: number; y: number };
 
@@ -134,7 +134,7 @@ export class FireRig {
       const k = Math.min(1, this.s.grow / GROW_MS);
       flame.setVisible(true).setScale(0.35 + 0.65 * k).setAlpha(0.6 + 0.4 * k);
     }
-    const cx = this.player.x; const top = this.player.y + 30;
+    const cx = this.player.x; const top = meterTop(this.scene, this.player);
     const here = this.near({ x: cx, y: this.player.y }, 96);
     let msg = '';
     if (this.s.phase === 'stack') msg = here ? `${this.text('fire.stack')} ${this.s.logs}/${LOGS}` : '';

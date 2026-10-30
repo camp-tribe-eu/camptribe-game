@@ -27,6 +27,19 @@ export class FrameFx {
 }
 
 /** Шкала (зелена смуга + маркер `pos` 0..1) під ногами героя: ні HUD зверху, ні палець знизу її не закривають (знімки GAME-189). */
+/**
+ * Де стоїть шкала справи: під ногами героя, а коли там бракує кадру (герой біля нижнього краю мапи — вбік телефона шкала й підказка
+ * вилазили за екран, знімок GAME-190) — над головою, а коли й там HUD — у фіксованому місці кадру. Висота блоку ≈ 56 px світу.
+ */
+export function meterTop(scene: Phaser.Scene, player: { x: number; y: number }): number {
+  const view = scene.cameras.main.worldView;
+  const below = player.y + 30;
+  if (below + 56 <= view.bottom - 4) return below;
+  const above = player.y - 96;
+  if (above >= view.y + 70) return above;   // 70 — смуга верхнього HUD
+  return view.y + view.height * 0.35;   // ні під, ні над героєм не вміщається (вбік телефона, 390 px) — фіксоване місце в кадрі
+}
+
 export function drawMeter(g: Phaser.GameObjects.Graphics, cx: number, top: number, band: { from: number; to: number }, pos: number): void {
   const w = 72; const x0 = cx - w / 2;
   g.fillStyle(0x1b1f23, 1).fillRect(x0 - 2, top - 2, w + 4, 12);

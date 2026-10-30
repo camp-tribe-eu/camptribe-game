@@ -7,6 +7,7 @@ import { PEGS, BAND, FOOT, IDLE, WOBBLE_MS, markerAt, placeOk, startTent, stepTe
 import type { Key } from '../../i18n';
 import type { Dir } from './character';
 import { facingToward } from '../npc-talk';
+import { meterTop } from './hand-fx';
 
 type Pt = { x: number; y: number };
 const REACH = 28;
@@ -155,7 +156,7 @@ export class TentRig {
     if (!meter || !hint) return;
     meter.clear();
     // Під ногами героя, а не над наметом: намет біля верхнього краю мапи, а там HUD — шкала й підказка ховались під рядками «Ціль/Далі» (знімок портрета GAME-189).
-    const cx = this.player.x; const top = this.player.y + 30;
+    const cx = this.player.x; const top = meterTop(this.scene, this.player);
     if (!placing) {
       const w = 72; const x0 = cx - w / 2;
       meter.fillStyle(0x1b1f23, 1).fillRect(x0 - 2, top - 2, w + 4, 12);
