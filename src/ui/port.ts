@@ -37,6 +37,8 @@ export interface UiPort {
    * `sprite: true` — лише обрізок (файл не завантажився).
    */
   portrait(npcId: string | null, sprite?: boolean): { readonly src: string; readonly kind: 'file' | 'sprite' } | null;
+  /** GAME-191: малює кімнату вступу (вікно з дощем, лампа, Метью) на полотні; повертає зупинку анімації. Немає — тло вступу просто темне (тести без полотна). */
+  introRoom?: IntroRoomPainter;
   /** GAME-182: сейв уже прочитано (або його немає) — до цього `story().stage === 'create'` ще не означає «нова гра»: вступ чекає. */
   loaded(): boolean;
   /** Гра просить відкрити екран подорожі (розмова з NPC на мапі); повертає відписку. */
@@ -48,3 +50,6 @@ export interface Credits {
   readonly licences: Readonly<Record<string, { readonly url: string }>>;
   readonly files: readonly { readonly file: string; readonly authors: readonly string[]; readonly licence: string; readonly sources: readonly string[]; readonly modified: string }[];
 }
+
+/** GAME-191: малювання кімнати вступу: полотно, розмір екрана в CSS-пікселях, «менше руху», чи вже знято. */
+export type IntroRoomPainter = (target: HTMLCanvasElement, cssW: number, cssH: number, reduced: boolean, isDead: () => boolean) => Promise<() => void>;
