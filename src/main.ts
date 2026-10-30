@@ -28,7 +28,7 @@ import { liveSpot, spotMove, storyMoves } from './content/director';
 import { portraitFor } from './view/portraits';
 import { headCrop, sheetOf } from './view/world/portrait-art';
 import { miaSpots, requestMarker, requestTarget, requestsDone } from './content/requests';
-import { MAP_SPOTS, isBulky, isMapFirstSpot, mapKeyFor, needsLeft, nextTarget, npcLive, resolveSpot, spotLook, unpackMoves } from './content/map-first';
+import { MAP_SPOTS, isBulky, isMapFirstSpot, mapKeyFor, moveKey, needsLeft, nextTarget, npcLive, resolveSpot, spotLook, unpackMoves } from './content/map-first';
 import { packFlag } from './core/packing';
 import type { GameState } from './core/state';
 import { progressOf, titleOf } from './core/progress';
@@ -150,7 +150,7 @@ const actOnMap = (name: string): void => {
     const r = resolveSpot(bridge.state, GAME_DEFS, name);
     if (!r) return;
     // GAME-183: вибір із кількох дій (куди їхати, що сушити, як завершити крок) — рамка вибору, команда піде з її кнопки.
-    if (r.options) { choiceSpot = name; storyChanged(); for (const l of talkListeners) l(); return; }
+    if (r.options || r.confirm) { choiceSpot = name; storyChanged(); for (const l of talkListeners) l(); return; }
     const first = r.moves[0];
     // Дрібна річ удома: у рюкзак (команда пакування піде при розвантаженні біля авто), без розмови ядра.
     if (first?.type === 'PackItem' && !isBulky(GAME_DEFS, first.itemId)) { backpack.push(first.itemId); storyChanged(); return; }
@@ -327,8 +327,12 @@ render(h(Shell, {
       if (id === CHOICE_CANCEL_ID) { choiceSpot = null; storyChanged(); return; }
       const intent = storyOffer(bridge.state, GAME_DEFS, viewOf()).intents.get(id);
       if (!intent) return;
+      // Підтверджена поїздка авто — увесь ланцюг ходів (напр. завершити крок + виїхати), а не лише останній.
+      const trip = choiceSpot !== null ? resolveSpot(bridge.state, GAME_DEFS, choiceSpot) : null;
+      const last = trip?.moves.at(-1);
+      const seq = trip?.confirm && last !== undefined && moveKey(last) === moveKey(intent) ? trip.moves : [intent];
       choiceSpot = null;
-      bridge.send(intent);
+      for (const m of seq) bridge.send(m);
       storyChanged();
     },
     onStory(listener: () => void) {

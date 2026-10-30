@@ -387,7 +387,9 @@ export function storyOffer(sim: SimState, defs: CoreDefs, view: StoryView = PANE
 
   // GAME-183: об'єкт мапи питає «що саме?» — варіанти в рамці вибору (те саме місце, що рамка розмови), а не кнопки ☰. Лише на мапі й без розмови.
   if (!dialogue && view.mapFirst && view.choice) {
-    const options = resolveSpot(sim, defs, view.choice)?.options;
+    const spot = resolveSpot(sim, defs, view.choice);
+    // Поїздка-підтвердження: ланцюг ходів — одна відповідь, її вигляд і намір — за останнім ходом (куди приїдемо); увесь ланцюг шле main.act.
+    const options = spot?.confirm ? spot.moves.slice(-1) : spot?.options;
     if (options) {
       const answers = options.map((m): OfferAction => { const a: OfferAction = { id: idOf(m, s), ...describe(m, defs, s, weather) }; intents.set(a.id, m); return a; });
       // GAME-185: «Що беремо?» — купівлі, на які бракує грошей, лишаються вимкненими рядками з причиною (без наміру: активувати їх нічим), а не зникають.

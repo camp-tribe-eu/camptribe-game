@@ -340,3 +340,50 @@ describe('GAME-185 · авто на дорозі з ST-004 везе вперед
     }
   });
 });
+
+describe('GAME-185 · кожна поїздка авто спершу питає (підтвердження), ланцюг ходів лишається цілим', () => {
+  /** Герой на дорозі з ST-004 (єдине місце призначення — табір, ланцюг CompleteQuest + Visit). */
+  const roadSim = (): SimState => {
+    let s = create((CHOICES[0] as { intent: Move }).intent);
+    for (let i = 0; i < 40 && !ROAD_GOAL(s); i++) {
+      const n = nextTarget(s, DEFS);
+      if (!n) break;
+      s = applyAll(s, (progressSpots(s).find((p) => p.name === n.spot) as { moves: readonly Move[] }).moves);
+    }
+    return { ...s, game: { ...s.game, dialogue: null } };
+  };
+  it('єдина поїздка (дорога з ST-004): confirm, ланцюг із двох ходів, а рамка має одну відповідь + «Не зараз»', () => {
+    const s = roadSim();
+    expect(ROAD_GOAL(s)).toBe(true);
+    const r = resolveSpot(s, DEFS, 'obj.vehicle');
+    expect(r?.confirm, 'єдина поїздка питає').toBe(true);
+    expect(r?.moves.map((m) => m.type)).toEqual(['CompleteQuest', 'Visit']);
+    const o = storyOffer(s, DEFS, { ...MAP_VIEW, choice: 'obj.vehicle' }).offer.dialogue;
+    expect(o?.ui, 'рамка вибору').toBe(true);
+    expect(o?.answers.map((a) => a.kind)).toEqual(['visit', 'cancel']);
+    expect(o?.answers[0]?.key).toBe('loc.camp.lake');
+  });
+  it('не-авто об\'єкти не питають (confirm лише в obj.vehicle)', () => {
+    const s = roadSim();
+    for (const name of (MAP_SPOTS.home as readonly string[]).filter((n) => n !== 'obj.vehicle')) expect(resolveSpot(s, DEFS, name)?.confirm, name).toBeUndefined();
+  });
+  it('удома: усе, що веде авто, — confirm (ланцюг CH1-HOME-001 + Visit дорога збережено)', () => {
+    let s = create((CHOICES[0] as { intent: Move }).intent);
+    for (let i = 0; i < 40 && !(resolveSpot(s, DEFS, 'obj.vehicle')?.moves.some((m) => m.type === 'CompleteQuest')); i++) {
+      const n = nextTarget(s, DEFS);
+      if (!n) break;
+      s = applyAll(s, (progressSpots(s).find((p) => p.name === n.spot) as { moves: readonly Move[] }).moves);
+    }
+    const r = resolveSpot(s, DEFS, 'obj.vehicle');
+    expect(r?.confirm).toBe(true);
+    expect(r?.moves.map((m) => m.type)).toEqual(['CompleteQuest', 'Visit']);
+    expect(coveredKeys(s, DEFS).has(moveKey((r?.moves[1]) as Move)), 'стрілка/ключі покриті').toBe(true);
+  });
+  it('НЕГАТИВНИЙ КОНТРОЛЬ: вибір із кількох напрямків — не confirm, а options', () => {
+    const s = roadSim();
+    const camp = applyAll(s, resolveSpot(s, DEFS, 'obj.vehicle')?.moves ?? []);
+    const r = resolveSpot({ ...camp, game: { ...camp.game, dialogue: null } }, DEFS, 'obj.vehicle');
+    expect(r?.options?.length, 'у таборі кілька напрямків').toBeGreaterThan(1);
+    expect(r?.confirm).toBeUndefined();
+  });
+});

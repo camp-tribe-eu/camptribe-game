@@ -153,7 +153,8 @@ export function moveKey(m: Move): string {
  * Що робить об'єкт: ходи ядра (по порядку) і/або відкрити багажник. `options` (GAME-183) — об'єкт пропонує ВИБІР однієї з дій (куди їхати, що сушити,
  * як завершити крок): сцена показує маленьку рамку вибору в рамці розмови замість ☰, `moves` тоді порожній. Один варіант вибору не буває — це просто `moves`.
  */
-export interface Resolved { readonly moves: readonly Move[]; readonly ui?: 'trunk'; readonly options?: readonly Move[] }
+export interface Resolved { readonly moves: readonly Move[]; readonly ui?: 'trunk'; readonly options?: readonly Move[]; readonly confirm?: true }
+// GAME-185: `confirm` — одна поїздка авто (можливо ланцюг ходів): мапа питає «Куди їдемо?» з єдиною відповіддю й «Не зараз», а не їде від дотику повз авто.
 
 const asCommand = (g: GameState, m: Move): Command => ({ ...m, commandId: nextCommandId(g) }) as Command;
 /** Хід, який ядро прийме, → наступний стан; інакше null. */
@@ -280,7 +281,7 @@ function compute(sim: SimState, defs: CoreDefs, name: string): Resolved | null {
     const v = vehicleMoves(g, defs);
     if (!v) return null;
     if (v.options) return { moves: [], options: v.options };
-    return chain(g, defs, v.moves) ? { moves: v.moves } : null;
+    return chain(g, defs, v.moves) ? { moves: v.moves, confirm: true } : null;
   }
   return null;
 }
