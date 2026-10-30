@@ -30,7 +30,7 @@ import { daySummary, daysEnded, NIGHT_PREFIX } from '../core/day-summary';
 import { type OfferAction, type OfferAtlas, type OfferCharacter, type OfferPacking, type OfferProgress, type OfferSummary, type OfferWave, type StoryOffer } from '../ui/story-types';
 import { RAW_WAVES } from '../content/waves';
 import { menuTasks } from '../content/director';
-import { coveredKeys, moveKey, nextTarget, resolveSpot, spotLabel } from '../content/map-first';
+import { coveredKeys, departBlock, moveKey, nextTarget, resolveSpot, spotLabel } from '../content/map-first';
 import { waveView } from '../core/wave';
 import type { Key } from '../i18n';
 import { liveRequestSpot as liveSpotFor } from '../content/requests';
@@ -292,6 +292,8 @@ export interface StoryView {
   readonly mapFirst: boolean; readonly trunk: boolean; readonly near: string | null; readonly backpack?: readonly string[];
   /** GAME-183: об'єкт мапи, що питає «що саме?» (авто — куди їхати, сушарка, приймальня, крок з вибором): його варіанти йдуть у рамку вибору замість ☰. Стан ПОКАЗУ. */
   readonly choice?: string | null;
+  /** GAME-178: гравець щойно спробував рушити, а авто не готове — HUD показує причину. Стан ПОКАЗУ. */
+  readonly departNote?: boolean;
 }
 /** Питання рамки вибору за об'єктом (ключі UI). */
 /** id відповіді «Не зараз» у рамці вибору дії на мапі (GAME-183): команди не має — гра лише закриває рамку. */
@@ -322,6 +324,7 @@ export function storyOffer(sim: SimState, defs: CoreDefs, view: StoryView = PANE
     backpack: view.backpack?.length ?? 0,
     next: reqT ? (reqT.startsWith('npc.') ? 'next.req.giver' : 'next.req.target') as Key : nextT?.key ?? null,
     nextSpot: reqT ?? nextT?.spot ?? null,
+    blocked: view.mapFirst && view.departNote ? ((b) => (b ? { carry: b.kind === 'carry', itemKeys: b.kind === 'missing' ? b.items.map((i) => nameKey(i) ?? i) : [] } : null))(departBlock(sim, defs, view.backpack ?? [])) : null,
     near: nearL ? { label: nearL.label, itemKey: nearL.ref ? nameKey(nearL.ref) : null } : reqNear ? { label: 'near.req' as Key, itemKey: reqNear.labelKey } : null,
   };
   const base = { mapFirst: view.mapFirst, hint, requests: trackerRows(s), goal: goalOf(s, st), progress: progressOffer(s), atlas: atlasOffer(s), moneyCents: s.moneyCents, inventory, journal, lastTrip, weather, forecast: todayForecast(sim), day: dayOf(sim.clock) + 1, timeMinutes: timeOfDay(sim.clock.minutes), wave: waveOffer(sim), mia: miaState(s, defs), ...summaryOffer(sim, defs) };

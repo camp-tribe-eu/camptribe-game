@@ -94,6 +94,8 @@ export interface OfferHint {
   readonly next: Key | null;
   readonly nextSpot: string | null;
   readonly near: { readonly label: Key; readonly itemKey: string | null } | null;
+  /** GAME-178: чому авто не рушає (рюкзак повний чи бракує речей); null — не показувати. */
+  readonly blocked: { readonly carry: boolean; readonly itemKeys: readonly string[] } | null;
 }
 
 /** Картка прохання (GAME-180): що зробити одним рядком, цілі-картинки (іконка + підпис) і нагорода (дані для GAME-181). */

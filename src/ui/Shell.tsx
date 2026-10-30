@@ -308,6 +308,11 @@ export function Shell({ port, langOverride, credits, build, holdToast = false, h
                 ))}
               </div>
             )}
+            {offer.hint.blocked && (
+              <div class="ui-next" data-ui="depart-hint" role="status">
+                {offer.hint.blocked.carry ? t('depart.carry') : `${t('depart.missing')} ${offer.hint.blocked.itemKeys.map((k) => ct(lang, k)).join(', ')}`}
+              </div>
+            )}
             {nextShown && (
               <div class="ui-next" data-ui="next-hint" data-kind={offer.hint.near ? 'near' : 'next'} data-spot={offer.hint.near ? undefined : offer.hint.nextSpot ?? undefined}>
                 {offer.hint.near
