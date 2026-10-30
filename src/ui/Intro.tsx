@@ -11,6 +11,7 @@ import { iconRects } from './atlas-icons';
 import { Portrait, type PortraitLookup } from './Portrait';
 import type { IntroRoomPainter } from './port';
 import type { StoryOffer } from './story-types';
+import { calmMotion } from '../platform/motion';
 
 type Step =
   | { readonly kind: 'line'; readonly who: string | null; readonly text: Key }
@@ -57,7 +58,7 @@ function Room({ paint }: { paint: IntroRoomPainter | undefined }) {
     let dead = false;
     let stop: () => void = () => undefined;
     const [w, h] = size.split('x').map(Number) as [number, number];
-    const reduced = typeof window.matchMedia === 'function' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const reduced = calmMotion();
     paint(el, w, h, reduced, () => dead).then((s) => { if (dead) s(); else stop = s; }, () => undefined);
     return () => { dead = true; stop(); };
   }, [size]);
