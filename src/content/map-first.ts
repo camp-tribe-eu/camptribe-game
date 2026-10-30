@@ -393,18 +393,25 @@ function roadNext(sim: SimState, defs: CoreDefs): Next | null {
   return { key: 'next.road.go', spot: 'obj.vehicle' };
 }
 
+/** Справа хвилі приїзду, яку гравець робить руками (view/world/tent.ts). */
+export const PITCH_TASK = 'pitch-tent';
+
 function campNext(sim: SimState, defs: CoreDefs): Next | null {
   const g = sim.game;
   const w = g.wave?.active;
   const stage = w ? defs.waves?.waves[w.waveId]?.stage : undefined;
   if (w && stage !== undefined && own(defs.story?.quests ?? {}, stage)?.locationId === MAP_LOCATION.camp) {
-    const open = Object.entries(w.tasks).find(([, t]) => t.outcome === 'open' && sim.clock.minutes <= t.dueAt);
+    const live = Object.entries(w.tasks).filter(([, t]) => t.outcome === 'open' && sim.clock.minutes <= t.dueAt);
+    // GAME-189: намет руками — стрілка й підпис однаково кажуть «постав намет тут» (раніше ціль «Намет» у HUD, а стрілка — на Елізу).
+    if (live.some(([id]) => id === PITCH_TASK)) return { key: 'next.camp.pitch', spot: `task.${PITCH_TASK}` };
+    const open = live[0];
     if (open) return { key: 'next.camp.task', spot: `task.${open[0]}` };
   }
   const tent = (id: string): Next => ({ key: 'next.camp.tent', spot: `step.${id}` });
   const elise = (id: string, o: string): Next => (objDone(g, id, o) ? { key: 'next.camp.elise.done', spot: `step.${id}` } : { key: 'next.camp.elise', spot: 'npc.elise' });
   if (quest(g, 'ST-005')) {
-    if (!objDone(g, 'ST-005', 'meet-elise') || !objDone(g, 'ST-005', 'pitch-tent')) return { key: 'next.camp.elise', spot: 'npc.elise' };
+    if (!objDone(g, 'ST-005', 'meet-elise')) return { key: 'next.camp.elise', spot: 'npc.elise' };
+    if (!objDone(g, 'ST-005', 'pitch-tent')) return { key: 'next.camp.elise.spot', spot: 'npc.elise' };   // намет уже стоїть (чи строк минув) — «де ночувати» вирішує розмова з Елізою
     if (!g.inventory['item.firewood']) return { key: 'next.camp.firewood', spot: 'take.item.firewood' };
     return tent('ST-005');
   }

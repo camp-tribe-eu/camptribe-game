@@ -270,5 +270,10 @@
   "next.home.end": "at home — finish the chapter by the door",
   "near.buy": "Buy or sell",
   "choice.buy": "What do we take?",
-  "next.camp.finish": "finish the chapter by your tent"
+  "next.camp.finish": "finish the chapter by your tent",
+  "tent.place": "Find flat ground and pitch the tent: ● or E",
+  "tent.blocked": "Not here — stand on open ground near the marker",
+  "tent.peg": "Peg: hit the green!",
+  "next.camp.pitch": "pitch the tent here — at the marker",
+  "next.camp.elise.spot": "ask Elise where to sleep"
 }

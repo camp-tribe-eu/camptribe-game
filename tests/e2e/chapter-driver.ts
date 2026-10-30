@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs';
 import { expect, type Page } from '@playwright/test';
 
 export interface Core { game: { player: { locationId: string; transportId?: string } | null; flags: string[]; quests: Record<string, { status: string }>; inventory: Record<string, number>; dialogue: unknown; wave?: unknown; campaignEnded: boolean }; clock: { minutes: number } }
-export interface Probe { playerX: number; playerY: number; nearObject: string | null; playerMoving: boolean; saveLoaded: boolean; fx: { target: string | null; guide: string; ring: number; backpack: number } }
+export interface Probe { playerX: number; playerY: number; nearObject: string | null; playerMoving: boolean; saveLoaded: boolean; tent: { phase: string; pegs: number; marker: number; inBand: boolean; placeOk: boolean }; fx: { target: string | null; guide: string; ring: number; backpack: number } }
 export const core = (page: Page): Promise<Core> => page.evaluate(() => (window as unknown as { __game: { read: () => Core } }).__game.read());
 export const probe = (page: Page): Promise<Probe> => page.evaluate(() => JSON.parse(JSON.stringify((window as unknown as { __game: { probe: Probe } }).__game.probe)) as Probe);
 export const loaded = (page: Page): Promise<unknown> => page.waitForFunction(() => (window as unknown as { __game?: { probe: { saveLoaded: boolean } } }).__game?.probe.saveLoaded === true, null, { timeout: 30_000 });
@@ -108,6 +108,29 @@ export async function answerOne(page: Page): Promise<string> {
   return `${choiceBox ? 'choice' : 'talk'}:${a.act}:${a.key || a.text.slice(0, 24)}`;
 }
 
+/**
+ * GAME-189 · намет руками: гравець уже натиснув дію біля task.pitch-tent (фаза «place»). Дальше — як людина: дочекатись, що привид зелений, поставити; на кожен із 4 кілків
+ * стежити за шкалою й натискати, коли маркер у зеленому (зонд tent.marker/inBand — лише читання). Тиснемо, коли маркер ≈ посередині зеленого: запас ≈ ±0,11 шкали (≈130 мс затримки).
+ */
+export async function playTent(page: Page, touch: boolean, midShot?: () => Promise<void>): Promise<void> {
+  const press = async (): Promise<void> => {
+    if (touch) await page.locator('[data-touch="interact"]').tap();
+    else { await page.keyboard.down('KeyE'); await page.waitForTimeout(80); await page.keyboard.up('KeyE'); }
+  };
+  await expect.poll(async () => (await probe(page)).tent.phase, { timeout: 5_000, message: 'дія біля намету мусить почати розміщення' }).toBe('place');
+  await expect.poll(async () => (await probe(page)).tent.placeOk, { timeout: 5_000, message: 'привид намету мусить стати зеленим (місце придатне)' }).toBe(true);
+  await page.waitForTimeout(450);   // затвор дії сцени: ≥ 400 мс між натисканнями
+  await press();
+  await expect.poll(async () => (await probe(page)).tent.phase, { timeout: 5_000, message: 'друга дія ставить намет' }).toBe('peg');
+  for (let k = 0; k < 4; k++) {
+    await page.waitForTimeout(450);   // затвор (маркер за цей час не дійде до середини: хід від краю ≥ 0,3 с)
+    await page.waitForFunction((n) => { const t = (window as unknown as { __game: { probe: { tent: { phase: string; pegs: number; marker: number } } } }).__game.probe.tent; return t.phase !== 'peg' || (t.pegs === n && Math.abs(t.marker - 0.5) < 0.07); }, k, { timeout: 10_000, polling: 'raf' });
+    await press();
+    await expect.poll(async () => { const t = (await probe(page)).tent; return t.phase !== 'peg' || t.pegs > k; }, { timeout: 5_000, message: `кілок ${k + 1} не забито` }).toBe(true);
+    if (k === 1 && midShot) await midShot();
+  }
+}
+
 const AUTO = (name: string): boolean => name.startsWith('step.') || name.startsWith('take.') || name === 'obj.vehicle' || name.startsWith('req.') || name.startsWith('pack.');
 /** Один «заход»: куди каже стрілка → дійти → дія від наближення (кільце) або кнопка дії (E / тап по кнопці). Повертає назву цілі. */
 export async function goAndDo(page: Page, touch: boolean, car = false): Promise<string> {
@@ -131,6 +154,7 @@ export async function goAndDo(page: Page, touch: boolean, car = false): Promise<
       if (touch) await page.locator('[data-touch="interact"]').tap();
       else { await page.keyboard.down('KeyE'); await page.waitForTimeout(200); await page.keyboard.up('KeyE'); }
     }
+    if (target === 'task.pitch-tent' && !AUTO(target)) await playTent(page, touch);
     try { await expect.poll(() => signature(page), { timeout: 5_000 }).not.toBe(before); break; } catch { /* ще раз із поточної точки */ }
   }
   const q = await probe(page);
