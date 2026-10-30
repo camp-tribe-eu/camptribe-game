@@ -11,7 +11,7 @@ import { STEP_MS } from '../../core/clock';
 import { KEY_BINDINGS, KEY_CODES, TAP_MAX_MOVE, TAP_MAX_MS, actionTarget, consumeFrame, createActionGate, moveVector, press, release, tapHitsSpot, type Action, type ActionTarget, type InputState } from './actions';
 import type { Bridge } from './bridge';
 import { PET_SHEETS, type WorldArt } from './art';
-import { COLS, FRAME, frameIndex, type Dir } from './character';
+import { ACTIONS, ACTION_COLS, COLS, DIR_ROW, FRAME, frameIndex, type Action as HeroAction, type Dir } from './character';
 import { FIRE_CORE, FIRE_GLOW, ambientAt, glowAlpha, timeOfDay } from './daylight';
 import { FOLLOW_SPEED_FACTOR, SPEED, centerOf, gridFromWalls, restPoints, stepFollowers, stepTo, tileOf, type Grid, type Pt } from './follow';
 import type { MapKey } from '../../content/map-first';
@@ -31,6 +31,7 @@ const AUTO_RANGE = TILE * 1.1;
 const ORIGIN_Y = 0.9;
 const BODY = { w: 16, h: 10 };
 const WALK_FPS = 12;
+const ACTION_FPS = 12;
 /** Глибини: земля, декор і стіни (стовбури, намети) — завжди під персонажем; спрайти сортуються за y ніг; верхівки — смугами. */
 const DEPTH = { ground: -300, decor: -200, walls: -100, always: 100_000 } as const;
 const DIRS: readonly Dir[] = ['up', 'left', 'down', 'right'];
@@ -192,6 +193,8 @@ export class WorldScene extends Phaser.Scene {
   private faced: string | null = null;
   /** GAME-173: скільки секунд герой стоїть; точки дозвілля родини (null — у строю) і всі точки мапи; напрямок руху героя для строю. */
   private idleS = 0;
+  /** GAME-191: дія героя, що зараз програється (slash / thrust / cast); null — ходьба й стояння як завжди. */
+  private acting: HeroAction | null = null;
   private leisure: (LeisureSpot | null)[] | null = null;
   private leisureSpots: LeisureSpot[] = [];
   private heading: Pt = { x: 0, y: 0 };
@@ -312,6 +315,22 @@ export class WorldScene extends Phaser.Scene {
     return this.insets;
   }
 
+  /**
+   * GAME-191 (OD-022): герой один раз програє анімацію дії LPC (slash / thrust / cast) у бік `facing` (за замовчуванням — куди дивиться)
+   * і повертається до стояння. Геймплей не змінює: нічого не рухає й нікого не зачіпає; виклик під час дії ігнорується (false).
+   */
+  playAction(action: HeroAction, facing: Dir = this.facing): boolean {
+    if (this.acting) return false;
+    this.acting = action;
+    this.facing = facing;
+    this.player.anims.play(`act-${action}-${facing}`);
+    this.player.once(Phaser.Animations.Events.ANIMATION_COMPLETE, () => {
+      this.acting = null;
+      this.player.setTexture('player', frameIndex(this.facing, 0));
+    });
+    return true;
+  }
+
   /** Складений лист ходьби як текстура з 36 кадрами (ключ кадру — номер). */
   private addSheet(key: string, canvas: HTMLCanvasElement): void {
     const tex = this.textures.addCanvas(key, canvas);
@@ -325,6 +344,11 @@ export class WorldScene extends Phaser.Scene {
     this.textures.addSpriteSheet('campfire', this.art.campfire, { frameWidth: FRAME, frameHeight: FRAME });
     this.textures.addSpriteSheet('mia', this.art.mia, { frameWidth: PET_SHEETS.mia.frame, frameHeight: PET_SHEETS.mia.frame });   // GAME-147/184: кішка Мія (ART-020)
     this.addSheet('player', this.art.sheets.player);
+    for (const a of ACTIONS) {   // GAME-191: листи дій героя — ключ `player-<дія>`, кадри за тим самим номером (рядок напрямку × стовпців дії + стовпець)
+      const tex = this.textures.addCanvas(`player-${a}`, this.art.playerActions[a]);
+      if (!tex) throw new Error(`texture player-${a} failed`);
+      for (let i = 0; i < ACTION_COLS[a] * 4; i++) tex.add(i, 0, (i % ACTION_COLS[a]) * FRAME, Math.floor(i / ACTION_COLS[a]) * FRAME, FRAME, FRAME);
+    }
     this.addSheet('elise', this.art.sheets.elise);
     for (const name of FOLLOWERS) this.addSheet(name, this.art.sheets[name]);
     for (const [name, canvas] of Object.entries(this.art.residents)) this.addSheet(`res-${name}`, canvas);
@@ -332,6 +356,9 @@ export class WorldScene extends Phaser.Scene {
     this.anims.create({ key: 'fire', frames: this.anims.generateFrameNumbers('campfire', { start: 0, end: 4 }), frameRate: 8, repeat: -1 });
     for (const dir of DIRS) {
       this.anims.create({ key: `walk-${dir}`, frames: Array.from({ length: COLS - 1 }, (_, i) => ({ key: 'player', frame: frameIndex(dir, i + 1) })), frameRate: WALK_FPS, repeat: -1 });
+    }
+    for (const a of ACTIONS) {
+      for (const dir of DIRS) this.anims.create({ key: `act-${a}-${dir}`, frames: Array.from({ length: ACTION_COLS[a] }, (_, i) => ({ key: `player-${a}`, frame: DIR_ROW[dir] * ACTION_COLS[a] + i })), frameRate: ACTION_FPS, repeat: 0 });
     }
     for (const name of FOLLOWERS) {
       for (const dir of DIRS) this.anims.create({ key: `walk-${name}-${dir}`, frames: Array.from({ length: COLS - 1 }, (_, i) => ({ key: name, frame: frameIndex(dir, i + 1) })), frameRate: WALK_FPS, repeat: -1 });
@@ -763,6 +790,7 @@ export class WorldScene extends Phaser.Scene {
     sp.s.anims.stop();
     sp.s.setFrame(frameIndex(toHero, 0));
     this.facing = facingToward(this.player, sp.s);
+    if (this.acting) { this.player.off(Phaser.Animations.Events.ANIMATION_COMPLETE); this.acting = null; this.player.setTexture('player'); }   // GAME-191: розмова обриває дію
     this.player.anims.stop();
     this.player.setFrame(frameIndex(this.facing, 0));
     this.hideBark();
@@ -835,7 +863,8 @@ export class WorldScene extends Phaser.Scene {
       const horizontal = v.x !== 0 && (v.y === 0 || this.facing === 'left' || this.facing === 'right');
       this.facing = horizontal ? (v.x < 0 ? 'left' : 'right') : (v.y < 0 ? 'up' : 'down');
     }
-    if (moving) this.player.anims.play(`walk-${this.facing}`, true);
+    if (this.acting) { /* GAME-191: триває анімація дії — ходьба її не перебиває */ }
+    else if (moving) this.player.anims.play(`walk-${this.facing}`, true);
     else { this.player.anims.stop(); this.player.setFrame(frameIndex(this.facing, 0)); }
     this.player.setDepth(this.player.y);
 

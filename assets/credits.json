@@ -72,10 +72,25 @@
     {
       "name": "Benjamin K. Smith (BenCreating)",
       "files": [
+        "characters/body/bodies/female/slash.png",
+        "characters/body/bodies/female/spellcast.png",
+        "characters/body/bodies/female/thrust.png",
         "characters/body/bodies/female/walk.png",
+        "characters/body/bodies/male/slash.png",
+        "characters/body/bodies/male/spellcast.png",
+        "characters/body/bodies/male/thrust.png",
         "characters/body/bodies/male/walk.png",
+        "characters/body/bodies/teen/slash.png",
+        "characters/body/bodies/teen/spellcast.png",
+        "characters/body/bodies/teen/thrust.png",
         "characters/body/bodies/teen/walk.png",
+        "characters/head/heads/human/female/slash.png",
+        "characters/head/heads/human/female/spellcast.png",
+        "characters/head/heads/human/female/thrust.png",
         "characters/head/heads/human/female/walk.png",
+        "characters/head/heads/human/male/slash.png",
+        "characters/head/heads/human/male/spellcast.png",
+        "characters/head/heads/human/male/thrust.png",
         "characters/head/heads/human/male/walk.png",
         "portraits/npc.amina.png",
         "portraits/npc.claire.png",
@@ -149,15 +164,45 @@
     {
       "name": "bluecarrot16",
       "files": [
+        "characters/body/bodies/female/slash.png",
+        "characters/body/bodies/female/spellcast.png",
+        "characters/body/bodies/female/thrust.png",
         "characters/body/bodies/female/walk.png",
+        "characters/body/bodies/male/slash.png",
+        "characters/body/bodies/male/spellcast.png",
+        "characters/body/bodies/male/thrust.png",
         "characters/body/bodies/male/walk.png",
+        "characters/body/bodies/teen/slash.png",
+        "characters/body/bodies/teen/spellcast.png",
+        "characters/body/bodies/teen/thrust.png",
         "characters/body/bodies/teen/walk.png",
+        "characters/feet/shoes/basic/male/slash.png",
+        "characters/feet/shoes/basic/male/spellcast.png",
+        "characters/feet/shoes/basic/male/thrust.png",
         "characters/feet/shoes/basic/male/walk.png",
+        "characters/head/heads/human/female/slash.png",
+        "characters/head/heads/human/female/spellcast.png",
+        "characters/head/heads/human/female/thrust.png",
         "characters/head/heads/human/female/walk.png",
+        "characters/head/heads/human/male/slash.png",
+        "characters/head/heads/human/male/spellcast.png",
+        "characters/head/heads/human/male/thrust.png",
         "characters/head/heads/human/male/walk.png",
+        "characters/legs/pants/male/slash.png",
+        "characters/legs/pants/male/spellcast.png",
+        "characters/legs/pants/male/thrust.png",
         "characters/legs/pants/male/walk.png",
+        "characters/legs/pants/thin/slash.png",
+        "characters/legs/pants/thin/spellcast.png",
+        "characters/legs/pants/thin/thrust.png",
         "characters/legs/pants/thin/walk.png",
+        "characters/torso/clothes/longsleeve/longsleeve/female/slash.png",
+        "characters/torso/clothes/longsleeve/longsleeve/female/spellcast.png",
+        "characters/torso/clothes/longsleeve/longsleeve/female/thrust.png",
         "characters/torso/clothes/longsleeve/longsleeve/female/walk.png",
+        "characters/torso/clothes/shortsleeve/shortsleeve/teen/slash.png",
+        "characters/torso/clothes/shortsleeve/shortsleeve/teen/spellcast.png",
+        "characters/torso/clothes/shortsleeve/shortsleeve/teen/thrust.png",
         "characters/torso/clothes/shortsleeve/shortsleeve/teen/walk.png",
         "portraits/animal.cat.png",
         "portraits/npc.amina.png",
@@ -343,8 +388,17 @@
     {
       "name": "Durrani",
       "files": [
+        "characters/body/bodies/female/slash.png",
+        "characters/body/bodies/female/spellcast.png",
+        "characters/body/bodies/female/thrust.png",
         "characters/body/bodies/female/walk.png",
+        "characters/body/bodies/male/slash.png",
+        "characters/body/bodies/male/spellcast.png",
+        "characters/body/bodies/male/thrust.png",
         "characters/body/bodies/male/walk.png",
+        "characters/body/bodies/teen/slash.png",
+        "characters/body/bodies/teen/spellcast.png",
+        "characters/body/bodies/teen/thrust.png",
         "characters/body/bodies/teen/walk.png",
         "portraits/npc.amina.png",
         "portraits/npc.claire.png",
@@ -391,13 +445,37 @@
     {
       "name": "Eliza Wyatt (ElizaWy)",
       "files": [
+        "characters/body/bodies/female/slash.png",
+        "characters/body/bodies/female/spellcast.png",
+        "characters/body/bodies/female/thrust.png",
         "characters/body/bodies/female/walk.png",
+        "characters/body/bodies/male/slash.png",
+        "characters/body/bodies/male/spellcast.png",
+        "characters/body/bodies/male/thrust.png",
         "characters/body/bodies/male/walk.png",
+        "characters/body/bodies/teen/slash.png",
+        "characters/body/bodies/teen/spellcast.png",
+        "characters/body/bodies/teen/thrust.png",
         "characters/body/bodies/teen/walk.png",
+        "characters/head/heads/human/male_small/slash.png",
+        "characters/head/heads/human/male_small/spellcast.png",
+        "characters/head/heads/human/male_small/thrust.png",
         "characters/head/heads/human/male_small/walk.png",
+        "characters/legs/pants/male/slash.png",
+        "characters/legs/pants/male/spellcast.png",
+        "characters/legs/pants/male/thrust.png",
         "characters/legs/pants/male/walk.png",
+        "characters/legs/pants/thin/slash.png",
+        "characters/legs/pants/thin/spellcast.png",
+        "characters/legs/pants/thin/thrust.png",
         "characters/legs/pants/thin/walk.png",
+        "characters/torso/clothes/longsleeve/longsleeve/female/slash.png",
+        "characters/torso/clothes/longsleeve/longsleeve/female/spellcast.png",
+        "characters/torso/clothes/longsleeve/longsleeve/female/thrust.png",
         "characters/torso/clothes/longsleeve/longsleeve/female/walk.png",
+        "characters/torso/clothes/shortsleeve/shortsleeve/teen/slash.png",
+        "characters/torso/clothes/shortsleeve/shortsleeve/teen/spellcast.png",
+        "characters/torso/clothes/shortsleeve/shortsleeve/teen/thrust.png",
         "characters/torso/clothes/shortsleeve/shortsleeve/teen/walk.png",
         "portraits/npc.amina.png",
         "portraits/npc.claire.png",
@@ -449,8 +527,17 @@
     {
       "name": "Evert",
       "files": [
+        "characters/body/bodies/female/slash.png",
+        "characters/body/bodies/female/spellcast.png",
+        "characters/body/bodies/female/thrust.png",
         "characters/body/bodies/female/walk.png",
+        "characters/body/bodies/male/slash.png",
+        "characters/body/bodies/male/spellcast.png",
+        "characters/body/bodies/male/thrust.png",
         "characters/body/bodies/male/walk.png",
+        "characters/body/bodies/teen/slash.png",
+        "characters/body/bodies/teen/spellcast.png",
+        "characters/body/bodies/teen/thrust.png",
         "characters/body/bodies/teen/walk.png",
         "portraits/npc.amina.png",
         "portraits/npc.claire.png",
@@ -552,18 +639,54 @@
     {
       "name": "JaidynReiman",
       "files": [
+        "characters/body/bodies/male/slash.png",
+        "characters/body/bodies/male/spellcast.png",
+        "characters/body/bodies/male/thrust.png",
         "characters/body/bodies/male/walk.png",
+        "characters/feet/shoes/basic/male/slash.png",
+        "characters/feet/shoes/basic/male/spellcast.png",
+        "characters/feet/shoes/basic/male/thrust.png",
         "characters/feet/shoes/basic/male/walk.png",
+        "characters/feet/shoes/basic/thin/slash.png",
+        "characters/feet/shoes/basic/thin/spellcast.png",
+        "characters/feet/shoes/basic/thin/thrust.png",
         "characters/feet/shoes/basic/thin/walk.png",
+        "characters/hair/messy1/adult/slash.png",
+        "characters/hair/messy1/adult/spellcast.png",
+        "characters/hair/messy1/adult/thrust.png",
         "characters/hair/messy1/adult/walk.png",
         "characters/hair/pixie/adult/walk.png",
+        "characters/hair/plain/adult/slash.png",
+        "characters/hair/plain/adult/spellcast.png",
+        "characters/hair/plain/adult/thrust.png",
         "characters/hair/plain/adult/walk.png",
+        "characters/hair/ponytail/adult/bg/slash.png",
+        "characters/hair/ponytail/adult/bg/spellcast.png",
+        "characters/hair/ponytail/adult/bg/thrust.png",
         "characters/hair/ponytail/adult/bg/walk.png",
+        "characters/hair/ponytail/adult/fg/slash.png",
+        "characters/hair/ponytail/adult/fg/spellcast.png",
+        "characters/hair/ponytail/adult/fg/thrust.png",
         "characters/hair/ponytail/adult/fg/walk.png",
+        "characters/legs/pants/male/slash.png",
+        "characters/legs/pants/male/spellcast.png",
+        "characters/legs/pants/male/thrust.png",
         "characters/legs/pants/male/walk.png",
+        "characters/legs/pants/thin/slash.png",
+        "characters/legs/pants/thin/spellcast.png",
+        "characters/legs/pants/thin/thrust.png",
         "characters/legs/pants/thin/walk.png",
+        "characters/torso/clothes/longsleeve/longsleeve/female/slash.png",
+        "characters/torso/clothes/longsleeve/longsleeve/female/spellcast.png",
+        "characters/torso/clothes/longsleeve/longsleeve/female/thrust.png",
         "characters/torso/clothes/longsleeve/longsleeve/female/walk.png",
+        "characters/torso/clothes/longsleeve/longsleeve/male/slash.png",
+        "characters/torso/clothes/longsleeve/longsleeve/male/spellcast.png",
+        "characters/torso/clothes/longsleeve/longsleeve/male/thrust.png",
         "characters/torso/clothes/longsleeve/longsleeve/male/walk.png",
+        "characters/torso/clothes/shortsleeve/shortsleeve/teen/slash.png",
+        "characters/torso/clothes/shortsleeve/shortsleeve/teen/spellcast.png",
+        "characters/torso/clothes/shortsleeve/shortsleeve/teen/thrust.png",
         "characters/torso/clothes/shortsleeve/shortsleeve/teen/walk.png",
         "portraits/npc.amina.png",
         "portraits/npc.claire.png",
@@ -634,8 +757,17 @@
     {
       "name": "Joe White",
       "files": [
+        "characters/feet/shoes/basic/thin/slash.png",
+        "characters/feet/shoes/basic/thin/spellcast.png",
+        "characters/feet/shoes/basic/thin/thrust.png",
         "characters/feet/shoes/basic/thin/walk.png",
+        "characters/hair/plain/adult/slash.png",
+        "characters/hair/plain/adult/spellcast.png",
+        "characters/hair/plain/adult/thrust.png",
         "characters/hair/plain/adult/walk.png",
+        "characters/legs/pants/thin/slash.png",
+        "characters/legs/pants/thin/spellcast.png",
+        "characters/legs/pants/thin/thrust.png",
         "characters/legs/pants/thin/walk.png",
         "portraits/npc.amina.png",
         "portraits/npc.claire.png",
@@ -695,13 +827,37 @@
     {
       "name": "Johannes Sjölund (wulax)",
       "files": [
+        "characters/body/bodies/female/slash.png",
+        "characters/body/bodies/female/spellcast.png",
+        "characters/body/bodies/female/thrust.png",
         "characters/body/bodies/female/walk.png",
+        "characters/body/bodies/male/slash.png",
+        "characters/body/bodies/male/spellcast.png",
+        "characters/body/bodies/male/thrust.png",
         "characters/body/bodies/male/walk.png",
+        "characters/body/bodies/teen/slash.png",
+        "characters/body/bodies/teen/spellcast.png",
+        "characters/body/bodies/teen/thrust.png",
         "characters/body/bodies/teen/walk.png",
+        "characters/feet/shoes/basic/male/slash.png",
+        "characters/feet/shoes/basic/male/spellcast.png",
+        "characters/feet/shoes/basic/male/thrust.png",
         "characters/feet/shoes/basic/male/walk.png",
+        "characters/feet/shoes/basic/thin/slash.png",
+        "characters/feet/shoes/basic/thin/spellcast.png",
+        "characters/feet/shoes/basic/thin/thrust.png",
         "characters/feet/shoes/basic/thin/walk.png",
+        "characters/legs/pants/male/slash.png",
+        "characters/legs/pants/male/spellcast.png",
+        "characters/legs/pants/male/thrust.png",
         "characters/legs/pants/male/walk.png",
+        "characters/legs/pants/thin/slash.png",
+        "characters/legs/pants/thin/spellcast.png",
+        "characters/legs/pants/thin/thrust.png",
         "characters/legs/pants/thin/walk.png",
+        "characters/torso/clothes/longsleeve/longsleeve/male/slash.png",
+        "characters/torso/clothes/longsleeve/longsleeve/male/spellcast.png",
+        "characters/torso/clothes/longsleeve/longsleeve/male/thrust.png",
         "characters/torso/clothes/longsleeve/longsleeve/male/walk.png",
         "portraits/npc.amina.png",
         "portraits/npc.claire.png",
@@ -823,10 +979,22 @@
     {
       "name": "Manuel Riecke (MrBeast)",
       "files": [
+        "characters/hair/messy1/adult/slash.png",
+        "characters/hair/messy1/adult/spellcast.png",
+        "characters/hair/messy1/adult/thrust.png",
         "characters/hair/messy1/adult/walk.png",
         "characters/hair/pixie/adult/walk.png",
+        "characters/hair/plain/adult/slash.png",
+        "characters/hair/plain/adult/spellcast.png",
+        "characters/hair/plain/adult/thrust.png",
         "characters/hair/plain/adult/walk.png",
+        "characters/hair/ponytail/adult/bg/slash.png",
+        "characters/hair/ponytail/adult/bg/spellcast.png",
+        "characters/hair/ponytail/adult/bg/thrust.png",
         "characters/hair/ponytail/adult/bg/walk.png",
+        "characters/hair/ponytail/adult/fg/slash.png",
+        "characters/hair/ponytail/adult/fg/spellcast.png",
+        "characters/hair/ponytail/adult/fg/thrust.png",
         "characters/hair/ponytail/adult/fg/walk.png",
         "portraits/npc.amina.png",
         "portraits/npc.claire.png",
@@ -876,9 +1044,21 @@
     {
       "name": "Matthew Krohn (makrohn)",
       "files": [
+        "characters/body/bodies/female/slash.png",
+        "characters/body/bodies/female/spellcast.png",
+        "characters/body/bodies/female/thrust.png",
         "characters/body/bodies/female/walk.png",
+        "characters/body/bodies/teen/slash.png",
+        "characters/body/bodies/teen/spellcast.png",
+        "characters/body/bodies/teen/thrust.png",
         "characters/body/bodies/teen/walk.png",
+        "characters/legs/pants/male/slash.png",
+        "characters/legs/pants/male/spellcast.png",
+        "characters/legs/pants/male/thrust.png",
         "characters/legs/pants/male/walk.png",
+        "characters/legs/pants/thin/slash.png",
+        "characters/legs/pants/thin/spellcast.png",
+        "characters/legs/pants/thin/thrust.png",
         "characters/legs/pants/thin/walk.png",
         "portraits/npc.amina.png",
         "portraits/npc.claire.png",
@@ -937,8 +1117,17 @@
     {
       "name": "MuffinElZangano",
       "files": [
+        "characters/body/bodies/female/slash.png",
+        "characters/body/bodies/female/spellcast.png",
+        "characters/body/bodies/female/thrust.png",
         "characters/body/bodies/female/walk.png",
+        "characters/body/bodies/male/slash.png",
+        "characters/body/bodies/male/spellcast.png",
+        "characters/body/bodies/male/thrust.png",
         "characters/body/bodies/male/walk.png",
+        "characters/body/bodies/teen/slash.png",
+        "characters/body/bodies/teen/spellcast.png",
+        "characters/body/bodies/teen/thrust.png",
         "characters/body/bodies/teen/walk.png",
         "portraits/npc.amina.png",
         "portraits/npc.claire.png",
@@ -1000,6 +1189,9 @@
     {
       "name": "Nyom",
       "files": [
+        "characters/torso/clothes/shortsleeve/shortsleeve/teen/slash.png",
+        "characters/torso/clothes/shortsleeve/shortsleeve/teen/spellcast.png",
+        "characters/torso/clothes/shortsleeve/shortsleeve/teen/thrust.png",
         "characters/torso/clothes/shortsleeve/shortsleeve/teen/walk.png",
         "portraits/npc.matthew.png"
       ],
@@ -1032,7 +1224,13 @@
     {
       "name": "Pierre Vigier (pvigier)",
       "files": [
+        "characters/body/bodies/female/slash.png",
+        "characters/body/bodies/female/spellcast.png",
+        "characters/body/bodies/female/thrust.png",
         "characters/body/bodies/female/walk.png",
+        "characters/body/bodies/teen/slash.png",
+        "characters/body/bodies/teen/spellcast.png",
+        "characters/body/bodies/teen/thrust.png",
         "characters/body/bodies/teen/walk.png",
         "portraits/npc.amina.png",
         "portraits/npc.claire.png",
@@ -1142,15 +1340,45 @@
     {
       "name": "Stephen Challener (Redshrike)",
       "files": [
+        "characters/body/bodies/female/slash.png",
+        "characters/body/bodies/female/spellcast.png",
+        "characters/body/bodies/female/thrust.png",
         "characters/body/bodies/female/walk.png",
+        "characters/body/bodies/male/slash.png",
+        "characters/body/bodies/male/spellcast.png",
+        "characters/body/bodies/male/thrust.png",
         "characters/body/bodies/male/walk.png",
+        "characters/body/bodies/teen/slash.png",
+        "characters/body/bodies/teen/spellcast.png",
+        "characters/body/bodies/teen/thrust.png",
         "characters/body/bodies/teen/walk.png",
+        "characters/head/heads/human/female/slash.png",
+        "characters/head/heads/human/female/spellcast.png",
+        "characters/head/heads/human/female/thrust.png",
         "characters/head/heads/human/female/walk.png",
+        "characters/head/heads/human/male/slash.png",
+        "characters/head/heads/human/male/spellcast.png",
+        "characters/head/heads/human/male/thrust.png",
         "characters/head/heads/human/male/walk.png",
+        "characters/head/heads/human/male_small/slash.png",
+        "characters/head/heads/human/male_small/spellcast.png",
+        "characters/head/heads/human/male_small/thrust.png",
         "characters/head/heads/human/male_small/walk.png",
+        "characters/legs/pants/male/slash.png",
+        "characters/legs/pants/male/spellcast.png",
+        "characters/legs/pants/male/thrust.png",
         "characters/legs/pants/male/walk.png",
+        "characters/legs/pants/thin/slash.png",
+        "characters/legs/pants/thin/spellcast.png",
+        "characters/legs/pants/thin/thrust.png",
         "characters/legs/pants/thin/walk.png",
+        "characters/torso/clothes/longsleeve/longsleeve/female/slash.png",
+        "characters/torso/clothes/longsleeve/longsleeve/female/spellcast.png",
+        "characters/torso/clothes/longsleeve/longsleeve/female/thrust.png",
         "characters/torso/clothes/longsleeve/longsleeve/female/walk.png",
+        "characters/torso/clothes/shortsleeve/shortsleeve/teen/slash.png",
+        "characters/torso/clothes/shortsleeve/shortsleeve/teen/spellcast.png",
+        "characters/torso/clothes/shortsleeve/shortsleeve/teen/thrust.png",
         "characters/torso/clothes/shortsleeve/shortsleeve/teen/walk.png",
         "portraits/npc.amina.png",
         "portraits/npc.claire.png",
@@ -1269,8 +1497,17 @@
     {
       "name": "Wolthera van Hövell tot Westerflier (TheraHedwig)",
       "files": [
+        "characters/body/bodies/female/slash.png",
+        "characters/body/bodies/female/spellcast.png",
+        "characters/body/bodies/female/thrust.png",
         "characters/body/bodies/female/walk.png",
+        "characters/body/bodies/male/slash.png",
+        "characters/body/bodies/male/spellcast.png",
+        "characters/body/bodies/male/thrust.png",
         "characters/body/bodies/male/walk.png",
+        "characters/body/bodies/teen/slash.png",
+        "characters/body/bodies/teen/spellcast.png",
+        "characters/body/bodies/teen/thrust.png",
         "characters/body/bodies/teen/walk.png",
         "portraits/npc.amina.png",
         "portraits/npc.claire.png",
@@ -1345,6 +1582,96 @@
   ],
   "files": [
     {
+      "file": "characters/body/bodies/female/slash.png",
+      "authors": [
+        "Benjamin K. Smith (BenCreating)",
+        "bluecarrot16",
+        "Wolthera van Hövell tot Westerflier (TheraHedwig)",
+        "Evert",
+        "MuffinElZangano",
+        "Durrani",
+        "Pierre Vigier (pvigier)",
+        "Eliza Wyatt (ElizaWy)",
+        "Matthew Krohn (makrohn)",
+        "Johannes Sjölund (wulax)",
+        "Stephen Challener (Redshrike)"
+      ],
+      "licence": "CC-BY-SA 3.0",
+      "sources": [
+        "https://opengameart.org/content/liberated-pixel-cup-lpc-base-assets-sprites-map-tiles",
+        "https://opengameart.org/content/lpc-medieval-fantasy-character-sprites",
+        "https://opengameart.org/content/lpc-ladies",
+        "https://opengameart.org/content/lpc-7-womens-shirts",
+        "https://opengameart.org/content/lpc-jump-expanded",
+        "https://opengameart.org/content/lpc-be-seated",
+        "https://opengameart.org/content/lpc-revised-character-basics",
+        "https://gitlab.com/vagabondgame/lpc-characters",
+        "https://opengameart.org/content/lpc-male-jumping-animation-by-durrani",
+        "https://opengameart.org/content/lpc-runcycle-and-diagonal-walkcycle"
+      ],
+      "modified": "no"
+    },
+    {
+      "file": "characters/body/bodies/female/spellcast.png",
+      "authors": [
+        "Benjamin K. Smith (BenCreating)",
+        "bluecarrot16",
+        "Wolthera van Hövell tot Westerflier (TheraHedwig)",
+        "Evert",
+        "MuffinElZangano",
+        "Durrani",
+        "Pierre Vigier (pvigier)",
+        "Eliza Wyatt (ElizaWy)",
+        "Matthew Krohn (makrohn)",
+        "Johannes Sjölund (wulax)",
+        "Stephen Challener (Redshrike)"
+      ],
+      "licence": "CC-BY-SA 3.0",
+      "sources": [
+        "https://opengameart.org/content/liberated-pixel-cup-lpc-base-assets-sprites-map-tiles",
+        "https://opengameart.org/content/lpc-medieval-fantasy-character-sprites",
+        "https://opengameart.org/content/lpc-ladies",
+        "https://opengameart.org/content/lpc-7-womens-shirts",
+        "https://opengameart.org/content/lpc-jump-expanded",
+        "https://opengameart.org/content/lpc-be-seated",
+        "https://opengameart.org/content/lpc-revised-character-basics",
+        "https://gitlab.com/vagabondgame/lpc-characters",
+        "https://opengameart.org/content/lpc-male-jumping-animation-by-durrani",
+        "https://opengameart.org/content/lpc-runcycle-and-diagonal-walkcycle"
+      ],
+      "modified": "no"
+    },
+    {
+      "file": "characters/body/bodies/female/thrust.png",
+      "authors": [
+        "Benjamin K. Smith (BenCreating)",
+        "bluecarrot16",
+        "Wolthera van Hövell tot Westerflier (TheraHedwig)",
+        "Evert",
+        "MuffinElZangano",
+        "Durrani",
+        "Pierre Vigier (pvigier)",
+        "Eliza Wyatt (ElizaWy)",
+        "Matthew Krohn (makrohn)",
+        "Johannes Sjölund (wulax)",
+        "Stephen Challener (Redshrike)"
+      ],
+      "licence": "CC-BY-SA 3.0",
+      "sources": [
+        "https://opengameart.org/content/liberated-pixel-cup-lpc-base-assets-sprites-map-tiles",
+        "https://opengameart.org/content/lpc-medieval-fantasy-character-sprites",
+        "https://opengameart.org/content/lpc-ladies",
+        "https://opengameart.org/content/lpc-7-womens-shirts",
+        "https://opengameart.org/content/lpc-jump-expanded",
+        "https://opengameart.org/content/lpc-be-seated",
+        "https://opengameart.org/content/lpc-revised-character-basics",
+        "https://gitlab.com/vagabondgame/lpc-characters",
+        "https://opengameart.org/content/lpc-male-jumping-animation-by-durrani",
+        "https://opengameart.org/content/lpc-runcycle-and-diagonal-walkcycle"
+      ],
+      "modified": "no"
+    },
+    {
       "file": "characters/body/bodies/female/walk.png",
       "authors": [
         "Benjamin K. Smith (BenCreating)",
@@ -1375,6 +1702,90 @@
       "modified": "no"
     },
     {
+      "file": "characters/body/bodies/male/slash.png",
+      "authors": [
+        "bluecarrot16",
+        "JaidynReiman",
+        "Benjamin K. Smith (BenCreating)",
+        "Evert",
+        "Eliza Wyatt (ElizaWy)",
+        "Wolthera van Hövell tot Westerflier (TheraHedwig)",
+        "MuffinElZangano",
+        "Durrani",
+        "Johannes Sjölund (wulax)",
+        "Stephen Challener (Redshrike)"
+      ],
+      "licence": "CC-BY-SA 3.0",
+      "sources": [
+        "https://opengameart.org/content/liberated-pixel-cup-lpc-base-assets-sprites-map-tiles",
+        "https://opengameart.org/content/lpc-medieval-fantasy-character-sprites",
+        "https://opengameart.org/content/lpc-male-jumping-animation-by-durrani",
+        "https://opengameart.org/content/lpc-runcycle-and-diagonal-walkcycle",
+        "https://opengameart.org/content/lpc-revised-character-basics",
+        "https://opengameart.org/content/lpc-be-seated",
+        "https://opengameart.org/content/lpc-runcycle-for-male-muscular-and-pregnant-character-bases-with-modular-heads",
+        "https://opengameart.org/content/lpc-jump-expanded",
+        "https://opengameart.org/content/lpc-character-bases"
+      ],
+      "modified": "no"
+    },
+    {
+      "file": "characters/body/bodies/male/spellcast.png",
+      "authors": [
+        "bluecarrot16",
+        "JaidynReiman",
+        "Benjamin K. Smith (BenCreating)",
+        "Evert",
+        "Eliza Wyatt (ElizaWy)",
+        "Wolthera van Hövell tot Westerflier (TheraHedwig)",
+        "MuffinElZangano",
+        "Durrani",
+        "Johannes Sjölund (wulax)",
+        "Stephen Challener (Redshrike)"
+      ],
+      "licence": "CC-BY-SA 3.0",
+      "sources": [
+        "https://opengameart.org/content/liberated-pixel-cup-lpc-base-assets-sprites-map-tiles",
+        "https://opengameart.org/content/lpc-medieval-fantasy-character-sprites",
+        "https://opengameart.org/content/lpc-male-jumping-animation-by-durrani",
+        "https://opengameart.org/content/lpc-runcycle-and-diagonal-walkcycle",
+        "https://opengameart.org/content/lpc-revised-character-basics",
+        "https://opengameart.org/content/lpc-be-seated",
+        "https://opengameart.org/content/lpc-runcycle-for-male-muscular-and-pregnant-character-bases-with-modular-heads",
+        "https://opengameart.org/content/lpc-jump-expanded",
+        "https://opengameart.org/content/lpc-character-bases"
+      ],
+      "modified": "no"
+    },
+    {
+      "file": "characters/body/bodies/male/thrust.png",
+      "authors": [
+        "bluecarrot16",
+        "JaidynReiman",
+        "Benjamin K. Smith (BenCreating)",
+        "Evert",
+        "Eliza Wyatt (ElizaWy)",
+        "Wolthera van Hövell tot Westerflier (TheraHedwig)",
+        "MuffinElZangano",
+        "Durrani",
+        "Johannes Sjölund (wulax)",
+        "Stephen Challener (Redshrike)"
+      ],
+      "licence": "CC-BY-SA 3.0",
+      "sources": [
+        "https://opengameart.org/content/liberated-pixel-cup-lpc-base-assets-sprites-map-tiles",
+        "https://opengameart.org/content/lpc-medieval-fantasy-character-sprites",
+        "https://opengameart.org/content/lpc-male-jumping-animation-by-durrani",
+        "https://opengameart.org/content/lpc-runcycle-and-diagonal-walkcycle",
+        "https://opengameart.org/content/lpc-revised-character-basics",
+        "https://opengameart.org/content/lpc-be-seated",
+        "https://opengameart.org/content/lpc-runcycle-for-male-muscular-and-pregnant-character-bases-with-modular-heads",
+        "https://opengameart.org/content/lpc-jump-expanded",
+        "https://opengameart.org/content/lpc-character-bases"
+      ],
+      "modified": "no"
+    },
+    {
       "file": "characters/body/bodies/male/walk.png",
       "authors": [
         "bluecarrot16",
@@ -1399,6 +1810,96 @@
         "https://opengameart.org/content/lpc-runcycle-for-male-muscular-and-pregnant-character-bases-with-modular-heads",
         "https://opengameart.org/content/lpc-jump-expanded",
         "https://opengameart.org/content/lpc-character-bases"
+      ],
+      "modified": "no"
+    },
+    {
+      "file": "characters/body/bodies/teen/slash.png",
+      "authors": [
+        "bluecarrot16",
+        "Evert",
+        "Wolthera van Hövell tot Westerflier (TheraHedwig)",
+        "Benjamin K. Smith (BenCreating)",
+        "MuffinElZangano",
+        "Durrani",
+        "Pierre Vigier (pvigier)",
+        "Eliza Wyatt (ElizaWy)",
+        "Matthew Krohn (makrohn)",
+        "Johannes Sjölund (wulax)",
+        "Stephen Challener (Redshrike)"
+      ],
+      "licence": "CC-BY-SA 3.0",
+      "sources": [
+        "https://opengameart.org/content/liberated-pixel-cup-lpc-base-assets-sprites-map-tiles",
+        "https://opengameart.org/content/lpc-medieval-fantasy-character-sprites",
+        "https://opengameart.org/content/lpc-ladies",
+        "https://opengameart.org/content/lpc-teen-unisex-base-clothes",
+        "https://opengameart.org/content/lpc-jump-expanded",
+        "https://opengameart.org/content/lpc-revised-character-basics",
+        "https://opengameart.org/content/lpc-be-seated",
+        "https://gitlab.com/vagabondgame/lpc-characters",
+        "https://opengameart.org/content/lpc-male-jumping-animation-by-durrani",
+        "https://opengameart.org/content/lpc-jump-expanded"
+      ],
+      "modified": "no"
+    },
+    {
+      "file": "characters/body/bodies/teen/spellcast.png",
+      "authors": [
+        "bluecarrot16",
+        "Evert",
+        "Wolthera van Hövell tot Westerflier (TheraHedwig)",
+        "Benjamin K. Smith (BenCreating)",
+        "MuffinElZangano",
+        "Durrani",
+        "Pierre Vigier (pvigier)",
+        "Eliza Wyatt (ElizaWy)",
+        "Matthew Krohn (makrohn)",
+        "Johannes Sjölund (wulax)",
+        "Stephen Challener (Redshrike)"
+      ],
+      "licence": "CC-BY-SA 3.0",
+      "sources": [
+        "https://opengameart.org/content/liberated-pixel-cup-lpc-base-assets-sprites-map-tiles",
+        "https://opengameart.org/content/lpc-medieval-fantasy-character-sprites",
+        "https://opengameart.org/content/lpc-ladies",
+        "https://opengameart.org/content/lpc-teen-unisex-base-clothes",
+        "https://opengameart.org/content/lpc-jump-expanded",
+        "https://opengameart.org/content/lpc-revised-character-basics",
+        "https://opengameart.org/content/lpc-be-seated",
+        "https://gitlab.com/vagabondgame/lpc-characters",
+        "https://opengameart.org/content/lpc-male-jumping-animation-by-durrani",
+        "https://opengameart.org/content/lpc-jump-expanded"
+      ],
+      "modified": "no"
+    },
+    {
+      "file": "characters/body/bodies/teen/thrust.png",
+      "authors": [
+        "bluecarrot16",
+        "Evert",
+        "Wolthera van Hövell tot Westerflier (TheraHedwig)",
+        "Benjamin K. Smith (BenCreating)",
+        "MuffinElZangano",
+        "Durrani",
+        "Pierre Vigier (pvigier)",
+        "Eliza Wyatt (ElizaWy)",
+        "Matthew Krohn (makrohn)",
+        "Johannes Sjölund (wulax)",
+        "Stephen Challener (Redshrike)"
+      ],
+      "licence": "CC-BY-SA 3.0",
+      "sources": [
+        "https://opengameart.org/content/liberated-pixel-cup-lpc-base-assets-sprites-map-tiles",
+        "https://opengameart.org/content/lpc-medieval-fantasy-character-sprites",
+        "https://opengameart.org/content/lpc-ladies",
+        "https://opengameart.org/content/lpc-teen-unisex-base-clothes",
+        "https://opengameart.org/content/lpc-jump-expanded",
+        "https://opengameart.org/content/lpc-revised-character-basics",
+        "https://opengameart.org/content/lpc-be-seated",
+        "https://gitlab.com/vagabondgame/lpc-characters",
+        "https://opengameart.org/content/lpc-male-jumping-animation-by-durrani",
+        "https://opengameart.org/content/lpc-jump-expanded"
       ],
       "modified": "no"
     },
@@ -1433,10 +1934,100 @@
       "modified": "no"
     },
     {
+      "file": "characters/feet/shoes/basic/male/slash.png",
+      "authors": [
+        "JaidynReiman",
+        "bluecarrot16",
+        "Johannes Sjölund (wulax)"
+      ],
+      "licence": "CC-BY-SA 3.0",
+      "sources": [
+        "https://opengameart.org/content/lpc-medieval-fantasy-character-sprites",
+        "http://opengameart.org/content/lpc-clothing-updates",
+        "https://opengameart.org/content/lpc-expanded-socks-shoes"
+      ],
+      "modified": "no"
+    },
+    {
+      "file": "characters/feet/shoes/basic/male/spellcast.png",
+      "authors": [
+        "JaidynReiman",
+        "bluecarrot16",
+        "Johannes Sjölund (wulax)"
+      ],
+      "licence": "CC-BY-SA 3.0",
+      "sources": [
+        "https://opengameart.org/content/lpc-medieval-fantasy-character-sprites",
+        "http://opengameart.org/content/lpc-clothing-updates",
+        "https://opengameart.org/content/lpc-expanded-socks-shoes"
+      ],
+      "modified": "no"
+    },
+    {
+      "file": "characters/feet/shoes/basic/male/thrust.png",
+      "authors": [
+        "JaidynReiman",
+        "bluecarrot16",
+        "Johannes Sjölund (wulax)"
+      ],
+      "licence": "CC-BY-SA 3.0",
+      "sources": [
+        "https://opengameart.org/content/lpc-medieval-fantasy-character-sprites",
+        "http://opengameart.org/content/lpc-clothing-updates",
+        "https://opengameart.org/content/lpc-expanded-socks-shoes"
+      ],
+      "modified": "no"
+    },
+    {
       "file": "characters/feet/shoes/basic/male/walk.png",
       "authors": [
         "JaidynReiman",
         "bluecarrot16",
+        "Johannes Sjölund (wulax)"
+      ],
+      "licence": "CC-BY-SA 3.0",
+      "sources": [
+        "https://opengameart.org/content/lpc-medieval-fantasy-character-sprites",
+        "http://opengameart.org/content/lpc-clothing-updates",
+        "https://opengameart.org/content/lpc-expanded-socks-shoes"
+      ],
+      "modified": "no"
+    },
+    {
+      "file": "characters/feet/shoes/basic/thin/slash.png",
+      "authors": [
+        "JaidynReiman",
+        "Joe White",
+        "Johannes Sjölund (wulax)"
+      ],
+      "licence": "CC-BY-SA 3.0",
+      "sources": [
+        "https://opengameart.org/content/lpc-medieval-fantasy-character-sprites",
+        "http://opengameart.org/content/lpc-clothing-updates",
+        "https://opengameart.org/content/lpc-expanded-socks-shoes"
+      ],
+      "modified": "no"
+    },
+    {
+      "file": "characters/feet/shoes/basic/thin/spellcast.png",
+      "authors": [
+        "JaidynReiman",
+        "Joe White",
+        "Johannes Sjölund (wulax)"
+      ],
+      "licence": "CC-BY-SA 3.0",
+      "sources": [
+        "https://opengameart.org/content/lpc-medieval-fantasy-character-sprites",
+        "http://opengameart.org/content/lpc-clothing-updates",
+        "https://opengameart.org/content/lpc-expanded-socks-shoes"
+      ],
+      "modified": "no"
+    },
+    {
+      "file": "characters/feet/shoes/basic/thin/thrust.png",
+      "authors": [
+        "JaidynReiman",
+        "Joe White",
         "Johannes Sjölund (wulax)"
       ],
       "licence": "CC-BY-SA 3.0",
@@ -1459,6 +2050,45 @@
         "https://opengameart.org/content/lpc-medieval-fantasy-character-sprites",
         "http://opengameart.org/content/lpc-clothing-updates",
         "https://opengameart.org/content/lpc-expanded-socks-shoes"
+      ],
+      "modified": "no"
+    },
+    {
+      "file": "characters/hair/messy1/adult/slash.png",
+      "authors": [
+        "JaidynReiman",
+        "Manuel Riecke (MrBeast)"
+      ],
+      "licence": "CC-BY-SA 3.0",
+      "sources": [
+        "https://opengameart.org/content/liberated-pixel-cup-lpc-base-assets-sprites-map-tiles",
+        "https://opengameart.org/content/lpc-expanded-hair"
+      ],
+      "modified": "no"
+    },
+    {
+      "file": "characters/hair/messy1/adult/spellcast.png",
+      "authors": [
+        "JaidynReiman",
+        "Manuel Riecke (MrBeast)"
+      ],
+      "licence": "CC-BY-SA 3.0",
+      "sources": [
+        "https://opengameart.org/content/liberated-pixel-cup-lpc-base-assets-sprites-map-tiles",
+        "https://opengameart.org/content/lpc-expanded-hair"
+      ],
+      "modified": "no"
+    },
+    {
+      "file": "characters/hair/messy1/adult/thrust.png",
+      "authors": [
+        "JaidynReiman",
+        "Manuel Riecke (MrBeast)"
+      ],
+      "licence": "CC-BY-SA 3.0",
+      "sources": [
+        "https://opengameart.org/content/liberated-pixel-cup-lpc-base-assets-sprites-map-tiles",
+        "https://opengameart.org/content/lpc-expanded-hair"
       ],
       "modified": "no"
     },
@@ -1489,6 +2119,51 @@
       "modified": "no"
     },
     {
+      "file": "characters/hair/plain/adult/slash.png",
+      "authors": [
+        "JaidynReiman",
+        "Manuel Riecke (MrBeast)",
+        "Joe White"
+      ],
+      "licence": "CC-BY-SA 3.0",
+      "sources": [
+        "https://opengameart.org/content/liberated-pixel-cup-lpc-base-assets-sprites-map-tiles",
+        "https://opengameart.org/content/ponytail-and-plain-hairstyles",
+        "https://opengameart.org/content/lpc-expanded-hair"
+      ],
+      "modified": "no"
+    },
+    {
+      "file": "characters/hair/plain/adult/spellcast.png",
+      "authors": [
+        "JaidynReiman",
+        "Manuel Riecke (MrBeast)",
+        "Joe White"
+      ],
+      "licence": "CC-BY-SA 3.0",
+      "sources": [
+        "https://opengameart.org/content/liberated-pixel-cup-lpc-base-assets-sprites-map-tiles",
+        "https://opengameart.org/content/ponytail-and-plain-hairstyles",
+        "https://opengameart.org/content/lpc-expanded-hair"
+      ],
+      "modified": "no"
+    },
+    {
+      "file": "characters/hair/plain/adult/thrust.png",
+      "authors": [
+        "JaidynReiman",
+        "Manuel Riecke (MrBeast)",
+        "Joe White"
+      ],
+      "licence": "CC-BY-SA 3.0",
+      "sources": [
+        "https://opengameart.org/content/liberated-pixel-cup-lpc-base-assets-sprites-map-tiles",
+        "https://opengameart.org/content/ponytail-and-plain-hairstyles",
+        "https://opengameart.org/content/lpc-expanded-hair"
+      ],
+      "modified": "no"
+    },
+    {
       "file": "characters/hair/plain/adult/walk.png",
       "authors": [
         "JaidynReiman",
@@ -1504,7 +2179,85 @@
       "modified": "no"
     },
     {
+      "file": "characters/hair/ponytail/adult/bg/slash.png",
+      "authors": [
+        "JaidynReiman",
+        "Manuel Riecke (MrBeast)"
+      ],
+      "licence": "CC-BY-SA 3.0",
+      "sources": [
+        "https://opengameart.org/content/liberated-pixel-cup-lpc-base-assets-sprites-map-tiles",
+        "https://opengameart.org/content/lpc-expanded-hair"
+      ],
+      "modified": "no"
+    },
+    {
+      "file": "characters/hair/ponytail/adult/bg/spellcast.png",
+      "authors": [
+        "JaidynReiman",
+        "Manuel Riecke (MrBeast)"
+      ],
+      "licence": "CC-BY-SA 3.0",
+      "sources": [
+        "https://opengameart.org/content/liberated-pixel-cup-lpc-base-assets-sprites-map-tiles",
+        "https://opengameart.org/content/lpc-expanded-hair"
+      ],
+      "modified": "no"
+    },
+    {
+      "file": "characters/hair/ponytail/adult/bg/thrust.png",
+      "authors": [
+        "JaidynReiman",
+        "Manuel Riecke (MrBeast)"
+      ],
+      "licence": "CC-BY-SA 3.0",
+      "sources": [
+        "https://opengameart.org/content/liberated-pixel-cup-lpc-base-assets-sprites-map-tiles",
+        "https://opengameart.org/content/lpc-expanded-hair"
+      ],
+      "modified": "no"
+    },
+    {
       "file": "characters/hair/ponytail/adult/bg/walk.png",
+      "authors": [
+        "JaidynReiman",
+        "Manuel Riecke (MrBeast)"
+      ],
+      "licence": "CC-BY-SA 3.0",
+      "sources": [
+        "https://opengameart.org/content/liberated-pixel-cup-lpc-base-assets-sprites-map-tiles",
+        "https://opengameart.org/content/lpc-expanded-hair"
+      ],
+      "modified": "no"
+    },
+    {
+      "file": "characters/hair/ponytail/adult/fg/slash.png",
+      "authors": [
+        "JaidynReiman",
+        "Manuel Riecke (MrBeast)"
+      ],
+      "licence": "CC-BY-SA 3.0",
+      "sources": [
+        "https://opengameart.org/content/liberated-pixel-cup-lpc-base-assets-sprites-map-tiles",
+        "https://opengameart.org/content/lpc-expanded-hair"
+      ],
+      "modified": "no"
+    },
+    {
+      "file": "characters/hair/ponytail/adult/fg/spellcast.png",
+      "authors": [
+        "JaidynReiman",
+        "Manuel Riecke (MrBeast)"
+      ],
+      "licence": "CC-BY-SA 3.0",
+      "sources": [
+        "https://opengameart.org/content/liberated-pixel-cup-lpc-base-assets-sprites-map-tiles",
+        "https://opengameart.org/content/lpc-expanded-hair"
+      ],
+      "modified": "no"
+    },
+    {
+      "file": "characters/hair/ponytail/adult/fg/thrust.png",
       "authors": [
         "JaidynReiman",
         "Manuel Riecke (MrBeast)"
@@ -1530,6 +2283,48 @@
       "modified": "no"
     },
     {
+      "file": "characters/head/heads/human/female/slash.png",
+      "authors": [
+        "bluecarrot16",
+        "Benjamin K. Smith (BenCreating)",
+        "Stephen Challener (Redshrike)"
+      ],
+      "licence": "CC-BY-SA 3.0",
+      "sources": [
+        "https://opengameart.org/content/",
+        "https://opengameart.org/content/lpc-character-bases"
+      ],
+      "modified": "no"
+    },
+    {
+      "file": "characters/head/heads/human/female/spellcast.png",
+      "authors": [
+        "bluecarrot16",
+        "Benjamin K. Smith (BenCreating)",
+        "Stephen Challener (Redshrike)"
+      ],
+      "licence": "CC-BY-SA 3.0",
+      "sources": [
+        "https://opengameart.org/content/",
+        "https://opengameart.org/content/lpc-character-bases"
+      ],
+      "modified": "no"
+    },
+    {
+      "file": "characters/head/heads/human/female/thrust.png",
+      "authors": [
+        "bluecarrot16",
+        "Benjamin K. Smith (BenCreating)",
+        "Stephen Challener (Redshrike)"
+      ],
+      "licence": "CC-BY-SA 3.0",
+      "sources": [
+        "https://opengameart.org/content/",
+        "https://opengameart.org/content/lpc-character-bases"
+      ],
+      "modified": "no"
+    },
+    {
       "file": "characters/head/heads/human/female/walk.png",
       "authors": [
         "bluecarrot16",
@@ -1539,6 +2334,48 @@
       "licence": "CC-BY-SA 3.0",
       "sources": [
         "https://opengameart.org/content/",
+        "https://opengameart.org/content/lpc-character-bases"
+      ],
+      "modified": "no"
+    },
+    {
+      "file": "characters/head/heads/human/male/slash.png",
+      "authors": [
+        "bluecarrot16",
+        "Benjamin K. Smith (BenCreating)",
+        "Stephen Challener (Redshrike)"
+      ],
+      "licence": "CC-BY-SA 3.0",
+      "sources": [
+        "https://opengameart.org/content/liberated-pixel-cup-lpc-base-assets-sprites-map-tiles",
+        "https://opengameart.org/content/lpc-character-bases"
+      ],
+      "modified": "no"
+    },
+    {
+      "file": "characters/head/heads/human/male/spellcast.png",
+      "authors": [
+        "bluecarrot16",
+        "Benjamin K. Smith (BenCreating)",
+        "Stephen Challener (Redshrike)"
+      ],
+      "licence": "CC-BY-SA 3.0",
+      "sources": [
+        "https://opengameart.org/content/liberated-pixel-cup-lpc-base-assets-sprites-map-tiles",
+        "https://opengameart.org/content/lpc-character-bases"
+      ],
+      "modified": "no"
+    },
+    {
+      "file": "characters/head/heads/human/male/thrust.png",
+      "authors": [
+        "bluecarrot16",
+        "Benjamin K. Smith (BenCreating)",
+        "Stephen Challener (Redshrike)"
+      ],
+      "licence": "CC-BY-SA 3.0",
+      "sources": [
+        "https://opengameart.org/content/liberated-pixel-cup-lpc-base-assets-sprites-map-tiles",
         "https://opengameart.org/content/lpc-character-bases"
       ],
       "modified": "no"
@@ -1558,6 +2395,42 @@
       "modified": "no"
     },
     {
+      "file": "characters/head/heads/human/male_small/slash.png",
+      "authors": [
+        "Eliza Wyatt (ElizaWy)",
+        "Stephen Challener (Redshrike)"
+      ],
+      "licence": "OGA-BY 3.0",
+      "sources": [
+        "https://github.com/LiberatedPixelCup/Universal-LPC-Spritesheet-Character-Generator"
+      ],
+      "modified": "no"
+    },
+    {
+      "file": "characters/head/heads/human/male_small/spellcast.png",
+      "authors": [
+        "Eliza Wyatt (ElizaWy)",
+        "Stephen Challener (Redshrike)"
+      ],
+      "licence": "OGA-BY 3.0",
+      "sources": [
+        "https://github.com/LiberatedPixelCup/Universal-LPC-Spritesheet-Character-Generator"
+      ],
+      "modified": "no"
+    },
+    {
+      "file": "characters/head/heads/human/male_small/thrust.png",
+      "authors": [
+        "Eliza Wyatt (ElizaWy)",
+        "Stephen Challener (Redshrike)"
+      ],
+      "licence": "OGA-BY 3.0",
+      "sources": [
+        "https://github.com/LiberatedPixelCup/Universal-LPC-Spritesheet-Character-Generator"
+      ],
+      "modified": "no"
+    },
+    {
       "file": "characters/head/heads/human/male_small/walk.png",
       "authors": [
         "Eliza Wyatt (ElizaWy)",
@@ -1566,6 +2439,60 @@
       "licence": "OGA-BY 3.0",
       "sources": [
         "https://github.com/LiberatedPixelCup/Universal-LPC-Spritesheet-Character-Generator"
+      ],
+      "modified": "no"
+    },
+    {
+      "file": "characters/legs/pants/male/slash.png",
+      "authors": [
+        "bluecarrot16",
+        "JaidynReiman",
+        "Eliza Wyatt (ElizaWy)",
+        "Matthew Krohn (makrohn)",
+        "Johannes Sjölund (wulax)",
+        "Stephen Challener (Redshrike)"
+      ],
+      "licence": "CC-BY-SA 3.0",
+      "sources": [
+        "https://opengameart.org/content/liberated-pixel-cup-lpc-base-assets-sprites-map-tiles",
+        "https://opengameart.org/content/lpc-medieval-fantasy-character-sprites",
+        "https://opengameart.org/content/lpc-expanded-pants"
+      ],
+      "modified": "no"
+    },
+    {
+      "file": "characters/legs/pants/male/spellcast.png",
+      "authors": [
+        "bluecarrot16",
+        "JaidynReiman",
+        "Eliza Wyatt (ElizaWy)",
+        "Matthew Krohn (makrohn)",
+        "Johannes Sjölund (wulax)",
+        "Stephen Challener (Redshrike)"
+      ],
+      "licence": "CC-BY-SA 3.0",
+      "sources": [
+        "https://opengameart.org/content/liberated-pixel-cup-lpc-base-assets-sprites-map-tiles",
+        "https://opengameart.org/content/lpc-medieval-fantasy-character-sprites",
+        "https://opengameart.org/content/lpc-expanded-pants"
+      ],
+      "modified": "no"
+    },
+    {
+      "file": "characters/legs/pants/male/thrust.png",
+      "authors": [
+        "bluecarrot16",
+        "JaidynReiman",
+        "Eliza Wyatt (ElizaWy)",
+        "Matthew Krohn (makrohn)",
+        "Johannes Sjölund (wulax)",
+        "Stephen Challener (Redshrike)"
+      ],
+      "licence": "CC-BY-SA 3.0",
+      "sources": [
+        "https://opengameart.org/content/liberated-pixel-cup-lpc-base-assets-sprites-map-tiles",
+        "https://opengameart.org/content/lpc-medieval-fantasy-character-sprites",
+        "https://opengameart.org/content/lpc-expanded-pants"
       ],
       "modified": "no"
     },
@@ -1583,6 +2510,66 @@
       "sources": [
         "https://opengameart.org/content/liberated-pixel-cup-lpc-base-assets-sprites-map-tiles",
         "https://opengameart.org/content/lpc-medieval-fantasy-character-sprites",
+        "https://opengameart.org/content/lpc-expanded-pants"
+      ],
+      "modified": "no"
+    },
+    {
+      "file": "characters/legs/pants/thin/slash.png",
+      "authors": [
+        "bluecarrot16",
+        "JaidynReiman",
+        "Eliza Wyatt (ElizaWy)",
+        "Joe White",
+        "Matthew Krohn (makrohn)",
+        "Johannes Sjölund (wulax)",
+        "Stephen Challener (Redshrike)"
+      ],
+      "licence": "CC-BY-SA 3.0",
+      "sources": [
+        "https://opengameart.org/content/liberated-pixel-cup-lpc-base-assets-sprites-map-tiles",
+        "https://opengameart.org/content/lpc-medieval-fantasy-character-sprites",
+        "http://opengameart.org/content/lpc-clothing-updates",
+        "https://opengameart.org/content/lpc-expanded-pants"
+      ],
+      "modified": "no"
+    },
+    {
+      "file": "characters/legs/pants/thin/spellcast.png",
+      "authors": [
+        "bluecarrot16",
+        "JaidynReiman",
+        "Eliza Wyatt (ElizaWy)",
+        "Joe White",
+        "Matthew Krohn (makrohn)",
+        "Johannes Sjölund (wulax)",
+        "Stephen Challener (Redshrike)"
+      ],
+      "licence": "CC-BY-SA 3.0",
+      "sources": [
+        "https://opengameart.org/content/liberated-pixel-cup-lpc-base-assets-sprites-map-tiles",
+        "https://opengameart.org/content/lpc-medieval-fantasy-character-sprites",
+        "http://opengameart.org/content/lpc-clothing-updates",
+        "https://opengameart.org/content/lpc-expanded-pants"
+      ],
+      "modified": "no"
+    },
+    {
+      "file": "characters/legs/pants/thin/thrust.png",
+      "authors": [
+        "bluecarrot16",
+        "JaidynReiman",
+        "Eliza Wyatt (ElizaWy)",
+        "Joe White",
+        "Matthew Krohn (makrohn)",
+        "Johannes Sjölund (wulax)",
+        "Stephen Challener (Redshrike)"
+      ],
+      "licence": "CC-BY-SA 3.0",
+      "sources": [
+        "https://opengameart.org/content/liberated-pixel-cup-lpc-base-assets-sprites-map-tiles",
+        "https://opengameart.org/content/lpc-medieval-fantasy-character-sprites",
+        "http://opengameart.org/content/lpc-clothing-updates",
         "https://opengameart.org/content/lpc-expanded-pants"
       ],
       "modified": "no"
@@ -1608,6 +2595,66 @@
       "modified": "no"
     },
     {
+      "file": "characters/torso/clothes/longsleeve/longsleeve/female/slash.png",
+      "authors": [
+        "bluecarrot16",
+        "Eliza Wyatt (ElizaWy)",
+        "JaidynReiman",
+        "Stephen Challener (Redshrike)"
+      ],
+      "licence": "CC-BY-SA 3.0",
+      "sources": [
+        "https://opengameart.org/content/liberated-pixel-cup-lpc-base-assets-sprites-map-tiles",
+        "https://opengameart.org/content/lpc-7-womens-shirts",
+        "http://opengameart.org/content/lpc-clothing-updates",
+        "https://opengameart.org/content/lpc-revised-character-basics",
+        "https://github.com/ElizaWy/LPC/tree/main/Characters/Clothing",
+        "https://opengameart.org/content/lpc-expanded-sit-run-jump-more",
+        "https://opengameart.org/content/lpc-expanded-simple-shirts"
+      ],
+      "modified": "no"
+    },
+    {
+      "file": "characters/torso/clothes/longsleeve/longsleeve/female/spellcast.png",
+      "authors": [
+        "bluecarrot16",
+        "Eliza Wyatt (ElizaWy)",
+        "JaidynReiman",
+        "Stephen Challener (Redshrike)"
+      ],
+      "licence": "CC-BY-SA 3.0",
+      "sources": [
+        "https://opengameart.org/content/liberated-pixel-cup-lpc-base-assets-sprites-map-tiles",
+        "https://opengameart.org/content/lpc-7-womens-shirts",
+        "http://opengameart.org/content/lpc-clothing-updates",
+        "https://opengameart.org/content/lpc-revised-character-basics",
+        "https://github.com/ElizaWy/LPC/tree/main/Characters/Clothing",
+        "https://opengameart.org/content/lpc-expanded-sit-run-jump-more",
+        "https://opengameart.org/content/lpc-expanded-simple-shirts"
+      ],
+      "modified": "no"
+    },
+    {
+      "file": "characters/torso/clothes/longsleeve/longsleeve/female/thrust.png",
+      "authors": [
+        "bluecarrot16",
+        "Eliza Wyatt (ElizaWy)",
+        "JaidynReiman",
+        "Stephen Challener (Redshrike)"
+      ],
+      "licence": "CC-BY-SA 3.0",
+      "sources": [
+        "https://opengameart.org/content/liberated-pixel-cup-lpc-base-assets-sprites-map-tiles",
+        "https://opengameart.org/content/lpc-7-womens-shirts",
+        "http://opengameart.org/content/lpc-clothing-updates",
+        "https://opengameart.org/content/lpc-revised-character-basics",
+        "https://github.com/ElizaWy/LPC/tree/main/Characters/Clothing",
+        "https://opengameart.org/content/lpc-expanded-sit-run-jump-more",
+        "https://opengameart.org/content/lpc-expanded-simple-shirts"
+      ],
+      "modified": "no"
+    },
+    {
       "file": "characters/torso/clothes/longsleeve/longsleeve/female/walk.png",
       "authors": [
         "bluecarrot16",
@@ -1628,6 +2675,57 @@
       "modified": "no"
     },
     {
+      "file": "characters/torso/clothes/longsleeve/longsleeve/male/slash.png",
+      "authors": [
+        "JaidynReiman",
+        "Johannes Sjölund (wulax)"
+      ],
+      "licence": "CC-BY-SA 3.0",
+      "sources": [
+        "https://opengameart.org/content/lpc-medieval-fantasy-character-sprites",
+        "http://opengameart.org/content/lpc-clothing-updates",
+        "https://opengameart.org/content/lpc-revised-character-basics",
+        "https://github.com/ElizaWy/LPC/tree/main/Characters/Clothing",
+        "https://opengameart.org/content/lpc-expanded-sit-run-jump-more",
+        "https://opengameart.org/content/lpc-expanded-simple-shirts"
+      ],
+      "modified": "no"
+    },
+    {
+      "file": "characters/torso/clothes/longsleeve/longsleeve/male/spellcast.png",
+      "authors": [
+        "JaidynReiman",
+        "Johannes Sjölund (wulax)"
+      ],
+      "licence": "CC-BY-SA 3.0",
+      "sources": [
+        "https://opengameart.org/content/lpc-medieval-fantasy-character-sprites",
+        "http://opengameart.org/content/lpc-clothing-updates",
+        "https://opengameart.org/content/lpc-revised-character-basics",
+        "https://github.com/ElizaWy/LPC/tree/main/Characters/Clothing",
+        "https://opengameart.org/content/lpc-expanded-sit-run-jump-more",
+        "https://opengameart.org/content/lpc-expanded-simple-shirts"
+      ],
+      "modified": "no"
+    },
+    {
+      "file": "characters/torso/clothes/longsleeve/longsleeve/male/thrust.png",
+      "authors": [
+        "JaidynReiman",
+        "Johannes Sjölund (wulax)"
+      ],
+      "licence": "CC-BY-SA 3.0",
+      "sources": [
+        "https://opengameart.org/content/lpc-medieval-fantasy-character-sprites",
+        "http://opengameart.org/content/lpc-clothing-updates",
+        "https://opengameart.org/content/lpc-revised-character-basics",
+        "https://github.com/ElizaWy/LPC/tree/main/Characters/Clothing",
+        "https://opengameart.org/content/lpc-expanded-sit-run-jump-more",
+        "https://opengameart.org/content/lpc-expanded-simple-shirts"
+      ],
+      "modified": "no"
+    },
+    {
       "file": "characters/torso/clothes/longsleeve/longsleeve/male/walk.png",
       "authors": [
         "JaidynReiman",
@@ -1638,6 +2736,72 @@
         "https://opengameart.org/content/lpc-medieval-fantasy-character-sprites",
         "http://opengameart.org/content/lpc-clothing-updates",
         "https://opengameart.org/content/lpc-revised-character-basics",
+        "https://github.com/ElizaWy/LPC/tree/main/Characters/Clothing",
+        "https://opengameart.org/content/lpc-expanded-sit-run-jump-more",
+        "https://opengameart.org/content/lpc-expanded-simple-shirts"
+      ],
+      "modified": "no"
+    },
+    {
+      "file": "characters/torso/clothes/shortsleeve/shortsleeve/teen/slash.png",
+      "authors": [
+        "Nyom",
+        "bluecarrot16",
+        "Eliza Wyatt (ElizaWy)",
+        "JaidynReiman",
+        "Stephen Challener (Redshrike)"
+      ],
+      "licence": "CC-BY-SA 3.0",
+      "sources": [
+        "https://opengameart.org/content/liberated-pixel-cup-lpc-base-assets-sprites-map-tiles",
+        "https://opengameart.org/content/lpc-7-womens-shirts",
+        "http://opengameart.org/content/lpc-revised-character-basics",
+        "http://opengameart.org/content/lpc-clothing-updates",
+        "https://opengameart.org/content/lpc-teen-androgynous-short-sleeve-shirt",
+        "https://github.com/ElizaWy/LPC/tree/main/Characters/Clothing",
+        "https://opengameart.org/content/lpc-expanded-sit-run-jump-more",
+        "https://opengameart.org/content/lpc-expanded-simple-shirts"
+      ],
+      "modified": "no"
+    },
+    {
+      "file": "characters/torso/clothes/shortsleeve/shortsleeve/teen/spellcast.png",
+      "authors": [
+        "Nyom",
+        "bluecarrot16",
+        "Eliza Wyatt (ElizaWy)",
+        "JaidynReiman",
+        "Stephen Challener (Redshrike)"
+      ],
+      "licence": "CC-BY-SA 3.0",
+      "sources": [
+        "https://opengameart.org/content/liberated-pixel-cup-lpc-base-assets-sprites-map-tiles",
+        "https://opengameart.org/content/lpc-7-womens-shirts",
+        "http://opengameart.org/content/lpc-revised-character-basics",
+        "http://opengameart.org/content/lpc-clothing-updates",
+        "https://opengameart.org/content/lpc-teen-androgynous-short-sleeve-shirt",
+        "https://github.com/ElizaWy/LPC/tree/main/Characters/Clothing",
+        "https://opengameart.org/content/lpc-expanded-sit-run-jump-more",
+        "https://opengameart.org/content/lpc-expanded-simple-shirts"
+      ],
+      "modified": "no"
+    },
+    {
+      "file": "characters/torso/clothes/shortsleeve/shortsleeve/teen/thrust.png",
+      "authors": [
+        "Nyom",
+        "bluecarrot16",
+        "Eliza Wyatt (ElizaWy)",
+        "JaidynReiman",
+        "Stephen Challener (Redshrike)"
+      ],
+      "licence": "CC-BY-SA 3.0",
+      "sources": [
+        "https://opengameart.org/content/liberated-pixel-cup-lpc-base-assets-sprites-map-tiles",
+        "https://opengameart.org/content/lpc-7-womens-shirts",
+        "http://opengameart.org/content/lpc-revised-character-basics",
+        "http://opengameart.org/content/lpc-clothing-updates",
+        "https://opengameart.org/content/lpc-teen-androgynous-short-sleeve-shirt",
         "https://github.com/ElizaWy/LPC/tree/main/Characters/Clothing",
         "https://opengameart.org/content/lpc-expanded-sit-run-jump-more",
         "https://opengameart.org/content/lpc-expanded-simple-shirts"

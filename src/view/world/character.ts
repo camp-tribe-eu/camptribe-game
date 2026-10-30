@@ -4,6 +4,12 @@
 
 export const FRAME = 64;
 export const COLS = 9;
+/** GAME-191 (OD-022): анімації дії LPC — рядки ті самі (вгору, ліворуч, вниз, праворуч), кадрів у рядку: slash 6, thrust 8, spellcast 7. */
+export type Action = 'slash' | 'thrust' | 'cast';
+export const ACTIONS: readonly Action[] = ['slash', 'thrust', 'cast'];
+export const ACTION_COLS: Readonly<Record<Action, number>> = { slash: 6, thrust: 8, cast: 7 };
+/** Ім'я файлу листа дії в assets/characters/<шар>/ (у LPC заклинання — spellcast). */
+export const ACTION_FILE: Readonly<Record<Action, string>> = { slash: 'slash', thrust: 'thrust', cast: 'spellcast' };
 export type Dir = 'up' | 'left' | 'down' | 'right';
 /** Рядки листа LPC: вгору, ліворуч, вниз, праворуч. */
 export const DIR_ROW: Readonly<Record<Dir, number>> = { up: 0, left: 1, down: 2, right: 3 };
@@ -37,10 +43,10 @@ export function loadImage(url: string): Promise<HTMLImageElement> {
   });
 }
 
-/** Лист ходьби з шарів (знизу вгору), кожен за потреби забарвлений. */
-export async function composeSheet(layers: readonly LayerSpec[]): Promise<HTMLCanvasElement> {
+/** Лист (ходьби за замовчуванням, або дії — з її числом стовпців) з шарів (знизу вгору), кожен за потреби забарвлений. */
+export async function composeSheet(layers: readonly LayerSpec[], cols: number = COLS): Promise<HTMLCanvasElement> {
   const out = document.createElement('canvas');
-  out.width = FRAME * COLS;
+  out.width = FRAME * cols;
   out.height = FRAME * 4;
   const ctx = out.getContext('2d');
   if (!ctx) throw new Error('2d canvas is unavailable');

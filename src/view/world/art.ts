@@ -30,8 +30,26 @@ import headTeen from '../../../assets/characters/head/heads/human/male_small/wal
 import tshirtTeen from '../../../assets/characters/torso/clothes/shortsleeve/shortsleeve/teen/walk.png';
 import hairMessy from '../../../assets/characters/hair/messy1/adult/walk.png';
 import hairPixie from '../../../assets/characters/hair/pixie/adult/walk.png';
+import bodyMaleSlash from '../../../assets/characters/body/bodies/male/slash.png';
+import bodyMaleThrust from '../../../assets/characters/body/bodies/male/thrust.png';
+import bodyMaleCast from '../../../assets/characters/body/bodies/male/spellcast.png';
+import headMaleSlash from '../../../assets/characters/head/heads/human/male/slash.png';
+import headMaleThrust from '../../../assets/characters/head/heads/human/male/thrust.png';
+import headMaleCast from '../../../assets/characters/head/heads/human/male/spellcast.png';
+import shoesMaleSlash from '../../../assets/characters/feet/shoes/basic/male/slash.png';
+import shoesMaleThrust from '../../../assets/characters/feet/shoes/basic/male/thrust.png';
+import shoesMaleCast from '../../../assets/characters/feet/shoes/basic/male/spellcast.png';
+import pantsMaleSlash from '../../../assets/characters/legs/pants/male/slash.png';
+import pantsMaleThrust from '../../../assets/characters/legs/pants/male/thrust.png';
+import pantsMaleCast from '../../../assets/characters/legs/pants/male/spellcast.png';
+import shirtMaleSlash from '../../../assets/characters/torso/clothes/longsleeve/longsleeve/male/slash.png';
+import shirtMaleThrust from '../../../assets/characters/torso/clothes/longsleeve/longsleeve/male/thrust.png';
+import shirtMaleCast from '../../../assets/characters/torso/clothes/longsleeve/longsleeve/male/spellcast.png';
+import hairPlainSlash from '../../../assets/characters/hair/plain/adult/slash.png';
+import hairPlainThrust from '../../../assets/characters/hair/plain/adult/thrust.png';
+import hairPlainCast from '../../../assets/characters/hair/plain/adult/spellcast.png';
 import catMia from '../../../assets/sprites/cat_mia.png';
-import { composeSheet, loadImage, type LayerSpec } from './character';
+import { ACTIONS, ACTION_COLS, composeSheet, loadImage, type Action, type LayerSpec } from './character';
 
 /**
  * Тайлсети мап: ім'я в .tmj → картинка. Сцена реєструє їх усі; кожна мапа використовує свій набір (MAP_TILESETS) — рівно ці імена
@@ -76,6 +94,15 @@ export const FAMILY_LOOKS = {
 
 /** Вигляд гравця: чоловічий шаблон родини George. */
 export const PLAYER_LOOK: readonly LayerSpec[] = FAMILY_LOOKS.george;
+/**
+ * GAME-191 (OD-022): ті самі шари й забарвлення, що PLAYER_LOOK, але з листами дії slash / thrust / spellcast того ж шару LPC
+ * (ті самі автори, ліцензія й варіанти — assets/characters/<шар>/{slash,thrust,spellcast}.png). Порядок шарів збігається з george.
+ */
+export const PLAYER_ACTION_LOOK: Readonly<Record<Action, readonly LayerSpec[]>> = {
+  slash: [{ url: bodyMaleSlash }, { url: headMaleSlash }, { url: shoesMaleSlash, tint: rgb(70, 50, 40) }, { url: pantsMaleSlash, tint: rgb(60, 80, 120) }, { url: shirtMaleSlash, tint: rgb(70, 120, 80) }, { url: hairPlainSlash, tint: rgb(90, 60, 35) }],
+  thrust: [{ url: bodyMaleThrust }, { url: headMaleThrust }, { url: shoesMaleThrust, tint: rgb(70, 50, 40) }, { url: pantsMaleThrust, tint: rgb(60, 80, 120) }, { url: shirtMaleThrust, tint: rgb(70, 120, 80) }, { url: hairPlainThrust, tint: rgb(90, 60, 35) }],
+  cast: [{ url: bodyMaleCast }, { url: headMaleCast }, { url: shoesMaleCast, tint: rgb(70, 50, 40) }, { url: pantsMaleCast, tint: rgb(60, 80, 120) }, { url: shirtMaleCast, tint: rgb(70, 120, 80) }, { url: hairPlainCast, tint: rgb(90, 60, 35) }],
+};
 /** Вигляд Елізи: власний шаблон NPC, не родини (GAME-114) — ті самі шари LPC, що й у Victoria, але чорне волосся й гірчична сорочка, щоб не плутати ні з Victoria, ні з гравцем. */
 export const ELISE_LOOK: readonly LayerSpec[] = [
   { url: ponytailBack, tint: rgb(35, 28, 28) }, { url: bodyFemale }, { url: headFemale }, { url: shoesThin, tint: rgb(80, 60, 50) },
@@ -138,6 +165,8 @@ export interface WorldArt {
   /** GAME-184: лист кішки Mia (PET_SHEETS.mia), декодований заздалегідь — сцена додає його як спрайтшит. */
   readonly mia: HTMLImageElement;
   readonly sheets: { readonly player: HTMLCanvasElement; readonly elise: HTMLCanvasElement; readonly victoria: HTMLCanvasElement; readonly matthew: HTMLCanvasElement };
+  /** GAME-191: листи дій героя (slash / thrust / cast). */
+  readonly playerActions: Readonly<Record<Action, HTMLCanvasElement>>;
   /** GAME-172: листи ходьби фонових мешканців за ключем RESIDENT_LOOKS. */
   readonly residents: Readonly<Record<string, HTMLCanvasElement>>;
 }
@@ -149,10 +178,11 @@ export interface WorldArt {
 export async function loadWorldArt(): Promise<WorldArt> {
   const names = Object.keys(TILESET_IMAGES);
   const residentNames = Object.keys(RESIDENT_LOOKS) as (keyof typeof RESIDENT_LOOKS)[];
-  const [images, campfireImg, miaImg, player, elise, victoria, matthew, residentSheets] = await Promise.all([
+  const [images, campfireImg, miaImg, player, elise, victoria, matthew, residentSheets, actionSheets] = await Promise.all([
     Promise.all(names.map((n) => loadImage(TILESET_IMAGES[n] ?? ''))),
     loadImage(CAMPFIRE_SHEET), loadImage(PET_SHEETS.mia.url), composeSheet(PLAYER_LOOK), composeSheet(ELISE_LOOK), composeSheet(FAMILY_LOOKS.victoria), composeSheet(FAMILY_LOOKS.matthew),
     Promise.all(residentNames.map((n) => composeSheet(RESIDENT_LOOKS[n]))),
+    Promise.all(ACTIONS.map((a) => composeSheet(PLAYER_ACTION_LOOK[a], ACTION_COLS[a]))),
   ]);
-  return { tilesets: Object.fromEntries(names.map((n, i) => [n, images[i] as HTMLImageElement])), campfire: campfireImg, mia: miaImg, sheets: { player, elise, victoria, matthew }, residents: Object.fromEntries(residentNames.map((n, i) => [n, residentSheets[i] as HTMLCanvasElement])) };
+  return { tilesets: Object.fromEntries(names.map((n, i) => [n, images[i] as HTMLImageElement])), campfire: campfireImg, mia: miaImg, sheets: { player, elise, victoria, matthew }, playerActions: Object.fromEntries(ACTIONS.map((a, i) => [a, actionSheets[i] as HTMLCanvasElement])) as Record<Action, HTMLCanvasElement>, residents: Object.fromEntries(residentNames.map((n, i) => [n, residentSheets[i] as HTMLCanvasElement])) };
 }
