@@ -282,5 +282,22 @@
   "fire.stack": "Stack the logs: E or ●",
   "fire.match": "Hold E or ● and let go in the green",
   "fire.fizzle": "It fizzled out, hold again",
-  "next.camp.elise.spot": "ask Elise where to sleep"
+  "next.camp.elise.spot": "ask Elise where to sleep",
+  "fish.start": "Fishing: hold E or ● and let go to cast",
+  "fish.charge": "The longer you hold, the farther it flies",
+  "fish.wait": "Waiting for a bite…",
+  "fish.bite": "A bite! Tap E or ●",
+  "fish.reel": "Hold: keep the green on the fish",
+  "fish.lost": "It got away. Cast again",
+  "fish.away": "The fish swam off. No worries",
+  "fish.caught": "Caught:",
+  "fish.release": "Let it go",
+  "fish.keep": "Keep for dinner",
+  "fish.kept": "Dinner is sorted",
+  "fish.freed": "Splash! Off it swims",
+  "fish.tally": "catch",
+  "fish.sp.perch": "Perch",
+  "fish.sp.carp": "Carp",
+  "fish.sp.trout": "Trout",
+  "fish.sp.pike": "Pike"
 }

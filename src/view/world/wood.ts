@@ -25,6 +25,8 @@ export class WoodRig {
   private meter: Phaser.GameObjects.Graphics | null = null;
   private hint: Phaser.GameObjects.Text | null = null;
   private needLeft = 0;
+  /** GAME-193: поки герой рибалить, підказка дров мовчить (одне місце під ногами — одна справа). */
+  muted = false;
 
   constructor(private readonly scene: Phaser.Scene, private readonly player: Phaser.GameObjects.Sprite, private readonly text: (key: Key) => string) { this.fx = new FrameFx(scene); }
 
@@ -154,7 +156,7 @@ export class WoodRig {
       msg = `${this.text('wood.chop')} ${Math.min(this.s.strikes + 1, STRIKES)}/${STRIKES}`;
     } else msg = this.needLeft > 0 ? this.text('wood.need') : gotCount(this.s) >= BRANCHES ? this.text('wood.bring') : `${this.text('wood.pick')} ${gotCount(this.s)}/${BRANCHES}`;
     if (hint.text !== msg) hint.setText(msg);
-    hint.setPosition(cx, this.s.phase === 'chop' ? top + 14 : top - 2);
+    hint.setVisible(!this.muted).setPosition(cx, this.s.phase === 'chop' ? top + 14 : top - 2);
   }
 }
 
