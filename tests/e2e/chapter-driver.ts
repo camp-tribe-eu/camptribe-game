@@ -123,7 +123,8 @@ export async function goAndDo(page: Page, touch: boolean, car = false): Promise<
     await walk(page, route(key, [q.playerX, q.playerY], target, car));
     // GAME-186 (2/2): прийшов ≠ «стоїть у зоні». Під навантаженням (кадр 60–120 мс) герой проскакує ціль, а мешканець чи слідувач опиняється ближчим за неї —
     // тоді кільце не заповнюється й кнопка дії бачить когось іншого. Гравець у цій миті просто підступає ще; ми теж: спершу дочекатись «стоїть і ціль найближча», інакше — новий захід із поточної точки.
-    const settled = await expect.poll(async () => { const s = await probe(page); return s.nearObject === target && !s.playerMoving; }, { timeout: 2_500 }).toBe(true).then(() => true, () => false);
+    // Дія, що вже спрацювала (кільце, рамка вибору — сцена на паузі й проба застигла), теж «дійшов»: повторний захід тоді лише тримав би стрілку до 45 с (рецензія #111).
+    const settled = await expect.poll(async () => { const s = await probe(page); return (s.nearObject === target && !s.playerMoving) || (await signature(page)) !== before; }, { timeout: 2_500 }).toBe(true).then(() => true, () => false);
     if (!settled && t < 2) continue;
     if (!AUTO(target)) {
       await expect.poll(async () => (await probe(page)).nearObject, { timeout: 5_000, message: `біля ${target} кнопка дії мусить знати, що поруч` }).toBe(target);

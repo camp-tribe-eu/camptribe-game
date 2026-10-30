@@ -211,7 +211,8 @@ async function doTarget(page: Page, r: Req, spot: string, i: number): Promise<vo
     const p = await probe(page);
     if (!p.playerMoving && Math.hypot(p.playerX - target.x, p.playerY - target.y) < 28) break;
   }
-  await expect.poll(async () => (await core(page)).game.flags.includes(flag(r.id, r.targets.length > 0 ? `t${i + 1}` : '')), { message: `${spot}: прапорець цілі не став`, timeout: 6_000 }).toBe(true);
+  const at = await probe(page);
+  await expect.poll(async () => (await core(page)).game.flags.includes(flag(r.id, r.targets.length > 0 ? `t${i + 1}` : '')), { message: `${spot}: прапорець цілі не став (герой за ${Math.round(Math.hypot(at.playerX - target.x, at.playerY - target.y))} px, поруч ${at.nearObject})`, timeout: 6_000 }).toBe(true);
   await expect(page.locator(`[data-ui="req-row"][data-request="${r.id}"]`)).toHaveAttribute('data-done', String(i + 1));
 }
 
