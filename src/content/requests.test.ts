@@ -1,5 +1,6 @@
 // GAME-180 · прохання сусідів: дані ↔ мапа ↔ діалоги ↔ ядро. Повний шлях кожного з п'яти прохань на справжньому ядрі (розмова → «Беруся» → цілі → здача → журнал),
 // відмова без наслідків, дані мапи й текстів, правила трекера/стрілки/«!». Негативні контролі в кінці (мутації, що мусять червоніти).
+import { FISH_FACTS } from './fish-fork';
 import { describe, expect, it } from 'vitest';
 import { dispatch, type Command } from '../core/commands';
 import { initialState, type GameState } from '../core/state';
@@ -113,7 +114,10 @@ describe('GAME-180 · дані прохань', () => {
       expect(regs.has(r.takenFlag) && regs.has(r.doneFlag), r.id).toBe(true);
       expect(STORY.journaled).toContain(r.doneFlag);
     }
-    expect(STORY.requestFlags?.length).toBe(REQUESTS.reduce((a, r) => a + r.targets.length + 2, 0));
+    // GAME-195: у тому ж списку косметичних прапорців — чотири факти розвилки рибки; прохання рахуємо окремо.
+    const fish: string[] = [FISH_FACTS.kept, FISH_FACTS.released, FISH_FACTS.charred, FISH_FACTS.trustNora];
+    expect(STORY.requestFlags).toEqual(expect.arrayContaining(fish));
+    expect(STORY.requestFlags?.filter((f) => !fish.includes(f)).length).toBe(REQUESTS.reduce((a, r) => a + r.targets.length + 2, 0));
   });
 
   it('тексти: усі ключі є в uk й en, кожен рядок ≤ 140 знаків (телефон)', () => {

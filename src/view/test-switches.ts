@@ -31,6 +31,8 @@ export interface TestSwitches {
   readonly panelActs?: boolean;
   /** GAME-182: вступ (дощовий вечір, лист, вибір героя) увімкнений завжди, крім збірки e2e: там його немає за замовчуванням (старі e2e обирають героя в ☰ одразу); ?intro=1 вмикає справжню поведінку (game-182.spec). */
   readonly intro: boolean;
+  /** GAME-192: ?hintIdleMs=N (1…60000) — справжня поведінка стрілки «Далі» з бездіяльністю N мс (і вікном показу min(6000, N/4)); без нього збірка e2e тримає «завжди» (старі e2e читають стрілку й рядок «Далі»). */
+  readonly hintIdleMs?: number;
   /** ?map=camp|home|shop — GAME-175: показати мапу незалежно від локації гравця (e2e механіки руху на мапі табору без персонажа). */
   readonly map?: 'camp' | 'home' | 'shop' | 'road';
   /** ?breakSpot=task.firewood — негативний контроль GAME-170: названий об'єкт мапи стає німим (дотик нічого не шле) — прохід мусить почервоніти. */
@@ -45,5 +47,6 @@ export function testSwitches(search: string, mode: string): TestSwitches {
   const lag = Number(q.get('frameLagMs'));
   const boot = Number(q.get('bootDelayMs'));
   const at = Number(q.get('atMinute'));
-  return { intro: q.get('intro') === '1', ...(Number.isInteger(boot) && boot >= 1 && boot <= 5000 ? { bootDelayMs: boot } : {}), ...(Number.isInteger(lag) && lag >= 1 && lag <= 190 ? { frameLagMs: lag } : {}), hideTouch: list('hideTouch'), hideAct: list('hideAct'), hideUi: list('hideUi'), breakSpot: list('breakSpot'), ...(q.get('noAutosave') === '1' ? { noAutosave: true } : {}), ...(q.get('holdToast') === '1' ? { holdToast: true } : {}), ...((q.get('atMinute') ?? '') !== '' && Number.isInteger(at) && at >= 0 && at <= 1439 ? { atMinute: at } : {}), ...(q.get('daylight') === 'off' ? { noDaylight: true } : {}), ...(q.get('mapFirst') !== '1' ? { panelActs: true } : {}), ...(['camp', 'home', 'shop', 'road'].includes(q.get('map') ?? '') ? { map: q.get('map') as 'camp' | 'home' | 'shop' | 'road' } : {}), ...(q.get('freshSeed') === '1' ? { freshSeed: true } : {}), ...(q.has('seed') && Number.isSafeInteger(seed) && seed >= 0 ? { seed } : {}) };
+  const hintIdle = Number(q.get('hintIdleMs'));
+  return { intro: q.get('intro') === '1', ...(Number.isInteger(boot) && boot >= 1 && boot <= 5000 ? { bootDelayMs: boot } : {}), ...(Number.isInteger(lag) && lag >= 1 && lag <= 190 ? { frameLagMs: lag } : {}), hideTouch: list('hideTouch'), hideAct: list('hideAct'), hideUi: list('hideUi'), breakSpot: list('breakSpot'), ...(q.get('noAutosave') === '1' ? { noAutosave: true } : {}), ...(q.get('holdToast') === '1' ? { holdToast: true } : {}), ...((q.get('atMinute') ?? '') !== '' && Number.isInteger(at) && at >= 0 && at <= 1439 ? { atMinute: at } : {}), ...(q.get('daylight') === 'off' ? { noDaylight: true } : {}), ...(q.get('mapFirst') !== '1' ? { panelActs: true } : {}), ...(['camp', 'home', 'shop', 'road'].includes(q.get('map') ?? '') ? { map: q.get('map') as 'camp' | 'home' | 'shop' | 'road' } : {}), ...(Number.isInteger(hintIdle) && hintIdle >= 1 && hintIdle <= 60000 ? { hintIdleMs: hintIdle } : {}), ...(q.get('freshSeed') === '1' ? { freshSeed: true } : {}), ...(q.has('seed') && Number.isSafeInteger(seed) && seed >= 0 ? { seed } : {}) };
 }

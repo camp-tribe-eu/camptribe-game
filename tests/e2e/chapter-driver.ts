@@ -4,9 +4,11 @@ import { readFileSync } from 'node:fs';
 import { expect, type Page } from '@playwright/test';
 
 export interface Core { game: { player: { locationId: string; transportId?: string } | null; flags: string[]; quests: Record<string, { status: string }>; inventory: Record<string, number>; dialogue: unknown; wave?: unknown; campaignEnded: boolean }; clock: { minutes: number } }
+/** GAME-193: зонд риболовлі (координати кнопок — у пікселях сторінки). */
+export interface FishP { phase: string; power: number; zone: number; fish: number; progress: number; inZone: boolean; casts: number; slipped: number; aways: number; kept: number; released: number; catches: number; species: string; spot: { x: number; y: number }; buttons: { release: { x: number; y: number }; keep: { x: number; y: number } } }
 export interface Probe { playerX: number; playerY: number; nearObject: string | null; playerMoving: boolean; saveLoaded: boolean; tent: { phase: string; pegs: number; marker: number; inBand: boolean; placeOk: boolean };
   wood: { phase: string; got: number; strikes: number; marker: number; inBand: boolean; branches: { x: number; y: number; got: boolean }[]; block: { x: number; y: number } };
-  fire: { phase: string; logs: number; charge: number; inBand: boolean; holding: boolean; fizzles: number; x: number; y: number }; fx: { target: string | null; guide: string; ring: number; backpack: number } }
+  fire: { phase: string; logs: number; charge: number; inBand: boolean; holding: boolean; fizzles: number; x: number; y: number }; grill: { phase: string; heat: number; cook: number; holding: boolean; chars: number; charred: boolean }; fish: FishP; fx: { target: string | null; guide: string; ring: number; backpack: number } }
 export const core = (page: Page): Promise<Core> => page.evaluate(() => (window as unknown as { __game: { read: () => Core } }).__game.read());
 export const probe = (page: Page): Promise<Probe> => page.evaluate(() => JSON.parse(JSON.stringify((window as unknown as { __game: { probe: Probe } }).__game.probe)) as Probe);
 export const loaded = (page: Page): Promise<unknown> => page.waitForFunction(() => (window as unknown as { __game?: { probe: { saveLoaded: boolean } } }).__game?.probe.saveLoaded === true, null, { timeout: 30_000 });
@@ -272,3 +274,72 @@ export async function installMenuObserver(page: Page): Promise<void> {
   });
 }
 export const menuSeen = (page: Page): Promise<string[]> => page.evaluate(() => (window as unknown as { __menu?: string[] }).__menu ?? []);
+
+/**
+ * GAME-193 · риболовля: герой уже біля берега. Тримати дію (шкала сили) → відпустити (закид) → дочекатись «клює» → торкнутись у вікні → вести зелену зону за рибкою (зонд читає зону й рибку) → вибір.
+ * `choice`: 'release' | 'keep'. Втеча рибки (рідко: затримка) — закидає ще. `midShot` — знімок посеред підсікання. Повертає вибір, що було зроблено.
+ */
+export async function playFishing(page: Page, touch: boolean, choice: 'release' | 'keep', midShot?: () => Promise<void>): Promise<void> {
+  const btn = page.locator('[data-touch="interact"]');
+  const fish = async (): Promise<FishP> => (await probe(page)).fish;
+  const down = async (): Promise<void> => { if (touch) await btn.dispatchEvent('pointerdown', { pointerId: 7, pointerType: 'touch', isPrimary: true }); else await page.keyboard.down('KeyE'); };
+  const up = async (): Promise<void> => { if (touch) await btn.dispatchEvent('pointerup', { pointerId: 7, pointerType: 'touch', isPrimary: true }); else await page.keyboard.up('KeyE'); };
+  const raf = (fn: string, arg: unknown, timeout: number): Promise<unknown> => page.waitForFunction(fn, arg, { timeout, polling: 'raf' });
+  for (let attempt = 0; attempt < 4; attempt++) {
+    await page.waitForTimeout(450);
+    await down();
+    await expect.poll(async () => (await fish()).phase, { timeout: 3_000, message: 'утримання біля берега мусить почати шкалу сили' }).toBe('charge');
+    await raf('window.__game.probe.fish.power > 0.6', null, 4_000);
+    await up();
+    await expect.poll(async () => (await fish()).phase, { timeout: 3_000, message: 'відпустив — закид, поплавок чекає' }).toBe('wait');
+    await raf('window.__game.probe.fish.phase === "bite"', null, 8_000);
+    await down(); await up();   // тап у вікні 600 мс
+    await expect.poll(async () => (await fish()).phase, { timeout: 2_000, message: 'тап у вікні «клює» підсікає' }).toBe('reel');
+    // Підсікання: у самій сторінці, кадр за кадром: тримати, коли рибка вища за центр зони.
+    const shotAt = midShot ? page.waitForFunction('window.__game.probe.fish.phase !== "reel" || window.__game.probe.fish.progress > 0.5', null, { timeout: 8_000, polling: 'raf' }).then(async () => { if ((await fish()).phase === 'reel') await midShot(); }) : Promise.resolve();
+    await page.evaluate((isTouch) => new Promise<void>((resolve) => {
+      const g = (window as unknown as { __game: { probe: { fish: { phase: string; zone: number; fish: number } } } }).__game;
+      const b = document.querySelector('[data-touch="interact"]');
+      let holding = false;
+      const set = (want: boolean): void => {
+        if (want === holding) return;
+        holding = want;
+        if (isTouch && b) b.dispatchEvent(new PointerEvent(want ? 'pointerdown' : 'pointerup', { pointerId: 7, pointerType: 'touch', isPrimary: true, bubbles: true }));
+        else { const e = new KeyboardEvent(want ? 'keydown' : 'keyup', { key: 'e', code: 'KeyE', bubbles: true, cancelable: true }); Object.defineProperty(e, 'keyCode', { get: () => 69 }); window.dispatchEvent(e); }
+      };
+      const t0 = performance.now();
+      const step = (): void => {
+        const f = g.probe.fish;
+        if (f.phase !== 'reel' || performance.now() - t0 > 12_000) { set(false); resolve(); return; }
+        set(f.fish > f.zone);
+        requestAnimationFrame(step);
+      };
+      step();
+    }), touch);
+    await shotAt;
+    if ((await fish()).phase === 'choice') break;
+    expect((await fish()).phase, 'рибка втекла — повернулись у спокій без штрафу').toBe('idle');
+  }
+  await expect.poll(async () => (await fish()).phase, { timeout: 3_000, message: 'улов: рамка вибору' }).toBe('choice');
+  await page.waitForTimeout(300);
+  if (touch) { const b = (await fish()).buttons[choice]; await page.touchscreen.tap(b.x, b.y); }
+  else {
+    if (choice === 'keep') { await page.keyboard.down('ArrowRight'); await page.waitForTimeout(80); await page.keyboard.up('ArrowRight'); await page.waitForTimeout(100); }
+    await page.keyboard.down('KeyE'); await page.waitForTimeout(80); await page.keyboard.up('KeyE');
+  }
+  await expect.poll(async () => (await fish()).phase, { timeout: 3_000, message: 'вибір закриває рамку' }).toBe('idle');
+  await closeFishScene(page);
+}
+
+/** GAME-195: вибір на озері пишеться сценою-однорядником (рамка розмови чи панель ☰): дочитати її й повернутись на мапу. */
+export async function closeFishScene(page: Page): Promise<void> {
+  await expect.poll(async () => (await core(page)).game.dialogue !== null, { timeout: 3_000, message: 'вибір рибки відкриває сцену-однорядник' }).toBe(true);
+  for (let i = 0; i < 6 && (await core(page)).game.dialogue !== null; i++) {
+    if (await talk(page).count()) await answerOne(page);
+    else await page.locator('.ui-story [data-ui="dialogue"] [data-act]').last().click({ timeout: 3_000 });
+    await page.waitForTimeout(350);
+  }
+  expect((await core(page)).game.dialogue, 'сцена-однорядник закінчилась').toBeNull();
+  const close = page.locator('[data-ui="story-close"]');
+  if (await close.count()) await close.click({ timeout: 3_000 }).catch(() => undefined);
+}

@@ -94,7 +94,8 @@ describe('GAME-142 · вогнище кінця дня 2: 16 проходжен�
     const seen = new Set(COMBOS.flatMap((c) => play(GAME_DEFS, c.setup, c.pick)));
     for (const id of ['l8', 'l12-photo', 'l12-plain', 'b1', 'b3', 'l6-photo', 'l6-plain', 'fire', 'lantern']) expect(seen.has(id), id).toBe(true);
     // Кожен вузол сцени показано хоч в одній комбінації — мертвих реплік немає.
-    expect([...seen].sort()).toEqual(RAW.nodes.map((n) => n.id).sort());
+    // Вузли рибної розвилки (fk*, fr*, GAME-195) показує fish-fork.test.ts — тут рибки нема.
+    expect([...seen].sort()).toEqual(RAW.nodes.map((n) => n.id).filter((id) => !/^f[kr]/.test(id)).sort());
     for (const c of COMBOS.filter((x) => !x.setup.photoTaken)) {
       const lines = play(GAME_DEFS, c.setup, c.pick).map((id) => UK[`${FIREPLACE_SCENE}.${id}`] ?? '');
       expect(lines.filter((t) => /зробив фото|це фото/.test(t)), label(c)).toEqual([]);

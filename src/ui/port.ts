@@ -41,6 +41,10 @@ export interface UiPort {
   introRoom?: IntroRoomPainter;
   /** GAME-182: сейв уже прочитано (або його немає) — до цього `story().stage === 'create'` ще не означає «нова гра»: вступ чекає. */
   loaded(): boolean;
+  /** GAME-192: чи зараз показувати підказку «Далі» (гравець застряг або ціль щойно змінилась); підписка — onStory. */
+  hintShown(): boolean;
+  /** GAME-192: режим підказок з налаштувань. */
+  setHintMode(mode: 'stuck' | 'always'): void;
   /** Гра просить відкрити екран подорожі (розмова з NPC на мапі); повертає відписку. */
   onOpenStory(listener: () => void): () => void;
 }

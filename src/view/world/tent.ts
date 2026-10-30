@@ -3,6 +3,7 @@
 import Phaser from 'phaser';
 import { calmMotion } from '../../platform/motion';
 import { playUi } from '../../audio/ui-sounds';
+import { sfx } from '../../audio/sfx';
 import { PEGS, BAND, FOOT, IDLE, WOBBLE_MS, markerAt, placeOk, startTent, stepTent, type TentEvent, type TentInput, type TentState } from '../../content/tent-pitch';
 import type { Key } from '../../i18n';
 import type { Dir } from './character';
@@ -109,7 +110,7 @@ export class TentRig {
     switch (e) {
       case 'placed': playUi('confirm'); this.dust(this.at.x, this.at.y + 8, 5); break;
       case 'blocked': playUi('back'); this.shake(this.g, 3); break;
-      case 'hit': case 'done': this.strike(peg, facing); playUi(e === 'done' ? 'confirm' : 'press'); if (e === 'done') this.dust(this.at.x, this.at.y, 8); break;
+      case 'hit': case 'done': this.strike(peg, facing); sfx('peg'); playUi(e === 'done' ? 'confirm' : 'press'); if (e === 'done') this.dust(this.at.x, this.at.y, 8); break;
       case 'miss': playUi('back'); this.wobbleLeft = WOBBLE_MS; this.shake(this.g, 4); break;
       default: break;
     }

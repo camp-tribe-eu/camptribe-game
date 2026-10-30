@@ -4,6 +4,7 @@ import { render, h } from 'preact';
 import { Shell } from './ui/Shell';
 import { t } from './i18n';
 import { loadSettings } from './platform/settings';
+import { HINT_FLASH_MS, HintIdle, type HintMode } from './content/hint-idle';
 import { buildLabel } from './core/build-info';
 import { newInput } from './view/world/actions';
 import { GAME_DEFS } from './content/slice-defs';
@@ -20,6 +21,10 @@ import { loadWorldArt } from './view/world/art';
 import { TENT_PROBE_IDLE } from './view/world/tent';
 import { WOOD_PROBE_IDLE } from './view/world/wood';
 import { FIRE_PROBE_IDLE } from './view/world/fire';
+import { GRILL_PROBE_IDLE } from './view/world/grill';
+import { FISH_FACTS, fishChoiceMove, fishEvening } from './content/fish-fork';
+import { FIREPLACE_SCENE } from './content/fireplace';
+import { FISH_PROBE_IDLE } from './view/world/fishing';
 import { mountTouchControls, setActionTarget } from './view/world/touch';
 import { frameSize } from './view/world/frame';
 import { CHOICE_CANCEL_ID, storyOffer, type StoryView } from './view/story-offer';
@@ -27,6 +32,8 @@ import { testSwitches } from './view/test-switches';
 import { addFrameLag, bootDelay, onFirstFrame } from './view/frame-lag';
 import type { StoryOffer } from './ui/story-types';
 import { uiSounds } from './audio/ui-sounds';
+import { ambient, ambientMix, isIntroOpen } from './audio';
+import { sfxPlayer } from './audio/sfx';
 import { fireplaceDue, liveSpot, spotMove, storyMoves } from './content/director';
 import { paintRoom } from './view/intro-room';
 import { portraitFor } from './view/portraits';
@@ -43,7 +50,7 @@ if (!app) throw new Error('#app is missing');
 
 const probe: WorldProbe = { ready: false, playerX: 0, playerY: 0, nearObject: null, nearKind: null, commandsSent: 0, cameraScrollX: 0, cameraScrollY: 0, clockMinutes: 0, saveLoaded: false, cameraLerp: [0, 0], followers: [], leisure: [],
   playerFrame: 0, playerDir: 'down', playerMoving: false, playerDepth: 0, coveredTiles: 0, behindTiles: 0, fps: 0, fpsWindows: 0, firstFrameMs: 0,
-  residents: [], bark: null, barkCount: 0, npcMarks: {}, miaAt: [], tent: TENT_PROBE_IDLE, wood: WOOD_PROBE_IDLE, fire: FIRE_PROBE_IDLE,
+  residents: [], bark: null, barkCount: 0, npcMarks: {}, miaAt: [], tent: TENT_PROBE_IDLE, wood: WOOD_PROBE_IDLE, fire: FIRE_PROBE_IDLE, grill: GRILL_PROBE_IDLE, fish: FISH_PROBE_IDLE,
   daylight: { on: false, visible: false, minuteOfDay: 0, darkness: 0, color: 0xffffff, glow: 0 },
   fx: { target: null, ring: 0, ringName: null, backpack: 0, guide: 'none', pops: 0, auto: 0, rewards: 0, rewardLast: '' } };
 // GAME-86: кожна команда ядру (дія екрана, розмова, взаємодія на мапі) → автозбереження одразу, а не лише на паузі.
@@ -149,6 +156,15 @@ const talkOnMap = (npcId: string): void => {
 };
 /** Дотик до об'єкта мапи: режисер каже, що це зараз (справа хвилі → CompleteTask; вогнище на етапі вечора → StartScene, і екран подорожі
  *  відкривається з репліками; інакше Interact). ?breakSpot=<назва> (лише збірка e2e) робить об'єкт німим — негативний контроль. */
+let grilledCharred = false;
+/** GAME-195: вибір на озері пишеться фактом ядра (сцена-однорядник у рамці розмови), а не лише лічильником вигляду. */
+const onFish = (keep: boolean): void => {
+  const m = fishChoiceMove(keep, bridge.state.game.flags);
+  if (!m) return;
+  mapTalk = true;
+  try { bridge.send(m); storyChanged(); } finally { mapTalk = false; }
+  for (const l of switches.panelActs ? openListeners : talkListeners) l();
+};
 const actOnMap = (name: string): void => {
   if (switches.breakSpot.includes(name)) return;
   // GAME-175: об'єкти дня 1 удома (крок, річ, полиця, авто, багажник) — ті самі команди ядра, що були кнопками панелі (src/content/map-first.ts).
@@ -172,8 +188,11 @@ const actOnMap = (name: string): void => {
     if (r.ui === 'trunk') for (const l of openListeners) l();
     return;
   }
-  const m = spotMove(bridge.state, name);
+  let m = spotMove(bridge.state, name);
   if (!m) return;
+  // GAME-195: рибка на вогнищі трішки підгоріла — факт сцени вечора (репліка інша, покарання нема).
+  if (m.type === 'StartScene' && m.sceneId === FIREPLACE_SCENE && grilledCharred) m = { ...m, facts: [...(m.facts ?? []), FISH_FACTS.charred] };
+  if (m.type === 'StartScene') grilledCharred = false;
   // Сцена біля вогнища: у мапі-першій грі — рамка розмови (як розмова з NPC; mapTalk глушить автовідкриття ☰), а не екран ☰.
   const asTalk = m.type === 'StartScene' && !switches.panelActs;
   if (asTalk) mapTalk = true;
@@ -195,9 +214,9 @@ const unloadOne = (): 'ok' | 'full' | 'none' => {
 const saves = createSaveSession(bridge, saveBackend, { story: STORY, stickers: GAME_DEFS.stickers ?? {}, ...(GAME_DEFS.life ? { life: GAME_DEFS.life } : {}), contentRev: STORY_REV, viable: (g) => saveViable(g, GAME_DEFS) });
 // Тестовий хук Playwright: лише ЧИТАННЯ — знімок стану копією, місток назовні не віддається
 // (рецензія PR #13: раніше скрипт сторінки міг надіслати команду в ядро).
-(window as unknown as { __game: { probe: WorldProbe; read: () => unknown; sounds: () => readonly string[] } }).__game = {
+(window as unknown as { __game: { probe: WorldProbe; read: () => unknown; sounds: () => readonly string[]; ambient: () => Readonly<Record<string, number>> } }).__game = {
   probe,
-  sounds: () => [...uiSounds.played],   // GAME-40: що мікшер прийняв до відтворення (лише читання)
+  sounds: () => [...uiSounds.played, ...sfxPlayer.played], ambient: () => ambient.levels(),   // GAME-40: що мікшер прийняв до відтворення (лише читання)
   read: () => JSON.parse(JSON.stringify(bridge.state)) as unknown,
 };
 
@@ -226,12 +245,29 @@ let targetSpot: string | null = null;
 let needsFor: GameState | null = null;
 let needsPack = -1;
 let needsMemo = { small: 0, bulky: 0 };
+// GAME-192: підказка «Далі» — лише коли застряг. Збірка e2e без ?hintIdleMs= тримає «завжди» (старі e2e читають стрілку).
+const hintIdle = switches.hintIdleMs !== undefined ? new HintIdle(switches.hintIdleMs, Math.min(HINT_FLASH_MS, Math.round(switches.hintIdleMs / 4))) : new HintIdle();
+const hintLegacy = import.meta.env.MODE === 'e2e' && switches.hintIdleMs === undefined;
+let hintMode: HintMode = loadSettings().hintMode;
+let hintLast = false;
+const applyHintMode = (): void => { hintIdle.mode = hintLegacy ? 'always' : hintMode; };
+applyHintMode();
 const worldHooks: WorldHooks = {
+  hintTick: (dt) => {
+    if (bridge.state.game.dialogue !== null) hintIdle.poke();
+    const v = hintIdle.tick(dt, worldHooks.target(), bridge.state.game);
+    if (v !== hintLast) { hintLast = v; for (const l of storyListeners) l(); }
+    return v;
+  },
+  hintPoke: () => hintIdle.poke(),
   onNpc: talkOnMap,
   // GAME-179: з ким можна говорити саме зараз — те саме, що прийме ядро (NPC тут, відкритий, розмови нема); «!» — гачок прохань GAME-180.
   talk: (id) => (npcLive(bridge.state.game, GAME_DEFS, id) ? { request: requestMarker(bridge.state.game, id) } : null),
   onObject: actOnMap,
   fireDue: () => fireplaceDue(bridge.state),
+  grillDue: () => fireplaceDue(bridge.state) && fishEvening(bridge.state.game.flags) === 'kept',
+  onGrilled: (charred) => { grilledCharred = charred; },
+  onFish,
   isLive: (name) => !campOnly(name) && liveSpot(bridge.state, name, GAME_DEFS) && !(name.startsWith('pack.') && backpack.includes(name.slice(5))),
   backpack: () => backpack.length,
   unload: unloadOne,
@@ -323,6 +359,8 @@ render(h(Shell, {
       storyChanged();
       return ok;
     },
+    hintShown: () => hintIdle.visible(),
+    setHintMode: (m) => { hintMode = m; applyHintMode(); },
     exportCode: () => encodeRestoreCode(saves.exportJson()),
     staleCode: () => (saves.stale ? encodeRestoreCode(saves.stale) : Promise.resolve(null)),
     dismissStale: () => saves.dismissStale(),
@@ -398,6 +436,13 @@ render(h(Shell, {
 // HUD живий (GAME-83): ігрова хвилина змінилась — повідомляємо UI, він перечитає знімок. Без таймера реального часу
 // (сторож no-realtime): це крок самої гри, а не відлік; поки меню чи екран відкриті, годинник стоїть — подій немає.
 let lastMinute = bridge.state.clock.minutes;
+// GAME-194 (рецензія #124): поки сцена світу на паузі (меню, розмова, підсумок, вступ «Нової гри»), її update не йде — фон тікає звідси:
+// «Вимкнути звук» у паузі доходить до петель одразу, а вступ після «Нової гри» вмикає дощ. Коли сцена йде — тікає вона сама (без подвійного кроку).
+game.events.on(Phaser.Core.Events.STEP, (_t: number, delta: number) => {
+  if (!game.scene.isPaused('world')) return;
+  if (isIntroOpen()) ambient.setAmbient(ambientMix({ map: null, intro: true, nearLake: false, fireLit: false, nearFire: false, transport: null }));
+  ambient.tick(delta);
+});
 game.events.on(Phaser.Core.Events.POST_STEP, () => {
   setActionTarget(pad, probe.nearKind);   // GAME-95: кнопка дії знає, що поруч (talk/fire/object) чи нічого (idle)
   if (probe.nearObject !== nearSpot) { nearSpot = probe.nearObject; departNote = false; storyChanged(); }   // GAME-175: підпис дії біля об'єкта в HUD

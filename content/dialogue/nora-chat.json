@@ -9,12 +9,14 @@
       "choices": [
         { "textKey": "dlg.nora-chat.hello.c1", "next": "a" },
         { "textKey": "dlg.nora-chat.hello.c2", "next": "b" },
-        { "textKey": "dlg.nora-chat.hello.c3", "next": "bye" }
+        { "textKey": "dlg.nora-chat.hello.c3", "next": "bye" },
+        { "textKey": "dlg.nora-chat.hello.c4", "next": "warm", "when": { "flag": "f.trust-nora-fish" } }
       ]
     },
     { "id": "a", "speaker": "npc", "textKey": "dlg.nora-chat.a", "end": true },
     { "id": "b", "speaker": "npc", "textKey": "dlg.nora-chat.b", "end": true },
     { "id": "bye", "speaker": "npc", "textKey": "dlg.nora-chat.bye", "end": true },
+    { "id": "warm", "speaker": "npc", "textKey": "dlg.nora-chat.warm", "end": true },
     {
       "id": "offer", "speaker": "npc", "textKey": "dlg.nora-chat.offer",
       "choices": [

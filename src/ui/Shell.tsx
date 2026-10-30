@@ -64,6 +64,7 @@ export function Shell({ port, langOverride, credits, build, holdToast = false, h
   // GAME-181: нове звання — маленьке свято: банер (назва + рядок родини) і звук підтвердження через єдиний мікшер. Банер не ловить дотики й гасне сам.
   // Гасне за ІГРОВИМ годинником (TITLE_UP_MIN хвилин, ≈ секунд живої гри): пауза й панелі його зупиняють — банер не зникає, поки його не видно; таймерів реального часу немає.
   const [titleUp, setTitleUp] = useState<{ index: number; at: number } | null>(null);
+  useEffect(() => { port.setHintMode(settings.hintMode); }, [settings.hintMode]);
   useEffect(() => port.onReward((r) => { if (r.title !== null) { const o = port.story(); setTitleUp({ index: r.title, at: o.day * 1440 + o.timeMinutes }); playUi('confirm'); } }), []);
   // Підсумок дня (GAME-106): з'являється, коли ДІЯ гравця завершила день (daysEnded зріс саме на ній), а не при завантаженні
   // сейву вже завершеного дня — після «Завершити сесію» й перезавантаження гравець повертається на мапу, а не в підсумок.
@@ -276,7 +277,9 @@ export function Shell({ port, langOverride, credits, build, holdToast = false, h
   const titleUpShown = titleUp !== null && sinceUp >= 0 && sinceUp < TITLE_UP_MIN && !paused && !storyOpen && !summary;
   const goalShown = offer.stage !== 'create' && (offer.goal !== null || offer.stage === 'ended') && !hideUi.includes('goal');
   const trackerShown = offer.stage !== 'create' && offer.requests.length > 0 && !hideUi.includes('requests');
-  const nextShown = offer.stage !== 'create' && (offer.hint.near || offer.hint.next || offer.hint.backpack > 0) && !hideUi.includes('next');
+  // GAME-192: «Далі: …» — лише коли застряг; позначка біля об'єкта й рюкзак лишаються завжди.
+  const nextText = !offer.hint.near && !!offer.hint.next && port.hintShown();
+  const nextShown = offer.stage !== 'create' && (offer.hint.near || nextText || offer.hint.backpack > 0) && !hideUi.includes('next');
   const portrait = (id: string | null, sprite?: boolean) => port.portrait(id, sprite);
 
   return (
@@ -328,10 +331,10 @@ export function Shell({ port, langOverride, credits, build, holdToast = false, h
               </div>
             )}
             {nextShown && (
-              <div class="ui-next" data-ui="next-hint" data-kind={offer.hint.near ? 'near' : 'next'} data-spot={offer.hint.near ? undefined : offer.hint.nextSpot ?? undefined}>
+              <div class="ui-next" data-ui="next-hint" role="status" data-kind={offer.hint.near ? 'near' : 'next'} data-spot={offer.hint.near ? undefined : offer.hint.nextSpot ?? undefined}>
                 {offer.hint.near
                   ? `● ${t(offer.hint.near.label)}${offer.hint.near.itemKey ? ` ${ct(lang, offer.hint.near.itemKey)}` : ''}`
-                  : `${offer.hint.next ? `${t('ui.next')} ${t(offer.hint.next as Key)}` : ''}`}
+                  : `${nextText && offer.hint.next ? `${t('ui.next')} ${t(offer.hint.next as Key)}` : ''}`}
                 {offer.hint.backpack > 0 && <span data-ui="backpack">{` · ${t('ui.backpack')}: ${offer.hint.backpack}`}</span>}
               </div>
             )}
@@ -388,6 +391,13 @@ export function Shell({ port, langOverride, credits, build, holdToast = false, h
               onClick={() => update({ ...settings, audio: { ...settings.audio, muted: !settings.audio.muted } })}>{t('ui.mute')}</button>
           </fieldset>
           {staleNotice}
+          <fieldset>
+            <legend>{t('ui.hints')}</legend>
+            {(['stuck', 'always'] as const).map((m) => (
+              <button type="button" class="ui-btn" data-ui={`hints-${m}`} aria-pressed={settings.hintMode === m}
+                onClick={() => update({ ...settings, hintMode: m })}>{t(m === 'stuck' ? 'ui.hintsStuck' : 'ui.hintsAlways')}</button>
+            ))}
+          </fieldset>
           <fieldset>
             <legend>{t('ui.saveGroup')}</legend>
             <button type="button" class="ui-btn" data-ui="save"

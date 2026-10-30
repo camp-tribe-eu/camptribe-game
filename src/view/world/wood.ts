@@ -3,6 +3,7 @@
 import Phaser from 'phaser';
 import { calmMotion } from '../../platform/motion';
 import { playUi } from '../../audio/ui-sounds';
+import { sfx } from '../../audio/sfx';
 import { BAND, BRANCH_AT, BRANCHES, STRIKES, WOOD_IDLE, gotCount, markerAt, startWood, stepWood, woodTarget, type WoodEvent, type WoodInput, type WoodState } from '../../content/wood-chop';
 import type { Key } from '../../i18n';
 import { FrameFx, HAND_FONT, TOP, drawMeter, meterTop } from './hand-fx';
@@ -25,6 +26,8 @@ export class WoodRig {
   private meter: Phaser.GameObjects.Graphics | null = null;
   private hint: Phaser.GameObjects.Text | null = null;
   private needLeft = 0;
+  /** GAME-193: поки герой рибалить, підказка дров мовчить (одне місце під ногами — одна справа). */
+  muted = false;
 
   constructor(private readonly scene: Phaser.Scene, private readonly player: Phaser.GameObjects.Sprite, private readonly text: (key: Key) => string) { this.fx = new FrameFx(scene); }
 
@@ -111,10 +114,10 @@ export class WoodRig {
     const e = this.feed({ kind: 'act', branch, atBlock });
     const g = branch !== null ? this.sticks[branch] : undefined;
     switch (e) {
-      case 'picked': playUi('press'); if (g) { this.fx.burst(g.x, g.y, 4, 0xcdbfa0, { r: 8, rise: 2 }); g.setVisible(false); } break;
+      case 'picked': sfx('branch'); playUi('press'); if (g) { this.fx.burst(g.x, g.y, 4, 0xcdbfa0, { r: 8, rise: 2 }); g.setVisible(false); } break;
       case 'need': playUi('back'); this.needLeft = 1800; break;
       case 'chopStart': playUi('confirm'); this.drawStump(BRANCHES); break;
-      case 'hit': case 'done': this.chip(e === 'done'); playUi(e === 'done' ? 'confirm' : 'press'); this.drawStump(BRANCHES - this.s.strikes); break;
+      case 'hit': case 'done': this.chip(e === 'done'); sfx('chop'); playUi(e === 'done' ? 'confirm' : 'press'); this.drawStump(BRANCHES - this.s.strikes); break;
       case 'miss': playUi('back'); this.fx.burst(this.block.x, this.block.y - 6, 3, 0xcdbfa0, { r: 8 }); break;
       default: break;
     }
@@ -154,7 +157,7 @@ export class WoodRig {
       msg = `${this.text('wood.chop')} ${Math.min(this.s.strikes + 1, STRIKES)}/${STRIKES}`;
     } else msg = this.needLeft > 0 ? this.text('wood.need') : gotCount(this.s) >= BRANCHES ? this.text('wood.bring') : `${this.text('wood.pick')} ${gotCount(this.s)}/${BRANCHES}`;
     if (hint.text !== msg) hint.setText(msg);
-    hint.setPosition(cx, this.s.phase === 'chop' ? top + 14 : top - 2);
+    hint.setVisible(!this.muted).setPosition(cx, this.s.phase === 'chop' ? top + 14 : top - 2);
   }
 }
 

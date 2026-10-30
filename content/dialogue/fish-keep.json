@@ -1,0 +1,18 @@
+{
+  "id": "dlg.fish-keep",
+  "scene": {
+    "titleKey": "dlg.fish-keep.title",
+    "facts": [
+      "f.fish-kept"
+    ]
+  },
+  "start": "n",
+  "nodes": [
+    {
+      "id": "n",
+      "speaker": "player",
+      "textKey": "dlg.fish-keep.n",
+      "end": true
+    }
+  ]
+}
