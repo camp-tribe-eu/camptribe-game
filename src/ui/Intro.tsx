@@ -3,6 +3,7 @@
 // Кожен крок пропускається («Пропустити»: до вибору героя — вибір усе одно лишається; після нього — одразу на мапу). Світ на паузі, поки вступ іде (Shell).
 // Тексти — src/i18n (intro.*); таймерів реального часу немає — рядки йдуть за дотиком, друк не потрібен.
 import { useEffect, useRef, useState } from 'preact/hooks';
+import { setIntroOpen } from '../audio';
 import { playUi } from '../audio/ui-sounds';
 import { ct } from '../i18n/content';
 import type { AnyLang, Key } from '../i18n';
@@ -52,6 +53,7 @@ export function Intro({ offer, lang, t, act, portrait, onDone }: { offer: StoryO
   // Фокус — на кнопку «далі» (або на першу відповідь вибору): клавіатура й екранний читач починають із неї.
   useEffect(() => { root.current?.querySelector<HTMLElement>('[data-ui="intro-next"], [data-act="create"]')?.focus({ preventScroll: true }); }, [i]);
   // Кінець вступу: наклейка «Дім» влітає зі звуком «дзинь» (той самий єдиний мікшер UI, що й решта підтверджень).
+  useEffect(() => { setIntroOpen(true); return () => setIntroOpen(false); }, []);   // GAME-194: дощ за вікном, поки вступ відкрито
   useEffect(() => { if (step.kind === 'final') playUi('confirm'); }, [step.kind]);
   // Дотик двічі за мить не пропускає два кроки: пауза між кроками за event.timeStamp (без таймерів).
   const last = useRef(Number.NEGATIVE_INFINITY);

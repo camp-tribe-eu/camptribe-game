@@ -17,7 +17,11 @@ export const DEFAULT_AUDIO: AudioSettings = { master: 0.8, sfx: 1, music: 0.6, m
 /** Куди мікшер віддає вже порахований звук. Реалізація Phaser — phaser-out.ts; у тестах — запис викликів. */
 export interface SoundOut {
   play(key: string, volume: number, loop: boolean): void;
+  /** Петля з керованою гучністю й зупинкою (фон, GAME-194). */
+  startLoop?(key: string, volume: number): LoopHandle;
 }
+
+export interface LoopHandle { setVolume(v: number): void; stop(): void }
 
 /** Обмежує до 0..1; NaN, Infinity і не-числа — 0 (тиша безпечніша за гучний сюрприз). */
 export function clamp01(v: unknown): number {
@@ -40,6 +44,10 @@ export interface Mixer {
   readonly settings: AudioSettings;
   /** Грає звук каналу; false — нічого не зіграно (тиша, немає виходу). */
   play(channel: Channel, key: string, opts?: { readonly loop?: boolean }): boolean;
+  /** Підсумкова гучність каналу (0 при mute). */
+  volume(channel: Channel): number;
+  /** Запустити петлю; null — немає виходу. Гучність рахує викликач (volume()). */
+  startLoop(key: string, volume: number): LoopHandle | null;
   /** Застосувати налаштування (з обмеженням 0..1). */
   apply(next: AudioSettings): void;
   /** Підключити/відключити вихід (сцена Phaser з'являється пізніше за мікшер). */
@@ -57,6 +65,8 @@ export function createMixer(initial: AudioSettings = DEFAULT_AUDIO, initialOut: 
       out.play(key, volume, opts?.loop === true);
       return true;
     },
+    volume(channel) { return effectiveVolume(s, channel); },
+    startLoop(key, volume) { return out?.startLoop?.(key, volume) ?? null; },
     apply(next) { s = parseAudio(next); },
     bind(o) { out = o; },
   };

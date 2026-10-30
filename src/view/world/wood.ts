@@ -3,6 +3,7 @@
 import Phaser from 'phaser';
 import { calmMotion } from '../../platform/motion';
 import { playUi } from '../../audio/ui-sounds';
+import { sfx } from '../../audio/sfx';
 import { BAND, BRANCH_AT, BRANCHES, STRIKES, WOOD_IDLE, gotCount, markerAt, startWood, stepWood, woodTarget, type WoodEvent, type WoodInput, type WoodState } from '../../content/wood-chop';
 import type { Key } from '../../i18n';
 import { FrameFx, HAND_FONT, TOP, drawMeter, meterTop } from './hand-fx';
@@ -113,10 +114,10 @@ export class WoodRig {
     const e = this.feed({ kind: 'act', branch, atBlock });
     const g = branch !== null ? this.sticks[branch] : undefined;
     switch (e) {
-      case 'picked': playUi('press'); if (g) { this.fx.burst(g.x, g.y, 4, 0xcdbfa0, { r: 8, rise: 2 }); g.setVisible(false); } break;
+      case 'picked': sfx('branch'); playUi('press'); if (g) { this.fx.burst(g.x, g.y, 4, 0xcdbfa0, { r: 8, rise: 2 }); g.setVisible(false); } break;
       case 'need': playUi('back'); this.needLeft = 1800; break;
       case 'chopStart': playUi('confirm'); this.drawStump(BRANCHES); break;
-      case 'hit': case 'done': this.chip(e === 'done'); playUi(e === 'done' ? 'confirm' : 'press'); this.drawStump(BRANCHES - this.s.strikes); break;
+      case 'hit': case 'done': this.chip(e === 'done'); sfx('chop'); playUi(e === 'done' ? 'confirm' : 'press'); this.drawStump(BRANCHES - this.s.strikes); break;
       case 'miss': playUi('back'); this.fx.burst(this.block.x, this.block.y - 6, 3, 0xcdbfa0, { r: 8 }); break;
       default: break;
     }

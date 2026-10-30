@@ -6,7 +6,7 @@
 // GAME-93: графіка LPC (OD-013) — тайли 32 px, персонаж із шарів (ходьба 9 кадрів × 4 напрямки), анімоване вогнище,
 // 3/4-глибина: верхівки дерев і дах намету малюються над персонажем, коли той стоїть ПОЗАД об'єктом (див. `bands`).
 import Phaser from 'phaser';
-import { bindPhaser } from '../../audio';
+import { ambient, bindPhaser, isIntroOpen, ambientMix } from '../../audio';
 import { STEP_MS } from '../../core/clock';
 import { KEY_BINDINGS, KEY_CODES, TAP_MAX_MOVE, TAP_MAX_MS, actionTarget, consumeFrame, createActionGate, moveVector, press, release, tapHitsSpot, type Action, type ActionTarget, type InputState } from './actions';
 import type { Bridge } from './bridge';
@@ -160,6 +160,9 @@ export interface WorldProbe {
 }
 
 /** Точка вогнища (об'єкт мапи obj.campfire) — центр світлої плями; нема — плями нема. */
+/** Відстані (px), з яких чути хвилі й тріск вогнища. */
+const LAKE_EAR = 260;
+const FIRE_EAR = 220;
 const spawnFire = (spots: readonly Spot[]): Pt | null => { const f = spots.find((s) => s.name === 'obj.campfire'); return f ? { x: f.x, y: f.y } : null; };
 
 /** Вікно вимірювання fps, мс. */
@@ -262,6 +265,20 @@ export class WorldScene extends Phaser.Scene {
     this.load.audio('ui-click', 'audio/ui-click_001.ogg');
     this.load.audio('ui-confirmation', 'audio/ui-confirmation_001.ogg');
     this.load.audio('ui-back', 'audio/ui-back_001.ogg');
+    // GAME-194: фон (6 петель) і 7 ефектів — літерали для check-scene-refs; відповідність таблицям AMBIENT_FILES/SFX_FILES доводить src/audio/ambient.test.ts.
+    this.load.audio('amb-camp', 'audio/amb-camp.ogg');
+    this.load.audio('amb-lake', 'audio/amb-lake.ogg');
+    this.load.audio('amb-fire', 'audio/amb-fire.ogg');
+    this.load.audio('amb-rain', 'audio/amb-rain.ogg');
+    this.load.audio('amb-road-car', 'audio/amb-road-car.ogg');
+    this.load.audio('amb-road-bike', 'audio/amb-road-bike.ogg');
+    this.load.audio('sfx-peg', 'audio/sfx-peg.ogg');
+    this.load.audio('sfx-chop', 'audio/sfx-chop.ogg');
+    this.load.audio('sfx-match', 'audio/sfx-match.ogg');
+    this.load.audio('sfx-cast', 'audio/sfx-cast.ogg');
+    this.load.audio('sfx-splash', 'audio/sfx-splash.ogg');
+    this.load.audio('sfx-catch', 'audio/sfx-catch.ogg');
+    this.load.audio('sfx-branch', 'audio/sfx-branch.ogg');
   }
 
   /**
@@ -889,6 +906,11 @@ export class WorldScene extends Phaser.Scene {
     const want = this.hooks.mapKey();
     if (want !== this.current) this.enterMap(want, true);
     else this.placeCar();
+    // GAME-194: фон за станом — чиста функція ambientMix; перехід і гучність — у модулі звуку.
+    const pp = { x: this.player.x, y: this.player.y };
+    ambient.setAmbient(ambientMix({ map: this.current, intro: isIntroOpen(), nearLake: this.current === 'camp' && this.fish.near(pp, LAKE_EAR), fireLit: this.fire.lit || this.fire.phase === 'done',
+      nearFire: this.fire.near(pp, FIRE_EAR), transport: this.hooks.transport() }));
+    ambient.tick(delta);
     const held = consumeFrame(this.controls);
     // GAME-189: поки герой б'є кілки — стоїть; розміщення намету — ходить вільно (привид іде за ним).
     const v = this.tent.holdsHero || this.wood.holdsHero || this.fire.holdsHero || this.fish.busy ? { x: 0, y: 0 } : moveVector(held);

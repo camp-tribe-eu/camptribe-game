@@ -3,6 +3,7 @@
 import Phaser from 'phaser';
 import { calmMotion } from '../../platform/motion';
 import { playUi } from '../../audio/ui-sounds';
+import { sfx } from '../../audio/sfx';
 import { BAND, FIRE_IDLE, GROW_MS, LOGS, chargeAt, startFire, stepFire, type FireEvent, type FireInput, type FireState } from '../../content/campfire-light';
 import type { Key } from '../../i18n';
 import { FrameFx, HAND_FONT, TOP, drawMeter, meterTop } from './hand-fx';
@@ -104,7 +105,7 @@ export class FireRig {
   private react(e: FireEvent): void {
     const x = this.at.x; const y = this.at.y;
     switch (e) {
-      case 'strike': playUi('press'); break;
+      case 'strike': sfx('match'); playUi('press'); break;
       case 'lit':
         playUi('confirm');
         this.fx.burst(x, y - 6, 14, 0xffc94a, { r: 26, rise: 14, dur: 700, size: 2 });

@@ -3,6 +3,7 @@
 // Мія: кіт до води не підходить, тут його не показуємо й не анімуємо.
 import Phaser from 'phaser';
 import { playUi } from '../../audio/ui-sounds';
+import { sfx } from '../../audio/sfx';
 import { BITE_MS, FISH_IDLE, SPECIES, ZONE, castDistance, catches, fishAt, inZone, makeRng, stepFish, type FishEvent, type FishInput, type FishState } from '../../content/fishing';
 import type { Key } from '../../i18n';
 import { FrameFx, HAND_FONT, TOP, meterTop } from './hand-fx';
@@ -135,12 +136,12 @@ export class FishRig {
     const t = this.target; const px = this.player.x; const py = this.player.y;
     switch (e) {
       case 'charge': playUi('press'); break;
-      case 'cast': playUi('press'); this.fly = FLIGHT_MS; this.fx.push(FLIGHT_MS, () => undefined, () => { this.fx.burst(t.x, t.y, 6, 0x9ad0ff, { r: 12, rise: 3, dur: 420, size: 2 }); }); break;
+      case 'cast': sfx('cast'); playUi('press'); this.fly = FLIGHT_MS; this.fx.push(FLIGHT_MS, () => undefined, () => { sfx('splash'); this.fx.burst(t.x, t.y, 6, 0x9ad0ff, { r: 12, rise: 3, dur: 420, size: 2 }); }); break;
       case 'bite': playUi('press'); this.fx.burst(t.x, t.y, 8, 0xdff3ff, { r: 16, rise: 8, dur: 480, size: 2 }); break;
       case 'slipped': playUi('back'); this.say('fish.lost'); this.fx.burst(t.x, t.y, 5, 0x9ad0ff, { r: 10, dur: 400, size: 2 }); break;
       case 'hook': playUi('press'); break;
       case 'away': playUi('back'); this.say('fish.away'); this.fx.burst(t.x, t.y, 7, 0x9ad0ff, { r: 14, dur: 450, size: 2 }); break;
-      case 'caught': playUi('confirm'); this.sel = 0; this.fx.burst(px, py - 50, 12, 0xffe58a, { r: 24, rise: 10, dur: 700, size: 2 }); this.fx.burst(t.x, t.y, 8, 0xdff3ff, { r: 18, rise: 10, dur: 500, size: 2 }); break;
+      case 'caught': sfx('catch'); playUi('confirm'); this.sel = 0; this.fx.burst(px, py - 50, 12, 0xffe58a, { r: 24, rise: 10, dur: 700, size: 2 }); this.fx.burst(t.x, t.y, 8, 0xdff3ff, { r: 18, rise: 10, dur: 500, size: 2 }); break;
       case 'kept': playUi('confirm'); this.say('fish.kept'); this.fx.burst(px, py - 40, 8, 0xffe58a, { r: 16, rise: 8, dur: 500, size: 2 }); break;
       case 'released': {
         playUi('press'); this.say('fish.freed');

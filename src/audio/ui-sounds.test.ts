@@ -40,7 +40,7 @@ describe('звуки UI', () => {
     expect(calls[0]?.volume).toBeCloseTo(0.25);
   });
   it('сцена вантажить рівно ті ключі й локальні файли, що в таблиці (preload), і файли лежать у public/audio', () => {
-    const loads = [...scene.matchAll(/this\.load\.audio\('([^']+)',\s*'([^']+)'\)/g)].map((m) => [m[1], m[2]]);
+    const loads = [...scene.matchAll(/this\.load\.audio\('(ui-[^']+)',\s*'([^']+)'\)/g)].map((m) => [m[1], m[2]]);
     const table = Object.values(UI_SOUND_FILES).map((f) => [f.key, f.url]);
     expect(table).toHaveLength(3);
     expect(loads).toEqual(table);
