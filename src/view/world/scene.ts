@@ -82,6 +82,10 @@ export interface WorldHooks {
   pets?(): readonly string[];
   /** GAME-190: вечір дня 2 готовий відкритись (вогнище треба розпалити руками); немає — вогнище одразу живе як раніше. */
   fireDue?(): boolean;
+  /** GAME-192: крок таймера підказки (мс кадру, ціль) → чи показувати стрілку «Далі»; немає — завжди. */
+  hintTick?(dtMs: number): boolean;
+  /** GAME-192: гравець діє (кнопка дії затиснута) — бездіяльність скидається. */
+  hintPoke?(): void;
   /** Транспорт гравця (авто малюється спрайтом на подвір'ї, велосипед — маркером). */
   transport(): string | null;
   /** GAME-181: підпис нагороди («+15 XP +10 ОМ»), що ще не показана над героєм; забирає її (наступний виклик — null). */
@@ -198,6 +202,8 @@ export class WorldScene extends Phaser.Scene {
   private barkReadyAt: number[] = [];
   /** GAME-179: маркери «…»/«!» над NPC (малюнок і вид, за який він намальований) і NPC, що зараз дивиться на героя (повертається вниз, коли той відійде). */
   private doneSeen = -1;
+  /** GAME-192: стрілка «Далі» зараз видима (гравець застряг / ціль нова / режим «завжди»). */
+  private hintOn = true;
   /** GAME-184: Мія біля цілі прохання (за назвою об'єкта); створюється, коли потрібна. */
   private miaSprites = new Map<string, Phaser.GameObjects.Sprite>();
   private npcMarks = new Map<string, { g: Phaser.GameObjects.Graphics; kind: NpcMarker | null }>();
@@ -907,7 +913,7 @@ export class WorldScene extends Phaser.Scene {
       const look = this.hooks.look(name);
       const sig = name === 'obj.vehicle' || name === 'obj.trunk' ? `${look}|${this.hooks.transport() ?? ''}` : look;
       if (sig !== m.look) this.draw(m, name, look, sig);
-      m.g.setScale(name === target ? 1 + 0.2 * Math.abs(Math.sin(time / 280)) : 1);   // ціль підказки «Далі:» — пульсує
+      m.g.setScale(name === target && this.hintOn ? 1 + 0.2 * Math.abs(Math.sin(time / 280)) : 1);   // ціль підказки «Далі:» — пульсує
     }
     for (const [name, sp] of this.npcSprites) sp.setVisible(this.hooks.isLive(name));
     const talkers = this.talkers();
@@ -1022,7 +1028,9 @@ export class WorldScene extends Phaser.Scene {
     const tnpc = tn?.startsWith('npc.') && this.hooks.talk(tn) !== null ? this.sprite(tn)?.s : undefined;
     const tpos = ts && (branchPt !== null || this.hooks.isLive(ts.name)) ? { x: ts.x, y: ts.y } : tnpc?.visible ? { x: tnpc.x, y: tnpc.y } : null;
     const insets = this.safeInsets(time);
-    this.fx?.drawGuide({ x: this.player.x, y: this.player.y }, tpos, this.cameras.main.worldView, insets, INTERACT_RANGE * 1.2, time);
+    this.hintOn = this.hooks.hintTick?.(delta) ?? true;
+    if (held.has('interact')) this.hooks.hintPoke?.();
+    this.fx?.drawGuide({ x: this.player.x, y: this.player.y }, this.hintOn ? tpos : null, this.cameras.main.worldView, insets, INTERACT_RANGE * 1.2, time);
     // GAME-185: вбік верхній ряд HUD лежить поверх мапи — герой (а з ним слідувачі) стоїть посередині ВІЛЬНОЇ висоти, а не під ним. Сторч шапка в потоці, камера без зсуву.
     this.cameras.main.setFollowOffset(0, this.landscape ? Math.round(insets.top / 2) : 0);
 

@@ -4,6 +4,7 @@ import { render, h } from 'preact';
 import { Shell } from './ui/Shell';
 import { t } from './i18n';
 import { loadSettings } from './platform/settings';
+import { HINT_FLASH_MS, HintIdle, type HintMode } from './content/hint-idle';
 import { buildLabel } from './core/build-info';
 import { newInput } from './view/world/actions';
 import { GAME_DEFS } from './content/slice-defs';
@@ -225,7 +226,21 @@ let targetSpot: string | null = null;
 let needsFor: GameState | null = null;
 let needsPack = -1;
 let needsMemo = { small: 0, bulky: 0 };
+// GAME-192: підказка «Далі» — лише коли застряг. Збірка e2e без ?hintIdleMs= тримає «завжди» (старі e2e читають стрілку).
+const hintIdle = switches.hintIdleMs !== undefined ? new HintIdle(switches.hintIdleMs, Math.min(HINT_FLASH_MS, Math.round(switches.hintIdleMs / 4))) : new HintIdle();
+const hintLegacy = import.meta.env.MODE === 'e2e' && switches.hintIdleMs === undefined;
+let hintMode: HintMode = loadSettings().hintMode;
+let hintLast = false;
+const applyHintMode = (): void => { hintIdle.mode = hintLegacy ? 'always' : hintMode; };
+applyHintMode();
 const worldHooks: WorldHooks = {
+  hintTick: (dt) => {
+    if (bridge.state.game.dialogue !== null) hintIdle.poke();
+    const v = hintIdle.tick(dt, worldHooks.target(), bridge.state.game);
+    if (v !== hintLast) { hintLast = v; for (const l of storyListeners) l(); }
+    return v;
+  },
+  hintPoke: () => hintIdle.poke(),
   onNpc: talkOnMap,
   // GAME-179: з ким можна говорити саме зараз — те саме, що прийме ядро (NPC тут, відкритий, розмови нема); «!» — гачок прохань GAME-180.
   talk: (id) => (npcLive(bridge.state.game, GAME_DEFS, id) ? { request: requestMarker(bridge.state.game, id) } : null),
@@ -322,6 +337,8 @@ render(h(Shell, {
       storyChanged();
       return ok;
     },
+    hintShown: () => hintIdle.visible(),
+    setHintMode: (m) => { hintMode = m; applyHintMode(); },
     exportCode: () => encodeRestoreCode(saves.exportJson()),
     staleCode: () => (saves.stale ? encodeRestoreCode(saves.stale) : Promise.resolve(null)),
     dismissStale: () => saves.dismissStale(),
