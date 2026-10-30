@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs';
 import { expect, type Page } from '@playwright/test';
 
 export interface Core { game: { player: { locationId: string; transportId?: string } | null; flags: string[]; quests: Record<string, { status: string }>; inventory: Record<string, number>; dialogue: unknown; wave?: unknown; campaignEnded: boolean }; clock: { minutes: number } }
-export interface Probe { playerX: number; playerY: number; nearObject: string | null; saveLoaded: boolean; fx: { target: string | null; guide: string; ring: number; backpack: number } }
+export interface Probe { playerX: number; playerY: number; nearObject: string | null; playerMoving: boolean; saveLoaded: boolean; fx: { target: string | null; guide: string; ring: number; backpack: number } }
 export const core = (page: Page): Promise<Core> => page.evaluate(() => (window as unknown as { __game: { read: () => Core } }).__game.read());
 export const probe = (page: Page): Promise<Probe> => page.evaluate(() => JSON.parse(JSON.stringify((window as unknown as { __game: { probe: Probe } }).__game.probe)) as Probe);
 export const loaded = (page: Page): Promise<unknown> => page.waitForFunction(() => (window as unknown as { __game?: { probe: { saveLoaded: boolean } } }).__game?.probe.saveLoaded === true, null, { timeout: 30_000 });
@@ -121,6 +121,10 @@ export async function goAndDo(page: Page, touch: boolean, car = false): Promise<
   for (let t = 0; t < 3; t++) {
     const q = t === 0 ? p : await probe(page);
     await walk(page, route(key, [q.playerX, q.playerY], target, car));
+    // GAME-186 (2/2): прийшов ≠ «стоїть у зоні». Під навантаженням (кадр 60–120 мс) герой проскакує ціль, а мешканець чи слідувач опиняється ближчим за неї —
+    // тоді кільце не заповнюється й кнопка дії бачить когось іншого. Гравець у цій миті просто підступає ще; ми теж: спершу дочекатись «стоїть і ціль найближча», інакше — новий захід із поточної точки.
+    const settled = await expect.poll(async () => { const s = await probe(page); return s.nearObject === target && !s.playerMoving; }, { timeout: 2_500 }).toBe(true).then(() => true, () => false);
+    if (!settled && t < 2) continue;
     if (!AUTO(target)) {
       await expect.poll(async () => (await probe(page)).nearObject, { timeout: 5_000, message: `біля ${target} кнопка дії мусить знати, що поруч` }).toBe(target);
       if (touch) await page.locator('[data-touch="interact"]').tap();
