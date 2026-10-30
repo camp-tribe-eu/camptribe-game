@@ -7,7 +7,7 @@ import { readFileSync } from 'node:fs';
 import { expect, test, type Page } from '@playwright/test';
 
 interface Pt { x: number; y: number }
-interface Probe { saveLoaded: boolean; playerX: number; playerY: number; nearObject: string | null; residents: { id: string; x: number; y: number }[]; npcMarks: Record<string, string>; fx: { target: string | null; guide: string; pops: number } }
+interface Probe { saveLoaded: boolean; playerX: number; playerY: number; nearObject: string | null; playerMoving: boolean; residents: { id: string; x: number; y: number }[]; npcMarks: Record<string, string>; fx: { target: string | null; guide: string; pops: number } }
 interface Core { game: { flags: string[]; dialogue: unknown }; journal: { type: string; ref?: string }[] }
 const probe = (page: Page): Promise<Probe> => page.evaluate(() => JSON.parse(JSON.stringify((window as unknown as { __game: { probe: Probe } }).__game.probe)) as Probe);
 const core = (page: Page): Promise<Core> => page.evaluate(() => (window as unknown as { __game: { read: () => Core } }).__game.read());
@@ -173,12 +173,46 @@ async function checkCard(page: Page, r: Req): Promise<void> {
   await expect(panel(page).locator('[data-act="choose"]', { hasText: 'Пізніше' })).toBeVisible();
 }
 
+/** Підступ до точки всередині сторінки: клавішу тримаємо й відпускаємо в rAF сцени (без CDP-затримки), зупинка за < 12 px або через 5 с. */
+async function approach(page: Page, to: Pt): Promise<void> {
+  await page.evaluate((to) => new Promise<void>((resolve) => {
+    const g = (window as unknown as { __game: { probe: { playerX: number; playerY: number } } }).__game;
+    const codes: Record<string, number> = { ArrowLeft: 37, ArrowUp: 38, ArrowRight: 39, ArrowDown: 40 };
+    let held: string | null = null;
+    const fire = (type: string, key: string): void => {
+      const e = new KeyboardEvent(type, { key, code: key, bubbles: true, cancelable: true });
+      Object.defineProperty(e, 'keyCode', { get: () => codes[key] });
+      window.dispatchEvent(e);
+    };
+    const set = (want: string | null): void => { if (held && held !== want) fire('keyup', held); if (want && held !== want) fire('keydown', want); held = want; };
+    const t0 = performance.now();
+    const tick = (): void => {
+      const dx = to.x - g.probe.playerX; const dy = to.y - g.probe.playerY;
+      if (Math.hypot(dx, dy) < 12 || performance.now() - t0 > 5_000) { set(null); resolve(); return; }
+      set(Math.abs(dx) >= Math.abs(dy) ? (dx < 0 ? 'ArrowLeft' : 'ArrowRight') : (dy < 0 ? 'ArrowUp' : 'ArrowDown'));
+      requestAnimationFrame(tick);
+    };
+    requestAnimationFrame(tick);
+  }), to);
+}
+
 /** Ціль ногами: ідемо до об'єкта, кільце наближення саме ставить прапорець; стрілка вказує на неї. */
 async function doTarget(page: Page, r: Req, spot: string, i: number): Promise<void> {
   const target = OBJ.get(spot) as Pt;
   expect((await probe(page)).fx.target, 'стрілка веде до наступної цілі').toBe(spot);
-  await walk(page, () => target, (p) => Math.hypot(p.playerX - target.x, p.playerY - target.y) < 14 || p.nearObject === spot && Math.hypot(p.playerX - target.x, p.playerY - target.y) < 30, spot);
-  await expect.poll(async () => (await core(page)).game.flags.includes(flag(r.id, r.targets.length > 0 ? `t${i + 1}` : '')), { message: `${spot}: прапорець цілі не став`, timeout: 6_000 }).toBe(true);
+  // GAME-186 (2/2): корінь — у ходьбі тесту, не в грі. walk() відпускає клавішу окремим CDP-викликом; під навантаженням (4 воркери, кадр 60–120 мс) той виклик
+  // запізнюється на сотні мс, і герой за цей час проскакує ціль на 30–80 px — за AUTO_RANGE (35) кільце не стартує (виміряно: зупинка за 41–49 px від цілі).
+  // Тому до цілі — грубо (шлях по тайлах), а ПІДСТУП і зупинка — всередині сторінки (rAF, без CDP), як у chapter-driver.walk; далі перевіряємо, що герой стоїть упритул.
+  // Саму перевірку прапорця (6 с) не ослаблено.
+  for (let attempt = 0; attempt < 4; attempt++) {
+    await walk(page, () => target, (p) => Math.hypot(p.playerX - target.x, p.playerY - target.y) < 48 || p.nearObject === spot, spot);
+    await approach(page, target);
+    await page.waitForTimeout(250);
+    const p = await probe(page);
+    if (!p.playerMoving && Math.hypot(p.playerX - target.x, p.playerY - target.y) < 28) break;
+  }
+  const at = await probe(page);
+  await expect.poll(async () => (await core(page)).game.flags.includes(flag(r.id, r.targets.length > 0 ? `t${i + 1}` : '')), { message: `${spot}: прапорець цілі не став (герой за ${Math.round(Math.hypot(at.playerX - target.x, at.playerY - target.y))} px, поруч ${at.nearObject})`, timeout: 6_000 }).toBe(true);
   await expect(page.locator(`[data-ui="req-row"][data-request="${r.id}"]`)).toHaveAttribute('data-done', String(i + 1));
 }
 
