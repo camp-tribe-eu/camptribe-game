@@ -18,6 +18,7 @@ import { matches } from '../core/story';
 import type { Key } from '../i18n';
 import { FIREPLACE_SCENE } from './fireplace';
 import type { Move } from './moves';
+import { vehicleReady } from '../view/world/proximity';
 
 export type MapKey = 'home' | 'shop' | 'camp' | 'road';
 /** Локація кожної мапи гри (властивість locationId у .tmj; звіряє map-content.test). */
@@ -499,6 +500,19 @@ export function needsLeft(sim: SimState, defs: CoreDefs, carried: readonly strin
   const pk = defs.packing;
   if (!p || !pk || !packingOpen(pk, g) || !active(g, 'CH1-HOME-001')) return [];
   return packItemsFor(pk, p).filter((i) => i.group === 'needed' && !g.flags.includes(packFlag(i.itemId)) && !carried.includes(i.itemId)).map((i) => i.itemId);
+}
+
+/** Чому авто зараз не рушає: рюкзак не порожній або потрібне ще не в багажнику. null — можна їхати (чи пакування не стосується цієї поїздки). */
+export type DepartBlock = { readonly kind: 'carry' } | { readonly kind: 'missing'; readonly items: readonly string[] };
+
+/**
+ * GAME-178: єдине джерело істини для «чи готове до дороги» — те саме vehicleReady, що тримає кільце біля авто (scene.ts). E/тап на авто (рамка «Куди їдемо?»)
+ * перед відправленням питає сюди ж: інакше ця стежка їхала б з речами на полицях чи в рюкзаку (ядро автоспакування на ній не робить).
+ */
+export function departBlock(sim: SimState, defs: CoreDefs, carried: readonly string[] = []): DepartBlock | null {
+  const left = needsLeft(sim, defs, carried);
+  if (vehicleReady(carried.length > 0, { small: left.length, bulky: 0 })) return null;
+  return carried.length > 0 ? { kind: 'carry' } : { kind: 'missing', items: left };
 }
 
 /**

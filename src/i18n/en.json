@@ -257,6 +257,8 @@
   "near.finish": "Finish:",
   "near.dry": "Dry the gear",
   "near.sell": "Sell gear",
+  "depart.carry": "Unload the backpack into the car first",
+  "depart.missing": "Still missing:",
   "choice.where": "Where to?",
   "choice.step": "What next?",
   "choice.dry": "What do we dry?",

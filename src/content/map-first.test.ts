@@ -13,7 +13,7 @@ import { GAME_DEFS } from './slice-defs';
 import { CONTENT } from './story';
 import { progressKey, type Move } from './moves';
 import { enumerateCombos } from '../../scripts/validator/combos.mjs';
-import { isBulky, needsLeft, DAY1_QUESTS, DAY1_TARGETS, MAP_LOCATION, MAP_SPOTS, coveredKeys, liveMapSpot, mapKeyFor, moveKey, nextTarget, resolveSpot, spotLabel, targetProblems, unpackMoves, type MapTarget } from './map-first';
+import { departBlock, isBulky, needsLeft, DAY1_QUESTS, DAY1_TARGETS, MAP_LOCATION, MAP_SPOTS, coveredKeys, liveMapSpot, mapKeyFor, moveKey, nextTarget, resolveSpot, spotLabel, targetProblems, unpackMoves, type MapTarget } from './map-first';
 
 const DEFS: CoreDefs = GAME_DEFS;
 const MAP_VIEW: StoryView = { mapFirst: true, trunk: false, near: null };
@@ -238,8 +238,8 @@ describe('підказка «Далі: …»', () => {
   it('у знімку для UI: рядок «Далі» й підпис дії біля об\'єкта; без персонажа — нічого', () => {
     const s = create((CHOICES[0] as { intent: Move }).intent);
     const o = storyOffer(s, DEFS, { ...MAP_VIEW, near: 'step.PROLOGUE-HOME-001' }).offer;
-    expect(o.hint).toEqual({ backpack: 0, next: 'next.prologue-home-001', nextSpot: 'step.PROLOGUE-HOME-001', near: { label: 'near.step.prologue-home-001', itemKey: null } });
-    expect(storyOffer(newSim(1, 5_000), DEFS, MAP_VIEW).offer.hint).toEqual({ backpack: 0, next: null, nextSpot: null, near: null });
+    expect(o.hint).toEqual({ backpack: 0, blocked: null, next: 'next.prologue-home-001', nextSpot: 'step.PROLOGUE-HOME-001', near: { label: 'near.step.prologue-home-001', itemKey: null } });
+    expect(storyOffer(newSim(1, 5_000), DEFS, MAP_VIEW).offer.hint).toEqual({ backpack: 0, blocked: null, next: null, nextSpot: null, near: null });
   });
 });
 
@@ -270,6 +270,15 @@ describe('рюкзак і потреби (GAME-175: дрібне — в рюкз
     expect(needsLeft(s, DEFS, [small])).not.toContain(small);
     expect(nextTarget(s, DEFS, [small])).toEqual({ key: 'next.unload', spot: 'obj.vehicle' });
     expect(needsLeft(newSim(1, 5_000), DEFS)).toEqual([]);
+  });
+  it('GAME-178: авто не рушає, поки бракує речей чи рюкзак не порожній; усе в багажнику — можна', () => {
+    const s = send(send(packingState(), { type: 'UnpackItem', itemId: 'item.simple-dinner' }), { type: 'UnpackItem', itemId: 'item.tent' });
+    const b = departBlock(s, DEFS, []);
+    expect(b?.kind).toBe('missing');
+    expect(b?.kind === 'missing' ? b.items : []).toEqual(expect.arrayContaining(['item.simple-dinner', 'item.tent']));
+    expect(departBlock(s, DEFS, ['item.lantern'])).toEqual({ kind: 'carry' });
+    expect(departBlock(packingState(), DEFS, [])).toBeNull();   // старт: усе потрібне вже в багажнику
+    expect(departBlock(newSim(1, 5_000), DEFS, [])).toBeNull();   // поза пакуванням гейта немає
   });
   it('НЕГАТИВНИЙ КОНТРОЛЬ: поза пакуванням (до крамниці) потреб немає, а рюкзак підказку не міняє', () => {
     const s = create((CHOICES[0] as { intent: Move }).intent);

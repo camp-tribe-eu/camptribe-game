@@ -28,7 +28,7 @@ import { liveSpot, spotMove, storyMoves } from './content/director';
 import { portraitFor } from './view/portraits';
 import { headCrop, sheetOf } from './view/world/portrait-art';
 import { miaSpots, requestMarker, requestTarget, requestsDone } from './content/requests';
-import { MAP_SPOTS, isBulky, isMapFirstSpot, mapKeyFor, moveKey, needsLeft, nextTarget, npcLive, resolveSpot, spotLook, unpackMoves } from './content/map-first';
+import { MAP_SPOTS, departBlock, isBulky, isMapFirstSpot, mapKeyFor, moveKey, needsLeft, nextTarget, npcLive, resolveSpot, spotLook, unpackMoves } from './content/map-first';
 import { packFlag } from './core/packing';
 import type { GameState } from './core/state';
 import { progressOf, titleOf } from './core/progress';
@@ -75,7 +75,9 @@ let nearSpot: string | null = null;
 const backpack: string[] = [];
 // GAME-183: об'єкт, що питає «що саме?» (авто — куди їхати, сушарка, приймальня, крок з вибором) — його варіанти показує рамка вибору. Стан ПОКАЗУ.
 let choiceSpot: string | null = null;
-const viewOf = (): StoryView => ({ mapFirst: !switches.panelActs, trunk: trunkOpen, near: nearSpot, backpack, choice: choiceSpot });
+// GAME-178: спроба рушити, коли авто не готове (бракує речей / рюкзак повний): HUD пояснює причину, поки гравець не відійде від об'єкта. Стан ПОКАЗУ (без таймера).
+let departNote = false;
+const viewOf = (): StoryView => ({ mapFirst: !switches.panelActs, trunk: trunkOpen, near: nearSpot, backpack, choice: choiceSpot, departNote });
 /** Об'єкти табору (GAME-183) живуть лише в мапі-першій грі: збірка e2e без ?mapFirst=1 (старі e2e) бачить табір, як до них — кнопки ☰, а не об'єкти. */
 const campOnly = (name: string): boolean => switches.panelActs === true && (MAP_SPOTS.camp as readonly string[]).includes(name);
 // GAME-170 зріз 2 · режисер: перед кожним оновленням екрана — ходи СЮЖЕТУ (StartWave на етапі хвилі). Ядро — сторож законності;
@@ -147,6 +149,12 @@ const actOnMap = (name: string): void => {
   if (switches.breakSpot.includes(name)) return;
   // GAME-175: об'єкти дня 1 удома (крок, річ, полиця, авто, багажник) — ті самі команди ядра, що були кнопками панелі (src/content/map-first.ts).
   if (isMapFirstSpot(name)) {
+    // GAME-178: E/тап на авто не їде, поки рюкзак не порожній і потрібне не в багажнику (те саме, що кільце); локація лишається, HUD каже чому.
+    if (name === 'obj.vehicle' && !switches.panelActs && departBlock(bridge.state, GAME_DEFS, backpack)) {
+      departNote = true;
+      storyChanged();
+      return;
+    }
     const r = resolveSpot(bridge.state, GAME_DEFS, name);
     if (!r) return;
     // GAME-183: вибір із кількох дій (куди їхати, що сушити, як завершити крок) — рамка вибору, команда піде з її кнопки.
@@ -386,7 +394,7 @@ render(h(Shell, {
 let lastMinute = bridge.state.clock.minutes;
 game.events.on(Phaser.Core.Events.POST_STEP, () => {
   setActionTarget(pad, probe.nearKind);   // GAME-95: кнопка дії знає, що поруч (talk/fire/object) чи нічого (idle)
-  if (probe.nearObject !== nearSpot) { nearSpot = probe.nearObject; storyChanged(); }   // GAME-175: підпис дії біля об'єкта в HUD
+  if (probe.nearObject !== nearSpot) { nearSpot = probe.nearObject; departNote = false; storyChanged(); }   // GAME-175: підпис дії біля об'єкта в HUD
   const m = bridge.state.clock.minutes;
   if (m === lastMinute) return;
   lastMinute = m;
