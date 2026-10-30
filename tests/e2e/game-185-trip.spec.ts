@@ -39,6 +39,13 @@ async function arriveOnRoad(page: Page, extra = ''): Promise<string[]> {
 }
 
 const menuSeen = menuOf;
+/** Відійти від авто справжнім маршрутом (до прилавка) — за межу зони дії (1,5 тайла), щоб авто «перезарядилось»; пряма лінія вбік упиралась у перешкоду (CI #112). */
+const away = async (page: Page): Promise<void> => {
+  const at = await probe(page);
+  await walk(page, route('road', [at.playerX, at.playerY], 'obj.sell'));
+  const p = await probe(page);
+  expect(Math.hypot(p.playerX - at.playerX, p.playerY - at.playerY), 'відійшли від авто далі за зону дії').toBeGreaterThan(64);
+};
 const toCar = async (page: Page): Promise<void> => {
   for (let t = 0; t < 3; t++) { const q = await probe(page); await walk(page, route('road', [q.playerX, q.playerY], 'obj.vehicle')); if (await talk(page).count()) break; await page.waitForTimeout(1500); if (await talk(page).count()) break; }
 };
@@ -58,8 +65,7 @@ test('авто на дорозі: рамка питає (одна відпові
   expect(c.game.player?.locationId, 'Escape: лишились на дорозі').toBe(ROAD);
   expect(c.game.quests['ST-004']?.status, 'ST-004 не завершено без відповіді').toBe('active');
   // «Не зараз» на дорозі: відійти від авто й підійти знову — рамка повертається, ✕ не їде.
-  const q = await probe(page);
-  await walk(page, [[q.playerX + 120, q.playerY]]);
+  await away(page);
   await toCar(page);
   await expect(talk(page)).toBeVisible({ timeout: 10_000 });
   await page.waitForTimeout(450);   // «глухота» рамки ~350 мс після появи (DialogueBox ACT_COOLDOWN_MS)
@@ -67,7 +73,7 @@ test('авто на дорозі: рамка питає (одна відпові
   await expect(talk(page)).toHaveCount(0);
   expect((await core(page)).game.player?.locationId, '«Не зараз»: лишились на дорозі').toBe(ROAD);
   // Згода: ланцюг цілий — ST-004 завершено, приїхали в табір.
-  await walk(page, [[q.playerX + 120, q.playerY]]);
+  await away(page);
   await toCar(page);
   await expect(talk(page)).toBeVisible({ timeout: 10_000 });
   await page.waitForTimeout(450);   // «глухота» рамки ~350 мс після появи (DialogueBox ACT_COOLDOWN_MS)
