@@ -331,7 +331,7 @@ export function Shell({ port, langOverride, credits, build, holdToast = false, h
               </div>
             )}
             {nextShown && (
-              <div class="ui-next" data-ui="next-hint" data-kind={offer.hint.near ? 'near' : 'next'} data-spot={offer.hint.near ? undefined : offer.hint.nextSpot ?? undefined}>
+              <div class="ui-next" data-ui="next-hint" role="status" data-kind={offer.hint.near ? 'near' : 'next'} data-spot={offer.hint.near ? undefined : offer.hint.nextSpot ?? undefined}>
                 {offer.hint.near
                   ? `● ${t(offer.hint.near.label)}${offer.hint.near.itemKey ? ` ${ct(lang, offer.hint.near.itemKey)}` : ''}`
                   : `${nextText && offer.hint.next ? `${t('ui.next')} ${t(offer.hint.next as Key)}` : ''}`}
