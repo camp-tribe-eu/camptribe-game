@@ -37,6 +37,9 @@ const ALLOW: Readonly<Record<string, Readonly<Record<string, { count: number; wh
   'src/ui/DialogueBox.tsx': {
     requestAnimationFrame: { count: 1, why: 'GAME-179: друк тексту рамки розмови літера за літерою (≈ 62 літери/с) — лише краса: увесь рядок уже в DOM, тап/E/Space/Enter дописують миттєво, prefers-reduced-motion друку не має; жодна дія не зникає й не спрацьовує сама, поки гравець думає' },
   },
+  'src/view/intro-room.ts': {
+    requestAnimationFrame: { count: 2, why: 'GAME-191: дощ за вікном кімнати вступу — лише картинка (краплі від мітки кадру); жодна дія не залежить від нього й не зникає: кроки вступу йдуть тільки за дотиком, prefers-reduced-motion малює один статичний кадр' },
+  },
   'src/view/frame-lag.ts': {
     performance: { count: 3, why: 'GAME-97/GAME-38: штучна затримка кадру й старту лише в збірці e2e (?frameLagMs, ?bootDelayMs) і вимір часу першого кадру (probe.firstFrameMs) — міряють затримку, гра нічого за ними не вирішує' },
   },
@@ -178,6 +181,6 @@ describe('жодного таймера реального часу на дія�
   });
 
   it(`файлів у скануванні: ${files.length}; знахідок у коді: ${hits.length} (усі — в переліку)`, () => {
-    expect(hits.map((h) => `${h.file}|${h.name}`)).toEqual(['src/ui/DialogueBox.tsx|requestAnimationFrame', 'src/ui/Shell.tsx|setTimeout', 'src/ui/Shell.tsx|requestAnimationFrame', 'src/view/frame-lag.ts|performance', 'src/view/frame-lag.ts|performance', 'src/view/frame-lag.ts|performance']);
+    expect(hits.map((h) => `${h.file}|${h.name}`)).toEqual(['src/ui/DialogueBox.tsx|requestAnimationFrame', 'src/ui/Shell.tsx|setTimeout', 'src/ui/Shell.tsx|requestAnimationFrame', 'src/view/frame-lag.ts|performance', 'src/view/frame-lag.ts|performance', 'src/view/frame-lag.ts|performance', 'src/view/intro-room.ts|requestAnimationFrame', 'src/view/intro-room.ts|requestAnimationFrame']);
   });
 });

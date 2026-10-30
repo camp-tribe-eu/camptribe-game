@@ -26,6 +26,7 @@ import { addFrameLag, bootDelay, onFirstFrame } from './view/frame-lag';
 import type { StoryOffer } from './ui/story-types';
 import { uiSounds } from './audio/ui-sounds';
 import { liveSpot, spotMove, storyMoves } from './content/director';
+import { paintRoom } from './view/intro-room';
 import { portraitFor } from './view/portraits';
 import { headCrop, sheetOf } from './view/world/portrait-art';
 import { miaSpots, requestMarker, requestTarget, requestsDone } from './content/requests';
@@ -356,6 +357,7 @@ render(h(Shell, {
       talkListeners.add(listener);
       return () => { talkListeners.delete(listener); };
     },
+    introRoom: paintRoom,
     portrait(npcId: string | null, sprite = false) {
       if (switches.hideUi.includes('portrait')) return null;   // ?hideUi=portrait — лише збірка e2e: негативний контроль (game-179.spec)
       const p = portraitFor(npcId, sprite ? {} : undefined);

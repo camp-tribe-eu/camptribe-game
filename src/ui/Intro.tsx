@@ -9,6 +9,7 @@ import type { AnyLang, Key } from '../i18n';
 import { AtlasPage } from './Atlas';
 import { iconRects } from './atlas-icons';
 import { Portrait, type PortraitLookup } from './Portrait';
+import type { IntroRoomPainter } from './port';
 import type { StoryOffer } from './story-types';
 
 type Step =
@@ -41,7 +42,29 @@ function Book() {
   );
 }
 
-export function Intro({ offer, lang, t, act, portrait, onDone }: { offer: StoryOffer; lang: AnyLang; t: (k: Key) => string; act: (id: string) => void; portrait: PortraitLookup; onDone: () => void }) {
+/** Тло вступу: кімната з вікном і дощем (intro-room.ts). Розмір береться з вікна й перемальовується при зміні орієнтації. */
+function Room({ paint }: { paint: IntroRoomPainter | undefined }) {
+  const ref = useRef<HTMLCanvasElement>(null);
+  const [size, setSize] = useState(() => `${window.innerWidth}x${window.innerHeight}`);
+  useEffect(() => {
+    const on = (): void => setSize(`${window.innerWidth}x${window.innerHeight}`);
+    window.addEventListener('resize', on);
+    return () => window.removeEventListener('resize', on);
+  }, []);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el || !paint) return undefined;
+    let dead = false;
+    let stop: () => void = () => undefined;
+    const [w, h] = size.split('x').map(Number) as [number, number];
+    const reduced = typeof window.matchMedia === 'function' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    paint(el, w, h, reduced, () => dead).then((s) => { if (dead) s(); else stop = s; }, () => undefined);
+    return () => { dead = true; stop(); };
+  }, [size]);
+  return <canvas ref={ref} class="ui-intro-room" data-ui="intro-room" aria-hidden="true" />;
+}
+
+export function Intro({ offer, lang, t, act, portrait, room, onDone }: { room?: IntroRoomPainter | undefined; offer: StoryOffer; lang: AnyLang; t: (k: Key) => string; act: (id: string) => void; portrait: PortraitLookup; onDone: () => void }) {
   const [i, setI] = useState(0);
   const root = useRef<HTMLDivElement>(null);
   const steps: readonly Step[] = [...PRE, ...POST, ...(offer.mia !== null ? [MIA] : []), { kind: 'final' }];
@@ -78,7 +101,7 @@ export function Intro({ offer, lang, t, act, portrait, onDone }: { offer: StoryO
   const name = who ? ct(lang, who) : t('ui.narrator');
   return (
     <div ref={root} class="ui-intro" data-ui="intro" data-step={i} data-kind={step.kind} role="dialog" aria-modal="true" aria-label={t('ui.story')}>
-      <div class="ui-intro-rain" aria-hidden="true" />
+      <Room paint={room} />
       {step.kind !== 'pick' && <button type="button" class="ui-btn ui-intro-skip" data-ui="intro-skip" onClick={skip}>{t('intro.skip')}</button>}
       {step.kind === 'letter' && (
         <div class="ui-intro-stage">
