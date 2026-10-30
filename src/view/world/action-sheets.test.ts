@@ -38,7 +38,7 @@ describe('листи дій героя й родини', () => {
       expect(act.length, `${action}: кількість шарів`).toBe(PLAYER_LOOK.length);
       PLAYER_LOOK.forEach((walk, i) => {
         const want = `characters/${layerOf(walk.url)}/${ACTION_FILE[action]}.png`;
-        expect(act[i]?.url.includes(want) || act[i]?.url.endsWith(`${ACTION_FILE[action]}.png`) && act[i]?.url.includes(layerOf(walk.url)), `${action}: шар ${i} не збігається з ${want}`).toBe(true);
+        expect(act[i]?.url.includes(want), `${action}: шар ${i} не збігається з ${want}`).toBe(true);
         expect(act[i]?.tint ?? null, `${action}: tint шару ${i}`).toEqual(walk.tint ?? null);
       });
     }

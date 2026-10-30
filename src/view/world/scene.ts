@@ -858,8 +858,9 @@ export class WorldScene extends Phaser.Scene {
     const moving = Math.hypot(this.player.x - this.last.x, this.player.y - this.last.y) > 0.25;
     if (moving) this.heading = { x: this.player.x - this.last.x, y: this.player.y - this.last.y };
     this.last = { x: this.player.x, y: this.player.y };
-    this.player.setVelocity(v.x * SPEED, v.y * SPEED);
-    if (v.x !== 0 || v.y !== 0) {
+    // GAME-191: під час дії (замах, удар, руки) герой стоїть і дивиться туди, куди почав, — без «замаху на бігу» (рецензія #118).
+    this.player.setVelocity(this.acting ? 0 : v.x * SPEED, this.acting ? 0 : v.y * SPEED);
+    if (!this.acting && (v.x !== 0 || v.y !== 0)) {
       const horizontal = v.x !== 0 && (v.y === 0 || this.facing === 'left' || this.facing === 'right');
       this.facing = horizontal ? (v.x < 0 ? 'left' : 'right') : (v.y < 0 ? 'up' : 'down');
     }
