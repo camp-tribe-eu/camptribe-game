@@ -42,7 +42,14 @@ const menuSeen = menuOf;
 /** Відійти від авто справжнім маршрутом (до прилавка) — за межу зони дії (1,5 тайла), щоб авто «перезарядилось»; пряма лінія вбік упиралась у перешкоду (CI #112). */
 const away = async (page: Page): Promise<void> => {
   const at = await probe(page);
-  await walk(page, route('road', [at.playerX, at.playerY], 'obj.sell'));
+  // Після «Не зараз» сцена знімає паузу не в той самий кадр: на повільному раннері перший захід міг піти в ще застиглу сцену (CI #120: 0 px). Тоді — ще раз із поточної точки.
+  for (let t = 0; t < 3; t++) {
+    const q = await probe(page);
+    await walk(page, route('road', [q.playerX, q.playerY], 'obj.sell'));
+    const r = await probe(page);
+    if (Math.hypot(r.playerX - at.playerX, r.playerY - at.playerY) > 64) break;
+    await page.waitForTimeout(500);
+  }
   const p = await probe(page);
   expect(Math.hypot(p.playerX - at.playerX, p.playerY - at.playerY), 'відійшли від авто далі за зону дії').toBeGreaterThan(64);
 };
