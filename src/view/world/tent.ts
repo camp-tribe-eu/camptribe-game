@@ -84,8 +84,9 @@ export class TentRig {
     if (!this.active || !this.g) { this.wobbleLeft = 0; return; }
     if (this.s.phase === 'place') {
       const o = OFF[facing];
-      // Привид — перед героєм; не вміщається там — пробуємо під ним і на півкроку (щоб не вимагати від гравця піксельної точності).
-      const tries: Pt[] = [{ x: this.player.x + o.x, y: this.player.y + o.y }, { x: this.player.x + o.x / 2, y: this.player.y + o.y / 2 }, { x: this.player.x, y: this.player.y }].map((q) => ({ x: Math.round(q.x), y: Math.round(q.y) }));
+      // Привид — перед героєм; не вміщається там — пробуємо під ним, на півкроку, а тоді на самій позначці й півнамету вище (у табору стіна
+      // одразу під позначкою: стоячи на ній лицем униз привид був червоний — рецензія #117). Без вимоги піксельної точності.
+      const tries: Pt[] = [{ x: this.player.x + o.x, y: this.player.y + o.y }, { x: this.player.x + o.x / 2, y: this.player.y + o.y / 2 }, { x: this.player.x, y: this.player.y }, this.spot, { x: this.spot.x, y: this.spot.y - FOOT.h / 2 }].map((q) => ({ x: Math.round(q.x), y: Math.round(q.y) }));
       const good = tries.find((q) => placeOk(q, this.spot, this.solidAt, this.others));
       this.at = good ?? (tries[0] as Pt);
       this.ok = good !== undefined;
