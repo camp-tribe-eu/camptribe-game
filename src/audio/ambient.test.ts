@@ -67,6 +67,12 @@ describe('createAmbient — перехід і розблокування', () =>
     const mute = harness({ ...DEFAULT_AUDIO, muted: true }); mute.a.unlock(); mute.a.setAmbient({ camp: 1 }); mute.a.tick(FADE_MS);
     expect(mute.started).toEqual([]);
   });
+  it('mute посеред гри: наступний tick (навіть з паузи — main.ts STEP) глушить петлю, що вже грає (рецензія #124)', () => {
+    const h = harness(); h.a.unlock(); h.a.setAmbient({ camp: 1 }); h.a.tick(FADE_MS);
+    expect(h.started[0]?.vol).toBeGreaterThan(0);
+    h.mx.apply({ ...DEFAULT_AUDIO, muted: true }); h.a.tick(16);
+    expect(h.started[0]?.vol).toBe(0);
+  });
   it('setAmbient(null) гасить усе', () => {
     const { started, a } = harness(); a.unlock(); a.setAmbient({ camp: 1 }); a.tick(FADE_MS); a.setAmbient(null); a.tick(FADE_MS);
     expect(a.levels()).toEqual({}); expect(started[0]?.stopped).toBe(true);

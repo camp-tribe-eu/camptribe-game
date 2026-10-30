@@ -28,7 +28,7 @@ import { testSwitches } from './view/test-switches';
 import { addFrameLag, bootDelay, onFirstFrame } from './view/frame-lag';
 import type { StoryOffer } from './ui/story-types';
 import { uiSounds } from './audio/ui-sounds';
-import { ambient } from './audio';
+import { ambient, ambientMix, isIntroOpen } from './audio';
 import { sfxPlayer } from './audio/sfx';
 import { fireplaceDue, liveSpot, spotMove, storyMoves } from './content/director';
 import { portraitFor } from './view/portraits';
@@ -399,6 +399,13 @@ render(h(Shell, {
 // HUD живий (GAME-83): ігрова хвилина змінилась — повідомляємо UI, він перечитає знімок. Без таймера реального часу
 // (сторож no-realtime): це крок самої гри, а не відлік; поки меню чи екран відкриті, годинник стоїть — подій немає.
 let lastMinute = bridge.state.clock.minutes;
+// GAME-194 (рецензія #124): поки сцена світу на паузі (меню, розмова, підсумок, вступ «Нової гри»), її update не йде — фон тікає звідси:
+// «Вимкнути звук» у паузі доходить до петель одразу, а вступ після «Нової гри» вмикає дощ. Коли сцена йде — тікає вона сама (без подвійного кроку).
+game.events.on(Phaser.Core.Events.STEP, (_t: number, delta: number) => {
+  if (!game.scene.isPaused('world')) return;
+  if (isIntroOpen()) ambient.setAmbient(ambientMix({ map: null, intro: true, nearLake: false, fireLit: false, nearFire: false, transport: null }));
+  ambient.tick(delta);
+});
 game.events.on(Phaser.Core.Events.POST_STEP, () => {
   setActionTarget(pad, probe.nearKind);   // GAME-95: кнопка дії знає, що поруч (talk/fire/object) чи нічого (idle)
   if (probe.nearObject !== nearSpot) { nearSpot = probe.nearObject; departNote = false; storyChanged(); }   // GAME-175: підпис дії біля об'єкта в HUD
