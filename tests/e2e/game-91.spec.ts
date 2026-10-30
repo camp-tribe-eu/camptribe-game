@@ -205,7 +205,9 @@ test.describe('джойстик', () => {
 
   test('дрібний зсув у мертвій зоні не рухає персонажа', async ({ browser }) => {
     const page = await newPage(browser, { width: 390, height: 844 }, 100);
-    const a = await probe(page);
+    // Спершу сцена має поставити героя: першим тестом шарда (fullyParallel, #119) проба встигала до розстановки — «рух» 384 px без жодного дотику.
+    let a = await probe(page);
+    await expect.poll(async () => { const p = await probe(page); const still = Math.abs(p.playerX - a.playerX) + Math.abs(p.playerY - a.playerY) < 0.5; a = p; return still; }, { timeout: 10_000, intervals: [250] }).toBe(true);
     await drag(page, 6, 6, 400);
     const b = await probe(page);
     expect(Math.abs(b.playerX - a.playerX) + Math.abs(b.playerY - a.playerY)).toBeLessThan(0.5);

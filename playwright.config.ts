@@ -27,7 +27,8 @@ export default defineConfig({
   // проєкт ПІСЛЯ всіх інших (dependencies), а всередині — послідовно (game-97.spec: mode serial). Лише ці тести, без решти:
   // `npx playwright test game-97 --no-deps` (інакше залежність проганяє весь проєкт e2e перед ними).
   projects: [
-    { name: 'e2e', testIgnore: /game-(97|38)\.spec\.ts/ },
+    // fullyParallel: шарди ділять ТЕСТИ, а не файли — інакше довгі ходильні game-181…184 збивались в один шард і впиралися в 40 хв (#119).
+    { name: 'e2e', testIgnore: /game-(97|38)\.spec\.ts/, fullyParallel: true },
     // GAME-38: бюджет fps (медіана з fpsSamples вікон, budgets.json) — теж у game-97.spec.ts, щоб іти послідовно з рештою fps-тестів.
     { name: 'perf', testMatch: /game-97\.spec\.ts/, dependencies: ['e2e'] },
     // GAME-38: перший кадр — теж абсолютний вимір; окремий проєкт ПІСЛЯ perf, щоб два файли perf не йшли паралельно різними воркерами.
