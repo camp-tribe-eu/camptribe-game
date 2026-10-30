@@ -12,7 +12,7 @@ const WIN = { sx: 0, sy: 26, w: 64, h: 44 } as const;   // вікно в home_wi
 const LAMP = { sx: 355, sy: 2, w: 24, h: 49 } as const;   // торшер у home_furniture.png (теплий абажур)
 const SHELF = { sx: 5, sy: 28, w: 54, h: 64 } as const; // книжкова полиця в home_shelf.png
 const SKY: readonly [number, number, number] = [30, 42, 70];
-const DROPS = 26;
+const DROPS = 72;   // 26 читались як «кілька крапель» (знімки PR #121) — щільніше, щоб це був дощ
 
 export interface Layout { readonly scale: number; readonly w: number; readonly h: number }
 
@@ -102,10 +102,10 @@ export async function paintRoom(target: HTMLCanvasElement, cssW: number, cssH: n
 
   // Метью біля полиці з атласом у руках (кадр «вниз», стоїть); атлас — той самий піксельний значок 8×8, що й в Атласі.
   const mx = shelfX - 34;
-  const my = floorY - 52 + 14;
+  const my = floorY - 52 + 14 + (h > 300 ? 34 : 0);   // висока кімната (портрет): Метью ближче, на підлозі, а не під стіною — менше порожнечі
   const drawMatthew = (): void => {
     c.drawImage(sheet, 0, 2 * FRAME, FRAME, FRAME, mx, my, FRAME, FRAME);
-    for (const r of iconRects('atlas')) { c.fillStyle = r.fill; c.fillRect(mx + 28 + r.x, my + 34 + r.y, 1, 1); }
+    for (const r of iconRects('atlas')) { c.fillStyle = r.fill; c.fillRect(mx + 34 + r.x * 2, my + 38 + r.y * 2, 2, 2); }   // ×2: 8×8 у руках губився
   };
   drawMatthew();
 
@@ -133,7 +133,7 @@ export async function paintRoom(target: HTMLCanvasElement, cssW: number, cssH: n
     rc.clearRect(0, 0, WIN.w, WIN.h);
     rc.fillStyle = 'rgba(170,200,235,0.85)';
     for (let i = 0; i < DROPS; i++) {
-      const len = 3 + Math.floor(hash(i, 3) * 3);
+      const len = 4 + Math.floor(hash(i, 3) * 4);
       const speed = 0.045 + hash(i, 2) * 0.03;   // px за мс
       const y = reduced ? hash(i, 4) * WIN.h : ((hash(i, 1) * (WIN.h + 8) + t * speed) % (WIN.h + 8)) - 4;
       const x = Math.floor(hash(i, 0) * WIN.w) - Math.floor(y * 0.12);
