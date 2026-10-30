@@ -973,6 +973,8 @@ export class WorldScene extends Phaser.Scene {
       const e = this.wood.act(this.wood.chopping ? null : woodBranch, woodBlock);
       if (e === 'hit' || e === 'done' || e === 'miss') this.playAction('slash', facingToward(this.player, bp));   // GAME-190: удар сокирою — справжній рух героя
       if (e === 'done') { this.wood.finish(); this.hooks.onObject('take.item.firewood'); }
+    } else if (pressed && this.fire.matching && nearFire) {
+      // Сірник — це утримання (fire.update вище): поки руки біля вогнища, дія не заводить розмову з сусідом поруч (Сара біля вогнища ставила гру на паузу посеред сірника, CI #120).
     } else if (pressed && act?.name === 'take.item.firewood') {
       // Дрова беруться лише руками (гілки → колода → удари): E біля купи без гілок нічого не бере; рига ще не стартувала (кадр до begin) — теж.
     } else if (pressed && act?.name === 'obj.campfire' && this.fire.phase !== 'idle' && this.fire.phase !== 'done') {
