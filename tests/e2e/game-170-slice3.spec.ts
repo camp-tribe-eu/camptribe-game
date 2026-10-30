@@ -5,6 +5,7 @@
 //  (b) вбік 844×390, дотик: W1 — один тап по кнопці, решта спізнюється на мапі (міряємо, скільки хвиля згасає); W2 — один тап; W3 — одна
 //      ціль джойстиком і кнопкою дії, решта спізнюється → намет вологий (wetGear); розділ не зламано (ST-005 завершується);
 //  (c) негативні контролі (закон 1): ?hideAct=task — кнопок справ немає; ?breakSpot=task.pick-spot — E біля ділянки нічого не шле.
+import { playTent } from './chapter-driver';
 import { readFileSync } from 'node:fs';
 import { expect, test, type Browser, type CDPSession, type Page } from '@playwright/test';
 
@@ -89,6 +90,8 @@ async function goAndPress(page: Page, name: string): Promise<void> {
   await page.keyboard.down('KeyE');
   await page.waitForTimeout(200);
   await page.keyboard.up('KeyE');
+  await page.waitForTimeout(300);
+  if (name === 'task.pitch-tent') await playTent(page, false);   // GAME-189: намет ставиться руками
   await page.waitForTimeout(300);
 }
 /** Розкладка картки мети — числами (той самий сторож, що в game-170.spec). */
