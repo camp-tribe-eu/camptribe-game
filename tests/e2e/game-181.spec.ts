@@ -80,7 +80,9 @@ async function walk(page: Page, pts: [number, number][]): Promise<void> {
 const signature = async (page: Page): Promise<string> => {
   const c = await core(page);
   const p = await probe(page);
-  return JSON.stringify([c.game.player?.locationId, c.game.flags, Object.entries(c.game.quests).map(([k, v]) => `${k}:${v.status}`), c.game.inventory, p.fx.backpack]);
+  // GAME-185: рамка підтвердження поїздки «Куди їдемо?» — теж «дія спрацювала» (ядро ще не змінилось, але авто вже спитало).
+  const frame = await page.locator('.ui-talk [data-ui="dialogue"]').count();
+  return JSON.stringify([frame, c.game.player?.locationId, c.game.flags, Object.entries(c.game.quests).map(([k, v]) => `${k}:${v.status}`), c.game.inventory, p.fx.backpack]);
 };
 
 /** Один «заход»: куди каже йти стрілка → дійти → дочекатись дії. Повертає назву цілі. */
@@ -99,6 +101,14 @@ async function goAndDo(page: Page): Promise<string> {
     if ((await signature(page)) !== before) break;
   }
   await expect.poll(() => signature(page), { timeout: 5_000, message: `біля ${target} дія не спрацювала від наближення` }).not.toBe(before);
+  // GAME-185: авто питає «Куди їдемо?» — гравець погоджується (єдина відповідь-напрямок); «Не зараз» не обираємо, інакше прохід не рухається.
+  const go = page.locator('.ui-talk [data-ui="dialogue"] [data-act="visit"]');
+  if (target === 'obj.vehicle' && await go.count()) {
+    const framed = await signature(page);
+    await page.waitForTimeout(450);   // «глухота» рамки ~350 мс після появи
+    await go.first().click();
+    await expect.poll(() => signature(page), { timeout: 5_000, message: 'відповідь «їдемо» не повезла авто' }).not.toBe(framed);
+  }
   await page.waitForTimeout(150);
   return target;
 }

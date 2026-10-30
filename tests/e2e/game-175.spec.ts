@@ -81,7 +81,9 @@ async function walk(page: Page, pts: [number, number][]): Promise<void> {
 const signature = async (page: Page): Promise<string> => {
   const c = await core(page);
   const p = await probe(page);
-  return JSON.stringify([c.game.player?.locationId, c.game.flags, Object.entries(c.game.quests).map(([k, v]) => `${k}:${v.status}`), c.game.inventory, p.fx.backpack]);
+  // GAME-185: рамка підтвердження поїздки «Куди їдемо?» — теж «дія спрацювала» (ядро ще не змінилось, але авто вже спитало).
+  const frame = await page.locator('.ui-talk [data-ui="dialogue"]').count();
+  return JSON.stringify([frame, c.game.player?.locationId, c.game.flags, Object.entries(c.game.quests).map(([k, v]) => `${k}:${v.status}`), c.game.inventory, p.fx.backpack]);
 };
 
 /** Один «заход» гравця: куди каже йти стрілка → дійти → дочекатись дії. Повертає назву цілі. */
@@ -115,6 +117,14 @@ async function goAndDo(page: Page, car: boolean, shot?: string): Promise<string>
     const q = await probe(page);
     throw new Error(`${(e as Error).message}; ціль ${target}, гравець (${Math.round(q.playerX)},${Math.round(q.playerY)}), кільце ${JSON.stringify(q.fx)}`, { cause: e });
   }
+  // GAME-185: авто питає «Куди їдемо?» — гравець погоджується (єдина відповідь-напрямок); «Не зараз» не обираємо, інакше прохід не рухається.
+  const go = page.locator('.ui-talk [data-ui="dialogue"] [data-act="visit"]');
+  if (target === 'obj.vehicle' && await go.count()) {
+    const framed = await signature(page);
+    await page.waitForTimeout(450);   // «глухота» рамки ~350 мс після появи
+    await go.first().click();
+    await expect.poll(() => signature(page), { timeout: 5_000, message: 'відповідь «їдемо» не повезла авто' }).not.toBe(framed);
+  }
   await page.waitForTimeout(150);
   return target;
 }
@@ -124,8 +134,10 @@ async function start(page: Page, pick: RegExp, query = ''): Promise<string[]> {
   page.on('pageerror', (e) => errors.push(e.message));
   // Лічильник кліків по діях панелі: окрім вибору героя їх бути не мусить.
   await page.addInitScript(() => {
-    (window as unknown as { __acts: string[] }).__acts = [];
-    document.addEventListener('click', (e) => { const el = (e.target as Element | null)?.closest('[data-act]'); if (el) (window as unknown as { __acts: string[] }).__acts.push(`${el.getAttribute('data-act')}:${el.getAttribute('data-key') ?? ''}`); }, true);
+    (window as unknown as { __acts: string[]; __frame: string[] }).__acts = [];
+    (window as unknown as { __frame: string[] }).__frame = [];
+    // GAME-185: відповіді в рамці підтвердження поїздки (.ui-talk) — не дії панелі ☰: рахуємо окремо.
+    document.addEventListener('click', (e) => { const el = (e.target as Element | null)?.closest('[data-act]'); if (el) (window as unknown as { __acts: string[]; __frame: string[] })[el.closest('.ui-talk') ? '__frame' : '__acts'].push(`${el.getAttribute('data-act')}:${el.getAttribute('data-key') ?? ''}`); }, true);
   });
   await page.goto(`/?seed=7&mapFirst=1${query}`);
   await page.waitForFunction(() => (window as unknown as { __game?: { probe: Probe } }).__game?.probe.saveLoaded === true, null, { timeout: 30_000 });
@@ -197,6 +209,9 @@ for (const v of VIEWS) {
       expect(c.game.quests['ST-004']?.status).toBe('active');
       const acts = await page.evaluate(() => (window as unknown as { __acts: string[] }).__acts);
       expect(acts.filter((a) => !a.startsWith('create:')), 'жодної дії панелі — лише ходьба').toEqual([]);
+      const frame = await page.evaluate(() => (window as unknown as { __frame: string[] }).__frame);
+      expect(frame.length, 'кожну поїздку авто підтверджено в рамці «Куди їдемо?»').toBeGreaterThanOrEqual(3);
+      expect(frame.every((a) => a.startsWith('visit:')), `у рамці лише напрямки: ${frame.join(', ')}`).toBe(true);
       const p = await probe(page);
       expect(p.fx.auto, 'дії від наближення').toBeGreaterThanOrEqual(6);
       expect(p.fx.pops, 'сплив «+1»/«OK» на кожну дію').toBeGreaterThanOrEqual(6);

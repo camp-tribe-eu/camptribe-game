@@ -94,7 +94,7 @@ export async function answerOne(page: Page): Promise<string> {
     // Рамка вибору дії: авто — за кінцем сюжету (табір ← дорога; дорога ← табір), решта — перший варіант (не «Не зараз»). Куди саме — за квестами в ядрі.
     const c = await core(page);
     const want = c.game.player?.locationId === 'loc.camp.lake' ? 'loc.road' : c.game.player?.locationId === 'loc.road' ? (c.game.quests['ST-005']?.status === 'active' ? 'loc.camp.lake' : 'loc.home') : '';
-    idx = acts.findIndex((a) => a.key === want);
+    idx = acts.findIndex((a) => a.act !== 'cancel' && a.key === want);   // GAME-185: «Не зараз» теж має порожній ключ — без цього на вимкненому «want» водій вибирав скасування
     if (idx < 0) idx = acts.findIndex((a) => a.act !== 'cancel');
   } else {
     for (const re of PREFER) { idx = acts.findIndex((a) => re.test(a.text)); if (idx >= 0) break; }
