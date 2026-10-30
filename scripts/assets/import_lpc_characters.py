@@ -49,6 +49,12 @@ LAYERS = [
     'feet/shoes/basic/male', 'feet/shoes/basic/thin',
 ]
 
+# GAME-191 (OD-022): action sheets for the layers the hero and the family wear (george, victoria, matthew — not Anna's pixie).
+# Same files, artists and variants as the walk layers: the generator's rows for slash/thrust/spellcast carry identical authors,
+# licences and source pages as the walk row of the layer, so the pin of the walk layer is the pin of its action sheets.
+ACTIONS = ['slash', 'thrust', 'spellcast']
+ACTION_LAYERS = [l for l in LAYERS if l != 'hair/pixie/adult']
+
 RANK = ['CC0', 'OGA-BY', 'CC-BY', 'CC-BY-SA', 'GPL']
 
 
@@ -82,8 +88,9 @@ def main(argv=None):
 
     pins = json.load(open(PINS, encoding='utf-8'))['pins'] if os.path.exists(PINS) else {}
     rows = []
-    for layer in LAYERS:
-        name = f'{layer}/walk.png'
+    jobs = [f'{l}/walk.png' for l in LAYERS] + [f'{l}/{a}.png' for l in ACTION_LAYERS for a in ACTIONS]
+    for name in jobs:
+        walk = name.rsplit('/', 1)[0] + '/walk.png'
         u = upstream.get(name)
         if not u:
             print(f'import: ERROR — no upstream CREDITS row for {name}', file=sys.stderr)
@@ -102,13 +109,19 @@ def main(argv=None):
         rows.append({
             'file': f'characters/{name}',
             'authors': '; '.join(x.strip() for x in u['authors'].split(',') if x.strip()),
-            'licence': pins[f'characters/{name}']['licence'] if f'characters/{name}' in pins else most_permissive(offered),
+            'licence': pins[f'characters/{walk}']['licence'] if f'characters/{walk}' in pins else most_permissive(offered),
             'licences_offered': ' | '.join(offered),
             'source_urls': ' '.join(urls),
             'origin': f'{RAW}/spritesheets/{name}',
             'notes': notes,
             'modified': 'no',  # bytes are copied unchanged
         })
+
+    for r in rows:  # an action sheet must offer exactly what its walk layer offers, or the walk pin does not cover it
+        base = next(x for x in rows if x['file'] == r['file'].rsplit('/', 1)[0] + '/walk.png')
+        if (r['authors'], r['licences_offered'], r['source_urls']) != (base['authors'], base['licences_offered'], base['source_urls']):
+            print(f"import: ERROR — {r['file']} differs from its walk layer in authors/licences/pages; pin it separately", file=sys.stderr)
+            return 1
 
     kept = []
     if os.path.exists(CREDITS):

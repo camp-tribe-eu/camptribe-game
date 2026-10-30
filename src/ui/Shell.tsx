@@ -20,6 +20,20 @@ const TOAST_MS = 5000;
 /** Скільки ігрових хвилин (≈ секунд живої гри) банер нового звання висить на мапі. */
 const TITLE_UP_MIN = 6;
 
+/**
+ * Титри групою: файли з тими самими авторами, ліцензією, джерелами й «змінено» — одним рядком (кожен файл названо).
+ * Лист ходьби й три листи дій шару LPC (GAME-191) інакше давали 92 рядки — axe у паузі не встигав за ліміт (CI #120).
+ */
+function creditGroups<F extends { file: string; authors: readonly string[]; licence: string; sources: readonly string[]; modified: string }>(list: readonly F[]): { f: F; files: string[] }[] {
+  const by = new Map<string, { f: F; files: string[] }>();
+  for (const f of list) {
+    const k = JSON.stringify([f.authors, f.licence, f.sources, f.modified]);
+    const g = by.get(k);
+    if (g) g.files.push(f.file); else by.set(k, { f, files: [f.file] });
+  }
+  return [...by.values()];
+}
+
 export function Shell({ port, langOverride, credits, build, holdToast = false, hideUi = [], intro: introOn = true }: { port: UiPort; langOverride?: AnyLang; credits: Credits; build: string; holdToast?: boolean; hideUi?: readonly string[]; intro?: boolean }) {
   const [paused, setPaused] = useState(false);
   // Підтвердження «Нової гри» (GAME-82): окремий діалог замість меню паузи; Escape — «Ні», а не закрити паузу.
@@ -400,9 +414,9 @@ export function Shell({ port, langOverride, credits, build, holdToast = false, h
             <summary class="ui-btn">{t('ui.credits')}</summary>
             <p>{t('ui.creditsIntro')}</p>
             <ul>
-              {credits.files.map((f) => (
-                <li data-credit={f.file} key={f.file}>
-                  <span class="ui-credit-file">{f.file}</span>
+              {creditGroups(credits.files).map(({ f, files }) => (
+                <li data-credit={files.join(' ')} key={files[0]}>
+                  <span class="ui-credit-file">{files.join(', ')}</span>
                   <span class="ui-credit-authors">{f.authors.join(', ')}</span>
                   <span class="ui-credit-links">
                     {/* Ліцензія без посилання — видно в e2e (кожна має бути посиланням), а не порожній href. */}

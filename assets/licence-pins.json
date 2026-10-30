@@ -52,6 +52,162 @@
     "characters/torso/clothes/shortsleeve/shortsleeve/teen/walk.png": {
       "licence": "CC-BY-SA 3.0",
       "evidence": "research/lpc-licences-evidence.md"
+    },
+    "characters/body/bodies/female/slash.png": {
+      "licence": "CC-BY-SA 3.0",
+      "evidence": "research/lpc-licences-evidence.md"
+    },
+    "characters/body/bodies/female/thrust.png": {
+      "licence": "CC-BY-SA 3.0",
+      "evidence": "research/lpc-licences-evidence.md"
+    },
+    "characters/body/bodies/female/spellcast.png": {
+      "licence": "CC-BY-SA 3.0",
+      "evidence": "research/lpc-licences-evidence.md"
+    },
+    "characters/body/bodies/male/slash.png": {
+      "licence": "CC-BY-SA 3.0",
+      "evidence": "research/lpc-licences-evidence.md"
+    },
+    "characters/body/bodies/male/thrust.png": {
+      "licence": "CC-BY-SA 3.0",
+      "evidence": "research/lpc-licences-evidence.md"
+    },
+    "characters/body/bodies/male/spellcast.png": {
+      "licence": "CC-BY-SA 3.0",
+      "evidence": "research/lpc-licences-evidence.md"
+    },
+    "characters/body/bodies/teen/slash.png": {
+      "licence": "CC-BY-SA 3.0",
+      "evidence": "research/lpc-licences-evidence.md"
+    },
+    "characters/body/bodies/teen/thrust.png": {
+      "licence": "CC-BY-SA 3.0",
+      "evidence": "research/lpc-licences-evidence.md"
+    },
+    "characters/body/bodies/teen/spellcast.png": {
+      "licence": "CC-BY-SA 3.0",
+      "evidence": "research/lpc-licences-evidence.md"
+    },
+    "characters/feet/shoes/basic/male/slash.png": {
+      "licence": "CC-BY-SA 3.0",
+      "evidence": "research/lpc-licences-evidence.md"
+    },
+    "characters/feet/shoes/basic/male/thrust.png": {
+      "licence": "CC-BY-SA 3.0",
+      "evidence": "research/lpc-licences-evidence.md"
+    },
+    "characters/feet/shoes/basic/male/spellcast.png": {
+      "licence": "CC-BY-SA 3.0",
+      "evidence": "research/lpc-licences-evidence.md"
+    },
+    "characters/feet/shoes/basic/thin/slash.png": {
+      "licence": "CC-BY-SA 3.0",
+      "evidence": "research/lpc-licences-evidence.md"
+    },
+    "characters/feet/shoes/basic/thin/thrust.png": {
+      "licence": "CC-BY-SA 3.0",
+      "evidence": "research/lpc-licences-evidence.md"
+    },
+    "characters/feet/shoes/basic/thin/spellcast.png": {
+      "licence": "CC-BY-SA 3.0",
+      "evidence": "research/lpc-licences-evidence.md"
+    },
+    "characters/hair/plain/adult/slash.png": {
+      "licence": "CC-BY-SA 3.0",
+      "evidence": "research/lpc-licences-evidence.md"
+    },
+    "characters/hair/plain/adult/thrust.png": {
+      "licence": "CC-BY-SA 3.0",
+      "evidence": "research/lpc-licences-evidence.md"
+    },
+    "characters/hair/plain/adult/spellcast.png": {
+      "licence": "CC-BY-SA 3.0",
+      "evidence": "research/lpc-licences-evidence.md"
+    },
+    "characters/head/heads/human/female/slash.png": {
+      "licence": "CC-BY-SA 3.0",
+      "evidence": "research/lpc-licences-evidence.md"
+    },
+    "characters/head/heads/human/female/thrust.png": {
+      "licence": "CC-BY-SA 3.0",
+      "evidence": "research/lpc-licences-evidence.md"
+    },
+    "characters/head/heads/human/female/spellcast.png": {
+      "licence": "CC-BY-SA 3.0",
+      "evidence": "research/lpc-licences-evidence.md"
+    },
+    "characters/head/heads/human/male/slash.png": {
+      "licence": "CC-BY-SA 3.0",
+      "evidence": "research/lpc-licences-evidence.md"
+    },
+    "characters/head/heads/human/male/thrust.png": {
+      "licence": "CC-BY-SA 3.0",
+      "evidence": "research/lpc-licences-evidence.md"
+    },
+    "characters/head/heads/human/male/spellcast.png": {
+      "licence": "CC-BY-SA 3.0",
+      "evidence": "research/lpc-licences-evidence.md"
+    },
+    "characters/legs/pants/male/slash.png": {
+      "licence": "CC-BY-SA 3.0",
+      "evidence": "research/lpc-licences-evidence.md"
+    },
+    "characters/legs/pants/male/thrust.png": {
+      "licence": "CC-BY-SA 3.0",
+      "evidence": "research/lpc-licences-evidence.md"
+    },
+    "characters/legs/pants/male/spellcast.png": {
+      "licence": "CC-BY-SA 3.0",
+      "evidence": "research/lpc-licences-evidence.md"
+    },
+    "characters/legs/pants/thin/slash.png": {
+      "licence": "CC-BY-SA 3.0",
+      "evidence": "research/lpc-licences-evidence.md"
+    },
+    "characters/legs/pants/thin/thrust.png": {
+      "licence": "CC-BY-SA 3.0",
+      "evidence": "research/lpc-licences-evidence.md"
+    },
+    "characters/legs/pants/thin/spellcast.png": {
+      "licence": "CC-BY-SA 3.0",
+      "evidence": "research/lpc-licences-evidence.md"
+    },
+    "characters/torso/clothes/longsleeve/longsleeve/female/slash.png": {
+      "licence": "CC-BY-SA 3.0",
+      "evidence": "research/lpc-licences-evidence.md"
+    },
+    "characters/torso/clothes/longsleeve/longsleeve/female/thrust.png": {
+      "licence": "CC-BY-SA 3.0",
+      "evidence": "research/lpc-licences-evidence.md"
+    },
+    "characters/torso/clothes/longsleeve/longsleeve/female/spellcast.png": {
+      "licence": "CC-BY-SA 3.0",
+      "evidence": "research/lpc-licences-evidence.md"
+    },
+    "characters/torso/clothes/longsleeve/longsleeve/male/slash.png": {
+      "licence": "CC-BY-SA 3.0",
+      "evidence": "research/lpc-licences-evidence.md"
+    },
+    "characters/torso/clothes/longsleeve/longsleeve/male/thrust.png": {
+      "licence": "CC-BY-SA 3.0",
+      "evidence": "research/lpc-licences-evidence.md"
+    },
+    "characters/torso/clothes/longsleeve/longsleeve/male/spellcast.png": {
+      "licence": "CC-BY-SA 3.0",
+      "evidence": "research/lpc-licences-evidence.md"
+    },
+    "characters/torso/clothes/shortsleeve/shortsleeve/teen/slash.png": {
+      "licence": "CC-BY-SA 3.0",
+      "evidence": "research/lpc-licences-evidence.md"
+    },
+    "characters/torso/clothes/shortsleeve/shortsleeve/teen/thrust.png": {
+      "licence": "CC-BY-SA 3.0",
+      "evidence": "research/lpc-licences-evidence.md"
+    },
+    "characters/torso/clothes/shortsleeve/shortsleeve/teen/spellcast.png": {
+      "licence": "CC-BY-SA 3.0",
+      "evidence": "research/lpc-licences-evidence.md"
     }
   }
 }

@@ -17,10 +17,13 @@ test.describe('титри', () => {
   test('кожен файл графіки — з авторами, ліцензією-посиланням і джерелами', async ({ page }) => {
     expect(credits.files.length).toBeGreaterThan(0);                       // порожній реєстр — не «усе гаразд»
     await openCredits(page);
-    const items = page.locator('[data-ui="credits"] li');
-    await expect(items).toHaveCount(credits.files.length);
+    // Рядок титрів — група файлів з однаковими авторами/ліцензією/джерелами (Shell.creditGroups); кожен файл — рівно в одному рядку.
+    const groups = new Set(credits.files.map((f) => JSON.stringify([f.authors, f.licence, f.sources, f.modified])));
+    await expect(page.locator('[data-ui="credits"] li')).toHaveCount(groups.size);
     for (const f of credits.files) {
-      const li = page.locator(`[data-ui="credits"] li[data-credit="${f.file}"]`);
+      const li = page.locator(`[data-ui="credits"] li[data-credit~="${f.file}"]`);
+      await expect(li).toHaveCount(1);
+      await expect(li.locator('.ui-credit-file')).toContainText(f.file);
       for (const a of f.authors) await expect(li).toContainText(a);
       await expect(li.locator(`a[data-licence="${f.licence}"]`)).toHaveAttribute('href', credits.licences[f.licence]?.url ?? 'MISSING');
       await expect(li.locator('a[href^="http"]:not([data-licence])')).toHaveCount(f.sources.length);

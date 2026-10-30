@@ -141,3 +141,60 @@ Stephen Challener (AKA Redshrike), Death's Darling. No attribution required to m
 | sprites/cat_mia.png | OGA-BY 3.0 | одна сторінка, п'ять ліцензій; найм'якша дозволена — OGA-BY 3.0. Файл змінено (обрізка, перефарбування в сіре, квантування) — за OGA-BY похідний твір переліцензовувати не заборонено, ліцензію лишено тією ж |
 
 Підсумок: 24 файли — 18 шарів генератора (`CC-BY-SA 3.0`×17, `OGA-BY 3.0`×1 `male_small`), вогнище, авто, намет, два атласи, кішка.
+
+## GAME-191 (OD-022): листи дій slash / thrust / spellcast
+
+Рядки генератора для `slash.png`, `thrust.png`, `spellcast.png` шару мають ті самі автори, ті самі запропоновані ліцензії й ті самі сторінки першоджерела, що й рядок `walk.png` цього шару (звірка — `scripts/assets/import_lpc_characters.py`, інакше імпорт падає). Отже сторінки OGA ті самі, що вище, і закріплення ліцензії те саме, що в ходьби того шару. Файли:
+
+- characters/body/bodies/female/slash.png
+- characters/body/bodies/female/spellcast.png
+- characters/body/bodies/female/thrust.png
+- characters/body/bodies/male/slash.png
+- characters/body/bodies/male/spellcast.png
+- characters/body/bodies/male/thrust.png
+- characters/body/bodies/teen/slash.png
+- characters/body/bodies/teen/spellcast.png
+- characters/body/bodies/teen/thrust.png
+- characters/feet/shoes/basic/male/slash.png
+- characters/feet/shoes/basic/male/spellcast.png
+- characters/feet/shoes/basic/male/thrust.png
+- characters/feet/shoes/basic/thin/slash.png
+- characters/feet/shoes/basic/thin/spellcast.png
+- characters/feet/shoes/basic/thin/thrust.png
+- characters/hair/messy1/adult/slash.png
+- characters/hair/messy1/adult/spellcast.png
+- characters/hair/messy1/adult/thrust.png
+- characters/hair/plain/adult/slash.png
+- characters/hair/plain/adult/spellcast.png
+- characters/hair/plain/adult/thrust.png
+- characters/hair/ponytail/adult/bg/slash.png
+- characters/hair/ponytail/adult/bg/spellcast.png
+- characters/hair/ponytail/adult/bg/thrust.png
+- characters/hair/ponytail/adult/fg/slash.png
+- characters/hair/ponytail/adult/fg/spellcast.png
+- characters/hair/ponytail/adult/fg/thrust.png
+- characters/head/heads/human/female/slash.png
+- characters/head/heads/human/female/spellcast.png
+- characters/head/heads/human/female/thrust.png
+- characters/head/heads/human/male/slash.png
+- characters/head/heads/human/male/spellcast.png
+- characters/head/heads/human/male/thrust.png
+- characters/head/heads/human/male_small/slash.png
+- characters/head/heads/human/male_small/spellcast.png
+- characters/head/heads/human/male_small/thrust.png
+- characters/legs/pants/male/slash.png
+- characters/legs/pants/male/spellcast.png
+- characters/legs/pants/male/thrust.png
+- characters/legs/pants/thin/slash.png
+- characters/legs/pants/thin/spellcast.png
+- characters/legs/pants/thin/thrust.png
+- characters/torso/clothes/longsleeve/longsleeve/female/slash.png
+- characters/torso/clothes/longsleeve/longsleeve/female/spellcast.png
+- characters/torso/clothes/longsleeve/longsleeve/female/thrust.png
+- characters/torso/clothes/longsleeve/longsleeve/male/slash.png
+- characters/torso/clothes/longsleeve/longsleeve/male/spellcast.png
+- characters/torso/clothes/longsleeve/longsleeve/male/thrust.png
+- characters/torso/clothes/shortsleeve/shortsleeve/teen/slash.png
+- characters/torso/clothes/shortsleeve/shortsleeve/teen/spellcast.png
+- characters/torso/clothes/shortsleeve/shortsleeve/teen/thrust.png
+
