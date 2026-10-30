@@ -151,17 +151,18 @@ export class TentRig {
     const hint = this.hint;
     if (!meter || !hint) return;
     meter.clear();
-    const top = this.at.y - FOOT.h / 2 - 14 - 4 * (placing ? PEGS : stage) - 16;
+    // Під ногами героя, а не над наметом: намет біля верхнього краю мапи, а там HUD — шкала й підказка ховались під рядками «Ціль/Далі» (знімок портрета GAME-189).
+    const cx = this.player.x; const top = this.player.y + 30;
     if (!placing) {
-      const w = 56; const x0 = this.at.x - w / 2;
-      meter.fillStyle(0x1b1f23, 1).fillRect(x0 - 2, top - 2, w + 4, 10);
-      meter.fillStyle(0x4a5058, 1).fillRect(x0, top, w, 6);
-      meter.fillStyle(0x6fe07a, 1).fillRect(x0 + w * BAND.from, top, w * (BAND.to - BAND.from), 6);
-      meter.fillStyle(0xf4f1e8, 1).fillRect(x0 + w * markerAt(this.s.t) - 1, top - 3, 3, 12);
+      const w = 72; const x0 = cx - w / 2;
+      meter.fillStyle(0x1b1f23, 1).fillRect(x0 - 2, top - 2, w + 4, 12);
+      meter.fillStyle(0x4a5058, 1).fillRect(x0, top, w, 8);
+      meter.fillStyle(0x6fe07a, 1).fillRect(x0 + w * BAND.from, top, w * (BAND.to - BAND.from), 8);
+      meter.fillStyle(0xf4f1e8, 1).fillRect(x0 + w * markerAt(this.s.t) - 1, top - 4, 3, 16);
     }
     const msg = placing ? this.text(this.ok ? 'tent.place' : 'tent.blocked') : `${this.text('tent.peg')} ${Math.min(this.s.pegs + 1, PEGS)}/${PEGS}`;
     if (hint.text !== msg) hint.setText(msg);
-    hint.setPosition(this.at.x, top - 6);
+    hint.setOrigin(0.5, 0).setPosition(cx, top + 14);
   }
 }
 
