@@ -249,7 +249,7 @@
   "next.camp.task": "make the deadline — go to the marker",
   "next.camp.elise": "talk to Elise",
   "next.camp.elise.done": "by Elise — finish the step",
-  "next.camp.firewood": "the clearing — the firewood pile",
+  "next.camp.firewood": "the clearing: gather branches and chop firewood",
   "next.camp.tent": "to your tent",
   "next.camp.lake": "the end of the pier — a morning by the lake",
   "next.camp.fire": "to the campfire — an evening together",
@@ -275,5 +275,12 @@
   "tent.blocked": "Not here — stand on open ground near the marker",
   "tent.peg": "Peg: hit the green!",
   "next.camp.pitch": "pitch the tent here — at the marker",
+  "wood.pick": "Pick up the branches: walk up and press E or ●",
+  "wood.bring": "Carry them to the chopping block and press E or ●",
+  "wood.chop": "Strike on green!",
+  "wood.need": "Gather all three branches first",
+  "fire.stack": "Stack the logs: E or ●",
+  "fire.match": "Hold E or ● and let go in the green",
+  "fire.fizzle": "It fizzled out, hold again",
   "next.camp.elise.spot": "ask Elise where to sleep"
 }

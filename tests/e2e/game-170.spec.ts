@@ -6,6 +6,7 @@
 // Розкладка — числами: картка в межах екрана, не перетинає ☰, ‖ і HUD; сторч — поле гри починається під карткою.
 import { readFileSync } from 'node:fs';
 import { expect, test, type Browser, type CDPSession, type Page } from '@playwright/test';
+import { playFire } from './chapter-driver';
 
 interface Core { game: { campaignEnded: boolean; quests: Record<string, { status: string }>; flags: string[]; wave?: { active: { tasks: Record<string, { dueAt: number; outcome: string }> } | null; past: Record<string, Record<string, string>> } }; clock: { minutes: number }; journal: { type: string; ref: string | null }[] }
 interface Probe { playerX: number; playerY: number; nearObject: string | null; commandsSent: number; cameraScrollX: number; cameraScrollY: number }
@@ -196,7 +197,8 @@ test.describe('(a) сторч 390×844, клавіатура: усе встиг�
     // Вечеря з Елізою, кінець етапу → вогнище на мапі відкриває сцену; дрова встигли → «Вогнище тихо потріскує».
     await dinnerAndCamp(page);
     await goAndPress(page, 'obj.campfire');
-    await expect(panel(page)).toBeVisible();
+    await playFire(page, false);   // GAME-190: вогнище розпалюють руками (поліна → сірник), тоді вже вечір біля вогню
+    await expect(panel(page)).toBeVisible({ timeout: 10_000 });
     await playFireplace(page, 'Вогнище тихо потріскує');
     expect(errors).toEqual([]);
   });
@@ -251,7 +253,8 @@ test.describe('(b) вбік 844×390, дотик: нічого не робимо
     await expect(page.locator('[data-touch="interact"]')).toHaveAttribute('data-target', 'fire');
     const b = await rectOf(page, '[data-touch="interact"]');
     await page.touchscreen.tap(b.left + b.width / 2, b.top + b.height / 2);
-    await expect(panel(page)).toBeVisible({ timeout: 5_000 });
+    await playFire(page, true);   // GAME-190: тап поклав перше полінце; далі поліна й сірник
+    await expect(panel(page)).toBeVisible({ timeout: 10_000 });
     await playFireplace(page, 'Сьогодні без вогнища');
     expect(errors).toEqual([]);
     await ctx.close();

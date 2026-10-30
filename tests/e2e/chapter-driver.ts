@@ -4,7 +4,9 @@ import { readFileSync } from 'node:fs';
 import { expect, type Page } from '@playwright/test';
 
 export interface Core { game: { player: { locationId: string; transportId?: string } | null; flags: string[]; quests: Record<string, { status: string }>; inventory: Record<string, number>; dialogue: unknown; wave?: unknown; campaignEnded: boolean }; clock: { minutes: number } }
-export interface Probe { playerX: number; playerY: number; nearObject: string | null; playerMoving: boolean; saveLoaded: boolean; tent: { phase: string; pegs: number; marker: number; inBand: boolean; placeOk: boolean }; fx: { target: string | null; guide: string; ring: number; backpack: number } }
+export interface Probe { playerX: number; playerY: number; nearObject: string | null; playerMoving: boolean; saveLoaded: boolean; tent: { phase: string; pegs: number; marker: number; inBand: boolean; placeOk: boolean };
+  wood: { phase: string; got: number; strikes: number; marker: number; inBand: boolean; branches: { x: number; y: number; got: boolean }[]; block: { x: number; y: number } };
+  fire: { phase: string; logs: number; charge: number; inBand: boolean; holding: boolean; fizzles: number; x: number; y: number }; fx: { target: string | null; guide: string; ring: number; backpack: number } }
 export const core = (page: Page): Promise<Core> => page.evaluate(() => (window as unknown as { __game: { read: () => Core } }).__game.read());
 export const probe = (page: Page): Promise<Probe> => page.evaluate(() => JSON.parse(JSON.stringify((window as unknown as { __game: { probe: Probe } }).__game.probe)) as Probe);
 export const loaded = (page: Page): Promise<unknown> => page.waitForFunction(() => (window as unknown as { __game?: { probe: { saveLoaded: boolean } } }).__game?.probe.saveLoaded === true, null, { timeout: 30_000 });
@@ -15,11 +17,15 @@ const maps: Record<string, Tmj> = {};
 const tmj = (key: string): Tmj => (maps[key] ??= JSON.parse(readFileSync(`public/maps/${key}.tmj`, 'utf8')) as Tmj);
 
 export function route(key: string, from: [number, number], spot: string, car = false): [number, number][] {
+  const o = (tmj(key).layers.find((l) => l.name === 'objects')?.objects ?? []).find((x) => x.name === spot);
+  if (!o) throw new Error(`на мапі ${key} немає ${spot}`);
+  return routeXY(key, from, o, car, spot);
+}
+/** Те саме до довільної точки мапи (гілки дров GAME-190 — не об'єкти .tmj, а точки сцени). */
+export function routeXY(key: string, from: [number, number], o: { x: number; y: number }, car = false, spot = `${o.x},${o.y}`): [number, number][] {
   const m = tmj(key);
   const walls = m.layers.find((l) => l.name === 'walls')?.data ?? [];
   const objs = m.layers.find((l) => l.name === 'objects')?.objects ?? [];
-  const o = objs.find((x) => x.name === spot);
-  if (!o) throw new Error(`на мапі ${key} немає ${spot}`);
   const veh = objs.find((x) => x.name === 'obj.vehicle');
   const blocked = (tx: number, ty: number): boolean => {
     if ((walls[ty * m.width + tx] ?? 1) > 0) return true;
@@ -131,6 +137,81 @@ export async function playTent(page: Page, touch: boolean, midShot?: () => Promi
   }
 }
 
+/**
+ * GAME-190 · дрова руками: стрілка веде до гілок по черзі, потім до колоди. Як людина: дійти до кожної непідібраної гілки (точки зі зонда), натиснути дію; до колоди, дія → 3 удари
+ * по шкалі (тиснемо, коли маркер ≈ посередині зеленого, як у наметі). `midShot` — знімок посередині рубання.
+ */
+export async function playWood(page: Page, touch: boolean, midShot?: () => Promise<void>): Promise<void> {
+  const press = async (): Promise<void> => {
+    if (touch) await page.locator('[data-touch="interact"]').tap();
+    else { await page.keyboard.down('KeyE'); await page.waitForTimeout(80); await page.keyboard.up('KeyE'); }
+  };
+  await expect.poll(async () => (await probe(page)).wood.phase, { timeout: 8_000, message: 'дрова руками: рига мусить стартувати (гілки лежать на мапі)' }).toBe('gather');
+  const near = async (pt: { x: number; y: number }): Promise<void> => {
+    for (let t = 0; t < 3; t++) {
+      const q = await probe(page);
+      if (Math.hypot(q.playerX - pt.x, q.playerY - pt.y) <= 40 && !q.playerMoving) return;
+      await walk(page, routeXY('camp-lake', [q.playerX, q.playerY], pt));
+      await page.waitForTimeout(250);
+    }
+  };
+  for (let i = 0; i < 3; i++) {
+    const w = (await probe(page)).wood;
+    const b = w.branches[i];
+    if (!b || b.got) continue;
+    await near(b);
+    await page.waitForTimeout(450);   // затвор дії сцени
+    await press();
+    await expect.poll(async () => (await probe(page)).wood.got, { timeout: 5_000, message: `гілку ${i + 1} не підняв` }).toBeGreaterThan(w.got);
+  }
+  const block = (await probe(page)).wood.block;
+  await near(block);
+  await page.waitForTimeout(450);
+  await press();
+  await expect.poll(async () => (await probe(page)).wood.phase, { timeout: 5_000, message: 'дія біля колоди з 3 гілками починає рубання' }).toBe('chop');
+  for (let k = 0; k < 3; k++) {
+    await page.waitForTimeout(450);
+    await page.waitForFunction((n) => { const t = (window as unknown as { __game: { probe: { wood: { phase: string; strikes: number; marker: number } } } }).__game.probe.wood; return t.phase !== 'chop' || (t.strikes === n && Math.abs(t.marker - 0.5) < 0.07); }, k, { timeout: 10_000, polling: 'raf' });
+    await press();
+    await expect.poll(async () => { const t = (await probe(page)).wood; return t.phase !== 'chop' || t.strikes > k; }, { timeout: 5_000, message: `удар ${k + 1} не влучив` }).toBe(true);
+    if (k === 1 && midShot) await midShot();
+  }
+}
+
+/**
+ * GAME-190 · вогнище руками: гравець уже натиснув дію біля obj.campfire (кострище чекає). 3 дії — 3 поліна; тоді ТРИМАТИ дію й відпустити, коли шкала ≈ посередині зеленого
+ * (зонд fire.charge). Згасло (рідко: затримка) — ще раз. `midShot` — знімок посеред утримання сірника.
+ */
+export async function playFire(page: Page, touch: boolean, midShot?: () => Promise<void>): Promise<void> {
+  const btn = page.locator('[data-touch="interact"]');
+  const press = async (): Promise<void> => {
+    if (touch) await btn.tap();
+    else { await page.keyboard.down('KeyE'); await page.waitForTimeout(80); await page.keyboard.up('KeyE'); }
+  };
+  const down = async (): Promise<void> => { if (touch) await btn.dispatchEvent('pointerdown', { pointerId: 7, pointerType: 'touch', isPrimary: true }); else await page.keyboard.down('KeyE'); };
+  const up = async (): Promise<void> => { if (touch) await btn.dispatchEvent('pointerup', { pointerId: 7, pointerType: 'touch', isPrimary: true }); else await page.keyboard.up('KeyE'); };
+  await expect.poll(async () => ['stack', 'match'].includes((await probe(page)).fire.phase), { timeout: 5_000, message: 'кострище мусить чекати на дрова (або вже зі складеними полінами)' }).toBe(true);
+  for (let k = 0; k < 3; k++) {
+    const logs = (await probe(page)).fire.logs;
+    if (logs > k) continue;   // перша дія (що відкрила розмову з вогнищем) могла вже покласти полінце
+    await page.waitForTimeout(450);
+    await press();
+    await expect.poll(async () => (await probe(page)).fire.logs, { timeout: 5_000, message: `полінце ${k + 1} не лягло` }).toBeGreaterThan(k);
+  }
+  await expect.poll(async () => (await probe(page)).fire.phase, { timeout: 5_000, message: 'три поліна відкривають сірник' }).toBe('match');
+  for (let attempt = 0; attempt < 3; attempt++) {
+    await page.waitForTimeout(450);
+    await down();
+    await expect.poll(async () => (await probe(page)).fire.holding, { timeout: 3_000, message: 'утримання мусить почати шкалу' }).toBe(true);
+    await page.waitForFunction(() => { const f = (window as unknown as { __game: { probe: { fire: { holding: boolean; charge: number } } } }).__game.probe.fire; return !f.holding || Math.abs(f.charge - 0.65) < 0.05; }, null, { timeout: 5_000, polling: 'raf' });
+    if (attempt === 0 && midShot) await midShot();
+    await up();
+    await page.waitForTimeout(150);
+    if (['lit', 'done'].includes((await probe(page)).fire.phase) || (await page.locator('.ui-talk').count()) > 0) return;
+  }
+  throw new Error('сірник не запалився за 3 спроби');
+}
+
 const AUTO = (name: string): boolean => name.startsWith('step.') || name.startsWith('take.') || name === 'obj.vehicle' || name.startsWith('req.') || name.startsWith('pack.');
 /** Один «заход»: куди каже стрілка → дійти → дія від наближення (кільце) або кнопка дії (E / тап по кнопці). Повертає назву цілі. */
 export async function goAndDo(page: Page, touch: boolean, car = false): Promise<string> {
@@ -140,6 +221,8 @@ export async function goAndDo(page: Page, touch: boolean, car = false): Promise<
   const loc = (await core(page)).game.player?.locationId ?? 'loc.home';
   const key = MAP_OF[loc];
   if (!key) throw new Error(`локація ${loc} без мапи`);
+  // GAME-190: дрова — руками (гілки → колода → удари); стрілка веде гілка за гілкою.
+  if (target.startsWith('wood.') || (target === 'take.item.firewood' && (await probe(page)).wood.phase !== 'idle')) { await playWood(page, touch); await page.waitForTimeout(150); return target; }
   const before = await signature(page);
   for (let t = 0; t < 3; t++) {
     const q = t === 0 ? p : await probe(page);
@@ -155,6 +238,7 @@ export async function goAndDo(page: Page, touch: boolean, car = false): Promise<
       else { await page.keyboard.down('KeyE'); await page.waitForTimeout(200); await page.keyboard.up('KeyE'); }
     }
     if (target === 'task.pitch-tent' && !AUTO(target)) await playTent(page, touch);
+    if (target === 'obj.campfire' && (await probe(page)).fire.phase === 'stack') await playFire(page, touch);   // GAME-190: вогнище руками
     try { await expect.poll(() => signature(page), { timeout: 5_000 }).not.toBe(before); break; } catch { /* ще раз із поточної точки */ }
   }
   const q = await probe(page);

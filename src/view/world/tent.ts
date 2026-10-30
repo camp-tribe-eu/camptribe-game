@@ -6,6 +6,7 @@ import { playUi } from '../../audio/ui-sounds';
 import { PEGS, BAND, FOOT, IDLE, WOBBLE_MS, markerAt, placeOk, startTent, stepTent, type TentEvent, type TentInput, type TentState } from '../../content/tent-pitch';
 import type { Key } from '../../i18n';
 import type { Dir } from './character';
+import { facingToward } from '../npc-talk';
 
 type Pt = { x: number; y: number };
 const REACH = 28;
@@ -34,6 +35,8 @@ export class TentRig {
   private spot: Pt = { x: 0, y: 0 };
   private solidAt: (x: number, y: number) => boolean = () => false;
   private others: readonly Pt[] = [];
+  /** Куди дивитись герою на останньому ударі (до кілка); сцена грає thrust у цей бік. */
+  strikeDir: Dir = 'down';
 
   constructor(private readonly scene: Phaser.Scene, private readonly player: Phaser.GameObjects.Sprite, private readonly text: (key: Key) => string) {}
 
@@ -117,10 +120,9 @@ export class TentRig {
     const px = this.at.x + peg.x; const py = this.at.y + peg.y;
     this.dust(px, py, 6);
     if (!calmMotion()) this.scene.cameras.main.shake(80, 0.003);
-    const lean = (px < this.player.x ? -1 : 1) * 10;
+    // GAME-190: удар — справжня анімація героя (лист thrust GAME-191), яку грає сцена в бік кілка (`strikeDir`); стиснення-«квадрат» більше не потрібне.
+    this.strikeDir = facingToward(this.player, { x: px, y: py });
     void facing;
-    const pl = this.player;
-    this.fx.push({ age: 0, dur: 160, apply: (k) => { const w = Math.sin(Math.PI * k); pl.setScale(1 + 0.12 * w, 1 - 0.12 * w).setAngle(lean * w); }, end: () => { pl.setScale(1, 1).setAngle(0); } });
   }
 
   private shake(g: Phaser.GameObjects.Graphics | null, deg: number): void {

@@ -23,6 +23,8 @@ import { BARK_RANGE, RESIDENTS, buildTimeline, placeAt, residentGrid, type Timel
 import type { Key } from '../../i18n';
 import { facingToward, markerFor, type NpcMarker } from '../npc-talk';
 import { TentRig, type TentProbe } from './tent';
+import { WoodRig, type WoodProbe } from './wood';
+import { FireRig, type FireProbe } from './fire';
 
 export const TILE = 32;
 const INTERACT_RANGE = TILE * 1.5;
@@ -78,6 +80,8 @@ export interface WorldHooks {
   requestsDone?(): number;
   /** GAME-184: цілі прохань, біля яких зараз стоїть Мія (лише коли гравець їде з кішкою). Немає — кішки на мапі нема. */
   pets?(): readonly string[];
+  /** GAME-190: вечір дня 2 готовий відкритись (вогнище треба розпалити руками); немає — вогнище одразу живе як раніше. */
+  fireDue?(): boolean;
   /** Транспорт гравця (авто малюється спрайтом на подвір'ї, велосипед — маркером). */
   transport(): string | null;
   /** GAME-181: підпис нагороди («+15 XP +10 ОМ»), що ще не показана над героєм; забирає її (наступний виклик — null). */
@@ -146,6 +150,10 @@ export interface WorldProbe {
   miaAt: string[];
   /** GAME-189 (лише для e2e): намет руками — фаза, кілки, шкала (позиція маркера й чи він у зеленому), чи місце придатне. */
   tent: TentProbe;
+  /** GAME-190 (лише для e2e): дрова руками — гілки, колода, шкала ударів. */
+  wood: WoodProbe;
+  /** GAME-190 (лише для e2e): вогнище руками — поліна, шкала сірника, чи тримає гравець дію. */
+  fire: FireProbe;
 }
 
 /** Точка вогнища (об'єкт мапи obj.campfire) — центр світлої плями; нема — плями нема. */
@@ -230,6 +238,9 @@ export class WorldScene extends Phaser.Scene {
   private unloadT = FEEDBACK_S * 0.4;
   private autoCount = 0;
   private tent!: TentRig;
+  private wood!: WoodRig;
+  private fire!: FireRig;
+  private fireSprite: Phaser.GameObjects.Sprite | null = null;
 
   /** art — графіка, декодована до старту гри (loadWorldArt); hooks — усе, що сцена просить у гри (див. WorldHooks). */
   constructor(private readonly bridge: Bridge, private readonly controls: InputState, private readonly probe: WorldProbe, private readonly art: WorldArt,
@@ -335,6 +346,13 @@ export class WorldScene extends Phaser.Scene {
     return true;
   }
 
+  /** Повернути героя лицем до точки (без анімації): перед дією біля колоди чи вогнища. */
+  private faceTo(p: Pt): void {
+    if (this.acting) return;
+    this.facing = facingToward(this.player, p);
+    this.player.setFrame(frameIndex(this.facing, 0));
+  }
+
   /** Складений лист ходьби як текстура з 36 кадрами (ключ кадру — номер). */
   private addSheet(key: string, canvas: HTMLCanvasElement): void {
     const tex = this.textures.addCanvas(key, canvas);
@@ -386,6 +404,8 @@ export class WorldScene extends Phaser.Scene {
     if (this.daylightOn) this.makeNight();
     this.fx = new MapFx(this);
     this.tent = new TentRig(this, this.player, this.barkText);
+    this.wood = new WoodRig(this, this.player, this.barkText);
+    this.fire = new FireRig(this, this.player, this.barkText);
 
     // lerp 1, 1 — камера стоїть на персонажі в тому ж кадрі, без згладженого «доїзду». Тож руху, який
     // треба гасити за prefers-reduced-motion, тут немає (GAME-39 #3); e2e читає lerp з живої камери.
@@ -427,6 +447,9 @@ export class WorldScene extends Phaser.Scene {
   /** Знищити все, що належить поточній мапі (шари, картинки, маркери, колізії) — перед побудовою наступної. */
   private teardown(): void {
     this.tent?.reset();
+    this.wood?.reset();
+    this.fire?.reset();
+    this.fireSprite = null;
     for (const o of this.owned) o.destroy();
     this.owned = [];
     this.wallCollider?.destroy();
@@ -490,7 +513,7 @@ export class WorldScene extends Phaser.Scene {
         const sp = this.add.sprite(s.x, s.y, NPC_SHEET[s.name] ?? 'elise', frameIndex('down', 0)).setOrigin(0.5, ORIGIN_Y).setDepth(s.y).setVisible(this.hooks.isLive(s.name));
         this.npcSprites.set(s.name, sp);
         this.owned.push(sp);
-      } else if (s.name === 'obj.campfire') this.owned.push(this.add.sprite(s.x, s.y, 'campfire').setOrigin(0.5, 0.85).setDepth(s.y).play('fire'));
+      } else if (s.name === 'obj.campfire') { this.fireSprite = this.add.sprite(s.x, s.y, 'campfire').setOrigin(0.5, 0.85).setDepth(s.y).play('fire'); this.owned.push(this.fireSprite); }
       else this.markers.set(s.name, this.marker(s));
     }
 
@@ -860,7 +883,7 @@ export class WorldScene extends Phaser.Scene {
     else this.placeCar();
     const held = consumeFrame(this.controls);
     // GAME-189: поки герой б'є кілки — стоїть; розміщення намету — ходить вільно (привид іде за ним).
-    const v = this.tent.holdsHero ? { x: 0, y: 0 } : moveVector(held);
+    const v = this.tent.holdsHero || this.wood.holdsHero || this.fire.holdsHero ? { x: 0, y: 0 } : moveVector(held);
     // Рухається той, хто справді зсунувся з минулого кадру (по зсуву, а не по швидкості — вона лишається, коли тіло вперлося в стіну): упертий у стіну персонаж стоїть, а не «іде на місці».
     const moving = Math.hypot(this.player.x - this.last.x, this.player.y - this.last.y) > 0.25;
     if (moving) this.heading = { x: this.player.x - this.last.x, y: this.player.y - this.last.y };
@@ -901,6 +924,23 @@ export class WorldScene extends Phaser.Scene {
     const act = tapSpot ?? spot;
     const dt = Math.min(delta / 1000, MAX_FOLLOW_DT);
     this.tent.update(delta, this.facing, time);
+    // GAME-190: дрова й вогнище руками. Рига живе, поки відповідна справа жива на мапі табору; поза табором чи коли справу закрито — зникає.
+    const inCamp = this.current === 'camp';
+    const woodLive = inCamp && this.hooks.isLive('take.item.firewood');
+    const woodSpot = this.spots.find((x) => x.name === 'take.item.firewood');
+    if (woodLive && woodSpot && this.wood.phase === 'idle') this.wood.begin({ x: woodSpot.x, y: woodSpot.y });
+    else if (!woodLive && this.wood.phase !== 'idle') this.wood.reset();
+    this.wood.update(delta);
+    const fireDue = inCamp && (this.hooks.fireDue?.() ?? false);
+    const fireSpot = this.spots.find((x) => x.name === 'obj.campfire');
+    if (fireDue && fireSpot && this.fire.phase === 'idle') this.fire.begin({ x: fireSpot.x, y: fireSpot.y }, this.fireSprite);
+    else if (!fireDue && this.fire.phase !== 'idle' && this.fire.phase !== 'lit') this.fire.reset();
+    const nearFire = this.fire.near({ x: this.player.x, y: this.player.y }, INTERACT_RANGE);
+    const fireEvents = this.fire.update(delta, held.has('interact') && nearFire, time);
+    for (const e of fireEvents) {
+      if (e === 'lit' || e === 'fizzle') this.playAction('cast', facingToward(this.player, this.fire.point()));
+      if (e === 'done') { this.fire.finish(); this.hooks.onObject('obj.campfire'); }
+    }
     const carrying = this.hooks.backpack() > 0;
     this.fx?.tick(dt);
     const reward = this.hooks.takeReward();
@@ -909,10 +949,28 @@ export class WorldScene extends Phaser.Scene {
     const needs = this.hooks.needs();
     // Скорочення E/тап — миттєво. Біля авто з рюкзаком воно розвантажує (а не їде).
     // GAME-189: намет руками. E/кнопка/тап по спойлеру-цілі task.pitch-tent починає розміщення; далі кожна дія — розміщення чи удар по кілку. Справа в ядрі закривається лише після 4-го влучання.
-    const pressed = this.gate(held.has('interact') || (this.tent.active ? tapped !== null : tapSpot !== null), time);
+    const pressed = this.gate(held.has('interact') || (this.tent.active || this.wood.chopping ? tapped !== null : tapSpot !== null), time);
+    const woodBranch = this.wood.active ? this.wood.nearBranch({ x: this.player.x, y: this.player.y }, INTERACT_RANGE) : null;
+    const woodBlock = this.wood.active && this.wood.atBlock({ x: this.player.x, y: this.player.y }, INTERACT_RANGE);
     if (this.tent.active) {
-      if (pressed && this.tent.act(this.facing) === 'done') { this.tent.finish(); this.hooks.onObject('task.pitch-tent'); }
-      else if (!this.hooks.isLive('task.pitch-tent')) this.tent.reset();
+      if (pressed) {
+        const e = this.tent.act(this.facing);
+        if (e === 'hit' || e === 'done') this.playAction('thrust', this.tent.strikeDir);   // GAME-190: справжній рух героя на кожен кілок
+        if (e === 'done') { this.tent.finish(); this.hooks.onObject('task.pitch-tent'); }
+      } else if (!this.hooks.isLive('task.pitch-tent')) this.tent.reset();
+    } else if (pressed && this.fire.stacking && nearFire) {
+      this.faceTo(this.fire.point());
+      this.fire.act();
+    } else if (pressed && this.wood.active && (this.wood.chopping || woodBranch !== null || woodBlock)) {
+      const bp = this.wood.blockPoint();
+      if (woodBranch === null || this.wood.chopping) this.faceTo(bp);
+      const e = this.wood.act(this.wood.chopping ? null : woodBranch, woodBlock);
+      if (e === 'hit' || e === 'done' || e === 'miss') this.playAction('slash', facingToward(this.player, bp));   // GAME-190: удар сокирою — справжній рух героя
+      if (e === 'done') { this.wood.finish(); this.hooks.onObject('take.item.firewood'); }
+    } else if (pressed && act?.name === 'take.item.firewood') {
+      // Дрова беруться лише руками (гілки → колода → удари): E біля купи без гілок нічого не бере; рига ще не стартувала (кадр до begin) — теж.
+    } else if (pressed && act?.name === 'obj.campfire' && this.fire.phase !== 'idle' && this.fire.phase !== 'done') {
+      // Вогнище, що чекає на вогонь, — лише руками (поліна → сірник); поліна й сірник вище, тут — коли герой ще не готовий (сірник, а не полінця).
     } else if (pressed && act?.name === 'task.pitch-tent') {
       const at = this.spots.find((x) => x.name === 'task.pitch-tent');
       if (at) this.tent.begin({ x: at.x, y: at.y }, (x, y) => { const t = tileOf(this.grid, { x, y }); return isSolid(this.grid, t); }, this.spots.filter((x) => x.name !== 'task.pitch-tent' && this.hooks.isLive(x.name)).map((x) => ({ x: x.x, y: x.y })));
@@ -955,11 +1013,14 @@ export class WorldScene extends Phaser.Scene {
     const doneNow = this.hooks.requestsDone?.() ?? 0;
     if (this.doneSeen >= 0 && doneNow > this.doneSeen) { this.fx?.pop(this.player.x, this.player.y, '+'); playUi('confirm'); }   // GAME-180: прохання здано — «+» над героєм
     this.doneSeen = doneNow;
-    const tn = this.hooks.target();
-    const ts = tn ? this.spots.find((x) => x.name === tn) : undefined;
+    // GAME-190: поки дрова збираються руками, стрілка веде до кожної гілки по черзі, потім до колоди.
+    const tn0 = this.hooks.target();
+    const tn = tn0 === 'take.item.firewood' && this.wood.active ? this.wood.targetName(tn0) : tn0;
+    const branchPt = tn ? this.wood.pointOf(tn) : null;
+    const ts = tn ? this.spots.find((x) => x.name === tn) ?? (branchPt ? { name: tn, x: branchPt.x, y: branchPt.y } : undefined) : undefined;
     // GAME-180: ціль підказки — просильник (id NPC): стрілка вказує на нього, де б він зараз стояв (мешканці ходять за розкладом).
     const tnpc = tn?.startsWith('npc.') && this.hooks.talk(tn) !== null ? this.sprite(tn)?.s : undefined;
-    const tpos = ts && this.hooks.isLive(ts.name) ? { x: ts.x, y: ts.y } : tnpc?.visible ? { x: tnpc.x, y: tnpc.y } : null;
+    const tpos = ts && (branchPt !== null || this.hooks.isLive(ts.name)) ? { x: ts.x, y: ts.y } : tnpc?.visible ? { x: tnpc.x, y: tnpc.y } : null;
     const insets = this.safeInsets(time);
     this.fx?.drawGuide({ x: this.player.x, y: this.player.y }, tpos, this.cameras.main.worldView, insets, INTERACT_RANGE * 1.2, time);
     // GAME-185: вбік верхній ряд HUD лежить поверх мапи — герой (а з ним слідувачі) стоїть посередині ВІЛЬНОЇ висоти, а не під ним. Сторч шапка в потоці, камера без зсуву.
@@ -994,6 +1055,8 @@ export class WorldScene extends Phaser.Scene {
       coveredTiles: covered,
       behindTiles: behind,
       tent: this.tent.probe(),
+      wood: this.wood.probe(),
+      fire: this.fire.probe(),
       miaAt: [...this.miaSprites].flatMap(([n, sp]) => (sp.visible ? [n] : [])),
       npcMarks: Object.fromEntries([...this.npcMarks].flatMap(([id, m]) => (m.g.visible && m.kind ? [[id, m.kind] as const] : []))),
       fx: { target: tn, ring: this.ring.name ? this.ring.t : 0, ringName: this.ring.name, backpack: this.hooks.backpack(), guide: this.fx?.guideMode ?? 'none', pops: this.fx?.pops ?? 0, auto: this.autoCount, rewards: this.rewardPops, rewardLast: this.rewardLast },

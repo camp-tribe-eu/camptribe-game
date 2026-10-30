@@ -8,6 +8,7 @@ import { PITCH_TASK, nextTarget } from './map-first';
 import { liveSpot } from './director';
 import type { Move } from './moves';
 import { GAME_DEFS as DEFS } from './slice-defs';
+import { BRANCH_AT, BRANCHES, startWood, stepWood, woodTarget } from './wood-chop';
 
 const send = (sim: SimState, m: Move): SimState => step(sim, { kind: 'command', command: { ...m, commandId: nextCommandId(sim.game) } as Command }, { defs: DEFS });
 const base = (): SimState => send(newSim(7, 3_000), (characterChoices(DEFS)[0] as { intent: Move }).intent);
@@ -49,5 +50,28 @@ describe('ST-005 у таборі: підпис і стрілка збігают�
   it('після знайомства з Елізою й відкритої справи стрілка — на місце намету з підписом «постав намет тут» (не на Елізу)', () => {
     const n = nextTarget(at({ meet: true, pitch: false, task: 'open', wood: false }), DEFS);
     expect(n).toEqual({ key: 'next.camp.pitch', spot: 'task.pitch-tent' });
+  });
+});
+
+// GAME-190 · дрова руками: підпис «збери гілки й наколи дрова» веде до купи (колоди), а всередині кроку стрілка (сцена) йде гілка за гілкою й завершує колодою.
+describe('ST-005: дрова руками — стрілка на кожному підкроці', () => {
+  it('ядро: без дров підпис — «дрова», ціль — колода (take.item.firewood); з дровами — «до свого намету»', () => {
+    expect(nextTarget(at({ meet: true, pitch: true, task: 'done', wood: false }), DEFS)).toEqual({ key: 'next.camp.firewood', spot: 'take.item.firewood' });
+    expect(nextTarget(at({ meet: true, pitch: true, task: 'done', wood: true }), DEFS)?.key).toBe('next.camp.tent');
+  });
+  it('сцена: стрілка проходить гілки 0→1→2 (кожна має місце на мапі), далі колоду; ніколи не «на гілку, що вже в руках»', () => {
+    let s = startWood();
+    const seen: string[] = [];
+    for (let i = 0; i < BRANCHES; i++) {
+      const t = woodTarget(s);
+      expect(t, `крок ${i}`).toEqual({ kind: 'branch', i });
+      expect(BRANCH_AT[(t as { i: number }).i], `гілка ${i} має місце`).toBeDefined();
+      seen.push(`b${i}`);
+      s = stepWood(s, { kind: 'act', branch: i, atBlock: false }).state;
+    }
+    expect(woodTarget(s)).toEqual({ kind: 'block' });
+    s = stepWood(s, { kind: 'act', branch: null, atBlock: true }).state;
+    expect(woodTarget(s)).toEqual({ kind: 'block' });
+    expect(seen).toEqual(['b0', 'b1', 'b2']);
   });
 });
