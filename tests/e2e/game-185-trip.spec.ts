@@ -62,6 +62,7 @@ test('авто на дорозі: рамка питає (одна відпові
   await walk(page, [[q.playerX + 120, q.playerY]]);
   await toCar(page);
   await expect(talk(page)).toBeVisible({ timeout: 10_000 });
+  await page.waitForTimeout(450);   // «глухота» рамки ~350 мс після появи (DialogueBox ACT_COOLDOWN_MS)
   await talk(page).locator('[data-act="cancel"]').click();
   await expect(talk(page)).toHaveCount(0);
   expect((await core(page)).game.player?.locationId, '«Не зараз»: лишились на дорозі').toBe(ROAD);
@@ -69,6 +70,7 @@ test('авто на дорозі: рамка питає (одна відпові
   await walk(page, [[q.playerX + 120, q.playerY]]);
   await toCar(page);
   await expect(talk(page)).toBeVisible({ timeout: 10_000 });
+  await page.waitForTimeout(450);   // «глухота» рамки ~350 мс після появи (DialogueBox ACT_COOLDOWN_MS)
   await talk(page).locator('[data-act="visit"]').click();
   await expect.poll(async () => (await core(page)).game.player?.locationId, { timeout: 10_000 }).toBe('loc.camp.lake');
   expect((await core(page)).game.quests['ST-004']?.status).toBe('completed');
