@@ -419,7 +419,9 @@ test('затиснутий Enter не пробігає кроки: одне на
   // Повторний down тієї самої клавіші Playwright шле з repeat: true — як автоповтор затиснутої клавіші.
   for (let i = 0; i < 4; i++) { await page.keyboard.down('Enter'); await page.waitForTimeout(30); }
   await page.keyboard.up('Enter');
-  await page.waitForTimeout(50);
+  // Спершу дочекатись, що перше натискання дійшло (на повільному раннері за 50 мс журнал ще 0 — CI #120), потім — що лишилось РІВНО одне.
+  await expect.poll(async () => (await core(page)).journal.length, { timeout: 3_000 }).toBeGreaterThanOrEqual(1);
+  await page.waitForTimeout(300);
   expect((await core(page)).journal.length).toBe(1);   // лише «Початок подорожі»
 });
 
