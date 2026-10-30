@@ -20,6 +20,8 @@ export const FIREPLACE_FACTS = {
   fireAllowed: 'f.fire-allowed',
   dinnerDone: 'f.fire-dinner-done',
   photoTaken: 'f.fire-photo-tent',
+  /** GAME-195: рибка на вогнищі трішки підгоріла (репліка вечері інша). */
+  fishCharred: 'f.fish-charred',
 } as const;
 
 export interface FireplaceSetup {
@@ -29,6 +31,7 @@ export interface FireplaceSetup {
   readonly dinnerDone: boolean;
   /** Метью справді зробив фото намету (GAME-140). */
   readonly photoTaken: boolean;
+  readonly fishCharred?: boolean;
 }
 
 /** Факти, які правдиві для цього вечора, — у порядку FIREPLACE_FACTS. */

@@ -1,0 +1,18 @@
+{
+  "id": "dlg.fish-release",
+  "scene": {
+    "titleKey": "dlg.fish-release.title",
+    "facts": [
+      "f.fish-released"
+    ]
+  },
+  "start": "n",
+  "nodes": [
+    {
+      "id": "n",
+      "speaker": "player",
+      "textKey": "dlg.fish-release.n",
+      "end": true
+    }
+  ]
+}

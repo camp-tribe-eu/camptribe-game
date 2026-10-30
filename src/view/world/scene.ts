@@ -25,6 +25,7 @@ import { facingToward, markerFor, type NpcMarker } from '../npc-talk';
 import { TentRig, type TentProbe } from './tent';
 import { WoodRig, type WoodProbe } from './wood';
 import { FireRig, type FireProbe } from './fire';
+import { GrillRig, type GrillProbe } from './grill';
 import { FISH_SPOT, FishRig, type FishProbe } from './fishing';
 
 export const TILE = 32;
@@ -83,6 +84,12 @@ export interface WorldHooks {
   pets?(): readonly string[];
   /** GAME-190: вечір дня 2 готовий відкритись (вогнище треба розпалити руками); немає — вогнище одразу живе як раніше. */
   fireDue?(): boolean;
+  /** GAME-195: рибка взята на вечерю — після розпалу вогнища її треба засмажити руками (перед вечірньою сценою). */
+  grillDue?(): boolean;
+  /** GAME-195: рибку засмажено (true — трішки підгоріла). */
+  onGrilled?(charred: boolean): void;
+  /** GAME-195: вибір на озері: true — узяти на вечерю, false — відпустити. */
+  onFish?(keep: boolean): void;
   /** Транспорт гравця (авто малюється спрайтом на подвір'ї, велосипед — маркером). */
   transport(): string | null;
   /** GAME-181: підпис нагороди («+15 XP +10 ОМ»), що ще не показана над героєм; забирає її (наступний виклик — null). */
@@ -155,6 +162,7 @@ export interface WorldProbe {
   wood: WoodProbe;
   /** GAME-190 (лише для e2e): вогнище руками — поліна, шкала сірника, чи тримає гравець дію. */
   fire: FireProbe;
+  grill: GrillProbe;
   /** GAME-193: риболовля (лише читання, для e2e). */
   fish: FishProbe;
 }
@@ -247,6 +255,7 @@ export class WorldScene extends Phaser.Scene {
   private wood!: WoodRig;
   private fire!: FireRig;
   private fish!: FishRig;
+  private grill!: GrillRig;
   private fireSprite: Phaser.GameObjects.Sprite | null = null;
 
   /** art — графіка, декодована до старту гри (loadWorldArt); hooks — усе, що сцена просить у гри (див. WorldHooks). */
@@ -428,6 +437,7 @@ export class WorldScene extends Phaser.Scene {
     this.wood = new WoodRig(this, this.player, this.barkText);
     this.fire = new FireRig(this, this.player, this.barkText);
     this.fish = new FishRig(this, this.player, this.barkText);
+    this.grill = new GrillRig(this, this.player, this.barkText);
 
     // lerp 1, 1 — камера стоїть на персонажі в тому ж кадрі, без згладженого «доїзду». Тож руху, який
     // треба гасити за prefers-reduced-motion, тут немає (GAME-39 #3); e2e читає lerp з живої камери.
@@ -472,6 +482,7 @@ export class WorldScene extends Phaser.Scene {
     this.wood?.reset();
     this.fire?.reset();
     this.fish?.reset();
+    this.grill?.reset();
     this.fireSprite = null;
     for (const o of this.owned) o.destroy();
     this.owned = [];
@@ -913,7 +924,7 @@ export class WorldScene extends Phaser.Scene {
     ambient.tick(delta);
     const held = consumeFrame(this.controls);
     // GAME-189: поки герой б'є кілки — стоїть; розміщення намету — ходить вільно (привид іде за ним).
-    const v = this.tent.holdsHero || this.wood.holdsHero || this.fire.holdsHero || this.fish.busy ? { x: 0, y: 0 } : moveVector(held);
+    const v = this.tent.holdsHero || this.wood.holdsHero || this.fire.holdsHero || this.grill.holdsHero || this.fish.busy ? { x: 0, y: 0 } : moveVector(held);
     // Рухається той, хто справді зсунувся з минулого кадру (по зсуву, а не по швидкості — вона лишається, коли тіло вперлося в стіну): упертий у стіну персонаж стоїть, а не «іде на місці».
     const moving = Math.hypot(this.player.x - this.last.x, this.player.y - this.last.y) > 0.25;
     if (moving) this.heading = { x: this.player.x - this.last.x, y: this.player.y - this.last.y };
@@ -970,15 +981,26 @@ export class WorldScene extends Phaser.Scene {
     const fireEvents = this.fire.update(delta, held.has('interact') && nearFire, time);
     for (const e of fireEvents) {
       if (e === 'lit' || e === 'fizzle') this.playAction('cast', facingToward(this.player, this.fire.point()));
-      if (e === 'done') { this.fire.finish(); this.hooks.onObject('obj.campfire'); }
+      if (e === 'done') {
+        this.fire.finish();
+        // GAME-195: взяту рибку смажимо руками (патичок → «не спали»), і лише потім вечірня сцена.
+        if (this.hooks.grillDue?.() && this.grill.phase === 'idle') this.grill.begin(this.fire.point());
+        else this.hooks.onObject('obj.campfire');
+      }
     }
     // GAME-193: риболовля на озері. Початок — утримання дії біля берега, коли поруч немає сюжетної цілі-тригера (поруч лише люди — родина тупцює коло героя, мешканці ходять: шлях до розмови з ними — відійти на крок від берега); далі автомат сам веде фази, а дія тут не робить нічого іншого.
     const fishFrame = { down: held.has('interact'), near: (spot === null || spot.kind === 'npc') && !this.tent.active && this.fish.near({ x: this.player.x, y: this.player.y }, INTERACT_RANGE), left: held.has('left'), right: held.has('right'), tap: tapped, time };
+    const grillEvents = this.grill.update(delta, held.has('interact') && nearFire, time);
+    for (const e of grillEvents) {
+      if (e === 'char') this.playAction('cast', facingToward(this.player, this.grill.point()));
+      if (e === 'done') { const ch = this.grill.charred; this.grill.finish(); this.hooks.onGrilled?.(ch); this.hooks.onObject('obj.campfire'); this.grill.reset(); }
+    }
     const water = this.fish.water();
     const fishWas = this.fish.busy;   // кадр, у якому рибалка щойно скінчилась (вибір поклав кнопкою дії), дію теж забирає: інакше та сама дія заводила б розмову з сусідом
     for (const e of this.fish.update(delta, fishFrame)) {
       if (e === 'charge' && water) this.faceTo(water);
       if (e === 'cast' && water) this.playAction('thrust', facingToward(this.player, water));
+      if (e === 'kept' || e === 'released') this.hooks.onFish?.(e === 'kept');
     }
     const carrying = this.hooks.backpack() > 0;
     this.fx?.tick(dt);
@@ -991,7 +1013,10 @@ export class WorldScene extends Phaser.Scene {
     const pressed = this.gate(held.has('interact') || (this.tent.active || this.wood.chopping ? tapped !== null : tapSpot !== null), time);
     const woodBranch = this.wood.active ? this.wood.nearBranch({ x: this.player.x, y: this.player.y }, INTERACT_RANGE) : null;
     const woodBlock = this.wood.active && this.wood.atBlock({ x: this.player.x, y: this.player.y }, INTERACT_RANGE);
-    if (fishWas || this.fish.busy) {
+    if (this.grill.active) {
+      // GAME-195: рибка на вогнищі забирає дію (нанизати, підняти): інша справа чи розмова чекає.
+      if (pressed && this.grill.skewering) { this.faceTo(this.grill.point()); this.grill.act(); this.playAction('cast', facingToward(this.player, this.grill.point())); }
+    } else if (fishWas || this.fish.busy) {
       // GAME-193: риболовля забирає дію (закид, підсікання, вибір) — розмови й інші справи чекають, поки гравець закінчить.
     } else if (this.tent.active) {
       if (pressed) {
@@ -1030,7 +1055,7 @@ export class WorldScene extends Phaser.Scene {
     const ready = (autoNear !== 'obj.vehicle' || vehicleReady(carrying, needs)) && !(autoNear?.startsWith('pack.') && this.hooks.look(autoNear) === 'trunk');
     const r = stepRing(this.ring, atCar && carrying ? null : autoNear, !this.fired.has(autoNear ?? '') && ready, autoNear !== 'obj.vehicle' || !moving, dt);
     this.ring = r.ring;
-    if (r.fire) {
+    if (r.fire && !(this.grill.active && r.fire === 'obj.campfire')) {
       this.fired.add(r.fire);
       this.autoCount++;
       this.hooks.onObject(r.fire);
@@ -1100,6 +1125,7 @@ export class WorldScene extends Phaser.Scene {
       tent: this.tent.probe(),
       wood: this.wood.probe(),
       fire: this.fire.probe(),
+      grill: this.grill.probe(),
       fish: this.fish.probe(),
       miaAt: [...this.miaSprites].flatMap(([n, sp]) => (sp.visible ? [n] : [])),
       npcMarks: Object.fromEntries([...this.npcMarks].flatMap(([id, m]) => (m.g.visible && m.kind ? [[id, m.kind] as const] : []))),

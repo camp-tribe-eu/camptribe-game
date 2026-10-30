@@ -1,6 +1,7 @@
 // Збирає сюжет для ядра (StoryDefs) з перевіреного content/ (GAME-29). Валідатор доводить
 // досяжність і відсутність тупиків; тут — лише переклад полів у форму ядра. Те, чого ядро ще не
 // вміє (`deliver`, продаж у NPC), не пропускається мовчки: збірка падає з назвою поля (закон 4).
+import { FISH_FACTS } from './fish-fork';
 import { stateHash } from '../core/hash';
 import type { CondDef, DialogueDef, EffectDef, ObjectiveDef, QuestDef, StoryDefs, WhenDef } from '../core/defs';
 import animals from '../../content/animals.json';
@@ -42,6 +43,7 @@ export interface RawContent {
   requests?: { id: string; targets: { id: string }[]; reward: { xp: number; om: number; skills: string[] } }[];
 }
 const requestFlag = (id: string, part: string): string => `f.${id.replace(/\./g, '-')}-${part}`;
+const FISH_COSMETIC: readonly string[] = [FISH_FACTS.kept, FISH_FACTS.released, FISH_FACTS.charred, FISH_FACTS.trustNora];
 const requestFlagsOf = (rs: NonNullable<RawContent['requests']>): string[] => rs.flatMap((r) => [requestFlag(r.id, 'taken'), ...r.targets.map((t) => requestFlag(r.id, t.id)), requestFlag(r.id, 'done')]);
 
 /**
@@ -118,7 +120,10 @@ export function compileStory(c: RawContent): StoryDefs {
     }),
     ...(memorableFacts(c).length ? { memorable: memorableFacts(c) } : {}),
     // GAME-180: прапорці прохань сусідів — косметичні для сюжету (перебір їх не розрізняє), «здано» ще й пишеться в журнал.
-    ...(c.requests?.length ? { requestFlags: requestFlagsOf(c.requests), journaled: c.requests.map((r) => requestFlag(r.id, 'done')), requestRewards: c.requests.map((r) => ({ flag: requestFlag(r.id, 'done'), key: `rw.${r.id}`, xp: r.reward.xp, om: r.reward.om, skills: r.reward.skills })) } : {}),
+    // GAME-195: розвилка рибки — факти косметичні для перебору й пишуться в журнал (по одному на команду: сцена озера ставить один, відповідь Нори — один).
+    requestFlags: [...(c.requests?.length ? requestFlagsOf(c.requests) : []), ...FISH_COSMETIC],
+    journaled: [...(c.requests ?? []).map((r) => requestFlag(r.id, 'done')), FISH_FACTS.kept, FISH_FACTS.released, FISH_FACTS.trustNora],
+    ...(c.requests?.length ? { requestRewards: c.requests.map((r) => ({ flag: requestFlag(r.id, 'done'), key: `rw.${r.id}`, xp: r.reward.xp, om: r.reward.om, skills: r.reward.skills })) } : {}),
   };
 }
 

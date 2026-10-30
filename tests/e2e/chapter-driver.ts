@@ -328,4 +328,18 @@ export async function playFishing(page: Page, touch: boolean, choice: 'release' 
     await page.keyboard.down('KeyE'); await page.waitForTimeout(80); await page.keyboard.up('KeyE');
   }
   await expect.poll(async () => (await fish()).phase, { timeout: 3_000, message: 'вибір закриває рамку' }).toBe('idle');
+  await closeFishScene(page);
+}
+
+/** GAME-195: вибір на озері пишеться сценою-однорядником (рамка розмови чи панель ☰): дочитати її й повернутись на мапу. */
+export async function closeFishScene(page: Page): Promise<void> {
+  await expect.poll(async () => (await core(page)).game.dialogue !== null, { timeout: 3_000, message: 'вибір рибки відкриває сцену-однорядник' }).toBe(true);
+  for (let i = 0; i < 6 && (await core(page)).game.dialogue !== null; i++) {
+    if (await talk(page).count()) await answerOne(page);
+    else await page.locator('.ui-story [data-ui="dialogue"] [data-act]').last().click({ timeout: 3_000 });
+    await page.waitForTimeout(350);
+  }
+  expect((await core(page)).game.dialogue, 'сцена-однорядник закінчилась').toBeNull();
+  const close = page.locator('[data-ui="story-close"]');
+  if (await close.count()) await close.click({ timeout: 3_000 }).catch(() => undefined);
 }

@@ -20,6 +20,9 @@ import { loadWorldArt } from './view/world/art';
 import { TENT_PROBE_IDLE } from './view/world/tent';
 import { WOOD_PROBE_IDLE } from './view/world/wood';
 import { FIRE_PROBE_IDLE } from './view/world/fire';
+import { GRILL_PROBE_IDLE } from './view/world/grill';
+import { FISH_FACTS, fishChoiceMove, fishEvening } from './content/fish-fork';
+import { FIREPLACE_SCENE } from './content/fireplace';
 import { FISH_PROBE_IDLE } from './view/world/fishing';
 import { mountTouchControls, setActionTarget } from './view/world/touch';
 import { frameSize } from './view/world/frame';
@@ -45,7 +48,7 @@ if (!app) throw new Error('#app is missing');
 
 const probe: WorldProbe = { ready: false, playerX: 0, playerY: 0, nearObject: null, nearKind: null, commandsSent: 0, cameraScrollX: 0, cameraScrollY: 0, clockMinutes: 0, saveLoaded: false, cameraLerp: [0, 0], followers: [], leisure: [],
   playerFrame: 0, playerDir: 'down', playerMoving: false, playerDepth: 0, coveredTiles: 0, behindTiles: 0, fps: 0, fpsWindows: 0, firstFrameMs: 0,
-  residents: [], bark: null, barkCount: 0, npcMarks: {}, miaAt: [], tent: TENT_PROBE_IDLE, wood: WOOD_PROBE_IDLE, fire: FIRE_PROBE_IDLE, fish: FISH_PROBE_IDLE,
+  residents: [], bark: null, barkCount: 0, npcMarks: {}, miaAt: [], tent: TENT_PROBE_IDLE, wood: WOOD_PROBE_IDLE, fire: FIRE_PROBE_IDLE, grill: GRILL_PROBE_IDLE, fish: FISH_PROBE_IDLE,
   daylight: { on: false, visible: false, minuteOfDay: 0, darkness: 0, color: 0xffffff, glow: 0 },
   fx: { target: null, ring: 0, ringName: null, backpack: 0, guide: 'none', pops: 0, auto: 0, rewards: 0, rewardLast: '' } };
 // GAME-86: кожна команда ядру (дія екрана, розмова, взаємодія на мапі) → автозбереження одразу, а не лише на паузі.
@@ -151,6 +154,15 @@ const talkOnMap = (npcId: string): void => {
 };
 /** Дотик до об'єкта мапи: режисер каже, що це зараз (справа хвилі → CompleteTask; вогнище на етапі вечора → StartScene, і екран подорожі
  *  відкривається з репліками; інакше Interact). ?breakSpot=<назва> (лише збірка e2e) робить об'єкт німим — негативний контроль. */
+let grilledCharred = false;
+/** GAME-195: вибір на озері пишеться фактом ядра (сцена-однорядник у рамці розмови), а не лише лічильником вигляду. */
+const onFish = (keep: boolean): void => {
+  const m = fishChoiceMove(keep, bridge.state.game.flags);
+  if (!m) return;
+  mapTalk = true;
+  try { bridge.send(m); storyChanged(); } finally { mapTalk = false; }
+  for (const l of switches.panelActs ? openListeners : talkListeners) l();
+};
 const actOnMap = (name: string): void => {
   if (switches.breakSpot.includes(name)) return;
   // GAME-175: об'єкти дня 1 удома (крок, річ, полиця, авто, багажник) — ті самі команди ядра, що були кнопками панелі (src/content/map-first.ts).
@@ -174,8 +186,11 @@ const actOnMap = (name: string): void => {
     if (r.ui === 'trunk') for (const l of openListeners) l();
     return;
   }
-  const m = spotMove(bridge.state, name);
+  let m = spotMove(bridge.state, name);
   if (!m) return;
+  // GAME-195: рибка на вогнищі трішки підгоріла — факт сцени вечора (репліка інша, покарання нема).
+  if (m.type === 'StartScene' && m.sceneId === FIREPLACE_SCENE && grilledCharred) m = { ...m, facts: [...(m.facts ?? []), FISH_FACTS.charred] };
+  if (m.type === 'StartScene') grilledCharred = false;
   // Сцена біля вогнища: у мапі-першій грі — рамка розмови (як розмова з NPC; mapTalk глушить автовідкриття ☰), а не екран ☰.
   const asTalk = m.type === 'StartScene' && !switches.panelActs;
   if (asTalk) mapTalk = true;
@@ -234,6 +249,9 @@ const worldHooks: WorldHooks = {
   talk: (id) => (npcLive(bridge.state.game, GAME_DEFS, id) ? { request: requestMarker(bridge.state.game, id) } : null),
   onObject: actOnMap,
   fireDue: () => fireplaceDue(bridge.state),
+  grillDue: () => fireplaceDue(bridge.state) && fishEvening(bridge.state.game.flags) === 'kept',
+  onGrilled: (charred) => { grilledCharred = charred; },
+  onFish,
   isLive: (name) => !campOnly(name) && liveSpot(bridge.state, name, GAME_DEFS) && !(name.startsWith('pack.') && backpack.includes(name.slice(5))),
   backpack: () => backpack.length,
   unload: unloadOne,

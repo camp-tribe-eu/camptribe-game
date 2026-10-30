@@ -299,5 +299,9 @@
   "fish.sp.perch": "Perch",
   "fish.sp.carp": "Carp",
   "fish.sp.trout": "Trout",
-  "fish.sp.pike": "Pike"
+  "fish.sp.pike": "Pike",
+  "grill.skewer": "Press E or ● to skewer the fish",
+  "grill.hold": "Hold E or ● to lift it off the heat; let go to put it back",
+  "grill.char": "A little charred is still tasty",
+  "grill.done": "The fish is ready"
 }
