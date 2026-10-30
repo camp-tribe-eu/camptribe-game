@@ -13,7 +13,7 @@ import type { Bridge } from './bridge';
 import { PET_SHEETS, type WorldArt } from './art';
 import { COLS, FRAME, frameIndex, type Dir } from './character';
 import { FIRE_CORE, FIRE_GLOW, ambientAt, glowAlpha, timeOfDay } from './daylight';
-import { FOLLOW_SPEED_FACTOR, SPEED, centerOf, gridFromWalls, restPoints, stepFollowers, stepTo, tileOf, type Grid, type Pt } from './follow';
+import { FOLLOW_SPEED_FACTOR, SPEED, centerOf, gridFromWalls, isSolid, restPoints, stepFollowers, stepTo, tileOf, type Grid, type Pt } from './follow';
 import type { MapKey } from '../../content/map-first';
 import { playUi } from '../../audio/ui-sounds';
 import { MapFx, type Needs } from './map-fx';
@@ -22,6 +22,7 @@ import { IDLE_AFTER_S, LEISURE_BY_MAP, assignLeisure, leisureFromObjects, type L
 import { BARK_RANGE, RESIDENTS, buildTimeline, placeAt, residentGrid, type Timeline } from './ambient';
 import type { Key } from '../../i18n';
 import { facingToward, markerFor, type NpcMarker } from '../npc-talk';
+import { TentRig, type TentProbe } from './tent';
 
 export const TILE = 32;
 const INTERACT_RANGE = TILE * 1.5;
@@ -142,6 +143,8 @@ export interface WorldProbe {
   npcMarks: Record<string, NpcMarker>;
   /** GAME-184: цілі прохань, біля яких намальована Мія (видимі спрайти). */
   miaAt: string[];
+  /** GAME-189 (лише для e2e): намет руками — фаза, кілки, шкала (позиція маркера й чи він у зеленому), чи місце придатне. */
+  tent: TentProbe;
 }
 
 /** Точка вогнища (об'єкт мапи obj.campfire) — центр світлої плями; нема — плями нема. */
@@ -223,6 +226,7 @@ export class WorldScene extends Phaser.Scene {
   private fired = new Set<string>();
   private unloadT = FEEDBACK_S * 0.4;
   private autoCount = 0;
+  private tent!: TentRig;
 
   /** art — графіка, декодована до старту гри (loadWorldArt); hooks — усе, що сцена просить у гри (див. WorldHooks). */
   constructor(private readonly bridge: Bridge, private readonly controls: InputState, private readonly probe: WorldProbe, private readonly art: WorldArt,
@@ -354,6 +358,7 @@ export class WorldScene extends Phaser.Scene {
     this.player.setCollideWorldBounds(true);
     if (this.daylightOn) this.makeNight();
     this.fx = new MapFx(this);
+    this.tent = new TentRig(this, this.player, this.barkText);
 
     // lerp 1, 1 — камера стоїть на персонажі в тому ж кадрі, без згладженого «доїзду». Тож руху, який
     // треба гасити за prefers-reduced-motion, тут немає (GAME-39 #3); e2e читає lerp з живої камери.
@@ -394,6 +399,7 @@ export class WorldScene extends Phaser.Scene {
 
   /** Знищити все, що належить поточній мапі (шари, картинки, маркери, колізії) — перед побудовою наступної. */
   private teardown(): void {
+    this.tent?.reset();
     for (const o of this.owned) o.destroy();
     this.owned = [];
     this.wallCollider?.destroy();
@@ -825,7 +831,8 @@ export class WorldScene extends Phaser.Scene {
     if (want !== this.current) this.enterMap(want, true);
     else this.placeCar();
     const held = consumeFrame(this.controls);
-    const v = moveVector(held);
+    // GAME-189: поки герой б'є кілки — стоїть; розміщення намету — ходить вільно (привид іде за ним).
+    const v = this.tent.holdsHero ? { x: 0, y: 0 } : moveVector(held);
     // Рухається той, хто справді зсунувся з минулого кадру (по зсуву, а не по швидкості — вона лишається, коли тіло вперлося в стіну): упертий у стіну персонаж стоїть, а не «іде на місці».
     const moving = Math.hypot(this.player.x - this.last.x, this.player.y - this.last.y) > 0.25;
     if (moving) this.heading = { x: this.player.x - this.last.x, y: this.player.y - this.last.y };
@@ -863,6 +870,7 @@ export class WorldScene extends Phaser.Scene {
     const tapSpot = tapped ? live.find((s) => Phaser.Math.Distance.Between(this.player.x, this.player.y, s.x, s.y) <= INTERACT_RANGE && tapHitsSpot(s, tapped)) ?? null : null;
     const act = tapSpot ?? spot;
     const dt = Math.min(delta / 1000, MAX_FOLLOW_DT);
+    this.tent.update(delta, this.facing, time);
     const carrying = this.hooks.backpack() > 0;
     this.fx?.tick(dt);
     const reward = this.hooks.takeReward();
@@ -870,7 +878,15 @@ export class WorldScene extends Phaser.Scene {
     const atCar = near === 'obj.vehicle' || near === 'obj.trunk';
     const needs = this.hooks.needs();
     // Скорочення E/тап — миттєво. Біля авто з рюкзаком воно розвантажує (а не їде).
-    if (this.gate(held.has('interact') || tapSpot !== null, time) && act) {
+    // GAME-189: намет руками. E/кнопка/тап по спойлеру-цілі task.pitch-tent починає розміщення; далі кожна дія — розміщення чи удар по кілку. Справа в ядрі закривається лише після 4-го влучання.
+    const pressed = this.gate(held.has('interact') || (this.tent.active ? tapped !== null : tapSpot !== null), time);
+    if (this.tent.active) {
+      if (pressed && this.tent.act(this.facing) === 'done') { this.tent.finish(); this.hooks.onObject('task.pitch-tent'); }
+      else if (!this.hooks.isLive('task.pitch-tent')) this.tent.reset();
+    } else if (pressed && act?.name === 'task.pitch-tent') {
+      const at = this.spots.find((x) => x.name === 'task.pitch-tent');
+      if (at) this.tent.begin({ x: at.x, y: at.y }, (x, y) => { const t = tileOf(this.grid, { x, y }); return isSolid(this.grid, t); }, this.spots.filter((x) => x.name !== 'task.pitch-tent' && this.hooks.isLive(x.name)).map((x) => ({ x: x.x, y: x.y })));
+    } else if (pressed && act) {
       if (act.kind === 'npc') { this.faceEachOther(act); this.hooks.onNpc(act.name); }
       else if (carrying && (act.name === 'obj.vehicle' || act.name === 'obj.trunk')) this.unloadOne();
       else { this.hooks.onObject(act.name); this.feedback(act.name); }
@@ -947,6 +963,7 @@ export class WorldScene extends Phaser.Scene {
       playerDepth: this.player.depth,
       coveredTiles: covered,
       behindTiles: behind,
+      tent: this.tent.probe(),
       miaAt: [...this.miaSprites].flatMap(([n, sp]) => (sp.visible ? [n] : [])),
       npcMarks: Object.fromEntries([...this.npcMarks].flatMap(([id, m]) => (m.g.visible && m.kind ? [[id, m.kind] as const] : []))),
       fx: { target: tn, ring: this.ring.name ? this.ring.t : 0, ringName: this.ring.name, backpack: this.hooks.backpack(), guide: this.fx?.guideMode ?? 'none', pops: this.fx?.pops ?? 0, auto: this.autoCount, rewards: this.rewardPops, rewardLast: this.rewardLast },

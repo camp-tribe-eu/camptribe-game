@@ -4,6 +4,7 @@
 // кінець розділу; день 2 закінчується «Підсумком дня 2» і кінцем розділу (останній тест).
 import { mkdirSync, readFileSync } from 'node:fs';
 import AxeBuilder from '@axe-core/playwright';
+import { playTent } from './chapter-driver';
 import { expect, test, type Locator, type Page } from '@playwright/test';
 
 interface Core { game: { campaignEnded: boolean; moneyCents: number; flags: string[]; wave?: { past: Record<string, Record<string, string>> } }; journal: { type: string; ref: string | null }[] }
@@ -63,6 +64,7 @@ async function doSpotTask(page: Page, spot: string): Promise<void> {
   expect(last.nearObject, `шлях до ${spot}: ${Math.round(last.playerX)},${Math.round(last.playerY)}`).toBe(spot);
   await page.keyboard.press('Space');
   await page.waitForTimeout(400);
+  if (spot === 'task.pitch-tent') await playTent(page, false);   // GAME-189: намет ставиться руками
 }
 
 const MODES = [
