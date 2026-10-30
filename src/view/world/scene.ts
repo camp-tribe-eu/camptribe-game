@@ -17,7 +17,7 @@ import { FOLLOW_SPEED_FACTOR, SPEED, centerOf, gridFromWalls, restPoints, stepFo
 import type { MapKey } from '../../content/map-first';
 import { playUi } from '../../audio/ui-sounds';
 import { MapFx, type Needs } from './map-fx';
-import { FEEDBACK_S, RING_IDLE, ringMayTake, stepRing, vehicleReady, type Insets, type Ring } from './proximity';
+import { FEEDBACK_S, RING_IDLE, pickNearest, ringMayTake, stepRing, vehicleReady, type Insets, type Ring } from './proximity';
 import { IDLE_AFTER_S, LEISURE_BY_MAP, assignLeisure, leisureFromObjects, type LeisureSpot } from './leisure';
 import { BARK_RANGE, RESIDENTS, buildTimeline, placeAt, residentGrid, type Timeline } from './ambient';
 import type { Key } from '../../i18n';
@@ -839,8 +839,6 @@ export class WorldScene extends Phaser.Scene {
     else { this.player.anims.stop(); this.player.setFrame(frameIndex(this.facing, 0)); }
     this.player.setDepth(this.player.y);
 
-    let spot: Spot | null = null;
-    let best = INTERACT_RANGE;
     const target = this.hooks.target();
     for (const [name, m] of this.markers) {
       const on = this.hooks.isLive(name);
@@ -854,15 +852,10 @@ export class WorldScene extends Phaser.Scene {
     for (const [name, sp] of this.npcSprites) sp.setVisible(this.hooks.isLive(name));
     const talkers = this.talkers();
     const live = [...this.spots.filter((s) => this.hooks.isLive(s.name)), ...talkers];
-    // GAME-179: родина тупцює коло героя й завжди найближча — тож говорить із нею лише тоді, коли в зоні дії нікого іншого (предмета, Елізи, мешканця) нема.
+    // GAME-179/186: родина тупцює коло героя — говорить із нею лише тоді, коли в зоні дії нікого іншого нема; між слідувачами перевага тому, на кого дивиться герой.
     const isFollower = (n: string): boolean => (FOLLOWER_NPC as readonly string[]).includes(n);
-    for (const pass of [false, true]) {
-      for (const s of live) {
-        if (isFollower(s.name) !== pass || (pass && spot)) continue;
-        const d = Phaser.Math.Distance.Between(this.player.x, this.player.y, s.x, s.y);
-        if (d <= best) { best = d; spot = s; }
-      }
-    }
+    const nearName = pickNearest(this.player.x, this.player.y, this.facing, live.map((s) => ({ name: s.name, x: s.x, y: s.y, follower: isFollower(s.name) })), INTERACT_RANGE);
+    const spot: Spot | null = nearName === null ? null : live.find((s) => s.name === nearName) ?? null;
     const near = spot?.name ?? null;
     // Тап: лише по цілі, що в зоні дії. Поза зоною нічого (без прокладання шляху, GAME-95).
     const tapped = this.tap;
@@ -886,7 +879,7 @@ export class WorldScene extends Phaser.Scene {
     for (const n of [...this.fired]) { const f = this.spots.find((x) => x.name === n); if (!f || Phaser.Math.Distance.Between(this.player.x, this.player.y, f.x, f.y) > INTERACT_RANGE) this.fired.delete(n); }
     // Спакована річ удома сама не «розпаковується» від проходу повз: її дістають лише E/тап (чи сітка).
     // Проходячи повз зайву річ (ліхтар, подушка), гравець її не підбирає сам: кільце рахує лише поточну ціль підказки; решту беруть E/тап — інакше «лишити» зайняло б місце потрібному.
-    const autoNear = spot && best <= AUTO_RANGE && ringMayTake(near, this.hooks.target()) ? near : null;
+    const autoNear = spot && Phaser.Math.Distance.Between(this.player.x, this.player.y, spot.x, spot.y) <= AUTO_RANGE && ringMayTake(near, this.hooks.target()) ? near : null;
     const ready = (autoNear !== 'obj.vehicle' || vehicleReady(carrying, needs)) && !(autoNear?.startsWith('pack.') && this.hooks.look(autoNear) === 'trunk');
     const r = stepRing(this.ring, atCar && carrying ? null : autoNear, !this.fired.has(autoNear ?? '') && ready, autoNear !== 'obj.vehicle' || !moving, dt);
     this.ring = r.ring;
