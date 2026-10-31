@@ -1,7 +1,9 @@
 name: research-fetch
 # Мережа сесії чату Гри закрита для kenney.nl, opengameart.org, Steam, itch.io. Runner GitHub — ні.
 # Цей workflow забирає матеріали з ПЕРШОДЖЕРЕЛ для огляду й проб.
-# Запуск: зміна research/fetch.txt у пуші. Рядок файлу: `назва<TAB>джерело`
+# Запуск: ЛИШЕ вручну (workflow_dispatch, GAME-223): `gh workflow run research-fetch.yml --ref <гілка>` або кнопка Run workflow
+#   з вибором гілки. Пуш НЕ запускає: злиття main у гілку тягнуло fetch.txt і перезаписувало вичищені research/refs (двічі 31.10).
+# Рядок файлу: `назва<TAB>джерело`
 #   kenney:<slug>       — сторінка kenney.nl/assets/<slug>, zip першоджерела (CC0)
 #   oga:<slug>          — сторінка opengameart.org/content/<slug>: ліцензія з цієї сторінки + усі файли з неї
 #   ogasearch:<слова>   — лише список знайдених сторінок OGA (назва, посилання) у list.txt
@@ -11,8 +13,6 @@ name: research-fetch
 #    Звук (ogg/wav, кожен файл < 300 КБ) комітиться ЛИШЕ для наборів, назва яких починається з `pack-sfx-`;
 #    для решти `pack-*` — без звуку, як і раніше.
 on:
-  push:
-    paths: ['research/fetch.txt', '.github/workflows/research-fetch.yml']
   workflow_dispatch:
 
 permissions:
