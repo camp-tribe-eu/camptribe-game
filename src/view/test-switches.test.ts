@@ -3,12 +3,13 @@ import { testSwitches } from './test-switches';
 
 describe('перемикачі e2e (рецензія GAME-36)', () => {
   it('у збірці e2e — працюють', () => {
-    expect(testSwitches('?hideAct=complete&hideTouch=interact,stick', 'e2e')).toEqual({ hideAct: ['complete'], hideTouch: ['interact', 'stick'], hideUi: [], breakSpot: [], intro: false, panelActs: true });
+    expect(testSwitches('?hideAct=complete&hideTouch=interact,stick', 'e2e')).toEqual({ hideAct: ['complete'], hideTouch: ['interact', 'stick'], hideUi: [], breakSpot: [], intro: false, music: false, panelActs: true });
+    expect(testSwitches('?music=1', 'e2e').music).toBe(true);   // GAME-207: музика в e2e — лише за проханням
     expect(testSwitches('?intro=1', 'e2e').intro).toBe(true);   // GAME-182: вступ у збірці e2e — лише за проханням
     expect(testSwitches('?mapFirst=1', 'e2e').panelActs).toBeUndefined();   // GAME-175: справжня поведінка — мапа першою
   });
   it('у звичайній збірці (production, development) — вимкнені', () => {
-    for (const mode of ['production', 'development']) expect(testSwitches('?hideAct=complete&hideTouch=interact&seed=7', mode)).toEqual({ hideAct: [], hideTouch: [], hideUi: [], breakSpot: [], intro: true });
+    for (const mode of ['production', 'development']) expect(testSwitches('?hideAct=complete&hideTouch=interact&seed=7', mode)).toEqual({ hideAct: [], hideTouch: [], hideUi: [], breakSpot: [], intro: true, music: true });
   });
   it('зерно: лише ціле невід’ємне; інакше — без зерна', () => {
     expect(testSwitches('?seed=7', 'e2e').seed).toBe(7);

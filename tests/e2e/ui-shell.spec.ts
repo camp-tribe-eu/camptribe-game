@@ -6,10 +6,10 @@ const probe = (page: Page): Promise<Probe> => page.evaluate(() => ({ ...(window 
 const coreMinutes = (page: Page): Promise<number> =>
   page.evaluate(() => ((window as unknown as { __game: { read: () => { clock: { minutes: number } } } }).__game.read()).clock.minutes);
 
-async function open(page: Page): Promise<void> {
+async function open(page: Page, query = ''): Promise<void> {
   const errors: string[] = [];
   page.on('pageerror', (e) => errors.push(e.message));
-  await page.goto('/');
+  await page.goto(`/${query}`);
   await page.waitForFunction(() => (window as unknown as { __game?: { probe: Probe } }).__game?.probe.ready === true, null, { timeout: 30_000 });
   expect(errors).toEqual([]);
 }
@@ -148,4 +148,22 @@ test('кнопки UI грають звуки через мікшер: пауз�
   const afterMute = (await sounds(page)).length;
   await page.locator('[data-ui="resume"]').click();                  // mute → мікшер нічого не приймає
   expect((await sounds(page)).length).toBe(afterMute);
+});
+
+// GAME-207: музика — через той самий мікшер; у збірці e2e її немає без ?music=1 (детермінізм), з ним тема мапи звучить після першого жесту.
+const musicLevels = (page: Page): Promise<Record<string, number>> => page.evaluate(() => (window as unknown as { __game: { music: () => Record<string, number> } }).__game.music());
+test('музика: без ?music=1 — тиша навіть після жесту; з ?music=1 на мапі крамниці після жесту звучить тема крамниці (GAME-204)', async ({ page }) => {
+  await open(page);
+  await page.locator('.ui-pause-btn').click();
+  await page.locator('[data-ui="resume"]').click();
+  await page.waitForTimeout(1500);
+  expect(await musicLevels(page)).toEqual({});
+  await page.goto('about:blank');
+  await open(page, '?music=1&map=shop');
+  await page.locator('.ui-pause-btn').click();
+  await page.locator('[data-ui="resume"]').click();
+  await page.waitForFunction(() => Object.keys((window as unknown as { __game: { music: () => Record<string, number> } }).__game.music()).length > 0, null, { timeout: 15_000 });
+  const levels = await musicLevels(page);
+  expect(Object.keys(levels)).toEqual(['shop']);
+  expect(levels.shop).toBeGreaterThan(0);
 });

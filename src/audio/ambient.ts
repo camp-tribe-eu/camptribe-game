@@ -56,18 +56,23 @@ export interface Ambient {
   levels(): Readonly<Partial<Record<AmbientLayer, number>>>;
 }
 
-export function createAmbient(mx: Pick<Mixer, 'volume' | 'startLoop'>): Ambient {
-  let target: AmbientMix = {};
+/** Програвач петель із плавним переходом між шарами; спільний для фону (ambient) і музики (music.ts, GAME-207).
+ *  `ready` — чи файли вже в кеші (музика довантажується після першого кадру); поки ні — петля не стартує, але рівні вже ростуть. */
+export function createLoopPlayer<L extends string>(files: Readonly<Record<L, { readonly key: string }>>, mx: Pick<Mixer, 'volume' | 'startLoop'>, opts: { readonly fadeMs?: number; readonly ready?: () => boolean } = {}): LoopPlayer<L> {
+  const fadeMs = opts.fadeMs ?? FADE_MS;
+  const ready = opts.ready ?? ((): boolean => true);
+  const none: Readonly<Partial<Record<L, number>>> = Object.freeze({}) as Readonly<Partial<Record<L, number>>>;
+  let target = none;
   let unlocked = false;
-  const gain = new Map<AmbientLayer, number>();
-  const loops = new Map<AmbientLayer, LoopHandle>();
-  const layers = Object.keys(AMBIENT_FILES) as AmbientLayer[];
+  const gain = new Map<L, number>();
+  const loops = new Map<L, LoopHandle>();
+  const layers = Object.keys(files) as L[];
   return {
-    setAmbient(mix) { target = mix ?? {}; },
+    setAmbient(mix) { target = mix ?? none; },
     unlock() { unlocked = true; },
-    levels() { const o: Partial<Record<AmbientLayer, number>> = {}; for (const [k, v] of gain) if (v > 0) o[k] = v; return o; },
+    levels() { const o: Partial<Record<L, number>> = {}; for (const [k, v] of gain) if (v > 0) o[k] = v; return o; },
     tick(dtMs) {
-      const step = Math.max(0, dtMs) / FADE_MS;
+      const step = Math.max(0, dtMs) / fadeMs;
       const vol = mx.volume('music');
       for (const l of layers) {
         const want = clamp01(target[l] ?? 0);
@@ -77,8 +82,8 @@ export function createAmbient(mx: Pick<Mixer, 'volume' | 'startLoop'>): Ambient 
         let h = loops.get(l);
         if (next <= 0 && want <= 0) { if (h) { h.stop(); loops.delete(l); } continue; }
         if (!h) {
-          if (!unlocked || vol <= 0) continue;   // без жесту чи в тиші нічого не стартуємо; петля піде, щойно з'явиться гучність
-          h = mx.startLoop(AMBIENT_FILES[l].key, next * vol) ?? undefined;
+          if (!unlocked || vol <= 0 || !ready()) continue;   // без жесту, в тиші чи до довантаження нічого не стартуємо; петля піде, щойно можна
+          h = mx.startLoop(files[l].key, next * vol) ?? undefined;
           if (!h) continue;
           loops.set(l, h);
         }
@@ -86,4 +91,15 @@ export function createAmbient(mx: Pick<Mixer, 'volume' | 'startLoop'>): Ambient 
       }
     },
   };
+}
+
+export interface LoopPlayer<L extends string> {
+  setAmbient(mix: Readonly<Partial<Record<L, number>>> | null): void;
+  tick(dtMs: number): void;
+  unlock(): void;
+  levels(): Readonly<Partial<Record<L, number>>>;
+}
+
+export function createAmbient(mx: Pick<Mixer, 'volume' | 'startLoop'>): Ambient {
+  return createLoopPlayer(AMBIENT_FILES, mx);
 }

@@ -6,7 +6,7 @@
 // GAME-93: графіка LPC (OD-013) — тайли 32 px, персонаж із шарів (ходьба 9 кадрів × 4 напрямки), анімоване вогнище,
 // 3/4-глибина: верхівки дерев і дах намету малюються над персонажем, коли той стоїть ПОЗАД об'єктом (див. `bands`).
 import Phaser from 'phaser';
-import { ambient, bindPhaser, isIntroOpen, ambientMix } from '../../audio';
+import { ambient, bindPhaser, isIntroOpen, ambientMix, music, musicFor } from '../../audio';
 import { STEP_MS } from '../../core/clock';
 import { KEY_BINDINGS, KEY_CODES, TAP_MAX_MOVE, TAP_MAX_MS, actionTarget, consumeFrame, createActionGate, moveVector, press, release, tapHitsSpot, type Action, type ActionTarget, type InputState } from './actions';
 import type { Bridge } from './bridge';
@@ -433,6 +433,18 @@ export class WorldScene extends Phaser.Scene {
 
   create(): void {
     bindPhaser(this.sound);   // GAME-40: мікшер отримує вихід Phaser (звуки вже в кеші після preload)
+    // GAME-207: музика довантажується ПІСЛЯ preload (перший кадр < 1,5 с, GAME-38) і лише коли ввімкнена (збірка e2e — за ?music=1).
+    // Літерали — для check-scene-refs; відповідність таблиці MUSIC_FILES доводить src/audio/music.test.ts. До 'complete' петля не стартує (music.ready).
+    if (music.enabled) {
+      this.load.audio('mus-intro', 'audio/mus-intro.ogg');
+      this.load.audio('mus-home', 'audio/mus-home.ogg');
+      this.load.audio('mus-road', 'audio/mus-road.ogg');
+      this.load.audio('mus-shop', 'audio/mus-shop.ogg');
+      this.load.audio('mus-camp-day', 'audio/mus-camp-day.ogg');
+      this.load.audio('mus-camp-evening', 'audio/mus-camp-evening.ogg');
+      this.load.once('complete', () => music.setReady(true));
+      this.load.start();
+    }
     for (const [name, img] of Object.entries(this.art.tilesets)) this.textures.addImage(name, img);
     this.textures.addSpriteSheet('objective-icons', this.art.icons, { frameWidth: ICON_SIZE, frameHeight: ICON_SIZE });   // GAME-201: кадр = номер клітинки
     this.textures.addSpriteSheet('campfire', this.art.campfire, { frameWidth: FRAME, frameHeight: FRAME });
@@ -1038,6 +1050,9 @@ export class WorldScene extends Phaser.Scene {
     ambient.setAmbient(ambientMix({ map: this.current, intro: isIntroOpen(), nearLake: this.current === 'camp' && this.fish.near(pp, LAKE_EAR), fireLit: this.fire.lit || this.fire.phase === 'done',
       nearFire: this.fire.near(pp, FIRE_EAR), transport: this.hooks.transport() }));
     ambient.tick(delta);
+    // GAME-207: тема за мапою, вступом і годиною доби — чиста функція musicFor; перехід — у модулі звуку.
+    music.setTrack(musicFor({ map: this.current, intro: isIntroOpen(), minuteOfDay: timeOfDay(this.bridge.state.clock.minutes) }));
+    music.tick(delta);
     const held = consumeFrame(this.controls);
     // GAME-189: поки герой б'є кілки — стоїть; розміщення намету — ходить вільно (привид іде за ним).
     const v = this.tent.holdsHero || this.wood.holdsHero || this.fire.holdsHero || this.grill.holdsHero || this.fish.busy ? { x: 0, y: 0 } : moveVector(held);
