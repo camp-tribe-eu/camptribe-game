@@ -1,0 +1,41 @@
+name: story
+# GAME-198: «сценарна кімната» — бриф кільком моделям через fal-ai/any-llm (ключ FAL лише з секрету).
+# Кладеш бриф у brain/Сценарій/briefs/, запускаєш вручну на своїй гілці, чернетки комітяться
+# в brain/Сценарій/drafts/<бриф>/. Це сировина для людини-редактора, не канон і не рантайм гри.
+on:
+  workflow_dispatch:
+    inputs:
+      brief:
+        description: 'Файл брифу в brain/Сценарій/briefs/ (напр. game-199-arc-v2.json)'
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  room:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: '22' }
+      - name: Перевірити кімнату без мережі
+        run: node --test scripts/story/room.test.mjs
+      - name: Запитати моделі
+        env:
+          FAL_KEY: ${{ secrets.FAL_KEY }}
+          BRIEF: ${{ inputs.brief }}
+        run: |
+          case "$BRIEF" in */*|*..*|'') echo "::error::лише ім'я файлу в brain/Сценарій/briefs/"; exit 1;; esac
+          node scripts/story/room.mjs "brain/Сценарій/briefs/$BRIEF"
+      - name: Закомітити чернетки
+        env:
+          BRIEF: ${{ inputs.brief }}
+        run: |
+          git config user.name "story-bot"
+          git config user.email "noreply@anthropic.com"
+          git add brain/Сценарій/drafts
+          git diff --staged --quiet && { echo "::error::чернеток немає — коміту немає"; exit 1; }
+          git commit -m "story: ${BRIEF}"
+          git pull --rebase origin "${GITHUB_REF_NAME}"
+          git push origin "HEAD:${GITHUB_REF_NAME}"
