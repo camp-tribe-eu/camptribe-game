@@ -204,6 +204,7 @@
         "characters/torso/clothes/shortsleeve/shortsleeve/teen/spellcast.png",
         "characters/torso/clothes/shortsleeve/shortsleeve/teen/thrust.png",
         "characters/torso/clothes/shortsleeve/shortsleeve/teen/walk.png",
+        "icons/objective_icons.png",
         "portraits/animal.cat.png",
         "portraits/npc.amina.png",
         "portraits/npc.claire.png",
@@ -231,6 +232,7 @@
         "http://opengameart.org/content/lpc-revised-character-basics",
         "https://github.com/ElizaWy/LPC/tree/main/Characters/Clothing",
         "https://github.com/LiberatedPixelCup/Universal-LPC-Spritesheet-Character-Generator",
+        "https://github.com/camp-tribe-eu/camptribe-game/blob/main/scripts/assets/build_objective_icons.py",
         "https://gitlab.com/vagabondgame/lpc-characters",
         "https://opengameart.org/content/",
         "https://opengameart.org/content/liberated-pixel-cup-lpc-base-assets-sprites-map-tiles",
@@ -284,15 +286,16 @@
       ]
     },
     {
-      "name": "CampTribe (власна робота)",
+      "name": "CampTribe (власні малюнки 5 клітинок)",
       "files": [
         "icons/objective_icons.png"
       ],
       "licences": [
-        "CC0"
+        "CC-BY-SA 3.0"
       ],
       "sources": [
-        "https://github.com/camp-tribe-eu/camptribe-game/blob/main/scripts/assets/build_objective_icons.py"
+        "https://github.com/camp-tribe-eu/camptribe-game/blob/main/scripts/assets/build_objective_icons.py",
+        "https://opengameart.org/content/lpc-revised-base-object-kit"
       ]
     },
     {
@@ -489,6 +492,7 @@
         "characters/torso/clothes/shortsleeve/shortsleeve/teen/spellcast.png",
         "characters/torso/clothes/shortsleeve/shortsleeve/teen/thrust.png",
         "characters/torso/clothes/shortsleeve/shortsleeve/teen/walk.png",
+        "icons/objective_icons.png",
         "portraits/npc.amina.png",
         "portraits/npc.claire.png",
         "portraits/npc.elise.png",
@@ -511,6 +515,7 @@
         "http://opengameart.org/content/lpc-revised-character-basics",
         "https://github.com/ElizaWy/LPC/tree/main/Characters/Clothing",
         "https://github.com/LiberatedPixelCup/Universal-LPC-Spritesheet-Character-Generator",
+        "https://github.com/camp-tribe-eu/camptribe-game/blob/main/scripts/assets/build_objective_icons.py",
         "https://gitlab.com/vagabondgame/lpc-characters",
         "https://opengameart.org/content/",
         "https://opengameart.org/content/liberated-pixel-cup-lpc-base-assets-sprites-map-tiles",
@@ -646,6 +651,19 @@
         "https://opengameart.org/content/lpc-floors",
         "https://opengameart.org/content/lpc-revised-base-object-kit",
         "https://opengameart.org/content/lpc-walls"
+      ]
+    },
+    {
+      "name": "Hyptosis (стильовий еталон LPC)",
+      "files": [
+        "icons/objective_icons.png"
+      ],
+      "licences": [
+        "CC-BY-SA 3.0"
+      ],
+      "sources": [
+        "https://github.com/camp-tribe-eu/camptribe-game/blob/main/scripts/assets/build_objective_icons.py",
+        "https://opengameart.org/content/lpc-revised-base-object-kit"
       ]
     },
     {
@@ -964,6 +982,7 @@
     {
       "name": "Lanea Zimmerman (Sharm)",
       "files": [
+        "icons/objective_icons.png",
         "tiles/base_out_atlas.png",
         "tiles/home_floor.png",
         "tiles/home_furniture.png",
@@ -979,6 +998,7 @@
         "OGA-BY 3.0"
       ],
       "sources": [
+        "https://github.com/camp-tribe-eu/camptribe-game/blob/main/scripts/assets/build_objective_icons.py",
         "https://opengameart.org/content/lpc-floors",
         "https://opengameart.org/content/lpc-revised-base-object-kit",
         "https://opengameart.org/content/lpc-revised-the-office",
@@ -2845,13 +2865,18 @@
     {
       "file": "icons/objective_icons.png",
       "authors": [
-        "CampTribe (власна робота)"
+        "Eliza Wyatt (ElizaWy)",
+        "Lanea Zimmerman (Sharm)",
+        "bluecarrot16",
+        "Hyptosis (стильовий еталон LPC)",
+        "CampTribe (власні малюнки 5 клітинок)"
       ],
-      "licence": "CC0",
+      "licence": "CC-BY-SA 3.0",
       "sources": [
+        "https://opengameart.org/content/lpc-revised-base-object-kit",
         "https://github.com/camp-tribe-eu/camptribe-game/blob/main/scripts/assets/build_objective_icons.py"
       ],
-      "modified": "drawn by hand in a script, 1 px outline added, colours snapped to the LPC base palette; no third-party pixels"
+      "modified": "AI-generated from LPC reference, magenta keyed out, box-downscaled to 16x16, quantized to the LPC base palette; 5 cells hand-drawn in script"
     },
     {
       "file": "portraits/animal.cat.png",
