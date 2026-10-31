@@ -1,0 +1,376 @@
+{
+ "batch": [
+  {
+   "name": "tent",
+   "endpoint": "fal-ai/flux-pro/kontext",
+   "payload": {
+    "prompt": "Using the exact pixel art style of this reference sprite sheet (same dark outline, limited palette, soft shading, light from the top-left), draw ONE small inventory ICON: a small green camping tent. Simple and readable when shrunk to 16x16 pixels, centered, filling most of the frame, isolated on a solid flat pure magenta #FF00FF background, no text, no frame, no shadow.",
+    "image_url": "https://raw.githubusercontent.com/camp-tribe-eu/camptribe-game/main/assets/tiles/home_furniture.png",
+    "num_images": 1,
+    "output_format": "png",
+    "safety_tolerance": "2",
+    "seed": 20261031
+   }
+  },
+  {
+   "name": "bag",
+   "endpoint": "fal-ai/flux-pro/kontext",
+   "payload": {
+    "prompt": "Using the exact pixel art style of this reference sprite sheet (same dark outline, limited palette, soft shading, light from the top-left), draw ONE small inventory ICON: a rolled blue sleeping bag. Simple and readable when shrunk to 16x16 pixels, centered, filling most of the frame, isolated on a solid flat pure magenta #FF00FF background, no text, no frame, no shadow.",
+    "image_url": "https://raw.githubusercontent.com/camp-tribe-eu/camptribe-game/main/assets/tiles/home_furniture.png",
+    "num_images": 1,
+    "output_format": "png",
+    "safety_tolerance": "2",
+    "seed": 20261031
+   }
+  },
+  {
+   "name": "lantern",
+   "endpoint": "fal-ai/flux-pro/kontext",
+   "payload": {
+    "prompt": "Using the exact pixel art style of this reference sprite sheet (same dark outline, limited palette, soft shading, light from the top-left), draw ONE small inventory ICON: a glowing camping lantern. Simple and readable when shrunk to 16x16 pixels, centered, filling most of the frame, isolated on a solid flat pure magenta #FF00FF background, no text, no frame, no shadow.",
+    "image_url": "https://raw.githubusercontent.com/camp-tribe-eu/camptribe-game/main/assets/tiles/home_furniture.png",
+    "num_images": 1,
+    "output_format": "png",
+    "safety_tolerance": "2",
+    "seed": 20261031
+   }
+  },
+  {
+   "name": "cushion",
+   "endpoint": "fal-ai/flux-pro/kontext",
+   "payload": {
+    "prompt": "Using the exact pixel art style of this reference sprite sheet (same dark outline, limited palette, soft shading, light from the top-left), draw ONE small inventory ICON: a soft orange cushion. Simple and readable when shrunk to 16x16 pixels, centered, filling most of the frame, isolated on a solid flat pure magenta #FF00FF background, no text, no frame, no shadow.",
+    "image_url": "https://raw.githubusercontent.com/camp-tribe-eu/camptribe-game/main/assets/tiles/home_furniture.png",
+    "num_images": 1,
+    "output_format": "png",
+    "safety_tolerance": "2",
+    "seed": 20261031
+   }
+  },
+  {
+   "name": "water",
+   "endpoint": "fal-ai/flux-pro/kontext",
+   "payload": {
+    "prompt": "Using the exact pixel art style of this reference sprite sheet (same dark outline, limited palette, soft shading, light from the top-left), draw ONE small inventory ICON: a plastic water bottle. Simple and readable when shrunk to 16x16 pixels, centered, filling most of the frame, isolated on a solid flat pure magenta #FF00FF background, no text, no frame, no shadow.",
+    "image_url": "https://raw.githubusercontent.com/camp-tribe-eu/camptribe-game/main/assets/tiles/home_furniture.png",
+    "num_images": 1,
+    "output_format": "png",
+    "safety_tolerance": "2",
+    "seed": 20261031
+   }
+  },
+  {
+   "name": "snack",
+   "endpoint": "fal-ai/flux-pro/kontext",
+   "payload": {
+    "prompt": "Using the exact pixel art style of this reference sprite sheet (same dark outline, limited palette, soft shading, light from the top-left), draw ONE small inventory ICON: a honey cookie. Simple and readable when shrunk to 16x16 pixels, centered, filling most of the frame, isolated on a solid flat pure magenta #FF00FF background, no text, no frame, no shadow.",
+    "image_url": "https://raw.githubusercontent.com/camp-tribe-eu/camptribe-game/main/assets/tiles/home_furniture.png",
+    "num_images": 1,
+    "output_format": "png",
+    "safety_tolerance": "2",
+    "seed": 20261031
+   }
+  },
+  {
+   "name": "dinner",
+   "endpoint": "fal-ai/flux-pro/kontext",
+   "payload": {
+    "prompt": "Using the exact pixel art style of this reference sprite sheet (same dark outline, limited palette, soft shading, light from the top-left), draw ONE small inventory ICON: a bowl of hot soup. Simple and readable when shrunk to 16x16 pixels, centered, filling most of the frame, isolated on a solid flat pure magenta #FF00FF background, no text, no frame, no shadow.",
+    "image_url": "https://raw.githubusercontent.com/camp-tribe-eu/camptribe-game/main/assets/tiles/home_furniture.png",
+    "num_images": 1,
+    "output_format": "png",
+    "safety_tolerance": "2",
+    "seed": 20261031
+   }
+  },
+  {
+   "name": "carrier",
+   "endpoint": "fal-ai/flux-pro/kontext",
+   "payload": {
+    "prompt": "Using the exact pixel art style of this reference sprite sheet (same dark outline, limited palette, soft shading, light from the top-left), draw ONE small inventory ICON: a pet carrier box. Simple and readable when shrunk to 16x16 pixels, centered, filling most of the frame, isolated on a solid flat pure magenta #FF00FF background, no text, no frame, no shadow.",
+    "image_url": "https://raw.githubusercontent.com/camp-tribe-eu/camptribe-game/main/assets/tiles/home_furniture.png",
+    "num_images": 1,
+    "output_format": "png",
+    "safety_tolerance": "2",
+    "seed": 20261031
+   }
+  },
+  {
+   "name": "bowl",
+   "endpoint": "fal-ai/flux-pro/kontext",
+   "payload": {
+    "prompt": "Using the exact pixel art style of this reference sprite sheet (same dark outline, limited palette, soft shading, light from the top-left), draw ONE small inventory ICON: a cat food bowl with kibble. Simple and readable when shrunk to 16x16 pixels, centered, filling most of the frame, isolated on a solid flat pure magenta #FF00FF background, no text, no frame, no shadow.",
+    "image_url": "https://raw.githubusercontent.com/camp-tribe-eu/camptribe-game/main/assets/tiles/home_furniture.png",
+    "num_images": 1,
+    "output_format": "png",
+    "safety_tolerance": "2",
+    "seed": 20261031
+   }
+  },
+  {
+   "name": "blanket",
+   "endpoint": "fal-ai/flux-pro/kontext",
+   "payload": {
+    "prompt": "Using the exact pixel art style of this reference sprite sheet (same dark outline, limited palette, soft shading, light from the top-left), draw ONE small inventory ICON: a folded checkered blanket. Simple and readable when shrunk to 16x16 pixels, centered, filling most of the frame, isolated on a solid flat pure magenta #FF00FF background, no text, no frame, no shadow.",
+    "image_url": "https://raw.githubusercontent.com/camp-tribe-eu/camptribe-game/main/assets/tiles/home_furniture.png",
+    "num_images": 1,
+    "output_format": "png",
+    "safety_tolerance": "2",
+    "seed": 20261031
+   }
+  },
+  {
+   "name": "firewood",
+   "endpoint": "fal-ai/flux-pro/kontext",
+   "payload": {
+    "prompt": "Using the exact pixel art style of this reference sprite sheet (same dark outline, limited palette, soft shading, light from the top-left), draw ONE small inventory ICON: a small bundle of firewood logs. Simple and readable when shrunk to 16x16 pixels, centered, filling most of the frame, isolated on a solid flat pure magenta #FF00FF background, no text, no frame, no shadow.",
+    "image_url": "https://raw.githubusercontent.com/camp-tribe-eu/camptribe-game/main/assets/tiles/home_furniture.png",
+    "num_images": 1,
+    "output_format": "png",
+    "safety_tolerance": "2",
+    "seed": 20261031
+   }
+  },
+  {
+   "name": "litter",
+   "endpoint": "fal-ai/flux-pro/kontext",
+   "payload": {
+    "prompt": "Using the exact pixel art style of this reference sprite sheet (same dark outline, limited palette, soft shading, light from the top-left), draw ONE small inventory ICON: a crumpled paper litter ball. Simple and readable when shrunk to 16x16 pixels, centered, filling most of the frame, isolated on a solid flat pure magenta #FF00FF background, no text, no frame, no shadow.",
+    "image_url": "https://raw.githubusercontent.com/camp-tribe-eu/camptribe-game/main/assets/tiles/home_furniture.png",
+    "num_images": 1,
+    "output_format": "png",
+    "safety_tolerance": "2",
+    "seed": 20261031
+   }
+  },
+  {
+   "name": "bird",
+   "endpoint": "fal-ai/flux-pro/kontext",
+   "payload": {
+    "prompt": "Using the exact pixel art style of this reference sprite sheet (same dark outline, limited palette, soft shading, light from the top-left), draw ONE small inventory ICON: a small brown songbird. Simple and readable when shrunk to 16x16 pixels, centered, filling most of the frame, isolated on a solid flat pure magenta #FF00FF background, no text, no frame, no shadow.",
+    "image_url": "https://raw.githubusercontent.com/camp-tribe-eu/camptribe-game/main/assets/tiles/home_furniture.png",
+    "num_images": 1,
+    "output_format": "png",
+    "safety_tolerance": "2",
+    "seed": 20261031
+   }
+  },
+  {
+   "name": "chain",
+   "endpoint": "fal-ai/flux-pro/kontext",
+   "payload": {
+    "prompt": "Using the exact pixel art style of this reference sprite sheet (same dark outline, limited palette, soft shading, light from the top-left), draw ONE small inventory ICON: a bicycle chain. Simple and readable when shrunk to 16x16 pixels, centered, filling most of the frame, isolated on a solid flat pure magenta #FF00FF background, no text, no frame, no shadow.",
+    "image_url": "https://raw.githubusercontent.com/camp-tribe-eu/camptribe-game/main/assets/tiles/home_furniture.png",
+    "num_images": 1,
+    "output_format": "png",
+    "safety_tolerance": "2",
+    "seed": 20261031
+   }
+  },
+  {
+   "name": "camera",
+   "endpoint": "fal-ai/flux-pro/kontext",
+   "payload": {
+    "prompt": "Using the exact pixel art style of this reference sprite sheet (same dark outline, limited palette, soft shading, light from the top-left), draw ONE small inventory ICON: a compact photo camera. Simple and readable when shrunk to 16x16 pixels, centered, filling most of the frame, isolated on a solid flat pure magenta #FF00FF background, no text, no frame, no shadow.",
+    "image_url": "https://raw.githubusercontent.com/camp-tribe-eu/camptribe-game/main/assets/tiles/home_furniture.png",
+    "num_images": 1,
+    "output_format": "png",
+    "safety_tolerance": "2",
+    "seed": 20261031
+   }
+  },
+  {
+   "name": "wire",
+   "endpoint": "fal-ai/flux-pro/kontext",
+   "payload": {
+    "prompt": "Using the exact pixel art style of this reference sprite sheet (same dark outline, limited palette, soft shading, light from the top-left), draw ONE small inventory ICON: a coil of red electric cable. Simple and readable when shrunk to 16x16 pixels, centered, filling most of the frame, isolated on a solid flat pure magenta #FF00FF background, no text, no frame, no shadow.",
+    "image_url": "https://raw.githubusercontent.com/camp-tribe-eu/camptribe-game/main/assets/tiles/home_furniture.png",
+    "num_images": 1,
+    "output_format": "png",
+    "safety_tolerance": "2",
+    "seed": 20261031
+   }
+  },
+  {
+   "name": "star",
+   "endpoint": "fal-ai/flux-pro/kontext",
+   "payload": {
+    "prompt": "Using the exact pixel art style of this reference sprite sheet (same dark outline, limited palette, soft shading, light from the top-left), draw ONE small inventory ICON: a golden star. Simple and readable when shrunk to 16x16 pixels, centered, filling most of the frame, isolated on a solid flat pure magenta #FF00FF background, no text, no frame, no shadow.",
+    "image_url": "https://raw.githubusercontent.com/camp-tribe-eu/camptribe-game/main/assets/tiles/home_furniture.png",
+    "num_images": 1,
+    "output_format": "png",
+    "safety_tolerance": "2",
+    "seed": 20261031
+   }
+  },
+  {
+   "name": "apple",
+   "endpoint": "fal-ai/flux-pro/kontext",
+   "payload": {
+    "prompt": "Using the exact pixel art style of this reference sprite sheet (same dark outline, limited palette, soft shading, light from the top-left), draw ONE small inventory ICON: a red apple. Simple and readable when shrunk to 16x16 pixels, centered, filling most of the frame, isolated on a solid flat pure magenta #FF00FF background, no text, no frame, no shadow.",
+    "image_url": "https://raw.githubusercontent.com/camp-tribe-eu/camptribe-game/main/assets/tiles/home_furniture.png",
+    "num_images": 1,
+    "output_format": "png",
+    "safety_tolerance": "2",
+    "seed": 20261031
+   }
+  },
+  {
+   "name": "car",
+   "endpoint": "fal-ai/flux-pro/kontext",
+   "payload": {
+    "prompt": "Using the exact pixel art style of this reference sprite sheet (same dark outline, limited palette, soft shading, light from the top-left), draw ONE small inventory ICON: a small blue family car. Simple and readable when shrunk to 16x16 pixels, centered, filling most of the frame, isolated on a solid flat pure magenta #FF00FF background, no text, no frame, no shadow.",
+    "image_url": "https://raw.githubusercontent.com/camp-tribe-eu/camptribe-game/main/assets/tiles/home_furniture.png",
+    "num_images": 1,
+    "output_format": "png",
+    "safety_tolerance": "2",
+    "seed": 20261031
+   }
+  },
+  {
+   "name": "suitcase",
+   "endpoint": "fal-ai/flux-pro/kontext",
+   "payload": {
+    "prompt": "Using the exact pixel art style of this reference sprite sheet (same dark outline, limited palette, soft shading, light from the top-left), draw ONE small inventory ICON: a brown travel suitcase. Simple and readable when shrunk to 16x16 pixels, centered, filling most of the frame, isolated on a solid flat pure magenta #FF00FF background, no text, no frame, no shadow.",
+    "image_url": "https://raw.githubusercontent.com/camp-tribe-eu/camptribe-game/main/assets/tiles/home_furniture.png",
+    "num_images": 1,
+    "output_format": "png",
+    "safety_tolerance": "2",
+    "seed": 20261031
+   }
+  },
+  {
+   "name": "map",
+   "endpoint": "fal-ai/flux-pro/kontext",
+   "payload": {
+    "prompt": "Using the exact pixel art style of this reference sprite sheet (same dark outline, limited palette, soft shading, light from the top-left), draw ONE small inventory ICON: a folded paper map. Simple and readable when shrunk to 16x16 pixels, centered, filling most of the frame, isolated on a solid flat pure magenta #FF00FF background, no text, no frame, no shadow.",
+    "image_url": "https://raw.githubusercontent.com/camp-tribe-eu/camptribe-game/main/assets/tiles/home_furniture.png",
+    "num_images": 1,
+    "output_format": "png",
+    "safety_tolerance": "2",
+    "seed": 20261031
+   }
+  },
+  {
+   "name": "heart",
+   "endpoint": "fal-ai/flux-pro/kontext",
+   "payload": {
+    "prompt": "Using the exact pixel art style of this reference sprite sheet (same dark outline, limited palette, soft shading, light from the top-left), draw ONE small inventory ICON: a red heart. Simple and readable when shrunk to 16x16 pixels, centered, filling most of the frame, isolated on a solid flat pure magenta #FF00FF background, no text, no frame, no shadow.",
+    "image_url": "https://raw.githubusercontent.com/camp-tribe-eu/camptribe-game/main/assets/tiles/home_furniture.png",
+    "num_images": 1,
+    "output_format": "png",
+    "safety_tolerance": "2",
+    "seed": 20261031
+   }
+  },
+  {
+   "name": "wrench",
+   "endpoint": "fal-ai/flux-pro/kontext",
+   "payload": {
+    "prompt": "Using the exact pixel art style of this reference sprite sheet (same dark outline, limited palette, soft shading, light from the top-left), draw ONE small inventory ICON: a steel wrench. Simple and readable when shrunk to 16x16 pixels, centered, filling most of the frame, isolated on a solid flat pure magenta #FF00FF background, no text, no frame, no shadow.",
+    "image_url": "https://raw.githubusercontent.com/camp-tribe-eu/camptribe-game/main/assets/tiles/home_furniture.png",
+    "num_images": 1,
+    "output_format": "png",
+    "safety_tolerance": "2",
+    "seed": 20261031
+   }
+  },
+  {
+   "name": "tyre",
+   "endpoint": "fal-ai/flux-pro/kontext",
+   "payload": {
+    "prompt": "Using the exact pixel art style of this reference sprite sheet (same dark outline, limited palette, soft shading, light from the top-left), draw ONE small inventory ICON: a bicycle tyre. Simple and readable when shrunk to 16x16 pixels, centered, filling most of the frame, isolated on a solid flat pure magenta #FF00FF background, no text, no frame, no shadow.",
+    "image_url": "https://raw.githubusercontent.com/camp-tribe-eu/camptribe-game/main/assets/tiles/home_furniture.png",
+    "num_images": 1,
+    "output_format": "png",
+    "safety_tolerance": "2",
+    "seed": 20261031
+   }
+  },
+  {
+   "name": "cat",
+   "endpoint": "fal-ai/flux-pro/kontext",
+   "payload": {
+    "prompt": "Using the exact pixel art style of this reference sprite sheet (same dark outline, limited palette, soft shading, light from the top-left), draw ONE small inventory ICON: the head of a grey cat. Simple and readable when shrunk to 16x16 pixels, centered, filling most of the frame, isolated on a solid flat pure magenta #FF00FF background, no text, no frame, no shadow.",
+    "image_url": "https://raw.githubusercontent.com/camp-tribe-eu/camptribe-game/main/assets/tiles/home_furniture.png",
+    "num_images": 1,
+    "output_format": "png",
+    "safety_tolerance": "2",
+    "seed": 20261031
+   }
+  },
+  {
+   "name": "bike",
+   "endpoint": "fal-ai/flux-pro/kontext",
+   "payload": {
+    "prompt": "Using the exact pixel art style of this reference sprite sheet (same dark outline, limited palette, soft shading, light from the top-left), draw ONE small inventory ICON: a bicycle. Simple and readable when shrunk to 16x16 pixels, centered, filling most of the frame, isolated on a solid flat pure magenta #FF00FF background, no text, no frame, no shadow.",
+    "image_url": "https://raw.githubusercontent.com/camp-tribe-eu/camptribe-game/main/assets/tiles/home_furniture.png",
+    "num_images": 1,
+    "output_format": "png",
+    "safety_tolerance": "2",
+    "seed": 20261031
+   }
+  },
+  {
+   "name": "boots",
+   "endpoint": "fal-ai/flux-pro/kontext",
+   "payload": {
+    "prompt": "Using the exact pixel art style of this reference sprite sheet (same dark outline, limited palette, soft shading, light from the top-left), draw ONE small inventory ICON: a pair of brown hiking boots. Simple and readable when shrunk to 16x16 pixels, centered, filling most of the frame, isolated on a solid flat pure magenta #FF00FF background, no text, no frame, no shadow.",
+    "image_url": "https://raw.githubusercontent.com/camp-tribe-eu/camptribe-game/main/assets/tiles/home_furniture.png",
+    "num_images": 1,
+    "output_format": "png",
+    "safety_tolerance": "2",
+    "seed": 20261031
+   }
+  },
+  {
+   "name": "flag",
+   "endpoint": "fal-ai/flux-pro/kontext",
+   "payload": {
+    "prompt": "Using the exact pixel art style of this reference sprite sheet (same dark outline, limited palette, soft shading, light from the top-left), draw ONE small inventory ICON: a small red flag on a pole. Simple and readable when shrunk to 16x16 pixels, centered, filling most of the frame, isolated on a solid flat pure magenta #FF00FF background, no text, no frame, no shadow.",
+    "image_url": "https://raw.githubusercontent.com/camp-tribe-eu/camptribe-game/main/assets/tiles/home_furniture.png",
+    "num_images": 1,
+    "output_format": "png",
+    "safety_tolerance": "2",
+    "seed": 20261031
+   }
+  },
+  {
+   "name": "coins",
+   "endpoint": "fal-ai/flux-pro/kontext",
+   "payload": {
+    "prompt": "Using the exact pixel art style of this reference sprite sheet (same dark outline, limited palette, soft shading, light from the top-left), draw ONE small inventory ICON: a small stack of gold coins. Simple and readable when shrunk to 16x16 pixels, centered, filling most of the frame, isolated on a solid flat pure magenta #FF00FF background, no text, no frame, no shadow.",
+    "image_url": "https://raw.githubusercontent.com/camp-tribe-eu/camptribe-game/main/assets/tiles/home_furniture.png",
+    "num_images": 1,
+    "output_format": "png",
+    "safety_tolerance": "2",
+    "seed": 20261031
+   }
+  },
+  {
+   "name": "line",
+   "endpoint": "fal-ai/flux-pro/kontext",
+   "payload": {
+    "prompt": "Using the exact pixel art style of this reference sprite sheet (same dark outline, limited palette, soft shading, light from the top-left), draw ONE small inventory ICON: a clothesline with colorful towels. Simple and readable when shrunk to 16x16 pixels, centered, filling most of the frame, isolated on a solid flat pure magenta #FF00FF background, no text, no frame, no shadow.",
+    "image_url": "https://raw.githubusercontent.com/camp-tribe-eu/camptribe-game/main/assets/tiles/home_furniture.png",
+    "num_images": 1,
+    "output_format": "png",
+    "safety_tolerance": "2",
+    "seed": 20261031
+   }
+  },
+  {
+   "name": "compass",
+   "endpoint": "fal-ai/flux-pro/kontext",
+   "payload": {
+    "prompt": "Using the exact pixel art style of this reference sprite sheet (same dark outline, limited palette, soft shading, light from the top-left), draw ONE small inventory ICON: a brass compass. Simple and readable when shrunk to 16x16 pixels, centered, filling most of the frame, isolated on a solid flat pure magenta #FF00FF background, no text, no frame, no shadow.",
+    "image_url": "https://raw.githubusercontent.com/camp-tribe-eu/camptribe-game/main/assets/tiles/home_furniture.png",
+    "num_images": 1,
+    "output_format": "png",
+    "safety_tolerance": "2",
+    "seed": 20261031
+   }
+  }
+ ]
+}
