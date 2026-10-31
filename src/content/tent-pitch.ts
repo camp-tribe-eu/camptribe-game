@@ -11,10 +11,17 @@ export const BAND = { from: 0.32, to: 0.68 } as const;
 export const WOBBLE_MS = 500;
 
 export type TentPhase = 'idle' | 'place' | 'peg' | 'done';
+/** GAME-203: найбільше помічників (мама й Метью тягнуть відтяжки); кожен знімає з тата один кілок, але два кілки тато б'є завжди. */
+export const MAX_HELPERS = 2;
+export const MIN_PEGS = 2;
+/** Скільки кілків на руки тата з `helpers` помічниками: 4 сам, 3 з одним, 2 з двома. Чиста функція — її читає сцена й e2e. */
+export const pegsFor = (helpers: number): number => Math.max(MIN_PEGS, PEGS - Math.max(0, Math.min(MAX_HELPERS, Math.trunc(helpers))));
 export interface TentState {
   readonly phase: TentPhase;
-  /** Забито кілків (0..PEGS). */
+  /** Забито кілків (0..need). */
   readonly pegs: number;
+  /** GAME-203: скільки кілків треба забити тату (pegsFor(helpers)); решту тримають помічники відтяжками. */
+  readonly need: number;
   /** Мс від початку поточного ходу маркера. */
   readonly t: number;
   /** Скільки промахів було (лише для відгуку; на хід гри не впливає — штрафу немає). */
@@ -23,8 +30,9 @@ export interface TentState {
 export type TentEvent = 'none' | 'started' | 'placed' | 'blocked' | 'hit' | 'miss' | 'done';
 export type TentInput = { readonly kind: 'tick'; readonly dtMs: number } | { readonly kind: 'act'; readonly placeOk: boolean };
 
-export const IDLE: TentState = { phase: 'idle', pegs: 0, t: 0, misses: 0 };
-export const startTent = (): TentState => ({ phase: 'place', pegs: 0, t: 0, misses: 0 });
+export const IDLE: TentState = { phase: 'idle', pegs: 0, need: PEGS, t: 0, misses: 0 };
+/** `helpers` — скільки членів родини тягнуть відтяжки (GAME-203): з ними кілків на руки тата менше. */
+export const startTent = (helpers = 0): TentState => ({ phase: 'place', pegs: 0, need: pegsFor(helpers), t: 0, misses: 0 });
 
 /** Позиція маркера 0..1 у мить t: трикутна хвиля (вниз-вгору), без розривів. */
 export function markerAt(t: number): number {
@@ -43,7 +51,7 @@ export function stepTent(s: TentState, i: TentInput): { state: TentState; event:
   if (s.phase !== 'peg') return { state: s, event: 'none' };
   if (!inBand(markerAt(s.t))) return { state: { ...s, t: 0, misses: s.misses + 1 }, event: 'miss' };
   const pegs = s.pegs + 1;
-  return pegs >= PEGS ? { state: { ...s, phase: 'done', pegs, t: 0 }, event: 'done' } : { state: { ...s, pegs, t: 0 }, event: 'hit' };
+  return pegs >= s.need ? { state: { ...s, phase: 'done', pegs, t: 0 }, event: 'done' } : { state: { ...s, pegs, t: 0 }, event: 'hit' };
 }
 
 /** Чи місце під намет придатне: поблизу цілі справи, усі кути підошви вільні, чужих об'єктів мапи в підошві нема. */

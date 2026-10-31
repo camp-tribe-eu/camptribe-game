@@ -8,9 +8,11 @@
       "choices": [
         { "textKey": "dlg.matthew-chat.hello.c1", "next": "a" },
         { "textKey": "dlg.matthew-chat.hello.c2", "next": "b" },
+        { "textKey": "dlg.matthew-chat.hello.c4", "next": "errand-shelter", "when": { "all": [{ "quest": "ST-005", "status": "active" }, { "notFlag": "f.errand-gear-shelter-victoria" }, { "notFlag": "f.errand-gear-shelter-matthew" }] }, "effects": [{ "setFlag": "f.errand-gear-shelter-matthew" }] },
         { "textKey": "dlg.matthew-chat.hello.c3", "next": "bye" }
       ]
     },
+    { "id": "errand-shelter", "speaker": "npc", "textKey": "dlg.matthew-chat.errand-shelter", "end": true },
     { "id": "a", "speaker": "npc", "textKey": "dlg.matthew-chat.a", "end": true },
     { "id": "b", "speaker": "npc", "textKey": "dlg.matthew-chat.b", "end": true },
     { "id": "bye", "speaker": "npc", "textKey": "dlg.matthew-chat.bye", "end": true }

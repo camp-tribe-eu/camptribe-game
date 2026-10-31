@@ -8,9 +8,13 @@
       "choices": [
         { "textKey": "dlg.victoria-chat.hello.c1", "next": "a" },
         { "textKey": "dlg.victoria-chat.hello.c2", "next": "b" },
+        { "textKey": "dlg.victoria-chat.hello.c4", "next": "errand-shelter", "when": { "all": [{ "quest": "ST-005", "status": "active" }, { "notFlag": "f.errand-gear-shelter-victoria" }, { "notFlag": "f.errand-gear-shelter-matthew" }] }, "effects": [{ "setFlag": "f.errand-gear-shelter-victoria" }] },
+        { "textKey": "dlg.victoria-chat.hello.c5", "next": "errand-dinner", "when": { "all": [{ "quest": "CH1-D2-CAMP-001", "status": "active" }, { "notFlag": "f.errand-dinner-victoria" }] }, "effects": [{ "setFlag": "f.errand-dinner-victoria" }] },
         { "textKey": "dlg.victoria-chat.hello.c3", "next": "bye" }
       ]
     },
+    { "id": "errand-shelter", "speaker": "npc", "textKey": "dlg.victoria-chat.errand-shelter", "end": true },
+    { "id": "errand-dinner", "speaker": "npc", "textKey": "dlg.victoria-chat.errand-dinner", "end": true },
     { "id": "a", "speaker": "npc", "textKey": "dlg.victoria-chat.a", "end": true },
     { "id": "b", "speaker": "npc", "textKey": "dlg.victoria-chat.b", "end": true },
     { "id": "bye", "speaker": "npc", "textKey": "dlg.victoria-chat.bye", "end": true }
