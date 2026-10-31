@@ -6,7 +6,7 @@ import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { loadMapObjects } from './load.mjs';
 import { checkSchema } from './schema.mjs';
-import { STICKER_SLOTS, ECON_FLOOR_CENTS, FACT_KINDS, FACT_STALE_DAYS, FLAG_FAMILIES, GEAR_CHECK_VARIANTS, GEAR_FIELDS, isWarning, LOAN_RE, SKILL_IDS, WAVE_MAX_LIMIT, WAVE_MAX_TASKS, WAVE_MIN_TASKS } from './codes.mjs';
+import { DIALOGUE_CHAIN_MAX, DIALOGUE_LINE_MAX, STICKER_SLOTS, ECON_FLOOR_CENTS, FACT_KINDS, FACT_STALE_DAYS, FLAG_FAMILIES, GEAR_CHECK_VARIANTS, GEAR_FIELDS, isWarning, LOAN_RE, SKILL_IDS, WAVE_MAX_LIMIT, WAVE_MAX_TASKS, WAVE_MIN_TASKS } from './codes.mjs';
 import { checkCombos, checkOptions, comboLabel, enumerateCombos, matches, NO_ANIMAL } from './combos.mjs';
 
 const I = (code, where, msg) => ({ code, where, msg });
@@ -768,6 +768,45 @@ export const CHECKS = [
           for (const v of exits(nodes.get(stack.pop()), false)) if (nodes.has(v) && !seen.has(v)) { seen.add(v); stack.push(v); }
         }
         for (const n of d.nodes) if (!seen.has(n.id)) out.push(I('DIALOGUE_NODE_UNREACHABLE', `${d.id}/${n.id}`, `вузол недосяжний зі старту «${d.start}»`));
+      }
+      return out;
+    },
+  },
+  {
+    id: 'dialogue-length',
+    run(c) { // @check:dialogue-length
+      // GAME-221: читання не має бути нудним. (1) репліка вузла в КОЖНІЙ мові ≤ DIALOGUE_LINE_MAX знаків (кодових точок);
+      // (2) ланцюжок вузлів без вибору (next / branches) — найбільше DIALOGUE_CHAIN_MAX реплік поспіль, рахуючи й вузол, що
+      // нарешті пропонує вибір чи закриває розмову. Ланцюжок починається на start і після кожного вибору. Ціна хибного спрацювання
+      // (закон 5): автор ділить довгу репліку або вставляє справжній вибір — тобто робить те, чого й хоче ця межа.
+      const out = [];
+      const langs = c.content.meta?.locales ?? [];
+      for (const d of c.content.dialogues ?? []) {
+        for (const n of d.nodes) for (const lang of langs) {
+          const text = c.content.locales?.[lang]?.[n.textKey];
+          if (typeof text !== 'string') continue; // відсутній ключ — справа LOCALE_MISSING
+          const len = Array.from(text).length;
+          if (len > DIALOGUE_LINE_MAX) out.push(I('DIALOGUE_LINE_TOO_LONG', `${d.id}/${n.id}[${lang}]`, `${len} знаків > ${DIALOGUE_LINE_MAX}: поділи репліку на дві чи скороти`));
+        }
+        const nodes = new Map(d.nodes.map((n) => [n.id, n]));
+        const memo = new Map();
+        const run = (id, path) => { // найдовший ланцюжок без вибору від вузла; петлю без виходу ловить dialogue-dead-end
+          const n = nodes.get(id);
+          if (!n || path.has(id)) return 0;
+          if (memo.has(id)) return memo.get(id);
+          path.add(id);
+          let best = 0;
+          if (!n.choices) for (const v of [...(n.next !== undefined ? [n.next] : []), ...(n.branches ?? []).map((b) => b.next)]) best = Math.max(best, run(v, path));
+          path.delete(id);
+          memo.set(id, 1 + best);
+          return 1 + best;
+        };
+        const starts = new Set([d.start]);
+        for (const n of d.nodes) for (const ch of n.choices ?? []) starts.add(ch.next);
+        for (const s of starts) {
+          const len = run(s, new Set());
+          if (len > DIALOGUE_CHAIN_MAX) out.push(I('DIALOGUE_CHAIN_TOO_LONG', `${d.id}/${s}`, `${len} реплік поспіль без вибору > ${DIALOGUE_CHAIN_MAX}: встав вибір чи дію`));
+        }
       }
       return out;
     },

@@ -4,6 +4,7 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { ct } from '../i18n/content';
 import type { AnyLang, Key } from '../i18n';
+import { VOICE_NPC_IDS, blipDue, blipIndices, blipper, speakerPitch } from '../audio/blip';
 import { calmMotion } from '../platform/motion';
 import { Portrait, type PortraitLookup } from './Portrait';
 import { RequestCard } from './RequestCard';
@@ -38,6 +39,12 @@ export function DialogueBox({ dialogue: d, lang, t, act, portrait }: { dialogue:
     const total = Array.from(text).length;
     if (calm || total === 0) { setN(total); return; }
     setN(0);
+    // GAME-221: голос — писк на кожну 3-тю озвучувану літеру, тон за мовцем; тап («дописати») і зменшений рух мовчать.
+    const blips = blipIndices(Array.from(text));
+    const names: Record<string, string> = {};
+    for (const id of VOICE_NPC_IDS) names[id] = ct(lang, id);
+    const hz = speakerPitch(d.speakerId, text, names);
+    let shownBefore = 0;
     let t0 = -1;
     // Один виклик requestAnimationFrame на файл (сторож no-realtime): перший запуск без мітки лише планує кадр.
     const loop = (ts?: number): void => {
@@ -45,6 +52,8 @@ export function DialogueBox({ dialogue: d, lang, t, act, portrait }: { dialogue:
         if (t0 < 0) t0 = ts;
         const k = Math.min(total, Math.floor((ts - t0) / CHAR_MS) + 1);
         setN(k);
+        if (blipDue(blips, shownBefore, k)) blipper.blip(hz);
+        shownBefore = k;
         if (k >= total) return;
       }
       raf.current = requestAnimationFrame(loop);

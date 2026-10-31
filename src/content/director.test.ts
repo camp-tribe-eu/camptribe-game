@@ -210,8 +210,9 @@ describe('режисер W4: цілі на мапі', () => {
     s = must(s, { type: 'Continue' });
     expect(s.game.dialogue?.node).toBe('fire');
     expect(fireplacePlayed(s)).toBe(true);
+    // GAME-221: на l1 і l3 — вибір без наслідків (розбиває довгий ланцюжок реплік); на l7 вибір 1 — гілка b.
     // Сцену грали — вогнище знову лише гріє (навіть коли розмову закрито).
-    while (s.game.dialogue) s = must(s, s.game.dialogue.node === 'l7' ? { type: 'Choose', choice: 1 } : { type: 'Continue' });
+    while (s.game.dialogue) s = must(s, ['l1', 'l3', 'l7'].includes(s.game.dialogue.node) ? { type: 'Choose', choice: 1 } : { type: 'Continue' });
     expect(fireplaceDue(s)).toBe(false);
     expect(spotMove(s, 'obj.campfire')).toEqual({ type: 'Interact', targetId: 'obj.campfire' });
     s = must(s, done(FIRE_STAGE));
