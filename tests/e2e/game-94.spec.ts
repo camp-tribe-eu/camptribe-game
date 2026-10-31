@@ -3,6 +3,7 @@
 // той самий стан; 2) та сама подорож після перезавантаження — без повтору, інша подорож — знову; 3) без приїзду — нічого.
 // Кожна перевірка має негативний контроль (мутація — у звіті картки).
 import { expect, test, type BrowserContext, type Page } from '@playwright/test';
+import { waitGameReady } from './ready';
 
 interface Core { game: unknown; clock: { minutes: number }; journal: { type: string; commandId: string }[] }
 interface Probe { playerX: number; playerY: number; clockMinutes: number }
@@ -13,7 +14,7 @@ const reminder = (page: Page) => page.locator('[data-ui="recovery-reminder"]');
 
 async function load(page: Page, query = ''): Promise<void> {
   await page.goto(`/${query}`);
-  await page.waitForFunction(() => (window as unknown as { __game?: { probe: { saveLoaded: boolean } } }).__game?.probe.saveLoaded === true, null, { timeout: 30_000 });
+  await waitGameReady(page);
 }
 async function act(page: Page, kind: string, key = ''): Promise<void> {
   await panel(page).locator(`[data-act="${kind}"][data-key="${key}"]`).click({ timeout: 5_000 });
@@ -46,7 +47,7 @@ for (const viewport of [{ width: 390, height: 844 }, { width: 844, height: 390 }
       await page.waitForTimeout(500);
       await expect(reminder(page)).toHaveCount(0);                      // їздити ще не їздили
       await page.reload();
-      await page.waitForFunction(() => (window as unknown as { __game?: { probe: { saveLoaded: boolean } } }).__game?.probe.saveLoaded === true);
+      await waitGameReady(page);
       await page.waitForTimeout(500);
       await expect(reminder(page)).toHaveCount(0);
       const stage0 = await page.locator('#stage').boundingBox();         // поле гри без нагадування — база
@@ -111,7 +112,7 @@ for (const viewport of [{ width: 390, height: 844 }, { width: 844, height: 390 }
       await expect(reminder(page)).toBeVisible();
       const trip1 = (await core(page)).journal.filter((e) => e.type === 'Visit').at(-1)?.commandId;
       await page.reload();                                               // не закривали: усе одно не повторюємо
-      await page.waitForFunction(() => (window as unknown as { __game?: { probe: { saveLoaded: boolean } } }).__game?.probe.saveLoaded === true);
+      await waitGameReady(page);
       await page.waitForTimeout(600);
       expect((await core(page)).journal.filter((e) => e.type === 'Visit').at(-1)?.commandId).toBe(trip1);   // той самий стан відновлено
       await expect(reminder(page)).toHaveCount(0);

@@ -6,6 +6,7 @@ import { mkdirSync, readFileSync } from 'node:fs';
 import AxeBuilder from '@axe-core/playwright';
 import { playTent } from './chapter-driver';
 import { expect, test, type Locator, type Page } from '@playwright/test';
+import { waitGameReady } from './ready';
 
 interface Core { game: { campaignEnded: boolean; moneyCents: number; flags: string[]; wave?: { past: Record<string, Record<string, string>> } }; journal: { type: string; ref: string | null }[] }
 const core = (page: Page): Promise<Core> => page.evaluate(() => (window as unknown as { __game: { read: () => Core } }).__game.read());
@@ -80,7 +81,7 @@ for (const mode of MODES) {
     const errors: string[] = [];
     page.on('pageerror', (e) => errors.push(e.message));
     const loaded = async (): Promise<void> => {
-      await page.waitForFunction(() => (window as unknown as { __game?: { probe: { saveLoaded: boolean } } }).__game?.probe.saveLoaded === true, null, { timeout: 30_000 });
+      await waitGameReady(page);
     };
     await page.goto('/?seed=2');
     await loaded();
@@ -187,7 +188,7 @@ test('«Продовжити» — назад на мапу; день 2 до «�
   const ctx = await browser.newContext({ viewport: { width: 1280, height: 800 } });
   const page = await ctx.newPage();
   await page.goto('/?seed=2');
-  await page.waitForFunction(() => (window as unknown as { __game?: { probe: { saveLoaded: boolean } } }).__game?.probe.saveLoaded === true, null, { timeout: 30_000 });
+  await waitGameReady(page);
   await page.locator('[data-touch="story"]').click();
   const click = async (sel: string): Promise<void> => { await panel(page).locator(sel).first().click(); await page.waitForTimeout(400); };
   await click('[data-act="create"]:has-text("Авто")');

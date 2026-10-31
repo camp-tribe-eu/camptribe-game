@@ -2,6 +2,7 @@
 // Негативний контроль (закон 1): без підтвердження (старий код) рамки не було б, і герой поїхав би одразу — тест на це червонів би.
 import { expect, test, type Page } from '@playwright/test';
 import { core, installMenuObserver, menuSeen as menuOf, probe, route, talk, walk } from './chapter-driver';
+import { waitGameReady } from './ready';
 
 const ROAD = 'loc.road';
 const SETTINGS_KEY = 'camplife.settings.v1';
@@ -22,7 +23,7 @@ async function arriveOnRoad(page: Page, extra = ''): Promise<string[]> {
   page.on('pageerror', (e) => errors.push(e.message));
   await page.addInitScript(([k]) => { try { localStorage.setItem(k as string, JSON.stringify({ textScale: 100, language: 'uk', hintSeen: true })); } catch { /* сховища немає */ } }, [SETTINGS_KEY] as const);
   await page.goto('/?seed=7');
-  await page.waitForFunction(() => (window as unknown as { __game?: { probe: { saveLoaded: boolean } } }).__game?.probe.saveLoaded === true, null, { timeout: 30_000 });
+  await waitGameReady(page);
   await page.locator('[data-touch="story"]').click();
   await panel(page).locator('[data-act="create"]', { hasText: /Велосипед|Bike/ }).first().click();
   await page.waitForTimeout(400);
@@ -32,7 +33,7 @@ async function arriveOnRoad(page: Page, extra = ''): Promise<string[]> {
   await page.waitForTimeout(600);   // автозбереження — на кожну команду
   await installMenuObserver(page);
   await page.goto(`/?seed=7&mapFirst=1${extra}`);
-  await page.waitForFunction(() => (window as unknown as { __game?: { probe: { saveLoaded: boolean } } }).__game?.probe.saveLoaded === true, null, { timeout: 30_000 });
+  await waitGameReady(page);
   await page.locator('[data-ui="recovery-close"]').click({ timeout: 800 }).catch(() => undefined);
   expect((await core(page)).game.player?.locationId, 'сейв підхопився: гравець на дорозі').toBe(ROAD);
   return errors;

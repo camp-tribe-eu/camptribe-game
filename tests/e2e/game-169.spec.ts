@@ -6,6 +6,7 @@
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Page } from '@playwright/test';
 import { dayOf, forecastOf, weatherOf, type Weather } from '../../src/core/weather';
+import { waitGameReady } from './ready';
 
 interface Core { worldSeed: number; clock: { minutes: number } }
 const core = (page: Page): Promise<Core> => page.evaluate(() => (window as unknown as { __game: { read: () => Core } }).__game.read());
@@ -16,7 +17,7 @@ async function open(page: Page, seed: number): Promise<string[]> {
   const errors: string[] = [];
   page.on('pageerror', (e) => errors.push(e.message));
   await page.goto(`/?seed=${seed}`);
-  await page.waitForFunction(() => (window as unknown as { __game?: { probe: { saveLoaded: boolean } } }).__game?.probe.saveLoaded === true, null, { timeout: 30_000 });
+  await waitGameReady(page);
   await page.locator('[data-touch="story"]').click();
   await expect(panel(page)).toBeVisible();
   // До вибору персонажа ні погоди, ні прогнозу немає (рядок стану — лише в грі).

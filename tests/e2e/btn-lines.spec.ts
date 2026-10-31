@@ -2,11 +2,12 @@
 // Детектор: крок між верхами сусідніх рядків (Range.getClientRects тексту) не менший за 1,2 кегля, line-height не менший за 1.2 кегля,
 // scrollHeight <= clientHeight. Негативний контроль: line-height 0.6 → детектор червоний.
 import { expect, test, type Page } from '@playwright/test';
+import { waitGameReady } from './ready';
 
 const panel = (page: Page) => page.locator('[data-ui="story"]');
 async function load(page: Page, query = ''): Promise<void> {
   await page.goto(`/${query}`);
-  await page.waitForFunction(() => (window as unknown as { __game?: { probe: { saveLoaded: boolean } } }).__game?.probe.saveLoaded === true, null, { timeout: 30_000 });
+  await waitGameReady(page);
 }
 async function act(page: Page, kind: string, key = ''): Promise<void> {
   await panel(page).locator(`[data-act="${kind}"][data-key="${key}"]`).click({ timeout: 5_000 });

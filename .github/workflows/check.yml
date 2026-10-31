@@ -40,13 +40,27 @@ jobs:
   # Обов'язкова перевірка гілки зветься «e2e» — це підсумкова job нижче, вона зелена лише коли зелені всі частини.
   e2e-shard:
     runs-on: ubuntu-latest
-    timeout-minutes: 55  # запас на повільний раннер: шард із ходильними game-183/184 сам по собі ~25–30 хв
+    timeout-minutes: 40  # шард ≈ 13 хв за заміром (GAME-223); було 55 при шарді в 31 хв
     strategy:
       fail-fast: false
       matrix:
-        # 8, а не 4: шарди йшли 32–40 хв при ліміті 40 і скасовувались без жодного червоного тесту (#115, #118, #119, 30.10);
-        # шард бере тести суцільним шматком, тож 12 ходильних game-184 по ~1 хв лягають разом. Публічний репозиторій — хвилини безкоштовні.
-        shard: [1, 2, 3, 4, 5, 6, 7, 8]
+        # GAME-223: два проєкти Playwright (playwright.config.ts: HEAVY). Шард = суцільний шматок за КІЛЬКІСТЮ тестів, тому в одному
+        # списку 108 важких тестів (ходильні розділи, міні-ігри) лягали в шарди 2–3 по 25–31 хв, решта 3–10. Тепер важкі — свої 10 шардів
+        # (оцінка за заміром: максимум ≈ 13 хв), легкі 303 тести — 3 шарди (≈ 10 хв). Було 8 шардів, макс. ≈ 31 хв; тепер 13, макс. ≈ 13 хв + запуск.
+        include:
+          - { project: e2e-heavy, shard: 1, total: 10 }
+          - { project: e2e-heavy, shard: 2, total: 10 }
+          - { project: e2e-heavy, shard: 3, total: 10 }
+          - { project: e2e-heavy, shard: 4, total: 10 }
+          - { project: e2e-heavy, shard: 5, total: 10 }
+          - { project: e2e-heavy, shard: 6, total: 10 }
+          - { project: e2e-heavy, shard: 7, total: 10 }
+          - { project: e2e-heavy, shard: 8, total: 10 }
+          - { project: e2e-heavy, shard: 9, total: 10 }
+          - { project: e2e-heavy, shard: 10, total: 10 }
+          - { project: e2e, shard: 1, total: 3 }
+          - { project: e2e, shard: 2, total: 3 }
+          - { project: e2e, shard: 3, total: 3 }
     container:
       image: mcr.microsoft.com/playwright:v1.64.1-noble
     steps:
@@ -64,11 +78,11 @@ jobs:
           node -e "require('playwright-core').chromium.launch().then(b => b.close())
           .then(() => console.log('OK: headless Chromium запускається'))
           .catch(e => { console.log('::error::Браузер образу не запускається — тег образу в check.yml не збігається з @playwright/test ' + require('@playwright/test/package.json').version + ': ' + e.message.split('\\n')[0]); process.exit(1); })"
-      - run: npx playwright test --project=e2e --shard=${{ matrix.shard }}/8
+      - run: npx playwright test --project=${{ matrix.project }} --shard=${{ matrix.shard }}/${{ matrix.total }}
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: e2e-results-${{ matrix.shard }}
+          name: e2e-results-${{ matrix.project }}-${{ matrix.shard }}
           path: test-results
           retention-days: 7
   e2e-perf:

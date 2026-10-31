@@ -3,6 +3,7 @@
 // Обидві орієнтації телефона.
 import { expect, test, type Page } from '@playwright/test';
 import { core, playFire, playFishing, probe, route, walk } from './chapter-driver';
+import { waitGameReady } from './ready';
 
 const SETTINGS_KEY = 'camplife.settings.v1';
 const VIEWS = [{ side: 'portrait', w: 390, h: 844, name: 'портрет' }, { side: 'landscape', w: 844, h: 390, name: 'ландшафт' }] as const;
@@ -27,7 +28,7 @@ for (const v of VIEWS) {
       page.on('pageerror', (e) => errors.push(e.message));
       await page.addInitScript(([k]) => { try { localStorage.setItem(k as string, JSON.stringify({ textScale: 100, language: 'uk', hintSeen: true })); } catch { /* сховища немає */ } }, [SETTINGS_KEY] as const);
       await page.goto('/?seed=7');
-      await page.waitForFunction(() => (window as unknown as { __game?: { probe: { saveLoaded: boolean } } }).__game?.probe.saveLoaded === true, null, { timeout: 30_000 });
+      await waitGameReady(page);
       await page.locator('[data-touch="story"]').click();
       await panel(page).locator('[data-act="create"]', { hasText: /Велосипед|Bike/ }).first().click();
       await page.waitForTimeout(400);
@@ -112,7 +113,7 @@ for (const v of VIEWS) {
       // 5) факт вибору лишається в збереженні: перезавантаження не губить його.
       await page.waitForTimeout(800);
       await page.reload();
-      await page.waitForFunction(() => (window as unknown as { __game?: { probe: { saveLoaded: boolean } } }).__game?.probe.saveLoaded === true, null, { timeout: 30_000 });
+      await waitGameReady(page);
       expect((await core(page)).game.flags).toContain(choice === 'keep' ? 'f.fish-kept' : 'f.fish-released');
       expect(errors).toEqual([]);
       await ctx.close();

@@ -3,6 +3,7 @@
 // Кожна перевірка — числа (межі прямокутників, зсуви в px), не «на око». Негативні контролі (мутації) — у звіті картки.
 import { GAME_NAME } from '../../src/config/brand';
 import { expect, test, type Browser, type Page } from '@playwright/test';
+import { waitGameReady } from './ready';
 
 const SETTINGS_KEY = 'camplife.settings.v1';
 interface Probe { ready: boolean; playerX: number; playerY: number; cameraScrollX: number; cameraScrollY: number }
@@ -20,7 +21,7 @@ async function newPage(browser: Browser, vp: { width: number; height: number }, 
   const page = await ctx.newPage();
   await page.addInitScript(([k, s, seen]) => { try { localStorage.setItem(k, JSON.stringify({ textScale: s, language: 'uk', hintSeen: seen })); } catch { /* сховища немає */ } }, [SETTINGS_KEY, scale, opts.hintSeen ?? true] as const);
   await page.goto('/?seed=2');
-  await page.waitForFunction(() => (window as unknown as { __game?: { probe: { ready: boolean; saveLoaded: boolean } } }).__game?.probe.saveLoaded === true, null, { timeout: 30_000 });
+  await waitGameReady(page);
   return page;
 }
 

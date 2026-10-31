@@ -1,6 +1,7 @@
 // GAME-89 · дрібні дефекти Прологу: №2 сід нової гри, №3 попередження консолі після «Нової гри», №4 кадр на телефоні,
 // №5 пастка фокуса в діалогах. (№6 — у story.spec.ts, бо потребує проходу до кінця розділу; №1 — юніт-тест src/content/start-time.test.ts.)
 import { expect, test, type Browser, type Page } from '@playwright/test';
+import { waitGameReady } from './ready';
 
 const SETTINGS_KEY = 'camplife.settings.v1';
 interface Core { worldSeed: number; game: { player: unknown } }
@@ -14,7 +15,7 @@ async function phone(browser: Browser, scale: 100 | 200): Promise<Page> {
 }
 async function load(page: Page, url = '/'): Promise<void> {
   await page.goto(url);
-  await page.waitForFunction(() => (window as unknown as { __game?: { probe: { ready: boolean; saveLoaded: boolean } } }).__game?.probe.saveLoaded === true, null, { timeout: 30_000 });
+  await waitGameReady(page);
 }
 async function newGame(page: Page): Promise<void> {
   await page.locator('[data-touch="pause"]').click();
@@ -44,7 +45,7 @@ test.describe('№3 і №2 · «Нова гра»', () => {
     expect(new Set([first, second, third]).size).toBe(3);   // хибне спрацювання ≈ 2^-32 на пару
     // Сід нової гри збережено: після перезавантаження він той самий (а не 20261022 за замовчуванням).
     await page.goto('/');   // без ?freshSeed: сід лежить у сейві, а не береться наново
-    await page.waitForFunction(() => (window as unknown as { __game?: { probe: { saveLoaded: boolean } } }).__game?.probe.saveLoaded === true);
+    await waitGameReady(page);
     expect((await core(page)).worldSeed).toBe(third);
   });
 

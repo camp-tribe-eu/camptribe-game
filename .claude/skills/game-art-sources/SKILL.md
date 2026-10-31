@@ -11,7 +11,7 @@ description: "Як брати графіку для CampLife: забрати н�
 і нотатка «що насправді є». Одне фото може бути хибним. Не вигадуй оточення: у магазині спорядження не буває
 книжкових полиць.
 1. Рядок у `research/fetch.txt`: `refs-<тема>\trefs:<запит>|<запит>|…` (англ. запити; Openverse — перше джерело,
-   Commons — друге). Пуш гілки запускає runner, мініатюри з вільною ліцензією й `CREDITS.txt` комітяться в `research/refs/<тема>/`.
+   Commons — друге). Після пушу рядка запусти runner вручну (`gh workflow run research-fetch.yml --ref <гілка>` або Actions → research-fetch → Run workflow → вибери гілку); мініатюри з вільною ліцензією й `CREDITS.txt` комітяться в `research/refs/<тема>/`.
 2. **Подивись очима** (контакт-аркуш через PIL) і відкинь нерелевантне — лічильник «≥ 10» сам нічого не доводить
    (перший прогін 31.10 приніс скани книжок і військові табори 1918).
 3. Допиши `research/refs/NOTES.md`: що стоїть, де, хто де стоїть, чого там не буває. Малюй за нотаткою.
@@ -36,7 +36,7 @@ description: "Як брати графіку для CampLife: забрати н�
    * `ogasearch:<слова>` — лише список сторінок, нічого не качає;
    * `steam:<appid>` — опис і скриншоти, **ніколи не комітяться**.
 2. Назва `pack-*` — комітиться в `research/packs/<назва>/`; `list-*` — у `research/lists/`.
-3. Пуш у гілку запускає `.github/workflows/research-fetch.yml`. Чекай коміт від `research-bot`:
+3. Запушивши гілку, запусти вручну `.github/workflows/research-fetch.yml` (workflow_dispatch, `--ref <гілка>`; пуш його більше НЕ запускає — GAME-223). Чекай коміт від `research-bot`:
    `until git fetch -q origin <гілка> && git log --format=%an HEAD..origin/<гілка> | grep -q research-bot; do sleep 10; done`
 4. Набір без ліцензії, процитованої зі сторінки першоджерела, **не комітиться**. Замість нього
    в `research/debug/<назва>.txt` лягає фрагмент розмітки блоку ліцензії.
@@ -73,6 +73,10 @@ LPC-персонажі: титри по шарах — у `CREDITS.csv` гене
 Колонка **`modified`** у `CREDITS.csv`: `no` — файл байт у байт як у джерелі; інакше — опис
 змін (≥ 8 символів), бо CC-BY-SA вимагає їх назвати. Змінений файл під CC-BY-SA лишається
 CC-BY-SA (`CREDITS_SA_RELICENSED`).
+
+`assets/CREDITS.csv` і `docs/LICENSE_REGISTER.md` зливаються union-ом (`.gitattributes`, GAME-223): рядки з різних
+гілок не конфліктують, а рядок, змінений в обох, стає дублем — його ловлять `CREDITS_DUPLICATE` і
+`REGISTER_DUPLICATE_ID`; лиши один.
 
 **`public/`** не має рядків титрів, тож туди можна лише CC0 або OFL (текст ліцензії поруч у
 `public/`). Усе, що вимагає атрибуції, — лише в `assets/` (`PUBLIC_NEEDS_CREDITS`). Кожен медіафайл

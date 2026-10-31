@@ -2,6 +2,7 @@
 // Кожна перевірка має свій негативний контроль поруч: зелений результат без нього нічого не доводить (закон 1).
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Page } from '@playwright/test';
+import { waitGameReady } from './ready';
 
 const story = (page: Page) => page.locator('[data-ui="story"]');
 
@@ -9,7 +10,7 @@ async function openGame(page: Page, query = ''): Promise<string[]> {
   const errors: string[] = [];
   page.on('pageerror', (e) => errors.push(e.message));
   await page.goto(`/${query}`);
-  await page.waitForFunction(() => (window as unknown as { __game?: { probe: { ready: boolean; saveLoaded: boolean } } }).__game?.probe.saveLoaded === true, null, { timeout: 30_000 });
+  await waitGameReady(page);
   return errors;
 }
 

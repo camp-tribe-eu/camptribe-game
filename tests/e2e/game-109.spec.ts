@@ -2,6 +2,7 @@
 // Дотиком на 844×390 і 390×844, мишею на 1280×800: покласти, дістати, місце не вміщається, автоукладання, далі — на дорогу.
 // Кожна ціль ≥ 44 px. Кожна дія — справжній клік (дотик), команда йде в ядро; числа звіряємо з ядром (window.__game).
 import { expect, test, type Page } from '@playwright/test';
+import { waitGameReady } from './ready';
 
 interface Core { game: { flags: string[]; player: { locationId: string | null } | null }; journal: { type: string }[] }
 const core = (page: Page): Promise<Core> => page.evaluate(() => (window as unknown as { __game: { read: () => Core } }).__game.read());
@@ -21,7 +22,7 @@ for (const mode of MODES) {
     const errors: string[] = [];
     page.on('pageerror', (e) => errors.push(e.message));
     await page.goto('/?seed=2');
-    await page.waitForFunction(() => (window as unknown as { __game?: { probe: { saveLoaded: boolean } } }).__game?.probe.saveLoaded === true, null, { timeout: 30_000 });
+    await waitGameReady(page);
     // Кнопку ☰ тапає лише дотик, мишею — клік: однаково «справжня» активація.
     // force — лише для кнопки з aria-disabled: Playwright не активує «недоступне», а гравець її натисне (і нічого не станеться).
     const press = async (loc: ReturnType<Page['locator']>, force = false): Promise<void> => {

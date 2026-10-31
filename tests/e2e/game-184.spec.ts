@@ -5,6 +5,7 @@
 // validator: after на чуже прохання / коло (REQUEST_AFTER_INVALID, scripts/validator/fixtures.mjs). Знімки здачі (SHOTS=1) → research/visual-audit/side-story-*.png.
 import { readFileSync } from 'node:fs';
 import { expect, test, type Page } from '@playwright/test';
+import { waitGameReady } from './ready';
 
 interface Pt { x: number; y: number }
 interface Probe { miaAt: string[]; saveLoaded: boolean; playerX: number; playerY: number; nearObject: string | null; residents: { id: string; x: number; y: number }[]; npcMarks: Record<string, string>; fx: { target: string | null; guide: string; pops: number } }
@@ -97,7 +98,7 @@ async function toCamp(page: Page, extra = '', pick: RegExp = /Велосипед
   page.on('console', (m) => { if (m.type() === 'error') errors.push(m.text()); });
   await page.addInitScript(([k]) => { try { localStorage.setItem(k as string, JSON.stringify({ textScale: 100, language: 'uk', hintSeen: true })); } catch { /* сховища немає */ } }, [SETTINGS_KEY] as const);
   await page.goto('/?seed=7');
-  await page.waitForFunction(() => (window as unknown as { __game?: { probe: { saveLoaded: boolean } } }).__game?.probe.saveLoaded === true, null, { timeout: 30_000 });
+  await waitGameReady(page);
   await page.locator('[data-touch="story"]').click();
   await panel(page).locator('[data-act="create"]', { hasText: pick }).first().click();
   await page.waitForTimeout(400);
@@ -114,7 +115,7 @@ async function toCamp(page: Page, extra = '', pick: RegExp = /Велосипед
     document.addEventListener('click', (e) => { if ((e.target as Element | null)?.closest('[data-touch="story"]')) w.__menu.push('☰-click'); }, true);
   });
   await page.goto(`/?seed=7&mapFirst=1${extra}`);
-  await page.waitForFunction(() => (window as unknown as { __game?: { probe: { saveLoaded: boolean } } }).__game?.probe.saveLoaded === true, null, { timeout: 30_000 });
+  await waitGameReady(page);
   await page.locator('[data-ui="recovery-close"]').click({ timeout: 800 }).catch(() => undefined);
   await page.locator('[data-ui="recovery-reminder"] button', { hasText: 'Закрити' }).click({ timeout: 1_500 }).catch(() => undefined);
   expect((await core(page)).game.player?.locationId, 'сейв підхопився: гравець у таборі').toBe(CAMP);
