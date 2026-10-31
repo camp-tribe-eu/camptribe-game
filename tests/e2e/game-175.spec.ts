@@ -6,7 +6,7 @@ import { expect, test, type Page } from '@playwright/test';
 
 interface Core { game: { player: { locationId: string; transportId: string } | null; flags: string[]; quests: Record<string, { status: string }>; inventory: Record<string, number> }; journal: { type: string }[] }
 interface Fx { target: string | null; ring: number; ringName: string | null; backpack: number; guide: string; pops: number; auto: number }
-interface Probe { playerX: number; playerY: number; fx: Fx; saveLoaded: boolean }
+interface Probe { playerX: number; playerY: number; fx: Fx; saveLoaded: boolean; visitors: { id: string; x: number; y: number }[] }
 const core = (page: Page): Promise<Core> => page.evaluate(() => (window as unknown as { __game: { read: () => Core } }).__game.read());
 const probe = (page: Page): Promise<Probe> => page.evaluate(() => JSON.parse(JSON.stringify((window as unknown as { __game: { probe: Probe } }).__game.probe)) as Probe);
 const MAPS = { 'loc.home': 'home', 'loc.shop': 'shop' } as const;
@@ -97,6 +97,8 @@ async function goAndDo(page: Page, car: boolean, shot?: string): Promise<string>
   const c = await core(page);
   const key = MAPS[(c.game.player?.locationId ?? 'loc.home') as keyof typeof MAPS];
   if (!key) throw new Error(`локація ${c.game.player?.locationId} — не мапа зрізу 1`);
+  // GAME-204: у крамниці ходить фоновий покупець, удома його нема (мутація: прибрати SHOP_VISITOR з CAST_BY_MAP.shop → червоніє)
+  await expect.poll(async () => (await probe(page)).visitors.length, { timeout: 10_000, message: `покупців на мапі ${key}` }).toBe(key === 'shop' ? 1 : 0);
   const before = await signature(page);
   // Під навантаженням (паралельні збірки) кадри повільні й одна ходьба може не дійти за 45 с: перераховуємо шлях із поточної точки до трьох разів.
   const walking = (async (): Promise<void> => {

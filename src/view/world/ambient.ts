@@ -34,6 +34,18 @@ export const RESIDENTS: readonly Resident[] = [
   { id: 'npc.claire', look: 'claire', phase: 55, barks: ['amb.claire.1', 'amb.claire.2'], stops: [{ c: 4, r: 16, dwell: 50 }, { c: 10, r: 19, dwell: 30 }, { c: 17, r: 12, dwell: 25 }] },
 ];
 
+/**
+ * GAME-204 · покупець у крамниці спорядження: фоновий, як мешканці табору (той самий розклад-функція часу, без стану й випадковості), але на мапі `shop`.
+ * Не квестовий (нема в npcs.json, не в RESIDENTS — біблія, портрети й реплики табору його не чіпають), без реплік. Ходить між трьома полицями —
+ * західний торець гондоли, її північний бік, настінні ліхтарі — по сітці стін без клітинок цілей. Стоянки лише на проходах шириною 2 клітинки (рядки 4–5, стовпці 3–4).
+ * Клітинки перевіряє ambient.test (мапа shop.tmj): прохідні, не на цілях, шлях між ними є, до кожної стоянки доходить і герой зі старту.
+ */
+export const SHOP_VISITOR: Resident = { id: 'ambient.shopper', look: 'shopper', phase: 0, barks: [], stops: [{ c: 4, r: 7, dwell: 35 }, { c: 7, r: 5, dwell: 30 }, { c: 9, r: 4, dwell: 25 }] };
+/** Фонові персонажі за мапою; решта мап — порожньо. */
+export const CAST_BY_MAP: Readonly<Record<string, readonly Resident[]>> = { camp: RESIDENTS, shop: [SHOP_VISITOR] };
+/** Усі, для кого сцена тримає спрайт (мешканці першими: індекси в масивах сцени збігаються з RESIDENTS). */
+export const CAST: readonly Resident[] = [...RESIDENTS, SHOP_VISITOR];
+
 /** Зони табору: прямокутник (клітинки, включно) і якір — клітинка, до якої ПІШКИ мусить дійти герой зі старту. Читає ambient.test. */
 export interface Zone { readonly id: string; readonly c0: number; readonly r0: number; readonly c1: number; readonly r1: number; readonly anchor: Tile }
 export const ZONES: readonly Zone[] = [

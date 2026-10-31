@@ -366,6 +366,104 @@
    "real_height_m": 0.8,
    "view": "front",
    "note": "GAME-204 OD-026: столик із ліхтарями 1,0 м, ≈0,8 м"
+  },
+  {
+   "id": "shop-decor-backpacks-1",
+   "file": "assets/tiles/shop_decor.png",
+   "crop": [
+    0,
+    0,
+    64,
+    64
+   ],
+   "real_width_m": 2.2,
+   "real_height_m": 1.85,
+   "view": "front",
+   "note": "GAME-204 ч.3: секція стіни з рюкзаками 2,2 м, перефарбована"
+  },
+  {
+   "id": "shop-decor-backpacks-2",
+   "file": "assets/tiles/shop_decor.png",
+   "crop": [
+    64,
+    0,
+    64,
+    64
+   ],
+   "real_width_m": 2.2,
+   "real_height_m": 1.85,
+   "view": "front",
+   "note": "GAME-204 ч.3: секція стіни з рюкзаками 2,2 м, перефарбована"
+  },
+  {
+   "id": "shop-decor-backpacks-3",
+   "file": "assets/tiles/shop_decor.png",
+   "crop": [
+    128,
+    0,
+    64,
+    64
+   ],
+   "real_width_m": 2.2,
+   "real_height_m": 1.85,
+   "view": "front",
+   "note": "GAME-204 ч.3: секція стіни з рюкзаками 2,2 м, перефарбована"
+  },
+  {
+   "id": "shop-decor-notice-board",
+   "file": "assets/tiles/shop_decor.png",
+   "crop": [
+    206,
+    17,
+    37,
+    23
+   ],
+   "real_width_m": 1.3,
+   "real_height_m": 0.8,
+   "view": "front",
+   "note": "GAME-204 ч.3: пробкова дошка оголошень 1,3×0,8 м (програмно, піктограми)"
+  },
+  {
+   "id": "shop-decor-sale-sign",
+   "file": "assets/tiles/shop_decor.png",
+   "crop": [
+    213,
+    46,
+    23,
+    14
+   ],
+   "real_width_m": 0.8,
+   "real_height_m": 0.5,
+   "view": "front",
+   "note": "GAME-204 ч.3: червона табличка «-20 %» 0,8×0,5 м (програмно)"
+  },
+  {
+   "id": "shop-decor-trail-poster",
+   "file": "assets/tiles/shop_decor.png",
+   "crop": [
+    265,
+    20,
+    18,
+    23
+   ],
+   "real_width_m": 0.6,
+   "real_height_m": 0.8,
+   "view": "front",
+   "note": "GAME-204 ч.3: постер-карта стежок 0,6×0,8 м (програмно)"
+  },
+  {
+   "id": "shop-decor-tent-poster",
+   "file": "assets/tiles/shop_decor.png",
+   "crop": [
+    293,
+    20,
+    18,
+    23
+   ],
+   "real_width_m": 0.6,
+   "real_height_m": 0.8,
+   "view": "front",
+   "note": "GAME-204 ч.3: постер із наметом 0,6×0,8 м (програмно)"
   }
  ]
 }

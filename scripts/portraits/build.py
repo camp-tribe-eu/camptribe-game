@@ -40,6 +40,7 @@ LOOKS = {  # як у src/view/world/art.ts
     'npc.sarah': pony(0, (70, 50, 40), (60, 60, 70), (70, 100, 190), (225, 190, 90)),
     'npc.claire': fem('messy', (60, 60, 60), (110, 100, 90), (45, 55, 110), (170, 80, 50)),
     'npc.amina': pony(0, (40, 40, 50), (60, 60, 80), (225, 225, 215), (50, 30, 28)),
+    'npc.cashier': pony(0, (55, 50, 45), (150, 135, 100), (20, 95, 140), (125, 30, 50)),   # GAME-204: Lotte; як lotte в art.ts
     'animal.cat': None,  # кішка: кадр із assets/sprites/cat_mia.png
 }
 DESC = {
@@ -53,6 +54,7 @@ DESC = {
     'npc.sarah': 'a cheerful woman about 29 years old with blonde ponytail, talkative open smile, wearing a blue sweater',
     'npc.claire': 'a clearly feminine woman about 38 years old with a soft rounded face, gentle features, long eyelashes, long tidy auburn-red hair worn down past her shoulders, a kind reassuring smile, wearing a navy-blue sweater',
     'npc.amina': 'a woman about 31 years old with dark brown hair in a ponytail, friendly attentive look, wearing a white-cream sweater',
+    'npc.cashier': 'a friendly woman about 34 years old, shop assistant, warm welcoming smile, long burgundy dark-red hair in a ponytail, wearing a royal-blue polo shirt',
     'animal.cat': 'a cute grey Scottish Fold cat with small folded ears, round face and big round eyes, head and chest portrait, no human features',
 }
 PROMPT = ("Redraw this exact game character as a head-and-shoulders portrait bust for a video game dialogue box, facing the viewer in a slight three-quarter view. "
