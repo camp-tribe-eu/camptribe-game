@@ -1,8 +1,20 @@
 file	title	author	license	source
-ref04.jpg	File:Two Medicine Camp Store (5634752069).jpg	GlacierNPS	Public domain	https://commons.wikimedia.org/wiki/File:Two_Medicine_Camp_Store_(5634752069).jpg
-ref05.jpg	File:Two Medicine Camp Store (5634749113).jpg	GlacierNPS	Public domain	https://commons.wikimedia.org/wiki/File:Two_Medicine_Camp_Store_(5634749113).jpg
-ref12.jpg	File:NT Camp Store (29761598140).jpg	vastateparksstaff	CC BY 2.0	https://commons.wikimedia.org/wiki/File:NT_Camp_Store_(29761598140).jpg
-ref17.jpg	File:熊本流通団地２階.jpg	ja:User:JO2337	CC BY-SA 3.0	https://commons.wikimedia.org/wiki/File:%E7%86%8A%E6%9C%AC%E6%B5%81%E9%80%9A%E5%9B%A3%E5%9C%B0%EF%BC%92%E9%9A%8E.jpg
-ref21.jpg	File:Winnibigoshish 1932 Tourist Camp-18-Big Winnie General Store interior.jpg	unknown	CC BY-SA 4.0	https://commons.wikimedia.org/wiki/File:Winnibigoshish_1932_Tourist_Camp-18-Big_Winnie_General_Store_interior.jpg
-ref22.jpg	File:Winnibigoshish 1932 Tourist Camp-17-Big Winnie General Store interior.jpg	unknown	CC BY-SA 4.0	https://commons.wikimedia.org/wiki/File:Winnibigoshish_1932_Tourist_Camp-17-Big_Winnie_General_Store_interior.jpg
-ref23.jpg	File:Winnibigoshish 1932 Tourist Camp-16-Big Winnie General Store-Interior.jpg	unknown	CC BY-SA 4.0	https://commons.wikimedia.org/wiki/File:Winnibigoshish_1932_Tourist_Camp-16-Big_Winnie_General_Store-Interior.jpg
+ref00.jpg	West Glacier Gas and Camp Store, Going-to-the-Sun Road, West Glacier, MT	w_lemay	CC BY-SA 2.0	https://www.flickr.com/photos/59081381@N03/51609243350
+ref01.jpg	Douthat SP - 9-23-21 - view from back of lakeview camp store	vastateparksstaff	CC BY 2.0	https://www.flickr.com/photos/37922399@N05/51524306506
+ref02.jpg	The Chinese Camp Store	seefit	CC BY 2.0	https://www.flickr.com/photos/76574551@N00/51867426719
+ref08.jpg	File:Stove at Roaring Camp General Store 1.JPG	BrokenSphere	CC BY-SA 3.0	https://commons.wikimedia.org/wiki/File:Stove_at_Roaring_Camp_General_Store_1.JPG
+ref09.jpg	File:Stove at Roaring Camp General Store 2.JPG	BrokenSphere	CC BY-SA 3.0	https://commons.wikimedia.org/wiki/File:Stove_at_Roaring_Camp_General_Store_2.JPG
+ref10.jpg	File:OF general store YNP1.jpg	Acroterion	CC BY-SA 4.0	https://commons.wikimedia.org/wiki/File:OF_general_store_YNP1.jpg
+ref11.jpg	File:Camp Wood stone facade store front.jpg	Rocknross52	CC BY-SA 3.0	https://commons.wikimedia.org/wiki/File:Camp_Wood_stone_facade_store_front.jpg
+ref12.jpg	File:Two Medicine Camp Store (5634752069).jpg	GlacierNPS	Public domain	https://commons.wikimedia.org/wiki/File:Two_Medicine_Camp_Store_(5634752069).jpg
+ref13.jpg	File:Two Medicine Camp Store (5634749113).jpg	GlacierNPS	Public domain	https://commons.wikimedia.org/wiki/File:Two_Medicine_Camp_Store_(5634749113).jpg
+ref14.jpg	File:Two Medicine Camp Store (5635326006).jpg	GlacierNPS	Public domain	https://commons.wikimedia.org/wiki/File:Two_Medicine_Camp_Store_(5635326006).jpg
+ref15.jpg	File:Pinewoods camp store.agr.jpg	ArnoldReinhold	CC BY-SA 4.0	https://commons.wikimedia.org/wiki/File:Pinewoods_camp_store.agr.jpg
+ref16.jpg	File:Camp Verde-Wingfield Mercantile Store-1880.JPG	Tony the Marine (talk)	CC BY-SA 3.0	https://commons.wikimedia.org/wiki/File:Camp_Verde-Wingfield_Mercantile_Store-1880.JPG
+ref17.jpg	File:Retro Game Camp Satellite Store Entrance.jpg	Ominae	CC BY-SA 4.0	https://commons.wikimedia.org/wiki/File:Retro_Game_Camp_Satellite_Store_Entrance.jpg
+ref18.jpg	File:Camp-verde-tx(general-store&post-office)2016-2.jpg	Darrylpearson	CC BY-SA 4.0	https://commons.wikimedia.org/wiki/File:Camp-verde-tx(general-store%26post-office)2016-2.jpg
+ref19.jpg	File:Camp-verde-tx(general-store&post-office)2016-1.jpg	Darrylpearson	CC BY-SA 4.0	https://commons.wikimedia.org/wiki/File:Camp-verde-tx(general-store%26post-office)2016-1.jpg
+ref20.jpg	File:NT Camp Store (29761598140).jpg	vastateparksstaff	CC BY 2.0	https://commons.wikimedia.org/wiki/File:NT_Camp_Store_(29761598140).jpg
+ref21.jpg	File:Two Medicine Camp Store (2).jpg	MONGO	CC BY-SA 4.0	https://commons.wikimedia.org/wiki/File:Two_Medicine_Camp_Store_(2).jpg
+ref22.jpg	File:Camp store at Can Tho PW Camp, November 1968.jpg	NARA photo 111-CCV-430-CC53539 by SP5 Ronald Delaurier	Public domain	https://commons.wikimedia.org/wiki/File:Camp_store_at_Can_Tho_PW_Camp,_November_1968.jpg
+ref23.jpg	File:ZAD Convenience Store Al Qudra.jpg	Missan IT Solutions	CC BY-SA 4.0	https://commons.wikimedia.org/wiki/File:ZAD_Convenience_Store_Al_Qudra.jpg
