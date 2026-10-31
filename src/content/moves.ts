@@ -5,6 +5,13 @@ import type { CoreDefs, StoryDefs } from '../core/defs';
 import { canonical } from '../core/hash';
 import type { GameState } from '../core/state';
 import { eventSeenFlag } from '../core/story';
+import { ERRAND_PREFIX } from './errands';
+
+/**
+ * Прапорець, косметичний для сюжету: прохання (f.req-*, GAME-180) і доручення родині (f.errand-*, GAME-202). Жоден квест їх не читає (валідатор REQUEST_GATES_QUEST;
+ * доручення лише веде виконавця сцени до справи хвилі — ядро закриває її тією ж CompleteTask), тож перебір і бот не множать на них простір станів.
+ */
+export const cosmeticFlag = (f: string): boolean => f.startsWith('f.req-') || f.startsWith(ERRAND_PREFIX);
 
 export type Move = Command extends infer C ? (C extends Command ? Omit<C, 'commandId'> : never) : never;
 
@@ -27,7 +34,7 @@ export function chatOnlyNpcs(st: StoryDefs): ReadonlySet<string> {
     // розмови з гілками додавали б до кожного стану табору десятки Choose/Continue — бот на 80 кроках не доходив до кінця жодного разу з 300 (save-size.test),
     // а повний перебір дня 3 вибухав. Повний шлях кожного прохання на ядрі доводить requests.test, графи розмов — валідатор (DIALOGUE_DEAD_END, REQUEST_*).
     const effects = Object.values(d.nodes).flatMap((n) => (n.choices ?? []).flatMap((c) => c.effects));
-    const request = effects.length > 0 && effects.every((e) => 'setFlag' in e && e.setFlag.startsWith('f.req-'));
+    const request = effects.length > 0 && effects.every((e) => 'setFlag' in e && cosmeticFlag(e.setFlag));
     const inert = Object.values(d.nodes).every((n) => (n.choices ?? []).every((c) => c.effects.length === 0 || request) && (!n.branches || request));
     if (inert) out.add(d.npcId);
   }
@@ -53,7 +60,7 @@ export function moves(s: GameState, defs: CoreDefs, withRequests = false): Move[
     const node = st.dialogues[s.dialogue.id]?.nodes[s.dialogue.node];
     // GAME-180: вибір, що відкриває прохання (умова читає f.req-*: хаб Елізи «Є щось, із чим допомогти?»), — не хід сюжету, а косметика: перебір і бот його не пропонують
     // (як розмови просильників вище; меню гравця — з withRequests). Індекси решти виборів не міняються. Шлях прохання й відсутність тупиків у ньому доводить requests.test.
-    (node?.choices ?? []).forEach((c, i) => { if (withRequests || !JSON.stringify(c.when ?? null).includes('"f.req-')) out.push({ type: 'Choose', choice: i }); });
+    (node?.choices ?? []).forEach((c, i) => { const w = JSON.stringify(c.when ?? null); if (withRequests || !(w.includes('"f.req-') || w.includes(`"${ERRAND_PREFIX}`))) out.push({ type: 'Choose', choice: i }); });
     out.push({ type: 'Continue' });
   }
   for (const l of Object.values(st.locations)) for (const id of l.items) out.push({ type: 'Pickup', itemId: id });
