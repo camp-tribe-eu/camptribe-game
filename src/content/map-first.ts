@@ -50,7 +50,7 @@ export const MAP_SPOTS = {
     'task.mia-carrier', 'task.map-to-luggage', 'task.lights-window', 'task.anna-goodbye', 'step.ST-004', 'step.CH1-D3-HOME-001', 'obj.drying', 'obj.sell',
   ],
   // Крамниця: прилавок-«купити/продати» (рамка вибору) і сушарка біля входу.
-  shop: ['take.item.tent', 'take.item.sleeping-bag', 'take.item.lantern', 'step.ST-003', 'obj.vehicle', 'obj.buy', 'obj.drying'],
+  shop: ['take.item.tent', 'take.item.sleeping-bag', 'take.item.lantern', 'step.ST-003', 'npc.cashier', 'obj.vehicle', 'obj.buy', 'obj.drying'],
   // GAME-183 · дорога — коротка смуга-сцена зі зупинками: справи хвилі, крок «У дорогу», сушарка, приймальня й авто (їхати далі — рамка вибору).
   road: [
     'task.fix-luggage', 'task.mia-water-blanket', 'task.check-route', 'task.patch-tyre', 'task.bag-covers', 'task.pick-path',

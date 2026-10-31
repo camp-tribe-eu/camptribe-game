@@ -17,6 +17,7 @@ import { FOLLOW_SPEED_FACTOR, SPEED, centerOf, gridFromWalls, isSolid, restPoint
 import type { MapKey } from '../../content/map-first';
 import { ICON_SIZE, iconIndex, objectiveIcon } from '../../content/objective-icons';
 import { playUi } from '../../audio/ui-sounds';
+import { sfx } from '../../audio/sfx';
 import { MapFx, type Needs } from './map-fx';
 import { FEEDBACK_S, RING_IDLE, pickNearest, ringMayTake, stepRing, vehicleReady, type Insets, type Ring } from './proximity';
 import { IDLE_AFTER_S, LEISURE_BY_MAP, assignLeisure, leisureFromObjects, type LeisureSpot } from './leisure';
@@ -102,7 +103,7 @@ export interface WorldHooks {
 }
 
 /** Хто з NPC якого листа ходьби має (лист — в art.ts); решта — як Еліза. */
-const NPC_SHEET: Readonly<Record<string, string>> = { 'npc.george': 'player' };
+const NPC_SHEET: Readonly<Record<string, string>> = { 'npc.george': 'player', 'npc.cashier': 'res-lotte' };
 /** Де стоїть авто відносно точки посадки `obj.vehicle` (ноги авто = нижній центр спрайта): праворуч-вниз; його колізія — нижня смуга. */
 const CAR_OFFSET = { x: 16, y: 80 };
 const CAR_BLOCK = { w: 104, h: 30 };
@@ -288,6 +289,8 @@ export class WorldScene extends Phaser.Scene {
     this.load.audio('amb-rain', 'audio/amb-rain.ogg');
     this.load.audio('amb-road-car', 'audio/amb-road-car.ogg');
     this.load.audio('amb-road-bike', 'audio/amb-road-bike.ogg');
+    this.load.audio('amb-shop', 'audio/amb-shop.ogg');
+    this.load.audio('sfx-chime', 'audio/sfx-chime.ogg');
     this.load.audio('sfx-peg', 'audio/sfx-peg.ogg');
     this.load.audio('sfx-chop', 'audio/sfx-chop.ogg');
     this.load.audio('sfx-match', 'audio/sfx-match.ogg');
@@ -518,6 +521,7 @@ export class WorldScene extends Phaser.Scene {
   private enterMap(key: MapKey, arrived: boolean): void {
     this.teardown();
     this.current = key;
+    if (key === 'shop') sfx('chime');   // GAME-204: дзвіночок на дверях, щойно герой заходить у крамницю
     const map = this.make.tilemap({ key });
     this.tilemap = map;
     const tilesets = map.tilesets.map((t) => {

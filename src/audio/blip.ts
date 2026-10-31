@@ -27,7 +27,7 @@ export function blipDue(indices: readonly number[], from: number, to: number): b
 /** Тон кожного мовця, Гц. Рядки різні й розведені щонайменше на пів тону (звіряє blip.test.ts зі складом із content/npcs.json). */
 export const VOICE_HZ: Readonly<Record<string, number>> = {
   'npc.george': 165, 'npc.luc': 185, 'npc.matthew': 233, 'npc.nora': 262, 'npc.victoria': 294,
-  'npc.sarah': 311, 'npc.elise': 330, 'npc.amina': 349, 'npc.claire': 370, 'npc.ingrid': 392,
+  'npc.sarah': 311, 'npc.elise': 330, 'npc.amina': 349, 'npc.claire': 370, 'npc.ingrid': 392, 'npc.cashier': 415,
   player: 220, narrator: 147,
 };
 

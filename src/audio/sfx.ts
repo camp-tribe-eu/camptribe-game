@@ -1,7 +1,7 @@
 // GAME-194 · короткі ефекти рук (кілок, сокира, сірник, закидання, сплеск, улов, гілка) — через ЄДИНИЙ мікшер, канал sfx.
 import { mixer as sharedMixer, type Mixer } from './index';
 
-export type Sfx = 'peg' | 'chop' | 'match' | 'cast' | 'splash' | 'catch' | 'branch';
+export type Sfx = 'peg' | 'chop' | 'match' | 'cast' | 'splash' | 'catch' | 'branch' | 'chime';
 
 export const SFX_FILES: Readonly<Record<Sfx, { readonly key: string; readonly url: string }>> = {
   peg: { key: 'sfx-peg', url: 'audio/sfx-peg.ogg' },
@@ -11,6 +11,7 @@ export const SFX_FILES: Readonly<Record<Sfx, { readonly key: string; readonly ur
   splash: { key: 'sfx-splash', url: 'audio/sfx-splash.ogg' },
   catch: { key: 'sfx-catch', url: 'audio/sfx-catch.ogg' },
   branch: { key: 'sfx-branch', url: 'audio/sfx-branch.ogg' },
+  chime: { key: 'sfx-chime', url: 'audio/sfx-chime.ogg' },   // GAME-204: дзвіночок на дверях крамниці
 };
 
 export interface SfxPlayer { play(name: Sfx): boolean; readonly played: readonly string[] }

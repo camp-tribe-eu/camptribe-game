@@ -11,6 +11,7 @@ import homeWindowsDoors from '../../../assets/tiles/home_windows_doors.png';
 import homeFurniture from '../../../assets/tiles/home_furniture.png';
 import homeOffice from '../../../assets/tiles/home_office.png';
 import homeShelf from '../../../assets/tiles/home_shelf.png';
+import shopGear from '../../../assets/tiles/shop_gear.png';
 import campfire from '../../../assets/sprites/campfire.png';
 import bodyMale from '../../../assets/characters/body/bodies/male/walk.png';
 import bodyFemale from '../../../assets/characters/body/bodies/female/walk.png';
@@ -59,13 +60,16 @@ import { ACTIONS, ACTION_COLS, composeSheet, loadImage, type Action, type LayerS
 export const TILESET_IMAGES: Readonly<Record<string, string>> = {
   'lpc-terrain': terrain, 'camp-tent': tent, 'camp-car': car,
   'home-walls': homeWalls, 'home-floor': homeFloor, 'home-windows-doors': homeWindowsDoors, 'home-furniture': homeFurniture, 'home-office': homeOffice, 'home-shelf': homeShelf,
+  'shop-gear': shopGear,
 };
 const HOME_SETS = ['home-walls', 'home-floor', 'home-windows-doors', 'home-furniture', 'home-office', 'home-shelf', 'lpc-terrain', 'camp-car'] as const;
+/** GAME-204: крамниця спорядження — власний аркуш shop-gear (каса, намет, гондоли, двері), без домашніх меблів і книжкової полиці. */
+const SHOP_SETS = ['home-walls', 'home-floor', 'home-windows-doors', 'shop-gear', 'lpc-terrain', 'camp-car'] as const;
 /** Які тайлсети має кожна мапа гри (ключ — як у scene.ts і map-first.ts). */
 export const MAP_TILESETS: Readonly<Record<'camp' | 'home' | 'shop' | 'road', readonly string[]>> = {
   camp: ['lpc-terrain', 'camp-tent', 'camp-car'],
   home: HOME_SETS,
-  shop: HOME_SETS,
+  shop: SHOP_SETS,
   road: HOME_SETS,   // GAME-183: смуга дороги — трава/стежка terrain і авто, як двір дому
 };
 export const CAMPFIRE_SHEET = campfire;
@@ -145,6 +149,14 @@ export const RESIDENT_LOOKS = {
   amina: [
     { url: ponytailBack, tint: rgb(50, 30, 28) }, { url: bodyFemale }, { url: headFemale }, { url: shoesThin, tint: rgb(40, 40, 50) },
     { url: pantsThin, tint: rgb(60, 60, 80) }, { url: shirtFemale, tint: rgb(225, 225, 215) }, { url: ponytailFront, tint: rgb(50, 30, 28) },
+  ],
+  /**
+   * GAME-204 · Lotte, продавчиня крамниці спорядження: не мешканка табору (у RESIDENTS її нема — стоїть за касою, нерухома), але лист ходьби складається тут же.
+   * Ті самі шари LPC: жіноче тіло, синя сорочка-«поло» крамниці, бордово-каштанове довге волосся в хвості — не плутається ні з родиною, ні з мешканцями (looks.test).
+   */
+  lotte: [
+    { url: ponytailBack, tint: rgb(125, 30, 50) }, { url: bodyFemale }, { url: headFemale }, { url: shoesThin, tint: rgb(55, 50, 45) },
+    { url: pantsThin, tint: rgb(150, 135, 100) }, { url: shirtFemale, tint: rgb(20, 95, 140) }, { url: ponytailFront, tint: rgb(125, 30, 50) },
   ],
 } as const satisfies Readonly<Record<string, readonly LayerSpec[]>>;
 
