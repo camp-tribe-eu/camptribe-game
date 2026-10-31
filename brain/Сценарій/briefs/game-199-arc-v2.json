@@ -1,5 +1,16 @@
 {
-  "models": ["openai/gpt-5-chat", "google/gemini-2.5-pro", "anthropic/claude-sonnet-4.5"],
+  "models": [
+    {
+      "model": "openai/gpt-5",
+      "reasoning": true
+    },
+    "openai/gpt-4.1",
+    {
+      "model": "google/gemini-2.5-pro",
+      "reasoning": true
+    },
+    "anthropic/claude-sonnet-4.5"
+  ],
   "system": "You are a senior narrative and game designer for cozy pixel-art adventure games. Answer in Ukrainian.",
   "prompt_file": "game-199-arc-v2.md"
 }
