@@ -2,6 +2,7 @@
 // Кожна перевірка має негативний контроль (мутація CSS/коду — у звіті картки). Числа — межі прямокутників, а не «на око».
 import { GAME_NAME } from '../../src/config/brand';
 import { expect, test, type Browser, type Page } from '@playwright/test';
+import { waitGameReady } from './ready';
 
 const SETTINGS_KEY = 'camplife.settings.v1';
 const panel = (page: Page) => page.locator('[data-ui="story"]');
@@ -19,7 +20,7 @@ async function newPage(browser: Browser, vp: { width: number; height: number }, 
 }
 async function load(page: Page, query = '?seed=2'): Promise<void> {
   await page.goto(`/${query}`);
-  await page.waitForFunction(() => (window as unknown as { __game?: { probe: { ready: boolean; saveLoaded: boolean } } }).__game?.probe.saveLoaded === true, null, { timeout: 30_000 });
+  await waitGameReady(page);
 }
 async function act(page: Page, kind: string, key = ''): Promise<void> {
   await panel(page).locator(`[data-act="${kind}"][data-key="${key}"]`).click({ timeout: 5_000 });

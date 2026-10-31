@@ -1,12 +1,13 @@
 // GAME-33 · сейви: IndexedDB, автозбереження, код відновлення, запасний слот.
 import { expect, test, type Page } from '@playwright/test';
 import { stateHash } from '../../src/core/hash';
+import { waitGameReady } from './ready';
 
 interface Probe { ready: boolean; saveLoaded: boolean; playerX: number; nearObject: string | null; commandsSent: number; clockMinutes: number }
 interface Snap { game: { grants: string[]; moneyCents: number; seq: number }; clock: { minutes: number; paused: boolean }; rng: number[]; finds: number }
 /** Усе, крім годинника: годинник іде між знімками законно. */
 const noClock = (s: Snap): Omit<Snap, 'clock'> => ({ game: s.game, rng: s.rng, finds: s.finds });
-const loaded = (page: Page) => page.waitForFunction(() => (window as unknown as { __game?: { probe: Probe } }).__game?.probe.saveLoaded === true);
+const loaded = (page: Page) => waitGameReady(page);
 const probe = (page: Page): Promise<Probe> => page.evaluate(() => ({ ...(window as unknown as { __game: { probe: Probe } }).__game.probe }));
 const snap = (page: Page): Promise<Snap> => page.evaluate(() => (window as unknown as { __game: { read: () => Snap } }).__game.read());
 
@@ -71,7 +72,7 @@ test.describe('сейви (десктоп)', () => {
     await page.keyboard.press('Escape');
     await expect.poll(() => mainSlot(page), { timeout: 10_000 }).toContain('rw.campfire-warmth');
     await page.reload();
-    await page.waitForFunction(() => (window as unknown as { __game?: { probe: Probe } }).__game?.probe.saveLoaded === true);
+    await waitGameReady(page);
     expect((await snap(page)).game.grants).toContain('rw.campfire-warmth');
   });
 
@@ -125,7 +126,7 @@ test.describe('сейви (десктоп)', () => {
       };
     }));
     await page.reload();
-    await page.waitForFunction(() => (window as unknown as { __game?: { probe: Probe } }).__game?.probe.saveLoaded === true);
+    await waitGameReady(page);
     expect((await snap(page)).game.grants).toContain('rw.campfire-warmth');
   });
 });

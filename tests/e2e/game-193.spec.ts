@@ -2,6 +2,7 @@
 // працюють. Обидві орієнтації телефона; знімки посеред підсікання — у scratchpad (G193_SHOTS).
 import { expect, test, type Page } from '@playwright/test';
 import { core, playFishing, probe, route, walk } from './chapter-driver';
+import { waitGameReady } from './ready';
 
 const CAMP = 'loc.camp.lake';
 const SETTINGS_KEY = 'camplife.settings.v1';
@@ -22,7 +23,7 @@ async function arriveInCamp(page: Page): Promise<string[]> {
   page.on('pageerror', (e) => errors.push(e.message));
   await page.addInitScript(([k]) => { try { localStorage.setItem(k as string, JSON.stringify({ textScale: 100, language: 'uk', hintSeen: true })); } catch { /* сховища немає */ } }, [SETTINGS_KEY] as const);
   await page.goto('/?seed=7');
-  await page.waitForFunction(() => (window as unknown as { __game?: { probe: { saveLoaded: boolean } } }).__game?.probe.saveLoaded === true, null, { timeout: 30_000 });
+  await waitGameReady(page);
   await page.locator('[data-touch="story"]').click();
   await panel(page).locator('[data-act="create"]', { hasText: /Велосипед|Bike/ }).first().click();
   await page.waitForTimeout(400);
@@ -31,7 +32,7 @@ async function arriveInCamp(page: Page): Promise<string[]> {
   expect((await core(page)).game.player?.locationId).toBe(CAMP);
   await page.waitForTimeout(600);
   await page.goto('/?seed=7&mapFirst=1');
-  await page.waitForFunction(() => (window as unknown as { __game?: { probe: { saveLoaded: boolean } } }).__game?.probe.saveLoaded === true, null, { timeout: 30_000 });
+  await waitGameReady(page);
   await page.locator('[data-ui="recovery-close"]').click({ timeout: 800 }).catch(() => undefined);
   expect((await core(page)).game.player?.locationId, 'сейв підхопився: гравець у таборі').toBe(CAMP);
   return errors;

@@ -3,6 +3,7 @@
 // родина (авто). Негативні контролі: ?breakSpot= робить об'єкт німим — прохід мусить почервоніти; без руху (стоїмо) нічого не відбувається.
 import { readFileSync } from 'node:fs';
 import { expect, test, type Page } from '@playwright/test';
+import { waitGameReady } from './ready';
 
 interface Core { game: { player: { locationId: string; transportId: string } | null; flags: string[]; quests: Record<string, { status: string }>; inventory: Record<string, number> }; journal: { type: string }[] }
 interface Fx { target: string | null; ring: number; ringName: string | null; backpack: number; guide: string; pops: number; auto: number }
@@ -140,7 +141,7 @@ async function start(page: Page, pick: RegExp, query = ''): Promise<string[]> {
     document.addEventListener('click', (e) => { const el = (e.target as Element | null)?.closest('[data-act]'); if (el) (window as unknown as { __acts: string[]; __frame: string[] })[el.closest('.ui-talk') ? '__frame' : '__acts'].push(`${el.getAttribute('data-act')}:${el.getAttribute('data-key') ?? ''}`); }, true);
   });
   await page.goto(`/?seed=7&mapFirst=1${query}`);
-  await page.waitForFunction(() => (window as unknown as { __game?: { probe: Probe } }).__game?.probe.saveLoaded === true, null, { timeout: 30_000 });
+  await waitGameReady(page);
   await page.locator('[data-touch="story"]').click();
   await page.locator('[data-ui="story"] [data-act="create"]', { hasText: pick }).first().click();
   await page.waitForTimeout(400);

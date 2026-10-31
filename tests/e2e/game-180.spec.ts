@@ -5,6 +5,7 @@
 // Знімки для research/visual-audit (SHOTS=1): картка прохання і трекер зі стрілкою у двох орієнтаціях. У звичайному прогоні — пропуск.
 import { readFileSync } from 'node:fs';
 import { expect, test, type Page } from '@playwright/test';
+import { waitGameReady } from './ready';
 
 interface Pt { x: number; y: number }
 interface Probe { saveLoaded: boolean; playerX: number; playerY: number; nearObject: string | null; playerMoving: boolean; residents: { id: string; x: number; y: number }[]; npcMarks: Record<string, string>; fx: { target: string | null; guide: string; pops: number } }
@@ -90,7 +91,7 @@ async function toCamp(page: Page, query = ''): Promise<string[]> {
   page.on('pageerror', (e) => errors.push(e.message));
   page.on('console', (m) => { if (m.type() === 'error') errors.push(m.text()); });
   await page.goto(`/?seed=7${query}`);
-  await page.waitForFunction(() => (window as unknown as { __game?: { probe: { saveLoaded: boolean } } }).__game?.probe.saveLoaded === true, null, { timeout: 30_000 });
+  await waitGameReady(page);
   await page.locator('[data-touch="story"]').click();
   await panel(page).locator('[data-act="create"]', { hasText: 'Велосипед' }).first().click();
   await page.waitForTimeout(400);

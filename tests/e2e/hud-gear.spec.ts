@@ -4,6 +4,7 @@
 // 4) у речах видно «мокре» і стан. Кожна перевірка має негативний контроль (мутація — у звіті картки).
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Page } from '@playwright/test';
+import { waitGameReady } from './ready';
 
 interface Core {
   game: { moneyCents: number; inventory: Record<string, number>; gear: Record<string, { condition: number; wet: boolean }> };
@@ -17,7 +18,7 @@ const SETTINGS_KEY = 'camplife.settings.v1';
 
 async function load(page: Page, query = ''): Promise<void> {
   await page.goto(`/${query}`);
-  await page.waitForFunction(() => (window as unknown as { __game?: { probe: { saveLoaded: boolean } } }).__game?.probe.saveLoaded === true, null, { timeout: 30_000 });
+  await waitGameReady(page);
 }
 async function openStory(page: Page): Promise<void> {
   await page.locator('[data-touch="story"]').click();

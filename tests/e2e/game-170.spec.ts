@@ -7,6 +7,7 @@
 import { readFileSync } from 'node:fs';
 import { expect, test, type Browser, type CDPSession, type Page } from '@playwright/test';
 import { playFire } from './chapter-driver';
+import { waitGameReady } from './ready';
 
 interface Core { game: { campaignEnded: boolean; quests: Record<string, { status: string }>; flags: string[]; wave?: { active: { tasks: Record<string, { dueAt: number; outcome: string }> } | null; past: Record<string, Record<string, string>> } }; clock: { minutes: number }; journal: { type: string; ref: string | null }[] }
 interface Probe { playerX: number; playerY: number; nearObject: string | null; commandsSent: number; cameraScrollX: number; cameraScrollY: number }
@@ -33,7 +34,7 @@ async function open(page: Page, query: string): Promise<string[]> {
   page.on('pageerror', (e) => errors.push(e.message));
   await page.addInitScript(([k]) => { try { localStorage.setItem(k, JSON.stringify({ textScale: 100, language: 'uk', hintSeen: true })); } catch { /* сховища немає */ } }, [SETTINGS_KEY] as const);
   await page.goto(`/${query}`);
-  await page.waitForFunction(() => (window as unknown as { __game?: { probe: { saveLoaded: boolean } } }).__game?.probe.saveLoaded === true, null, { timeout: 30_000 });
+  await waitGameReady(page);
   await page.locator('[data-touch="story"]').click();
   await expect(panel(page)).toBeVisible();
   return errors;

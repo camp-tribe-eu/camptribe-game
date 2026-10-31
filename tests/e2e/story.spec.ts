@@ -3,6 +3,7 @@
 import { readFileSync } from 'node:fs';
 import ts from 'typescript';
 import { expect, test, type Browser, type Page } from '@playwright/test';
+import { waitGameReady } from './ready';
 
 interface Core { game: { campaignEnded: boolean; grants: string[]; player: { transportId: string } | null }; clock: { paused: boolean; minutes: number }; journal: { type: string }[] }
 const core = (page: Page): Promise<Core> => page.evaluate(() => (window as unknown as { __game: { read: () => Core } }).__game.read());
@@ -11,7 +12,7 @@ async function open(page: Page, query = ''): Promise<string[]> {
   const errors: string[] = [];
   page.on('pageerror', (e) => errors.push(e.message));
   await page.goto(`/${query}`);
-  await page.waitForFunction(() => (window as unknown as { __game?: { probe: { ready: boolean; saveLoaded: boolean } } }).__game?.probe.saveLoaded === true, null, { timeout: 30_000 });
+  await waitGameReady(page);
   await page.locator('[data-touch="story"]').click();
   await expect(page.locator('[data-ui="story"]')).toBeVisible();
   return errors;

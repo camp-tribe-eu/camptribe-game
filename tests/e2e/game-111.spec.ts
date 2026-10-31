@@ -5,6 +5,7 @@
 //      і role=meter у ту саму панель — детектор мусить їх знайти;
 //  (c) велосипедист без кішки панелі Mia не має зовсім (Mia не їде велосипедом).
 import { expect, test, type Page } from '@playwright/test';
+import { waitGameReady } from './ready';
 
 interface Core { game: { wave?: { active: { tasks: Record<string, { outcome: string }> } | null } } }
 const core = (page: Page): Promise<Core> => page.evaluate(() => (window as unknown as { __game: { read: () => Core } }).__game.read());
@@ -19,7 +20,7 @@ async function open(page: Page): Promise<string[]> {
   page.on('pageerror', (e) => errors.push(e.message));
   await page.addInitScript(([k]) => { try { localStorage.setItem(k, JSON.stringify({ textScale: 100, language: 'uk', hintSeen: true })); } catch { /* сховища немає */ } }, [SETTINGS_KEY] as const);
   await page.goto('/?seed=5');
-  await page.waitForFunction(() => (window as unknown as { __game?: { probe: { saveLoaded: boolean } } }).__game?.probe.saveLoaded === true, null, { timeout: 30_000 });
+  await waitGameReady(page);
   await page.locator('[data-touch="story"]').click();
   await expect(panel(page)).toBeVisible();
   return errors;

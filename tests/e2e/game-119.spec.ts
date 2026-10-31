@@ -3,10 +3,11 @@
 // нову назву (мутація у звіті картки). Що константа = 'CampTribe', тримає src/guards/brand.test.ts.
 import { GAME_NAME } from '../../src/config/brand';
 import { expect, test } from '@playwright/test';
+import { waitGameReady } from './ready';
 
 test('назва гри — у вкладці браузера й у підписі збірки', async ({ page }) => {
   await page.goto('/?seed=2');
-  await page.waitForFunction(() => (window as unknown as { __game?: { probe: { saveLoaded: boolean } } }).__game?.probe.saveLoaded === true, null, { timeout: 30_000 });
+  await waitGameReady(page);
   expect(await page.title()).toBe(GAME_NAME);
   await page.locator('[data-touch="pause"]').click();
   await expect(page.locator('[data-ui="pause"] [data-ui="build"]')).toHaveText(new RegExp(`^${GAME_NAME} v\\S+ · `));

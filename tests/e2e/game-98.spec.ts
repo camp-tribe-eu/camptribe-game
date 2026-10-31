@@ -7,6 +7,7 @@
 // Негативні контролі — тут, у коді (закон 1): світлий/сірий текст рамки → міряч дає < 4.5; blur → фокус не на #stage, а шлях гри повертає;
 // без ?holdToast=1 тост зникає, з ним — лишається.
 import { expect, test, type Browser, type Locator, type Page } from '@playwright/test';
+import { waitGameReady } from './ready';
 
 const SETTINGS_KEY = 'camplife.settings.v1';
 const AA = 4.5;
@@ -20,7 +21,7 @@ async function open(browser: Browser, vp: { width: number; height: number }, tou
   // holdToast: тост живе 5 с від старту, а на повільному CI сторінка готова пізніше — без перемикача тест червонів би
   // за часом, а не за контрастом (рецензія Fable, GAME-98).
   await page.goto(hold ? '/?seed=2&holdToast=1' : '/?seed=2');
-  await page.waitForFunction(() => (window as unknown as { __game?: { probe: { saveLoaded: boolean } } }).__game?.probe.saveLoaded === true, null, { timeout: 30_000 });
+  await waitGameReady(page);
   // Полотно Phaser має встигнути намалювати мапу: інакше «тло» — порожній чорний, і контраст вийшов би завищеним.
   await expect.poll(async () => (await page.locator('#stage canvas').evaluate((el) => el.getBoundingClientRect().height)) / vp.height, { timeout: 15_000 }).toBeGreaterThanOrEqual(0.85);
   return page;

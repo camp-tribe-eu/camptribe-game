@@ -3,6 +3,7 @@
 // Негативні контролі (закон 1): ?hideUi=goal — цілі немає (перевірка «ціль видна» на цьому червоніє); завантаження сейву нагородою не святкується.
 import { readFileSync } from 'node:fs';
 import { expect, test, type Locator, type Page } from '@playwright/test';
+import { waitGameReady } from './ready';
 
 interface Progress { xp: number; om: number; keys: string[] }
 interface Core { clock: { minutes: number }; game: { player: { locationId: string } | null; flags: string[]; quests: Record<string, { status: string }>; inventory: Record<string, number>; progress?: Progress } }
@@ -11,7 +12,7 @@ interface Probe { playerX: number; playerY: number; clockMinutes: number; fx: Fx
 const core = (page: Page): Promise<Core> => page.evaluate(() => (window as unknown as { __game: { read: () => Core } }).__game.read());
 const probe = (page: Page): Promise<Probe> => page.evaluate(() => JSON.parse(JSON.stringify((window as unknown as { __game: { probe: Probe } }).__game.probe)) as Probe);
 const sounds = (page: Page): Promise<string[]> => page.evaluate(() => (window as unknown as { __game: { sounds: () => string[] } }).__game.sounds());
-const loaded = (page: Page): Promise<unknown> => page.waitForFunction(() => (window as unknown as { __game?: { probe: Probe } }).__game?.probe.saveLoaded === true, null, { timeout: 30_000 });
+const loaded = (page: Page): Promise<unknown> => waitGameReady(page);
 
 const VIEWS = [{ name: 'портрет', side: 'portrait', w: 390, h: 844 }, { name: 'ландшафт', side: 'landscape', w: 844, h: 390 }] as const;
 const shot = (side: string, what: string): string => `research/visual-audit/progress-${side}-${what}.png`;

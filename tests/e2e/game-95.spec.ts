@@ -3,6 +3,7 @@
 // конвеєр браузера з перевіркою влучання, тож «дотик на кнопці не створює джойстик» перевіряється на живому DOM.
 // Негативні контролі (мутації) — у звіті картки; кожна перевірка має мутацію, що її червонить.
 import { expect, test, type Browser, type CDPSession, type Page } from '@playwright/test';
+import { waitGameReady } from './ready';
 
 const SETTINGS_KEY = 'camplife.settings.v1';
 // Два положення телефона: сторч і горизонтально (власник: грати будуть горизонтально, як Stardew mobile) — кожен тест іде в обох.
@@ -28,7 +29,7 @@ async function newPage(browser: Browser, vp: Vp, opts: { hintSeen?: boolean } = 
   const page = await ctx.newPage();
   await page.addInitScript(([k, seen]) => { try { localStorage.setItem(k, JSON.stringify({ textScale: 100, language: 'uk', hintSeen: seen })); } catch { /* сховища немає */ } }, [SETTINGS_KEY, opts.hintSeen ?? true] as const);
   await page.goto('/?seed=2');
-  await page.waitForFunction(() => (window as unknown as { __game?: { probe: { saveLoaded: boolean } } }).__game?.probe.saveLoaded === true, null, { timeout: 30_000 });
+  await waitGameReady(page);
   return { page, cdp: await ctx.newCDPSession(page) };
 }
 const touch = (cdp: CDPSession, type: 'touchStart' | 'touchMove' | 'touchEnd', x?: number, y?: number): Promise<unknown> =>

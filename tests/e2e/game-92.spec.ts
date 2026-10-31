@@ -2,6 +2,7 @@
 // рядки шапки на одній лівій межі, джойстик і кнопка дії на однакових відступах від країв.
 // Усе міряємо числами (межі прямокутників у px). Негативні контролі (мутації) — у звіті картки.
 import { expect, test, type Browser, type Page } from '@playwright/test';
+import { waitGameReady } from './ready';
 
 const SETTINGS_KEY = 'camplife.settings.v1';
 /** Базовий відступ від краю — токен --gap у index.html (16 px); тест тримає власну копію числа, щоб видалення токена було червоним. */
@@ -29,7 +30,7 @@ async function newPage(browser: Browser, vp: Vp, scale: 100 | 200, opts: { hintS
   }
   await page.addInitScript(([k, s, seen]) => { try { localStorage.setItem(k, JSON.stringify({ textScale: s, language: 'uk', hintSeen: seen })); } catch { /* сховища немає */ } }, [SETTINGS_KEY, scale, opts.hintSeen ?? true] as const);
   await page.goto('/?seed=2');
-  await page.waitForFunction(() => (window as unknown as { __game?: { probe: { saveLoaded: boolean } } }).__game?.probe.saveLoaded === true, null, { timeout: 30_000 });
+  await waitGameReady(page);
   return page;
 }
 
@@ -125,7 +126,7 @@ test('десктоп без дотику: шапка й кнопки на міс
   const page = await ctx.newPage();
   await page.addInitScript(([k]) => { try { localStorage.setItem(k, JSON.stringify({ textScale: 100, language: 'uk', hintSeen: true })); } catch { /* сховища немає */ } }, [SETTINGS_KEY] as const);
   await page.goto('/?seed=2');
-  await page.waitForFunction(() => (window as unknown as { __game?: { probe: { saveLoaded: boolean } } }).__game?.probe.saveLoaded === true, null, { timeout: 30_000 });
+  await waitGameReady(page);
   for (const sel of [CONTROLS['ширма ☰'], CONTROLS['пауза ‖']]) expect(edgeGap(await rectOf(page, sel), { width: 1280, height: 800 }).min).toBeGreaterThanOrEqual(GAP - 0.01);
   await ctx.close();
 });

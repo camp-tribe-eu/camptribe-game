@@ -2,6 +2,7 @@
 // Мапи (дім, крамниця, дорога, табір) — зі справжніх .tmj; шлях по плитках. Жодного дотику до ☰.
 import { readFileSync } from 'node:fs';
 import { expect, type Page } from '@playwright/test';
+import { waitGameReady } from './ready';
 
 export interface Core { game: { player: { locationId: string; transportId?: string } | null; flags: string[]; quests: Record<string, { status: string }>; inventory: Record<string, number>; dialogue: unknown; wave?: unknown; campaignEnded: boolean }; clock: { minutes: number } }
 /** GAME-193: зонд риболовлі (координати кнопок — у пікселях сторінки). */
@@ -11,7 +12,7 @@ export interface Probe { playerX: number; playerY: number; nearObject: string | 
   fire: { phase: string; logs: number; charge: number; inBand: boolean; holding: boolean; fizzles: number; x: number; y: number }; grill: { phase: string; heat: number; cook: number; holding: boolean; chars: number; charred: boolean }; fish: FishP; fx: { target: string | null; guide: string; ring: number; backpack: number } }
 export const core = (page: Page): Promise<Core> => page.evaluate(() => (window as unknown as { __game: { read: () => Core } }).__game.read());
 export const probe = (page: Page): Promise<Probe> => page.evaluate(() => JSON.parse(JSON.stringify((window as unknown as { __game: { probe: Probe } }).__game.probe)) as Probe);
-export const loaded = (page: Page): Promise<unknown> => page.waitForFunction(() => (window as unknown as { __game?: { probe: { saveLoaded: boolean } } }).__game?.probe.saveLoaded === true, null, { timeout: 30_000 });
+export const loaded = (page: Page): Promise<unknown> => waitGameReady(page);
 
 export const MAP_OF: Readonly<Record<string, string>> = { 'loc.home': 'home', 'loc.shop': 'shop', 'loc.road': 'road', 'loc.camp.lake': 'camp-lake' };
 interface Tmj { width: number; height: number; layers: { name: string; data?: number[]; objects?: { name: string; x: number; y: number }[] }[] }

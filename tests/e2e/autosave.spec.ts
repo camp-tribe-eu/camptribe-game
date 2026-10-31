@@ -1,10 +1,11 @@
 // GAME-86 · автозбереження після кожної дії: F5 БЕЗ паузи не губить прогрес.
 import { expect, test, type Page } from '@playwright/test';
+import { waitGameReady } from './ready';
 
 interface Core { game: { moneyCents: number; player: { locationId: string | null } | null; quests: Record<string, { status: string }> }; journal: unknown[] }
 const core = (page: Page): Promise<Core> => page.evaluate(() => (window as unknown as { __game: { read: () => Core } }).__game.read());
 const panel = (page: Page) => page.locator('[data-ui="story"]');
-const loaded = (page: Page, url = '/') => page.goto(url).then(() => page.waitForFunction(() => (window as unknown as { __game?: { probe: { saveLoaded: boolean } } }).__game?.probe.saveLoaded === true, null, { timeout: 30_000 }));
+const loaded = (page: Page, url = '/') => page.goto(url).then(() => waitGameReady(page));
 
 async function act(page: Page, kind: string, key?: string): Promise<void> {
   await panel(page).locator(key ? `[data-act="${kind}"][data-key="${key}"]` : `[data-act="${kind}"]`).first().click();
@@ -38,7 +39,7 @@ test('F5 без паузи після двох квестів: персонаж,
   expect(Object.values(before.game.quests).filter((q) => q.status === 'completed').length).toBeGreaterThanOrEqual(2);
   await expect.poll(() => stored(page), { timeout: 500 }).toContain('"ST-002":{"status":"completed"');   // «збережено» видно в сховищі
   await page.reload();
-  await page.waitForFunction(() => (window as unknown as { __game?: { probe: { saveLoaded: boolean } } }).__game?.probe.saveLoaded === true);
+  await waitGameReady(page);
   const after = await core(page);
   expect(after.game.player).toEqual(before.game.player);
   expect(after.game.quests).toEqual(before.game.quests);
@@ -55,7 +56,7 @@ for (const place of ['loc.shop', 'loc.road']) {
     expect(before.game.player?.locationId).toBe(place);
     await page.waitForTimeout(500);
     await page.reload();
-    await page.waitForFunction(() => (window as unknown as { __game?: { probe: { saveLoaded: boolean } } }).__game?.probe.saveLoaded === true);
+    await waitGameReady(page);
     const after = await core(page);
     expect(after.game.player?.locationId).toBe(place);
     expect(after.game.quests).toEqual(before.game.quests);
@@ -68,6 +69,6 @@ test('негативний контроль: без автозбереження
   expect((await core(page)).game.player).not.toBeNull();
   await page.waitForTimeout(500);
   await page.reload();     // без ?noAutosave: читаємо сховище, яке перемикач не наповнив
-  await page.waitForFunction(() => (window as unknown as { __game?: { probe: { saveLoaded: boolean } } }).__game?.probe.saveLoaded === true);
+  await waitGameReady(page);
   expect((await core(page)).game.player).toBeNull();
 });

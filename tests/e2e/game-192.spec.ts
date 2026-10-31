@@ -2,6 +2,7 @@
 // або завжди, якщо так обрано в налаштуваннях. probe.fx.target звітує ціль завжди (драйвери e2e ходять за нею). Таймер стискаємо ?hintIdleMs=.
 // Негативний контроль: у режимі «завжди» стрілка не ховається — той самий тест «прихована до бездіяльності» там мусить червоніти.
 import { expect, test, type Browser, type Page } from '@playwright/test';
+import { waitGameReady } from './ready';
 
 const SETTINGS_KEY = 'camplife.settings.v1';
 const VIEWS = [{ w: 390, h: 844, name: 'портрет' }, { w: 844, h: 390, name: 'ландшафт' }] as const;
@@ -14,7 +15,7 @@ async function start(browser: Browser, v: { w: number; h: number }, mode: 'stuck
   const page = await ctx.newPage();
   await page.addInitScript(([k, m]) => { try { localStorage.setItem(k as string, JSON.stringify({ textScale: 100, language: 'uk', hintSeen: true, hintMode: m })); } catch { /* сховища немає */ } }, [SETTINGS_KEY, mode] as const);
   await page.goto('/?seed=7&mapFirst=1&hintIdleMs=6000');
-  await page.waitForFunction(() => (window as unknown as { __game?: { probe: { saveLoaded: boolean } } }).__game?.probe.saveLoaded === true, null, { timeout: 30_000 });
+  await waitGameReady(page);
   await page.locator('[data-touch="story"]').click();
   await page.locator('[data-ui="story"] [data-act="create"]', { hasText: /Велосипед|Bike/ }).first().click();
   await page.waitForTimeout(400);

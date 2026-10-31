@@ -2,11 +2,12 @@
 // Атлас із ☰ (12 слотів, печатка в центрі, мапа з «ми тут»); «Пропустити» працює; обидві орієнтації. Старі e2e обирають героя в ☰ — тож вступ у збірці e2e вмикає лише ?intro=1.
 // Негативні контролі (закон 1): без ?intro=1 вступу немає (перевірка «вступ видно» на цьому червоніє); завантажений сейв вступу не показує.
 import { expect, test, type Page } from '@playwright/test';
+import { waitGameReady } from './ready';
 
 interface Core { game: { player: { locationId: string } | null; stickers?: string[]; quests: Record<string, { status: string }> } }
 const core = (page: Page): Promise<Core> => page.evaluate(() => (window as unknown as { __game: { read: () => Core } }).__game.read());
 const sounds = (page: Page): Promise<string[]> => page.evaluate(() => (window as unknown as { __game: { sounds: () => string[] } }).__game.sounds());
-const loaded = (page: Page): Promise<unknown> => page.waitForFunction(() => (window as unknown as { __game?: { probe: { saveLoaded: boolean } } }).__game?.probe.saveLoaded === true, null, { timeout: 30_000 });
+const loaded = (page: Page): Promise<unknown> => waitGameReady(page);
 
 const VIEWS = [{ side: 'portrait', w: 390, h: 844 }, { side: 'landscape', w: 844, h: 390 }] as const;
 const FIRST_CHOICE_BUDGET_MS = 15_000;

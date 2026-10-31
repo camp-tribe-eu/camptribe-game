@@ -5,6 +5,7 @@
 // Сторч-розкладку тримають game-91/92/95 без змін. Негативні контролі (мутації) — у звіті картки.
 import { expect, test, type Browser, type CDPSession, type Page } from '@playwright/test';
 import { readFileSync } from 'node:fs';
+import { waitGameReady } from './ready';
 /** Розмір мапи кемпінгу, px (GAME-172: 40×24 клітинки по 32 — було 640×384); з файлу мапи, а не числом у тесті. */
 const CAMP = JSON.parse(readFileSync(new URL('../../public/maps/camp-lake.tmj', import.meta.url), 'utf8')) as { width: number; height: number; tilewidth: number; tileheight: number };
 const MAP_W = CAMP.width * CAMP.tilewidth;
@@ -23,7 +24,7 @@ async function open(browser: Browser, vp: Vp, touch: boolean, inset = 0): Promis
   const page = await ctx.newPage();
   await page.addInitScript(([k, l]) => { try { localStorage.setItem(k as string, JSON.stringify({ textScale: 100, language: l, hintSeen: true })); } catch { /* сховища немає */ } }, [SETTINGS_KEY, 'uk'] as const);
   await page.goto('/?seed=2');
-  await page.waitForFunction(() => (window as unknown as { __game?: { probe: { saveLoaded: boolean } } }).__game?.probe.saveLoaded === true, null, { timeout: 30_000 });
+  await waitGameReady(page);
   // Виріз екрана: Chromium не дає емулювати env(safe-area-inset-*), тож перекриваємо змінні --safe-*, з яких CSS складає відступи.
   if (inset > 0) await page.addStyleTag({ content: `:root { --safe-left: ${inset}px !important; --safe-right: ${inset}px !important; }` });
   return { page, cdp: await ctx.newCDPSession(page) };

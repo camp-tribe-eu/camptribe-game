@@ -1,5 +1,6 @@
 // GAME-82 · «Нова гра» в меню паузи: підтвердження, скасування, збереження нової гри через перезавантаження.
 import { expect, test, type Page } from '@playwright/test';
+import { waitGameReady } from './ready';
 
 interface Core { game: { moneyCents: number; player: { transportId: string } | null }; clock: { paused: boolean }; journal: { type: string }[] }
 const core = (page: Page): Promise<Core> => page.evaluate(() => (window as unknown as { __game: { read: () => Core } }).__game.read());
@@ -9,7 +10,7 @@ const confirm = (page: Page) => page.locator('[data-ui="confirm-new"]');
 
 async function load(page: Page, url = '/'): Promise<void> {
   await page.goto(url);
-  await page.waitForFunction(() => (window as unknown as { __game?: { probe: { saveLoaded: boolean } } }).__game?.probe.saveLoaded === true, null, { timeout: 30_000 });
+  await waitGameReady(page);
 }
 
 /** Гра з персонажем і непорожнім журналом — інакше «нова гра стерла» нічого не доводить. */
@@ -50,7 +51,7 @@ test('скасування нічого не змінює: журнал, гро�
   expect(after.journal).toEqual(before.journal);
   expect(after.game).toEqual(before.game);
   await page.reload();
-  await page.waitForFunction(() => (window as unknown as { __game?: { probe: { saveLoaded: boolean } } }).__game?.probe.saveLoaded === true);
+  await waitGameReady(page);
   expect((await core(page)).journal).toEqual(before.journal);   // і в сховищі стара гра
 });
 
@@ -68,7 +69,7 @@ test('підтвердження: текст про стирання; після
   expect(old.journal.length).toBeGreaterThan(0);
   // Автозбереження тримає нову гру: після перезавантаження — не стара.
   await page.reload();
-  await page.waitForFunction(() => (window as unknown as { __game?: { probe: { saveLoaded: boolean } } }).__game?.probe.saveLoaded === true);
+  await waitGameReady(page);
   const again = await core(page);
   expect(again.game.player).toBeNull();
   expect(again.journal).toEqual([]);
