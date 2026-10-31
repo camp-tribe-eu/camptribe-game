@@ -3326,7 +3326,7 @@
       "sources": [
         "https://opengameart.org/content/lpc-revised-base-object-kit"
       ],
-      "modified": "twelve campsite items (caravan, motorhome, hookup post, lamp post, water tap, clothesline, picnic table with chair, recycling bins, bicycle, barrier, reception hut, sanitary block) redrawn by an image-editing model from the LPC furniture sheet, magenta background keyed out, scaled with a box filter onto a 384x224 sheet bottom-aligned to the tile grid, quantized to the LPC palette (scripts/assets/build_camp_props.py)"
+      "modified": "AI-похідний твір від аркуша CC-BY-SA 3.0; лишається CC-BY-SA 3.0 (як ART-021)"
     },
     {
       "file": "tiles/camp_tent.png",
