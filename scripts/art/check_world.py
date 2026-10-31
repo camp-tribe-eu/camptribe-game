@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """GAME-222 / OD-026 · сторож «світ правдивий»: масштаб, порядок розмірів і перспектива не-LPC предметів.
 
-    python3 scripts/art/check_world.py                 # перевірка content/art/world-scale.json
+    python3 scripts/art/check_world.py                 # перевірка art/world-scale.json
     python3 scripts/art/check_world.py --self-test     # синтетичні картинки: кожен код має спрацювати
     python3 scripts/art/check_world.py --mutate        # вимикає кожну перевірку по черзі: self-test МУСИТЬ упасти
     python3 scripts/art/check_world.py --override assets/tiles/camp_props.png=/шлях/до/файла.png   # чужа гілка
@@ -27,7 +27,7 @@ from PIL import Image
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.environ.get('WORLD_ROOT') or os.path.dirname(os.path.dirname(HERE))
-JSON_PATH = os.path.join(ROOT, 'content/art/world-scale.json')
+JSON_PATH = os.path.join(ROOT, 'art/world-scale.json')
 
 ORDER_RATIO = 1.15
 SLOPE_MAX = 0.12
@@ -130,7 +130,7 @@ def check_missing(entries, lpc, files):
     if not ENABLED['missing']:
         return []
     have = {e['file'] for e in entries} | set(lpc)
-    return [('WORLD_MISSING_ENTRY', f"{f}: PNG не з білого списку LPC і без жодного рядка в content/art/world-scale.json — додай справжні метри "
+    return [('WORLD_MISSING_ENTRY', f"{f}: PNG не з білого списку LPC і без жодного рядка в art/world-scale.json — додай справжні метри "
              f"(або, якщо це оригінал LPC, внеси в lpc_sheets)") for f in sorted(files) if f not in have]
 
 
