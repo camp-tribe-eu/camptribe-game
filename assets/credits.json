@@ -93,6 +93,7 @@
         "characters/head/heads/human/male/thrust.png",
         "characters/head/heads/human/male/walk.png",
         "portraits/npc.amina.png",
+        "portraits/npc.cashier.png",
         "portraits/npc.claire.png",
         "portraits/npc.elise.png",
         "portraits/npc.george.png",
@@ -207,6 +208,7 @@
         "icons/objective_icons.png",
         "portraits/animal.cat.png",
         "portraits/npc.amina.png",
+        "portraits/npc.cashier.png",
         "portraits/npc.claire.png",
         "portraits/npc.elise.png",
         "portraits/npc.george.png",
@@ -222,6 +224,7 @@
         "tiles/home_furniture.png",
         "tiles/home_walls.png",
         "tiles/home_windows_doors.png",
+        "tiles/shop_decor.png",
         "tiles/shop_gear.png"
       ],
       "licences": [
@@ -405,6 +408,7 @@
         "characters/body/bodies/teen/thrust.png",
         "characters/body/bodies/teen/walk.png",
         "portraits/npc.amina.png",
+        "portraits/npc.cashier.png",
         "portraits/npc.claire.png",
         "portraits/npc.elise.png",
         "portraits/npc.george.png",
@@ -483,6 +487,7 @@
         "characters/torso/clothes/shortsleeve/shortsleeve/teen/walk.png",
         "icons/objective_icons.png",
         "portraits/npc.amina.png",
+        "portraits/npc.cashier.png",
         "portraits/npc.claire.png",
         "portraits/npc.elise.png",
         "portraits/npc.george.png",
@@ -495,6 +500,7 @@
         "tiles/camp_props.png",
         "tiles/home_furniture.png",
         "tiles/home_office.png",
+        "tiles/shop_decor.png",
         "tiles/shop_gear.png"
       ],
       "licences": [
@@ -548,6 +554,7 @@
         "characters/body/bodies/teen/thrust.png",
         "characters/body/bodies/teen/walk.png",
         "portraits/npc.amina.png",
+        "portraits/npc.cashier.png",
         "portraits/npc.claire.png",
         "portraits/npc.elise.png",
         "portraits/npc.george.png",
@@ -634,6 +641,7 @@
         "tiles/home_floor.png",
         "tiles/home_furniture.png",
         "tiles/home_walls.png",
+        "tiles/shop_decor.png",
         "tiles/shop_gear.png"
       ],
       "licences": [
@@ -712,6 +720,7 @@
         "characters/torso/clothes/shortsleeve/shortsleeve/teen/thrust.png",
         "characters/torso/clothes/shortsleeve/shortsleeve/teen/walk.png",
         "portraits/npc.amina.png",
+        "portraits/npc.cashier.png",
         "portraits/npc.claire.png",
         "portraits/npc.elise.png",
         "portraits/npc.george.png",
@@ -793,6 +802,7 @@
         "characters/legs/pants/thin/thrust.png",
         "characters/legs/pants/thin/walk.png",
         "portraits/npc.amina.png",
+        "portraits/npc.cashier.png",
         "portraits/npc.claire.png",
         "portraits/npc.elise.png",
         "portraits/npc.george.png",
@@ -883,6 +893,7 @@
         "characters/torso/clothes/longsleeve/longsleeve/male/thrust.png",
         "characters/torso/clothes/longsleeve/longsleeve/male/walk.png",
         "portraits/npc.amina.png",
+        "portraits/npc.cashier.png",
         "portraits/npc.claire.png",
         "portraits/npc.elise.png",
         "portraits/npc.george.png",
@@ -984,6 +995,7 @@
         "tiles/home_shelf.png",
         "tiles/home_walls.png",
         "tiles/home_windows_doors.png",
+        "tiles/shop_decor.png",
         "tiles/shop_gear.png",
         "tiles/terrain_atlas.png"
       ],
@@ -1024,6 +1036,7 @@
         "characters/hair/ponytail/adult/fg/thrust.png",
         "characters/hair/ponytail/adult/fg/walk.png",
         "portraits/npc.amina.png",
+        "portraits/npc.cashier.png",
         "portraits/npc.claire.png",
         "portraits/npc.elise.png",
         "portraits/npc.george.png",
@@ -1088,6 +1101,7 @@
         "characters/legs/pants/thin/thrust.png",
         "characters/legs/pants/thin/walk.png",
         "portraits/npc.amina.png",
+        "portraits/npc.cashier.png",
         "portraits/npc.claire.png",
         "portraits/npc.elise.png",
         "portraits/npc.george.png",
@@ -1157,6 +1171,7 @@
         "characters/body/bodies/teen/thrust.png",
         "characters/body/bodies/teen/walk.png",
         "portraits/npc.amina.png",
+        "portraits/npc.cashier.png",
         "portraits/npc.claire.png",
         "portraits/npc.elise.png",
         "portraits/npc.george.png",
@@ -1260,6 +1275,7 @@
         "characters/body/bodies/teen/thrust.png",
         "characters/body/bodies/teen/walk.png",
         "portraits/npc.amina.png",
+        "portraits/npc.cashier.png",
         "portraits/npc.claire.png",
         "portraits/npc.elise.png",
         "portraits/npc.ingrid.png",
@@ -1408,6 +1424,7 @@
         "characters/torso/clothes/shortsleeve/shortsleeve/teen/thrust.png",
         "characters/torso/clothes/shortsleeve/shortsleeve/teen/walk.png",
         "portraits/npc.amina.png",
+        "portraits/npc.cashier.png",
         "portraits/npc.claire.png",
         "portraits/npc.elise.png",
         "portraits/npc.george.png",
@@ -1537,6 +1554,7 @@
         "characters/body/bodies/teen/thrust.png",
         "characters/body/bodies/teen/walk.png",
         "portraits/npc.amina.png",
+        "portraits/npc.cashier.png",
         "portraits/npc.claire.png",
         "portraits/npc.elise.png",
         "portraits/npc.george.png",
@@ -2926,6 +2944,48 @@
       "modified": "redrawn as a 96x96 head-and-shoulders portrait by an image-editing model from the LPC sprite, background keyed out, quantized to the LPC palette plus skin tones"
     },
     {
+      "file": "portraits/npc.cashier.png",
+      "authors": [
+        "JaidynReiman",
+        "Manuel Riecke (MrBeast)",
+        "Benjamin K. Smith (BenCreating)",
+        "bluecarrot16",
+        "Wolthera van Hövell tot Westerflier (TheraHedwig)",
+        "Evert",
+        "MuffinElZangano",
+        "Durrani",
+        "Pierre Vigier (pvigier)",
+        "Eliza Wyatt (ElizaWy)",
+        "Matthew Krohn (makrohn)",
+        "Johannes Sjölund (wulax)",
+        "Stephen Challener (Redshrike)",
+        "Joe White"
+      ],
+      "licence": "CC-BY-SA 3.0",
+      "sources": [
+        "https://opengameart.org/content/liberated-pixel-cup-lpc-base-assets-sprites-map-tiles",
+        "https://opengameart.org/content/lpc-expanded-hair",
+        "https://opengameart.org/content/lpc-medieval-fantasy-character-sprites",
+        "https://opengameart.org/content/lpc-ladies",
+        "https://opengameart.org/content/lpc-7-womens-shirts",
+        "https://opengameart.org/content/lpc-jump-expanded",
+        "https://opengameart.org/content/lpc-be-seated",
+        "https://opengameart.org/content/lpc-revised-character-basics",
+        "https://gitlab.com/vagabondgame/lpc-characters",
+        "https://opengameart.org/content/lpc-male-jumping-animation-by-durrani",
+        "https://opengameart.org/content/lpc-runcycle-and-diagonal-walkcycle",
+        "https://opengameart.org/content/",
+        "https://opengameart.org/content/lpc-character-bases",
+        "http://opengameart.org/content/lpc-clothing-updates",
+        "https://opengameart.org/content/lpc-expanded-socks-shoes",
+        "https://opengameart.org/content/lpc-expanded-pants",
+        "https://github.com/ElizaWy/LPC/tree/main/Characters/Clothing",
+        "https://opengameart.org/content/lpc-expanded-sit-run-jump-more",
+        "https://opengameart.org/content/lpc-expanded-simple-shirts"
+      ],
+      "modified": "redrawn as a 96x96 head-and-shoulders portrait by an image-editing model from the LPC sprite, background keyed out, quantized to the LPC palette plus skin tones"
+    },
+    {
       "file": "portraits/npc.claire.png",
       "authors": [
         "Benjamin K. Smith (BenCreating)",
@@ -3496,6 +3556,20 @@
         "https://opengameart.org/content/lpc-windows-doors"
       ],
       "modified": "one white 2-tile window (cropped from x=16 so it sits on the tile grid) and one white door (shifted 16 px down so it stands on the floor line) cropped from windows-doors.png onto a 96x96 sheet, recoloured onto the base palette (scripts/palette/quantize.py)"
+    },
+    {
+      "file": "tiles/shop_decor.png",
+      "authors": [
+        "Eliza Wyatt (ElizaWy)",
+        "Lanea Zimmerman (Sharm)",
+        "bluecarrot16",
+        "Hyptosis"
+      ],
+      "licence": "CC-BY-SA 3.0",
+      "sources": [
+        "https://opengameart.org/content/lpc-revised-base-object-kit"
+      ],
+      "modified": "three backpack wall panels recoloured per backpack (hue replaced inside a mask of pixels differing from the plank wall), plus a cork notice board, a sale sign and two posters drawn in code onto the plank wall, 320x64 sheet, quantized to the LPC palette (scripts/assets/build_shop_decor.py)"
     },
     {
       "file": "tiles/shop_gear.png",

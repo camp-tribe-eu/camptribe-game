@@ -14,7 +14,7 @@ export type Portrait =
 export const SPRITE_SHEET: Readonly<Record<string, SheetId>> = {
   'npc.elise': 'elise', 'npc.george': 'player', 'npc.victoria': 'victoria', 'npc.matthew': 'matthew',
   ...Object.fromEntries(RESIDENTS.map((r) => [r.id, `res:${r.look}` as SheetId])),
-  'npc.cashier': 'res:lotte',   // GAME-204: портрета-файла поки нема — запасний обрізок зі спрайта (без FAL)
+  'npc.cashier': 'res:lotte',   // GAME-204: Лотте; портрет — assets/portraits/npc.cashier.png (FAL, art/requests/portraits-cashier.json), обрізок — лише запасний
 };
 
 /** Усі, з ким можна говорити на мапах: сторож npc-talk.test порівнює цей список із content/npcs.json. */

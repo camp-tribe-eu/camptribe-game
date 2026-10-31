@@ -3,7 +3,8 @@
 
     python3 scripts/portraits/build.py refs  OUTDIR            # референс-спрайти (кадр «вниз», x8) у OUTDIR
     python3 scripts/portraits/build.py req   OUTDIR NAME.json [id ...]   # art/requests/NAME.json (картинки data:-URI)
-    python3 scripts/portraits/build.py post  RAWDIR OUTDIR    # ключ фону, зменшення до 96x96, палітра LPC+шкіра -> PNG
+    python3 scripts/portraits/build.py post  RAWDIR OUTDIR    # ключ фону, зменшення до 96x96, палітра LPC+шкіра -> PNG (RAWDIR = art/out/<batch>/, файли <id>_0.webp)
+    python3 scripts/portraits/build.py credits               # рядки portraits/* в assets/CREDITS.csv з авторів шарів-референсів
 
 Шари й кольори — ті самі, що в src/view/world/art.ts (спрайт і портрет мусять збігатися).
 Постобробка квантує на палітру LPC + art/palette/portraits-extra.json (відтінки шкіри; правило — у ній і в scripts/palette/check.py).
@@ -40,6 +41,7 @@ LOOKS = {  # як у src/view/world/art.ts
     'npc.sarah': pony(0, (70, 50, 40), (60, 60, 70), (70, 100, 190), (225, 190, 90)),
     'npc.claire': fem('messy', (60, 60, 60), (110, 100, 90), (45, 55, 110), (170, 80, 50)),
     'npc.amina': pony(0, (40, 40, 50), (60, 60, 80), (225, 225, 215), (50, 30, 28)),
+    'npc.cashier': pony(0, (55, 50, 45), (150, 135, 100), (20, 95, 140), (125, 30, 50)),   # GAME-204: Lotte; як lotte в art.ts
     'animal.cat': None,  # кішка: кадр із assets/sprites/cat_mia.png
 }
 DESC = {
@@ -53,6 +55,7 @@ DESC = {
     'npc.sarah': 'a cheerful woman about 29 years old with blonde ponytail, talkative open smile, wearing a blue sweater',
     'npc.claire': 'a clearly feminine woman about 38 years old with a soft rounded face, gentle features, long eyelashes, long tidy auburn-red hair worn down past her shoulders, a kind reassuring smile, wearing a navy-blue sweater',
     'npc.amina': 'a woman about 31 years old with dark brown hair in a ponytail, friendly attentive look, wearing a white-cream sweater',
+    'npc.cashier': 'a friendly woman about 34 years old, shop assistant, warm welcoming smile, long burgundy dark-red hair in a ponytail, wearing a royal-blue polo shirt',
     'animal.cat': 'a cute grey Scottish Fold cat with small folded ears, round face and big round eyes, head and chest portrait, no human features',
 }
 PROMPT = ("Redraw this exact game character as a head-and-shoulders portrait bust for a video game dialogue box, facing the viewer in a slight three-quarter view. "
@@ -143,7 +146,7 @@ def post(src, dst, size=96):
     Image.fromarray(out, 'RGBA').save(dst)
 
 
-def credits(portrait_dir):
+def credits():
     """Рядки assets/CREDITS.csv для портретів: автори й джерела — об'єднання рядків шарів, з яких складено спрайт-референс."""
     import csv, io
     rows = {r['file']: r for r in csv.DictReader(open('assets/CREDITS.csv', encoding='utf-8'))}
@@ -166,16 +169,20 @@ def credits(portrait_dir):
         text = f.read()
     keep = [l for l in text.splitlines(True) if not l.startswith('portraits/')]
     buf = io.StringIO(); w = csv.writer(buf, lineterminator='\n')
-    for r in out:
+    for r in sorted(out, key=lambda r: r['file']):  # за іменем файла — стабільний порядок між запусками
         w.writerow([r[h] for h in ['file', 'authors', 'licence', 'licences_offered', 'source_urls', 'origin', 'notes', 'modified']])
     open('assets/CREDITS.csv', 'w', encoding='utf-8').write(''.join(keep) + buf.getvalue())
 
 
+NARGS = {'refs': 1, 'req': 2, 'credits': 0, 'post': 2}  # обов'язкові позиційні аргументи режиму
+
 if __name__ == '__main__':
-    m = sys.argv[1]
+    m = sys.argv[1] if len(sys.argv) > 1 else ''
+    if m not in NARGS or len(sys.argv) - 2 < NARGS[m]:
+        sys.exit(__doc__.strip() + '\n\nПОМИЛКА: режим і аргументи — як у рядках вище (post потребує RAWDIR і OUTDIR; credits — без аргументів).')
     if m == 'refs': refs(sys.argv[2])
     elif m == 'req': req(sys.argv[2], sys.argv[3], sys.argv[4:])
-    elif m == 'credits': credits(sys.argv[2])
+    elif m == 'credits': credits()
     elif m == 'post':
         os.makedirs(sys.argv[3], exist_ok=True)
         for f in sorted(os.listdir(sys.argv[2])):

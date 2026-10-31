@@ -9,7 +9,7 @@ import bible from '../../../docs/NARRATIVE_BIBLE.md?raw';
 import ambientSource from './ambient.ts?raw';
 import uk from '../../i18n/uk.json';
 import en from '../../i18n/en.json';
-import { BARK_RANGE, RESIDENTS, TILES_PER_MIN, ZONES, buildTimeline, placeAt, residentGrid, walkableAt, type Zone } from './ambient';
+import { BARK_RANGE, CAST, CAST_BY_MAP, RESIDENTS, SHOP_VISITOR, TILES_PER_MIN, ZONES, buildTimeline, placeAt, residentGrid, walkableAt, type Zone } from './ambient';
 import { findPath, gridFromWalls, isSolid, tileOf, type Grid, type Pt, type Tile } from './follow';
 
 const TILE = 32;
@@ -219,5 +219,52 @@ describe('детермінізм джерела', () => {
   it('ambient.ts не читає ні Math.random, ні годинник стіни', () => {
     const code = ambientSource.split('\n').filter((l) => !l.trim().startsWith('//')).join('\n').replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, '');
     expect(code).not.toMatch(/Math\.random|Date\.now|new Date|performance\.now/);
+  });
+});
+
+// GAME-204 · покупець у крамниці. Мутація: стоянку (7,5) у стіну (6,6) чи на ціль (10,6) → «прохідна», «не на цілі» червоніють; прибрати хід по шляху (стоянки у різних зонах) → «ходить» червоніє;
+// мутація 3: у CAST_BY_MAP.shop покласти мешканців табору → «лише покупець» червоніє.
+describe('покупець у крамниці (shop.tmj)', () => {
+  const SHOP = import.meta.glob<string>('../../../public/maps/shop.tmj', { query: '?raw', import: 'default', eager: true });
+  const sm = JSON.parse(Object.values(SHOP)[0] ?? '') as TiledMap;
+  const sobjs = sm.layers.find((l) => l.name === 'objects')?.objects ?? [];
+  const sgrid = gridFromWalls(sm.width, sm.height, TILE, sm.layers.find((l) => l.name === 'walls')?.data ?? []);
+  const targets = sobjs.filter((o) => ['trigger', 'npc', 'anchor'].includes(kind(o)));
+  const swalk = residentGrid(sgrid, targets.map((o) => ({ x: o.x, y: o.y })));
+  const hero = sobjs.find((o) => o.name === 's.start') as { x: number; y: number };
+
+  it('у крамниці лише покупець; у таборі лише мешканці; CAST збирає всіх', () => {
+    expect(CAST_BY_MAP.shop).toEqual([SHOP_VISITOR]);
+    expect(CAST_BY_MAP.camp).toBe(RESIDENTS);
+    expect(CAST).toEqual([...RESIDENTS, SHOP_VISITOR]);
+    expect(RESIDENTS.map((r) => r.id)).not.toContain(SHOP_VISITOR.id);
+  });
+
+  it('2–3 стоянки: прохідні, не на цілях взаємодії; герой зі старту доходить до кожної; шлях між ними є', () => {
+    expect(SHOP_VISITOR.stops.length).toBeGreaterThanOrEqual(2);
+    expect(SHOP_VISITOR.stops.length).toBeLessThanOrEqual(3);
+    const spotTiles = new Set(targets.map((s) => { const t = tileOf(sgrid, s); return `${t.c},${t.r}`; }));
+    for (const st of SHOP_VISITOR.stops) {
+      expect(isSolid(sgrid, st), `стоянка (${st.c},${st.r}) у стіні`).toBe(false);
+      expect(spotTiles.has(`${st.c},${st.r}`), `стоянка (${st.c},${st.r}) на цілі`).toBe(false);
+      expect(findPath(sgrid, tileOf(sgrid, hero), st), `герой не дійде до (${st.c},${st.r})`).not.toBeNull();
+    }
+    expect(buildTimeline(swalk, SHOP_VISITOR)).not.toBeNull();
+  });
+
+  it('за весь цикл покупець ходить, завжди на прохідній клітинці й не на цілі; мовчить (без реплік)', () => {
+    const tl = buildTimeline(swalk, SHOP_VISITOR);
+    if (!tl) throw new Error('no timeline');
+    const spotTiles = new Set(targets.map((s) => { const t = tileOf(sgrid, s); return `${t.c},${t.r}`; }));
+    let moved = 0;
+    for (let m = 0; m < tl.cycle * 2; m += 0.25) {
+      const p = placeAt(swalk, tl, m);
+      const t = tileOf(sgrid, p);
+      expect(walkableAt(sgrid, p), `о ${m} хв у стіні (${t.c},${t.r})`).toBe(true);
+      expect(spotTiles.has(`${t.c},${t.r}`), `о ${m} хв на цілі (${t.c},${t.r})`).toBe(false);
+      if (p.moving) moved++;
+    }
+    expect(moved).toBeGreaterThan(0);
+    expect(SHOP_VISITOR.barks).toEqual([]);
   });
 });

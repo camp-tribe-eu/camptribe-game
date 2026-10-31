@@ -167,6 +167,7 @@ SHOP_TS = [
     ('home-floor', '../../assets/tiles/home_floor.png', 2, 2, 13, 64, 32),
     ('home-windows-doors', '../../assets/tiles/home_windows_doors.png', 3, 9, 15, 96, 96),
     ('shop-gear', '../../assets/tiles/shop_gear.png', 11, _LAY['cols'] * _LAY['rows'], 24, 352, 32 * _LAY['rows']),
+    ('shop-decor', '../../assets/tiles/shop_decor.png', 10, 20, 100, 320, 64),   # GAME-204 ч.3: панелі задньої стіни (scripts/assets/build_shop_decor.py)
 ]
 GEAR0, GEAR_COLS = 24, _LAY['cols']                    # firstgid і ширина аркуша shop_gear
 GEAR = {n: tuple(v) for n, v in _LAY['cells'].items()}  # предмет → (колонка, рядок, ширина, висота) у аркуші, у тайлах
@@ -229,8 +230,14 @@ def build_shop():
             for dc, g in enumerate(row):
                 put(layers, W, H, 'above', c0 + dc, 10 + dr, g)
     # задня стіна: суцільний ряд рюкзаків (панелі 2×2) і під ним полиці по відділах — спальники | газ | ліхтарі
-    for c in range(1, last, 2):
-        gear(layers, W, H, 'backpack-wall', c, 1)
+    # GAME-204 ч.3: шість панелей — не однакових: рюкзаки (оригінал + 3 перефарбовані), дошка оголошень із табличкою «−20 %», два постери
+    for c, panel in zip(range(1, last, 2), (None, 0, 3, 1, 4, 2)):
+        if panel is None:
+            gear(layers, W, H, 'backpack-wall', c, 1)
+        else:
+            for dr in range(2):
+                for dc in range(2):
+                    put(layers, W, H, 'above', c + dc, 1 + dr, 100 + dr * 10 + panel * 2 + dc)
     for c in range(1, 5):
         gear(layers, W, H, 'sleeping-bags', c, 3)
     for c in range(5, 9):

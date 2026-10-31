@@ -21,7 +21,7 @@ import { sfx } from '../../audio/sfx';
 import { MapFx, type Needs } from './map-fx';
 import { FEEDBACK_S, RING_IDLE, pickNearest, ringMayTake, stepRing, vehicleReady, type Insets, type Ring } from './proximity';
 import { IDLE_AFTER_S, LEISURE_BY_MAP, assignLeisure, leisureFromObjects, type LeisureSpot } from './leisure';
-import { BARK_RANGE, RESIDENTS, buildTimeline, placeAt, residentGrid, type Timeline } from './ambient';
+import { BARK_RANGE, CAST, CAST_BY_MAP, RESIDENTS, buildTimeline, placeAt, residentGrid, type Timeline } from './ambient';
 import type { Key } from '../../i18n';
 import { facingToward, markerFor, talkBeatsFishing, type NpcMarker } from '../npc-talk';
 import { TentRig, type TentProbe } from './tent';
@@ -149,6 +149,8 @@ export interface WorldProbe {
   followers: Pt[];
   /** GAME-172 (лише для e2e): де стоять фонові мешканці табору (ноги, піксельні координати мапи) і чи йдуть. */
   residents: { id: string; x: number; y: number; moving: boolean }[];
+  /** GAME-204 (лише для e2e): фоновий покупець у крамниці (ноги, піксельні координати мапи); порожньо поза крамницею. */
+  visitors: { id: string; x: number; y: number; moving: boolean }[];
   /** GAME-172: ключ репліки, що зараз над головою мешканця (null — тиша), і скільки реплік уже прозвучало. */
   bark: string | null;
   barkCount: number;
@@ -210,7 +212,7 @@ export class WorldScene extends Phaser.Scene {
   private followSprites: Phaser.GameObjects.Sprite[] = [];
   private followFacing: Dir[] = [];
   /** GAME-172: фонові мешканці — розклад (чиста функція ігрового часу), спрайти, останній напрямок, репліка. */
-  private residentLines: Timeline[] = [];
+  private residentLines: (Timeline | null)[] = [];   // у порядку CAST; null — не на цій мапі
   private residentSprites: Phaser.GameObjects.Sprite[] = [];
   private residentFacing: Dir[] = [];
   private residentBark: { text: Phaser.GameObjects.Text; until: number; npc: number } | null = null;
@@ -432,13 +434,13 @@ export class WorldScene extends Phaser.Scene {
     // Слідувачі — лише картинки: без тіла фізики й без інтерактивності, тож тап і кнопка дії їх «не бачать» (GAME-112, цілі взаємодії).
     this.followFacing = FOLLOWERS.map(() => 'down' as Dir);
     this.followSprites = FOLLOWERS.map((name) => this.add.sprite(0, 0, name, frameIndex('down', 0)).setOrigin(0.5, ORIGIN_Y));
-    for (const res of RESIDENTS) {
+    for (const res of CAST) {
       for (const dir of DIRS) this.anims.create({ key: `walk-res-${res.look}-${dir}`, frames: Array.from({ length: COLS - 1 }, (_, i) => ({ key: `res-${res.look}`, frame: frameIndex(dir, i + 1) })), frameRate: WALK_FPS, repeat: -1 });
     }
-    this.residentFacing = RESIDENTS.map(() => 'down' as Dir);
-    this.barkNext = RESIDENTS.map(() => 0);
-    this.barkReadyAt = RESIDENTS.map(() => 0);
-    this.residentSprites = RESIDENTS.map((res) => this.add.sprite(0, 0, `res-${res.look}`, frameIndex('down', 0)).setOrigin(0.5, ORIGIN_Y).setVisible(false));
+    this.residentFacing = CAST.map(() => 'down' as Dir);
+    this.barkNext = CAST.map(() => 0);
+    this.barkReadyAt = CAST.map(() => 0);
+    this.residentSprites = CAST.map((res) => this.add.sprite(0, 0, `res-${res.look}`, frameIndex('down', 0)).setOrigin(0.5, ORIGIN_Y).setVisible(false));
     this.events.on(Phaser.Scenes.Events.PAUSE, () => { this.hideBark(); });
     this.player = this.physics.add.sprite(0, 0, 'player', frameIndex('down', 0));
     this.player.setOrigin(0.5, ORIGIN_Y);
@@ -521,7 +523,7 @@ export class WorldScene extends Phaser.Scene {
   private enterMap(key: MapKey, arrived: boolean): void {
     this.teardown();
     this.current = key;
-    if (key === 'shop') sfx('chime');   // GAME-204: дзвіночок на дверях, щойно герой заходить у крамницю
+    if (key === 'shop' && arrived) sfx('chime');   // GAME-204: дзвіночок — лише коли герой справді зайшов у двері (завантаження сейву всередині — без нього)
     const map = this.make.tilemap({ key });
     this.tilemap = map;
     const tilesets = map.tilesets.map((t) => {
@@ -578,19 +580,18 @@ export class WorldScene extends Phaser.Scene {
     const shore = objects.find((o) => typeOf(o) === 'anchor' && o.name === FISH_SPOT);   // GAME-193: береговий пункт риболовлі (необов'язкова справа, не на сюжетному шляху)
     if (shore) this.fish.begin({ x: shore.x ?? 0, y: shore.y ?? 0 });
     this.hideBark();
-    if (key === 'camp') {
-      const walkGrid = residentGrid(this.grid, [...this.spots, ...this.anchors]);
-      this.residentLines = RESIDENTS.map((res) => {
-        const tl = buildTimeline(walkGrid, res);
-        if (!tl) throw new Error(`ambient: ${res.id} has no path between its stops`);
-        return tl;
-      });
-      this.probe.residents = RESIDENTS.map((res) => ({ id: res.id, x: 0, y: 0, moving: false }));
-    } else {
-      this.residentLines = [];
-      this.probe.residents = [];
-    }
-    this.residentSprites.forEach((sp) => sp.setVisible(key === 'camp'));
+    // GAME-204: фонові живуть у таборі (мешканці) і в крамниці (покупець); на дворі й дорозі їх нема. Шляхи — по сітці стін без клітинок цілей; розклад мусить будуватись (інакше мапа зламана — голосно).
+    const onMap = CAST_BY_MAP[key] ?? [];
+    const walkGrid = residentGrid(this.grid, [...this.spots, ...this.anchors]);
+    this.residentLines = CAST.map((res) => {
+      if (!onMap.includes(res)) return null;
+      const tl = buildTimeline(walkGrid, res);
+      if (!tl) throw new Error(`ambient: ${res.id} has no path between its stops`);
+      return tl;
+    });
+    this.probe.residents = key === 'camp' ? RESIDENTS.map((res) => ({ id: res.id, x: 0, y: 0, moving: false })) : [];
+    this.probe.visitors = key === 'shop' ? onMap.map((res) => ({ id: res.id, x: 0, y: 0, moving: false })) : [];
+    this.residentSprites.forEach((sp, i) => sp.setVisible(this.residentLines[i] != null));
     this.moveResidents(0);
     const fromMap = leisureFromObjects(objects as never, TILE);
     this.leisureSpots = fromMap.length > 0 ? fromMap : [...(LEISURE_BY_MAP[key === 'camp' ? 'camp-lake' : key] ?? [])];
@@ -780,8 +781,9 @@ export class WorldScene extends Phaser.Scene {
     const minutes = clock.minutes + clock.accMs / STEP_MS;
     this.residentLines.forEach((tl, i) => {
       const s = this.residentSprites[i];
-      const out = this.probe.residents[i];
-      if (!s || !out) return;
+      if (!s || !tl) return;
+      const out = i < RESIDENTS.length ? this.probe.residents[i] : this.probe.visitors.find((v) => v.id === tl.resident.id);
+      if (!out) return;
       const p = placeAt(this.grid, tl, minutes);
       const moved = Math.hypot(p.x - s.x, p.y - s.y) > 0.05;
       const dir = p.moving ? p.dir : this.residentFacing[i] ?? 'down';
@@ -814,11 +816,10 @@ export class WorldScene extends Phaser.Scene {
       bark.text.setPosition(Math.round(Phaser.Math.Clamp(s.x, view.x + half, view.right - half)), Math.round(Math.max(s.y - 52, view.y + bark.text.height + 2)));
       return;
     }
-    if (this.residentLines.length === 0) return;
     for (let i = 0; i < RESIDENTS.length; i++) {
       const s = this.residentSprites[i];
       const res = RESIDENTS[i];
-      if (!s || !res || time < (this.barkReadyAt[i] ?? 0)) continue;
+      if (!s || !res || !this.residentLines[i] || time < (this.barkReadyAt[i] ?? 0)) continue;
       if (Math.hypot(this.player.x - s.x, this.player.y - s.y) > BARK_RANGE) continue;
       const n = this.barkNext[i] ?? 0;
       const key = res.barks[n % res.barks.length] as Key;

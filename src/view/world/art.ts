@@ -13,6 +13,7 @@ import homeFurniture from '../../../assets/tiles/home_furniture.png';
 import homeOffice from '../../../assets/tiles/home_office.png';
 import homeShelf from '../../../assets/tiles/home_shelf.png';
 import shopGear from '../../../assets/tiles/shop_gear.png';
+import shopDecor from '../../../assets/tiles/shop_decor.png';
 import campfire from '../../../assets/sprites/campfire.png';
 import bodyMale from '../../../assets/characters/body/bodies/male/walk.png';
 import bodyFemale from '../../../assets/characters/body/bodies/female/walk.png';
@@ -61,11 +62,11 @@ import { ACTIONS, ACTION_COLS, composeSheet, loadImage, type Action, type LayerS
 export const TILESET_IMAGES: Readonly<Record<string, string>> = {
   'lpc-terrain': terrain, 'camp-tent': tent, 'camp-car': car, 'camp-props': campProps,
   'home-walls': homeWalls, 'home-floor': homeFloor, 'home-windows-doors': homeWindowsDoors, 'home-furniture': homeFurniture, 'home-office': homeOffice, 'home-shelf': homeShelf,
-  'shop-gear': shopGear,
+  'shop-gear': shopGear, 'shop-decor': shopDecor,
 };
 const HOME_SETS = ['home-walls', 'home-floor', 'home-windows-doors', 'home-furniture', 'home-office', 'home-shelf', 'lpc-terrain', 'camp-car'] as const;
 /** GAME-204: крамниця спорядження — власний аркуш shop-gear (каса, намет, гондоли, двері), без домашніх меблів і книжкової полиці. */
-const SHOP_SETS = ['home-walls', 'home-floor', 'home-windows-doors', 'shop-gear', 'lpc-terrain', 'camp-car'] as const;
+const SHOP_SETS = ['home-walls', 'home-floor', 'home-windows-doors', 'shop-gear', 'shop-decor', 'lpc-terrain', 'camp-car'] as const;
 /** Які тайлсети має кожна мапа гри (ключ — як у scene.ts і map-first.ts). */
 export const MAP_TILESETS: Readonly<Record<'camp' | 'home' | 'shop' | 'road', readonly string[]>> = {
   camp: ['lpc-terrain', 'camp-tent', 'camp-car', 'camp-props'],
@@ -142,6 +143,11 @@ export const RESIDENT_LOOKS = {
   sarah: [
     { url: ponytailBack, tint: rgb(225, 190, 90) }, { url: bodyFemale }, { url: headFemale }, { url: shoesThin, tint: rgb(70, 50, 40) },
     { url: pantsThin, tint: rgb(60, 60, 70) }, { url: shirtFemale, tint: rgb(70, 100, 190) }, { url: ponytailFront, tint: rgb(225, 190, 90) },
+  ],
+  /** GAME-204: покупець крамниці — чоловік у бірюзовій сорочці й майже чорним волоссям; відрізняється від Luc/George/Matthew волоссям і сорочкою (looks.test). */
+  shopper: [
+    { url: bodyMale }, { url: headMale }, { url: shoesMale, tint: rgb(55, 55, 60) }, { url: pantsMale, tint: rgb(95, 90, 70) },
+    { url: shirtMale, tint: rgb(35, 150, 140) }, { url: hairPlain, tint: rgb(35, 32, 30) },
   ],
   claire: [
     { url: bodyFemale }, { url: headFemale }, { url: shoesThin, tint: rgb(60, 60, 60) }, { url: pantsThin, tint: rgb(110, 100, 90) },
