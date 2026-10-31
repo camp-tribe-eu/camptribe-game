@@ -30,8 +30,8 @@ ROOT = os.environ.get('WORLD_ROOT') or os.path.dirname(os.path.dirname(HERE))
 JSON_PATH = os.path.join(ROOT, 'art/world-scale.json')
 
 ORDER_RATIO = 1.15
-SLOPE_MAX = 0.12
-MIN_ISO_W = 24
+SLOPE_MAX = 0.25   # ізометрія ≈ 0,5; складені предмети (стійка + тумба, полиця з балонами) дають до ±0,2 — рецензія PR #136
+MIN_ISO_W = 48     # стовпчики й ліхтарі на круглій ніжці вужчі: їхній нерівний низ — не ізометрія
 CENTRAL = 0.8
 ENABLED = {'scale': True, 'order': True, 'iso': True, 'vee': True, 'missing': True, 'calib': True}   # --mutate чіпає саме ці місця
 
@@ -81,10 +81,32 @@ def bottom_slope(cols, x0, x1):
 HALF_MAX = 0.2   # «V»-низ ізометрії: ліва й права половини низу похилі в різні боки, загальний нахил ≈ 0 (санблок GAME-205)
 
 
+R2_MIN = 0.9   # «V» ізометрії — прямі ребра; кущ, крона, валун — криві (R² нижче), рецензія PR #136
+
+
+def _fit(pts):
+    """МНК: (нахил, R²) для точок [(x, y)]."""
+    n = len(pts)
+    if n < 3:
+        return 0.0, 0.0
+    mx = sum(p[0] for p in pts) / n
+    my = sum(p[1] for p in pts) / n
+    sxx = sum((p[0] - mx) ** 2 for p in pts)
+    syy = sum((p[1] - my) ** 2 for p in pts)
+    sxy = sum((p[0] - mx) * (p[1] - my) for p in pts)
+    if not sxx or not syy:
+        return 0.0, 0.0
+    return sxy / sxx, sxy * sxy / (sxx * syy)
+
+
 def v_bottom(cols, x0, x1):
-    """Нахили низу лівої й правої половини; ізометричний кут дає +s і −s, плоский фасад — ≈0 і ≈0."""
+    """Нахил і R² низу лівої й правої половини (крайні 10 % відкинуто); ізометричний кут — дві прямі +s і −s."""
+    w = x1 - x0
     mid = (x0 + x1) / 2
-    return bottom_slope({x: y for x, y in cols.items() if x < mid}, x0, int(mid)), bottom_slope({x: y for x, y in cols.items() if x >= mid}, int(mid), x1)
+    lo, hi = x0 + w * 0.1, x1 - w * 0.1
+    left = [(x, y) for x, y in cols.items() if lo <= x < mid]
+    right = [(x, y) for x, y in cols.items() if mid <= x < hi]
+    return _fit(left), _fit(right)
 
 
 def evaluate(entries, loader, px_per_m=28, tol=0.25):
@@ -108,8 +130,8 @@ def evaluate(entries, loader, px_per_m=28, tol=0.25):
             want = round(e['real_width_m'] * px_per_m)
             errors.append(('WORLD_SCALE', f"{e['id']}: ширина {w} px при {e['real_width_m']} м = {pxm:.1f} px/м, треба {lo:.0f}–{hi:.0f} "
                            f"(≈{want} px). Спрайт {'завеликий' if pxm > hi else 'замалий'} у {max(pxm, px_per_m) / min(pxm, px_per_m):.2f} раза"))
-        sl, sr = v_bottom(cols, bb[0], bb[2])
-        if ENABLED['vee'] and w >= 48 and HALF_MAX < sl < 1.5 and -1.5 < sr < -HALF_MAX:   # «V» (низ униз до середини); стовп на ніжці дає >1,5, «Λ» шлагбаума — інший знак
+        (sl, rl), (sr, rr) = v_bottom(cols, bb[0], bb[2])
+        if ENABLED['vee'] and w >= MIN_ISO_W and HALF_MAX < sl < 1.5 and -1.5 < sr < -HALF_MAX and min(rl, rr) >= R2_MIN:   # «V» (низ униз до середини); стовп на ніжці дає >1,5, «Λ» шлагбаума — інший знак
             errors.append(('WORLD_ISO', f"{e['id']}: низ силуету — «V» (ліва половина {sl:+.2f}, права {sr:+.2f}, межа ±{HALF_MAX}) — кут будівлі "
                            f"до глядача, ізометрія; у грі фасад рівно до екрана"))
         if ENABLED['iso'] and w >= MIN_ISO_W and abs(slope) > SLOPE_MAX:
@@ -117,7 +139,7 @@ def evaluate(entries, loader, px_per_m=28, tol=0.25):
                            f"а в грі лише LPC 3/4 ортогонально (передня грань рівно до екрана)"))
     if ENABLED['order']:
         for a in rows:
-            bad = [b for b in rows if a['real_w'] > ORDER_RATIO * b['real_w'] and not a['w'] > b['w']]
+            bad = [b for b in rows if a['real_w'] > ORDER_RATIO * b['real_w'] and a['w'] < b['w']]   # рівна ширина — не порушення: тайлова сітка (32 px) не розрізняє 1,0 і 1,2 м
             if bad:
                 errors.append(('WORLD_ORDER', f"{a['id']} ({a['real_w']} м) на екрані {a['w']} px, а менші в житті не менші на екрані: "
                                + ', '.join(f"{b['id']} ({b['real_w']} м) = {b['w']} px" for b in sorted(bad, key=lambda b: -b['w'])[:4])
@@ -231,6 +253,23 @@ def diamond(w, h, slope=0.5):
     return im
 
 
+def ellipse(w, h):
+    """Кущ: овал — низ круглий, не «V»."""
+    from PIL import ImageDraw
+    im = Image.new('RGBA', (w + 8, h + 8))
+    ImageDraw.Draw(im).ellipse((4, 4, w + 3, h + 3), fill=(40, 120, 40, 255))
+    return im
+
+
+def tree(w, h):
+    """Дерево: крона-овал + стовбур посередині."""
+    from PIL import ImageDraw
+    out = Image.new('RGBA', (w + 8, h + 8))
+    out.alpha_composite(ellipse(w, int(h * 0.7)), (0, 0))
+    ImageDraw.Draw(out).rectangle((w // 2 - 3, int(h * 0.6), w // 2 + 4, h + 3), fill=(90, 60, 30, 255))
+    return out
+
+
 def with_magenta(w, h):
     """Предмет у рамці з чисто-пурпурового фону (ключ FAL), що не став прозорим."""
     im = Image.new('RGBA', (w + 40, h + 40), (255, 0, 255, 255))
@@ -239,7 +278,7 @@ def with_magenta(w, h):
 
 
 def selftest():
-    img = {'good': box(126, 42), 'good_small': box(14, 28), 'shear': sheared(126, 42), 'vee': diamond(126, 42), 'big': box(250, 84), 'small': box(40, 14),
+    img = {'good': box(126, 42), 'good_small': box(14, 28), 'shear': sheared(126, 42), 'vee': diamond(126, 42), 'bush': ellipse(60, 36), 'tree': tree(84, 110), 'big': box(250, 84), 'small': box(40, 14),
            'magenta': with_magenta(126, 42), 'tiny_ref': box(30, 20)}
     loader = lambda f: img.get(f)
     E = lambda i, f, w, h, crop=None: dict(id=i, file=f, crop=crop or [0, 0, img[f].width, img[f].height], real_width_m=w, real_height_m=h, view='front')
@@ -260,6 +299,9 @@ def selftest():
     case('вузький стовпчик проходить (ISO пропущено <24 px)', [E('post', 'good_small', 0.5, 1.0)], [])
     case('ізометрична коробка → WORLD_ISO', [E('car', 'shear', 4.5, 1.5)], ['WORLD_ISO'])
     case('ізометрія кутом до глядача («V»-низ) → WORLD_ISO', [E('car', 'vee', 4.5, 1.5)], ['WORLD_ISO'])
+    case('кущ (круглий низ) — не ізометрія', [E('bush', 'bush', 2.0, 1.2)], [])
+    case('дерево (крона + стовбур) — не ізометрія', [E('tree', 'tree', 3.0, 4.0)], [])
+    case('однакова ширина при 4,5 і 5,4 м — не порушення порядку', [E('a', 'good', 4.5, 1.5), E('b', 'good', 5.4, 1.5)], [])
     case('завелика коробка → WORLD_SCALE', [E('car', 'big', 4.5, 1.5)], ['WORLD_SCALE'])
     case('замала коробка → WORLD_SCALE', [E('car', 'small', 4.5, 1.5)], ['WORLD_SCALE'])
     # порядок: кемпер 7 м вужчий за авто 4,5 м; масштаб у межах (мутація SCALE не має його ховати)
@@ -287,10 +329,12 @@ MUTATIONS = [
     ('ORDER вимкнено', "'order': True,", "'order': False,"),
     ('ISO вимкнено', "'iso': True,", "'iso': False,"),
     ('«V»-ізометрію вимкнено', "'vee': True,", "'vee': False,"),
+    ('«V» без перевірки прямизни ребер', "R2_MIN = 0.9 ", "R2_MIN = 0.0 "),
+    ('рівна ширина знову порушення', "and a['w'] < b['w']]", "and not a['w'] > b['w']]"),
     ('MISSING_ENTRY вимкнено', "'missing': True,", "'missing': False,"),
     ('CALIB вимкнено', "'calib': True}", "'calib': False}"),
     ('пурпур не вважається прозорим', "and not (px[0] >= 250 and px[1] <= 5 and px[2] >= 250)", ''),
-    ('поріг нахилу розкритий до 0,9', 'SLOPE_MAX = 0.12', 'SLOPE_MAX = 0.9'),
+    ('поріг нахилу розкритий до 0,9', 'SLOPE_MAX = 0.25', 'SLOPE_MAX = 0.9'),
     ('допуск масштабу 100 %', "def evaluate(entries, loader, px_per_m=28, tol=0.25):", "def evaluate(entries, loader, px_per_m=28, tol=1.0):"),
     ('відсутній файл — помилка замість WARN ігнорується разом із виміром (continue зникає)', "            continue\n        m = measure", "            pass\n        m = measure"),
 ]
