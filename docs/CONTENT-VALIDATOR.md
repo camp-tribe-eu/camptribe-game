@@ -71,6 +71,9 @@ Effect    = { setFlag: "f.…" } | { startQuest: "<id квесту>" } | { compl
   (зокрема вкладених), квест в `startQuest`, квест і ціль у `completeObjective`.
 * `dialogue-reachable` → `DIALOGUE_NODE_UNREACHABLE`: обхід від `start` за `next` і **всіма** виборами
   (умовними теж). Якщо `start` не існує — мовчить, першопричину вже назвав `DIALOGUE_REF_MISSING`.
+* `dialogue-length` → `DIALOGUE_LINE_TOO_LONG`, `DIALOGUE_CHAIN_TOO_LONG` (GAME-221): репліка вузла ≤ `DIALOGUE_LINE_MAX` (110)
+  кодових точок у кожній мові; ланцюжок вузлів без вибору (`next`/`branches`) від `start` чи від цілі вибору ≤ `DIALOGUE_CHAIN_MAX` (4),
+  рахуючи вузол, що пропонує вибір чи закриває розмову. Межі — у `scripts/validator/codes.mjs`, обґрунтування — там же.
 * `dialogue-dead-end` → `DIALOGUE_DEAD_END`: з кожного вузла має бути шлях до `end` лише
   **безумовними** виходами (`next` або вибір без `when`). Ловить вузол без виходу, вузол лише з
   умовними виборами і петлю без `end`. **Ціна хибного спрацювання (закон 5):** взаємовиключні
@@ -167,6 +170,7 @@ Effect    = { setFlag: "f.…" } | { startQuest: "<id квесту>" } | { compl
 | `quest-xp` | `QUEST_NO_XP`, `QUEST_XP_RANGE` | GAME-181: кожен квест має `xp` — крок головного 10…20, побічка 15 (scenario §2.1) |
 | `dialogue-refs` | `DIALOGUE_REF_MISSING` | §2 посилання діалогу ведуть на існуючі записи |
 | `dialogue-reachable` | `DIALOGUE_NODE_UNREACHABLE` | §3 кожен вузол діалогу досяжний |
+| `dialogue-length` | `DIALOGUE_LINE_TOO_LONG`, `DIALOGUE_CHAIN_TOO_LONG` | GAME-221: репліка ≤ 110 знаків у кожній мові (2 рядки рамки на телефоні); не більше 4 реплік поспіль без вибору (вузол із `choices` теж рахується) |
 | `dialogue-dead-end` | `DIALOGUE_DEAD_END` | §3 з кожного вузла діалогу є безумовний шлях до кінця |
 | `dialogue-flags` | `DIALOGUE_FLAG_NEVER_SET`, `DIALOGUE_COND_CONTRADICTION` | §2 умова не читає прапорець, який ніщо не ставить; §3 all не суперечить собі |
 | `dialogue-memory` | `MEMORY_NEVER_SET` | GAME-48: умова не читає факт пам'яті, якого цей NPC не може знати |
