@@ -1,7 +1,7 @@
 // GAME-189 · намет руками: чиста логіка. Мутації (кожна має зробити тест червоним): «завжди влучає» (inBand → true), «done без вводу» (tick доводить до done).
 import campMap from '../../public/maps/camp-lake.tmj?raw';
 import { describe, expect, it } from 'vitest';
-import { BAND, IDLE, PEGS, PERIOD_MS, inBand, markerAt, placeOk, startTent, stepTent, type TentInput, type TentState } from './tent-pitch';
+import { BAND, IDLE, MAX_HELPERS, MIN_PEGS, PEGS, PERIOD_MS, inBand, markerAt, pegsFor, placeOk, startTent, stepTent, type TentInput, type TentState } from './tent-pitch';
 
 const act = (s: TentState, placeOk = true) => stepTent(s, { kind: 'act', placeOk });
 const tick = (s: TentState, dtMs: number) => stepTent(s, { kind: 'tick', dtMs }).state;
@@ -82,6 +82,39 @@ describe('автомат намету', () => {
     const feed: TentInput[] = [{ kind: 'act', placeOk: true }, { kind: 'tick', dtMs: 700 }, { kind: 'act', placeOk: true }, { kind: 'tick', dtMs: 33 }, { kind: 'act', placeOk: true }];
     const run = (): TentState => feed.reduce((s, i) => stepTent(s, i).state, startTent());
     expect(run()).toEqual(run());
+  });
+});
+
+describe('намет разом (GAME-203): помічники тягнуть відтяжки — кілків на руки тата менше', () => {
+  it('сам — 4 кілки; з одним помічником — 3; з двома — 2; більше двох і сміття не рахуються (мутація «помічники нічого не дають»: need завжди PEGS → червоне)', () => {
+    expect(pegsFor(0)).toBe(PEGS);
+    expect(pegsFor(1)).toBe(PEGS - 1);
+    expect(pegsFor(2)).toBe(PEGS - 2);
+    expect(pegsFor(2)).toBe(MIN_PEGS);
+    expect(pegsFor(5)).toBe(pegsFor(MAX_HELPERS));
+    expect(pegsFor(-3)).toBe(PEGS);
+    expect(pegsFor(1.9)).toBe(PEGS - 1);
+    expect(pegsFor(1)).toBeLessThan(pegsFor(0));   // помічник МУСИТЬ щось давати
+  });
+  it('з двома помічниками намет готовий після 2 влучань (сам — після 4), подія done рівно раз', () => {
+    let s = act(startTent(2)).state;
+    expect(s.need).toBe(2);
+    const events: string[] = [];
+    for (let k = 0; k < 2; k++) { s = tick(s, MID); const r = act(s); events.push(r.event); s = r.state; }
+    expect(events).toEqual(['hit', 'done']);
+    expect(s.phase).toBe('done');
+    // Контроль: без помічників ті самі два удари — ще не готово.
+    let a = act(startTent()).state;
+    for (let k = 0; k < 2; k++) { a = tick(a, MID); a = act(a).state; }
+    expect(a.phase).toBe('peg');
+    expect(a.pegs).toBe(2);
+    expect(IDLE.need).toBe(PEGS);
+  });
+  it('помічники не роблять намет за тата: без вводу й із двома помічниками фаза peg вічна', () => {
+    let s = act(startTent(2)).state;
+    for (let i = 0; i < 10_000; i++) s = tick(s, 16);
+    expect(s.phase).toBe('peg');
+    expect(s.pegs).toBe(0);
   });
 });
 

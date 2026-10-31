@@ -51,6 +51,18 @@ import shirtMaleCast from '../../../assets/characters/torso/clothes/longsleeve/l
 import hairPlainSlash from '../../../assets/characters/hair/plain/adult/slash.png';
 import hairPlainThrust from '../../../assets/characters/hair/plain/adult/thrust.png';
 import hairPlainCast from '../../../assets/characters/hair/plain/adult/spellcast.png';
+// GAME-202/203: листи дії thrust для Вікторії й Метью (доручення й відтяжки намету) — ті самі шари, що їхні листи ходьби.
+import bodyFemaleThrust from '../../../assets/characters/body/bodies/female/thrust.png';
+import headFemaleThrust from '../../../assets/characters/head/heads/human/female/thrust.png';
+import shoesThinThrust from '../../../assets/characters/feet/shoes/basic/thin/thrust.png';
+import pantsThinThrust from '../../../assets/characters/legs/pants/thin/thrust.png';
+import shirtFemaleThrust from '../../../assets/characters/torso/clothes/longsleeve/longsleeve/female/thrust.png';
+import ponytailBackThrust from '../../../assets/characters/hair/ponytail/adult/bg/thrust.png';
+import ponytailFrontThrust from '../../../assets/characters/hair/ponytail/adult/fg/thrust.png';
+import bodyTeenThrust from '../../../assets/characters/body/bodies/teen/thrust.png';
+import headTeenThrust from '../../../assets/characters/head/heads/human/male_small/thrust.png';
+import tshirtTeenThrust from '../../../assets/characters/torso/clothes/shortsleeve/shortsleeve/teen/thrust.png';
+import hairMessyThrust from '../../../assets/characters/hair/messy1/adult/thrust.png';
 import objectiveIcons from '../../../assets/icons/objective_icons.png';
 import catMia from '../../../assets/sprites/cat_mia.png';
 import { ACTIONS, ACTION_COLS, composeSheet, loadImage, type Action, type LayerSpec } from './character';
@@ -109,6 +121,20 @@ export const PLAYER_ACTION_LOOK: Readonly<Record<Action, readonly LayerSpec[]>> 
   slash: [{ url: bodyMaleSlash }, { url: headMaleSlash }, { url: shoesMaleSlash, tint: rgb(70, 50, 40) }, { url: pantsMaleSlash, tint: rgb(60, 80, 120) }, { url: shirtMaleSlash, tint: rgb(70, 120, 80) }, { url: hairPlainSlash, tint: rgb(90, 60, 35) }],
   thrust: [{ url: bodyMaleThrust }, { url: headMaleThrust }, { url: shoesMaleThrust, tint: rgb(70, 50, 40) }, { url: pantsMaleThrust, tint: rgb(60, 80, 120) }, { url: shirtMaleThrust, tint: rgb(70, 120, 80) }, { url: hairPlainThrust, tint: rgb(90, 60, 35) }],
   cast: [{ url: bodyMaleCast }, { url: headMaleCast }, { url: shoesMaleCast, tint: rgb(70, 50, 40) }, { url: pantsMaleCast, tint: rgb(60, 80, 120) }, { url: shirtMaleCast, tint: rgb(70, 120, 80) }, { url: hairPlainCast, tint: rgb(90, 60, 35) }],
+};
+/**
+ * GAME-202/203 (OD-024 §3): лист thrust Вікторії й Метью — ті самі шари й забарвлення, що FAMILY_LOOKS, з файлами thrust того ж шару LPC
+ * (assets/characters/<шар>/thrust.png: ті самі автори й ліцензії). Вікторія несе речі під навіс і тягне відтяжку; Метью — так само.
+ */
+export const FAMILY_THRUST_LOOK: Readonly<Record<'victoria' | 'matthew', readonly LayerSpec[]>> = {
+  victoria: [
+    { url: ponytailBackThrust, tint: rgb(150, 90, 40) }, { url: bodyFemaleThrust }, { url: headFemaleThrust }, { url: shoesThinThrust, tint: rgb(120, 60, 60) },
+    { url: pantsThinThrust, tint: rgb(70, 70, 90) }, { url: shirtFemaleThrust, tint: rgb(200, 110, 90) }, { url: ponytailFrontThrust, tint: rgb(150, 90, 40) },
+  ],
+  matthew: [
+    { url: bodyTeenThrust }, { url: headTeenThrust }, { url: shoesThinThrust, tint: rgb(220, 220, 220) }, { url: pantsThinThrust, tint: rgb(50, 60, 90) },
+    { url: tshirtTeenThrust, tint: rgb(150, 50, 60) }, { url: hairMessyThrust, tint: rgb(60, 40, 25) },
+  ],
 };
 /** Вигляд Елізи: власний шаблон NPC, не родини (GAME-114) — ті самі шари LPC, що й у Victoria, але чорне волосся й гірчична сорочка, щоб не плутати ні з Victoria, ні з гравцем. */
 export const ELISE_LOOK: readonly LayerSpec[] = [
@@ -189,6 +215,8 @@ export interface WorldArt {
   readonly sheets: { readonly player: HTMLCanvasElement; readonly elise: HTMLCanvasElement; readonly victoria: HTMLCanvasElement; readonly matthew: HTMLCanvasElement };
   /** GAME-191: листи дій героя (slash / thrust / cast). */
   readonly playerActions: Readonly<Record<Action, HTMLCanvasElement>>;
+  /** GAME-202/203: лист thrust Вікторії й Метью (доручення, відтяжки намету). */
+  readonly familyThrust: Readonly<Record<'victoria' | 'matthew', HTMLCanvasElement>>;
   /** GAME-172: листи ходьби фонових мешканців за ключем RESIDENT_LOOKS. */
   readonly residents: Readonly<Record<string, HTMLCanvasElement>>;
 }
@@ -200,11 +228,12 @@ export interface WorldArt {
 export async function loadWorldArt(): Promise<WorldArt> {
   const names = Object.keys(TILESET_IMAGES);
   const residentNames = Object.keys(RESIDENT_LOOKS) as (keyof typeof RESIDENT_LOOKS)[];
-  const [images, campfireImg, miaImg, iconsImg, player, elise, victoria, matthew, residentSheets, actionSheets] = await Promise.all([
+  const [images, campfireImg, miaImg, iconsImg, player, elise, victoria, matthew, residentSheets, actionSheets, victoriaThrust, matthewThrust] = await Promise.all([
     Promise.all(names.map((n) => loadImage(TILESET_IMAGES[n] ?? ''))),
     loadImage(CAMPFIRE_SHEET), loadImage(PET_SHEETS.mia.url), loadImage(objectiveIcons), composeSheet(PLAYER_LOOK), composeSheet(ELISE_LOOK), composeSheet(FAMILY_LOOKS.victoria), composeSheet(FAMILY_LOOKS.matthew),
     Promise.all(residentNames.map((n) => composeSheet(RESIDENT_LOOKS[n]))),
     Promise.all(ACTIONS.map((a) => composeSheet(PLAYER_ACTION_LOOK[a], ACTION_COLS[a]))),
+    composeSheet(FAMILY_THRUST_LOOK.victoria, ACTION_COLS.thrust), composeSheet(FAMILY_THRUST_LOOK.matthew, ACTION_COLS.thrust),
   ]);
-  return { tilesets: Object.fromEntries(names.map((n, i) => [n, images[i] as HTMLImageElement])), campfire: campfireImg, mia: miaImg, icons: iconsImg, sheets: { player, elise, victoria, matthew }, playerActions: Object.fromEntries(ACTIONS.map((a, i) => [a, actionSheets[i] as HTMLCanvasElement])) as Record<Action, HTMLCanvasElement>, residents: Object.fromEntries(residentNames.map((n, i) => [n, residentSheets[i] as HTMLCanvasElement])) };
+  return { tilesets: Object.fromEntries(names.map((n, i) => [n, images[i] as HTMLImageElement])), campfire: campfireImg, mia: miaImg, icons: iconsImg, sheets: { player, elise, victoria, matthew }, playerActions: Object.fromEntries(ACTIONS.map((a, i) => [a, actionSheets[i] as HTMLCanvasElement])) as Record<Action, HTMLCanvasElement>, residents: Object.fromEntries(residentNames.map((n, i) => [n, residentSheets[i] as HTMLCanvasElement])), familyThrust: { victoria: victoriaThrust, matthew: matthewThrust } };
 }
