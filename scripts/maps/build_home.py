@@ -199,6 +199,11 @@ def gear(layers, W, H, name, c0, r0, solid=True, wall=False):
                 put(layers, W, H, 'decor', c0 + dc, r, g)
 
 
+def bottom(name, c, r):
+    """Предмет аркуша стоїть низом на рядку r (його клітинки можуть бути заввишки 1 або 2)."""
+    return name, c, r + 1 - GEAR[name][3]
+
+
 def build_shop():
     W, H = 20, 14
     layers = blank_layers(W, H)
@@ -216,20 +221,20 @@ def build_shop():
     gear(layers, W, H, 'shop-door', 9, 8, solid=False)    # двері у нижній стіні, герой проходить крізь прохід
     # задня стіна, зліва направо — за відділами: намети й спальники | рюкзаки (на стіні) | газ і ліхтарі | взуття | вудки. Прохід перед стелажами — рядки 4–5 (2 клітинки).
     for c in range(1, 5):
-        gear(layers, W, H, 'sleeping-bags', c, 3)
+        gear(layers, W, H, *bottom('sleeping-bags', c, 3))
     gear(layers, W, H, 'backpack-wall', 5, 1)
     gear(layers, W, H, 'backpack-wall', 7, 1)
-    gear(layers, W, H, 'lantern-display', 8, 3)
+    gear(layers, W, H, *bottom('lantern-display', 8, 3))
     for c in range(9, 13):
-        gear(layers, W, H, 'gas-shelf', c, 3)
+        gear(layers, W, H, *bottom('gas-shelf', c, 3))
     for c in range(13, 16):
-        gear(layers, W, H, 'boots-rack', c, 3)
-    gear(layers, W, H, 'rods-rack', 17, 2)
+        gear(layers, W, H, *bottom('boots-rack', c, 3))
+    gear(layers, W, H, *bottom('rods-rack', 17, 3))
     # зал: виставка намету на килимку зі стільцями; каса біля входу з холодильником напоїв
-    gear(layers, W, H, 'dome-tent', 1, 6)
-    gear(layers, W, H, 'chairs-display', 5, 7)
-    gear(layers, W, H, 'checkout', 12, 6)                 # прилавок у рядку 7; Lotte за ним, у рядку 6
-    gear(layers, W, H, 'fridge', 15, 6)
+    gear(layers, W, H, *bottom('dome-tent', 1, 7))
+    gear(layers, W, H, *bottom('chairs-display', 5, 7))
+    gear(layers, W, H, *bottom('checkout', 12, 7))                 # прилавок у рядку 7; Lotte за ним, у рядку 6
+    gear(layers, W, H, *bottom('fridge', 15, 7))
     objs = [point(i + 1, n, t, c) for i, (n, t, c) in enumerate(HOME_SPOTS)]
     layout = next(l for l in base['layers'] if l['name'] == 'layout')
     layout = dict(layout, id=6)
@@ -311,10 +316,10 @@ def build_shop():
     gear(layers, W, H, 'sleeping-bags', 5, 3)             # гондоли вздовж задньої стіни
     gear(layers, W, H, 'boots-rack', 8, 3)
     gear(layers, W, H, 'gas-shelf', 11, 3)
-    gear(layers, W, H, 'rods-rack', 17, 2)                # кут вудок
+    gear(layers, W, H, *bottom('rods-rack', 17, 3))                # кут вудок
     gear(layers, W, H, 'dome-tent', 2, 6)                 # виставка намету
-    gear(layers, W, H, 'checkout', 12, 6)                 # каса біля входу; за нею (ряд 5) — місце касира
-    gear(layers, W, H, 'fridge', 15, 6)
+    gear(layers, W, H, *bottom('checkout', 12, 7))                 # каса біля входу; за нею (ряд 5) — місце касира
+    gear(layers, W, H, *bottom('fridge', 15, 7))
     gear(layers, W, H, 'lantern-display', 16, 6)
     objs = [point(i + 1, n, t, c) for i, (n, t, c) in enumerate(SHOP_SPOTS)]
     return {
