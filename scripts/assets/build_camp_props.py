@@ -22,20 +22,31 @@ from check import load_palette  # noqa: E402
 from quantize import quantize  # noqa: E402
 
 T = 32
-SRC = os.path.join(ROOT, 'art/out/camp-items-1')
 DST = os.path.join(ROOT, 'assets/tiles/camp_props.png')
-COLS, ROWS = 12, 7
-# (файл без _0.webp, (col, row, w_tiles, h_tiles))
+SCALE_JSON = os.path.join(ROOT, 'art/world-scale.json')
+PX_PER_M = 28           # OD-026: дорослий LPC ≈ 47 px ≈ 1,7 м
+COLS = 14
+# (ім'я, id у world-scale.json, тека джерела, файл-варіант). GAME-205 (друга черга): предмети, що провалили сторож (WORLD_ISO/WORLD_SCALE),
+# перемальовані ортогонально (camp-items-2); решта лишається з camp-items-1, але тепер масштабується до справжньої ширини.
 ITEMS = [
-    ('caravan', (0, 0, 5, 2)), ('motorhome', (5, 0, 5, 2)), ('hookup-post', (10, 0, 1, 2)), ('lamp-post', (11, 0, 1, 3)), ('water-tap', (10, 2, 1, 1)),
-    ('clothesline', (0, 2, 4, 2)), ('camp-table-chairs', (4, 2, 2, 1)), ('recycling-bins', (7, 2, 3, 1)), ('bicycles', (7, 3, 2, 1)),
-    ('barrier', (0, 4, 3, 1)), ('reception-hut', (3, 4, 3, 2)), ('sanitary-block', (6, 4, 5, 3)),
+    ('caravan', 'caravan', 'camp-items-2', 0), ('motorhome', 'motorhome', 'camp-items-2', 1),
+    ('sanitary', 'sanitary-block', 'camp-items-2', 0), ('reception', 'reception-hut', 'camp-items-2', 0),
+    ('clothesline', 'clothesline', 'camp-items-1', 0), ('bins', 'recycling-bins', 'camp-items-1', 0), ('barrier', 'barrier', 'camp-items-2', 1),
+    ('table', 'camp-table', 'camp-items-1', 0), ('bikes', 'bicycles', 'camp-items-1', 0),
+    ('hookup', 'hookup-post', 'camp-items-2', 1), ('lamp', 'lamp-post', 'camp-items-2', 0), ('tap', 'water-tap', 'camp-items-2', 1),
 ]
+SRC_FILE = {'sanitary': 'sanitary-block', 'reception': 'reception-hut', 'bins': 'recycling-bins', 'bikes': 'bicycles', 'table': 'camp-table-chairs',
+            'hookup': 'hookup-post', 'lamp': 'lamp-post', 'tap': 'water-tap'}
+
+
+def real_widths():
+    import json
+    return {e['id']: e['real_width_m'] for e in json.load(open(SCALE_JSON, encoding='utf8'))['entries']}
 
 
 def is_bg(p):
     r, g, b = p
-    return r > 150 and g < 120 and b > 70 and r - g > 110 and b - g > 40
+    return r > 140 and g < 130 and b > 80 and r - g > 90 and b - g > 40
 
 
 def key_out(im):
@@ -98,7 +109,7 @@ def decontaminate(im, strict=False):
     kill = []
     for y in range(h):
         for x in range(w):
-            if px[x, y][3] and px[x, y][0] > 120 and px[x, y][2] > 70 and px[x, y][2] - px[x, y][1] > 35 and abs(px[x, y][0] - px[x, y][2]) < 150:
+            if px[x, y][3] and px[x, y][0] > 110 and px[x, y][2] > 60 and px[x, y][2] - px[x, y][1] > 22 and px[x, y][0] - px[x, y][1] > 30 and abs(px[x, y][0] - px[x, y][2]) < 150:
                 near = any(0 <= x + dx < w and 0 <= y + dy < h and px[x + dx, y + dy][3] == 0 for dx in (-2, -1, 0, 1, 2) for dy in (-2, -1, 0, 1, 2))
                 if near:
                     kill.append((x, y))
@@ -118,34 +129,75 @@ def decontaminate(im, strict=False):
 STRICT = {'boots-rack'}
 
 
-def sprite(name, w_tiles, h_tiles):
-    im = Image.open(os.path.join(SRC, f'{name}_0.webp'))
-    im = drop_small(decontaminate(key_out(im), name in STRICT))
+def sprite(name, src, variant, width_px):
+    im = Image.open(os.path.join(ROOT, 'art/out', src, f'{SRC_FILE.get(name, name)}_{variant}.webp'))
+    im = key_out(im)
+    for _ in range(2):                                   # пурпурова кайма: два проходи (друга знімає рожеві «тіні» під першою)
+        im = decontaminate(im, True)
+    im = drop_small(im)
     im = im.crop(im.getchannel('A').point(lambda v: 255 if v >= 128 else 0).getbbox())
-    k = min(w_tiles * T / im.width, h_tiles * T / im.height)
-    return im.resize((max(1, round(im.width * k)), max(1, round(im.height * k))), Image.BOX)
+    k = width_px / im.width
+    return im.resize((width_px, max(1, round(im.height * k))), Image.BOX)
+
+
+def layout(sprites):
+    """Шельфове пакування у клітинки 32 px: -> {ім'я: (col, row, w_tiles, h_tiles, x_off, y_off)}, висота аркуша в рядках."""
+    pos, col, row, rowh = {}, 0, 0, 0
+    for name, s in sprites.items():
+        wt, ht = -(-s.width // T), -(-s.height // T)
+        if col + wt > COLS:
+            col, row, rowh = 0, row + rowh, 0
+        pos[name] = (col, row, wt, ht)
+        col += wt
+        rowh = max(rowh, ht)
+    return pos, row + rowh
 
 
 def build(workdir):
-    sheet = Image.new('RGBA', (COLS * T, ROWS * T))
-    for name, (c, r, w, h) in ITEMS:
-        s = sprite(name, w, h)
-        sheet.alpha_composite(s, (c * T + (w * T - s.width) // 2, (r + h) * T - s.height))
+    rw = real_widths()
+    sprites = {n: sprite(n, src, v, round(rw[i] * PX_PER_M)) for n, i, src, v in ITEMS}
+    pos, rows = layout(sprites)
+    sheet = Image.new('RGBA', (COLS * T, rows * T))
+    crops = {}
+    for (name, i, _, _), s in zip(ITEMS, sprites.values()):
+        c, r, wt, ht = pos[name]
+        x, y = c * T + (wt * T - s.width) // 2, (r + ht) * T - s.height
+        sheet.alpha_composite(s, (x, y))
+        crops[i] = [c * T, r * T, wt * T, ht * T]
     raw = os.path.join(workdir, 'raw.png')
     sheet.save(raw)
     dst = os.path.join(workdir, 'camp_props.png')
     quantize(raw, dst, load_palette(os.path.join(ROOT, 'art/palette/lpc.json'))[1])
-    return dst
+    return dst, pos, rows, crops
+
+
+def write_scale(crops):
+    import json
+    d = json.load(open(SCALE_JSON, encoding='utf8'))
+    for e in d['entries']:
+        if e['id'] in crops:
+            e['crop'] = crops[e['id']]
+    open(SCALE_JSON, 'w', encoding='utf8').write(json.dumps(d, indent=1, ensure_ascii=False) + '\n')
+
+
+def prop_sheet():
+    """Для build_camp_lake.py: {ім'я: (col, row, w_tiles, h_tiles)}; рядків аркуша."""
+    rw = real_widths()
+    sprites = {n: sprite(n, src, v, round(rw[i] * PX_PER_M)) for n, i, src, v in ITEMS}
+    pos, rows = layout(sprites)
+    return pos, rows
 
 
 def main(argv):
     with tempfile.TemporaryDirectory() as wd:
-        built = build(wd)
+        built, pos, rows, crops = build(wd)
         if '--check' in argv:
             same = os.path.exists(DST) and open(DST, 'rb').read() == open(built, 'rb').read()
             print('camp_props.png: ' + ('збігається' if same else 'ВІДРІЗНЯЄТЬСЯ'))
             return 0 if same else 1
         open(DST, 'wb').write(open(built, 'rb').read())
+        write_scale(crops)
+        print('аркуш', COLS * T, 'x', rows * T, pos)
         print('записано', DST)
     return 0
 
