@@ -341,7 +341,21 @@ for (const vp of ZOOMED) {
         const need = (p: Pr): boolean => sign * (p[axis] - (axis === 'playerX' ? p0.playerX : p0.playerY)) > 12;
         await touchEv(cdp, 'touchStart', 70, Math.round(vp.height * 0.5));
         await touchEv(cdp, 'touchMove', 70 + dx, Math.round(vp.height * 0.5) + dy);
-        await expect.poll(async () => need(await probeOf(page)), { message: `${axis} ${sign > 0 ? 'росте' : 'спадає'}`, timeout: 10_000, intervals: [30] }).toBe(true);
+        try {
+          await expect.poll(async () => need(await probeOf(page)), { message: `${axis} ${sign > 0 ? 'росте' : 'спадає'}`, timeout: 10_000, intervals: [30] }).toBe(true);
+        } catch (e) {
+          // GAME-186: рідкісний збій на CI (#127, #129) — знімок стану гри в лог, щоб знайти корінь (артефакти CI із сесії недоступні).
+          const dump = await page.evaluate(() => {
+            const p = (window as unknown as { __game?: { probe: Record<string, unknown> } }).__game?.probe ?? {};
+            const pick = ['playerX', 'playerY', 'playerMoving', 'nearObject', 'nearKind', 'cameraScrollX', 'cameraScrollY', 'paused', 'fx', 'tent', 'fish'];
+            const res = (p.residents as { id: string; x: number; y: number }[] | undefined) ?? [];
+            const near = res.filter((r) => Math.hypot(r.x - Number(p.playerX), r.y - Number(p.playerY)) < 64);
+            const panels = [...document.querySelectorAll('[data-ui]')].filter((el) => (el as HTMLElement).offsetParent !== null).map((el) => (el as HTMLElement).dataset.ui);
+            return { ...Object.fromEntries(pick.map((k) => [k, p[k]])), residentsNear: near, panels, active: document.activeElement?.id || document.activeElement?.tagName };
+          });
+          console.log(`GAME-186 джойстик ${axis} p0=${JSON.stringify({ x: p0.playerX, y: p0.playerY })} стан=${JSON.stringify(dump)}`);
+          throw e;
+        }
         await touchEv(cdp, 'touchEnd');
         const p1 = await probeOf(page);
         const other = axis === 'playerX' ? 'playerY' : 'playerX';
