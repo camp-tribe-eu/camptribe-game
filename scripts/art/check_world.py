@@ -33,7 +33,7 @@ ORDER_RATIO = 1.15
 SLOPE_MAX = 0.12
 MIN_ISO_W = 24
 CENTRAL = 0.8
-ENABLED = {'scale': True, 'order': True, 'iso': True, 'missing': True, 'calib': True}   # --mutate чіпає саме ці місця
+ENABLED = {'scale': True, 'order': True, 'iso': True, 'vee': True, 'missing': True, 'calib': True}   # --mutate чіпає саме ці місця
 
 
 def opaque(px):
@@ -78,6 +78,15 @@ def bottom_slope(cols, x0, x1):
     return sum((p[0] - mx) * (p[1] - my) for p in pts) / den if den else 0.0
 
 
+HALF_MAX = 0.2   # «V»-низ ізометрії: ліва й права половини низу похилі в різні боки, загальний нахил ≈ 0 (санблок GAME-205)
+
+
+def v_bottom(cols, x0, x1):
+    """Нахили низу лівої й правої половини; ізометричний кут дає +s і −s, плоский фасад — ≈0 і ≈0."""
+    mid = (x0 + x1) / 2
+    return bottom_slope({x: y for x, y in cols.items() if x < mid}, x0, int(mid)), bottom_slope({x: y for x, y in cols.items() if x >= mid}, int(mid), x1)
+
+
 def evaluate(entries, loader, px_per_m=28, tol=0.25):
     """-> (errors [(code, msg)], warns [msg], rows [dict])."""
     errors, warns, rows = [], [], []
@@ -99,6 +108,10 @@ def evaluate(entries, loader, px_per_m=28, tol=0.25):
             want = round(e['real_width_m'] * px_per_m)
             errors.append(('WORLD_SCALE', f"{e['id']}: ширина {w} px при {e['real_width_m']} м = {pxm:.1f} px/м, треба {lo:.0f}–{hi:.0f} "
                            f"(≈{want} px). Спрайт {'завеликий' if pxm > hi else 'замалий'} у {max(pxm, px_per_m) / min(pxm, px_per_m):.2f} раза"))
+        sl, sr = v_bottom(cols, bb[0], bb[2])
+        if ENABLED['vee'] and w >= 48 and HALF_MAX < sl < 1.5 and -1.5 < sr < -HALF_MAX:   # «V» (низ униз до середини); стовп на ніжці дає >1,5, «Λ» шлагбаума — інший знак
+            errors.append(('WORLD_ISO', f"{e['id']}: низ силуету — «V» (ліва половина {sl:+.2f}, права {sr:+.2f}, межа ±{HALF_MAX}) — кут будівлі "
+                           f"до глядача, ізометрія; у грі фасад рівно до екрана"))
         if ENABLED['iso'] and w >= MIN_ISO_W and abs(slope) > SLOPE_MAX:
             errors.append(('WORLD_ISO', f"{e['id']}: низ силуету похилий (нахил {slope:+.2f}, межа ±{SLOPE_MAX}) — ізометрія/перспектива, "
                            f"а в грі лише LPC 3/4 ортогонально (передня грань рівно до екрана)"))
@@ -207,6 +220,17 @@ def sheared(w, h, slope=0.5):
     return im
 
 
+def diamond(w, h, slope=0.5):
+    """Ізометрична коробка кутом до глядача: низ «V» (з обох боків униз до середини)."""
+    drop = int(w / 2 * slope)
+    im = Image.new('RGBA', (w + 8, h + drop + 8))
+    for x in range(w):
+        off = int(min(x, w - 1 - x) * slope)
+        for y in range(h):
+            im.putpixel((x + 4, y + off + 4), (120, 90, 60, 255))
+    return im
+
+
 def with_magenta(w, h):
     """Предмет у рамці з чисто-пурпурового фону (ключ FAL), що не став прозорим."""
     im = Image.new('RGBA', (w + 40, h + 40), (255, 0, 255, 255))
@@ -215,7 +239,7 @@ def with_magenta(w, h):
 
 
 def selftest():
-    img = {'good': box(126, 42), 'good_small': box(14, 28), 'shear': sheared(126, 42), 'big': box(250, 84), 'small': box(40, 14),
+    img = {'good': box(126, 42), 'good_small': box(14, 28), 'shear': sheared(126, 42), 'vee': diamond(126, 42), 'big': box(250, 84), 'small': box(40, 14),
            'magenta': with_magenta(126, 42), 'tiny_ref': box(30, 20)}
     loader = lambda f: img.get(f)
     E = lambda i, f, w, h, crop=None: dict(id=i, file=f, crop=crop or [0, 0, img[f].width, img[f].height], real_width_m=w, real_height_m=h, view='front')
@@ -235,6 +259,7 @@ def selftest():
     case('правильна коробка проходить', [E('car', 'good', 4.5, 1.5)], [])
     case('вузький стовпчик проходить (ISO пропущено <24 px)', [E('post', 'good_small', 0.5, 1.0)], [])
     case('ізометрична коробка → WORLD_ISO', [E('car', 'shear', 4.5, 1.5)], ['WORLD_ISO'])
+    case('ізометрія кутом до глядача («V»-низ) → WORLD_ISO', [E('car', 'vee', 4.5, 1.5)], ['WORLD_ISO'])
     case('завелика коробка → WORLD_SCALE', [E('car', 'big', 4.5, 1.5)], ['WORLD_SCALE'])
     case('замала коробка → WORLD_SCALE', [E('car', 'small', 4.5, 1.5)], ['WORLD_SCALE'])
     # порядок: кемпер 7 м вужчий за авто 4,5 м; масштаб у межах (мутація SCALE не має його ховати)
@@ -261,6 +286,7 @@ MUTATIONS = [
     ('SCALE вимкнено', "ENABLED = {'scale': True,", "ENABLED = {'scale': False,"),
     ('ORDER вимкнено', "'order': True,", "'order': False,"),
     ('ISO вимкнено', "'iso': True,", "'iso': False,"),
+    ('«V»-ізометрію вимкнено', "'vee': True,", "'vee': False,"),
     ('MISSING_ENTRY вимкнено', "'missing': True,", "'missing': False,"),
     ('CALIB вимкнено', "'calib': True}", "'calib': False}"),
     ('пурпур не вважається прозорим', "and not (px[0] >= 250 and px[1] <= 5 and px[2] >= 250)", ''),
