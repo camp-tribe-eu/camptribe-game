@@ -24,6 +24,12 @@ const COMBOS_FILE = 'validator/combos.mjs';
 // 1. Вимкнення кожної перевірки цілком. 2. Точкові мутації логіки, де помилка найдорожча.
 const mutations = [
   ...CHECKS.map((c) => ({ name: `вимкнено перевірку ${c.id}`, file: CHECKS_FILE, from: `// @check:${c.id}\n`, to: `// @check:${c.id}\n      return [];\n` })),
+  { name: 'GAME-221: межа довжини репліки — строго більше 111 (пропускає 111)', file: CHECKS_FILE, from: 'if (len > DIALOGUE_LINE_MAX)', to: 'if (len > DIALOGUE_LINE_MAX + 1)' },
+  { name: 'GAME-221: довжина реплік перевіряється лише в першій мові', file: CHECKS_FILE, from: 'for (const n of d.nodes) for (const lang of langs) {', to: 'for (const n of d.nodes) for (const lang of langs.slice(0, 1)) {' },
+  { name: 'GAME-221: межа ланцюжка — 5 реплік дозволено', file: CHECKS_FILE, from: 'if (len > DIALOGUE_CHAIN_MAX)', to: 'if (len > DIALOGUE_CHAIN_MAX + 1)' },
+  { name: 'GAME-221: вибір не обнуляє лічильник (ланцюжок іде крізь choices)', file: CHECKS_FILE, from: 'if (!n.choices) for (const v of [...(n.next', to: 'if (true) for (const v of [...(n.choices ?? []).map((x) => x.next), ...(n.next' },
+  { name: 'GAME-221: гілки (branches) не входять до ланцюжка', file: CHECKS_FILE, from: '...(n.branches ?? []).map((b) => b.next)]) best', to: ']) best' },
+  { name: 'GAME-221: ланцюжок рахується лише від start, а не від цілей вибору', file: CHECKS_FILE, from: 'for (const n of d.nodes) for (const ch of n.choices ?? []) starts.add(ch.next);', to: '' },
   { name: 'формат id основного етапу — будь-що (рецензія PR #62)', file: CHECKS_FILE, from: 'quests: /^(?:(?:[A-Z][A-Z0-9]*-)+\\d{3}|', to: 'quests: /^(?:.+|' },
   { name: 'відмова рахується як завершення', file: CHECKS_FILE, from: "u === X && tr.on === 'complete'", to: 'u === X' },
   { name: 'transition-gate: джерело зараховано й при відмові', file: CHECKS_FILE, from: "if (tr.on === 'complete') done.add(uid);", to: 'done.add(uid);' },

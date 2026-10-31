@@ -77,6 +77,8 @@ export const CODES = {
 
   // діалоги, GAME-28 (TD-005 граф, TD-006 типізовані умови)
   DIALOGUE_REF_MISSING:      { check: 'dialogue-refs', spec: '§2 кожне посилання діалогу (NPC, квест, ціль, транспорт, вузол) веде на існуючий запис' },
+  DIALOGUE_LINE_TOO_LONG:    { check: 'dialogue-length', spec: 'GAME-221: репліка діалогу — не довша за DIALOGUE_LINE_MAX знаків у кожній мові (≤ 2 рядки рамки розмови на телефоні)' },
+  DIALOGUE_CHAIN_TOO_LONG:   { check: 'dialogue-length', spec: 'GAME-221: не більше DIALOGUE_CHAIN_MAX реплік поспіль без вибору (читання не має стати нудним)' },
   DIALOGUE_NODE_UNREACHABLE: { check: 'dialogue-reachable', spec: '§3 кожен вузол діалогу досяжний зі старту' },
   DIALOGUE_DEAD_END:         { check: 'dialogue-dead-end', spec: '§3 з кожного вузла діалогу є безумовний шлях до end' },
   DIALOGUE_FLAG_NEVER_SET:   { check: 'dialogue-flags', spec: '§2 умова не читає прапорець, який ніщо досяжне не ставить (сетер за нездійсненною умовою — не сетер)' },
@@ -174,6 +176,13 @@ export const STICKER_SLOTS = 12;
 // Скільки справ у хвилі (GAME-170). Дзеркало WAVE_MIN_TASKS/WAVE_MAX_TASKS ядра (src/core/defs.ts); рівність стереже src/content/waves.test.ts.
 export const WAVE_MIN_TASKS = 2;
 export const WAVE_MAX_TASKS = 4;
+
+// GAME-221: межі читабельності діалогу. 110 знаків: рамка розмови на телефоні в ландшафті (≈ 667×375, шрифт 0.72rem) тримає ≈ 55 знаків
+// в рядку, тож 2 рядки = 110; довша репліка росте до 3 рядків і з'їдає мапу над рамкою. Для порівняння: верхня межа skill game-content — 140
+// (на широкому екрані), а найдовша наявна репліка гри — 121. 4 репліки поспіль без вибору: на п'ятій гравець уже лише гортає — вибір чи дія
+// (вузол із choices) обнуляє лічильник, а вузол із choices сам теж рахується як прочитана репліка.
+export const DIALOGUE_LINE_MAX = 110;
+export const DIALOGUE_CHAIN_MAX = 4;
 
 export const FACT_KINDS = ['regulation', 'geography', 'price', 'schedule', 'culture'];
 
