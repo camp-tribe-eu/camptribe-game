@@ -74,6 +74,10 @@ LPC-персонажі: титри по шарах — у `CREDITS.csv` гене
 змін (≥ 8 символів), бо CC-BY-SA вимагає їх назвати. Змінений файл під CC-BY-SA лишається
 CC-BY-SA (`CREDITS_SA_RELICENSED`).
 
+`assets/CREDITS.csv` і `docs/LICENSE_REGISTER.md` зливаються union-ом (`.gitattributes`, GAME-223): рядки з різних
+гілок не конфліктують, а рядок, змінений в обох, стає дублем — його ловлять `CREDITS_DUPLICATE` і
+`REGISTER_DUPLICATE_ID`; лиши один.
+
 **`public/`** не має рядків титрів, тож туди можна лише CC0 або OFL (текст ліцензії поруч у
 `public/`). Усе, що вимагає атрибуції, — лише в `assets/` (`PUBLIC_NEEDS_CREDITS`). Кожен медіафайл
 у `public/` має рядок у `docs/LICENSE_REGISTER.md` (`PUBLIC_NO_REGISTER_ROW`).

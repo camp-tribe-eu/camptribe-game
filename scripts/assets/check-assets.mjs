@@ -67,7 +67,7 @@ export const CODES = [
   'REGISTER_PATH_UNUSED', 'REGISTER_NO_SOURCE', 'REGISTER_LICENCE_MISMATCH', 'CREDITS_BAD_HEADER',
   'ASSET_NO_CREDITS_ROW', 'CREDITS_FILE_MISSING', 'CREDITS_DUPLICATE', 'CREDITS_NO_AUTHOR', 'CREDITS_NO_SOURCE',
   'LICENCE_NOT_OFFERED', 'LICENCE_NOT_ALLOWED', 'LICENCE_NOT_MOST_PERMISSIVE', 'CREDITS_JSON_STALE',
-  'CREDITS_UPSTREAM_MISSING', 'CREDITS_UPSTREAM_MISMATCH', 'CREDITS_MODIFIED_UNDESCRIBED', 'CREDITS_SA_RELICENSED',
+  'CREDITS_UPSTREAM_MISSING', 'CREDITS_UPSTREAM_MISMATCH', 'CREDITS_MODIFIED_UNDESCRIBED', 'CREDITS_SA_RELICENSED', 'REGISTER_DUPLICATE_ID',
   'PUBLIC_EMPTY', 'PUBLIC_NO_REGISTER_ROW', 'PUBLIC_NEEDS_CREDITS',
   'LICENCE_PINS_BAD', 'LICENCE_PIN_MISMATCH', 'LICENCE_PIN_NO_EVIDENCE', 'LICENCE_PIN_UNUSED',
 ];
@@ -203,6 +203,9 @@ export function check({ files, publicFiles, register, credits, json, upstream, p
   const reg = registerRows(register);
   // @check:REGISTER_EMPTY
   if (reg.length === 0) add('REGISTER_EMPTY', REGISTER, 'жодного рядка XXX-NNN — розбір зламався');
+  // @check:REGISTER_DUPLICATE_ID
+  // GAME-223: реєстр зливається union-ом (.gitattributes) — рядок, змінений в обох гілках, стає двома з тим самим ID.
+  for (const id of new Set(reg.map((r) => r.id))) if (reg.filter((r) => r.id === id).length > 1) add('REGISTER_DUPLICATE_ID', REGISTER, `${id} — рядок двічі (злиття union?): лиши один`);
   const rowOf = new Map();
   for (const t of tracked) {
     const hits = reg.filter((r) => r.paths.some((p) => covers(p, t)));
@@ -371,6 +374,7 @@ function selfTest() {
     ['реєстр не розібрано', { ...base, register: '' }, 'ASSET_NO_REGISTER_ROW,PUBLIC_NO_REGISTER_ROW,REGISTER_EMPTY'],
     ['PNG без рядка реєстру (мутація картки)', mk([T, H, C, 'x/new.png,Dan,CC0,CC0,https://e.org,o,n,no'], { files: [...files, 'x/new.png'] }), 'ASSET_NO_REGISTER_ROW'],
     ['.PNG великими теж перевіряється', { ...base, files: [...files, 'x/BIG.PNG'] }, 'ASSET_NO_CREDITS_ROW,ASSET_NO_REGISTER_ROW'],
+    ['ID реєстру двічі (union-злиття), другий рядок без шляхів', { ...base, register: reg + '\n' + reg.split('\n').find((l) => /^\|\s*[A-Z]+-\d{3}\s*\|/.test(l)).replace(/`(?:assets|public)\/[^`]*`/g, '_ще не використано_') + '\n' }, 'REGISTER_DUPLICATE_ID'],
     ['файл у двох рядках реєстру', { ...base, register: reg.replace('`assets/c/hero.png`', '`assets/c/hero.png` `assets/t/a.png`') }, 'ASSET_REGISTER_AMBIGUOUS'],
     ['рядок реєстру на зниклий файл', { ...base, register: reg.replace('`assets/t/`', '`assets/t/` `assets/gone.png`') }, 'REGISTER_PATH_UNUSED'],
     ['рядок реєстру без посилання', { ...base, register: reg.replace('https://example.org/tiles', 'OGA, сторінка') }, 'REGISTER_NO_SOURCE'],
