@@ -1,0 +1,21 @@
+file	title	author	license	source
+ref00.jpg	File:Alfred Boxall's Military Cross.jpg	Europeana staff photographer	Public domain	https://commons.wikimedia.org/wiki/File:Alfred_Boxall%27s_Military_Cross.jpg
+ref01.jpg	File:Victory show Cosby Leicestershire UK 2011-09-03 zaphad1 IMG 3552 - 6112173545 World War I and II medals awards insignia badges UK Belgium France Russian Soviet German.jpg	zaphad1	CC BY 2.0	https://commons.wikimedia.org/wiki/File:Victory_show_Cosby_Leicestershire_UK_2011-09-03_zaphad1_IMG_3552_-_6112173545_World_War_I_and_II_medals_awards_insignia_badges_UK_Belgium_France_Russian_Soviet_German.jpg
+ref02.jpg	File:26th Infantry Regiment near Butgenbach Two.jpg	unknown	Public domain	https://commons.wikimedia.org/wiki/File:26th_Infantry_Regiment_near_Butgenbach_Two.jpg
+ref03.jpg	File:US Gun Position on Elsenborn Ridge.jpg	U.S. Signal Corps	Public domain	https://commons.wikimedia.org/wiki/File:US_Gun_Position_on_Elsenborn_Ridge.jpg
+ref04.jpg	File:Hemer-Landesgartenschau-Stalag-Modell1.JPG	Waddehadde	CC BY-SA 3.0	https://commons.wikimedia.org/wiki/File:Hemer-Landesgartenschau-Stalag-Modell1.JPG
+ref05.jpg	File:Monthermé Phade CFDA route 2.jpg	Smiley.toerist	CC BY-SA 3.0	https://commons.wikimedia.org/wiki/File:Montherm%C3%A9_Phade_CFDA_route_2.jpg
+ref06.jpg	File:Monthermé Phade CFDA route 1.jpg	Smiley.toerist	CC BY-SA 3.0	https://commons.wikimedia.org/wiki/File:Montherm%C3%A9_Phade_CFDA_route_1.jpg
+ref07.jpg	File:Bivouac in the Battle of Ardennes.jpg	Stephane Gaudry	CC BY 2.0	https://commons.wikimedia.org/wiki/File:Bivouac_in_the_Battle_of_Ardennes.jpg
+ref08.jpg	File:Maréchal Saint-Paul 06056.jpg	Gérald Garitan	CC BY-SA 3.0	https://commons.wikimedia.org/wiki/File:Mar%C3%A9chal_Saint-Paul_06056.jpg
+ref09.jpg	File:Keltische omwalling - Camp d'Attila - bij La Cheppe, Frankrijk 2004.jpg	Hubert DENIES	CC BY-SA 3.0	https://commons.wikimedia.org/wiki/File:Keltische_omwalling_-_Camp_d%27Attila_-_bij_La_Cheppe,_Frankrijk_2004.jpg
+ref10.jpg	File:CAMP ROMAIN - panoramio (3).jpg	jean melis	CC BY 3.0	https://commons.wikimedia.org/wiki/File:CAMP_ROMAIN_-_panoramio_(3).jpg
+ref11.jpg	File:La Meuse at Vireux-Molhain, département des Ardennes, France - panoramio.jpg	Maarten Sepp	CC BY-SA 3.0	https://commons.wikimedia.org/wiki/File:La_Meuse_at_Vireux-Molhain,_d%C3%A9partement_des_Ardennes,_France_-_panoramio.jpg
+ref12.png	File:Sedan et le camp de la misère.png	VVVCFFrance	CC BY-SA 4.0	https://commons.wikimedia.org/wiki/File:Sedan_et_le_camp_de_la_mis%C3%A8re.png
+ref13.jpg	File:Argonnenbahn 81009.jpg	G.Garitan	CC BY-SA 4.0	https://commons.wikimedia.org/wiki/File:Argonnenbahn_81009.jpg
+ref14.jpg	File:Camille Van Camp - View in the Belgian Ardennes.jpg	Camille Van Camp (1834-1891)	Public domain	https://commons.wikimedia.org/wiki/File:Camille_Van_Camp_-_View_in_the_Belgian_Ardennes.jpg
+ref15.jpg	File:Carte camps Marathon.jpg	Famenne &amp; Art Museum, Marche-en-Famenne, 2021	CC BY-SA 4.0	https://commons.wikimedia.org/wiki/File:Carte_camps_Marathon.jpg
+ref16.jpg	File:Camp de la Ferme Medeah pres de Sommepy-Tahure, Marne.jpg	Unknown photographer	Public domain	https://commons.wikimedia.org/wiki/File:Camp_de_la_Ferme_Medeah_pres_de_Sommepy-Tahure,_Marne.jpg
+ref17.jpg	File:Camping-Car Park Sedan-9003.jpg	Raimond Spekking	CC BY-SA 4.0	https://commons.wikimedia.org/wiki/File:Camping-Car_Park_Sedan-9003.jpg
+ref18.jpg	File:France, St Mihiel, Fort du Camp des Romains - Vue de St Michel prise de la route du fort du Camp des Romains - A23881.jpg	Chevalier Georges	CC BY-SA 4.0	https://commons.wikimedia.org/wiki/File:France,_St_Mihiel,_Fort_du_Camp_des_Romains_-_Vue_de_St_Michel_prise_de_la_route_du_fort_du_Camp_des_Romains_-_A23881.jpg
+ref19.jpg	File:France, St Mihiel, Vue prise du fort du Camp des Romains Vers le Nord - A23863.jpg	Chevalier Georges	CC BY-SA 4.0	https://commons.wikimedia.org/wiki/File:France,_St_Mihiel,_Vue_prise_du_fort_du_Camp_des_Romains_Vers_le_Nord_-_A23863.jpg
