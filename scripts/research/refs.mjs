@@ -32,6 +32,25 @@ export function pick(json) {
   });
 }
 
+const OV_FREE = new Set(['cc0', 'pdm', 'by', 'by-sa']);
+/** Відповідь Openverse → картки; лише ліцензії, що дозволяють поширення з титрами (без NC/ND). */
+export function pickOpenverse(json) {
+  return (json?.results ?? []).flatMap((r) => {
+    const lic = String(r.license ?? '').toLowerCase();
+    if (!OV_FREE.has(lic) || !r.thumbnail || !photo(`x.${r.filetype ?? 'jpg'}`, `image/${r.filetype === 'png' ? 'png' : 'jpeg'}`)) return [];
+    const name = lic === 'cc0' ? 'CC0' : lic === 'pdm' ? 'Public domain' : `CC ${lic.toUpperCase()} ${r.license_version ?? ''}`.trim();
+    return [{ title: r.title || r.id, thumb: r.thumbnail, page: r.foreign_landing_url || r.url, license: name, author: r.creator || 'unknown' }];
+  });
+}
+
+async function searchOpenverse(q) {
+  const u = new URL('https://api.openverse.org/v1/images/');
+  Object.entries({ q, page_size: '20', license: 'cc0,pdm,by,by-sa', category: 'photograph' }).forEach(([k, v]) => u.searchParams.set(k, v));
+  const r = await fetch(u, { headers: { 'User-Agent': UA } });
+  if (!r.ok) { console.log(`Openverse HTTP ${r.status} для «${q}»`); return []; }
+  return pickOpenverse(await r.json());
+}
+
 export const creditLine = (i, file) => `${file}\t${i.title}\t${i.author}\t${i.license}\t${i.page}`;
 
 async function search(q) {
@@ -51,7 +70,7 @@ async function main() {
   const seen = new Set();
   const items = [];
   for (const q of queries.split('|').map((s) => s.trim()).filter(Boolean)) {
-    for (const i of await search(q)) if (!seen.has(i.title) && items.length < 20) { seen.add(i.title); items.push(i); }
+    for (const i of [...await searchOpenverse(q), ...await search(q)]) if (!seen.has(i.title) && items.length < 24) { seen.add(i.title); items.push(i); }
   }
   mkdirSync(dir, { recursive: true });
   const lines = ['file\ttitle\tauthor\tlicense\tsource'];
