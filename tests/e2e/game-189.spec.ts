@@ -60,7 +60,8 @@ for (const v of VIEWS) {
     await walk(page, route('camp-lake', [q.playerX, q.playerY], 'task.pitch-tent'));
     await expect.poll(async () => (await probe(page)).nearObject, { timeout: 8_000 }).toBe('task.pitch-tent');
     await page.locator('[data-touch="interact"]').tap();
-    await playTent(page, touch, async () => { await page.screenshot({ path: `${SHOTS}/g189-${v.side}.png` }); expect((await probe(page)).tent.pegs, 'мить знімка: два кілки забито').toBe(2); });
+    // GAME-203: родина поруч тягне відтяжки — кілків на руки тата менше (need = 4 − помічники); знімок — після половини кілків тата.
+    await playTent(page, touch, async () => { await page.screenshot({ path: `${SHOTS}/g189-${v.side}.png` }); const t = (await probe(page)).tent; expect(t.pegs, 'мить знімка: половину кілків тата забито').toBe(Math.floor(t.need / 2)); });
     await expect.poll(() => pitchOutcome(page), { timeout: 8_000, message: 'після 4 влучань ядро зарахувало справу' }).toBe('done');
     expect((await probe(page)).tent.phase).toBe('idle');
     expect(errors).toEqual([]);

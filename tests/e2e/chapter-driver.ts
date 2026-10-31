@@ -7,7 +7,8 @@ import { waitGameReady } from './ready';
 export interface Core { game: { player: { locationId: string; transportId?: string } | null; flags: string[]; quests: Record<string, { status: string }>; inventory: Record<string, number>; dialogue: unknown; wave?: unknown; campaignEnded: boolean }; clock: { minutes: number } }
 /** GAME-193: зонд риболовлі (координати кнопок — у пікселях сторінки). */
 export interface FishP { phase: string; power: number; zone: number; fish: number; progress: number; inZone: boolean; casts: number; slipped: number; aways: number; kept: number; released: number; catches: number; species: string; spot: { x: number; y: number }; buttons: { release: { x: number; y: number }; keep: { x: number; y: number } } }
-export interface Probe { playerX: number; playerY: number; nearObject: string | null; playerMoving: boolean; saveLoaded: boolean; tent: { phase: string; pegs: number; marker: number; inBand: boolean; placeOk: boolean };
+export interface Probe { playerX: number; playerY: number; nearObject: string | null; playerMoving: boolean; saveLoaded: boolean; commandsSent: number; cameraScrollX: number; cameraScrollY: number; tent: { phase: string; pegs: number; need: number; helpers: number; marker: number; inBand: boolean; placeOk: boolean; x: number; y: number };
+  followers: { x: number; y: number }[]; jobs: ({ kind: 'errand'; task: string; phase: 'walk' | 'work' } | { kind: 'tent'; phase: 'walk' | 'pull' } | null)[];
   wood: { phase: string; got: number; strikes: number; marker: number; inBand: boolean; branches: { x: number; y: number; got: boolean }[]; block: { x: number; y: number } };
   fire: { phase: string; logs: number; charge: number; inBand: boolean; holding: boolean; fizzles: number; x: number; y: number }; grill: { phase: string; heat: number; cook: number; holding: boolean; chars: number; charred: boolean }; fish: FishP; fx: { target: string | null; guide: string; ring: number; backpack: number } }
 export const core = (page: Page): Promise<Core> => page.evaluate(() => (window as unknown as { __game: { read: () => Core } }).__game.read());
@@ -131,12 +132,15 @@ export async function playTent(page: Page, touch: boolean, midShot?: () => Promi
   await page.waitForTimeout(450);   // затвор дії сцени: ≥ 400 мс між натисканнями
   await press();
   await expect.poll(async () => (await probe(page)).tent.phase, { timeout: 5_000, message: 'друга дія ставить намет' }).toBe('peg');
-  for (let k = 0; k < 4; k++) {
+  // GAME-203: кілків на руки тата — `need` (4 сам, 2 з двома помічниками); знімок посередині — після половини кілків.
+  const need = (await probe(page)).tent.need;
+  expect(need, 'кілків на руки тата: 2..4').toBeGreaterThanOrEqual(2);
+  for (let k = 0; k < need; k++) {
     await page.waitForTimeout(450);   // затвор (маркер за цей час не дійде до середини: хід від краю ≥ 0,3 с)
     await page.waitForFunction((n) => { const t = (window as unknown as { __game: { probe: { tent: { phase: string; pegs: number; marker: number } } } }).__game.probe.tent; return t.phase !== 'peg' || (t.pegs === n && Math.abs(t.marker - 0.5) < 0.07); }, k, { timeout: 10_000, polling: 'raf' });
     await press();
     await expect.poll(async () => { const t = (await probe(page)).tent; return t.phase !== 'peg' || t.pegs > k; }, { timeout: 5_000, message: `кілок ${k + 1} не забито` }).toBe(true);
-    if (k === 1 && midShot) await midShot();
+    if (k === Math.floor(need / 2) - 1 && midShot) await midShot();
   }
 }
 
