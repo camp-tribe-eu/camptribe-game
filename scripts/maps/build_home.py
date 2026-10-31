@@ -159,12 +159,12 @@ def build_home():
 # двері у нижній стіні, каса біля входу (касир стоїть за прилавком, у ряду 5), виставка намету на трав'яному килимку зі стільцями,
 # гондоли вздовж задньої стіни (спальники, взуття, газ), рюкзаки на стіні, кут вудок, холодильник і ліхтарі біля каси.
 # Графіка — assets/tiles/shop_gear.png (GAME-204, scripts/assets/build_shop_gear.py).
+_LAY = json.load(open(os.path.join(ROOT, 'art/shop_gear_layout.json')))   # пише scripts/assets/build_shop_gear.py (клітинки = розмір спрайта у справжньому масштабі, OD-026)
 SHOP_TS = [
     ('home-walls', '../../assets/tiles/home_walls.png', 4, 12, 1, 128, 96),
     ('home-floor', '../../assets/tiles/home_floor.png', 2, 2, 13, 64, 32),
     ('shop-gear', '../../assets/tiles/shop_gear.png', 11, _LAY['cols'] * _LAY['rows'], 15, 352, 32 * _LAY['rows']),
 ]
-_LAY = json.load(open(os.path.join(ROOT, 'art/shop_gear_layout.json')))   # пише scripts/assets/build_shop_gear.py (клітинки = розмір спрайта у справжньому масштабі, OD-026)
 GEAR0, GEAR_COLS = 15, _LAY['cols']                    # firstgid і ширина аркуша shop_gear
 GEAR = {n: tuple(v) for n, v in _LAY['cells'].items()}  # предмет → (колонка, рядок, ширина, висота) у аркуші, у тайлах
 SHOP_SPOTS = [
