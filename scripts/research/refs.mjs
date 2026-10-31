@@ -14,6 +14,9 @@ export function freeLicense(short) {
   return s === 'cc0' || s === 'public domain' || s.startsWith('pd') || /^cc[ -]by(-sa)?([ -]\d(\.\d)?)?$/.test(s);
 }
 
+/** Справжнє фото (JPEG/PNG), а не документ чи скан. */
+export const photo = (title, mime) => /^image\/(jpeg|png)$/.test(String(mime ?? '')) && !/\.(pdf|djvu?|tiff?|svg)$/i.test(String(title ?? ''));
+
 const strip = (html) => String(html ?? '').replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim();
 
 /** Відповідь API Commons → картки з мініатюрою, автором і ліцензією; лише вільні. */
@@ -23,7 +26,8 @@ export function pick(json) {
     const ii = p.imageinfo?.[0];
     const m = ii?.extmetadata ?? {};
     const license = strip(m.LicenseShortName?.value);
-    if (!ii?.thumburl || !freeLicense(license)) return [];
+    // Лише фото: пошук Commons повертає й PDF/DjVu (скани книжок пройшли як «фото» — прогін 31.10, закон 1).
+    if (!ii?.thumburl || !freeLicense(license) || !photo(p.title, ii.mime)) return [];
     return [{ title: p.title, thumb: ii.thumburl, page: ii.descriptionurl, license, author: strip(m.Artist?.value) || 'unknown' }];
   });
 }
@@ -32,8 +36,8 @@ export const creditLine = (i, file) => `${file}\t${i.title}\t${i.author}\t${i.li
 
 async function search(q) {
   const u = new URL(API);
-  Object.entries({ action: 'query', format: 'json', generator: 'search', gsrsearch: q, gsrnamespace: '6', gsrlimit: '40',
-    prop: 'imageinfo', iiprop: 'url|extmetadata', iiurlwidth: '640', iiextmetadatafilter: 'LicenseShortName|Artist' })
+  Object.entries({ action: 'query', format: 'json', generator: 'search', gsrsearch: `${q} filetype:bitmap`, gsrnamespace: '6', gsrlimit: '40',
+    prop: 'imageinfo', iiprop: 'url|mime|extmetadata', iiurlwidth: '640', iiextmetadatafilter: 'LicenseShortName|Artist' })
     .forEach(([k, v]) => u.searchParams.set(k, v));
   const r = await fetch(u, { headers: { 'User-Agent': UA } });
   if (!r.ok) throw new Error(`Commons API HTTP ${r.status}`);
