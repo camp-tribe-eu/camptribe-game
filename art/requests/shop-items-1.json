@@ -1,0 +1,148 @@
+{
+ "batch": [
+  {
+   "name": "backpack-wall",
+   "endpoint": "fal-ai/flux-pro/kontext",
+   "payload": {
+    "prompt": "Using the exact pixel art style of this reference furniture sprite sheet (same 3/4 top-down RPG perspective, same dark outline, same limited palette and shading, same scale where one tile is 32 pixels, light from the top-left), draw ONE new object: a wall-mounted slatwall rack with six colorful hiking backpacks hanging in two rows (orange, blue, green, red), about 3 tiles wide and 2 tiles tall. Modern European outdoor and camping equipment store. Single object centered, isolated on a solid flat pure magenta #FF00FF background, no floor, no shadow, no text, no logo, no people.",
+    "image_url": "https://raw.githubusercontent.com/camp-tribe-eu/camptribe-game/main/assets/tiles/home_furniture.png",
+    "num_images": 1,
+    "output_format": "png",
+    "safety_tolerance": "2",
+    "seed": 20261031
+   }
+  },
+  {
+   "name": "rods-rack",
+   "endpoint": "fal-ai/flux-pro/kontext",
+   "payload": {
+    "prompt": "Using the exact pixel art style of this reference furniture sprite sheet (same 3/4 top-down RPG perspective, same dark outline, same limited palette and shading, same scale where one tile is 32 pixels, light from the top-left), draw ONE new object: a wooden floor stand holding eight upright fishing rods with reels, next to a small pegboard with fishing tackle boxes, about 2 tiles wide and 3 tiles tall. Modern European outdoor and camping equipment store. Single object centered, isolated on a solid flat pure magenta #FF00FF background, no floor, no shadow, no text, no logo, no people.",
+    "image_url": "https://raw.githubusercontent.com/camp-tribe-eu/camptribe-game/main/assets/tiles/home_furniture.png",
+    "num_images": 1,
+    "output_format": "png",
+    "safety_tolerance": "2",
+    "seed": 20261031
+   }
+  },
+  {
+   "name": "gas-shelf",
+   "endpoint": "fal-ai/flux-pro/kontext",
+   "payload": {
+    "prompt": "Using the exact pixel art style of this reference furniture sprite sheet (same 3/4 top-down RPG perspective, same dark outline, same limited palette and shading, same scale where one tile is 32 pixels, light from the top-left), draw ONE new object: a low metal store shelf with rows of small blue camping gas canisters and compact camping stoves in boxes, about 2 tiles wide and 2 tiles tall. Modern European outdoor and camping equipment store. Single object centered, isolated on a solid flat pure magenta #FF00FF background, no floor, no shadow, no text, no logo, no people.",
+    "image_url": "https://raw.githubusercontent.com/camp-tribe-eu/camptribe-game/main/assets/tiles/home_furniture.png",
+    "num_images": 1,
+    "output_format": "png",
+    "safety_tolerance": "2",
+    "seed": 20261031
+   }
+  },
+  {
+   "name": "checkout",
+   "endpoint": "fal-ai/flux-pro/kontext",
+   "payload": {
+    "prompt": "Using the exact pixel art style of this reference furniture sprite sheet (same 3/4 top-down RPG perspective, same dark outline, same limited palette and shading, same scale where one tile is 32 pixels, light from the top-left), draw ONE new object: a modern shop checkout counter with a cash register, a card payment terminal and a small display of snack bars, about 3 tiles wide and 2 tiles tall, seen from the customer side. Modern European outdoor and camping equipment store. Single object centered, isolated on a solid flat pure magenta #FF00FF background, no floor, no shadow, no text, no logo, no people.",
+    "image_url": "https://raw.githubusercontent.com/camp-tribe-eu/camptribe-game/main/assets/tiles/home_furniture.png",
+    "num_images": 1,
+    "output_format": "png",
+    "safety_tolerance": "2",
+    "seed": 20261031
+   }
+  },
+  {
+   "name": "fridge",
+   "endpoint": "fal-ai/flux-pro/kontext",
+   "payload": {
+    "prompt": "Using the exact pixel art style of this reference furniture sprite sheet (same 3/4 top-down RPG perspective, same dark outline, same limited palette and shading, same scale where one tile is 32 pixels, light from the top-left), draw ONE new object: a tall glass-door drinks fridge with bottles of water and juice on lit shelves, about 1 tile wide and 2 tiles tall. Modern European outdoor and camping equipment store. Single object centered, isolated on a solid flat pure magenta #FF00FF background, no floor, no shadow, no text, no logo, no people.",
+    "image_url": "https://raw.githubusercontent.com/camp-tribe-eu/camptribe-game/main/assets/tiles/home_furniture.png",
+    "num_images": 1,
+    "output_format": "png",
+    "safety_tolerance": "2",
+    "seed": 20261031
+   }
+  },
+  {
+   "name": "sleeping-bags",
+   "endpoint": "fal-ai/flux-pro/kontext",
+   "payload": {
+    "prompt": "Using the exact pixel art style of this reference furniture sprite sheet (same 3/4 top-down RPG perspective, same dark outline, same limited palette and shading, same scale where one tile is 32 pixels, light from the top-left), draw ONE new object: a store shelf with rolled sleeping bags in stuff sacks and rolled foam camping mats in bright colors, about 2 tiles wide and 2 tiles tall. Modern European outdoor and camping equipment store. Single object centered, isolated on a solid flat pure magenta #FF00FF background, no floor, no shadow, no text, no logo, no people.",
+    "image_url": "https://raw.githubusercontent.com/camp-tribe-eu/camptribe-game/main/assets/tiles/home_furniture.png",
+    "num_images": 1,
+    "output_format": "png",
+    "safety_tolerance": "2",
+    "seed": 20261031
+   }
+  },
+  {
+   "name": "boots-rack",
+   "endpoint": "fal-ai/flux-pro/kontext",
+   "payload": {
+    "prompt": "Using the exact pixel art style of this reference furniture sprite sheet (same 3/4 top-down RPG perspective, same dark outline, same limited palette and shading, same scale where one tile is 32 pixels, light from the top-left), draw ONE new object: a wooden shelf with pairs of hiking boots on three levels, about 2 tiles wide and 2 tiles tall. Modern European outdoor and camping equipment store. Single object centered, isolated on a solid flat pure magenta #FF00FF background, no floor, no shadow, no text, no logo, no people.",
+    "image_url": "https://raw.githubusercontent.com/camp-tribe-eu/camptribe-game/main/assets/tiles/home_furniture.png",
+    "num_images": 1,
+    "output_format": "png",
+    "safety_tolerance": "2",
+    "seed": 20261031
+   }
+  },
+  {
+   "name": "lantern-display",
+   "endpoint": "fal-ai/flux-pro/kontext",
+   "payload": {
+    "prompt": "Using the exact pixel art style of this reference furniture sprite sheet (same 3/4 top-down RPG perspective, same dark outline, same limited palette and shading, same scale where one tile is 32 pixels, light from the top-left), draw ONE new object: a small table display with camping lanterns and headlamps, one lantern glowing warm yellow, about 2 tiles wide and 1 tile tall. Modern European outdoor and camping equipment store. Single object centered, isolated on a solid flat pure magenta #FF00FF background, no floor, no shadow, no text, no logo, no people.",
+    "image_url": "https://raw.githubusercontent.com/camp-tribe-eu/camptribe-game/main/assets/tiles/home_furniture.png",
+    "num_images": 1,
+    "output_format": "png",
+    "safety_tolerance": "2",
+    "seed": 20261031
+   }
+  },
+  {
+   "name": "chairs-display",
+   "endpoint": "fal-ai/flux-pro/kontext",
+   "payload": {
+    "prompt": "Using the exact pixel art style of this reference furniture sprite sheet (same 3/4 top-down RPG perspective, same dark outline, same limited palette and shading, same scale where one tile is 32 pixels, light from the top-left), draw ONE new object: two folding camping chairs and a small folding camping table set up as a store display, about 3 tiles wide and 2 tiles tall. Modern European outdoor and camping equipment store. Single object centered, isolated on a solid flat pure magenta #FF00FF background, no floor, no shadow, no text, no logo, no people.",
+    "image_url": "https://raw.githubusercontent.com/camp-tribe-eu/camptribe-game/main/assets/tiles/home_furniture.png",
+    "num_images": 1,
+    "output_format": "png",
+    "safety_tolerance": "2",
+    "seed": 20261031
+   }
+  },
+  {
+   "name": "dome-tent",
+   "endpoint": "fal-ai/flux-pro/kontext",
+   "payload": {
+    "prompt": "Using the exact pixel art style of this reference furniture sprite sheet (same 3/4 top-down RPG perspective, same dark outline, same limited palette and shading, same scale where one tile is 32 pixels, light from the top-left), draw ONE new object: a modern two-person dome camping tent in green and orange nylon with guy lines, pitched as a store display, about 3 tiles wide and 2 tiles tall. Modern European outdoor and camping equipment store. Single object centered, isolated on a solid flat pure magenta #FF00FF background, no floor, no shadow, no text, no logo, no people.",
+    "image_url": "https://raw.githubusercontent.com/camp-tribe-eu/camptribe-game/main/assets/tiles/home_furniture.png",
+    "num_images": 1,
+    "output_format": "png",
+    "safety_tolerance": "2",
+    "seed": 20261031
+   }
+  },
+  {
+   "name": "shop-door",
+   "endpoint": "fal-ai/flux-pro/kontext",
+   "payload": {
+    "prompt": "Using the exact pixel art style of this reference furniture sprite sheet (same 3/4 top-down RPG perspective, same dark outline, same limited palette and shading, same scale where one tile is 32 pixels, light from the top-left), draw ONE new object: a modern shop entrance door with a glass panel and a metal handle in a wall section, about 1 tile wide and 2 tiles tall. Modern European outdoor and camping equipment store. Single object centered, isolated on a solid flat pure magenta #FF00FF background, no floor, no shadow, no text, no logo, no people.",
+    "image_url": "https://raw.githubusercontent.com/camp-tribe-eu/camptribe-game/main/assets/tiles/home_furniture.png",
+    "num_images": 1,
+    "output_format": "png",
+    "safety_tolerance": "2",
+    "seed": 20261031
+   }
+  },
+  {
+   "name": "shop-window",
+   "endpoint": "fal-ai/flux-pro/kontext",
+   "payload": {
+    "prompt": "Using the exact pixel art style of this reference furniture sprite sheet (same 3/4 top-down RPG perspective, same dark outline, same limited palette and shading, same scale where one tile is 32 pixels, light from the top-left), draw ONE new object: a large shop display window in a wall section with daylight coming through, about 3 tiles wide and 2 tiles tall. Modern European outdoor and camping equipment store. Single object centered, isolated on a solid flat pure magenta #FF00FF background, no floor, no shadow, no text, no logo, no people.",
+    "image_url": "https://raw.githubusercontent.com/camp-tribe-eu/camptribe-game/main/assets/tiles/home_furniture.png",
+    "num_images": 1,
+    "output_format": "png",
+    "safety_tolerance": "2",
+    "seed": 20261031
+   }
+  }
+ ]
+}

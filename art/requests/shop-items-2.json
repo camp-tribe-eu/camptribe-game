@@ -1,0 +1,40 @@
+{
+ "batch": [
+  {
+   "name": "rods-rack",
+   "endpoint": "fal-ai/flux-pro/kontext",
+   "payload": {
+    "prompt": "LPC style pixel art, 3/4 top-down ORTHOGRAPHIC view like classic 16-bit RPGs, front face parallel to the screen, top visible as a thin strip, NO isometric, NO perspective, light from top-left, flat magenta #FF00FF background, single object. Same pixel art style as this reference furniture sprite sheet (same dark outline, limited palette, shading, 32 px tile). Draw ONE object: a wooden floor stand holding eight upright fishing rods with reels, rods vertical, about 1.5 meters wide and 2 meters tall, seen straight from the front like a wall unit. Flat front elevation: the bottom edge of the object is a perfectly horizontal straight line, the sides are perfectly vertical. Modern European outdoor equipment store. Isolated on solid flat pure magenta #FF00FF background, no floor, no shadow, no text, no logo, no people.",
+    "image_url": "https://raw.githubusercontent.com/camp-tribe-eu/camptribe-game/main/assets/tiles/home_furniture.png",
+    "num_images": 1,
+    "output_format": "png",
+    "safety_tolerance": "2",
+    "seed": 20261101
+   }
+  },
+  {
+   "name": "gas-shelf",
+   "endpoint": "fal-ai/flux-pro/kontext",
+   "payload": {
+    "prompt": "LPC style pixel art, 3/4 top-down ORTHOGRAPHIC view like classic 16-bit RPGs, front face parallel to the screen, top visible as a thin strip, NO isometric, NO perspective, light from top-left, flat magenta #FF00FF background, single object. Same pixel art style as this reference furniture sprite sheet (same dark outline, limited palette, shading, 32 px tile). Draw ONE object: a low metal store shelf unit with three shelves holding rows of small blue camping gas canisters and compact camping stoves in boxes, about 1.1 meters wide and 1.5 meters tall, seen straight from the front. Flat front elevation: the bottom edge of the object is a perfectly horizontal straight line, the sides are perfectly vertical. Modern European outdoor equipment store. Isolated on solid flat pure magenta #FF00FF background, no floor, no shadow, no text, no logo, no people.",
+    "image_url": "https://raw.githubusercontent.com/camp-tribe-eu/camptribe-game/main/assets/tiles/home_furniture.png",
+    "num_images": 1,
+    "output_format": "png",
+    "safety_tolerance": "2",
+    "seed": 20261101
+   }
+  },
+  {
+   "name": "boots-rack",
+   "endpoint": "fal-ai/flux-pro/kontext",
+   "payload": {
+    "prompt": "LPC style pixel art, 3/4 top-down ORTHOGRAPHIC view like classic 16-bit RPGs, front face parallel to the screen, top visible as a thin strip, NO isometric, NO perspective, light from top-left, flat magenta #FF00FF background, single object. Same pixel art style as this reference furniture sprite sheet (same dark outline, limited palette, shading, 32 px tile). Draw ONE object: a wooden store shelf unit with three shelves of pairs of hiking boots, about 1.1 meters wide and 1.5 meters tall, seen straight from the front. Flat front elevation: the bottom edge of the object is a perfectly horizontal straight line, the sides are perfectly vertical. Modern European outdoor equipment store. Isolated on solid flat pure magenta #FF00FF background, no floor, no shadow, no text, no logo, no people.",
+    "image_url": "https://raw.githubusercontent.com/camp-tribe-eu/camptribe-game/main/assets/tiles/home_furniture.png",
+    "num_images": 1,
+    "output_format": "png",
+    "safety_tolerance": "2",
+    "seed": 20261101
+   }
+  }
+ ]
+}

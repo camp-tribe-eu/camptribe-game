@@ -8,5 +8,6 @@
   { "id": "npc.sarah", "nameKey": "npc.sarah", "locationId": "loc.camp.lake", "unlockedBy": "ST-004" },
   { "id": "npc.claire", "nameKey": "npc.claire", "locationId": "loc.camp.lake", "unlockedBy": "ST-004" },
   { "id": "npc.victoria", "nameKey": "npc.victoria", "locationId": "loc.camp.lake", "unlockedBy": "ST-004" },
-  { "id": "npc.matthew", "nameKey": "npc.matthew", "locationId": "loc.camp.lake", "unlockedBy": "ST-004" }
+  { "id": "npc.matthew", "nameKey": "npc.matthew", "locationId": "loc.camp.lake", "unlockedBy": "ST-004" },
+  { "id": "npc.cashier", "nameKey": "npc.cashier", "locationId": "loc.shop" }
 ]

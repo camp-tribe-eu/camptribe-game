@@ -20,7 +20,7 @@ interface TiledLayer {
   name: string; type: string; objects?: TiledObject[]; properties?: { name: string; value: unknown }[];
   offsetx?: number; offsety?: number; x?: number; y?: number; parallaxx?: number; parallaxy?: number; visible?: boolean; opacity?: number; data?: number[]; layers?: TiledLayer[];
 }
-interface TiledMap { properties?: { name: string; value: unknown }[]; layers: TiledLayer[]; tilesets?: { name?: string; tiles?: { properties?: { name: string }[] }[] }[] }
+interface TiledMap { properties?: { name: string; value: unknown }[]; layers: TiledLayer[]; tilesets?: { name?: string; image?: string; tiles?: { properties?: { name: string }[] }[] }[] }
 
 /**
  * Формат мапи, який сцена читає ТАК САМО, як валідатор мап (рецензія ea1e98e: чотири правки мапи
@@ -174,6 +174,19 @@ describe('мапа сцени ↔ контент (GAME-32)', () => {
     expect(mapContentProblems(noCar, GAME_DEFS).join(), 'GAME-183: авто табору прибрано').toContain('obj.vehicle');
   });
 
+  it('GAME-204 · крамниця спорядження без домашніх меблів: жодної книжкової полиці, дивана чи письмового столу', () => {
+    // Домашні тайлсети крамниці заборонені (OD-024: у магазині туристичного спорядження не буває книжкових полиць).
+    const HOME_ONLY = ['home-shelf', 'home-furniture', 'home-office'];   // вікна LPC (home-windows-doors) — не меблі: вони у передній стіні крамниці (GAME-204, рецензія 4)
+    const homeFurniture = (m: TiledMap & { tilesets?: { name?: string; image?: string }[] }): string[] =>
+      (m.tilesets ?? []).filter((t) => HOME_ONLY.includes(t.name ?? '') || /home_(shelf|furniture|office)\.png$/.test(t.image ?? '')).map((t) => `${t.name} ${t.image}`);
+    expect(homeFurniture(mapOf('shop.tmj')), 'shop.tmj має домашні меблі').toEqual([]);
+    expect(MAP_TILESETS.shop.filter((n) => HOME_ONLY.includes(n)), 'MAP_TILESETS.shop має домашній тайлсет').toEqual([]);
+    // Контроль: сторож уміє червоніти (закон 1).
+    const bad = structuredClone(mapOf('shop.tmj')) as TiledMap & { tilesets: { name?: string; image?: string }[] };
+    bad.tilesets.push({ name: 'home-shelf', image: '../../assets/tiles/home_shelf.png' });
+    expect(homeFurniture(bad)).toHaveLength(1);
+  });
+
   it('GAME-175 · дім і крамниця: об\'єкти мапи = MAP_SPOTS, локація, тайлсети — негативні контролі', () => {
     const objs = (m: TiledMap): TiledObject[] => m.layers.find((l) => l.name === 'objects')?.objects ?? [];
     for (const [file, key] of [['home.tmj', 'home'], ['shop.tmj', 'shop']] as const) {
@@ -185,7 +198,7 @@ describe('мапа сцени ↔ контент (GAME-32)', () => {
       expect(mapContentProblems(extra, GAME_DEFS, key).join(), `${file}: зайвий об'єкт`).toContain('step.ST-999');
       const away = structuredClone(base); const p = away.properties?.find((x) => x.name === 'locationId'); if (p) p.value = 'loc.camp.lake';
       expect(mapContentProblems(away, GAME_DEFS, key).join(), `${file}: чужа локація`).toContain('локація мапи');
-      const thin = structuredClone(base); thin.tilesets = (thin.tilesets ?? []).filter((t) => t.name !== 'home-shelf');
+      const thin = structuredClone(base); thin.tilesets = (thin.tilesets ?? []).filter((t) => t.name !== 'home-walls');
       expect(gameMapFormatProblems(thin, key).join(), `${file}: тайлсет прибрано`).toContain('тайлсети');
     }
     // Мапа дому без `layout` не плутається, а `layout` поруч з `objects` — дозволений; другий шар об'єктів — ні.

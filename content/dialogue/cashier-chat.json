@@ -1,0 +1,44 @@
+{
+  "id": "dlg.cashier-chat",
+  "npcId": "npc.cashier",
+  "start": "hello",
+  "nodes": [
+    {
+      "id": "hello",
+      "speaker": "npc",
+      "textKey": "dlg.cashier-chat.hello",
+      "choices": [
+        {
+          "textKey": "dlg.cashier-chat.hello.c1",
+          "next": "a"
+        },
+        {
+          "textKey": "dlg.cashier-chat.hello.c2",
+          "next": "b"
+        },
+        {
+          "textKey": "dlg.cashier-chat.hello.c3",
+          "next": "bye"
+        }
+      ]
+    },
+    {
+      "id": "a",
+      "speaker": "npc",
+      "textKey": "dlg.cashier-chat.a",
+      "end": true
+    },
+    {
+      "id": "b",
+      "speaker": "npc",
+      "textKey": "dlg.cashier-chat.b",
+      "end": true
+    },
+    {
+      "id": "bye",
+      "speaker": "npc",
+      "textKey": "dlg.cashier-chat.bye",
+      "end": true
+    }
+  ]
+}

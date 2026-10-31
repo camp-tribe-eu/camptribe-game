@@ -1,0 +1,3 @@
+/content/faq	FAQ
+/content/lpc-medieval-village-decorations	[LPC] Medieval Village Decorations
+/content/october-2026-art-challenge-phobias	October 2026 Art Challenge - Phobias
