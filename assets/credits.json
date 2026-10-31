@@ -286,19 +286,6 @@
       ]
     },
     {
-      "name": "CampTribe (власні малюнки 5 клітинок)",
-      "files": [
-        "icons/objective_icons.png"
-      ],
-      "licences": [
-        "CC-BY-SA 3.0"
-      ],
-      "sources": [
-        "https://github.com/camp-tribe-eu/camptribe-game/blob/main/scripts/assets/build_objective_icons.py",
-        "https://opengameart.org/content/lpc-revised-base-object-kit"
-      ]
-    },
-    {
       "name": "Casper Nilsson",
       "files": [
         "tiles/base_out_atlas.png",
@@ -2868,8 +2855,7 @@
         "Eliza Wyatt (ElizaWy)",
         "Lanea Zimmerman (Sharm)",
         "bluecarrot16",
-        "Hyptosis (стильовий еталон LPC)",
-        "CampTribe (власні малюнки 5 клітинок)"
+        "Hyptosis (стильовий еталон LPC)"
       ],
       "licence": "CC-BY-SA 3.0",
       "sources": [
