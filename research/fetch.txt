@@ -61,3 +61,7 @@ pack-lpc-cats-dogs	oga:lpc-cats-and-dogs
 list-lpc-cats	ogasearch:lpc cats dogs
 # GAME-147: сорочка підлітка shortsleeve/teen — єдина сторінка рядка генератора, якої ще не звірено.
 lic-lpc-teen-androgynous-short-sleeve-shirt	page:https://opengameart.org/content/lpc-teen-androgynous-short-sleeve-shirt
+# GAME-197 (OD-024): справжні фото перед малюванням сцени — вільні ліцензії Wikimedia Commons, мініатюри + CREDITS.txt
+refs-outdoor-shop	refs:camping store|outdoor shop tents|camping equipment shop|fishing tackle shop|Decathlon store interior
+refs-campsite-eu	refs:campsite tents|camping caravans Netherlands|camping Belgium|camping France tents|caravan park Europe
+refs-shop-checkout	refs:shop cashier counter|checkout counter store|cash register shop|shop assistant counter
