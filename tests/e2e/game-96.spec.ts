@@ -336,6 +336,8 @@ for (const vp of ZOOMED) {
       const { page, cdp } = await open(browser, vp, true);
       const k = (await rect(page, '#stage canvas')).width / (await page.locator('#stage canvas').evaluate((el) => (el as HTMLCanvasElement).width));
       expect(k, 'zoom ≥ 2').toBeGreaterThanOrEqual(2);
+      // GAME-186: знімок стану з CI показав p0={x:0,y:0} — проба ще не мала героя (сцена не поставила його), тож «x спадає від 0» не наставало ніколи. Чекаємо готової проби.
+      await expect.poll(async () => { const p = await probeOf(page); return p.playerX !== 0 || p.playerY !== 0; }, { message: 'проба має позицію героя', timeout: 10_000 }).toBe(true);
       for (const [dx, dy, axis, sign] of [[-50, 0, 'playerX', -1], [0, 50, 'playerY', 1], [50, 0, 'playerX', 1], [0, -50, 'playerY', -1]] as const) {
         const p0 = await probeOf(page);
         const need = (p: Pr): boolean => sign * (p[axis] - (axis === 'playerX' ? p0.playerX : p0.playerY)) > 12;
