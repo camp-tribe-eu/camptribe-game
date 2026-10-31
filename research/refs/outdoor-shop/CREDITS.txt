@@ -1,25 +1,9 @@
 file	title	author	license	source
-ref00.jpg	File:Stove at Roaring Camp General Store 1.JPG	BrokenSphere	CC BY-SA 3.0	https://commons.wikimedia.org/wiki/File:Stove_at_Roaring_Camp_General_Store_1.JPG
-ref01.jpg	File:Stove at Roaring Camp General Store 2.JPG	BrokenSphere	CC BY-SA 3.0	https://commons.wikimedia.org/wiki/File:Stove_at_Roaring_Camp_General_Store_2.JPG
-ref02.jpg	File:OF general store YNP1.jpg	Acroterion	CC BY-SA 4.0	https://commons.wikimedia.org/wiki/File:OF_general_store_YNP1.jpg
-ref03.jpg	File:Camp Wood stone facade store front.jpg	Rocknross52	CC BY-SA 3.0	https://commons.wikimedia.org/wiki/File:Camp_Wood_stone_facade_store_front.jpg
 ref04.jpg	File:Two Medicine Camp Store (5634752069).jpg	GlacierNPS	Public domain	https://commons.wikimedia.org/wiki/File:Two_Medicine_Camp_Store_(5634752069).jpg
 ref05.jpg	File:Two Medicine Camp Store (5634749113).jpg	GlacierNPS	Public domain	https://commons.wikimedia.org/wiki/File:Two_Medicine_Camp_Store_(5634749113).jpg
-ref06.jpg	File:Two Medicine Camp Store (5635326006).jpg	GlacierNPS	Public domain	https://commons.wikimedia.org/wiki/File:Two_Medicine_Camp_Store_(5635326006).jpg
-ref07.jpg	File:Pinewoods camp store.agr.jpg	ArnoldReinhold	CC BY-SA 4.0	https://commons.wikimedia.org/wiki/File:Pinewoods_camp_store.agr.jpg
-ref08.jpg	File:Camp Verde-Wingfield Mercantile Store-1880.JPG	Tony the Marine (talk)	CC BY-SA 3.0	https://commons.wikimedia.org/wiki/File:Camp_Verde-Wingfield_Mercantile_Store-1880.JPG
-ref09.jpg	File:Retro Game Camp Satellite Store Entrance.jpg	Ominae	CC BY-SA 4.0	https://commons.wikimedia.org/wiki/File:Retro_Game_Camp_Satellite_Store_Entrance.jpg
-ref10.jpg	File:Camp-verde-tx(general-store&post-office)2016-2.jpg	Darrylpearson	CC BY-SA 4.0	https://commons.wikimedia.org/wiki/File:Camp-verde-tx(general-store%26post-office)2016-2.jpg
-ref11.jpg	File:Camp-verde-tx(general-store&post-office)2016-1.jpg	Darrylpearson	CC BY-SA 4.0	https://commons.wikimedia.org/wiki/File:Camp-verde-tx(general-store%26post-office)2016-1.jpg
 ref12.jpg	File:NT Camp Store (29761598140).jpg	vastateparksstaff	CC BY 2.0	https://commons.wikimedia.org/wiki/File:NT_Camp_Store_(29761598140).jpg
-ref13.jpg	File:Two Medicine Camp Store (2).jpg	MONGO	CC BY-SA 4.0	https://commons.wikimedia.org/wiki/File:Two_Medicine_Camp_Store_(2).jpg
 ref14.jpg	File:Camp store at Can Tho PW Camp, November 1968.jpg	NARA photo 111-CCV-430-CC53539 by SP5 Ronald Delaurier	Public domain	https://commons.wikimedia.org/wiki/File:Camp_store_at_Can_Tho_PW_Camp,_November_1968.jpg
-ref15.jpg	File:ZAD Convenience Store Al Qudra.jpg	Missan IT Solutions	CC BY-SA 4.0	https://commons.wikimedia.org/wiki/File:ZAD_Convenience_Store_Al_Qudra.jpg
-ref16.jpg	File:Camp Mather Store in 2022.jpg	MikeVdP	CC BY-SA 4.0	https://commons.wikimedia.org/wiki/File:Camp_Mather_Store_in_2022.jpg
 ref17.jpg	File:熊本流通団地２階.jpg	ja:User:JO2337	CC BY-SA 3.0	https://commons.wikimedia.org/wiki/File:%E7%86%8A%E6%9C%AC%E6%B5%81%E9%80%9A%E5%9B%A3%E5%9C%B0%EF%BC%92%E9%9A%8E.jpg
-ref18.jpg	File:Uncle Julio's Store Front.jpg	Aspensmonster	CC BY-SA 4.0	https://commons.wikimedia.org/wiki/File:Uncle_Julio%27s_Store_Front.jpg
-ref19.jpg	File:Van Camp’s Store Building, Main Street, Metamora, IN.jpg	w_lemay	CC BY-SA 2.0	https://commons.wikimedia.org/wiki/File:Van_Camp%E2%80%99s_Store_Building,_Main_Street,_Metamora,_IN.jpg
-ref20.jpg	File:Historical Marker, Van Camp’s Store Building, Main Street, Metamora, IN.jpg	w_lemay	CC BY-SA 2.0	https://commons.wikimedia.org/wiki/File:Historical_Marker,_Van_Camp%E2%80%99s_Store_Building,_Main_Street,_Metamora,_IN.jpg
 ref21.jpg	File:Winnibigoshish 1932 Tourist Camp-18-Big Winnie General Store interior.jpg	unknown	CC BY-SA 4.0	https://commons.wikimedia.org/wiki/File:Winnibigoshish_1932_Tourist_Camp-18-Big_Winnie_General_Store_interior.jpg
 ref22.jpg	File:Winnibigoshish 1932 Tourist Camp-17-Big Winnie General Store interior.jpg	unknown	CC BY-SA 4.0	https://commons.wikimedia.org/wiki/File:Winnibigoshish_1932_Tourist_Camp-17-Big_Winnie_General_Store_interior.jpg
 ref23.jpg	File:Winnibigoshish 1932 Tourist Camp-16-Big Winnie General Store-Interior.jpg	unknown	CC BY-SA 4.0	https://commons.wikimedia.org/wiki/File:Winnibigoshish_1932_Tourist_Camp-16-Big_Winnie_General_Store-Interior.jpg
