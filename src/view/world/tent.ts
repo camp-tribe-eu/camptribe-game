@@ -1,10 +1,10 @@
-// GAME-189 · намет руками (OD-022): вигляд і відгук. Логіку (місце, шкала, кілки) веде чистий автомат content/tent-pitch.ts; тут лише малюємо його стан,
+// GAME-189 · намет руками (OD-022): вигляд і відгук. GAME-203: намет разом — помічники (мама й Метью) тягнуть відтяжки з боків, кілків на руки тата менше. Логіку (місце, шкала, кілки) веде чистий автомат content/tent-pitch.ts; тут лише малюємо його стан,
 // рухаємо героя «ударом» (стиснення + нахил до кілка; лист удару GAME-191 ще не намальований), пил, звук і струс камери. Стан показу: ядро й сейв його не знають.
 import Phaser from 'phaser';
 import { calmMotion } from '../../platform/motion';
 import { playUi } from '../../audio/ui-sounds';
 import { sfx } from '../../audio/sfx';
-import { PEGS, BAND, FOOT, IDLE, WOBBLE_MS, markerAt, placeOk, startTent, stepTent, type TentEvent, type TentInput, type TentState } from '../../content/tent-pitch';
+import { MAX_HELPERS, PEGS, BAND, FOOT, IDLE, WOBBLE_MS, markerAt, placeOk, startTent, stepTent, type TentEvent, type TentInput, type TentState } from '../../content/tent-pitch';
 import type { Key } from '../../i18n';
 import type { Dir } from './character';
 import { facingToward } from '../npc-talk';
@@ -19,8 +19,10 @@ const TOP = 100_000;
 const FONT = { fontFamily: 'CampPixel, monospace', fontSize: '8px', color: '#f4f1e8', backgroundColor: '#1b1f23dd', padding: { x: 4, y: 3 }, wordWrap: { width: 150 }, align: 'center' } as const;
 
 /** Видимий стан для e2e (лише читання). */
-export interface TentProbe { phase: TentState['phase']; pegs: number; marker: number; inBand: boolean; placeOk: boolean; x: number; y: number }
-export const TENT_PROBE_IDLE: TentProbe = { phase: 'idle', pegs: 0, marker: 0, inBand: false, placeOk: false, x: 0, y: 0 };
+export interface TentProbe { phase: TentState['phase']; pegs: number; /** GAME-203: скільки кілків на руки тата й скільки помічників тягнуть відтяжки. */ need: number; helpers: number; marker: number; inBand: boolean; placeOk: boolean; x: number; y: number }
+export const TENT_PROBE_IDLE: TentProbe = { phase: 'idle', pegs: 0, need: PEGS, helpers: 0, marker: 0, inBand: false, placeOk: false, x: 0, y: 0 };
+/** GAME-203: де стоять помічники відносно центру намету — ліворуч і праворуч від підошви, трохи нижче (тягнуть відтяжки до себе). */
+export const HELPER_OFF: readonly Pt[] = [{ x: -FOOT.w / 2 - 12, y: 6 }, { x: FOOT.w / 2 + 12, y: 6 }];
 
 /** Короткий ефект, що рахується кадрами гри (не таймером і не tween: сторож no-realtime): k 0..1 за `dur` мс. */
 interface Fx { age: number; readonly dur: number; readonly apply: (k: number) => void; readonly end: () => void }
@@ -37,6 +39,8 @@ export class TentRig {
   private spot: Pt = { x: 0, y: 0 };
   private solidAt: (x: number, y: number) => boolean = () => false;
   private others: readonly Pt[] = [];
+  /** GAME-203: скільки членів родини тягнуть відтяжки (0 — тато сам). Ставить сцена на begin. */
+  private helpers = 0;
   /** Куди дивитись герою на останньому ударі (до кілка); сцена грає thrust у цей бік. */
   strikeDir: Dir = 'down';
 
@@ -46,11 +50,16 @@ export class TentRig {
   /** Герой стоїть, поки б'є кілки (у фазі розміщення ходить вільно: привид іде за ним). */
   get holdsHero(): boolean { return this.s.phase === 'peg'; }
   get phase(): TentState['phase'] { return this.s.phase; }
+  /** GAME-203: світові точки, де стоять помічники (у порядку HELPER_OFF), поки намет ставиться; порожньо — помічників нема або кілки ще не почались. */
+  helperSpots(): Pt[] { return this.s.phase === 'peg' ? HELPER_OFF.slice(0, this.helpers).map((o) => ({ x: this.at.x + o.x, y: this.at.y + o.y })) : []; }
+  /** Центр намету (підошви), поки він ставиться чи вже стоїть. */
+  point(): Pt { return { x: this.at.x, y: this.at.y }; }
 
-  begin(spot: Pt, solidAt: (x: number, y: number) => boolean, others: readonly Pt[]): void {
+  begin(spot: Pt, solidAt: (x: number, y: number) => boolean, others: readonly Pt[], helpers = 0): void {
     this.reset();
     this.spot = spot; this.solidAt = solidAt; this.others = others;
-    this.s = startTent();
+    this.helpers = Math.max(0, Math.min(MAX_HELPERS, helpers));
+    this.s = startTent(this.helpers);
     this.g = this.scene.add.graphics();
     this.meter = this.scene.add.graphics().setDepth(TOP);
     this.hint = this.scene.add.text(0, 0, '', FONT).setOrigin(0.5, 1).setDepth(TOP + 1);
@@ -58,7 +67,7 @@ export class TentRig {
 
   /** Четвертий кілок забито: лишається готовий намет, шкала й підказка зникають. */
   finish(): void {
-    if (this.g) { this.g.clear(); this.g.setAngle(0).setDepth(this.at.y - 8); drawTent(this.g, PEGS, null, 1, PEGS, -1, 0); }
+    if (this.g) { this.g.clear(); this.g.setAngle(0).setDepth(this.at.y - 8); drawTent(this.g, PEGS, null, 1, PEGS, -1, 0, 0); }
     this.reset(true);
   }
 
@@ -73,7 +82,7 @@ export class TentRig {
 
   probe(): TentProbe {
     const m = markerAt(this.s.t);
-    return { phase: this.s.phase, pegs: this.s.pegs, marker: m, inBand: m >= BAND.from && m <= BAND.to, placeOk: this.ok, x: this.at.x, y: this.at.y };
+    return { phase: this.s.phase, pegs: this.s.pegs, need: this.s.need, helpers: this.s.phase === 'idle' ? 0 : this.helpers, marker: m, inBand: m >= BAND.from && m <= BAND.to, placeOk: this.ok, x: this.at.x, y: this.at.y };
   }
 
   private feed(i: TentInput): TentEvent {
@@ -106,7 +115,7 @@ export class TentRig {
     if (!this.active) return 'none';
     const placing = this.s.phase === 'place';
     const e = this.feed({ kind: 'act', placeOk: this.ok });
-    const peg = CORNERS[Math.min(this.s.pegs - (e === 'hit' || e === 'done' ? 1 : 0), PEGS - 1)] as Pt;
+    const peg = CORNERS[Math.min(this.s.pegs - (e === 'hit' || e === 'done' ? 1 : 0), PEGS - 1)] as Pt;   // тато б'є кути по черзі з першого; решту (need..PEGS) тримають відтяжками помічники
     switch (e) {
       case 'placed': playUi('confirm'); this.dust(this.at.x, this.at.y + 8, 5); break;
       case 'blocked': playUi('back'); this.shake(this.g, 3); break;
@@ -145,13 +154,15 @@ export class TentRig {
     const g = this.g;
     if (!g) return;
     const placing = this.s.phase === 'place';
-    const stage = placing ? PEGS : this.s.pegs;
+    // GAME-203: полотно росте з кожним кілком тата до повного (з помічниками кілків менше — ростe більшими кроками); відтяжки тягнуть — полотно дихає на 1–2 px.
+    const stage = placing ? PEGS : Math.round((PEGS * this.s.pegs) / this.s.need);
+    const pull = !placing && this.helpers > 0 && !calmMotion() ? (1 + Math.sin(time / 260)) * 1.5 : 0;
     g.setPosition(this.at.x, this.at.y);
     if (!placing && this.wobbleLeft > 0 && !calmMotion()) g.setAngle(Math.sin(time / 28) * 3 * (this.wobbleLeft / WOBBLE_MS));
     else if (!placing) g.setAngle(0);
     g.setDepth(placing ? TOP - 2 : this.at.y - 8);
     g.clear();
-    drawTent(g, stage, placing ? (this.ok ? 0x6fe07a : 0xe05a5a) : null, placing ? 0.55 : 1, this.s.pegs, placing ? -1 : Math.min(this.s.pegs, PEGS - 1), time);
+    drawTent(g, stage, placing ? (this.ok ? 0x6fe07a : 0xe05a5a) : null, placing ? 0.55 : 1, this.s.pegs, placing ? -1 : Math.min(this.s.pegs, PEGS - 1), time, pull, placing ? 0 : this.helpers);
     const meter = this.meter;
     const hint = this.hint;
     if (!meter || !hint) return;
@@ -165,22 +176,31 @@ export class TentRig {
       meter.fillStyle(0x6fe07a, 1).fillRect(x0 + w * BAND.from, top, w * (BAND.to - BAND.from), 8);
       meter.fillStyle(0xf4f1e8, 1).fillRect(x0 + w * markerAt(this.s.t) - 1, top - 4, 3, 16);
     }
-    const msg = placing ? this.text(this.ok ? 'tent.place' : 'tent.blocked') : `${this.text('tent.peg')} ${Math.min(this.s.pegs + 1, PEGS)}/${PEGS}`;
+    const msg = placing ? this.text(this.ok ? 'tent.place' : 'tent.blocked') : `${this.text('tent.peg')} ${Math.min(this.s.pegs + 1, this.s.need)}/${this.s.need}`;
     if (hint.text !== msg) hint.setText(msg);
     hint.setOrigin(0.5, 0).setPosition(cx, top + 14);
   }
 }
 
-/** Намет із 5 ступенів: підошва, кілки, каркас і полотно, що виростає з кожним кілком. `tint` — привид (зелений/червоний). */
-function drawTent(g: Phaser.GameObjects.Graphics, stage: number, tint: number | null, alpha: number, hits: number, current: number, time: number): void {
+/**
+ * Намет із 5 ступенів: підошва, кілки, каркас і полотно, що виростає з кожним кілком. `tint` — привид (зелений/червоний).
+ * GAME-203: `pull` (px) — полотно розтягнуте відтяжками вшир, покадрово від часу сцени; `helpers` — скільки відтяжок тримають (лінії від кутів до помічників, HELPER_OFF).
+ */
+function drawTent(g: Phaser.GameObjects.Graphics, stage: number, tint: number | null, alpha: number, hits: number, current: number, time: number, pull: number, helpers = 0): void {
   const hw = FOOT.w / 2; const hh = FOOT.h / 2;
   g.fillStyle(tint ?? 0x4f6a3a, alpha * 0.8).fillRect(-hw, -hh, FOOT.w, FOOT.h);
   if (stage > 0) {
     const h = 6 + stage * 5;
-    g.fillStyle(tint ?? 0xd9822b, alpha).fillTriangle(-hw, hh, hw, hh, 0, hh - h);
-    g.fillStyle(tint ?? 0xa85f1c, alpha).fillTriangle(0, hh - h, hw, hh, 0, hh);
+    const w = hw + pull;
+    g.fillStyle(tint ?? 0xd9822b, alpha).fillTriangle(-w, hh, w, hh, 0, hh - h);
+    g.fillStyle(tint ?? 0xa85f1c, alpha).fillTriangle(0, hh - h, w, hh, 0, hh);
     g.fillStyle(tint ?? 0x1b1f23, alpha).fillTriangle(-6, hh, 6, hh, 0, hh - h * 0.6);
   }
+  // Відтяжки: від бічних кутів до рук помічників (вони стоять на HELPER_OFF), поки намет ставиться.
+  HELPER_OFF.slice(0, helpers).forEach((o, k) => {
+    const sx = k === 0 ? -hw : hw;
+    g.lineStyle(1, 0xe8e6e3, 0.9).beginPath().moveTo(sx, 0).lineTo(o.x + (k === 0 ? 6 : -6), o.y - 14 + pull * 0.5).strokePath();
+  });
   CORNERS.forEach((c, i) => {
     if (tint !== null) return;
     if (i < hits) g.fillStyle(0x8a5a2b, 1).fillRect(c.x - 1, c.y - 1, 3, 4);

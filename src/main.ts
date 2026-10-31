@@ -39,6 +39,7 @@ import { paintRoom } from './view/intro-room';
 import { portraitFor } from './view/portraits';
 import { headCrop, sheetOf } from './view/world/portrait-art';
 import { miaSpots, requestMarker, requestTarget, requestsDone } from './content/requests';
+import { errandMove, plannedErrands } from './content/errands';
 import { MAP_SPOTS, departBlock, isBulky, isMapFirstSpot, mapKeyFor, moveKey, needsLeft, nextTarget, npcLive, resolveSpot, spotLook, unpackMoves } from './content/map-first';
 import { packFlag } from './core/packing';
 import type { GameState } from './core/state';
@@ -48,7 +49,7 @@ import type { RewardEvent } from './ui/port';
 const app = document.querySelector<HTMLElement>('#app');
 if (!app) throw new Error('#app is missing');
 
-const probe: WorldProbe = { ready: false, playerX: 0, playerY: 0, nearObject: null, nearKind: null, commandsSent: 0, cameraScrollX: 0, cameraScrollY: 0, clockMinutes: 0, saveLoaded: false, cameraLerp: [0, 0], followers: [], leisure: [],
+const probe: WorldProbe = { ready: false, playerX: 0, playerY: 0, nearObject: null, nearKind: null, commandsSent: 0, cameraScrollX: 0, cameraScrollY: 0, clockMinutes: 0, saveLoaded: false, cameraLerp: [0, 0], followers: [], leisure: [], jobs: [],
   playerFrame: 0, playerDir: 'down', playerMoving: false, playerDepth: 0, coveredTiles: 0, behindTiles: 0, fps: 0, fpsWindows: 0, firstFrameMs: 0,
   residents: [], bark: null, barkCount: 0, npcMarks: {}, miaAt: [], tent: TENT_PROBE_IDLE, wood: WOOD_PROBE_IDLE, fire: FIRE_PROBE_IDLE, grill: GRILL_PROBE_IDLE, fish: FISH_PROBE_IDLE,
   daylight: { on: false, visible: false, minuteOfDay: 0, darkness: 0, color: 0xffffff, glow: 0 },
@@ -252,6 +253,9 @@ let hintMode: HintMode = loadSettings().hintMode;
 let hintLast = false;
 const applyHintMode = (): void => { hintIdle.mode = hintLegacy ? 'always' : hintMode; };
 applyHintMode();
+let errandsFor: GameState | null = null;
+let errandsMin = -1;
+let errandsMemo: ReturnType<typeof plannedErrands> = [];
 const worldHooks: WorldHooks = {
   hintTick: (dt) => {
     if (bridge.state.game.dialogue !== null) hintIdle.poke();
@@ -295,6 +299,19 @@ const worldHooks: WorldHooks = {
   mapKey: () => switches.map ?? (switches.panelActs ? 'camp' : mapKeyFor(bridge.state.game.player?.locationId)),
   transport: () => bridge.state.game.player?.transportId ?? null,
   takeReward,
+  // GAME-202: доручення — факти ядра (f.errand-*), лише для живих справ; виконавець попрацював — та сама команда CompleteTask, але від помічника.
+  errands: () => {
+    // Раз на стан ядра й хвилину годинника (строк справи), а не на кадр.
+    if (errandsFor !== bridge.state.game || errandsMin !== bridge.state.clock.minutes) { errandsFor = bridge.state.game; errandsMin = bridge.state.clock.minutes; errandsMemo = plannedErrands(bridge.state.game.flags, (spot) => liveSpot(bridge.state, spot, GAME_DEFS)); }
+    return errandsMemo;
+  },
+  onErrand: (task) => {
+    const e = plannedErrands(bridge.state.game.flags, (spot) => liveSpot(bridge.state, spot, GAME_DEFS)).find((x) => x.task === task);
+    if (!e) return;
+    bridge.send(errandMove(e));
+    storyChanged();
+  },
+  tentAlone: () => switches.tentAlone === true,
 };
 /** GAME-179: запасні портрети — обрізки спрайтів, зроблені раз на лист. */
 const spriteCrops = new Map<string, string>();

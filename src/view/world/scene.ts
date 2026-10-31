@@ -13,7 +13,8 @@ import type { Bridge } from './bridge';
 import { PET_SHEETS, type WorldArt } from './art';
 import { ACTIONS, ACTION_COLS, COLS, DIR_ROW, FRAME, frameIndex, type Action as HeroAction, type Dir } from './character';
 import { FIRE_CORE, FIRE_GLOW, ambientAt, glowAlpha, timeOfDay } from './daylight';
-import { FOLLOW_SPEED_FACTOR, SPEED, centerOf, gridFromWalls, isSolid, restPoints, stepFollowers, stepTo, tileOf, type Grid, type Pt } from './follow';
+import { FOLLOW_SPEED_FACTOR, SPEED, centerOf, findPath, gridFromWalls, isSolid, restPoints, stepFollowers, stepTo, tileOf, type Grid, type Pt, type Tile } from './follow';
+import { MAX_HELPERS } from '../../content/tent-pitch';
 import type { MapKey } from '../../content/map-first';
 import { ICON_SIZE, iconIndex, objectiveIcon } from '../../content/objective-icons';
 import { playUi } from '../../audio/ui-sounds';
@@ -48,6 +49,18 @@ const FOLLOWERS = ['victoria', 'matthew'] as const;
 const FOLLOWER_NPC = ['npc.victoria', 'npc.matthew'] as const;
 /** Довгий кадр (згорнута вкладка) не телепортує слідувачів: крок обмежений 0,1 с. */
 const MAX_FOLLOW_DT = 0.1;
+/** GAME-202: скільки секунд виконавець доручення видимо працює біля цілі (анімація thrust по колу), перш ніж сцена віддасть ядру команду помічника. */
+export const ERRAND_WORK_S = 2.4;
+/** GAME-203: помічник тягне відтяжку, лише якщо він не далі стількох тайлів шляху від намету й не зайнятий дорученням; інакше тато ставить сам (довше). */
+const HELPER_REACH_STEPS = 10;
+const ACT_LOOP_FPS = 9;
+/**
+ * GAME-202/203: що зараз робить член родини замість іти у строю. `errand` — несе речі до об'єкта мапи (цілі справи), `tent` — тягне відтяжку намету.
+ * Стан показу: ядро знає лише прапорець доручення і команду, яку сцена шле після роботи.
+ */
+type Job =
+  | { readonly kind: 'errand'; readonly task: string; readonly spot: Pt; goal: Tile | null; workS: number; sent: boolean }
+  | { readonly kind: 'tent'; readonly spot: Pt; goal: Tile | null };
 /** GAME-172: репліка мешканця висить стільки мс, і той самий мешканець озветься знову не раніше ніж за стільки. */
 const BARK_SHOW_MS = 4000;
 const BARK_COOLDOWN_MS = 25_000;
@@ -100,6 +113,12 @@ export interface WorldHooks {
   transport(): string | null;
   /** GAME-181: підпис нагороди («+15 XP +10 ОМ»), що ще не показана над героєм; забирає її (наступний виклик — null). */
   takeReward(): string | null;
+  /** GAME-202: кому що доручено (факти ядра f.errand-*, лише живі справи): член родини (ключ FOLLOWERS) → об'єкт мапи справи. Немає — доручень у грі нема. */
+  errands?(): readonly { readonly member: string; readonly task: string; readonly spot: string }[];
+  /** GAME-202: виконавець дійшов і попрацював — ядру команда помічника закрити справу (CompleteTask, actor helper). */
+  onErrand?(task: string): void;
+  /** GAME-203 (лише збірка e2e, ?tentAlone=1): тато ставить намет сам, навіть коли родина поруч — шлях «без помічників». */
+  tentAlone?(): boolean;
 }
 
 /** Хто з NPC якого листа ходьби має (лист — в art.ts); решта — як Еліза. */
@@ -164,6 +183,8 @@ export interface WorldProbe {
   miaAt: string[];
   /** GAME-189 (лише для e2e): намет руками — фаза, кілки, шкала (позиція маркера й чи він у зеленому), чи місце придатне. */
   tent: TentProbe;
+  /** GAME-202/203 (лише для e2e): що зараз робить кожен слідувач (у порядку FOLLOWERS): у строю (null), іде за дорученням / працює, чи тягне відтяжку намету. */
+  jobs: ({ kind: 'errand'; task: string; phase: 'walk' | 'work' } | { kind: 'tent'; phase: 'walk' | 'pull' } | null)[];
   /** GAME-190 (лише для e2e): дрова руками — гілки, колода, шкала ударів. */
   wood: WoodProbe;
   /** GAME-190 (лише для e2e): вогнище руками — поліна, шкала сірника, чи тримає гравець дію. */
@@ -209,6 +230,10 @@ export class WorldScene extends Phaser.Scene {
   private chain: Pt[] = [];
   private followSprites: Phaser.GameObjects.Sprite[] = [];
   private followFacing: Dir[] = [];
+  /** GAME-202/203: чим зайнятий кожен слідувач (null — у строю чи на дозвіллі). */
+  private jobs: (Job | null)[] = [];
+  /** GAME-203: хто з FOLLOWERS тягне відтяжки намету, що зараз ставиться (індекси). */
+  private tentHelpers: number[] = [];
   /** GAME-172: фонові мешканці — розклад (чиста функція ігрового часу), спрайти, останній напрямок, репліка. */
   private residentLines: Timeline[] = [];
   private residentSprites: Phaser.GameObjects.Sprite[] = [];
@@ -416,7 +441,13 @@ export class WorldScene extends Phaser.Scene {
       for (let i = 0; i < ACTION_COLS[a] * 4; i++) tex.add(i, 0, (i % ACTION_COLS[a]) * FRAME, Math.floor(i / ACTION_COLS[a]) * FRAME, FRAME, FRAME);
     }
     this.addSheet('elise', this.art.sheets.elise);
-    for (const name of FOLLOWERS) this.addSheet(name, this.art.sheets[name]);
+    for (const name of FOLLOWERS) {
+      this.addSheet(name, this.art.sheets[name]);
+      // GAME-202/203: лист thrust родини — ключ `<ім'я>-thrust`, кадри за тим самим номером, що в героя.
+      const tex = this.textures.addCanvas(`${name}-thrust`, this.art.familyThrust[name]);
+      if (!tex) throw new Error(`texture ${name}-thrust failed`);
+      for (let i = 0; i < ACTION_COLS.thrust * 4; i++) tex.add(i, 0, (i % ACTION_COLS.thrust) * FRAME, Math.floor(i / ACTION_COLS.thrust) * FRAME, FRAME, FRAME);
+    }
     for (const [name, canvas] of Object.entries(this.art.residents)) this.addSheet(`res-${name}`, canvas);
 
     this.anims.create({ key: 'fire', frames: this.anims.generateFrameNumbers('campfire', { start: 0, end: 4 }), frameRate: 8, repeat: -1 });
@@ -428,7 +459,10 @@ export class WorldScene extends Phaser.Scene {
     }
     for (const name of FOLLOWERS) {
       for (const dir of DIRS) this.anims.create({ key: `walk-${name}-${dir}`, frames: Array.from({ length: COLS - 1 }, (_, i) => ({ key: name, frame: frameIndex(dir, i + 1) })), frameRate: WALK_FPS, repeat: -1 });
+      // GAME-202/203: робота руками по колу (несе речі, тягне відтяжку) — лист thrust без першого кадру «стоїть», повільніше за удар героя.
+      for (const dir of DIRS) this.anims.create({ key: `work-${name}-${dir}`, frames: Array.from({ length: ACTION_COLS.thrust - 1 }, (_, i) => ({ key: `${name}-thrust`, frame: DIR_ROW[dir] * ACTION_COLS.thrust + i + 1 })), frameRate: ACT_LOOP_FPS, repeat: -1 });
     }
+    this.jobs = FOLLOWERS.map(() => null);
     // Слідувачі — лише картинки: без тіла фізики й без інтерактивності, тож тап і кнопка дії їх «не бачать» (GAME-112, цілі взаємодії).
     this.followFacing = FOLLOWERS.map(() => 'down' as Dir);
     this.followSprites = FOLLOWERS.map((name) => this.add.sprite(0, 0, name, frameIndex('down', 0)).setOrigin(0.5, ORIGIN_Y));
@@ -573,6 +607,9 @@ export class WorldScene extends Phaser.Scene {
     this.followSprites.forEach((sp, i) => sp.setPosition(this.chain[i]?.x ?? 0, this.chain[i]?.y ?? 0).setDepth(this.chain[i]?.y ?? 0));
     this.probe.followers = this.chain.map((p) => ({ x: p.x, y: p.y }));
     this.probe.leisure = this.chain.map(() => null);
+    this.jobs = FOLLOWERS.map(() => null);
+    this.tentHelpers = [];
+    this.probe.jobs = FOLLOWERS.map(() => null);
     // GAME-172: мешканці живуть лише в таборі; на мапах дня 1 (двір, крамниця) їх нема. Шляхи — по сітці стін без клітинок цілей; розклад мусить будуватись (інакше мапа зламана — голосно).
     this.anchors = objects.filter((o) => typeOf(o) === 'anchor').map((o) => ({ x: o.x ?? 0, y: o.y ?? 0 }));
     const shore = objects.find((o) => typeOf(o) === 'anchor' && o.name === FISH_SPOT);   // GAME-193: береговий пункт риболовлі (необов'язкова справа, не на сюжетному шляху)
@@ -734,11 +771,53 @@ export class WorldScene extends Phaser.Scene {
     playUi(res === 'ok' ? 'press' : 'back');
   }
 
-  /** GAME-112: родина йде за героєм у обхід стін (GAME-173: вільним строєм); поки він стоїть — кожен на своїй точці дозвілля. Анімація й напрямок — з зсуву за кадр. */
+  /**
+   * GAME-202/203: роботи родини на цей кадр. Доручення — з фактів ядра (hooks.errands: лише живі справи, тож зроблена чи спізнена справа знімає роботу сама);
+   * відтяжки намету — поки тато б'є кілки (tent.phase peg) і помічник у tentHelpers. Робота, що триває, зберігає свій стан (ціль-тайл, секунди праці).
+   */
+  private planJobs(): void {
+    const errands = this.hooks.errands?.() ?? [];
+    const helperSpots = this.tent.helperSpots();
+    if (!this.tent.active) this.tentHelpers = [];   // намет поставлено чи справу закрито інакше — відтяжки відпущено (у фазі розміщення помічники ще чекають у строю)
+    FOLLOWERS.forEach((name, i) => {
+      const was = this.jobs[i] ?? null;
+      const e = errands.find((x) => x.member === name);
+      const at = e ? this.spots.find((x) => x.name === e.spot) : undefined;
+      if (e && at) { this.jobs[i] = was?.kind === 'errand' && was.task === e.task ? was : { kind: 'errand', task: e.task, spot: { x: at.x, y: at.y }, goal: null, workS: 0, sent: false }; return; }
+      const k = this.tentHelpers.indexOf(i);
+      const hs = k >= 0 ? helperSpots[k] : undefined;
+      if (hs) { this.jobs[i] = was?.kind === 'tent' ? was : { kind: 'tent', spot: hs, goal: null }; return; }
+      this.jobs[i] = null;
+    });
+  }
+
+  /**
+   * Тайл, на якому стоять біля `spot`: сусід тайла цілі з найкоротшим шляхом від `from` (сам тайл цілі — ні: закрив би позначку); нема — тайл цілі, якщо вільний.
+   * `exact` — стати на сам тайл точки (місце помічника біля намету), якщо він прохідний.
+   */
+  private standTile(from: Pt, spot: Pt, exact = false): Tile | null {
+    const t = tileOf(this.grid, spot);
+    const own = tileOf(this.grid, from);
+    if (exact && !isSolid(this.grid, t) && findPath(this.grid, own, t)) return t;
+    let best: Tile | null = null;
+    let bestLen = Infinity;
+    for (const d of [{ c: 0, r: 1 }, { c: -1, r: 0 }, { c: 1, r: 0 }, { c: 0, r: -1 }]) {
+      const n = { c: t.c + d.c, r: t.r + d.r };
+      if (isSolid(this.grid, n)) continue;
+      const len = findPath(this.grid, own, n)?.length ?? Infinity;
+      if (len < bestLen) { best = n; bestLen = len; }
+    }
+    if (best) return best;
+    return !isSolid(this.grid, t) && findPath(this.grid, own, t) ? t : null;
+  }
+
+  /** GAME-112: родина йде за героєм у обхід стін (GAME-173: вільним строєм); поки він стоїть — кожен на своїй точці дозвілля. Анімація й напрямок — з зсуву за кадр.
+   *  GAME-202/203: хто має роботу (доручення, відтяжка намету) — іде до неї сам і працює руками; у строю лишаються вільні. */
   private moveFollowers(deltaMs: number, time: number, moving: boolean): void {
     const dt = Math.min(deltaMs / 1000, MAX_FOLLOW_DT);
     const before = this.chain.map((p) => ({ x: p.x, y: p.y }));
     const hero = { x: this.player.x, y: this.player.y };
+    this.planJobs();
     // Дозвілля: герой простояв IDLE_AFTER_S — точки роздаються один раз (до наступного руху), без випадковості.
     if (moving) { this.idleS = 0; this.leisure = null; } else this.idleS += dt;
     if (!this.leisure && this.idleS >= IDLE_AFTER_S) {
@@ -746,31 +825,51 @@ export class WorldScene extends Phaser.Scene {
       this.leisure = assignLeisure(this.grid, hero, this.chain.length, this.leisureSpots, avoid);
     }
     const plan = this.leisure;
-    const rest = this.chain.filter((_, i) => !plan?.[i]);
+    const rest = this.chain.filter((_, i) => !plan?.[i] && !this.jobs[i]);
     const parked = (plan ?? []).flatMap((l) => (l ? [centerOf(this.grid, l)] : []));
-    if (rest.length > 0) stepFollowers(this.grid, hero, rest, dt, SPEED * FOLLOW_SPEED_FACTOR, [...this.spots, ...parked], this.heading);
+    const busy = this.chain.filter((_, i) => this.jobs[i]);
+    if (rest.length > 0) stepFollowers(this.grid, hero, rest, dt, SPEED * FOLLOW_SPEED_FACTOR, [...this.spots, ...parked, ...busy], this.heading);
     this.chain.forEach((p, i) => {
       const s = this.followSprites[i];
       const b = before[i];
       const out = this.probe.followers[i];
       const name = FOLLOWERS[i];
       if (!s || !b || !out || !name) return;
-      const spot = plan?.[i] ?? null;
+      const job = this.jobs[i] ?? null;
+      const spot = job ? null : plan?.[i] ?? null;
       let arrived = false;
-      if (spot) arrived = stepTo(this.grid, p, spot, dt, SPEED * FOLLOW_SPEED_FACTOR);
+      let working = false;
+      if (job) {
+        // До місця роботи — своїм шляхом у обхід стін; дійшов — лицем до цілі й руки в роботу (thrust по колу).
+        job.goal ??= this.standTile(p, job.spot, job.kind === 'tent');
+        arrived = job.goal ? stepTo(this.grid, p, job.goal, dt, SPEED * FOLLOW_SPEED_FACTOR) : true;
+        if (arrived) {
+          working = true;
+          this.followFacing[i] = facingToward(p, job.spot);
+          if (job.kind === 'errand') {
+            job.workS += dt;
+            if (!job.sent && job.workS >= ERRAND_WORK_S) { job.sent = true; this.hooks.onErrand?.(job.task); this.fx?.pop(p.x, p.y, 'OK'); playUi('confirm'); }
+          }
+        }
+      } else if (spot) arrived = stepTo(this.grid, p, spot, dt, SPEED * FOLLOW_SPEED_FACTOR);
       const dx = p.x - b.x;
       const dy = p.y - b.y;
       if (dx !== 0 || dy !== 0) this.followFacing[i] = Math.abs(dx) > Math.abs(dy) ? (dx < 0 ? 'left' : 'right') : (dy < 0 ? 'up' : 'down');
       if (arrived && spot) this.followFacing[i] = spot.face;
       const dir = this.followFacing[i] ?? 'down';
-      if (dx !== 0 || dy !== 0) s.anims.play(`walk-${name}-${dir}`, true);
-      else { s.anims.stop(); s.setFrame(frameIndex(dir, 0)); }
+      if (working) s.anims.play(`work-${name}-${dir}`, true);
+      else {
+        if (s.texture.key !== name) s.setTexture(name, frameIndex(dir, 0));   // повернувся з роботи — знову лист ходьби
+        if (dx !== 0 || dy !== 0) s.anims.play(`walk-${name}-${dir}`, true);
+        else { s.anims.stop(); s.setFrame(frameIndex(dir, 0)); }
+      }
       // Лише картинка гойдається на 1 px (проба й глибина — по справжній точці).
-      const bob = arrived ? Math.round(Math.sin(time / 380 + i * 2.1)) : 0;
+      const bob = arrived && spot ? Math.round(Math.sin(time / 380 + i * 2.1)) : 0;
       s.setPosition(p.x, p.y + bob).setDepth(p.y);
       out.x = p.x;
       out.y = p.y;
       this.probe.leisure[i] = arrived && spot ? { kind: spot.kind, c: spot.c, r: spot.r } : null;
+      this.probe.jobs[i] = job ? (job.kind === 'errand' ? { kind: 'errand', task: job.task, phase: working ? 'work' : 'walk' } : { kind: 'tent', phase: working ? 'pull' : 'walk' }) : null;
     });
   }
 
@@ -1057,7 +1156,15 @@ export class WorldScene extends Phaser.Scene {
       // Вогнище, що чекає на вогонь, — лише руками (поліна → сірник); поліна й сірник вище, тут — коли герой ще не готовий (сірник, а не полінця).
     } else if (pressed && act?.name === 'task.pitch-tent') {
       const at = this.spots.find((x) => x.name === 'task.pitch-tent');
-      if (at) this.tent.begin({ x: at.x, y: at.y }, (x, y) => { const t = tileOf(this.grid, { x, y }); return isSolid(this.grid, t); }, this.spots.filter((x) => x.name !== 'task.pitch-tent' && this.hooks.isLive(x.name)).map((x) => ({ x: x.x, y: x.y })));
+      if (at) {
+        // GAME-203: хто з родини поруч і вільний — тягне відтяжки (кілків на руки тата менше: tent-pitch pegsFor); зайняті дорученням чи далекі — ні.
+        this.tentHelpers = this.hooks.tentAlone?.() ? [] : this.chain.flatMap((p, i) => {
+          if (this.jobs[i]?.kind === 'errand') return [];
+          const way = findPath(this.grid, tileOf(this.grid, p), tileOf(this.grid, at));
+          return way !== null && way.length - 1 <= HELPER_REACH_STEPS ? [i] : [];
+        }).slice(0, MAX_HELPERS);
+        this.tent.begin({ x: at.x, y: at.y }, (x, y) => { const t = tileOf(this.grid, { x, y }); return isSolid(this.grid, t); }, this.spots.filter((x) => x.name !== 'task.pitch-tent' && this.hooks.isLive(x.name)).map((x) => ({ x: x.x, y: x.y })), this.tentHelpers.length);
+      }
     } else if (pressed && act) {
       if (act.kind === 'npc') { this.faceEachOther(act); this.hooks.onNpc(act.name); }
       else if (carrying && (act.name === 'obj.vehicle' || act.name === 'obj.trunk')) this.unloadOne();
