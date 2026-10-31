@@ -71,3 +71,7 @@ list-lpc-store	ogasearch:lpc store interior
 list-lpc-counter	ogasearch:lpc counter
 list-lpc-market	ogasearch:lpc market stall
 list-lpc-camping	ogasearch:lpc camping
+# GAME-204: кандидати магазину — прилавки/верстати, ящики й ятки, полиці
+pack-lpc-woodshop	oga:lpc-woodshop
+pack-lpc-tailor	oga:lpc-tailor
+pack-lpc-village-decor	oga:lpc-medieval-village-decorations
