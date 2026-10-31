@@ -116,7 +116,8 @@ export interface WorldHooks {
   /** GAME-202: кому що доручено (факти ядра f.errand-*, лише живі справи): член родини (ключ FOLLOWERS) → об'єкт мапи справи. Немає — доручень у грі нема. */
   errands?(): readonly { readonly member: string; readonly task: string; readonly spot: string }[];
   /** GAME-202: виконавець дійшов і попрацював — ядру команда помічника закрити справу (CompleteTask, actor helper). */
-  onErrand?(task: string): void;
+  /** true — ядро прийняло (справу закрито); false — відхилило: сцена почне роботу наново. */
+  onErrand?(task: string): boolean;
   /** GAME-203 (лише збірка e2e, ?tentAlone=1): тато ставить намет сам, навіть коли родина поруч — шлях «без помічників». */
   tentAlone?(): boolean;
 }
@@ -848,7 +849,7 @@ export class WorldScene extends Phaser.Scene {
           this.followFacing[i] = facingToward(p, job.spot);
           if (job.kind === 'errand') {
             job.workS += dt;
-            if (!job.sent && job.workS >= ERRAND_WORK_S) { job.sent = true; this.hooks.onErrand?.(job.task); this.fx?.pop(p.x, p.y, 'OK'); playUi('confirm'); }
+            if (!job.sent && job.workS >= ERRAND_WORK_S) { if (this.hooks.onErrand?.(job.task) === false) { job.workS = 0; } else { job.sent = true; this.fx?.pop(p.x, p.y, 'OK'); playUi('confirm'); } }
           }
         }
       } else if (spot) arrived = stepTo(this.grid, p, spot, dt, SPEED * FOLLOW_SPEED_FACTOR);

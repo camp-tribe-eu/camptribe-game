@@ -307,9 +307,11 @@ const worldHooks: WorldHooks = {
   },
   onErrand: (task) => {
     const e = plannedErrands(bridge.state.game.flags, (spot) => liveSpot(bridge.state, spot, GAME_DEFS)).find((x) => x.task === task);
-    if (!e) return;
+    if (!e) return true;
     bridge.send(errandMove(e));
     storyChanged();
+    // Рецензія PR #141: ядро могло відхилити (гонка на хвилині) — тоді справа ще жива, і сцена спробує знову, а не «працює» вічно.
+    return !plannedErrands(bridge.state.game.flags, (spot) => liveSpot(bridge.state, spot, GAME_DEFS)).some((x) => x.task === task);
   },
   tentAlone: () => switches.tentAlone === true,
 };
