@@ -1,0 +1,16 @@
+{
+ "batch": [
+  {
+   "name": "boots-rack",
+   "endpoint": "fal-ai/flux-pro/kontext",
+   "payload": {
+    "prompt": "LPC style pixel art, flat FRONT elevation view, orthographic, NO isometric, NO perspective, the side of the object is NOT visible, only the front face, like a 2D side-scroller sprite, light from top-left, flat magenta #FF00FF background. Same pixel art style as this reference furniture sprite sheet (dark outline, limited palette). Draw ONE object: a simple wooden shelf unit with three shelves holding pairs of hiking boots, about 1.1 meters wide and 1.5 meters tall, perfectly rectangular silhouette, perfectly vertical sides, perfectly horizontal bottom edge. Isolated on solid flat pure magenta #FF00FF background, no floor, no cast shadow, no text, no logo, no people.",
+    "image_url": "https://raw.githubusercontent.com/camp-tribe-eu/camptribe-game/main/assets/tiles/home_furniture.png",
+    "num_images": 1,
+    "output_format": "png",
+    "safety_tolerance": "2",
+    "seed": 777
+   }
+  }
+ ]
+}
