@@ -11,6 +11,9 @@ import homeWindowsDoors from '../../../assets/tiles/home_windows_doors.png';
 import homeFurniture from '../../../assets/tiles/home_furniture.png';
 import homeOffice from '../../../assets/tiles/home_office.png';
 import homeShelf from '../../../assets/tiles/home_shelf.png';
+import shopWoodshop from '../../../assets/tiles/shop_woodshop.png';
+import shopTailor from '../../../assets/tiles/shop_tailor.png';
+import shopDecor from '../../../assets/tiles/shop_decor.png';
 import campfire from '../../../assets/sprites/campfire.png';
 import bodyMale from '../../../assets/characters/body/bodies/male/walk.png';
 import bodyFemale from '../../../assets/characters/body/bodies/female/walk.png';
@@ -58,13 +61,16 @@ import { ACTIONS, ACTION_COLS, composeSheet, loadImage, type Action, type LayerS
 export const TILESET_IMAGES: Readonly<Record<string, string>> = {
   'lpc-terrain': terrain, 'camp-tent': tent, 'camp-car': car,
   'home-walls': homeWalls, 'home-floor': homeFloor, 'home-windows-doors': homeWindowsDoors, 'home-furniture': homeFurniture, 'home-office': homeOffice, 'home-shelf': homeShelf,
+  'shop-woodshop': shopWoodshop, 'shop-tailor': shopTailor, 'shop-decor': shopDecor,
 };
 const HOME_SETS = ['home-walls', 'home-floor', 'home-windows-doors', 'home-furniture', 'home-office', 'home-shelf', 'lpc-terrain', 'camp-car'] as const;
+/** GAME-204: крамниця спорядження — власні аркуші (вішаки, верстак-прилавок, намет), без домашніх меблів і книжкової полиці. */
+const SHOP_SETS = ['home-walls', 'home-floor', 'shop-woodshop', 'shop-tailor', 'shop-decor', 'lpc-terrain', 'camp-car'] as const;
 /** Які тайлсети має кожна мапа гри (ключ — як у scene.ts і map-first.ts). */
 export const MAP_TILESETS: Readonly<Record<'camp' | 'home' | 'shop' | 'road', readonly string[]>> = {
   camp: ['lpc-terrain', 'camp-tent', 'camp-car'],
   home: HOME_SETS,
-  shop: HOME_SETS,
+  shop: SHOP_SETS,
   road: HOME_SETS,   // GAME-183: смуга дороги — трава/стежка terrain і авто, як двір дому
 };
 export const CAMPFIRE_SHEET = campfire;

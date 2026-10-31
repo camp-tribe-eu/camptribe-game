@@ -155,17 +155,41 @@ def build_home():
 
 
 # ---------------------------------------------------------------- крамниця
+# GAME-204 · крамниця туристичного спорядження за research/refs/NOTES.md (а не домашня кімната з книжковою полицею): каса біля входу
+# (касир стоїть ПОПЕРЕДУ прилавка обличчям до дверей), виставка намету на трав'яному килимку, стіл-гондола зі згортками,
+# стіна одягу, настінні панелі з інструментом, кошики й ящик дрібниць. Графіка — assets/tiles/shop_*.png (scripts/assets/build_shop_outdoor.py).
+SHOP_TS = [
+    ('home-walls', '../../assets/tiles/home_walls.png', 4, 12, 1, 128, 96),
+    ('home-floor', '../../assets/tiles/home_floor.png', 2, 2, 13, 64, 32),
+    ('shop-woodshop', '../../assets/tiles/shop_woodshop.png', 8, 24, 15, 256, 96),
+    ('shop-tailor', '../../assets/tiles/shop_tailor.png', 10, 20, 39, 320, 64),
+    ('shop-decor', '../../assets/tiles/shop_decor.png', 8, 24, 59, 256, 96),
+]
+WOOD0, TAIL0, DECO0 = 15, 39, 59                      # firstgid аркушів крамниці
 SHOP_SPOTS = [
     ('s.start', 'spawn', (9, 6)),
     ('s.car', 'spawn', (10, 10)),
-    ('take.item.tent', 'trigger', (2, 4)),
-    ('take.item.sleeping-bag', 'trigger', (5, 4)),
-    ('take.item.lantern', 'trigger', (8, 4)),
-    ('step.ST-003', 'trigger', (15, 4)),
+    ('take.item.tent', 'trigger', (4, 6)),            # на килимку праворуч від наметової виставки
+    ('take.item.sleeping-bag', 'trigger', (7, 6)),    # перед столом-гондолою зі згортками
+    ('take.item.lantern', 'trigger', (11, 7)),        # ліворуч від прилавка, де стоїть ліхтар
+    ('step.ST-003', 'trigger', (15, 5)),              # збоку прилавка, за ним — місце касира
     ('obj.vehicle', 'trigger', (13, 10)),
-    ('obj.buy', 'trigger', (12, 6)),                  # GAME-183: прилавок — купити чи продати (рамка вибору)
+    ('obj.buy', 'trigger', (13, 8)),                  # GAME-183: прилавок — купити чи продати; покупець стоїть перед ним
     ('obj.drying', 'trigger', (4, 10)),               # біля входу: мотузка для сушіння
 ]
+
+
+def block(layers, W, H, name, c0, r0, cols, rows, first, sheet_cols, sc, sr):
+    """Кладе прямокутник тайлів аркуша (стартова клітинка sc,sr) на мапу."""
+    for dr in range(rows):
+        for dc in range(cols):
+            put(layers, W, H, name, c0 + dc, r0 + dr, first + (sr + dr) * sheet_cols + sc + dc)
+
+
+def solid_block(layers, W, H, c0, r0, cols, rows, first, sheet_cols, sc, sr):
+    """Предмет, що стоїть на підлозі: усі клітинки — у walls (колізія), верхній рядок ще й в above (голова предмета поверх героя за ним)."""
+    block(layers, W, H, 'walls', c0, r0, cols, rows, first, sheet_cols, sc, sr)
+    block(layers, W, H, 'above', c0, r0, cols, 1, first, sheet_cols, sc, sr)
 
 
 def build_shop():
@@ -177,14 +201,41 @@ def build_shop():
     for r in range(3, 9):
         for c in range(W):
             put(layers, W, H, 'ground', c, r, 14)         # кремова плитка
-    for c0 in (1, 4, 7, 11):                              # чотири полиці з товаром (шафа 2×3: верх — above, низ — walls); три перші — з речами списку
-        for dc, (top0, top1, low) in enumerate(((74, 76, 78), (75, 77, 79))):
-            put(layers, W, H, 'above', c0 + dc, 1, top0)
-            put(layers, W, H, 'above', c0 + dc, 2, top1)
-            put(layers, W, H, 'walls', c0 + dc, 3, low)
-    for dc, g in enumerate((46, 47, 48)):                 # прилавок
-        put(layers, W, H, 'walls', 14 + dc, 3, g)
-    put(layers, W, H, 'above', 15, 2, 69)                 # ноутбук на прилавку
+    for r in (7, 8):
+        for c in (9, 10):
+            put(layers, W, H, 'ground', c, r, 13)         # дубовий килимок-доріжка від дверей
+    rnd = random.Random(204)
+    for r in range(5, 8):
+        for c in range(1, 6):
+            put(layers, W, H, 'ground', c, r, terrain(rnd.choice(GRASS)))   # трав'яний килимок під виставкою наметів (ref17)
+    # настінні панелі з інструментом (шар above, рядок 1) і вивіски відділів
+    block(layers, W, H, 'above', 6, 1, 3, 1, WOOD0, 8, 4, 2)
+    block(layers, W, H, 'above', 10, 1, 2, 1, WOOD0, 8, 0, 2)
+    block(layers, W, H, 'above', 12, 1, 2, 1, WOOD0, 8, 2, 2)
+    block(layers, W, H, 'above', 2, 1, 1, 1, DECO0, 8, 6, 0)      # торба — рюкзаки й намети
+    block(layers, W, H, 'above', 4, 1, 1, 1, DECO0, 8, 5, 0)      # каструля — готування
+    block(layers, W, H, 'above', 9, 1, 1, 1, DECO0, 8, 7, 0)      # інструмент
+    # виставка намету: рядки 5–7, колонки 2–3
+    solid_block(layers, W, H, 2, 5, 2, 3, DECO0, 8, 0, 0)
+    # дрова й ящик біля задньої стіни ліворуч
+    for c, sc in ((4, 2), (5, 3)):
+        put(layers, W, H, 'walls', c, 3, DECO0 + 8 + sc)
+    block(layers, W, H, 'walls', 0, 3, 2, 1, DECO0, 8, 4, 2)
+    # стіл-гондола зі згортками (колонки 6–8, рядки 4–5) і два кошики зі згортками на ньому
+    block(layers, W, H, 'walls', 6, 4, 3, 2, WOOD0, 8, 0, 0)
+    for c, sc in ((6, 6), (8, 8)):
+        block(layers, W, H, 'above', c, 3, 1, 2, TAIL0, 10, sc, 0)
+    # прилавок біля входу (колонки 12–14, рядки 6–7) і ліхтар на ньому; позаду — місце касира (рядки 4–5)
+    block(layers, W, H, 'walls', 12, 6, 3, 2, WOOD0, 8, 0, 0)
+    put(layers, W, H, 'above', 12, 6, DECO0 + 2)
+    # стіна одягу: три вішаки (колонки 14–19, рядки 2–3): нижній ряд — колізія, верх — поверх стіни
+    for c, sc in ((14, 0), (16, 2), (18, 4)):
+        block(layers, W, H, 'walls', c, 3, 2, 1, TAIL0, 10, sc, 1)
+        block(layers, W, H, 'above', c, 2, 2, 1, TAIL0, 10, sc, 0)
+    # кошики дрібниць біля каси (колонки 16–17, рядки 6–7)
+    for c, sc in ((16, 7), (17, 9)):
+        block(layers, W, H, 'above', c, 6, 1, 1, TAIL0, 10, sc, 0)
+        block(layers, W, H, 'walls', c, 7, 1, 1, TAIL0, 10, sc, 1)
     yard(layers, W, H, 9, (9, 10), 5)
     objs = [point(i + 1, n, t, c) for i, (n, t, c) in enumerate(SHOP_SPOTS)]
     return {
@@ -193,7 +244,7 @@ def build_shop():
         'layers': [tile_layer(1, 'ground', W, H, layers['ground']), tile_layer(2, 'decor', W, H, layers['decor']),
                    tile_layer(3, 'walls', W, H, layers['walls'], True), tile_layer(4, 'above', W, H, layers['above']),
                    {'id': 5, 'name': 'objects', 'type': 'objectgroup', 'draworder': 'topdown', 'opacity': 1, 'visible': True, 'x': 0, 'y': 0, 'objects': objs}],
-        'tilesets': tmj_tilesets(HOME_TS + YARD_TS),
+        'tilesets': tmj_tilesets(SHOP_TS + YARD_TS),
         'properties': [{'name': 'locationId', 'type': 'string', 'value': 'loc.shop'}],
     }
 
