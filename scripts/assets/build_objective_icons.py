@@ -60,7 +60,8 @@ ICONS = {
 
 # GAME-201: де є FAL-малюнок (art/out/objective-icons-1/<key>_0.webp, фон — рожево-малиновий), беремо його; відхилені лишаються програмними.
 FAL_DIR = os.path.join(ROOT, 'art', 'out', 'objective-icons-1')
-REJECT = {'chain', 'cushion', 'snack', 'litter', 'tyre'}   # огляд 31.10.2026: нечитабельні -> перегенерація (art/requests/objective-icons-2.json)
+REJECT = set()   # огляд 31.10.2026: 5 нечитабельних із першого прогону перегенеровано (art/requests/objective-icons-2.json) — беруться з FAL_DIR2
+FAL_DIR2 = os.path.join(ROOT, 'art', 'out', 'objective-icons-2')   # другий прогін має перевагу: chain, cushion, snack, litter, tyre
 CELL = 16
 
 
@@ -143,7 +144,8 @@ def build():
     cells = {}
     ink = nearest(INK, pal)[0]
     for i, k in enumerate(keys):
-        fal = os.path.join(FAL_DIR, k + '_0.webp')
+        fal2 = os.path.join(FAL_DIR2, k + '_0.webp')
+        fal = fal2 if os.path.exists(fal2) else os.path.join(FAL_DIR, k + '_0.webp')
         if k not in REJECT and os.path.exists(fal):
             atlas.paste(fal_cell(fal, pal, ink), ((i % cols) * 16, (i // cols) * 16))
             cells[k] = i
