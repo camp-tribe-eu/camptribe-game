@@ -155,29 +155,33 @@ def build_home():
 
 
 # ---------------------------------------------------------------- крамниця
-# GAME-204 · крамниця туристичного спорядження за research/refs/NOTES.md (а не домашня кімната з книжковою полицею): дерев'яна підлога,
-# двері у нижній стіні, каса біля входу (касир стоїть за прилавком, у ряду 5), виставка намету на трав'яному килимку зі стільцями,
-# гондоли вздовж задньої стіни (спальники, взуття, газ), рюкзаки на стіні, кут вудок, холодильник і ліхтарі біля каси.
+# GAME-204 · інтер'єр невеликої європейської крамниці туристичного спорядження за research/refs/NOTES.md (outdoor-shop, shop-checkout):
+# 14×12 клітинок, підлога 12×7 (≈ 14×8 м), стіни з усіх боків (LPC home_walls, як у домі), у передній стіні — скляні двері й два вітринні вікна,
+# за стінами — темрява. Задня стіна: панелі з рюкзаками + суцільна лінія настінних полиць (спальники | газ | ліхтарі). Зал: гондола з двох рядів
+# «спина до спини» (спальники / газ і кухня + ліхтарі), стійки взуття й вудок біля лівої стіни, виставковий намет на малому трав'яному килимку
+# (3×2) під вікном, каса біля входу з Lotte за прилавком і холодильник напоїв поруч. Проходи — по 2 клітинки.
 # Графіка — assets/tiles/shop_gear.png (GAME-204, scripts/assets/build_shop_gear.py).
 _LAY = json.load(open(os.path.join(ROOT, 'art/shop_gear_layout.json')))   # пише scripts/assets/build_shop_gear.py (клітинки = розмір спрайта у справжньому масштабі, OD-026)
 SHOP_TS = [
     ('home-walls', '../../assets/tiles/home_walls.png', 4, 12, 1, 128, 96),
     ('home-floor', '../../assets/tiles/home_floor.png', 2, 2, 13, 64, 32),
-    ('shop-gear', '../../assets/tiles/shop_gear.png', 11, _LAY['cols'] * _LAY['rows'], 15, 352, 32 * _LAY['rows']),
+    ('home-windows-doors', '../../assets/tiles/home_windows_doors.png', 3, 9, 15, 96, 96),
+    ('shop-gear', '../../assets/tiles/shop_gear.png', 11, _LAY['cols'] * _LAY['rows'], 24, 352, 32 * _LAY['rows']),
 ]
-GEAR0, GEAR_COLS = 15, _LAY['cols']                    # firstgid і ширина аркуша shop_gear
+GEAR0, GEAR_COLS = 24, _LAY['cols']                    # firstgid і ширина аркуша shop_gear
 GEAR = {n: tuple(v) for n, v in _LAY['cells'].items()}  # предмет → (колонка, рядок, ширина, висота) у аркуші, у тайлах
+SHOP_W, SHOP_H = 14, 12
 SHOP_SPOTS = [
-    ('s.start', 'spawn', (9, 6)),
-    ('s.car', 'spawn', (10, 10)),
-    ('take.item.tent', 'trigger', (3, 8)),            # перед наметом на трав'яному килимку
-    ('take.item.sleeping-bag', 'trigger', (3, 4)),    # перед стелажами зі спальниками
-    ('take.item.lantern', 'trigger', (8, 4)),         # перед столиком із ліхтарями біля газу
-    ('step.ST-003', 'trigger', (11, 7)),              # збоку каси з боку покупця (рецензія 3: не за прилавком)
-    ('npc.cashier', 'npc', (13, 6)),                  # Lotte: ЗА прилавком (ноги на верхній кромці каси, прилавок у рядку 7), обличчям до входу. Говорити — з (14,6) збоку (радіус 1,5 клітинки)
-    ('obj.vehicle', 'trigger', (13, 10)),
-    ('obj.buy', 'trigger', (13, 8)),                  # GAME-183: каса — купити чи продати; покупець стоїть перед нею
-    ('obj.drying', 'trigger', (4, 10)),               # біля входу: мотузка для сушіння
+    ('s.start', 'spawn', (6, 8)),
+    ('s.car', 'spawn', (7, 8)),
+    ('take.item.tent', 'trigger', (4, 8)),            # збоку від намету на килимку, під вікном
+    ('take.item.sleeping-bag', 'trigger', (3, 4)),    # у проході перед настінними полицями зі спальниками
+    ('take.item.lantern', 'trigger', (11, 4)),        # у проході перед настінними полицями з ліхтарями
+    ('step.ST-003', 'trigger', (12, 9)),              # збоку каси з боку покупця (не за прилавком)
+    ('npc.cashier', 'npc', (10, 6)),                  # Lotte ЗА прилавком (прилавок у рядках 7–8), обличчям до входу. Говорити — з (11,6)
+    ('obj.vehicle', 'trigger', (7, 10)),              # у дверях: вийти до авто (велосипеда) і їхати далі
+    ('obj.buy', 'trigger', (10, 9)),                  # GAME-183: каса — купити чи продати; покупець стоїть перед нею
+    ('obj.drying', 'trigger', (4, 9)),                # біля входу: мотузка для сушіння
 ]
 
 
@@ -199,128 +203,55 @@ def gear(layers, W, H, name, c0, r0, solid=True, wall=False):
                 put(layers, W, H, 'decor', c0 + dc, r, g)
 
 
-def bottom(name, c, r):
-    """Предмет аркуша стоїть низом на рядку r (його клітинки можуть бути заввишки 1 або 2)."""
-    return name, c, r + 1 - GEAR[name][3]
-
-
 def build_shop():
-    W, H = 20, 14
+    W, H = SHOP_W, SHOP_H
     layers = blank_layers(W, H)
-    for c in range(W):                                    # задня стіна: три рядки, як у домі
-        for r, row in enumerate(((1, 2, 3), (5, 6, 7), (9, 10, 11))):
-            put(layers, W, H, 'walls', c, r, row[0] if c == 0 else row[2] if c == W - 1 else row[1])
-    for r in range(3, 9):
-        for c in range(W):
+    last = W - 1
+    for c in range(W):                                    # задня стіна (рядки 0–2) і передня (рядки 10–11): кути й середина, як у домі
+        for r, row in ((0, (1, 2, 3)), (1, (5, 6, 7)), (2, (9, 10, 11)), (10, (5, 6, 7)), (11, (9, 10, 11))):
+            put(layers, W, H, 'walls', c, r, row[0] if c == 0 else row[2] if c == last else row[1])
+    for r in range(3, 10):                                # бічні стіни: товстий верх стіни з дому (тайл 8)
+        put(layers, W, H, 'walls', 0, r, 8)
+        put(layers, W, H, 'walls', last, r, 8)
+        for c in range(1, last):
             put(layers, W, H, 'ground', c, r, 13)         # дубова підлога
     rnd = random.Random(204)
-    for r in range(6, 9):
-        for c in range(1, 7):
-            put(layers, W, H, 'ground', c, r, terrain(rnd.choice(GRASS)))   # трав'яний килимок під виставкою наметів (ref17)
-    yard(layers, W, H, 9, (9, 10), 5)
-    gear(layers, W, H, 'shop-door', 9, 8, solid=False)    # двері у нижній стіні, герой проходить крізь прохід
-    # задня стіна, зліва направо — за відділами: намети й спальники | рюкзаки (на стіні) | газ і ліхтарі | взуття | вудки. Прохід перед стелажами — рядки 4–5 (2 клітинки).
+    for r in (8, 9):
+        for c in (1, 2, 3):
+            put(layers, W, H, 'ground', c, r, terrain(rnd.choice(GRASS)))   # малий трав'яний килимок під виставковим наметом (ref17)
+    for c in (6, 7):                                      # прохід у дверях
+        for r in (10, 11):
+            put(layers, W, H, 'walls', c, r, 0)
+            put(layers, W, H, 'ground', c, r, 6 if r == 10 else 10)   # стіна за дверима, щоб поруч із полотном не просвічувала темрява
+    gear(layers, W, H, 'shop-door', 6, 10, solid=False)
+    for c0 in (2, 10):                                    # два вітринні вікна у передній стіні (без верхнього карниза: він лише на підлозі)
+        for dr, row in ((0, (18, 19)), (1, (21, 22))):
+            for dc, g in enumerate(row):
+                put(layers, W, H, 'above', c0 + dc, 10 + dr, g)
+    # задня стіна: суцільний ряд рюкзаків (панелі 2×2) і під ним полиці по відділах — спальники | газ | ліхтарі
+    for c in range(1, last, 2):
+        gear(layers, W, H, 'backpack-wall', c, 1)
     for c in range(1, 5):
-        gear(layers, W, H, *bottom('sleeping-bags', c, 3))
-    gear(layers, W, H, 'backpack-wall', 5, 1)
-    gear(layers, W, H, 'backpack-wall', 7, 1)
-    gear(layers, W, H, *bottom('lantern-display', 8, 3))
-    for c in range(9, 13):
-        gear(layers, W, H, *bottom('gas-shelf', c, 3))
-    for c in range(13, 16):
-        gear(layers, W, H, *bottom('boots-rack', c, 3))
-    gear(layers, W, H, *bottom('rods-rack', 17, 3))
-    # зал: виставка намету на килимку зі стільцями; каса біля входу з холодильником напоїв
-    gear(layers, W, H, *bottom('dome-tent', 1, 7))
-    gear(layers, W, H, *bottom('chairs-display', 5, 7))
-    gear(layers, W, H, *bottom('checkout', 12, 7))                 # прилавок у рядку 7; Lotte за ним, у рядку 6
-    gear(layers, W, H, *bottom('fridge', 15, 7))
-    objs = [point(i + 1, n, t, c) for i, (n, t, c) in enumerate(HOME_SPOTS)]
-    layout = next(l for l in base['layers'] if l['name'] == 'layout')
-    layout = dict(layout, id=6)
-    return {
-        'type': 'map', 'version': '1.10', 'tiledversion': '1.11.0', 'orientation': 'orthogonal', 'renderorder': 'right-down',
-        'width': W, 'height': H, 'tilewidth': T, 'tileheight': T, 'infinite': False, 'nextlayerid': 8, 'nextobjectid': 40,
-        'layers': [tile_layer(1, 'ground', W, H, layers['ground']), tile_layer(2, 'decor', W, H, layers['decor']),
-                   tile_layer(3, 'walls', W, H, layers['walls'], True), tile_layer(4, 'above', W, H, layers['above']),
-                   {'id': 5, 'name': 'objects', 'type': 'objectgroup', 'draworder': 'topdown', 'opacity': 1, 'visible': True, 'x': 0, 'y': 0, 'objects': objs}, layout],
-        'tilesets': tmj_tilesets(HOME_TS + YARD_TS),
-        'properties': [{'name': 'locationId', 'type': 'string', 'value': 'loc.home'}],
-    }
-
-
-# ---------------------------------------------------------------- крамниця
-# GAME-204 · крамниця туристичного спорядження за research/refs/NOTES.md (а не домашня кімната з книжковою полицею): дерев'яна підлога,
-# двері у нижній стіні, каса біля входу (касир стоїть за прилавком, у ряду 5), виставка намету на трав'яному килимку зі стільцями,
-# гондоли вздовж задньої стіни (спальники, взуття, газ), рюкзаки на стіні, кут вудок, холодильник і ліхтарі біля каси.
-# Графіка — assets/tiles/shop_gear.png (GAME-204, scripts/assets/build_shop_gear.py).
-SHOP_TS = [
-    ('home-walls', '../../assets/tiles/home_walls.png', 4, 12, 1, 128, 96),
-    ('home-floor', '../../assets/tiles/home_floor.png', 2, 2, 13, 64, 32),
-    ('shop-gear', '../../assets/tiles/shop_gear.png', 11, _LAY['cols'] * _LAY['rows'], 15, 352, 32 * _LAY['rows']),
-]
-_LAY = json.load(open(os.path.join(ROOT, 'art/shop_gear_layout.json')))   # пише scripts/assets/build_shop_gear.py (клітинки = розмір спрайта у справжньому масштабі, OD-026)
-GEAR0, GEAR_COLS = 15, _LAY['cols']                    # firstgid і ширина аркуша shop_gear
-GEAR = {n: tuple(v) for n, v in _LAY['cells'].items()}  # предмет → (колонка, рядок, ширина, висота) у аркуші, у тайлах
-SHOP_SPOTS = [
-    ('s.start', 'spawn', (9, 6)),
-    ('s.car', 'spawn', (10, 10)),
-    ('take.item.tent', 'trigger', (3, 8)),            # перед наметом на трав'яному килимку
-    ('take.item.sleeping-bag', 'trigger', (3, 4)),    # перед стелажами зі спальниками
-    ('take.item.lantern', 'trigger', (8, 4)),         # перед столиком із ліхтарями біля газу
-    ('step.ST-003', 'trigger', (11, 7)),              # збоку каси з боку покупця (рецензія 3: не за прилавком)
-    ('npc.cashier', 'npc', (13, 6)),                  # Lotte: ЗА прилавком (ноги на верхній кромці каси, прилавок у рядку 7), обличчям до входу. Говорити — з (14,6) збоку (радіус 1,5 клітинки)
-    ('obj.vehicle', 'trigger', (13, 10)),
-    ('obj.buy', 'trigger', (13, 8)),                  # GAME-183: каса — купити чи продати; покупець стоїть перед нею
-    ('obj.drying', 'trigger', (4, 10)),               # біля входу: мотузка для сушіння
-]
-
-
-def gear(layers, W, H, name, c0, r0, solid=True, wall=False):
-    """Ставить предмет аркуша shop_gear, лівий верхній тайл — (c0, r0). Рядки в задній стіні (< 3) — лише поверх стіни (above); нижче —
-    колізія (walls), а верхній рядок предмета ще й в above (голова предмета поверх героя, що проходить позаду)."""
-    sc, sr, w, h = GEAR[name]
-    for dr in range(h):
-        for dc in range(w):
-            g = GEAR0 + (sr + dr) * GEAR_COLS + sc + dc
-            r = r0 + dr
-            if r < 3 or wall:
-                put(layers, W, H, 'above', c0 + dc, r, g)
-            elif solid:
-                put(layers, W, H, 'walls', c0 + dc, r, g)
-                if dr == 0 or r == 3:
-                    put(layers, W, H, 'above', c0 + dc, r, g)
-            else:
-                put(layers, W, H, 'decor', c0 + dc, r, g)
-
-
-def build_shop():
-    W, H = 20, 14
-    layers = blank_layers(W, H)
-    for c in range(W):                                    # задня стіна: три рядки, як у домі
-        for r, row in enumerate(((1, 2, 3), (5, 6, 7), (9, 10, 11))):
-            put(layers, W, H, 'walls', c, r, row[0] if c == 0 else row[2] if c == W - 1 else row[1])
-    for r in range(3, 9):
-        for c in range(W):
-            put(layers, W, H, 'ground', c, r, 13)         # дубова підлога
-    rnd = random.Random(204)
-    for r in range(6, 9):
-        for c in range(1, 7):
-            put(layers, W, H, 'ground', c, r, terrain(rnd.choice(GRASS)))   # трав'яний килимок під виставкою наметів (ref17)
-    yard(layers, W, H, 9, (9, 10), 5)
-    gear(layers, W, H, 'shop-door', 9, 8, solid=False)    # двері у нижній стіні, герой проходить крізь прохід
-    gear(layers, W, H, 'backpack-wall', 1, 1)             # рюкзаки на стіні
-    gear(layers, W, H, 'backpack-wall', 7, 1)             # ще дві панелі з рюкзаками — задня стіна не порожня (рецензія 3), проміжки по 3 тайли
-    gear(layers, W, H, 'backpack-wall', 13, 1)
-    gear(layers, W, H, 'chairs-display', 1, 3)            # стільці й столик біля намету
-    gear(layers, W, H, 'sleeping-bags', 5, 3)             # гондоли вздовж задньої стіни
-    gear(layers, W, H, 'boots-rack', 8, 3)
-    gear(layers, W, H, 'gas-shelf', 11, 3)
-    gear(layers, W, H, *bottom('rods-rack', 17, 3))                # кут вудок
-    gear(layers, W, H, 'dome-tent', 2, 6)                 # виставка намету
-    gear(layers, W, H, *bottom('checkout', 12, 7))                 # каса біля входу; за нею (ряд 5) — місце касира
-    gear(layers, W, H, *bottom('fridge', 15, 7))
-    gear(layers, W, H, 'lantern-display', 16, 6)
+        gear(layers, W, H, 'sleeping-bags', c, 3)
+    for c in range(5, 9):
+        gear(layers, W, H, 'gas-shelf', c, 3)
+    for c in range(9, last):
+        gear(layers, W, H, 'lantern-display', c, 3)
+    # біля лівої стіни: взуття й вудки
+    gear(layers, W, H, 'boots-rack', 1, 4)
+    gear(layers, W, H, 'boots-rack', 2, 4)
+    gear(layers, W, H, 'rods-rack', 1, 6)
+    # гондола зі спини до спини (рядки 6–7): північний бік — спальники, південний — газ і кухня, ліхтарі
+    for c in range(5, 10):
+        gear(layers, W, H, 'sleeping-bags', c, 6)
+    for c in range(5, 8):
+        gear(layers, W, H, 'gas-shelf', c, 7)
+    for c in (8, 9):
+        gear(layers, W, H, 'lantern-display', c, 7)
+    # виставка намету на килимку, каса біля входу, холодильник поруч
+    gear(layers, W, H, 'dome-tent', 1, 8)
+    gear(layers, W, H, 'checkout', 10, 7)                 # прилавок у рядках 7–8; Lotte за ним, у рядку 6
+    gear(layers, W, H, 'fridge', 12, 7)
     objs = [point(i + 1, n, t, c) for i, (n, t, c) in enumerate(SHOP_SPOTS)]
     return {
         'type': 'map', 'version': '1.10', 'tiledversion': '1.11.0', 'orientation': 'orthogonal', 'renderorder': 'right-down',

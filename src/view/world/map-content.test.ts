@@ -176,7 +176,7 @@ describe('мапа сцени ↔ контент (GAME-32)', () => {
 
   it('GAME-204 · крамниця спорядження без домашніх меблів: жодної книжкової полиці, дивана чи письмового столу', () => {
     // Домашні тайлсети крамниці заборонені (OD-024: у магазині туристичного спорядження не буває книжкових полиць).
-    const HOME_ONLY = ['home-shelf', 'home-furniture', 'home-office', 'home-windows-doors'];
+    const HOME_ONLY = ['home-shelf', 'home-furniture', 'home-office'];   // вікна LPC (home-windows-doors) — не меблі: вони у передній стіні крамниці (GAME-204, рецензія 4)
     const homeFurniture = (m: TiledMap & { tilesets?: { name?: string; image?: string }[] }): string[] =>
       (m.tilesets ?? []).filter((t) => HOME_ONLY.includes(t.name ?? '') || /home_(shelf|furniture|office)\.png$/.test(t.image ?? '')).map((t) => `${t.name} ${t.image}`);
     expect(homeFurniture(mapOf('shop.tmj')), 'shop.tmj має домашні меблі').toEqual([]);

@@ -63,7 +63,7 @@ export const TILESET_IMAGES: Readonly<Record<string, string>> = {
 };
 const HOME_SETS = ['home-walls', 'home-floor', 'home-windows-doors', 'home-furniture', 'home-office', 'home-shelf', 'lpc-terrain', 'camp-car'] as const;
 /** GAME-204: крамниця спорядження — власний аркуш shop-gear (каса, намет, гондоли, двері), без домашніх меблів і книжкової полиці. */
-const SHOP_SETS = ['home-walls', 'home-floor', 'shop-gear', 'lpc-terrain', 'camp-car'] as const;
+const SHOP_SETS = ['home-walls', 'home-floor', 'home-windows-doors', 'shop-gear', 'lpc-terrain', 'camp-car'] as const;
 /** Які тайлсети має кожна мапа гри (ключ — як у scene.ts і map-first.ts). */
 export const MAP_TILESETS: Readonly<Record<'camp' | 'home' | 'shop' | 'road', readonly string[]>> = {
   camp: ['lpc-terrain', 'camp-tent', 'camp-car'],
