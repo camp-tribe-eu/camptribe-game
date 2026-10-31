@@ -5,6 +5,7 @@ import { mixer } from '../audio';
 import { playUi, soundForButton } from '../audio/ui-sounds';
 import { DEFAULT_SETTINGS, TEXT_SCALES, loadSettings, saveSettings, type Settings } from '../platform/settings';
 import type { Credits, UiPort } from './port';
+import { ObjectiveIcon } from './ObjectiveIcon';
 import { t as tr, type AnyLang, type Key } from '../i18n';
 import { ct } from '../i18n/content';
 import { StoryPanel, money } from './StoryPanel';
@@ -316,7 +317,7 @@ export function Shell({ port, langOverride, credits, build, holdToast = false, h
             дві підказки одна на одній не стоять (картка мети — у потоці шапки вище). Не ловить дотик. */}
         {(goalShown || nextShown || trackerShown) && (
           <div class="ui-strip">
-            {goalShown && <div class="ui-goal" data-ui="goal" data-ended={offer.stage === 'ended' ? 'yes' : undefined}>{`${t('ui.goal')}: ${offer.goal ? ct(lang, offer.goal.key) : t('ui.goal.ended')}`}</div>}
+            {goalShown && <div class="ui-goal" data-ui="goal" data-ended={offer.stage === 'ended' ? 'yes' : undefined}><ObjectiveIcon spot={offer.stage === 'ended' ? null : offer.hint.nextSpot} />{`${t('ui.goal')}: ${offer.goal ? ct(lang, offer.goal.key) : t('ui.goal.ended')}`}</div>}
             {/* GAME-180: трекер прийнятих прохань — «Сміття 2/3» (окремий рядок смуги: ціль · трекер · «Далі»); стрілка на мапі веде до наступної цілі, а коли все зроблено — до просильника. */}
             {trackerShown && (
               <div class="ui-reqs" data-ui="req-tracker" role="group" aria-label={t('ui.req.tracker')}>
@@ -334,7 +335,7 @@ export function Shell({ port, langOverride, credits, build, holdToast = false, h
               <div class="ui-next" data-ui="next-hint" role="status" data-kind={offer.hint.near ? 'near' : 'next'} data-spot={offer.hint.near ? undefined : offer.hint.nextSpot ?? undefined}>
                 {offer.hint.near
                   ? `● ${t(offer.hint.near.label)}${offer.hint.near.itemKey ? ` ${ct(lang, offer.hint.near.itemKey)}` : ''}`
-                  : `${nextText && offer.hint.next ? `${t('ui.next')} ${t(offer.hint.next as Key)}` : ''}`}
+                  : <><ObjectiveIcon spot={nextText ? offer.hint.nextSpot : null} />{`${nextText && offer.hint.next ? `${t('ui.next')} ${t(offer.hint.next as Key)}` : ''}`}</>}
                 {offer.hint.backpack > 0 && <span data-ui="backpack">{` · ${t('ui.backpack')}: ${offer.hint.backpack}`}</span>}
               </div>
             )}

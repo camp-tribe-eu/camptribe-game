@@ -284,6 +284,18 @@
       ]
     },
     {
+      "name": "CampTribe (власна робота)",
+      "files": [
+        "icons/objective_icons.png"
+      ],
+      "licences": [
+        "CC0"
+      ],
+      "sources": [
+        "https://github.com/camp-tribe-eu/camptribe-game/blob/main/scripts/assets/build_objective_icons.py"
+      ]
+    },
+    {
       "name": "Casper Nilsson",
       "files": [
         "tiles/base_out_atlas.png",
@@ -2829,6 +2841,17 @@
         "https://opengameart.org/content/lpc-expanded-simple-shirts"
       ],
       "modified": "no"
+    },
+    {
+      "file": "icons/objective_icons.png",
+      "authors": [
+        "CampTribe (власна робота)"
+      ],
+      "licence": "CC0",
+      "sources": [
+        "https://github.com/camp-tribe-eu/camptribe-game/blob/main/scripts/assets/build_objective_icons.py"
+      ],
+      "modified": "drawn by hand in a script, 1 px outline added, colours snapped to the LPC base palette; no third-party pixels"
     },
     {
       "file": "portraits/animal.cat.png",
