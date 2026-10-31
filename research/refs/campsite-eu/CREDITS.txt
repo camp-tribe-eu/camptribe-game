@@ -1,13 +1,23 @@
 file	title	author	license	source
-ref00.jpg	File:Scripture Union Campsite, Kings Cross, Isle of Arran - geograph.org.uk - 19857.jpg	Gordon McKinlay	CC BY-SA 2.0	https://commons.wikimedia.org/wiki/File:Scripture_Union_Campsite,_Kings_Cross,_Isle_of_Arran_-_geograph.org.uk_-_19857.jpg
-ref01.jpg	File:Sligachan Campsite - geograph.org.uk - 74220.jpg	Lynne Kirton	CC BY-SA 2.0	https://commons.wikimedia.org/wiki/File:Sligachan_Campsite_-_geograph.org.uk_-_74220.jpg
-ref02.jpg	File:Sykeside Campsite, Brotherswater - geograph.org.uk - 60680.jpg	Chris Upson	CC BY-SA 2.0	https://commons.wikimedia.org/wiki/File:Sykeside_Campsite,_Brotherswater_-_geograph.org.uk_-_60680.jpg
-ref03.jpg	File:Campsite, Edale - geograph.org.uk - 106959.jpg	Callum Black	CC BY-SA 2.0	https://commons.wikimedia.org/wiki/File:Campsite,_Edale_-_geograph.org.uk_-_106959.jpg
-ref04.jpg	File:Campsite, Horton in Ribblesdale - geograph.org.uk - 103990.jpg	Nigel Homer	CC BY-SA 2.0	https://commons.wikimedia.org/wiki/File:Campsite,_Horton_in_Ribblesdale_-_geograph.org.uk_-_103990.jpg
-ref05.jpg	File:Campsite near Edinbane, Skye - geograph.org.uk - 109357.jpg	Norrie Adamson	CC BY-SA 2.0	https://commons.wikimedia.org/wiki/File:Campsite_near_Edinbane,_Skye_-_geograph.org.uk_-_109357.jpg
-ref06.jpg	File:Campsite - geograph.org.uk - 154013.jpg	Dara Jasumani	CC BY-SA 2.0	https://commons.wikimedia.org/wiki/File:Campsite_-_geograph.org.uk_-_154013.jpg
-ref07.jpg	File:Dol-gam Campsite - geograph.org.uk - 157084.jpg	Hugh Venables	CC BY-SA 2.0	https://commons.wikimedia.org/wiki/File:Dol-gam_Campsite_-_geograph.org.uk_-_157084.jpg
-ref08.jpg	File:Tents, Blacklands Farm - geograph.org.uk - 182736.jpg	Nigel Chadwick	CC BY-SA 2.0	https://commons.wikimedia.org/wiki/File:Tents,_Blacklands_Farm_-_geograph.org.uk_-_182736.jpg
-ref09.jpg	File:Campsite at Dalraddy Holiday Park - geograph.org.uk - 378119.jpg	Peter Standing	CC BY-SA 2.0	https://commons.wikimedia.org/wiki/File:Campsite_at_Dalraddy_Holiday_Park_-_geograph.org.uk_-_378119.jpg
-ref10.jpg	File:Irfon Valley Campsite - geograph.org.uk - 388717.jpg	William Metcalfe	CC BY-SA 2.0	https://commons.wikimedia.org/wiki/File:Irfon_Valley_Campsite_-_geograph.org.uk_-_388717.jpg
-ref15.jpg	File:Polly Joke campsite - geograph.org.uk - 690214.jpg	Katy Walters	CC BY-SA 2.0	https://commons.wikimedia.org/wiki/File:Polly_Joke_campsite_-_geograph.org.uk_-_690214.jpg
+ref00.jpg	Painting men wildnerness campsite tent	thegetty	CC0	https://www.rawpixel.com/image/14310034/painting-men-wildnerness-campsite-with-tent-william-notman
+ref02.jpg	Rural campsite tent teepee barren	unknown	CC0	https://www.rawpixel.com/image/3290147/free-photo-image-building-camping-canvas-tent
+ref03.jpg	Campsite at Hidden Valley Campground	Joshua Tree National Park	Public domain	https://www.flickr.com/photos/115357548@N08/51318098888
+ref04.jpg	Chickahominy Recreation Site	BLM Oregon & Washington	CC BY 2.0	https://www.flickr.com/photos/50169152@N06/29817845925
+ref05.jpg	Tahquamenon River campsite	calamity_sal	CC BY 2.0	https://www.flickr.com/photos/35657616@N02/14380370199
+ref07.jpg	Should have brought tent pegs	Pooka Onyx	CC BY 2.0	https://www.flickr.com/photos/198235891@N08/54588144245
+ref08.jpg	Setting up camp	BLM Alaska	Public domain	https://www.flickr.com/photos/76641642@N08/51298226460
+ref09.jpg	Tangle Lakes campsite	BLM Alaska	Public domain	https://www.flickr.com/photos/76641642@N08/51296477492
+ref10.jpg	Back at Campsite 17	niiicedave	CC BY-SA 2.0	https://www.flickr.com/photos/33671002@N00/51332335830
+ref11.jpg	New Camping Site ...	Bernard DUPONT	CC BY-SA 2.0	https://www.flickr.com/photos/65695019@N07/33531674515
+ref12.jpg	Eltham Park Christian Youth Camp	Blue Mountains Library, Local Studies	CC BY-SA 2.0	https://www.flickr.com/photos/26602074@N06/52450113923
+ref13.jpg	McCain Valley Resource Conservation Area	blmcalifornia	Public domain	https://www.flickr.com/photos/50976304@N07/51858567596
+ref14.jpg	View from Lamplugh Glacier campsite, Glacier Bay National Park, Alaska	Matt-Zimmerman	CC BY 2.0	https://www.flickr.com/photos/16725630@N00/25388744454
+ref15.jpg	(ch41)	Ted and Jen	CC BY 2.0	https://www.flickr.com/photos/10637778@N00/52252899407
+ref16.jpg	File:Scripture Union Campsite, Kings Cross, Isle of Arran - geograph.org.uk - 19857.jpg	Gordon McKinlay	CC BY-SA 2.0	https://commons.wikimedia.org/wiki/File:Scripture_Union_Campsite,_Kings_Cross,_Isle_of_Arran_-_geograph.org.uk_-_19857.jpg
+ref17.jpg	File:Sligachan Campsite - geograph.org.uk - 74220.jpg	Lynne Kirton	CC BY-SA 2.0	https://commons.wikimedia.org/wiki/File:Sligachan_Campsite_-_geograph.org.uk_-_74220.jpg
+ref18.jpg	File:Sykeside Campsite, Brotherswater - geograph.org.uk - 60680.jpg	Chris Upson	CC BY-SA 2.0	https://commons.wikimedia.org/wiki/File:Sykeside_Campsite,_Brotherswater_-_geograph.org.uk_-_60680.jpg
+ref19.jpg	File:Campsite, Edale - geograph.org.uk - 106959.jpg	Callum Black	CC BY-SA 2.0	https://commons.wikimedia.org/wiki/File:Campsite,_Edale_-_geograph.org.uk_-_106959.jpg
+ref20.jpg	File:Campsite, Horton in Ribblesdale - geograph.org.uk - 103990.jpg	Nigel Homer	CC BY-SA 2.0	https://commons.wikimedia.org/wiki/File:Campsite,_Horton_in_Ribblesdale_-_geograph.org.uk_-_103990.jpg
+ref21.jpg	File:Campsite near Edinbane, Skye - geograph.org.uk - 109357.jpg	Norrie Adamson	CC BY-SA 2.0	https://commons.wikimedia.org/wiki/File:Campsite_near_Edinbane,_Skye_-_geograph.org.uk_-_109357.jpg
+ref22.jpg	File:Campsite - geograph.org.uk - 154013.jpg	Dara Jasumani	CC BY-SA 2.0	https://commons.wikimedia.org/wiki/File:Campsite_-_geograph.org.uk_-_154013.jpg
+ref23.jpg	File:Dol-gam Campsite - geograph.org.uk - 157084.jpg	Hugh Venables	CC BY-SA 2.0	https://commons.wikimedia.org/wiki/File:Dol-gam_Campsite_-_geograph.org.uk_-_157084.jpg
