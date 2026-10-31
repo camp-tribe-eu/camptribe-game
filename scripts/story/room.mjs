@@ -12,6 +12,7 @@ const FAL = 'https://fal.run/fal-ai/any-llm';
 export function parseBrief(raw, readFile) {
   const b = JSON.parse(raw);
   if (!Array.isArray(b.models) || b.models.length === 0) throw new Error('бриф: models — непорожній список моделей');
+  if (b.prompt_file && (/(^|[\\/])\.\.([\\/]|$)/.test(b.prompt_file) || /^([\\/]|[a-z]:)/i.test(b.prompt_file))) throw new Error('бриф: prompt_file лише поруч із брифом, без .. і абсолютних шляхів');
   const prompt = b.prompt ?? (b.prompt_file ? readFile(b.prompt_file) : '');
   if (!prompt.trim()) throw new Error('бриф: порожній prompt (prompt або prompt_file)');
   return { models: b.models, system: b.system ?? '', prompt };

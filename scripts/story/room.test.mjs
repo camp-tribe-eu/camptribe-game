@@ -7,6 +7,9 @@ test('бриф: моделі й текст обов\'язкові; текст м
   assert.deepEqual(parseBrief('{"models":["a/b"],"prompt":"хай"}', () => ''), { models: ['a/b'], system: '', prompt: 'хай' });
   assert.equal(parseBrief('{"models":["a/b"],"prompt_file":"x.md"}', (p) => (p === 'x.md' ? 'з файлу' : '')).prompt, 'з файлу');
   assert.throws(() => parseBrief('{"models":[],"prompt":"хай"}', () => ''), /models/);
+  assert.throws(() => parseBrief('{"models":["a/b"],"prompt_file":"../../README.md"}', () => 'x'), /prompt_file/);
+  assert.throws(() => parseBrief('{"models":["a/b"],"prompt_file":"/etc/hosts"}', () => 'x'), /prompt_file/);
+  assert.equal(parseBrief('{"models":["a/b"],"prompt_file":"a..b.md"}', () => 'ok').prompt, 'ok');
   assert.throws(() => parseBrief('{"models":["a/b"],"prompt":"  "}', () => ''), /порожній prompt/);
 });
 
