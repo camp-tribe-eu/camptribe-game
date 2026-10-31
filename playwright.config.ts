@@ -6,6 +6,12 @@ const executablePath = process.env.PW_CHROMIUM_PATH;
 // Окремий порт для паралельних прогонів (кілька копій репозиторію на одній машині).
 const port = Number(process.env.PW_PORT ?? 4173);
 
+// GAME-223: «важкі» файли (ходильні розділи й міні-ігри, ~108 тестів, ≈ 60 із ~90 хв сумарного часу CI) — окремий проєкт, щоб CI
+// ділив їх на свої шарди. Шард Playwright — суцільний шматок за кількістю тестів, а не за часом, тож в одному списку важкі файли
+// лягали поруч (шарди 2–3 по 25–31 хв, решта 3–10). Один regexp — і для e2e-heavy, і для testIgnore в e2e: розбиття повне й без
+// перетинів за побудовою. Новий важкий файл — додай сюди; забутий просто піде в легкий шард (повільніше, але не пропаде).
+const HEAVY = /game-(169|170|170-slice3|172|173|175|178-depart|179|180|181|182|183|183-chapter|184|185|185-trip|189|190|192|193|195)\.spec\.ts/;
+
 export default defineConfig({
   testDir: 'tests/e2e',
   outputDir: 'test-results',
@@ -28,9 +34,10 @@ export default defineConfig({
   // `npx playwright test game-97 --no-deps` (інакше залежність проганяє весь проєкт e2e перед ними).
   projects: [
     // fullyParallel: шарди ділять ТЕСТИ, а не файли — інакше довгі ходильні game-181…184 збивались в один шард і впиралися в 40 хв (#119).
-    { name: 'e2e', testIgnore: /game-(97|38)\.spec\.ts/, fullyParallel: true },
+    { name: 'e2e', testIgnore: [/game-(97|38)\.spec\.ts/, HEAVY], fullyParallel: true },
+    { name: 'e2e-heavy', testMatch: HEAVY, fullyParallel: true },
     // GAME-38: бюджет fps (медіана з fpsSamples вікон, budgets.json) — теж у game-97.spec.ts, щоб іти послідовно з рештою fps-тестів.
-    { name: 'perf', testMatch: /game-97\.spec\.ts/, dependencies: ['e2e'] },
+    { name: 'perf', testMatch: /game-97\.spec\.ts/, dependencies: ['e2e', 'e2e-heavy'] },
     // GAME-38: перший кадр — теж абсолютний вимір; окремий проєкт ПІСЛЯ perf, щоб два файли perf не йшли паралельно різними воркерами.
     { name: 'perf-boot', testMatch: /game-38\.spec\.ts/, dependencies: ['perf'] },
   ],
