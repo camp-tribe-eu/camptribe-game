@@ -1,10 +1,9 @@
 file	title	author	license	source
 ref00.jpg	Painting men wildnerness campsite tent	thegetty	CC0	https://www.rawpixel.com/image/14310034/painting-men-wildnerness-campsite-with-tent-william-notman
-ref01.jpg	Campsite tents, group people one	thegetty	CC0	https://www.rawpixel.com/image/14288455/photo-image-person-public-domain-building
 ref02.jpg	Rural campsite tent teepee barren	unknown	CC0	https://www.rawpixel.com/image/3290147/free-photo-image-building-camping-canvas-tent
 ref03.jpg	Campsite at Hidden Valley Campground	Joshua Tree National Park	Public domain	https://www.flickr.com/photos/115357548@N08/51318098888
+ref04.jpg	Chickahominy Recreation Site	BLM Oregon & Washington	CC BY 2.0	https://www.flickr.com/photos/50169152@N06/29817845925
 ref05.jpg	Tahquamenon River campsite	calamity_sal	CC BY 2.0	https://www.flickr.com/photos/35657616@N02/14380370199
-ref06.jpg	TGOC 2022 Route (ch0)	Ted and Jen	CC BY 2.0	https://www.flickr.com/photos/10637778@N00/52280841571
 ref07.jpg	Should have brought tent pegs	Pooka Onyx	CC BY 2.0	https://www.flickr.com/photos/198235891@N08/54588144245
 ref08.jpg	Setting up camp	BLM Alaska	Public domain	https://www.flickr.com/photos/76641642@N08/51298226460
 ref09.jpg	Tangle Lakes campsite	BLM Alaska	Public domain	https://www.flickr.com/photos/76641642@N08/51296477492
