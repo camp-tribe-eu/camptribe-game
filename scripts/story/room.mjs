@@ -6,16 +6,21 @@
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { basename, dirname, join } from 'node:path';
 
-const FAL = 'https://fal.run/fal-ai/any-llm';
+const QUEUE = 'https://queue.fal.run/fal-ai/any-llm';
 
-/** Бриф: { models: string[], system?: string, prompt?: string, prompt_file?: string }. Помилка — текстом, не мовчки. */
+/** Модель брифу: рядок або { model, reasoning } (деякі моделі, напр. gemini-2.5-pro, вимагають reasoning: true). */
+export const modelSpec = (m) => (typeof m === 'string' ? { model: m, reasoning: false } : { model: String(m?.model ?? ''), reasoning: m?.reasoning === true });
+
+/** Бриф: { models: (string | {model, reasoning})[], system?: string, prompt?: string, prompt_file?: string }. Помилка — текстом, не мовчки. */
 export function parseBrief(raw, readFile) {
   const b = JSON.parse(raw);
   if (!Array.isArray(b.models) || b.models.length === 0) throw new Error('бриф: models — непорожній список моделей');
   if (b.prompt_file && (/(^|[\\/])\.\.([\\/]|$)/.test(b.prompt_file) || /^([\\/]|[a-z]:)/i.test(b.prompt_file))) throw new Error('бриф: prompt_file лише поруч із брифом, без .. і абсолютних шляхів');
   const prompt = b.prompt ?? (b.prompt_file ? readFile(b.prompt_file) : '');
   if (!prompt.trim()) throw new Error('бриф: порожній prompt (prompt або prompt_file)');
-  return { models: b.models, system: b.system ?? '', prompt };
+  const models = b.models.map(modelSpec);
+  if (models.some((m) => !m.model)) throw new Error('бриф: у кожної моделі має бути назва');
+  return { models, system: b.system ?? '', prompt };
 }
 
 /** Ім'я файлу чернетки з назви моделі: openai/gpt-5-chat → openai--gpt-5-chat.md */
@@ -29,12 +34,26 @@ export function outputOf(json) {
   return out;
 }
 
-async function ask(model, system, prompt, key) {
-  const res = await fetch(FAL, {
-    method: 'POST',
-    headers: { Authorization: `Key ${key}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ model, prompt, ...(system ? { system_prompt: system } : {}) }),
-  });
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+/** Через чергу fal: довга відповідь (> 5 хв) не обриває з'єднання, як прямий виклик (прогін 41193545217: «fetch failed»). */
+async function ask({ model, reasoning }, system, prompt, key) {
+  const headers = { Authorization: `Key ${key}`, 'Content-Type': 'application/json' };
+  const body = { model, prompt, ...(system ? { system_prompt: system } : {}), ...(reasoning ? { reasoning: true } : {}) };
+  const sub = await fetch(QUEUE, { method: 'POST', headers, body: JSON.stringify(body) });
+  const subText = await sub.text();
+  if (!sub.ok) throw new Error(`HTTP ${sub.status}: ${subText.slice(0, 300)}`);
+  const { status_url: statusUrl, response_url: responseUrl } = JSON.parse(subText);
+  const deadline = Date.now() + 20 * 60_000;
+  for (;;) {
+    if (Date.now() > deadline) throw new Error('немає відповіді за 20 хв');
+    await sleep(5000);
+    const st = await fetch(statusUrl, { headers });
+    const sj = await st.json().catch(() => ({}));
+    if (sj.status === 'COMPLETED') break;
+    if (!st.ok && st.status !== 202) throw new Error(`статус HTTP ${st.status}`);
+  }
+  const res = await fetch(responseUrl, { headers });
   const text = await res.text();
   if (!res.ok) throw new Error(`HTTP ${res.status}: ${text.slice(0, 300)}`);
   return outputOf(JSON.parse(text));
@@ -49,9 +68,10 @@ async function main() {
   const outDir = join('brain', 'Сценарій', 'drafts', basename(file, '.json'));
   mkdirSync(outDir, { recursive: true });
   const failed = [];
-  for (const model of brief.models) {
+  for (const spec of brief.models) {
+    const model = spec.model;
     try {
-      const out = await ask(model, brief.system, brief.prompt, key);
+      const out = await ask(spec, brief.system, brief.prompt, key);
       writeFileSync(join(outDir, draftName(model)), `<!-- ${model} · ${new Date().toISOString().slice(0, 10)} · чернетка, не канон -->\n\n${out}\n`);
       console.log(`OK   ${model}: ${out.length} знаків`);
     } catch (e) {

@@ -1,10 +1,10 @@
 // node --test scripts/story/room.test.mjs — сценарна кімната без мережі (GAME-198).
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { draftName, outputOf, parseBrief } from './room.mjs';
+import { draftName, modelSpec, outputOf, parseBrief } from './room.mjs';
 
 test('бриф: моделі й текст обов\'язкові; текст можна взяти з файлу поруч', () => {
-  assert.deepEqual(parseBrief('{"models":["a/b"],"prompt":"хай"}', () => ''), { models: ['a/b'], system: '', prompt: 'хай' });
+  assert.deepEqual(parseBrief('{"models":["a/b"],"prompt":"хай"}', () => ''), { models: [{ model: 'a/b', reasoning: false }], system: '', prompt: 'хай' });
   assert.equal(parseBrief('{"models":["a/b"],"prompt_file":"x.md"}', (p) => (p === 'x.md' ? 'з файлу' : '')).prompt, 'з файлу');
   assert.throws(() => parseBrief('{"models":[],"prompt":"хай"}', () => ''), /models/);
   assert.throws(() => parseBrief('{"models":["a/b"],"prompt_file":"../../README.md"}', () => 'x'), /prompt_file/);
@@ -24,4 +24,11 @@ test('порожня відповідь або помилка моделі — �
 test('ім\'я чернетки з назви моделі — без скісних рисок', () => {
   assert.equal(draftName('openai/gpt-5-chat'), 'openai--gpt-5-chat.md');
   assert.equal(draftName('google/gemini-2.5-pro'), 'google--gemini-2.5-pro.md');
+});
+
+test('модель — рядок або {model, reasoning}; без назви — помилка', () => {
+  assert.deepEqual(modelSpec('a/b'), { model: 'a/b', reasoning: false });
+  assert.deepEqual(modelSpec({ model: 'g/p', reasoning: true }), { model: 'g/p', reasoning: true });
+  assert.deepEqual(modelSpec({ model: 'g/p', reasoning: 'yes' }), { model: 'g/p', reasoning: false });
+  assert.throws(() => parseBrief('{"models":[{"reasoning":true}],"prompt":"x"}', () => ''), /назва/);
 });
