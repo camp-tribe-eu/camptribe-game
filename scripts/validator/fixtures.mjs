@@ -189,6 +189,16 @@ const withTransportFact = (c) => c.flags.push({ id: 's.transport', type: 'enum',
 
 const dlg = (c) => c.dialogues[0];
 const node = (c, id) => dlg(c).nodes.find((n) => n.id === id);
+// GAME-221: рядок рівно n знаків і 4 слова (щоб не червоніти заодно від LINE_LENGTH за словами).
+const padUk = (n) => `аб вг де ${'ж'.repeat(n - 9)}`;
+const padEn = (n) => `ab cd ef ${'g'.repeat(n - 9)}`;
+// GAME-221: вставити k проміжних реплік між thanks і bye: thanks → t1 → … → tk → bye (усього k + 2 реплік без вибору).
+function chain(c, k) {
+  const ids = Array.from({ length: k }, (_, i) => `t${i + 1}`);
+  const seq = ['thanks', ...ids, 'bye'];
+  ids.forEach((id) => dlg(c).nodes.push({ id, speaker: 'npc', textKey: K('bye'), next: seq[seq.indexOf(id) + 1] }));
+  node(c, 'thanks').next = seq[1];
+}
 // GAME-115: enum-прапорець «настрій» (calm | glad), закодований як f.fixture-mood-<значення>.
 const withMood = (c) => { c.flags.push({ id: 'f.fixture-mood', type: 'enum', values: ['calm', 'glad'], initial: 'unset', owner: 'dlg.fixture-ranger/hello' }); return c; };
 // Вжити значення enum: ефект у hello.c2 і умова в окремому виборі поруч із безумовним виходом.
@@ -643,6 +653,23 @@ export const FIXTURES = [
       { textKey: K('help.c1'), next: 'bye', when: { notFlag: 'f.fixture-met' } },
       { textKey: K('help.c2'), next: 'bye' },
     ];
+  } },
+  // GAME-221: межі читабельності. Кожна мутація межі (110 → 111, 4 → 5, вибір не обнуляє, гілка не рахується) має тут свого свідка.
+  // (рядок K('bye') спільний із вузлом другого діалогу еталона, тому одна довга репліка дає 2 спрацювання — по одному на вузол)
+  { name: '[діалог] контроль: репліка рівно 110 знаків у обох мовах — коректно', expect: [], patch(c) { for (const l of ['uk', 'en']) c.locales[l][K('bye')] = padUk(110); } },
+  { name: '[діалог] репліка 111 знаків лише в одній мові (en)', expect: ['DIALOGUE_LINE_TOO_LONG'], count: { code: 'DIALOGUE_LINE_TOO_LONG', n: 2 }, patch(c) { c.locales.uk[K('bye')] = padUk(110); c.locales.en[K('bye')] = padEn(111); } },
+  { name: '[діалог] репліка 111 знаків лише в одній мові (uk)', expect: ['DIALOGUE_LINE_TOO_LONG'], count: { code: 'DIALOGUE_LINE_TOO_LONG', n: 2 }, patch(c) { c.locales.uk[K('bye')] = padUk(111); } },
+  { name: '[діалог] контроль: 4 репліки поспіль без вибору — коректно', expect: [], patch(c) { chain(c, 2); } },
+  { name: '[діалог] 5 реплік поспіль без вибору (next)', expect: ['DIALOGUE_CHAIN_TOO_LONG'], count: { code: 'DIALOGUE_CHAIN_TOO_LONG', n: 1 }, patch(c) { chain(c, 3); } },
+  { name: '[діалог] 5 реплік поспіль, шлях іде через гілку (branches), а не next', expect: ['DIALOGUE_CHAIN_TOO_LONG'], count: { code: 'DIALOGUE_CHAIN_TOO_LONG', n: 1 }, patch(c) {
+    chain(c, 3); const t = node(c, 'thanks'); t.branches = [{ when: { flag: 'f.fixture-helped' }, next: 't1' }]; t.next = 'bye';
+  } },
+  { name: '[діалог] контроль: 8 реплік, але вибір посередині обнуляє лічильник — коректно', expect: [], patch(c) {
+    chain(c, 3); delete node(c, 't2').next; node(c, 't2').choices = [{ textKey: K('help.c2'), next: 't3' }, { textKey: K('help.c1'), next: 't3' }];
+  } },
+  { name: '[діалог] довгий ланцюжок після вибору рахується від цілі вибору', expect: ['DIALOGUE_CHAIN_TOO_LONG'], count: { code: 'DIALOGUE_CHAIN_TOO_LONG', n: 1 }, patch(c) {
+    // thanks → bye скорочено: після вибору help.c2 гравець іде не в bye, а в ланцюжок із 5 реплік
+    chain(c, 3); node(c, 'help').choices[1].next = 't1';
   } },
   { name: '[діалог] вузол, на який не веде жоден вибір', expect: ['DIALOGUE_NODE_UNREACHABLE'], patch(c) {
     dlg(c).nodes.push({ id: 'orphan', speaker: 'npc', textKey: K('bye'), end: true });

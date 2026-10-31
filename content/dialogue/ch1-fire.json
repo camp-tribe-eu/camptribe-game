@@ -57,7 +57,10 @@
       "id": "lantern",
       "speaker": "player",
       "textKey": "dlg.ch1-fire.lantern",
-      "next": "lantern-george"
+      "choices": [
+        { "textKey": "dlg.ch1-fire.lantern.c1", "next": "lantern-george" },
+        { "textKey": "dlg.ch1-fire.lantern.c2", "next": "lantern-george" }
+      ]
     },
     {
       "id": "lantern-george",
@@ -97,7 +100,10 @@
       "id": "fk1c",
       "speaker": "player",
       "textKey": "dlg.ch1-fire.fk1c",
-      "next": "fk2"
+      "choices": [
+        { "textKey": "dlg.ch1-fire.fk1c.c1", "next": "fk2" },
+        { "textKey": "dlg.ch1-fire.fk1c.c2", "next": "fk2" }
+      ]
     },
     {
       "id": "fkl",
@@ -109,7 +115,10 @@
       "id": "fk2",
       "speaker": "player",
       "textKey": "dlg.ch1-fire.fk2",
-      "next": "fk3"
+      "choices": [
+        { "textKey": "dlg.ch1-fire.fk2.c1", "next": "fk3" },
+        { "textKey": "dlg.ch1-fire.fk2.c2", "next": "fk3" }
+      ]
     },
     {
       "id": "fk3",
@@ -127,7 +136,10 @@
       "id": "fr2",
       "speaker": "player",
       "textKey": "dlg.ch1-fire.fr2",
-      "next": "fr3"
+      "choices": [
+        { "textKey": "dlg.ch1-fire.fr2.c1", "next": "fr3" },
+        { "textKey": "dlg.ch1-fire.fr2.c2", "next": "fr3" }
+      ]
     },
     {
       "id": "fr3",
@@ -170,7 +182,10 @@
       "id": "l1",
       "speaker": "player",
       "textKey": "dlg.ch1-fire.l1",
-      "next": "l2"
+      "choices": [
+        { "textKey": "dlg.ch1-fire.l1.c1", "next": "l2" },
+        { "textKey": "dlg.ch1-fire.l1.c2", "next": "l2" }
+      ]
     },
     {
       "id": "l2",
@@ -182,7 +197,10 @@
       "id": "l3",
       "speaker": "player",
       "textKey": "dlg.ch1-fire.l3",
-      "next": "l4"
+      "choices": [
+        { "textKey": "dlg.ch1-fire.l3.c1", "next": "l4" },
+        { "textKey": "dlg.ch1-fire.l3.c2", "next": "l4" }
+      ]
     },
     {
       "id": "l4",
@@ -241,7 +259,10 @@
       "id": "l9",
       "speaker": "player",
       "textKey": "dlg.ch1-fire.l9",
-      "next": "l10"
+      "choices": [
+        { "textKey": "dlg.ch1-fire.l9.c1", "next": "l10" },
+        { "textKey": "dlg.ch1-fire.l9.c2", "next": "l10" }
+      ]
     },
     {
       "id": "l10",
