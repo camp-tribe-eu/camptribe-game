@@ -23,7 +23,8 @@ async function open(browser: Browser, vp: Vp, touch: boolean, inset = 0): Promis
   const page = await ctx.newPage();
   await page.addInitScript(([k, l]) => { try { localStorage.setItem(k as string, JSON.stringify({ textScale: 100, language: l, hintSeen: true })); } catch { /* сховища немає */ } }, [SETTINGS_KEY, 'uk'] as const);
   await page.goto('/?seed=2');
-  await page.waitForFunction(() => (window as unknown as { __game?: { probe: { saveLoaded: boolean } } }).__game?.probe.saveLoaded === true, null, { timeout: 30_000 });
+  // GAME-186: сейв завантажений ≠ сцена готова. На повільному CI тест встигав почати джойстик/знімок p0, поки герой ще (0,0) — тепер чекаємо й probe.ready (сцена поставила героя).
+  await page.waitForFunction(() => { const p = (window as unknown as { __game?: { probe: { saveLoaded: boolean; ready: boolean } } }).__game?.probe; return p?.saveLoaded === true && p.ready === true; }, null, { timeout: 30_000 });
   // Виріз екрана: Chromium не дає емулювати env(safe-area-inset-*), тож перекриваємо змінні --safe-*, з яких CSS складає відступи.
   if (inset > 0) await page.addStyleTag({ content: `:root { --safe-left: ${inset}px !important; --safe-right: ${inset}px !important; }` });
   return { page, cdp: await ctx.newCDPSession(page) };
