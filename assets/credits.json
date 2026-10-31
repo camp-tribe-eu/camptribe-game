@@ -217,6 +217,7 @@
         "portraits/npc.sarah.png",
         "portraits/npc.victoria.png",
         "sprites/cat_mia.png",
+        "tiles/camp_props.png",
         "tiles/home_floor.png",
         "tiles/home_furniture.png",
         "tiles/home_walls.png",
@@ -284,19 +285,6 @@
       ],
       "sources": [
         "https://opengameart.org/content/lpc-floors"
-      ]
-    },
-    {
-      "name": "CampTribe (власні малюнки 5 клітинок)",
-      "files": [
-        "icons/objective_icons.png"
-      ],
-      "licences": [
-        "CC-BY-SA 3.0"
-      ],
-      "sources": [
-        "https://github.com/camp-tribe-eu/camptribe-game/blob/main/scripts/assets/build_objective_icons.py",
-        "https://opengameart.org/content/lpc-revised-base-object-kit"
       ]
     },
     {
@@ -504,6 +492,7 @@
         "portraits/npc.nora.png",
         "portraits/npc.sarah.png",
         "portraits/npc.victoria.png",
+        "tiles/camp_props.png",
         "tiles/home_furniture.png",
         "tiles/home_office.png",
         "tiles/shop_gear.png"
@@ -641,6 +630,7 @@
     {
       "name": "Hyptosis",
       "files": [
+        "tiles/camp_props.png",
         "tiles/home_floor.png",
         "tiles/home_furniture.png",
         "tiles/home_walls.png",
@@ -987,6 +977,7 @@
       "files": [
         "icons/objective_icons.png",
         "tiles/base_out_atlas.png",
+        "tiles/camp_props.png",
         "tiles/home_floor.png",
         "tiles/home_furniture.png",
         "tiles/home_office.png",
@@ -2872,8 +2863,7 @@
         "Eliza Wyatt (ElizaWy)",
         "Lanea Zimmerman (Sharm)",
         "bluecarrot16",
-        "Hyptosis (стильовий еталон LPC)",
-        "CampTribe (власні малюнки 5 клітинок)"
+        "Hyptosis (стильовий еталон LPC)"
       ],
       "licence": "CC-BY-SA 3.0",
       "sources": [
@@ -3361,6 +3351,20 @@
         "https://opengameart.org/content/lpc-modern-car-additions"
       ],
       "modified": "cropped to the car, scaled to 64 px height with nearest-neighbour (about 0.67x, the car was ~30% too big), centred on a 128x64 canvas, recoloured onto the base palette (scripts/palette/quantize.py)"
+    },
+    {
+      "file": "tiles/camp_props.png",
+      "authors": [
+        "Eliza Wyatt (ElizaWy)",
+        "Lanea Zimmerman (Sharm)",
+        "bluecarrot16",
+        "Hyptosis"
+      ],
+      "licence": "CC-BY-SA 3.0",
+      "sources": [
+        "https://opengameart.org/content/lpc-revised-base-object-kit"
+      ],
+      "modified": "AI-похідний твір від аркуша CC-BY-SA 3.0; лишається CC-BY-SA 3.0 (як ART-021)"
     },
     {
       "file": "tiles/camp_tent.png",

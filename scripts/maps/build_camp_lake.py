@@ -22,6 +22,7 @@
 import json
 import os
 import random
+import re
 import sys
 
 from PIL import Image
@@ -37,15 +38,23 @@ W, H = 40, 24   # GAME-172: було 20×12 (240 клітинок) — тепе�
 TERRAIN = os.path.join(ROOT, 'assets/tiles/terrain_atlas.png')
 TENT = os.path.join(ROOT, 'assets/tiles/camp_tent.png')
 CAR = os.path.join(ROOT, 'assets/tiles/camp_car.png')
+PROPS = os.path.join(ROOT, 'assets/tiles/camp_props.png')
 FIRE = os.path.join(ROOT, 'assets/sprites/campfire.png')
 MAP = os.path.join(ROOT, 'public/maps/camp-lake.tmj')
 PACK = os.path.join(ROOT, 'research/packs')
+
+sys.path.insert(0, os.path.join(ROOT, 'scripts', 'assets'))
+import build_camp_props  # noqa: E402
+
+PROP_SHEET, PROP_ROWS = build_camp_props.prop_sheet()      # GAME-205: розміри з реальної ширини предметів (art/world-scale.json × 28 px/м)
+PROP_SHEET['tent'] = (0, 0, 3, 2)
 
 # Тайлсети: (ім'я в сцені, файл від public/maps/, ширина в тайлах, кількість тайлів, firstgid).
 TILESETS = [
     ('lpc-terrain', '../../assets/tiles/terrain_atlas.png', 32, 1024, 1),
     ('camp-tent', '../../assets/tiles/camp_tent.png', 3, 6, 1025),
     ('camp-car', '../../assets/tiles/camp_car.png', 4, 8, 1031),
+    ('camp-props', '../../assets/tiles/camp_props.png', build_camp_props.COLS, build_camp_props.COLS * PROP_ROWS, 1039),   # GAME-205: каравани, меблі, санітарка… (build_camp_props.py)
 ]
 
 
@@ -81,8 +90,8 @@ class Grid:
     def __init__(self):
         self.layers = {n: [0] * (W * H) for n in ('ground', 'decor', 'walls', 'above')}
         self.atlas = Image.open(TERRAIN).convert('RGBA')
-        self.sheets = {1: self.atlas, 1025: Image.open(TENT).convert('RGBA'), 1031: Image.open(CAR).convert('RGBA')}
-        self.cols = {1: 32, 1025: 3, 1031: 4}
+        self.sheets = {1: self.atlas, 1025: Image.open(TENT).convert('RGBA'), 1031: Image.open(CAR).convert('RGBA'), 1039: Image.open(PROPS).convert('RGBA')}
+        self.cols = {1: 32, 1025: 3, 1031: 4, 1039: build_camp_props.COLS}
 
     def blank(self, first, ox, oy):
         """Тайл повністю прозорий — у шар не кладемо (інакше він би блокував порожню клітинку)."""
@@ -112,6 +121,8 @@ TENT_S = (1025, 0, 0, 3, 2)
 CAR_S = (1031, 0, 0, 4, 2)
 BOULDER = (1, 832, 672, 2, 2)     # атлас (26,21): валун 2×2
 STUMP = (1, 736, 576, 1, 1)       # атлас (23,18): пень
+# GAME-205: аркуш camp_props.png (build_camp_props.py): назва → (стовпець, рядок, ширина, висота) у клітинках.
+HEDGE = (1, 800, 416)                                      # центральний тайл куща 3×3 — жива огорожа ділянки
 POND = (6, 11)                    # атлас (6,11): ставок 3×3 з трав'яним берегом; розтягуємо краї → озеро будь-якого розміру
 PLANK = [(512, 640), (544, 640), (576, 640)]   # атлас (16..18,20): суцільні дошки причалу
 
@@ -120,6 +131,111 @@ LAKE = (28, 1, 39, 12)
 PIER_ROW = 7
 PIER_COLS = (28, 33)              # настил у воді: стовпці 28..33, рядок 7
 PIER_HEAD = (34, 36, 6, 8)        # майданчик на кінці: стовпці 34..36, рядки 6..8
+
+
+DIRT_GID = 1 + (160 // T) * 32 + 640 // T      # атлас (20,5): ґрунт стежок
+
+
+def reserved_cells():
+    """Клітинки, яких реквізит не торкається: цілі взаємодії, якорі, дозвілля, старт, вогнище, Еліза й стоянки мешканців (ambient.ts)."""
+    res = {(x // T, y // T) for _, x, y in TASK_SPOTS}
+    res |= {(c, r) for _, c, r in ANCHORS} | {(c, r) for _, c, r, _f in LEISURE} | {(6, 5), (3, 4), (2, 8)}
+    src = open(os.path.join(ROOT, 'src/view/world/ambient.ts'), encoding='utf8').read()
+    res |= {(int(m[1]), int(m[2])) for m in re.finditer(r'c: (\d+), r: (\d+), dwell', src)}
+    res |= {(int(m[1]), int(m[2])) for m in re.finditer(r'anchor: \{ c: (\d+), r: (\d+) \}', src)}   # якорі зон ambient.ts: до них дійти пішки (ambient.test)
+    return res
+
+
+def _reach(g, blocked):
+    walls = g.layers['walls']
+    seen, todo = {(6, 5)}, [(6, 5)]
+    while todo:
+        c, r = todo.pop()
+        for n in ((c + 1, r), (c - 1, r), (c, r + 1), (c, r - 1)):
+            if 0 <= n[0] < W and 0 <= n[1] < H and n not in seen and n not in blocked and not walls[n[1] * W + n[0]]:
+                seen.add(n)
+                todo.append(n)
+    return seen
+
+
+def cut_cells(g):
+    """GAME-205: клітинки, до яких не дійти від старту (6,5): (1) герой — по клітинках без walls — до всіх цілей, якорів, дозвілля й стоянок;
+    (2) мешканці — як у residentGrid (ambient.ts): цілі-тригери й NPC для них стіни, — до стоянок і якорів зон (обхід у ширину)."""
+    res = reserved_cells()
+    hero = _reach(g, set())
+    triggers = {(x // T, y // T) for _, x, y in TASK_SPOTS} | {(3, 4), (2, 8)} | {(c, r) for _, c, r in ANCHORS}   # ambient.test: мешканцям і якорі — стіни
+    resident = _reach(g, triggers)
+    src = open(os.path.join(ROOT, 'src/view/world/ambient.ts'), encoding='utf8').read()
+    walk = {(int(m[1]), int(m[2])) for m in re.finditer(r'c: (\d+), r: (\d+), dwell', src)} | {(int(m[1]), int(m[2])) for m in re.finditer(r'anchor: \{ c: (\d+), r: (\d+) \}', src)}
+    return sorted({c for c in res if c not in hero} | {c for c in walk if c not in resident})
+
+
+class Props:
+    """GAME-205 · реквізит кемпінгу з аркуша camp-props. Ставить, лише якщо ніщо не накладається, зарезервовані клітинки вільні, а навколо
+    лишається вільне кільце без стін (прохід ≥ 1 клітинка між об'єктами). auto() бере першого придатного кандидата; None — не поміщається (збірка падає)."""
+
+    def __init__(self, g):
+        self.g, self.res, self.placed = g, reserved_cells(), []
+
+    def _cells(self, name, c, r):
+        _, _, w, h = PROP_SHEET[name]
+        return [(c + i, r + j) for j in range(h) for i in range(w)]
+
+    def fits(self, name, c, r, margin=0, path=False, hot_clear=True):
+        g, (_, _, w, h) = self.g, PROP_SHEET[name]
+        # Старий табір (стовпці 0–9, рядки 0–10) — сцена сімейного обладнання: місце намету (task.pitch-tent), дрова, вогнище, старт. Ручні міні-ігри
+        # (тент 48×32 у радіусі 72 px, дрова) і тест глибини між наметами (game-93) мусять мати довкола вільні 2 клітинки.
+        hot = [(x // T, y // T) for _, x, y in TASK_SPOTS if x // T < 10 and y // T < 11] + [(6, 5), (3, 4), (2, 8)]
+        if hot_clear and any(max(abs(cc - hc), abs(rr - hr)) <= 2 for cc, rr in self._cells(name, c, r) for hc, hr in hot):
+            return False
+        if c < 0 or r < 1 or c + w > W or r + h > 21:
+            return False
+        for cc, rr in self._cells(name, c, r):
+            k = rr * W + cc
+            if (cc, rr) in self.res or g.layers['walls'][k] or g.layers['above'][k] or (not path and g.layers['ground'][k] == DIRT_GID):
+                return False
+        for rr in range(max(0, r - margin), min(H, r + h + margin)):
+            for cc in range(max(0, c - margin), min(W, c + w + margin)):
+                if g.layers['walls'][rr * W + cc]:
+                    return False
+        return True
+
+    def put(self, name, c, r):
+        col, row, w, h = PROP_SHEET[name]
+        if name == 'tent':                                  # намет — не з аркуша camp-props, а з camp_tent.png (як старі)
+            self.g.stamp(*TENT_S, c, r)
+            self.placed.append((name, c, r))
+            return
+        self.g.stamp(1039, col * T, row * T, w, h, c, r, 'tree')
+        self.placed.append((name, c, r))
+
+    def auto(self, name, cands, optional=False, **kw):
+        for c, r in cands:
+            if self.fits(name, c, r, **kw):
+                snap = {k: v[:] for k, v in self.g.layers.items()}
+                self.put(name, c, r)
+                if not cut_cells(self.g):
+                    return c, r
+                self.g.layers.update(snap)                  # поставлений предмет замурував би ціль — знімаємо, беремо наступного кандидата
+                self.placed.pop()
+        if optional:
+            print(f'  (пропущено {name}: немає місця)', file=sys.stderr)
+            return None
+        raise AssertionError(f'{name}: немає місця серед {len(cands)} кандидатів')
+
+
+def scan(c0, r0, c1, r1):
+    return [(c, r) for r in range(r0, r1 + 1) for c in range(c0, c1 + 1)]
+
+
+def near(tc, tr, rad=6):
+    """Усі клітинки в квадраті навколо (tc, tr), від найближчих: кандидати для речей біля намету."""
+    return sorted(scan(tc - rad, tr - rad + 2, tc + rad, tr + rad), key=lambda t: (abs(t[0] - tc - 1) + 1.5 * abs(t[1] - tr - 1), t))
+
+
+def around(tc, tr, tw=3, th=2, w=2, h=2):
+    """Кандидати біля намету (tc, tr, tw×th): праворуч, ліворуч, під ним, над ним."""
+    return [(tc + tw, tr), (tc + tw, tr + 1), (tc - w, tr), (tc - w, tr + 1), (tc, tr + th), (tc + 1, tr + th), (tc, tr - h), (tc + 1, tr - h)]
 
 
 def hut(g, c, r, w, wall_row, back):
@@ -149,6 +265,11 @@ def build_grid():
     for r in range(8, 21):
         for c in (18, 19):
             g.put('ground', c, r, 1, *dirt)
+    for c in range(12, 28):                                              # GAME-205: головна дорога 2 клітинки завширшки (рядки 7–8)
+        g.put('ground', c, 8, 1, *dirt)
+    for r in range(1, 7):                                                # в'їзна дорога 3 клітинки завширшки з півночі (шлагбаум і рецепція біля неї)
+        for c in (12, 13, 14):
+            g.put('ground', c, r, 1, *dirt)
     for c in range(13, 18):
         g.put('ground', c, 6, 1, *dirt)
     for c in range(21, 26):
@@ -174,7 +295,7 @@ def build_grid():
     g.stamp(*BOULDER, 26, 1, 'solid')
 
     # Верхня кромка: стовбури (крони за межею кадру). Стовпці 10–11 — велика сосна (східна стіна старого табору).
-    for c in list(range(0, 10, 2)) + list(range(12, 40, 2)):
+    for c in list(range(0, 10, 2)) + [16] + list(range(18, 40, 2)):   # GAME-205: прогалина c12–15 — в'їзд
         g.stamp(*PINE, c, 0, 'solid', rows=[4])
     g.stamp(*PINE, 10, 0, 'solid')
     g.stamp(*BUSH, 10, 9, 'solid')                      # рядки 9–11; ворота — рядки 5–8
@@ -187,25 +308,10 @@ def build_grid():
     g.stamp(*TENT_S, 0, 2)
     g.stamp(*TENT_S, 5, 2)
 
-    # Рецепція (13..17) і санітарний блок (21..25): дах — сланець, стіна — цегла/камінь; двері й вікна — з атласу.
-    BRICK = [(1, 672, 704), (1, 704, 704), (1, 736, 704), (1, 768, 704), (1, 736, 704)]
-    hut(g, 13, 3, 5, [BRICK[0], (1, 416, 672), (1, 544, 672), (1, 576, 672), BRICK[3]], BRICK[1])
-    STONE = [(1, 512, 832), (1, 544, 832), (1, 544, 832), (1, 544, 832), (1, 576, 832)]
-    hut(g, 21, 3, 5, [STONE[0], (1, 544, 704), (1, 576, 704), STONE[3], STONE[4]], STONE[1])
-
-    # Намети й кущі вздовж головної стежки (кемпінг не порожній між зонами).
-    g.stamp(*TENT_S, 14, 9)
-    g.stamp(*TENT_S, 22, 9)
-
-    # Південна галявина наметів: два ряди наметів і авто (зліва від лісової стежки).
-    for c in (1, 6, 11):
-        g.stamp(*TENT_S, c, 13)
-    for c in (3, 8):
-        g.stamp(*TENT_S, c, 17)
-    g.stamp(*CAR_S, 12, 17, 'solid')
+    # Рецепція (14..16) і санітарний блок (21..25) — предмети аркуша camp-props (GAME-205), ставляться нижче разом з рештою реквізиту.
 
     # Ліс: два ряди сосен (стовбури в рядках 15 і 20) із проходом для стежки (стовпці 18–19) і галявиною (стовпці 14–25, рядки 16–20).
-    for c in range(20, 40, 2):
+    for c in range(28, 40, 2):                                           # GAME-205: над ділянкою P3 (стовпці 20–27) ліс прорідили
         g.stamp(*PINE, c, 11, 'tree')
     for c in range(26, 40, 2):
         g.stamp(*PINE, c, 16, 'tree')
@@ -214,13 +320,77 @@ def build_grid():
         g.stamp(*BUSH, c, 21, 'solid')
     # Галявина: пень і валун.
     g.stamp(*STUMP, 23, 18, 'solid')
-    g.stamp(*BOULDER, 15, 19, 'solid')
+    g.stamp(*BOULDER, 24, 19, 'solid')
+
+    # GAME-205 · табір як справжній європейський кемпінг (research/refs/NOTES.md): в'їзна дорога зі шлагбаумом поперек і рецепцією поруч, санблок посередині,
+    # ділянки — прямокутники, обгороджені живою огорожею; на кожній ОДНА одиниця: (авто + причіп) / (кемпер) / (авто + намет), стіл і стовпчик електрики
+    # біля краю з боку дороги; ліхтарі вздовж доріг, баки біля в'їзду, кран біля санблока, мотузка на ділянці. Жодного розкидання.
+    p = Props(g)
+
+    def at(name, c, bottom):                      # предмет за нижнім рядком (висота з аркуша)
+        h = PROP_SHEET[name][3]
+        p.put(name, c, bottom - h + 1)
+
+    def at_free(name, c, bottom):                 # без колізій (піднятий шлагбаум: герой проходить)
+        col, row, w, h = PROP_SHEET[name]
+        for j in range(h):
+            for i in range(w):
+                g.put('decor', c + i, bottom - h + 1 + j, 1039, (col + i) * T, (row + j) * T)
+
+    def hedge(c0, r0, w, h, gaps=(), side_gap=(), sides='we'):
+        """Ділянка w×h: огорожа ззаду (рядок r0) і з боків; gaps — стовпці без огорожі ззаду, side_gap — рядки без бічної огорожі."""
+        for c in range(c0, c0 + w):
+            if c not in gaps:
+                g.put('walls', c, r0, *HEDGE)
+        for r in range(r0 + 1, r0 + h):
+            if r not in side_gap:
+                for c, k in ((c0, 'w'), (c0 + w - 1, 'e')):
+                    if k in sides:
+                        g.put('walls', c, r, *HEDGE)
+
+    at_free('barrier', 12, 3)                     # шлагбаум поперек в'їзної дороги (3 клітинки = ширина дороги)
+    at('reception', 15, 5)                        # рецепція праворуч від дороги, фасад до глядача
+    at('sanitary', 21, 5)                         # санблок посередині між ділянками й рецепцією
+    for c in (11, 12, 13, 14):                    # в'їзна дорога: ґрунт під ногами шлагбаума й дальше
+        pass
+
+    # P1 (c0–7, r12–20): авто + причіп; вхід із провулка c8–9 (бічна огорожа без прогалини в рядках 14–17).
+    hedge(0, 12, 8, 9, side_gap=(14, 15, 16, 17))
+    at('caravan', 1, 15)
+    at('table', 5, 19)
+    g.stamp(*CAR_S, 2, 17, 'solid')
+    at('hookup', 6, 14)
+    at('clothesline', 1, 20)
+    # провулок c8–9 (2 клітинки) від головної дороги вниз
+    for r in range(9, 21):
+        for c in (8, 9):
+            g.put('ground', c, r, 1, *dirt)
+    # P2 (c10–16, r13–20): авто + намет.
+    hedge(10, 13, 7, 8, side_gap=(14, 15, 16, 17, 19), sides='w')
+    g.stamp(*TENT_S, 12, 14)
+    at('table', 15, 16)
+    g.stamp(*CAR_S, 12, 18, 'solid')   # (11,19) — ціль Люка, тож авто з c12
+    at('hookup', 11, 15)
+    # P3 (c20–27, r11–15): кемпер біля озера.
+    hedge(20, 11, 8, 6, gaps=(), side_gap=(12, 13, 14))
+    at('motorhome', 21, 14)
+    at('table', 25, 11 + 3)
+    at('hookup', 20, 13)
+    # лінійка вздовж доріг: ліхтарі, баки біля в'їзду, кран біля санблока
+    for c, r in ((11, 6), (15, 7), (20, 7), (26, 7), (17, 10), (20, 10), (17, 19)):
+        p.auto('lamp', [(c, r)], optional=True, hot_clear=False, path=True)
+    p.auto('bins', [(16, 6), (17, 6), (19, 5), (19, 6)], optional=True, hot_clear=False, path=True)
+    p.auto('tap', [(20, 6), (28, 6)], optional=True, hot_clear=False, path=True)
+    # PLACEMENTS
+    print('props:', p.placed, file=sys.stderr)
 
     walls = g.layers['walls']
     for name, c, r in (('spawn', 6, 5), ('вогнище', 3, 4), ('Еліза', 2, 8), *((n, x // 32, y // 32) for n, x, y in TASK_SPOTS)):
         assert not walls[r * W + c], f'{name} у клітинці ({c},{r}) замуровано'
     for name, c, r in ANCHORS:
         assert not walls[r * W + c], f'{name} у клітинці ({c},{r}) замуровано'
+    cut = cut_cells(g)
+    assert not cut, f'недосяжні від старту клітинки: {cut}'
     return g
 
 
@@ -289,7 +459,8 @@ ANCHORS = [
     ('obj.pitch-1', 2, 16), ('obj.pitch-2', 7, 16), ('obj.pitch-3', 10, 16),   # вільні місця біля південних наметів
     ('obj.reception-desk', 16, 6), ('obj.sanitary-door', 24, 6),               # двори перед рецепцією й санітарним блоком
     ('obj.firewood-pile', 22, 18),                                             # лісова галявина, біля пенька-колоди
-    ('obj.water', 27, 10), ('obj.pier-end', 36, 7),                            # доступ до води з берега й кінець причалу
+    ('obj.water', 27, 10), ('obj.pier-end', 36, 7), ('fish.shore', 27, 12),   # fish.shore — місце риболовлі (було вписано в .tmj руками)
+                             # доступ до води з берега й кінець причалу
 ]
 
 

@@ -1,0 +1,148 @@
+{
+ "batch": [
+  {
+   "name": "caravan",
+   "endpoint": "fal-ai/flux-pro/kontext",
+   "payload": {
+    "prompt": "Using the exact pixel art style of this reference furniture sprite sheet (same 3/4 top-down RPG perspective, same dark outline, same limited palette and shading, same scale where one tile is 32 pixels, light from the top-left), draw ONE new object: a white touring caravan with a blue stripe, small windows and a door, front view slightly from above, about 5 tiles wide and 3 tiles tall. European holiday campsite. Single object centered, isolated on a solid flat pure magenta #FF00FF background, no floor, no shadow, no text, no logo, no people.",
+    "image_url": "https://raw.githubusercontent.com/camp-tribe-eu/camptribe-game/main/assets/tiles/home_furniture.png",
+    "num_images": 1,
+    "output_format": "png",
+    "safety_tolerance": "2",
+    "seed": 20261031
+   }
+  },
+  {
+   "name": "motorhome",
+   "endpoint": "fal-ai/flux-pro/kontext",
+   "payload": {
+    "prompt": "Using the exact pixel art style of this reference furniture sprite sheet (same 3/4 top-down RPG perspective, same dark outline, same limited palette and shading, same scale where one tile is 32 pixels, light from the top-left), draw ONE new object: a cream and green camper motorhome van with a roof, windows and a side awning, about 5 tiles wide and 3 tiles tall. European holiday campsite. Single object centered, isolated on a solid flat pure magenta #FF00FF background, no floor, no shadow, no text, no logo, no people.",
+    "image_url": "https://raw.githubusercontent.com/camp-tribe-eu/camptribe-game/main/assets/tiles/home_furniture.png",
+    "num_images": 1,
+    "output_format": "png",
+    "safety_tolerance": "2",
+    "seed": 20261031
+   }
+  },
+  {
+   "name": "hookup-post",
+   "endpoint": "fal-ai/flux-pro/kontext",
+   "payload": {
+    "prompt": "Using the exact pixel art style of this reference furniture sprite sheet (same 3/4 top-down RPG perspective, same dark outline, same limited palette and shading, same scale where one tile is 32 pixels, light from the top-left), draw ONE new object: a short grey electric hookup post for campsite pitches with a blue socket box and a small lamp on top, about 1 tile wide and 2 tiles tall. European holiday campsite. Single object centered, isolated on a solid flat pure magenta #FF00FF background, no floor, no shadow, no text, no logo, no people.",
+    "image_url": "https://raw.githubusercontent.com/camp-tribe-eu/camptribe-game/main/assets/tiles/home_furniture.png",
+    "num_images": 1,
+    "output_format": "png",
+    "safety_tolerance": "2",
+    "seed": 20261031
+   }
+  },
+  {
+   "name": "recycling-bins",
+   "endpoint": "fal-ai/flux-pro/kontext",
+   "payload": {
+    "prompt": "Using the exact pixel art style of this reference furniture sprite sheet (same 3/4 top-down RPG perspective, same dark outline, same limited palette and shading, same scale where one tile is 32 pixels, light from the top-left), draw ONE new object: three wheelie recycling bins in a row (yellow, blue and green) with lids, about 3 tiles wide and 2 tiles tall. European holiday campsite. Single object centered, isolated on a solid flat pure magenta #FF00FF background, no floor, no shadow, no text, no logo, no people.",
+    "image_url": "https://raw.githubusercontent.com/camp-tribe-eu/camptribe-game/main/assets/tiles/home_furniture.png",
+    "num_images": 1,
+    "output_format": "png",
+    "safety_tolerance": "2",
+    "seed": 20261031
+   }
+  },
+  {
+   "name": "camp-table-chairs",
+   "endpoint": "fal-ai/flux-pro/kontext",
+   "payload": {
+    "prompt": "Using the exact pixel art style of this reference furniture sprite sheet (same 3/4 top-down RPG perspective, same dark outline, same limited palette and shading, same scale where one tile is 32 pixels, light from the top-left), draw ONE new object: a folding picnic table with a red checkered cloth and two folding camping chairs next to it, about 3 tiles wide and 2 tiles tall. European holiday campsite. Single object centered, isolated on a solid flat pure magenta #FF00FF background, no floor, no shadow, no text, no logo, no people.",
+    "image_url": "https://raw.githubusercontent.com/camp-tribe-eu/camptribe-game/main/assets/tiles/home_furniture.png",
+    "num_images": 1,
+    "output_format": "png",
+    "safety_tolerance": "2",
+    "seed": 20261031
+   }
+  },
+  {
+   "name": "clothesline",
+   "endpoint": "fal-ai/flux-pro/kontext",
+   "payload": {
+    "prompt": "Using the exact pixel art style of this reference furniture sprite sheet (same 3/4 top-down RPG perspective, same dark outline, same limited palette and shading, same scale where one tile is 32 pixels, light from the top-left), draw ONE new object: a washing line between two wooden poles with hanging colorful towels and swimsuits, about 4 tiles wide and 2 tiles tall. European holiday campsite. Single object centered, isolated on a solid flat pure magenta #FF00FF background, no floor, no shadow, no text, no logo, no people.",
+    "image_url": "https://raw.githubusercontent.com/camp-tribe-eu/camptribe-game/main/assets/tiles/home_furniture.png",
+    "num_images": 1,
+    "output_format": "png",
+    "safety_tolerance": "2",
+    "seed": 20261031
+   }
+  },
+  {
+   "name": "barrier",
+   "endpoint": "fal-ai/flux-pro/kontext",
+   "payload": {
+    "prompt": "Using the exact pixel art style of this reference furniture sprite sheet (same 3/4 top-down RPG perspective, same dark outline, same limited palette and shading, same scale where one tile is 32 pixels, light from the top-left), draw ONE new object: a red and white striped road barrier arm lowered across the road on two grey posts, about 4 tiles wide and 2 tiles tall. European holiday campsite. Single object centered, isolated on a solid flat pure magenta #FF00FF background, no floor, no shadow, no text, no logo, no people.",
+    "image_url": "https://raw.githubusercontent.com/camp-tribe-eu/camptribe-game/main/assets/tiles/home_furniture.png",
+    "num_images": 1,
+    "output_format": "png",
+    "safety_tolerance": "2",
+    "seed": 20261031
+   }
+  },
+  {
+   "name": "reception-hut",
+   "endpoint": "fal-ai/flux-pro/kontext",
+   "payload": {
+    "prompt": "Using the exact pixel art style of this reference furniture sprite sheet (same 3/4 top-down RPG perspective, same dark outline, same limited palette and shading, same scale where one tile is 32 pixels, light from the top-left), draw ONE new object: a small wooden reception office hut with a pitched roof, a window with a counter and a green sign board, about 3 tiles wide and 3 tiles tall. European holiday campsite. Single object centered, isolated on a solid flat pure magenta #FF00FF background, no floor, no shadow, no text, no logo, no people.",
+    "image_url": "https://raw.githubusercontent.com/camp-tribe-eu/camptribe-game/main/assets/tiles/home_furniture.png",
+    "num_images": 1,
+    "output_format": "png",
+    "safety_tolerance": "2",
+    "seed": 20261031
+   }
+  },
+  {
+   "name": "sanitary-block",
+   "endpoint": "fal-ai/flux-pro/kontext",
+   "payload": {
+    "prompt": "Using the exact pixel art style of this reference furniture sprite sheet (same 3/4 top-down RPG perspective, same dark outline, same limited palette and shading, same scale where one tile is 32 pixels, light from the top-left), draw ONE new object: a low brick sanitary building with toilets and showers, flat roof, two doors with blue and pink signs, about 5 tiles wide and 3 tiles tall. European holiday campsite. Single object centered, isolated on a solid flat pure magenta #FF00FF background, no floor, no shadow, no text, no logo, no people.",
+    "image_url": "https://raw.githubusercontent.com/camp-tribe-eu/camptribe-game/main/assets/tiles/home_furniture.png",
+    "num_images": 1,
+    "output_format": "png",
+    "safety_tolerance": "2",
+    "seed": 20261031
+   }
+  },
+  {
+   "name": "bicycles",
+   "endpoint": "fal-ai/flux-pro/kontext",
+   "payload": {
+    "prompt": "Using the exact pixel art style of this reference furniture sprite sheet (same 3/4 top-down RPG perspective, same dark outline, same limited palette and shading, same scale where one tile is 32 pixels, light from the top-left), draw ONE new object: two parked touring bicycles leaning together, one red and one blue, with panniers, about 2 tiles wide and 2 tiles tall. European holiday campsite. Single object centered, isolated on a solid flat pure magenta #FF00FF background, no floor, no shadow, no text, no logo, no people.",
+    "image_url": "https://raw.githubusercontent.com/camp-tribe-eu/camptribe-game/main/assets/tiles/home_furniture.png",
+    "num_images": 1,
+    "output_format": "png",
+    "safety_tolerance": "2",
+    "seed": 20261031
+   }
+  },
+  {
+   "name": "lamp-post",
+   "endpoint": "fal-ai/flux-pro/kontext",
+   "payload": {
+    "prompt": "Using the exact pixel art style of this reference furniture sprite sheet (same 3/4 top-down RPG perspective, same dark outline, same limited palette and shading, same scale where one tile is 32 pixels, light from the top-left), draw ONE new object: a black campsite path lamp post with a warm glowing lantern on top, about 1 tile wide and 3 tiles tall. European holiday campsite. Single object centered, isolated on a solid flat pure magenta #FF00FF background, no floor, no shadow, no text, no logo, no people.",
+    "image_url": "https://raw.githubusercontent.com/camp-tribe-eu/camptribe-game/main/assets/tiles/home_furniture.png",
+    "num_images": 1,
+    "output_format": "png",
+    "safety_tolerance": "2",
+    "seed": 20261031
+   }
+  },
+  {
+   "name": "water-tap",
+   "endpoint": "fal-ai/flux-pro/kontext",
+   "payload": {
+    "prompt": "Using the exact pixel art style of this reference furniture sprite sheet (same 3/4 top-down RPG perspective, same dark outline, same limited palette and shading, same scale where one tile is 32 pixels, light from the top-left), draw ONE new object: a standing campsite water tap on a small concrete base with a bucket, about 1 tile wide and 1 tile tall. European holiday campsite. Single object centered, isolated on a solid flat pure magenta #FF00FF background, no floor, no shadow, no text, no logo, no people.",
+    "image_url": "https://raw.githubusercontent.com/camp-tribe-eu/camptribe-game/main/assets/tiles/home_furniture.png",
+    "num_images": 1,
+    "output_format": "png",
+    "safety_tolerance": "2",
+    "seed": 20261031
+   }
+  }
+ ]
+}

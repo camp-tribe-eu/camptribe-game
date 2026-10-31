@@ -207,6 +207,8 @@ test.describe('джойстик', () => {
   test('дрібний зсув у мертвій зоні не рухає персонажа', async ({ browser }) => {
     const page = await newPage(browser, { width: 390, height: 844 }, 100);
     // Спершу сцена має поставити героя: першим тестом шарда (fullyParallel, #119) проба встигала до розстановки — «рух» 384 px без жодного дотику.
+    // GAME-186: «стоїть 250 мс» проходило й на (0,0) ДО розстановки (CI #135, знову 384 px) — тож спершу probe.ready.
+    await page.waitForFunction(() => (window as unknown as { __game?: { probe: { ready: boolean } } }).__game?.probe.ready === true, null, { timeout: 30_000 });
     let a = await probe(page);
     await expect.poll(async () => { const p = await probe(page); const still = Math.abs(p.playerX - a.playerX) + Math.abs(p.playerY - a.playerY) < 0.5; a = p; return still; }, { timeout: 10_000, intervals: [250] }).toBe(true);
     await drag(page, 6, 6, 400);
