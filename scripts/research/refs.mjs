@@ -1,6 +1,6 @@
 // GAME-197 (OD-024): справжні референси перед малюванням — вільні фото з Wikimedia Commons.
 // Мережа сесії закрита, тому запускає runner (research-fetch.yml, рядок `refs-<тема>\trefs:<запит>|<запит>…`).
-// Комітимо лише мініатюри (≤ 640 px) з вільною ліцензією і з автором у CREDITS.txt; невільне — пропускаємо.
+// Комітимо лише мініатюри (Commons ≤ 640 px, Openverse ≤ 960 px) з вільною ліцензією і з автором у CREDITS.txt; невільне — пропускаємо.
 // Запуск: node scripts/research/refs.mjs <тека> "<запит>|<запит>" [мінімум]
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';

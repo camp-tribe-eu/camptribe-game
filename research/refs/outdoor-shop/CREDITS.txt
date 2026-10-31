@@ -2,7 +2,6 @@ file	title	author	license	source
 ref04.jpg	File:Two Medicine Camp Store (5634752069).jpg	GlacierNPS	Public domain	https://commons.wikimedia.org/wiki/File:Two_Medicine_Camp_Store_(5634752069).jpg
 ref05.jpg	File:Two Medicine Camp Store (5634749113).jpg	GlacierNPS	Public domain	https://commons.wikimedia.org/wiki/File:Two_Medicine_Camp_Store_(5634749113).jpg
 ref12.jpg	File:NT Camp Store (29761598140).jpg	vastateparksstaff	CC BY 2.0	https://commons.wikimedia.org/wiki/File:NT_Camp_Store_(29761598140).jpg
-ref14.jpg	File:Camp store at Can Tho PW Camp, November 1968.jpg	NARA photo 111-CCV-430-CC53539 by SP5 Ronald Delaurier	Public domain	https://commons.wikimedia.org/wiki/File:Camp_store_at_Can_Tho_PW_Camp,_November_1968.jpg
 ref17.jpg	File:熊本流通団地２階.jpg	ja:User:JO2337	CC BY-SA 3.0	https://commons.wikimedia.org/wiki/File:%E7%86%8A%E6%9C%AC%E6%B5%81%E9%80%9A%E5%9B%A3%E5%9C%B0%EF%BC%92%E9%9A%8E.jpg
 ref21.jpg	File:Winnibigoshish 1932 Tourist Camp-18-Big Winnie General Store interior.jpg	unknown	CC BY-SA 4.0	https://commons.wikimedia.org/wiki/File:Winnibigoshish_1932_Tourist_Camp-18-Big_Winnie_General_Store_interior.jpg
 ref22.jpg	File:Winnibigoshish 1932 Tourist Camp-17-Big Winnie General Store interior.jpg	unknown	CC BY-SA 4.0	https://commons.wikimedia.org/wiki/File:Winnibigoshish_1932_Tourist_Camp-17-Big_Winnie_General_Store_interior.jpg
