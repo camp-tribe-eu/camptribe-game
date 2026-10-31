@@ -163,7 +163,7 @@ def cut_cells(g):
     (2) мешканці — як у residentGrid (ambient.ts): цілі-тригери й NPC для них стіни, — до стоянок і якорів зон (обхід у ширину)."""
     res = reserved_cells()
     hero = _reach(g, set())
-    triggers = {(x // T, y // T) for _, x, y in TASK_SPOTS} | {(3, 4), (2, 8)}
+    triggers = {(x // T, y // T) for _, x, y in TASK_SPOTS} | {(3, 4), (2, 8)} | {(c, r) for _, c, r in ANCHORS}   # ambient.test: мешканцям і якорі — стіни
     resident = _reach(g, triggers)
     src = open(os.path.join(ROOT, 'src/view/world/ambient.ts'), encoding='utf8').read()
     walk = {(int(m[1]), int(m[2])) for m in re.finditer(r'c: (\d+), r: (\d+), dwell', src)} | {(int(m[1]), int(m[2])) for m in re.finditer(r'anchor: \{ c: (\d+), r: (\d+) \}', src)}
@@ -357,7 +357,7 @@ def build_grid():
     # P1 (c0–7, r12–20): авто + причіп; вхід із провулка c8–9 (бічна огорожа без прогалини в рядках 14–17).
     hedge(0, 12, 8, 9, side_gap=(14, 15, 16, 17))
     at('caravan', 1, 15)
-    at('table', 5, 16)
+    at('table', 5, 19)
     g.stamp(*CAR_S, 2, 17, 'solid')
     at('hookup', 6, 14)
     at('clothesline', 1, 20)
