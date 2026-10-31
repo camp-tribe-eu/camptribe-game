@@ -135,18 +135,6 @@
       ]
     },
     {
-      "name": "Bertram",
-      "files": [
-        "tiles/shop_decor.png"
-      ],
-      "licences": [
-        "CC-BY-SA 3.0"
-      ],
-      "sources": [
-        "https://opengameart.org/content/lpc-medieval-village-decorations"
-      ]
-    },
-    {
       "name": "bleutailfly",
       "files": [
         "tiles/home_floor.png",
@@ -232,9 +220,7 @@
         "tiles/home_furniture.png",
         "tiles/home_walls.png",
         "tiles/home_windows_doors.png",
-        "tiles/shop_gear.png",
-        "tiles/shop_tailor.png",
-        "tiles/shop_woodshop.png"
+        "tiles/shop_gear.png"
       ],
       "licences": [
         "CC-BY-SA 3.0",
@@ -267,12 +253,10 @@
         "https://opengameart.org/content/lpc-revised-character-basics",
         "https://opengameart.org/content/lpc-runcycle-and-diagonal-walkcycle",
         "https://opengameart.org/content/lpc-runcycle-for-male-muscular-and-pregnant-character-bases-with-modular-heads",
-        "https://opengameart.org/content/lpc-tailor",
         "https://opengameart.org/content/lpc-teen-androgynous-short-sleeve-shirt",
         "https://opengameart.org/content/lpc-teen-unisex-base-clothes",
         "https://opengameart.org/content/lpc-walls",
         "https://opengameart.org/content/lpc-windows-doors",
-        "https://opengameart.org/content/lpc-woodshop",
         "https://opengameart.org/content/ponytail-and-plain-hairstyles"
       ]
     },
@@ -307,7 +291,6 @@
         "tiles/home_floor.png",
         "tiles/home_walls.png",
         "tiles/home_windows_doors.png",
-        "tiles/shop_decor.png",
         "tiles/terrain_atlas.png"
       ],
       "licences": [
@@ -316,7 +299,6 @@
       ],
       "sources": [
         "https://opengameart.org/content/lpc-floors",
-        "https://opengameart.org/content/lpc-medieval-village-decorations",
         "https://opengameart.org/content/lpc-tile-atlas",
         "https://opengameart.org/content/lpc-walls",
         "https://opengameart.org/content/lpc-windows-doors"
@@ -363,30 +345,6 @@
       ]
     },
     {
-      "name": "Curt",
-      "files": [
-        "tiles/shop_decor.png"
-      ],
-      "licences": [
-        "CC-BY-SA 3.0"
-      ],
-      "sources": [
-        "https://opengameart.org/content/lpc-medieval-village-decorations"
-      ]
-    },
-    {
-      "name": "Daneeklu",
-      "files": [
-        "tiles/shop_decor.png"
-      ],
-      "licences": [
-        "CC-BY-SA 3.0"
-      ],
-      "sources": [
-        "https://opengameart.org/content/lpc-medieval-village-decorations"
-      ]
-    },
-    {
       "name": "Daniel Armstrong (HughSpectrum)",
       "files": [
         "tiles/base_out_atlas.png",
@@ -426,18 +384,6 @@
       ],
       "sources": [
         "https://opengameart.org/content/lpc-tile-atlas"
-      ]
-    },
-    {
-      "name": "Daniel Eddeland (daneeklu)",
-      "files": [
-        "tiles/shop_decor.png"
-      ],
-      "licences": [
-        "CC-BY-SA 3.0"
-      ],
-      "sources": [
-        "https://opengameart.org/content/lpc-medieval-village-decorations"
       ]
     },
     {
@@ -653,14 +599,12 @@
       "name": "Guido Bos",
       "files": [
         "tiles/home_walls.png",
-        "tiles/home_windows_doors.png",
-        "tiles/shop_decor.png"
+        "tiles/home_windows_doors.png"
       ],
       "licences": [
         "CC-BY-SA 3.0"
       ],
       "sources": [
-        "https://opengameart.org/content/lpc-medieval-village-decorations",
         "https://opengameart.org/content/lpc-walls",
         "https://opengameart.org/content/lpc-windows-doors"
       ]
@@ -683,7 +627,6 @@
         "tiles/home_floor.png",
         "tiles/home_furniture.png",
         "tiles/home_walls.png",
-        "tiles/shop_decor.png",
         "tiles/shop_gear.png"
       ],
       "licences": [
@@ -692,7 +635,6 @@
       ],
       "sources": [
         "https://opengameart.org/content/lpc-floors",
-        "https://opengameart.org/content/lpc-medieval-village-decorations",
         "https://opengameart.org/content/lpc-revised-base-object-kit",
         "https://opengameart.org/content/lpc-walls"
       ]
@@ -806,16 +748,13 @@
     {
       "name": "Jetrel",
       "files": [
-        "tiles/home_floor.png",
-        "tiles/shop_decor.png"
+        "tiles/home_floor.png"
       ],
       "licences": [
-        "CC-BY-SA 3.0",
         "CC-BY-SA 4.0"
       ],
       "sources": [
-        "https://opengameart.org/content/lpc-floors",
-        "https://opengameart.org/content/lpc-medieval-village-decorations"
+        "https://opengameart.org/content/lpc-floors"
       ]
     },
     {
@@ -876,18 +815,6 @@
       ]
     },
     {
-      "name": "Johann C",
-      "files": [
-        "tiles/shop_decor.png"
-      ],
-      "licences": [
-        "CC-BY-SA 3.0"
-      ],
-      "sources": [
-        "https://opengameart.org/content/lpc-medieval-village-decorations"
-      ]
-    },
-    {
       "name": "Johann Charlot",
       "files": [
         "tiles/base_out_atlas.png",
@@ -898,18 +825,6 @@
       ],
       "sources": [
         "https://opengameart.org/content/lpc-tile-atlas"
-      ]
-    },
-    {
-      "name": "Johannes Sjölund",
-      "files": [
-        "tiles/shop_decor.png"
-      ],
-      "licences": [
-        "CC-BY-SA 3.0"
-      ],
-      "sources": [
-        "https://opengameart.org/content/lpc-medieval-village-decorations"
       ]
     },
     {
@@ -1047,7 +962,6 @@
         "tiles/home_shelf.png",
         "tiles/home_walls.png",
         "tiles/home_windows_doors.png",
-        "tiles/shop_decor.png",
         "tiles/shop_gear.png",
         "tiles/terrain_atlas.png"
       ],
@@ -1058,7 +972,6 @@
       ],
       "sources": [
         "https://opengameart.org/content/lpc-floors",
-        "https://opengameart.org/content/lpc-medieval-village-decorations",
         "https://opengameart.org/content/lpc-revised-base-object-kit",
         "https://opengameart.org/content/lpc-revised-the-office",
         "https://opengameart.org/content/lpc-shelves-rework",
@@ -1278,18 +1191,6 @@
       ]
     },
     {
-      "name": "Nemisys",
-      "files": [
-        "tiles/shop_decor.png"
-      ],
-      "licences": [
-        "CC-BY-SA 3.0"
-      ],
-      "sources": [
-        "https://opengameart.org/content/lpc-medieval-village-decorations"
-      ]
-    },
-    {
       "name": "Nyom",
       "files": [
         "characters/torso/clothes/shortsleeve/shortsleeve/teen/slash.png",
@@ -1342,12 +1243,10 @@
         "portraits/npc.matthew.png",
         "portraits/npc.nora.png",
         "portraits/npc.sarah.png",
-        "portraits/npc.victoria.png",
-        "tiles/shop_tailor.png"
+        "portraits/npc.victoria.png"
       ],
       "licences": [
-        "CC-BY-SA 3.0",
-        "OGA-BY 3.0"
+        "CC-BY-SA 3.0"
       ],
       "sources": [
         "http://opengameart.org/content/lpc-clothing-updates",
@@ -1371,7 +1270,6 @@
         "https://opengameart.org/content/lpc-medieval-fantasy-character-sprites",
         "https://opengameart.org/content/lpc-revised-character-basics",
         "https://opengameart.org/content/lpc-runcycle-and-diagonal-walkcycle",
-        "https://opengameart.org/content/lpc-tailor",
         "https://opengameart.org/content/lpc-teen-androgynous-short-sleeve-shirt",
         "https://opengameart.org/content/lpc-teen-unisex-base-clothes"
       ]
@@ -1380,8 +1278,7 @@
       "name": "Reemax",
       "files": [
         "tiles/home_floor.png",
-        "tiles/home_walls.png",
-        "tiles/shop_decor.png"
+        "tiles/home_walls.png"
       ],
       "licences": [
         "CC-BY-SA 3.0",
@@ -1389,7 +1286,6 @@
       ],
       "sources": [
         "https://opengameart.org/content/lpc-floors",
-        "https://opengameart.org/content/lpc-medieval-village-decorations",
         "https://opengameart.org/content/lpc-walls"
       ]
     },
@@ -1501,8 +1397,6 @@
         "tiles/base_out_atlas.png",
         "tiles/home_floor.png",
         "tiles/home_walls.png",
-        "tiles/shop_decor.png",
-        "tiles/shop_tailor.png",
         "tiles/terrain_atlas.png"
       ],
       "licences": [
@@ -1531,11 +1425,9 @@
         "https://opengameart.org/content/lpc-ladies",
         "https://opengameart.org/content/lpc-male-jumping-animation-by-durrani",
         "https://opengameart.org/content/lpc-medieval-fantasy-character-sprites",
-        "https://opengameart.org/content/lpc-medieval-village-decorations",
         "https://opengameart.org/content/lpc-revised-character-basics",
         "https://opengameart.org/content/lpc-runcycle-and-diagonal-walkcycle",
         "https://opengameart.org/content/lpc-runcycle-for-male-muscular-and-pregnant-character-bases-with-modular-heads",
-        "https://opengameart.org/content/lpc-tailor",
         "https://opengameart.org/content/lpc-teen-androgynous-short-sleeve-shirt",
         "https://opengameart.org/content/lpc-teen-unisex-base-clothes",
         "https://opengameart.org/content/lpc-tile-atlas",
@@ -1570,14 +1462,12 @@
     {
       "name": "Tuomo Untinen",
       "files": [
-        "tiles/home_shelf.png",
-        "tiles/shop_decor.png"
+        "tiles/home_shelf.png"
       ],
       "licences": [
         "CC-BY-SA 3.0"
       ],
       "sources": [
-        "https://opengameart.org/content/lpc-medieval-village-decorations",
         "https://opengameart.org/content/lpc-shelves-rework"
       ]
     },
@@ -1597,8 +1487,7 @@
       "name": "William Thompson (William.Thompsonj)",
       "files": [
         "tiles/home_floor.png",
-        "tiles/home_walls.png",
-        "tiles/shop_decor.png"
+        "tiles/home_walls.png"
       ],
       "licences": [
         "CC-BY-SA 3.0",
@@ -1606,7 +1495,6 @@
       ],
       "sources": [
         "https://opengameart.org/content/lpc-floors",
-        "https://opengameart.org/content/lpc-medieval-village-decorations",
         "https://opengameart.org/content/lpc-walls"
       ]
     },
@@ -1670,18 +1558,6 @@
       ]
     },
     {
-      "name": "Xenodora",
-      "files": [
-        "tiles/shop_decor.png"
-      ],
-      "licences": [
-        "CC-BY-SA 3.0"
-      ],
-      "sources": [
-        "https://opengameart.org/content/lpc-medieval-village-decorations"
-      ]
-    },
-    {
       "name": "xhunterko",
       "files": [
         "tiles/camp_tent.png"
@@ -1697,15 +1573,13 @@
       "name": "Zabin",
       "files": [
         "sprites/campfire.png",
-        "tiles/home_walls.png",
-        "tiles/shop_decor.png"
+        "tiles/home_walls.png"
       ],
       "licences": [
         "CC-BY-SA 3.0"
       ],
       "sources": [
         "https://opengameart.org/content/camp-fire-animation-for-rpgs-finished",
-        "https://opengameart.org/content/lpc-medieval-village-decorations",
         "https://opengameart.org/content/lpc-walls"
       ]
     }
@@ -3572,34 +3446,6 @@
       "modified": "one white 2-tile window (cropped from x=16 so it sits on the tile grid) and one white door (shifted 16 px down so it stands on the floor line) cropped from windows-doors.png onto a 96x96 sheet, recoloured onto the base palette (scripts/palette/quantize.py)"
     },
     {
-      "file": "tiles/shop_decor.png",
-      "authors": [
-        "Reemax",
-        "Lanea Zimmerman (Sharm)",
-        "Johann C",
-        "Xenodora",
-        "Johannes Sjölund",
-        "Casper Nilsson",
-        "Hyptosis",
-        "Daniel Eddeland (daneeklu)",
-        "Zabin",
-        "Jetrel",
-        "Stephen Challener (Redshrike)",
-        "Guido Bos",
-        "Nemisys",
-        "Curt",
-        "William Thompson (William.Thompsonj)",
-        "Daneeklu",
-        "Bertram",
-        "Tuomo Untinen"
-      ],
-      "licence": "CC-BY-SA 3.0",
-      "sources": [
-        "https://opengameart.org/content/lpc-medieval-village-decorations"
-      ],
-      "modified": "tent scaled to 0.5 with a box filter, three lanterns, two firewood piles, one crate and three hanging signs trimmed and centred onto a 256x96 sheet, bottom-aligned to the tile grid, recoloured onto the base palette; stays CC-BY-SA (scripts/assets/build_shop_outdoor.py, scripts/palette/quantize.py)"
-    },
-    {
       "file": "tiles/shop_gear.png",
       "authors": [
         "Eliza Wyatt (ElizaWy)",
@@ -3612,30 +3458,6 @@
         "https://opengameart.org/content/lpc-revised-base-object-kit"
       ],
       "modified": "eleven shop items (checkout, fridge, backpack wall, rod rack, door, dome tent, boot rack, sleeping bags, chairs, gas shelf, lantern table) redrawn by an image-editing model from the LPC furniture sheet, magenta background keyed out, scaled with a box filter onto a 352x192 sheet bottom-aligned to the tile grid, quantized to the LPC palette (scripts/assets/build_shop_gear.py)"
-    },
-    {
-      "file": "tiles/shop_tailor.png",
-      "authors": [
-        "bluecarrot16",
-        "Stephen Challener (Redshrike)",
-        "Pierre Vigier (pvigier)"
-      ],
-      "licence": "OGA-BY 3.0",
-      "sources": [
-        "https://opengameart.org/content/lpc-tailor"
-      ],
-      "modified": "three clothes racks (2x2 tiles) and four rolled-cloth baskets (1x2 tiles) trimmed and centred onto a 320x64 sheet, bottom-aligned to the tile grid, recoloured onto the base palette (scripts/assets/build_shop_outdoor.py, scripts/palette/quantize.py)"
-    },
-    {
-      "file": "tiles/shop_woodshop.png",
-      "authors": [
-        "bluecarrot16"
-      ],
-      "licence": "OGA-BY 3.0",
-      "sources": [
-        "https://opengameart.org/content/lpc-woodshop"
-      ],
-      "modified": "workbench cropped, trimmed and centred on a 3x2 tile block (used as the checkout counter and a display table) plus three tool-panel strips trimmed onto a 256x96 sheet, bottom-aligned to the tile grid, recoloured onto the base palette (scripts/assets/build_shop_outdoor.py, scripts/palette/quantize.py)"
     },
     {
       "file": "tiles/terrain_atlas.png",

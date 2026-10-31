@@ -11,9 +11,6 @@ import homeWindowsDoors from '../../../assets/tiles/home_windows_doors.png';
 import homeFurniture from '../../../assets/tiles/home_furniture.png';
 import homeOffice from '../../../assets/tiles/home_office.png';
 import homeShelf from '../../../assets/tiles/home_shelf.png';
-import shopWoodshop from '../../../assets/tiles/shop_woodshop.png';
-import shopTailor from '../../../assets/tiles/shop_tailor.png';
-import shopDecor from '../../../assets/tiles/shop_decor.png';
 import shopGear from '../../../assets/tiles/shop_gear.png';
 import campfire from '../../../assets/sprites/campfire.png';
 import bodyMale from '../../../assets/characters/body/bodies/male/walk.png';
@@ -62,7 +59,7 @@ import { ACTIONS, ACTION_COLS, composeSheet, loadImage, type Action, type LayerS
 export const TILESET_IMAGES: Readonly<Record<string, string>> = {
   'lpc-terrain': terrain, 'camp-tent': tent, 'camp-car': car,
   'home-walls': homeWalls, 'home-floor': homeFloor, 'home-windows-doors': homeWindowsDoors, 'home-furniture': homeFurniture, 'home-office': homeOffice, 'home-shelf': homeShelf,
-  'shop-woodshop': shopWoodshop, 'shop-tailor': shopTailor, 'shop-decor': shopDecor, 'shop-gear': shopGear,
+  'shop-gear': shopGear,
 };
 const HOME_SETS = ['home-walls', 'home-floor', 'home-windows-doors', 'home-furniture', 'home-office', 'home-shelf', 'lpc-terrain', 'camp-car'] as const;
 /** GAME-204: крамниця спорядження — власний аркуш shop-gear (каса, намет, гондоли, двері), без домашніх меблів і книжкової полиці. */
@@ -151,6 +148,14 @@ export const RESIDENT_LOOKS = {
   amina: [
     { url: ponytailBack, tint: rgb(50, 30, 28) }, { url: bodyFemale }, { url: headFemale }, { url: shoesThin, tint: rgb(40, 40, 50) },
     { url: pantsThin, tint: rgb(60, 60, 80) }, { url: shirtFemale, tint: rgb(225, 225, 215) }, { url: ponytailFront, tint: rgb(50, 30, 28) },
+  ],
+  /**
+   * GAME-204 · Lotte, продавчиня крамниці спорядження: не мешканка табору (у RESIDENTS її нема — стоїть за касою, нерухома), але лист ходьби складається тут же.
+   * Ті самі шари LPC: жіноче тіло, синя сорочка-«поло» крамниці, каштанове скуйовджене волосся — не плутається ні з родиною, ні з мешканцями (looks.test).
+   */
+  lotte: [
+    { url: bodyFemale }, { url: headFemale }, { url: shoesThin, tint: rgb(55, 50, 45) }, { url: pantsThin, tint: rgb(150, 135, 100) },
+    { url: shirtFemale, tint: rgb(20, 95, 140) }, { url: hairMessy, tint: rgb(110, 60, 35) },
   ],
 } as const satisfies Readonly<Record<string, readonly LayerSpec[]>>;
 

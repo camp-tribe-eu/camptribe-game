@@ -91,7 +91,7 @@ def drop_small(im, frac=0.06):
     return out
 
 
-def decontaminate(im):
+def decontaminate(im, strict=False):
     """Знімає пурпурову кайму: піксель із пурпуровим відтінком поруч із прозорим стає прозорим."""
     w, h = im.size
     px = im.load()
@@ -104,12 +104,23 @@ def decontaminate(im):
                     kill.append((x, y))
     for x, y in kill:
         px[x, y] = (0, 0, 0, 0)
+    # GAME-204 (рецензія 3): лише для strict-предметів (стійка взуття) рожево-бордові залишки напівпрозорої кайми (r > g + 25 і b > g + 8) зникають у всьому предметі;
+    # дерево має b < g, а на касі темні шви шафи цього кольору — тому не для всіх.
+    for _ in range(2 if strict else 0):
+        for y in range(h):
+            for x in range(w):
+                r, g, b, a = px[x, y]
+                if a and r > g + 25 and b > g + 8:
+                    px[x, y] = (0, 0, 0, 0)
     return im
+
+
+STRICT = {'boots-rack'}
 
 
 def sprite(name, w_tiles, h_tiles):
     im = Image.open(os.path.join(SRC, f'{name}_0.webp'))
-    im = drop_small(decontaminate(key_out(im)))
+    im = drop_small(decontaminate(key_out(im), name in STRICT))
     im = im.crop(im.getchannel('A').point(lambda v: 255 if v >= 128 else 0).getbbox())
     k = min(w_tiles * T / im.width, h_tiles * T / im.height)
     return im.resize((max(1, round(im.width * k)), max(1, round(im.height * k))), Image.BOX)

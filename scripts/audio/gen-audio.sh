@@ -24,6 +24,8 @@ amb road-car 10 "aevalsrc='0.35*sin(2*PI*55*t)+0.2*sin(2*PI*110*t+0.5)+0.1*sin(2
 # Дорога (велосипед): тихий тік ланцюга ~7 Гц + вітер.
 amb road-bike 10 "aevalsrc='0.9*lt(mod(t,0.14),0.003)*(2*random(0)-1)':d=10:s=22050,bandpass=f=2500:w=1500,volume=0.9[k];$(n pink 10 0.3 6),lowpass=f=900,volume=0.5[w];[k][w]amix=inputs=2:normalize=0,volume=10dB"
 
+# Крамниця (GAME-204): тиха кімнатна «тиша» — вентиляція (рожевий шум, низькі частоти) + рідкий шурхіт пакувань і далекий дзенькіт каси.
+amb shop 12 "$(n pink 12 0.25 21),lowpass=f=500,tremolo=f=0.15:d=0.3,volume=0.35[v];$(n white 12 0.6 23),highpass=f=3000,agate=threshold=0.55:attack=1:release=60,volume=0.12[r];aevalsrc='0.05*sin(2*PI*2300*t)*exp(-9*mod(t,6.1))*lt(mod(t,6.1),0.4)':d=12:s=22050[k];[v][r][k]amix=inputs=3:normalize=0,volume=6dB"
 # Ефекти.
 sfx peg "aevalsrc='0.9*sin(2*PI*(170-60*t)*t)*exp(-14*t)+0.5*(2*random(0)-1)*exp(-60*t)':d=0.3:s=22050" 0.3
 sfx chop "aevalsrc='0.8*(2*random(0)-1)*exp(-45*t)+0.7*sin(2*PI*110*t)*exp(-18*t)':d=0.3:s=22050,lowpass=f=3500" 0.3
@@ -32,4 +34,6 @@ sfx cast "aevalsrc='(2*random(0)-1)*sin(PI*t/0.45)*0.8':d=0.45:s=22050,bandpass=
 sfx splash "aevalsrc='(2*random(0)-1)*exp(-9*t)*0.9':d=0.5:s=22050,lowpass=f=3500,highpass=f=300" 0.5
 sfx catch "aevalsrc='0.45*(sin(2*PI*784*t)*exp(-7*t)+sin(2*PI*988*(t-0.12))*exp(-7*(t-0.12))*gte(t,0.12)+sin(2*PI*1319*(t-0.24))*exp(-6*(t-0.24))*gte(t,0.24))':d=0.8:s=22050" 0.8
 sfx branch "aevalsrc='0.7*(2*random(0)-1)*exp(-120*t)+0.6*(2*random(0)-1)*exp(-100*(t-0.07))*gte(t,0.07)':d=0.25:s=22050,highpass=f=800" 0.25
+# Дзвіночок на дверях крамниці: дві гармоніки дзвону з швидким згасанням, друга чутно пізніше.
+sfx chime "aevalsrc='0.5*(sin(2*PI*2093*t)+0.4*sin(2*PI*5300*t))*exp(-6*t)+0.4*(sin(2*PI*2637*(t-0.18))+0.3*sin(2*PI*6600*(t-0.18)))*exp(-6*(t-0.18))*gte(t,0.18)':d=1.1:s=22050" 1.1
 ls -l $out; du -cb $out/amb-*.ogg $out/sfx-*.ogg | tail -1

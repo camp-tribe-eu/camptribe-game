@@ -176,7 +176,8 @@ SHOP_SPOTS = [
     ('take.item.tent', 'trigger', (3, 8)),            # під наметом на трав'яному килимку
     ('take.item.sleeping-bag', 'trigger', (6, 5)),    # перед гондолою зі спальниками
     ('take.item.lantern', 'trigger', (16, 8)),        # перед столом із ліхтарем
-    ('step.ST-003', 'trigger', (15, 5)),              # збоку каси, за прилавком — місце касира
+    ('step.ST-003', 'trigger', (11, 7)),              # збоку каси з боку покупця (рецензія 3: не за прилавком)
+    ('npc.cashier', 'npc', (13, 5)),                  # Lotte: за прилавком, обличчям до входу; стоїть на місці. Говорити — з клітинки поруч (12,5)/(14,5)
     ('obj.vehicle', 'trigger', (13, 10)),
     ('obj.buy', 'trigger', (13, 8)),                  # GAME-183: каса — купити чи продати; покупець стоїть перед нею
     ('obj.drying', 'trigger', (4, 10)),               # біля входу: мотузка для сушіння
@@ -217,6 +218,8 @@ def build_shop():
     yard(layers, W, H, 9, (9, 10), 5)
     gear(layers, W, H, 'shop-door', 9, 8, solid=False)    # двері у нижній стіні, герой проходить крізь прохід
     gear(layers, W, H, 'backpack-wall', 1, 1)             # рюкзаки на стіні
+    gear(layers, W, H, 'backpack-wall', 7, 1)             # ще дві панелі з рюкзаками — задня стіна не порожня (рецензія 3), проміжки по 3 тайли
+    gear(layers, W, H, 'backpack-wall', 13, 1)
     gear(layers, W, H, 'chairs-display', 1, 3)            # стільці й столик біля намету
     gear(layers, W, H, 'sleeping-bags', 5, 3)             # гондоли вздовж задньої стіни
     gear(layers, W, H, 'boots-rack', 8, 3)
