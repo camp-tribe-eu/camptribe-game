@@ -33,7 +33,7 @@ ORDER_RATIO = 1.15
 SLOPE_MAX = 0.25   # ізометрія ≈ 0,5; складені предмети (стійка + тумба, полиця з балонами) дають до ±0,2 — рецензія PR #136
 MIN_ISO_W = 48     # стовпчики й ліхтарі на круглій ніжці вужчі: їхній нерівний низ — не ізометрія
 CENTRAL = 0.8
-ENABLED = {'scale': True, 'order': True, 'iso': True, 'vee': True, 'missing': True, 'calib': True, 'measure': True}   # --mutate чіпає саме ці місця
+ENABLED = {'scale': True, 'order': True, 'iso': True, 'vee': True, 'missing': True, 'calib': True, 'measure': True, 'thin': True}   # --mutate чіпає саме ці місця
 
 
 def opaque(px):
@@ -125,6 +125,13 @@ def evaluate(entries, loader, px_per_m=28, tol=0.25):
         bb, w, h, cols = m
         by_h = ENABLED['measure'] and e.get('measure') == 'height'   # тонкий предмет (ліхтар, стовпчик): силует ширший за тіло — міряємо висоту
         pxm = h / e['real_height_m'] if by_h else w / e['real_width_m']
+        if by_h and ENABLED['thin']:
+            # рецензія PR #135: «за висотою» — не втеча від ширини. Лише справді тонкий предмет (ширина ≤ ½ висоти),
+            # і силует не ширший за 3× тіла (голова ліхтаря, кран) — інакше це завеликий предмет під чужою позначкою.
+            if e['real_width_m'] > 0.5 * e['real_height_m']:
+                errors.append(('WORLD_SCALE', f"{e['id']}: measure: height лише для тонких (ширина ≤ ½ висоти), а тут {e['real_width_m']}×{e['real_height_m']} м"))
+            elif w > 3 * hi * e['real_width_m']:
+                errors.append(('WORLD_SCALE', f"{e['id']}: тонкий предмет завширшки {w} px — понад 3× тіла ({3 * hi * e['real_width_m']:.0f} px при {e['real_width_m']} м)"))
         slope = bottom_slope(cols, bb[0], bb[2])
         rows.append(dict(id=e['id'], w=w, h=h, pxm=pxm, pxm_h=h / e['real_height_m'], slope=slope, real_w=e['real_width_m'], entry=e, by_h=by_h))
         if ENABLED['scale'] and not (lo <= pxm <= hi):
@@ -281,7 +288,7 @@ def with_magenta(w, h):
 
 
 def selftest():
-    img = {'good': box(126, 42), 'good_small': box(14, 28), 'shear': sheared(126, 42), 'vee': diamond(126, 42), 'bush': ellipse(60, 36), 'post': box(14, 84), 'tree': tree(84, 110), 'big': box(250, 84), 'small': box(40, 14),
+    img = {'good': box(126, 42), 'good_small': box(14, 28), 'shear': sheared(126, 42), 'vee': diamond(126, 42), 'bush': ellipse(60, 36), 'post': box(14, 84), 'shortpost': box(14, 40), 'fatpost': box(126, 84), 'tree': tree(84, 110), 'big': box(250, 84), 'small': box(40, 14),
            'magenta': with_magenta(126, 42), 'tiny_ref': box(30, 20)}
     loader = lambda f: img.get(f)
     E = lambda i, f, w, h, crop=None: dict(id=i, file=f, crop=crop or [0, 0, img[f].width, img[f].height], real_width_m=w, real_height_m=h, view='front')
@@ -306,6 +313,9 @@ def selftest():
     case('дерево (крона + стовбур) — не ізометрія', [E('tree', 'tree', 3.0, 4.0)], [])
     case('однакова ширина при 4,5 і 5,4 м — не порушення порядку', [E('a', 'good', 4.5, 1.5), E('b', 'good', 5.4, 1.5)], [])
     case('тонкий ліхтар за висотою (0,3×3 м, 14×84 px) проходить', [dict(E('lamp', 'post', 0.3, 3.0), measure='height')], [])
+    case('ліхтар за висотою, але замалий (14×40 px на 3 м) → WORLD_SCALE', [dict(E('lamp', 'shortpost', 0.3, 3.0), measure='height')], ['WORLD_SCALE'])
+    case('широке авто під позначкою «за висотою» → WORLD_SCALE', [dict(E('car', 'big', 4.5, 3.0), measure='height')], ['WORLD_SCALE'])
+    case('тонкий, але силует уп\'ятеро ширший за тіло → WORLD_SCALE', [dict(E('lamp', 'fatpost', 0.3, 3.0), measure='height')], ['WORLD_SCALE'])
     case('завелика коробка → WORLD_SCALE', [E('car', 'big', 4.5, 1.5)], ['WORLD_SCALE'])
     case('замала коробка → WORLD_SCALE', [E('car', 'small', 4.5, 1.5)], ['WORLD_SCALE'])
     # порядок: кемпер 7 м вужчий за авто 4,5 м; масштаб у межах (мутація SCALE не має його ховати)
@@ -333,7 +343,8 @@ MUTATIONS = [
     ('ORDER вимкнено', "'order': True,", "'order': False,"),
     ('ISO вимкнено', "'iso': True,", "'iso': False,"),
     ('«V»-ізометрію вимкнено', "'vee': True,", "'vee': False,"),
-    ('measure: height ігнорується', "'measure': True}", "'measure': False}"),
+    ('measure: height ігнорується', "'measure': True,", "'measure': False,"),
+    ('межа тонкості вимкнена', "'thin': True}", "'thin': False}"),
     ('«V» без перевірки прямизни ребер', "R2_MIN = 0.9 ", "R2_MIN = 0.0 "),
     ('рівна ширина знову порушення', "and a['w'] < b['w']]", "and not a['w'] > b['w']]"),
     ('MISSING_ENTRY вимкнено', "'missing': True,", "'missing': False,"),
