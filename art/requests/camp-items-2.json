@@ -1,0 +1,100 @@
+{
+ "batch": [
+  {
+   "name": "caravan",
+   "endpoint": "fal-ai/flux-pro/kontext",
+   "payload": {
+    "prompt": "Using the exact pixel art style of this reference furniture sprite sheet (same dark outline, same limited palette and shading, one tile is 32 pixels), draw ONE new object: a white touring caravan with a blue stripe, small windows and a door, LONG SIDE facing the viewer, wide and low, about 6.5 times longer than tall at roof strip, wheels at the bottom edge, drawbar at the left end. LPC style pixel art, 3/4 top-down ORTHOGRAPHIC view like classic 16-bit RPGs, front facade parallel to the screen, roof visible as a strip above the facade, NO isometric angle, NO perspective, light from top-left, flat magenta #FF00FF background, single object. European holiday campsite. Isolated, no floor, no shadow, no text, no logo, no people.",
+    "image_url": "https://raw.githubusercontent.com/camp-tribe-eu/camptribe-game/main/assets/tiles/home_furniture.png",
+    "num_images": 2,
+    "output_format": "png",
+    "safety_tolerance": "2",
+    "seed": 20261032
+   }
+  },
+  {
+   "name": "motorhome",
+   "endpoint": "fal-ai/flux-pro/kontext",
+   "payload": {
+    "prompt": "Using the exact pixel art style of this reference furniture sprite sheet (same dark outline, same limited palette and shading, one tile is 32 pixels), draw ONE new object: a cream and green camper motorhome, LONG SIDE facing the viewer, windows and a cab at the left end, flat roof strip on top, wheels at the bottom edge. LPC style pixel art, 3/4 top-down ORTHOGRAPHIC view like classic 16-bit RPGs, front facade parallel to the screen, roof visible as a strip above the facade, NO isometric angle, NO perspective, light from top-left, flat magenta #FF00FF background, single object. European holiday campsite. Isolated, no floor, no shadow, no text, no logo, no people.",
+    "image_url": "https://raw.githubusercontent.com/camp-tribe-eu/camptribe-game/main/assets/tiles/home_furniture.png",
+    "num_images": 2,
+    "output_format": "png",
+    "safety_tolerance": "2",
+    "seed": 20261032
+   }
+  },
+  {
+   "name": "hookup-post",
+   "endpoint": "fal-ai/flux-pro/kontext",
+   "payload": {
+    "prompt": "Using the exact pixel art style of this reference furniture sprite sheet (same dark outline, same limited palette and shading, one tile is 32 pixels), draw ONE new object: a small grey electric hookup bollard post for campsite pitches with a blue socket box, seen straight from the front, very narrow and short. LPC style pixel art, 3/4 top-down ORTHOGRAPHIC view like classic 16-bit RPGs, front facade parallel to the screen, roof visible as a strip above the facade, NO isometric angle, NO perspective, light from top-left, flat magenta #FF00FF background, single object. European holiday campsite. Isolated, no floor, no shadow, no text, no logo, no people.",
+    "image_url": "https://raw.githubusercontent.com/camp-tribe-eu/camptribe-game/main/assets/tiles/home_furniture.png",
+    "num_images": 2,
+    "output_format": "png",
+    "safety_tolerance": "2",
+    "seed": 20261032
+   }
+  },
+  {
+   "name": "lamp-post",
+   "endpoint": "fal-ai/flux-pro/kontext",
+   "payload": {
+    "prompt": "Using the exact pixel art style of this reference furniture sprite sheet (same dark outline, same limited palette and shading, one tile is 32 pixels), draw ONE new object: a very thin tall dark campsite street lamp post with a small lamp head, seen straight from the front, symmetrical. LPC style pixel art, 3/4 top-down ORTHOGRAPHIC view like classic 16-bit RPGs, front facade parallel to the screen, roof visible as a strip above the facade, NO isometric angle, NO perspective, light from top-left, flat magenta #FF00FF background, single object. European holiday campsite. Isolated, no floor, no shadow, no text, no logo, no people.",
+    "image_url": "https://raw.githubusercontent.com/camp-tribe-eu/camptribe-game/main/assets/tiles/home_furniture.png",
+    "num_images": 2,
+    "output_format": "png",
+    "safety_tolerance": "2",
+    "seed": 20261032
+   }
+  },
+  {
+   "name": "water-tap",
+   "endpoint": "fal-ai/flux-pro/kontext",
+   "payload": {
+    "prompt": "Using the exact pixel art style of this reference furniture sprite sheet (same dark outline, same limited palette and shading, one tile is 32 pixels), draw ONE new object: a tiny outdoor water tap standpipe on a small grey base, seen straight from the front. LPC style pixel art, 3/4 top-down ORTHOGRAPHIC view like classic 16-bit RPGs, front facade parallel to the screen, roof visible as a strip above the facade, NO isometric angle, NO perspective, light from top-left, flat magenta #FF00FF background, single object. European holiday campsite. Isolated, no floor, no shadow, no text, no logo, no people.",
+    "image_url": "https://raw.githubusercontent.com/camp-tribe-eu/camptribe-game/main/assets/tiles/home_furniture.png",
+    "num_images": 2,
+    "output_format": "png",
+    "safety_tolerance": "2",
+    "seed": 20261032
+   }
+  },
+  {
+   "name": "reception-hut",
+   "endpoint": "fal-ai/flux-pro/kontext",
+   "payload": {
+    "prompt": "Using the exact pixel art style of this reference furniture sprite sheet (same dark outline, same limited palette and shading, one tile is 32 pixels), draw ONE new object: a small wooden campsite reception hut, rectangular, FRONT FACADE facing the viewer with a door and a window with a counter and a red awning, gable roof drawn as a strip above the facade, no side walls visible. LPC style pixel art, 3/4 top-down ORTHOGRAPHIC view like classic 16-bit RPGs, front facade parallel to the screen, roof visible as a strip above the facade, NO isometric angle, NO perspective, light from top-left, flat magenta #FF00FF background, single object. European holiday campsite. Isolated, no floor, no shadow, no text, no logo, no people.",
+    "image_url": "https://raw.githubusercontent.com/camp-tribe-eu/camptribe-game/main/assets/tiles/home_furniture.png",
+    "num_images": 2,
+    "output_format": "png",
+    "safety_tolerance": "2",
+    "seed": 20261032
+   }
+  },
+  {
+   "name": "sanitary-block",
+   "endpoint": "fal-ai/flux-pro/kontext",
+   "payload": {
+    "prompt": "Using the exact pixel art style of this reference furniture sprite sheet (same dark outline, same limited palette and shading, one tile is 32 pixels), draw ONE new object: a long low rectangular campsite sanitary block building, FRONT FACADE facing the viewer, several doors and small windows along the facade, flat grey-brown roof drawn as a strip above the facade, no side walls visible, symmetrical. LPC style pixel art, 3/4 top-down ORTHOGRAPHIC view like classic 16-bit RPGs, front facade parallel to the screen, roof visible as a strip above the facade, NO isometric angle, NO perspective, light from top-left, flat magenta #FF00FF background, single object. European holiday campsite. Isolated, no floor, no shadow, no text, no logo, no people.",
+    "image_url": "https://raw.githubusercontent.com/camp-tribe-eu/camptribe-game/main/assets/tiles/home_furniture.png",
+    "num_images": 2,
+    "output_format": "png",
+    "safety_tolerance": "2",
+    "seed": 20261032
+   }
+  },
+  {
+   "name": "barrier",
+   "endpoint": "fal-ai/flux-pro/kontext",
+   "payload": {
+    "prompt": "Using the exact pixel art style of this reference furniture sprite sheet (same dark outline, same limited palette and shading, one tile is 32 pixels), draw ONE new object: a red and white striped campsite entrance barrier boom gate, horizontal arm, seen straight from the front, with a small post at the left end. LPC style pixel art, 3/4 top-down ORTHOGRAPHIC view like classic 16-bit RPGs, front facade parallel to the screen, roof visible as a strip above the facade, NO isometric angle, NO perspective, light from top-left, flat magenta #FF00FF background, single object. European holiday campsite. Isolated, no floor, no shadow, no text, no logo, no people.",
+    "image_url": "https://raw.githubusercontent.com/camp-tribe-eu/camptribe-game/main/assets/tiles/home_furniture.png",
+    "num_images": 2,
+    "output_format": "png",
+    "safety_tolerance": "2",
+    "seed": 20261032
+   }
+  }
+ ]
+}
