@@ -32,7 +32,7 @@ import { testSwitches } from './view/test-switches';
 import { addFrameLag, bootDelay, onFirstFrame } from './view/frame-lag';
 import type { StoryOffer } from './ui/story-types';
 import { uiSounds } from './audio/ui-sounds';
-import { ambient, ambientMix, isIntroOpen } from './audio';
+import { ambient, ambientMix, isIntroOpen, music } from './audio';
 import { sfxPlayer } from './audio/sfx';
 import { fireplaceDue, liveSpot, spotMove, storyMoves } from './content/director';
 import { paintRoom } from './view/intro-room';
@@ -72,6 +72,7 @@ const input = newInput();
 // ?hideAct=complete — лише для негативного контролю e2e (GAME-36; лише в збірці --mode e2e).
 const switches = testSwitches(location.search, import.meta.env.MODE);
 const hiddenActs = switches.hideAct;
+music.setEnabled(switches.music);   // GAME-207: у збірці e2e музика лише за ?music=1 — тести детерміновані, файли не вантажаться
 const shown = (o: StoryOffer): StoryOffer => (hiddenActs.length === 0 ? o : {
   ...o,
   actions: o.actions.filter((a) => !hiddenActs.includes(a.kind)),
@@ -215,9 +216,9 @@ const unloadOne = (): 'ok' | 'full' | 'none' => {
 const saves = createSaveSession(bridge, saveBackend, { story: STORY, stickers: GAME_DEFS.stickers ?? {}, ...(GAME_DEFS.life ? { life: GAME_DEFS.life } : {}), contentRev: STORY_REV, viable: (g) => saveViable(g, GAME_DEFS) });
 // Тестовий хук Playwright: лише ЧИТАННЯ — знімок стану копією, місток назовні не віддається
 // (рецензія PR #13: раніше скрипт сторінки міг надіслати команду в ядро).
-(window as unknown as { __game: { probe: WorldProbe; read: () => unknown; sounds: () => readonly string[]; ambient: () => Readonly<Record<string, number>> } }).__game = {
+(window as unknown as { __game: { probe: WorldProbe; read: () => unknown; sounds: () => readonly string[]; ambient: () => Readonly<Record<string, number>>; music: () => Readonly<Record<string, number>> } }).__game = {
   probe,
-  sounds: () => [...uiSounds.played, ...sfxPlayer.played], ambient: () => ambient.levels(),   // GAME-40: що мікшер прийняв до відтворення (лише читання)
+  sounds: () => [...uiSounds.played, ...sfxPlayer.played], ambient: () => ambient.levels(), music: () => music.levels(),   // GAME-40: що мікшер прийняв до відтворення (лише читання)
   read: () => JSON.parse(JSON.stringify(bridge.state)) as unknown,
 };
 
@@ -461,6 +462,8 @@ game.events.on(Phaser.Core.Events.STEP, (_t: number, delta: number) => {
   if (!game.scene.isPaused('world')) return;
   if (isIntroOpen()) ambient.setAmbient(ambientMix({ map: null, intro: true, nearLake: false, fireLit: false, nearFire: false, transport: null }));
   ambient.tick(delta);
+  if (isIntroOpen()) music.setTrack('intro');   // GAME-207: музика вступу під дощ; інакше лишається тема, яку задала сцена
+  music.tick(delta);
 });
 game.events.on(Phaser.Core.Events.POST_STEP, () => {
   setActionTarget(pad, probe.nearKind);   // GAME-95: кнопка дії знає, що поруч (talk/fire/object) чи нічого (idle)
