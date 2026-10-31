@@ -1,0 +1,64 @@
+{
+  "batch": [
+    {
+      "name": "cushion",
+      "endpoint": "fal-ai/flux-pro/kontext",
+      "payload": {
+        "prompt": "Using the exact pixel art style of this reference sprite sheet (same dark outline, limited palette, soft shading, light from the top-left), draw ONE small inventory ICON: a square plaid camping seat cushion, drawn large, bold and clear, one single object. Simple and readable when shrunk to 16x16 pixels, centered, filling most of the frame, isolated on a solid flat pure magenta #FF00FF background, no text, no frame, no shadow.",
+        "image_url": "https://raw.githubusercontent.com/camp-tribe-eu/camptribe-game/main/assets/tiles/home_furniture.png",
+        "num_images": 1,
+        "output_format": "png",
+        "safety_tolerance": "2",
+        "seed": 20261031
+      }
+    },
+    {
+      "name": "snack",
+      "endpoint": "fal-ai/flux-pro/kontext",
+      "payload": {
+        "prompt": "Using the exact pixel art style of this reference sprite sheet (same dark outline, limited palette, soft shading, light from the top-left), draw ONE small inventory ICON: a granola bar in a wrapper, drawn large, bold and clear, one single object. Simple and readable when shrunk to 16x16 pixels, centered, filling most of the frame, isolated on a solid flat pure magenta #FF00FF background, no text, no frame, no shadow.",
+        "image_url": "https://raw.githubusercontent.com/camp-tribe-eu/camptribe-game/main/assets/tiles/home_furniture.png",
+        "num_images": 1,
+        "output_format": "png",
+        "safety_tolerance": "2",
+        "seed": 20261031
+      }
+    },
+    {
+      "name": "litter",
+      "endpoint": "fal-ai/flux-pro/kontext",
+      "payload": {
+        "prompt": "Using the exact pixel art style of this reference sprite sheet (same dark outline, limited palette, soft shading, light from the top-left), draw ONE small inventory ICON: a crumpled plastic bottle and paper wrapper (litter), drawn large, bold and clear, one single object. Simple and readable when shrunk to 16x16 pixels, centered, filling most of the frame, isolated on a solid flat pure magenta #FF00FF background, no text, no frame, no shadow.",
+        "image_url": "https://raw.githubusercontent.com/camp-tribe-eu/camptribe-game/main/assets/tiles/home_furniture.png",
+        "num_images": 1,
+        "output_format": "png",
+        "safety_tolerance": "2",
+        "seed": 20261031
+      }
+    },
+    {
+      "name": "chain",
+      "endpoint": "fal-ai/flux-pro/kontext",
+      "payload": {
+        "prompt": "Using the exact pixel art style of this reference sprite sheet (same dark outline, limited palette, soft shading, light from the top-left), draw ONE small inventory ICON: a short steel bike chain loop, drawn large, bold and clear, one single object. Simple and readable when shrunk to 16x16 pixels, centered, filling most of the frame, isolated on a solid flat pure magenta #FF00FF background, no text, no frame, no shadow.",
+        "image_url": "https://raw.githubusercontent.com/camp-tribe-eu/camptribe-game/main/assets/tiles/home_furniture.png",
+        "num_images": 1,
+        "output_format": "png",
+        "safety_tolerance": "2",
+        "seed": 20261031
+      }
+    },
+    {
+      "name": "tyre",
+      "endpoint": "fal-ai/flux-pro/kontext",
+      "payload": {
+        "prompt": "Using the exact pixel art style of this reference sprite sheet (same dark outline, limited palette, soft shading, light from the top-left), draw ONE small inventory ICON: a bicycle tyre seen at a 3/4 angle, drawn large, bold and clear, one single object. Simple and readable when shrunk to 16x16 pixels, centered, filling most of the frame, isolated on a solid flat pure magenta #FF00FF background, no text, no frame, no shadow.",
+        "image_url": "https://raw.githubusercontent.com/camp-tribe-eu/camptribe-game/main/assets/tiles/home_furniture.png",
+        "num_images": 1,
+        "output_format": "png",
+        "safety_tolerance": "2",
+        "seed": 20261031
+      }
+    }
+  ]
+}
