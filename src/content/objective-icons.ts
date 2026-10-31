@@ -1,5 +1,5 @@
 // GAME-201 · яка піктограма стоїть над ціллю: річ завдання (вудка над стійкою, намет над наметом), а не безликий кубик. Один вибір для мапи (сцена)
-// й для HUD (Shell). Дані — objective-icons.json; малюнки — assets/icons/objective_icons.png (власна робота, CC0; scripts/assets/build_objective_icons.py),
+// й для HUD (Shell). Дані — objective-icons.json; малюнки — assets/icons/objective_icons.png (26 клітинок — FAL від LPC, CC-BY-SA 3.0, ART-031; 5 — власні, ART-022; файл цілком — CC-BY-SA 3.0; scripts/assets/build_objective_icons.py),
 // клітинки — objective-icon-atlas.json. Крок сюжету без речі (step.*) — запасна «зірка»: це перелічено явно (fallbackPrefixes), решта без іконки — помилка тесту.
 import data from './objective-icons.json';
 import atlas from './objective-icon-atlas.json';
@@ -40,3 +40,10 @@ export function iconCell(key: string): { x: number; y: number } {
 
 /** Номер клітинки (кадр спрайтшита сцени й позиція CSS-аркуша в HUD). */
 export const iconIndex = (key: string): number => CELLS[key] ?? CELLS[ICON_FALLBACK] ?? 0;
+
+/** CSS-тло однієї клітинки атласу в масштабі scale (для HUD; живе поза src/ui — це рядки CSS, а не текст для людей). */
+export function iconCss(key: string, sheetUrl: string, scale: number): Record<string, string> {
+  const c = iconCell(key);
+  const px = ICON_SIZE * scale;
+  return { width: `${px}px`, height: `${px}px`, backgroundImage: `url(${sheetUrl})`, backgroundSize: `${ICON_COLS * px}px auto`, backgroundPosition: `-${c.x * scale}px -${c.y * scale}px` };
+}
