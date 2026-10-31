@@ -15,6 +15,7 @@ import { ACTIONS, ACTION_COLS, COLS, DIR_ROW, FRAME, frameIndex, type Action as 
 import { FIRE_CORE, FIRE_GLOW, ambientAt, glowAlpha, timeOfDay } from './daylight';
 import { FOLLOW_SPEED_FACTOR, SPEED, centerOf, gridFromWalls, isSolid, restPoints, stepFollowers, stepTo, tileOf, type Grid, type Pt } from './follow';
 import type { MapKey } from '../../content/map-first';
+import { ICON_SIZE, iconIndex, objectiveIcon } from '../../content/objective-icons';
 import { playUi } from '../../audio/ui-sounds';
 import { sfx } from '../../audio/sfx';
 import { MapFx, type Needs } from './map-fx';
@@ -107,10 +108,10 @@ const NPC_SHEET: Readonly<Record<string, string>> = { 'npc.george': 'player', 'n
 const CAR_OFFSET = { x: 16, y: 80 };
 const CAR_BLOCK = { w: 104, h: 30 };
 /** Маркери: колір за родом об'єкта. */
-const MARKER_COLOR = { step: 0xffd54a, task: 0xffd54a, item: 0xe0a458, itemTrunk: 0x9be28f, vehicle: 0x6ec1ff, other: 0x9be28f } as const;
+const ICON_Y = -4;   // GAME-201: низ піктограми цілі над точкою об'єкта (ноги), світові px
 
 /** Маркер цілі: графіка і вигляд, у якому вона намальована зараз (перемальовується, коли вигляд міняється). */
-interface Marker { readonly g: Phaser.GameObjects.Graphics; look: string }
+interface Marker { readonly g: Phaser.GameObjects.Container; readonly shape: Phaser.GameObjects.Graphics; img: Phaser.GameObjects.Image | null; look: string }
 
 /** Смуга шару `above`: тайли верхівок, що мають одну «базову» лінію (низ стовбура під ними). */
 interface Band { readonly layer: Phaser.Tilemaps.TilemapLayer; readonly depth: number }
@@ -305,19 +306,20 @@ export class WorldScene extends Phaser.Scene {
    * глибина — її y. Колір — за родом: крок/справа — золотий, річ — бурштиновий (зелений, коли вже в багажнику), авто — блакитний.
    */
   private marker(s: Spot): Marker {
-    const g = this.add.graphics({ x: s.x, y: s.y });
+    const shape = this.add.graphics();
+    const g = this.add.container(s.x, s.y, [shape]);
     g.setDepth(s.y);
-    const m: Marker = { g, look: '' };
+    const m: Marker = { g, shape, img: null, look: '' };
     this.draw(m, s.name, this.hooks.look(s.name), s.name === 'obj.vehicle' || s.name === 'obj.trunk' ? `${this.hooks.look(s.name)}|${this.hooks.transport() ?? ''}` : this.hooks.look(s.name));
     g.setVisible(this.hooks.isLive(s.name));
     return m;
   }
 
   private draw(m: Marker, name: string, look: 'room' | 'trunk', sig: string): void {
-    const family = name.startsWith('task.') ? 'task' : name.startsWith('step.') ? 'step' : name.startsWith('pack.') || name.startsWith('take.') || name.startsWith('req.') ? (look === 'trunk' ? 'itemTrunk' : 'item')
-      : name === 'obj.vehicle' || name === 'obj.trunk' ? 'vehicle' : 'other';
     m.look = sig;
-    const g = m.g.clear();
+    const g = m.shape.clear();
+    m.img?.destroy();
+    m.img = null;
     g.fillStyle(0x000000, 0.35).fillEllipse(0, 0, 22, 10);
     if (name === 'obj.vehicle' && this.hooks.transport() === 'transport.bike') { this.drawBike(g); return; }
     if (name === 'obj.trunk' && this.hooks.transport() === 'transport.bike') {   // велосипед: «багажник» — місце, де речі пристібають до рами: скатка зі стяжкою
@@ -326,9 +328,11 @@ export class WorldScene extends Phaser.Scene {
       g.fillStyle(0xd9a441, 1).fillRect(-5, -14, 2, 9).fillRect(3, -14, 2, 9);
       return;
     }
-    g.fillStyle(MARKER_COLOR[family], 1).fillRoundedRect(-7, -16, 14, 14, 3);
-    g.lineStyle(1, 0x1b1f23, 1).strokeRoundedRect(-7, -16, 14, 14, 3);
-    if (family === 'itemTrunk') g.lineStyle(2, 0x1b1f23, 1).beginPath().moveTo(-3, -9).lineTo(-1, -6).lineTo(3, -12).strokePath();   // галочка: уже в багажнику
+    // GAME-201: замість кубика — піктограма речі завдання (objective-icons), над точкою; гойдається покадрово в update (без твінів).
+    m.img = this.add.image(0, ICON_Y, 'objective-icons', iconIndex(objectiveIcon(name).key)).setOrigin(0.5, 1);
+    m.g.add(m.img);
+    if (look === 'trunk' && (name.startsWith('pack.') || name.startsWith('take.') || name.startsWith('req.'))) g.fillStyle(0x9be28f, 1).fillCircle(8, ICON_Y - 15, 4).lineStyle(1, 0x1b1f23, 1).strokeCircle(8, ICON_Y - 15, 4)
+      .lineStyle(2, 0x1b1f23, 1).beginPath().moveTo(6, ICON_Y - 15).lineTo(7.5, ICON_Y - 13).lineTo(10.5, ICON_Y - 17).strokePath();   // галочка: уже в багажнику
   }
 
   /** Велосипед пікселями палітри гри (LPC-набір його не має): два колеса, рама, кермо, сідло, багажник-«рюкзак» ззаду; ноги — на (0,0). */
@@ -402,6 +406,7 @@ export class WorldScene extends Phaser.Scene {
   create(): void {
     bindPhaser(this.sound);   // GAME-40: мікшер отримує вихід Phaser (звуки вже в кеші після preload)
     for (const [name, img] of Object.entries(this.art.tilesets)) this.textures.addImage(name, img);
+    this.textures.addSpriteSheet('objective-icons', this.art.icons, { frameWidth: ICON_SIZE, frameHeight: ICON_SIZE });   // GAME-201: кадр = номер клітинки
     this.textures.addSpriteSheet('campfire', this.art.campfire, { frameWidth: FRAME, frameHeight: FRAME });
     this.textures.addSpriteSheet('mia', this.art.mia, { frameWidth: PET_SHEETS.mia.frame, frameHeight: PET_SHEETS.mia.frame });   // GAME-147/184: кішка Мія (ART-020)
     this.addSheet('player', this.art.sheets.player);
@@ -499,7 +504,7 @@ export class WorldScene extends Phaser.Scene {
     this.wallCollider = null;
     this.tilemap?.destroy();
     this.tilemap = null;
-    for (const m of this.markers.values()) m.g.destroy();
+    for (const m of this.markers.values()) m.g.destroy(true);
     this.markers.clear();
     this.npcSprites.clear();   // самі спрайти — у `owned`
     for (const p of this.carParts) p.destroy();
@@ -958,6 +963,7 @@ export class WorldScene extends Phaser.Scene {
       const look = this.hooks.look(name);
       const sig = name === 'obj.vehicle' || name === 'obj.trunk' ? `${look}|${this.hooks.transport() ?? ''}` : look;
       if (sig !== m.look) this.draw(m, name, look, sig);
+      m.img?.setY(ICON_Y - Math.round(Math.abs(Math.sin(time / 420)) * 2));   // GAME-201: ніжне гойдання, покадрово від часу сцени
       m.g.setScale(name === target && this.hintOn ? 1 + 0.2 * Math.abs(Math.sin(time / 280)) : 1);   // ціль підказки «Далі:» — пульсує
     }
     for (const [name, sp] of this.npcSprites) sp.setVisible(this.hooks.isLive(name));

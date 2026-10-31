@@ -2,6 +2,7 @@ file	title	author	license	source
 ref00.jpg	West Glacier Gas and Camp Store, Going-to-the-Sun Road, West Glacier, MT	w_lemay	CC BY-SA 2.0	https://www.flickr.com/photos/59081381@N03/51609243350
 ref01.jpg	Douthat SP - 9-23-21 - view from back of lakeview camp store	vastateparksstaff	CC BY 2.0	https://www.flickr.com/photos/37922399@N05/51524306506
 ref02.jpg	The Chinese Camp Store	seefit	CC BY 2.0	https://www.flickr.com/photos/76574551@N00/51867426719
+ref03.jpg	DO 10-28-2022 - view from Lakeview Camp Store deck	vastateparksstaff	CC BY 2.0	https://www.flickr.com/photos/37922399@N05/52469880047
 ref04.jpg	Camping store, Soho	Roy Katzenberg	CC BY 2.0	https://www.flickr.com/photos/14149634@N00/53582739021
 ref05.jpg	Sign, West Glacier Gas and Camp Store, Going-to-the-Sun Road, West Glacier, MT	w_lemay	CC BY-SA 2.0	https://www.flickr.com/photos/59081381@N03/51608590193
 ref06.jpg	095 Snoopy's Camp Store	The Fun Chronicles	CC0	https://www.flickr.com/photos/196406308@N04/52344947710

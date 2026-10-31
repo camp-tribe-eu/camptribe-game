@@ -49,6 +49,7 @@ import shirtMaleCast from '../../../assets/characters/torso/clothes/longsleeve/l
 import hairPlainSlash from '../../../assets/characters/hair/plain/adult/slash.png';
 import hairPlainThrust from '../../../assets/characters/hair/plain/adult/thrust.png';
 import hairPlainCast from '../../../assets/characters/hair/plain/adult/spellcast.png';
+import objectiveIcons from '../../../assets/icons/objective_icons.png';
 import catMia from '../../../assets/sprites/cat_mia.png';
 import { ACTIONS, ACTION_COLS, composeSheet, loadImage, type Action, type LayerSpec } from './character';
 
@@ -174,6 +175,8 @@ export const PET_SHEETS = {
 export interface WorldArt {
   readonly tilesets: Readonly<Record<string, HTMLImageElement>>;
   readonly campfire: HTMLImageElement;
+  /** GAME-201: атлас піктограм цілей (assets/icons/objective_icons.png). */
+  readonly icons: HTMLImageElement;
   /** GAME-184: лист кішки Mia (PET_SHEETS.mia), декодований заздалегідь — сцена додає його як спрайтшит. */
   readonly mia: HTMLImageElement;
   readonly sheets: { readonly player: HTMLCanvasElement; readonly elise: HTMLCanvasElement; readonly victoria: HTMLCanvasElement; readonly matthew: HTMLCanvasElement };
@@ -190,11 +193,11 @@ export interface WorldArt {
 export async function loadWorldArt(): Promise<WorldArt> {
   const names = Object.keys(TILESET_IMAGES);
   const residentNames = Object.keys(RESIDENT_LOOKS) as (keyof typeof RESIDENT_LOOKS)[];
-  const [images, campfireImg, miaImg, player, elise, victoria, matthew, residentSheets, actionSheets] = await Promise.all([
+  const [images, campfireImg, miaImg, iconsImg, player, elise, victoria, matthew, residentSheets, actionSheets] = await Promise.all([
     Promise.all(names.map((n) => loadImage(TILESET_IMAGES[n] ?? ''))),
-    loadImage(CAMPFIRE_SHEET), loadImage(PET_SHEETS.mia.url), composeSheet(PLAYER_LOOK), composeSheet(ELISE_LOOK), composeSheet(FAMILY_LOOKS.victoria), composeSheet(FAMILY_LOOKS.matthew),
+    loadImage(CAMPFIRE_SHEET), loadImage(PET_SHEETS.mia.url), loadImage(objectiveIcons), composeSheet(PLAYER_LOOK), composeSheet(ELISE_LOOK), composeSheet(FAMILY_LOOKS.victoria), composeSheet(FAMILY_LOOKS.matthew),
     Promise.all(residentNames.map((n) => composeSheet(RESIDENT_LOOKS[n]))),
     Promise.all(ACTIONS.map((a) => composeSheet(PLAYER_ACTION_LOOK[a], ACTION_COLS[a]))),
   ]);
-  return { tilesets: Object.fromEntries(names.map((n, i) => [n, images[i] as HTMLImageElement])), campfire: campfireImg, mia: miaImg, sheets: { player, elise, victoria, matthew }, playerActions: Object.fromEntries(ACTIONS.map((a, i) => [a, actionSheets[i] as HTMLCanvasElement])) as Record<Action, HTMLCanvasElement>, residents: Object.fromEntries(residentNames.map((n, i) => [n, residentSheets[i] as HTMLCanvasElement])) };
+  return { tilesets: Object.fromEntries(names.map((n, i) => [n, images[i] as HTMLImageElement])), campfire: campfireImg, mia: miaImg, icons: iconsImg, sheets: { player, elise, victoria, matthew }, playerActions: Object.fromEntries(ACTIONS.map((a, i) => [a, actionSheets[i] as HTMLCanvasElement])) as Record<Action, HTMLCanvasElement>, residents: Object.fromEntries(residentNames.map((n, i) => [n, residentSheets[i] as HTMLCanvasElement])) };
 }
