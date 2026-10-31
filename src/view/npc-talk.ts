@@ -18,6 +18,14 @@ export function markerFor(canTalk: boolean, hasRequest: boolean, dist: number): 
   return dist <= CHAT_MARKER_RANGE ? 'chat' : null;
 }
 
+/**
+ * GAME-196: біля берега дія належить розмові, коли герой дивиться на сусіда поруч; інакше — вудці.
+ * Без сусіда поруч (`npc` — null) риболовля доступна завжди.
+ */
+export function talkBeatsFishing(hero: { readonly x: number; readonly y: number }, facing: Dir, npc: { readonly x: number; readonly y: number } | null): boolean {
+  return npc !== null && facingToward(hero, npc) === facing;
+}
+
 /** Куди дивиться той, хто стоїть у `from`, коли говорить із тим, хто в `to` (вісь із більшим зсувом; нічия — по вертикалі, як у ходьбі). */
 export function facingToward(from: { readonly x: number; readonly y: number }, to: { readonly x: number; readonly y: number }): Dir {
   const dx = to.x - from.x;

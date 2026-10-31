@@ -12,7 +12,7 @@ import { GAME_DEFS } from '../content/slice-defs';
 import { chatOnlyNpcs, type Move } from '../content/moves';
 import { RESIDENTS } from './world/ambient';
 import { storyOffer } from './story-offer';
-import { CHAT_MARKER_RANGE, facingToward, markerFor } from './npc-talk';
+import { CHAT_MARKER_RANGE, facingToward, markerFor, talkBeatsFishing } from './npc-talk';
 import { PORTRAIT_FILES, SPRITE_SHEET, TALKERS, portraitFor, portraitReport } from './portraits';
 
 const RAW = import.meta.glob<string>(['../../content/npcs.json', '../../content/quests.json', '../../content/dialogue/*.json', '../../content/locales/*.json', '../../public/maps/*.tmj'], { query: '?raw', import: 'default', eager: true });
@@ -187,5 +187,20 @@ describe('GAME-179 · портрети: хто має справжній фай�
     // Файл, що нікому не належить (одруківка в імені), — помилка: його ніхто не підхопить (animal.cat — Мія, ще не співрозмовник).
     const known = new Set([...TALKERS.flatMap((id) => [id, id.slice(4)]), 'player', 'animal.cat']);
     expect(Object.keys(PORTRAIT_FILES).filter((f) => !known.has(f))).toEqual([]);
+  });
+});
+
+describe('GAME-196 · біля берега: розмова, коли дивишся на сусіда; інакше — вудка', () => {
+  const hero = { x: 100, y: 100 };
+  it('сусіда поруч немає — дія для вудки', () => {
+    expect(talkBeatsFishing(hero, 'up', null)).toBe(false);
+  });
+  it('дивишся на сусіда — розмова', () => {
+    expect(talkBeatsFishing(hero, 'right', { x: 130, y: 104 })).toBe(true);
+    expect(talkBeatsFishing(hero, 'up', { x: 98, y: 70 })).toBe(true);
+  });
+  it('сусід за спиною чи збоку — вудка', () => {
+    expect(talkBeatsFishing(hero, 'left', { x: 130, y: 104 })).toBe(false);
+    expect(talkBeatsFishing(hero, 'down', { x: 98, y: 70 })).toBe(false);
   });
 });

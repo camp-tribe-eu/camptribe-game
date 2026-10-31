@@ -21,7 +21,7 @@ import { FEEDBACK_S, RING_IDLE, pickNearest, ringMayTake, stepRing, vehicleReady
 import { IDLE_AFTER_S, LEISURE_BY_MAP, assignLeisure, leisureFromObjects, type LeisureSpot } from './leisure';
 import { BARK_RANGE, RESIDENTS, buildTimeline, placeAt, residentGrid, type Timeline } from './ambient';
 import type { Key } from '../../i18n';
-import { facingToward, markerFor, type NpcMarker } from '../npc-talk';
+import { facingToward, markerFor, talkBeatsFishing, type NpcMarker } from '../npc-talk';
 import { TentRig, type TentProbe } from './tent';
 import { WoodRig, type WoodProbe } from './wood';
 import { FireRig, type FireProbe } from './fire';
@@ -994,8 +994,8 @@ export class WorldScene extends Phaser.Scene {
         else this.hooks.onObject('obj.campfire');
       }
     }
-    // GAME-193: риболовля на озері. Початок — утримання дії біля берега, коли поруч немає сюжетної цілі-тригера (поруч лише люди — родина тупцює коло героя, мешканці ходять: шлях до розмови з ними — відійти на крок від берега); далі автомат сам веде фази, а дія тут не робить нічого іншого.
-    const fishFrame = { down: held.has('interact'), near: (spot === null || spot.kind === 'npc') && !this.tent.active && this.fish.near({ x: this.player.x, y: this.player.y }, INTERACT_RANGE), left: held.has('left'), right: held.has('right'), tap: tapped, time };
+    // GAME-193: риболовля на озері. Початок — утримання дії біля берега, коли поруч немає сюжетної цілі-тригера (поруч лише люди: коли герой дивиться на сусіда, дія — розмова, GAME-196; інакше — вудка); далі автомат сам веде фази, а дія тут не робить нічого іншого.
+    const fishFrame = { down: held.has('interact'), near: (spot === null || (spot.kind === 'npc' && !talkBeatsFishing(this.player, this.facing, spot))) && !this.tent.active && this.fish.near({ x: this.player.x, y: this.player.y }, INTERACT_RANGE), left: held.has('left'), right: held.has('right'), tap: tapped, time };
     const grillEvents = this.grill.update(delta, held.has('interact') && nearFire, time);
     for (const e of grillEvents) {
       if (e === 'char') this.playAction('cast', facingToward(this.player, this.grill.point()));
