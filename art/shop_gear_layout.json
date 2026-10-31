@@ -1,0 +1,118 @@
+{
+ "cols": 11,
+ "rows": 4,
+ "cells": {
+  "checkout": [
+   0,
+   0,
+   2,
+   2
+  ],
+  "fridge": [
+   2,
+   0,
+   1,
+   2
+  ],
+  "backpack-wall": [
+   3,
+   0,
+   2,
+   2
+  ],
+  "rods-rack": [
+   5,
+   0,
+   2,
+   2
+  ],
+  "shop-door": [
+   7,
+   0,
+   2,
+   2
+  ],
+  "dome-tent": [
+   0,
+   2,
+   3,
+   2
+  ],
+  "boots-rack": [
+   3,
+   2,
+   1,
+   1
+  ],
+  "sleeping-bags": [
+   4,
+   2,
+   1,
+   1
+  ],
+  "chairs-display": [
+   5,
+   2,
+   2,
+   1
+  ],
+  "gas-shelf": [
+   7,
+   2,
+   1,
+   1
+  ],
+  "lantern-display": [
+   8,
+   2,
+   1,
+   1
+  ]
+ },
+ "sprite_px": {
+  "checkout": [
+   56,
+   38
+  ],
+  "fridge": [
+   25,
+   45
+  ],
+  "backpack-wall": [
+   62,
+   52
+  ],
+  "rods-rack": [
+   42,
+   49
+  ],
+  "shop-door": [
+   48,
+   53
+  ],
+  "dome-tent": [
+   67,
+   37
+  ],
+  "boots-rack": [
+   31,
+   32
+  ],
+  "sleeping-bags": [
+   31,
+   29
+  ],
+  "chairs-display": [
+   50,
+   21
+  ],
+  "gas-shelf": [
+   31,
+   31
+  ],
+  "lantern-display": [
+   28,
+   23
+  ]
+ }
+}

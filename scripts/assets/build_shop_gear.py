@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""GAME-204 · аркуш assets/tiles/shop_gear.png — 11 предметів крамниці туристичного спорядження, згенерованих fal-ai/flux-pro/kontext
+"""GAME-204 · аркуш assets/tiles/shop_gear.png — 11 предметів крамниці (масштаб — справжня ширина × 28 px/м, OD-026) туристичного спорядження, згенерованих fal-ai/flux-pro/kontext
 за референсом assets/tiles/home_furniture.png (CC-BY-SA 3.0), тека art/out/shop-items-1/.
 
     python3 scripts/assets/build_shop_gear.py [--check]
@@ -22,14 +22,18 @@ from check import load_palette  # noqa: E402
 from quantize import quantize  # noqa: E402
 
 T = 32
-SRC = os.path.join(ROOT, 'art/out/shop-items-1')
+PX_PER_M = 28                                          # art/world-scale.json: px_per_m (OD-026)
+OUT = os.path.join(ROOT, 'art/out')
 DST = os.path.join(ROOT, 'assets/tiles/shop_gear.png')
-COLS, ROWS = 11, 6
-# (файл без _0.webp, (col, row, w_tiles, h_tiles))
+LAYOUT = os.path.join(ROOT, 'art/shop_gear_layout.json')   # (колонка, рядок, ширина, висота) у тайлах — читає scripts/maps/build_home.py
+COLS = 11
+# GAME-204 / OD-026: кожен предмет масштабується до СПРАВЖНЬОЇ ширини × 28 px/м (рівно ті числа, що в art/world-scale.json), а не «вписується в клітинки».
+# (файл без _0.webp, справжня ширина, м, каталоги джерела від найновішого). Клітинки аркуша виходять із розміру спрайта.
 ITEMS = [
-    ('checkout', (0, 0, 3, 2)), ('fridge', (3, 0, 1, 2)), ('backpack-wall', (4, 0, 3, 2)), ('rods-rack', (7, 0, 2, 3)),
-    ('shop-door', (9, 0, 2, 2)), ('dome-tent', (0, 2, 4, 2)), ('boots-rack', (4, 2, 2, 2)), ('sleeping-bags', (9, 2, 2, 2)),
-    ('chairs-display', (0, 4, 3, 2)), ('gas-shelf', (3, 4, 2, 2)), ('lantern-display', (5, 4, 2, 2)),
+    ('checkout', 2.0, ['shop-items-1']), ('fridge', 0.9, ['shop-items-1']), ('backpack-wall', 2.2, ['shop-items-1']),
+    ('rods-rack', 1.5, ['shop-items-2', 'shop-items-1']), ('shop-door', 1.7, ['shop-items-3', 'shop-items-1']), ('dome-tent', 2.4, ['shop-items-1']),
+    ('boots-rack', 1.1, ['shop-items-4', 'shop-items-2', 'shop-items-1']), ('sleeping-bags', 1.1, ['shop-items-1']), ('chairs-display', 1.8, ['shop-items-1']),
+    ('gas-shelf', 1.1, ['shop-items-2', 'shop-items-1']), ('lantern-display', 1.0, ['shop-items-1']),
 ]
 
 
@@ -118,34 +122,55 @@ def decontaminate(im, strict=False):
 STRICT = {'boots-rack'}
 
 
-def sprite(name, w_tiles, h_tiles):
-    im = Image.open(os.path.join(SRC, f'{name}_0.webp'))
+def source(name, dirs):
+    for d in dirs:
+        p = os.path.join(OUT, d, f'{name}_0.webp')
+        if os.path.exists(p):
+            return p
+    raise SystemExit(f'немає джерела для {name}: {dirs}')
+
+
+def sprite(name, real_w, dirs):
+    im = Image.open(source(name, dirs))
     im = drop_small(decontaminate(key_out(im), name in STRICT))
     im = im.crop(im.getchannel('A').point(lambda v: 255 if v >= 128 else 0).getbbox())
-    k = min(w_tiles * T / im.width, h_tiles * T / im.height)
+    k = real_w * PX_PER_M / im.width
     return im.resize((max(1, round(im.width * k)), max(1, round(im.height * k))), Image.BOX)
 
 
 def build(workdir):
-    sheet = Image.new('RGBA', (COLS * T, ROWS * T))
-    for name, (c, r, w, h) in ITEMS:
-        s = sprite(name, w, h)
+    sprites = [(n, sprite(n, w, d)) for n, w, d in ITEMS]
+    layout, x, y, rowh = {}, 0, 0, 0
+    for n, s in sprites:
+        wt, ht = -(-s.width // T), -(-s.height // T)
+        if x + wt > COLS:
+            x, y, rowh = 0, y + rowh, 0
+        layout[n] = (x, y, wt, ht)
+        x, rowh = x + wt, max(rowh, ht)
+    rows = y + rowh
+    sheet = Image.new('RGBA', (COLS * T, rows * T))
+    for n, s in sprites:
+        c, r, w, h = layout[n]
         sheet.alpha_composite(s, (c * T + (w * T - s.width) // 2, (r + h) * T - s.height))
     raw = os.path.join(workdir, 'raw.png')
     sheet.save(raw)
     dst = os.path.join(workdir, 'shop_gear.png')
     quantize(raw, dst, load_palette(os.path.join(ROOT, 'art/palette/lpc.json'))[1])
-    return dst
+    return dst, layout, {n: s.size for n, s in sprites}, rows
 
 
 def main(argv):
     with tempfile.TemporaryDirectory() as wd:
-        built = build(wd)
+        built, layout, sizes, rows = build(wd)
+        import json
+        lay = json.dumps({'cols': COLS, 'rows': rows, 'cells': layout, 'sprite_px': sizes}, indent=1)
         if '--check' in argv:
-            same = os.path.exists(DST) and open(DST, 'rb').read() == open(built, 'rb').read()
+            same = os.path.exists(DST) and open(DST, 'rb').read() == open(built, 'rb').read() and os.path.exists(LAYOUT) and open(LAYOUT).read() == lay
             print('shop_gear.png: ' + ('збігається' if same else 'ВІДРІЗНЯЄТЬСЯ'))
             return 0 if same else 1
         open(DST, 'wb').write(open(built, 'rb').read())
+        open(LAYOUT, 'w').write(lay)
+        print(sizes, 'рядків', rows)
         print('записано', DST)
     return 0
 
