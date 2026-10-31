@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""GAME-222 · «лінійка»: усі предмети з content/art/world-scale.json поруч із дорослим LPC, 1:1, за справжньою шириною.
+"""GAME-222 · «лінійка»: усі предмети з art/world-scale.json поруч із дорослим LPC, 1:1, за справжньою шириною.
 
     python3 scripts/art/lineup.py [--branch main] [--out research/visual-audit/lineup-main.png] [--override шлях=файл ...]
 
