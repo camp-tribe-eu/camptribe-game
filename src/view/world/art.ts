@@ -151,11 +151,11 @@ export const RESIDENT_LOOKS = {
   ],
   /**
    * GAME-204 · Lotte, продавчиня крамниці спорядження: не мешканка табору (у RESIDENTS її нема — стоїть за касою, нерухома), але лист ходьби складається тут же.
-   * Ті самі шари LPC: жіноче тіло, синя сорочка-«поло» крамниці, каштанове скуйовджене волосся — не плутається ні з родиною, ні з мешканцями (looks.test).
+   * Ті самі шари LPC: жіноче тіло, синя сорочка-«поло» крамниці, бордово-каштанове довге волосся в хвості — не плутається ні з родиною, ні з мешканцями (looks.test).
    */
   lotte: [
-    { url: bodyFemale }, { url: headFemale }, { url: shoesThin, tint: rgb(55, 50, 45) }, { url: pantsThin, tint: rgb(150, 135, 100) },
-    { url: shirtFemale, tint: rgb(20, 95, 140) }, { url: hairMessy, tint: rgb(110, 60, 35) },
+    { url: ponytailBack, tint: rgb(125, 30, 50) }, { url: bodyFemale }, { url: headFemale }, { url: shoesThin, tint: rgb(55, 50, 45) },
+    { url: pantsThin, tint: rgb(150, 135, 100) }, { url: shirtFemale, tint: rgb(20, 95, 140) }, { url: ponytailFront, tint: rgb(125, 30, 50) },
   ],
 } as const satisfies Readonly<Record<string, readonly LayerSpec[]>>;
 
