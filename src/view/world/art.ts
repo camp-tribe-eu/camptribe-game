@@ -5,6 +5,7 @@
 import terrain from '../../../assets/tiles/terrain_atlas.png';
 import tent from '../../../assets/tiles/camp_tent.png';
 import car from '../../../assets/tiles/camp_car.png';
+import campProps from '../../../assets/tiles/camp_props.png';
 import homeWalls from '../../../assets/tiles/home_walls.png';
 import homeFloor from '../../../assets/tiles/home_floor.png';
 import homeWindowsDoors from '../../../assets/tiles/home_windows_doors.png';
@@ -58,7 +59,7 @@ import { ACTIONS, ACTION_COLS, composeSheet, loadImage, type Action, type LayerS
  * звіряє map-content.test. GAME-175: дім і крамниця — тайлсети home-* (проба GAME-146) і двір з terrain/camp-car.
  */
 export const TILESET_IMAGES: Readonly<Record<string, string>> = {
-  'lpc-terrain': terrain, 'camp-tent': tent, 'camp-car': car,
+  'lpc-terrain': terrain, 'camp-tent': tent, 'camp-car': car, 'camp-props': campProps,
   'home-walls': homeWalls, 'home-floor': homeFloor, 'home-windows-doors': homeWindowsDoors, 'home-furniture': homeFurniture, 'home-office': homeOffice, 'home-shelf': homeShelf,
   'shop-gear': shopGear,
 };
@@ -67,7 +68,7 @@ const HOME_SETS = ['home-walls', 'home-floor', 'home-windows-doors', 'home-furni
 const SHOP_SETS = ['home-walls', 'home-floor', 'home-windows-doors', 'shop-gear', 'lpc-terrain', 'camp-car'] as const;
 /** Які тайлсети має кожна мапа гри (ключ — як у scene.ts і map-first.ts). */
 export const MAP_TILESETS: Readonly<Record<'camp' | 'home' | 'shop' | 'road', readonly string[]>> = {
-  camp: ['lpc-terrain', 'camp-tent', 'camp-car'],
+  camp: ['lpc-terrain', 'camp-tent', 'camp-car', 'camp-props'],
   home: HOME_SETS,
   shop: SHOP_SETS,
   road: HOME_SETS,   // GAME-183: смуга дороги — трава/стежка terrain і авто, як двір дому

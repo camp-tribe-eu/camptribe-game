@@ -48,8 +48,8 @@
    "crop": [
     0,
     0,
-    160,
-    64
+    192,
+    96
    ],
    "real_width_m": 6.5,
    "real_height_m": 2.6,
@@ -60,10 +60,10 @@
    "id": "motorhome",
    "file": "assets/tiles/camp_props.png",
    "crop": [
-    160,
+    192,
     0,
-    160,
-    64
+    224,
+    96
    ],
    "real_width_m": 7.0,
    "real_height_m": 3.0,
@@ -74,50 +74,53 @@
    "id": "hookup-post",
    "file": "assets/tiles/camp_props.png",
    "crop": [
-    320,
-    0,
+    416,
+    224,
     32,
-    64
+    32
    ],
    "real_width_m": 0.4,
    "real_height_m": 1.0,
    "view": "front",
-   "note": "GAME-205 FAL: стовпчик електрики 0,4×1 м"
+   "note": "GAME-205 FAL: стовпчик електрики 0,4×1 м · міряємо за висотою: тонкий предмет, ширина силуету — голова/кран, а не тіло (OD-026)",
+   "measure": "height"
   },
   {
    "id": "lamp-post",
    "file": "assets/tiles/camp_props.png",
    "crop": [
-    352,
     0,
+    288,
     32,
     96
    ],
    "real_width_m": 0.3,
    "real_height_m": 3.0,
    "view": "front",
-   "note": "GAME-205 FAL: ліхтар 0,3×3 м"
+   "note": "GAME-205 FAL: ліхтар 0,3×3 м · міряємо за висотою: тонкий предмет, ширина силуету — голова/кран, а не тіло (OD-026)",
+   "measure": "height"
   },
   {
    "id": "water-tap",
    "file": "assets/tiles/camp_props.png",
    "crop": [
-    320,
-    64,
+    32,
+    288,
     32,
     32
    ],
    "real_width_m": 0.3,
    "real_height_m": 0.9,
    "view": "front",
-   "note": "GAME-205 FAL: кран 0,3×0,9 м"
+   "note": "GAME-205 FAL: кран 0,3×0,9 м · міряємо за висотою: тонкий предмет, ширина силуету — голова/кран, а не тіло (OD-026)",
+   "measure": "height"
   },
   {
    "id": "clothesline",
    "file": "assets/tiles/camp_props.png",
    "crop": [
     0,
-    64,
+    224,
     128,
     64
    ],
@@ -130,8 +133,8 @@
    "id": "camp-table",
    "file": "assets/tiles/camp_props.png",
    "crop": [
-    128,
-    64,
+    288,
+    224,
     64,
     32
    ],
@@ -144,9 +147,9 @@
    "id": "recycling-bins",
    "file": "assets/tiles/camp_props.png",
    "crop": [
+    128,
     224,
     64,
-    96,
     32
    ],
    "real_width_m": 1.9,
@@ -158,8 +161,8 @@
    "id": "bicycles",
    "file": "assets/tiles/camp_props.png",
    "crop": [
+    352,
     224,
-    96,
     64,
     32
    ],
@@ -172,10 +175,10 @@
    "id": "barrier",
    "file": "assets/tiles/camp_props.png",
    "crop": [
-    0,
-    128,
+    192,
+    224,
     96,
-    32
+    64
    ],
    "real_width_m": 3.0,
    "real_height_m": 1.0,
@@ -186,10 +189,10 @@
    "id": "reception-hut",
    "file": "assets/tiles/camp_props.png",
    "crop": [
+    224,
     96,
     128,
-    96,
-    64
+    128
    ],
    "real_width_m": 4.0,
    "real_height_m": 3.0,
@@ -200,10 +203,10 @@
    "id": "sanitary-block",
    "file": "assets/tiles/camp_props.png",
    "crop": [
-    192,
-    128,
-    160,
-    96
+    0,
+    96,
+    224,
+    64
    ],
    "real_width_m": 8.0,
    "real_height_m": 3.5,
