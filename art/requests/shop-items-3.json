@@ -1,0 +1,16 @@
+{
+ "batch": [
+  {
+   "name": "shop-door",
+   "endpoint": "fal-ai/flux-pro/kontext",
+   "payload": {
+    "prompt": "LPC style pixel art, 3/4 top-down ORTHOGRAPHIC view like classic 16-bit RPGs, front face parallel to the screen, NO isometric, NO perspective, light from top-left, flat magenta #FF00FF background, single object. Same pixel art style as this reference furniture sprite sheet (same dark outline, limited palette, shading). Draw ONE object: a single-leaf glass entrance door of an outdoor equipment store with a wooden frame and a small awning bar above, about 1 meter wide and 2.2 meters tall (tall narrow portrait shape, aspect about 1 to 2.2), seen straight from the front, perfectly vertical sides. Isolated on solid flat pure magenta #FF00FF background, no wall, no floor, no shadow, no text, no logo, no people.",
+    "image_url": "https://raw.githubusercontent.com/camp-tribe-eu/camptribe-game/main/assets/tiles/home_furniture.png",
+    "num_images": 1,
+    "output_format": "png",
+    "safety_tolerance": "2",
+    "seed": 20261101
+   }
+  }
+ ]
+}

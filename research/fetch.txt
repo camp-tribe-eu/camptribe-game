@@ -65,4 +65,13 @@ lic-lpc-teen-androgynous-short-sleeve-shirt	page:https://opengameart.org/content
 refs-outdoor-shop	refs:camping store|outdoor shop tents|camping equipment shop|fishing tackle shop|Decathlon store interior
 refs-campsite-eu	refs:campsite tents|camping caravans Netherlands|camping Belgium|camping France tents|caravan park Europe
 refs-shop-checkout	refs:shop cashier counter|checkout counter store|cash register shop|shop assistant counter
-refs-campsite-facilities	refs:campsite reception barrier|campsite sanitary building|camping electric hookup post|campsite recycling bins|caravan awning camping
+# GAME-204: магазин спорядження — шукаємо LPC-елементи магазину (прилавок, каса, стелажі з товаром)
+list-lpc-shop	ogasearch:lpc shop
+list-lpc-store	ogasearch:lpc store interior
+list-lpc-counter	ogasearch:lpc counter
+list-lpc-market	ogasearch:lpc market stall
+list-lpc-camping	ogasearch:lpc camping
+# GAME-204: кандидати магазину — прилавки/верстати, ящики й ятки, полиці
+pack-lpc-woodshop	oga:lpc-woodshop
+pack-lpc-tailor	oga:lpc-tailor
+pack-lpc-village-decor	oga:lpc-medieval-village-decorations

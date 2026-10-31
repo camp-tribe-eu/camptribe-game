@@ -27,8 +27,8 @@ describe('ambientMix — фон за станом', () => {
     expect(mix({ map: 'road', transport: 'transport.car' })).toEqual({ 'road-car': 1 });
     expect(mix({ map: 'road', transport: null })).toEqual({ 'road-car': 1 });
   });
-  it('крамниця і світ без мапи — тиша', () => {
-    expect(mix({ map: 'shop' })).toEqual({});
+  it('крамниця — тихий власний фон; світ без мапи — тиша', () => {
+    expect(mix({ map: 'shop' })).toEqual({ shop: 0.7 });
     expect(mix({ map: null })).toEqual({});
   });
 });

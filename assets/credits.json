@@ -221,7 +221,8 @@
         "tiles/home_floor.png",
         "tiles/home_furniture.png",
         "tiles/home_walls.png",
-        "tiles/home_windows_doors.png"
+        "tiles/home_windows_doors.png",
+        "tiles/shop_gear.png"
       ],
       "licences": [
         "CC-BY-SA 3.0",
@@ -506,7 +507,8 @@
         "portraits/npc.victoria.png",
         "tiles/camp_props.png",
         "tiles/home_furniture.png",
-        "tiles/home_office.png"
+        "tiles/home_office.png",
+        "tiles/shop_gear.png"
       ],
       "licences": [
         "CC-BY-SA 3.0",
@@ -644,7 +646,8 @@
         "tiles/camp_props.png",
         "tiles/home_floor.png",
         "tiles/home_furniture.png",
-        "tiles/home_walls.png"
+        "tiles/home_walls.png",
+        "tiles/shop_gear.png"
       ],
       "licences": [
         "CC-BY-SA 3.0",
@@ -994,6 +997,7 @@
         "tiles/home_shelf.png",
         "tiles/home_walls.png",
         "tiles/home_windows_doors.png",
+        "tiles/shop_gear.png",
         "tiles/terrain_atlas.png"
       ],
       "licences": [
@@ -3506,6 +3510,20 @@
         "https://opengameart.org/content/lpc-windows-doors"
       ],
       "modified": "one white 2-tile window (cropped from x=16 so it sits on the tile grid) and one white door (shifted 16 px down so it stands on the floor line) cropped from windows-doors.png onto a 96x96 sheet, recoloured onto the base palette (scripts/palette/quantize.py)"
+    },
+    {
+      "file": "tiles/shop_gear.png",
+      "authors": [
+        "Eliza Wyatt (ElizaWy)",
+        "Lanea Zimmerman (Sharm)",
+        "bluecarrot16",
+        "Hyptosis"
+      ],
+      "licence": "CC-BY-SA 3.0",
+      "sources": [
+        "https://opengameart.org/content/lpc-revised-base-object-kit"
+      ],
+      "modified": "eleven shop items (checkout, fridge, backpack wall, rod rack, door, dome tent, boot rack, sleeping bags, chairs, gas shelf, lantern table) redrawn by an image-editing model from the LPC furniture sheet, magenta background keyed out, scaled with a box filter onto a 352x192 sheet bottom-aligned to the tile grid, quantized to the LPC palette (scripts/assets/build_shop_gear.py)"
     },
     {
       "file": "tiles/terrain_atlas.png",

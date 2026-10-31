@@ -2,7 +2,7 @@
 // петлі запускає мікшер через SoundOut (phaser-out.ts). Гучність — канал «music» мікшера (ползунок і mute ті самі, що в налаштуваннях).
 import { clamp01, type LoopHandle, type Mixer } from './mixer';
 
-export type AmbientLayer = 'camp' | 'lake' | 'fire' | 'rain' | 'road-car' | 'road-bike';
+export type AmbientLayer = 'camp' | 'lake' | 'fire' | 'rain' | 'road-car' | 'road-bike' | 'shop';
 /** Цільова гучність кожного шару 0..1; шару, якого немає в мапі, — тиша. */
 export type AmbientMix = Readonly<Partial<Record<AmbientLayer, number>>>;
 
@@ -28,14 +28,16 @@ export const AMBIENT_FILES: Readonly<Record<AmbientLayer, { readonly key: string
   rain: { key: 'amb-rain', url: 'audio/amb-rain.ogg' },
   'road-car': { key: 'amb-road-car', url: 'audio/amb-road-car.ogg' },
   'road-bike': { key: 'amb-road-bike', url: 'audio/amb-road-bike.ogg' },
+  shop: { key: 'amb-shop', url: 'audio/amb-shop.ogg' },
 };
 
-/** Який фон звучить у цьому стані. Вступ і двір — дощ; табір — пташки з вітром, біля озера + хвилі, біля розпаленого вогнища + тріск; дорога — за транспортом. */
+/** Який фон звучить у цьому стані. Вступ і двір — дощ; крамниця — тиха кімнатна «тиша»; табір — пташки з вітром, біля озера + хвилі, біля розпаленого вогнища + тріск; дорога — за транспортом. */
 export function ambientMix(s: AmbientState): AmbientMix {
   if (s.intro) return { rain: 1 };
   switch (s.map) {
     case 'home': return { rain: 0.8 };
     case 'camp': return { camp: 1, ...(s.nearLake ? { lake: 0.8 } : {}), ...(s.fireLit && s.nearFire ? { fire: 0.9 } : {}) };
+    case 'shop': return { shop: 0.7 };   // GAME-204: тиха вентиляція й рідкий шурхіт крамниці
     case 'road': return { [s.transport === 'transport.bike' ? 'road-bike' : 'road-car']: 1 };
     default: return {};
   }

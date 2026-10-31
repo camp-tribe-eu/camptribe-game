@@ -766,5 +766,13 @@
   "journal.f.fish-released": "let the fish go, and Nora brought a treat",
   "journal.f.trust-nora-fish": "Nora trusts the family more: they accepted her treat",
   "dlg.nora-chat.hello.c4": "Thanks for the honey biscuits",
-  "dlg.nora-chat.warm": "My pleasure! I love a camp that shares warmth. Come by again."
+  "dlg.nora-chat.warm": "My pleasure! I love a camp that shares warmth. Come by again.",
+  "npc.cashier": "Lotte",
+  "dlg.cashier-chat.hello": "Welcome! I am Lotte. Where to: mountains, a lake, or away from schedules?",
+  "dlg.cashier-chat.hello.c1": "To a lake, for now.",
+  "dlg.cashier-chat.hello.c2": "Any tip before we leave?",
+  "dlg.cashier-chat.hello.c3": "Thanks, I am just looking.",
+  "dlg.cashier-chat.a": "Then take a dry bag. Rain always arrives right after the tent is up.",
+  "dlg.cashier-chat.b": "Check the tent poles at home. Better to find a broken one indoors.",
+  "dlg.cashier-chat.bye": "Look all you like. The door chime will greet you next time too."
 }

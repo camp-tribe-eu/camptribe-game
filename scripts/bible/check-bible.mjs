@@ -194,7 +194,7 @@ const CASES = [
   ['дубль біографії NPC → BIBLE_BIO_DUP', (t) => must(t, 'велотуристка з одним велосипедом і жовтим наметом', 'веломеханік, що носить олівець за вухом'), 'BIBLE_BIO_DUP'],
   ['дубль id → BIBLE_ID_DUP', (t) => must(t, '| npc.nora | Нора |', '| npc.luc | Нора |'), 'BIBLE_ID_DUP'],
   ['порожня слабкість → BIBLE_NPC_FIELD', (t) => must(t, 'губить окуляри й не довіряє застосункам', ''), 'BIBLE_NPC_FIELD'],
-  ['NPC менше шести → BIBLE_NPC_FEW', (t) => t.split('\n').filter((l) => !/^\| npc\.(amina|claire) /.test(l)).join('\n'), 'BIBLE_NPC_FEW'],
+  ['NPC менше шести → BIBLE_NPC_FEW', (t) => t.split('\n').filter((l) => !/^\| npc\.(amina|claire|cashier) /.test(l)).join('\n'), 'BIBLE_NPC_FEW'],
   ['немає Victoria в родині → BIBLE_FAMILY_MISSING', (t) => t.split('\n').filter((l) => !/^\| npc\.victoria /.test(l)).join('\n'), 'BIBLE_FAMILY_MISSING'],
   ['4 правила тону → BIBLE_TONE_RULES', (t) => must(t, '5. **Тільки люди', '* **Тільки люди'), 'BIBLE_TONE_RULES'],
   ['правило без «Не так» → BIBLE_TONE_RULES', (t) => must(t, '  * Не так: «Так.»', ''), 'BIBLE_TONE_RULES'],
