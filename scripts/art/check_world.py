@@ -33,7 +33,7 @@ ORDER_RATIO = 1.15
 SLOPE_MAX = 0.25   # ізометрія ≈ 0,5; складені предмети (стійка + тумба, полиця з балонами) дають до ±0,2 — рецензія PR #136
 MIN_ISO_W = 48     # стовпчики й ліхтарі на круглій ніжці вужчі: їхній нерівний низ — не ізометрія
 CENTRAL = 0.8
-ENABLED = {'scale': True, 'order': True, 'iso': True, 'vee': True, 'missing': True, 'calib': True}   # --mutate чіпає саме ці місця
+ENABLED = {'scale': True, 'order': True, 'iso': True, 'vee': True, 'missing': True, 'calib': True, 'measure': True}   # --mutate чіпає саме ці місця
 
 
 def opaque(px):
@@ -123,12 +123,14 @@ def evaluate(entries, loader, px_per_m=28, tol=0.25):
             errors.append(('WORLD_SCALE', f"{e['id']}: у кропі {e['crop']} немає жодного видимого пікселя — кроп хибний (порожній ≠ зелений)"))
             continue
         bb, w, h, cols = m
-        pxm = w / e['real_width_m']
+        by_h = ENABLED['measure'] and e.get('measure') == 'height'   # тонкий предмет (ліхтар, стовпчик): силует ширший за тіло — міряємо висоту
+        pxm = h / e['real_height_m'] if by_h else w / e['real_width_m']
         slope = bottom_slope(cols, bb[0], bb[2])
-        rows.append(dict(id=e['id'], w=w, h=h, pxm=pxm, pxm_h=h / e['real_height_m'], slope=slope, real_w=e['real_width_m'], entry=e))
+        rows.append(dict(id=e['id'], w=w, h=h, pxm=pxm, pxm_h=h / e['real_height_m'], slope=slope, real_w=e['real_width_m'], entry=e, by_h=by_h))
         if ENABLED['scale'] and not (lo <= pxm <= hi):
-            want = round(e['real_width_m'] * px_per_m)
-            errors.append(('WORLD_SCALE', f"{e['id']}: ширина {w} px при {e['real_width_m']} м = {pxm:.1f} px/м, треба {lo:.0f}–{hi:.0f} "
+            dim, m, px = ('висота', e['real_height_m'], h) if by_h else ('ширина', e['real_width_m'], w)
+            want = round(m * px_per_m)
+            errors.append(('WORLD_SCALE', f"{e['id']}: {dim} {px} px при {m} м = {pxm:.1f} px/м, треба {lo:.0f}–{hi:.0f} "
                            f"(≈{want} px). Спрайт {'завеликий' if pxm > hi else 'замалий'} у {max(pxm, px_per_m) / min(pxm, px_per_m):.2f} раза"))
         (sl, rl), (sr, rr) = v_bottom(cols, bb[0], bb[2])
         if ENABLED['vee'] and w >= MIN_ISO_W and HALF_MAX < sl < 1.5 and -1.5 < sr < -HALF_MAX and min(rl, rr) >= R2_MIN:   # «V» (низ униз до середини); стовп на ніжці дає >1,5, «Λ» шлагбаума — інший знак
@@ -138,8 +140,9 @@ def evaluate(entries, loader, px_per_m=28, tol=0.25):
             errors.append(('WORLD_ISO', f"{e['id']}: низ силуету похилий (нахил {slope:+.2f}, межа ±{SLOPE_MAX}) — ізометрія/перспектива, "
                            f"а в грі лише LPC 3/4 ортогонально (передня грань рівно до екрана)"))
     if ENABLED['order']:
-        for a in rows:
-            bad = [b for b in rows if a['real_w'] > ORDER_RATIO * b['real_w'] and a['w'] < b['w']]   # рівна ширина — не порушення: тайлова сітка (32 px) не розрізняє 1,0 і 1,2 м
+        wide = [r for r in rows if not r['by_h']]   # порядок — за шириною; тонкі (за висотою) не порівнюємо
+        for a in wide:
+            bad = [b for b in wide if a['real_w'] > ORDER_RATIO * b['real_w'] and a['w'] < b['w']]   # рівна ширина — не порушення: тайлова сітка (32 px) не розрізняє 1,0 і 1,2 м
             if bad:
                 errors.append(('WORLD_ORDER', f"{a['id']} ({a['real_w']} м) на екрані {a['w']} px, а менші в житті не менші на екрані: "
                                + ', '.join(f"{b['id']} ({b['real_w']} м) = {b['w']} px" for b in sorted(bad, key=lambda b: -b['w'])[:4])
@@ -278,7 +281,7 @@ def with_magenta(w, h):
 
 
 def selftest():
-    img = {'good': box(126, 42), 'good_small': box(14, 28), 'shear': sheared(126, 42), 'vee': diamond(126, 42), 'bush': ellipse(60, 36), 'tree': tree(84, 110), 'big': box(250, 84), 'small': box(40, 14),
+    img = {'good': box(126, 42), 'good_small': box(14, 28), 'shear': sheared(126, 42), 'vee': diamond(126, 42), 'bush': ellipse(60, 36), 'post': box(14, 84), 'tree': tree(84, 110), 'big': box(250, 84), 'small': box(40, 14),
            'magenta': with_magenta(126, 42), 'tiny_ref': box(30, 20)}
     loader = lambda f: img.get(f)
     E = lambda i, f, w, h, crop=None: dict(id=i, file=f, crop=crop or [0, 0, img[f].width, img[f].height], real_width_m=w, real_height_m=h, view='front')
@@ -302,6 +305,7 @@ def selftest():
     case('кущ (круглий низ) — не ізометрія', [E('bush', 'bush', 2.0, 1.2)], [])
     case('дерево (крона + стовбур) — не ізометрія', [E('tree', 'tree', 3.0, 4.0)], [])
     case('однакова ширина при 4,5 і 5,4 м — не порушення порядку', [E('a', 'good', 4.5, 1.5), E('b', 'good', 5.4, 1.5)], [])
+    case('тонкий ліхтар за висотою (0,3×3 м, 14×84 px) проходить', [dict(E('lamp', 'post', 0.3, 3.0), measure='height')], [])
     case('завелика коробка → WORLD_SCALE', [E('car', 'big', 4.5, 1.5)], ['WORLD_SCALE'])
     case('замала коробка → WORLD_SCALE', [E('car', 'small', 4.5, 1.5)], ['WORLD_SCALE'])
     # порядок: кемпер 7 м вужчий за авто 4,5 м; масштаб у межах (мутація SCALE не має його ховати)
@@ -329,10 +333,11 @@ MUTATIONS = [
     ('ORDER вимкнено', "'order': True,", "'order': False,"),
     ('ISO вимкнено', "'iso': True,", "'iso': False,"),
     ('«V»-ізометрію вимкнено', "'vee': True,", "'vee': False,"),
+    ('measure: height ігнорується', "'measure': True}", "'measure': False}"),
     ('«V» без перевірки прямизни ребер', "R2_MIN = 0.9 ", "R2_MIN = 0.0 "),
     ('рівна ширина знову порушення', "and a['w'] < b['w']]", "and not a['w'] > b['w']]"),
     ('MISSING_ENTRY вимкнено', "'missing': True,", "'missing': False,"),
-    ('CALIB вимкнено', "'calib': True}", "'calib': False}"),
+    ('CALIB вимкнено', "'calib': True,", "'calib': False,"),
     ('пурпур не вважається прозорим', "and not (px[0] >= 250 and px[1] <= 5 and px[2] >= 250)", ''),
     ('поріг нахилу розкритий до 0,9', 'SLOPE_MAX = 0.25', 'SLOPE_MAX = 0.9'),
     ('допуск масштабу 100 %', "def evaluate(entries, loader, px_per_m=28, tol=0.25):", "def evaluate(entries, loader, px_per_m=28, tol=1.0):"),

@@ -40,8 +40,12 @@ SRC_FILE = {'sanitary': 'sanitary-block', 'reception': 'reception-hut', 'bins': 
 
 
 def real_widths():
+    """-> {id: ('w'|'h', метри)}: тонкі предмети (measure: height) масштабуються за висотою, решта — за шириною."""
     import json
-    return {e['id']: e['real_width_m'] for e in json.load(open(SCALE_JSON, encoding='utf8'))['entries']}
+    out = {}
+    for e in json.load(open(SCALE_JSON, encoding='utf8'))['entries']:
+        out[e['id']] = ('h', e['real_height_m']) if e.get('measure') == 'height' else ('w', e['real_width_m'])
+    return out
 
 
 def is_bg(p):
@@ -129,15 +133,16 @@ def decontaminate(im, strict=False):
 STRICT = {'boots-rack'}
 
 
-def sprite(name, src, variant, width_px):
+def sprite(name, src, variant, target):
     im = Image.open(os.path.join(ROOT, 'art/out', src, f'{SRC_FILE.get(name, name)}_{variant}.webp'))
     im = key_out(im)
     for _ in range(2):                                   # пурпурова кайма: два проходи (друга знімає рожеві «тіні» під першою)
         im = decontaminate(im, True)
     im = drop_small(im)
     im = im.crop(im.getchannel('A').point(lambda v: 255 if v >= 128 else 0).getbbox())
-    k = width_px / im.width
-    return im.resize((width_px, max(1, round(im.height * k))), Image.BOX)
+    axis, px = target
+    k = px / (im.width if axis == 'w' else im.height)
+    return im.resize((max(1, round(im.width * k)), max(1, round(im.height * k))), Image.BOX)
 
 
 def layout(sprites):
@@ -155,7 +160,7 @@ def layout(sprites):
 
 def build(workdir):
     rw = real_widths()
-    sprites = {n: sprite(n, src, v, round(rw[i] * PX_PER_M)) for n, i, src, v in ITEMS}
+    sprites = {n: sprite(n, src, v, (rw[i][0], round(rw[i][1] * PX_PER_M))) for n, i, src, v in ITEMS}
     pos, rows = layout(sprites)
     sheet = Image.new('RGBA', (COLS * T, rows * T))
     crops = {}
@@ -183,7 +188,7 @@ def write_scale(crops):
 def prop_sheet():
     """Для build_camp_lake.py: {ім'я: (col, row, w_tiles, h_tiles)}; рядків аркуша."""
     rw = real_widths()
-    sprites = {n: sprite(n, src, v, round(rw[i] * PX_PER_M)) for n, i, src, v in ITEMS}
+    sprites = {n: sprite(n, src, v, (rw[i][0], round(rw[i][1] * PX_PER_M))) for n, i, src, v in ITEMS}
     pos, rows = layout(sprites)
     return pos, rows
 
