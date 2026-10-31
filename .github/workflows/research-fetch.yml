@@ -23,6 +23,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Фільтр ліцензій референсів (без мережі)
+        run: node --test scripts/research/refs.test.mjs
       - name: Забрати
         run: |
           set -uo pipefail
@@ -131,6 +133,10 @@ jobs:
                 echo "::$tok::"
                 echo "::endgroup::"
                 ;;
+              refs:*)
+                # GAME-197 (OD-024): вільні фото Wikimedia Commons перед малюванням сцени; <мінімуму — збій.
+                node scripts/research/refs.mjs "$d" "${src#refs:}" || fail=1
+                ;;
               *)
                 curl -sfL "$src" -o "$d/$(basename "${src%%\?*}")" || { echo "::error::$name: $src"; fail=1; }
                 ;;
@@ -144,10 +150,14 @@ jobs:
         if: always()
         run: |
           set -euo pipefail
-          for d in out/pack-* out/list-*; do
+          for d in out/pack-* out/list-* out/refs-*; do
             [ -d "$d" ] || continue
             n=$(basename "$d")
             case "$n" in
+              refs-*)
+                # Лише мініатюри з вільною ліцензією й титрами (фільтр — scripts/research/refs.mjs).
+                [ -s "$d/CREDITS.txt" ] || { echo "::warning::$n: без CREDITS.txt — не комічу"; continue; }
+                mkdir -p "research/refs/${n#refs-}"; cp "$d"/* "research/refs/${n#refs-}/" ;;
               pack-*)
                 # Без ліцензії, процитованої з першоджерела, не комітимо (aggregator-does-not-license).
                 [ -s "$d/LICENSE-from-page.txt" ] && [ -s "$d/SOURCE.txt" ] && ! grep -q '^NOT FOUND' "$d/LICENSE-from-page.txt" || {
@@ -175,7 +185,7 @@ jobs:
           git config user.name "research-bot"
           git config user.email "noreply@anthropic.com"
           # Лише наявні теки: git add із неіснуючим шляхом відкидає ВЕСЬ виклик (закон 4 — без || true).
-          for t in research/packs research/lists research/debug; do if [ -d "$t" ]; then git add "$t"; fi; done
+          for t in research/packs research/lists research/debug research/refs; do if [ -d "$t" ]; then git add "$t"; fi; done
           echo "до коміту: $(git diff --staged --name-only | wc -l) файлів"
           git diff --staged --quiet || { git commit -m "research: набори з першоджерел для проби графіки"; git push origin HEAD:${GITHUB_REF_NAME}; }
       - uses: actions/upload-artifact@v4
