@@ -1,0 +1,6 @@
+# GAME-223: реєстри, у які лише ДОДАЮТЬ рядки — паралельні гілки не конфліктують на сусідніх рядках.
+# merge=union бере обидві сторони без маркерів; задвоєний рядок усе одно ловить node scripts/assets/check-assets.mjs
+# (шлях файлу в титрах мусить бути унікальний). JSON (assets/credits.json) НЕ об'єднувати: він генерований (--write-json).
+assets/CREDITS.csv merge=union
+docs/LICENSE_REGISTER.md merge=union
+research/refs/*/CREDITS.txt merge=union
