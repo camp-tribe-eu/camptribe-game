@@ -730,6 +730,7 @@ export const CHECKS = [
       const out = [];
       const { by } = c.ix;
       const miss = (where, msg) => out.push(I('DIALOGUE_REF_MISSING', where, msg));
+      const taskIds = new Set((c.content.waves ?? []).flatMap((w) => w.tasks.map((t) => t.id)));
       for (const d of c.content.dialogues ?? []) {
         const nodes = new Set(d.nodes.map((n) => n.id));
         if (d.npcId !== undefined && !by.npcs.has(d.npcId)) miss(`${d.id}.npcId`, `NPC «${d.npcId}» не існує`);
@@ -745,6 +746,8 @@ export const CHECKS = [
         if (leaf.quest !== undefined && !by.quests.has(leaf.quest)) miss(where, `квесту «${leaf.quest}» не існує`);
         if (leaf.transport !== undefined && !by.transports.has(leaf.transport)) miss(where, `транспорту «${leaf.transport}» не існує`);
         if (leaf.animal !== undefined && leaf.animal !== 'animal.none' && !by.animals.has(leaf.animal)) miss(where, `тварини «${leaf.animal}» не існує`);
+        // GAME-202: taskOpen читає справу хвилі — вона мусить існувати хоч в одній хвилі (інакше вибір-доручення не покажеться ніколи).
+        if (leaf.taskOpen !== undefined && !taskIds.has(leaf.taskOpen)) miss(where, `справи «${leaf.taskOpen}» немає в жодній хвилі content/waves.json`);
       }
       for (const [where, e] of dialogueEffects(c.content)) {
         if (e.startQuest !== undefined && !by.quests.has(e.startQuest)) miss(where, `квесту «${e.startQuest}» не існує`);
@@ -1253,7 +1256,10 @@ export const CHECKS = [
       const signatures = new Map();
       for (const w of waves) {
         if (w.tasks.length < WAVE_MIN_TASKS) out.push(I('WAVE_TOO_FEW_TASKS', w.id, `справ ${w.tasks.length}, а хвиля — це ${WAVE_MIN_TASKS}–${WAVE_MAX_TASKS} одночасні справи`));
-        if (w.tasks.length > WAVE_MAX_TASKS) out.push(I('WAVE_TOO_MANY_TASKS', w.id, `справ ${w.tasks.length}, а хвиля — це ${WAVE_MIN_TASKS}–${WAVE_MAX_TASKS} одночасні справи: прибери зайве чи розбий на дві хвилі`));
+        // GAME-202: «одночасні» — скільки справ ВИДНО одному гравцеві (варіанти за when не складаються): без комбінацій — усі справи разом.
+        const mine = combos.filter((k) => matches(w.when, k));
+        const maxVisible = mine.length ? Math.max(...mine.map((k) => w.tasks.filter((t) => matches(t.when, k)).length)) : w.tasks.length;
+        if (maxVisible > WAVE_MAX_TASKS) out.push(I('WAVE_TOO_MANY_TASKS', w.id, `гравцеві видно ${maxVisible} справ одночасно, а хвиля — це ${WAVE_MIN_TASKS}–${WAVE_MAX_TASKS}: прибери зайве чи розбий на дві хвилі`));
         for (const t of w.tasks) {
           const where = `${w.id}/${t.id}`;
           if (!Number.isInteger(t.limitMin) || t.limitMin < 1 || t.limitMin > WAVE_MAX_LIMIT) out.push(I('WAVE_LIMIT_INVALID', `${where}.limitMin`, `строк ${JSON.stringify(t.limitMin)}: ціле 1…${WAVE_MAX_LIMIT} ігрових хвилин`));

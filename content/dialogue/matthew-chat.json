@@ -1,20 +1,129 @@
 {
   "id": "dlg.matthew-chat",
   "npcId": "npc.matthew",
-  "start": "hello",
+  "start": "hi",
   "nodes": [
     {
-      "id": "hello", "speaker": "npc", "textKey": "dlg.matthew-chat.hello",
-      "choices": [
-        { "textKey": "dlg.matthew-chat.hello.c1", "next": "a" },
-        { "textKey": "dlg.matthew-chat.hello.c2", "next": "b" },
-        { "textKey": "dlg.matthew-chat.hello.c4", "next": "errand-shelter", "when": { "all": [{ "quest": "ST-005", "status": "active" }, { "notFlag": "f.errand-gear-shelter-victoria" }, { "notFlag": "f.errand-gear-shelter-matthew" }] }, "effects": [{ "setFlag": "f.errand-gear-shelter-matthew" }] },
-        { "textKey": "dlg.matthew-chat.hello.c3", "next": "bye" }
+      "id": "hi",
+      "speaker": "npc",
+      "textKey": "dlg.matthew-chat.hi",
+      "next": "hello",
+      "branches": [
+        {
+          "when": {
+            "quest": "CH1-HOME-001",
+            "status": "active"
+          },
+          "next": "home"
+        }
       ]
     },
-    { "id": "errand-shelter", "speaker": "npc", "textKey": "dlg.matthew-chat.errand-shelter", "end": true },
-    { "id": "a", "speaker": "npc", "textKey": "dlg.matthew-chat.a", "end": true },
-    { "id": "b", "speaker": "npc", "textKey": "dlg.matthew-chat.b", "end": true },
-    { "id": "bye", "speaker": "npc", "textKey": "dlg.matthew-chat.bye", "end": true }
+    {
+      "id": "home",
+      "speaker": "npc",
+      "textKey": "dlg.matthew-chat.home",
+      "choices": [
+        {
+          "textKey": "dlg.matthew-chat.home.c1",
+          "next": "errand-map",
+          "when": {
+            "all": [
+              {
+                "taskOpen": "map-to-luggage"
+              },
+              {
+                "notFlag": "f.errand-map-to-luggage-matthew"
+              }
+            ]
+          },
+          "effects": [
+            {
+              "setFlag": "f.errand-map-to-luggage-matthew"
+            }
+          ]
+        },
+        {
+          "textKey": "dlg.matthew-chat.home.c2",
+          "next": "home-bye"
+        }
+      ]
+    },
+    {
+      "id": "errand-map",
+      "speaker": "npc",
+      "textKey": "dlg.matthew-chat.errand-map",
+      "end": true
+    },
+    {
+      "id": "home-bye",
+      "speaker": "npc",
+      "textKey": "dlg.matthew-chat.home-bye",
+      "end": true
+    },
+    {
+      "id": "hello",
+      "speaker": "npc",
+      "textKey": "dlg.matthew-chat.hello",
+      "choices": [
+        {
+          "textKey": "dlg.matthew-chat.hello.c1",
+          "next": "a"
+        },
+        {
+          "textKey": "dlg.matthew-chat.hello.c2",
+          "next": "b"
+        },
+        {
+          "textKey": "dlg.matthew-chat.hello.c4",
+          "next": "errand-shelter",
+          "when": {
+            "all": [
+              {
+                "taskOpen": "gear-shelter"
+              },
+              {
+                "notFlag": "f.errand-gear-shelter-victoria"
+              },
+              {
+                "notFlag": "f.errand-gear-shelter-matthew"
+              }
+            ]
+          },
+          "effects": [
+            {
+              "setFlag": "f.errand-gear-shelter-matthew"
+            }
+          ]
+        },
+        {
+          "textKey": "dlg.matthew-chat.hello.c3",
+          "next": "bye"
+        }
+      ]
+    },
+    {
+      "id": "errand-shelter",
+      "speaker": "npc",
+      "textKey": "dlg.matthew-chat.errand-shelter",
+      "end": true
+    },
+    {
+      "id": "a",
+      "speaker": "npc",
+      "textKey": "dlg.matthew-chat.a",
+      "end": true
+    },
+    {
+      "id": "b",
+      "speaker": "npc",
+      "textKey": "dlg.matthew-chat.b",
+      "end": true
+    },
+    {
+      "id": "bye",
+      "speaker": "npc",
+      "textKey": "dlg.matthew-chat.bye",
+      "end": true
+    }
   ]
 }

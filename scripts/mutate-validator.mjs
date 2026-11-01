@@ -219,7 +219,9 @@ const mutations = [
   { name: '[хвиля] строк 0 приймається', file: CHECKS_FILE, from: '!Number.isInteger(t.limitMin) || t.limitMin < 1 || t.limitMin > WAVE_MAX_LIMIT', to: '!Number.isInteger(t.limitMin) || t.limitMin < 0 || t.limitMin > WAVE_MAX_LIMIT' },
   { name: '[хвиля] строк не обмежений згори', file: CHECKS_FILE, from: '|| t.limitMin > WAVE_MAX_LIMIT) out.push', to: '|| false) out.push' },
   { name: '[хвиля] межа строку в реєстрі ширша за хвилю', file: 'validator/codes.mjs', from: 'export const WAVE_MAX_LIMIT = 60;', to: 'export const WAVE_MAX_LIMIT = 61;' },
-  { name: '[хвиля] п’ять справ не звітуються (верхня межа вимкнена)', file: CHECKS_FILE, from: "if (w.tasks.length > WAVE_MAX_TASKS) out.push(I('WAVE_TOO_MANY_TASKS'", to: "if (false) out.push(I('WAVE_TOO_MANY_TASKS'" },
+  { name: '[хвиля] п’ять справ не звітуються (верхня межа вимкнена)', file: CHECKS_FILE, from: "if (maxVisible > WAVE_MAX_TASKS) out.push(I('WAVE_TOO_MANY_TASKS'", to: "if (false) out.push(I('WAVE_TOO_MANY_TASKS'" },
+  // GAME-202: межа — на справи, видимі одному гравцеві; підміна на всі записи хвилі разом (варіанти складаються) мусить почервоніти на контролі «п’ять записів, та ≤ 4 видно».
+  { name: '[хвиля] одночасність рахується по всіх записах, а не по видимих гравцеві', file: CHECKS_FILE, from: "const maxVisible = mine.length ? Math.max(", to: "const maxVisible = w.tasks.length; const unusedMax = mine.length ? Math.max(" },
   { name: '[хвиля] верхня межа в реєстрі зсунута на п’ять', file: 'validator/codes.mjs', from: 'export const WAVE_MAX_TASKS = 4;', to: 'export const WAVE_MAX_TASKS = 5;' },
   { name: '[хвиля] безпека Мії знову залежить від поля animal', file: CHECKS_FILE, from: 'if (isAnimalTask(t)) {', to: 'if (t.animal !== undefined) {' },
   { name: '[хвиля] ціль npc.mia / animal.* не робить справу справою про тварину', file: CHECKS_FILE, from: "(t.targets ?? []).some((x) => /^(animal\\.|npc\\.mia)/.test(x.id)) || ", to: '' },

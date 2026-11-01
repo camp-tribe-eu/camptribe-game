@@ -47,7 +47,7 @@ export const MAP_SPOTS = {
     'pack.item.lantern', 'pack.item.snacks', 'pack.item.mia-blanket', 'pack.item.lantern-2', 'pack.item.lantern-3', 'pack.item.big-cushion',
     'npc.george', 'obj.vehicle', 'obj.trunk',
     // GAME-183 · решта дому: справи хвилі «Виїзд о шостій», кроки поза основним шляхом, сушарка й приймальня.
-    'task.mia-carrier', 'task.map-to-luggage', 'task.lights-window', 'task.anna-goodbye', 'step.ST-004', 'step.CH1-D3-HOME-001', 'obj.drying', 'obj.sell',
+    'task.mia-carrier', 'task.map-to-luggage', 'task.lights-window', 'task.anna-goodbye', 'task.iron-clothes', 'step.ST-004', 'step.CH1-D3-HOME-001', 'obj.drying', 'obj.sell',
   ],
   // Крамниця: прилавок-«купити/продати» (рамка вибору) і сушарка біля входу.
   shop: ['take.item.tent', 'take.item.sleeping-bag', 'take.item.lantern', 'step.ST-003', 'npc.cashier', 'obj.vehicle', 'obj.buy', 'obj.drying'],
@@ -306,7 +306,7 @@ export function resolveSpot(sim: SimState, defs: CoreDefs, name: string): Resolv
 export function npcLive(g: GameState, defs: CoreDefs, id: string): boolean {
   const p = g.player;
   const npc = defs.story ? own(defs.story.npcs, id) : undefined;
-  return !!p && !!npc && g.dialogue === null && npc.locationId === p.locationId && matches(npc.when, p)
+  return !!p && !!npc && g.dialogue === null && (npc.locationId === p.locationId || npc.follows === true) && matches(npc.when, p)
     && (npc.unlockedBy === undefined || own(g.quests, npc.unlockedBy)?.status === 'completed');
 }
 
@@ -336,6 +336,8 @@ export function coveredKeys(sim: SimState, defs: CoreDefs): ReadonlySet<string> 
   const map = mapKeyFor(p?.locationId);
   // Дорога мапи не має (її малює табір), тож покриває лише гравець у локації своєї мапи.
   if (p && p.locationId === MAP_LOCATION[map] && g.dialogue === null) {
+    // GAME-202: родина (follows) ходить із героєм — її розмова є на кожній мапі (слідувачі сцени), тож панелі вона не потрібна.
+    for (const [id, n] of Object.entries(defs.story?.npcs ?? {})) if (n.follows === true && npcLive(g, defs, id)) out.add(`Talk|${id}`);
     for (const name of MAP_SPOTS[map] as readonly string[]) {
       if (name.startsWith('npc.')) { if (npcLive(g, defs, name)) out.add(`Talk|npc.${name.slice(4)}`); continue; }
       if (name.startsWith(SPOT_PREFIX.pack)) continue;   // пакування — не серед меню панелі (ходи PackItem/UnpackItem з сітки багажника)

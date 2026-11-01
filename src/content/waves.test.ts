@@ -40,7 +40,7 @@ const isMia = (id: string): boolean => id.startsWith('mia') || id.endsWith('mia'
 
 /** Що саме мусить бути у варіанті (сценарій v3 §3): справи про Мію — лише з кішкою; велосипедні — лише на велосипеді. */
 const EXPECTED: Record<string, (k: Combo) => string[]> = {
-  [WAVE_CH1_DEPARTURE]: (k) => ['map-to-luggage', 'lights-window', ...(k.animal === 'animal.cat' ? ['mia-carrier'] : []), ...(k.transport === 'transport.bike' ? ['anna-goodbye'] : [])],
+  [WAVE_CH1_DEPARTURE]: (k) => ['map-to-luggage', 'lights-window', ...(k.animal === 'animal.cat' ? ['mia-carrier'] : []), ...(k.transport === 'transport.bike' ? ['anna-goodbye'] : ['iron-clothes'])],   // GAME-202 «Збори»: праска — лише авто (на велосипед прасоване не беруть)
   [WAVE_CH1_ROAD]: (k) => ['fix-luggage', 'check-route', ...(k.animal === 'animal.cat' ? ['mia-water-blanket'] : [])],
   [WAVE_CH1_ROAD_BIKE]: () => ['patch-tyre', 'bag-covers', 'pick-path'],
   [WAVE_CH1_ARRIVAL]: (k) => ['pick-spot', 'pitch-tent', 'gear-shelter', ...(k.animal === 'animal.cat' ? ['mia-car'] : [])],

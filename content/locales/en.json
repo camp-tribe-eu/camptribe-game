@@ -780,5 +780,20 @@
   "dlg.cashier-chat.hello.c3": "Thanks, I am just looking.",
   "dlg.cashier-chat.a": "Then take a dry bag. Rain always arrives right after the tent is up.",
   "dlg.cashier-chat.b": "Check the tent poles at home. Better to find a broken one indoors.",
-  "dlg.cashier-chat.bye": "Look all you like. The door chime will greet you next time too."
+  "dlg.cashier-chat.bye": "Look all you like. The door chime will greet you next time too.",
+  "wave.ch1-home-departure.iron-clothes": "Iron and fold the clothes into the bag. Yourself, or ask Victoria.",
+  "wave.ch1-home-departure.iron-clothes.done": "Shirts rolled and packed. Victoria: \"Ironing before a trip isn't about shirts, it's about calm.\"",
+  "wave.ch1-home-departure.iron-clothes.late": "The iron got switched off at the door — checked twice. The shirts went crumpled, and nobody noticed.",
+  "dlg.victoria-chat.hi": "Mm? I'm listening, go on.",
+  "dlg.victoria-chat.home": "I'm between the ironing board and your list. What do I take on?",
+  "dlg.victoria-chat.home.c1": "Could you iron and fold the clothes into the bag?",
+  "dlg.victoria-chat.home.c2": "Nothing, I've got it. Stick to the plan.",
+  "dlg.victoria-chat.errand-iron": "The iron is already heating. Shirts rolled, not stacked.",
+  "dlg.victoria-chat.home-bye": "Then I'll check your list again. And the list for the list.",
+  "dlg.matthew-chat.hi": "Huh? I'm here, listening.",
+  "dlg.matthew-chat.home": "Camera's packed. Twice. The rest is an open question.",
+  "dlg.matthew-chat.home.c1": "Could you put the map in the luggage?",
+  "dlg.matthew-chat.home.c2": "Nothing, keep shooting.",
+  "dlg.matthew-chat.errand-map": "Map goes in the luggage. And a photo of it, as proof.",
+  "dlg.matthew-chat.home-bye": "Okay. I'm by the door, with the camera."
 }
