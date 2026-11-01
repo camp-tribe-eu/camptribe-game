@@ -83,6 +83,10 @@ test('Escape під час кіно — теж пропуск', async ({ page })
   await waitGameReady(page);
   await begin(page);
   await page.waitForTimeout(1_500);
+  // Рецензія PR #144: модифікатор і гаряча клавіша браузера сцену не пропускають (мутація «будь-яка клавіша» → червоне).
+  await page.keyboard.press('Shift');
+  await page.keyboard.press('Control+KeyC');
+  await expect(cold(page)).toHaveCount(1);
   await page.keyboard.press('Escape');
   await expect(cold(page)).toHaveCount(0);
   await expect(page.locator('[data-ui="intro-next"]')).toBeVisible();

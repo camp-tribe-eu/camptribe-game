@@ -42,7 +42,8 @@ export function ColdOpen({ paint, t, onDone }: { paint?: ColdOpenPainter | undef
   // Будь-яка клавіша під час сцени — пропуск (Escape, Enter, Space, стрілки…), крім Tab (навігація фокусом).
   useEffect(() => {
     if (!playing) return undefined;
-    const onKey = (e: KeyboardEvent): void => { if (e.code === 'Tab') return; e.preventDefault(); e.stopPropagation(); finishRef.current(); };
+    const onKey = (e: KeyboardEvent): void => { if (e.code === 'Tab' || e.ctrlKey || e.metaKey || e.altKey || /^(Shift|Control|Alt|Meta)$/.test(e.key)) return; e.preventDefault();   // рецензія PR #144: модифікатори й гарячі клавіші браузера (Ctrl+R, F5 із Ctrl) не пропускають сцену й не ковтаються
+      e.stopPropagation(); finishRef.current(); };
     window.addEventListener('keydown', onKey, true);
     return () => window.removeEventListener('keydown', onKey, true);
   }, [playing]);
