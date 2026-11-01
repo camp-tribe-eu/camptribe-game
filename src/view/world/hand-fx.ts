@@ -10,11 +10,14 @@ export class FrameFx {
   private list: Fx[] = [];
   constructor(private readonly scene: Phaser.Scene) {}
   push(dur: number, apply: (k: number) => void, end: () => void): void { this.list.push({ age: 0, dur, apply, end }); }
+  // Рецензія PR #146: end()/apply() можуть додати новий ефект (сплеск після кидка) — він іде в свіжий this.list і не губиться при заміні списку.
   update(dtMs: number): void {
-    for (const f of this.list) { f.age += dtMs; f.apply(Math.min(1, f.age / f.dur)); }
-    this.list = this.list.filter((f) => { if (f.age < f.dur) return true; f.end(); return false; });
+    const cur = this.list; this.list = [];
+    for (const f of cur) { f.age += dtMs; f.apply(Math.min(1, f.age / f.dur)); }
+    const keep = cur.filter((f) => { if (f.age < f.dur) return true; f.end(); return false; });
+    this.list = keep.concat(this.list);
   }
-  clear(): void { for (const f of this.list) f.end(); this.list = []; }
+  clear(): void { const cur = this.list; this.list = []; for (const f of cur) f.end(); }
   /** Розліт крапок за кутами (без випадковості), що гаснуть; `rise` — куди їх зносить угору (іскри — багато, тріски — мало). */
   burst(x: number, y: number, n: number, color: number, o: { r?: number; rise?: number; dur?: number; size?: number } = {}): void {
     const r = o.r ?? 14; const rise = o.rise ?? 4; const size = o.size ?? 3;
