@@ -36,6 +36,7 @@ import { ambient, ambientMix, isIntroOpen, music } from './audio';
 import { sfxPlayer } from './audio/sfx';
 import { fireplaceDue, liveSpot, spotMove, storyMoves } from './content/director';
 import { paintRoom } from './view/intro-room';
+import { paintColdOpen } from './view/cold-open';
 import { portraitFor } from './view/portraits';
 import { headCrop, sheetOf } from './view/world/portrait-art';
 import { miaSpots, requestMarker, requestTarget, requestsDone } from './content/requests';
@@ -419,6 +420,9 @@ render(h(Shell, {
       return () => { talkListeners.delete(listener); };
     },
     introRoom: paintRoom,
+    coldOpenScene: paintColdOpen,
+    // GAME-216: кіно перед вступом — раз на нову гру; при завантаженні лише коли жодного сейву не прочитано (існуючий сейв кіно не показує).
+    coldOpen: (reason) => switches.coldOpen && (reason === 'new' || !saves.loadedSave),
     portrait(npcId: string | null, sprite = false) {
       if (switches.hideUi.includes('portrait')) return null;   // ?hideUi=portrait — лише збірка e2e: негативний контроль (game-179.spec)
       const p = portraitFor(npcId, sprite ? {} : undefined);
