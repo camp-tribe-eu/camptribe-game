@@ -30,6 +30,8 @@ import { WoodRig, type WoodProbe } from './wood';
 import { FireRig, type FireProbe } from './fire';
 import { GrillRig, type GrillProbe } from './grill';
 import { FISH_SPOT, FishRig, type FishProbe } from './fishing';
+import { REVEAL_BEATS, revealCenter, type RevealAnchors } from '../camp-reveal';
+import { calmMotion } from '../../platform/motion';
 
 export const TILE = 32;
 const INTERACT_RANGE = TILE * 1.5;
@@ -120,6 +122,8 @@ export interface WorldHooks {
   onErrand?(task: string): boolean;
   /** GAME-203 (лише збірка e2e, ?tentAlone=1): тато ставить намет сам, навіть коли родина поруч — шлях «без помічників». */
   tentAlone?(): boolean;
+  /** GAME-216: чи зіграти заставку першого приїзду в табір (камера: герой → озеро → табір → герой, ≤ 10 с, будь-який дотик виходить). Немає — ніколи. */
+  campReveal?(): boolean;
 }
 
 /** Хто з NPC якого листа ходьби має (лист — в art.ts); решта — як Еліза. */
@@ -195,6 +199,8 @@ export interface WorldProbe {
   grill: GrillProbe;
   /** GAME-193: риболовля (лише читання, для e2e). */
   fish: FishProbe;
+  /** GAME-216 (лише для e2e): заставка приїзду в табір триває (камера не на героєві). */
+  reveal: boolean;
 }
 
 /** Точка вогнища (об'єкт мапи obj.campfire) — центр світлої плями; нема — плями нема. */
@@ -263,6 +269,10 @@ export class WorldScene extends Phaser.Scene {
   private fpsStart = -1;
   /** Тап по канві (GAME-95): світова точка, чекає на кадр update, де її звіряють із цілями в зоні дії. */
   private tap: { x: number; y: number } | null = null;
+  /** GAME-216: заставка першого приїзду в табір — мс від початку й опорні точки; null — камера стежить за героєм. Раз на сесію сцени. */
+  private reveal: { elapsed: number; anchors: RevealAnchors } | null = null;
+  private revealDone = false;
+  private revealSkip = false;
   /** GAME-99: нічна маска (на весь екран, MULTIPLY) і світла пляма вогнища (ADD); null, якщо ефект вимкнено. */
   private night: Phaser.GameObjects.Rectangle | null = null;
   private glow: Phaser.GameObjects.Image | null = null;
@@ -523,6 +533,7 @@ export class WorldScene extends Phaser.Scene {
       }
     }
     // Тап по об'єкту на канві = та сама взаємодія, що й кнопка дії (GAME-95). Не тап (рух пальця, довга пауза) — ігноруємо.
+    this.input.on('pointerdown', () => { if (this.reveal) this.revealSkip = true; });   // GAME-216: дотик виходить із заставки одразу
     this.input.on('pointerup', (p: Phaser.Input.Pointer) => {
       if (p.getDistance() > TAP_MAX_MOVE || p.getDuration() > TAP_MAX_MS) return;
       const w = this.cameras.main.getWorldPoint(p.x, p.y);
@@ -656,6 +667,14 @@ export class WorldScene extends Phaser.Scene {
     this.cameras.main.setBounds(0, 0, map.widthInPixels, map.heightInPixels);
     this.cameras.main.centerOn(this.player.x, this.player.y);
     this.last = { x: this.player.x, y: this.player.y };
+    // GAME-216: перший приїзд у табір — заставка: камера відпливає до озера й табору і вертається (таблиця бітів camp-reveal.ts, кадр за кадром).
+    // Лише з опорними точками на мапі (берег FISH_SPOT і вогнище), без «менше руху», раз на сцену; гра не стоїть — герой може йти, і будь-який дотик виходить.
+    const fire = spawnFire(this.spots);
+    if (key === 'camp' && !this.revealDone && shore && fire && this.hooks.campReveal?.() === true && !calmMotion()) {
+      this.revealDone = true;
+      this.reveal = { elapsed: 0, anchors: { player: { x: this.player.x, y: this.player.y }, lake: { x: shore.x ?? 0, y: shore.y ?? 0 }, camp: fire } };
+      this.cameras.main.stopFollow();
+    } else this.endReveal();
     this.placeCar();
     // Щойно з'явився поруч з об'єктом (приїхав, завантажив гру) — не діє, поки не відійде: інакше авто везло б назад саме.
     this.fired = new Set(this.spots.filter((sp) => Phaser.Math.Distance.Between(spawn.x ?? 0, spawn.y ?? 0, sp.x, sp.y) <= INTERACT_RANGE).map((sp) => sp.name));
@@ -789,6 +808,13 @@ export class WorldScene extends Phaser.Scene {
    * GAME-202/203: роботи родини на цей кадр. Доручення — з фактів ядра (hooks.errands: лише живі справи, тож зроблена чи спізнена справа знімає роботу сама);
    * відтяжки намету — поки тато б'є кілки (tent.phase peg) і помічник у tentHelpers. Робота, що триває, зберігає свій стан (ціль-тайл, секунди праці).
    */
+  /** GAME-216: заставка скінчилась (або її не було) — камера стежить за героєм, як завжди. */
+  private endReveal(): void {
+    this.reveal = null;
+    this.revealSkip = false;
+    if (this.player) this.cameras.main.startFollow(this.player, true, 1, 1);
+  }
+
   private planJobs(): void {
     const errands = this.hooks.errands?.() ?? [];
     const helperSpots = this.tent.helperSpots();
@@ -1054,6 +1080,12 @@ export class WorldScene extends Phaser.Scene {
     music.setTrack(musicFor({ map: this.current, intro: isIntroOpen(), minuteOfDay: timeOfDay(this.bridge.state.clock.minutes) }));
     music.tick(delta);
     const held = consumeFrame(this.controls);
+    // GAME-216: заставка приїзду — камера по таблиці бітів; будь-яка клавіша, дотик чи кінець таблиці — камера знову на героєві.
+    if (this.reveal) {
+      this.reveal.elapsed += delta;
+      const c = held.size > 0 || this.revealSkip || this.tap !== null ? null : revealCenter(this.reveal.elapsed, this.reveal.anchors, REVEAL_BEATS);
+      if (c) this.cameras.main.centerOn(c.x, c.y); else this.endReveal();
+    }
     // GAME-189: поки герой б'є кілки — стоїть; розміщення намету — ходить вільно (привид іде за ним).
     const v = this.tent.holdsHero || this.wood.holdsHero || this.fire.holdsHero || this.grill.holdsHero || this.fish.busy ? { x: 0, y: 0 } : moveVector(held);
     // Рухається той, хто справді зсунувся з минулого кадру (по зсуву, а не по швидкості — вона лишається, коли тіло вперлося в стіну): упертий у стіну персонаж стоїть, а не «іде на місці».
@@ -1250,6 +1282,7 @@ export class WorldScene extends Phaser.Scene {
     }
     const frame = Number(this.player.frame.name);
     Object.assign(this.probe, {
+      reveal: this.reveal !== null,
       playerX: this.player.x,
       playerY: this.player.y,
       nearObject: near,

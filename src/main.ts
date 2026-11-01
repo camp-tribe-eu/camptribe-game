@@ -50,7 +50,7 @@ import type { RewardEvent } from './ui/port';
 const app = document.querySelector<HTMLElement>('#app');
 if (!app) throw new Error('#app is missing');
 
-const probe: WorldProbe = { ready: false, playerX: 0, playerY: 0, nearObject: null, nearKind: null, commandsSent: 0, cameraScrollX: 0, cameraScrollY: 0, clockMinutes: 0, saveLoaded: false, cameraLerp: [0, 0], followers: [], leisure: [], jobs: [],
+const probe: WorldProbe = { ready: false, reveal: false, playerX: 0, playerY: 0, nearObject: null, nearKind: null, commandsSent: 0, cameraScrollX: 0, cameraScrollY: 0, clockMinutes: 0, saveLoaded: false, cameraLerp: [0, 0], followers: [], leisure: [], jobs: [],
   playerFrame: 0, playerDir: 'down', playerMoving: false, playerDepth: 0, coveredTiles: 0, behindTiles: 0, fps: 0, fpsWindows: 0, firstFrameMs: 0,
   residents: [], visitors: [], bark: null, barkCount: 0, npcMarks: {}, miaAt: [], tent: TENT_PROBE_IDLE, wood: WOOD_PROBE_IDLE, fire: FIRE_PROBE_IDLE, grill: GRILL_PROBE_IDLE, fish: FISH_PROBE_IDLE,
   daylight: { on: false, visible: false, minuteOfDay: 0, darkness: 0, color: 0xffffff, glow: 0 },
@@ -316,6 +316,8 @@ const worldHooks: WorldHooks = {
     return !plannedErrands(bridge.state.game.flags, (spot) => liveSpot(bridge.state, spot, GAME_DEFS)).some((x) => x.task === task);
   },
   tentAlone: () => switches.tentAlone === true,
+  // GAME-216: заставка — лише на першому приїзді в табір (ST-005 живий, з Елізою ще не говорили); ?noReveal=1 — негативний контроль e2e.
+  campReveal: () => switches.noReveal !== true && bridge.state.game.quests['ST-005']?.status === 'active' && !(bridge.state.game.quests['ST-005']?.done ?? []).includes('meet-elise'),
 };
 /** GAME-179: запасні портрети — обрізки спрайтів, зроблені раз на лист. */
 const spriteCrops = new Map<string, string>();
@@ -423,6 +425,8 @@ render(h(Shell, {
     coldOpenScene: paintColdOpen,
     // GAME-216: кіно перед вступом — раз на нову гру; при завантаженні лише коли жодного сейву не прочитано (існуючий сейв кіно не показує).
     coldOpen: (reason) => switches.coldOpen && (reason === 'new' || !saves.loadedSave),
+    episodeFlags: () => bridge.state.game.flags,
+    episodeNow: () => switches.episode === true,
     portrait(npcId: string | null, sprite = false) {
       if (switches.hideUi.includes('portrait')) return null;   // ?hideUi=portrait — лише збірка e2e: негативний контроль (game-179.spec)
       const p = portraitFor(npcId, sprite ? {} : undefined);

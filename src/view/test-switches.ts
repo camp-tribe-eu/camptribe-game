@@ -43,6 +43,10 @@ export interface TestSwitches {
   readonly tentAlone?: boolean;
   /** GAME-207: музика. У збірці e2e вимкнена за замовчуванням (тести детерміновані, файли не вантажаться); ?music=1 вмикає справжню поведінку. */
   readonly music: boolean;
+  /** ?episode=1 — GAME-216: картка-«серія» кінця розділу показується одразу при завантаженні (знімки й перевірка пропуску без проходження розділу). */
+  readonly episode?: boolean;
+  /** ?noReveal=1 — GAME-216: без заставки першого приїзду в табір (негативний контроль: камера одразу на героєві). */
+  readonly noReveal?: boolean;
 }
 
 export function testSwitches(search: string, mode: string): TestSwitches {
@@ -54,5 +58,5 @@ export function testSwitches(search: string, mode: string): TestSwitches {
   const boot = Number(q.get('bootDelayMs'));
   const at = Number(q.get('atMinute'));
   const hintIdle = Number(q.get('hintIdleMs'));
-  return { intro: q.get('intro') === '1', coldOpen: q.get('coldOpen') === '1', music: q.get('music') === '1', ...(Number.isInteger(boot) && boot >= 1 && boot <= 5000 ? { bootDelayMs: boot } : {}), ...(Number.isInteger(lag) && lag >= 1 && lag <= 190 ? { frameLagMs: lag } : {}), hideTouch: list('hideTouch'), hideAct: list('hideAct'), hideUi: list('hideUi'), breakSpot: list('breakSpot'), ...(q.get('noAutosave') === '1' ? { noAutosave: true } : {}), ...(q.get('tentAlone') === '1' ? { tentAlone: true } : {}), ...(q.get('holdToast') === '1' ? { holdToast: true } : {}), ...((q.get('atMinute') ?? '') !== '' && Number.isInteger(at) && at >= 0 && at <= 1439 ? { atMinute: at } : {}), ...(q.get('daylight') === 'off' ? { noDaylight: true } : {}), ...(q.get('mapFirst') !== '1' ? { panelActs: true } : {}), ...(['camp', 'home', 'shop', 'road'].includes(q.get('map') ?? '') ? { map: q.get('map') as 'camp' | 'home' | 'shop' | 'road' } : {}), ...(Number.isInteger(hintIdle) && hintIdle >= 1 && hintIdle <= 60000 ? { hintIdleMs: hintIdle } : {}), ...(q.get('freshSeed') === '1' ? { freshSeed: true } : {}), ...(q.has('seed') && Number.isSafeInteger(seed) && seed >= 0 ? { seed } : {}) };
+  return { intro: q.get('intro') === '1', coldOpen: q.get('coldOpen') === '1', music: q.get('music') === '1', ...(Number.isInteger(boot) && boot >= 1 && boot <= 5000 ? { bootDelayMs: boot } : {}), ...(Number.isInteger(lag) && lag >= 1 && lag <= 190 ? { frameLagMs: lag } : {}), hideTouch: list('hideTouch'), hideAct: list('hideAct'), hideUi: list('hideUi'), breakSpot: list('breakSpot'), ...(q.get('noAutosave') === '1' ? { noAutosave: true } : {}), ...(q.get('tentAlone') === '1' ? { tentAlone: true } : {}), ...(q.get('episode') === '1' ? { episode: true } : {}), ...(q.get('noReveal') === '1' ? { noReveal: true } : {}), ...(q.get('holdToast') === '1' ? { holdToast: true } : {}), ...((q.get('atMinute') ?? '') !== '' && Number.isInteger(at) && at >= 0 && at <= 1439 ? { atMinute: at } : {}), ...(q.get('daylight') === 'off' ? { noDaylight: true } : {}), ...(q.get('mapFirst') !== '1' ? { panelActs: true } : {}), ...(['camp', 'home', 'shop', 'road'].includes(q.get('map') ?? '') ? { map: q.get('map') as 'camp' | 'home' | 'shop' | 'road' } : {}), ...(Number.isInteger(hintIdle) && hintIdle >= 1 && hintIdle <= 60000 ? { hintIdleMs: hintIdle } : {}), ...(q.get('freshSeed') === '1' ? { freshSeed: true } : {}), ...(q.has('seed') && Number.isSafeInteger(seed) && seed >= 0 ? { seed } : {}) };
 }
