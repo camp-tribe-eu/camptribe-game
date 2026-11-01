@@ -32,6 +32,8 @@ async function delegate(page: Page, i: number, id: string, choice: RegExp): Prom
   await page.keyboard.press('KeyE');
   await expect(talk(page)).toBeVisible({ timeout: 5_000 });
   await page.waitForTimeout(600);   // «глухота» рамки ~350 мс після відкриття: ранній тап ігнорується
+  // Розмова родини починається з короткої репліки («М-м? Я слухаю») → «Далі» → вибір (гілка дому чи табору за станом ядра, GAME-202 «Збори»).
+  if (await talk(page).locator('[data-act]', { hasText: choice }).count() === 0) { await talk(page).locator('[data-act]').last().click(); await page.waitForTimeout(450); }
   await talk(page).locator('[data-act]', { hasText: choice }).click({ timeout: 5_000 });
   await page.waitForTimeout(450);
   for (let k = 0; k < 4 && await talk(page).isVisible().catch(() => false); k++) { await talk(page).locator('[data-act]').last().click(); await page.waitForTimeout(450); }

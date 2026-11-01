@@ -62,3 +62,47 @@ describe('контент доручень ↔ хвилі й реєстр (GAME-2
     expect(members).toEqual(new Set(FAMILY));
   });
 });
+
+// GAME-202 (решта картки) · сторож «кожен f.errand-* має справу й точку на мапі»: усі діалоги content/dialogue/*.json (не лише двоє з родини),
+// справа — у хвилі, не leaderOnly; об'єкт task.<справа> лежить на мапі ЕТАПУ хвилі (дім → home.tmj, табір → camp-lake.tmj, дорога → road.tmj);
+// вибір-доручення стоїть за умовою taskOpen САМЕ цієї справи (інакше «Іду» — а ніхто не йде, бо справи вже нема).
+// Мутації (кожна червона, перевірено руками 01.11.2026): прапорець на неіснуючу справу; прибрати task.iron-clothes з home.tmj; замінити taskOpen на quest.
+import quests from '../../content/quests.json';
+import homeMap from '../../public/maps/home.tmj?raw';
+import campMap from '../../public/maps/camp-lake.tmj?raw';
+import roadMap from '../../public/maps/road.tmj?raw';
+import { mapKeyFor } from './map-first';
+
+type Cond = { all?: Cond[]; any?: Cond[]; taskOpen?: string } & Record<string, unknown>;
+type Choice = { when?: Cond; effects?: ({ setFlag: string } | object)[] };
+type Dialogue = { id: string; nodes: { choices?: Choice[] }[] };
+const ALL_DIALOGUES = Object.values(import.meta.glob<Dialogue>('../../content/dialogue/*.json', { eager: true, import: 'default' }));
+const objectsOf = (raw: string): string[] => (JSON.parse(raw) as { layers: { name: string; objects?: { name: string }[] }[] }).layers.find((l) => l.name === 'objects')?.objects?.map((o) => o.name) ?? [];
+const MAP_OBJECTS: Record<string, string[]> = { home: objectsOf(homeMap), camp: objectsOf(campMap), road: objectsOf(roadMap) };
+const leaves = (c: Cond | undefined, out: Cond[] = []): Cond[] => { if (!c) return out; if (c.all) c.all.forEach((x) => leaves(x, out)); else if (c.any) c.any.forEach((x) => leaves(x, out)); else out.push(c); return out; };
+
+describe('усі доручення контенту ↔ хвилі, мапи, умова taskOpen (GAME-202)', () => {
+  const choices = ALL_DIALOGUES.flatMap((d) => d.nodes.flatMap((n) => (n.choices ?? []).map((ch) => [d.id, ch] as const)));
+  const errands = choices.flatMap(([id, ch]) => (ch.effects ?? []).flatMap((e) => ('setFlag' in e && e.setFlag.startsWith(ERRAND_PREFIX) ? [[id, ch, e.setFlag] as const] : [])));
+  it('доручень ≥ 4 (табір: навіс ×2, вечеря; дім: праска, карта) — інакше звірка нижче нічого не доводить', () => {
+    expect(errands.length).toBeGreaterThanOrEqual(5);
+    expect(errands.some(([, , f]) => f === 'f.errand-iron-clothes-victoria')).toBe(true);
+    expect(errands.some(([, , f]) => f === 'f.errand-map-to-luggage-matthew')).toBe(true);
+  });
+  it('кожне доручення: справа існує, не leaderOnly, зареєстрована, має task.<справа> на мапі етапу хвилі, а вибір стоїть за taskOpen цієї справи', () => {
+    const byTask = new Map(waves.flatMap((w) => w.tasks.map((t) => [t.id, { t, w }] as const)));
+    for (const [dlg, ch, f] of errands) {
+      const e = parseErrand(f);
+      expect(e, `${dlg}: ${f} — доручення без виконавця з родини`).not.toBeNull();
+      const hit = byTask.get(e?.task ?? '');
+      expect(hit, `${dlg}: ${f} — такої справи немає в content/waves.json`).toBeDefined();
+      if (!hit || !e) continue;
+      expect((hit.t as { leaderOnly?: boolean }).leaderOnly, `${f}: справа лише для лідера — ядро відмовить помічнику`).not.toBe(true);
+      expect(flags.some((r) => r.id === f), `${f}: не зареєстровано в content/flags.json`).toBe(true);
+      const stage = quests.find((q) => q.id === hit.w.stage);
+      const map = mapKeyFor(stage?.locationId);
+      expect(MAP_OBJECTS[map], `${f}: на мапі «${map}» етапу ${hit.w.stage} немає об'єкта ${e.spot} — виконавцеві нікуди йти`).toContain(e.spot);
+      expect(leaves(ch.when).some((l) => l.taskOpen === e.task), `${dlg}: вибір «${f}» не стоїть за taskOpen «${e.task}» — доручення пропонувалось би й після того, як справу зроблено`).toBe(true);
+    }
+  });
+});

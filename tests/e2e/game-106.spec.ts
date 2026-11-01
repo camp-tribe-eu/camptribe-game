@@ -239,6 +239,10 @@ test('«Продовжити» — назад на мапу; день 2 до «�
   for (const [k, key] of [['complete', 'q.ch1-d3-return-001'], ['visit', 'loc.home']] as const) await click(`[data-act="${k}"][data-key="${key}"]`);
   await expect(summary(page)).toHaveCount(0);                                // контроль: до межі дня 3 підсумку немає
   await click('[data-act="complete"][data-key="q.ch1-d3-home-001"]');
+  // GAME-216: кінець розділу — спершу картка-«серія», підсумок дня 3 — після неї.
+  await expect(page.locator('[data-ui="episode"]')).toBeVisible();
+  await expect(summary(page)).toHaveCount(0);
+  await page.locator('[data-ui="episode-skip"]').click();
   await expect(summary(page)).toBeVisible();
   await expect(summary(page).locator('h2')).toHaveText('Підсумок дня 3');
   expect(await summary(page).locator('[data-kind="quests"] li').evaluateAll((els) => els.map((e) => (e as HTMLElement).dataset.key)))

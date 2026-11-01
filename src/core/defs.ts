@@ -112,6 +112,8 @@ export type CondDef =
   /** GAME-48: NPC, чия це розмова, пам'ятає факт (`m.назва`). У події в дорозі NPC немає — ніколи. */
   | { readonly remembers: string }
   | { readonly notRemembers: string }
+  /** GAME-202: справа живої хвилі ще відкрита (не зроблена й не спізнилась) — вибір-доручення зникає, щойно справу зроблено. */
+  | { readonly taskOpen: string }
   | { readonly all: readonly CondDef[] }
   | { readonly any: readonly CondDef[] };
 
@@ -186,7 +188,8 @@ export interface StoryDefs {
   readonly animals: Readonly<Record<string, { readonly transports?: readonly string[] }>>;
   /** `sheltered` (GAME-88): дім чи кемпінг — під дахом або при наметі; тут спорядження можна сушити й у дощ. Немає поля — просто неба. */
   readonly locations: Readonly<Record<string, { readonly unlockedBy?: string; readonly when?: WhenDef; readonly items: readonly string[]; readonly sheltered?: boolean }>>;
-  readonly npcs: Readonly<Record<string, { readonly locationId: string; readonly unlockedBy?: string; readonly when?: WhenDef }>>;
+  /** `follows` (GAME-202): член родини — ходить із героєм, тож говорити з ним можна на будь-якій мапі, а не лише в його locationId. */
+  readonly npcs: Readonly<Record<string, { readonly locationId: string; readonly unlockedBy?: string; readonly when?: WhenDef; readonly follows?: boolean }>>;
   readonly quests: Readonly<Record<string, QuestDef>>;
   /** Діалоги за id; на NPC — щонайбільше один (валідатор: DIALOGUE_NPC_DUPLICATE). */
   readonly dialogues: Readonly<Record<string, DialogueDef>>;
@@ -268,6 +271,22 @@ export const WAVE_MAX_LIMIT = 60;
 export const WAVE_MIN_TASKS = 2;
 export const WAVE_MAX_TASKS = 4;
 
+/**
+ * Скільки справ хвилі ОДИН гравець бачить разом (GAME-202): перебір значень вимірів, що трапляються в `when` справ (плюс «інше»
+ * значення поза ними), і найбільша кількість справ, чиї when збігаються в одній точці. Варіанти за транспортом чи твариною не складаються.
+ */
+export function maxVisibleTasks(w: Pick<WaveDef, 'tasks'>): number {
+  const dims = ['profiles', 'transports', 'animals'] as const;
+  const values = dims.map((k) => [...new Set(w.tasks.flatMap((t) => t.when?.[k] ?? [])), null]);
+  let best = 0;
+  for (const p of values[0] as (string | null)[]) for (const tr of values[1] as (string | null)[]) for (const an of values[2] as (string | null)[]) {
+    const at = [p, tr, an];
+    const n = w.tasks.filter((t) => dims.every((k, i) => { const need = t.when?.[k]; const v = at[i] ?? null; return !need || (v !== null && need.includes(v)); })).length;
+    if (n > best) best = n;
+  }
+  return best;
+}
+
 export interface CoreDefs {
   /** Хвилі напруги (GAME-170, content/waves.json). Немає — StartWave/CompleteTask відмовляють (UNKNOWN_TARGET). */
   readonly waves?: WaveDefs;
@@ -340,7 +359,8 @@ export function checkDefs(defs: CoreDefs, flagKinds?: Readonly<Record<string, st
     // GAME-170: етап існує, справ 2–4, межа — ціле 1…WAVE_MAX_LIMIT; повну семантику (варіанти, унікальність) доводить валідатор.
     if (!ID.test(id) || w.tasks.some((t) => !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(t.id))) out.push({ code: 'DEFS_BAD_ID', where: id });
     if (defs.story && !Object.hasOwn(defs.story.quests, w.stage)) out.push({ code: 'DEFS_BAD_REF', where: `${id}.stage` });
-    if (w.tasks.length < WAVE_MIN_TASKS || w.tasks.length > WAVE_MAX_TASKS) out.push({ code: 'DEFS_BAD_AMOUNT', where: `${id}.tasks` });
+    // GAME-202: межа зверху — на справи, які ОДНОМУ гравцеві видно разом (варіанти за транспортом/твариною не складаються); точно, за комбінаціями, це доводить валідатор.
+    if (w.tasks.length < WAVE_MIN_TASKS || maxVisibleTasks(w) > WAVE_MAX_TASKS) out.push({ code: 'DEFS_BAD_AMOUNT', where: `${id}.tasks` });
     for (const t of w.tasks) {
       if (!Number.isSafeInteger(t.limitMin) || t.limitMin < 1 || t.limitMin > WAVE_MAX_LIMIT) out.push({ code: 'DEFS_BAD_AMOUNT', where: `${id}/${t.id}.limitMin` });
       if (t.animal !== undefined && defs.story && !Object.hasOwn(defs.story.animals, t.animal)) out.push({ code: 'DEFS_BAD_REF', where: `${id}/${t.id}.animal` });

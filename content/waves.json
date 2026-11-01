@@ -13,7 +13,9 @@
       { "id": "lights-window", "textKey": "wave.ch1-home-departure.lights-window", "limitMin": 45,
         "done": { "textKey": "wave.ch1-home-departure.lights-window.done" }, "late": { "textKey": "wave.ch1-home-departure.lights-window.late" } },
       { "id": "anna-goodbye", "textKey": "wave.ch1-home-departure.anna-goodbye", "limitMin": 50, "leaderOnly": true, "when": { "transports": ["transport.bike"] },
-        "done": { "textKey": "wave.ch1-home-departure.anna-goodbye.done" }, "late": { "textKey": "wave.ch1-home-departure.anna-goodbye.late" } }
+        "done": { "textKey": "wave.ch1-home-departure.anna-goodbye.done" }, "late": { "textKey": "wave.ch1-home-departure.anna-goodbye.late" } },
+      { "id": "iron-clothes", "textKey": "wave.ch1-home-departure.iron-clothes", "limitMin": 45, "when": { "transports": ["transport.car"] },
+        "done": { "textKey": "wave.ch1-home-departure.iron-clothes.done" }, "late": { "textKey": "wave.ch1-home-departure.iron-clothes.late" } }
     ]
   },
   {

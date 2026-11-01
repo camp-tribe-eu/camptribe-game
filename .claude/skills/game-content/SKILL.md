@@ -97,7 +97,7 @@ GDD — приватний (`brain/Передача/00-dzherelo-lezhyt-lokalno.m
 | `transports.json` | **`id`**, **`nameKey`** | `transport.bike` |
 | `animals.json` | **`id`**, **`nameKey`**, `transports` | `animal.cat` (`animal.none` — зарезервовано) |
 | `items.json` | **`id`**, **`nameKey`** | `item.sleeping-bag` |
-| `npcs.json` | **`id`**, **`nameKey`**, **`locationId`**, `unlockedBy`, `sells`, `when` | `npc.elise` |
+| `npcs.json` | **`id`**, **`nameKey`**, **`locationId`**, `unlockedBy`, `sells`, `when`, `follows` (GAME-202: член родини ходить із героєм — розмова на будь-якій мапі) | `npc.elise` |
 | `locations.json` | **`id`**, **`nameKey`**, `unlockedBy`, `items`, `when` | `loc.camp.lake` |
 | `quests.json` | **`id`**, **`titleKey`**, **`optional`**, **`xp`** (XP мандрівника: крок головного 10–20, побічка 15, GAME-181), **`objectives`**, **`transitions`**, `end` (кінець розділу), `dayEnd` (межа дня історії, GAME-141), `giverId`, `locationId`, `when`, `requires`, `reward` | основний — канонічний id сценарію `ST-006`, `CH1-HOME-001` (ключ тексту — `q.ch1-home-001`), бічний `q.nora-walk` |
 | `events.json` | **`id`**, **`titleKey`**, **`repeatable`**, `locationId`, `reward` | `ev.neighbours-firewood` |
@@ -153,6 +153,7 @@ GDD — приватний (`brain/Передача/00-dzherelo-lezhyt-lokalno.m
 * Умова (`when`) — **об'єкт, ніколи рядок** (TD-006), рівно один ключ: `{ "flag": "f.x" }`,
   `{ "notFlag": "f.x" }`, `{ "quest": "ST-001", "status": "active" | "completed" }`,
   `{ "transport": "transport.bike" }`, `{ "remembers": "m.x" }`, `{ "notRemembers": "m.x" }`,
+  `{ "taskOpen": "gear-shelter" }` (GAME-202: справа живої хвилі ще відкрита — для виборів-доручень, щоб вони зникали, щойно справу зроблено),
   `{ "all": [умови] }`, `{ "any": [умови] }`.
 * Ефект — рівно один ключ: `{ "setFlag": "f.x" }`, `{ "startQuest": "q.x" }`,
   `{ "completeObjective": { "quest": "ST-003", "objective": "get-tent" } }`, `{ "remember": "m.x" }`.

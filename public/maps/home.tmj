@@ -2099,6 +2099,18 @@
     },
     {
      "id": 25,
+     "name": "task.iron-clothes",
+     "type": "trigger",
+     "x": 688,
+     "y": 304,
+     "width": 0,
+     "height": 0,
+     "point": true,
+     "rotation": 0,
+     "visible": true
+    },
+    {
+     "id": 26,
      "name": "step.ST-004",
      "type": "trigger",
      "x": 208,
@@ -2110,7 +2122,7 @@
      "visible": true
     },
     {
-     "id": 26,
+     "id": 27,
      "name": "step.CH1-D3-HOME-001",
      "type": "trigger",
      "x": 208,
@@ -2122,7 +2134,7 @@
      "visible": true
     },
     {
-     "id": 27,
+     "id": 28,
      "name": "obj.drying",
      "type": "trigger",
      "x": 272,
@@ -2134,7 +2146,7 @@
      "visible": true
     },
     {
-     "id": 28,
+     "id": 29,
      "name": "obj.sell",
      "type": "trigger",
      "x": 336,

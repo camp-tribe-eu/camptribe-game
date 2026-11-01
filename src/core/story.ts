@@ -91,7 +91,7 @@ export function locationOpen(st: StoryDefs, d: StoryDraft, p: PlayerState, id: s
 
 export function npcOpen(st: StoryDefs, d: StoryDraft, p: PlayerState, id: string): boolean {
   const npc = own(st.npcs, id);
-  return !!npc && matches(npc.when, p) && completed(d, npc.unlockedBy) && locationOpen(st, d, p, npc.locationId);
+  return !!npc && matches(npc.when, p) && completed(d, npc.unlockedBy) && (npc.follows === true || locationOpen(st, d, p, npc.locationId));
 }
 
 // Сусіди вузла для транспорту — раз на заморожений перелік доріг (рецензія: route() кличуть на кожен Visit,
@@ -307,6 +307,9 @@ export function holds(c: CondDef, d: StoryDraft, p: PlayerState, npcId?: string)
   if ('remembers' in c) return remembers(d, npcId, c.remembers);
   if ('notRemembers' in c) return !remembers(d, npcId, c.notRemembers);
   if ('quest' in c) return own(d.quests, c.quest)?.status === c.status;
+  // GAME-202: справа відкрита лише в живій хвилі й зі статусом open; зроблена, спізнена чи хвиля минула — ні. Строк за годинником
+  // уже розсудив settleWave перед командою (sim.afterClock), тож тут статусу досить.
+  if ('taskOpen' in c) return own(d.wave?.active?.tasks ?? {}, c.taskOpen)?.outcome === 'open';
   if ('transport' in c) return p.transportId === c.transport;
   if ('animal' in c) return p.animalId === c.animal;
   if ('all' in c) return c.all.every((x) => holds(x, d, p, npcId));
@@ -396,7 +399,7 @@ export function applyStory(cmd: StoryCommand, d: StoryDraft, st: StoryDefs | und
       const npc = own(st.npcs, cmd.npcId);
       if (!npc) return 'UNKNOWN_TARGET';
       if (!npcOpen(st, d, p, cmd.npcId)) return 'LOCKED';
-      if (p.locationId !== npc.locationId) return 'NOT_HERE';
+      if (p.locationId !== npc.locationId && npc.follows !== true) return 'NOT_HERE';   // GAME-202: родина завжди поруч із героєм
       mark(st, d, p, 'talk', cmd.npcId);
       const dlg = Object.entries(st.dialogues).find(([, x]) => x.npcId === cmd.npcId);
       if (dlg) d.dialogue = { id: dlg[0], node: dlg[1].start };

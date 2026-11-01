@@ -33,6 +33,8 @@ Object.assign(cond.variants, {
   // GAME-48: пам'ять NPC — того, чия це розмова (факт «m.назва»).
   remembers: obj({ remembers: req(str) }),
   notRemembers: obj({ notRemembers: req(str) }),
+  // GAME-202: справа живої хвилі ще відкрита — доручення в розмові зникає, щойно справу зроблено чи вона спізнилась.
+  taskOpen: obj({ taskOpen: req(str) }),
   all: obj({ all: req(conds) }),
   any: obj({ any: req(conds) }),
 });
@@ -121,7 +123,8 @@ export const SCHEMAS = {
     weightG: int1, volumeL: int1, waterproofMm: int0, comfortC: { t: 'int', min: -40, max: 40 }, sleeps: int1,
     priceCents: int0, resaleCents: int0,
   }),
-  npcs: obj({ id: req(str), nameKey: req(str), locationId: req(str), unlockedBy: str, sells: arr(str), when }),
+  // follows (GAME-202): член родини ходить із героєм — розмова можлива на будь-якій мапі, locationId — лише «домашня» мапа для панелі.
+  npcs: obj({ id: req(str), nameKey: req(str), locationId: req(str), unlockedBy: str, sells: arr(str), when, follows: bool }),
   locations: obj({ id: req(str), nameKey: req(str), unlockedBy: str, items: arr(str), sheltered: bool, when }),
   quests: obj({
     id: req(str), titleKey: req(str), optional: req(bool), end: bool, dayEnd: bool, xp: int0,

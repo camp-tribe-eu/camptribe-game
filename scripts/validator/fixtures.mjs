@@ -411,6 +411,9 @@ export const FIXTURES = [
   { name: '[наклейка] немає англійського тексту', expect: ['LOCALE_MISSING'], patch(c) { delete c.locales.en['sticker.fixture-first.text']; } },
   { name: '[хвиля] одна справа', expect: ['WAVE_TOO_FEW_TASKS'], patch(c) { wave(c).tasks.pop(); } },
   { name: '[хвиля] п’ять справ — забагато', expect: ['WAVE_TOO_MANY_TASKS'], patch(c) { for (const id of ['a', 'b', 'c']) wave(c).tasks.push(extraTask(id)); } },
+  // GAME-202: варіанти за транспортом не складаються — п’ять записів, але гравцеві видно щонайбільше чотири.
+  { base: 'combo', name: '[хвиля] контроль: п’ять записів, та в кожній комбінації видно ≤ 4 — не забагато', expect: [], patch(c) { wave(c).tasks.push(extraTask('a'), extraTask('b', { when: { transports: [T_CAR] } }), extraTask('c', { when: { transports: [T_BIKE] } })); } },
+  { base: 'combo', name: '[хвиля] п’ять справ видно водієві — забагато', expect: ['WAVE_TOO_MANY_TASKS'], patch(c) { wave(c).tasks.push(extraTask('a'), extraTask('b'), extraTask('c', { when: { transports: [T_CAR] } })); } },
   { name: '[хвиля] контроль: чотири справи (межа) — коректно', expect: [], patch(c) { for (const id of ['a', 'b']) wave(c).tasks.push(extraTask(id)); } },
   { name: '[хвиля] справа про Мію без поля animal і з небезпечною ціллю', expect: ['WAVE_ANIMAL_UNSAFE'], patch(c) { wave(c).tasks.push(extraTask('find-mia', { leaderOnly: true, targets: [{ id: 'spot.shore', safe: false }] })); } },
   { name: '[хвиля] справа про Мію без поля animal і без цілей', expect: ['WAVE_ANIMAL_UNSAFE'], patch(c) { wave(c).tasks.push(extraTask('find-mia', { leaderOnly: true })); } },
@@ -862,6 +865,9 @@ export const FIXTURES = [
     node(c, 'help').choices[0].when = { any: [{ transport: 'transport.fixture-bike' }, { flag: 'f.fixture-helped' }] };
   } },
   { base: 'combo', name: '[діалог] умова на неіснуючий транспорт', expect: ['DIALOGUE_REF_MISSING'], patch(c) { withTransportFact(c); node(c, 'help').choices[0].when = { transport: 'transport.ghost' }; } },
+  // GAME-202: taskOpen — справа хвилі мусить існувати; наявна — коректно.
+  { base: 'combo', name: '[діалог] умова taskOpen на неіснуючу справу хвилі', expect: ['DIALOGUE_REF_MISSING'], patch(c) { node(c, 'help').choices[0].when = { taskOpen: 'ghost' }; } },
+  { base: 'combo', name: '[діалог] контроль: taskOpen на справу хвилі — коректно', expect: [], patch(c) { node(c, 'help').choices[0].when = { taskOpen: 'wood' }; } },
 
   // ---- комбінації профіль × транспорт × тварина (синтетичні профілі) ----
   { base: 'combo', name: '[комб.] еталон із профілями, транспортом і собакою коректний', expect: [], patch() {} },
