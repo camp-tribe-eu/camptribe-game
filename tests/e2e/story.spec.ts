@@ -150,6 +150,12 @@ async function playBikeDay3(page: Page): Promise<void> {
 
 /** GAME-106: кінець дня відкриває підсумок дня N; «Продовжити» — на мапу. reopen — знову відкрити ☰. */
 async function finishDay(page: Page, reopen: boolean, day = 1): Promise<void> {
+  // GAME-216: у кінці розділу спершу картка-«серія» (підсумок дня — після неї); закрити її кнопкою, як гравець.
+  await expect(page.locator('[data-ui="summary"], [data-ui="episode"]').first()).toBeVisible();
+  if (await page.locator('[data-ui="episode"]').count() > 0) {
+    await page.locator('[data-ui="episode-skip"]').click();
+    await expect(page.locator('[data-ui="episode"]')).toHaveCount(0);
+  }
   await expect(page.locator('[data-ui="summary"]')).toBeVisible();
   await expect(page.locator('[data-ui="summary"] h2')).toHaveText(`Підсумок дня ${day}`);
   await page.locator('[data-ui="summary-continue"]').click();
