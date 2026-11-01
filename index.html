@@ -263,7 +263,7 @@
       /* GAME-216: картка-«серія» наприкінці розділу — той самий темний екран, рядки з'являються по черзі (CSS-затримка з таблиці бітів), дотик показує все. */
       .ui-episode { cursor: pointer; justify-content: center; }
       .ui-episode-body { position: relative; z-index: 1; display: grid; gap: 10px; max-width: 640px; margin: 0 auto; padding: 56px max(var(--edge-right), 16px) 24px max(var(--edge-left), 16px); overflow-y: auto; }
-      .ui-episode-line { margin: 0; padding: 8px 12px; border-radius: 8px; background: #0b0d14cc; font-size: 0.85rem; line-height: 1.5; text-align: center; text-shadow: 0 2px 0 #000; opacity: 0; animation: ui-episode-in 500ms ease-out forwards; }
+      .ui-episode-line { margin: 0; padding: 8px 12px; border-radius: 8px; background: #0b0d14cc; font-size: 0.85rem; line-height: 1.5; text-align: center; text-shadow: 0 2px 0 #000; opacity: 0; animation: ui-episode-in 500ms ease-out forwards; animation-delay: calc(var(--ep-delay, 0) * 1ms); }
       .ui-episode[data-state="all"] .ui-episode-line { opacity: 1; animation: none; }
       .ui-episode-line[data-kind="title"] { background: transparent; color: #ffd54a; letter-spacing: 0.04em; }
       .ui-episode-line[data-voice="henry"] { color: #f1d9a0; font-style: italic; }

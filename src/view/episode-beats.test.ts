@@ -4,7 +4,8 @@ import { describe, expect, it } from 'vitest';
 import en from '../i18n/en.json';
 import uk from '../i18n/uk.json';
 import flags from '../../content/flags.json';
-import { EPISODE_MAX_DELAY_MS, type EpisodeLine, LINE_MAX_CHARS, RECAP_LINES, episodeLines, episodeProblems, recapKeys } from './episode-beats';
+import { EPISODE_MAX_DELAY_MS, type EpisodeLine, LINE_MAX_CHARS, RECAP_LINES, episodeLines, recapKeys } from '../ui/episode-beats';
+import { episodeProblems } from './episode-check';
 
 const texts = (lines: readonly EpisodeLine[]): Record<string, string[]> =>
   Object.fromEntries(lines.map((l) => [l.text, [(uk as Record<string, string>)[l.text] ?? '', (en as Record<string, string>)[l.text] ?? '']]));

@@ -28,7 +28,7 @@ export function EpisodeCard({ flags, t, onDone }: { flags: readonly string[]; t:
     <div class="ui-intro ui-cold ui-episode" data-ui="episode" data-state={all ? 'all' : 'typing'} role="dialog" aria-modal="true" aria-label={t('ep.title')} onPointerDown={tap}>
       <div class="ui-episode-body">
         {lines.current.map((l) => (
-          <p key={l.text} class="ui-episode-line" data-kind={l.kind} data-voice={l.voice} data-ui="episode-line" style={all ? undefined : `animation-delay:${l.delayMs}ms`}>
+          <p key={l.text} class="ui-episode-line" data-kind={l.kind} data-voice={l.voice} data-ui="episode-line" style={all ? undefined : { '--ep-delay': l.delayMs }}>
             {t(l.text)}
           </p>
         ))}
