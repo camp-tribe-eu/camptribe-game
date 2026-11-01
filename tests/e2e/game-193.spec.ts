@@ -67,7 +67,7 @@ for (const v of VIEWS) {
     f = await fishOf(page);
     expect(f.phase).toBe('idle'); expect(f.catches).toBe(0);
     // 3) з вводом: перший улов — відпустити.
-    await playFishing(page, touch, 'release', async () => { await page.screenshot({ path: `${SHOTS}/g193-reel-${v.side}.png` }); expect((await fishOf(page)).phase, 'мить знімка: підсікання').toBe('reel'); });
+    await playFishing(page, touch, 'release', async () => { await page.screenshot({ path: `${SHOTS}/g193-reel-${v.side}.png` }); const fr = await fishOf(page); expect(fr.phase, 'мить знімка: підсікання').toBe('reel'); expect(fr.ripples, 'GAME-206: кільця на воді коло поплавка').toBeGreaterThan(0); });
     f = await fishOf(page);
     expect(f.released).toBe(1); expect(f.kept).toBe(0); expect(f.catches).toBe(1);
     // 4) другий улов — узяти на вечерю.
