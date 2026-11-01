@@ -30,6 +30,8 @@ import { WoodRig, type WoodProbe } from './wood';
 import { FireRig, type FireProbe } from './fire';
 import { GrillRig, type GrillProbe } from './grill';
 import { FISH_SPOT, FishRig, type FishProbe } from './fishing';
+import { LiveFx, type LiveProbe } from './fx-live-layer';
+import { groundKind, type Ground } from './fx-live';
 import { REVEAL_BEATS, revealCenter, type RevealAnchors } from '../camp-reveal';
 import { calmMotion } from '../../platform/motion';
 
@@ -201,6 +203,8 @@ export interface WorldProbe {
   fish: FishProbe;
   /** GAME-216 (лише для e2e): заставка приїзду в табір триває (камера не на героєві). */
   reveal: boolean;
+  /** GAME-206 (лише для e2e): живі дрібниці — скільки іскор, пилу, диму, стебел намальовано в кадрі; чи гойдається авто; чи режим спокою. */
+  live: LiveProbe;
 }
 
 /** Точка вогнища (об'єкт мапи obj.campfire) — центр світлої плями; нема — плями нема. */
@@ -289,6 +293,11 @@ export class WorldScene extends Phaser.Scene {
   /** Авто на подвір'ї: спрайт і невидима колізія — окремо від мапи (залежать від транспорту гравця, а не від мапи). */
   private carParts: { destroy(): void }[] = [];
   private carFor = '';
+  /** GAME-206: спрайт авто з двигуном (дорога) і його справжнє місце — погойдування прикладається від нього, не накопичується. */
+  private carImg: { img: Phaser.GameObjects.Image; x: number; y: number } | null = null;
+  private live!: LiveFx;
+  /** Набір terrain поточної мапи (перший gid і кількість тайлів) — для роду землі під ногами. */
+  private terrain = { first: 0, count: 0 };
   private fx: MapFx | null = null;
   private insets: Insets = { top: 24, bottom: 0, left: 0, right: 0 };
   private insetsAt = -1e9;
@@ -506,6 +515,7 @@ export class WorldScene extends Phaser.Scene {
     this.player.setCollideWorldBounds(true);
     if (this.daylightOn) this.makeNight();
     this.fx = new MapFx(this);
+    this.live = new LiveFx(this, DEPTH.decor - 50, DEPTH.always - 10);
     this.tent = new TentRig(this, this.player, this.barkText);
     this.wood = new WoodRig(this, this.player, this.barkText);
     this.fire = new FireRig(this, this.player, this.barkText);
@@ -557,6 +567,7 @@ export class WorldScene extends Phaser.Scene {
     this.fire?.reset();
     this.fish?.reset();
     this.grill?.reset();
+    this.live?.reset();
     this.fireSprite = null;
     for (const o of this.owned) o.destroy();
     this.owned = [];
@@ -570,6 +581,7 @@ export class WorldScene extends Phaser.Scene {
     for (const p of this.carParts) p.destroy();
     this.carParts = [];
     this.carFor = '';
+    this.carImg = null;
     this.glow = null;
     this.bands = [];
   }
@@ -584,6 +596,8 @@ export class WorldScene extends Phaser.Scene {
     if (key === 'shop' && arrived) sfx('chime');   // GAME-204: дзвіночок — лише коли герой справді зайшов у двері (завантаження сейву всередині — без нього)
     const map = this.make.tilemap({ key });
     this.tilemap = map;
+    const terrain = map.tilesets.find((t) => t.name === 'lpc-terrain');
+    this.terrain = terrain ? { first: terrain.firstgid, count: terrain.total } : { first: 0, count: 0 };
     const tilesets = map.tilesets.map((t) => {
       const ts = map.addTilesetImage(t.name, t.name, TILE, TILE, 0, 0);
       if (!ts) throw new Error(`tileset ${t.name} is missing in the scene art`);
@@ -692,13 +706,16 @@ export class WorldScene extends Phaser.Scene {
     if (want === this.carFor) return;
     for (const p of this.carParts) p.destroy();
     this.carParts = [];
+    this.carImg = null;
     this.carFor = want;
     const v = this.spots.find((s) => s.name === 'obj.vehicle');
     // Табір (GAME-183): авто вже намальоване тайлами стоянки (camp-car) — другого не ставимо; об'єкт мапи лише точка дії біля нього.
     if (!v || t !== 'transport.car' || this.current === 'camp') return;
     const x = v.x + CAR_OFFSET.x;
     const y = v.y + CAR_OFFSET.y;
-    this.carParts.push(this.add.image(x, y, 'camp-car').setOrigin(0.5, 1).setDepth(y));
+    const img = this.add.image(x, y, 'camp-car').setOrigin(0.5, 1).setDepth(y);
+    this.carParts.push(img);
+    this.carImg = { img, x, y };
     const block = this.add.zone(x, y - CAR_BLOCK.h / 2, CAR_BLOCK.w, CAR_BLOCK.h);
     this.physics.add.existing(block, true);
     const col = this.physics.add.collider(this.player, block);
@@ -1041,6 +1058,14 @@ export class WorldScene extends Phaser.Scene {
     }
   }
 
+  /** Рід землі під точкою світу — за шаром `ground` живої мапи (дані тайлів лишаються й після запікання в картинку). */
+  private groundAt(x: number, y: number): Ground {
+    const layer = this.tilemap?.getLayer('ground');
+    if (!layer || this.terrain.count === 0) return 'none';
+    const gid = layer.data[Math.floor(y / TILE)]?.[Math.floor(x / TILE)]?.index ?? -1;
+    return groundKind(gid, this.terrain.first, this.terrain.count);
+  }
+
   /** Межа паузи: зупинити тіло, інакше фізика дотягує стару швидкість після продовження (рецензія PR #13). */
   haltPlayer(): void {
     if (!this.player) return;
@@ -1089,7 +1114,8 @@ export class WorldScene extends Phaser.Scene {
     // GAME-189: поки герой б'є кілки — стоїть; розміщення намету — ходить вільно (привид іде за ним).
     const v = this.tent.holdsHero || this.wood.holdsHero || this.fire.holdsHero || this.grill.holdsHero || this.fish.busy ? { x: 0, y: 0 } : moveVector(held);
     // Рухається той, хто справді зсунувся з минулого кадру (по зсуву, а не по швидкості — вона лишається, коли тіло вперлося в стіну): упертий у стіну персонаж стоїть, а не «іде на місці».
-    const moving = Math.hypot(this.player.x - this.last.x, this.player.y - this.last.y) > 0.25;
+    const movedPx = Math.hypot(this.player.x - this.last.x, this.player.y - this.last.y);
+    const moving = movedPx > 0.25;
     if (moving) this.heading = { x: this.player.x - this.last.x, y: this.player.y - this.last.y };
     this.last = { x: this.player.x, y: this.player.y };
     // GAME-191: під час дії (замах, удар, руки) герой стоїть і дивиться туди, куди почав, — без «замаху на бігу» (рецензія #118).
@@ -1166,6 +1192,13 @@ export class WorldScene extends Phaser.Scene {
       if (e === 'cast' && water) this.playAction('thrust', facingToward(this.player, water));
       if (e === 'kept' || e === 'released') this.hooks.onFish?.(e === 'kept');
     }
+    // GAME-206: живі дрібниці — трава й пил під ногами (за тайлом землі), іскри над запаленим вогнищем, дим і погойдування авто на дорозі (двигун чекає).
+    const sway = this.live.update(time, delta, {
+      hero: { x: this.player.x, y: this.player.y }, heading: this.heading, moving, movedPx, ground: this.groundAt(this.player.x, this.player.y),
+      fire: this.fireSprite?.visible ? { x: this.fireSprite.x, y: this.fireSprite.y } : null,
+      car: this.carImg && this.current === 'road' ? { x: this.carImg.x, y: this.carImg.y, back: -1 } : null,
+    });
+    if (this.carImg) this.carImg.img.setY(this.carImg.y + (sway?.dy ?? 0)).setRotation(sway?.angle ?? 0);
     const carrying = this.hooks.backpack() > 0;
     this.fx?.tick(dt);
     const reward = this.hooks.takeReward();
@@ -1302,6 +1335,7 @@ export class WorldScene extends Phaser.Scene {
       fire: this.fire.probe(),
       grill: this.grill.probe(),
       fish: this.fish.probe(),
+      live: { ...this.live.probe },
       miaAt: [...this.miaSprites].flatMap(([n, sp]) => (sp.visible ? [n] : [])),
       npcMarks: Object.fromEntries([...this.npcMarks].flatMap(([id, m]) => (m.g.visible && m.kind ? [[id, m.kind] as const] : []))),
       fx: { target: tn, ring: this.ring.name ? this.ring.t : 0, ringName: this.ring.name, backpack: this.hooks.backpack(), guide: this.fx?.guideMode ?? 'none', pops: this.fx?.pops ?? 0, auto: this.autoCount, rewards: this.rewardPops, rewardLast: this.rewardLast },

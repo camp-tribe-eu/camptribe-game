@@ -7,10 +7,15 @@ import { sfx } from '../../audio/sfx';
 import { BITE_MS, FISH_IDLE, SPECIES, ZONE, castDistance, catches, fishAt, inZone, makeRng, stepFish, type FishEvent, type FishInput, type FishState } from '../../content/fishing';
 import type { Key } from '../../i18n';
 import { FrameFx, HAND_FONT, TOP, meterTop } from './hand-fx';
+import { FX_PALETTE, castArc, floatBob, ripples, splashDrops } from './fx-live';
+import { calmMotion } from '../../platform/motion';
 
 type Pt = { x: number; y: number };
 export const FISH_SPOT = 'fish.shore';
 const FLIGHT_MS = 450;
+/** Висота дуги закиду, px (GAME-206: дуга — чиста функція fx-live.castArc, сідає точно в точку закиду). */
+const ARC_H = 34;
+const SPLASH_MS = 420;
 const MSG_MS = 1600;
 const SPECIES_COLOR: Record<string, number> = { perch: 0x8fb04a, carp: 0xd9a860, trout: 0xc9a0dc, pike: 0x5fa88a };
 const NAME_KEY: Record<string, Key> = { perch: 'fish.sp.perch', carp: 'fish.sp.carp', trout: 'fish.sp.trout', pike: 'fish.sp.pike' };
@@ -21,8 +26,10 @@ export interface FishProbe {
   phase: FishState['phase']; power: number; waitMs: number; zone: number; fish: number; progress: number; inZone: boolean; species: string;
   casts: number; slipped: number; aways: number; kept: number; released: number; catches: number; selected: number;
   bobber: Pt; spot: Pt; buttons: { release: Pt; keep: Pt };
+  /** GAME-206: кілець на воді в кадрі й чи поплавок зараз летить дугою. */
+  ripples: number; flying: boolean;
 }
-export const FISH_PROBE_IDLE: FishProbe = { phase: 'idle', power: 0, waitMs: 0, zone: 0, fish: 0, progress: 0, inZone: false, species: '', casts: 0, slipped: 0, aways: 0, kept: 0, released: 0, catches: 0, selected: 0, bobber: { x: 0, y: 0 }, spot: { x: 0, y: 0 }, buttons: { release: { x: 0, y: 0 }, keep: { x: 0, y: 0 } } };
+export const FISH_PROBE_IDLE: FishProbe = { phase: 'idle', power: 0, waitMs: 0, zone: 0, fish: 0, progress: 0, inZone: false, species: '', casts: 0, slipped: 0, aways: 0, kept: 0, released: 0, catches: 0, selected: 0, bobber: { x: 0, y: 0 }, spot: { x: 0, y: 0 }, buttons: { release: { x: 0, y: 0 }, keep: { x: 0, y: 0 } }, ripples: 0, flying: false };
 
 export interface FishFrame { readonly down: boolean; readonly near: boolean; readonly left: boolean; readonly right: boolean; readonly tap: Pt | null; readonly time: number }
 
@@ -43,6 +50,8 @@ export class FishRig {
   private hint: Phaser.GameObjects.Text | null = null;
   private name: Phaser.GameObjects.Text | null = null;
   private btn: [Phaser.GameObjects.Text, Phaser.GameObjects.Text] | null = null;
+  private ringsDrawn = 0;
+  private readonly calm = calmMotion();
 
   constructor(private readonly scene: Phaser.Scene, private readonly player: Phaser.GameObjects.Sprite, private readonly text: (key: Key) => string) { this.fx = new FrameFx(scene); }
 
@@ -86,7 +95,7 @@ export class FishRig {
     return {
       phase: s.phase, power: s.power, waitMs: s.waitMs, zone: s.zone, fish: s.phase === 'reel' ? fishAt(s) : 0, progress: s.progress, inZone: s.phase === 'reel' && inZone(s), species: SPECIES[s.species]?.id ?? '',
       casts: s.casts, slipped: s.slipped, aways: s.aways, kept: s.kept, released: s.released, catches: catches(s), selected: this.sel,
-      bobber: this.bobberAt(0), spot: this.spot ?? { x: 0, y: 0 }, buttons: { release: b(0), keep: b(1) },
+      bobber: this.bobberAt(0), spot: this.spot ?? { x: 0, y: 0 }, buttons: { release: b(0), keep: b(1) }, ripples: this.ringsDrawn, flying: this.fly > 0,
     };
   }
 
@@ -94,9 +103,8 @@ export class FishRig {
     const p = this.spot; if (!p) return { x: 0, y: 0 };
     const to = { x: p.x + 24 + castDistance(this.s.power), y: p.y };
     this.target = to;
-    if (this.fly <= 0) return { x: to.x, y: to.y + (this.s.phase === 'wait' ? Math.sin(time / 420) * 1.5 : 0) };
-    const k = 1 - this.fly / FLIGHT_MS;
-    return { x: this.player.x + (to.x - this.player.x) * k, y: this.player.y - 18 + (to.y - (this.player.y - 18)) * k - Math.sin(k * Math.PI) * 34 };
+    if (this.fly <= 0) return { x: to.x, y: to.y + (this.s.phase === 'wait' && !this.calm ? floatBob(time).dy : 0) };   // хвилі гойдають поплавок
+    return castArc({ x: this.player.x, y: this.player.y - 18 }, to, 1 - this.fly / FLIGHT_MS, ARC_H);
   }
 
   private feed(i: FishInput): FishEvent {
@@ -136,7 +144,7 @@ export class FishRig {
     const t = this.target; const px = this.player.x; const py = this.player.y;
     switch (e) {
       case 'charge': playUi('press'); break;
-      case 'cast': sfx('cast'); playUi('press'); this.fly = FLIGHT_MS; this.fx.push(FLIGHT_MS, () => undefined, () => { sfx('splash'); this.fx.burst(t.x, t.y, 6, 0x9ad0ff, { r: 12, rise: 3, dur: 420, size: 2 }); }); break;
+      case 'cast': sfx('cast'); playUi('press'); this.fly = FLIGHT_MS; this.fx.push(FLIGHT_MS, () => undefined, () => { sfx('splash'); this.splash(t, this.s.casts); }); break;
       case 'bite': playUi('press'); this.fx.burst(t.x, t.y, 8, 0xdff3ff, { r: 16, rise: 8, dur: 480, size: 2 }); break;
       case 'slipped': playUi('back'); this.say('fish.lost'); this.fx.burst(t.x, t.y, 5, 0x9ad0ff, { r: 10, dur: 400, size: 2 }); break;
       case 'hook': playUi('press'); break;
@@ -154,6 +162,16 @@ export class FishRig {
     }
   }
 
+  /** Сплеск: краплі по параболах (fx-live.splashDrops) і одне кільце, що розходиться, — покадрово; у спокійному режимі лише кільце. */
+  private splash(at: Pt, seed: number): void {
+    const g = this.scene.add.graphics().setDepth(at.y + 5);
+    this.fx.push(SPLASH_MS, (k) => {
+      g.clear();
+      g.lineStyle(1, FX_PALETTE.foam, 0.7 * (1 - k)).strokeEllipse(at.x, at.y + 1, 6 + 18 * k, 3 + 7 * k);
+      if (!this.calm) for (const d of splashDrops(k, seed)) g.fillStyle(FX_PALETTE.water, d.alpha).fillRect(at.x + d.dx - 1, at.y + d.dy - 1, 2, 2);
+    }, () => { g.destroy(); });
+  }
+
   private draw(f: FishFrame): void {
     const meter = this.meter; const hint = this.hint; const fishG = this.fishG; const bob = this.bobber; const name = this.name; const btn = this.btn;
     if (!meter || !hint || !fishG || !bob || !name || !btn) return;
@@ -167,11 +185,15 @@ export class FishRig {
       const dip = s.phase === 'bite' ? 4 + Math.sin(f.time / 40) * 2 : s.phase === 'reel' ? 3 : 0;
       const bx = at.x; const by = at.y + dip;
       bob.setDepth(by + 4);
+      const tilt = s.phase === 'wait' && this.fly <= 0 && !this.calm ? floatBob(f.time).tilt : 0;   // хвиля нахиляє поплавок
       bob.lineStyle(1, 0xe8e4d8, 0.9).lineBetween(this.player.x + 8, this.player.y - 22, bx, by - 4);
-      bob.fillStyle(0xf4f1e8, 1).fillCircle(bx, by - 2, 3).fillStyle(0xd94a3a, 1).fillCircle(bx, by - 4, 3);
-      if (s.phase === 'wait' && this.fly <= 0) bob.lineStyle(1, 0xdff3ff, 0.6).strokeEllipse(bx, by + 1, 10 + Math.sin(f.time / 300) * 2, 4);
+      bob.fillStyle(0xf4f1e8, 1).fillCircle(bx, by - 2, 3).fillStyle(0xd94a3a, 1).fillCircle(bx + tilt * 4, by - 4, 3);
+      this.ringsDrawn = 0;
+      if ((s.phase === 'wait' || s.phase === 'reel') && this.fly <= 0) {
+        for (const r of ripples(this.calm ? 0 : f.time)) { bob.lineStyle(1, FX_PALETTE.foam, r.alpha).strokeEllipse(bx, by + 1, r.r * 2, r.r * 0.8); this.ringsDrawn++; }
+      }
       if (s.phase === 'bite') bob.lineStyle(1, 0xffffff, 0.9).strokeEllipse(bx, by + 1, 14 + ((f.time / 60) % 6), 6);
-    }
+    } else this.ringsDrawn = 0;
     let msg = '';
     if (s.phase === 'idle') msg = this.msgLeft > 0 && this.msg ? this.text(this.msg) : f.near ? `${this.text('fish.start')}${catches(s) > 0 ? `  ·  ${this.text('fish.tally')} ${catches(s)}` : ''}` : '';
     else if (s.phase === 'charge') { drawFill(meter, cx, top, s.power); msg = this.text('fish.charge'); }
