@@ -1,6 +1,6 @@
 // GAME-170 зріз 3 · хвилі W1 «Виїзд о шостій» (дім — кнопки екрана подорожі), W2 «Небо темнішає» (зупинка — кнопки), W3 «Встигнути до
 // зливи» (табір — цілі на мапі) граються з початку гри автівкою з Мією (сім'я з підлітком):
-//  (a) сторч 390×844, клавіатура: W1 — три кнопки «Зробити» з Enter → усі done; W3 — чотири цілі клавіатурою → усі done; картка мети W3
+//  (a) сторч 390×844, клавіатура: W1 — чотири кнопки «Зробити» з Enter (авто+Мія: Мія, карта, світло, праска — GAME-202) → усі done; W3 — чотири цілі клавіатурою → усі done; картка мети W3
 //      у межах екрана, не перетинає ☰, ‖ і HUD (той самий сторож розкладки, що в game-170.spec); міряємо реальний час;
 //  (b) вбік 844×390, дотик: W1 — один тап по кнопці, решта спізнюється на мапі (міряємо, скільки хвиля згасає); W2 — один тап; W3 — одна
 //      ціль джойстиком і кнопкою дії, решта спізнюється → намет вологий (wetGear); розділ не зламано (ST-005 завершується);
@@ -25,6 +25,8 @@ const W2 = 'wave.ch1-day1-road';
 const W3 = 'wave.ch1-day1-arrival';
 const SETTINGS_KEY = 'camplife.settings.v1';
 const W3_SPOTS = ['task.pick-spot', 'task.pitch-tent', 'task.gear-shelter', 'task.mia-car'] as const;
+/** W1 для авто з Мією: чотири справи (GAME-202 «Збори» додала праску — лише авто). */
+const W1_TASKS = ['iron-clothes', 'lights-window', 'map-to-luggage', 'mia-carrier'] as const;
 
 const MAP = JSON.parse(readFileSync('public/maps/camp-lake.tmj', 'utf8')) as { layers: { objects?: { name: string; x: number; y: number }[] }[] };
 const at = (name: string): { x: number; y: number } => {
@@ -63,7 +65,7 @@ async function toHome(page: Page): Promise<void> {
   const c = await core(page);
   expect(c.game.quests['CH1-HOME-001']?.status).toBe('active');
   expect(c.game.wave?.active?.waveId).toBe(W1);
-  expect(Object.keys(c.game.wave?.active?.tasks ?? {}).sort()).toEqual(['lights-window', 'map-to-luggage', 'mia-carrier']);
+  expect(Object.keys(c.game.wave?.active?.tasks ?? {}).sort()).toEqual(W1_TASKS);
 }
 const remaining = (c: Core): number[] => Object.values(c.game.wave?.active?.tasks ?? {}).map((t) => t.dueAt - c.clock.minutes);
 const KEY_CODE = { ArrowLeft: 37, ArrowUp: 38, ArrowRight: 39, ArrowDown: 40 } as const;
@@ -128,29 +130,29 @@ async function roadToCamp(page: Page, onRoad: (page: Page) => Promise<void>): Pr
 test.describe('(a) сторч 390×844, клавіатура: W1 і W3 усе встигли', () => {
   const VP = { width: 390, height: 844 };
   test.use({ viewport: VP, hasTouch: true, isMobile: true });
-  test('W1: три кнопки «Зробити» з клавіатури → усі done; W3: чотири цілі клавіатурою → усі done; картка W3 у межах екрана', async ({ page }, info) => {
+  test('W1: чотири кнопки «Зробити» з клавіатури → усі done; W3: чотири цілі клавіатурою → усі done; картка W3 у межах екрана', async ({ page }, info) => {
     test.setTimeout(240_000);
     const errors = await open(page, '?seed=5');
     await toHome(page);
-    await expect(taskButtons(page)).toHaveCount(3);
+    await expect(taskButtons(page)).toHaveCount(W1_TASKS.length);
     await expect(taskButtons(page).first()).toContainText('Зробити:');
     // Екран подорожі зупиняє годинник: строки стоять, поки гравець читає (та сама пауза, що в Shell).
     const r0 = remaining(await core(page));
     await page.waitForTimeout(1_500);
     expect(remaining(await core(page))).toEqual(r0);
     const t0 = Date.now();
-    for (let i = 0; i < 3; i++) {
+    for (let i = 0; i < W1_TASKS.length; i++) {
       await taskButtons(page).first().focus();
       await page.keyboard.press('Enter');
       await page.waitForTimeout(450);
-      await expect(taskButtons(page)).toHaveCount(2 - i);
+      await expect(taskButtons(page)).toHaveCount(W1_TASKS.length - 1 - i);
     }
     const w1 = (Date.now() - t0) / 1000;
     const c1 = await core(page);
     expect(c1.game.wave?.active).toBeNull();
-    expect(c1.game.wave?.past[W1]).toEqual({ 'mia-carrier': 'done', 'map-to-luggage': 'done', 'lights-window': 'done' });
+    expect(c1.game.wave?.past[W1]).toEqual({ 'mia-carrier': 'done', 'map-to-luggage': 'done', 'lights-window': 'done', 'iron-clothes': 'done' });
     info.annotations.push({ type: 'w1-real-seconds-all-done', description: w1.toFixed(1) });
-    console.log(`GAME-170 зріз 3 (a): W1 три справи клавіатурою за ${w1.toFixed(1)} с`);
+    console.log(`GAME-170 зріз 3 (a): W1 чотири справи клавіатурою за ${w1.toFixed(1)} с`);
 
     await roadToCamp(page, async () => { /* W2 без дій — усе спізниться від'їздом */ });
     await panel(page).locator('[data-ui="story-close"]').click();
@@ -201,7 +203,7 @@ test.describe('(b) вбік 844×390, дотик: одна справа тапо
     await toHome(page);
     await tapOn(page, '[data-act="task"][data-key="wave.ch1-home-departure.mia-carrier"]');
     expect((await core(page)).game.wave?.active?.tasks['mia-carrier']?.outcome).toBe('done');
-    await expect(taskButtons(page)).toHaveCount(2);
+    await expect(taskButtons(page)).toHaveCount(W1_TASKS.length - 1);
     await panel(page).locator('[data-ui="story-close"]').click();
     await expect(card(page)).toBeVisible();
     await expect(card(page)).toHaveAttribute('data-done', '1');
@@ -212,7 +214,7 @@ test.describe('(b) вбік 844×390, дотик: одна справа тапо
     await expect.poll(async () => (await core(page)).game.wave?.active === null, { timeout: 90_000, intervals: [500] }).toBe(true);
     const w1 = (Date.now() - t0) / 1000;
     const c1 = await core(page);
-    expect(c1.game.wave?.past[W1]).toEqual({ 'mia-carrier': 'done', 'map-to-luggage': 'late', 'lights-window': 'late' });
+    expect(c1.game.wave?.past[W1]).toEqual({ 'mia-carrier': 'done', 'map-to-luggage': 'late', 'lights-window': 'late', 'iron-clothes': 'late' });
     expect(c1.clock.minutes - m0).toBeGreaterThanOrEqual(45);
     expect(w1).toBeGreaterThanOrEqual(30);
     expect(w1).toBeLessThanOrEqual(75);
