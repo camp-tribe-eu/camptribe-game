@@ -58,3 +58,16 @@ export function episodeLines(flags: readonly string[]): EpisodeLine[] {
     { kind: 'next', text: 'ep.next', voice: 'narrator', delayMs: STEP_MS * (recap.length + 2) + 800 },
   ];
 }
+
+/**
+ * Коли показати картку (GAME-216, рецензія PR #145): лише на переході play → ended у ЦІЙ сесії, після того як сейв прочитано.
+ * До читання сейву стан «ended» нічого не означає (Shell монтується раніше за saves.start, і вже завершений сейв перемикає
+ * create → ended після монтування — це завантаження, а не кінець розділу). `prev === null` — ще не бачили стану після читання:
+ * перший знімок лише запам'ятовується. Чиста функція; мутації — episode-beats.test.ts.
+ */
+export function episodeStep(prev: boolean | null, loaded: boolean, ended: boolean): { show: boolean; next: boolean | null } {
+  if (!loaded) return { show: false, next: null };
+  if (prev === null) return { show: false, next: ended };
+  return { show: ended && !prev, next: ended };
+}
+

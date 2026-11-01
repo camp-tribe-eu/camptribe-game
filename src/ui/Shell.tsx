@@ -15,6 +15,7 @@ import { AtlasPanel } from './Atlas';
 import { Intro } from './Intro';
 import { ColdOpen } from './ColdOpen';
 import { EpisodeCard } from './EpisodeCard';
+import { episodeStep } from './episode-beats';
 import { trapTab } from './focus-trap';
 import type { OfferSummary, StoryOffer } from './story-types';
 
@@ -67,8 +68,10 @@ export function Shell({ port, langOverride, credits, build, holdToast = false, h
   // GAME-216: кінець розділу як «серія» — картка показується РАЗ, у мить, коли stage став 'ended' у цій сесії (не при завантаженні вже завершеного сейву).
   // Нічого не блокує: сейв уже записано ядром, під карткою — гра; ?episode=1 (лише збірка e2e) показує картку одразу.
   const [episode, setEpisode] = useState(() => port.episodeNow?.() === true);
-  const endedRef = useRef(port.story().stage === 'ended');
-  const watchEnded = (o: StoryOffer): void => { const now = o.stage === 'ended'; if (now && !endedRef.current) setEpisode(true); endedRef.current = now; };
+  // Рецензія PR #145: Shell монтується до того, як сейв прочитано (saves.start), тож стан стежимо лише після port.loaded(): перший знімок після
+  // читання — запам'ятати, не показувати (завантажений завершений сейв — не кінець розділу); далі — лише перехід play → ended (episodeStep).
+  const endedRef = useRef<boolean | null>(null);
+  const watchEnded = (o: StoryOffer): void => { const r = episodeStep(endedRef.current, port.loaded(), o.stage === 'ended'); endedRef.current = r.next; if (r.show) setEpisode(true); };
   useEffect(() => { checkIntro(); return port.onStory(() => { const o = port.story(); setOffer(o); watchEnded(o); checkIntro(); }); }, []);
   const [atlasOpen, setAtlasOpen] = useState(false);
   // GAME-181: нове звання — маленьке свято: банер (назва + рядок родини) і звук підтвердження через єдиний мікшер. Банер не ловить дотики й гасне сам.
@@ -365,7 +368,7 @@ export function Shell({ port, langOverride, credits, build, holdToast = false, h
       {episode && !intro && port.episodeFlags && <EpisodeCard flags={port.episodeFlags()} t={t} onDone={() => { setEpisode(false); focusStage(); }} />}
       {intro && !cold && <Intro offer={offer} lang={lang} t={t} act={storyAct} portrait={portrait} room={port.introRoom} onDone={endIntro} />}
       {talk && !paused && !storyOpen && !summary && offer.dialogue && <DialogueBox dialogue={offer.dialogue} lang={lang} t={t} act={storyAct} portrait={portrait} />}
-      {summary && !paused && <DaySummary summary={summary} lang={lang} t={t} onContinue={summaryContinue} onEnd={summaryEnd} />}
+      {summary && !paused && !episode && <DaySummary summary={summary} lang={lang} t={t} onContinue={summaryContinue} onEnd={summaryEnd} />}
       {paused && confirmNew && (
         <div class="ui-overlay" role="dialog" aria-modal="true" aria-label={t('ui.newGame')} data-ui="confirm-new" onKeyDown={(e) => trapTab(e, e.currentTarget)}>
           <h2>{t('ui.newGame')}</h2>

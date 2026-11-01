@@ -1,6 +1,7 @@
 // GAME-24 (рух, камера, колізії, взаємодія) і GAME-69 (дотик, три в'юпорти) — у справжньому браузері.
 import { readFileSync } from 'node:fs';
 import { expect, test, type Page } from '@playwright/test';
+import { waitGameReady } from './ready';
 
 interface Probe { ready: boolean; playerX: number; playerY: number; nearObject: string | null; commandsSent: number; cameraScrollX: number; cameraScrollY: number }
 
@@ -323,11 +324,26 @@ for (const vp of VIEWPORTS) {
         await page.waitForTimeout(400);
       }
       for (const [k, key] of [['complete', 'q.ch1-d3-return-001'], ['visit', 'loc.home'], ['complete', 'q.ch1-d3-home-001']] as const) await tapAct(k, key);
+      // GAME-216: кінець розділу — спершу картка-«серія» (три рядки, слід дідуся, кліфхенгер): перший тап показує все, другий закриває; лише тоді підсумок дня 3.
+      const episode = page.locator('[data-ui="episode"]');
+      await expect(episode).toBeVisible();
+      await expect(episode.locator('[data-ui="episode-line"][data-kind="recap"]')).toHaveCount(3);
+      await episode.tap();
+      await expect(episode).toHaveAttribute('data-state', 'all');
+      await episode.tap();
+      await expect(episode).toHaveCount(0);
       await expect(page.locator('[data-ui="summary"] h2')).toHaveText('Підсумок дня 3');
       await page.locator('[data-ui="summary-continue"]').tap();
       await page.locator('[data-touch="story"]').tap();
       await expect(story.locator('[data-ui="ended"]')).toBeVisible();
       expect((await page.evaluate(() => (window as unknown as { __game: { read: () => { game: { campaignEnded: boolean } } } }).__game.read().game.campaignEnded))).toBe(true);
+      // Рецензія PR #145: перезавантаження вже завершеного сейву — це завантаження, а не кінець розділу: картки-«серії» НЕМА (вона була рівно раз, вище).
+      await page.reload();
+      await waitGameReady(page);
+      await page.waitForTimeout(1_500);
+      await expect(page.locator('[data-ui="episode"]')).toHaveCount(0);
+      await page.locator('[data-touch="story"]').tap();
+      await expect(story.locator('[data-ui="ended"]')).toBeVisible();
     });
 
     test('негативний контроль: прихована кнопка взаємодії — прохід дотиком неможливий', async ({ page }) => {

@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest';
 import en from '../i18n/en.json';
 import uk from '../i18n/uk.json';
 import flags from '../../content/flags.json';
-import { EPISODE_MAX_DELAY_MS, type EpisodeLine, LINE_MAX_CHARS, RECAP_LINES, episodeLines, recapKeys } from '../ui/episode-beats';
+import { EPISODE_MAX_DELAY_MS, type EpisodeLine, LINE_MAX_CHARS, RECAP_LINES, episodeLines, episodeStep, recapKeys } from '../ui/episode-beats';
 import { episodeProblems } from './episode-check';
 
 const texts = (lines: readonly EpisodeLine[]): Record<string, string[]> =>
@@ -40,3 +40,26 @@ describe('картка-«серія» — таблиця рядків (GAME-216)
     expect(episodeProblems(ok, { 'ep.next': ['x'.repeat(LINE_MAX_CHARS + 1)] }).some((p) => p.startsWith('LINE_TOO_LONG ep.next'))).toBe(true);
   });
 });
+
+describe('коли показувати картку (рецензія PR #145): лише перехід play → ended після читання сейву', () => {
+  it('завантаження вже завершеного сейву: create (до читання) → ended (після) — картки НЕМА; мутація «сіяти стан при монтуванні» — червона', () => {
+    let prev: boolean | null = null;
+    const a = episodeStep(prev, false, false); prev = a.next;   // монтування: сейв ще не прочитано, stage create
+    expect(a.show).toBe(false);
+    const b = episodeStep(prev, true, true); prev = b.next;     // saves.start завершився: stage одразу ended
+    expect(b.show).toBe(false);
+    expect(episodeStep(prev, true, true).show).toBe(false);     // далі теж тихо
+  });
+  it('справжній кінець розділу: після читання play → ended — картка рівно раз', () => {
+    let prev: boolean | null = null;
+    prev = episodeStep(prev, true, false).next;                  // сейв прочитано, гра триває
+    const end = episodeStep(prev, true, true); prev = end.next;
+    expect(end.show).toBe(true);
+    expect(episodeStep(prev, true, true).show).toBe(false);     // повторні знімки — без картки
+  });
+  it('до читання сейву стан не запам’ятовується (next null), навіть якщо він «ended»', () => {
+    expect(episodeStep(null, false, true)).toEqual({ show: false, next: null });
+    expect(episodeStep(true, false, false)).toEqual({ show: false, next: null });
+  });
+});
+
