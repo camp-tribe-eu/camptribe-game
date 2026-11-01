@@ -40,6 +40,9 @@ const ALLOW: Readonly<Record<string, Readonly<Record<string, { count: number; wh
   'src/view/intro-room.ts': {
     requestAnimationFrame: { count: 2, why: 'GAME-191: дощ за вікном кімнати вступу — лише картинка (краплі від мітки кадру); жодна дія не залежить від нього й не зникає: кроки вступу йдуть тільки за дотиком, prefers-reduced-motion малює один статичний кадр' },
   },
+  'src/view/cold-open.ts': {
+    requestAnimationFrame: { count: 2, why: 'GAME-216: холодний початок — камера, затемнення й друк підпису від мітки кадру (лише картинка): кожен біт має вихід за часом у наступний і в вступ, а дотик чи клавіша виходить одразу (ColdOpen.tsx); жодна дія гравця не зникає й не спрацьовує сама — у сцені немає рішень' },
+  },
   'src/view/frame-lag.ts': {
     performance: { count: 3, why: 'GAME-97/GAME-38: штучна затримка кадру й старту лише в збірці e2e (?frameLagMs, ?bootDelayMs) і вимір часу першого кадру (probe.firstFrameMs) — міряють затримку, гра нічого за ними не вирішує' },
   },
@@ -181,6 +184,6 @@ describe('жодного таймера реального часу на дія�
   });
 
   it(`файлів у скануванні: ${files.length}; знахідок у коді: ${hits.length} (усі — в переліку)`, () => {
-    expect(hits.map((h) => `${h.file}|${h.name}`)).toEqual(['src/ui/DialogueBox.tsx|requestAnimationFrame', 'src/ui/Shell.tsx|setTimeout', 'src/ui/Shell.tsx|requestAnimationFrame', 'src/view/frame-lag.ts|performance', 'src/view/frame-lag.ts|performance', 'src/view/frame-lag.ts|performance', 'src/view/intro-room.ts|requestAnimationFrame', 'src/view/intro-room.ts|requestAnimationFrame']);
+    expect(hits.map((h) => `${h.file}|${h.name}`)).toEqual(['src/ui/DialogueBox.tsx|requestAnimationFrame', 'src/ui/Shell.tsx|setTimeout', 'src/ui/Shell.tsx|requestAnimationFrame', 'src/view/cold-open.ts|requestAnimationFrame', 'src/view/cold-open.ts|requestAnimationFrame', 'src/view/frame-lag.ts|performance', 'src/view/frame-lag.ts|performance', 'src/view/frame-lag.ts|performance', 'src/view/intro-room.ts|requestAnimationFrame', 'src/view/intro-room.ts|requestAnimationFrame']);
   });
 });

@@ -67,6 +67,8 @@ function isNewer(json: string): boolean {
 export function createSaveSession(bridge: SessionBridge, store: SessionStore, content: SessionContent = {}) {
   let ready = false;
   let holdAutosave = false;
+  // GAME-216: на старті прочитано й завантажено придатний сейв (кіно перед вступом тоді не показується).
+  let loadedSave = false;
   /** Автозбереження просили, поки воно стояло (до кінця читання чи поки карантин не записано) — не губимо дію гравця (GAME-86). */
   let pending = false;
   let staleJson: string | null = null;
@@ -102,6 +104,8 @@ export function createSaveSession(bridge: SessionBridge, store: SessionStore, co
     get ready() { return ready; },
     /** Сейв, відкладений на старті як застарілий (для повідомлення й коду відновлення). */
     get stale(): string | null { return stales[0] ?? null; },
+    /** GAME-216: чи стартове читання завантажило сейв (а не почало з чистого стану). */
+    get loadedSave(): boolean { return loadedSave; },
     /** Сховати повідомлення про відкладений сейв: гравець код уже бачив. Копію в сховищі прибираємо. */
     async dismissStale(): Promise<boolean> {
       const json = stales[0];
@@ -141,6 +145,7 @@ export function createSaveSession(bridge: SessionBridge, store: SessionStore, co
         const paused = bridge.state.clock.paused; // пауза — як зараз в інтерфейсі, а не як у сейві
         bridge.load(pick);
         bridge.setPaused(paused);
+        loadedSave = true;
       }
       ready = true;
       // Гравець діяв, поки читали: його дію автозбереження відкинуло, а стартовий сейв її не замінив —

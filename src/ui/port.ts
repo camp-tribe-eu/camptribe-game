@@ -39,6 +39,10 @@ export interface UiPort {
   portrait(npcId: string | null, sprite?: boolean): { readonly src: string; readonly kind: 'file' | 'sprite' } | null;
   /** GAME-191: малює кімнату вступу (вікно з дощем, лампа, Метью) на полотні; повертає зупинку анімації. Немає — тло вступу просто темне (тести без полотна). */
   introRoom?: IntroRoomPainter;
+  /** GAME-216: малює холодний початок (кіно ≤ 45 с перед вступом); повертає зупинку. Немає — сцени немає, одразу вступ. */
+  coldOpenScene?: ColdOpenPainter;
+  /** GAME-216: чи показувати холодний початок: 'load' — вступ при завантаженні (лише коли сейву не було), 'new' — «Нова гра» з меню. Немає — ніколи. */
+  coldOpen?(reason: 'load' | 'new'): boolean;
   /** GAME-182: сейв уже прочитано (або його немає) — до цього `story().stage === 'create'` ще не означає «нова гра»: вступ чекає. */
   loaded(): boolean;
   /** GAME-192: чи зараз показувати підказку «Далі» (гравець застряг або ціль щойно змінилась); підписка — onStory. */
@@ -57,3 +61,6 @@ export interface Credits {
 
 /** GAME-191: малювання кімнати вступу: полотно, розмір екрана в CSS-пікселях, «менше руху», чи вже знято. */
 export type IntroRoomPainter = (target: HTMLCanvasElement, cssW: number, cssH: number, reduced: boolean, isDead: () => boolean) => Promise<() => void>;
+
+/** GAME-216: малювання холодного початку: полотно, елемент підпису, розмір екрана, «менше руху», чи вже знято, тексти, годинник сцени (мс, живе в компоненті), кінець сцени. */
+export type ColdOpenPainter = (target: HTMLCanvasElement, caption: HTMLElement, cssW: number, cssH: number, reduced: boolean, isDead: () => boolean, texts: { readonly line: (key: string) => string }, clock: { elapsed: number }, onEnd: () => void) => Promise<() => void>;

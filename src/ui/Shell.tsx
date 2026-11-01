@@ -13,6 +13,7 @@ import { DaySummary } from './DaySummary';
 import { DialogueBox } from './DialogueBox';
 import { AtlasPanel } from './Atlas';
 import { Intro } from './Intro';
+import { ColdOpen } from './ColdOpen';
 import { trapTab } from './focus-trap';
 import type { OfferSummary, StoryOffer } from './story-types';
 
@@ -54,11 +55,13 @@ export function Shell({ port, langOverride, credits, build, holdToast = false, h
   // GAME-182: вступ — замість підказки «Відкрий ☰, щоб почати»: персонажа ще немає → дощовий вечір, лист і перший вибір (хто вирушає), без ☰. Світ на паузі, поки вступ іде.
   // Сейв читається асинхронно: поки він не прочитаний, `create` ще не «нова гра» — вступ вирішуємо раз, на першому знімку ПІСЛЯ читання.
   const [intro, setIntro] = useState(false);
+  // GAME-216: холодний початок — кіно перед вступом, раз на нову гру: при завантаженні лише коли сейву не було (порт знає), з меню «Нова гра» — завжди.
+  const [cold, setCold] = useState(false);
   const introChecked = useRef(false);
   const checkIntro = (): void => {
     if (introChecked.current || !port.loaded()) return;
     introChecked.current = true;
-    if (introOn && port.story().stage === 'create') { setIntro(true); port.setPaused(true); }
+    if (introOn && port.story().stage === 'create') { setIntro(true); setCold(port.coldOpen?.('load') === true); port.setPaused(true); }
   };
   useEffect(() => { checkIntro(); return port.onStory(() => { setOffer(port.story()); checkIntro(); }); }, []);
   const [atlasOpen, setAtlasOpen] = useState(false);
@@ -140,7 +143,7 @@ export function Shell({ port, langOverride, credits, build, holdToast = false, h
       setRemind(null);
       if (settings.remindedTrip !== null) update({ ...settings, remindedTrip: null });
       setPaused(false);
-      if (introOn) { setIntro(true); port.setPaused(true); } else story(true);
+      if (introOn) { setIntro(true); setCold(port.coldOpen?.('new') === true); port.setPaused(true); } else story(true);
     });
   };
   const story = (open: boolean): void => {
@@ -351,7 +354,8 @@ export function Shell({ port, langOverride, credits, build, holdToast = false, h
       )}
       {storyOpen && <StoryPanel offer={offer} lang={lang} t={t} act={storyAct} close={() => story(false)} portrait={portrait} settings={() => { setStoryOpen(false); toggle(true); }} footer={offer.stage !== 'create' && <button type="button" class="ui-btn" data-ui="atlas-open" onClick={openAtlas}>{`${t('ui.atlas')}: ${offer.atlas.count}/${offer.atlas.total}`}</button>}>{staleNotice}</StoryPanel>}
       {atlasOpen && <AtlasPanel atlas={offer.atlas} lang={lang} t={t} close={closeAtlas} />}
-      {intro && <Intro offer={offer} lang={lang} t={t} act={storyAct} portrait={portrait} room={port.introRoom} onDone={endIntro} />}
+      {intro && cold && <ColdOpen paint={port.coldOpenScene} t={t} onDone={() => setCold(false)} />}
+      {intro && !cold && <Intro offer={offer} lang={lang} t={t} act={storyAct} portrait={portrait} room={port.introRoom} onDone={endIntro} />}
       {talk && !paused && !storyOpen && !summary && offer.dialogue && <DialogueBox dialogue={offer.dialogue} lang={lang} t={t} act={storyAct} portrait={portrait} />}
       {summary && !paused && <DaySummary summary={summary} lang={lang} t={t} onContinue={summaryContinue} onEnd={summaryEnd} />}
       {paused && confirmNew && (
