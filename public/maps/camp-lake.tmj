@@ -10,7 +10,7 @@
  "tileheight": 32,
  "infinite": false,
  "nextlayerid": 7,
- "nextobjectid": 74,
+ "nextobjectid": 77,
  "layers": [
   {
    "id": 1,
@@ -4859,6 +4859,42 @@
        "value": "right"
       }
      ]
+    },
+    {
+     "id": 74,
+     "name": "trace.camp-crate",
+     "type": "trigger",
+     "x": 208,
+     "y": 48,
+     "width": 0,
+     "height": 0,
+     "point": true,
+     "rotation": 0,
+     "visible": true
+    },
+    {
+     "id": 75,
+     "name": "repair.bench",
+     "type": "trigger",
+     "x": 496,
+     "y": 240,
+     "width": 0,
+     "height": 0,
+     "point": true,
+     "rotation": 0,
+     "visible": true
+    },
+    {
+     "id": 76,
+     "name": "crate.start",
+     "type": "anchor",
+     "x": 592,
+     "y": 464,
+     "width": 0,
+     "height": 0,
+     "point": true,
+     "rotation": 0,
+     "visible": true
     }
    ]
   }

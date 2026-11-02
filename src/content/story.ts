@@ -3,6 +3,7 @@
 // вміє (`deliver`, продаж у NPC), не пропускається мовчки: збірка падає з назвою поля (закон 4).
 import { FISH_FACTS } from './fish-fork';
 import { traceFlags, traceRewards, TRACES } from './traces';
+import { REPAIR_FLAG } from './repair';
 import { stateHash } from '../core/hash';
 import type { CondDef, DialogueDef, EffectDef, ObjectiveDef, QuestDef, StoryDefs, WhenDef } from '../core/defs';
 import animals from '../../content/animals.json';
@@ -123,7 +124,7 @@ export function compileStory(c: RawContent): StoryDefs {
     // GAME-180: прапорці прохань сусідів — косметичні для сюжету (перебір їх не розрізняє), «здано» ще й пишеться в журнал.
     // GAME-195: розвилка рибки — факти косметичні для перебору й пишуться в журнал (по одному на команду: сцена озера ставить один, відповідь Нори — один).
     // GAME-215: прапорці слідів дідуся — теж косметичні (їх читає лише Атлас і вибір-згадка в розмові, що ставить лише їх).
-    requestFlags: [...(c.requests?.length ? requestFlagsOf(c.requests) : []), ...FISH_COSMETIC, ...traceFlags(TRACES)],
+    requestFlags: [...(c.requests?.length ? requestFlagsOf(c.requests) : []), ...FISH_COSMETIC, ...traceFlags(TRACES), REPAIR_FLAG],
     journaled: [...(c.requests ?? []).map((r) => requestFlag(r.id, 'done')), FISH_FACTS.kept, FISH_FACTS.released, FISH_FACTS.trustNora],
     // GAME-215: нагорода сліду — той самий гачок «з'явився прапорець → XP раз за ключ».
     requestRewards: [...(c.requests ?? []).map((r) => ({ flag: requestFlag(r.id, 'done'), key: `rw.${r.id}`, xp: r.reward.xp, om: r.reward.om, skills: r.reward.skills })), ...traceRewards(TRACES)],

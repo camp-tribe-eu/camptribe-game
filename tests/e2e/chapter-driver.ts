@@ -9,6 +9,7 @@ export interface Core { game: { player: { locationId: string; transportId?: stri
 export interface FishP { phase: string; power: number; zone: number; fish: number; progress: number; inZone: boolean; casts: number; slipped: number; aways: number; kept: number; released: number; catches: number; species: string; spot: { x: number; y: number }; buttons: { release: { x: number; y: number }; keep: { x: number; y: number } }; ripples: number; flying: boolean }
 export interface Probe { playerX: number; playerY: number; nearObject: string | null; playerMoving: boolean; saveLoaded: boolean; reveal: boolean; commandsSent: number; cameraScrollX: number; cameraScrollY: number; tent: { phase: string; pegs: number; need: number; helpers: number; marker: number; inBand: boolean; placeOk: boolean; x: number; y: number };
   followers: { x: number; y: number }[]; jobs: ({ kind: 'errand'; task: string; phase: 'walk' | 'work' } | { kind: 'tent'; phase: 'walk' | 'pull' } | null)[];
+  crate: { active: boolean; x: number; y: number; c: number; r: number; pushes: number; refused: number; lastRefusal: string | null; oldOpen: boolean; repairHits: number; repairDone: boolean; dust: number };
   wood: { phase: string; got: number; strikes: number; marker: number; inBand: boolean; branches: { x: number; y: number; got: boolean }[]; block: { x: number; y: number } };
   fire: { phase: string; logs: number; charge: number; inBand: boolean; holding: boolean; fizzles: number; x: number; y: number }; grill: { phase: string; heat: number; cook: number; holding: boolean; chars: number; charred: boolean }; fish: FishP; fx: { target: string | null; guide: string; ring: number; backpack: number }; live: { sparks: number; dust: number; exhaust: number; blades: number; sway: boolean; calm: boolean } }
 export const core = (page: Page): Promise<Core> => page.evaluate(() => (window as unknown as { __game: { read: () => Core } }).__game.read());
@@ -31,8 +32,10 @@ export function routeXY(key: string, from: [number, number], o: { x: number; y: 
   const walls = m.layers.find((l) => l.name === 'walls')?.data ?? [];
   const objs = m.layers.find((l) => l.name === 'objects')?.objects ?? [];
   const veh = objs.find((x) => x.name === 'obj.vehicle');
+  const crate = key === 'camp-lake' ? objs.find((x) => x.name === 'crate.start') : undefined;
   const blocked = (tx: number, ty: number): boolean => {
     if ((walls[ty * m.width + tx] ?? 1) > 0) return true;
+    if (crate && tx === Math.floor(crate.x / 32) && ty === Math.floor(crate.y / 32)) return true;   // GAME-209: ящик на старті мапи табору — тверда перешкода (його штовхають лише в game-209)
     if (car && key !== 'camp-lake' && veh) { const cx = veh.x + 16; const cy = veh.y + 80; if (tx * 32 + 32 > cx - 52 && tx * 32 < cx + 52 && ty * 32 + 32 > cy - 30 && ty * 32 < cy) return true; }
     return false;
   };

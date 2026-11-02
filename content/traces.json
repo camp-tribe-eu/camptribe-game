@@ -88,6 +88,16 @@
     "reward": { "xp": 5 }
   },
   {
+    "id": "trace.camp-crate",
+    "kind": "cache",
+    "location": "loc.camp.lake",
+    "spot": "trace.camp-crate",
+    "nameKey": "trace.camp-crate",
+    "textKey": "trace.camp-crate.text",
+    "year": 1978,
+    "reward": { "xp": 5 }
+  },
+  {
     "id": "trace.camp-elise",
     "kind": "person",
     "location": "loc.camp.lake",

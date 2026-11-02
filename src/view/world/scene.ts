@@ -20,13 +20,16 @@ import { ICON_SIZE, iconIndex, objectiveIcon } from '../../content/objective-ico
 import { playUi } from '../../audio/ui-sounds';
 import { sfx } from '../../audio/sfx';
 import { MapFx, type Needs } from './map-fx';
-import { FEEDBACK_S, RING_IDLE, pickNearest, ringMayTake, stepRing, vehicleReady, type Insets, type Ring } from './proximity';
+import { FEEDBACK_S, RING_IDLE, isAutoSpot, pickNearest, ringMayTake, stepRing, vehicleReady, type Insets, type Ring } from './proximity';
 import { IDLE_AFTER_S, LEISURE_BY_MAP, assignLeisure, leisureFromObjects, type LeisureSpot } from './leisure';
 import { BARK_RANGE, CAST, CAST_BY_MAP, RESIDENTS, buildTimeline, placeAt, residentGrid, type Timeline } from './ambient';
 import type { Key } from '../../i18n';
 import { facingToward, markerFor, talkBeatsFishing, type NpcMarker } from '../npc-talk';
 import { TentRig, type TentProbe } from './tent';
 import { WoodRig, type WoodProbe } from './wood';
+import { CampProps, OLD_CRATE_SPOT, type CrateProbe } from './crate';
+import { crateWorld } from '../../content/crate-push';
+import { REPAIR_SPOT } from '../../content/repair';
 import { FireRig, type FireProbe } from './fire';
 import { GrillRig, type GrillProbe } from './grill';
 import { FISH_SPOT, FishRig, type FishProbe } from './fishing';
@@ -117,6 +120,8 @@ export interface WorldHooks {
   transport(): string | null;
   /** GAME-181: підпис нагороди («+15 XP +10 ОМ»), що ще не показана над героєм; забирає її (наступний виклик — null). */
   takeReward(): string | null;
+  /** GAME-209: об'єкт-знахідка чи справа вже зроблені (старий ящик відкрито, лавку полагоджено) — сцена малює їх відкритими/готовими. */
+  spotDone?(name: string): boolean;
   /** GAME-202: кому що доручено (факти ядра f.errand-*, лише живі справи): член родини (ключ FOLLOWERS) → об'єкт мапи справи. Немає — доручень у грі нема. */
   errands?(): readonly { readonly member: string; readonly task: string; readonly spot: string }[];
   /** GAME-202: виконавець дійшов і попрацював — ядру команда помічника закрити справу (CompleteTask, actor helper). */
@@ -196,6 +201,8 @@ export interface WorldProbe {
   jobs: ({ kind: 'errand'; task: string; phase: 'walk' | 'work' } | { kind: 'tent'; phase: 'walk' | 'pull' } | null)[];
   /** GAME-190 (лише для e2e): дрова руками — гілки, колода, шкала ударів. */
   wood: WoodProbe;
+  /** GAME-209: ящик, старий ящик і ремонт лавки (лише читання, для e2e). */
+  crate: CrateProbe;
   /** GAME-190 (лише для e2e): вогнище руками — поліна, шкала сірника, чи тримає гравець дію. */
   fire: FireProbe;
   grill: GrillProbe;
@@ -290,6 +297,8 @@ export class WorldScene extends Phaser.Scene {
   private tilemap: Phaser.Tilemaps.Tilemap | null = null;
   private owned: { destroy(): void }[] = [];
   private wallCollider: Phaser.Physics.Arcade.Collider | null = null;
+  private crateCollider: Phaser.Physics.Arcade.Collider | null = null;
+  private props!: CampProps;
   /** Авто на подвір'ї: спрайт і невидима колізія — окремо від мапи (залежать від транспорту гравця, а не від мапи). */
   private carParts: { destroy(): void }[] = [];
   private carFor = '';
@@ -539,6 +548,7 @@ export class WorldScene extends Phaser.Scene {
     this.live = new LiveFx(this, DEPTH.decor - 50, DEPTH.always - 10);
     this.tent = new TentRig(this, this.player, this.barkText);
     this.wood = new WoodRig(this, this.player, this.barkText);
+    this.props = new CampProps(this, this.barkText);
     this.fire = new FireRig(this, this.player, this.barkText);
     this.fish = new FishRig(this, this.player, this.barkText);
     this.grill = new GrillRig(this, this.player, this.barkText);
@@ -585,6 +595,9 @@ export class WorldScene extends Phaser.Scene {
   private teardown(): void {
     this.tent?.reset();
     this.wood?.reset();
+    this.props?.reset();
+    this.crateCollider?.destroy();
+    this.crateCollider = null;
     this.fire?.reset();
     this.fish?.reset();
     this.grill?.reset();
@@ -699,6 +712,14 @@ export class WorldScene extends Phaser.Scene {
     this.player.body.reset(spawn.x ?? 0, spawn.y ?? 0);
     this.physics.world.setBounds(0, 0, map.widthInPixels, map.heightInPixels);
     this.wallCollider = this.physics.add.collider(this.player, walls);
+    // GAME-209: ящик, що штовхається, старий ящик і лавка — лише в таборі. Світ сторожа: стіни й клітинки всіх об'єктів мапи (крім самого старту ящика).
+    if (key === 'camp') {
+      const named = (n: string): Pt | null => { const o = objects.find((x) => x.name === n); return o ? { x: o.x ?? 0, y: o.y ?? 0 } : null; };
+      const spotPx = objects.filter((o) => typeOf(o) !== 'spawn' && o.name !== 'crate.start').map((o) => ({ x: o.x ?? 0, y: o.y ?? 0 }));
+      const cw = crateWorld(map.width, map.height, TILE, wallsData, { x: spawn.x ?? 0, y: spawn.y ?? 0 }, spotPx);
+      this.props.begin(cw, TILE, named('crate.start'), named(OLD_CRATE_SPOT), named(REPAIR_SPOT), this.hooks.spotDone?.(OLD_CRATE_SPOT) ?? false, this.hooks.spotDone?.(REPAIR_SPOT) ?? false);
+      if (this.props.body) this.crateCollider = this.physics.add.collider(this.player, this.props.body);
+    }
     this.cameras.main.setBounds(0, 0, map.widthInPixels, map.heightInPixels);
     this.cameras.main.centerOn(this.player.x, this.player.y);
     this.last = { x: this.player.x, y: this.player.y };
@@ -1184,6 +1205,7 @@ export class WorldScene extends Phaser.Scene {
     else if (!woodLive && this.wood.phase !== 'idle') this.wood.reset();
     this.wood.muted = this.fish.busy;
     this.wood.update(delta);
+    this.props.update(delta, { x: this.player.x, y: this.player.y }, INTERACT_RANGE, this.hooks.isLive(REPAIR_SPOT));
     const fireDue = inCamp && (this.hooks.fireDue?.() ?? false);
     const fireSpot = this.spots.find((x) => x.name === 'obj.campfire');
     if (fireDue && fireSpot && this.fire.phase === 'idle') this.fire.begin({ x: fireSpot.x, y: fireSpot.y }, this.fireSprite);
@@ -1268,6 +1290,23 @@ export class WorldScene extends Phaser.Scene {
         }).slice(0, MAX_HELPERS);
         this.tent.begin({ x: at.x, y: at.y }, (x, y) => { const t = tileOf(this.grid, { x, y }); return isSolid(this.grid, t); }, this.spots.filter((x) => x.name !== 'task.pitch-tent' && this.hooks.isLive(x.name)).map((x) => ({ x: x.x, y: x.y })), this.tentHelpers.length);
       }
+    } else if (pressed && this.props.crateNear({ x: this.player.x, y: this.player.y }, TILE * 1.3) && (act === null || isAutoSpot(act.name) || isFollower(act.name))) {
+      // GAME-209: ящик поруч — штовхаємо на клітинку від героя (сторож не пускає в прохід); дія з сусідньою ціллю-автоспрацьовувачем не заважає.
+      const r = this.props.push({ x: this.player.x, y: this.player.y });
+      if (r.dir) { this.faceTo(this.props.crateAt()); this.playAction('thrust', r.dir); }
+    } else if (pressed && act?.name === REPAIR_SPOT) {
+      // GAME-209: лавка — три удари молотка (пил і тріски на кожен); після третього ядро видає малу нагороду раз.
+      const at = this.spots.find((x) => x.name === REPAIR_SPOT);
+      if (at) this.faceTo(at);
+      const e = this.props.hit(this.props.repairNear({ x: this.player.x, y: this.player.y }, INTERACT_RANGE));
+      if (e !== 'none') this.playAction('thrust', facingToward(this.player, at ?? this.player));
+      if (e === 'done') { this.hooks.onObject(REPAIR_SPOT); this.feedback(REPAIR_SPOT); }
+    } else if (pressed && act?.name === OLD_CRATE_SPOT) {
+      // GAME-209: старий ящик відкривають явно (E/●), не проходом повз: кришка, пил, і знахідка йде в Атлас.
+      this.props.open();
+      this.playAction('thrust', facingToward(this.player, this.props.oldPoint() ?? this.player));
+      this.hooks.onObject(OLD_CRATE_SPOT);
+      this.feedback(OLD_CRATE_SPOT);
     } else if (pressed && act) {
       if (act.kind === 'npc') { this.faceEachOther(act); this.hooks.onNpc(act.name); }
       else if (carrying && (act.name === 'obj.vehicle' || act.name === 'obj.trunk')) this.unloadOne();
@@ -1353,6 +1392,7 @@ export class WorldScene extends Phaser.Scene {
       behindTiles: behind,
       tent: this.tent.probe(),
       wood: this.wood.probe(),
+      crate: { ...this.props.probeData },
       fire: this.fire.probe(),
       grill: this.grill.probe(),
       fish: this.fish.probe(),

@@ -9,7 +9,7 @@
   },
   "requestIcons": { "litter": "litter", "bird": "bird", "chain": "chain", "lantern": "lantern", "cookie": "snack", "apple": "apple", "camera": "camera", "star": "star", "wire": "wire" },
   "spots": {
-    "obj.vehicle": "car", "obj.trunk": "suitcase", "obj.buy": "coins", "obj.sell": "coins", "obj.drying": "line", "obj.litter": "litter",
+    "obj.vehicle": "car", "obj.trunk": "suitcase", "obj.buy": "coins", "obj.sell": "coins", "obj.drying": "line", "obj.litter": "litter", "repair.bench": "wrench",
     "task.mia-carrier": "carrier", "task.mia-carrier-home": "carrier", "task.map-to-luggage": "map", "task.lights-window": "lantern", "task.anna-goodbye": "heart", "task.iron-clothes": "bag",
     "task.fix-luggage": "suitcase", "task.patch-tyre": "tyre", "task.mia-water-blanket": "blanket", "task.bag-covers": "bag", "task.check-route": "map", "task.pick-path": "compass",
     "task.dinner": "dinner", "task.firewood": "firewood", "task.find-mia": "cat", "task.mia-car": "cat", "task.cover-bikes": "bike", "task.walk-site": "boots",
