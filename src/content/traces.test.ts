@@ -42,7 +42,8 @@ describe('GAME-215 · сліди дідуся: дані', () => {
       if (t.kind === 'person') { expect(t.spot).toBeUndefined(); expect(row?.kind).toBeUndefined(); continue; }
       expect(t.spot, t.id).toBe(t.id);
       expect(spots.has(t.spot as string), `${t.spot} на мапі`).toBe(true);
-      expect(isAutoSpot(t.spot as string)).toBe(true);
+      // GAME-209: старий ящик — єдиний слід, що відкривається явно (E/●), а не наближенням; решта — автоспрацьовує.
+      expect(isAutoSpot(t.spot as string), `${t.spot}: автоспрацьовує лише не-ящик`).toBe(t.spot !== 'trace.camp-crate');
       expect(row?.kind).toBe('interaction');
       expect(GAME_DEFS.interactions[t.spot as string]?.flags).toEqual([t.flag]);
     }

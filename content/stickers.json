@@ -120,6 +120,16 @@
     }
   },
   {
+    "id": "sticker.bench",
+    "nameKey": "sticker.bench",
+    "textKey": "sticker.bench.text",
+    "kind": "team",
+    "icon": "plan",
+    "cond": {
+      "flag": "f.bench-repaired"
+    }
+  },
+  {
     "id": "sticker.henry-postcard",
     "nameKey": "sticker.henry-postcard",
     "textKey": "sticker.henry-postcard.text",
@@ -153,6 +163,9 @@
         },
         {
           "flag": "f.trace-camp-reception"
+        },
+        {
+          "flag": "f.trace-camp-crate"
         },
         {
           "flag": "f.trace-camp-elise"

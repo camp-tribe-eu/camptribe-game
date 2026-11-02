@@ -11,6 +11,7 @@ import { WAVES } from './waves';
 import { ATLAS_PAGES, STICKER_DEFS } from './stickers';
 import { requestInteractions } from './requests';
 import { traceInteractions } from './traces';
+import { REPAIR_INTERACTION, REPAIR_SPOT } from './repair';
 
 /** Крамниця гри (GAME-81): єдина локація, де продається спорядження. Неіснуючий id ловить checkDefs (DEFS_BAD_REF). */
 export const SHOP = 'loc.shop';
@@ -53,6 +54,8 @@ export const SLICE_DEFS: CoreDefs = {
     ...requestInteractions(),
     // GAME-215: сліди дідуся Генрі (content/traces.json) — дотик до позначки олівцем ставить прапорець сліду.
     ...traceInteractions(),
+    // GAME-209: лавку лагодять руками (молоток, пил) — мала разова нагорода.
+    [REPAIR_SPOT]: REPAIR_INTERACTION,
   },
 };
 

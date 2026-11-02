@@ -20,6 +20,9 @@ import { WorldScene, type WorldHooks, type WorldProbe } from './view/world/scene
 import { loadWorldArt } from './view/world/art';
 import { TENT_PROBE_IDLE } from './view/world/tent';
 import { WOOD_PROBE_IDLE } from './view/world/wood';
+import { CRATE_PROBE_IDLE } from './view/world/crate';
+import { REPAIR_FLAG, REPAIR_SPOT } from './content/repair';
+import { traceOfSpot } from './content/traces';
 import { FIRE_PROBE_IDLE } from './view/world/fire';
 import { GRILL_PROBE_IDLE } from './view/world/grill';
 import { FISH_FACTS, fishChoiceMove, fishEvening } from './content/fish-fork';
@@ -53,7 +56,7 @@ if (!app) throw new Error('#app is missing');
 
 const probe: WorldProbe = { ready: false, reveal: false, playerX: 0, playerY: 0, nearObject: null, nearKind: null, commandsSent: 0, cameraScrollX: 0, cameraScrollY: 0, clockMinutes: 0, saveLoaded: false, cameraLerp: [0, 0], followers: [], leisure: [], jobs: [],
   playerFrame: 0, playerDir: 'down', playerMoving: false, playerDepth: 0, coveredTiles: 0, behindTiles: 0, fps: 0, fpsWindows: 0, firstFrameMs: 0,
-  residents: [], visitors: [], bark: null, barkCount: 0, npcMarks: {}, miaAt: [], tent: TENT_PROBE_IDLE, wood: WOOD_PROBE_IDLE, fire: FIRE_PROBE_IDLE, grill: GRILL_PROBE_IDLE, fish: FISH_PROBE_IDLE, live: LIVE_PROBE_IDLE,
+  residents: [], visitors: [], bark: null, barkCount: 0, npcMarks: {}, miaAt: [], tent: TENT_PROBE_IDLE, wood: WOOD_PROBE_IDLE, crate: CRATE_PROBE_IDLE, fire: FIRE_PROBE_IDLE, grill: GRILL_PROBE_IDLE, fish: FISH_PROBE_IDLE, live: LIVE_PROBE_IDLE,
   daylight: { on: false, visible: false, minuteOfDay: 0, darkness: 0, color: 0xffffff, glow: 0 },
   fx: { target: null, ring: 0, ringName: null, backpack: 0, guide: 'none', pops: 0, auto: 0, rewards: 0, rewardLast: '' } };
 // GAME-86: кожна команда ядру (дія екрана, розмова, взаємодія на мапі) → автозбереження одразу, а не лише на паузі.
@@ -302,6 +305,7 @@ const worldHooks: WorldHooks = {
   mapKey: () => switches.map ?? (switches.panelActs ? 'camp' : mapKeyFor(bridge.state.game.player?.locationId)),
   transport: () => bridge.state.game.player?.transportId ?? null,
   takeReward,
+  spotDone: (name) => { const f = bridge.state.game.flags; const t = traceOfSpot(name); return t ? f.includes(t.flag) : name === REPAIR_SPOT && f.includes(REPAIR_FLAG); },
   // GAME-202: доручення — факти ядра (f.errand-*), лише для живих справ; виконавець попрацював — та сама команда CompleteTask, але від помічника.
   errands: () => {
     // Раз на стан ядра й хвилину годинника (строк справи), а не на кадр.
