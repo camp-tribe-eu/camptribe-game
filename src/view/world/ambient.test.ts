@@ -10,6 +10,7 @@ import ambientSource from './ambient.ts?raw';
 import uk from '../../i18n/uk.json';
 import en from '../../i18n/en.json';
 import { BARK_RANGE, CAST, CAST_BY_MAP, RESIDENTS, SHOP_VISITOR, TILES_PER_MIN, ZONES, buildTimeline, placeAt, residentGrid, walkableAt, type Zone } from './ambient';
+import { DIALOGUE_LINE_MAX } from '../../../scripts/validator/codes.mjs';
 import { findPath, gridFromWalls, isSolid, tileOf, type Grid, type Pt, type Tile } from './follow';
 
 const TILE = 32;
@@ -185,10 +186,10 @@ describe('фонові мешканці', () => {
 
 describe('репліки мешканців', () => {
   const words = (s: string): number => s.trim().split(/\s+/).length;
-  const lines = RESIDENTS.flatMap((r) => r.barks.map((k) => ({ id: r.id, key: k })));
+  const lines = CAST.flatMap((r) => r.barks.map((k) => ({ id: r.id, key: k })));
 
   it('кожен має ≥ 2 реплік; ключі є в uk і en; 4–15 слів; uk ≤ 140 символів', () => {
-    for (const r of RESIDENTS) expect(r.barks.length, `${r.id}: реплік`).toBeGreaterThanOrEqual(2);
+    for (const r of CAST) expect(r.barks.length, `${r.id}: реплік`).toBeGreaterThanOrEqual(2);
     for (const { id, key } of lines) {
       const u = (uk as Record<string, string>)[key];
       const e = (en as Record<string, string>)[key];
@@ -200,6 +201,18 @@ describe('репліки мешканців', () => {
         expect(n, `${key} (${lang}): ${n} слів`).toBeLessThanOrEqual(15);
       }
       expect((u ?? '').length).toBeLessThanOrEqual(140);
+    }
+  });
+
+  // GAME-221: та сама межа, що в діалогах (DIALOGUE_LINE_MAX знаків у КОЖНІЙ мові): бульбашка над головою не ширша за 2 рядки на телефоні.
+  // Мутація: подовж amb.*.* в uk чи en понад межу — червоніє.
+  it('репліка над головою — не довша за DIALOGUE_LINE_MAX знаків у uk і en', () => {
+    expect(lines.length, 'реплік немає — тест нічого не доводить').toBeGreaterThanOrEqual(12);
+    for (const { key } of lines) {
+      for (const [lang, dict] of [['uk', uk], ['en', en]] as const) {
+        const len = [...((dict as Record<string, string>)[key] ?? '')].length;
+        expect(len, `${key} (${lang}): ${len} знаків > ${DIALOGUE_LINE_MAX}`).toBeLessThanOrEqual(DIALOGUE_LINE_MAX);
+      }
     }
   });
 
@@ -265,6 +278,6 @@ describe('покупець у крамниці (shop.tmj)', () => {
       if (p.moving) moved++;
     }
     expect(moved).toBeGreaterThan(0);
-    expect(SHOP_VISITOR.barks).toEqual([]);
+    expect(SHOP_VISITOR.barks.length, 'GAME-221: покупець має >= 2 реплік').toBeGreaterThanOrEqual(2);
   });
 });

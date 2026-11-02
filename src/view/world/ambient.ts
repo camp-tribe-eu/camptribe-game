@@ -36,11 +36,11 @@ export const RESIDENTS: readonly Resident[] = [
 
 /**
  * GAME-204 · покупець у крамниці спорядження: фоновий, як мешканці табору (той самий розклад-функція часу, без стану й випадковості), але на мапі `shop`.
- * Не квестовий (нема в npcs.json, не в RESIDENTS — біблія, портрети й реплики табору його не чіпають), без реплік. Ходить між трьома полицями —
+ * Не квестовий (нема в npcs.json, не в RESIDENTS — біблія й портрети табору його не чіпають); має дві короткі репліки про спорядження (GAME-221: балачка над головою, гру не зупиняє). Ходить між трьома полицями —
  * західний торець гондоли, її північний бік, настінні ліхтарі — по сітці стін без клітинок цілей. Стоянки лише на проходах шириною 2 клітинки (рядки 4–5, стовпці 3–4).
  * Клітинки перевіряє ambient.test (мапа shop.tmj): прохідні, не на цілях, шлях між ними є, до кожної стоянки доходить і герой зі старту.
  */
-export const SHOP_VISITOR: Resident = { id: 'ambient.shopper', look: 'shopper', phase: 0, barks: [], stops: [{ c: 4, r: 7, dwell: 35 }, { c: 7, r: 5, dwell: 30 }, { c: 9, r: 4, dwell: 25 }] };
+export const SHOP_VISITOR: Resident = { id: 'ambient.shopper', look: 'shopper', phase: 0, barks: ['amb.shopper.1', 'amb.shopper.2'], stops: [{ c: 4, r: 7, dwell: 35 }, { c: 7, r: 5, dwell: 30 }, { c: 9, r: 4, dwell: 25 }] };
 /** Фонові персонажі за мапою; решта мап — порожньо. */
 export const CAST_BY_MAP: Readonly<Record<string, readonly Resident[]>> = { camp: RESIDENTS, shop: [SHOP_VISITOR] };
 /** Усі, для кого сцена тримає спрайт (мешканці першими: індекси в масивах сцени збігаються з RESIDENTS). */

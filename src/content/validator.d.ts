@@ -9,6 +9,8 @@ declare module '*/validator/combos.mjs' {
 declare module '*/validator/codes.mjs' {
   /** Вісім напрямів навичок (GAME-72) — мусить збігатися з SKILL_IDS ядра. */
   export const SKILL_IDS: string[];
+  /** Межа довжини репліки діалогу, знаків (GAME-221) — бульбашки над головою мешканців беруть ту саму. */
+  export const DIALOGUE_LINE_MAX: number;
   /** Поля картки спорядження (GAME-73), крім kind. */
   export const GEAR_FIELDS: string[];
   /** Сімейства прапорців ядра (GAME-115): f.pack-*, f.seen-* — префікс і породжувач із контенту. */
