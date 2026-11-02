@@ -60,6 +60,22 @@ export const ZONES: readonly Zone[] = [
   { id: 'clearing', c0: 14, r0: 16, c1: 25, r1: 20, anchor: { c: 21, r: 18 } },
 ];
 
+/**
+ * GAME-211 · пори доби картки персонажа (content/npcs.json → card.schedule): хвилина доби, о котрій розклад руху мешканця звіряється з карткою
+ * (7:00, 15:00, 19:00). Одне джерело правди про те, ДЕ мешканець: функція часу placeAt; картка лише називає зону й тут її перевіряє
+ * юніт-тест (npc-cards.test) — розійшлися (хтось змінив стоянки, а картку забув) → червоне. Пори підібрано так, щоб о цих хвилинах
+ * кожен мешканець стояв (не йшов), а вранці й увечері був у різних зонах (e2e game-211 це бачить у справжньому браузері).
+ */
+export const SCHEDULE_MINUTES = { morning: 420, day: 900, evening: 1140 } as const;
+
+/** Зона табору, в якій клітинка; поза всіма прямокутниками — найближча за якорем (шлях між зонами теж «десь біля»). */
+export function zoneAt(t: Tile): string {
+  const inside = ZONES.find((z) => t.c >= z.c0 && t.c <= z.c1 && t.r >= z.r0 && t.r <= z.r1);
+  if (inside) return inside.id;
+  const dist = (z: Zone): number => Math.hypot(z.anchor.c - t.c, z.anchor.r - t.r);
+  return ([...ZONES].sort((a, b) => dist(a) - dist(b))[0] as Zone).id;
+}
+
 /** Клітинки, які мешканцям заборонені: цілі взаємодії (тригери й NPC мапи) — сітка стін плюс ці клітинки як стіни. */
 export function residentGrid(walls: Grid, spots: readonly Pt[]): Grid {
   const solid = [...walls.solid];

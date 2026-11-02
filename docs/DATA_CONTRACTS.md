@@ -18,7 +18,7 @@
 | DC-003 | `transports` | транспорт: `id`, `nameKey` | GDD; OD-012 | ACCEPTED |
 | DC-004 | `animals` | тварина: `id`, `nameKey`, `transports` — чим можна везти; `animal.none` зарезервовано | GDD; CR-017 | ACCEPTED |
 | DC-005 | `items` | предмет: `id`, `nameKey` | GDD SIMULATION §інвентар | ACCEPTED |
-| DC-006 | `npcs` | NPC: `locationId`, `unlockedBy`, `sells`, `when` | GDD; CR-016 | ACCEPTED |
+| DC-006 | `npcs` | NPC: `locationId`, `unlockedBy`, `sells`, `when`, `follows`, `card` (GAME-211: `habit`, `likes`, `dislikes`, `dream`, `phrases` 2–3, `schedule.morning/day/evening` `{ textKey, zone? }`) | GDD; CR-016 | ACCEPTED |
 | DC-007 | `locations` | локація: `unlockedBy`, `items`, `when` | GDD | ACCEPTED |
 | DC-008 | `quests` | етап: `optional`, `end`, `requires`, `objectives[]`, `transitions[]` (`complete`/`decline`), `reward` (`money` — **центи**, CR-040; `items[].item`), `when`. Ядро виконує: `src/core/story.ts` (GAME-29); `deliver` ще не підтримано — збірка сюжету падає, а не мовчить | GDD §12.2; GAME-29 | ACCEPTED |
 | DC-009 | `events` | подія: `repeatable`, `reward`, `locationId` | GDD §12.3 | ACCEPTED |

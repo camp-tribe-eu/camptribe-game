@@ -527,6 +527,14 @@ export const CHECKS = [
       const add = (k, where) => { if (k !== undefined) keys.set(k, where); };
       const ct = c.content;
       for (const t of ['profiles', 'transports', 'animals', 'items', 'npcs', 'locations']) (ct[t] ?? []).forEach((e) => add(e.nameKey, e.id));
+      // GAME-211: тексти картки персонажа (звичка, вподобання, фрази, розклад, мрія) — у двох мовах, як усе показуване.
+      for (const n of ct.npcs ?? []) {
+        const k = n.card; if (!k) continue;
+        const addCard = (v, where) => { if (typeof v === 'string' && v.trim() !== '') add(v, where); };   // пусте поле — справа npc-cards, не перекладу
+        for (const f of ['habit', 'likes', 'dislikes', 'dream']) addCard(k[f], `${n.id}.card.${f}`);
+        (k.phrases ?? []).forEach((x, i) => addCard(x, `${n.id}.card.phrases[${i}]`));
+        for (const t of ['morning', 'day', 'evening']) addCard(k.schedule?.[t]?.textKey, `${n.id}.card.schedule.${t}`);
+      }
       for (const q of ct.quests ?? []) {
         add(q.titleKey, q.id);
         q.objectives.forEach((o) => add(o.textKey, `${q.id}/${o.id}`));
@@ -1117,6 +1125,25 @@ export const CHECKS = [
             if (open.length) out.push(I('DIALOGUE_QUEST_GATE', `${where}.effects`, `startQuest «${target.id}» вимагає предмет «${it}», а NPC «${d.npcId}» доступний і там, де його ще не можна мати (${open.sort().join(', ')}); відкривай NPC пізніше`));
           }
         }
+      }
+      return out;
+    },
+  },
+  {
+    id: 'npc-cards',
+    run(c) { // @check:npc-cards
+      // GAME-211: картка персонажа — договір для письменника й для гри: що любить, чого боїться, коли де буває. Без неї NPC — «табличка з іменем».
+      // Ціна хибного спрацювання (закон 5): автор дописує один непорожній ключ у npcs.json. Ціна пропуску — безликий персонаж і розклад, якого немає.
+      // Існування самих текстів у двох мовах стереже locale-keys (картка додає свої ключі туди). Зони з розкладом — звіряє юніт-тест із ambient.ts.
+      const out = [];
+      const filled = (v) => typeof v === 'string' && v.trim() !== '';
+      for (const n of c.content.npcs ?? []) {
+        const card = n.card;
+        if (card === undefined || card === null) { out.push(I('NPC_CARD_MISSING', n.id, 'у NPC немає картки (card)')); continue; }
+        for (const f of ['habit', 'likes', 'dislikes', 'dream']) if (!filled(card[f])) out.push(I('NPC_CARD_MISSING', `${n.id}.card.${f}`, `у картки порожнє поле «${f}»`));
+        const ph = card.phrases ?? [];
+        if (ph.length < 2 || ph.length > 3 || ph.some((x) => !filled(x)) || new Set(ph).size !== ph.length) out.push(I('NPC_CARD_PHRASES', `${n.id}.card.phrases`, `фірмових фраз має бути 2–3, непорожніх і різних (є ${ph.length})`));
+        for (const t of ['morning', 'day', 'evening']) if (!filled(card.schedule?.[t]?.textKey)) out.push(I('NPC_CARD_NO_SCHEDULE', `${n.id}.card.schedule.${t}`, `у розкладі немає пори «${t}»`));
       }
       return out;
     },
