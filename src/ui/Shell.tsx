@@ -292,6 +292,7 @@ export function Shell({ port, langOverride, credits, build, holdToast = false, h
   const goalShown = offer.stage !== 'create' && (offer.goal !== null || offer.stage === 'ended') && !hideUi.includes('goal');
   const trackerShown = offer.stage !== 'create' && offer.requests.length > 0 && !hideUi.includes('requests');
   // GAME-192: «Далі: …» — лише коли застряг; позначка біля об'єкта й рюкзак лишаються завжди.
+  const nearestShown = offer.stage === 'play' && offer.nearest !== null && !hideUi.includes('nearest');
   const nextText = !offer.hint.near && !!offer.hint.next && port.hintShown();
   const nextShown = offer.stage !== 'create' && (offer.hint.near || nextText || offer.hint.backpack > 0) && !hideUi.includes('next');
   const portrait = (id: string | null, sprite?: boolean) => port.portrait(id, sprite);
@@ -328,10 +329,15 @@ export function Shell({ port, langOverride, credits, build, holdToast = false, h
             у шапці під ☰ · HUD · ‖; тост-підказка про ☰ (GAME-95) його не заступає — вона лише на екрані вибору героя, де цього рядка немає. */}
         {/* GAME-181: ОДНА коротка поточна ціль (крок головного квесту) — завжди на екрані, обидві орієнтації. Лежить ВГОРІ смуги під шапкою, а «Далі: …» (GAME-175) — під нею:
             дві підказки одна на одній не стоять (картка мети — у потоці шапки вище). Не ловить дотик. */}
-        {(goalShown || nextShown || trackerShown) && (
+        {(goalShown || nextShown || trackerShown || nearestShown) && (
           <div class="ui-strip">
             {goalShown && <div class="ui-goal" data-ui="goal" data-ended={offer.stage === 'ended' ? 'yes' : undefined}><ObjectiveIcon spot={offer.stage === 'ended' ? null : offer.hint.nextSpot} />{`${t('ui.goal')}: ${offer.goal ? ct(lang, offer.goal.key) : t('ui.goal.ended')}`}</div>}
             {/* GAME-180: трекер прийнятих прохань — «Сміття 2/3» (окремий рядок смуги: ціль · трекер · «Далі»); стрілка на мапі веде до наступної цілі, а коли все зроблено — до просильника. */}
+            {nearestShown && offer.nearest && (
+              <div class="ui-near-reward" data-ui="nearest" data-kind={offer.nearest.kind} data-left={offer.nearest.left} role="status">
+                {`★ ${t('rw.nearest')}: ${offer.nearest.ui ? t(offer.nearest.labelKey as Key) : ct(lang, offer.nearest.labelKey)} — ${t('rw.more')} ${offer.nearest.left}`}
+              </div>
+            )}
             {trackerShown && (
               <div class="ui-reqs" data-ui="req-tracker" role="group" aria-label={t('ui.req.tracker')}>
                 {offer.requests.map((r) => (

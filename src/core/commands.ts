@@ -12,6 +12,7 @@ import type { Weather } from './weather';
 import { applyStory, questNeedsItem, type StoryCommand, type StoryDraft } from './story';
 import { applyWave, type WaveCommand } from './wave';
 import { award, awardsFor } from './progress';
+import { atlasAwards } from './atlas-fill';
 import { grantStickers } from './stickers';
 
 export type { StoryCommand } from './story';
@@ -364,6 +365,9 @@ export function dispatch(state: GameState, cmd: Command, defs: CoreDefs, guard: 
     // GAME-182: наклейки Атласу, чиї умови щойно стали правдою (дані content/stickers.json).
     const st = grantStickers(draft.stickers, defs.stickers, draft);
     if (st !== undefined) draft.stickers = st;
+    // GAME-200: повна сторінка Атласу — нагорода раз за ключ `atlas:<сторінка>` (лише за справді повну: atlas-fill.ts).
+    const ap = award(draft.progress, atlasAwards(draft.stickers, defs.atlasPages), guard.award !== false);
+    if (ap !== undefined) draft.progress = ap;
   }
   // GAME-180: прохання сусідів здано (з'явився прапорець «здано») — XP, ОМ і практика навичок за `rw.<прохання>`, раз за ключ (повторне здавання/перезавантаження — 0).
   if (!code) {

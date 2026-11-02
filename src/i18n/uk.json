@@ -343,5 +343,20 @@
   "trace.kind.inscription": "напис",
   "trace.kind.riddle": "загадка",
   "trace.kind.gift": "подарунок у дорогу",
-  "near.trace": "Роздивитись слід дідуся"
+  "near.trace": "Роздивитись слід дідуся",
+  "rw.nearest": "Найближча нагорода",
+  "rw.more": "ще",
+  "rw.henry": "листівка Генрі",
+  "rw.atlas": "сторінка Атласу",
+  "ui.goals": "Цілі",
+  "ui.goals.main": "Головна",
+  "ui.goals.side": "Побічна",
+  "ui.goals.reward": "Нагорода близько",
+  "atlas.fill": "Атлас заповнено",
+  "atlas.page.reward": "нагорода",
+  "atlas.page.rewardGot": "нагороду отримано",
+  "atlas.page.henryReward": "листівка",
+  "sum.tomorrow": "Завтра",
+  "sum.tomorrow.1": "вогнище біля озера, зоряний вечір і сусіди з маленькими проханнями.",
+  "sum.tomorrow.2": "останній ранок біля озера, а потім — дорога додому."
 }

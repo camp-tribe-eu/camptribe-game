@@ -131,6 +131,17 @@ export function StoryPanel({ offer, lang, t, act, close, portrait, children, foo
           )}
         </section>
       )}
+      {offer.stage !== 'create' && showRest && offer.goals.length > 0 && (
+        // GAME-200: 2–4 паралельні цілі — головна, побічні й «нагорода близько» (ще N). Без таймерів і покарань (OD-022).
+        <section class="ui-goals" data-ui="goals" data-count={offer.goals.length} aria-label={t('ui.goals')}>
+          <h3>{t('ui.goals')}</h3>
+          <ul>{offer.goals.map((g, i) => (
+            <li key={`${g.kind}-${i}`} data-ui="goal-row" data-kind={g.kind}>
+              {`${t(`ui.goals.${g.kind}` as Key)}: ${g.ui ? t(g.key as Key) : ct(lang, g.key)}${g.left !== undefined ? ` — ${t('rw.more')} ${g.left}` : ''}`}
+            </li>
+          ))}</ul>
+        </section>
+      )}
       {offer.stage === 'ended' && <p class="ui-status" data-ui="ended" role="status">{t('ui.ended')}</p>}
       {showRest && offer.quests.map((q) => (
         <section class="ui-quest" data-ui="quest" key={q.key}>

@@ -68,6 +68,22 @@ function HenryTrail({ henry, lang, t }: { henry: OfferAtlas['henry']; lang: AnyL
   );
 }
 
+/** GAME-200: заповнення — загальне і по сторінках; нагорода за повну сторінку: що буде, а коли повна — що отримано (її видає ядро, тут лише напис). */
+function AtlasFill({ atlas, t }: { atlas: OfferAtlas; t: (k: Key) => string }) {
+  return (
+    <section class="ui-atlas-fill" data-ui="atlas-fill" data-pct={atlas.fillPct} aria-label={t('atlas.fill')}>
+      <p class="ui-atlas-fill-total" data-ui="atlas-fill-total">{`${t('atlas.fill')}: ${atlas.fillPct}%`}</p>
+      <ul class="ui-atlas-fill-pages">
+        {atlas.pages.map((p) => (
+          <li key={p.id} data-ui="atlas-page-fill" data-page={p.id} data-pct={p.pct} data-have={p.have} data-total={p.total} data-done={p.done ? 'yes' : 'no'}>
+            {`${t(p.titleKey as Key)}: ${p.pct}% (${p.have}/${p.total}) · ${p.done ? t('atlas.page.rewardGot') : `${t('atlas.page.reward')}: ${p.reward ? `+${p.reward.xp} ${t('ui.xp')}${p.reward.om > 0 ? ` · +${p.reward.om} ${t('ui.om')}` : ''}` : t('atlas.page.henryReward')}`}`}
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
 /** Сторінка Атласу. `fly` — id наклейки, що влітає (кінець вступу): лише анімація, стан уже в ядрі. */
 export function AtlasPage({ atlas, lang, t, fly = null }: { atlas: OfferAtlas; lang: AnyLang; t: (k: Key) => string; fly?: string | null }) {
   const slots = Array.from({ length: atlas.total }, (_, i) => atlas.slots[i] ?? null);
@@ -92,6 +108,7 @@ export function AtlasPage({ atlas, lang, t, fly = null }: { atlas: OfferAtlas; l
         {slots.slice(5).map((s, i) => cell(s, i + 5))}
       </ul>
       <p class="ui-atlas-count" data-ui="atlas-count" data-count={atlas.count} data-total={atlas.total}>{`${t('atlas.count')}: ${atlas.count}/${atlas.total}`}</p>
+      <AtlasFill atlas={atlas} t={t} />
       <EuropeMap t={t} />
       <HenryTrail henry={atlas.henry} lang={lang} t={t} />
     </section>

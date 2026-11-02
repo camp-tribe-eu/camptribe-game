@@ -18,7 +18,10 @@ import { initialState, type GameState } from '../core/state';
 import { MAX_RANK, SKILL_IDS, skillStep } from '../core/skills';
 import { TITLE_COUNT, progressOf, titleStep } from '../core/progress';
 import { STICKER_SLOTS, stickersOf } from '../core/stickers';
-import { STICKER_META } from '../content/stickers';
+import { ATLAS_PAGES, STICKER_META } from '../content/stickers';
+import { pageFill } from '../core/atlas-fill';
+import { nearestReward } from '../content/nearest-reward';
+import { LOCALES } from '../i18n';
 import { chapterComplete, matches, route } from '../core/story';
 import { capacityOf, packedOf, packFlag, packingOpen, packItemsFor, usedUnits } from '../core/packing';
 import { timeOfDay } from './world/daylight';
@@ -27,7 +30,7 @@ import { CONTENT, memorableFacts } from '../content/story';
 import { moves, progressKey, type Move } from '../content/moves';
 import items from '../../content/items.json';
 import { daySummary, daysEnded, NIGHT_PREFIX } from '../core/day-summary';
-import { type OfferAction, type OfferAtlas, type OfferCharacter, type OfferPacking, type OfferProgress, type OfferSummary, type OfferWave, type StoryOffer } from '../ui/story-types';
+import { type OfferAction, type OfferAtlas, type OfferGoal, type OfferCharacter, type OfferPacking, type OfferProgress, type OfferSummary, type OfferWave, type StoryOffer } from '../ui/story-types';
 import { RAW_WAVES } from '../content/waves';
 import { menuTasks } from '../content/director';
 import { coveredKeys, departBlock, moveKey, nextTarget, resolveSpot, spotLabel } from '../content/map-first';
@@ -224,6 +227,7 @@ export function summaryOffer(sim: SimState, defs: CoreDefs): { daysEnded: number
       money: sum.money,
       reward: sum.reward,
       nextKey: st && sim.game.player && !chapterComplete(sim.game, st) ? goalOf(sim.game, st)?.key ?? null : null,
+      tomorrowKey: st && sim.game.player && !chapterComplete(sim.game, st) ? tomorrowKeyOf(sum.day) : null,
       sections: sum.sections.map((x) => ({ kind: x.kind, keys: x.ids.map((id) => (x.kind === 'night' ? `sum.night.${id.slice(NIGHT_PREFIX.length)}` : nameKey(id) ?? id)) })),
     },
   };
@@ -256,11 +260,37 @@ export function progressOffer(s: GameState): OfferProgress {
   };
 }
 
+/** GAME-200 · тизер «Завтра…»: рядок `sum.tomorrow.<день>` у src/i18n (uk+en). Дня без рядка тизера не має — екран просто його не показує. */
+export const tomorrowKeyOf = (day: number): Key | null => (Object.hasOwn(LOCALES.uk, `sum.tomorrow.${day}`) ? (`sum.tomorrow.${day}` as Key) : null);
+
+/**
+ * GAME-200 · відкриті цілі журналу: головна, побічні (бічний квест у роботі, прохання сусіда в роботі) і «нагорода близько» (nearestReward).
+ * Не більше 4; головна й нагорода — завжди, поки є, побічні — між ними. Нічого не вигадує: порожньо там, де справді нічого немає.
+ */
+export function openGoals(s: GameState, st: StoryDefs): OfferGoal[] {
+  const p = s.player;
+  if (!p) return [];
+  const main = goalOf(s, st);
+  const sides: OfferGoal[] = [
+    ...Object.entries(s.quests).filter(([qid, q]) => q.status === 'active' && st.quests[qid]?.optional === true && matches(st.quests[qid]?.when, p)).map(([qid]) => ({ kind: 'side' as const, key: nameKey(qid) ?? qid, ui: false })),
+    ...REQUESTS.filter((r) => ['active', 'ready'].includes(requestStatus(s.flags, r))).map((r) => ({ kind: 'side' as const, key: r.titleKey, ui: false })),
+  ].slice(0, 2);
+  const n = nearestReward(s);
+  return [...(main ? [{ kind: 'main' as const, key: main.key, ui: false }] : []), ...sides, ...(n ? [{ kind: 'reward' as const, key: n.labelKey, ui: n.ui, left: n.left }] : [])];
+}
+
 /** GAME-182 · сторінка Атласу: слоти — наклейки з content/stickers.json у порядку контенту, отримані (ядро: state.stickers) — кольорові, решта — силуети. */
 export function atlasOffer(s: GameState): OfferAtlas {
   const have = stickersOf(s);
   const slots = STICKER_META.map((m) => ({ ...m, owned: have.includes(m.id) }));
-  return { slots, total: STICKER_SLOTS, count: slots.filter((x) => x.owned).length, henry: henryPage(s.flags) };
+  const henry = henryPage(s.flags);
+  // GAME-200: заповнення сторінок. «Перша спроба» — наклейки (нагорода XP/ОМ за повну), «Шлях Генрі» — сліди (нагорода — листівка, її видає ядро).
+  const pages = [
+    ...ATLAS_PAGES.map((pg) => { const f = pageFill(have, pg.stickers); return { id: pg.id, titleKey: 'atlas.title', have: f.have, total: f.total, pct: f.pct, done: f.have === f.total && f.total > 0, reward: { xp: pg.xp, om: pg.om } }; }),
+    { id: 'henry', titleKey: 'atlas.henry', have: henry.found, total: henry.total, pct: henry.total === 0 ? 0 : Math.floor((henry.found * 100) / henry.total), done: henry.postcard, reward: null },
+  ];
+  const sum = pages.reduce((a, x) => ({ have: a.have + x.have, total: a.total + x.total }), { have: 0, total: 0 });
+  return { slots, total: STICKER_SLOTS, count: slots.filter((x) => x.owned).length, henry, pages, fillPct: sum.total === 0 ? 0 : Math.floor((sum.have * 100) / sum.total) };
 }
 
 /** Картка мети (GAME-170, зріз 2): жива хвиля з ядра (waveView — хвилини за годинником симуляції) і тексти з content/waves.json. */
@@ -329,7 +359,7 @@ export function storyOffer(sim: SimState, defs: CoreDefs, view: StoryView = PANE
     near: nearL ? { label: nearL.label, itemKey: nearL.ref ? nameKey(nearL.ref) : null } : reqNear ? { label: 'near.req' as Key, itemKey: reqNear.labelKey }
       : view.near !== null && view.mapFirst && isTraceSpot(view.near) && liveTraceSpot(s, view.near) ? { label: 'near.trace' as Key, itemKey: null } : null,   // GAME-215: біля позначки олівцем
   };
-  const base = { mapFirst: view.mapFirst, hint, requests: trackerRows(s), goal: goalOf(s, st), progress: progressOffer(s), atlas: atlasOffer(s), moneyCents: s.moneyCents, inventory, journal, lastTrip, weather, forecast: todayForecast(sim), day: dayOf(sim.clock) + 1, timeMinutes: timeOfDay(sim.clock.minutes), wave: waveOffer(sim), mia: miaState(s, defs), ...summaryOffer(sim, defs) };
+  const base = { mapFirst: view.mapFirst, hint, requests: trackerRows(s), goal: goalOf(s, st), progress: progressOffer(s), atlas: atlasOffer(s), nearest: nearestReward(s), goals: s.player ? openGoals(s, st) : [], moneyCents: s.moneyCents, inventory, journal, lastTrip, weather, forecast: todayForecast(sim), day: dayOf(sim.clock) + 1, timeMinutes: timeOfDay(sim.clock.minutes), wave: waveOffer(sim), mia: miaState(s, defs), ...summaryOffer(sim, defs) };
 
   if (!s.player) {
     const choices = characterChoices(defs);
