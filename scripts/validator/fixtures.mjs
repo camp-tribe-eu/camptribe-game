@@ -210,7 +210,7 @@ const row = (id, extra = {}) => ({ id, type: 'bool', initial: false, owner: 'fix
 
 // Прохання сусідів (GAME-180): сусід біля табору просить дві речі — і є «Пізніше», і здача. Усе, що потрібне перевірці requests, додає цей помічник:
 // NPC з діалогом (gate → offer / reminder / turnin), два прапорці-цілі (ставить ядро на дотик до об'єкта мапи), реєстр, тексти й запис журналу.
-export const FIXTURE_MAPS = ['npc.ranger', 'req.fixture-chores.t1', 'req.fixture-chores.t2', 'req.fixture-more.t1', 'trace.fixture-pine', 'trace.fixture-stump', 'trace.fixture-x1', 'trace.fixture-x2', 'trace.fixture-x3'];
+export const FIXTURE_MAPS = ['npc.ranger', 'req.fixture-wx-sunny.t1', 'req.fixture-wx-cloudy.t1', 'req.fixture-wx-rain.t1', 'req.fixture-chores.t1', 'req.fixture-chores.t2', 'req.fixture-more.t1', 'trace.fixture-pine', 'trace.fixture-stump', 'trace.fixture-x1', 'trace.fixture-x2', 'trace.fixture-x3'];
 const RQ = (k) => `dlg.fixture-neighbor.${k}`;
 const RF = (p) => `f.req-fixture-chores-${p}`;
 function withRequest(c) {
@@ -250,6 +250,18 @@ function withRequest(c) {
   const keys = ['npc.neighbor', 'req.fixture-chores', 'req.fixture-chores.goal', 'req.fixture-chores.track', 'req.fixture-chores.t1', 'req.fixture-chores.t2', `journal.${RF('done')}`,
     ...['gate', 'offer', 'offer.c1', 'offer.c2', 'accepted', 'later', 'reminder', 'turnin', 'turnin.c1', 'bye'].map(N)];
   for (const lang of c.meta.locales) for (const k of keys) c.locales[lang][k] = lineText(lang, k);
+  withWeather(c);
+}
+// GAME-208: справи за погодою — по одній на кожен вид, без просильника; дотик до позначки ставить ціль і done (реєстр: interaction).
+const WX_KINDS = ['sunny', 'cloudy', 'rain'];
+const WXF = (k, p) => `f.req-fixture-wx-${k}-${p}`;
+function withWeather(c) {
+  for (const k of WX_KINDS) {
+    const id = `req.fixture-wx-${k}`;
+    c.flags.push(row(WXF(k, 't1'), { kind: 'interaction', owner: 'взаємодія на мапі' }), row(WXF(k, 'done'), { kind: 'interaction', owner: 'взаємодія на мапі' }));
+    c.requests.push({ id, weather: k, titleKey: id, goalKey: `${id}.goal`, trackKey: `${id}.track`, targets: [{ id: 't1', spot: `${id}.t1`, icon: 'star', labelKey: `${id}.t1` }], reward: { xp: 12, om: 8, skills: ['skill.camping'] } });
+    for (const lang of c.meta.locales) for (const key of [id, `${id}.goal`, `${id}.track`, `${id}.t1`, `journal.${WXF(k, 'done')}`]) c.locales[lang][key] = lineText(lang, key);
+  }
 }
 // GAME-184: продовження арки того ж просильника (`after`): вузли offer2/turnin2 і гілки на початку gate. Еталон коректного продовження — чисто.
 const RF2 = (p) => `f.req-fixture-more-${p}`;
@@ -485,6 +497,12 @@ export const FIXTURES = [
   { name: '[хвиля] wetGear: false — ефект, що нічого не робить', expect: ['SCHEMA_INVALID'], patch(c) { wave(c).tasks[0].late.effects = [{ wetGear: false }]; } },
   // Прохання сусідів (GAME-180).
   { name: '[прохання] контроль: коректне прохання (просильник, дві цілі на мапі, «Пізніше», здача) — чисто', expect: [], patch(c) { withRequest(c); } },
+  // Справи за погодою (GAME-208): на кожен вид погоди є справа; вид відомий; просильника немає.
+  { name: '[погода] МУТАЦІЯ: для дощу немає жодної справи — «дощ не міняє завдань»', expect: ['REQUEST_WEATHER_MISSING'], patch(c) { withRequest(c); c.requests = c.requests.filter((r) => r.weather !== 'rain'); c.flags = c.flags.filter((f) => !f.id.startsWith('f.req-fixture-wx-rain-')); } },
+  { name: '[погода] справа називає невідому погоду (град)', expect: ['REQUEST_WEATHER_INVALID', 'REQUEST_WEATHER_MISSING'], patch(c) { withRequest(c); c.requests.find((r) => r.weather === 'rain').weather = 'hail'; } },
+  { name: '[погода] справа за погодою з просильником', expect: ['REQUEST_WEATHER_INVALID'], patch(c) { withRequest(c); c.requests.find((r) => r.weather === 'sunny').giver = 'npc.neighbor'; } },
+  { name: '[погода] справа за погодою без цілі на мапі', expect: ['REQUEST_NO_TARGET', 'FLAG_REGISTERED_UNUSED'], patch(c) { withRequest(c); c.requests.find((r) => r.weather === 'cloudy').targets = []; } },
+  { name: '[погода] немає тексту справи в одній мові', expect: ['LOCALE_MISSING'], patch(c) { withRequest(c); delete c.locales.en['req.fixture-wx-rain.goal']; } },
   { name: '[прохання] просильника немає серед NPC', expect: ['REQUEST_GIVER_INVALID'], patch(c) { withRequest(c); c.requests[0].giver = 'npc.nobody'; } },
   { name: '[прохання] немає жодної цілі', expect: ['REQUEST_NO_TARGET', 'REQUEST_NO_TURNIN'], patch(c) { withRequest(c); c.requests[0].targets = []; } },
   { name: '[прохання] МУТАЦІЯ: ціль без об’єкта на мапі', expect: ['REQUEST_TARGET_NO_MAP'], patch(c) { withRequest(c); c.requests[0].targets[1].spot = 'req.fixture-chores.ghost'; } },
@@ -502,7 +520,7 @@ export const FIXTURES = [
   { name: '[прохання] id не за шаблоном (похідні прапорці й тексти теж розходяться з діалогом)', expect: ['ID_FORMAT', 'LOCALE_MISSING', 'REQUEST_NO_LATER', 'REQUEST_NO_TURNIN'], patch(c) { withRequest(c); c.requests[0].id = 'req.Fixture_chores'; } },
   { name: '[прохання] іконка не з переліку', expect: ['SCHEMA_INVALID'], patch(c) { withRequest(c); c.requests[0].targets[0].icon = 'dragon'; } },
   { name: '[прохання] контроль: продовження арки (after, вузли offer2/turnin2) — чисто', expect: [], patch(c) { withFollowUp(c); } },
-  { name: '[прохання] МУТАЦІЯ: after називає неіснуюче прохання', expect: ['REQUEST_AFTER_INVALID'], patch(c) { withFollowUp(c); c.requests[1].after = 'req.fixture-ghost'; } },
+  { name: '[прохання] МУТАЦІЯ: after називає неіснуюче прохання', expect: ['REQUEST_AFTER_INVALID'], patch(c) { withFollowUp(c); c.requests.find((r) => r.id === 'req.fixture-more').after = 'req.fixture-ghost'; } },
   { name: '[прохання] after веде на прохання іншого просильника', expect: ['REQUEST_AFTER_INVALID', 'REQUEST_NO_LATER', 'REQUEST_NO_TURNIN'], patch(c) { withFollowUp(c); c.npcs.push({ id: 'npc.other', nameKey: 'npc.other', locationId: 'loc.camp' }); c.locales.uk['npc.other'] = 'x'; c.locales.en['npc.other'] = 'x'; c.requests[0].giver = 'npc.other'; c.dialogues.push({ id: 'dlg.fixture-other', npcId: 'npc.other', start: 'bye', nodes: [{ id: 'bye', speaker: 'npc', textKey: RQ('bye'), end: true }] }); } },
   { name: '[прохання] after утворює коло', expect: ['REQUEST_AFTER_INVALID', 'REQUEST_NO_LATER'], patch(c) { withFollowUp(c); c.requests[0].after = 'req.fixture-more'; } },
   { name: '[прохання] продовження без вузла offer2 — не взяти', expect: ['REQUEST_NO_LATER', 'DIALOGUE_NODE_UNREACHABLE', 'DIALOGUE_FLAG_NEVER_SET'], patch(c) { withFollowUp(c); const d = rqDialogue(c); d.nodes = d.nodes.filter((n) => n.id !== 'offer2'); d.nodes.find((n) => n.id === 'gate').branches = d.nodes.find((n) => n.id === 'gate').branches.filter((b) => b.next !== 'offer2'); } },

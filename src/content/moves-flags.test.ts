@@ -37,7 +37,12 @@ describe('прапорці виключених взаємодій ніхто н
     expect(branchReaders(GAME_DEFS, 'f.litter-cleaned-ch1')).toEqual(['dlg.elise-greeting']);
   });
   it('GAME-180 · цілі прохань: читає їх ЛИШЕ розмова просильника (його гілка/вибір здачі); квести, хвилі, життя, пакування й чужі розмови — ні', () => {
-    const reqs = excludedFlags(GAME_DEFS).filter(isRequestFlag);
+    const all = excludedFlags(GAME_DEFS).filter(isRequestFlag);
+    // GAME-208: справи за погодою (f.req-wx-*) без просильника — їх не читає НІХТО в сюжеті (лише журнал і нагорода ядра).
+    const wx = all.filter((f) => f.startsWith('f.req-wx-'));
+    expect(wx.length).toBeGreaterThanOrEqual(14);
+    for (const f of wx) expect([GAME_DEFS.story?.quests, GAME_DEFS.waves, GAME_DEFS.life, GAME_DEFS.packing, GAME_DEFS.story?.dialogues].filter((v) => JSON.stringify(v ?? null).includes(`"${f}"`)), `${f}: сюжет його не читає`).toEqual([]);
+    const reqs = all.filter((f) => !f.startsWith('f.req-wx-'));
     expect(reqs.length).toBeGreaterThanOrEqual(7);
     const giverOf = (f: string): string => `dlg.${{ nora: 'nora-chat', luc: 'luc-chat', ingrid: 'ingrid-chat', sarah: 'sarah-chat', elise: 'elise-greeting' }[f.split('-')[1] ?? ''] ?? '?'}`;
     for (const f of reqs) {

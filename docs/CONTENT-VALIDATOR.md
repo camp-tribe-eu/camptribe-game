@@ -28,6 +28,7 @@ node scripts/mutate-validator.mjs               # довести, що само�
 | `facts.json` | зовнішні факти: `source`, `checkedAt` (РРРР-ММ-ДД), `kind` | `fact.назва` |
 | `waves.json` | хвилі напруги (GAME-170, DC-016): `stage`, `when`, `tasks[]` зі строком `limitMin` (ігрові хвилини 1–60), `leaderOnly`, `animal` + `targets[{id, safe}]`, наслідками `done`/`late` (`setFlag` або `wetGear` — спорядження вологе), `allDone`, `fallback`; перевірка `waves` (розділ «Хвилі напруги») | `wave.назва` |
 | `flags.json` | реєстр прапорців і фактів стану (GAME-115, DC-015, розділ «Реєстр прапорців»): `id`, `type`, `initial`, `owner`, `note`, `values`, `valuesFrom`, `generatedFrom`, `reserved`, `aka`, `journal` | `f.назва`, `f.префікс-*`, `m.назва`, `s.назва` |
+| `requests.json` (рядки з `weather`, GAME-208) | справа дня за погодою: `weather` (`sunny`/`cloudy`/`rain`), БЕЗ `giver` і `after`, одна ціль-позначка на мапі табору, `reward`; відкрита в «Цілях» ☰ лише за цієї погоди (інша погода — інша справа, не провал, OD-022); дотик ставить `f.req-<id>-t1` і `-done`; перевірка `requests` (`REQUEST_WEATHER_MISSING` — на кожен вид погоди є хоч одна справа, `REQUEST_WEATHER_INVALID` — вид відомий, без просильника) | `req.wx-назва` |
 | `traces.json` | сліди дідуся Генрі (GAME-215): `kind` (`cache`/`person`/`inscription`/`riddle`/`gift`), `location` (регіон), `spot` (об'єкт мапи = `id`) або `npc` (`person`), `nameKey`, `textKey`, `year` (немає — свіжий слід), `reward` `{ xp }`; стан — прапорець `f.trace-<назва>`; перевірка `traces` (`TRACE_UNREACHABLE`, `TRACE_NO_REWARD`, `TRACE_REGION_COUNT` 3–5 на регіон, `TRACE_POSTCARD_MISSING` — наклейка з `all` на кожен слід, `TRACE_GATES_QUEST` — сюжет від слідів не залежить) | `trace.назва` |
 | `locales/<мова>.json` | ключ → переклад | — |
 | `dialogue/<назва>.json` | один діалог-граф на файл (розділ «Діалоги») | `dlg.назва` |
@@ -180,6 +181,7 @@ Effect    = { setFlag: "f.…" } | { startQuest: "<id квесту>" } | { compl
 | `packing` | `PACK_ITEM_DUPLICATE`, `PACK_CAPACITY_MISSING`, `PACK_NEEDED_OVERFLOW`, `PACK_NOTE_UNPACKABLE` | GAME-109: кожна річ раз; місце на кожен транспорт; «потрібне» вміщається; підпис — про річ зі списку. Посилання — `REF_MISSING`, переклад підписів — `LOCALE_MISSING`, прапорці `f.pack-*` — `dialogue-flags` |
 | `calendar` | `CALENDAR_MISSING`, `CALENDAR_BAD_DATE`, `CALENDAR_RANGE_OVERLAP`, `JOB_BILLS_EXCEED_SALARY` | GAME-71: робота чи школяр у профілі — лише з `calendar.json`; `start` — справжня `YYYY-MM-DD`, свята й межі канікул — справжні `MM-DD`, що є щороку; канікули не перетинаються (і через Новий рік), свято не двічі; рахунки профілю ≤ зарплати (SIM-LIFE-008) |
 | `gear` | `GEAR_FIELD_MISSING`, `GEAR_RESALE_ABOVE_PRICE`, `GEAR_DOMINATED` | GAME-73: картка спорядження повна; викуп ≤ ціни (SIM-INV-004); немає речі того ж виду, не гіршої ні в чому (SIM-INV-005) — тир є компромісом, а не «сильніше» |
+| `requests` (GAME-208) | `REQUEST_WEATHER_MISSING`, `REQUEST_WEATHER_INVALID` | сценарій погоди: кожен вид погоди (`WEATHER_KINDS` = `WEATHERS` ядра) має свою справу — мутація «дощ без справ» червоніє; перелік звіряє `src/content/weather-requests.test.ts` |
 | `waves` | `WAVE_TOO_FEW_TASKS`, `WAVE_LIMIT_INVALID`, `WAVE_OUTCOME_MISSING`, `WAVE_VARIANT_INCOMPLETE`, `WAVE_REPEATED`, `WAVE_ANIMAL_UNSAFE`, `WAVE_ANIMAL_HELPER` | GAME-170, сценарій v3 §6: ≥ 2 справи, строк, обидва наслідки, текст для авто/вело/соло, унікальність справ між етапами, Мія ніколи в небезпечній точці й лише в руках лідера — кожне з мутацією |
 | `mia-bike` | `MIA_ON_BIKE`, `MIA_CONTENT_UNGATED` | GAME-111, рішення власника 24.10: Мія не їде велосипедом (її `transports` — лише авто), а ціль, справа хвилі, подія в дорозі й річ пакування про неї мають `when.animals = [animal.cat]` |
 | `combo-options` | `COMBO_OPTION_UNUSABLE`, `WHEN_UNSATISFIABLE` | §1 кожен транспорт можна обрати; §3 кожна умова `when` (разом з умовою свого квесту; для переходу — ще й квесту-цілі) відповідає хоча б одній дозволеній комбінації |
@@ -341,7 +343,8 @@ Actions → validate → Enable workflow).
   (`giverId`), локації квесту (`locationId`) і необов'язкової цілі не звіряються з `when`
   квесту: якщо вони ніде не перетинаються, валідатор мовчить (рецензія PR #10).
 * **Умови на стан світу** (пройдені квести, гроші, погода) — `when` знає лише стан гравця. `s.weather`
-  уже в реєстрі (`reserved`), але умови на погоду в діалогах ще немає.
+  уже в реєстрі (`reserved`), але умови на погоду в діалогах ще немає. Погоду знають лише справи за погодою
+  (`requests[].weather`, GAME-208): їх стережуть `REQUEST_WEATHER_*`.
 * **Умови на стан світу на переходах.** Перехід знає лише стан гравця (`when`); цикл із виходом, умова якого ніколи не
   справджується, пройде як коректний.
 * **Діалоги в комбінаціях.** Умова `transport` у діалозі не звіряється з комбінаціями: вибір

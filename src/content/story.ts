@@ -41,11 +41,11 @@ export interface RawContent {
   /** Реєстр прапорців (GAME-115); ядру з нього потрібні лише пам'ятні вибори (`journal: true`, GAME-110). */
   flags?: { id: string; type: string; values?: string[]; journal?: boolean }[];
   /** content/requests.json (GAME-180): прохання сусідів; ядру з нього потрібні лише назви прапорців. */
-  requests?: { id: string; targets: { id: string }[]; reward: { xp: number; om: number; skills: string[] } }[];
+  requests?: { id: string; weather?: string; targets: { id: string }[]; reward: { xp: number; om: number; skills: string[] } }[];
 }
 const requestFlag = (id: string, part: string): string => `f.${id.replace(/\./g, '-')}-${part}`;
 const FISH_COSMETIC: readonly string[] = [FISH_FACTS.kept, FISH_FACTS.released, FISH_FACTS.charred, FISH_FACTS.trustNora];
-const requestFlagsOf = (rs: NonNullable<RawContent['requests']>): string[] => rs.flatMap((r) => [requestFlag(r.id, 'taken'), ...r.targets.map((t) => requestFlag(r.id, t.id)), requestFlag(r.id, 'done')]);
+const requestFlagsOf = (rs: NonNullable<RawContent['requests']>): string[] => rs.flatMap((r) => [...(r.weather === undefined ? [requestFlag(r.id, 'taken')] : []), ...r.targets.map((t) => requestFlag(r.id, t.id)), requestFlag(r.id, 'done')]);
 
 /**
  * Пам'ятні вибори (GAME-110): конкретні назви фактів із `journal: true` — bool як є, enum — `<id>-<значення>` на кожне

@@ -6,7 +6,7 @@ import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { loadMapObjects } from './load.mjs';
 import { checkSchema } from './schema.mjs';
-import { DIALOGUE_CHAIN_MAX, DIALOGUE_LINE_MAX, STICKER_SLOTS, TRACE_MIN, TRACE_MAX, ECON_FLOOR_CENTS, FACT_KINDS, FACT_STALE_DAYS, FLAG_FAMILIES, GEAR_CHECK_VARIANTS, GEAR_FIELDS, isWarning, LOAN_RE, SKILL_IDS, WAVE_MAX_LIMIT, WAVE_MAX_TASKS, WAVE_MIN_TASKS } from './codes.mjs';
+import { DIALOGUE_CHAIN_MAX, DIALOGUE_LINE_MAX, STICKER_SLOTS, TRACE_MIN, TRACE_MAX, ECON_FLOOR_CENTS, FACT_KINDS, FACT_STALE_DAYS, FLAG_FAMILIES, GEAR_CHECK_VARIANTS, GEAR_FIELDS, isWarning, LOAN_RE, SKILL_IDS, WEATHER_KINDS, WAVE_MAX_LIMIT, WAVE_MAX_TASKS, WAVE_MIN_TASKS } from './codes.mjs';
 import { checkCombos, checkOptions, comboLabel, enumerateCombos, matches, NO_ANIMAL } from './combos.mjs';
 
 const I = (code, where, msg) => ({ code, where, msg });
@@ -1174,9 +1174,12 @@ export const CHECKS = [
       const seenSpots = new Map();
       for (const r of rs) {
         const where = r.id;
-        const npc = npcs.get(r.giver);
-        const d = (ct.dialogues ?? []).find((x) => x.npcId === r.giver);
-        if (!npc) out.push(I('REQUEST_GIVER_INVALID', where, `просильник «${r.giver}» — немає такого NPC у npcs.json`));
+        // GAME-208: справа за погодою — без просильника й розмови: її відкриває погода дня. Перевіряємо вид погоди, відсутність giver/after, цілі й нагороду.
+        const wx = r.weather !== undefined;
+        if (wx && (!WEATHER_KINDS.includes(r.weather) || r.giver !== undefined || r.after !== undefined)) out.push(I('REQUEST_WEATHER_INVALID', where, `справа за погодою «${r.weather}»: вид погоди мусить бути з ${WEATHER_KINDS.join('/')}, без giver і без after`));
+        const npc = wx ? undefined : npcs.get(r.giver);
+        const d = wx ? undefined : (ct.dialogues ?? []).find((x) => x.npcId === r.giver);
+        if (wx) { /* просильника немає — перевірка нижче не потрібна */ } else if (!npc) out.push(I('REQUEST_GIVER_INVALID', where, `просильник «${r.giver}» — немає такого NPC у npcs.json`));
         else if (!d) out.push(I('REQUEST_GIVER_INVALID', where, `просильник «${r.giver}» не має діалогу: «!» вів би в порожнечу`));
         const targets = r.targets ?? [];
         if (targets.length === 0) out.push(I('REQUEST_NO_TARGET', where, 'у прохання немає жодної цілі на мапі: «зроби щось» без місця, де це робити'));
@@ -1186,7 +1189,7 @@ export const CHECKS = [
           else seenSpots.set(t.spot, where);
         }
         // GAME-184: продовження арки — `after` називає прохання ТОГО Ж просильника, що стоїть раніше (ланцюг без кола): інакше воно ніколи не відкриється.
-        if (r.after !== undefined) {
+        if (r.after !== undefined && !wx) {
           const prev = rs.find((x) => x.id === r.after);
           if (!prev || prev.giver !== r.giver) out.push(I('REQUEST_AFTER_INVALID', where, `after «${r.after}» — ${prev ? `прохання іншого просильника (${prev.giver})` : 'такого прохання немає'}: продовження не відкриється`));
           else { const seen = new Set([r.id]); for (let x = prev; x; x = x.after === undefined ? undefined : rs.find((y) => y.id === x.after)) { if (seen.has(x.id)) { out.push(I('REQUEST_AFTER_INVALID', where, `after утворює коло через «${x.id}»: жодне прохання кола не відкриється`)); break; } seen.add(x.id); } }
@@ -1224,6 +1227,8 @@ export const CHECKS = [
         });
         if (!hasTurnIn) out.push(I('REQUEST_NO_TURNIN', where, `у діалозі ${d.id} немає здачі: вибір із setFlag ${done} за умовою, що вимагає КОЖНУ ціль (${needs.join(', ')}) — без цього прохання не завершити або завершується без роботи`));
       }
+      // GAME-208: кожен вид погоди має хоч одну справу — інакше «дощ не міняє завдань» (закон 1: цей сторож мусить червоніти, коли дощових справ немає).
+      for (const kind of WEATHER_KINDS) if (!rs.some((r) => r.weather === kind)) out.push(I('REQUEST_WEATHER_MISSING', 'requests', `для погоди «${kind}» немає жодної справи (requests[].weather): такий день не дасть гравцеві іншого заняття`));
       // Сюжет від прохань не залежить: умова на f.req-* (у виборі чи в автоматичній гілці) не стоїть перед жодним ефектом, крім setFlag власних f.req-* прапорців
       // (startQuest, completeObjective, remember, setFlag чужого прапорця — червоніють; для гілки — по всьому, що з неї досяжне).
       const readsReq = (when) => condLeaves(when).map((x) => x.flag ?? x.notFlag).find((f) => typeof f === 'string' && f.startsWith('f.req-'));
@@ -1660,6 +1665,8 @@ function atlasReads(content) {
   const out = [];
   for (const s of content.stickers ?? []) if (s.cond && typeof s.cond === 'object') for (const leaf of condLeaves(s.cond)) { const f = leaf.flag ?? leaf.notFlag; if (f !== undefined) out.push([`${s.id}.cond`, f]); }
   for (const tr of content.traces ?? []) if (typeof tr.id === 'string') out.push([`traces:${tr.id}`, traceFlag(tr.id)]);
+  // GAME-208: прапорці цілі й «зроблено» справи за погодою читає ядро (нагорода за done) і журнал — розмови-здачі в такої справи немає.
+  for (const r of content.requests ?? []) if (r.weather !== undefined && typeof r.id === 'string') for (const part of ['done', ...(r.targets ?? []).map((t) => t.id)]) out.push([`requests:${r.id}`, requestFlag(r.id, part)]);
   return out;
 }
 

@@ -9,6 +9,8 @@ declare module '*/validator/combos.mjs' {
 declare module '*/validator/codes.mjs' {
   /** Вісім напрямів навичок (GAME-72) — мусить збігатися з SKILL_IDS ядра. */
   export const SKILL_IDS: string[];
+  /** Види погоди дня (GAME-208) — мусять збігатися з WEATHERS ядра. */
+  export const WEATHER_KINDS: string[];
   /** Межа довжини репліки діалогу, знаків (GAME-221) — бульбашки над головою мешканців беруть ту саму. */
   export const DIALOGUE_LINE_MAX: number;
   /** Поля картки спорядження (GAME-73), крім kind. */

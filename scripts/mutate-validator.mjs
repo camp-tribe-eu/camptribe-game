@@ -279,6 +279,9 @@ const mutations = [
   // GAME-184: продовження арки (after) — ланцюг прохань одного просильника
   { name: '[прохання] after на неіснуюче/чуже прохання не звітується', file: CHECKS_FILE, from: "if (!prev || prev.giver !== r.giver) out.push(I('REQUEST_AFTER_INVALID'", to: "if (false) out.push(I('REQUEST_AFTER_INVALID'" },
   { name: '[прохання] продовження шукає пропозицію у вузлі offer (а не offer2)', file: CHECKS_FILE, from: "const offerId = r.after === undefined ? 'offer' : 'offer2';", to: "const offerId = 'offer';" },
+  // GAME-208: справи за погодою — сторож покриття видів погоди й сторож відомого виду
+  { name: '[погода] покриття видів погоди не перевіряється (дощ без жодної справи проходить)', file: CHECKS_FILE, from: 'for (const kind of WEATHER_KINDS) if (!rs.some((r) => r.weather === kind))', to: 'for (const kind of []) if (!rs.some((r) => r.weather === kind))' },
+  { name: '[погода] невідомий вид погоди чи просильник у справі за погодою не звітується', file: CHECKS_FILE, from: "if (wx && (!WEATHER_KINDS.includes(r.weather) || r.giver !== undefined || r.after !== undefined)) out.push(", to: "if (false) out.push(" },
   { name: '[Мія] гілка { animal } не вважається охороною: репліка про Мію у проханні лічиться безумовною', file: CHECKS_FILE, from: "conjuncts(cond).some((x) => x.animal === MIA)", to: "false" },
   { name: '[Мія] рядки прохання (картка) не перевіряються на ім’я Мії', file: CHECKS_FILE, from: "if (mentions(key)) out.push(I('MIA_CONTENT_UNGATED', `${r.id}.${key}`", to: "if (false) out.push(I('MIA_CONTENT_UNGATED', `${r.id}.${key}`" },
   // GAME-56: давність факту — попередження, не помилка

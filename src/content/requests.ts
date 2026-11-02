@@ -9,18 +9,21 @@
 import requestsRaw from '../../content/requests.json';
 import type { InteractionDef } from '../core/defs';
 import type { GameState } from '../core/state';
+import type { Weather } from '../core/weather';
 
 export interface RequestTarget { readonly id: string; readonly spot: string; readonly icon: RequestIcon; readonly labelKey: string; readonly flag: string; /** GAME-184: у кого їде Мія, вона лежить/сидить біля цієї цілі (спрайт у сцені); решті — та сама ціль без неї. */ readonly mia?: boolean }
 export interface RequestReward { readonly xp: number; readonly om: number; readonly skills: readonly string[] }
 export interface RequestDef {
-  readonly id: string; readonly giver: string; readonly after?: string; readonly titleKey: string; readonly goalKey: string; readonly trackKey: string;
+  readonly id: string; readonly giver?: string; readonly after?: string;
+  /** GAME-208: побічна справа дня за погодою. Без просильника й без «Беруся»: видима й жива лише тоді, коли погода дня збіглася; інша погода — інша справа, а не провал (OD-022). */
+  readonly weather?: Weather; readonly titleKey: string; readonly goalKey: string; readonly trackKey: string;
   readonly targets: readonly RequestTarget[]; readonly reward: RequestReward; readonly takenFlag: string; readonly doneFlag: string;
 }
 export const REQUEST_ICONS = ['litter', 'bird', 'chain', 'lantern', 'cookie', 'apple', 'camera', 'star', 'wire'] as const;
 export type RequestIcon = (typeof REQUEST_ICONS)[number];
 
 interface RawRequest {
-  id: string; giver: string; after?: string; titleKey: string; goalKey: string; trackKey: string;
+  id: string; giver?: string; after?: string; weather?: Weather; titleKey: string; goalKey: string; trackKey: string;
   targets: { id: string; spot: string; icon: RequestIcon; labelKey: string; mia?: boolean }[]; reward: RequestReward;
 }
 
@@ -42,18 +45,21 @@ export function compileRequests(raw: readonly RawRequest[]): RequestDef[] {
 export const REQUESTS: readonly RequestDef[] = compileRequests(requestsRaw as RawRequest[]);
 
 /** Усі прапорці прохань (для ключа перебору) і прапорці «здано» (запис журналу). */
-export const requestFlags = (rs: readonly RequestDef[] = REQUESTS): string[] => rs.flatMap((r) => [r.takenFlag, ...r.targets.map((t) => t.flag), r.doneFlag]);
+export const requestFlags = (rs: readonly RequestDef[] = REQUESTS): string[] => rs.flatMap((r) => [...(r.weather === undefined ? [r.takenFlag] : []), ...r.targets.map((t) => t.flag), r.doneFlag]);
 export const requestDoneFlags = (rs: readonly RequestDef[] = REQUESTS): string[] => rs.map((r) => r.doneFlag);
 
 /** Ціль-взаємодія ядра: дотик ставить прапорець цілі; нагорода «0 центів», разова за grantId (повторний дотик — відмова ядра). */
 export function requestInteractions(rs: readonly RequestDef[] = REQUESTS): Record<string, InteractionDef> {
-  return Object.fromEntries(rs.flatMap((r) => r.targets.map((t) => [t.spot, { grantId: `rw.${t.spot.replace(/\./g, '-')}`, moneyCents: 0, flags: [t.flag] }] as const)));
+  // GAME-208: у справи за погодою немає розмови-здачі — дотик до останньої цілі ставить і `done` (нагороду видає ядро за ним).
+  return Object.fromEntries(rs.flatMap((r) => r.targets.map((t, i) => [t.spot, { grantId: `rw.${t.spot.replace(/\./g, '-')}`, moneyCents: 0, flags: r.weather !== undefined && i === r.targets.length - 1 ? [t.flag, r.doneFlag] : [t.flag] }] as const)));
 }
 
 /** `locked` (GAME-184): продовження арки, чия попередниця ще не здана — його не видно ні в «!», ні в розмові. */
 export type RequestStatus = 'locked' | 'available' | 'active' | 'ready' | 'done';
-export function requestStatus(flags: readonly string[], r: RequestDef, rs: readonly RequestDef[] = REQUESTS): RequestStatus {
+export function requestStatus(flags: readonly string[], r: RequestDef, rs: readonly RequestDef[] = REQUESTS, weather?: Weather): RequestStatus {
   if (flags.includes(r.doneFlag)) return 'done';
+  // GAME-208: справа за погодою — сьогоднішня погода її відкриває; інша погода (або погоду не передано) — її просто немає серед цілей.
+  if (r.weather !== undefined) return r.weather !== weather ? 'locked' : r.targets.every((t) => flags.includes(t.flag)) ? 'ready' : 'active';
   const before = r.after === undefined ? undefined : rs.find((x) => x.id === r.after);
   if (before && !flags.includes(before.doneFlag)) return 'locked';
   if (!flags.includes(r.takenFlag)) return 'available';
@@ -78,11 +84,11 @@ export function requestMarker(g: GameState, npcId: string, rs: readonly RequestD
 }
 
 /** Позначка цілі на мапі живе, лише коли прохання взято, ціль ще не зроблена і розмови немає (під час розмови світ мовчить, як усі об'єкти). */
-export function liveRequestSpot(g: GameState, name: string, rs: readonly RequestDef[] = REQUESTS): boolean {
+export function liveRequestSpot(g: GameState, name: string, rs: readonly RequestDef[] = REQUESTS, weather?: Weather): boolean {
   if (g.player?.locationId !== REQUEST_LOCATION || g.dialogue !== null) return false;
   for (const r of rs) {
     const t = r.targets.find((x) => x.spot === name);
-    if (t) return g.flags.includes(r.takenFlag) && !g.flags.includes(r.doneFlag) && !g.flags.includes(t.flag);
+    if (t) return (r.weather === undefined ? g.flags.includes(r.takenFlag) : r.weather === weather) && !g.flags.includes(r.doneFlag) && !g.flags.includes(t.flag);
   }
   return false;
 }
@@ -90,10 +96,10 @@ export const isRequestSpot = (name: string, rs: readonly RequestDef[] = REQUESTS
 
 /** Рядок трекера в HUD: прийняті й ще не здані прохання. «Хмиз 2/5» = назва · зроблено/усього. */
 export interface TrackerRow { readonly id: string; readonly trackKey: string; readonly done: number; readonly total: number; readonly ready: boolean }
-export function trackerRows(g: GameState, rs: readonly RequestDef[] = REQUESTS): TrackerRow[] {
+export function trackerRows(g: GameState, rs: readonly RequestDef[] = REQUESTS, weather?: Weather): TrackerRow[] {
   if (g.player?.locationId !== REQUEST_LOCATION) return [];
   return rs.flatMap((r) => {
-    const s = requestStatus(g.flags, r, rs);
+    const s = requestStatus(g.flags, r, rs, weather);
     if (s !== 'active' && s !== 'ready') return [];
     return [{ id: r.id, trackKey: r.trackKey, done: r.targets.filter((t) => g.flags.includes(t.flag)).length, total: r.targets.length, ready: s === 'ready' }];
   });
@@ -103,8 +109,9 @@ export function trackerRows(g: GameState, rs: readonly RequestDef[] = REQUESTS):
 export function requestTarget(g: GameState, rs: readonly RequestDef[] = REQUESTS): string | null {
   if (g.player?.locationId !== REQUEST_LOCATION || g.dialogue !== null) return null;
   for (const r of rs) {
+    if (r.weather !== undefined) continue;   // GAME-208: справа за погодою — побічна, стрілка веде лише до прохань сусідів і головної ниті
     const s = requestStatus(g.flags, r, rs);
-    if (s === 'ready') return r.giver;
+    if (s === 'ready' && r.giver !== undefined) return r.giver;
     if (s === 'active') return r.targets.find((t) => !g.flags.includes(t.flag))?.spot ?? null;
   }
   return null;

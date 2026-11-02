@@ -231,7 +231,8 @@ async function playRequest(page: Page, r: Req, opts: { later?: boolean; shot?: s
     await page.waitForTimeout(450);
     await closeTalk(page);
     expect((await core(page)).game.flags.filter((f) => f.startsWith('f.req-')), 'відмова нічого не ставить').toEqual(before);
-    await expect(page.locator('[data-ui="req-row"]')).toHaveCount(0);
+    // GAME-208: справи за погодою (без просильника) теж стоять у трекері — відмова не додає саме ЦЬОГО прохання.
+    await expect(page.locator(`[data-ui="req-row"][data-request="${r.id}"]`)).toHaveCount(0);
     await expect.poll(async () => (await probe(page)).npcMarks[r.giver], { timeout: 5_000 }).toBe('request');
     await openTalk(page, r);   // пропозиція повертається: «!» лишився, до просильника (він ходить за розкладом) — знову ногами
     await toCard(page, r);

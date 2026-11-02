@@ -12,7 +12,7 @@
 //    інших локацій (дім, зупинка в дорозі) закриваються кнопками екрана подорожі (menuTasks → story-offer), а справи табору — цілями
 //    task.* на мапі. Екран подорожі зупиняє годинник (Shell: story(open) → pause), тож строки W1/W2 ідуть лише поки гравець на мапі.
 import type { CoreDefs } from '../core/defs';
-import type { SimState } from '../core/sim';
+import { todayWeather, type SimState } from '../core/sim';
 import type { GameState } from '../core/state';
 import { matches } from '../core/story';
 import { taskOutcome, tasksFor } from '../core/wave';
@@ -111,7 +111,7 @@ export function liveSpot(sim: SimState, name: string, defs?: CoreDefs): boolean 
     const t = sim.game.wave?.active?.tasks[name.slice(TASK_SPOT.length)];
     return t !== undefined && t.outcome === 'open' && sim.clock.minutes <= t.dueAt && sim.game.player?.locationId === MAP_LOCATION;
   }
-  if (isRequestSpot(name)) return liveRequestSpot(sim.game, name);   // GAME-180: ціль прохання — лише поки прохання взято й ціль не зроблена
+  if (isRequestSpot(name)) return liveRequestSpot(sim.game, name, undefined, todayWeather(sim));   // GAME-180: ціль прохання — лише поки прохання взято й ціль не зроблена
   if (isTraceSpot(name)) return liveTraceSpot(sim.game, name);   // GAME-215: слід дідуся — поки не знайдено
   if (name === 'obj.litter') return !sim.game.flags.includes('f.litter-cleaned-ch1');
   return true;
