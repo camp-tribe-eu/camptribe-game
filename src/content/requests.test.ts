@@ -14,10 +14,13 @@ import { GAME_DEFS } from './slice-defs';
 import { CONTENT, STORY } from './story';
 import { TRACE_FLAG_PREFIX } from './traces';
 import mapRaw from '../../public/maps/camp-lake.tmj?raw';
-import { REQUESTS, REQUEST_FLAG_PREFIX, miaSpots, compileRequests, liveRequestSpot, requestFlag, requestMarker, requestOf, requestReward, requestStatus, requestTarget, requestsDone, trackerRows, type RequestDef } from './requests';
+import { REQUESTS as ALL_REQUESTS, REQUEST_FLAG_PREFIX, miaSpots, compileRequests, liveRequestSpot, requestFlag, requestMarker, requestOf, requestReward, requestStatus, requestTarget, requestsDone, trackerRows, type RequestDef } from './requests';
 import { liveSpot } from './director';
 import { storyOffer } from '../view/story-offer';
 import { STICKER_DEFS } from './stickers';
+/** Прохання сусідів (з просильником і розмовою). Справи за погодою (GAME-208) без просильника — їх перевіряє weather-requests.test.ts. */
+type Neighbor = RequestDef & { readonly giver: string };
+const REQUESTS = ALL_REQUESTS.filter((r): r is Neighbor => r.weather === undefined);
 
 let n = 0;
 const send = (s: GameState, m: Move) => dispatch(s, { ...m, commandId: `rq${n++}` } as Command, GAME_DEFS);
@@ -81,7 +84,7 @@ const PATH: Record<string, { offer: readonly string[]; turnin: readonly string[]
 const FIRSTS = REQUESTS.filter((r) => r.after === undefined);
 const FOLLOWS = REQUESTS.filter((r) => r.after !== undefined);
 /** Пройти прохання повністю на ядрі (розмова, цілі, здача): стан після здачі. */
-function complete(from: GameState, r: RequestDef): GameState {
+function complete(from: GameState, r: Neighbor): GameState {
   const p = PATH[r.id] as { offer: readonly string[]; turnin: readonly string[] };
   let s = finish(say(from, r.giver, p.offer));
   for (const t of r.targets) s = touch(s, t.spot);
@@ -119,7 +122,7 @@ describe('GAME-180 · дані прохань', () => {
     const fish: string[] = [FISH_FACTS.kept, FISH_FACTS.released, FISH_FACTS.charred, FISH_FACTS.trustNora];
     expect(STORY.requestFlags).toEqual(expect.arrayContaining(fish));
     // GAME-215: там само — прапорці слідів дідуся (f.trace-*); їх рахує traces.test.ts.
-    expect(STORY.requestFlags?.filter((f) => !fish.includes(f) && !f.startsWith(TRACE_FLAG_PREFIX)).length).toBe(REQUESTS.reduce((a, r) => a + r.targets.length + 2, 0));
+    expect(STORY.requestFlags?.filter((f) => !fish.includes(f) && !f.startsWith(TRACE_FLAG_PREFIX)).length).toBe(REQUESTS.reduce((a, r) => a + r.targets.length + 2, 0) + ALL_REQUESTS.filter((r) => r.weather !== undefined).reduce((a, r) => a + r.targets.length + 1, 0));
   });
 
   it('тексти: усі ключі є в uk й en, кожен рядок ≤ 140 знаків (телефон)', () => {
@@ -186,7 +189,7 @@ describe('GAME-180 · повний шлях кожного прохання на
 
   for (const r of FOLLOWS) {
     it(`GAME-184 ${r.id}: заблоковане до здачі ${r.after}; після неї — «!», «Беруся», ${r.targets.length} ціл., здача, наклейка-умова, нагорода раз`, () => {
-      const first = REQUESTS.find((x) => x.id === r.after) as RequestDef;
+      const first = REQUESTS.find((x) => x.id === r.after) as Neighbor;
       const p = PATH[r.id] as { offer: readonly string[]; turnin: readonly string[] };
       const s0 = atCamp();
       expect(requestStatus(s0.flags, r), 'до першого прохання — заблоковане').toBe('locked');
@@ -226,7 +229,7 @@ describe('GAME-180 · повний шлях кожного прохання на
   }
 
   it('цілі неживі, поки прохання не взято; здача без усіх цілей неможлива (розмова веде в нагадування, а не в подяку)', () => {
-    const r = requestOf('npc.nora') as RequestDef;
+    const r = requestOf('npc.nora') as Neighbor;
     const s0 = atCamp();
     for (const t of r.targets) expect(liveRequestSpot(s0, t.spot)).toBe(false);
     const taken = finish(say(s0, r.giver, ['n', 'offer.c1', 'n']));
@@ -238,7 +241,7 @@ describe('GAME-180 · повний шлях кожного прохання на
   });
 
   it('GAME-181: здача видає rw.<прохання> (15 XP, 10 ОМ, практика навичок) рівно раз; повторна здача чи перезавантаження — 0', () => {
-    const r = requestOf('npc.luc') as RequestDef;
+    const r = requestOf('npc.luc') as Neighbor;
     const p = PATH[r.id] as { offer: readonly string[]; turnin: readonly string[] };
     let s = finish(say(atCamp(), r.giver, p.offer));
     s = touch(s, (r.targets[0] as { spot: string }).spot);
@@ -272,16 +275,16 @@ describe('GAME-180 · повний шлях кожного прохання на
   });
 
   it('після здачі всієї арки просильник просто розмовляє (гілка «звичайна балачка»), нову пропозицію не робить; а після першого прохання пропонує продовження', () => {
-    const r = requestOf('npc.luc') as RequestDef;
+    const r = requestOf('npc.luc') as Neighbor;
     const afterFirst = complete(atCamp(), r);
     expect(play([{ type: 'Talk', npcId: r.giver }, { type: 'Continue' }], afterFirst).dialogue?.node, 'продовження арки').toBe('offer2');
-    const s = complete(afterFirst, REQUESTS.find((x) => x.after === r.id) as RequestDef);
+    const s = complete(afterFirst, REQUESTS.find((x) => x.after === r.id) as Neighbor);
     const t = play([{ type: 'Talk', npcId: r.giver }, { type: 'Continue' }], s);
     expect(t.dialogue?.node).toBe('hello');
   });
 
   it('запис у журналі: здача пише «Memory» з прапорцем «здано» (і лише вона)', () => {
-    const r = requestOf('npc.ingrid') as RequestDef;
+    const r = requestOf('npc.ingrid') as Neighbor;
     let sim: SimState = newSim(7, 5_000);
     const ctx = { defs: GAME_DEFS };
     const run = (m: Move): void => { sim = step(sim, { kind: 'command', command: { ...m, commandId: `jr${n++}` } as Command }, ctx); };
@@ -319,8 +322,8 @@ describe('GAME-184 · варіанти історій за твариною (М�
   };
   for (const c of COMBOS) {
     it(`${c.label}: камера Нори — Мія лише з кішкою (спрайт-ціль miaSpots, репліка found-mia), інакше «рюкзак Метью»; історія та сама`, () => {
-      const first = REQUESTS.find((r) => r.id === 'req.nora-shore') as RequestDef;
-      const cam = REQUESTS.find((r) => r.id === 'req.nora-camera') as RequestDef;
+      const first = REQUESTS.find((r) => r.id === 'req.nora-shore') as Neighbor;
+      const cam = REQUESTS.find((r) => r.id === 'req.nora-camera') as Neighbor;
       let s = complete(campAs(c), first);
       expect(miaSpots(s), 'до «Беруся» Мії біля цілі нема').toEqual([]);
       s = finish(say(s, cam.giver, (PATH[cam.id] as { offer: readonly string[] }).offer));
@@ -332,8 +335,8 @@ describe('GAME-184 · варіанти історій за твариною (М�
       expect(s.flags, 'та сама історія доходить до кінця').toContain(cam.doneFlag);
     });
     it(`${c.label}: зоряна карта — четверта частина: Мія з кішкою, інакше Метью; сцена біля вогнища та сама`, () => {
-      const first = REQUESTS.find((r) => r.id === 'req.ingrid-birds') as RequestDef;
-      const map = REQUESTS.find((r) => r.id === 'req.ingrid-starmap') as RequestDef;
+      const first = REQUESTS.find((r) => r.id === 'req.ingrid-birds') as Neighbor;
+      const map = REQUESTS.find((r) => r.id === 'req.ingrid-starmap') as Neighbor;
       let s = complete(campAs(c), first);
       s = finish(say(s, map.giver, (PATH[map.id] as { offer: readonly string[] }).offer));
       expect(miaSpots(s)).toEqual(c.cat ? ['req.ingrid-starmap.t4'] : []);
@@ -349,7 +352,7 @@ describe('GAME-184 · варіанти історій за твариною (М�
 
 describe('GAME-180 · правила на ядрі й режисері', () => {
   it('ціль у director.liveSpot живе лише в таборі й поки прохання взято й ціль не зроблена; не в таборі — мовчить', () => {
-    const r = requestOf('npc.luc') as RequestDef;
+    const r = requestOf('npc.luc') as Neighbor;
     const spot = (r.targets[0] as { spot: string }).spot;
     const s0 = newSim(7, 5_000);
     const camp = { ...s0, game: finish(say(atCamp(), r.giver, ['n', 'offer.c1', 'n'])) };
@@ -385,7 +388,7 @@ describe('GAME-180 · правила на ядрі й режисері', () => {
       const names = [r.takenFlag, ...r.targets.map((t) => t.flag), r.doneFlag];
       for (let mask = 0; mask < 1 << names.length; mask++) {
         const base = atCamp();
-        const pre = r.after === undefined ? [] : [(REQUESTS.find((x) => x.id === r.after) as RequestDef).doneFlag];   // продовження живе, лише коли перше здано — інакше вузли offer2/turnin2 не відвідати
+        const pre = r.after === undefined ? [] : [(REQUESTS.find((x) => x.id === r.after) as Neighbor).doneFlag];   // продовження живе, лише коли перше здано — інакше вузли offer2/turnin2 не відвідати
         const s0 = { ...base, flags: [...base.flags, ...pre, ...names.filter((_, i) => (mask >> i) & 1)].sort() };
         // обхід: кожен стан розмови — кожна доступна відповідь; кінець — розмови немає. З КОЖНОГО вузла має бути шлях до кінця (не лише з першого).
         const edges = new Map<string, Set<string>>();
@@ -411,7 +414,7 @@ describe('GAME-180 · правила на ядрі й режисері', () => {
   it('негативні контролі: ціль без об’єкта мапи, прохання без здачі, неповна здача — червоніють (дзеркало валідатора)', () => {
     const miss = compileRequests([{ id: 'req.x', giver: 'npc.nora', titleKey: 'a', goalKey: 'b', trackKey: 'c', targets: [{ id: 't1', spot: 'req.x.ghost', icon: 'litter', labelKey: 'd' }], reward: { xp: 1, om: 1, skills: [] } }]);
     expect(MAP_NAMES.has((miss[0]?.targets[0] as { spot: string }).spot), 'сторож мапи не сліпий').toBe(false);
-    const r = requestOf('npc.nora') as RequestDef;
+    const r = requestOf('npc.nora') as Neighbor;
     const flags = [r.takenFlag, ...r.targets.slice(0, 2).map((t) => t.flag)];
     expect(requestStatus(flags, r), 'дві з трьох цілей — ще не здача').toBe('active');
     expect(requestStatus([...flags, (r.targets[2] as { flag: string }).flag], r)).toBe('ready');

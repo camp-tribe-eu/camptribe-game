@@ -222,5 +222,166 @@
         "skill.mechanics"
       ]
     }
+  },
+  {
+    "id": "req.wx-rain-tarp",
+    "weather": "rain",
+    "titleKey": "req.wx-rain-tarp",
+    "goalKey": "req.wx-rain-tarp.goal",
+    "trackKey": "req.wx-rain-tarp.track",
+    "targets": [
+      {
+        "id": "t1",
+        "spot": "req.wx-rain-tarp.t1",
+        "icon": "chain",
+        "labelKey": "req.wx-rain-tarp.t1"
+      }
+    ],
+    "reward": {
+      "xp": 12,
+      "om": 8,
+      "skills": [
+        "skill.camping",
+        "skill.mechanics"
+      ]
+    }
+  },
+  {
+    "id": "req.wx-rain-gear",
+    "weather": "rain",
+    "titleKey": "req.wx-rain-gear",
+    "goalKey": "req.wx-rain-gear.goal",
+    "trackKey": "req.wx-rain-gear.track",
+    "targets": [
+      {
+        "id": "t1",
+        "spot": "req.wx-rain-gear.t1",
+        "icon": "litter",
+        "labelKey": "req.wx-rain-gear.t1"
+      }
+    ],
+    "reward": {
+      "xp": 12,
+      "om": 8,
+      "skills": [
+        "skill.camping",
+        "skill.planning"
+      ]
+    }
+  },
+  {
+    "id": "req.wx-rain-line",
+    "weather": "rain",
+    "titleKey": "req.wx-rain-line",
+    "goalKey": "req.wx-rain-line.goal",
+    "trackKey": "req.wx-rain-line.track",
+    "targets": [
+      {
+        "id": "t1",
+        "spot": "req.wx-rain-line.t1",
+        "icon": "wire",
+        "labelKey": "req.wx-rain-line.t1"
+      }
+    ],
+    "reward": {
+      "xp": 12,
+      "om": 8,
+      "skills": [
+        "skill.planning",
+        "skill.cooking"
+      ]
+    }
+  },
+  {
+    "id": "req.wx-sunny-shade",
+    "weather": "sunny",
+    "titleKey": "req.wx-sunny-shade",
+    "goalKey": "req.wx-sunny-shade.goal",
+    "trackKey": "req.wx-sunny-shade.track",
+    "targets": [
+      {
+        "id": "t1",
+        "spot": "req.wx-sunny-shade.t1",
+        "icon": "star",
+        "labelKey": "req.wx-sunny-shade.t1"
+      }
+    ],
+    "reward": {
+      "xp": 12,
+      "om": 8,
+      "skills": [
+        "skill.camping",
+        "skill.planning"
+      ]
+    }
+  },
+  {
+    "id": "req.wx-sunny-bottles",
+    "weather": "sunny",
+    "titleKey": "req.wx-sunny-bottles",
+    "goalKey": "req.wx-sunny-bottles.goal",
+    "trackKey": "req.wx-sunny-bottles.track",
+    "targets": [
+      {
+        "id": "t1",
+        "spot": "req.wx-sunny-bottles.t1",
+        "icon": "apple",
+        "labelKey": "req.wx-sunny-bottles.t1"
+      }
+    ],
+    "reward": {
+      "xp": 12,
+      "om": 8,
+      "skills": [
+        "skill.finance",
+        "skill.planning"
+      ]
+    }
+  },
+  {
+    "id": "req.wx-cloudy-kite",
+    "weather": "cloudy",
+    "titleKey": "req.wx-cloudy-kite",
+    "goalKey": "req.wx-cloudy-kite.goal",
+    "trackKey": "req.wx-cloudy-kite.track",
+    "targets": [
+      {
+        "id": "t1",
+        "spot": "req.wx-cloudy-kite.t1",
+        "icon": "star",
+        "labelKey": "req.wx-cloudy-kite.t1"
+      }
+    ],
+    "reward": {
+      "xp": 12,
+      "om": 8,
+      "skills": [
+        "skill.communication",
+        "skill.planning"
+      ]
+    }
+  },
+  {
+    "id": "req.wx-cloudy-lantern",
+    "weather": "cloudy",
+    "titleKey": "req.wx-cloudy-lantern",
+    "goalKey": "req.wx-cloudy-lantern.goal",
+    "trackKey": "req.wx-cloudy-lantern.track",
+    "targets": [
+      {
+        "id": "t1",
+        "spot": "req.wx-cloudy-lantern.t1",
+        "icon": "lantern",
+        "labelKey": "req.wx-cloudy-lantern.t1"
+      }
+    ],
+    "reward": {
+      "xp": 12,
+      "om": 8,
+      "skills": [
+        "skill.electrics",
+        "skill.camping"
+      ]
+    }
   }
 ]

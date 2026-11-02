@@ -115,6 +115,8 @@ export const CODES = {
   REQUEST_NO_TURNIN:      { check: 'requests', spec: 'GAME-180: є здача, яка вимагає кожну ціль, і подяка просильника' },
   REQUEST_REWARD_INVALID: { check: 'requests', spec: 'GAME-180: нагорода-гачок (xp, om, skills) — лише існуючі напрями навичок; споживає GAME-181' },
   REQUEST_AFTER_INVALID:  { check: 'requests', spec: 'GAME-184: продовження арки (after) називає раніше прохання того ж просильника, без кола — інакше воно не відкриється' },
+  REQUEST_WEATHER_MISSING: { check: 'requests', spec: 'GAME-208: на кожен вид погоди (WEATHER_KINDS) є хоч одна справа за погодою — інакше день цієї погоди нічого не змінює для гравця' },
+  REQUEST_WEATHER_INVALID: { check: 'requests', spec: 'GAME-208: справа за погодою називає відомий вид погоди, без просильника й без after (її відкриває погода дня, а не розмова)' },
   REQUEST_GATES_QUEST:    { check: 'requests', spec: 'GAME-180: сюжет від прохань не залежить — діалог не рухає квест за прапорцем прохання' },
   WAVE_FLAG_GATES_QUEST:  { check: 'waves', spec: 'GAME-170: кінець розділу від хвиль не залежить — діалог не рухає квест (startQuest/completeObjective) за умовою на прапорець, який ставить наслідок хвилі' },
   WAVE_STAGE_OVERLAP:     { check: 'waves', spec: 'GAME-170: на етапі в кожній комбінації діє не більше однієї хвилі — when двох хвиль одного етапу не перекриваються' },
@@ -151,6 +153,8 @@ export const CODES = {
 
 // GAME-72: вісім напрямів навичок. Той самий перелік — SKILL_IDS у src/core/skills.ts; звірку тримає
 // src/content/semantics.test.ts — розійдуться, і тест почервоніє.
+// GAME-208: види погоди дня. Той самий перелік — WEATHERS у src/core/weather.ts; звірку тримає src/content/weather-requests.test.ts.
+export const WEATHER_KINDS = ['sunny', 'cloudy', 'rain'];
 export const SKILL_IDS = ['skill.planning', 'skill.camping', 'skill.mechanics', 'skill.electrics', 'skill.cooking', 'skill.finance', 'skill.endurance', 'skill.communication'];
 
 // GAME-73: поля картки спорядження (крім kind — він і робить предмет спорядженням).

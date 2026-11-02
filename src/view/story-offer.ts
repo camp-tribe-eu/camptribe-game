@@ -36,7 +36,7 @@ import { menuTasks } from '../content/director';
 import { coveredKeys, departBlock, moveKey, nextTarget, resolveSpot, spotLabel } from '../content/map-first';
 import { waveView } from '../core/wave';
 import type { Key } from '../i18n';
-import { liveRequestSpot as liveSpotFor } from '../content/requests';
+import { liveRequestSpot as liveSpotFor, REQUEST_LOCATION } from '../content/requests';
 import { miaState } from '../content/mia';
 import { henryPage, isTraceSpot, liveTraceSpot } from '../content/traces';
 import { isRequestSpot, offerNodeOf, REQUESTS, requestOf, requestStatus, requestDoneFlags, requestTarget, trackerRows } from '../content/requests';
@@ -267,13 +267,15 @@ export const tomorrowKeyOf = (day: number): Key | null => (Object.hasOwn(LOCALES
  * GAME-200 · відкриті цілі журналу: головна, побічні (бічний квест у роботі, прохання сусіда в роботі) і «нагорода близько» (nearestReward).
  * Не більше 4; головна й нагорода — завжди, поки є, побічні — між ними. Нічого не вигадує: порожньо там, де справді нічого немає.
  */
-export function openGoals(s: GameState, st: StoryDefs): OfferGoal[] {
+export function openGoals(s: GameState, st: StoryDefs, weather?: Weather): OfferGoal[] {
   const p = s.player;
   if (!p) return [];
   const main = goalOf(s, st);
   const sides: OfferGoal[] = [
+    // GAME-208: справа дня за погодою — перша серед побічних: дощ і ясний день дають РІЗНІ цілі (не провал, а інше заняття).
+    ...REQUESTS.filter((r) => r.weather !== undefined && p.locationId === REQUEST_LOCATION && ['active', 'ready'].includes(requestStatus(s.flags, r, REQUESTS, weather))).map((r) => ({ kind: 'side' as const, key: r.titleKey, ui: false })),
     ...Object.entries(s.quests).filter(([qid, q]) => q.status === 'active' && st.quests[qid]?.optional === true && matches(st.quests[qid]?.when, p)).map(([qid]) => ({ kind: 'side' as const, key: nameKey(qid) ?? qid, ui: false })),
-    ...REQUESTS.filter((r) => ['active', 'ready'].includes(requestStatus(s.flags, r))).map((r) => ({ kind: 'side' as const, key: r.titleKey, ui: false })),
+    ...REQUESTS.filter((r) => r.weather === undefined && ['active', 'ready'].includes(requestStatus(s.flags, r))).map((r) => ({ kind: 'side' as const, key: r.titleKey, ui: false })),
   ].slice(0, 2);
   const n = nearestReward(s);
   return [...(main ? [{ kind: 'main' as const, key: main.key, ui: false }] : []), ...sides, ...(n ? [{ kind: 'reward' as const, key: n.labelKey, ui: n.ui, left: n.left }] : [])];
@@ -349,7 +351,7 @@ export function storyOffer(sim: SimState, defs: CoreDefs, view: StoryView = PANE
   const nearL = s.player && view.mapFirst && view.near !== null ? spotLabel(sim, defs, view.near) : null;
   // GAME-180: на мапі табору підказка «Далі:» веде до прохання в роботі (ціль → просильник), а біля цілі — підпис дії.
   const reqT = requestTarget(s);
-  const reqNear = view.near !== null && view.mapFirst && isRequestSpot(view.near) && liveSpotFor(s, view.near)
+  const reqNear = view.near !== null && view.mapFirst && isRequestSpot(view.near) && liveSpotFor(s, view.near, undefined, weather)
     ? REQUESTS.flatMap((r) => r.targets).find((t) => t.spot === view.near) : undefined;
   const hint = {
     backpack: view.backpack?.length ?? 0,
@@ -359,7 +361,7 @@ export function storyOffer(sim: SimState, defs: CoreDefs, view: StoryView = PANE
     near: nearL ? { label: nearL.label, itemKey: nearL.ref ? nameKey(nearL.ref) : null } : reqNear ? { label: 'near.req' as Key, itemKey: reqNear.labelKey }
       : view.near !== null && view.mapFirst && isTraceSpot(view.near) && liveTraceSpot(s, view.near) ? { label: 'near.trace' as Key, itemKey: null } : null,   // GAME-215: біля позначки олівцем
   };
-  const base = { mapFirst: view.mapFirst, hint, requests: trackerRows(s), goal: goalOf(s, st), progress: progressOffer(s), atlas: atlasOffer(s), nearest: nearestReward(s), goals: s.player ? openGoals(s, st) : [], moneyCents: s.moneyCents, inventory, journal, lastTrip, weather, forecast: todayForecast(sim), day: dayOf(sim.clock) + 1, timeMinutes: timeOfDay(sim.clock.minutes), wave: waveOffer(sim), mia: miaState(s, defs), ...summaryOffer(sim, defs) };
+  const base = { mapFirst: view.mapFirst, hint, requests: trackerRows(s, REQUESTS, weather), goal: goalOf(s, st), progress: progressOffer(s), atlas: atlasOffer(s), nearest: nearestReward(s), goals: s.player ? openGoals(s, st, weather) : [], moneyCents: s.moneyCents, inventory, journal, lastTrip, weather, forecast: todayForecast(sim), day: dayOf(sim.clock) + 1, timeMinutes: timeOfDay(sim.clock.minutes), wave: waveOffer(sim), mia: miaState(s, defs), ...summaryOffer(sim, defs) };
 
   if (!s.player) {
     const choices = characterChoices(defs);
