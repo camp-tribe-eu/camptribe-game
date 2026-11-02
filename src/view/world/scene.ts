@@ -992,10 +992,10 @@ export class WorldScene extends Phaser.Scene {
       bark.text.setPosition(Math.round(Phaser.Math.Clamp(s.x, view.x + half, view.right - half)), Math.round(Math.max(s.y - 52, view.y + bark.text.height + 2)));
       return;
     }
-    for (let i = 0; i < RESIDENTS.length; i++) {
+    for (let i = 0; i < CAST.length; i++) {
       const s = this.residentSprites[i];
-      const res = RESIDENTS[i];
-      if (!s || !res || !this.residentLines[i] || time < (this.barkReadyAt[i] ?? 0)) continue;
+      const res = CAST[i];
+      if (!s || !res || res.barks.length === 0 || !this.residentLines[i] || time < (this.barkReadyAt[i] ?? 0)) continue;
       if (Math.hypot(this.player.x - s.x, this.player.y - s.y) > BARK_RANGE) continue;
       const n = this.barkNext[i] ?? 0;
       const key = res.barks[n % res.barks.length] as Key;
