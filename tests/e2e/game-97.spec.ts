@@ -9,7 +9,7 @@ import { budget } from './budgets';
 test.describe.configure({ mode: 'serial' });
 
 const FLOOR_FPS = 20;
-interface Probe { ready: boolean; fps: number; fpsWindows: number; followers: { x: number; y: number }[]; daylight: { visible: boolean } }
+interface Probe { ready: boolean; fps: number; fpsWindows: number; followers: { x: number; y: number }[]; daylight: { visible: boolean }; light: { patches: number } }
 const probe = (page: Page): Promise<Probe> => page.evaluate(() => ({ ...(window as unknown as { __game: { probe: Probe } }).__game.probe }));
 
 for (const vp of [{ width: 1280, height: 800 }, { width: 390, height: 844 }]) {
@@ -22,6 +22,22 @@ for (const vp of [{ width: 1280, height: 800 }, { width: 390, height: 844 }]) {
     await page.waitForFunction((n) => (window as unknown as { __game: { probe: Probe } }).__game.probe.fpsWindows >= n + 2, w0, { timeout: 40_000, polling: 250 });
     const p = await probe(page);
     console.log(`GAME-97 fps ${vp.width}x${vp.height}: ${p.fps.toFixed(1)}`);
+    expect(p.fps).toBeGreaterThanOrEqual(FLOOR_FPS);
+  });
+}
+
+// GAME-210 · плями світла з вікон (дім, крамниця) не ламають бюджет кадру: вони намальовані ОДИН раз у текстуру, тож fps інтер'єру з плямами ≥ FLOOR_FPS.
+// Умова `patches > 0` — щоб тест не пройшов на інтер'єрі без плям (мутація: вимкнути makePatches → червоне саме тут).
+for (const map of ['home', 'shop'] as const) {
+  test(`GAME-210 fps інтер'єру «${map}» з плямами світла ≥ ${FLOOR_FPS}`, async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 800 });
+    await page.goto(`/?map=${map}&noReveal=1`);
+    await page.waitForFunction(() => (window as unknown as { __game?: { probe: { ready: boolean } } }).__game?.probe.ready === true, null, { timeout: 30_000 });
+    expect((await probe(page)).light.patches, `на мапі ${map} нема плям світла — fps міряв би інтер'єр без них`).toBeGreaterThan(0);
+    const w0 = (await probe(page)).fpsWindows;
+    await page.waitForFunction((n) => (window as unknown as { __game: { probe: Probe } }).__game.probe.fpsWindows >= n + 2, w0, { timeout: 40_000, polling: 250 });
+    const p = await probe(page);
+    console.log(`GAME-210 fps ${map} 1280x800 (плями ${p.light.patches}): ${p.fps.toFixed(1)}`);
     expect(p.fps).toBeGreaterThanOrEqual(FLOOR_FPS);
   });
 }
