@@ -12,7 +12,7 @@ import { KEY_BINDINGS, KEY_CODES, TAP_MAX_MOVE, TAP_MAX_MS, actionTarget, consum
 import type { Bridge } from './bridge';
 import { PET_SHEETS, type WorldArt } from './art';
 import { ACTIONS, ACTION_COLS, COLS, DIR_ROW, FRAME, frameIndex, type Action as HeroAction, type Dir } from './character';
-import { FIRE_CORE, FIRE_GLOW, ambientAt, glowAlpha, timeOfDay } from './daylight';
+import { FIRE_CORE, FIRE_GLOW, MAX_DARKNESS, ambientAt, glowAlpha, timeOfDay } from './daylight';
 import { FOLLOW_SPEED_FACTOR, SPEED, centerOf, findPath, gridFromWalls, isSolid, restPoints, stepFollowers, stepTo, tileOf, type Grid, type Pt, type Tile } from './follow';
 import { MAX_HELPERS } from '../../content/tent-pitch';
 import type { MapKey } from '../../content/map-first';
@@ -20,6 +20,8 @@ import { ICON_SIZE, iconIndex, objectiveIcon } from '../../content/objective-ico
 import { playUi } from '../../audio/ui-sounds';
 import { sfx } from '../../audio/sfx';
 import { MapFx, type Needs } from './map-fx';
+import { bandOverHero, nextCanopyAlpha } from './canopy';
+import { findWindows, patchAlpha, patchQuads } from './light-patches';
 import { FEEDBACK_S, RING_IDLE, isAutoSpot, pickNearest, ringMayTake, stepRing, vehicleReady, type Insets, type Ring } from './proximity';
 import { IDLE_AFTER_S, LEISURE_BY_MAP, assignLeisure, leisureFromObjects, type LeisureSpot } from './leisure';
 import { BARK_RANGE, CAST, CAST_BY_MAP, RESIDENTS, buildTimeline, placeAt, residentGrid, type Timeline } from './ambient';
@@ -145,7 +147,7 @@ const ICON_Y = -4;   // GAME-201: низ піктограми цілі над т
 interface Marker { readonly g: Phaser.GameObjects.Container; readonly shape: Phaser.GameObjects.Graphics; img: Phaser.GameObjects.Image | null; look: string }
 
 /** Смуга шару `above`: тайли верхівок, що мають одну «базову» лінію (низ стовбура під ними). */
-interface Band { readonly layer: Phaser.Tilemaps.TilemapLayer; readonly depth: number }
+interface Band { readonly layer: Phaser.Tilemaps.TilemapLayer; readonly depth: number; alpha: number }
 
 export interface WorldProbe {
   ready: boolean;
@@ -170,6 +172,10 @@ export interface WorldProbe {
   playerDepth: number;
   coveredTiles: number;
   behindTiles: number;
+  /** GAME-210 (лише для e2e): крони/дахи над героєм (глибина смуги > глибини героя) і найменша їхня прозорість зараз (1 — ніхто не під кроною; нижче — герой під кроною). */
+  canopy: { bands: number; over: number; minAlpha: number };
+  /** GAME-210 (лише для e2e): плями світла з вікон на підлозі — скільки намальовано, глибина шару й прозорість (гасне до ночі). */
+  light: { patches: number; depth: number; alpha: number };
   /** GAME-97 (лише для e2e): кадрів за секунду — середнє за останнє повне вікно ~3 с; 0, доки перше вікно не закрилось. */
   fps: number;
   /** Скільки вікон fps уже закрито (тест чекає на нове вікно, а не читає застаріле число). */
@@ -287,6 +293,8 @@ export class WorldScene extends Phaser.Scene {
   /** GAME-99: нічна маска (на весь екран, MULTIPLY) і світла пляма вогнища (ADD); null, якщо ефект вимкнено. */
   private night: Phaser.GameObjects.Rectangle | null = null;
   private glow: Phaser.GameObjects.Image | null = null;
+  private patches: Phaser.GameObjects.Image | null = null;
+  private patchCount = 0;
 
   /** Позначки цілей (GAME-170 зріз 2; GAME-175: речі, кроки, авто) — за назвою об'єкта; видимі лише поки об'єкт «живий» (isLive). */
   private markers = new Map<string, Marker>();
@@ -617,6 +625,8 @@ export class WorldScene extends Phaser.Scene {
     this.carFor = '';
     this.carImg = null;
     this.glow = null;
+    this.patches = null;
+    this.patchCount = 0;
     this.bands = [];
   }
 
@@ -655,6 +665,7 @@ export class WorldScene extends Phaser.Scene {
     if (ground && decor) this.bake(bakeKey, map, [ground, decor, walls]);
     this.owned.push(this.add.image(0, 0, bakeKey).setOrigin(0, 0).setDepth(DEPTH.ground));
     for (const layer of [ground, decor, walls]) layer?.setVisible(false);
+    this.makePatches(key, map);
 
     const objects = map.getObjectLayer('objects')?.objects ?? [];
     const typeOf = (o: Phaser.Types.Tilemaps.TiledObject): string => String(o.type || (o as { class?: string }).class || '');
@@ -791,8 +802,42 @@ export class WorldScene extends Phaser.Scene {
       const layer = map.createBlankLayer(`above@${depth}`, tilesets, 0, 0, map.width, map.height, TILE, TILE);
       if (!layer || !(layer instanceof Phaser.Tilemaps.TilemapLayer)) throw new Error('band layer failed');
       for (const t of tiles) layer.putTileAt(t.index, t.x, t.y);
-      return { layer: layer.setDepth(depth), depth };
+      return { layer: layer.setDepth(depth), depth, alpha: 1 };
     });
+  }
+
+  /**
+   * GAME-210: плями світла з вікон на підлозі (дім, крамниця) — ОДНА статична текстура, намальована при вході на мапу (не щокадру); над запеченою землею,
+   * під героєм і меблями-спрайтами. Тепле світло — FIRE_CORE з палітри. Прозорість міняє updateDaylight лише коли доба її змінила; вночі гасне.
+   */
+  private makePatches(key: MapKey, map: Phaser.Tilemaps.Tilemap): void {
+    const ts = map.tilesets.find((t) => t.name === 'home-windows-doors');
+    const above = map.getLayer('above');
+    if (!ts || !above) return;
+    const flat = above.data.flatMap((row) => row.map((t) => t.index));
+    const quads = findWindows(flat, map.width, map.height, ts.firstgid).flatMap((w) => patchQuads(w, map.height, TILE));
+    if (quads.length === 0) return;
+    const xs = quads.flatMap((q) => q.pts.map((p) => p[0]));
+    const ys = quads.flatMap((q) => q.pts.map((p) => p[1]));
+    const ox = Math.max(0, Math.floor(Math.min(...xs)));
+    const oy = Math.max(0, Math.floor(Math.min(...ys)));
+    const w = Math.min(map.widthInPixels, Math.ceil(Math.max(...xs))) - ox;
+    const h = Math.min(map.heightInPixels, Math.ceil(Math.max(...ys))) - oy;
+    const texKey = `light-${key}`;
+    if (!this.textures.exists(texKey)) {
+      const tex = this.textures.addDynamicTexture(texKey, w, h);
+      if (!tex) throw new Error(`light texture ${texKey} failed`);
+      const g = this.add.graphics();
+      for (const q of quads) {
+        g.fillStyle(FIRE_CORE, q.alpha).fillPoints(q.pts.map(([x, y]) => new Phaser.Math.Vector2(x - ox, y - oy)), true);
+      }
+      tex.draw(g);
+      tex.render();
+      g.destroy();
+    }
+    this.patches = this.add.image(ox, oy, texKey).setOrigin(0, 0).setDepth(DEPTH.ground + 1);
+    this.owned.push(this.patches);
+    this.patchCount = quads.length;
   }
 
   /** Запекти шари мапи (у заданому порядку) в одну статичну картинку на всю мапу: піксель у піксель те, що малювали б самі шари. */
@@ -846,6 +891,7 @@ export class WorldScene extends Phaser.Scene {
     this.night.setVisible(visible);
     if (visible) this.night.setFillStyle(a.color, 1);
     this.glow?.setVisible(visible).setAlpha(glow);
+    this.patches?.setAlpha(patchAlpha(a.darkness, MAX_DARKNESS));
     Object.assign(d, { visible, minuteOfDay, darkness: a.darkness, color: a.color, glow: this.glow ? glow : 0 });
   }
 
@@ -1369,9 +1415,16 @@ export class WorldScene extends Phaser.Scene {
     const box = this.player.getBounds();
     let covered = 0;
     let behind = 0;
+    let over = 0;
+    let minAlpha = 1;
     for (const b of this.bands) {
       const n = b.layer.getTilesWithinWorldXY(box.x, box.y, box.width, box.height).filter((t) => t.index > 0).length;
-      if (b.layer.depth > this.player.depth) covered += n; else behind += n;   // глибина — з живого шару, не з нашого запису: тест бачить, що справді малюється
+      const above = bandOverHero(b.layer.depth, this.player.depth);   // глибина — з живого шару, не з нашого запису: тест бачить, що справді малюється
+      if (above) { covered += n; over++; } else behind += n;
+      // GAME-210: під кроною герой не зникає — крона напівпрозора, поки його кадр її перекриває (покадрово від dt, без tween).
+      const next = nextCanopyAlpha(b.alpha, above, n > 0, delta / 1000);
+      if (next !== b.alpha) { b.alpha = next; b.layer.setAlpha(next); }
+      minAlpha = Math.min(minAlpha, b.alpha);
     }
     const frame = Number(this.player.frame.name);
     Object.assign(this.probe, {
@@ -1390,6 +1443,8 @@ export class WorldScene extends Phaser.Scene {
       playerDepth: this.player.depth,
       coveredTiles: covered,
       behindTiles: behind,
+      canopy: { bands: this.bands.length, over, minAlpha },
+      light: { patches: this.patchCount, depth: this.patches?.depth ?? 0, alpha: this.patches?.alpha ?? 0 },
       tent: this.tent.probe(),
       wood: this.wood.probe(),
       crate: { ...this.props.probeData },
