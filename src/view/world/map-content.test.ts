@@ -8,6 +8,7 @@ import pkg from '../../../package.json';
 import sceneSource from './scene.ts?raw';
 import { MAP_TILESETS, TILESET_IMAGES } from './art';
 import { MAP_LOCATION, MAP_SPOTS, isMapFirstSpot, type MapKey } from '../../content/map-first';
+import { isTraceSpot } from '../../content/traces';
 
 // Файли сцени гри (src/view/world). Сторінка спайка (src/view/spike) має свою мапу й гри не стосується.
 const WORLD_SOURCES = import.meta.glob<string>(['./**/*.ts', '!./**/*.test.ts'], { query: '?raw', import: 'default', eager: true });
@@ -92,7 +93,8 @@ export function mapContentProblems(map: TiledMap, defs: CoreDefs, key: MapKey = 
     const onMap = objects.filter((o) => typeOf(o) === 'trigger' || typeOf(o) === 'npc').map((o) => o.name).sort();
     const known: string[] = [...MAP_SPOTS[key]].sort();
     for (const n of known) if (!onMap.includes(n)) out.push(`об'єкт ${n} із MAP_SPOTS.${key} немає на мапі`);
-    for (const n of onMap) if (!known.includes(n)) out.push(`об'єкт ${n} на мапі ${key} не описано в MAP_SPOTS`);
+    // GAME-215: сліди дідуся (trace.*) — не об'єкти зрізу 1: їх веде src/content/traces.ts, а «кожна позначка — на мапі» стережуть traces.test.ts і валідатор (TRACE_UNREACHABLE).
+    for (const n of onMap) if (!known.includes(n) && !isTraceSpot(n)) out.push(`об'єкт ${n} на мапі ${key} не описано в MAP_SPOTS`);
   }
   // Табір (GAME-183): об'єкти кроків із MAP_SPOTS.camp мусять бути на мапі (решта цілей табору — справи хвиль, прохання, вогнище — свої сторожі); повніше — camp-first.test.
   if (key === 'camp') for (const n of MAP_SPOTS.camp) if (!objects.some((o) => o.name === n)) out.push(`об'єкт ${n} із MAP_SPOTS.camp немає на мапі`);

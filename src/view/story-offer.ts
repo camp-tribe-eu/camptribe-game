@@ -35,6 +35,7 @@ import { waveView } from '../core/wave';
 import type { Key } from '../i18n';
 import { liveRequestSpot as liveSpotFor } from '../content/requests';
 import { miaState } from '../content/mia';
+import { henryPage, isTraceSpot, liveTraceSpot } from '../content/traces';
 import { isRequestSpot, offerNodeOf, REQUESTS, requestOf, requestStatus, requestDoneFlags, requestTarget, trackerRows } from '../content/requests';
 
 const NO_ANIMAL = 'animal.none';
@@ -259,7 +260,7 @@ export function progressOffer(s: GameState): OfferProgress {
 export function atlasOffer(s: GameState): OfferAtlas {
   const have = stickersOf(s);
   const slots = STICKER_META.map((m) => ({ ...m, owned: have.includes(m.id) }));
-  return { slots, total: STICKER_SLOTS, count: slots.filter((x) => x.owned).length };
+  return { slots, total: STICKER_SLOTS, count: slots.filter((x) => x.owned).length, henry: henryPage(s.flags) };
 }
 
 /** Картка мети (GAME-170, зріз 2): жива хвиля з ядра (waveView — хвилини за годинником симуляції) і тексти з content/waves.json. */
@@ -325,7 +326,8 @@ export function storyOffer(sim: SimState, defs: CoreDefs, view: StoryView = PANE
     next: reqT ? (reqT.startsWith('npc.') ? 'next.req.giver' : 'next.req.target') as Key : nextT?.key ?? null,
     nextSpot: reqT ?? nextT?.spot ?? null,
     blocked: view.mapFirst && view.departNote ? ((b) => (b ? { carry: b.kind === 'carry', itemKeys: b.kind === 'missing' ? b.items.map((i) => nameKey(i) ?? i) : [] } : null))(departBlock(sim, defs, view.backpack ?? [])) : null,
-    near: nearL ? { label: nearL.label, itemKey: nearL.ref ? nameKey(nearL.ref) : null } : reqNear ? { label: 'near.req' as Key, itemKey: reqNear.labelKey } : null,
+    near: nearL ? { label: nearL.label, itemKey: nearL.ref ? nameKey(nearL.ref) : null } : reqNear ? { label: 'near.req' as Key, itemKey: reqNear.labelKey }
+      : view.near !== null && view.mapFirst && isTraceSpot(view.near) && liveTraceSpot(s, view.near) ? { label: 'near.trace' as Key, itemKey: null } : null,   // GAME-215: біля позначки олівцем
   };
   const base = { mapFirst: view.mapFirst, hint, requests: trackerRows(s), goal: goalOf(s, st), progress: progressOffer(s), atlas: atlasOffer(s), moneyCents: s.moneyCents, inventory, journal, lastTrip, weather, forecast: todayForecast(sim), day: dayOf(sim.clock) + 1, timeMinutes: timeOfDay(sim.clock.minutes), wave: waveOffer(sim), mia: miaState(s, defs), ...summaryOffer(sim, defs) };
 

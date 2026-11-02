@@ -210,7 +210,7 @@ const row = (id, extra = {}) => ({ id, type: 'bool', initial: false, owner: 'fix
 
 // Прохання сусідів (GAME-180): сусід біля табору просить дві речі — і є «Пізніше», і здача. Усе, що потрібне перевірці requests, додає цей помічник:
 // NPC з діалогом (gate → offer / reminder / turnin), два прапорці-цілі (ставить ядро на дотик до об'єкта мапи), реєстр, тексти й запис журналу.
-export const FIXTURE_MAPS = ['npc.ranger', 'req.fixture-chores.t1', 'req.fixture-chores.t2', 'req.fixture-more.t1'];
+export const FIXTURE_MAPS = ['npc.ranger', 'req.fixture-chores.t1', 'req.fixture-chores.t2', 'req.fixture-more.t1', 'trace.fixture-pine', 'trace.fixture-stump', 'trace.fixture-x1', 'trace.fixture-x2', 'trace.fixture-x3'];
 const RQ = (k) => `dlg.fixture-neighbor.${k}`;
 const RF = (p) => `f.req-fixture-chores-${p}`;
 function withRequest(c) {
@@ -392,7 +392,52 @@ function withMiaLine(c, gated) {
   else gate.branches.unshift({ when: { notFlag: RF('done') }, next: 'mia-line' });
   for (const lang of c.meta.locales) c.locales[lang][RQ("mia-line")] = `Mia ${lang}: line one two three four five`;
 }
+// GAME-215: сліди дідуся Генрі — три сліди в loc.camp: дві позначки на мапі (kind: interaction у реєстрі) і «людина, що пам'ятає» (рейнджер:
+// вибір у хабі ставить прапорець); листівка — наклейка з all на кожен слід. Еталон коректного набору — позитивний контроль нижче.
+const TF = (n) => `f.trace-fixture-${n}`;
+const traceRow = (n, name, text) => ({ id: `trace.fixture-${n}`, kind: 'cache', location: 'loc.camp', spot: `trace.fixture-${n}`, nameKey: name, textKey: text, year: 1978, reward: { xp: 5 } });
+function withTraces(c) {
+  c.traces = [
+    traceRow('pine', 'trace.fixture-pine', 'trace.fixture-pine.text'),
+    { ...traceRow('stump', 'trace.fixture-stump', 'trace.fixture-stump.text'), kind: 'inscription' },
+    { id: 'trace.fixture-ranger', kind: 'person', location: 'loc.camp', npc: 'npc.ranger', nameKey: 'trace.fixture-ranger', textKey: 'trace.fixture-ranger.text', reward: { xp: 5 } },
+  ];
+  node(c, 'hello').choices.splice(1, 0, { textKey: K('hello.henry'), next: 'henry', when: { notFlag: TF('ranger') } });
+  dlg(c).nodes.splice(3, 0, { id: 'henry', speaker: 'npc', textKey: K('henry'), choices: [{ textKey: K('henry.c1'), next: 'bye', effects: [{ setFlag: TF('ranger') }] }, { textKey: K('henry.c2'), next: 'bye' }] });
+  c.flags.push(row(TF('pine'), { kind: 'interaction', owner: 'взаємодія на мапі' }), row(TF('stump'), { kind: 'interaction', owner: 'взаємодія на мапі' }), row(TF('ranger'), { owner: 'dlg.fixture-ranger/henry' }));
+  c.stickers.push({ id: 'sticker.fixture-postcard', nameKey: 'sticker.fixture-postcard', textKey: 'sticker.fixture-postcard.text', kind: 'gold', icon: 'postcard', cond: { all: [{ flag: TF('pine') }, { flag: TF('stump') }, { flag: TF('ranger') }] } });
+  const keys = ['trace.fixture-pine', 'trace.fixture-pine.text', 'trace.fixture-stump', 'trace.fixture-stump.text', 'trace.fixture-ranger', 'trace.fixture-ranger.text', 'sticker.fixture-postcard', 'sticker.fixture-postcard.text', ...['hello.henry', 'henry', 'henry.c1', 'henry.c2'].map(K)];
+  for (const lang of c.meta.locales) for (const k of keys) c.locales[lang][k] = lineText(lang, k);
+}
+/** Ще n позначок у loc.camp (для межі TRACE_MAX): об'єкти є у FIXTURE_MAPS, рядки реєстру й тексти — теж, листівка вимагає і їх. */
+function moreTraces(c, n) {
+  for (let i = 1; i <= n; i++) {
+    c.traces.push(traceRow(`x${i}`, `trace.fixture-x${i}`, `trace.fixture-x${i}.text`));
+    c.flags.push(row(TF(`x${i}`), { kind: 'interaction', owner: 'взаємодія на мапі' }));
+    c.stickers.find((s) => s.id === 'sticker.fixture-postcard').cond.all.push({ flag: TF(`x${i}`) });
+    for (const lang of c.meta.locales) for (const k of [`trace.fixture-x${i}`, `trace.fixture-x${i}.text`]) c.locales[lang][k] = lineText(lang, k);
+  }
+}
+
 export const FIXTURES = [
+  // GAME-215 · сліди дідуся Генрі
+  { name: '[слід] контроль: три сліди регіону (дві позначки на мапі, одна людина), листівка за всі — коректно', expect: [], patch(c) { withTraces(c); } },
+  { name: '[слід] контроль: п’ять слідів у регіоні — верхня межа ще коректна', expect: [], patch(c) { withTraces(c); moreTraces(c, 2); } },
+  { name: '[слід] МУТАЦІЯ: позначки немає на мапі (і spot розійшовся з id)', expect: ['TRACE_UNREACHABLE'], count: { code: 'TRACE_UNREACHABLE', n: 2 }, patch(c) { withTraces(c); c.traces[0].spot = 'trace.fixture-ghost'; } },
+  { name: '[слід] два сліди вказують на один об’єкт мапи', expect: ['TRACE_UNREACHABLE'], patch(c) { withTraces(c); c.traces[1].spot = 'trace.fixture-pine'; } },
+  { name: '[слід] регіону сліду немає в locations.json', expect: ['TRACE_UNREACHABLE', 'TRACE_REGION_COUNT'], patch(c) { withTraces(c); c.traces[0].location = 'loc.nowhere'; } },
+  { name: '[слід] «людина, що пам’ятає»: розмова не ставить прапорець сліду', expect: ['TRACE_UNREACHABLE', 'DIALOGUE_FLAG_NEVER_SET', 'STICKER_FLAG_NEVER_SET'], patch(c) { withTraces(c); node(c, 'henry').choices[0].effects = []; } },
+  { name: '[слід] «людина, що пам’ятає» має spot замість npc', expect: ['TRACE_UNREACHABLE'], patch(c) { withTraces(c); c.traces[2].spot = 'trace.fixture-pine'; delete c.traces[2].npc; } },
+  { name: '[слід] МУТАЦІЯ: слід без нагороди (xp 0)', expect: ['TRACE_NO_REWARD'], patch(c) { withTraces(c); c.traces[0].reward = { xp: 0 }; } },
+  { name: '[слід] слід без поля reward', expect: ['TRACE_NO_REWARD'], patch(c) { withTraces(c); delete c.traces[1].reward; } },
+  { name: '[слід] у регіоні лише два сліди', expect: ['TRACE_REGION_COUNT'], patch(c) { withTraces(c); c.traces.pop(); node(c, 'hello').choices.splice(1, 1); dlg(c).nodes.splice(3, 1); c.flags = c.flags.filter((f) => f.id !== TF('ranger')); c.stickers.find((s) => s.id === 'sticker.fixture-postcard').cond.all.pop(); } },
+  { name: '[слід] у регіоні шість слідів', expect: ['TRACE_REGION_COUNT'], patch(c) { withTraces(c); moreTraces(c, 3); } },
+  { name: '[слід] листівки немає', expect: ['TRACE_POSTCARD_MISSING'], patch(c) { withTraces(c); c.stickers = c.stickers.filter((s) => s.id !== 'sticker.fixture-postcard'); } },
+  { name: '[слід] листівка за частину слідів', expect: ['TRACE_POSTCARD_MISSING'], patch(c) { withTraces(c); c.stickers.find((s) => s.id === 'sticker.fixture-postcard').cond.all.pop(); } },
+  { name: '[слід] квест рушається за прапорцем сліду', expect: ['TRACE_GATES_QUEST'], patch(c) { withTraces(c); node(c, 'hello').choices.push({ textKey: K('hello.c2'), next: 'bye', when: { flag: TF('ranger') }, effects: [{ startQuest: 'ST-003' }] }); } },
+  { name: '[слід] гілка за прапорцем сліду веде до чужого прапорця', expect: ['TRACE_GATES_QUEST'], patch(c) { withTraces(c); node(c, 'hello').choices.push({ textKey: K('hello.c2'), next: 'gate2' }); dlg(c).nodes.push({ id: 'gate2', speaker: 'npc', textKey: K('bye'), next: 'bye', branches: [{ when: { flag: TF('ranger') }, next: 'help' }] }); node(c, 'help').choices[1].effects = [{ setFlag: 'f.fixture-met' }]; } },
+  { name: '[слід] текст сліду без перекладу', expect: ['LOCALE_MISSING'], patch(c) { withTraces(c); delete c.locales.en['trace.fixture-pine']; } },
+  { name: '[слід] прапорець сліду без рядка реєстру (і листівка без сетера, бо сетер позначки — рядок реєстру)', expect: ['FLAG_UNREGISTERED', 'STICKER_FLAG_NEVER_SET'], patch(c) { withTraces(c); c.flags = c.flags.filter((f) => f.id !== TF('pine')); } },
   // Хвилі напруги (GAME-170). Еталон уже має хвилю з двома справами — «еталон коректний» нижче є позитивним контролем.
   { name: '[хвиля] контроль: три справи, одна лише для лідера з безпечною ціллю для тварини — коректно', expect: [], patch(c) {
     c.animals = [{ id: 'animal.fixture-cat', nameKey: 'npc.ranger' }];
@@ -404,7 +449,7 @@ export const FIXTURES = [
   { name: '[наклейка] умова — порожній об’єкт (схема ловить першою)', expect: ['SCHEMA_INVALID'], patch(c) { c.stickers[0].cond = {}; } },
   { name: '[наклейка] умова за транспортом (ядро її не обчислює)', expect: ['STICKER_COND_UNSUPPORTED'], patch(c) { c.stickers[0].cond = { transport: 'transport.x' }; } },
   { name: '[наклейка] квесту з умови немає', expect: ['STICKER_COND_REF'], patch(c) { c.stickers[0].cond = { quest: 'ST-999', status: 'completed' }; } },
-  { name: '[наклейка] прапорця з умови ніхто не ставить', expect: ['STICKER_FLAG_NEVER_SET'], patch(c) { c.stickers[0].cond = { flag: 'f.fixture-ghost' }; } },
+  { name: '[наклейка] прапорця з умови ніхто не ставить (і він не в реєстрі: Атлас — читач, GAME-215)', expect: ['STICKER_FLAG_NEVER_SET', 'FLAG_UNREGISTERED'], patch(c) { c.stickers[0].cond = { flag: 'f.fixture-ghost' }; } },
   { name: '[наклейка] 13 наклейок на 12 слотів', expect: ['STICKER_TOO_MANY'], patch(c) { for (let i = 0; i < 12; i++) c.stickers.push({ ...c.stickers[0], id: `sticker.fixture-extra-${i}` }); } },
   { name: '[наклейка] контроль: рівно 12 — коректно', expect: [], patch(c) { for (let i = 0; i < 11; i++) c.stickers.push({ ...c.stickers[0], id: `sticker.fixture-extra-${i}` }); } },
   { name: '[наклейка] без тексту (textKey) — схема', expect: ['SCHEMA_INVALID'], patch(c) { delete c.stickers[0].textKey; } },

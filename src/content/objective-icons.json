@@ -15,5 +15,5 @@
     "task.dinner": "dinner", "task.firewood": "firewood", "task.find-mia": "cat", "task.mia-car": "cat", "task.cover-bikes": "bike", "task.walk-site": "boots",
     "task.clean-up": "litter", "task.pack-tent": "tent", "task.pick-spot": "flag", "task.pitch-tent": "tent", "task.gear-shelter": "tent"
   },
-  "fallbackPrefixes": ["step."]
+  "fallbackPrefixes": ["step.", "trace."]
 }

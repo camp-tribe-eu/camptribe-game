@@ -16,7 +16,7 @@ const isRequestFlag = (f: string): boolean => f.startsWith('f.req-');
 /** Сюжет без автоматичних гілок (`branches`) — усе інше в ньому читати прапорець взаємодії не може. */
 const withoutBranches = (story: CoreDefs['story']): unknown => story && {
   ...story,
-  requestFlags: undefined, journaled: undefined,   // метадані перебору (список імен), а не умови
+  requestFlags: undefined, journaled: undefined, requestRewards: undefined,   // метадані перебору й нагород (списки імен), а не умови (GAME-215: сліди теж тут)
   dialogues: Object.fromEntries(Object.entries(story.dialogues).map(([id, dlg]) => [id, { ...dlg, nodes: Object.fromEntries(Object.entries(dlg.nodes).map(([n, node]) => [n, { ...node, branches: undefined }])) }])),
 };
 /** Усе, що читає прапорці: сюжет (квести, розмови, сцени — без гілок), хвилі, життя, пакування. Будь-яка згадка id там — читання. */

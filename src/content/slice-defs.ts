@@ -10,6 +10,7 @@ import { LIFE } from './life';
 import { WAVES } from './waves';
 import { STICKER_DEFS } from './stickers';
 import { requestInteractions } from './requests';
+import { traceInteractions } from './traces';
 
 /** Крамниця гри (GAME-81): єдина локація, де продається спорядження. Неіснуючий id ловить checkDefs (DEFS_BAD_REF). */
 export const SHOP = 'loc.shop';
@@ -50,6 +51,8 @@ export const SLICE_DEFS: CoreDefs = {
     'obj.litter': { grantId: 'rw.litter-cleaned', moneyCents: 0, flags: ['f.litter-cleaned-ch1'], award: 'clean' },
     // GAME-180: цілі прохань сусідів (content/requests.json) — дотик до позначки на мапі ставить прапорець цілі.
     ...requestInteractions(),
+    // GAME-215: сліди дідуся Генрі (content/traces.json) — дотик до позначки олівцем ставить прапорець сліду.
+    ...traceInteractions(),
   },
 };
 

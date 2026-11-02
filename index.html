@@ -308,10 +308,27 @@
       .ui-atlas-map { position: relative; width: clamp(110px, 38vw, 190px); }
       .ui-atlas-map svg { display: block; width: 100%; height: auto; }
       .ui-atlas-here { position: absolute; left: 47%; top: 22%; padding: 1px 5px; border-radius: 4px; background: #2b2f36; color: #f4f1e8; font-size: 0.55rem; line-height: 1.3; white-space: nowrap; }
+      /* GAME-215: сторінка «Шлях Генрі» — сліди дідуся за регіонами під сторінкою наклейок; позначка олівцем, як на мапі. */
+      .ui-henry { flex: 1 1 100%; margin: 0; padding: 8px 10px 6px; border-top: 2px dashed #6b543066; text-align: left; font-size: 0.7rem; }
+      .ui-henry-title { margin: 0; font-size: 0.85rem; color: #6b3d1d; text-align: center; }
+      .ui-henry-hint { margin: 0 0 4px; font-size: 0.6rem; color: #5b4a33; text-align: center; }
+      .ui-henry-region { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 10px; padding: 2px 0; }
+      .ui-henry-region-name { flex: 0 0 auto; min-width: 5.5em; font-weight: bold; color: #3b3a44; }
+      .ui-henry-list { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 2px 12px; flex: 1 1 auto; }
+      .ui-trace { display: inline-flex; align-items: center; gap: 4px; color: #3b3a44; }
+      .ui-trace-mark { width: 1.1rem; height: 1.1rem; flex: none; color: #3b3a44; }
+      .ui-trace-mark circle, .ui-trace-mark line { fill: none; stroke: currentColor; stroke-linecap: round; }
+      .ui-trace-mark circle { transform: rotate(-70deg); transform-origin: center; }   /* розрив кола олівця — зліва вгорі, як на мапі */
+      .ui-trace-mark[data-found="no"] { opacity: 0.35; }
+      .ui-trace[data-found="no"] .ui-trace-name { color: #8a8f94; font-style: italic; }
+      .ui-trace-meta { font-size: 0.58rem; color: #6b5430; }
+      .ui-henry-count { margin: 4px 0 0; text-align: center; }
+      .ui-henry-postcard { display: flex; align-items: center; justify-content: center; gap: 6px; margin: 4px 0 0; padding: 4px 8px; border: 2px solid #6b5430; border-radius: 6px; background: #fff; color: #a8452a; font-weight: bold; }
+      .ui-henry-postcard .ui-sticker-icon { width: 1.2rem; height: 1.2rem; }
       /* Телефон вбік (844×390): сітка ліворуч, назва, лічильник і мапа — праворуч; під сторінкою рядок вступу й кнопка. */
       @media (max-height: 500px) {
-        .ui-atlas-page { display: grid; grid-template-columns: auto minmax(0, 1fr); grid-template-areas: "grid title" "grid count" "grid map"; align-items: center; gap: 4px 16px; }
-        .ui-atlas-grid { grid-area: grid; } .ui-atlas-title { grid-area: title; } .ui-atlas-count { grid-area: count; } .ui-atlas-map { grid-area: map; justify-self: center; width: clamp(100px, 22vw, 160px); }
+        .ui-atlas-page { display: grid; grid-template-columns: auto minmax(0, 1fr); grid-template-areas: "grid title" "grid count" "grid map" "henry henry"; align-items: center; gap: 4px 16px; }
+        .ui-atlas-grid { grid-area: grid; } .ui-atlas-title { grid-area: title; } .ui-atlas-count { grid-area: count; } .ui-atlas-map { grid-area: map; justify-self: center; width: clamp(100px, 22vw, 160px); } .ui-henry { grid-area: henry; }
         .ui-intro-stage:has(> .ui-letter) { align-items: center; justify-content: flex-end; padding-bottom: 8px; } .ui-intro-stage > .ui-letter { max-width: min(46%, 380px); }
         .ui-intro-stage { padding-top: 44px; } .ui-intro-atlas { flex-direction: column; flex-wrap: nowrap; gap: 6px; } .ui-intro-final { flex: none; }
         .ui-atlas { padding-top: 8px; gap: 6px; } .ui-atlas h2 { font-size: 1.1rem; margin: 0; }

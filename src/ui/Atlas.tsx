@@ -28,6 +28,46 @@ function EuropeMap({ t }: { t: (k: Key) => string }) {
   );
 }
 
+/** GAME-215: позначка олівцем, як на мапі (scene.ts drawTrace): нерівне коло з розривом і зірочка; знайдений слід — графіт, інший — блідий. */
+function PencilMark({ found }: { found: boolean }) {
+  return (
+    <svg class="ui-trace-mark" viewBox="0 0 24 24" aria-hidden="true" focusable="false" data-found={found ? 'yes' : 'no'}>
+      <circle cx="12" cy="12" r="8.5" stroke-width="2" stroke-dasharray="44 9" />
+      <line x1="9" y1="9" x2="15" y2="15" stroke-width="1.6" /><line x1="15" y1="9" x2="9" y2="15" stroke-width="1.6" /><line x1="12" y1="7.5" x2="12" y2="16.5" stroke-width="1.6" />
+    </svg>
+  );
+}
+
+/**
+ * GAME-215: сторінка «Шлях Генрі» — сліди дідуся за регіонами (content/traces.json), знайдені з назвою, видом і датою (1978 чи «цієї осені»:
+ * дата каже, яка нитка стара, а яка — свіжа), незнайдені — лише позначка. Усі знайдено — листівка (наклейку видає ядро, тут лише напис).
+ */
+function HenryTrail({ henry, lang, t }: { henry: OfferAtlas['henry']; lang: AnyLang; t: (k: Key) => string }) {
+  const regions = [...new Set(henry.traces.map((x) => x.location))];
+  return (
+    <section class="ui-henry" data-ui="henry" data-found={henry.found} data-total={henry.total} aria-label={t('atlas.henry')}>
+      <h4 class="ui-henry-title">{t('atlas.henry')}</h4>
+      <p class="ui-henry-hint">{t('atlas.henry.hint')}</p>
+      {regions.map((loc) => (
+        <div key={loc} class="ui-henry-region" data-ui="henry-region" data-location={loc}>
+          <span class="ui-henry-region-name">{ct(lang, loc)}</span>
+          <ul class="ui-henry-list">
+            {henry.traces.filter((x) => x.location === loc).map((x) => (
+              <li key={x.id} class="ui-trace" data-ui="trace" data-id={x.id} data-kind={x.kind} data-found={x.found ? 'yes' : 'no'} title={x.found ? ct(lang, x.textKey) : undefined}>
+                <PencilMark found={x.found} />
+                <span class="ui-trace-name">{x.found ? ct(lang, x.nameKey) : t('atlas.henry.unknown')}</span>
+                {x.found && <span class="ui-trace-meta">{`${t(`trace.kind.${x.kind}` as Key)} · ${x.year === null ? t('trace.fresh') : String(x.year)}`}</span>}
+              </li>
+            ))}
+          </ul>
+        </div>
+      ))}
+      <p class="ui-henry-count" data-ui="henry-count">{`${t('atlas.henry.count')}: ${henry.found}/${henry.total}`}</p>
+      {henry.postcard && <p class="ui-henry-postcard" data-ui="henry-postcard"><Icon icon="postcard" />{t('atlas.henry.postcard')}</p>}
+    </section>
+  );
+}
+
 /** Сторінка Атласу. `fly` — id наклейки, що влітає (кінець вступу): лише анімація, стан уже в ядрі. */
 export function AtlasPage({ atlas, lang, t, fly = null }: { atlas: OfferAtlas; lang: AnyLang; t: (k: Key) => string; fly?: string | null }) {
   const slots = Array.from({ length: atlas.total }, (_, i) => atlas.slots[i] ?? null);
@@ -53,6 +93,7 @@ export function AtlasPage({ atlas, lang, t, fly = null }: { atlas: OfferAtlas; l
       </ul>
       <p class="ui-atlas-count" data-ui="atlas-count" data-count={atlas.count} data-total={atlas.total}>{`${t('atlas.count')}: ${atlas.count}/${atlas.total}`}</p>
       <EuropeMap t={t} />
+      <HenryTrail henry={atlas.henry} lang={lang} t={t} />
     </section>
   );
 }

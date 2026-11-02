@@ -127,6 +127,13 @@ export const CODES = {
   STICKER_FLAG_NEVER_SET: { check: 'stickers', spec: 'GAME-182: прапорець в умові наклейки ставить хоч один ефект setFlag, сцена чи хвиля — інакше наклейка недосяжна' },
   STICKER_TOO_MANY:       { check: 'stickers', spec: 'GAME-182: на сторінці Атласу 12 слотів — наклейок не більше' },
 
+  // сліди дідуся Генрі, GAME-215 (content/traces.json; картка власника 31.10: 3–5 позначок на регіон, необов'язкові, за всі — листівка)
+  TRACE_UNREACHABLE:      { check: 'traces', spec: 'GAME-215: кожен слід досяжний — об\u2019єкт позначки є на мапі регіону (spot) або розмова NPC ставить його прапорець (person); регіон існує; один об\u2019єкт — один слід' },
+  TRACE_NO_REWARD:        { check: 'traces', spec: 'GAME-215: у кожного сліду є нагорода (reward.xp > 0) — знахідка без «+» мовчить, і гравець не знає, що щось знайшов' },
+  TRACE_REGION_COUNT:     { check: 'traces', spec: 'GAME-215: у регіоні зі слідами їх 3–5 (картка власника) — менше не шлях, більше — шум на мапі' },
+  TRACE_POSTCARD_MISSING: { check: 'traces', spec: 'GAME-215: є наклейка-листівка, чия умова вимагає КОЖЕН слід — інакше «Шлях Генрі» ні до чого не веде, або листівка дається за частину' },
+  TRACE_GATES_QUEST:      { check: 'traces', spec: 'GAME-215: сюжет від слідів не залежить — розмова не рухає квест і не ставить чужий прапорець за умовою на f.trace-*' },
+
   // Мія і велосипед, GAME-111 (рішення власника 24.10: Мія ніколи не їде велосипедом)
   MIA_ON_BIKE:          { check: 'mia-bike', spec: 'GAME-111: тварина Мія не дозволена на велосипеді — немає ні дії, ні події з Мією в дорозі велосипедом' },
   MIA_CONTENT_UNGATED:  { check: 'mia-bike', spec: 'GAME-111: контент про Мію (ціль, справа хвилі, подія, річ пакування) показується лише тому, хто їде з кішкою — умова when.animals = [animal.cat]' },
@@ -173,6 +180,9 @@ export const FLAG_FAMILIES = {
 export const WAVE_MAX_LIMIT = 60;
 // GAME-182: слотів на сторінці Атласу. Дзеркало STICKER_SLOTS ядра (src/core/stickers.ts): рівність стереже src/content/stickers.test.ts.
 export const STICKER_SLOTS = 12;
+// GAME-215: слідів дідуся на регіон (картка власника 31.10: 3–5). Дзеркало TRACE_MIN/TRACE_MAX ядра (src/content/traces.ts): рівність стереже src/content/traces.test.ts.
+export const TRACE_MIN = 3;
+export const TRACE_MAX = 5;
 // Скільки справ у хвилі (GAME-170). Дзеркало WAVE_MIN_TASKS/WAVE_MAX_TASKS ядра (src/core/defs.ts); рівність стереже src/content/waves.test.ts.
 export const WAVE_MIN_TASKS = 2;
 export const WAVE_MAX_TASKS = 4;

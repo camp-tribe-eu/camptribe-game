@@ -114,7 +114,8 @@ export function exploreView(s: GameState, st: Pick<StoryDefs, 'memorable' | 'req
   if (mem.size === 0) return progressView(s);
   const npcMemory = Object.fromEntries(Object.entries(s.npcMemory).map(([npc, facts]) => [npc, facts.filter((f) => !mem.has(f))] as const).filter(([, facts]) => facts.length > 0));
   // GAME-180: дотик до цілі прохання видає разову нагороду (grantId `rw.req-…`, 0 центів) — теж косметика; без цього вісім цілей давали б 2⁸ станів у перебору «меню + сцена».
-  const grants = (st.requestFlags?.length ?? 0) > 0 ? s.grants.filter((g) => !g.startsWith('rw.req-')) : s.grants;
+  // GAME-215: те саме для позначок слідів дідуся (`rw.trace-…`, 0 центів): дев'ять позначок на трьох мапах давали б 2⁹ станів.
+  const grants = (st.requestFlags?.length ?? 0) > 0 ? s.grants.filter((g) => !g.startsWith('rw.req-') && !g.startsWith('rw.trace-')) : s.grants;
   return { ...progressView(s), flags: s.flags.filter((f) => !mem.has(f)), grants, npcMemory };
 }
 

@@ -21,6 +21,7 @@
         { "textKey": "dlg.elise-greeting.hello.c13", "next": "bikezone-thanks", "when": { "remembers": "m.bikezone-helped" } },
         { "textKey": "dlg.elise-greeting.hello.c14", "next": "dinner", "when": { "quest": "CH1-D2-CAMP-001", "status": "active" } },
         { "textKey": "dlg.elise-greeting.hello.c15", "next": "farewell", "when": { "quest": "CH1-D3-ELISE-001", "status": "active" }, "effects": [{ "completeObjective": { "quest": "CH1-D3-ELISE-001", "objective": "goodbye" } }] },
+        { "textKey": "dlg.elise-greeting.hello.trace", "next": "trace-henry", "when": { "all": [{ "flag": "f.elise-met" }, { "notFlag": "f.trace-camp-elise" }] } },
         { "textKey": "dlg.elise-greeting.hello.req0", "next": "req", "when": { "notFlag": "f.req-elise-lantern-done" } }
       ]
     },
@@ -129,6 +130,10 @@
     },
     { "id": "goodbye-road", "speaker": "npc", "textKey": "dlg.elise-greeting.goodbye-road", "next": "bye" },
     { "id": "goodbye-quiet", "speaker": "npc", "textKey": "dlg.elise-greeting.goodbye-quiet", "next": "bye" },
+    { "id": "trace-henry", "speaker": "npc", "textKey": "dlg.elise-greeting.trace-henry", "choices": [
+      { "textKey": "dlg.elise-greeting.trace-henry.c1", "next": "trace-henry-2", "effects": [{ "setFlag": "f.trace-camp-elise" }] },
+      { "textKey": "dlg.elise-greeting.trace-henry.c2", "next": "bye" } ] },
+    { "id": "trace-henry-2", "speaker": "npc", "textKey": "dlg.elise-greeting.trace-henry-2", "next": "bye" },
     { "id": "bye", "speaker": "npc", "textKey": "dlg.elise-greeting.bye", "end": true },
     { "id": "req", "speaker": "npc", "textKey": "dlg.elise-greeting.req", "next": "bye", "branches": [{ "when": { "all": [{ "flag": "f.req-elise-lantern-t1" }, { "notFlag": "f.req-elise-lantern-done" }] }, "next": "turnin" }, { "when": { "all": [{ "flag": "f.req-elise-lantern-taken" }, { "notFlag": "f.req-elise-lantern-done" }] }, "next": "reminder" }, { "when": { "all": [{ "notFlag": "f.req-elise-lantern-taken" }, { "notFlag": "f.req-elise-lantern-done" }] }, "next": "offer" }] },
     {

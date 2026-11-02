@@ -1,0 +1,99 @@
+[
+  {
+    "id": "trace.home-wardrobe",
+    "kind": "cache",
+    "location": "loc.home",
+    "spot": "trace.home-wardrobe",
+    "nameKey": "trace.home-wardrobe",
+    "textKey": "trace.home-wardrobe.text",
+    "year": 1978,
+    "reward": { "xp": 5 }
+  },
+  {
+    "id": "trace.home-bench",
+    "kind": "inscription",
+    "location": "loc.home",
+    "spot": "trace.home-bench",
+    "nameKey": "trace.home-bench",
+    "textKey": "trace.home-bench.text",
+    "year": 1978,
+    "reward": { "xp": 5 }
+  },
+  {
+    "id": "trace.home-mailbox",
+    "kind": "gift",
+    "location": "loc.home",
+    "spot": "trace.home-mailbox",
+    "nameKey": "trace.home-mailbox",
+    "textKey": "trace.home-mailbox.text",
+    "reward": { "xp": 5 }
+  },
+  {
+    "id": "trace.road-milestone",
+    "kind": "inscription",
+    "location": "loc.road",
+    "spot": "trace.road-milestone",
+    "nameKey": "trace.road-milestone",
+    "textKey": "trace.road-milestone.text",
+    "year": 1978,
+    "reward": { "xp": 5 }
+  },
+  {
+    "id": "trace.road-oak",
+    "kind": "cache",
+    "location": "loc.road",
+    "spot": "trace.road-oak",
+    "nameKey": "trace.road-oak",
+    "textKey": "trace.road-oak.text",
+    "year": 1978,
+    "reward": { "xp": 5 }
+  },
+  {
+    "id": "trace.road-sign",
+    "kind": "riddle",
+    "location": "loc.road",
+    "spot": "trace.road-sign",
+    "nameKey": "trace.road-sign",
+    "textKey": "trace.road-sign.text",
+    "year": 1978,
+    "reward": { "xp": 5 }
+  },
+  {
+    "id": "trace.camp-pine",
+    "kind": "inscription",
+    "location": "loc.camp.lake",
+    "spot": "trace.camp-pine",
+    "nameKey": "trace.camp-pine",
+    "textKey": "trace.camp-pine.text",
+    "year": 1978,
+    "reward": { "xp": 5 }
+  },
+  {
+    "id": "trace.camp-stump",
+    "kind": "cache",
+    "location": "loc.camp.lake",
+    "spot": "trace.camp-stump",
+    "nameKey": "trace.camp-stump",
+    "textKey": "trace.camp-stump.text",
+    "year": 1978,
+    "reward": { "xp": 5 }
+  },
+  {
+    "id": "trace.camp-reception",
+    "kind": "gift",
+    "location": "loc.camp.lake",
+    "spot": "trace.camp-reception",
+    "nameKey": "trace.camp-reception",
+    "textKey": "trace.camp-reception.text",
+    "reward": { "xp": 5 }
+  },
+  {
+    "id": "trace.camp-elise",
+    "kind": "person",
+    "location": "loc.camp.lake",
+    "npc": "npc.elise",
+    "nameKey": "trace.camp-elise",
+    "textKey": "trace.camp-elise.text",
+    "reward": { "xp": 5 }
+  }
+]

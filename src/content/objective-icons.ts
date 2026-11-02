@@ -1,6 +1,7 @@
 // GAME-201 · яка піктограма стоїть над ціллю: річ завдання (вудка над стійкою, намет над наметом), а не безликий кубик. Один вибір для мапи (сцена)
 // й для HUD (Shell). Дані — objective-icons.json; малюнки — assets/icons/objective_icons.png (усі 31 клітинки — FAL від LPC, CC-BY-SA 3.0, ART-031; scripts/assets/build_objective_icons.py),
 // клітинки — objective-icon-atlas.json. Крок сюжету без речі (step.*) — запасна «зірка»: це перелічено явно (fallbackPrefixes), решта без іконки — помилка тесту.
+// GAME-215: слід дідуся (trace.*) теж у fallbackPrefixes — сцена малює його не піктограмою, а позначкою олівцем (scene.ts drawTrace).
 import data from './objective-icons.json';
 import atlas from './objective-icon-atlas.json';
 import { REQUESTS } from './requests';

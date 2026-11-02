@@ -17,6 +17,9 @@ declare module '*/validator/codes.mjs' {
   export const WAVE_MAX_LIMIT: number;
   /** Слотів на сторінці Атласу (GAME-182) — мусить збігатися з STICKER_SLOTS ядра. */
   export const STICKER_SLOTS: number;
+  /** Слідів дідуся на регіон (GAME-215) — мусить збігатися з TRACE_MIN/TRACE_MAX у src/content/traces.ts. */
+  export const TRACE_MIN: number;
+  export const TRACE_MAX: number;
   export const WAVE_MIN_TASKS: number;
   export const GEAR_CHECK_VARIANTS: readonly string[];
   export const WAVE_MAX_TASKS: number;

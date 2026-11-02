@@ -6,7 +6,7 @@ import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { loadMapObjects } from './load.mjs';
 import { checkSchema } from './schema.mjs';
-import { DIALOGUE_CHAIN_MAX, DIALOGUE_LINE_MAX, STICKER_SLOTS, ECON_FLOOR_CENTS, FACT_KINDS, FACT_STALE_DAYS, FLAG_FAMILIES, GEAR_CHECK_VARIANTS, GEAR_FIELDS, isWarning, LOAN_RE, SKILL_IDS, WAVE_MAX_LIMIT, WAVE_MAX_TASKS, WAVE_MIN_TASKS } from './codes.mjs';
+import { DIALOGUE_CHAIN_MAX, DIALOGUE_LINE_MAX, STICKER_SLOTS, TRACE_MIN, TRACE_MAX, ECON_FLOOR_CENTS, FACT_KINDS, FACT_STALE_DAYS, FLAG_FAMILIES, GEAR_CHECK_VARIANTS, GEAR_FIELDS, isWarning, LOAN_RE, SKILL_IDS, WAVE_MAX_LIMIT, WAVE_MAX_TASKS, WAVE_MIN_TASKS } from './codes.mjs';
 import { checkCombos, checkOptions, comboLabel, enumerateCombos, matches, NO_ANIMAL } from './combos.mjs';
 
 const I = (code, where, msg) => ({ code, where, msg });
@@ -27,6 +27,7 @@ const ID_PATTERNS = {
   requests: /^req\.[a-z0-9]+(?:[.-][a-z0-9]+)*$/,
   waves: /^wave\.[a-z0-9]+(?:[.-][a-z0-9]+)*$/,
   stickers: /^sticker\.[a-z0-9]+(?:[.-][a-z0-9]+)*$/,
+  traces: /^trace\.[a-z0-9]+(?:[.-][a-z0-9]+)*$/,
 };
 const FLAG_ID = /^f\.[a-z0-9]+(?:[.-][a-z0-9]+)*$/;
 // Факт пам'яті NPC (GAME-48): «m.» і слова через дефіс — m.came-by-bike.
@@ -539,6 +540,7 @@ export const CHECKS = [
         for (const t of w.tasks) { add(t.textKey, `${w.id}/${t.id}`); add(t.done?.textKey, `${w.id}/${t.id}.done`); add(t.late?.textKey, `${w.id}/${t.id}.late`); }
       }
       for (const s of ct.stickers ?? []) { add(s.nameKey, `${s.id}.nameKey`); add(s.textKey, `${s.id}.textKey`); }
+      for (const tr of ct.traces ?? []) { add(tr.nameKey, `${tr.id}.nameKey`); add(tr.textKey, `${tr.id}.textKey`); }   // GAME-215: сліди дідуся
       // GAME-180: прохання сусідів — назва, рядок «що зробити», підпис у трекері, підписи цілей і запис журналу про здачу.
       for (const r of ct.requests ?? []) {
         add(r.titleKey, r.id); add(r.goalKey, `${r.id}.goalKey`); add(r.trackKey, `${r.id}.trackKey`);
@@ -935,6 +937,8 @@ export const CHECKS = [
         const row = byId.get(name) ?? enums.find((e) => name.startsWith(`${e.id}-`));
         if (row) read.add(row.id);
       }
+      // Атлас теж читає: умова наклейки чи сторінка «Шлях Генрі» (GAME-215) згадує прапорець — він не «забутий».
+      for (const [, name] of atlasReads(c.content)) { const r = byId.get(name) ?? enums.find((e) => name.startsWith(e.id + '-')); if (r) read.add(r.id); }
 
       const collection = (k) => (c.content[k] ?? []).map((x) => x.id);
       const boolIds = new Set(reg.filter((e) => e.type === 'bool').map((e) => e.id));
@@ -1147,7 +1151,7 @@ export const CHECKS = [
           } else if (leaf.quest !== undefined && !quests.has(leaf.quest)) {
             out.push(I('STICKER_COND_REF', where, `квесту «${leaf.quest}» немає в quests.json`));
           } else if (leaf.flag !== undefined && !set.has(leaf.flag)) {
-            out.push(I('STICKER_FLAG_NEVER_SET', where, `прапорець «${leaf.flag}» не ставить жоден ефект setFlag, сцена чи хвиля — наклейка недосяжна`));
+            out.push(I('STICKER_FLAG_NEVER_SET', where, `прапорець «${leaf.flag}» не ставить жоден ефект setFlag, сцена, хвиля чи взаємодія на мапі (kind: interaction) — наклейка недосяжна`));
           }
         }
       }
@@ -1238,6 +1242,79 @@ export const CHECKS = [
           const id = st.pop(); if (seen.has(id)) continue; seen.add(id);
           const n = byId.get(id); if (!n) continue;
           for (const ch of n.choices ?? []) { const fx = foreign(ch.effects); if (fx.length) { out.push(I('REQUEST_GATES_QUEST', where, `${dd.id}: гілка за умовою на ${bad} веде до ефекту поза прапорцями прохань (${JSON.stringify(fx[0])}) у вузлі «${id}»`)); st.length = 0; break; } }
+          st.push(...exits(n, false));
+        }
+      }
+      return out;
+    },
+  },
+  {
+    // GAME-215: сліди дідуся Генрі — необов'язкові позначки олівцем на мапі регіону (content/traces.json). Слід — не квест: його стан —
+    // прапорець f.trace-<назва>, який ставить дотик до об'єкта мапи (spot, kind: interaction у реєстрі) або розмова з NPC (person).
+    // Сторож стереже: кожен слід досяжний (об'єкт є на мапі, розмова ставить прапорець, регіон існує); у кожного є нагорода; у регіоні
+    // 3–5 слідів; за всі сліди — листівка; сюжет від слідів не залежить. Ціна хибного спрацювання (закон 5): автор додає spot/reward —
+    // одне поле; ціна пропуску — позначка, до якої не дійти, або сторінка «Шлях Генрі», яку не заповнити.
+    id: 'traces',
+    run(c) { // @check:traces
+      const out = [];
+      const ts = c.content.traces ?? [];
+      if (ts.length === 0) return out;
+      const ct = c.content;
+      const maps = c.maps;
+      if (!Array.isArray(maps)) return [I('INTERNAL_ERROR', 'traces', 'не передано імена об’єктів мапи (validate(content, { today, maps })): без них «позначка є на мапі» не перевірити — це збій, не PASS')];
+      const locs = new Set((ct.locations ?? []).map((l) => l.id));
+      const npcs = new Set((ct.npcs ?? []).map((n) => n.id));
+      const seenSpots = new Map();
+      const byRegion = new Map();
+      for (const tr of ts) {
+        const where = tr.id;
+        const flag = traceFlag(tr.id);
+        byRegion.set(tr.location, (byRegion.get(tr.location) ?? 0) + 1);
+        if (!locs.has(tr.location)) out.push(I('TRACE_UNREACHABLE', where, `регіону «${tr.location}» немає в locations.json — слід ніде не покласти`));
+        if (tr.kind === 'person') {
+          if (tr.spot !== undefined) out.push(I('TRACE_UNREACHABLE', where, 'слід «людина, що пам’ятає» має npc, а не spot: його знаходять розмовою, не дотиком'));
+          if (tr.npc === undefined || !npcs.has(tr.npc)) out.push(I('TRACE_UNREACHABLE', where, `npc «${tr.npc ?? '—'}» — немає такого NPC у npcs.json`));
+          else {
+            const d = (ct.dialogues ?? []).find((x) => x.npcId === tr.npc);
+            const sets = d && d.nodes.some((n) => (n.choices ?? []).some((ch) => (ch.effects ?? []).some((e) => e.setFlag === flag)));
+            if (!sets) out.push(I('TRACE_UNREACHABLE', where, `розмова з ${tr.npc} не має вибору з setFlag ${flag}: слід не знайти`));
+          }
+        } else {
+          if (tr.npc !== undefined) out.push(I('TRACE_UNREACHABLE', where, 'npc — лише для сліду kind: person; позначку на мапі знаходять дотиком до spot'));
+          if (tr.spot === undefined) out.push(I('TRACE_UNREACHABLE', where, 'у сліду немає spot — об’єкта мапи, до якого дійти ногами'));
+          else {
+            if (tr.spot !== tr.id) out.push(I('TRACE_UNREACHABLE', where, `spot «${tr.spot}» мусить дорівнювати id сліду: так ядро знаходить слід за об’єктом мапи (src/content/traces.ts)`));
+            if (!maps.includes(tr.spot)) out.push(I('TRACE_UNREACHABLE', where, `позначки «${tr.spot}» немає серед об’єктів мапи: до неї не дійти, слід не знайти`));
+            if (seenSpots.has(tr.spot)) out.push(I('TRACE_UNREACHABLE', where, `об’єкт мапи «${tr.spot}» уже є слідом ${seenSpots.get(tr.spot)}: один об’єкт — один слід`));
+            else seenSpots.set(tr.spot, where);
+          }
+        }
+        if (!(Number.isInteger(tr.reward?.xp) && tr.reward.xp > 0)) out.push(I('TRACE_NO_REWARD', where, 'у сліду немає нагороди (reward.xp > 0): знахідка мовчить, гравець не бачить, що щось знайшов'));
+      }
+      for (const [loc, n] of byRegion) {
+        if (n < TRACE_MIN || n > TRACE_MAX) out.push(I('TRACE_REGION_COUNT', loc, `у регіоні ${n} слід(ів), а картка каже ${TRACE_MIN}–${TRACE_MAX}: ${n < TRACE_MIN ? 'додай слід або прибери регіон' : 'зайві сліди прибери'}`));
+      }
+      // Листівка: наклейка, чия умова (all) вимагає КОЖЕН прапорець сліду — не частину й не «будь-який».
+      const flags = ts.map((tr) => traceFlag(tr.id));
+      const postcard = (ct.stickers ?? []).find((s) => { const have = new Set(conjuncts(s.cond ?? {}).map((x) => x.flag).filter((x) => x !== undefined)); return flags.every((f) => have.has(f)); });
+      if (!postcard) out.push(I('TRACE_POSTCARD_MISSING', 'traces', `немає наклейки, чия умова all вимагає кожен слід (${flags.join(', ')}): «Шлях Генрі» ні до чого не веде`));
+      // Сюжет від слідів не залежить: умова на f.trace-* (вибір чи гілка) не стоїть перед жодним ефектом, крім setFlag власних f.trace-*.
+      const readsTrace = (when) => condLeaves(when).map((x) => x.flag ?? x.notFlag).find((f) => typeof f === 'string' && f.startsWith(TRACE_FLAG_PREFIX));
+      const foreign = (effects) => (effects ?? []).filter((e) => !(e.setFlag !== undefined && e.setFlag.startsWith(TRACE_FLAG_PREFIX)));
+      for (const [where, ch, dd] of dialogueChoices(ct)) {
+        const bad = ch.when ? readsTrace(ch.when) : undefined;
+        const fx = foreign(ch.effects);
+        if (bad && fx.length) out.push(I('TRACE_GATES_QUEST', where, `${dd.id}: вибір за умовою на слід ${bad} має ефект поза прапорцями слідів (${JSON.stringify(fx[0])}) — сюжет не може залежати від необов’язкових слідів`));
+      }
+      for (const [where, br, dd] of dialogueBranches(ct)) {
+        const bad = readsTrace(br.when);
+        if (!bad) continue;
+        const byId = new Map(dd.nodes.map((n) => [n.id, n]));
+        const seen = new Set(); const st = [br.next];
+        while (st.length) {
+          const id = st.pop(); if (seen.has(id)) continue; seen.add(id);
+          const n = byId.get(id); if (!n) continue;
+          for (const ch of n.choices ?? []) { const fx = foreign(ch.effects); if (fx.length) { out.push(I('TRACE_GATES_QUEST', where, `${dd.id}: гілка за умовою на слід ${bad} веде до ефекту поза прапорцями слідів (${JSON.stringify(fx[0])}) у вузлі «${id}»`)); st.length = 0; break; } }
           st.push(...exits(n, false));
         }
       }
@@ -1555,17 +1632,34 @@ function flagSetters(content) {
   for (const [, e] of dialogueEffects(content)) if (e.setFlag !== undefined) have.add(e.setFlag);
   for (const dl of content.dialogues ?? []) for (const fact of dl.scene?.facts ?? []) have.add(fact);
   for (const [, fl] of waveEffects(content)) have.add(fl);
+  // Прапорці взаємодії (kind: interaction) ставить ядро на дотик до об'єкта мапи (GAME-215: сліди дідуся → наклейка-листівка).
+  for (const e of content.flags ?? []) if (e.kind === 'interaction' && !e.id.endsWith('-*')) have.add(e.id);
   return have;
 }
 /** Прапорець прохання: `req.nora-shore` + `taken` → `f.req-nora-shore-taken` (дзеркало src/content/requests.ts requestFlag). */
 const requestFlag = (id, part) => `f.${id.replace(/\./g, '-')}-${part}`;
+/** Прапорець сліду (GAME-215): `trace.home-bench` → `f.trace-home-bench` (дзеркало src/content/traces.ts traceFlag). */
+const TRACE_FLAG_PREFIX = 'f.trace-';
+const traceFlag = (id) => `f.${id.replace(/\./g, '-')}`;
 
 function flagUses(content) {
   const out = [];
   for (const [where, leaf] of condLeavesAll(content)) { const f = leaf.flag ?? leaf.notFlag; if (f !== undefined) out.push([where, f]); }
+  for (const [where, f] of atlasReads(content)) out.push([where, f]);
   for (const [where, e] of dialogueEffects(content)) if (e.setFlag !== undefined) out.push([where, e.setFlag]);
   for (const d of content.dialogues ?? []) (d.scene?.facts ?? []).forEach((f, i) => out.push([`${d.id}.scene.facts[${i}]`, f]));
   for (const [where, f] of waveEffects(content)) out.push([where, f]);
+  return out;
+}
+
+/**
+ * Прапорці, які читає Атлас (GAME-182/215): умови наклейок (flag/notFlag, також у all/any) і прапорці слідів дідуся (сторінка «Шлях Генрі»
+ * показує кожен слід за його f.trace-*). Для реєстру це справжні читачі: рядок, який читає лише Атлас, — не «мертвий» і не «ніким не згаданий».
+ */
+function atlasReads(content) {
+  const out = [];
+  for (const s of content.stickers ?? []) if (s.cond && typeof s.cond === 'object') for (const leaf of condLeaves(s.cond)) { const f = leaf.flag ?? leaf.notFlag; if (f !== undefined) out.push([`${s.id}.cond`, f]); }
+  for (const tr of content.traces ?? []) if (typeof tr.id === 'string') out.push([`traces:${tr.id}`, traceFlag(tr.id)]);
   return out;
 }
 
