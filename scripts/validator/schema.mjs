@@ -84,7 +84,16 @@ export const WAVE_SCHEMA = obj({ id: req(str), titleKey: req(str), hookKey: req(
 // Наклейки Атласу (GAME-182): `cond` НЕ required тут — його відсутність стереже перевірка stickers власним кодом STICKER_NO_COND (як limitMin у хвиль), щоб забута умова не ховалась під загальним SCHEMA_INVALID.
 export const STICKER_SCHEMA = obj({ id: req(str), nameKey: req(str), textKey: req(str), kind: req(en('place', 'people', 'mia', 'team', 'gold')), icon: req(str), cond });
 
+// Сліди дідуся Генрі (GAME-215): позначка олівцем на мапі регіону (`spot` — об'єкт мапи) або людина, що пам'ятає (`npc` — розмова ставить
+// прапорець). `year` — рік сліду (1978; немає — свіжий слід цієї осені: дата на листівці каже, що є що). `reward` НЕ required тут:
+// її відсутність стереже перевірка traces власним кодом TRACE_NO_REWARD (як cond у наклейок), щоб слід без нагороди не ховався під SCHEMA_INVALID.
+export const TRACE_SCHEMA = obj({
+  id: req(str), kind: req(en('cache', 'person', 'inscription', 'riddle', 'gift')), location: req(str), spot: str, npc: str,
+  nameKey: req(str), textKey: req(str), year: { t: 'int', min: 1900, max: 2100 }, reward: obj({ xp: req(int0) }),
+});
+
 export const SCHEMAS = {
+  traces: TRACE_SCHEMA,
   stickers: STICKER_SCHEMA,
   dialogues: DIALOGUE_SCHEMA,
   waves: WAVE_SCHEMA,
@@ -167,7 +176,7 @@ export const SCHEMAS = {
 };
 
 
-export const COLLECTIONS = ['profiles', 'transports', 'animals', 'items', 'npcs', 'locations', 'quests', 'events', 'facts', 'roads', 'flags', 'waves', 'requests', 'stickers'];
+export const COLLECTIONS = ['profiles', 'transports', 'animals', 'items', 'npcs', 'locations', 'quests', 'events', 'facts', 'roads', 'flags', 'waves', 'requests', 'stickers', 'traces'];
 
 function typeOk(s, v) {
   switch (s.t) {

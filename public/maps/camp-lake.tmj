@@ -10,7 +10,7 @@
  "tileheight": 32,
  "infinite": false,
  "nextlayerid": 7,
- "nextobjectid": 64,
+ "nextobjectid": 67,
  "layers": [
   {
    "id": 1,
@@ -4455,6 +4455,42 @@
      "type": "trigger",
      "x": 528,
      "y": 592,
+     "width": 0,
+     "height": 0,
+     "point": true,
+     "rotation": 0,
+     "visible": true
+    },
+    {
+     "id": 64,
+     "name": "trace.camp-pine",
+     "type": "trigger",
+     "x": 48,
+     "y": 48,
+     "width": 0,
+     "height": 0,
+     "point": true,
+     "rotation": 0,
+     "visible": true
+    },
+    {
+     "id": 65,
+     "name": "trace.camp-stump",
+     "type": "trigger",
+     "x": 368,
+     "y": 400,
+     "width": 0,
+     "height": 0,
+     "point": true,
+     "rotation": 0,
+     "visible": true
+    },
+    {
+     "id": 66,
+     "name": "trace.camp-reception",
+     "type": "trigger",
+     "x": 432,
+     "y": 144,
      "width": 0,
      "height": 0,
      "point": true,

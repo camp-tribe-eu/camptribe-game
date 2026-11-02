@@ -12,6 +12,7 @@ import flagsJson from '../../content/flags.json';
 import { exploreView, type Move } from './moves';
 import { GAME_DEFS } from './slice-defs';
 import { CONTENT, STORY } from './story';
+import { TRACE_FLAG_PREFIX } from './traces';
 import mapRaw from '../../public/maps/camp-lake.tmj?raw';
 import { REQUESTS, REQUEST_FLAG_PREFIX, miaSpots, compileRequests, liveRequestSpot, requestFlag, requestMarker, requestOf, requestReward, requestStatus, requestTarget, requestsDone, trackerRows, type RequestDef } from './requests';
 import { liveSpot } from './director';
@@ -117,7 +118,8 @@ describe('GAME-180 · дані прохань', () => {
     // GAME-195: у тому ж списку косметичних прапорців — чотири факти розвилки рибки; прохання рахуємо окремо.
     const fish: string[] = [FISH_FACTS.kept, FISH_FACTS.released, FISH_FACTS.charred, FISH_FACTS.trustNora];
     expect(STORY.requestFlags).toEqual(expect.arrayContaining(fish));
-    expect(STORY.requestFlags?.filter((f) => !fish.includes(f)).length).toBe(REQUESTS.reduce((a, r) => a + r.targets.length + 2, 0));
+    // GAME-215: там само — прапорці слідів дідуся (f.trace-*); їх рахує traces.test.ts.
+    expect(STORY.requestFlags?.filter((f) => !fish.includes(f) && !f.startsWith(TRACE_FLAG_PREFIX)).length).toBe(REQUESTS.reduce((a, r) => a + r.targets.length + 2, 0));
   });
 
   it('тексти: усі ключі є в uk й en, кожен рядок ≤ 140 знаків (телефон)', () => {

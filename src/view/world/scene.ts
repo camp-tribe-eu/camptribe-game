@@ -375,11 +375,32 @@ export class WorldScene extends Phaser.Scene {
       g.fillStyle(0xd9a441, 1).fillRect(-5, -14, 2, 9).fillRect(3, -14, 2, 9);
       return;
     }
+    if (name.startsWith('trace.')) { this.drawTrace(g); return; }   // GAME-215: позначка олівцем, без піктограми атласу
     // GAME-201: замість кубика — піктограма речі завдання (objective-icons), над точкою; гойдається покадрово в update (без твінів).
     m.img = this.add.image(0, ICON_Y, 'objective-icons', iconIndex(objectiveIcon(name).key)).setOrigin(0.5, 1);
     m.g.add(m.img);
     if (look === 'trunk' && (name.startsWith('pack.') || name.startsWith('take.') || name.startsWith('req.'))) g.fillStyle(0x9be28f, 1).fillCircle(8, ICON_Y - 15, 4).lineStyle(1, 0x1b1f23, 1).strokeCircle(8, ICON_Y - 15, 4)
       .lineStyle(2, 0x1b1f23, 1).beginPath().moveTo(6, ICON_Y - 15).lineTo(7.5, ICON_Y - 13).lineTo(10.5, ICON_Y - 17).strokePath();   // галочка: уже в багажнику
+  }
+
+  /**
+   * GAME-215: слід дідуся Генрі — позначка олівцем, як у дорожньому атласі: нерівне графітове коло з розривом, маленька зірочка й короткий підпис-риска.
+   * Малюється кодом у палітрі гри (графіт 0x3b3a44, папір 0xf4ecd2): нової графіки немає (OD-013/OD-026), масштаб — одна клітинка.
+   */
+  private drawTrace(g: Phaser.GameObjects.Graphics): void {
+    const GRAPHITE = 0x3b3a44;
+    g.fillStyle(0xf4ecd2, 0.55).fillCircle(0, -14, 11);   // клаптик паперу під олівцем
+    g.lineStyle(2, GRAPHITE, 0.95).beginPath();
+    for (let i = 0; i <= 26; i++) {   // нерівне коло з розривом (олівець не замикає лінію)
+      const a = -Math.PI * 0.35 + (i / 26) * Math.PI * 1.85;
+      const r = 10 + (i % 3 === 0 ? 0.9 : i % 3 === 1 ? -0.6 : 0.2);
+      const x = Math.cos(a) * r; const y = -14 + Math.sin(a) * r * 0.82;
+      if (i === 0) g.moveTo(x, y); else g.lineTo(x, y);
+    }
+    g.strokePath();
+    g.lineStyle(1.5, GRAPHITE, 1).beginPath();   // зірочка-хрестик у колі
+    g.moveTo(-3, -17).lineTo(3, -11).moveTo(3, -17).lineTo(-3, -11).moveTo(0, -18.5).lineTo(0, -9.5).strokePath();
+    g.lineStyle(1.5, GRAPHITE, 0.9).beginPath().moveTo(11, -5).lineTo(19, -7).strokePath();   // короткий підпис-риска
   }
 
   /** Велосипед пікселями палітри гри (LPC-набір його не має): два колеса, рама, кермо, сідло, багажник-«рюкзак» ззаду; ноги — на (0,0). */

@@ -129,6 +129,10 @@ HOME_SPOTS = [
     ('step.CH1-D3-HOME-001', 'trigger', (6, 9)),      # поріг: кінець розділу — «Знову вдома»
     ('obj.drying', 'trigger', (8, 13)),               # двір: мотузка (висушити мокре спорядження)
     ('obj.sell', 'trigger', (10, 14)),                # двір: продати спорядження
+    # GAME-215 · сліди дідуся Генрі (content/traces.json, spot = id сліду): позначки олівцем, необов'язкові, ≥ 2 клітинки від інших цілей.
+    ('trace.home-wardrobe', 'trigger', (25, 7)),      # спальня, шафа: бляшанка з квитками 1978
+    ('trace.home-bench', 'trigger', (3, 13)),         # двір: лавка з вирізаним «H+E»
+    ('trace.home-mailbox', 'trigger', (22, 13)),      # двір, біля воріт: поштова скринька зі свіжою листівкою
 ]
 
 
@@ -291,6 +295,10 @@ ROAD_SPOTS = [
     ('obj.drying', 'trigger', (12, 7)),
     ('obj.sell', 'trigger', (16, 7)),
     ('obj.vehicle', 'trigger', (27, 5)),              # авто (велосипед) — їхати далі
+    # GAME-215 · сліди дідуся Генрі на дорозі (content/traces.json): кілометровий стовпчик, дуб, старий вказівник.
+    ('trace.road-milestone', 'trigger', (9, 7)),
+    ('trace.road-oak', 'trigger', (16, 2)),
+    ('trace.road-sign', 'trigger', (22, 2)),
 ]
 
 

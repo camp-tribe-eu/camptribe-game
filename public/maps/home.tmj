@@ -2156,6 +2156,42 @@
      "point": true,
      "rotation": 0,
      "visible": true
+    },
+    {
+     "id": 30,
+     "name": "trace.home-wardrobe",
+     "type": "trigger",
+     "x": 816,
+     "y": 240,
+     "width": 0,
+     "height": 0,
+     "point": true,
+     "rotation": 0,
+     "visible": true
+    },
+    {
+     "id": 31,
+     "name": "trace.home-bench",
+     "type": "trigger",
+     "x": 112,
+     "y": 432,
+     "width": 0,
+     "height": 0,
+     "point": true,
+     "rotation": 0,
+     "visible": true
+    },
+    {
+     "id": 32,
+     "name": "trace.home-mailbox",
+     "type": "trigger",
+     "x": 720,
+     "y": 432,
+     "width": 0,
+     "height": 0,
+     "point": true,
+     "rotation": 0,
+     "visible": true
     }
    ]
   },

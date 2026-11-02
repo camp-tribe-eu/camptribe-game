@@ -28,6 +28,7 @@ node scripts/mutate-validator.mjs               # довести, що само�
 | `facts.json` | зовнішні факти: `source`, `checkedAt` (РРРР-ММ-ДД), `kind` | `fact.назва` |
 | `waves.json` | хвилі напруги (GAME-170, DC-016): `stage`, `when`, `tasks[]` зі строком `limitMin` (ігрові хвилини 1–60), `leaderOnly`, `animal` + `targets[{id, safe}]`, наслідками `done`/`late` (`setFlag` або `wetGear` — спорядження вологе), `allDone`, `fallback`; перевірка `waves` (розділ «Хвилі напруги») | `wave.назва` |
 | `flags.json` | реєстр прапорців і фактів стану (GAME-115, DC-015, розділ «Реєстр прапорців»): `id`, `type`, `initial`, `owner`, `note`, `values`, `valuesFrom`, `generatedFrom`, `reserved`, `aka`, `journal` | `f.назва`, `f.префікс-*`, `m.назва`, `s.назва` |
+| `traces.json` | сліди дідуся Генрі (GAME-215): `kind` (`cache`/`person`/`inscription`/`riddle`/`gift`), `location` (регіон), `spot` (об'єкт мапи = `id`) або `npc` (`person`), `nameKey`, `textKey`, `year` (немає — свіжий слід), `reward` `{ xp }`; стан — прапорець `f.trace-<назва>`; перевірка `traces` (`TRACE_UNREACHABLE`, `TRACE_NO_REWARD`, `TRACE_REGION_COUNT` 3–5 на регіон, `TRACE_POSTCARD_MISSING` — наклейка з `all` на кожен слід, `TRACE_GATES_QUEST` — сюжет від слідів не залежить) | `trace.назва` |
 | `locales/<мова>.json` | ключ → переклад | — |
 | `dialogue/<назва>.json` | один діалог-граф на файл (розділ «Діалоги») | `dlg.назва` |
 

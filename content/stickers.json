@@ -118,5 +118,46 @@
     "cond": {
       "flag": "f.req-luc-radio-done"
     }
+  },
+  {
+    "id": "sticker.henry-postcard",
+    "nameKey": "sticker.henry-postcard",
+    "textKey": "sticker.henry-postcard.text",
+    "kind": "gold",
+    "icon": "postcard",
+    "cond": {
+      "all": [
+        {
+          "flag": "f.trace-home-wardrobe"
+        },
+        {
+          "flag": "f.trace-home-bench"
+        },
+        {
+          "flag": "f.trace-home-mailbox"
+        },
+        {
+          "flag": "f.trace-road-milestone"
+        },
+        {
+          "flag": "f.trace-road-oak"
+        },
+        {
+          "flag": "f.trace-road-sign"
+        },
+        {
+          "flag": "f.trace-camp-pine"
+        },
+        {
+          "flag": "f.trace-camp-stump"
+        },
+        {
+          "flag": "f.trace-camp-reception"
+        },
+        {
+          "flag": "f.trace-camp-elise"
+        }
+      ]
+    }
   }
 ]

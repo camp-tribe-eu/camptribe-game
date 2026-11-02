@@ -18,6 +18,7 @@ import { matches } from '../core/story';
 import { taskOutcome, tasksFor } from '../core/wave';
 import { FIREPLACE_SCENE, fireplaceFacts } from './fireplace';
 import { isMapFirstSpot, liveMapSpot } from './map-first';
+import { isTraceSpot, liveTraceSpot } from './traces';
 import type { Move } from './moves';
 import { isRequestSpot, liveRequestSpot } from './requests';
 import { WAVE_CH1_EVENING } from './waves';
@@ -111,6 +112,7 @@ export function liveSpot(sim: SimState, name: string, defs?: CoreDefs): boolean 
     return t !== undefined && t.outcome === 'open' && sim.clock.minutes <= t.dueAt && sim.game.player?.locationId === MAP_LOCATION;
   }
   if (isRequestSpot(name)) return liveRequestSpot(sim.game, name);   // GAME-180: ціль прохання — лише поки прохання взято й ціль не зроблена
+  if (isTraceSpot(name)) return liveTraceSpot(sim.game, name);   // GAME-215: слід дідуся — поки не знайдено
   if (name === 'obj.litter') return !sim.game.flags.includes('f.litter-cleaned-ch1');
   return true;
 }

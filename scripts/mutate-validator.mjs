@@ -211,7 +211,7 @@ const mutations = [
   { name: '[реєстр] journal дозволено будь-якому рядку', file: CHECKS_FILE, from: "if (e.journal === true && (!core ||", to: "if (false && (!core ||" },
   { name: '[реєстр] прапорець ядра може стартувати true', file: CHECKS_FILE, from: '(core && init !== false)', to: 'false' },
   { name: '[реєстр] «unset» дозволено серед значень enum', file: CHECKS_FILE, from: "if (!ENUM_VALUE.test(v) || v === 'unset') inv(", to: 'if (!ENUM_VALUE.test(v)) inv(' },
-  { name: '[реєстр] завантажувач і схема не знають flags.json', file: 'validator/schema.mjs', from: "'facts', 'roads', 'flags', 'waves', 'requests', 'stickers'];", to: "'facts', 'roads', 'waves', 'requests', 'stickers'];" },
+  { name: '[реєстр] завантажувач і схема не знають flags.json', file: 'validator/schema.mjs', from: "'facts', 'roads', 'flags', 'waves', 'requests', 'stickers', 'traces'];", to: "'facts', 'roads', 'waves', 'requests', 'stickers', 'traces'];" },
   { name: '[реєстр] id реєстру не звіряються з форматом', file: CHECKS_FILE, from: "if (!ok) out.push(I('ID_FORMAT', `flags:${e.id}`", to: "if (false) out.push(I('ID_FORMAT', `flags:${e.id}`" },
   { name: '[реєстр] дублі id реєстру не звітуються', file: CHECKS_FILE, from: "for (const t of [...Object.keys(ID_PATTERNS), 'flags']) dup(", to: 'for (const t of Object.keys(ID_PATTERNS)) dup(' },
   // GAME-170: хвилі напруги
@@ -255,7 +255,7 @@ const mutations = [
   { name: '[хвиля] перекриття when хвиль одного етапу не звітується', file: CHECKS_FILE, from: "if (k) out.push(I('WAVE_STAGE_OVERLAP'", to: "if (false) out.push(I('WAVE_STAGE_OVERLAP'" },
   { name: '[хвиля] хвилі одного етапу вважаються перекритими й без спільної комбінації', file: CHECKS_FILE, from: "const k = combos.find((x) => matches(a.when, x) && matches(b.when, x));", to: "const k = combos[0];" },
   { name: '[хвиля] схема не знає wetGear', file: 'validator/schema.mjs', from: "const waveEffect = union({ setFlag: obj({ setFlag: req(str) }), wetGear: obj({ wetGear: req({ t: 'boolean', only: true }) }) });", to: 'const waveEffect = union({ setFlag: obj({ setFlag: req(str) }) });' },
-  { name: '[хвиля] завантажувач і схема не знають waves.json', file: 'validator/schema.mjs', from: "'facts', 'roads', 'flags', 'waves', 'requests', 'stickers'];", to: "'facts', 'roads', 'flags', 'requests', 'stickers'];" },
+  { name: '[хвиля] завантажувач і схема не знають waves.json', file: 'validator/schema.mjs', from: "'facts', 'roads', 'flags', 'waves', 'requests', 'stickers', 'traces'];", to: "'facts', 'roads', 'flags', 'requests', 'stickers', 'traces'];" },
   // наклейки Атласу (GAME-182)
   { name: '[наклейка] наклейка без умови не звітується', file: CHECKS_FILE, from: "out.push(I('STICKER_NO_COND', where,", to: "void (I('STICKER_NO_COND', where," },
   { name: '[наклейка] умова за транспортом чи пам’яттю не звітується', file: CHECKS_FILE, from: "out.push(I('STICKER_COND_UNSUPPORTED',", to: "void (I('STICKER_COND_UNSUPPORTED'," },
@@ -265,7 +265,17 @@ const mutations = [
   { name: '[наклейка] 13-та наклейка проходить (межа зсунута в інший бік)', file: CHECKS_FILE, from: 'list.length > STICKER_SLOTS', to: 'list.length > STICKER_SLOTS + 1' },
   { name: '[наклейка] тексти наклейок не входять до перевірки перекладу', file: CHECKS_FILE, from: "for (const s of ct.stickers ?? []) { add(s.nameKey,", to: "for (const s of []) { add(s.nameKey," },
   { name: '[наклейка] схема не обов’язує текст наклейки', file: 'validator/schema.mjs', from: "nameKey: req(str), textKey: req(str), kind: req(en('place'", to: "nameKey: str, textKey: str, kind: req(en('place'" },
-  { name: '[прохання] завантажувач і схема не знають requests.json', file: 'validator/schema.mjs', from: "'facts', 'roads', 'flags', 'waves', 'requests', 'stickers'];", to: "'facts', 'roads', 'flags', 'waves', 'stickers'];" },
+  { name: '[прохання] завантажувач і схема не знають requests.json', file: 'validator/schema.mjs', from: "'facts', 'roads', 'flags', 'waves', 'requests', 'stickers', 'traces'];", to: "'facts', 'roads', 'flags', 'waves', 'stickers', 'traces'];" },
+  // сліди дідуся Генрі (GAME-215)
+  { name: '[слід] завантажувач і схема не знають traces.json', file: 'validator/schema.mjs', from: "'facts', 'roads', 'flags', 'waves', 'requests', 'stickers', 'traces'];", to: "'facts', 'roads', 'flags', 'waves', 'requests', 'stickers'];" },
+  { name: '[слід] слід без нагороди проходить (xp ≥ 0 замість > 0)', file: CHECKS_FILE, from: 'Number.isInteger(tr.reward?.xp) && tr.reward.xp > 0', to: 'Number.isInteger(tr.reward?.xp) && tr.reward.xp >= 0' },
+  { name: '[слід] позначка без об’єкта на мапі не звітується', file: CHECKS_FILE, from: "if (!maps.includes(tr.spot)) out.push(I('TRACE_UNREACHABLE'", to: "if (false) out.push(I('TRACE_UNREACHABLE'" },
+  { name: '[слід] «людина, що пам’ятає» без сетера в розмові не звітується', file: CHECKS_FILE, from: "if (!sets) out.push(I('TRACE_UNREACHABLE'", to: "if (false) out.push(I('TRACE_UNREACHABLE'" },
+  { name: '[слід] нижня межа зсунута (два сліди дозволено)', file: CHECKS_FILE, from: 'if (n < TRACE_MIN || n > TRACE_MAX)', to: 'if (n < TRACE_MIN - 1 || n > TRACE_MAX)' },
+  { name: '[слід] верхня межа зсунута (шість слідів дозволено)', file: CHECKS_FILE, from: 'if (n < TRACE_MIN || n > TRACE_MAX)', to: 'if (n < TRACE_MIN || n > TRACE_MAX + 1)' },
+  { name: '[слід] листівка за частину слідів проходить (some замість every)', file: CHECKS_FILE, from: 'return flags.every((f) => have.has(f)); });', to: 'return flags.some((f) => have.has(f)); });' },
+  { name: '[слід] тексти слідів не входять до перевірки перекладу', file: CHECKS_FILE, from: 'for (const tr of ct.traces ?? []) { add(tr.nameKey,', to: 'for (const tr of []) { add(tr.nameKey,' },
+  { name: '[слід] прапорці слідів не рахуються вжитими (Атлас не читач)', file: CHECKS_FILE, from: "for (const tr of content.traces ?? []) if (typeof tr.id === 'string') out.push([`traces:${tr.id}`, traceFlag(tr.id)]);", to: '' },
   // GAME-184: продовження арки (after) — ланцюг прохань одного просильника
   { name: '[прохання] after на неіснуюче/чуже прохання не звітується', file: CHECKS_FILE, from: "if (!prev || prev.giver !== r.giver) out.push(I('REQUEST_AFTER_INVALID'", to: "if (false) out.push(I('REQUEST_AFTER_INVALID'" },
   { name: '[прохання] продовження шукає пропозицію у вузлі offer (а не offer2)', file: CHECKS_FILE, from: "const offerId = r.after === undefined ? 'offer' : 'offer2';", to: "const offerId = 'offer';" },

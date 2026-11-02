@@ -329,5 +329,17 @@
   "ep.recap.home": "Back home with sand in the shoes and a plan for the next trip.",
   "ep.trace": "Between the atlas pages — a circled hill and a pencil line: \"The best view isn't from the tower. H+E\".",
   "ep.next": "Next episode: Luxembourg, a trail of our own — and the other half of the medallion.",
-  "ep.continue": "Continue"
+  "ep.continue": "Continue",
+  "atlas.henry": "Henry's Trail",
+  "atlas.henry.hint": "Pencil marks on the maps: every one can be found, none is required.",
+  "atlas.henry.count": "Traces found",
+  "atlas.henry.unknown": "Not found yet",
+  "atlas.henry.postcard": "Henry's postcard — for every trace",
+  "trace.fresh": "this autumn",
+  "trace.kind.cache": "cache",
+  "trace.kind.person": "someone who remembers",
+  "trace.kind.inscription": "inscription",
+  "trace.kind.riddle": "riddle",
+  "trace.kind.gift": "gift for the road",
+  "near.trace": "Look at Grandpa's trace"
 }

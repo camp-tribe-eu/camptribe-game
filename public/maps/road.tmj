@@ -1460,6 +1460,42 @@
      "point": true,
      "rotation": 0,
      "visible": true
+    },
+    {
+     "id": 16,
+     "name": "trace.road-milestone",
+     "type": "trigger",
+     "x": 304,
+     "y": 240,
+     "width": 0,
+     "height": 0,
+     "point": true,
+     "rotation": 0,
+     "visible": true
+    },
+    {
+     "id": 17,
+     "name": "trace.road-oak",
+     "type": "trigger",
+     "x": 528,
+     "y": 80,
+     "width": 0,
+     "height": 0,
+     "point": true,
+     "rotation": 0,
+     "visible": true
+    },
+    {
+     "id": 18,
+     "name": "trace.road-sign",
+     "type": "trigger",
+     "x": 720,
+     "y": 80,
+     "width": 0,
+     "height": 0,
+     "point": true,
+     "rotation": 0,
+     "visible": true
     }
    ]
   }
