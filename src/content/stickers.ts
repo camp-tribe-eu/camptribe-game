@@ -2,6 +2,7 @@
 // Валідатор (перевірка stickers) доводить: у кожної наклейки є умова з відомими прапорцями й квестами, текст uk/en, не більше 12.
 import type { CondDef } from '../core/defs';
 import type { StickerDefs } from '../core/stickers';
+import type { AtlasPageRule } from '../core/atlas-fill';
 import stickers from '../../content/stickers.json';
 
 export interface RawSticker { id: string; nameKey: string; textKey: string; kind: string; icon: string; cond: CondDef }
@@ -12,3 +13,12 @@ export const STICKER_META: readonly { readonly id: string; readonly nameKey: str
 
 export const compileStickers = (raw: readonly RawSticker[]): StickerDefs => Object.fromEntries(raw.map((s) => [s.id, { cond: s.cond }]));
 export const STICKER_DEFS: StickerDefs = compileStickers(stickers as RawSticker[]);
+
+/**
+ * GAME-200 · сторінки Атласу з нагородою. «Перша спроба» — усі наклейки розділу 1, крім листівки Генрі (вона — нагорода сторінки «Шлях Генрі», GAME-215:
+ * там заповнення — знайдені сліди, див. henryPage). Нагорода XP/ОМ — раз за ключ `atlas:ch1`. Сторінку додає розділ: новий запис — нова нагорода, ядро не міняється.
+ */
+export const HENRY_STICKER = 'sticker.henry-postcard';
+export const ATLAS_PAGES: readonly AtlasPageRule[] = [
+  { id: 'ch1', stickers: (stickers as RawSticker[]).map((s) => s.id).filter((id) => id !== HENRY_STICKER), xp: 20, om: 5 },
+];

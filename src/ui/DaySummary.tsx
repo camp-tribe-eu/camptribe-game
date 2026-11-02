@@ -28,6 +28,7 @@ export function DaySummary({ summary, lang, t, onContinue, onEnd }: {
           {`${t('sum.reward')}: +${summary.reward.xp} ${t('ui.xp')}${summary.reward.om > 0 ? ` · +${summary.reward.om} ${t('ui.om')}` : ''}`}
         </p>
         <p class="ui-summary-sec" data-ui="summary-next">{`${t('sum.next')}: ${summary.nextKey ? ct(lang, summary.nextKey) : t('sum.nextEnded')}`}</p>
+        {summary.tomorrowKey && <p class="ui-summary-sec ui-summary-tomorrow" data-ui="summary-tomorrow">{`${t('sum.tomorrow')}: ${t(summary.tomorrowKey as Key)}`}</p>}
         {summary.sections.map((s) => (
           <section class="ui-summary-sec" data-ui="summary-section" data-kind={s.kind} key={s.kind}>
             <h3>{t(TITLE[s.kind])}</h3>

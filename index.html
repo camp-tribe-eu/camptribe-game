@@ -68,6 +68,10 @@
         line-height: var(--hud-lh); min-width: 0; overflow-wrap: anywhere; pointer-events: none; }
       .ui-next[data-kind="near"] { color: #9be28f; }
       /* GAME-180: трекер прохань — рядок усередині «Далі:»; повний пункт («Сміття 3/3») зеленіє: лишилось повернутись до просильника. */
+      .ui-near-reward { box-sizing: border-box; max-width: 100%; padding: 3px 8px; border-radius: 8px; background: #2a2f36; color: #ffd54a; font-size: 0.8125rem; line-height: var(--hud-lh); min-width: 0; overflow-wrap: anywhere; pointer-events: none; }
+      .ui-goals ul, .ui-atlas-fill-pages { margin: 0; padding-left: 1.2em; text-align: left; }
+      .ui-atlas-fill { font-size: 0.8125rem; text-align: left; }
+      .ui-atlas-fill p { margin: 4px 0; font-weight: 700; }
       .ui-reqs { box-sizing: border-box; max-width: 100%; display: flex; flex-wrap: wrap; column-gap: 10px; padding: 3px 8px; border-radius: 8px; background: #2a2f36; color: #f4efe6; font-size: 0.8125rem; line-height: var(--hud-lh); font-weight: 700; font-variant-numeric: tabular-nums; pointer-events: none; }
       .ui-req-row[data-ready="yes"] { color: #9be28f; }
       /* Картка прохання в рамці розмови: що зробити, цілі-картинки, нагорода. */
@@ -327,8 +331,8 @@
       .ui-henry-postcard .ui-sticker-icon { width: 1.2rem; height: 1.2rem; }
       /* Телефон вбік (844×390): сітка ліворуч, назва, лічильник і мапа — праворуч; під сторінкою рядок вступу й кнопка. */
       @media (max-height: 500px) {
-        .ui-atlas-page { display: grid; grid-template-columns: auto minmax(0, 1fr); grid-template-areas: "grid title" "grid count" "grid map" "henry henry"; align-items: center; gap: 4px 16px; }
-        .ui-atlas-grid { grid-area: grid; } .ui-atlas-title { grid-area: title; } .ui-atlas-count { grid-area: count; } .ui-atlas-map { grid-area: map; justify-self: center; width: clamp(100px, 22vw, 160px); } .ui-henry { grid-area: henry; }
+        .ui-atlas-page { display: grid; grid-template-columns: auto minmax(0, 1fr); grid-template-areas: "grid title" "grid count" "grid fill" "grid map" "henry henry"; align-items: center; gap: 4px 16px; }
+        .ui-atlas-grid { grid-area: grid; } .ui-atlas-title { grid-area: title; } .ui-atlas-count { grid-area: count; } .ui-atlas-map { grid-area: map; justify-self: center; width: clamp(100px, 22vw, 160px); } .ui-henry { grid-area: henry; } .ui-atlas-fill { grid-area: fill; }
         .ui-intro-stage:has(> .ui-letter) { align-items: center; justify-content: flex-end; padding-bottom: 8px; } .ui-intro-stage > .ui-letter { max-width: min(46%, 380px); }
         .ui-intro-stage { padding-top: 44px; } .ui-intro-atlas { flex-direction: column; flex-wrap: nowrap; gap: 6px; } .ui-intro-final { flex: none; }
         .ui-atlas { padding-top: 8px; gap: 6px; } .ui-atlas h2 { font-size: 1.1rem; margin: 0; }

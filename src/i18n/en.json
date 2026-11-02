@@ -343,5 +343,20 @@
   "trace.kind.inscription": "inscription",
   "trace.kind.riddle": "riddle",
   "trace.kind.gift": "gift for the road",
-  "near.trace": "Look at Grandpa's trace"
+  "near.trace": "Look at Grandpa's trace",
+  "rw.nearest": "Nearest reward",
+  "rw.more": "more",
+  "rw.henry": "Henry's postcard",
+  "rw.atlas": "Atlas page",
+  "ui.goals": "Goals",
+  "ui.goals.main": "Main",
+  "ui.goals.side": "Side",
+  "ui.goals.reward": "Reward is close",
+  "atlas.fill": "Atlas filled",
+  "atlas.page.reward": "reward",
+  "atlas.page.rewardGot": "reward earned",
+  "atlas.page.henryReward": "postcard",
+  "sum.tomorrow": "Tomorrow",
+  "sum.tomorrow.1": "a campfire by the lake, a starry evening and neighbours with small favours.",
+  "sum.tomorrow.2": "a last morning by the lake, then the road home."
 }

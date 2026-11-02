@@ -3,6 +3,7 @@
 // Каталог збирається з перевіреного content/ (валідатор) — ядро його не змінює.
 import { isSkillId, MAX_RANK, type SkillId } from './skills';
 import type { LifeDefs } from './life';
+import type { AtlasPageRule } from './atlas-fill';
 import type { StickerDefs } from './stickers';
 
 export interface ItemDef {
@@ -305,6 +306,8 @@ export interface CoreDefs {
   readonly packing?: PackingDefs;
   /** Наклейки Атласу (GAME-182, content/stickers.json): умови видачі. Немає — наклейок немає. */
   readonly stickers?: StickerDefs;
+  /** GAME-200: сторінки Атласу з нагородою за повне заповнення (src/content/stickers.ts). Немає — нагород немає. */
+  readonly atlasPages?: readonly AtlasPageRule[];
 }
 
 export const EMPTY_DEFS: CoreDefs = { items: {}, interactions: {} };

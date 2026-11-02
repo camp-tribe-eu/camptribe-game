@@ -51,7 +51,14 @@ export interface OfferSummary {
   readonly reward: { readonly xp: number; readonly om: number };
   /** GAME-181: «Наступного разу: …» — ключ назви активного головного квесту; null — розділ завершено. */
   readonly nextKey: string | null;
+  /** GAME-200: «Завтра…» — ключ інтерфейсу короткого тизера наступного дня (`sum.tomorrow.<день>`); null — розділ завершено чи тизера для дня немає. */
+  readonly tomorrowKey: string | null;
 }
+
+/** GAME-200: найближча нагорода («ще N…»): ключ підпису — контенту (`ui: false`) або інтерфейсу. */
+export interface OfferNearest { readonly kind: 'request' | 'henry' | 'atlas'; readonly left: number; readonly labelKey: string; readonly ui: boolean }
+/** GAME-200: відкрита ціль журналу — головна, побічна (квест/прохання) або «нагорода близько». Не більше 4. */
+export interface OfferGoal { readonly kind: 'main' | 'side' | 'reward'; readonly key: string; readonly ui: boolean; readonly left?: number }
 
 /** GAME-181: звання за XP — `key` (`title.N`) і `nextKey` у content/locales; `into/span` — просування до наступного (span 0 — найвище). */
 export interface OfferTitle { readonly index: number; readonly key: string; readonly nextKey: string | null; readonly into: number; readonly span: number }
@@ -68,7 +75,11 @@ export interface OfferSkill {
   readonly unlockKey: string | null;
 }
 /** GAME-182: сторінка Атласу «Перша спроба» — наклейки за слотами (у порядку контенту; не отримана — силует) і лічильник; печатка господаря — місце є, самої печатки в першому розділі ще немає. */
+export interface OfferAtlasPage { readonly id: string; readonly titleKey: string; readonly have: number; readonly total: number; readonly pct: number; readonly done: boolean; readonly reward: { readonly xp: number; readonly om: number } | null }
 export interface OfferAtlas {
+  /** GAME-200: заповнення сторінок (відсоток і нагорода за повну) і загальне — за всіма сторінками разом. */
+  readonly pages: readonly OfferAtlasPage[];
+  readonly fillPct: number;
   readonly slots: readonly { readonly id: string; readonly nameKey: string; readonly textKey: string; readonly kind: string; readonly icon: string; readonly owned: boolean }[];
   /** Скільки слотів на сторінці (12). */
   readonly total: number;
@@ -168,4 +179,7 @@ export interface StoryOffer {
   readonly progress: OfferProgress;
   /** GAME-182: Атлас. */
   readonly atlas: OfferAtlas;
+  /** GAME-200: найближча нагорода й відкриті цілі журналу. */
+  readonly nearest: OfferNearest | null;
+  readonly goals: readonly OfferGoal[];
 }

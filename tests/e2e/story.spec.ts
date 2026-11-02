@@ -387,7 +387,10 @@ test.describe('GAME-80 · подвійне натискання', () => {
     await open(page, '?seed=5');
     await carToCamp(page);
     const before = (await core(page)).journal.length;
-    const box = await panel(page).locator('[data-act="pickup"][data-key="item.firewood"]').boundingBox();
+    const btn = panel(page).locator('[data-act="pickup"][data-key="item.firewood"]');
+    // GAME-200: розділ «Цілі» подовжив панель — на телефоні кнопка може бути нижче краю; дотик за межами екрана нічого не робить.
+    await btn.scrollIntoViewIfNeeded();
+    const box = await btn.boundingBox();
     if (!box) throw new Error('кнопки «Узяти: Дрова» немає на екрані');
     const x = box.x + box.width / 2, y = box.y + box.height / 2;
     await page.touchscreen.tap(x, y);
