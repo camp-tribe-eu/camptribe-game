@@ -53,8 +53,22 @@ function duskWave() {
   return { id: 'wave.fixture-dusk', titleKey: WV('title'), hookKey: WV('hook'), stage: 'ST-002', fallback: { textKey: WV('fallback') }, tasks: [waveTask('wood'), waveTask('tea')] };
 }
 
+// GAME-211: еталонна картка персонажа. Кожен NPC еталона її має (інакше NPC_CARD_MISSING червонів би в кожному прикладі, що додає NPC):
+// baseline() ставить її двом NPC, judge() самотесту доповнює нею NPC, яких додав приклад (крім прикладів із rawCards — вони перевіряють саму картку).
+const FC = (k) => `card.fixture.${k}`;
+const CARD_TEXTS = ['habit', 'likes', 'dislikes', 'dream', 'phrase1', 'phrase2', 'schedule.morning', 'schedule.day', 'schedule.evening'];
+export const fixtureCard = () => ({
+  habit: FC('habit'), likes: FC('likes'), dislikes: FC('dislikes'), dream: FC('dream'), phrases: [FC('phrase1'), FC('phrase2')],
+  schedule: { morning: { textKey: FC('schedule.morning') }, day: { textKey: FC('schedule.day') }, evening: { textKey: FC('schedule.evening') } },
+});
+export function withCards(c) {
+  for (const n of c.npcs) n.card ??= fixtureCard();
+  for (const lang of c.meta.locales) if (c.locales?.[lang]) for (const k of CARD_TEXTS) c.locales[lang][FC(k)] ??= `[${lang}] ${k}`;
+  return c;
+}
+
 export function baseline() {
-  return {
+  return withCards({
     meta: { start: 'ST-001', locales: ['uk', 'en'] },
     items: [
       { id: 'item.map', nameKey: 'item.map' },
@@ -121,7 +135,7 @@ export function baseline() {
       uk: Object.fromEntries(LOCALE_KEYS.map((k) => [k, lineText('uk', k)])),
       en: Object.fromEntries(LOCALE_KEYS.map((k) => [k, lineText('en', k)])),
     },
-  };
+  });
 }
 
 const q = (c, id) => c.quests.find((x) => x.id === id);
@@ -455,6 +469,19 @@ export const FIXTURES = [
     c.animals = [{ id: 'animal.fixture-cat', nameKey: 'npc.ranger' }];
     wave(c).tasks.push(waveTask('wood', { id: 'cat', textKey: WV('wood'), done: { textKey: WV('wood.done') }, late: { textKey: WV('wood.late') }, animal: 'animal.fixture-cat', leaderOnly: true, targets: [{ id: 'spot.pines', safe: true }] }));
   } },
+  // GAME-211 · картки персонажів (rawCards: приклад сам ламає картку, тож самотест не доповнює її еталонною)
+  { name: '[картка] контроль: усі NPC з повною карткою — коректно', expect: [], rawCards: true, patch() {} },
+  { name: '[картка] МУТАЦІЯ: картка без розкладу', expect: ['NPC_CARD_NO_SCHEDULE'], rawCards: true, count: { code: 'NPC_CARD_NO_SCHEDULE', n: 3 }, patch(c) { delete c.npcs[0].card.schedule; } },
+  { name: '[картка] розклад без вечора', expect: ['NPC_CARD_NO_SCHEDULE'], rawCards: true, count: { code: 'NPC_CARD_NO_SCHEDULE', n: 1 }, patch(c) { delete c.npcs[1].card.schedule.evening; } },
+  { name: '[картка] пора розкладу з порожнім ключем тексту', expect: ['NPC_CARD_NO_SCHEDULE'], rawCards: true, patch(c) { c.npcs[0].card.schedule.day.textKey = ' '; } },
+  { name: '[картка] NPC зовсім без картки', expect: ['NPC_CARD_MISSING'], rawCards: true, count: { code: 'NPC_CARD_MISSING', n: 1 }, patch(c) { delete c.npcs[1].card; } },
+  { name: '[картка] порожнє поле «любить»', expect: ['NPC_CARD_MISSING'], rawCards: true, patch(c) { c.npcs[0].card.likes = ''; } },
+  { name: '[картка] немає поля «страх або мрія»', expect: ['NPC_CARD_MISSING'], rawCards: true, patch(c) { delete c.npcs[0].card.dream; } },
+  { name: '[картка] одна фірмова фраза замість 2–3', expect: ['NPC_CARD_PHRASES'], rawCards: true, patch(c) { c.npcs[0].card.phrases = [c.npcs[0].card.phrases[0]]; } },
+  { name: '[картка] чотири фірмові фрази', expect: ['NPC_CARD_PHRASES'], rawCards: true, patch(c) { c.npcs[0].card.phrases.push('card.fixture.habit', 'card.fixture.likes'); } },
+  { name: '[картка] фрази повторюються', expect: ['NPC_CARD_PHRASES'], rawCards: true, patch(c) { c.npcs[0].card.phrases = ['card.fixture.phrase1', 'card.fixture.phrase1']; } },
+  { name: '[картка] тексту розкладу немає в одній з мов', expect: ['LOCALE_MISSING'], rawCards: true, patch(c) { delete c.locales.en['card.fixture.schedule.morning']; } },
+  { name: '[картка] невідоме поле картки (схема)', expect: ['SCHEMA_UNKNOWN_FIELD'], rawCards: true, patch(c) { c.npcs[0].card.mood = 'x'; } },
   // GAME-182 · наклейки Атласу
   { name: '[наклейка] без умови видачі', expect: ['STICKER_NO_COND'], patch(c) { delete c.stickers[0].cond; } },
   { name: '[наклейка] контроль: умова за прапорцем, який ставить діалог — коректно', expect: [], patch(c) { c.stickers[0].cond = { flag: 'f.fixture-met' }; } },

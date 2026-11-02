@@ -10,7 +10,7 @@ import { CHECKS, validate } from './checks.mjs';
 import { loadContent } from './load.mjs';
 import { verdict } from './verdict.mjs';
 import { COLLECTIONS } from './schema.mjs';
-import { baseline, comboBaseline, FIXTURES, FILE_FIXTURES, FIXTURE_MAPS, TODAY } from './fixtures.mjs';
+import { baseline, comboBaseline, FIXTURES, FILE_FIXTURES, FIXTURE_MAPS, TODAY, withCards } from './fixtures.mjs';
 
 const codeSet = (issues) => [...new Set(issues.map((i) => i.code))].sort();
 
@@ -61,6 +61,7 @@ export function selfTest() {
   const judge = (f) => {
     const c = f.base === 'combo' ? comboBaseline() : baseline();
     f.patch(c);
+    if (!f.rawCards) withCards(c);   // GAME-211: NPC, доданим прикладом, — еталонна картка, якщо приклад не перевіряє саму картку
     const issues = validate(c, { today: TODAY, maps: FIXTURE_MAPS });
     const got = codeSet(issues);
     const want = [...f.expect].sort();

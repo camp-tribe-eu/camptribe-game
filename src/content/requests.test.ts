@@ -422,3 +422,52 @@ describe('GAME-180 · правила на ядрі й режисері', () => {
     expect(requestFlag('req.nora-shore', 't1')).toBe('f.req-nora-shore-t1');
   });
 });
+
+// GAME-211 · сусід пам'ятає, що ми допомогли: рядок після допомоги ≠ рядок без неї. Дані — content/dialogue/{sarah,nora}-chat.json, прапорці ставить сама здача
+// прохання (f.req-*-done), нових прапорців нема. Мутації (перевірено, див. PR): прибрати гілку thanks із gate Сари або `when` з hello.c5 Нори → червоні.
+describe('GAME-211 · пам’ять сусідів: рядок після допомоги', () => {
+  const rawNodes = (id: string): { id: string; textKey: string; choices?: { textKey: string; next: string; when?: unknown }[] }[] =>
+    (CONTENT.dialogues.find((d) => d.id === id)?.nodes ?? []) as never;
+  const lineOf = (s: GameState): string => {
+    const d = s.dialogue;
+    const key = rawNodes(d?.id ?? '').find((x) => x.id === d?.node)?.textKey ?? '';
+    return LOC[key] ?? `?${key}`;
+  };
+  const withFlag = (s: GameState, f: string): GameState => ({ ...s, flags: [...s.flags, f] });
+  const sarah = REQUESTS.find((r) => r.giver === 'npc.sarah') as Neighbor;
+
+  it('Сара: після здачі печива другою репліякою — подяка з пам’яттю; без допомоги вона просить допомоги, а не дякує', () => {
+    const none = play([{ type: 'Talk', npcId: 'npc.sarah' }], atCamp());
+    const helped = play([{ type: 'Talk', npcId: 'npc.sarah' }], complete(atCamp(), sarah));
+    const afterNone = play([{ type: 'Continue' }], none);
+    const afterHelped = play([{ type: 'Continue' }], helped);
+    expect(afterHelped.dialogue?.node).toBe('thanks');
+    expect(lineOf(afterHelped)).toBe(LOC['dlg.sarah-chat.thanks']);
+    expect(afterNone.dialogue?.node, 'без допомоги — пропозиція, не подяка').toBe('offer');
+    expect(lineOf(afterNone)).not.toBe(lineOf(afterHelped));
+    // після подяки розмова повертається до звичайного привітання: старі вузли недоторкані
+    const hello = play([{ type: 'Continue' }], afterHelped);
+    expect(hello.dialogue?.node).toBe('hello');
+    expect(LOC_EN['dlg.sarah-chat.thanks']).not.toBe(LOC['dlg.sarah-chat.thanks']);
+  });
+
+  it('Нора: вибір про чистий берег з’являється в привітанні лише після здачі прохання; веде до рядка з пам’яттю', () => {
+    const hello = rawNodes('dlg.nora-chat').find((x) => x.id === 'hello');
+    const memory = hello?.choices?.find((c) => c.textKey === 'dlg.nora-chat.hello.c5');
+    expect(memory?.when, 'вибір умовний за здачею прохання').toEqual({ flag: 'f.req-nora-shore-done' });
+    expect(hello?.choices?.filter((c) => c.when === undefined).length, 'безумовна пара лишилась (граф без глухих кутів)').toBe(3);
+    const done = ['f.req-nora-shore-taken', 'f.req-nora-shore-done', 'f.req-nora-camera-taken', 'f.req-nora-camera-done'];
+    const base = done.reduce(withFlag, atCamp());
+    const without = ['f.req-nora-camera-taken', 'f.req-nora-camera-done'].reduce(withFlag, atCamp());
+    const talk = (s: GameState): GameState => play([{ type: 'Continue' }], play([{ type: 'Talk', npcId: 'npc.nora' }], s));
+    expect(talk(base).dialogue?.node).toBe('hello');
+    const atHello = (s: GameState): GameState => ({ ...s, dialogue: { id: 'dlg.nora-chat', node: 'hello' } });
+    // умову перевіряє саме ядро: вибір 4 приймається лише з прапорцем
+    const tryChoose = (s: GameState) => send(atHello(s), { type: 'Choose', choice: 4 });
+    expect(tryChoose(base).ok, 'з прапорцем — вибір приймається').toBe(true);
+    expect(tryChoose(without).ok, 'без прапорця — ядро відхиляє вибір').toBe(false);
+    const said = play([{ type: 'Choose', choice: 4 }], atHello(base));
+    expect(said.dialogue?.node).toBe('shore-memory');
+    expect(lineOf(said)).toBe(LOC['dlg.nora-chat.shore-memory']);
+  });
+});

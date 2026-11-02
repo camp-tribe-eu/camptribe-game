@@ -1,4 +1,4 @@
 [
-  { "id": "npc.elise", "nameKey": "npc.elise", "locationId": "loc.camp.lake", "unlockedBy": "ST-004" },
-  { "id": "npc.nora", "nameKey": "npc.nora", "locationId": "loc.camp.lake", "unlockedBy": "ST-004" }
+  {"id": "npc.elise", "nameKey": "npc.elise", "locationId": "loc.camp.lake", "unlockedBy": "ST-004", "card": {"habit": "card.elise.habit", "likes": "card.elise.likes", "dislikes": "card.elise.dislikes", "phrases": ["card.elise.phrase1", "card.elise.phrase2", "card.elise.phrase3"], "schedule": {"morning": {"textKey": "card.elise.schedule.morning"}, "day": {"textKey": "card.elise.schedule.day"}, "evening": {"textKey": "card.elise.schedule.evening"}}, "dream": "card.elise.dream"}},
+  {"id": "npc.nora", "nameKey": "npc.nora", "locationId": "loc.camp.lake", "unlockedBy": "ST-004", "card": {"habit": "card.nora.habit", "likes": "card.nora.likes", "dislikes": "card.nora.dislikes", "phrases": ["card.nora.phrase1", "card.nora.phrase2", "card.nora.phrase3"], "schedule": {"morning": {"textKey": "card.nora.schedule.morning", "zone": "forest-path"}, "day": {"textKey": "card.nora.schedule.day", "zone": "reception"}, "evening": {"textKey": "card.nora.schedule.evening", "zone": "pier"}}, "dream": "card.nora.dream"}}
 ]

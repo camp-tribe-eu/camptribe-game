@@ -133,7 +133,16 @@ export const SCHEMAS = {
     priceCents: int0, resaleCents: int0,
   }),
   // follows (GAME-202): член родини ходить із героєм — розмова можлива на будь-якій мапі, locationId — лише «домашня» мапа для панелі.
-  npcs: obj({ id: req(str), nameKey: req(str), locationId: req(str), unlockedBy: str, sells: arr(str), when, follows: bool }),
+  // card (GAME-211): картка персонажа — звичка, вподобання, манера мови (2–3 фрази), розклад ранок/день/вечір, страх або мрія. Поля НЕ required
+  // тут: їх відсутність стереже перевірка npc-cards власними кодами (NPC_CARD_MISSING, NPC_CARD_NO_SCHEDULE), а не загальний SCHEMA_INVALID.
+  // schedule.<пора>.zone — зона табору (ZONES у src/view/world/ambient.ts), лише для мешканців; збіг із розкладом руху звіряє юніт-тест.
+  npcs: obj({
+    id: req(str), nameKey: req(str), locationId: req(str), unlockedBy: str, sells: arr(str), when, follows: bool,
+    card: obj({
+      habit: str, likes: str, dislikes: str, dream: str, phrases: arr(str),
+      schedule: obj({ morning: obj({ textKey: str, zone: str }), day: obj({ textKey: str, zone: str }), evening: obj({ textKey: str, zone: str }) }),
+    }),
+  }),
   locations: obj({ id: req(str), nameKey: req(str), unlockedBy: str, items: arr(str), sheltered: bool, when }),
   quests: obj({
     id: req(str), titleKey: req(str), optional: req(bool), end: bool, dayEnd: bool, xp: int0,

@@ -3,7 +3,8 @@
   "npcId": "npc.sarah",
   "start": "gate",
   "nodes": [
-    { "id": "gate", "speaker": "npc", "textKey": "dlg.sarah-chat.gate", "next": "hello", "branches": [{ "when": { "all": [{ "flag": "f.req-sarah-snack-t1" }, { "flag": "f.req-sarah-snack-t2" }, { "notFlag": "f.req-sarah-snack-done" }] }, "next": "turnin" }, { "when": { "all": [{ "flag": "f.req-sarah-snack-taken" }, { "notFlag": "f.req-sarah-snack-done" }] }, "next": "reminder" }, { "when": { "all": [{ "notFlag": "f.req-sarah-snack-taken" }, { "notFlag": "f.req-sarah-snack-done" }] }, "next": "offer" }] },
+    { "id": "gate", "speaker": "npc", "textKey": "dlg.sarah-chat.gate", "next": "hello", "branches": [{ "when": { "all": [{ "flag": "f.req-sarah-snack-t1" }, { "flag": "f.req-sarah-snack-t2" }, { "notFlag": "f.req-sarah-snack-done" }] }, "next": "turnin" }, { "when": { "all": [{ "flag": "f.req-sarah-snack-taken" }, { "notFlag": "f.req-sarah-snack-done" }] }, "next": "reminder" }, { "when": { "all": [{ "notFlag": "f.req-sarah-snack-taken" }, { "notFlag": "f.req-sarah-snack-done" }] }, "next": "offer" }, { "when": { "flag": "f.req-sarah-snack-done" }, "next": "thanks" }] },
+    { "id": "thanks", "speaker": "npc", "textKey": "dlg.sarah-chat.thanks", "next": "hello" },
     {
       "id": "hello", "speaker": "npc", "textKey": "dlg.sarah-chat.hello",
       "choices": [

@@ -97,7 +97,7 @@ GDD — приватний (`brain/Передача/00-dzherelo-lezhyt-lokalno.m
 | `transports.json` | **`id`**, **`nameKey`** | `transport.bike` |
 | `animals.json` | **`id`**, **`nameKey`**, `transports` | `animal.cat` (`animal.none` — зарезервовано) |
 | `items.json` | **`id`**, **`nameKey`** | `item.sleeping-bag` |
-| `npcs.json` | **`id`**, **`nameKey`**, **`locationId`**, `unlockedBy`, `sells`, `when`, `follows` (GAME-202: член родини ходить із героєм — розмова на будь-якій мапі) | `npc.elise` |
+| `npcs.json` | **`id`**, **`nameKey`**, **`locationId`**, `unlockedBy`, `sells`, `when`, `follows` (GAME-202: член родини ходить із героєм — розмова на будь-якій мапі), `card` (GAME-211: картка персонажа — `habit`, `likes`, `dislikes`, `dream`, `phrases` 2–3, `schedule.morning/day/evening` `{ textKey, zone? }`; коди `NPC_CARD_*` нижче) | `npc.elise` |
 | `locations.json` | **`id`**, **`nameKey`**, `unlockedBy`, `items`, `when` | `loc.camp.lake` |
 | `quests.json` | **`id`**, **`titleKey`**, **`optional`**, **`xp`** (XP мандрівника: крок головного 10–20, побічка 15, GAME-181), **`objectives`**, **`transitions`**, `end` (кінець розділу), `dayEnd` (межа дня історії, GAME-141), `giverId`, `locationId`, `when`, `requires`, `reward` | основний — канонічний id сценарію `ST-006`, `CH1-HOME-001` (ключ тексту — `q.ch1-home-001`), бічний `q.nora-walk` |
 | `events.json` | **`id`**, **`titleKey`**, **`repeatable`**, `locationId`, `reward` | `ev.neighbours-firewood` |
@@ -305,6 +305,12 @@ GDD — приватний (`brain/Передача/00-dzherelo-lezhyt-lokalno.m
 - `STICKER_COND_REF` — квест з умови наклейки не існує в `quests.json`. Не допустити: id квесту копіюй дослівно з `quests.json`.
 - `STICKER_FLAG_NEVER_SET` — прапорець з умови наклейки не ставить жоден `setFlag` (діалог, сцена, наслідок хвилі) і він не прапорець взаємодії на мапі (`kind: interaction` у реєстрі): наклейка недосяжна. Не допустити: спершу ефект `setFlag` у діалозі (або рядок реєстру `kind: interaction` для об'єкта мапи), потім наклейка; enum — конкретне значення `f.pitch-pines`.
 - `STICKER_TOO_MANY` — наклейок більше за 12 слотів сторінки Атласу. Не допустити: сторінка — 12 слотів (сценарій §2.1); нова сторінка — окрема картка; тексти `nameKey`/`textKey` — у `uk` і `en` одночасно (інакше `LOCALE_MISSING`).
+
+**Картки персонажів** (GAME-211, `content/npcs.json` → `card`)
+- `NPC_CARD_MISSING` — у NPC немає картки або порожнє поле `habit` / `likes` / `dislikes` / `dream` (страх або мрія). Не допустити: кожен новий NPC у `npcs.json` одразу з карткою; ключі тексту — `card.<ім'я>.<поле>`, обидві мови.
+- `NPC_CARD_NO_SCHEDULE` — у розкладі картки немає пори `morning`, `day` чи `evening` (кожна з `textKey`). Не допустити: розклад — три пори, без жодної порожньої; мешканцю табору ще й `zone` (id із `ZONES` у `ambient.ts`) — вона мусить збігатися з тим, де його ставить розклад руху о 7:00 / 15:00 / 19:00 (`SCHEDULE_MINUTES`), інакше червоніє `npc-cards.test`. Змінив стоянки в `RESIDENTS` — перевір зони в картці.
+- `NPC_CARD_PHRASES` — фірмових фраз не 2–3, або порожня, або повтор. Не допустити: 2–3 різні короткі фрази в манері персонажа.
+- Пам'ять сусіда: рядок «після допомоги» — гілка/вибір за прапорцем `f.req-*-done` (нових прапорців не додавати: перебір меню від них вибухає), приклади — `dlg.sarah-chat/thanks`, `dlg.nora-chat/hello.c5`; існуючі вузли не міняти, лише додавати.
 
 **Ящик і лавка табору** (GAME-209, `src/content/crate-push.ts`, `repair.ts`): на мапі табору `crate.start` (якір) — ящик, що штовхається по клітинках; сторож `softlockGuard` відхиляє зсув, після якого від ніг героя відрізано точку появи чи будь-який об'єкт мапи (новий об'єкт на мапі автоматично входить у перевірку; тест вичерпно перебирає розташування ящика на справжній мапі й має мутацію «сторож вимкнено → червоне»). Старт ящика не ставити на стоянки мешканців (`ambient.ts`) і не на маршрути. `trace.camp-crate` — слід, що відкривається явно (E), не наближенням. `repair.bench` — лагодження руками (3 удари, `f.bench-repaired`, наклейка `sticker.bench`).
 
