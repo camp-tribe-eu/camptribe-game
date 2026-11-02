@@ -4,6 +4,7 @@ import type { Command } from '../core/commands';
 import type { CoreDefs, StoryDefs } from '../core/defs';
 import { canonical } from '../core/hash';
 import type { GameState } from '../core/state';
+import { REPAIR_INTERACTION } from './repair';
 import { eventSeenFlag } from '../core/story';
 import { ERRAND_PREFIX } from './errands';
 
@@ -115,7 +116,7 @@ export function exploreView(s: GameState, st: Pick<StoryDefs, 'memorable' | 'req
   const npcMemory = Object.fromEntries(Object.entries(s.npcMemory).map(([npc, facts]) => [npc, facts.filter((f) => !mem.has(f))] as const).filter(([, facts]) => facts.length > 0));
   // GAME-180: дотик до цілі прохання видає разову нагороду (grantId `rw.req-…`, 0 центів) — теж косметика; без цього вісім цілей давали б 2⁸ станів у перебору «меню + сцена».
   // GAME-215: те саме для позначок слідів дідуся (`rw.trace-…`, 0 центів): дев'ять позначок на трьох мапах давали б 2⁹ станів.
-  const grants = (st.requestFlags?.length ?? 0) > 0 ? s.grants.filter((g) => !g.startsWith('rw.req-') && !g.startsWith('rw.trace-')) : s.grants;
+  const grants = (st.requestFlags?.length ?? 0) > 0 ? s.grants.filter((g) => !g.startsWith('rw.req-') && !g.startsWith('rw.trace-') && g !== REPAIR_INTERACTION.grantId) : s.grants;
   return { ...progressView(s), flags: s.flags.filter((f) => !mem.has(f)), grants, npcMemory };
 }
 
