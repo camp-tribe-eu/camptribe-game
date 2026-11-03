@@ -26,6 +26,7 @@ import { FEEDBACK_S, RING_IDLE, isAutoSpot, pickNearest, ringMayTake, stepRing, 
 import { IDLE_AFTER_S, LEISURE_BY_MAP, assignLeisure, leisureFromObjects, type LeisureSpot } from './leisure';
 import { BARK_RANGE, CAST, CAST_BY_MAP, RESIDENTS, buildTimeline, placeAt, residentGrid, type Timeline } from './ambient';
 import type { Key } from '../../i18n';
+import { GLYPHS, LOOK_S, idleBob, isEvening, lookAt, type Glyph } from './idle';
 import { facingToward, markerFor, talkBeatsFishing, type NpcMarker } from '../npc-talk';
 import { TentRig, type TentProbe } from './tent';
 import { WoodRig, type WoodProbe } from './wood';
@@ -241,6 +242,12 @@ function drawMarker(g: Phaser.GameObjects.Graphics, kind: NpcMarker): void {
   else g.fillRect(-1, -6, 3, 6).fillRect(-1, 2, 3, 2);
 }
 
+/** GAME-212: піксельний гліф (♪, ?) у палітрі бульби NPC. */
+function drawGlyph(g: Phaser.GameObjects.Graphics, kind: Glyph): void {
+  g.clear().fillStyle(0x1b1f23, 1);
+  GLYPHS[kind].forEach((row, y) => { for (let x = 0; x < row.length; x++) if (row[x] === '#') g.fillRect(x * 2 - 5, y * 2 - 7, 2, 2); });
+}
+
 export class WorldScene extends Phaser.Scene {
   /** GAME-181 (для e2e): скільки спливів нагороди показано й який був останній. */
   private rewardPops = 0;
@@ -256,6 +263,13 @@ export class WorldScene extends Phaser.Scene {
   private chain: Pt[] = [];
   private followSprites: Phaser.GameObjects.Sprite[] = [];
   private followFacing: Dir[] = [];
+  /** GAME-212: скільки мс стоїть герой / слідувач / мешканець (дихання), куди й скільки ще дивиться слідувач на сплеск, видимий зсув героя. */
+  private heroStandMs = 0;
+  private heroBob = 0;
+  private followStand: number[] = [];
+  private followLook: { dir: Dir; s: number }[] = [];
+  private resStand: number[] = [];
+  private emoteG: Phaser.GameObjects.Graphics[] = [];
   /** GAME-202/203: чим зайнятий кожен слідувач (null — у строю чи на дозвіллі). */
   private jobs: (Job | null)[] = [];
   /** GAME-203: хто з FOLLOWERS тягне відтяжки намету, що зараз ставиться (індекси). */
@@ -537,11 +551,14 @@ export class WorldScene extends Phaser.Scene {
     this.jobs = FOLLOWERS.map(() => null);
     // Слідувачі — лише картинки: без тіла фізики й без інтерактивності, тож тап і кнопка дії їх «не бачать» (GAME-112, цілі взаємодії).
     this.followFacing = FOLLOWERS.map(() => 'down' as Dir);
+    this.followStand = FOLLOWERS.map(() => 0);
+    this.followLook = FOLLOWERS.map(() => ({ dir: 'down' as Dir, s: 0 }));
     this.followSprites = FOLLOWERS.map((name) => this.add.sprite(0, 0, name, frameIndex('down', 0)).setOrigin(0.5, ORIGIN_Y));
     for (const res of CAST) {
       for (const dir of DIRS) this.anims.create({ key: `walk-res-${res.look}-${dir}`, frames: Array.from({ length: COLS - 1 }, (_, i) => ({ key: `res-${res.look}`, frame: frameIndex(dir, i + 1) })), frameRate: WALK_FPS, repeat: -1 });
     }
     this.residentFacing = CAST.map(() => 'down' as Dir);
+    this.resStand = CAST.map(() => 0);
     this.barkNext = CAST.map(() => 0);
     this.barkReadyAt = CAST.map(() => 0);
     this.residentSprites = CAST.map((res) => this.add.sprite(0, 0, `res-${res.look}`, frameIndex('down', 0)).setOrigin(0.5, ORIGIN_Y).setVisible(false));
@@ -559,6 +576,9 @@ export class WorldScene extends Phaser.Scene {
     this.props = new CampProps(this, this.barkText);
     this.fire = new FireRig(this, this.player, this.barkText);
     this.fish = new FishRig(this, this.player, this.barkText);
+    this.fish.onSplash = (at) => this.chain.forEach((p, i) => { const d = lookAt(p, at); if (d) this.followLook[i] = { dir: d, s: LOOK_S }; });
+    // GAME-212: зсув дихання героя — лише на спрайті; перед кроком фізики знімаємо, щоб тіло й проба лишались справжніми.
+    this.events.on(Phaser.Scenes.Events.PRE_UPDATE, () => { if (this.heroBob) { this.player.y -= this.heroBob; this.heroBob = 0; } });
     this.grill = new GrillRig(this, this.player, this.barkText);
 
     // lerp 1, 1 — камера стоїть на персонажі в тому ж кадрі, без згладженого «доїзду». Тож руху, який
@@ -1001,6 +1021,11 @@ export class WorldScene extends Phaser.Scene {
       const dy = p.y - b.y;
       if (dx !== 0 || dy !== 0) this.followFacing[i] = Math.abs(dx) > Math.abs(dy) ? (dx < 0 ? 'left' : 'right') : (dy < 0 ? 'up' : 'down');
       if (arrived && spot) this.followFacing[i] = spot.face;
+      // GAME-212: сплеск поруч — стоячий слідувач на мить дивиться на воду (лише напрямок).
+      const still = dx === 0 && dy === 0 && !working;
+      this.followStand[i] = still ? (this.followStand[i] ?? 0) + deltaMs : 0;
+      const look = this.followLook[i];
+      if (look && look.s > 0) { look.s -= dt; if (still) this.followFacing[i] = look.dir; }
       const dir = this.followFacing[i] ?? 'down';
       if (working) s.anims.play(`work-${name}-${dir}`, true);
       else {
@@ -1009,7 +1034,7 @@ export class WorldScene extends Phaser.Scene {
         else { s.anims.stop(); s.setFrame(frameIndex(dir, 0)); }
       }
       // Лише картинка гойдається на 1 px (проба й глибина — по справжній точці).
-      const bob = arrived && spot ? Math.round(Math.sin(time / 380 + i * 2.1)) : 0;
+      const bob = arrived && spot ? Math.round(Math.sin(time / 380 + i * 2.1)) : idleBob(this.followStand[i] ?? 0, i);
       s.setPosition(p.x, p.y + bob).setDepth(p.y);
       out.x = p.x;
       out.y = p.y;
@@ -1019,6 +1044,7 @@ export class WorldScene extends Phaser.Scene {
   }
 
   /** GAME-172: мешканці стають туди, де їх ставить розклад о цей ігровий час; тиша, поки годинник стоїть (пауза). */
+  private stepMs = 0;   // GAME-212: мс кадру для moveResidents
   private moveResidents(time: number): void {
     const clock = this.bridge.state.clock;
     const minutes = clock.minutes + clock.accMs / STEP_MS;
@@ -1028,12 +1054,13 @@ export class WorldScene extends Phaser.Scene {
       const out = i < RESIDENTS.length ? this.probe.residents[i] : this.probe.visitors.find((v) => v.id === tl.resident.id);
       if (!out) return;
       const p = placeAt(this.grid, tl, minutes);
-      const moved = Math.hypot(p.x - s.x, p.y - s.y) > 0.05;
+      const moved = Math.hypot(p.x - out.x, p.y - out.y) > 0.05;   // з логічною точкою: зсув дихання на спрайті рухом не вважається
       const dir = p.moving ? p.dir : this.residentFacing[i] ?? 'down';
       this.residentFacing[i] = dir;
       if (moved && p.moving) s.anims.play(`walk-res-${tl.resident.look}-${dir}`, true);
       else { s.anims.stop(); s.setFrame(frameIndex(dir, 0)); }
-      s.setPosition(p.x, p.y).setDepth(p.y);
+      this.resStand[i] = moved || p.moving ? 0 : (this.resStand[i] ?? 0) + this.stepMs;
+      s.setPosition(p.x, p.y + idleBob(this.resStand[i] ?? 0, i)).setDepth(p.y);
       out.x = p.x;
       out.y = p.y;
       out.moving = moved && p.moving;
@@ -1118,6 +1145,24 @@ export class WorldScene extends Phaser.Scene {
     this.player.anims.stop();
     this.player.setFrame(frameIndex(this.facing, 0));
     this.hideBark();
+  }
+
+  /** GAME-212: дихання героя (зсув спрайта, що знімається в PRE_UPDATE) і гліфи-емоції: ♪ — мешканець, що стоїть увечері; ? — над героєм, коли клює. */
+  private updateEmotes(time: number, delta: number, moving: boolean): void {
+    this.heroStandMs = moving || this.acting || this.fish.busy ? 0 : this.heroStandMs + delta;
+    const hb = idleBob(this.heroStandMs);
+    if (hb && !this.heroBob) { this.player.y += hb; this.heroBob = hb; }
+    const evening = isEvening(timeOfDay(this.bridge.state.clock.minutes));
+    const marks: { at: Pt; kind: Glyph }[] = [];
+    if (this.current === 'camp' && evening) RESIDENTS.forEach((r, i) => { const s = this.residentSprites[i]; if (s?.visible && (this.resStand[i] ?? 0) > 2000 && this.residentBark?.npc !== i && this.hooks.talk(r.id) === null) marks.push({ at: { x: s.x, y: s.y - 50 }, kind: 'note' }); });
+    if (this.fish.phase === 'bite') marks.push({ at: { x: this.player.x, y: this.player.y - 56 }, kind: 'ask' });
+    marks.forEach((m, k) => {
+      let g = this.emoteG[k];
+      if (!g) { g = this.add.graphics().setDepth(DEPTH.always); this.emoteG[k] = g; }
+      drawGlyph(g, m.kind);
+      g.setPosition(Math.round(m.at.x), Math.round(m.at.y + Math.sin(time / 300 + k) * 1.5)).setVisible(true);
+    });
+    for (let k = marks.length; k < this.emoteG.length; k++) this.emoteG[k]?.setVisible(false);
   }
 
   /** GAME-179: маркер над кожним, з ким можна говорити: «…» поруч, «!» коли є прохання. Бульба стоїть над головою, трохи гойдається; репліка-«бурчання» її заступає. */
@@ -1409,8 +1454,10 @@ export class WorldScene extends Phaser.Scene {
 
     this.moveFollowers(delta, time, moving || v.x !== 0 || v.y !== 0);
     this.updateDaylight(time);
+    this.stepMs = delta;
     this.moveResidents(time);
     this.updateNpcMarks(time);
+    this.updateEmotes(time, delta, moving || v.x !== 0 || v.y !== 0);
 
     const box = this.player.getBounds();
     let covered = 0;
