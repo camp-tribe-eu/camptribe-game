@@ -55,6 +55,8 @@ export class FishRig {
 
   constructor(private readonly scene: Phaser.Scene, private readonly player: Phaser.GameObjects.Sprite, private readonly text: (key: Key) => string) { this.fx = new FrameFx(scene); }
 
+  /** GAME-212: хто хоче знати про сплеск (родина обертається до води). */
+  onSplash?: (at: Pt) => void;
   get phase(): FishState['phase'] { return this.s.phase; }
   /** Рибалка триває: ходьба й інші дії дивляться повз неї. */
   get busy(): boolean { return this.s.phase !== 'idle'; }
@@ -164,6 +166,7 @@ export class FishRig {
 
   /** Сплеск: краплі по параболах (fx-live.splashDrops) і одне кільце, що розходиться, — покадрово; у спокійному режимі лише кільце. */
   private splash(at: Pt, seed: number): void {
+    this.onSplash?.(at);   // GAME-212: сусіди дивляться на плюскіт
     const g = this.scene.add.graphics().setDepth(at.y + 5);
     this.fx.push(SPLASH_MS, (k) => {
       g.clear();
