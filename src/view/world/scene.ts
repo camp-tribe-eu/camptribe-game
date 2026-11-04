@@ -40,7 +40,7 @@ import { FISH_SPOT, FishRig, type FishProbe } from './fishing';
 import { LiveFx, type LiveProbe } from './fx-live-layer';
 import { groundKind, type Ground } from './fx-live';
 import { SwimRig, type SwimProbe } from './swim-rig';
-import { CampLife, type CampProbe } from './camp-life-rig';
+import { CampAlive, type CampProbe } from './camp-alive-rig';
 import { dayOf, weatherOf } from '../../core/weather';
 import { swimGridOf, swimRegionOf, withWater } from './swim';
 import { REVEAL_BEATS, revealCenter, type RevealAnchors } from '../camp-reveal';
@@ -338,7 +338,7 @@ export class WorldScene extends Phaser.Scene {
   private carImg: { img: Phaser.GameObjects.Image; x: number; y: number } | null = null;
   private live!: LiveFx;
   private swim!: SwimRig;
-  private life!: CampLife;
+  private life!: CampAlive;
   private lifeDay = -1;
   private lifeRain = false;
   /** Набір terrain поточної мапи (перший gid і кількість тайлів) — для роду землі під ногами. */
@@ -586,7 +586,7 @@ export class WorldScene extends Phaser.Scene {
     this.fx = new MapFx(this);
     this.live = new LiveFx(this, DEPTH.decor - 50, DEPTH.always - 10);
     this.swim = new SwimRig(this, this.player, DEPTH.decor - 40);
-    this.life = new CampLife(this, this.barkText, (text, lift) => this.fx?.pop(this.player.x, this.player.y, text, lift));
+    this.life = new CampAlive(this, this.barkText, (text, lift) => this.fx?.pop(this.player.x, this.player.y, text, lift));
     this.tent = new TentRig(this, this.player, this.barkText);
     this.wood = new WoodRig(this, this.player, this.barkText);
     this.props = new CampProps(this, this.barkText);

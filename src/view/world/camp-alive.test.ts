@@ -5,7 +5,7 @@ import { describe, expect, it } from 'vitest';
 import {
   BIN_HOP, BINS, COLLECT_R, FALL_MS, MAGNET_R, PIER_STEP_PX, PINE_SHAKE, PUDDLES, PUDDLE_R, REACTIONS, SEATS, SEAT_IDLE, SIT_LEAVE, SIT_MIN_MS, SIT_R, bendAt, bushShift, crownShift, dropAt, dropCount, itemAt, leafAt, leafPlan, lidHeight,
   markUsed, onPier, pickReaction, planDrops, ringAt, stepItems, stepPier, stepPuddles, stepSeat, usedToday, type Item,
-} from './camp-life';
+} from './camp-alive';
 import { findPath, gridFromWalls, isSolid, type Grid, type Pt } from './follow';
 
 const RAW = import.meta.glob<string>('../../../public/maps/camp-lake.tmj', { query: '?raw', import: 'default', eager: true });

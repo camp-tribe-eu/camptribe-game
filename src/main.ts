@@ -30,7 +30,7 @@ import { FIREPLACE_SCENE } from './content/fireplace';
 import { FISH_PROBE_IDLE } from './view/world/fishing';
 import { LIVE_PROBE_IDLE } from './view/world/fx-live-layer';
 import { SWIM_PROBE_IDLE } from './view/world/swim-rig';
-import { CAMP_PROBE_IDLE } from './view/world/camp-life-rig';
+import { CAMP_PROBE_IDLE } from './view/world/camp-alive-rig';
 import { mountTouchControls, setActionTarget } from './view/world/touch';
 import { frameSize } from './view/world/frame';
 import { CHOICE_CANCEL_ID, storyOffer, type StoryView } from './view/story-offer';

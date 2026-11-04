@@ -1,4 +1,4 @@
-// GAME-225 · «Живий табір»: малює й грає відгуки речей табору (математика й таблиці — camp-life.ts). Нової графіки нема: крони й кущі — ті самі тайли набору
+// GAME-225 · «Живий табір»: малює й грає відгуки речей табору (математика й таблиці — camp-alive.ts). Нової графіки нема: крони й кущі — ті самі тайли набору
 // (тремтить їхня копія з того ж тайлсету, оригінал на кадри гасне), решта — Graphics у палітрі гри. Усе покадрово, звук лише через src/audio.
 import Phaser from 'phaser';
 import { playCamp, campSounds } from '../../audio/camp-sounds';
@@ -10,7 +10,7 @@ import {
   BINS, BIN_LID_Y, BIN_MS, LEAF_MS, PUDDLES, PUDDLE_R, REACTIONS, SEATS, SEAT_IDLE, SHAKE_MS, SIT_DY, SIT_ROWS, SPOUT, SWAY_MS, TAP_DROPS, TAP_MS, TREMBLE_MS,
   HINT_KEY, bendAt, bushShift, crownShift, dropAt, leafAt, leafPlan, lidHeight, markUsed, onPier, pickReaction, planDrops, ringAt, stepItems, stepPier, stepPuddles, stepSeat, trembleShift, usedToday,
   type Item, type Leaf, type Pt, type Reaction, type SeatEvent, type SeatState, type UseLog,
-} from './camp-life';
+} from './camp-alive';
 
 const OUT = 0x1b1f23;
 const BOARD_SHOW_MS = 4200;
@@ -33,7 +33,7 @@ interface Crown { readonly tiles: Phaser.Tilemaps.Tile[]; readonly layer: Phaser
 
 export type PopFn = (text: string, lift: number) => void;
 
-export class CampLife {
+export class CampAlive {
   private seatState: SeatState = SEAT_IDLE;
   private log: UseLog = {};
   private items: Item[] = [];
