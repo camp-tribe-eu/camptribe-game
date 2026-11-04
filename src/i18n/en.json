@@ -378,5 +378,10 @@
   "life.hint.tap": "Water tap: E or ●",
   "life.hint.bin": "Clank the lid: E or ●",
   "life.hint.board": "Notice board: E or ●",
+  "life.find.plank": "+1 Plank",
+  "life.find.shard": "+1 Shard",
+  "life.find.twig": "+1 Twig",
+  "life.hint.smash": "Smash: E or ●",
+  "life.hint.branch": "Shake the branch: E or ●",
   "life.board": "Notice board: quiet hours 10 pm to 7 am. Rubbish in the bins, campfire never unattended. Enjoy your stay!"
 }

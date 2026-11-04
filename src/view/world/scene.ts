@@ -508,6 +508,9 @@ export class WorldScene extends Phaser.Scene {
     return true;
   }
 
+  /** GAME-228: де зараз тварини (кішка Мія): дія їх ніколи не б'є — вони лише передаються вибору цілі, який їх відкидає. */
+  private petPoints(): Pt[] { return [...this.miaSprites.values()].filter((m) => m.visible).map((m) => ({ x: m.x, y: m.y })); }
+
   /** Повернути героя лицем до точки (без анімації): перед дією біля колоди чи вогнища. */
   private faceTo(p: Pt): void {
     if (this.acting) return;
@@ -1298,7 +1301,7 @@ export class WorldScene extends Phaser.Scene {
       if (c) this.cameras.main.centerOn(c.x, c.y); else this.endReveal();
     }
     // GAME-189: поки герой б'є кілки — стоїть; розміщення намету — ходить вільно (привид іде за ним).
-    const handsBusy = this.tent.holdsHero || this.wood.holdsHero || this.fire.holdsHero || this.grill.holdsHero || this.fish.busy;
+    const handsBusy = this.tent.holdsHero || this.wood.holdsHero || this.fire.holdsHero || this.grill.holdsHero || this.fish.busy || this.life.holdsHero;   // GAME-228: стоп героя після розбивання
     const vIn = handsBusy ? { x: 0, y: 0 } : moveVector(held);
     // GAME-225: лавка. Зайшов на точку — сів (стоїть на ній, ноги сховані); будь-який рух — встав.
     const seatEv = this.life.stepSeat(delta, { x: this.player.x, y: this.player.y }, vIn.x !== 0 || vIn.y !== 0, handsBusy || this.acting !== null || this.swim.inWater || this.current !== 'camp');
@@ -1392,7 +1395,7 @@ export class WorldScene extends Phaser.Scene {
       fire: this.fireSprite?.visible ? { x: this.fireSprite.x, y: this.fireSprite.y } : null,
       car: this.carImg && this.current === 'road' ? { x: this.carImg.x, y: this.carImg.y, back: -1 } : null,
     });
-    this.life.update(delta, { hero: { x: this.player.x, y: this.player.y }, moving, movedPx, day: lifeDay, rain: this.lifeRain, hintOn: !handsBusy && this.acting === null && !this.wood.active && !this.tent.active && (act === null || isFollower(act.name)) });
+    this.life.update(delta, { hero: { x: this.player.x, y: this.player.y }, moving, movedPx, day: lifeDay, rain: this.lifeRain, toastAt: { x: this.cameras.main.worldView.x + 6, y: this.cameras.main.worldView.bottom - this.insets.bottom }, animals: this.petPoints(), hintOn: !handsBusy && this.acting === null && !this.wood.active && !this.tent.active && (act === null || isFollower(act.name)) });
     if (this.carImg) this.carImg.img.setY(this.carImg.y + (sway?.dy ?? 0)).setRotation(sway?.angle ?? 0);
     const carrying = this.hooks.backpack() > 0;
     this.fx?.tick(dt);
@@ -1405,7 +1408,7 @@ export class WorldScene extends Phaser.Scene {
     const pressed = this.gate(held.has('interact') || (this.tent.active || this.wood.chopping ? tapped !== null : tapSpot !== null), time);
     const woodBranch = this.wood.active ? this.wood.nearBranch({ x: this.player.x, y: this.player.y }, INTERACT_RANGE) : null;
     // GAME-225: жива річ табору (сосна, кущ, колонка, смітник, дошка) — лише коли поруч нема сюжетної цілі (як ящик).
-    const lifeHit = pressed && inCamp && (act === null || isAutoSpot(act.name) || isFollower(act.name)) ? this.life.pick({ x: this.player.x, y: this.player.y }) : null;
+    const lifeHit = pressed && inCamp && (act === null || isAutoSpot(act.name) || isFollower(act.name)) ? this.life.pick({ x: this.player.x, y: this.player.y }, this.petPoints()) : null;
     const woodBlock = this.wood.active && this.wood.atBlock({ x: this.player.x, y: this.player.y }, INTERACT_RANGE);
     if (this.grill.active) {
       // GAME-195: рибка на вогнищі забирає дію (нанизати, підняти): інша справа чи розмова чекає.

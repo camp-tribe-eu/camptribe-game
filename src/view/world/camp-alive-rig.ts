@@ -4,6 +4,8 @@ import Phaser from 'phaser';
 import { playCamp, campSounds } from '../../audio/camp-sounds';
 import { calmMotion } from '../../platform/motion';
 import type { Key } from '../../i18n';
+import { SmashRig, SMASH_PROBE_IDLE, type SmashProbe } from './smash-rig';
+import { SMASH_HINT, SMASH_PROPS, isFindKind, isSmashKind, pickSmash, planFinds, breaksAway, type Entity, type SmashProp } from './smash';
 import { FX_PALETTE } from './fx-live';
 import { HAND_FONT, TOP } from './hand-fx';
 import {
@@ -22,10 +24,12 @@ export interface CampProbe {
   puddles: number; splashes: number; rings: number;
   taps: number; bend: number; drops: number; binHops: number; lid: number; board: boolean; boardShown: number;
   pierSteps: number; hint: string; sounds: string[];
+  /** GAME-228: розбивання (ящик, бочка, горщик, гілка). */
+  smash: SmashProbe; plank: number; shard: number; twig: number;
 }
 export const CAMP_PROBE_IDLE: CampProbe = {
   sitting: false, seat: -1, sits: 0, stands: 0, shakes: 0, trembles: 0, lastDrop: 0, items: 0, cones: 0, berries: 0, usedToday: [], leaves: 0, crownShift: 0, bushShift: 0,
-  puddles: 0, splashes: 0, rings: 0, taps: 0, bend: 0, drops: 0, binHops: 0, lid: 0, board: false, boardShown: 0, pierSteps: 0, hint: '', sounds: [],
+  puddles: 0, splashes: 0, rings: 0, taps: 0, bend: 0, drops: 0, binHops: 0, lid: 0, board: false, boardShown: 0, pierSteps: 0, hint: '', sounds: [], smash: SMASH_PROBE_IDLE, plank: 0, shard: 0, twig: 0,
 };
 
 interface Anim { readonly r: Reaction; age: number; readonly mode: 'shake' | 'tremble' | 'sway' | 'tap' | 'bin' }
@@ -55,9 +59,12 @@ export class CampAlive {
   private hint: Phaser.GameObjects.Text | null = null;
   private board: Phaser.GameObjects.Text | null = null;
   private readonly calm = calmMotion();
+  private readonly smash: SmashRig;
   readonly probe: CampProbe = { ...CAMP_PROBE_IDLE };
 
-  constructor(private readonly scene: Phaser.Scene, private readonly text: (key: Key) => string, private readonly pop: PopFn) {}
+  constructor(private readonly scene: Phaser.Scene, private readonly text: (key: Key) => string, private readonly pop: PopFn) {
+    this.smash = new SmashRig(scene, text, (n) => this.sound(n));
+  }
 
   get sitting(): boolean { return this.seatState.seat !== null; }
   get seatPoint(): { x: number; y: number; face: 'up' | 'left' | 'down' | 'right' } | null { const s = this.seatState.seat; return s === null ? null : SEATS[s] ?? null; }
@@ -66,6 +73,8 @@ export class CampAlive {
   /** Нахил колонки (0..1) цього кадру: сцена присідає героєві. */
   get bend(): number { const a = this.anims.find((x) => x.mode === 'tap'); return a ? bendAt(a.age) : 0; }
   get collected(): { cones: number; berries: number } { return { cones: this.probe.cones, berries: this.probe.berries }; }
+  /** GAME-228: після удару по ящику, бочці, горщику чи гілці герой завмирає на 5–7 кадрів. */
+  get holdsHero(): boolean { return this.smash.holdsHero; }
 
   private sound(n: Parameters<typeof playCamp>[0]): void { playCamp(n); this.probe.sounds = campSounds.played.slice(-8); }
 
@@ -78,7 +87,7 @@ export class CampAlive {
     this.fxG = s.add.graphics().setDepth(99_000);
     this.hint = s.add.text(0, 0, '', HAND_FONT).setOrigin(0.5, 1).setDepth(TOP + 1).setVisible(false);
     this.board = s.add.text(0, 0, '', { ...HAND_FONT, wordWrap: { width: 170 } }).setOrigin(0.5, 1).setDepth(TOP + 1).setVisible(false);
-    this.owned.push(this.groundG, this.fxG, this.hint, this.board);
+    this.owned.push(this.groundG, this.fxG, this.hint, this.board, ...this.smash.begin());
     for (const seat of SEATS) { const g = s.add.graphics().setPosition(seat.x, seat.y).setDepth(seat.y + 0.5); drawBench(g); this.owned.push(g); }
     const bd = REACTIONS.find((r) => r.kind === 'board');
     if (bd) { const g = s.add.graphics().setPosition(bd.at.x, bd.at.y).setDepth(bd.at.y); drawBoard(g); this.owned.push(g); }
@@ -109,6 +118,7 @@ export class CampAlive {
     for (const o of this.owned) o.destroy();
     this.owned = []; this.berryG.clear();
     this.fxG = null; this.groundG = null; this.hint = null; this.board = null;
+    this.smash.reset();
     this.seatState = SEAT_IDLE; this.log = {}; this.items = []; this.leaves = []; this.anims = []; this.puddleIn = []; this.rings = []; this.pierAcc = 0; this.boardLeft = 0;
     Object.assign(this.probe, CAMP_PROBE_IDLE, { sounds: [], usedToday: [] });
   }
@@ -126,11 +136,25 @@ export class CampAlive {
   }
 
   /** Річ, на яку діє герой зараз (E/●), або null. */
-  pick(hero: Pt): Reaction | null { return this.active && !this.sitting ? pickReaction(hero) : null; }
+  pick(hero: Pt, animals: readonly Pt[] = []): Reaction | SmashProp | null {
+    if (!this.active || this.sitting || this.smash.holdsHero) return null;
+    const a = pickReaction(hero); const b = this.pickBreakable(hero, animals);
+    if (!a || !b) return a ?? b;
+    return Math.hypot(hero.x - b.at.x, hero.y - b.at.y) < Math.hypot(hero.x - a.at.x, hero.y - a.at.y) ? b : a;
+  }
+
+  /** GAME-228: розбивна річ поруч (розбиті сьогодні не беруться). Тварини передаються як `animals`, але ніколи не цілі (pickSmash). */
+  private pickBreakable(hero: Pt, animals: readonly Pt[]): SmashProp | null {
+    const standing = SMASH_PROPS.filter((p) => !(breaksAway(p.kind) && usedToday(this.log, p.id, this.day)));
+    const others: Entity[] = animals.map((at, i) => ({ id: `animal.${i}`, kind: 'animal', at, range: 40 }));
+    return pickSmash(hero, standing, others);
+  }
 
   /** Дія (E/●) над річчю `r`: тремтіння/гойдання, частинки, звук; шишки й ягоди — раз на день. Повертає, що сталося. */
-  act(r: Reaction, hero: Pt, day: number): 'shake' | 'tremble' | 'sway' | 'tap' | 'bin' | 'board' {
+  act(r: Reaction | SmashProp, hero: Pt, day: number): 'shake' | 'tremble' | 'sway' | 'tap' | 'bin' | 'board' | 'smash' {
     const p = this.probe;
+    if (isSmashKind(r.kind)) return this.actSmash(r as SmashProp, hero, day);
+    r = r as Reaction;
     if (r.kind === 'pine' || r.kind === 'bush') {
       const pine = r.kind === 'pine';
       if (usedToday(this.log, r.id, day)) {
@@ -158,8 +182,22 @@ export class CampAlive {
     return 'board';
   }
 
+  /** Удар по речі табору: раз на день (ящик, бочка, горщик — зникають до наступної доби; гілка лишається й повторно лише здригається). */
+  private actSmash(r: SmashProp, hero: Pt, day: number): 'smash' | 'tremble' {
+    if (usedToday(this.log, r.id, day)) { this.smash.tremble(r); this.probe.trembles++; return 'tremble'; }
+    this.log = markUsed(this.log, r.id, day);
+    this.smash.hit(r, day, this.calm);
+    const finds = planFinds(r, day, hero, this.nextId, this.calm);
+    this.nextId += finds.length;
+    this.items.push(...finds);
+    this.probe.items = this.items.length; this.probe.lastDrop = finds.length;
+    this.probe.usedToday = Object.keys(this.log).filter((k) => this.log[k] === day);
+    this.probe.smash = this.smash.probe;
+    return 'smash';
+  }
+
   /** Кадр світу: падіння/магніт, калюжі, кроки по пірсу, тремтіння крон, малювання. */
-  update(dtMs: number, f: { hero: Pt; moving: boolean; movedPx: number; day: number; rain: boolean; hintOn: boolean }): void {
+  update(dtMs: number, f: { hero: Pt; moving: boolean; movedPx: number; day: number; rain: boolean; hintOn: boolean; toastAt?: Pt; animals?: readonly Pt[] }): void {
     const g = this.fxG; const gg = this.groundG;
     if (!this.active || !g || !gg) return;
     const p = this.probe;
@@ -167,7 +205,11 @@ export class CampAlive {
     // Предмети: падіння, магніт, підбір («поп» і «+1» над героєм).
     const st = stepItems(this.items, f.hero, dtMs);
     this.items = st.items;
-    st.collected.forEach((k, i) => { if (k === 'cone') p.cones++; else p.berries++; this.pop(this.text(k === 'cone' ? 'life.cone' : 'life.berry'), i * 12); this.sound('pop'); });
+    st.collected.forEach((k, i) => {
+      if (isFindKind(k)) { p[k]++; this.smash.toast(k); this.sound('pop'); return; }   // GAME-228: знахідка — плашка біля кута замість сплива над героєм
+      if (k === 'cone') p.cones++; else p.berries++;
+      this.pop(this.text(k === 'cone' ? 'life.cone' : 'life.berry'), i * 12); this.sound('pop');
+    });
     p.items = this.items.length;
     // Калюжі: лише в дощові дні.
     if (this.rain) {
@@ -191,10 +233,13 @@ export class CampAlive {
     // Малювання кадру: предмети, листя, кільця, краплі колонки, кришки.
     g.clear();
     for (const it of this.items) {
+      if (it.pop !== undefined) continue;   // знахідки малює SmashRig
       if (it.kind === 'cone') { g.fillStyle(OUT, 0.35).fillEllipse(it.x, it.y + 2, 7, 3); g.fillStyle(0x6b4423, 1).fillEllipse(it.x, it.y - 3, 5, 8); g.fillStyle(0xb98852, 1).fillRect(Math.round(it.x) - 1, Math.round(it.y) - 6, 2, 2).fillRect(Math.round(it.x), Math.round(it.y) - 2, 2, 2); }
       else { g.fillStyle(OUT, 0.3).fillEllipse(it.x, it.y + 1, 5, 2); g.fillStyle(0x7a2a6b, 1).fillCircle(it.x, it.y - 2, 2.2); g.fillStyle(0xd9a0f0, 1).fillRect(Math.round(it.x), Math.round(it.y) - 3, 1, 1); }
     }
     p.leaves = this.leaves.length;
+    this.smash.update(dtMs, g, f.toastAt ?? { x: f.hero.x - 60, y: f.hero.y + 60 }, this.items);
+    p.smash = this.smash.probe;
     for (const { l, age } of this.leaves) { const q = leafAt(l, age); g.fillStyle(l.color ? FX_PALETTE.grassDark : FX_PALETTE.grass, q.alpha).fillRect(Math.round(q.x), Math.round(q.y), 2, 2); }
     p.rings = this.rings.length;
     for (const r of this.rings) { const q = ringAt(r.age); if (q) g.lineStyle(1, FX_PALETTE.foam, q.alpha).strokeEllipse(r.x, r.y, q.r * 2, q.r * 0.8); }
@@ -224,11 +269,11 @@ export class CampAlive {
     if (board && bd) {
       if (this.boardLeft > 0 && Math.hypot(f.hero.x - bd.at.x, f.hero.y - bd.at.y) <= bd.range * 2) { const m = this.text('life.board'); if (board.text !== m) board.setText(m); board.setPosition(Math.round(bd.at.x), Math.round(bd.at.y - 34)).setVisible(true); } else board.setVisible(false);
     }
-    const near = f.hintOn && !this.sitting ? pickReaction(f.hero) : null;
+    const near = f.hintOn && !this.sitting ? this.pick(f.hero, f.animals) : null;
     const show = near && near.kind !== 'board' || (near?.kind === 'board' && this.boardLeft <= 0) ? near : null;
-    const has = show && ((show.kind !== 'pine' && show.kind !== 'bush') || !usedToday(this.log, show.id, f.day));
+    const has = show && ((show.kind !== 'pine' && show.kind !== 'bush' && !isSmashKind(show.kind)) || !usedToday(this.log, show.id, f.day));
     if (hint) {
-      if (show && has) { const m = this.text(HINT_KEY[show.kind]); if (hint.text !== m) hint.setText(m); hint.setPosition(Math.round(show.at.x), Math.round(show.at.y - (show.kind === 'pine' ? 14 : 32))).setVisible(true); p.hint = show.id; }
+      if (show && has) { const m = this.text(isSmashKind(show.kind) ? SMASH_HINT[show.kind] : HINT_KEY[show.kind]); if (hint.text !== m) hint.setText(m); hint.setPosition(Math.round(show.at.x), Math.round(show.at.y - (show.kind === 'pine' ? 14 : isSmashKind(show.kind) ? 28 : 32))).setVisible(true); p.hint = show.id; }
       else { hint.setVisible(false); p.hint = ''; }
     }
   }
@@ -255,6 +300,7 @@ export class CampAlive {
     if (!gg) return;
     gg.clear();
     if (this.rain) for (const q of PUDDLES) { gg.fillStyle(FX_PALETTE.water, 0.5).fillEllipse(q.x, q.y, PUDDLE_R * 2, 8); gg.fillStyle(FX_PALETTE.foam, 0.45).fillEllipse(q.x - 3, q.y - 1, 8, 2); }
+    this.smash.redraw(SMASH_PROPS.filter((q) => usedToday(this.log, q.id, this.day)).map((q) => q.id));
     for (const [id, bg] of this.berryG) {
       bg.clear();
       const r = REACTIONS.find((x) => x.id === id);
