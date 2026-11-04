@@ -12,6 +12,7 @@ export type Intent = Command extends infer C ? (C extends Command ? Omit<C, 'com
 export const MAX_FRAME_MS = 250;
 
 export interface Bridge {
+  /** Скільки команд гравця надіслано. GAME-229: «Practise» — побічний наслідок дії руками, не окрема команда гравця, тому не рахується. */
   readonly sent: number;
   readonly state: SimState;
   send(intent: Intent): void;
@@ -42,7 +43,7 @@ export function createBridge(seed: number, catalog: CoreDefs, afterSend?: () => 
     get sent() { return sent; },
     get state() { return state; },
     send(intent) {
-      sent++;
+      if (intent.type !== 'Practise') sent++;
       const command = { ...intent, commandId: nextCommandId(state.game) } as Command;
       state = step(state, { kind: 'command', command }, { defs });
       afterSend?.();   // GAME-86: стан змінила команда — автозбереження (не кожен кадр)
