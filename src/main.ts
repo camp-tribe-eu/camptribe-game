@@ -61,7 +61,7 @@ import type { RewardEvent } from './ui/port';
 const app = document.querySelector<HTMLElement>('#app');
 if (!app) throw new Error('#app is missing');
 
-const probe: WorldProbe = { ready: false, reveal: false, gift: { count: 0, npc: null, reaction: null, emote: null, poseAge: -1, poseColumn: null, sounds: [] }, playerX: 0, playerY: 0, nearObject: null, nearKind: null, commandsSent: 0, cameraScrollX: 0, cameraScrollY: 0, clockMinutes: 0, saveLoaded: false, cameraLerp: [0, 0], followers: [], leisure: [], jobs: [],
+const probe: WorldProbe = { ready: false, reveal: false, gift: { count: 0, npc: null, reaction: null, emote: null, poseAge: -1, poseColumn: null, poseFrames: 0, sounds: [] }, playerX: 0, playerY: 0, nearObject: null, nearKind: null, commandsSent: 0, cameraScrollX: 0, cameraScrollY: 0, clockMinutes: 0, saveLoaded: false, cameraLerp: [0, 0], followers: [], leisure: [], jobs: [],
   playerFrame: 0, playerDir: 'down', playerMoving: false, playerDepth: 0, coveredTiles: 0, behindTiles: 0, canopy: { bands: 0, over: 0, minAlpha: 1 }, light: { patches: 0, depth: 0, alpha: 0 }, lamps: { count: 0, on: false, alpha: 0, radius: 0 }, fps: 0, fpsWindows: 0, firstFrameMs: 0,
   residents: [], neighbours: [], visitors: [], bark: null, barkCount: 0, npcMarks: {}, miaAt: [], tent: TENT_PROBE_IDLE, wood: WOOD_PROBE_IDLE, crate: CRATE_PROBE_IDLE, fire: FIRE_PROBE_IDLE, grill: GRILL_PROBE_IDLE, fish: FISH_PROBE_IDLE, live: LIVE_PROBE_IDLE, swim: SWIM_PROBE_IDLE, camp: CAMP_PROBE_IDLE,
   daylight: { on: false, visible: false, minuteOfDay: 0, darkness: 0, color: 0xffffff, glow: 0 },

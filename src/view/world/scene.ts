@@ -242,7 +242,7 @@ export interface WorldProbe {
   /** GAME-216 (лише для e2e): заставка приїзду в табір триває (камера не на героєві). */
   reveal: boolean;
   /** GAME-230 (лише для e2e): подарунки — скільки реакцій показано, остання (мешканець, реакція, значок), кадр пози героя (-1 — не вручає) і звуки (останні). */
-  gift: { count: number; npc: string | null; reaction: string | null; emote: string | null; poseAge: number; poseColumn: number | null; sounds: string[] };
+  gift: { count: number; npc: string | null; reaction: string | null; emote: string | null; poseAge: number; poseColumn: number | null; poseFrames: number; sounds: string[] };
   /** GAME-206 (лише для e2e): живі дрібниці — скільки іскор, пилу, диму, стебел намальовано в кадрі; чи гойдається авто; чи режим спокою. */
   live: LiveProbe;
   /** GAME-227 (лише для e2e): купання — стан під ногами (суша/мілина/глибина), гойдання, кола, краплі, мокрі сліди, звуки; Мія на воді (мусить бути 0). */
@@ -556,7 +556,7 @@ export class WorldScene extends Phaser.Scene {
     if (this.giftAge >= 0) {
       const col = poseColumn(this.giftAge);
       if (this.acting || col === null) this.giftAge = -1;
-      else this.player.setTexture('player-thrust', DIR_ROW[this.facing] * ACTION_COLS.thrust + col);
+      else { this.player.setTexture('player-thrust', DIR_ROW[this.facing] * ACTION_COLS.thrust + col); this.probe.gift.poseFrames++; }
       if (this.giftAge >= 0) this.giftAge = nextPoseAge(this.giftAge);
       if (this.giftAge < 0) this.player.setTexture('player', frameIndex(this.facing, 0));
     }
