@@ -163,7 +163,7 @@ describe('речі табору на мапі', () => {
       expect(isSolid(grid, t), `${p.id} на стіні`).toBe(false);
       expect(findPath(grid, from, t), `шлях до ${p.id}`).not.toBeNull();
       for (const o of objs) expect(Math.hypot(p.at.x - o.x, p.at.y - o.y), `${p.id} надто близько до ${o.name}`).toBeGreaterThan(48);
-      for (const r of REACTIONS) expect(Math.hypot(p.at.x - r.at.x, p.at.y - r.at.y), `${p.id} на ${r.id}`).toBeGreaterThan(r.range);
+      for (const r of REACTIONS) expect(Math.hypot(p.at.x - r.at.x, p.at.y - r.at.y), `${p.id}: зона дії перетинає ${r.id}`).toBeGreaterThan(r.range + p.range);
     }
     expect(new Set(SMASH_PROPS.map((p) => p.id)).size).toBe(SMASH_PROPS.length);
   });

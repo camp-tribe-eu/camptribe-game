@@ -40,7 +40,7 @@ for (const v of VIEWS) {
     test.setTimeout(150_000);
     const errors = await open(page, v.w, v.h);
     expect((await camp(page)).smash.props, 'речі табору стоять').toBe(4);
-    await goTo(page, 590, 266);   // ящик біля рецепції (610, 262)
+    await goTo(page, 660, 340);   // ящик за колонкою (680, 340)
     await expect.poll(async () => (await camp(page)).hint, { timeout: 5_000 }).toBe('crate.reception');
     await press(page);
     const c00 = await camp(page);
@@ -98,7 +98,7 @@ for (const s of SHAPES) {
   test(`знімок: ящик розбито, плашка видна — ${s.name}`, async ({ page }) => {
     test.setTimeout(120_000);
     const errors = await open(page, s.w, s.h);
-    await goTo(page, 590, 266);
+    await goTo(page, 660, 340);
     await press(page);
     await expect.poll(async () => (await camp(page)).smash.debris, { timeout: 2_000 }).toBeGreaterThan(0);
     await shot(page, `smash-${s.name}-debris`);

@@ -16,7 +16,7 @@ export interface SmashProp { readonly id: string; readonly kind: SmashKind; read
  * (інакше ціль перехоплює дію, як у лавки й дошки). Положення звіряє smash.test.ts із camp-lake.tmj.
  */
 export const SMASH_PROPS: readonly SmashProp[] = [
-  { id: 'crate.reception', kind: 'crate', at: { x: 610, y: 262 }, range: 30 },     // біля рецепції й бачків
+  { id: 'crate.reception', kind: 'crate', at: { x: 680, y: 340 }, range: 30 },     // за колонкою, поза зонами колонки й бачків (GAME-225)
   { id: 'pot.reception', kind: 'pot', at: { x: 400, y: 250 }, range: 28 },        // глиняний горщик біля рецепції
   { id: 'barrel.wood', kind: 'barrel', at: { x: 770, y: 590 }, range: 30 },       // бочка біля дров
   { id: 'branch.wood', kind: 'branch', at: { x: 620, y: 556 }, range: 30 },       // суха гілка біля дров
