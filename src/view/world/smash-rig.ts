@@ -121,7 +121,8 @@ export class SmashRig {
     for (const [id, age] of [...this.shakes]) {
       const a = age + dtMs;
       const p = SMASH_PROPS.find((x) => x.id === id);
-      if (a >= BRANCH_SHAKE_MS) { this.shakes.delete(id); p && this.gfx.get(id)?.setX(p.at.x); } else { this.shakes.set(id, a); p && this.gfx.get(id)?.setX(p.at.x + branchShift(a)); }
+      if (a >= BRANCH_SHAKE_MS) this.shakes.delete(id); else this.shakes.set(id, a);
+      if (p) this.gfx.get(id)?.setX(p.at.x + (a >= BRANCH_SHAKE_MS ? 0 : branchShift(a)));
     }
     for (const b of this.bursts) b.age += dtMs;
     for (const s of this.smokes) s.age += dtMs;
