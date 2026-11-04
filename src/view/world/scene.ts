@@ -33,6 +33,7 @@ import { WoodRig, type WoodProbe } from './wood';
 import { CampProps, OLD_CRATE_SPOT, type CrateProbe } from './crate';
 import { crateWorld } from '../../content/crate-push';
 import { REPAIR_SPOT } from '../../content/repair';
+import { isPhotoSpot } from '../../content/photos';
 import { FireRig, type FireProbe } from './fire';
 import { GrillRig, type GrillProbe } from './grill';
 import { FISH_SPOT, FishRig, type FishProbe } from './fishing';
@@ -692,8 +693,9 @@ export class WorldScene extends Phaser.Scene {
     const spawns = objects.filter((o) => typeOf(o) === 'spawn');
     const spawn = (arrived ? spawns.find((o) => o.name === 's.car') : spawns.find((o) => o.name === 's.start')) ?? spawns[0];
     if (!spawn) throw new Error(`map ${key}: no spawn in layer objects`);
-    this.spots = objects.filter((o) => typeOf(o) === 'trigger' || typeOf(o) === 'npc')
-      .map((o) => ({ name: o.name, kind: typeOf(o) as Spot['kind'], x: o.x ?? 0, y: o.y ?? 0 }));
+    // GAME-213: кадри камери — наявні «якорі» мапи (obj.pier-end, obj.water, obj.pitch-1); інтерактивні лише як кадр (живі, поки фото не зроблено).
+    this.spots = objects.filter((o) => typeOf(o) === 'trigger' || typeOf(o) === 'npc' || (typeOf(o) === 'anchor' && isPhotoSpot(o.name)))
+      .map((o) => ({ name: o.name, kind: (typeOf(o) === 'anchor' ? 'trigger' : typeOf(o)) as Spot['kind'], x: o.x ?? 0, y: o.y ?? 0 }));
 
     for (const s of this.spots) {
       // Точка об'єкта — ноги/основа: спрайт стоїть на ній, а глибина сортування — її y.
