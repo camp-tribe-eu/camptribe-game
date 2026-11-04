@@ -101,7 +101,8 @@ export function activityFor(resIndex: number, stopIdx: number, seat: number): Ac
 // ---------- Стан ----------
 
 export const WAVE_R = 96;
-export const BLOCK_R = 24;
+/** Герой ближче за клітинку від сусіда — «на шляху». */
+export const BLOCK_R = 32;
 export const BLOCK_FRAMES = 120;
 export const WAVE_FRAMES = 60;
 export const CHAT_R = 64;
