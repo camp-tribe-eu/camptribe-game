@@ -13,7 +13,7 @@ export const UI_SOUND_FILES: Readonly<Record<UiSound, { readonly key: string; re
 
 /** Кнопки «назад/закрити/скасувати» (data-ui) і «позитивні підтвердження»; решта кнопок — звичайний клік. */
 const BACK = new Set(['story-close', 'confirm-new-no', 'recovery-close', 'summary-end', 'stale-dismiss']);
-const CONFIRM = new Set(['resume', 'summary-continue', 'confirm-new-yes']);
+const CONFIRM = new Set(['resume', 'summary-continue', 'confirm-new-yes', 'levelup-continue']);
 export function soundForButton(dataUi: string | undefined): UiSound {
   if (dataUi !== undefined && BACK.has(dataUi)) return 'back';
   if (dataUi !== undefined && CONFIRM.has(dataUi)) return 'confirm';

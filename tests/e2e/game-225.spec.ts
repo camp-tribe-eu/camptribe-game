@@ -64,7 +64,7 @@ for (const v of VIEWS) {
     expect(errors, errors.join('\n')).toEqual([]);
   });
 
-  test(`сосна: потрусив — шишки падають і підбираються (+1), раз на день — ${v.side}`, async ({ page }) => {
+  test(`сосна: потрусив — шишки падають і підбираються (плашка «+N Шишка» в куті), раз на день — ${v.side}`, async ({ page }) => {
     test.setTimeout(150_000);
     const errors = await open(page, 'sunny', v.w, v.h);
     expect((await camp(page)).puddles, 'сонце — калюж нема').toBe(0);
@@ -81,7 +81,9 @@ for (const v of VIEWS) {
     const pops0 = (await probe(page) as unknown as { fx: { pops: number } }).fx.pops;
     await expect.poll(async () => (await camp(page)).cones, { timeout: 8_000 }).toBe(c0.lastDrop);
     expect((await camp(page)).items, 'усе підібрано').toBe(0);
-    expect((await probe(page) as unknown as { fx: { pops: number } }).fx.pops - pops0, 'спливи «+1 Шишка»').toBe(c0.lastDrop);
+    // GAME-229: цифр над героєм нема — «+N Шишка» стоїть плашкою в куті (як знахідки GAME-228), а не спливом над головою.
+    expect((await probe(page) as unknown as { fx: { pops: number } }).fx.pops - pops0, 'над героєм нічого не спливло').toBe(0);
+    expect((await camp(page) as unknown as { smash: { toastText: string[] } }).smash.toastText, 'плашка «+N Шишка»').toEqual([`+${c0.lastDrop} Шишка`]);
     expect((await camp(page)).sounds).toContain('pop');
     // Раз на день: друга спроба — лише здригання, нічого не падає.
     await page.waitForTimeout(700);

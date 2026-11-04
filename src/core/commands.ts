@@ -4,7 +4,7 @@
 
 import { canBuyAt, type CoreDefs } from './defs';
 import type { CommandRecord, GameState, RejectCode } from './state';
-import { practise, rankOf, SKILL_IDS, type SkillId } from './skills';
+import { HAND_ACTIONS, isHandAction, practise, rankOf, SKILL_IDS, type SkillId } from './skills';
 import { gearOf, pruneGear, sellPriceOf } from './gear';
 import { bookLeave, cancelLeave } from './life';
 import { autoPack, capacityOf, packFlag, packingOpen, packItemsFor, usedUnits, withPacked } from './packing';
@@ -38,7 +38,9 @@ export type Command =
   /** Пакування (GAME-109): покласти / дістати річ, або укласти автоматично. Лише там і тоді, де його відкрито (packing.at/openAfter). */
   | { readonly type: 'PackItem'; readonly commandId: string; readonly itemId: string }
   | { readonly type: 'UnpackItem'; readonly commandId: string; readonly itemId: string }
-  | { readonly type: 'AutoPack'; readonly commandId: string };
+  | { readonly type: 'AutoPack'; readonly commandId: string }
+  /** Практика руками (GAME-229): дія на мапі (сокира, кілок, вудка…) вчить навичку з таблиці HAND_ACTIONS. Нічого, крім досвіду, не змінює. */
+  | { readonly type: 'Practise'; readonly commandId: string; readonly action: string };
 
 /** Підтверджений факт (CR-031). Причина — commandId команди, що його спричинила. */
 export type GameEvent =
@@ -174,6 +176,11 @@ function apply(cmd: Command, d: Draft, defs: CoreDefs, guard: Safeguards, today:
       });
       return null;
     }
+    case 'Practise': {
+      if (!isHandAction(cmd.action)) return 'INVALID_COMMAND';
+      if (!d.player) return 'NO_CHARACTER';
+      return null;
+    }
     case 'Repair': {
       if (!isContentId(cmd.targetId)) return 'INVALID_COMMAND';
       const def = own(defs.repairs ?? {}, cmd.targetId);
@@ -291,6 +298,8 @@ export function practiceOf(cmd: Command, before: GameState, after: Pick<Draft, '
       const def = own(defs.repairs ?? {}, cmd.targetId);
       return def ? { key: `repair:${cmd.targetId}`, skills: [def.skill] } : null;
     }
+    case 'Practise':
+      return isHandAction(cmd.action) ? { key: `hand:${cmd.action}`, skills: HAND_ACTIONS[cmd.action] as readonly SkillId[] } : null;
     default:
       return null;
   }

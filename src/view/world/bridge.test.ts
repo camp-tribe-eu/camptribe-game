@@ -18,6 +18,14 @@ describe('місток', () => {
     expect(Object.keys(b.state.game.processed).sort()).toEqual(['c0', 'c1', 'c2', 'c3', 'c4']);
   });
 
+  it('GAME-229: «Practise» (побічна практика руками) не рахується як команда гравця, але доходить до ядра', () => {
+    const b = createBridge(1, DEFS);
+    b.send({ type: 'BuyItem', itemId: 'item.cup' });
+    b.send({ type: 'Practise', action: 'wood' });
+    expect(b.sent).toBe(1);
+    expect(Object.keys(b.state.game.processed)).toHaveLength(2);
+  });
+
   it('після завантаження сейву id продовжуються, а не починаються з c0', () => {
     const a = createBridge(1, DEFS);
     a.send({ type: 'BuyItem', itemId: 'item.cup' });

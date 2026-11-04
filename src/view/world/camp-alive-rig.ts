@@ -35,7 +35,6 @@ export const CAMP_PROBE_IDLE: CampProbe = {
 interface Anim { readonly r: Reaction; age: number; readonly mode: 'shake' | 'tremble' | 'sway' | 'tap' | 'bin' }
 interface Crown { readonly tiles: Phaser.Tilemaps.Tile[]; readonly layer: Phaser.Tilemaps.TilemapLayer | null; img: Phaser.GameObjects.Image | null; baseX: number; baseY: number }
 
-export type PopFn = (text: string, lift: number) => void;
 
 export class CampAlive {
   private seatState: SeatState = SEAT_IDLE;
@@ -62,7 +61,7 @@ export class CampAlive {
   private readonly smash: SmashRig;
   readonly probe: CampProbe = { ...CAMP_PROBE_IDLE };
 
-  constructor(private readonly scene: Phaser.Scene, private readonly text: (key: Key) => string, private readonly pop: PopFn) {
+  constructor(private readonly scene: Phaser.Scene, private readonly text: (key: Key) => string) {
     this.smash = new SmashRig(scene, text, (n) => this.sound(n));
   }
 
@@ -205,10 +204,10 @@ export class CampAlive {
     // Предмети: падіння, магніт, підбір («поп» і «+1» над героєм).
     const st = stepItems(this.items, f.hero, dtMs);
     this.items = st.items;
-    st.collected.forEach((k, i) => {
+    st.collected.forEach((k) => {
       if (isFindKind(k)) { p[k]++; this.smash.toast(k); this.sound('pop'); return; }   // GAME-228: знахідка — плашка біля кута замість сплива над героєм
       if (k === 'cone') p.cones++; else p.berries++;
-      this.pop(this.text(k === 'cone' ? 'life.cone' : 'life.berry'), i * 12); this.sound('pop');
+      this.smash.toast(k === 'cone' ? 'cone' : 'berry'); this.sound('pop');   // GAME-229: «+1 Шишка» — плашка в куті, як знахідки (GAME-228), а не цифра над героєм
     });
     p.items = this.items.length;
     // Калюжі: лише в дощові дні.

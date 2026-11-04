@@ -32,6 +32,34 @@ export const PRACTICE_XP_CAP = (RANK_XP[PRACTICE_RANK_CAP + 1] as number) - 1;
 
 export type Skills = Readonly<Record<string, number>>;
 
+/**
+ * GAME-229 · практика руками: що вчить кожна дія на мапі табору. Той самий механізм, що й практика команд ядра (practise): ключ `hand:<дія>`,
+ * віддача падає з кожним повтором (practiceGain), стеля практики — PRACTICE_RANK_CAP. Нових напрямів немає — лише вісім із SKILL_IDS.
+ * «Майстер» (механіка) — сокира, ремонт, розбивання; «Табірник» — кілки намету, шишки й ягоди; «Витривалість» — рибалка (терпіння); «Кухня» — засмажити рибу.
+ */
+export const HAND_ACTIONS = {
+  wood: ['skill.mechanics'],
+  repair: ['skill.mechanics'],
+  smash: ['skill.mechanics'],
+  tent: ['skill.camping'],
+  forage: ['skill.camping'],
+  fish: ['skill.endurance'],
+  grill: ['skill.cooking'],
+} as const satisfies Record<string, readonly SkillId[]>;
+export type HandAction = keyof typeof HAND_ACTIONS & string;
+export const isHandAction = (a: unknown): a is HandAction => typeof a === 'string' && Object.hasOwn(HAND_ACTIONS, a);
+
+/** Нові ранги між двома знімками досвіду (GAME-229): лише зростання; невідомі напрями ігноруються. Чиста функція — на ній стоїть екран «Що відкрилось». */
+export function rankUps(before: Skills, after: Skills): { readonly skill: SkillId; readonly rank: number }[] {
+  const out: { skill: SkillId; rank: number }[] = [];
+  for (const id of SKILL_IDS) {
+    const a = rankOf(Object.hasOwn(before, id) ? (before[id] as number) : 0);
+    const b = rankOf(Object.hasOwn(after, id) ? (after[id] as number) : 0);
+    for (let r = a + 1; r <= b; r++) out.push({ skill: id, rank: r });
+  }
+  return out;
+}
+
 /** Ранг за досвідом: найбільший r, чий поріг досягнуто. */
 export function rankOf(xp: number): number {
   let r = 0;

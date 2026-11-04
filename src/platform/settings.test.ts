@@ -9,14 +9,18 @@ const mem = (): Storage => {
 describe('налаштування (GAME-25)', () => {
   it('зберігаються й читаються', () => {
     const s = mem();
-    expect(saveSettings({ textScale: 150, language: 'en', hintSeen: true, remindedTrip: null, audio: DEFAULT_SETTINGS.audio, hintMode: 'always' }, s)).toBe(true);
-    expect(loadSettings(s)).toEqual({ textScale: 150, language: 'en', hintSeen: true, remindedTrip: null, audio: DEFAULT_SETTINGS.audio, hintMode: 'always' });
+    expect(saveSettings({ textScale: 150, language: 'en', hintSeen: true, remindedTrip: null, audio: DEFAULT_SETTINGS.audio, hintMode: 'always', levelUps: true }, s)).toBe(true);
+    expect(loadSettings(s)).toEqual({ textScale: 150, language: 'en', hintSeen: true, remindedTrip: null, audio: DEFAULT_SETTINGS.audio, hintMode: 'always', levelUps: true });
     s.setItem('camplife.settings.v1', JSON.stringify({ hintMode: 'junk' }));
     expect(loadSettings(s).hintMode).toBe('stuck');   // GAME-192: типово «коли застряг»
+    s.setItem('camplife.settings.v1', JSON.stringify({ levelUps: false }));
+    expect(loadSettings(s).levelUps).toBe(false);   // GAME-229: вимкнений екран рангів переживає перезапуск
+    s.setItem('camplife.settings.v1', JSON.stringify({ levelUps: 'junk' }));
+    expect(loadSettings(s).levelUps).toBe(true);    // сміття — типове «показувати»
   });
   it('200 % (GAME-39) зберігається й читається; 175 — чуже значення, типове', () => {
     const s = mem();
-    saveSettings({ textScale: 200, language: 'uk', hintSeen: false, remindedTrip: null, audio: DEFAULT_SETTINGS.audio, hintMode: 'stuck' }, s);
+    saveSettings({ textScale: 200, language: 'uk', hintSeen: false, remindedTrip: null, audio: DEFAULT_SETTINGS.audio, hintMode: 'stuck', levelUps: true }, s);
     expect(loadSettings(s).textScale).toBe(200);
     s.setItem('camplife.settings.v1', JSON.stringify({ textScale: 175, language: 'uk' }));
     expect(loadSettings(s).textScale).toBe(DEFAULT_SETTINGS.textScale);

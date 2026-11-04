@@ -10,6 +10,8 @@ import { t as tr, type AnyLang, type Key } from '../i18n';
 import { ct } from '../i18n/content';
 import { StoryPanel, money } from './StoryPanel';
 import { DaySummary } from './DaySummary';
+import { LevelUp } from './LevelUp';
+import { queueUps, topOverlay, type SkillUp } from './overlay-order';
 import { DialogueBox } from './DialogueBox';
 import { AtlasPanel } from './Atlas';
 import { Intro } from './Intro';
@@ -38,7 +40,7 @@ function creditGroups<F extends { file: string; authors: readonly string[]; lice
   return [...by.values()];
 }
 
-export function Shell({ port, langOverride, credits, build, holdToast = false, hideUi = [], intro: introOn = true }: { port: UiPort; langOverride?: AnyLang; credits: Credits; build: string; holdToast?: boolean; hideUi?: readonly string[]; intro?: boolean }) {
+export function Shell({ port, langOverride, credits, build, holdToast = false, hideUi = [], intro: introOn = true, levelUps: levelUpsOn = true }: { port: UiPort; langOverride?: AnyLang; credits: Credits; build: string; holdToast?: boolean; hideUi?: readonly string[]; intro?: boolean; levelUps?: boolean }) {
   const [paused, setPaused] = useState(false);
   // Підтвердження «Нової гри» (GAME-82): окремий діалог замість меню паузи; Escape — «Ні», а не закрити паузу.
   const [confirmNew, setConfirmNew] = useState(false);
@@ -83,6 +85,11 @@ export function Shell({ port, langOverride, credits, build, holdToast = false, h
   // сейву вже завершеного дня — після «Завершити сесію» й перезавантаження гравець повертається на мапу, а не в підсумок.
   // Поки він відкритий, світ на паузі (як на екрані подорожі).
   const [summary, setSummary] = useState<OfferSummary | null>(null);
+  // GAME-229: нові ранги за день копичаться тут і показуються екраном «Що відкрилось» ПЕРЕД підсумком (порядок — overlay-order.ts). Вимкнено в налаштуваннях чи збірці — черги немає.
+  const [ups, setUps] = useState<readonly SkillUp[]>([]);
+  const upsOn = levelUpsOn && settings.levelUps;
+  useEffect(() => port.onSkillUp((u) => setUps((prev) => [...prev, ...queueUps(upsOn, u)])), [upsOn]);
+  const shownUps = queueUps(upsOn, ups);
   const storyAct = (id: string): void => {
     const before = port.story().daysEnded;
     port.act(id);
@@ -142,6 +149,7 @@ export function Shell({ port, langOverride, credits, build, holdToast = false, h
   // Підтверджено: порт чистить гру; далі — екран подорожі, а там вибір персонажа (гри без гравця на мапі немає).
   const startNew = (): void => {
     setConfirmNew(false);
+    setUps([]);   // ранги покинутої гри не мають показатись у новій (GAME-229)
     setStatus(null);
     setCodeOut('');
     setCodeIn('');
@@ -205,11 +213,11 @@ export function Shell({ port, langOverride, credits, build, holdToast = false, h
       e.preventDefault();
       if (atlasOpen) { playUi('back'); closeAtlas(); return; }
       if (confirmNew || summary || talk || storyOpen || paused) playUi('back');   // Escape закрив/скасував — «назад»; відкриття паузи звуку не має
-      if (confirmNew) setConfirmNew(false); else if (summary) summaryContinue(); else if (talk) { if (offer.dialogue?.ui) storyAct(offer.dialogue.answers.find((a) => a.kind === 'cancel')?.id ?? ''); else if (!offer.mapFirst) { setTalk(false); story(true); } /* GAME-185: у мапі-першій Escape не відкриває ☰ з відповідями розмови — рамка лишається */ } else if (storyOpen) story(false); else toggle(!paused);
+      if (confirmNew) setConfirmNew(false); else if (summary) { if (!episode && shownUps.length > 0) setUps([]); else summaryContinue(); } else if (talk) { if (offer.dialogue?.ui) storyAct(offer.dialogue.answers.find((a) => a.kind === 'cancel')?.id ?? ''); else if (!offer.mapFirst) { setTalk(false); story(true); } /* GAME-185: у мапі-першій Escape не відкриває ☰ з відповідями розмови — рамка лишається */ } else if (storyOpen) story(false); else toggle(!paused);
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [paused, storyOpen, confirmNew, summary, talk, intro, atlasOpen]);
+  }, [paused, storyOpen, confirmNew, summary, talk, intro, atlasOpen, episode, ups, upsOn]);
 
   // GAME-182: Атлас із ☰ — окрема накладка (світ лишається на паузі); закрили — назад на екран подорожі.
   const openAtlas = (): void => { setOffer(port.story()); setStoryOpen(false); setAtlasOpen(true); };
@@ -285,6 +293,8 @@ export function Shell({ port, langOverride, credits, build, holdToast = false, h
   // HUD (GAME-83): де ти, день і час, гроші. Лежить над полем гри, а не на ньому (див. #app у index.html).
   const hh = String(Math.floor(offer.timeMinutes / 60)).padStart(2, '0');
   const mm = String(offer.timeMinutes % 60).padStart(2, '0');
+  // GAME-229: який із екранів кінця дня зараз зверху (картка розділу → «Що відкрилось» → підсумок).
+  const top = topOverlay({ episode, ups: shownUps.length, summary: summary !== null });
   const showHint = !settings.hintSeen && offer.stage === 'create';
   // Банер — лише на мапі (не поверх екрана подорожі, паузи чи підсумку дня) і лише поки не минуло TITLE_UP_MIN ігрових хвилин.
   const sinceUp = titleUp ? offer.day * 1440 + offer.timeMinutes - titleUp.at : -1;
@@ -374,7 +384,8 @@ export function Shell({ port, langOverride, credits, build, holdToast = false, h
       {episode && !intro && port.episodeFlags && <EpisodeCard flags={port.episodeFlags()} t={t} onDone={() => { setEpisode(false); focusStage(); }} />}
       {intro && !cold && <Intro offer={offer} lang={lang} t={t} act={storyAct} portrait={portrait} room={port.introRoom} onDone={endIntro} />}
       {talk && !paused && !storyOpen && !summary && offer.dialogue && <DialogueBox dialogue={offer.dialogue} lang={lang} t={t} act={storyAct} portrait={portrait} />}
-      {summary && !paused && !episode && <DaySummary summary={summary} lang={lang} t={t} onContinue={summaryContinue} onEnd={summaryEnd} />}
+      {summary && !paused && top === 'levelup' && <LevelUp ups={shownUps} lang={lang} t={t} onContinue={() => setUps([])} />}
+      {summary && !paused && top === 'summary' && <DaySummary summary={summary} lang={lang} t={t} onContinue={summaryContinue} onEnd={summaryEnd} />}
       {paused && confirmNew && (
         <div class="ui-overlay" role="dialog" aria-modal="true" aria-label={t('ui.newGame')} data-ui="confirm-new" onKeyDown={(e) => trapTab(e, e.currentTarget)}>
           <h2>{t('ui.newGame')}</h2>
@@ -421,6 +432,13 @@ export function Shell({ port, langOverride, credits, build, holdToast = false, h
             ))}
           </fieldset>
           <fieldset>
+            <legend>{t('ui.levelUps')}</legend>
+            {([true, false] as const).map((on) => (
+              <button type="button" class="ui-btn" data-ui={`levelups-${on ? 'on' : 'off'}`} aria-pressed={settings.levelUps === on}
+                onClick={() => update({ ...settings, levelUps: on })}>{t(on ? 'ui.levelUpsOn' : 'ui.levelUpsOff')}</button>
+            ))}
+          </fieldset>
+          <fieldset>
             <legend>{t('ui.saveGroup')}</legend>
             <button type="button" class="ui-btn" data-ui="save"
               onClick={() => { void port.save().then((ok) => { setStatus(ok ? 'ui.saved' : 'ui.saveFailed'); if (ok) playUi('confirm'); }); }}>{t('ui.save')}</button>
@@ -431,7 +449,7 @@ export function Shell({ port, langOverride, credits, build, holdToast = false, h
             <textarea class="ui-code" data-ui="code-in" rows={3} aria-label={t('ui.importCode')} placeholder={t('ui.importCode')}
               value={codeIn} onInput={(e) => setCodeIn((e.currentTarget as HTMLTextAreaElement).value)} />
             <button type="button" class="ui-btn" data-ui="code-apply"
-              onClick={() => { void port.importCode(codeIn).then((r) => setStatus(({ ok: 'ui.importOk', bad: 'ui.importBad', outdated: 'ui.importOutdated', newer: 'ui.importNewer', unsaved: 'ui.importUnsaved' } as const)[r])); }}>{t('ui.apply')}</button>
+              onClick={() => { void port.importCode(codeIn).then((r) => { if (r === 'ok' || r === 'unsaved') setUps([]); setStatus(({ ok: 'ui.importOk', bad: 'ui.importBad', outdated: 'ui.importOutdated', newer: 'ui.importNewer', unsaved: 'ui.importUnsaved' } as const)[r]); }); }}>{t('ui.apply')}</button>
             {status && <p class="ui-status" data-ui="status" role="status">{t(status)}</p>}
           </fieldset>
           <fieldset>
