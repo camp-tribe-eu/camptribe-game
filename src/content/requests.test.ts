@@ -1,6 +1,7 @@
 // GAME-180 · прохання сусідів: дані ↔ мапа ↔ діалоги ↔ ядро. Повний шлях кожного з п'яти прохань на справжньому ядрі (розмова → «Беруся» → цілі → здача → журнал),
 // відмова без наслідків, дані мапи й текстів, правила трекера/стрілки/«!». Негативні контролі в кінці (мутації, що мусять червоніти).
 import { REPAIR_FLAG } from './repair';
+import { LITTER_FLAG } from './side';
 import { PHOTO_FLAG_PREFIX } from './photos';   // GAME-213: фото — косметичні прапорці, не прохання
 import { FISH_FACTS } from './fish-fork';
 import { describe, expect, it } from 'vitest';
@@ -124,7 +125,7 @@ describe('GAME-180 · дані прохань', () => {
     const fish: string[] = [FISH_FACTS.kept, FISH_FACTS.released, FISH_FACTS.charred, FISH_FACTS.trustNora];
     expect(STORY.requestFlags).toEqual(expect.arrayContaining(fish));
     // GAME-215: там само — прапорці слідів дідуся (f.trace-*); їх рахує traces.test.ts. GAME-209: і прапорець лагодження лавки (косметичний для перебору; його стереже repair.test.ts).
-    expect(STORY.requestFlags?.filter((f) => !fish.includes(f) && !f.startsWith(TRACE_FLAG_PREFIX) && f !== REPAIR_FLAG && !f.startsWith(PHOTO_FLAG_PREFIX)).length).toBe(REQUESTS.reduce((a, r) => a + r.targets.length + 2, 0) + ALL_REQUESTS.filter((r) => r.weather !== undefined).reduce((a, r) => a + r.targets.length + 1, 0));
+    expect(STORY.requestFlags?.filter((f) => !fish.includes(f) && !f.startsWith(TRACE_FLAG_PREFIX) && f !== REPAIR_FLAG && !f.startsWith(PHOTO_FLAG_PREFIX) && f !== LITTER_FLAG).length).toBe(REQUESTS.reduce((a, r) => a + r.targets.length + 2, 0) + ALL_REQUESTS.filter((r) => r.weather !== undefined).reduce((a, r) => a + r.targets.length + 1, 0));
   });
 
   it('тексти: усі ключі є в uk й en, кожен рядок ≤ 140 знаків (телефон)', () => {
@@ -150,7 +151,7 @@ describe('GAME-180 · дані прохань', () => {
     expect(JSON.stringify(exploreView(touched, STORY))).toBe(JSON.stringify(exploreView(b, STORY)));
     expect(JSON.stringify(exploreView({ ...b, grants: [...b.grants, 'rw.other'].sort() }, STORY)), 'чужа нагорода ключ розрізняє').not.toBe(JSON.stringify(exploreView(b, STORY)));
     // контроль: без списку прапорців прохань ключ розрізнявся б — сторож не сліпий
-    const noList = { ...STORY, requestFlags: [] };
+    const noList = { ...STORY, requestFlags: [], sideGrants: [] };
     expect(JSON.stringify(exploreView(a, noList))).not.toBe(JSON.stringify(exploreView(b, noList)));
   });
 });

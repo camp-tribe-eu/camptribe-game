@@ -9,10 +9,7 @@ import { STORY } from './story';
 import { LIFE } from './life';
 import { WAVES } from './waves';
 import { ATLAS_PAGES, STICKER_DEFS } from './stickers';
-import { requestInteractions } from './requests';
-import { traceInteractions } from './traces';
-import { photoInteractions } from './photos';
-import { REPAIR_INTERACTION, REPAIR_SPOT } from './repair';
+import { SIDE_INTERACTIONS } from './side';
 
 /** Крамниця гри (GAME-81): єдина локація, де продається спорядження. Неіснуючий id ловить checkDefs (DEFS_BAD_REF). */
 export const SHOP = 'loc.shop';
@@ -47,18 +44,8 @@ export const SLICE_DEFS: CoreDefs = {
     'item.lantern': {},
   },
   interactions: {
-    // GAME-181: перше «погрітись» біля вогнища поза сценою — маленький секрет (+5 XP, раз).
-    'obj.campfire': { grantId: 'rw.campfire-warmth', moneyCents: 0, award: 'secret' },
-    // GAME-170 зріз 2: чужі пакети біля води — добра справа без строку й поза хвилею; журнал пише запис (Interact), Еліза дякує зранку дня 3 (GAME-144).
-    'obj.litter': { grantId: 'rw.litter-cleaned', moneyCents: 0, flags: ['f.litter-cleaned-ch1'], award: 'clean' },
-    // GAME-180: цілі прохань сусідів (content/requests.json) — дотик до позначки на мапі ставить прапорець цілі.
-    ...requestInteractions(),
-    // GAME-215: сліди дідуся Генрі (content/traces.json) — дотик до позначки олівцем ставить прапорець сліду.
-    ...traceInteractions(),
-    // GAME-213: фото камерою телефона на трьох наявних об'єктах табору (src/content/photos.ts).
-    ...photoInteractions(),
-    // GAME-209: лавку лагодять руками (молоток, пил) — мала разова нагорода.
-    [REPAIR_SPOT]: REPAIR_INTERACTION,
+    // GAME-224: побічні взаємодії (вогнище, сміття, прохання, сліди, фото, лавка) — єдине джерело content/side.ts.
+    ...SIDE_INTERACTIONS,
   },
 };
 

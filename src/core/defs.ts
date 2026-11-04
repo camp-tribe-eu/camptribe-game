@@ -203,6 +203,8 @@ export interface StoryDefs {
   readonly memorable?: readonly string[];
   /** Прапорці прохань сусідів (GAME-180): косметичні для сюжету — повний перебір їх не розрізняє (moves.ts exploreView). */
   readonly requestFlags?: readonly string[];
+  /** GAME-224: `grantId` побічних взаємодій (content/side.ts) — теж косметичні для перебору. */
+  readonly sideGrants?: readonly string[];
   /** Нагороди прохань сусідів (GAME-180/181): коли з'являється прапорець `flag` («здано»), видається `rw.<прохання>` (XP, ОМ) і практика навичок — раз за ключ. */
   readonly requestRewards?: readonly { readonly flag: string; readonly key: string; readonly xp: number; readonly om: number; readonly skills: readonly string[] }[];
   /** Прапорці, поява яких пишеться в журнал подорожі як «Запам'ятали: …» (GAME-180: прохання здано); текст — journal.<прапорець>. */
