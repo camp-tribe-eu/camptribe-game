@@ -110,6 +110,6 @@ export class GrillRig {
       msg = this.msg > 0 && this.note ? this.text(this.note) : this.text('grill.hold');
     }
     if (hint.text !== msg) hint.setText(msg);
-    hint.setVisible(msg !== '').setPosition(cx, top + 14);
+    hint.setVisible(msg !== '' && Math.hypot(this.at.x - cx, this.at.y - this.player.y) <= 110).setPosition(cx, top + 14);   // GAME-225: підпис — лише поруч із вогнищем
   }
 }

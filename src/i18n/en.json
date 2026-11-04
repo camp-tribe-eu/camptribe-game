@@ -370,5 +370,13 @@
   "atlas.photos.empty": "Empty frame",
   "photo.pier": "End of the pier",
   "photo.lake": "The lake from the shore",
-  "photo.pitch": "Our spot for the tent"
+  "photo.pitch": "Our spot for the tent",
+  "life.cone": "+1 Pine cone",
+  "life.berry": "+1 Berry",
+  "life.hint.shake": "Shake it: E or ●",
+  "life.hint.pick": "Pick berries: E or ●",
+  "life.hint.tap": "Fetch water: E or ●",
+  "life.hint.bin": "Clank the lid: E or ●",
+  "life.hint.board": "Notice board: E or ●",
+  "life.board": "Notice board: quiet hours 10 pm to 7 am. Rubbish in the bins, campfire never unattended. Enjoy your stay!"
 }

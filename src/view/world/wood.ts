@@ -6,6 +6,7 @@ import { playUi } from '../../audio/ui-sounds';
 import { sfx } from '../../audio/sfx';
 import { BAND, BRANCH_AT, BRANCHES, STRIKES, WOOD_IDLE, gotCount, markerAt, startWood, stepWood, woodTarget, type WoodEvent, type WoodInput, type WoodState } from '../../content/wood-chop';
 import type { Key } from '../../i18n';
+import { labelNear } from './label-range';
 import { FrameFx, HAND_FONT, TOP, drawMeter, meterTop } from './hand-fx';
 
 type Pt = { x: number; y: number };
@@ -157,7 +158,8 @@ export class WoodRig {
       msg = `${this.text('wood.chop')} ${Math.min(this.s.strikes + 1, STRIKES)}/${STRIKES}`;
     } else msg = this.needLeft > 0 ? this.text('wood.need') : gotCount(this.s) >= BRANCHES ? this.text('wood.bring') : `${this.text('wood.pick')} ${gotCount(this.s)}/${BRANCHES}`;
     if (hint.text !== msg) hint.setText(msg);
-    hint.setVisible(!this.muted).setPosition(cx, this.s.phase === 'chop' ? top + 14 : top - 2);
+    const near = labelNear(this.player, this.block, this.s.phase === 'chop' ? [] : this.pts.filter((_, i) => !this.s.got[i]));
+    hint.setVisible(!this.muted && near).setPosition(cx, this.s.phase === 'chop' ? top + 14 : top - 2);
   }
 }
 
