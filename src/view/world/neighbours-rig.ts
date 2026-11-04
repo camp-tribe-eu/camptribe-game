@@ -1,0 +1,171 @@
+// GAME-226 · «Живі сусіди»: малює й веде сусідів табору за станами з neighbours.ts. Нової графіки нема: той самий лист ходьби LPC; книга, рука привітання й значки —
+// кілька пікселів Graphics у палітрі гри. Усе покадрово (лічильник кадрів, жодних твінів і таймерів), звуку тут нема.
+import Phaser from 'phaser';
+import { idleBob } from './idle';
+import { facingToward } from '../npc-talk';
+import { FRAME, frameIndex, type Dir } from './character';
+import { SEATS, SIT_DY, SIT_ROWS } from './camp-alive';
+import { walkableAt, type Timeline } from './ambient';
+import type { Grid, Pt } from './follow';
+import {
+  EMOTES, EMOTE_COLORS, HOMES, MIND0, activityFor, breath, emoteScale, flipping, lookDir, nightOf, pagesTurned, planHome, routeAt, seatNear, sinceEvening, stepMind, stopIndexAt, waveFrame, workFrame,
+  type Emote, type HomePlan, type Mind, type NState, type Route, type RoutePhase,
+} from './neighbours';
+
+const INK = 0x1b1f23;
+const SKIN = 0xf1c27d;
+const COVER = 0x8a4b2d;
+const PAGE = 0xf4f1e8;
+/** Обхід героя: на скільки px зсувається сусід убік. */
+const SIDE_STEP = 28;
+/** Скільки кадрів після розмови сусід стоїть, не крутячи головою. */
+export const HOLD_FRAMES = 90;
+
+export interface NeighbourProbe {
+  id: string; state: NState; phase: RoutePhase; x: number; y: number; emote: Emote | null; emoteAge: number; waveDay: number; waves: number; pages: number; off: Pt; sitting: boolean;
+}
+const mod = (a: number, n: number): number => ((a % n) + n) % n;
+
+export class Neighbours {
+  private minds: Mind[] = [];
+  private holds: number[] = [];
+  private plans = new Map<string, HomePlan | null>();
+  private bodies: Phaser.GameObjects.Graphics[] = [];
+  private top: Phaser.GameObjects.Graphics | null = null;
+  private cropped: boolean[] = [];
+  private waves: number[] = [];
+  readonly probe: NeighbourProbe[] = [];
+
+  constructor(private readonly scene: Phaser.Scene, private readonly depthTop: number) {}
+
+  /** Нова мапа: пам'ять і малюнки з нуля. Малюнки створюються під потрібну кількість сусідів. */
+  begin(ids: readonly string[]): void {
+    this.destroy();
+    this.minds = ids.map(() => MIND0);
+    this.holds = ids.map(() => 0);
+    this.cropped = ids.map(() => false);
+    this.waves = ids.map(() => 0);
+    this.plans.clear();
+    this.bodies = ids.map(() => this.scene.add.graphics());
+    this.top = this.scene.add.graphics().setDepth(this.depthTop);
+    this.probe.length = 0;
+    ids.forEach((id) => this.probe.push({ id, state: 'stand', phase: 'out', x: 0, y: 0, emote: null, emoteAge: 0, waveDay: -1, waves: 0, pages: 0, off: { x: 0, y: 0 }, sitting: false }));
+  }
+
+  destroy(): void {
+    for (const g of this.bodies) g.destroy();
+    this.bodies = [];
+    this.top?.destroy();
+    this.top = null;
+  }
+
+  /** Розмова: сусід стоїть і не крутить головою кілька кадрів. */
+  hold(i: number): void { this.holds[i] = HOLD_FRAMES; }
+  state(i: number): NState { return this.minds[i]?.state ?? 'stand'; }
+  /** Сусід спить чи сидить біля намету — «мугикання» вечора йому не пасує. */
+  quiet(i: number): boolean { const s = this.minds[i]?.state; return s === 'sleep' || (s === 'sit' && this.probe[i]?.phase === 'home'); }
+
+  /** Кадр сусіда `i`: рахує, де він і що робить, ставить спрайт і малює дрібниці. Повертає ЛОГІЧНУ точку (за розкладом/дорогою) для проби й дзвінка. */
+  drive(i: number, s: Phaser.GameObjects.Sprite, grid: Grid, tl: Timeline, minutes: number, hero: Pt | null, raining: boolean, barking: boolean, facing: Dir): Route {
+    const res = tl.resident;
+    const home = HOMES[res.id];
+    const night = nightOf(minutes);
+    const key = `${i}:${night}:${raining}`;
+    let plan = this.plans.get(key);
+    if (plan === undefined && home) {
+      plan = planHome(grid, tl, home, minutes - sinceEvening(minutes), raining);
+      if (this.plans.size > 48) this.plans.clear();
+      this.plans.set(key, plan);
+    }
+    const route = routeAt(grid, tl, home ?? { c: 0, r: 0 }, home ? plan ?? null : null, minutes);
+    const prev = this.minds[i] ?? MIND0;
+    const dist = hero ? Math.hypot(hero.x - route.x, hero.y - route.y) : Infinity;
+    const stopIdx = route.phase === 'out' && !route.moving ? stopIndexAt(res, grid, route) : -1;
+    const seat = stopIdx >= 0 ? seatNear(route) : -1;
+    const seatPt = seat >= 0 ? SEATS[seat] : undefined;
+    const bench = seatPt ? { x: seatPt.x - route.x, y: seatPt.y - route.y } : null;
+    const side = hero && dist < 60 ? this.sideStep(grid, route, hero) : null;
+    const hold = (this.holds[i] ?? 0) > 0;
+    if (hold) this.holds[i] = (this.holds[i] ?? 0) - 1;
+    const tod = mod(minutes + 480, 1440);
+    const m = stepMind(prev, { tod, day: Math.floor((minutes + 480) / 1440), phase: route.phase, moving: route.moving, dist, raining, activity: activityFor(i, stopIdx, seat), side, bench, hold });
+    this.minds[i] = m;
+    if (m.state === 'wave' && prev.state !== 'wave') this.waves[i] = (this.waves[i] ?? 0) + 1;
+    this.show(i, s, route, m, hero, facing, seatPt?.face ?? null);
+    this.emoteOf(i, s, m, barking);
+    const p = this.probe[i];
+    if (p) Object.assign(p, { state: m.state, phase: route.phase, x: s.x, y: s.y, emote: m.emote, emoteAge: m.emoteAge, waveDay: m.waveDay, waves: this.waves[i] ?? 0, pages: pagesTurned(m.f), off: { x: Math.round(m.off.x), y: Math.round(m.off.y) }, sitting: this.cropped[i] === true });
+    return route;
+  }
+
+  /** Куди зсунутись від героя: напрямок «від нього» й обидва боки поперек — перший, де прохідно. */
+  private sideStep(grid: Grid, at: Pt, hero: Pt): Pt | null {
+    const d = Math.hypot(at.x - hero.x, at.y - hero.y) || 1;
+    const ax = (at.x - hero.x) / d; const ay = (at.y - hero.y) / d;
+    for (const [dx, dy] of [[ax, ay], [-ay, ax], [ay, -ax]] as const) {
+      const p = { x: at.x + dx * SIDE_STEP, y: at.y + dy * SIDE_STEP };
+      if (walkableAt(grid, p) && walkableAt(grid, { x: at.x + dx * SIDE_STEP * 0.5, y: at.y + dy * SIDE_STEP * 0.5 })) return { x: dx * SIDE_STEP, y: dy * SIDE_STEP };
+    }
+    return null;
+  }
+
+  private show(i: number, s: Phaser.GameObjects.Sprite, route: Route, m: Mind, hero: Pt | null, facing: Dir, seatFace: Dir | null): void {
+    const look = s.texture.key.replace(/^res-/, '');
+    const x = route.x + m.off.x;
+    const y = route.y + m.off.y;
+    const st = m.state;
+    const sitting = st === 'sleep' || st === 'sit';
+    let dir: Dir = facing;
+    let dy = 0;
+    let squash = 1;
+    const walking = (st === 'walk' || st === 'hurry' || (st === 'around' && route.moving)) && route.moving;
+    if (walking) dir = route.dir;
+    else if (st === 'wave' || st === 'around') dir = hero ? facingToward({ x, y }, hero) : dir;
+    else if (st === 'look') dir = lookDir(m.f);
+    else if (st === 'sit') dir = route.phase === 'home' ? 'down' : seatFace ?? 'down';
+    else if (st === 'sleep' || st === 'read' || st === 'work') dir = 'down';
+    if (walking) {
+      s.anims.timeScale = st === 'hurry' ? 1.5 : 1;
+      s.anims.play(`walk-res-${look}-${dir}`, true);
+    } else { s.anims.stop(); s.setFrame(frameIndex(dir, 0)); }
+    if (st === 'work') { const w = workFrame(m.f); dy = w; squash = 1 - 0.05 * w; }
+    if (sitting) dy = SIT_DY + (st === 'sleep' ? breath(m.f) : 0);
+    else if (st === 'stand' || st === 'look' || st === 'read' || st === 'wave') dy += idleBob(m.f * 17, i);
+    if (sitting && !this.cropped[i]) { s.setCrop(0, 0, FRAME, SIT_ROWS); this.cropped[i] = true; }
+    else if (!sitting && this.cropped[i]) { s.setCrop(); this.cropped[i] = false; }
+    s.setScale(1, squash).setPosition(x, y + dy).setDepth(y);
+    // Книга в руках і рука привітання: кілька пікселів поверх спрайта.
+    const g = this.bodies[i];
+    if (!g) return;
+    g.clear().setDepth(y + 1);
+    if (st === 'read') {
+      const left = flipping(m.f);
+      g.fillStyle(INK, 1).fillRect(x - 6, y - 24, 12, 8);
+      g.fillStyle(COVER, 1).fillRect(x - 5, y - 23, 10, 6);
+      g.fillStyle(PAGE, 1).fillRect(x - 4, y - 22, left ? 3 : 4, 4).fillRect(x + (left ? 1 : 0), y - 22, left ? 3 : 4, 4);
+    } else if (st === 'wave') {
+      const up = waveFrame(m.f) === 1;
+      const hx = x + (dir === 'left' ? -11 : 11);
+      const hy = y - (up ? 40 : 30);
+      g.fillStyle(INK, 1).fillRect(hx - 3, hy - 3, 6, 6);
+      g.fillStyle(SKIN, 1).fillRect(hx - 2, hy - 2, 4, 4);
+    }
+  }
+
+  private emoteOf(i: number, s: Phaser.GameObjects.Sprite, m: Mind, barking: boolean): void {
+    const g = this.top;
+    if (!g) return;
+    if (i === 0) g.clear();
+    if (!m.emote || barking || !s.visible) return;
+    const k = emoteScale(m.emoteAge);
+    if (k <= 0) return;
+    const cell = 2;
+    const rows = EMOTES[m.emote];
+    const ox = Math.round(s.x - 5);
+    const oy = Math.round(s.y - 70 + (1 - k) * 6);
+    g.fillStyle(INK, k);
+    rows.forEach((row, ry) => { for (let rx = 0; rx < row.length; rx++) if (row[rx] === '#') g.fillRect(ox + rx * cell - 1, oy + ry * cell - 1, cell + 2, cell + 2); });
+    g.fillStyle(EMOTE_COLORS[m.emote], k);
+    rows.forEach((row, ry) => { for (let rx = 0; rx < row.length; rx++) if (row[rx] === '#') g.fillRect(ox + rx * cell, oy + ry * cell, cell, cell); });
+  }
+}

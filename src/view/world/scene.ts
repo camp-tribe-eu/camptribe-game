@@ -24,6 +24,7 @@ import { bandOverHero, nextCanopyAlpha } from './canopy';
 import { findWindows, patchAlpha, patchQuads } from './light-patches';
 import { FEEDBACK_S, RING_IDLE, isAutoSpot, pickNearest, ringMayTake, stepRing, vehicleReady, type Insets, type Ring } from './proximity';
 import { IDLE_AFTER_S, LEISURE_BY_MAP, assignLeisure, leisureFromObjects, type LeisureSpot } from './leisure';
+import { Neighbours, type NeighbourProbe } from './neighbours-rig';
 import { BARK_RANGE, CAST, CAST_BY_MAP, RESIDENTS, buildTimeline, placeAt, residentGrid, type Timeline } from './ambient';
 import type { Key } from '../../i18n';
 import { GLYPHS, LOOK_S, idleBob, isEvening, lookAt, type Glyph } from './idle';
@@ -192,6 +193,8 @@ export interface WorldProbe {
   followers: Pt[];
   /** GAME-172 (лише для e2e): де стоять фонові мешканці табору (ноги, піксельні координати мапи) і чи йдуть. */
   residents: { id: string; x: number; y: number; moving: boolean }[];
+  /** GAME-226 (лише для e2e): що зараз робить кожен сусід табору — стан, фаза дороги, де видно спрайт, значок над головою. */
+  neighbours: NeighbourProbe[];
   /** GAME-204 (лише для e2e): фоновий покупець у крамниці (ноги, піксельні координати мапи); порожньо поза крамницею. */
   visitors: { id: string; x: number; y: number; moving: boolean }[];
   /** GAME-172: ключ репліки, що зараз над головою мешканця (null — тиша), і скільки реплік уже прозвучало. */
@@ -339,6 +342,8 @@ export class WorldScene extends Phaser.Scene {
   private live!: LiveFx;
   private swim!: SwimRig;
   private life!: CampAlive;
+  private neigh!: Neighbours;
+  private walkGrid!: Grid;   // GAME-226: живі сусіди
   private lifeDay = -1;
   private lifeRain = false;
   /** Набір terrain поточної мапи (перший gid і кількість тайлів) — для роду землі під ногами. */
@@ -586,6 +591,7 @@ export class WorldScene extends Phaser.Scene {
     this.fx = new MapFx(this);
     this.live = new LiveFx(this, DEPTH.decor - 50, DEPTH.always - 10);
     this.swim = new SwimRig(this, this.player, DEPTH.decor - 40);
+    this.neigh = new Neighbours(this, DEPTH.always);
     this.life = new CampAlive(this, this.barkText, (text, lift) => this.fx?.pop(this.player.x, this.player.y, text, lift));
     this.tent = new TentRig(this, this.player, this.barkText);
     this.wood = new WoodRig(this, this.player, this.barkText);
@@ -745,6 +751,7 @@ export class WorldScene extends Phaser.Scene {
     // GAME-204: фонові живуть у таборі (мешканці) і в крамниці (покупець); на дворі й дорозі їх нема. Шляхи — по сітці стін без клітинок цілей; розклад мусить будуватись (інакше мапа зламана — голосно).
     const onMap = CAST_BY_MAP[key] ?? [];
     const walkGrid = residentGrid(this.grid, [...this.spots, ...this.anchors]);
+    this.walkGrid = walkGrid;
     this.residentLines = CAST.map((res) => {
       if (!onMap.includes(res)) return null;
       const tl = buildTimeline(walkGrid, res);
@@ -754,6 +761,8 @@ export class WorldScene extends Phaser.Scene {
     this.probe.residents = key === 'camp' ? RESIDENTS.map((res) => ({ id: res.id, x: 0, y: 0, moving: false })) : [];
     this.probe.visitors = key === 'shop' ? onMap.map((res) => ({ id: res.id, x: 0, y: 0, moving: false })) : [];
     this.residentSprites.forEach((sp, i) => sp.setVisible(this.residentLines[i] != null));
+    this.neigh.begin(key === 'camp' ? RESIDENTS.map((r) => r.id) : []);
+    this.probe.neighbours = this.neigh.probe;
     this.moveResidents(0);
     const fromMap = leisureFromObjects(objects as never, TILE);
     this.leisureSpots = fromMap.length > 0 ? fromMap : [...(LEISURE_BY_MAP[key === 'camp' ? 'camp-lake' : key] ?? [])];
@@ -1076,6 +1085,14 @@ export class WorldScene extends Phaser.Scene {
       if (!s || !tl) return;
       const out = i < RESIDENTS.length ? this.probe.residents[i] : this.probe.visitors.find((v) => v.id === tl.resident.id);
       if (!out) return;
+      if (this.current === 'camp' && i < RESIDENTS.length) {
+        // GAME-226: сусід табору — стани, дорога додому, привітання (neighbours.ts); probe.residents лишається логічною точкою розкладу (game-211).
+        const q = this.neigh.drive(i, s, this.walkGrid, tl, minutes, this.player ? { x: this.player.x, y: this.player.y } : null, this.lifeRain, this.residentBark?.npc === i, this.residentFacing[i] ?? 'down');
+        const movedQ = Math.hypot(q.x - out.x, q.y - out.y) > 0.05;
+        this.resStand[i] = movedQ || q.moving ? 0 : (this.resStand[i] ?? 0) + this.stepMs;
+        out.x = q.x; out.y = q.y; out.moving = movedQ && q.moving;
+        return;
+      }
       const p = placeAt(this.grid, tl, minutes);
       const moved = Math.hypot(p.x - out.x, p.y - out.y) > 0.05;   // з логічною точкою: зсув дихання на спрайті рухом не вважається
       const dir = p.moving ? p.dir : this.residentFacing[i] ?? 'down';
@@ -1147,7 +1164,7 @@ export class WorldScene extends Phaser.Scene {
   private sprite(id: string): { s: Phaser.GameObjects.Sprite; face: (d: Dir) => void } | null {
     const ri = RESIDENTS.findIndex((r) => r.id === id);
     const rs = this.residentSprites[ri];
-    if (ri >= 0 && rs) return { s: rs, face: (d) => { this.residentFacing[ri] = d; } };
+    if (ri >= 0 && rs) return { s: rs, face: (d) => { this.residentFacing[ri] = d; this.neigh.hold(ri); } };
     const fi = FOLLOWER_NPC.findIndex((n) => n === id);
     const fs = this.followSprites[fi];
     if (fi >= 0 && fs) return { s: fs, face: (d) => { this.followFacing[fi] = d; } };
@@ -1182,7 +1199,7 @@ export class WorldScene extends Phaser.Scene {
     if (hb && !this.heroBob) { this.player.y += hb; this.heroBob = hb; }
     const evening = isEvening(timeOfDay(this.bridge.state.clock.minutes));
     const marks: { at: Pt; kind: Glyph }[] = [];
-    if (this.current === 'camp' && evening) RESIDENTS.forEach((r, i) => { const s = this.residentSprites[i]; if (s?.visible && (this.resStand[i] ?? 0) > 2000 && this.residentBark?.npc !== i && this.hooks.talk(r.id) === null) marks.push({ at: { x: s.x, y: s.y - 50 }, kind: 'note' }); });
+    if (this.current === 'camp' && evening) RESIDENTS.forEach((r, i) => { const s = this.residentSprites[i]; if (s?.visible && (this.resStand[i] ?? 0) > 2000 && this.residentBark?.npc !== i && !this.neigh.quiet(i) && this.hooks.talk(r.id) === null) marks.push({ at: { x: s.x, y: s.y - 50 }, kind: 'note' }); });
     if (this.fish.phase === 'bite') marks.push({ at: { x: this.player.x, y: this.player.y - 56 }, kind: 'ask' });
     marks.forEach((m, k) => {
       let g = this.emoteG[k];
