@@ -1633,7 +1633,7 @@ export class WorldScene extends Phaser.Scene {
     this.stepMs = delta;
     this.moveResidents(time);
     this.stepGift();
-    if (this.heartHold > 0) this.heartHold--; else if (!heroBusy({ acting: this.acting !== null, inWater: this.swim.inWater, fishing: this.fish.busy, tent: this.tent.active, wood: this.wood.active, fire: this.fire.holdsHero, grill: this.grill.active, smash: this.life.holdsHero })) this.hooks.heart?.();   // GAME-235: не під час дії руками   // GAME-230: після подарунка сцена серця чекає, поки догорить реакція (♥ і поза), а не обриває її паузою
+    if (this.heartHold > 0) this.heartHold--; else if (!heroBusy({ acting: this.acting !== null, inWater: this.swim.inWater, fishing: this.fish.busy, tent: this.tent.holdsHero, wood: this.wood.holdsHero, fire: this.fire.holdsHero, grill: this.grill.holdsHero, smash: this.life.holdsHero })) this.hooks.heart?.();   // GAME-235: не під час дії руками   // GAME-230: після подарунка сцена серця чекає, поки догорить реакція (♥ і поза), а не обриває її паузою
     this.updateNpcMarks(time);
     this.updateEmotes(time, delta, moving || v.x !== 0 || v.y !== 0);
 
