@@ -201,6 +201,8 @@ function apply(cmd: Command, d: Draft, defs: CoreDefs, guard: Safeguards, today:
       if (have === 1 && defs.story && questNeedsItem(defs.story, d, d.player, cmd.itemId)) return 'ITEM_QUEST_LOCKED';
       d.inventory = have === 1 ? Object.fromEntries(Object.entries(d.inventory).filter(([k]) => k !== cmd.itemId)) : { ...d.inventory, [cmd.itemId]: have - 1 };
       d.friend = giveGift(d.friend, cmd.npcId, reactionOf(prefs, cmd.itemId), today);
+      // Подарунок — гарний привід закінчити розмову: рамка зникає, світ іде далі, і гравець бачить реакцію (♥ чи «…») та позу вручення, а не рамку поверх мапи.
+      if (d.dialogue !== null && defs.story && own(defs.story.dialogues, d.dialogue.id)?.npcId === cmd.npcId) d.dialogue = null;
       return null;
     }
     case 'Forage': {

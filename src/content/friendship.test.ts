@@ -92,6 +92,12 @@ describe('подарунок', () => {
     expect(ptsOf(s1b.game.friend, 'npc.nora')).toBe(LIKED_POINTS);
     expect(codeOf(s1, gift('npc.sarah', FORAGE_ITEMS.berry))).toBeNull();
   });
+  it('подарунок закінчує розмову з цим мешканцем (рамка зникає, світ іде далі); чужу розмову не чіпає', () => {
+    const mine = camp({ [FORAGE_ITEMS.berry]: 2 }, { dialogue: { id: 'dlg.nora-chat', node: 'hello' } });
+    expect(send(mine, gift('npc.nora', FORAGE_ITEMS.berry)).game.dialogue).toBeNull();
+    const other = camp({ [FORAGE_ITEMS.berry]: 2 }, { dialogue: { id: 'dlg.luc-chat', node: 'hello' } });
+    expect(send(other, gift('npc.nora', FORAGE_ITEMS.berry)).game.dialogue).toEqual({ id: 'dlg.luc-chat', node: 'hello' });
+  });
   it('наступного дня знову можна (день — з годинника гри)', () => {
     const s1 = send(camp({ [FORAGE_ITEMS.berry]: 3 }), gift('npc.nora', FORAGE_ITEMS.berry));
     const nextDay = { ...s1, clock: { ...s1.clock, minutes: s1.clock.minutes + 1440 } };

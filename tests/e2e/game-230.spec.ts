@@ -126,10 +126,13 @@ for (const v of VIEWS) {
     // Кнопка «Подарувати» є; розгортає список (ягоди, шишка); дрова не пропонуються (їх у герої нема).
     const open = panel(page).locator('[data-act="gift-open"]');
     await expect(open, 'кнопка «Подарувати» в рамці розмови').toBeVisible();
+    await page.waitForTimeout(500);   // глухота ~350 мс після появи рамки (щоб «дія» з мапи не влучила в кнопку)
     await open.click();
     await expect(panel(page).locator('[data-act="gift"]')).toHaveCount(2);
     await shot(page, `gift-list-${v.side}`);
     await panel(page).locator('[data-act="gift"][data-key="item.berries"]').click();
+    // Дар закінчує розмову: рамка зникає, світ іде далі — і видно реакцію, а не рамку поверх мапи.
+    await expect(box(page)).toBeHidden({ timeout: 5_000 });
     // Реакція: ♥ над Норою, дзвіночок, поза героя 30 кадрів (лічильник кадрів, а не годинник).
     await expect.poll(async () => (await probe(page)).gift.count, { timeout: 5_000 }).toBe(1);
     const g = (await probe(page)).gift;
@@ -142,12 +145,10 @@ for (const v of VIEWS) {
     const afterGift = await sim(page);
     expect(afterGift.game.friend?.pts['npc.nora']).toBe(5);
     expect(afterGift.game.inventory['item.berries']).toBe(1);
-    // Другий подарунок того ж дня — неможливо: кнопки «Подарувати» вже немає (ядро відмовило б GRANT_ALREADY_GIVEN).
-    await expect(panel(page).locator('[data-act="gift-open"]')).toHaveCount(0);
+    // Другий подарунок того ж дня — неможливо: заговорили знову, а кнопки «Подарувати» вже немає (ядро відмовило б GRANT_ALREADY_GIVEN).
     if (v.side === 'portrait') for (const r of RATIOS) { await page.setViewportSize({ width: r.w, height: r.h }); await page.waitForTimeout(500); await shot(page, `reaction-${r.side}`); }
     await page.setViewportSize({ width: v.w, height: v.h });
-    // Закрили розмову — година 15:30 і два серця: сцена Нори відкривається сама.
-    await closeTalk(page).catch(() => undefined);
+    // Година 15:30 і два серця: щойно догорить реакція, сцена Нори відкривається сама.
     await expect.poll(async () => (await sim(page)).game.dialogue?.id ?? null, { message: 'сцена серця відкрилась', timeout: 15_000 }).toBe('dlg.heart-nora');
     await expect(panel(page).locator('[data-ui="line"]')).toContainText('Нора');
     await shot(page, `heart-${v.side}`);
@@ -156,6 +157,10 @@ for (const v of VIEWS) {
     }
     expect((await sim(page)).game.dialogue).toBeNull();
     expect((await sim(page)).game.friend?.seen).toEqual(['npc.nora']);
+    await talkTo(page, 'npc.nora');
+    await page.waitForTimeout(500);
+    await expect(panel(page).locator('[data-act="gift-open"]'), 'сьогодні Нора вже отримала подарунок').toHaveCount(0);
+    await closeTalk(page);
     // Вдруге не відкривається, скільки б ми не стояли в таборі.
     await page.waitForTimeout(3_000);
     expect((await sim(page)).game.dialogue, 'сцена серця не повторилась').toBeNull();

@@ -23,7 +23,7 @@ import { nightSounds } from '../../audio/night-sounds';
 import { sfx } from '../../audio/sfx';
 import { campSounds, playCamp } from '../../audio/camp-sounds';
 import type { GiftReaction } from '../../core/friendship';
-import { giftEmote, giftSound, nextPoseAge, poseColumn } from './gift-fx';
+import { GIFT_POSE_FRAMES, giftEmote, giftSound, nextPoseAge, poseColumn } from './gift-fx';
 import { MapFx, type Needs } from './map-fx';
 import { bandOverHero, nextCanopyAlpha } from './canopy';
 import { findWindows, patchAlpha, patchQuads } from './light-patches';
@@ -31,6 +31,7 @@ import { LAMP_RADIUS, findLamps, lampAlpha, lampsOn } from './lamps';
 import { FEEDBACK_S, RING_IDLE, isAutoSpot, pickNearest, ringMayTake, stepRing, vehicleReady, type Insets, type Ring } from './proximity';
 import { IDLE_AFTER_S, LEISURE_BY_MAP, assignLeisure, leisureFromObjects, type LeisureSpot } from './leisure';
 import { Neighbours, type NeighbourProbe } from './neighbours-rig';
+import { EMOTE_FRAMES } from './neighbours';
 import { BARK_RANGE, CAST, CAST_BY_MAP, RESIDENTS, buildTimeline, placeAt, residentGrid, type Timeline } from './ambient';
 import type { Key } from '../../i18n';
 import { GLYPHS, LOOK_S, idleBob, isEvening, lookAt, type Glyph } from './idle';
@@ -326,6 +327,8 @@ export class WorldScene extends Phaser.Scene {
   private acting: HeroAction | null = null;
   /** GAME-230: кадр пози «вручаю подарунок» (-1 — поза не триває). Рахується кадрами гри. */
   private giftAge = -1;
+  /** GAME-230: скільки кадрів сцена серця ще чекає після подарунка. */
+  private heartHold = 0;
   /** GAME-230: скільки шишок і ягід уже передано в інвентар (лічильник риґу показує зібране, тут — що з нього вже в ядрі). */
   private foraged = { cones: 0, berries: 0 };
   private leisure: (LeisureSpot | null)[] | null = null;
@@ -547,6 +550,7 @@ export class WorldScene extends Phaser.Scene {
       const i = RESIDENTS.findIndex((r) => r.id === g.npc);
       const s = i >= 0 ? this.residentSprites[i] : undefined;
       const emote = giftEmote(g.reaction);
+      this.heartHold = EMOTE_FRAMES + GIFT_POSE_FRAMES;
       if (this.neigh.react(g.npc, emote)) {
         playCamp(giftSound(g.reaction));
         this.probe.gift.count++; this.probe.gift.npc = g.npc; this.probe.gift.reaction = g.reaction; this.probe.gift.emote = emote; this.probe.gift.sounds = campSounds.played.slice(-4);
@@ -1625,7 +1629,7 @@ export class WorldScene extends Phaser.Scene {
     this.stepMs = delta;
     this.moveResidents(time);
     this.stepGift();
-    this.hooks.heart?.();
+    if (this.heartHold > 0) this.heartHold--; else this.hooks.heart?.();   // GAME-230: після подарунка сцена серця чекає, поки догорить реакція (♥ і поза), а не обриває її паузою
     this.updateNpcMarks(time);
     this.updateEmotes(time, delta, moving || v.x !== 0 || v.y !== 0);
 

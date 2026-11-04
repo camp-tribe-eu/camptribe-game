@@ -137,7 +137,7 @@ export function DialogueBox({ dialogue: d, lang, t, act, portrait }: { dialogue:
           {d.gifts && d.gifts.length > 0 && (
             // GAME-230: «Подарувати» — розгортає те, що герой тримає й може вручити цьому співрозмовнику (нічого не карає: гірший дар лише не радує).
             <div class="ui-answers ui-talk-answers ui-gifts" data-ui="gifts">
-              <button type="button" class="ui-btn" data-act="gift-open" aria-expanded={giftOpen ? 'true' : 'false'} onClick={(e) => guarded(e, () => setGiftOpen(!giftOpen))}>{t('ui.gift.open')}</button>
+              <button type="button" class="ui-btn" data-act="gift-open" aria-expanded={giftOpen ? 'true' : 'false'} onClick={() => setGiftOpen(!giftOpen)}>{t('ui.gift.open')}</button>
               {giftOpen && d.gifts.map((a) => (
                 <button type="button" class="ui-btn" key={a.id} data-act="gift" data-key={a.key ?? ''} onClick={(e) => guarded(e, () => { setGiftOpen(false); act(a.id); })}>{ct(lang, a.key)}</button>
               ))}
