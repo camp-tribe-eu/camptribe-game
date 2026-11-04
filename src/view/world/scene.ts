@@ -19,10 +19,12 @@ import { MAX_HELPERS } from '../../content/tent-pitch';
 import type { MapKey } from '../../content/map-first';
 import { ICON_SIZE, iconIndex, objectiveIcon } from '../../content/objective-icons';
 import { playUi } from '../../audio/ui-sounds';
+import { nightSounds } from '../../audio/night-sounds';
 import { sfx } from '../../audio/sfx';
 import { MapFx, type Needs } from './map-fx';
 import { bandOverHero, nextCanopyAlpha } from './canopy';
 import { findWindows, patchAlpha, patchQuads } from './light-patches';
+import { LAMP_RADIUS, findLamps, lampAlpha, lampsOn } from './lamps';
 import { FEEDBACK_S, RING_IDLE, isAutoSpot, pickNearest, ringMayTake, stepRing, vehicleReady, type Insets, type Ring } from './proximity';
 import { IDLE_AFTER_S, LEISURE_BY_MAP, assignLeisure, leisureFromObjects, type LeisureSpot } from './leisure';
 import { Neighbours, type NeighbourProbe } from './neighbours-rig';
@@ -186,6 +188,8 @@ export interface WorldProbe {
   canopy: { bands: number; over: number; minAlpha: number };
   /** GAME-210 (лише для e2e): плями світла з вікон на підлозі — скільки намальовано, глибина шару й прозорість (гасне до ночі). */
   light: { patches: number; depth: number; alpha: number };
+  /** GAME-231 (лише для e2e): ліхтарі табору — скільки стоїть, чи горять (з 18:00), прозорість кола світла й його радіус, px. */
+  lamps: { count: number; on: boolean; alpha: number; radius: number };
   /** GAME-97 (лише для e2e): кадрів за секунду — середнє за останнє повне вікно ~3 с; 0, доки перше вікно не закрилось. */
   fps: number;
   /** Скільки вікон fps уже закрито (тест чекає на нове вікно, а не читає застаріле число). */
@@ -325,6 +329,10 @@ export class WorldScene extends Phaser.Scene {
   private glow: Phaser.GameObjects.Image | null = null;
   private patches: Phaser.GameObjects.Image | null = null;
   private patchCount = 0;
+  /** GAME-231: кола світла під ліхтарями табору (ADD, покадрова прозорість). */
+  private lampGlows: Phaser.GameObjects.Image[] = [];
+  /** GAME-231: мешканець, з яким відкрито розмову (діалог ядра `game.dialogue`); скидається, щойно діалог закрито. */
+  private talkingTo: string | null = null;
 
   /** Позначки цілей (GAME-170 зріз 2; GAME-175: речі, кроки, авто) — за назвою об'єкта; видимі лише поки об'єкт «живий» (isLive). */
   private markers = new Map<string, Marker>();
@@ -678,6 +686,7 @@ export class WorldScene extends Phaser.Scene {
     this.glow = null;
     this.patches = null;
     this.patchCount = 0;
+    this.lampGlows = [];
     this.bands = [];
   }
 
@@ -717,6 +726,7 @@ export class WorldScene extends Phaser.Scene {
     this.owned.push(this.add.image(0, 0, bakeKey).setOrigin(0, 0).setDepth(DEPTH.ground));
     for (const layer of [ground, decor, walls]) layer?.setVisible(false);
     this.makePatches(key, map);
+    this.makeLamps(map);
 
     const objects = map.getObjectLayer('objects')?.objects ?? [];
     const typeOf = (o: Phaser.Types.Tilemaps.TiledObject): string => String(o.type || (o as { class?: string }).class || '');
@@ -770,6 +780,7 @@ export class WorldScene extends Phaser.Scene {
     this.probe.visitors = key === 'shop' ? onMap.map((res) => ({ id: res.id, x: 0, y: 0, moving: false })) : [];
     this.residentSprites.forEach((sp, i) => sp.setVisible(this.residentLines[i] != null));
     this.neigh.begin(key === 'camp' ? RESIDENTS.map((r) => r.id) : []);
+    this.neigh.setFire(key === 'camp' ? spawnFire(this.spots) : null);
     this.lastRes = CAST.map(() => ({ x: 0, y: 0 }));
     this.probe.neighbours = this.neigh.probe;
     this.moveResidents(0);
@@ -901,6 +912,34 @@ export class WorldScene extends Phaser.Scene {
     this.patchCount = quads.length;
   }
 
+  /** GAME-231: коло світла під кожним ліхтарем мапи (верх ліхтаря й стовп у шарі `above`); текстура одна — радіальний градієнт із палітри, як у вогнища. */
+  private makeLamps(map: Phaser.Tilemaps.Tilemap): void {
+    const ts = map.tilesets.find((t) => t.name === 'camp-props');
+    const above = map.getLayer('above');
+    if (!this.daylightOn || !ts || !above) return;
+    const lamps = findLamps(above.data.flatMap((row) => row.map((t) => t.index)), map.width, map.height, ts.firstgid);
+    if (lamps.length === 0) return;
+    if (!this.textures.exists('lamp-glow')) {
+      const R = LAMP_RADIUS;
+      const tex = this.textures.createCanvas('lamp-glow', R * 2, R * 2);
+      if (!tex) throw new Error('texture lamp-glow failed');
+      const ctx = tex.getContext();
+      const css = (c: number): string => `#${c.toString(16).padStart(6, '0')}`;
+      const g = ctx.createRadialGradient(R, R, 0, R, R, R);
+      g.addColorStop(0, `${css(FIRE_CORE)}cc`);
+      g.addColorStop(0.4, `${css(FIRE_GLOW)}66`);
+      g.addColorStop(1, `${css(FIRE_GLOW)}00`);
+      ctx.fillStyle = g;
+      ctx.fillRect(0, 0, R * 2, R * 2);
+      tex.refresh();
+    }
+    for (const l of lamps) {
+      const img = this.add.image(l.x, l.y, 'lamp-glow').setDepth(DEPTH.always + 2).setBlendMode(Phaser.BlendModes.ADD).setVisible(false);
+      this.owned.push(img);
+      this.lampGlows.push(img);
+    }
+  }
+
   /** Запекти шари мапи (у заданому порядку) в одну статичну картинку на всю мапу: піксель у піксель те, що малювали б самі шари. */
   private bake(key: string, map: Phaser.Tilemaps.Tilemap, layers: Phaser.Tilemaps.TilemapLayer[]): void {
     const tex = this.textures.addDynamicTexture(key, map.widthInPixels, map.heightInPixels);
@@ -953,6 +992,9 @@ export class WorldScene extends Phaser.Scene {
     if (visible) this.night.setFillStyle(a.color, 1);
     this.glow?.setVisible(visible).setAlpha(glow);
     this.patches?.setAlpha(patchAlpha(a.darkness, MAX_DARKNESS));
+    const lamp = lampAlpha(minuteOfDay, a.darkness, time);
+    for (const g of this.lampGlows) g.setVisible(lamp > 0).setAlpha(lamp);
+    Object.assign(this.probe.lamps, { count: this.lampGlows.length, on: lampsOn(minuteOfDay), alpha: this.lampGlows.length ? lamp : 0, radius: LAMP_RADIUS });
     Object.assign(d, { visible, minuteOfDay, darkness: a.darkness, color: a.color, glow: this.glow ? glow : 0 });
   }
 
@@ -1089,6 +1131,8 @@ export class WorldScene extends Phaser.Scene {
   private moveResidents(time: number): void {
     const clock = this.bridge.state.clock;
     const minutes = clock.minutes + clock.accMs / STEP_MS;
+    if (this.talkingTo !== null && this.bridge.state.game.dialogue === null) this.talkingTo = null;
+    this.neigh.setTalking(this.talkingTo);
     this.residentLines.forEach((tl, i) => {
       const s = this.residentSprites[i];
       if (!s || !tl) return;
@@ -1295,6 +1339,9 @@ export class WorldScene extends Phaser.Scene {
     // GAME-207: тема за мапою, вступом і годиною доби — чиста функція musicFor; перехід — у модулі звуку.
     music.setTrack(musicFor({ map: this.current, intro: isIntroOpen(), minuteOfDay: timeOfDay(this.bridge.state.clock.minutes) }));
     music.tick(delta);
+    // GAME-231: цвіркуни й сова вночі в таборі — звук лише через src/audio; час — ігрова хвилина (дробова), без таймерів.
+    const nightClock = this.bridge.state.clock;
+    nightSounds.tick(delta, { map: this.current, intro: isIntroOpen(), raining: this.lifeRain, minuteOfDay: timeOfDay(nightClock.minutes + nightClock.accMs / STEP_MS) });
     const lifeDay = dayOf(this.bridge.state.clock);   // GAME-225: день й дощ для табору (калюжі, раз на день)
     if (lifeDay !== this.lifeDay) { this.lifeDay = lifeDay; this.lifeRain = weatherOf(this.bridge.state.worldSeed, lifeDay) === 'rain'; }
     const held = consumeFrame(this.controls);
@@ -1476,7 +1523,7 @@ export class WorldScene extends Phaser.Scene {
       if (e !== 'board' && e !== 'tap') this.playAction('thrust', facingToward(this.player, lifeHit.at));
       this.life.refresh();
     } else if (pressed && act) {
-      if (act.kind === 'npc') { this.faceEachOther(act); this.hooks.onNpc(act.name); }
+      if (act.kind === 'npc') { this.faceEachOther(act); this.hooks.onNpc(act.name); this.talkingTo = this.bridge.state.game.dialogue !== null ? act.name : null; }
       else if (carrying && (act.name === 'obj.vehicle' || act.name === 'obj.trunk')) this.unloadOne();
       else { this.hooks.onObject(act.name); this.feedback(act.name); }
     }

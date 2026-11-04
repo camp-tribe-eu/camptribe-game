@@ -6,7 +6,7 @@ import { RESIDENTS, TILES_PER_MIN, buildTimeline, residentGrid, walkableAt, type
 import { findPath, gridFromWalls, tileOf, type Pt } from './follow';
 import {
   BLOCK_FRAMES, BLOCK_R, EMOTE_FRAMES, EMOTE_HOLD, EMOTE_IN, HOMES, MIND0, OFF_SPEED, RAIN_SPEED, WAVE_FRAMES, WAVE_R, ZZZ_EVERY,
-  emoteScale, flipping, lookDir, neighbourAt, pagesTurned, planHome, routeAt, sinceEvening, stepMind, waveFrame, workFrame, EMOTES,
+  EMOTE_DY, FIRE_HALF, emoteShiftX, heldBy, emoteScale, flipping, lookDir, neighbourAt, pagesTurned, planHome, routeAt, sinceEvening, stepMind, waveFrame, workFrame, EMOTES,
   type Frame, type Mind, type NState,
 } from './neighbours';
 
@@ -239,5 +239,54 @@ describe('сторожі', () => {
   });
   it('нічого не пишеться в сейв/SIDE: у модулях нема звернень до ядра й сховищ', () => {
     for (const [f, src] of Object.entries(SRC)) expect(src, f).not.toMatch(/core\/|localStorage|grant\(|SIDE\./);
+  });
+});
+
+describe('GAME-231: тримання на всю розмову, значок убік від вогню', () => {
+  /** Як рига рахує кадр: пільговий відлік після початку розмови + сигнал «розмова відкрита». */
+  function talkFrames(n: number, talking: string | null, grace0: number, night: Frame): Mind[] {
+    let m: Mind = { ...MIND0, state: 'sleep', emote: 'zzz', emoteAge: 0 };   // до розмови спав
+    let left = grace0;
+    const out: Mind[] = [];
+    for (let k = 0; k < n; k++) {
+      const hold = heldBy(left, talking, 'npc.amina');
+      if (left > 0) left--;
+      m = stepMind(m, { ...night, hold });
+      out.push(m);
+    }
+    return out;
+  }
+  const night = near({ phase: 'home', tod: 22 * 60, dist: 20, activity: 'stand' });
+  it('довга розмова вночі (3000 кадрів = 50 с): сусід стоїть увесь час, без «Z» і без сну', () => {
+    const ms = talkFrames(3000, 'npc.amina', 90, night);
+    expect(ms.every((m) => m.state === 'stand'), 'хтось ліг чи сів').toBe(true);
+    expect(ms.every((m) => m.emote !== 'zzz'), '«Z» над головою під час розмови').toBe(true);
+  });
+  it('без сигналу розмови після 90 кадрів — знову спить (контроль: тримає саме сигнал, а не відлік)', () => {
+    const ms = talkFrames(300, null, 90, night);
+    expect(ms[89]?.state).toBe('stand');
+    expect(ms[91]?.state).toBe('sleep');
+  });
+  it('тримає лише співрозмовника: розмова з іншим сусідом не будить цього', () => {
+    expect(heldBy(0, 'npc.nora', 'npc.amina')).toBe(false);
+    expect(heldBy(0, 'npc.amina', 'npc.amina')).toBe(true);
+    expect(heldBy(5, null, 'npc.amina')).toBe(true);
+    expect(heldBy(0, null, 'npc.amina')).toBe(false);
+  });
+  it('«?»-обхід героя не зачеплено: без розмови герой на шляху надовго — «around»', () => {
+    const ms = run(MIND0, BLOCK_FRAMES + 20, near({ dist: BLOCK_R - 8, activity: 'stand' }));
+    expect(ms[ms.length - 1]?.state).toBe('around');
+  });
+  it('значок над Сарою біля вогнища (3,5) не лягає на полум’я: зсув убік; далеко від вогню — без зсуву', () => {
+    const fire = { x: 112, y: 144 };
+    const sarah = { x: 112, y: 176 };
+    const dx = emoteShiftX(sarah, fire);
+    expect(Math.abs(dx)).toBeGreaterThanOrEqual(FIRE_HALF + 7 - 0);
+    // значок (10 px завширшки) після зсуву поза полум’ям шириною 2×FIRE_HALF
+    expect(Math.abs(sarah.x - 5 + dx + 5 - fire.x)).toBeGreaterThan(FIRE_HALF);
+    expect(emoteShiftX({ x: 400, y: 176 }, fire)).toBe(0);
+    expect(emoteShiftX({ x: 112, y: 300 }, fire)).toBe(0);
+    expect(emoteShiftX(sarah, null)).toBe(0);
+    expect(EMOTE_DY).toBe(70);
   });
 });
