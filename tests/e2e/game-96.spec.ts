@@ -317,20 +317,40 @@ for (const vp of PORTRAIT) {
 const ZOOMED: Vp[] = [{ width: 844, height: 390 }, { width: 1920, height: 1080 }];
 interface Pr { playerX: number; playerY: number; nearObject: string | null; commandsSent: number; cameraScrollX: number; cameraScrollY: number }
 const probeOf = (page: Page): Promise<Pr> => page.evaluate(() => ({ ...(window as unknown as { __game: { probe: Pr } }).__game.probe }));
-const ELISE = { x: 80, y: 272 };   // public/maps/camp-lake.tmj, npc.elise (ноги)
+// Ноги Елізи — з файлу мапи, а не числами в тесті (GAME-233); вона стоїть на місці (розклад ходьби її не стосується).
+const ELISE = (() => {
+  const o = (JSON.parse(readFileSync(new URL('../../public/maps/camp-lake.tmj', import.meta.url), 'utf8')) as { layers: { objects?: { name: string; x: number; y: number }[] }[] })
+    .layers.flatMap((l) => l.objects ?? []).find((x) => x.name === 'npc.elise');
+  if (!o) throw new Error('npc.elise немає на мапі camp-lake');
+  return { x: o.x, y: o.y };
+})();
 async function stickDrive(page: Page, cdp: CDPSession, dx: number, dy: number, until: (p: Pr) => boolean): Promise<void> {
   const y0 = Math.round((page.viewportSize()?.height ?? 800) * 0.5);
   await touchEv(cdp, 'touchStart', 70, y0);
   await touchEv(cdp, 'touchMove', 70 + dx, y0 + dy);
   try { await expect.poll(async () => until(await probeOf(page)), { timeout: 12_000, intervals: [16] }).toBe(true); }
+  catch (e) { console.log(`GAME-233 stickDrive(${dx},${dy}) не дійшов: ${JSON.stringify(await probeOf(page))}`); throw e; }
   finally { await touchEv(cdp, 'touchEnd'); }
   await expect.poll(async () => { const a = await probeOf(page); await page.waitForTimeout(120); const b = await probeOf(page); return Math.hypot(a.playerX - b.playerX, a.playerY - b.playerY); }, { timeout: 10_000 }).toBeLessThan(0.1);
 }
-const screenOfWorld = async (page: Page, wx: number, wy: number): Promise<{ x: number; y: number }> => {
-  const p = await probeOf(page);
-  const c = await page.locator('#stage canvas').evaluate((el) => { const r = el.getBoundingClientRect(); return { left: r.left, top: r.top, k: r.width / (el as HTMLCanvasElement).width }; });
-  return { x: c.left + (wx - p.cameraScrollX) * c.k, y: c.top + (wy - p.cameraScrollY) * c.k };
-};
+// GAME-233: камера, полотно й проба читаються в ОДНОМУ ході JS (раніше — трьома окремими await, між якими кадр міг зсунути камеру).
+const screenOfWorld = (page: Page, wx: number, wy: number): Promise<{ x: number; y: number }> =>
+  page.evaluate(([x, y]) => {
+    const p = (window as unknown as { __game: { probe: Pr } }).__game.probe;
+    const el = document.querySelector('#stage canvas') as HTMLCanvasElement;
+    const r = el.getBoundingClientRect();
+    const k = r.width / el.width;
+    return { x: r.left + (x - p.cameraScrollX) * k, y: r.top + (y - p.cameraScrollY) * k };
+  }, [wx, wy] as const);
+const distToElise = (p: Pr): number => Math.hypot(p.playerX - ELISE.x, p.playerY - ELISE.y);
+/** Ціль тапу — стан, а не час: чекаємо, поки герой і камера простояли два кадри поспіль, і лише тоді рахуємо екранну точку. */
+async function settled(page: Page): Promise<void> {
+  await expect.poll(() => page.evaluate(() => new Promise<boolean>((done) => {
+    const pr = (window as unknown as { __game: { probe: Pr } }).__game.probe;
+    const a = [pr.playerX, pr.playerY, pr.cameraScrollX, pr.cameraScrollY];
+    requestAnimationFrame(() => requestAnimationFrame(() => done(a.every((v, i) => v === [pr.playerX, pr.playerY, pr.cameraScrollX, pr.cameraScrollY][i]))));
+  })), { message: 'герой і камера стоять', timeout: 10_000 }).toBe(true);
+}
 for (const vp of ZOOMED) {
   test.describe(`zoom ≥ 2, ${vp.width}×${vp.height}`, () => {
     test('джойстик веде в той бік, куди тягнеш (вліво, вниз, вправо, вгору)', async ({ browser }) => {
@@ -370,8 +390,23 @@ for (const vp of ZOOMED) {
     test('тап по Елізі в зоні дії відкриває розмову; тап по ній поза зоною — нічого', async ({ browser }) => {
       // Поза зоною: підходимо так, щоб Еліза була в кадрі, але далеко від зони дії.
       const out = await open(browser, vp, true);
-      await stickDrive(out.page, out.cdp, -50, 0, (p) => p.playerX <= 165);
-      await stickDrive(out.page, out.cdp, 0, 50, (p) => p.playerY >= 215);
+      // GAME-233: стоп джойстика запізнюється, тож фіксований «x ≤ 165, y ≥ 215» під навантаженням «перелітав» у зону дії Елізи (3 із 40 червоних
+      // на 844×390) або до вогнища. Замість цього описуємо потрібний СТАН — далеко від Елізи (70…120 px), нічого не в зоні дії, вона в кадрі — і
+      // тягнемо героя до точки P у цьому вікні, зупиняючись, щойно стан настав; перельот лишається в широкому вікні, а не в зоні дії.
+      const kz = await out.page.locator('#stage canvas').evaluate((el) => el.getBoundingClientRect().width / (el as HTMLCanvasElement).width);
+      const farOk = (p: Pr): boolean => {
+        const d = distToElise(p);
+        const sx = (ELISE.x - p.cameraScrollX) * kz;
+        const sy = (ELISE.y - 24 - p.cameraScrollY) * kz;
+        return p.nearObject === null && d >= 70 && d <= 120 && sx > 0 && sx < vp.width && sy > 0 && sy < vp.height;
+      };
+      const P = { x: ELISE.x + 85, y: ELISE.y - 10 };
+      for (let i = 0; i < 8 && !farOk(await probeOf(out.page)); i++) {
+        const q = await probeOf(out.page);
+        const d = Math.hypot(P.x - q.playerX, P.y - q.playerY) || 1;
+        await stickDrive(out.page, out.cdp, Math.round(((P.x - q.playerX) / d) * 50), Math.round(((P.y - q.playerY) / d) * 50), farOk);
+      }
+      await settled(out.page);
       const o0 = await probeOf(out.page);
       expect(o0.nearObject, 'Елізи поруч нема').toBeNull();
       const far = await screenOfWorld(out.page, ELISE.x, ELISE.y - 24);
@@ -383,9 +418,17 @@ for (const vp of ZOOMED) {
       await out.page.context().close();
       // В зоні.
       const inn = await open(browser, vp, true);
-      await stickDrive(inn.page, inn.cdp, -50, 0, (p) => p.playerX <= 88);
-      for (let i = 0; i < 6 && (await probeOf(inn.page)).nearObject !== 'npc.elise'; i++) await stickDrive(inn.page, inn.cdp, 0, i % 2 === 0 ? 50 : -50, (p) => p.nearObject === 'npc.elise');
+      // GAME-233: той самий корінь, що й вище — стоп джойстика запізнюється, і «x ≤ 88» під навантаженням доносило героя до лівої стіни (x≈8),
+      // звідки жоден з шести вертикальних ривків уже не діставав Елізи. Тепер після грубого підходу кожен ривок іде ПО ВЕКТОРУ «герой → Еліза».
+      await stickDrive(inn.page, inn.cdp, -50, 0, (p) => p.playerX <= 130);
+      for (let i = 0; i < 6 && (await probeOf(inn.page)).nearObject !== 'npc.elise'; i++) {
+        const q = await probeOf(inn.page);
+        const d = distToElise(q) || 1;
+        await stickDrive(inn.page, inn.cdp, Math.round(((ELISE.x - q.playerX) / d) * 50), Math.round(((ELISE.y - q.playerY) / d) * 50), (p) => p.nearObject === 'npc.elise');
+      }
       expect((await probeOf(inn.page)).nearObject).toBe('npc.elise');
+      await settled(inn.page);
+      expect((await probeOf(inn.page)).nearObject, 'після відстою Еліза досі поруч').toBe('npc.elise');
       const n0 = await probeOf(inn.page);
       const at = await screenOfWorld(inn.page, ELISE.x, ELISE.y - 24);
       await inn.page.touchscreen.tap(at.x, at.y);
