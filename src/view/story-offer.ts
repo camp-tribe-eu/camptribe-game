@@ -38,6 +38,7 @@ import { waveView } from '../core/wave';
 import type { Key } from '../i18n';
 import { liveRequestSpot as liveSpotFor, REQUEST_LOCATION } from '../content/requests';
 import { miaState } from '../content/mia';
+import { photoPage } from '../content/photos';
 import { henryPage, isTraceSpot, liveTraceSpot } from '../content/traces';
 import { isRequestSpot, offerNodeOf, REQUESTS, requestOf, requestStatus, requestDoneFlags, requestTarget, trackerRows } from '../content/requests';
 
@@ -292,7 +293,7 @@ export function atlasOffer(s: GameState): OfferAtlas {
     { id: 'henry', titleKey: 'atlas.henry', have: henry.found, total: henry.total, pct: henry.total === 0 ? 0 : Math.floor((henry.found * 100) / henry.total), done: henry.postcard, reward: null },
   ];
   const sum = pages.reduce((a, x) => ({ have: a.have + x.have, total: a.total + x.total }), { have: 0, total: 0 });
-  return { slots, total: STICKER_SLOTS, count: slots.filter((x) => x.owned).length, henry, pages, fillPct: sum.total === 0 ? 0 : Math.floor((sum.have * 100) / sum.total) };
+  return { slots, total: STICKER_SLOTS, count: slots.filter((x) => x.owned).length, henry, photos: photoPage(s.flags), pages, fillPct: sum.total === 0 ? 0 : Math.floor((sum.have * 100) / sum.total) };
 }
 
 /** Картка мети (GAME-170, зріз 2): жива хвиля з ядра (waveView — хвилини за годинником симуляції) і тексти з content/waves.json. */

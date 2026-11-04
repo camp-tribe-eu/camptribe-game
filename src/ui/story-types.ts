@@ -85,6 +85,8 @@ export interface OfferAtlas {
   readonly total: number;
   readonly count: number;
   /** GAME-215: сторінка «Шлях Генрі» — сліди дідуся за регіонами; `postcard` — усі знайдено (наклейка-листівка видана ядром). */
+  /** GAME-213: фото камерою телефона (розділ «Фото» в Атласі). */
+  readonly photos: { readonly photos: readonly { readonly id: string; readonly nameKey: string; readonly taken: boolean }[]; readonly taken: number; readonly total: number };
   readonly henry: { readonly traces: readonly { readonly id: string; readonly kind: string; readonly location: string; readonly nameKey: string; readonly textKey: string; readonly year: number | null; readonly found: boolean }[]; readonly found: number; readonly total: number; readonly postcard: boolean };
 }
 export interface OfferProgress { readonly xp: number; readonly om: number; readonly title: OfferTitle; readonly skills: readonly OfferSkill[] }

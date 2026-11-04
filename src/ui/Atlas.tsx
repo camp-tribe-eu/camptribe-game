@@ -68,6 +68,24 @@ function HenryTrail({ henry, lang, t }: { henry: OfferAtlas['henry']; lang: AnyL
   );
 }
 
+/** GAME-213: розділ «Фото» — знімки камерою телефона (3 місця табору); зроблене фото з назвою, інше — порожня рамка. */
+function PhotoRoll({ photos, t }: { photos: OfferAtlas['photos']; t: (k: Key) => string }) {
+  return (
+    <section class="ui-henry" data-ui="photos" data-taken={photos.taken} data-total={photos.total} aria-label={t('atlas.photos')}>
+      <h4 class="ui-henry-title">{t('atlas.photos')}</h4>
+      <p class="ui-henry-hint">{t('atlas.photos.hint')}</p>
+      <ul class="ui-henry-list">
+        {photos.photos.map((p) => (
+          <li key={p.id} class="ui-trace" data-ui="photo" data-id={p.id} data-taken={p.taken ? 'yes' : 'no'}>
+            <span class="ui-trace-name">{p.taken ? t(p.nameKey as Key) : t('atlas.photos.empty')}</span>
+          </li>
+        ))}
+      </ul>
+      <p class="ui-henry-count" data-ui="photos-count">{`${t('atlas.photos.count')}: ${photos.taken}/${photos.total}`}</p>
+    </section>
+  );
+}
+
 /** GAME-200: заповнення — загальне і по сторінках; нагорода за повну сторінку: що буде, а коли повна — що отримано (її видає ядро, тут лише напис). */
 function AtlasFill({ atlas, t }: { atlas: OfferAtlas; t: (k: Key) => string }) {
   return (
@@ -111,6 +129,7 @@ export function AtlasPage({ atlas, lang, t, fly = null }: { atlas: OfferAtlas; l
       <AtlasFill atlas={atlas} t={t} />
       <EuropeMap t={t} />
       <HenryTrail henry={atlas.henry} lang={lang} t={t} />
+      <PhotoRoll photos={atlas.photos} t={t} />
     </section>
   );
 }

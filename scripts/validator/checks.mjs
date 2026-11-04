@@ -786,6 +786,21 @@ export const CHECKS = [
     },
   },
   {
+    id: 'translated-nodes',
+    run(c) { // @check:translated-nodes
+      // GAME-213: перекладач у телефоні. Вузол `translated: true` має ДВА різні варіанти: next (поруч Метью — точна репліка) і гілку branches
+      // в інший вузол (Метью нема — неточний, добрий жарт). Без пари гравець без Метью чує те саме або застряє; ціна хибного спрацювання
+      // (закон 5) — автор додає другий вузол. Обидва вузли існують (DIALOGUE_BAD_REF), а що з них є шлях до кінця — стереже dialogue-dead-end.
+      const out = [];
+      for (const d of c.content.dialogues ?? []) for (const n of d.nodes) {
+        if (n.translated !== true) continue;
+        const alt = (n.branches ?? []).filter((b) => b.next !== n.next);
+        if (n.next === undefined || alt.length === 0) out.push(I('TRANSLATE_VARIANT_MISSING', `${d.id}/${n.id}`, 'translated: true без пари варіантів — потрібні next і гілка branches в інший вузол'));
+      }
+      return out;
+    },
+  },
+  {
     id: 'dialogue-length',
     run(c) { // @check:dialogue-length
       // GAME-221: читання не має бути нудним. (1) репліка вузла в КОЖНІЙ мові ≤ DIALOGUE_LINE_MAX знаків (кодових точок);

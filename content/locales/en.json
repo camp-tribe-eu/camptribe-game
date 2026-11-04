@@ -974,5 +974,10 @@
   "card.cashier.schedule.evening": "In the evening she closes at seven and sorts the poles.",
   "dlg.sarah-chat.thanks": "Oh, it's you! That snack fit the budget — I still think of it. Thanks!",
   "dlg.nora-chat.hello.c5": "Is the shore still clean?",
-  "dlg.nora-chat.shore-memory": "It is! I look at it every morning before the road. Thanks for helping."
+  "dlg.nora-chat.shore-memory": "It is! I look at it every morning before the road. Thanks for helping.",
+  "dlg.ingrid-chat.hello.c4": "Try the translator",
+  "dlg.ingrid-chat.tr": "Ingrid says something quick in her own language. The phone listens and thinks.",
+  "dlg.ingrid-chat.tr-ok": "Matthew fixes it: \"She says evenings here are quiet and the sky is big.\"",
+  "dlg.ingrid-chat.tr-off": "Phone: \"She says dinners here are quiet and the sky is big as dinner.\"",
+  "dlg.ingrid-chat.tr-laugh": "Ingrid laughs: \"Evenings, not dinners!\" The translator mixes up similar words, but it tries."
 }

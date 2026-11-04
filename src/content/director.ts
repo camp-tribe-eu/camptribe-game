@@ -19,6 +19,7 @@ import { taskOutcome, tasksFor } from '../core/wave';
 import { FIREPLACE_SCENE, fireplaceFacts } from './fireplace';
 import { isMapFirstSpot, liveMapSpot } from './map-first';
 import { isTraceSpot, liveTraceSpot } from './traces';
+import { isPhotoSpot, livePhotoSpot } from './photos';
 import { REPAIR_FLAG, REPAIR_SPOT } from './repair';
 import type { Move } from './moves';
 import { isRequestSpot, liveRequestSpot } from './requests';
@@ -114,6 +115,7 @@ export function liveSpot(sim: SimState, name: string, defs?: CoreDefs): boolean 
   }
   if (isRequestSpot(name)) return liveRequestSpot(sim.game, name, undefined, todayWeather(sim));   // GAME-180: ціль прохання — лише поки прохання взято й ціль не зроблена
   if (isTraceSpot(name)) return liveTraceSpot(sim.game, name);   // GAME-215: слід дідуся — поки не знайдено
+  if (isPhotoSpot(name)) return livePhotoSpot(sim.game, name);   // GAME-213: кадр, поки фото не зроблено
   if (name === REPAIR_SPOT) return sim.game.player?.locationId === MAP_LOCATION && sim.game.dialogue === null && !sim.game.flags.includes(REPAIR_FLAG);   // GAME-209: лавка, поки не полагоджена
   if (name === 'obj.litter') return !sim.game.flags.includes('f.litter-cleaned-ch1');
   return true;

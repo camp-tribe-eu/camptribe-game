@@ -51,7 +51,7 @@ const choice = obj({ textKey: req(str), next: req(str), when: cond, effects: arr
 const branch = obj({ when: req(cond), next: req(str) });
 const node = obj({
   id: req(str), speaker: req(en('npc', 'player')), textKey: req(str),
-  end: bool, next: str, branches: { t: 'array', of: branch, min: 1 }, choices: { t: 'array', of: choice, min: 1 },
+  end: bool, translated: bool, next: str, branches: { t: 'array', of: branch, min: 1 }, choices: { t: 'array', of: choice, min: 1 },
 });
 
 const reward = obj({ grantId: req(str), items: arr(obj({ item: req(str), qty: req(int1) })), money: int0, once: bool });
