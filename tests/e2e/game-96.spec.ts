@@ -185,6 +185,25 @@ test('поворот сторч → вбік → сторч: стан живий
   await page.screenshot({ path: `${SHOTS}/game-96-390x844-game.png` });
 });
 
+// GAME-238: тест вище червонів на повільному CI не через поворот, а через дихання (GAME-212): через 2 с стояння спрайт героя щокадру
+// зсувається на 0/1 px, і проба playerY брала його ВЖЕ зі зсувом — «персонаж на місці» бачив 1 px руху, коли вибірка припадала на
+// нижній пів-період. Договір GAME-212: зсув лише на спрайті, у пробі й фізиці — справжня позиція. Сторож: стоїмо > 2 с + період,
+// probe.heroBob живе (0 і 1 — дихання справді йде, інакше тест нічого не доводить), а playerY за ≥ 1,5 періоду — одне число.
+// Негативний контроль: probe.playerY = this.player.y (зі зсувом) → два значення, тест червоний.
+test('стоїть > 2 с: спрайт дихає (0/1 px), а проба позиції героя — одне число (GAME-212: зсув лише на спрайті)', async ({ browser }) => {
+  const { page } = await open(browser, { width: 390, height: 844 }, true);
+  await page.waitForFunction(() => (window as unknown as { __game: { probe: { heroBob: number } } }).__game.probe.heroBob !== 0, null, { timeout: 15_000, polling: 25 });
+  const ys = new Set<number>(); const bobs = new Set<number>();
+  const until = Date.now() + 2_400;   // 1,5 × IDLE_PERIOD_MS (1600)
+  while (Date.now() < until) {
+    const s = await page.evaluate(() => { const p = (window as unknown as { __game: { probe: { playerY: number; heroBob: number } } }).__game.probe; return { y: p.playerY, b: p.heroBob }; });
+    ys.add(s.y); bobs.add(s.b);
+    await page.waitForTimeout(40);
+  }
+  expect([...bobs].sort(), 'дихання йде: зсув спрайта 0 і 1').toEqual([0, 1]);
+  expect([...ys], `проба playerY під час дихання — одне число, а не ${[...ys].join(', ')}`).toHaveLength(1);
+});
+
 // GAME-96 продовження (смак власника 25.10): вбік і на десктопі мапа на ВСЮ ширину екрана — без чорних смуг з боків; керування
 // поверх мапи; камера в межах мапи (порожнечі немає); пікселі чіткі (цілий zoom, image-rendering: pixelated).
 // Негативний контроль (мутація, звіт картки): старий кадр 640×352 під FIT → «≥ 99 % ширини» і «край — мапа» червоніють.

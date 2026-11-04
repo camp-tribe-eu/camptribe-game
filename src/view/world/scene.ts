@@ -190,6 +190,8 @@ export interface WorldProbe {
   playerFrame: number;
   playerDir: Dir;
   playerMoving: boolean;
+  /** GAME-238 (лише для e2e): зсув дихання спрайта героя (GAME-212), px — 0/1 по колу, коли стоїть > 2 с. У playerY його НЕМА: там справжня позиція. */
+  heroBob: number;
   /** Глибина персонажа (= y ніг) і кількість тайлів верхівок, що зараз перекривають його кадр / лежать позаду нього. */
   playerDepth: number;
   coveredTiles: number;
@@ -1651,7 +1653,10 @@ export class WorldScene extends Phaser.Scene {
     Object.assign(this.probe, {
       reveal: this.reveal !== null,
       playerX: this.player.x,
-      playerY: this.player.y,
+      // GAME-238: справжня позиція, без зсуву дихання (GAME-212 кладе ±1 px на спрайт після update і знімає в PRE_UPDATE; у пробі він
+      // робив героя «рухомим» на 1 px, щойно він постояв 2 с — game-96 «персонаж на місці» червонів на повільному CI).
+      playerY: this.player.y - this.heroBob,
+      heroBob: this.heroBob,
       nearObject: near,
       nearKind: spot ? actionTarget(spot.kind, spot.name) : null,
       commandsSent: this.bridge.sent,
