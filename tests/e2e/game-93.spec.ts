@@ -81,13 +81,35 @@ test.describe('LPC на сцені (десктоп 1280×800)', () => {
     // GAME-97: до стіни — за умовою (крок фізики йде від згладженої дельти, під навантаженням CI повільніше), далі тиснемо.
     await hold(page, 'ArrowRight', (q) => q.playerX > 390, 10_000);   // GAME-172: стіна старого табору (стовпець 13) — на x ≈ 408; було 280 у мапі 20×12
     const { end } = await hold(page, 'ArrowRight', () => false, 1000);
-    await page.keyboard.down('ArrowRight');
-    await page.waitForTimeout(400);
-    const p = await probe(page);
-    await page.keyboard.up('ArrowRight');
     expect(end.playerX).toBeGreaterThan(390);
-    expect(p.playerMoving).toBe(false);
-    expect(p.playerFrame).toBe(ROW.right * COLS);
+    // GAME-234: раніше — фіксована пауза 400 мс і один зріз: під навантаженням CI герой ще міг доповзати до стіни (playerMoving = зсув за кадр > 0.25 px).
+    // Тепер: тримаємо клавішу й чекаємо за подією — playerX не змінюється десять кадрів поспіль (rAF); тоді збираємо ще 30 кадрів упору й вимагаємо, що в КОЖНОМУ — спокій.
+    await page.keyboard.down('ArrowRight');
+    const run = await page.evaluate(() => new Promise<{ stable: boolean; xs: number[]; moving: boolean[]; frames: number[]; dirs: string[] }>((resolve) => {
+      const g = (window as unknown as { __game: { probe: Probe } }).__game.probe;
+      const deadline = performance.now() + 10_000;   // та сама межа, що й в hold(): не збільшення, а страховка від вічного циклу
+      let lastX = Number.NaN;
+      let same = 0;
+      const out = { xs: [] as number[], moving: [] as boolean[], frames: [] as number[], dirs: [] as string[] };
+      const tick = (): void => {
+        if (same < 10) {
+          same = g.playerX === lastX ? same + 1 : 0;
+          lastX = g.playerX;
+          if (performance.now() > deadline) return resolve({ stable: false, ...out });
+        } else {
+          out.xs.push(g.playerX); out.moving.push(g.playerMoving); out.frames.push(g.playerFrame); out.dirs.push(g.playerDir);
+          if (out.xs.length >= 30) return resolve({ stable: true, ...out });
+        }
+        requestAnimationFrame(tick);
+      };
+      requestAnimationFrame(tick);
+    }));
+    await page.keyboard.up('ArrowRight');
+    expect(run.stable, 'герой уперся в стіну: playerX не змінюється десять кадрів поспіль').toBe(true);
+    expect(run.xs.every((x) => x === run.xs[0]), 'у упорі координата не пливе').toBe(true);
+    expect(run.moving.every((m) => m === false), 'упертий у стіну: анімація ходьби не грає в жодному з 30 кадрів').toBe(true);
+    expect(run.frames.every((f) => f === ROW.right * COLS), 'у кожному кадрі — кадр спокою обличчям до стіни').toBe(true);
+    expect(run.dirs.every((d) => d === 'right'), 'напрямок до стіни зберігається').toBe(true);
   });
 
   // 3/4-глибина: два намети в рядках 2–3 (дах — шар above, низ — walls), між ними прохід у стовпцях 3–4 (x 96–160).
