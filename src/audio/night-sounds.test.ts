@@ -1,6 +1,7 @@
 // GAME-231 · нічні звуки: вдень цвіркунів нема, вночі є; сова — від ігрової хвилини (детерміновано); mute → без AudioContext; дощ глушить.
 // Мутації (вручну, виводи в PR): nightTarget завжди 1 → «вдень тиша» червоніє; прибрати `v > 0` → «mute» червоніє; сова без модуля доби → «детермінована» червоніє.
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it } from 'vitest';
+import { createBlipper, resetSharedContext } from './blip';
 import { CRICKET_EVERY_MS, NIGHT_FADE_MS, OWL_OFFSETS, OWL_WINDOW, createNightSounds, nightTarget, owlDue, type NightState } from './night-sounds';
 
 function fake(vol: number, gesture = true) {
@@ -114,5 +115,40 @@ describe('межа звуку: сцена кличе лише модуль src/a
     expect(src).toMatch(/import \{[^}]*nightSounds[^}]*\} from '\.\.\/\.\.\/audio\/night-sounds'/);
     expect(src).toMatch(/nightSounds\.tick\(/);
     expect(src).not.toMatch(/AudioContext/);
+  });
+});
+
+describe('GAME-235: спільний AudioContext', () => {
+  const g = globalThis as { AudioContext?: unknown };
+  const old = g.AudioContext;
+  afterEach(() => { g.AudioContext = old; resetSharedContext(); });
+  function stub(): { made: () => number } {
+    let made = 0;
+    g.AudioContext = class {
+      currentTime = 1; destination = {};
+      constructor() { made++; }
+      createOscillator() { return { type: '', frequency: { value: 0, setValueAtTime() {}, exponentialRampToValueAtTime() {} }, connect() {}, start() {}, stop() {} }; }
+      createGain() { return { gain: { setValueAtTime() {}, linearRampToValueAtTime() {}, exponentialRampToValueAtTime() {} }, connect() {} }; }
+    };
+    resetSharedContext();
+    return { made: () => made };
+  }
+  it('нічні звуки й blip ділять один AudioContext', () => {
+    const c = stub();
+    const mx = { volume: () => 1 };
+    const n = createNightSounds(mx); n.unlock();
+    const b = createBlipper(mx);
+    expect(b.blip(220)).toBe(true);
+    run(n, at(NIGHT), 6000);
+    expect(n.counts.cricket, 'нічні звуки справді грали').toBeGreaterThan(0);
+    expect(c.made(), 'контекст один').toBe(1);
+  });
+  it('mute або без жесту — жодного AudioContext', () => {
+    const c = stub();
+    const muted = createNightSounds({ volume: () => 0 }); muted.unlock();
+    run(muted, at(NIGHT), 6000);
+    const noGesture = createNightSounds({ volume: () => 1 });
+    run(noGesture, at(NIGHT), 6000);
+    expect(c.made()).toBe(0);
   });
 });

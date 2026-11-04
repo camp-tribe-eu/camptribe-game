@@ -95,10 +95,16 @@ export function createBlipper(mx: Pick<Mixer, 'volume'>, makeContext: () => Blip
   };
 }
 
+let shared: BlipContext | null | undefined;
+/** GAME-235: єдиний AudioContext на сторінку — blip, звуки табору, плавання й нічні звуки беруть його звідси (раніше кожен відкривав свій). Створюється при першому запиті; mute не питає. */
 export function defaultContext(): BlipContext | null {
+  if (shared !== undefined) return shared;
   const C = (globalThis as { AudioContext?: new () => BlipContext; webkitAudioContext?: new () => BlipContext }).AudioContext
     ?? (globalThis as { webkitAudioContext?: new () => BlipContext }).webkitAudioContext;
-  return C ? new C() : null;
+  shared = C ? new C() : null;
+  return shared;
 }
+/** Лише для тестів: забути спільний контекст. */
+export function resetSharedContext(): void { shared = undefined; }
 
 export const blipper: Blipper = createBlipper(sharedMixer);

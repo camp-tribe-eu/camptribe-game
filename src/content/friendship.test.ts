@@ -8,7 +8,7 @@ import { newSim, step, type SimState } from '../core/sim';
 import { fromSave, serialize } from '../core/save';
 import { HEART_AT, LIKED_POINTS, REQUEST_POINTS, heartsFor, ptsOf } from '../core/friendship';
 import { characterChoices } from '../view/story-offer';
-import { FORAGE_ITEMS, FRIEND_DEFS, GIFTABLE, HEART_FROM_TOD, HEART_TO_TOD, giftOptions, heartDue, inHeartWindow, reactionFor, todOf } from './friendship';
+import { FORAGE_ITEMS, FRIEND_DEFS, canForage, GIFTABLE, HEART_FROM_TOD, HEART_TO_TOD, giftOptions, heartDue, inHeartWindow, reactionFor, todOf } from './friendship';
 import type { Move } from './moves';
 import { GAME_DEFS as DEFS } from './slice-defs';
 import { STORY } from './story';
@@ -126,6 +126,15 @@ describe('подарунок', () => {
     expect(codeOf(s, { type: 'Forage', itemId: 'item.tent' })).toBe('UNKNOWN_ITEM');
     const full = { ...s, game: { ...s.game, inventory: { [FORAGE_ITEMS.cone]: 20 } } };
     expect(codeOf(full, { type: 'Forage', itemId: FORAGE_ITEMS.cone })).toBe('INVALID_AMOUNT');
+  });
+  it('GAME-235: canForage збігається з ядром — на стелі 20 «+1» не показуємо, нічого не додалось', () => {
+    for (const have of [0, 1, 19, 20, 25]) {
+      const st = { ...camp(), game: { ...camp().game, inventory: { [FORAGE_ITEMS.cone]: have } } };
+      const accepted = codeOf(st, { type: 'Forage', itemId: FORAGE_ITEMS.cone }) === null;
+      expect(canForage(st.game.inventory, FORAGE_ITEMS.cone), `у руках ${have}`).toBe(accepted);
+    }
+    expect(canForage({}, FORAGE_ITEMS.berry)).toBe(true);
+    expect(canForage({ [FORAGE_ITEMS.berry]: 20 }, FORAGE_ITEMS.berry)).toBe(false);
   });
   it('що пропонує UI: триманий дар, лише цьому мешканцю й раз за день', () => {
     const s = camp({ [FORAGE_ITEMS.berry]: 1, 'item.tent': 1 });
