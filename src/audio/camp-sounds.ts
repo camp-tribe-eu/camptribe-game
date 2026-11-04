@@ -4,7 +4,7 @@
 import { mixer as sharedMixer, type Mixer } from './index';
 import { defaultContext } from './blip';
 
-export type CampSoundName = 'plank' | 'thud' | 'leaf' | 'pop' | 'clank' | 'water' | 'splash' | 'sit' | 'paper';
+export type CampSoundName = 'plank' | 'thud' | 'leaf' | 'pop' | 'clank' | 'water' | 'splash' | 'sit' | 'paper' | 'crack' | 'clay' | 'hollow' | 'snap';
 /** Кожен звук — короткий спад тону (from → to Гц) за ms мс; peak — частка гучності sfx. */
 export const CAMP_SPECS: Readonly<Record<CampSoundName, { readonly type: 'sine' | 'triangle' | 'square'; readonly from: number; readonly to: number; readonly ms: number; readonly peak: number }>> = {
   plank: { type: 'triangle', from: 210, to: 130, ms: 70, peak: 0.1 },   // крок по дошках пірса: дерево, порожнисто
@@ -16,6 +16,10 @@ export const CAMP_SPECS: Readonly<Record<CampSoundName, { readonly type: 'sine' 
   splash: { type: 'triangle', from: 640, to: 240, ms: 110, peak: 0.12 },// калюжа під ногою
   sit: { type: 'sine', from: 170, to: 110, ms: 90, peak: 0.1 },         // сів на лавку
   paper: { type: 'triangle', from: 900, to: 700, ms: 50, peak: 0.05 },  // дошка оголошень
+  crack: { type: 'square', from: 360, to: 130, ms: 95, peak: 0.1 },     // GAME-228: ящик тріснув (сухе дерево)
+  clay: { type: 'triangle', from: 820, to: 380, ms: 110, peak: 0.1 },   // горщик розбився (глина дзвінка й коротка)
+  hollow: { type: 'sine', from: 210, to: 85, ms: 140, peak: 0.16 },     // бочка: порожнисто
+  snap: { type: 'square', from: 1100, to: 520, ms: 55, peak: 0.06 },    // суха гілка тріснула
 };
 
 interface CampContext {

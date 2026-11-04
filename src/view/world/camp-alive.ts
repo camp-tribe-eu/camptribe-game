@@ -88,7 +88,7 @@ export const markUsed = (log: UseLog, id: string, day: number): UseLog => ({ ...
 
 // ---------- Падіння шишок і ягід ----------
 
-export type ItemKind = 'cone' | 'berry';
+export type ItemKind = 'cone' | 'berry' | 'plank' | 'shard' | 'twig';
 export interface Item {
   readonly id: number; readonly kind: ItemKind;
   /** Звідки впало, куди лягло. */
@@ -98,6 +98,8 @@ export interface Item {
   readonly x: number; readonly y: number;
   /** мс, відколи предмет летить до героя; −1 — ще лежить. */
   readonly magnet: number;
+  /** GAME-228: знахідка з розбитої речі — підскакує на `pop` px (замість падіння з крони) і на торсі героя зменшується за EAT_FRAMES кадри (`eat` — мс зменшення; −1 — ще ні). Шишки й ягоди цих полів не мають. */
+  readonly pop?: number; readonly eat?: number;
 }
 export const FALL_MS = 520;
 const BOUNCE_MS = 160;
@@ -105,8 +107,12 @@ const BOUNCE_MS = 160;
 export const REST_MIN_MS = 620;
 export const MAGNET_R = 64;
 export const COLLECT_R = 9;
+/** GAME-228: зменшення знахідки на торсі героя — 3 кадри, радіус її магніта (≈ клітинка). */
+export const EAT_FRAMES = 3;
+export const EAT_MS = EAT_FRAMES * FRAME_MS;
+export const POP_MAGNET_R = 40;
 
-const idSeed = (id: string): number => { let h = 7; for (let i = 0; i < id.length; i++) h = (Math.imul(h, 31) + id.charCodeAt(i)) | 0; return h >>> 0; };
+export const idSeed = (id: string): number => { let h = 7; for (let i = 0; i < id.length; i++) h = (Math.imul(h, 31) + id.charCodeAt(i)) | 0; return h >>> 0; };
 
 /** Скільки впало: шишок 1–3, ягід 2–4; залежить від дерева й дня, не від випадку. */
 export function dropCount(kind: ReactionKind, id: string, day: number): number {
@@ -132,7 +138,12 @@ export function planDrops(kind: ReactionKind, id: string, day: number, from: Pt,
 
 /** Позиція предмета за віком: падіння по параболі (k²), раз підскочив на 4 px і ліг. */
 export function itemAt(it: Item): Pt {
-  if (it.age < FALL_MS) { const k = it.age / FALL_MS; return { x: it.x0 + (it.x1 - it.x0) * k, y: it.y0 + (it.y1 - it.y0) * k * k }; }
+  if (it.age < FALL_MS) {
+    const k = it.age / FALL_MS;
+    // Знахідка розбитої речі: підскок угору на pop px і падіння (парабола 4k(1−k)), а не падіння з крони.
+    if (it.pop !== undefined) return { x: it.x0 + (it.x1 - it.x0) * k, y: it.y0 + (it.y1 - it.y0) * k - it.pop * 4 * k * (1 - k) };
+    return { x: it.x0 + (it.x1 - it.x0) * k, y: it.y0 + (it.y1 - it.y0) * k * k };
+  }
   const b = it.age - FALL_MS;
   return { x: it.x1, y: it.y1 - (b < BOUNCE_MS ? 4 * Math.sin((Math.PI * b) / BOUNCE_MS) : 0) };
 }
@@ -144,15 +155,24 @@ export function stepItems(items: readonly Item[], hero: Pt, dtMs: number): { ite
   const target = { x: hero.x, y: hero.y - 10 };
   for (const it of items) {
     const age = it.age + dt;
+    if (it.eat !== undefined && it.eat >= 0) {   // GAME-228: уже на торсі — зменшується до 0 за EAT_FRAMES кадри, тримається на герої
+      const eat = it.eat + dt;
+      if (eat >= EAT_MS) { collected.push(it.kind); continue; }
+      keep.push({ ...it, age, x: target.x, y: target.y, eat });
+      continue;
+    }
     let { x, y } = itemAt({ ...it, age });
     let magnet = it.magnet;
-    if (magnet < 0 && age >= REST_MIN_MS && Math.hypot(target.x - x, target.y - y) <= MAGNET_R) magnet = 0;
+    if (magnet < 0 && age >= REST_MIN_MS && Math.hypot(target.x - x, target.y - y) <= (it.pop !== undefined ? POP_MAGNET_R : MAGNET_R)) magnet = 0;
     if (magnet >= 0) {
       const sx = magnet === 0 && it.magnet < 0 ? x : it.x; const sy = magnet === 0 && it.magnet < 0 ? y : it.y;
       magnet += dt;
       const dx = target.x - sx; const dy = target.y - sy; const d = Math.hypot(dx, dy);
       const step = ((80 + 520 * (magnet / 1000)) * dt) / 1000;
-      if (d <= COLLECT_R || step >= d) { collected.push(it.kind); continue; }
+      if (d <= COLLECT_R || step >= d) {
+        if (it.eat !== undefined) { keep.push({ ...it, age, x: target.x, y: target.y, magnet, eat: 0 }); continue; }   // знахідка: спершу зменшення на торсі, потім «поп»
+        collected.push(it.kind); continue;
+      }
       x = sx + (dx / d) * step; y = sy + (dy / d) * step;
     }
     keep.push({ ...it, age, x, y, magnet });
