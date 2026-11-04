@@ -383,5 +383,28 @@
         "skill.camping"
       ]
     }
+  },
+  {
+    "id": "req.wx-sunny-swim",
+    "weather": "sunny",
+    "titleKey": "req.wx-sunny-swim",
+    "goalKey": "req.wx-sunny-swim.goal",
+    "trackKey": "req.wx-sunny-swim.track",
+    "targets": [
+      {
+        "id": "t1",
+        "spot": "req.wx-sunny-swim.t1",
+        "icon": "star",
+        "labelKey": "req.wx-sunny-swim.t1"
+      }
+    ],
+    "reward": {
+      "xp": 12,
+      "om": 8,
+      "skills": [
+        "skill.camping",
+        "skill.communication"
+      ]
+    }
   }
 ]

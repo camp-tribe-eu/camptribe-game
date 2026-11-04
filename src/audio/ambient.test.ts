@@ -103,3 +103,13 @@ describe('файли й завантаження', () => {
     expect(calls).toEqual(['sfx-peg']);
   });
 });
+
+describe('GAME-227: під водою', () => {
+  it('у воді табір приглушений, вогнища не чути, лишається тихе переливання озера', () => {
+    const base = { map: 'camp', intro: false, nearLake: true, fireLit: true, nearFire: true, transport: null } as const;
+    const dry = ambientMix(base); const wet = ambientMix({ ...base, swimming: true });
+    expect(wet.camp ?? 0).toBeLessThan(dry.camp ?? 0);
+    expect(wet.fire).toBeUndefined();
+    expect(wet.lake ?? 0).toBeGreaterThan(0);
+  });
+});

@@ -39,6 +39,8 @@ import { GrillRig, type GrillProbe } from './grill';
 import { FISH_SPOT, FishRig, type FishProbe } from './fishing';
 import { LiveFx, type LiveProbe } from './fx-live-layer';
 import { groundKind, type Ground } from './fx-live';
+import { SwimRig, type SwimProbe } from './swim-rig';
+import { swimGridOf, swimRegionOf, withWater } from './swim';
 import { REVEAL_BEATS, revealCenter, type RevealAnchors } from '../camp-reveal';
 import { calmMotion } from '../../platform/motion';
 
@@ -220,6 +222,8 @@ export interface WorldProbe {
   reveal: boolean;
   /** GAME-206 (лише для e2e): живі дрібниці — скільки іскор, пилу, диму, стебел намальовано в кадрі; чи гойдається авто; чи режим спокою. */
   live: LiveProbe;
+  /** GAME-227 (лише для e2e): купання — стан під ногами (суша/мілина/глибина), гойдання, кола, краплі, мокрі сліди, звуки; Мія на воді (мусить бути 0). */
+  swim: SwimProbe;
 }
 
 /** Точка вогнища (об'єкт мапи obj.campfire) — центр світлої плями; нема — плями нема. */
@@ -328,6 +332,7 @@ export class WorldScene extends Phaser.Scene {
   /** GAME-206: спрайт авто з двигуном (дорога) і його справжнє місце — погойдування прикладається від нього, не накопичується. */
   private carImg: { img: Phaser.GameObjects.Image; x: number; y: number } | null = null;
   private live!: LiveFx;
+  private swim!: SwimRig;
   /** Набір terrain поточної мапи (перший gid і кількість тайлів) — для роду землі під ногами. */
   private terrain = { first: 0, count: 0 };
   private fx: MapFx | null = null;
@@ -572,6 +577,7 @@ export class WorldScene extends Phaser.Scene {
     if (this.daylightOn) this.makeNight();
     this.fx = new MapFx(this);
     this.live = new LiveFx(this, DEPTH.decor - 50, DEPTH.always - 10);
+    this.swim = new SwimRig(this, this.player, DEPTH.decor - 40);
     this.tent = new TentRig(this, this.player, this.barkText);
     this.wood = new WoodRig(this, this.player, this.barkText);
     this.props = new CampProps(this, this.barkText);
@@ -709,7 +715,11 @@ export class WorldScene extends Phaser.Scene {
 
     // Слідувачі: нова сітка проходимості мапи й місця стоянки біля точки появи.
     const wallsData = map.getLayer('walls')?.data.flatMap((row) => row.map((t) => t.index)) ?? [];
-    this.grid = gridFromWalls(map.width, map.height, TILE, wallsData);
+    // GAME-227: пляж — вода без стін (герой пливе сам); слідувачі, мешканці й ящик бачать воду пляжу як стіну: родина чекає на березі.
+    const groundData = map.getLayer('ground')?.data.flatMap((row) => row.map((t) => t.index)) ?? [];
+    const swimGrid = key === 'camp' ? swimGridOf(map.width, map.height, groundData, swimRegionOf(objects as never, TILE)) : null;
+    this.swim.begin(swimGrid, TILE);
+    this.grid = gridFromWalls(map.width, map.height, TILE, swimGrid ? withWater(wallsData, swimGrid) : wallsData);
     this.chain = restPoints(this.grid, { x: spawn.x ?? 0, y: spawn.y ?? 0 }, FOLLOWERS.length, this.spots);
     this.followSprites.forEach((sp, i) => sp.setPosition(this.chain[i]?.x ?? 0, this.chain[i]?.y ?? 0).setDepth(this.chain[i]?.y ?? 0));
     this.probe.followers = this.chain.map((p) => ({ x: p.x, y: p.y }));
@@ -749,7 +759,7 @@ export class WorldScene extends Phaser.Scene {
     if (key === 'camp') {
       const named = (n: string): Pt | null => { const o = objects.find((x) => x.name === n); return o ? { x: o.x ?? 0, y: o.y ?? 0 } : null; };
       const spotPx = objects.filter((o) => typeOf(o) !== 'spawn' && o.name !== 'crate.start').map((o) => ({ x: o.x ?? 0, y: o.y ?? 0 }));
-      const cw = crateWorld(map.width, map.height, TILE, wallsData, { x: spawn.x ?? 0, y: spawn.y ?? 0 }, spotPx);
+      const cw = crateWorld(map.width, map.height, TILE, swimGrid ? withWater(wallsData, swimGrid) : wallsData, { x: spawn.x ?? 0, y: spawn.y ?? 0 }, spotPx);
       this.props.begin(cw, TILE, named('crate.start'), named(OLD_CRATE_SPOT), named(REPAIR_SPOT), this.hooks.spotDone?.(OLD_CRATE_SPOT) ?? false, this.hooks.spotDone?.(REPAIR_SPOT) ?? false);
       if (this.props.body) this.crateCollider = this.physics.add.collider(this.player, this.props.body);
     }
@@ -983,7 +993,7 @@ export class WorldScene extends Phaser.Scene {
   private moveFollowers(deltaMs: number, time: number, moving: boolean): void {
     const dt = Math.min(deltaMs / 1000, MAX_FOLLOW_DT);
     const before = this.chain.map((p) => ({ x: p.x, y: p.y }));
-    const hero = { x: this.player.x, y: this.player.y };
+    const hero = this.swim.inWater ? { ...this.swim.lastLand } : { x: this.player.x, y: this.player.y };   // GAME-227: герой у воді — родина чекає на березі, де він зайшов
     this.planJobs();
     // Дозвілля: герой простояв IDLE_AFTER_S — точки роздаються один раз (до наступного руху), без випадковості.
     if (moving) { this.idleS = 0; this.leisure = null; } else this.idleS += dt;
@@ -1234,7 +1244,7 @@ export class WorldScene extends Phaser.Scene {
     // GAME-194: фон за станом — чиста функція ambientMix; перехід і гучність — у модулі звуку.
     const pp = { x: this.player.x, y: this.player.y };
     ambient.setAmbient(ambientMix({ map: this.current, intro: isIntroOpen(), nearLake: this.current === 'camp' && this.fish.near(pp, LAKE_EAR), fireLit: this.fire.lit || this.fire.phase === 'done',
-      nearFire: this.fire.near(pp, FIRE_EAR), transport: this.hooks.transport() }));
+      nearFire: this.fire.near(pp, FIRE_EAR), transport: this.hooks.transport(), swimming: this.swim.inWater }));
     ambient.tick(delta);
     // GAME-207: тема за мапою, вступом і годиною доби — чиста функція musicFor; перехід — у модулі звуку.
     music.setTrack(musicFor({ map: this.current, intro: isIntroOpen(), minuteOfDay: timeOfDay(this.bridge.state.clock.minutes) }));
@@ -1254,7 +1264,8 @@ export class WorldScene extends Phaser.Scene {
     if (moving) this.heading = { x: this.player.x - this.last.x, y: this.player.y - this.last.y };
     this.last = { x: this.player.x, y: this.player.y };
     // GAME-191: під час дії (замах, удар, руки) герой стоїть і дивиться туди, куди почав, — без «замаху на бігу» (рецензія #118).
-    this.player.setVelocity(this.acting ? 0 : v.x * SPEED, this.acting ? 0 : v.y * SPEED);
+    const swimK = this.swim.update(time, delta, { moving, movedPx, facing: this.facing, pets: [...this.miaSprites.values()].filter((m) => m.visible) });   // GAME-227: у глибині −40 %
+    this.player.setVelocity(this.acting ? 0 : v.x * SPEED * swimK, this.acting ? 0 : v.y * SPEED * swimK);
     if (!this.acting && (v.x !== 0 || v.y !== 0)) {
       const horizontal = v.x !== 0 && (v.y === 0 || this.facing === 'left' || this.facing === 'right');
       this.facing = horizontal ? (v.x < 0 ? 'left' : 'right') : (v.y < 0 ? 'up' : 'down');
@@ -1315,7 +1326,7 @@ export class WorldScene extends Phaser.Scene {
       }
     }
     // GAME-193: риболовля на озері. Початок — утримання дії біля берега, коли поруч немає сюжетної цілі-тригера (поруч лише люди: коли герой дивиться на сусіда, дія — розмова, GAME-196; інакше — вудка); далі автомат сам веде фази, а дія тут не робить нічого іншого.
-    const fishFrame = { down: held.has('interact'), near: (spot === null || (spot.kind === 'npc' && !talkBeatsFishing(this.player, this.facing, spot))) && !this.tent.active && this.fish.near({ x: this.player.x, y: this.player.y }, INTERACT_RANGE), left: held.has('left'), right: held.has('right'), tap: tapped, time };
+    const fishFrame = { down: held.has('interact'), near: (spot === null || (spot.kind === 'npc' && !talkBeatsFishing(this.player, this.facing, spot))) && !this.tent.active && !this.swim.inWater && this.fish.near({ x: this.player.x, y: this.player.y }, INTERACT_RANGE), left: held.has('left'), right: held.has('right'), tap: tapped, time };
     const grillEvents = this.grill.update(delta, held.has('interact') && nearFire, time);
     for (const e of grillEvents) {
       if (e === 'char') this.playAction('cast', facingToward(this.player, this.grill.point()));
@@ -1501,6 +1512,7 @@ export class WorldScene extends Phaser.Scene {
       grill: this.grill.probe(),
       fish: this.fish.probe(),
       live: { ...this.live.probe },
+      swim: { ...this.swim.probe },
       miaAt: [...this.miaSprites].flatMap(([n, sp]) => (sp.visible ? [n] : [])),
       npcMarks: Object.fromEntries([...this.npcMarks].flatMap(([id, m]) => (m.g.visible && m.kind ? [[id, m.kind] as const] : []))),
       fx: { target: tn, ring: this.ring.name ? this.ring.t : 0, ringName: this.ring.name, backpack: this.hooks.backpack(), guide: this.fx?.guideMode ?? 'none', pops: this.fx?.pops ?? 0, auto: this.autoCount, rewards: this.rewardPops, rewardLast: this.rewardLast },

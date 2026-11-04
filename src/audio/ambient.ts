@@ -19,6 +19,8 @@ export interface AmbientState {
   readonly nearFire: boolean;
   /** `transport.car` | `transport.bike` | null (ще не обрано). */
   readonly transport: string | null;
+  /** GAME-227: герой у воді — решта звуків приглушена, лишається тихе переливання озера. */
+  readonly swimming?: boolean;
 }
 
 export const AMBIENT_FILES: Readonly<Record<AmbientLayer, { readonly key: string; readonly url: string }>> = {
@@ -36,7 +38,7 @@ export function ambientMix(s: AmbientState): AmbientMix {
   if (s.intro) return { rain: 1 };
   switch (s.map) {
     case 'home': return { rain: 0.8 };
-    case 'camp': return { camp: 1, ...(s.nearLake ? { lake: 0.8 } : {}), ...(s.fireLit && s.nearFire ? { fire: 0.9 } : {}) };
+    case 'camp': if (s.swimming === true) return { camp: 0.3, lake: 0.6 }; return { camp: 1, ...(s.nearLake ? { lake: 0.8 } : {}), ...(s.fireLit && s.nearFire ? { fire: 0.9 } : {}) };
     case 'shop': return { shop: 0.7 };   // GAME-204: тиха вентиляція й рідкий шурхіт крамниці
     case 'road': return { [s.transport === 'transport.bike' ? 'road-bike' : 'road-car']: 1 };
     default: return {};

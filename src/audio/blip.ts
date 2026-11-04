@@ -50,7 +50,7 @@ export function speakerPitch(speakerId: string | null | undefined, text = '', na
 }
 
 /** Найменше, що ми приймаємо від WebAudio-контексту; у тестах підміняється записом. */
-interface BlipContext {
+export interface BlipContext {
   readonly currentTime: number;
   readonly destination: unknown;
   readonly state?: string;
@@ -95,7 +95,7 @@ export function createBlipper(mx: Pick<Mixer, 'volume'>, makeContext: () => Blip
   };
 }
 
-function defaultContext(): BlipContext | null {
+export function defaultContext(): BlipContext | null {
   const C = (globalThis as { AudioContext?: new () => BlipContext; webkitAudioContext?: new () => BlipContext }).AudioContext
     ?? (globalThis as { webkitAudioContext?: new () => BlipContext }).webkitAudioContext;
   return C ? new C() : null;
