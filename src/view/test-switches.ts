@@ -33,6 +33,8 @@ export interface TestSwitches {
   readonly intro: boolean;
   /** GAME-216: холодний початок (кіно ≤ 45 с перед вступом) увімкнений завжди, крім збірки e2e: там ?coldOpen=1 (разом з ?intro=1) вмикає справжню поведінку (game-216.spec). */
   readonly coldOpen: boolean;
+  /** GAME-229: екран «Що відкрилось» (нові ранги навичок) перед підсумком дня: завжди, крім збірки e2e — там його немає за замовчуванням (старі e2e закривають лише підсумок), ?levelUps=1 вмикає справжню поведінку (game-229.spec). */
+  readonly levelUps: boolean;
   /** GAME-192: ?hintIdleMs=N (1…60000) — справжня поведінка стрілки «Далі» з бездіяльністю N мс (і вікном показу min(6000, N/4)); без нього збірка e2e тримає «завжди» (старі e2e читають стрілку й рядок «Далі»). */
   readonly hintIdleMs?: number;
   /** ?map=camp|home|shop — GAME-175: показати мапу незалежно від локації гравця (e2e механіки руху на мапі табору без персонажа). */
@@ -50,7 +52,7 @@ export interface TestSwitches {
 }
 
 export function testSwitches(search: string, mode: string): TestSwitches {
-  if (mode !== 'e2e') return { hideTouch: [], hideAct: [], hideUi: [], breakSpot: [], intro: true, coldOpen: true, music: true };
+  if (mode !== 'e2e') return { hideTouch: [], hideAct: [], hideUi: [], breakSpot: [], intro: true, coldOpen: true, levelUps: true, music: true };
   const q = new URLSearchParams(search);
   const list = (k: string): string[] => (q.get(k) ?? '').split(',').filter(Boolean);
   const seed = Number(q.get('seed'));
@@ -58,5 +60,5 @@ export function testSwitches(search: string, mode: string): TestSwitches {
   const boot = Number(q.get('bootDelayMs'));
   const at = Number(q.get('atMinute'));
   const hintIdle = Number(q.get('hintIdleMs'));
-  return { intro: q.get('intro') === '1', coldOpen: q.get('coldOpen') === '1', music: q.get('music') === '1', ...(Number.isInteger(boot) && boot >= 1 && boot <= 5000 ? { bootDelayMs: boot } : {}), ...(Number.isInteger(lag) && lag >= 1 && lag <= 190 ? { frameLagMs: lag } : {}), hideTouch: list('hideTouch'), hideAct: list('hideAct'), hideUi: list('hideUi'), breakSpot: list('breakSpot'), ...(q.get('noAutosave') === '1' ? { noAutosave: true } : {}), ...(q.get('tentAlone') === '1' ? { tentAlone: true } : {}), ...(q.get('episode') === '1' ? { episode: true } : {}), ...(q.get('noReveal') === '1' ? { noReveal: true } : {}), ...(q.get('holdToast') === '1' ? { holdToast: true } : {}), ...((q.get('atMinute') ?? '') !== '' && Number.isInteger(at) && at >= 0 && at <= 1439 ? { atMinute: at } : {}), ...(q.get('daylight') === 'off' ? { noDaylight: true } : {}), ...(q.get('mapFirst') !== '1' ? { panelActs: true } : {}), ...(['camp', 'home', 'shop', 'road'].includes(q.get('map') ?? '') ? { map: q.get('map') as 'camp' | 'home' | 'shop' | 'road' } : {}), ...(Number.isInteger(hintIdle) && hintIdle >= 1 && hintIdle <= 60000 ? { hintIdleMs: hintIdle } : {}), ...(q.get('freshSeed') === '1' ? { freshSeed: true } : {}), ...(q.has('seed') && Number.isSafeInteger(seed) && seed >= 0 ? { seed } : {}) };
+  return { intro: q.get('intro') === '1', coldOpen: q.get('coldOpen') === '1', levelUps: q.get('levelUps') === '1', music: q.get('music') === '1', ...(Number.isInteger(boot) && boot >= 1 && boot <= 5000 ? { bootDelayMs: boot } : {}), ...(Number.isInteger(lag) && lag >= 1 && lag <= 190 ? { frameLagMs: lag } : {}), hideTouch: list('hideTouch'), hideAct: list('hideAct'), hideUi: list('hideUi'), breakSpot: list('breakSpot'), ...(q.get('noAutosave') === '1' ? { noAutosave: true } : {}), ...(q.get('tentAlone') === '1' ? { tentAlone: true } : {}), ...(q.get('episode') === '1' ? { episode: true } : {}), ...(q.get('noReveal') === '1' ? { noReveal: true } : {}), ...(q.get('holdToast') === '1' ? { holdToast: true } : {}), ...((q.get('atMinute') ?? '') !== '' && Number.isInteger(at) && at >= 0 && at <= 1439 ? { atMinute: at } : {}), ...(q.get('daylight') === 'off' ? { noDaylight: true } : {}), ...(q.get('mapFirst') !== '1' ? { panelActs: true } : {}), ...(['camp', 'home', 'shop', 'road'].includes(q.get('map') ?? '') ? { map: q.get('map') as 'camp' | 'home' | 'shop' | 'road' } : {}), ...(Number.isInteger(hintIdle) && hintIdle >= 1 && hintIdle <= 60000 ? { hintIdleMs: hintIdle } : {}), ...(q.get('freshSeed') === '1' ? { freshSeed: true } : {}), ...(q.has('seed') && Number.isSafeInteger(seed) && seed >= 0 ? { seed } : {}) };
 }

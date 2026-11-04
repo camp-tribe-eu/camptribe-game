@@ -15,9 +15,11 @@ export interface Settings {
   readonly audio: AudioSettings;
   /** GAME-192: стрілка «Далі» — лише коли застряг (типово) чи завжди. Не частина сейву. */
   readonly hintMode: 'stuck' | 'always';
+  /** GAME-229: екран «Що відкрилось» (нові ранги) перед підсумком дня; вимкнено — навички ростуть так само, але екрана немає. Не частина сейву. */
+  readonly levelUps: boolean;
 }
 
-export const DEFAULT_SETTINGS: Settings = { textScale: 100, language: 'uk', hintSeen: false, remindedTrip: null, audio: DEFAULT_AUDIO, hintMode: 'stuck' };
+export const DEFAULT_SETTINGS: Settings = { textScale: 100, language: 'uk', hintSeen: false, remindedTrip: null, audio: DEFAULT_AUDIO, hintMode: 'stuck', levelUps: true };
 const KEY = 'camplife.settings.v1';
 // 200 % — WCAG 1.4.4 (GAME-39): текст удвічі без обрізання й без втрати функцій.
 export const TEXT_SCALES = [100, 125, 150, 200] as const;
@@ -35,6 +37,7 @@ export function loadSettings(storage: Pick<Storage, 'getItem'> | undefined = saf
       remindedTrip: typeof v.remindedTrip === 'string' && v.remindedTrip !== '' ? v.remindedTrip : null,
       audio: parseAudio(v.audio),
       hintMode: v.hintMode === 'always' ? 'always' : 'stuck',
+      levelUps: v.levelUps !== false,
     };
   } catch {
     return DEFAULT_SETTINGS;

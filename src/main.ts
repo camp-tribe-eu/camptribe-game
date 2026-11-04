@@ -51,6 +51,8 @@ import { MAP_SPOTS, departBlock, isBulky, isMapFirstSpot, mapKeyFor, moveKey, ne
 import { packFlag } from './core/packing';
 import type { GameState } from './core/state';
 import { progressOf, titleOf } from './core/progress';
+import { rankUps, type HandAction } from './core/skills';
+import type { SkillUp } from './ui/overlay-order';
 import type { RewardEvent } from './ui/port';
 
 const app = document.querySelector<HTMLElement>('#app');
@@ -60,7 +62,7 @@ const probe: WorldProbe = { ready: false, reveal: false, playerX: 0, playerY: 0,
   playerFrame: 0, playerDir: 'down', playerMoving: false, playerDepth: 0, coveredTiles: 0, behindTiles: 0, canopy: { bands: 0, over: 0, minAlpha: 1 }, light: { patches: 0, depth: 0, alpha: 0 }, fps: 0, fpsWindows: 0, firstFrameMs: 0,
   residents: [], neighbours: [], visitors: [], bark: null, barkCount: 0, npcMarks: {}, miaAt: [], tent: TENT_PROBE_IDLE, wood: WOOD_PROBE_IDLE, crate: CRATE_PROBE_IDLE, fire: FIRE_PROBE_IDLE, grill: GRILL_PROBE_IDLE, fish: FISH_PROBE_IDLE, live: LIVE_PROBE_IDLE, swim: SWIM_PROBE_IDLE, camp: CAMP_PROBE_IDLE,
   daylight: { on: false, visible: false, minuteOfDay: 0, darkness: 0, color: 0xffffff, glow: 0 },
-  fx: { target: null, ring: 0, ringName: null, backpack: 0, guide: 'none', pops: 0, auto: 0, rewards: 0, rewardLast: '' } };
+  fx: { target: null, ring: 0, ringName: null, backpack: 0, guide: 'none', pops: 0, auto: 0, rewards: 0, rewardLast: '', headLabels: [] } };
 // GAME-86: кожна команда ядру (дія екрана, розмова, взаємодія на мапі) → автозбереження одразу, а не лише на паузі.
 // GAME-89 №2: сід світу (а з ним погода дня 1) — свіжий для кожної гри, з crypto на межі; ядро лишається детермінованим,
 // бо сід записується в worldSeed сейву. ?seed=N (лише збірка e2e) закріплює сід — для відтворюваних тестів.
@@ -132,6 +134,23 @@ const syncRewards = (): void => {
   pendingPop = { xp: (pendingPop?.xp ?? 0) + xp, om: (pendingPop?.om ?? 0) + om };
   for (const l of rewardListeners) l({ xp, om, title: up });
 };
+// GAME-229 · нові ранги навичок для екрана «Що відкрилось». Той самий принцип, що в нагород: стан ПОКАЗУ. База — зараз у ядрі; завантаження, нова гра, імпорт коду
+// і поява персонажа (старт професії одразу дає ранги) рангом не вважаються. Екран показує Shell наприкінці дня, а не посеред гри.
+let seenSkills: Readonly<Record<string, number>> = {};
+let ranksReady = false;
+let hadPlayer = false;
+const skillListeners = new Set<(ups: readonly SkillUp[]) => void>();
+const rebaseRanks = (): void => { seenSkills = bridge.state.game.skills; hadPlayer = bridge.state.game.player !== null; ranksReady = true; };
+const syncRanks = (): void => {
+  if (!ranksReady) return;
+  const g = bridge.state.game;
+  if (!hadPlayer || g.player === null) { rebaseRanks(); return; }
+  const ups = rankUps(seenSkills, g.skills);
+  seenSkills = g.skills;
+  if (ups.length > 0) for (const l of skillListeners) l(ups);
+};
+/** GAME-229: дія руками закінчена — ядро записує практику (вона сама зменшує віддачу з повтором); відмову (немає персонажа) мовчки ігноруємо. */
+const handPractise = (action: HandAction): void => { bridge.send({ type: 'Practise', action }); storyChanged(); };
 const takeReward = (): string | null => {
   const r = pendingPop;
   pendingPop = null;
@@ -141,6 +160,7 @@ const takeReward = (): string | null => {
 };
 const storyChanged = (): void => {
   syncRewards();
+  syncRanks();
   // GAME-175: мапа-перша гра — спакований «за порадою» набір розкладається, коли гравець удома; речі він переносить ногами (раз за гру).
   if (!switches.panelActs && !unpackedOnce) {
     const moves = unpackMoves(bridge.state, GAME_DEFS);
@@ -276,6 +296,7 @@ const worldHooks: WorldHooks = {
   // GAME-179: з ким можна говорити саме зараз — те саме, що прийме ядро (NPC тут, відкритий, розмови нема); «!» — гачок прохань GAME-180.
   talk: (id) => (npcLive(bridge.state.game, GAME_DEFS, id) ? { request: requestMarker(bridge.state.game, id) } : null),
   onObject: actOnMap,
+  onHand: handPractise,
   fireDue: () => fireplaceDue(bridge.state),
   grillDue: () => fireplaceDue(bridge.state) && fishEvening(bridge.state.game.flags) === 'kept',
   onGrilled: (charred) => { grilledCharred = charred; },
@@ -378,6 +399,7 @@ render(h(Shell, {
   ...(switches.holdToast ? { holdToast: true } : {}),
   hideUi: switches.hideUi,
   intro: switches.intro,
+  levelUps: switches.levelUps,
   credits,
   port: {
     save: () => saves.save(),
@@ -386,6 +408,7 @@ render(h(Shell, {
       unpackedOnce = false;
       const ok = await saves.newGame();
       rebaseRewards();
+      rebaseRanks();
       storyChanged();
       return ok;
     },
@@ -399,6 +422,7 @@ render(h(Shell, {
       unpackedOnce = false;
       const r = await saves.adopt(await decodeRestoreCode(code));
       rebaseRewards();
+      rebaseRanks();
       storyChanged();
       return r;
     },
@@ -419,6 +443,10 @@ render(h(Shell, {
     onStory(listener: () => void) {
       storyListeners.add(listener);
       return () => { storyListeners.delete(listener); };
+    },
+    onSkillUp(listener: (ups: readonly SkillUp[]) => void) {
+      skillListeners.add(listener);
+      return () => { skillListeners.delete(listener); };
     },
     onReward(listener: (r: RewardEvent) => void) {
       rewardListeners.add(listener);
@@ -498,4 +526,4 @@ window.addEventListener('pagehide', () => saves.autosave());
 
 // Старт: підхопити останній цілий сейв. Позиція в пікселях не зберігається (DC-042):
 // після завантаження персонаж з'являється в точці появи. Правила гонок — у save-session.ts.
-void saves.start().then(() => { probe.saveLoaded = true; rebaseRewards(); storyChanged(); });
+void saves.start().then(() => { probe.saveLoaded = true; rebaseRewards(); rebaseRanks(); storyChanged(); });

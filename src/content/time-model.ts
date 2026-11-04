@@ -51,6 +51,7 @@ export function moveSeconds(m: Move): number {
       return SECONDS.menuTap;
     case 'CompleteQuest': case 'DeclineQuest': return SECONDS.questDone;
     case 'Repair': return SECONDS.repair;
+    case 'Practise': return 0;                                     // GAME-229: практика руками — побічний наслідок дії на мапі, окремого ходу бота немає
     case 'CreateCharacter': return SECONDS.createCharacter;
     default: { const never: never = m; throw new Error(`time model: no estimate for ${JSON.stringify(never)}`); }
   }

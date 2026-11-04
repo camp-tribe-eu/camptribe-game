@@ -7,8 +7,8 @@ import { FX_PALETTE } from './fx-live';
 import { HAND_FONT, TOP } from './hand-fx';
 import { FRAME_MS, type Item, type Pt } from './camp-alive';
 import {
-  BRANCH_SHAKE_MS, DEBRIS_MS, FIND_KEY, SMASH_PROPS, SMOKE_MS, TOAST_MAX, branchShift, breaksAway, debrisAt, debrisPlan, findScale, freezeMs, pushToast, smokeAt, stepToasts, toastAlpha,
-  type Debris, type FindKind, type SmashProp, type ToastEntry,
+  BRANCH_SHAKE_MS, DEBRIS_MS, TOAST_KEY, SMASH_PROPS, SMOKE_MS, TOAST_MAX, branchShift, breaksAway, debrisAt, debrisPlan, findScale, freezeMs, pushToast, smokeAt, stepToasts, toastAlpha,
+  type Debris, type SmashProp, type ToastEntry, type ToastKind,
 } from './smash';
 
 const OUT = 0x1b1f23;
@@ -16,7 +16,7 @@ const SOUND_OF = { crate: 'crack', barrel: 'hollow', pot: 'clay', branch: 'snap'
 
 interface Burst { readonly p: SmashProp; readonly debris: readonly Debris[]; age: number }
 interface Smoke { readonly x: number; readonly y: number; age: number }
-export interface SmashProbe { smashes: number; shakes: number; lastDebris: number; lastFreeze: number; debris: number; smoke: number; hold: number; broken: string[]; toasts: { kind: FindKind; count: number }[]; toastText: string[]; toastAlpha: number; findSizes: number[]; props: number; sounds: string[] }
+export interface SmashProbe { smashes: number; shakes: number; lastDebris: number; lastFreeze: number; debris: number; smoke: number; hold: number; broken: string[]; toasts: { kind: ToastKind; count: number }[]; toastText: string[]; toastAlpha: number; findSizes: number[]; props: number; sounds: string[] }
 export const SMASH_PROBE_IDLE: SmashProbe = { smashes: 0, shakes: 0, lastDebris: 0, lastFreeze: 0, debris: 0, smoke: 0, hold: 0, broken: [], toasts: [], toastText: [], toastAlpha: 0, findSizes: [], props: 0, sounds: [] };
 
 /** Дерев'яна бочка: клепки й два обручі, світло зліва; ноги — на (0,0). */
@@ -111,7 +111,7 @@ export class SmashRig {
   /** Повторний удар по гілці того ж дня: ледь здригається, нічого не падає. */
   tremble(p: SmashProp): void { this.shakes.set(p.id, BRANCH_SHAKE_MS - FRAME_MS); this.sound('snap'); }
 
-  toast(kind: FindKind): void { this.toasts = pushToast(this.toasts, kind); }
+  toast(kind: ToastKind): void { this.toasts = pushToast(this.toasts, kind); }
 
   /** Кадр: стоп, тремтіння гілки, уламки й дим (малюються в `g`), плашка біля нижнього лівого кута (`anchor` — світові координати кута кадру над елементами керування). */
   update(dtMs: number, g: Phaser.GameObjects.Graphics, anchor: Pt, items: readonly Item[]): void {
@@ -143,7 +143,7 @@ export class SmashRig {
     this.labels.forEach((l, i) => {
       const t = this.toasts[i];
       if (!t) { l.setVisible(false); return; }
-      const m = this.text(FIND_KEY[t.kind]).replace(/^\+1/, `+${t.count}`);
+      const m = this.text(TOAST_KEY[t.kind]).replace(/^\+1/, `+${t.count}`);
       if (l.text !== m) l.setText(m);
       l.setPosition(Math.round(anchor.x), Math.round(anchor.y - i * 15)).setAlpha(toastAlpha(t.age)).setVisible(true);
       pr.toastText.push(m); pr.toastAlpha = toastAlpha(t.age);

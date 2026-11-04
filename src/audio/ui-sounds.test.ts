@@ -20,7 +20,7 @@ describe('звуки UI', () => {
     expect(ui.played).toEqual(['ui-click', 'ui-confirmation', 'ui-back']);
   });
   it('кнопки: «Продовжити»/підтвердити → confirm; закрити/скасувати → back; решта → press', () => {
-    expect(['resume', 'summary-continue', 'confirm-new-yes'].map(soundForButton)).toEqual(['confirm', 'confirm', 'confirm']);
+    expect(['resume', 'summary-continue', 'confirm-new-yes', 'levelup-continue'].map(soundForButton)).toEqual(['confirm', 'confirm', 'confirm', 'confirm']);
     expect(['story-close', 'confirm-new-no', 'recovery-close', 'summary-end', 'stale-dismiss'].map(soundForButton)).toEqual(['back', 'back', 'back', 'back', 'back']);
     expect(['save', 'mute', 'new-game', undefined, 'text-100'].map(soundForButton)).toEqual(['press', 'press', 'press', 'press', 'press']);
   });

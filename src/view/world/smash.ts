@@ -137,12 +137,15 @@ export const FIND_REST_MS = REST_MIN_MS;
 
 // ---------- Плашка «+1 Предмет» ----------
 
-export interface ToastEntry { readonly kind: FindKind; readonly count: number; readonly age: number }
+/** Що показує плашка в куті: знахідки розбивання й (GAME-229) шишки та ягоди — над героєм цифр немає. */
+export type ToastKind = FindKind | 'cone' | 'berry';
+export const TOAST_KEY: Readonly<Record<ToastKind, Key>> = { ...FIND_KEY, cone: 'life.cone', berry: 'life.berry' };
+export interface ToastEntry { readonly kind: ToastKind; readonly count: number; readonly age: number }
 export const TOAST_MS = 3000;
 export const TOAST_FADE_MS = 500;
 export const TOAST_MAX = 3;
 /** Додати знахідку: той самий вид — лічильник росте й плашка тримається знову; новий вид кладеться НАД попереднім (кінець списку — верх). */
-export function pushToast(list: readonly ToastEntry[], kind: FindKind): ToastEntry[] {
+export function pushToast(list: readonly ToastEntry[], kind: ToastKind): ToastEntry[] {
   const i = list.findIndex((t) => t.kind === kind);
   const next = i >= 0 ? list.map((t, j) => (j === i ? { kind, count: t.count + 1, age: 0 } : t)) : [...list, { kind, count: 1, age: 0 }];
   return next.slice(-TOAST_MAX);

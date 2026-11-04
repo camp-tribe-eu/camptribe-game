@@ -8,6 +8,7 @@
 import Phaser from 'phaser';
 import { ambient, bindPhaser, isIntroOpen, ambientMix, music, musicFor } from '../../audio';
 import { STEP_MS } from '../../core/clock';
+import type { HandAction } from '../../core/skills';
 import { KEY_BINDINGS, KEY_CODES, TAP_MAX_MOVE, TAP_MAX_MS, actionTarget, consumeFrame, createActionGate, moveVector, press, release, tapHitsSpot, type Action, type ActionTarget, type InputState } from './actions';
 import type { Bridge } from './bridge';
 import { PET_SHEETS, type WorldArt } from './art';
@@ -127,8 +128,10 @@ export interface WorldHooks {
   hintPoke?(): void;
   /** Транспорт гравця (авто малюється спрайтом на подвір'ї, велосипед — маркером). */
   transport(): string | null;
-  /** GAME-181: підпис нагороди («+15 XP +10 ОМ»), що ще не показана над героєм; забирає її (наступний виклик — null). */
+  /** GAME-181: підпис нагороди («+15 XP +10 ОМ»), що ще не показана; забирає її (наступний виклик — null). GAME-229: над героєм цифр немає — підпис лише в пробі (`fx.rewardLast`), число видно в підсумку дня й у ☰. */
   takeReward(): string | null;
+  /** GAME-229: дія руками закінчена (сокира, кілок, вудка, ремонт, розбивання, шишки/ягоди, смаження) — вона вчить навичку; немає — навичок нема. */
+  onHand?(action: HandAction): void;
   /** GAME-209: об'єкт-знахідка чи справа вже зроблені (старий ящик відкрито, лавку полагоджено) — сцена малює їх відкритими/готовими. */
   spotDone?(name: string): boolean;
   /** GAME-202: кому що доручено (факти ядра f.errand-*, лише живі справи): член родини (ключ FOLLOWERS) → об'єкт мапи справи. Немає — доручень у грі нема. */
@@ -205,7 +208,7 @@ export interface WorldProbe {
   /** GAME-99 (лише для e2e): ефект «день і ніч» — що зараз намальовано. `on` — ефект увімкнено; `visible` — прямокутник/пляма видимі (вдень — ні). */
   daylight: { on: boolean; visible: boolean; minuteOfDay: number; darkness: number; color: number; glow: number };
   /** GAME-175 (лише для e2e): кільце наближення (0..1, об'єкт), рюкзак, стрілка до мети (none/line/edge), лічильник спливів, дії-від-наближення. */
-  fx: { target: string | null; ring: number; ringName: string | null; backpack: number; guide: 'none' | 'line' | 'edge'; pops: number; auto: number; rewards: number; rewardLast: string };
+  fx: { target: string | null; ring: number; ringName: string | null; backpack: number; guide: 'none' | 'line' | 'edge'; pops: number; auto: number; rewards: number; rewardLast: string; headLabels: string[] };
   /** GAME-179 (лише для e2e): які маркери зараз над головами NPC — id → chat («…») / request («!»). */
   npcMarks: Record<string, NpcMarker>;
   /** GAME-184: цілі прохань, біля яких намальована Мія (видимі спрайти). */
@@ -389,6 +392,7 @@ export class WorldScene extends Phaser.Scene {
     this.load.audio('amb-road-bike', 'audio/amb-road-bike.ogg');
     this.load.audio('amb-shop', 'audio/amb-shop.ogg');
     this.load.audio('sfx-chime', 'audio/sfx-chime.ogg');
+    this.load.audio('sfx-fanfare', 'audio/sfx-fanfare.ogg');   // GAME-229
     this.load.audio('sfx-peg', 'audio/sfx-peg.ogg');
     this.load.audio('sfx-chop', 'audio/sfx-chop.ogg');
     this.load.audio('sfx-match', 'audio/sfx-match.ogg');
@@ -596,7 +600,7 @@ export class WorldScene extends Phaser.Scene {
     this.live = new LiveFx(this, DEPTH.decor - 50, DEPTH.always - 10);
     this.swim = new SwimRig(this, this.player, DEPTH.decor - 40);
     this.neigh = new Neighbours(this, DEPTH.always);
-    this.life = new CampAlive(this, this.barkText, (text, lift) => this.fx?.pop(this.player.x, this.player.y, text, lift));
+    this.life = new CampAlive(this, this.barkText);
     this.tent = new TentRig(this, this.player, this.barkText);
     this.wood = new WoodRig(this, this.player, this.barkText);
     this.props = new CampProps(this, this.barkText);
@@ -955,14 +959,14 @@ export class WorldScene extends Phaser.Scene {
   /** Сплив і звук на дію: підібрав/поклав — «+1» і клацання, крок/авто — «OK» і підтвердження. */
   private feedback(name: string): void {
     const pick = name.startsWith('take.') || name.startsWith('pack.');
-    this.fx?.pop(this.player.x, this.player.y, pick ? '+1' : 'OK');
+    this.fx?.pop(this.player.x, this.player.y, pick ? '+' : 'OK');   // GAME-229: без цифр над героєм («+», не «+1»)
     playUi(pick ? 'press' : 'confirm');
   }
 
   private unloadOne(): void {
     const res = this.hooks.unload();
     if (res === 'none') return;
-    this.fx?.pop(this.player.x, this.player.y, res === 'ok' ? '+1' : '!');
+    this.fx?.pop(this.player.x, this.player.y, res === 'ok' ? '+' : '!');
     playUi(res === 'ok' ? 'press' : 'back');
   }
 
@@ -1380,14 +1384,14 @@ export class WorldScene extends Phaser.Scene {
     const grillEvents = this.grill.update(delta, held.has('interact') && nearFire, time);
     for (const e of grillEvents) {
       if (e === 'char') this.playAction('cast', facingToward(this.player, this.grill.point()));
-      if (e === 'done') { const ch = this.grill.charred; this.grill.finish(); this.hooks.onGrilled?.(ch); this.hooks.onObject('obj.campfire'); this.grill.reset(); }
+      if (e === 'done') { const ch = this.grill.charred; this.grill.finish(); this.hooks.onGrilled?.(ch); this.hooks.onHand?.('grill'); this.hooks.onObject('obj.campfire'); this.grill.reset(); }
     }
     const water = this.fish.water();
     const fishWas = this.fish.busy;   // кадр, у якому рибалка щойно скінчилась (вибір поклав кнопкою дії), дію теж забирає: інакше та сама дія заводила б розмову з сусідом
     for (const e of this.fish.update(delta, fishFrame)) {
       if (e === 'charge' && water) this.faceTo(water);
       if (e === 'cast' && water) this.playAction('thrust', facingToward(this.player, water));
-      if (e === 'kept' || e === 'released') this.hooks.onFish?.(e === 'kept');
+      if (e === 'kept' || e === 'released') { this.hooks.onFish?.(e === 'kept'); this.hooks.onHand?.('fish'); }
     }
     // GAME-206: живі дрібниці — трава й пил під ногами (за тайлом землі), іскри над запаленим вогнищем, дим і погойдування авто на дорозі (двигун чекає).
     const sway = this.live.update(time, delta, {
@@ -1400,7 +1404,8 @@ export class WorldScene extends Phaser.Scene {
     const carrying = this.hooks.backpack() > 0;
     this.fx?.tick(dt);
     const reward = this.hooks.takeReward();
-    if (reward) { this.fx?.pop(this.player.x, this.player.y, reward, 14); this.rewardPops++; this.rewardLast = reward; }   // GAME-181: «+N» за нагороду — над сплавом «+1/OK» дії
+    // GAME-181 → GAME-229: «+15 XP +10 ОМ» над героєм більше не малюється (game-feel: під час дії цифр нема, прогрес — відгук і екран рангів). Подію лічимо для проби.
+    if (reward) { this.rewardPops++; this.rewardLast = reward; }
     const atCar = near === 'obj.vehicle' || near === 'obj.trunk';
     const needs = this.hooks.needs();
     // Скорочення E/тап — миттєво. Біля авто з рюкзаком воно розвантажує (а не їде).
@@ -1419,7 +1424,7 @@ export class WorldScene extends Phaser.Scene {
       if (pressed) {
         const e = this.tent.act(this.facing);
         if (e === 'hit' || e === 'done') this.playAction('thrust', this.tent.strikeDir);   // GAME-190: справжній рух героя на кожен кілок
-        if (e === 'done') { this.tent.finish(); this.hooks.onObject('task.pitch-tent'); }
+        if (e === 'done') { this.tent.finish(); this.hooks.onObject('task.pitch-tent'); this.hooks.onHand?.('tent'); }
       } else if (!this.hooks.isLive('task.pitch-tent')) this.tent.reset();
     } else if (pressed && this.fire.stacking && nearFire) {
       this.faceTo(this.fire.point());
@@ -1429,7 +1434,7 @@ export class WorldScene extends Phaser.Scene {
       if (woodBranch === null || this.wood.chopping) this.faceTo(bp);
       const e = this.wood.act(this.wood.chopping ? null : woodBranch, woodBlock);
       if (e === 'hit' || e === 'done' || e === 'miss') this.playAction('slash', facingToward(this.player, bp));   // GAME-190: удар сокирою — справжній рух героя
-      if (e === 'done') { this.wood.finish(); this.hooks.onObject('take.item.firewood'); }
+      if (e === 'done') { this.wood.finish(); this.hooks.onObject('take.item.firewood'); this.hooks.onHand?.('wood'); }
     } else if (pressed && this.fire.matching && nearFire) {
       // Сірник — це утримання (fire.update вище): поки руки біля вогнища, дія не заводить розмову з сусідом поруч (Сара біля вогнища ставила гру на паузу посеред сірника, CI #120).
     } else if (pressed && act?.name === 'take.item.firewood') {
@@ -1457,7 +1462,7 @@ export class WorldScene extends Phaser.Scene {
       if (at) this.faceTo(at);
       const e = this.props.hit(this.props.repairNear({ x: this.player.x, y: this.player.y }, INTERACT_RANGE));
       if (e !== 'none') this.playAction('thrust', facingToward(this.player, at ?? this.player));
-      if (e === 'done') { this.hooks.onObject(REPAIR_SPOT); this.feedback(REPAIR_SPOT); }
+      if (e === 'done') { this.hooks.onObject(REPAIR_SPOT); this.hooks.onHand?.('repair'); this.feedback(REPAIR_SPOT); }
     } else if (pressed && act?.name === OLD_CRATE_SPOT) {
       // GAME-209: старий ящик відкривають явно (E/●), не проходом повз: кришка, пил, і знахідка йде в Атлас.
       this.props.open();
@@ -1467,6 +1472,7 @@ export class WorldScene extends Phaser.Scene {
     } else if (lifeHit) {
       this.faceTo(lifeHit.at);
       const e = this.life.act(lifeHit, { x: this.player.x, y: this.player.y }, lifeDay);
+      if (e === 'smash') this.hooks.onHand?.('smash'); else if (e === 'shake' || e === 'sway') this.hooks.onHand?.('forage');   // GAME-229: «tremble» (той самий день) нічого не вчить
       if (e !== 'board' && e !== 'tap') this.playAction('thrust', facingToward(this.player, lifeHit.at));
       this.life.refresh();
     } else if (pressed && act) {
@@ -1574,7 +1580,7 @@ export class WorldScene extends Phaser.Scene {
       camp: { ...this.life.probe },
       miaAt: [...this.miaSprites].flatMap(([n, sp]) => (sp.visible ? [n] : [])),
       npcMarks: Object.fromEntries([...this.npcMarks].flatMap(([id, m]) => (m.g.visible && m.kind ? [[id, m.kind] as const] : []))),
-      fx: { target: tn, ring: this.ring.name ? this.ring.t : 0, ringName: this.ring.name, backpack: this.hooks.backpack(), guide: this.fx?.guideMode ?? 'none', pops: this.fx?.pops ?? 0, auto: this.autoCount, rewards: this.rewardPops, rewardLast: this.rewardLast },
+      fx: { target: tn, ring: this.ring.name ? this.ring.t : 0, ringName: this.ring.name, backpack: this.hooks.backpack(), guide: this.fx?.guideMode ?? 'none', pops: this.fx?.pops ?? 0, auto: this.autoCount, rewards: this.rewardPops, rewardLast: this.rewardLast, headLabels: [...(this.fx?.labels ?? [])] },
     });
   }
 }

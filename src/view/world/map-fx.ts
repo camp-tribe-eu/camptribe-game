@@ -20,6 +20,8 @@ export class MapFx {
   private bubbleKey = '';
   /** Скільки спливів показано (для e2e) і яка підказка-стрілка зараз: none | line | edge. */
   pops = 0;
+  /** GAME-229 (лише проба): тексти, що справді намальовано над героєм, останні 24 — на них стоїть сторож «над героєм немає цифр» (hero-label.ts). */
+  readonly labels: string[] = [];
   private floaters: { t: Phaser.GameObjects.Text; y0: number; age: number }[] = [];
   guideMode: 'none' | 'line' | 'edge' = 'none';
 
@@ -137,6 +139,8 @@ export class MapFx {
   /** Сплив над героєм: «+1»/«OK» піднімається й гасне (≈0,6 с; рухає tick — без таймерів реального часу). */
   pop(x: number, y: number, text: string, lift = 0): void {
     this.pops++;
+    this.labels.push(text);
+    if (this.labels.length > 24) this.labels.shift();
     this.floaters.push({ t: this.scene.add.text(x, y - 44 - lift, text, FONT).setOrigin(0.5, 1).setDepth(TOP), y0: y - 44 - lift, age: 0 });
   }
 
