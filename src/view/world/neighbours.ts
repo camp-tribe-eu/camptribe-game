@@ -169,6 +169,9 @@ export interface Frame {
   /** Триває розмова: стоїмо, не крутимо головою. */
   readonly hold: boolean;
 }
+/** GAME-231: сусід тримається (стоїть, без «Z», не лягає), поки йде пільговий відлік після розмови АБО триває сама розмова з ним (`talking` — id співрозмовника, сигнал діалогу ядра). */
+export const heldBy = (graceFrames: number, talking: string | null, id: string): boolean => graceFrames > 0 || talking === id;
+
 /** Швидкість зсуву, px за кадр (≈ 60 px/с — неквапливо). */
 export const OFF_SPEED = 1;
 
@@ -193,11 +196,28 @@ export function stepMind(m: Mind, f: Frame): Mind {
   const fInState = entered ? 0 : m.f + 1;
   const want = entered ? emoteOnEnter(state, f) : state === 'sleep' && fInState % ZZZ_EVERY === 0 ? 'zzz' : null;
   if (want && (!emote || (entered && want !== 'dots'))) { emote = want; emoteAge = 0; }
+  if (f.hold && emote === 'zzz') emote = null;   // GAME-231: розбуджений розмовою — сонного «Z» над головою вже нема
   const target = state === 'around' && f.side ? f.side : state === 'sit' && f.phase === 'out' && f.bench ? f.bench : { x: 0, y: 0 };
   const dx = target.x - m.off.x; const dy = target.y - m.off.y;
   const d = Math.hypot(dx, dy);
   const off = d <= OFF_SPEED ? { x: target.x, y: target.y } : { x: m.off.x + (dx / d) * OFF_SPEED, y: m.off.y + (dy / d) * OFF_SPEED };
   return { state, f: fInState, waveDay: state === 'wave' && m.state !== 'wave' ? f.day : m.waveDay, emote, emoteAge, blockF, off };
+}
+
+// ---------- Значок над головою: щоб не лягав на полум'я ----------
+
+/** Значок (≈ 10×14 px) малюється на s.y − 70; полум'я вогнища — від fire.y − 56 до fire.y + 8, завширшки ~ FIRE_HALF. Якщо значок лягає на нього — зсув убік. */
+export const EMOTE_DY = 70;
+export const FIRE_HALF = 22;
+export const EMOTE_SIDE = 30;
+/** Зсув значка по x, px: 0, якщо вогнище не заважає; інакше убік від осі вогнища (праворуч, якщо сусід у самій осі). */
+export function emoteShiftX(at: Pt, fire: Pt | null): number {
+  if (!fire) return 0;
+  const top = at.y - EMOTE_DY; const bottom = top + 14;
+  if (bottom < fire.y - 56 || top > fire.y + 8) return 0;
+  const dx = at.x - fire.x;
+  if (Math.abs(dx) >= FIRE_HALF + 7) return 0;
+  return dx < 0 ? -EMOTE_SIDE : EMOTE_SIDE;
 }
 
 // ---------- Кадри заняття ----------
