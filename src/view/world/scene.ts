@@ -926,8 +926,8 @@ export class WorldScene extends Phaser.Scene {
       const ctx = tex.getContext();
       const css = (c: number): string => `#${c.toString(16).padStart(6, '0')}`;
       const g = ctx.createRadialGradient(R, R, 0, R, R, R);
-      g.addColorStop(0, `${css(FIRE_CORE)}cc`);
-      g.addColorStop(0.4, `${css(FIRE_GLOW)}66`);
+      g.addColorStop(0, `${css(FIRE_CORE)}88`);
+      g.addColorStop(0.4, `${css(FIRE_GLOW)}30`);
       g.addColorStop(1, `${css(FIRE_GLOW)}00`);
       ctx.fillStyle = g;
       ctx.fillRect(0, 0, R * 2, R * 2);

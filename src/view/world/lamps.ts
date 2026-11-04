@@ -1,14 +1,14 @@
 // GAME-231 · «Ніч у таборі»: ліхтарі табору вмикаються о 18:00 м'яким теплим колом світла й вимикаються вранці. ЛИШЕ відображення: нічого не пише в ядро й сейв.
 // Ліхтарі — ті, що вже стоять на мапі (шар `above`: верх ліхтаря camp-props 126 і тайл стовпа 140 під ним); нових файлів графіки немає.
 // Світло малюється покадрово (прозорість від доби й дрібного мерехтіння — як glowAlpha вогнища), колір — FIRE_CORE/FIRE_GLOW із палітри LPC.
-// Масштаб: ≈ 28 px на метр, тож коло радіусом LAMP_RADIUS (72 px) — ≈ 2,5 м під ліхтарем, а не заливка всієї стежки.
+// Масштаб: ≈ 28 px на метр, тож коло радіусом LAMP_RADIUS (56 px) — ≈ 2 м під ліхтарем, а не заливка всієї стежки.
 import { MAX_DARKNESS } from './daylight';
 
 /** Ліхтарі вмикаються о 18:00 (картка GAME-231) і гаснуть, коли вже ранок (на початку світанку 06:30 з daylight.ts). */
 export const LAMPS_ON_MINUTE = 18 * 60;
 export const LAMPS_OFF_MINUTE = 6 * 60 + 30;
-/** Радіус кола світла, px (≈ 2,5 м при 28 px/м). */
-export const LAMP_RADIUS = 72;
+/** Радіус кола світла, px (2 м при 28 px/м). */
+export const LAMP_RADIUS = 56;
 /** Де на тайлі верхівки світить скло ліхтаря (px від верху тайла): за малюнком 126 — рядки 22–27. */
 export const BULB_DY = 24;
 const TILE = 32;
@@ -39,5 +39,5 @@ export function lampAlpha(minuteOfDay: number, darkness: number, timeMs: number)
   if (!lampsOn(minuteOfDay)) return 0;
   const flicker = 1 + 0.025 * Math.sin(timeMs / 410) + 0.015 * Math.sin(timeMs / 97);
   const dusk = Math.min(1, Math.max(0, darkness) / MAX_DARKNESS);
-  return Math.min(1, (0.4 + 0.5 * dusk) * flicker);
+  return Math.min(1, (0.35 + 0.5 * dusk) * flicker);
 }

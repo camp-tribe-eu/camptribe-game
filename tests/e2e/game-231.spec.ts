@@ -34,7 +34,7 @@ async function open(page: Page, atMinute: number, w: number, h: number, settings
 const shot = async (page: Page, name: string, side: string): Promise<void> => { mkdirSync(SHOTS, { recursive: true }); await page.screenshot({ path: `${SHOTS}/${name}-${side}.png` }); };
 
 for (const v of VIEWS) {
-  test(`ліхтарі: о 17:50 і вдень темні, о 18:00 і 20:30 світять (коло ≈ 2,5 м), знімки — ${v.side}`, async ({ page }) => {
+  test(`ліхтарі: о 17:50 і вдень темні, о 18:00 і 20:30 світять (коло ≈ 2 м), знімки — ${v.side}`, async ({ page }) => {
     test.setTimeout(120_000);
     const errors = await open(page, DAY, v.w, v.h);
     const day = await lamps(page);
@@ -51,7 +51,7 @@ for (const v of VIEWS) {
         expect(l.on, `${name}: ліхтарі горять`).toBe(true);
         expect(l.alpha, `${name}: яскравість`).toBeGreaterThan(minAlpha);
         expect(l.alpha).toBeLessThanOrEqual(1);
-        expect(l.radius / 28, 'радіус у метрах').toBeGreaterThan(2);
+        expect(l.radius / 28, 'радіус у метрах').toBeGreaterThanOrEqual(2);
         expect(l.radius / 28).toBeLessThan(3);
       }
       await shot(page, name, v.side);
@@ -169,10 +169,15 @@ test.describe('розмова вночі', () => {
     const errors = await toCamp(page, `&noAutosave=1&atMinute=${NIGHT}`);
     const id = 'npc.nora';
     await expect.poll(async () => (await nbs(page)).find((n) => n.id === id)?.state, { timeout: 10_000, message: 'о цій порі Нора спить' }).toBe('sleep');
-    await walkTo(page, id);
-    await expect.poll(async () => (await probe(page)).npcMarks[id], { timeout: 6_000, message: 'над головою «…»' }).toMatch(/^(chat|request)$/);
-    await page.keyboard.press('Space');
-    await expect(page.locator('[data-ui="story"] [data-ui="dialogue"]')).toBeVisible({ timeout: 8_000 });
+    const box = page.locator('[data-ui="story"] [data-ui="dialogue"]');
+    // Сусід ворушиться, «найближчий» міг змінитись між кроком і дією (як у game-179): ще раз підходимо й тиснемо дію, до трьох спроб.
+    for (let attempt = 0; attempt < 3 && !(await box.isVisible()); attempt++) {
+      await walkTo(page, id);
+      await expect.poll(async () => (await probe(page)).npcMarks[id], { timeout: 6_000, message: 'над головою «…»' }).toMatch(/^(chat|request)$/);
+      if ((await probe(page)).nearObject === id) await page.keyboard.press('Space');
+      await box.waitFor({ state: 'visible', timeout: 4_000 }).catch(() => undefined);
+    }
+    await expect(box, 'рамка розмови відкрилась').toBeVisible();
     await page.mouse.move(5, 5);
     // Розмова відкрита (діалог ядра) — це і є сигнал, яким рига тримає сусіда. Світ на паузі: сцена не йде, тож сусід заморожений у стійці «стоїть».
     expect((await g<{ dialogue: unknown; paused: boolean }>(page, '({ dialogue: g.read().game.dialogue, paused: g.read().clock.paused })')).dialogue, 'діалог ядра відкрито').not.toBeNull();

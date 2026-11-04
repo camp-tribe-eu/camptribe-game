@@ -27,7 +27,7 @@ describe('ліхтарі табору (GAME-231)', () => {
     const v = Array.from({ length: 200 }, (_, i) => lampAlpha(23 * 60, MAX_DARKNESS, i * 16));
     expect(Math.max(...v) - Math.min(...v)).toBeLessThan(0.08);
   });
-  it('радіус кола ≈ 2,5 м при 28 px/м', () => { expect(LAMP_RADIUS / 28).toBeGreaterThan(2); expect(LAMP_RADIUS / 28).toBeLessThan(3); });
+  it('радіус кола 2–3 м при 28 px/м', () => { expect(LAMP_RADIUS / 28).toBeGreaterThanOrEqual(2); expect(LAMP_RADIUS / 28).toBeLessThan(3); });
   it('знаходить ліхтарі за верхом і стовпом під ним (верх без стовпа — не ліхтар)', () => {
     const g = 100; const W = 4; const H = 4;
     const d = new Array(W * H).fill(0) as number[];
