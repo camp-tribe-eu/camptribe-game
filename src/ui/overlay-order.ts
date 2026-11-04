@@ -4,7 +4,17 @@
 // ранги чекають кінця дня, щоб не перебивати гру. Вимкнено в налаштуваннях — рангів не показуємо зовсім (навичка росте так само, лише без екрана).
 export type Overlay = 'episode' | 'levelup' | 'summary';
 
-export interface SkillUp { readonly skill: string; readonly rank: number }
+/** Новий ранг навички; `order` — місце напряму в SKILL_IDS (ставить main: UI не імпортує значень ядра). */
+export interface SkillUp { readonly skill: string; readonly rank: number; readonly order: number }
+/** Одна картка на навичку: найвищий досягнутий ранг і всі здобуті ранги (для рядків «що відкрилось»). */
+export interface SkillCard { readonly skill: string; readonly rank: number; readonly ranks: readonly number[] }
+
+/** Згорнути чергу рангів: одна картка на навичку, у порядку SKILL_IDS, ранги по зростанню без повторів. */
+export function collapseUps(ups: readonly SkillUp[]): SkillCard[] {
+  const by = new Map<string, { order: number; ranks: Set<number> }>();
+  for (const u of ups) { const e = by.get(u.skill) ?? { order: u.order, ranks: new Set<number>() }; e.ranks.add(u.rank); by.set(u.skill, e); }
+  return [...by.entries()].sort((a, b) => a[1].order - b[1].order).map(([skill, e]) => { const ranks = [...e.ranks].sort((x, y) => x - y); return { skill, rank: ranks[ranks.length - 1] as number, ranks }; });
+}
 
 export function topOverlay(f: { readonly episode: boolean; readonly ups: number; readonly summary: boolean }): Overlay | null {
   if (f.episode) return 'episode';

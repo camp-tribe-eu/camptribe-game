@@ -110,14 +110,17 @@
       .ui-summary-sec { opacity: 0; animation: ui-rv-in 360ms ease-out forwards; animation-delay: calc(var(--rv-delay, 0) * 1ms); }
       @keyframes ui-rv-in { to { opacity: 1; } }
       .ui-sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap; }
-      .ui-count::after { content: counter(n); counter-reset: n var(--n); animation: ui-tick var(--count-ms, 900ms) ease-out both; }
+      .ui-count::after { content: counter(n) / ""; counter-reset: n var(--n); animation: ui-tick var(--count-ms, 900ms) ease-out both; }
       @keyframes ui-tick { from { --n: 0; } to { --n: var(--to, 0); } }
       /* GAME-229: екран «Що відкрилось» — рядки навичок з'являються по одному; світліша рамка, без цифр. */
-      .ui-levelup-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; width: min(92vw, 560px); }
-      .ui-levelup-item { display: grid; gap: 2px; text-align: left; padding: 8px 12px; border: 2px solid #ffd54a; border-radius: 8px; background: #0b0d14cc; opacity: 0; animation: ui-rv-in 420ms ease-out forwards; animation-delay: calc(var(--rv-delay, 0) * 1ms); }
-      .ui-levelup-item strong { color: #ffd54a; font-size: 0.95rem; }
-      .ui-levelup-opened { font-size: 0.8rem; color: #e8e6e3; }
-      .ui-levelup { place-content: center; }
+      .ui-levelup-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; width: min(92vw, 560px); }
+      @media (orientation: landscape) { .ui-levelup-list { grid-template-columns: 1fr 1fr; width: min(94vw, 780px); } }
+      .ui-levelup-item { display: grid; gap: 2px; text-align: left; padding: 5px 10px; border: 2px solid #ffd54a; border-radius: 8px; background: #0b0d14cc; opacity: 0; animation: ui-rv-in 420ms ease-out forwards; animation-delay: calc(var(--rv-delay, 0) * 1ms); }
+      .ui-levelup-item strong { color: #ffd54a; font-size: 0.8rem; line-height: 1.3; }
+      .ui-levelup-opened { font-size: 0.7rem; line-height: 1.35; color: #e8e6e3; }
+      .ui-levelup { place-content: center; background: #0b0d14ee; gap: 8px; padding: 10px 16px; }
+      .ui-levelup h2 { margin: 0; font-size: 1.1rem; }
+      .ui-levelup .ui-summary-actions { position: sticky; bottom: 0; padding: 4px 0; }   /* «Далі» завжди в кадрі, навіть коли карток багато */
       .ui-btn-locked { border-style: dashed; color: #cfcbc7; background: #22262b; cursor: not-allowed; }
       #stage canvas { image-rendering: pixelated; }
       /* GAME-91: підпис збірки — у меню паузи (див. Shell.tsx), у діалозі він на своєму тлі. */

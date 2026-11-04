@@ -37,7 +37,7 @@ export type Skills = Readonly<Record<string, number>>;
  * віддача падає з кожним повтором (practiceGain), стеля практики — PRACTICE_RANK_CAP. Нових напрямів немає — лише вісім із SKILL_IDS.
  * «Майстер» (механіка) — сокира, ремонт, розбивання; «Табірник» — кілки намету, шишки й ягоди; «Витривалість» — рибалка (терпіння); «Кухня» — засмажити рибу.
  */
-export const HAND_ACTIONS: Readonly<Record<string, readonly SkillId[]>> = {
+export const HAND_ACTIONS = {
   wood: ['skill.mechanics'],
   repair: ['skill.mechanics'],
   smash: ['skill.mechanics'],
@@ -45,7 +45,7 @@ export const HAND_ACTIONS: Readonly<Record<string, readonly SkillId[]>> = {
   forage: ['skill.camping'],
   fish: ['skill.endurance'],
   grill: ['skill.cooking'],
-};
+} as const satisfies Record<string, readonly SkillId[]>;
 export type HandAction = keyof typeof HAND_ACTIONS & string;
 export const isHandAction = (a: unknown): a is HandAction => typeof a === 'string' && Object.hasOwn(HAND_ACTIONS, a);
 

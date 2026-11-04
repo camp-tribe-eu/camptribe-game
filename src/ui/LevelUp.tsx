@@ -6,7 +6,8 @@ import { ct } from '../i18n/content';
 import type { AnyLang, Key } from '../i18n';
 import { sfx } from '../audio/sfx';
 import { trapTab } from './focus-trap';
-import type { SkillUp } from './overlay-order';
+import { collapseUps, type SkillUp } from './overlay-order';
+import { revealDelay } from './summary-reveal';
 
 export function LevelUp({ ups, lang, t, onContinue }: { ups: readonly SkillUp[]; lang: AnyLang; t: (k: Key) => string; onContinue: () => void }) {
   const root = useRef<HTMLDivElement>(null);
@@ -17,10 +18,10 @@ export function LevelUp({ ups, lang, t, onContinue }: { ups: readonly SkillUp[];
       onKeyDown={(e) => { if (root.current) trapTab(e, root.current); }}>
       <h2 id="ui-levelup-title" tabIndex={-1}>{t('lvl.title')}</h2>
       <ul class="ui-levelup-list">
-        {ups.map((u) => (
-          <li key={`${u.skill}.${u.rank}`} class="ui-levelup-item" data-ui="levelup-item" data-skill={u.skill} data-rank={u.rank} style={{ '--rv-delay': `${ups.indexOf(u) * 280}ms` }}>
+        {collapseUps(ups).map((u, i) => (
+          <li key={u.skill} class="ui-levelup-item" data-ui="levelup-item" data-skill={u.skill} data-rank={u.rank} style={{ '--rv-delay': revealDelay(i) }}>
             <strong>{`${ct(lang, u.skill)} · ${t('ui.skills.rank')} ${u.rank} — ${ct(lang, `${u.skill}.r${u.rank}`)}`}</strong>
-            <span class="ui-levelup-opened">{`${t('lvl.opened')}: ${ct(lang, `${u.skill}.r${u.rank}.unlock`)}`}</span>
+            <span class="ui-levelup-opened">{`${t('lvl.opened')}: ${u.ranks.map((r) => ct(lang, `${u.skill}.r${r}.unlock`)).join(' · ')}`}</span>
           </li>
         ))}
       </ul>

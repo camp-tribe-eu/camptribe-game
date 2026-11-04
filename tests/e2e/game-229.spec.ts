@@ -94,6 +94,7 @@ for (const v of VIEWS) {
     const got = await items.evaluateAll((els) => els.map((e) => `${(e as HTMLElement).dataset.skill}:${(e as HTMLElement).dataset.rank}`));
     expect(got, 'ранг від дії руками серед нових').toContain('skill.mechanics:1');
     expect(got.length, 'і ранги від ходів ядра (табір, планування…)').toBeGreaterThan(1);
+    expect(got.every((g) => !g.endsWith(':0')), 'ранги ≥ 1').toBe(true);
     const mech = levelup(page).locator('[data-skill="skill.mechanics"]');
     await expect(mech).toContainText('Механіка');
     await expect(mech).toContainText('Той, хто бачить дрібниці');
@@ -102,14 +103,20 @@ for (const v of VIEWS) {
     expect(await sounds(page), 'фанфара через єдиний аудіомодуль').toContain('sfx-fanfare');
     // Кнопка в межах екрана, ≥ 44 px.
     const btn = levelup(page).locator('[data-ui="levelup-continue"]');
-    await btn.scrollIntoViewIfNeeded();
-    const r = await btn.boundingBox();
-    expect(r && r.width >= 44 && r.height >= 44 && r.x >= 0 && r.x + r.width <= v.w, `кнопка ${JSON.stringify(r)}`).toBe(true);
+    // «Далі» повністю в кадрі БЕЗ прокрутки (рецензія PR #165): у кожній орієнтації й пропорції; один рядок на навичку (без повторів).
+    const inView = async (w: number, h: number): Promise<void> => {
+      await levelup(page).evaluate((el) => { el.scrollTop = 0; });
+      const r = await btn.boundingBox();
+      expect(r && r.width >= 44 && r.height >= 44 && r.x >= 0 && r.x + r.width <= w && r.y >= 0 && r.y + r.height <= h, `кнопка ${w}×${h}: ${JSON.stringify(r)}`).toBe(true);
+    };
+    await inView(v.w, v.h);
+    expect(new Set(got.map((g) => g.split(':')[0])).size, 'одна картка на навичку').toBe(got.length);
     const top = (): Promise<void> => levelup(page).evaluate((el) => { el.scrollTop = 0; });
     await top();
     await shot(page, `levelup-${v.side}`);
     if (v.side === 'portrait') {
-      for (const s of SHAPES) { await page.setViewportSize({ width: s.w, height: s.h }); await page.waitForTimeout(250); await top(); await shot(page, `levelup-${s.name}`); }
+      for (const s of SHAPES) { await page.setViewportSize({ width: s.w, height: s.h }); await page.waitForTimeout(250); await top(); await inView(s.w, s.h); await shot(page, `levelup-${s.name}`); }
+      for (const s of [{ w: 844, h: 390 }, { w: 844, h: 475 }]) { await page.setViewportSize({ width: s.w, height: s.h }); await page.waitForTimeout(250); await inView(s.w, s.h); }
       await page.setViewportSize({ width: v.w, height: v.h });
     }
 

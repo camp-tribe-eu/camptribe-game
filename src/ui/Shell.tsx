@@ -149,6 +149,7 @@ export function Shell({ port, langOverride, credits, build, holdToast = false, h
   // Підтверджено: порт чистить гру; далі — екран подорожі, а там вибір персонажа (гри без гравця на мапі немає).
   const startNew = (): void => {
     setConfirmNew(false);
+    setUps([]);   // ранги покинутої гри не мають показатись у новій (GAME-229)
     setStatus(null);
     setCodeOut('');
     setCodeIn('');
@@ -448,7 +449,7 @@ export function Shell({ port, langOverride, credits, build, holdToast = false, h
             <textarea class="ui-code" data-ui="code-in" rows={3} aria-label={t('ui.importCode')} placeholder={t('ui.importCode')}
               value={codeIn} onInput={(e) => setCodeIn((e.currentTarget as HTMLTextAreaElement).value)} />
             <button type="button" class="ui-btn" data-ui="code-apply"
-              onClick={() => { void port.importCode(codeIn).then((r) => setStatus(({ ok: 'ui.importOk', bad: 'ui.importBad', outdated: 'ui.importOutdated', newer: 'ui.importNewer', unsaved: 'ui.importUnsaved' } as const)[r])); }}>{t('ui.apply')}</button>
+              onClick={() => { void port.importCode(codeIn).then((r) => { if (r === 'ok' || r === 'unsaved') setUps([]); setStatus(({ ok: 'ui.importOk', bad: 'ui.importBad', outdated: 'ui.importOutdated', newer: 'ui.importNewer', unsaved: 'ui.importUnsaved' } as const)[r]); }); }}>{t('ui.apply')}</button>
             {status && <p class="ui-status" data-ui="status" role="status">{t(status)}</p>}
           </fieldset>
           <fieldset>

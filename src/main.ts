@@ -51,7 +51,7 @@ import { MAP_SPOTS, departBlock, isBulky, isMapFirstSpot, mapKeyFor, moveKey, ne
 import { packFlag } from './core/packing';
 import type { GameState } from './core/state';
 import { progressOf, titleOf } from './core/progress';
-import { rankUps, type HandAction } from './core/skills';
+import { rankUps, SKILL_IDS, type HandAction } from './core/skills';
 import type { SkillUp } from './ui/overlay-order';
 import type { RewardEvent } from './ui/port';
 
@@ -147,7 +147,7 @@ const syncRanks = (): void => {
   if (!hadPlayer || g.player === null) { rebaseRanks(); return; }
   const ups = rankUps(seenSkills, g.skills);
   seenSkills = g.skills;
-  if (ups.length > 0) for (const l of skillListeners) l(ups);
+  if (ups.length > 0) for (const l of skillListeners) l(ups.map((u) => ({ ...u, order: SKILL_IDS.indexOf(u.skill) })));
 };
 /** GAME-229: дія руками закінчена — ядро записує практику (вона сама зменшує віддачу з повтором); відмову (немає персонажа) мовчки ігноруємо. */
 const handPractise = (action: HandAction): void => { bridge.send({ type: 'Practise', action }); storyChanged(); };
