@@ -68,7 +68,7 @@ for (const v of VIEWS) {
 
   test(`махає раз на добу при першому наближенні; герой на шляху надовго — «?» і обхід — ${v.side}`, async ({ page }) => {
     test.setTimeout(90_000);
-    const errors = await open(page, 80, v.w, v.h);   // Сара стоїть біля лавки під вогнищем (клітинка 3,5) з хвилини 78 до 118; герой на старті за ~80 px
+    const errors = await open(page, 78, v.w, v.h);   // Сара стоїть біля лавки під вогнищем (клітинка 3,5) з хвилини 78 до 118; герой на старті за ~80 px
     await expect.poll(async () => (await one(page, 'npc.sarah')).state, { timeout: 4_000 }).toBe('wave');
     await expect.poll(async () => (await one(page, 'npc.sarah')).emote, { timeout: 2_000 }).toBe('heart');
     await shot(page, 'wave', v.side);

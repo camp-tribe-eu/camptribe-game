@@ -343,7 +343,8 @@ export class WorldScene extends Phaser.Scene {
   private swim!: SwimRig;
   private life!: CampAlive;
   private neigh!: Neighbours;
-  private walkGrid!: Grid;   // GAME-226: живі сусіди
+  private walkGrid!: Grid;
+  private lastRes: Pt[] = [];   // GAME-226: живі сусіди
   private lifeDay = -1;
   private lifeRain = false;
   /** Набір terrain поточної мапи (перший gid і кількість тайлів) — для роду землі під ногами. */
@@ -762,6 +763,7 @@ export class WorldScene extends Phaser.Scene {
     this.probe.visitors = key === 'shop' ? onMap.map((res) => ({ id: res.id, x: 0, y: 0, moving: false })) : [];
     this.residentSprites.forEach((sp, i) => sp.setVisible(this.residentLines[i] != null));
     this.neigh.begin(key === 'camp' ? RESIDENTS.map((r) => r.id) : []);
+    this.lastRes = CAST.map(() => ({ x: 0, y: 0 }));
     this.probe.neighbours = this.neigh.probe;
     this.moveResidents(0);
     const fromMap = leisureFromObjects(objects as never, TILE);
@@ -1088,9 +1090,12 @@ export class WorldScene extends Phaser.Scene {
       if (this.current === 'camp' && i < RESIDENTS.length) {
         // GAME-226: сусід табору — стани, дорога додому, привітання (neighbours.ts); probe.residents лишається логічною точкою розкладу (game-211).
         const q = this.neigh.drive(i, s, this.walkGrid, tl, minutes, this.player ? { x: this.player.x, y: this.player.y } : null, this.lifeRain, this.residentBark?.npc === i, this.residentFacing[i] ?? 'down');
-        const movedQ = Math.hypot(q.x - out.x, q.y - out.y) > 0.05;
+        const pq = this.lastRes[i] ?? q;
+        const movedQ = Math.hypot(q.x - pq.x, q.y - pq.y) > 0.05;
+        this.lastRes[i] = { x: q.x, y: q.y };
         this.resStand[i] = movedQ || q.moving ? 0 : (this.resStand[i] ?? 0) + this.stepMs;
-        out.x = q.x; out.y = q.y; out.moving = movedQ && q.moving;
+        const sched = placeAt(this.grid, tl, minutes);   // probe.residents — ТОЧКА РОЗКЛАДУ (її звіряють картки, game-211); де сусід насправді (дім, ніч) — probe.neighbours
+        out.x = sched.x; out.y = sched.y; out.moving = sched.moving;
         return;
       }
       const p = placeAt(this.grid, tl, minutes);
