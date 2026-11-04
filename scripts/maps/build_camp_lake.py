@@ -291,6 +291,11 @@ def build_grid():
         g.layers['walls'][r * W + c] = 0
         g.put('decor', c, r, 1, *PLANK[(c + r) % 3])
 
+    # GAME-227 · пляж для купання: вода без стін у зоні SWIM_BEACH (герой пливе; слідувачі й Мія бачать її стіною в сцені, src/view/world/swim.ts).
+    for r in range(SWIM_BEACH[1], SWIM_BEACH[1] + SWIM_BEACH[3]):
+        for c in range(SWIM_BEACH[0], SWIM_BEACH[0] + SWIM_BEACH[2]):
+            g.layers['walls'][r * W + c] = 0
+
     # Валун на березі.
     g.stamp(*BOULDER, 26, 1, 'solid')
 
@@ -394,6 +399,9 @@ def build_grid():
     return g
 
 
+# GAME-227: зона пляжу (стовпець, рядок, ширина, висота) — вода озера без стін, на південь від причалу (рядок 7); якір `swim.beach` несе ці розміри.
+SWIM_BEACH = (28, 9, 6, 3)
+
 # GAME-170 зріз 2 (W4 «Вечір на трьох фронтах»): цілі справ і добра справа — точки на прохідних клітинках лівої галявини.
 # task.<справа> закриває справу хвилі дотиком; obj.litter — чужі пакети біля води (очерет озера починається з x=10).
 # Мія (task.find-mia) — під лавкою (1,6): від вогнища (3,4) ≥ 2 клітинки, від води — 8; валідатор мап доводить досяжність пішки.
@@ -457,6 +465,7 @@ TASK_SPOTS = [
     # GAME-209 · старий ящик (знахідка, відкривається явно) і лавка, яку лагодять руками (src/content/repair.ts).
     ('trace.camp-crate', 6 * 32 + 16, 1 * 32 + 16),        # (6,1) старий ящик з літерою «Г» у північній кімнаті
     ('repair.bench', 15 * 32 + 16, 7 * 32 + 16),           # (15,7) хитка лавка біля рецепції
+    ('req.wx-sunny-swim.t1', 32 * 32 + 16, 10 * 32 + 16),   # GAME-227: (32,10) буйок у глибині пляжу — сонячна справа «скупатися» (GAME-208)
 ]
 
 
@@ -467,7 +476,7 @@ ANCHORS = [
     ('obj.reception-desk', 16, 6), ('obj.sanitary-door', 24, 6),               # двори перед рецепцією й санітарним блоком
     ('obj.firewood-pile', 22, 18),                                             # лісова галявина, біля пенька-колоди
     ('crate.start', 18, 14),                                                   # GAME-209: старт ящика, що штовхається (src/content/crate-push.ts); не на стоянці мешканців
-    ('obj.water', 27, 10), ('obj.pier-end', 36, 7), ('fish.shore', 27, 12),   # fish.shore — місце риболовлі (було вписано в .tmj руками)
+    ('obj.water', 27, 10), ('obj.pier-end', 36, 7), ('fish.shore', 27, 12), ('swim.beach', 28, 9),   # fish.shore — місце риболовлі (було вписано в .tmj руками)
                              # доступ до води з берега й кінець причалу
 ]
 
@@ -493,6 +502,9 @@ def objects():
            for i, n, t, x, y in pts]
     for o, f in zip(out[-len(LEISURE):], (l[3] for l in LEISURE)):
         o['properties'] = [{'name': 'face', 'type': 'string', 'value': f}]
+    for o in out:
+        if o['name'] == 'swim.beach':
+            o['properties'] = [{'name': 'cols', 'type': 'int', 'value': SWIM_BEACH[2]}, {'name': 'rows', 'type': 'int', 'value': SWIM_BEACH[3]}]
     return out
 
 

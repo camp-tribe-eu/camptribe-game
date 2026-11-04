@@ -10,7 +10,7 @@
  "tileheight": 32,
  "infinite": false,
  "nextlayerid": 7,
- "nextobjectid": 77,
+ "nextobjectid": 79,
  "layers": [
   {
    "id": 1,
@@ -2357,12 +2357,12 @@
     0,
     0,
     0,
-    391,
-    392,
-    392,
-    392,
-    392,
-    392,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
     392,
     392,
     392,
@@ -2397,12 +2397,12 @@
     0,
     0,
     0,
-    391,
-    392,
-    392,
-    392,
-    392,
-    392,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
     392,
     392,
     392,
@@ -2437,12 +2437,12 @@
     442,
     442,
     442,
-    391,
-    392,
-    392,
-    392,
-    392,
-    392,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
     392,
     392,
     392,
@@ -4895,6 +4895,42 @@
      "point": true,
      "rotation": 0,
      "visible": true
+    },
+    {
+     "id": 77,
+     "name": "req.wx-sunny-swim.t1",
+     "type": "trigger",
+     "x": 1040,
+     "y": 336,
+     "width": 0,
+     "height": 0,
+     "point": true,
+     "rotation": 0,
+     "visible": true
+    },
+    {
+     "id": 78,
+     "name": "swim.beach",
+     "type": "anchor",
+     "x": 912,
+     "y": 304,
+     "width": 0,
+     "height": 0,
+     "point": true,
+     "rotation": 0,
+     "visible": true,
+     "properties": [
+      {
+       "name": "cols",
+       "type": "int",
+       "value": 6
+      },
+      {
+       "name": "rows",
+       "type": "int",
+       "value": 3
+      }
+     ]
     }
    ]
   }
