@@ -7,7 +7,7 @@ import { waitGameReady } from './ready';
 
 interface Progress { xp: number; om: number; keys: string[] }
 interface Core { clock: { minutes: number }; game: { player: { locationId: string } | null; flags: string[]; quests: Record<string, { status: string }>; inventory: Record<string, number>; progress?: Progress } }
-interface Fx { target: string | null; ring: number; backpack: number; pops: number; auto: number; rewards: number; rewardLast: string }
+interface Fx { target: string | null; ring: number; backpack: number; pops: number; auto: number; rewards: number; rewardLast: string; headLabels: string[] }
 interface Probe { playerX: number; playerY: number; clockMinutes: number; fx: Fx; saveLoaded: boolean }
 const core = (page: Page): Promise<Core> => page.evaluate(() => (window as unknown as { __game: { read: () => Core } }).__game.read());
 const probe = (page: Page): Promise<Probe> => page.evaluate(() => JSON.parse(JSON.stringify((window as unknown as { __game: { probe: Probe } }).__game.probe)) as Probe);
@@ -180,7 +180,7 @@ test('мутація: ?hideUi=goal — цілі на екрані немає (п
 });
 
 for (const v of VIEWS) {
-  test(`перше нове звання — ходьбою: «+N» над героєм, банер, звук, час до нього; після перезавантаження банера нема — ${v.name}`, async ({ browser }) => {
+  test(`перше нове звання — ходьбою: нагорода є (над героєм цифр нема — GAME-229), банер, звук, час до нього; після перезавантаження банера нема — ${v.name}`, async ({ browser }) => {
     test.setTimeout(540_000);
     const ctx = await browser.newContext({ viewport: { width: v.w, height: v.h }, hasTouch: true, isMobile: true });
     const page = await ctx.newPage();
@@ -216,11 +216,12 @@ for (const v of VIEWS) {
     const br = await rect(banner);
     expect(br && br.l >= 0 && br.r <= v.w && br.t >= 0 && br.b <= v.h, `банер у межах екрана ${JSON.stringify(br)}`).toBe(true);
     expect(await banner.evaluate((el) => getComputedStyle(el).pointerEvents)).toBe('none');
-    // Звук: через єдиний мікшер (ключ ui-confirmation); «+N» — сплив над героєм (лічильник проби).
+    // Звук: через єдиний мікшер (ключ ui-confirmation). GAME-229: «+N XP» над героєм більше не малюється — лише подія нагороди в пробі (rewards/rewardLast), число видно в підсумку дня й у ☰.
     expect(await sounds(page)).toContain('ui-confirmation');
     const p = await probe(page);
-    expect(p.fx.rewards, 'спливів нагороди').toBeGreaterThanOrEqual(1);
-    expect(seenPop, 'підпис спливу: «+N XP»').toMatch(/^\+\d+ XP/);
+    expect(p.fx.rewards, 'подій нагороди').toBeGreaterThanOrEqual(1);
+    expect(seenPop, 'підпис нагороди в пробі: «+N XP»').toMatch(/^\+\d+ XP/);
+    expect(p.fx.headLabels.filter((l) => /\d|XP|ОМ/.test(l)), 'над героєм ні цифр, ні нагород (GAME-229)').toEqual([]);
     await page.locator('[data-ui="recovery-close"]').click({ timeout: 800 }).catch(() => undefined);   // нагадування про код відновлення не закриває банер на знімку
     await page.screenshot({ path: shot(v.side, 'titleup') });
     // Міряємо живий час ходьби скриптом (стіна годинника, що тече лише коли гра на мапі) і число дій гравця. Ігровий годинник (clockMin) тут НЕ міра: дорога (Visit) перемотує його на хвилини маршруту.
