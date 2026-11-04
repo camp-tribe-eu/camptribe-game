@@ -13,6 +13,7 @@ import { isJournalType, type SimState } from './sim';
 import { CONDITION_MAX } from './gear';
 import { PRACTICE_SATURATION, SKILL_IDS, zeroSkills } from './skills';
 import { backfillProgress } from './progress';
+import { POINTS_CAP } from './friendship';
 import { backfillStickers, type StickerDefs } from './stickers';
 import { REJECT_CODES } from './state';
 import { paydaysThrough, type LifeDefs } from './life';
@@ -128,6 +129,10 @@ function shapeError(sim: unknown): string | null {
   if (pg !== undefined && (!isObj(pg) || !isInt(pg.xp) || !isInt(pg.om) || !sortedUniq(pg.keys) || !sortedUniq(pg.cosmetics))) return 'game: progress';
   // Наклейки (GAME-182): поле необов'язкове; є — відсортовані рядки без повторів (так пише лише ядро).
   if (game.stickers !== undefined && !sortedUniq(game.stickers)) return 'game: stickers';
+  // Дружба (GAME-230): поле необов'язкове (сейви до GAME-230 його не мають); є — очки й дні цілі ≥ 0 (очки ≤ стелі), `seen` — відсортовані рядки без повторів (так пише лише ядро).
+  const fr = game.friend;
+  if (fr !== undefined && (!isObj(fr) || !isObj(fr.pts) || !isObj(fr.gift) || !sortedUniq(fr.seen)
+    || Object.values(fr.pts).some((n) => !isInt(n) || (n as number) > POINTS_CAP) || Object.values(fr.gift).some((n) => !isInt(n)))) return 'game: friend';
   const dl = game.dialogue;
   if (dl !== null && (!isObj(dl) || typeof dl.id !== 'string' || typeof dl.node !== 'string')) return 'game: dialogue';
   const p = game.player;

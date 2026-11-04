@@ -4,7 +4,7 @@
 import { mixer as sharedMixer, type Mixer } from './index';
 import { defaultContext } from './blip';
 
-export type CampSoundName = 'plank' | 'thud' | 'leaf' | 'pop' | 'clank' | 'water' | 'splash' | 'sit' | 'paper' | 'crack' | 'clay' | 'hollow' | 'snap';
+export type CampSoundName = 'plank' | 'thud' | 'leaf' | 'pop' | 'clank' | 'water' | 'splash' | 'sit' | 'paper' | 'crack' | 'clay' | 'hollow' | 'snap' | 'bell' | 'dull';
 /** Кожен звук — короткий спад тону (from → to Гц) за ms мс; peak — частка гучності sfx. */
 export const CAMP_SPECS: Readonly<Record<CampSoundName, { readonly type: 'sine' | 'triangle' | 'square'; readonly from: number; readonly to: number; readonly ms: number; readonly peak: number }>> = {
   plank: { type: 'triangle', from: 210, to: 130, ms: 70, peak: 0.1 },   // крок по дошках пірса: дерево, порожнисто
@@ -20,6 +20,8 @@ export const CAMP_SPECS: Readonly<Record<CampSoundName, { readonly type: 'sine' 
   clay: { type: 'triangle', from: 820, to: 380, ms: 110, peak: 0.1 },   // горщик розбився (глина дзвінка й коротка)
   hollow: { type: 'sine', from: 210, to: 85, ms: 140, peak: 0.16 },     // бочка: порожнисто
   snap: { type: 'square', from: 1100, to: 520, ms: 55, peak: 0.06 },    // суха гілка тріснула
+  bell: { type: 'sine', from: 1320, to: 1180, ms: 260, peak: 0.1 },     // GAME-230: подарунок до смаку — високий дзвіночок
+  dull: { type: 'sine', from: 190, to: 120, ms: 110, peak: 0.1 },       // GAME-230: подарунок не до смаку (чи нейтральний) — глухий «тьох», без докору
 };
 
 interface CampContext {

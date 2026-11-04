@@ -85,6 +85,14 @@ export class Neighbours {
     if (id === null && this.talking !== null) { const i = this.ids.indexOf(this.talking); if (i >= 0) this.holds[i] = HOLD_FRAMES; }   // розмова скінчилась — ще мить стоїть, а не «падає» в сон посеред кадру
     this.talking = id;
   }
+  /** GAME-230: реакція на подарунок — значок над головою мешканця `id` (♥ чи «…»), той самий життєвий цикл, що в решти значків (EMOTE_FRAMES кадрів). false — такого мешканця тут нема. */
+  react(id: string, e: Emote): boolean {
+    const i = this.ids.indexOf(id);
+    const m = this.minds[i];
+    if (!m) return false;
+    this.minds[i] = { ...m, emote: e, emoteAge: 0 };
+    return true;
+  }
   /** Вогнище табору (для зсуву значків над головою); null — нема. */
   setFire(p: Pt | null): void { this.fire = p; }
   state(i: number): NState { return this.minds[i]?.state ?? 'stand'; }

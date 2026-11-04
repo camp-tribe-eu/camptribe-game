@@ -1,0 +1,49 @@
+{
+  "id": "dlg.heart-nora",
+  "scene": {
+    "titleKey": "dlg.heart-nora.title",
+    "facts": []
+  },
+  "start": "s1",
+  "nodes": [
+    {
+      "id": "s1",
+      "speaker": "player",
+      "textKey": "dlg.heart-nora.s1",
+      "next": "s2"
+    },
+    {
+      "id": "s2",
+      "speaker": "player",
+      "textKey": "dlg.heart-nora.s2",
+      "next": "s3"
+    },
+    {
+      "id": "s3",
+      "speaker": "player",
+      "textKey": "dlg.heart-nora.s3",
+      "choices": [
+        {
+          "textKey": "dlg.heart-nora.s3.c1",
+          "next": "s4"
+        },
+        {
+          "textKey": "dlg.heart-nora.s3.c2",
+          "next": "s4"
+        }
+      ]
+    },
+    {
+      "id": "s4",
+      "speaker": "player",
+      "textKey": "dlg.heart-nora.s4",
+      "next": "s5"
+    },
+    {
+      "id": "s5",
+      "speaker": "player",
+      "textKey": "dlg.heart-nora.s5",
+      "end": true
+    }
+  ]
+}

@@ -389,5 +389,7 @@
   "life.find.twig": "+1 Twig",
   "life.hint.smash": "Smash: E or ●",
   "life.hint.branch": "Shake the branch: E or ●",
-  "life.board": "Notice board: quiet hours 10 pm to 7 am. Rubbish in the bins, campfire never unattended. Enjoy your stay!"
+  "life.board": "Notice board: quiet hours 10 pm to 7 am. Rubbish in the bins, campfire never unattended. Enjoy your stay!",
+  "act.gift": "Give",
+  "ui.gift.open": "Give a gift"
 }

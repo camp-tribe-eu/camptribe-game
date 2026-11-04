@@ -4,6 +4,7 @@ import type { GearState } from './gear';
 import type { LifeState } from './life';
 import type { WaveState } from './wave';
 import type { ProgressState } from './progress';
+import type { FriendState } from './friendship';
 import { zeroSkills } from './skills';
 
 export interface CommandRecord {
@@ -92,6 +93,11 @@ export interface GameState {
    * backfillStickers). Похідне від прапорців і квестів — у ключі ходів не бере участі (moves.ts, PROGRESS_IGNORED).
    */
   readonly stickers?: readonly string[];
+  /**
+   * Дружба з мешканцями (GAME-230): очки, день останнього подарунка й зіграні сцени серця. Поля немає — нічого ще не було (сейви до GAME-230
+   * читаються без міграції версії). Похідне від уже відомого перебору станів нічого не змінює — у ключі ходів не бере участі (moves.ts, PROGRESS_IGNORED).
+   */
+  readonly friend?: FriendState;
 }
 
 export const REJECT_CODES = [

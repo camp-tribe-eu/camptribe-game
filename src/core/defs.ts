@@ -5,6 +5,7 @@ import { isSkillId, MAX_RANK, type SkillId } from './skills';
 import type { LifeDefs } from './life';
 import type { AtlasPageRule } from './atlas-fill';
 import type { StickerDefs } from './stickers';
+import type { FriendDefs } from './friendship';
 
 export interface ItemDef {
   /** Ціна купівлі, центи; немає — предмет не продається. */
@@ -308,6 +309,8 @@ export interface CoreDefs {
   readonly packing?: PackingDefs;
   /** Наклейки Атласу (GAME-182, content/stickers.json): умови видачі. Немає — наклейок немає. */
   readonly stickers?: StickerDefs;
+  /** Дружба й подарунки (GAME-230, content/npcs.json → gifts/heart). Немає — подарунків і сцен серця немає. */
+  readonly friendship?: FriendDefs;
   /** GAME-200: сторінки Атласу з нагородою за повне заповнення (src/content/stickers.ts). Немає — нагород немає. */
   readonly atlasPages?: readonly AtlasPageRule[];
 }

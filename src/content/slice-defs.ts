@@ -9,6 +9,7 @@ import { STORY } from './story';
 import { LIFE } from './life';
 import { WAVES } from './waves';
 import { ATLAS_PAGES, STICKER_DEFS } from './stickers';
+import { FRIEND_DEFS } from './friendship';
 import { SIDE_INTERACTIONS } from './side';
 
 /** Крамниця гри (GAME-81): єдина локація, де продається спорядження. Неіснуючий id ловить checkDefs (DEFS_BAD_REF). */
@@ -70,4 +71,4 @@ export const PACKING: PackingDefs = compilePacking(packing as RawPacking);
  * Те, з чим працює гра: зріз + сюжет + календар життя (GAME-71). Перевіряється й заморожується в містку (createBridge).
  * Календар читає лише симуляція (зарплата) і команди BookLeave/CancelLeave — у ходах перебору (moves.ts) їх немає.
  */
-export const GAME_DEFS: CoreDefs = { ...SLICE_DEFS, story: STORY, life: LIFE, packing: PACKING, waves: WAVES, stickers: STICKER_DEFS, atlasPages: ATLAS_PAGES };
+export const GAME_DEFS: CoreDefs = { ...SLICE_DEFS, story: STORY, life: LIFE, packing: PACKING, waves: WAVES, stickers: STICKER_DEFS, atlasPages: ATLAS_PAGES, friendship: FRIEND_DEFS };

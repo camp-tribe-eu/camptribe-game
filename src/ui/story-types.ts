@@ -6,7 +6,7 @@ import type { Key } from '../i18n';
 export interface OfferAction {
   readonly id: string;
   /** `task` — справа живої хвилі з екрана подорожі (GAME-170 зріз 3: дім, зупинка в дорозі — локації без мапи). */
-  readonly kind: 'visit' | 'talk' | 'pickup' | 'buy' | 'sell' | 'dry' | 'complete' | 'decline' | 'choose' | 'continue' | 'pack' | 'unpack' | 'autopack' | 'task' | 'cancel';
+  readonly kind: 'visit' | 'talk' | 'pickup' | 'buy' | 'sell' | 'dry' | 'complete' | 'decline' | 'choose' | 'continue' | 'pack' | 'unpack' | 'autopack' | 'task' | 'cancel' | 'gift';
   readonly key: string | null;
   readonly priceCents?: number;
   /** Скільки хвилин займе дорога (GAME-31); немає — дія на місці. */
@@ -143,7 +143,9 @@ export interface StoryOffer {
     /** GAME-183: `key` — ключ UI (src/i18n), а не контенту: рамка вибору дії на мапі («Куди їдемо?»), а не репліка; остання відповідь — «Не зараз». */
     readonly ui?: boolean;
     /** GAME-180: вузол пропозиції прохання — картка (портрет просильника є в рамці; тут що зробити, цілі-картинки й нагорода). */
-    readonly request?: OfferRequestCard } | null;
+    readonly request?: OfferRequestCard;
+    /** GAME-230: що герой може подарувати співрозмовнику (кнопка «Подарувати» розгортає цей список); немає — нічого дарувати чи сьогодні вже дарував. */
+    readonly gifts?: readonly OfferAction[] } | null;
   readonly actions: readonly OfferAction[];
   /** Пакування перед дорогою; null — зараз закрите. */
   readonly packing: OfferPacking | null;

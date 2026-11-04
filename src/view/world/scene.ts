@@ -21,6 +21,9 @@ import { ICON_SIZE, iconIndex, objectiveIcon } from '../../content/objective-ico
 import { playUi } from '../../audio/ui-sounds';
 import { nightSounds } from '../../audio/night-sounds';
 import { sfx } from '../../audio/sfx';
+import { campSounds, playCamp } from '../../audio/camp-sounds';
+import type { GiftReaction } from '../../core/friendship';
+import { giftEmote, giftSound, nextPoseAge, poseColumn } from './gift-fx';
 import { MapFx, type Needs } from './map-fx';
 import { bandOverHero, nextCanopyAlpha } from './canopy';
 import { findWindows, patchAlpha, patchQuads } from './light-patches';
@@ -145,6 +148,12 @@ export interface WorldHooks {
   tentAlone?(): boolean;
   /** GAME-216: чи зіграти заставку першого приїзду в табір (камера: герой → озеро → табір → герой, ≤ 10 с, будь-який дотик виходить). Немає — ніколи. */
   campReveal?(): boolean;
+  /** GAME-230: подарунок щойно вручено — хто (id мешканця) і як відреагував; забирає його (наступний виклик — null). Реакція — лише вигляд і звук, очки веде ядро. */
+  takeGift?(): { readonly npc: string; readonly reaction: GiftReaction } | null;
+  /** GAME-230: щокадру в таборі — чи час для сцени серця; main її відкриває (HeartEvent), сцена нічого не вирішує. */
+  heart?(): void;
+  /** GAME-230: герой підняв шишку чи ягоду в таборі — main кладе її в інвентар (Forage), щоб її можна було подарувати. */
+  onForage?(kind: 'cone' | 'berry'): void;
 }
 
 /** Хто з NPC якого листа ходьби має (лист — в art.ts); решта — як Еліза. */
@@ -232,6 +241,8 @@ export interface WorldProbe {
   fish: FishProbe;
   /** GAME-216 (лише для e2e): заставка приїзду в табір триває (камера не на героєві). */
   reveal: boolean;
+  /** GAME-230 (лише для e2e): подарунки — скільки реакцій показано, остання (мешканець, реакція, значок), кадр пози героя (-1 — не вручає) і звуки (останні). */
+  gift: { count: number; npc: string | null; reaction: string | null; emote: string | null; poseAge: number; poseColumn: number | null; sounds: string[] };
   /** GAME-206 (лише для e2e): живі дрібниці — скільки іскор, пилу, диму, стебел намальовано в кадрі; чи гойдається авто; чи режим спокою. */
   live: LiveProbe;
   /** GAME-227 (лише для e2e): купання — стан під ногами (суша/мілина/глибина), гойдання, кола, краплі, мокрі сліди, звуки; Мія на воді (мусить бути 0). */
@@ -313,6 +324,10 @@ export class WorldScene extends Phaser.Scene {
   private idleS = 0;
   /** GAME-191: дія героя, що зараз програється (slash / thrust / cast); null — ходьба й стояння як завжди. */
   private acting: HeroAction | null = null;
+  /** GAME-230: кадр пози «вручаю подарунок» (-1 — поза не триває). Рахується кадрами гри. */
+  private giftAge = -1;
+  /** GAME-230: скільки шишок і ягід уже передано в інвентар (лічильник риґу показує зібране, тут — що з нього вже в ядрі). */
+  private foraged = { cones: 0, berries: 0 };
   private leisure: (LeisureSpot | null)[] | null = null;
   private leisureSpots: LeisureSpot[] = [];
   private heading: Pt = { x: 0, y: 0 };
@@ -518,6 +533,35 @@ export class WorldScene extends Phaser.Scene {
       this.player.setTexture('player', frameIndex(this.facing, 0));
     });
     return true;
+  }
+
+  /** GAME-230: реакція на подарунок і поза героя — покадрово (30 кадрів), без таймерів. Поки поза триває, ходьба її скасовує. */
+  private stepGift(): void {
+    const c = this.life.collected;
+    if (c.cones < this.foraged.cones) this.foraged.cones = c.cones;   // лічильник риґу почався знову (нова мапа) — не дублюємо
+    if (c.berries < this.foraged.berries) this.foraged.berries = c.berries;
+    while (this.foraged.cones < c.cones) { this.foraged.cones++; this.hooks.onForage?.('cone'); }
+    while (this.foraged.berries < c.berries) { this.foraged.berries++; this.hooks.onForage?.('berry'); }
+    const g = this.hooks.takeGift?.();
+    if (g) {
+      const i = RESIDENTS.findIndex((r) => r.id === g.npc);
+      const s = i >= 0 ? this.residentSprites[i] : undefined;
+      const emote = giftEmote(g.reaction);
+      if (this.neigh.react(g.npc, emote)) {
+        playCamp(giftSound(g.reaction));
+        this.probe.gift.count++; this.probe.gift.npc = g.npc; this.probe.gift.reaction = g.reaction; this.probe.gift.emote = emote; this.probe.gift.sounds = campSounds.played.slice(-4);
+      }
+      if (s && !this.acting) { this.facing = facingToward(this.player, { x: s.x, y: s.y }); this.giftAge = 0; }
+    }
+    if (this.giftAge >= 0) {
+      const col = poseColumn(this.giftAge);
+      if (this.acting || col === null) this.giftAge = -1;
+      else this.player.setTexture('player-thrust', DIR_ROW[this.facing] * ACTION_COLS.thrust + col);
+      if (this.giftAge >= 0) this.giftAge = nextPoseAge(this.giftAge);
+      if (this.giftAge < 0) this.player.setTexture('player', frameIndex(this.facing, 0));
+    }
+    this.probe.gift.poseAge = this.giftAge;
+    this.probe.gift.poseColumn = this.giftAge >= 0 ? poseColumn(this.giftAge) : null;
   }
 
   /** GAME-228: де зараз тварини (кішка Мія): дія їх ніколи не б'є — вони лише передаються вибору цілі, який їх відкидає. */
@@ -1580,6 +1624,8 @@ export class WorldScene extends Phaser.Scene {
     this.updateDaylight(time);
     this.stepMs = delta;
     this.moveResidents(time);
+    this.stepGift();
+    this.hooks.heart?.();
     this.updateNpcMarks(time);
     this.updateEmotes(time, delta, moving || v.x !== 0 || v.y !== 0);
 

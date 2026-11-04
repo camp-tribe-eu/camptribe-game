@@ -138,6 +138,10 @@ export const SCHEMAS = {
   // schedule.<пора>.zone — зона табору (ZONES у src/view/world/ambient.ts), лише для мешканців; збіг із розкладом руху звіряє юніт-тест.
   npcs: obj({
     id: req(str), nameKey: req(str), locationId: req(str), unlockedBy: str, sells: arr(str), when, follows: bool,
+    // gifts/heart (GAME-230): що мешканець любить/не любить із подарунків (id предметів) і сцена серця (діалог зі `scene`) за `at` серць (1…5).
+    // Узгодженість (предмет існує, любить ≥ 1, сцена справді сцена й єдина) стереже перевірка gifts кодами GIFT_PREF_INVALID / HEART_EVENT_INVALID.
+    gifts: obj({ likes: arr(str), dislikes: arr(str) }),
+    heart: obj({ scene: str, at: { t: 'int', min: 1, max: 5 } }),
     card: obj({
       habit: str, likes: str, dislikes: str, dream: str, phrases: arr(str),
       schedule: obj({ morning: obj({ textKey: str, zone: str }), day: obj({ textKey: str, zone: str }), evening: obj({ textKey: str, zone: str }) }),

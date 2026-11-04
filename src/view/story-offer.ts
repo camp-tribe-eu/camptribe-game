@@ -38,6 +38,7 @@ import { waveView } from '../core/wave';
 import type { Key } from '../i18n';
 import { liveRequestSpot as liveSpotFor, REQUEST_LOCATION } from '../content/requests';
 import { miaState } from '../content/mia';
+import { giftOptions } from '../content/friendship';
 import { photoPage } from '../content/photos';
 import { henryPage, isTraceSpot, liveTraceSpot } from '../content/traces';
 import { isRequestSpot, offerNodeOf, REQUESTS, requestOf, requestStatus, requestDoneFlags, requestTarget, trackerRows } from '../content/requests';
@@ -420,7 +421,18 @@ export function storyOffer(sim: SimState, defs: CoreDefs, view: StoryView = PANE
     const card = rq && s.dialogue.node === offerNodeOf(rq) && requestStatus(s.flags, rq) === 'available'
       ? { id: rq.id, titleKey: rq.titleKey, goalKey: rq.goalKey, goals: rq.targets.map((t) => ({ icon: t.icon, labelKey: t.labelKey })), reward: rq.reward }
       : undefined;
-    dialogue = { speakerKey, speakerId, key: node?.textKey ?? null, answers: offered, ...(card ? { request: card } : {}) };
+    // GAME-230: «Подарувати» — що з триманого герой може вручити саме цьому мешканцю зараз (без останніх дров, потрібних квесту, і не вдруге за день). Команди дару в перебір не входять.
+    const gifts: OfferAction[] = [];
+    if (view.mapFirst && npcId !== undefined && defs.friendship) {
+      for (const itemId of giftOptions(s, npcId, dayOf(sim.clock), defs.friendship)) {
+        const m = { type: 'GiveGift', npcId, itemId } as Move;
+        if (!dispatch(s, { ...m, commandId: nextCommandId(s) } as Command, defs, undefined, dayOf(sim.clock)).ok) continue;
+        const a: OfferAction = { id: `gift|${npcId}|${itemId}`, kind: 'gift', key: nameKey(itemId) };
+        intents.set(a.id, m);
+        gifts.push(a);
+      }
+    }
+    dialogue = { speakerKey, speakerId, key: node?.textKey ?? null, answers: offered, ...(card ? { request: card } : {}), ...(gifts.length > 0 ? { gifts } : {}) };
   }
 
   // GAME-183: об'єкт мапи питає «що саме?» — варіанти в рамці вибору (те саме місце, що рамка розмови), а не кнопки ☰. Лише на мапі й без розмови.

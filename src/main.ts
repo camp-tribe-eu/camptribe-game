@@ -48,6 +48,8 @@ import { portraitFor } from './view/portraits';
 import { headCrop, sheetOf } from './view/world/portrait-art';
 import { miaSpots, requestMarker, requestTarget, requestsDone } from './content/requests';
 import { errandMove, plannedErrands } from './content/errands';
+import { FORAGE_ITEMS, heartDue, reactionFor } from './content/friendship';
+import type { GiftReaction } from './core/friendship';
 import { MAP_SPOTS, departBlock, isBulky, isMapFirstSpot, mapKeyFor, moveKey, needsLeft, nextTarget, npcLive, resolveSpot, spotLook, unpackMoves } from './content/map-first';
 import { packFlag } from './core/packing';
 import type { GameState } from './core/state';
@@ -59,7 +61,7 @@ import type { RewardEvent } from './ui/port';
 const app = document.querySelector<HTMLElement>('#app');
 if (!app) throw new Error('#app is missing');
 
-const probe: WorldProbe = { ready: false, reveal: false, playerX: 0, playerY: 0, nearObject: null, nearKind: null, commandsSent: 0, cameraScrollX: 0, cameraScrollY: 0, clockMinutes: 0, saveLoaded: false, cameraLerp: [0, 0], followers: [], leisure: [], jobs: [],
+const probe: WorldProbe = { ready: false, reveal: false, gift: { count: 0, npc: null, reaction: null, emote: null, poseAge: -1, poseColumn: null, sounds: [] }, playerX: 0, playerY: 0, nearObject: null, nearKind: null, commandsSent: 0, cameraScrollX: 0, cameraScrollY: 0, clockMinutes: 0, saveLoaded: false, cameraLerp: [0, 0], followers: [], leisure: [], jobs: [],
   playerFrame: 0, playerDir: 'down', playerMoving: false, playerDepth: 0, coveredTiles: 0, behindTiles: 0, canopy: { bands: 0, over: 0, minAlpha: 1 }, light: { patches: 0, depth: 0, alpha: 0 }, lamps: { count: 0, on: false, alpha: 0, radius: 0 }, fps: 0, fpsWindows: 0, firstFrameMs: 0,
   residents: [], neighbours: [], visitors: [], bark: null, barkCount: 0, npcMarks: {}, miaAt: [], tent: TENT_PROBE_IDLE, wood: WOOD_PROBE_IDLE, crate: CRATE_PROBE_IDLE, fire: FIRE_PROBE_IDLE, grill: GRILL_PROBE_IDLE, fish: FISH_PROBE_IDLE, live: LIVE_PROBE_IDLE, swim: SWIM_PROBE_IDLE, camp: CAMP_PROBE_IDLE,
   daylight: { on: false, visible: false, minuteOfDay: 0, darkness: 0, color: 0xffffff, glow: 0 },
@@ -195,6 +197,9 @@ const onFish = (keep: boolean): void => {
   try { bridge.send(m); storyChanged(); } finally { mapTalk = false; }
   for (const l of switches.panelActs ? openListeners : talkListeners) l();
 };
+let giftFx: { npc: string; reaction: GiftReaction } | null = null;
+let heartFor: object | null = null;
+let heartMin = -1;
 const actOnMap = (name: string): void => {
   if (switches.breakSpot.includes(name)) return;
   // GAME-175: об'єкти дня 1 удома (крок, річ, полиця, авто, багажник) — ті самі команди ядра, що були кнопками панелі (src/content/map-first.ts).
@@ -294,6 +299,20 @@ const worldHooks: WorldHooks = {
   },
   hintPoke: () => hintIdle.poke(),
   onNpc: talkOnMap,
+  // GAME-230: реакція на щойно вручений подарунок (одноразово) і гачок сцени серця (раз на стан ядра й хвилину, а не на кадр).
+  takeGift: () => { const g = giftFx; giftFx = null; return g; },
+  heart: () => {
+    const g = bridge.state.game;
+    const min = bridge.state.clock.minutes;
+    if (heartFor === g && heartMin === min) return;
+    heartFor = g; heartMin = min;
+    const npc = heartDue(g, min);
+    if (npc === null || switches.hideUi.length > 0) return;
+    mapTalk = true;
+    try { bridge.send({ type: 'HeartEvent', npcId: npc }); storyChanged(); } finally { mapTalk = false; }
+    for (const l of talkListeners) l();
+  },
+  onForage: (kind) => { bridge.send({ type: 'Forage', itemId: kind === 'cone' ? FORAGE_ITEMS.cone : FORAGE_ITEMS.berry }); },
   // GAME-179: з ким можна говорити саме зараз — те саме, що прийме ядро (NPC тут, відкритий, розмови нема); «!» — гачок прохань GAME-180.
   talk: (id) => (npcLive(bridge.state.game, GAME_DEFS, id) ? { request: requestMarker(bridge.state.game, id) } : null),
   onObject: actOnMap,
@@ -438,7 +457,10 @@ render(h(Shell, {
       const last = trip?.moves.at(-1);
       const seq = trip?.confirm && last !== undefined && moveKey(last) === moveKey(intent) ? trip.moves : [intent];
       choiceSpot = null;
+      const before = bridge.state.game.friend?.gift;
       for (const m of seq) bridge.send(m);
+      // GAME-230: подарунок прийнято ядром (день подарунка змінився) — показати реакцію; відмова нічого не показує.
+      if (intent.type === 'GiveGift' && bridge.state.game.friend?.gift !== before && bridge.state.game.friend?.gift[intent.npcId] !== undefined) giftFx = { npc: intent.npcId, reaction: reactionFor(intent.npcId, intent.itemId) };
       storyChanged();
     },
     onStory(listener: () => void) {
