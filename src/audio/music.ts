@@ -27,7 +27,7 @@ export const MUSIC_BY_MAP: Readonly<Record<MapKey, MusicTrack | 'silence' | 'by-
   camp: 'by-daylight',
 };
 
-/** Вечірня тема табору — від сутінків (19:30 за daylight.ts мінус пів години, щоб музика вела настрій) до світанку. */
+/** Вечірня тема табору — від вечора (сутінки daylight.ts починаються о 17:50; музика вмикається о 19:00, коли вже видно синій) до світанку. */
 export const EVENING_FROM_MINUTE = 19 * 60;
 export const MORNING_FROM_MINUTE = 6 * 60 + 30;
 export const isEveningMinute = (minuteOfDay: number): boolean => {
