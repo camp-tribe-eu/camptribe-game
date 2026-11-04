@@ -9,6 +9,7 @@
 // * предмет здобувається з `items` локації, де стоїть гравець, або з нагороди квесту;
 // * перехід із `choiceKey` — вибір гравця; без нього — шлях за замовчуванням;
 // * `requires` квесту-цілі перевіряється в мить переходу.
+import type { FriendState } from './friendship';
 import type { LifeState } from './life';
 import type { CondDef, EffectDef, QuestDef, RewardDef, StoryDefs, WayDef, WhenDef } from './defs';
 import type { GameEvent } from './commands';
@@ -70,6 +71,7 @@ export interface StoryDraft {
   progress?: ProgressState;
   /** Наклейки Атласу (GAME-182); поля немає — жодної ще немає. */
   stickers?: readonly string[];
+  friend?: FriendState;
 }
 
 const own = <T>(o: Readonly<Record<string, T>>, k: string): T | undefined => (Object.hasOwn(o, k) ? o[k] : undefined);

@@ -1164,6 +1164,38 @@ export const CHECKS = [
     },
   },
   {
+    id: 'gifts',
+    run(c) { // @check:gifts
+      // GAME-230: подарунки й сцена серця — договір між даними й ядром (src/core/friendship.ts). Без «любить» дружби не підняти подарунком; сцена, якої нема, ніколи не зіграється.
+      // Ціна хибного спрацювання (закон 5): автор правит один рядок npcs.json. Ціна пропуску — мертві серця: сцена, до якої не дійти, і подарунок, що ніколи не радує.
+      const out = [];
+      const items = new Set((c.content.items ?? []).map((i) => i.id));
+      const scenes = new Map((c.content.dialogues ?? []).filter((d) => d.scene !== undefined && d.npcId === undefined && d.trigger === undefined).map((d) => [d.id, d]));
+      const used = new Map();
+      for (const n of c.content.npcs ?? []) {
+        const g = n.gifts;
+        if (g !== undefined) {
+          const likes = g.likes ?? [];
+          const dislikes = g.dislikes ?? [];
+          if (likes.length === 0) out.push(I('GIFT_PREF_INVALID', `${n.id}.gifts.likes`, 'мешканець нічого не любить із подарунків — дружби не підняти'));
+          for (const [kind, list] of [['likes', likes], ['dislikes', dislikes]]) {
+            if (new Set(list).size !== list.length) out.push(I('GIFT_PREF_INVALID', `${n.id}.gifts.${kind}`, 'предмет у списку двічі'));
+            for (const it of list) if (!items.has(it)) out.push(I('GIFT_PREF_INVALID', `${n.id}.gifts.${kind}`, `предмет «${it}» відсутній у items.json`));
+          }
+          for (const it of likes) if (dislikes.includes(it)) out.push(I('GIFT_PREF_INVALID', `${n.id}.gifts`, `«${it}» і любимий, і небажаний одночасно`));
+        }
+        const h = n.heart;
+        if (h !== undefined) {
+          if (g === undefined) out.push(I('HEART_EVENT_INVALID', `${n.id}.heart`, 'сцена серця без gifts: серць не набрати подарунками'));
+          if (!scenes.has(h.scene)) out.push(I('HEART_EVENT_INVALID', `${n.id}.heart.scene`, `«${h.scene}» — не діалог-сцена (потрібен dialogue зі scene, без npcId і trigger)`));
+          if (used.has(h.scene)) out.push(I('HEART_EVENT_INVALID', `${n.id}.heart.scene`, `сцену «${h.scene}» уже має ${used.get(h.scene)}`));
+          used.set(h.scene, n.id);
+        }
+      }
+      return out;
+    },
+  },
+  {
     id: 'stickers',
     run(c) { // @check:stickers
       // GAME-182: наклейка Атласу видається ядром за умовою з content/stickers.json — без умови вона або не видалась би ніколи, або видалась би всім одразу.

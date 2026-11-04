@@ -14,6 +14,7 @@ import { applyWave, type WaveCommand } from './wave';
 import { award, awardsFor } from './progress';
 import { atlasAwards } from './atlas-fill';
 import { grantStickers } from './stickers';
+import { addPoints, canGiftToday, giveGift, heartEventDue, markHeartSeen, reactionOf, REQUEST_POINTS } from './friendship';
 
 export type { StoryCommand } from './story';
 export type { WaveCommand } from './wave';
@@ -40,7 +41,13 @@ export type Command =
   | { readonly type: 'UnpackItem'; readonly commandId: string; readonly itemId: string }
   | { readonly type: 'AutoPack'; readonly commandId: string }
   /** Практика руками (GAME-229): дія на мапі (сокира, кілок, вудка…) вчить навичку з таблиці HAND_ACTIONS. Нічого, крім досвіду, не змінює. */
-  | { readonly type: 'Practise'; readonly commandId: string; readonly action: string };
+  | { readonly type: 'Practise'; readonly commandId: string; readonly action: string }
+  /** Подарунок мешканцю табору (GAME-230): предмет з інвентаря, не більше одного на NPC за день; реакцію й очки дає каталог дружби (ніколи не мінус). */
+  | { readonly type: 'GiveGift'; readonly commandId: string; readonly npcId: string; readonly itemId: string }
+  /** Збір дару природи (GAME-230): шишка чи ягода, яку герой підняв у таборі, лягає в інвентар (лише предмети з `friendship.forage`). */
+  | { readonly type: 'Forage'; readonly commandId: string; readonly itemId: string }
+  /** Сцена серця (GAME-230): серць достатньо й сцена ще не грана — відкрити її й записати «зіграно» (удруге — CONDITION_FAILED). */
+  | { readonly type: 'HeartEvent'; readonly commandId: string; readonly npcId: string };
 
 /** Підтверджений факт (CR-031). Причина — commandId команди, що його спричинила. */
 export type GameEvent =
@@ -174,6 +181,53 @@ function apply(cmd: Command, d: Draft, defs: CoreDefs, guard: Safeguards, today:
         type: 'RewardGranted', commandId: cmd.commandId, targetId: cmd.targetId,
         grantId: def.grantId, moneyCents: def.moneyCents, items: (def.items ?? []).map((i) => ({ ...i })),
       });
+      return null;
+    }
+    case 'GiveGift': {
+      if (!isContentId(cmd.npcId) || !isContentId(cmd.itemId)) return 'INVALID_COMMAND';
+      if (today === undefined) return 'INVALID_COMMAND';   // без годинника «сьогодні» невідоме — ліміт «раз на день» не обчислити
+      const fr = defs.friendship;
+      if (!fr) return 'UNKNOWN_TARGET';
+      if (!d.player) return 'NO_CHARACTER';
+      const prefs = own(fr.prefs, cmd.npcId);
+      const npc = defs.story ? own(defs.story.npcs, cmd.npcId) : undefined;
+      if (!prefs || !npc) return 'UNKNOWN_TARGET';
+      if (d.player.locationId !== npc.locationId) return 'NOT_HERE';
+      if (!fr.giftable.includes(cmd.itemId)) return 'UNKNOWN_ITEM';
+      const have = own(d.inventory, cmd.itemId) ?? 0;
+      if (have < 1) return 'ITEM_NOT_OWNED';
+      if (!canGiftToday(d.friend, cmd.npcId, today)) return 'GRANT_ALREADY_GIVEN';
+      // Останній примірник, потрібний активному квесту, не дарується (як і не продається): інакше квест не завершити.
+      if (have === 1 && defs.story && questNeedsItem(defs.story, d, d.player, cmd.itemId)) return 'ITEM_QUEST_LOCKED';
+      d.inventory = have === 1 ? Object.fromEntries(Object.entries(d.inventory).filter(([k]) => k !== cmd.itemId)) : { ...d.inventory, [cmd.itemId]: have - 1 };
+      d.friend = giveGift(d.friend, cmd.npcId, reactionOf(prefs, cmd.itemId), today);
+      // Подарунок — гарний привід закінчити розмову: рамка зникає, світ іде далі, і гравець бачить реакцію (♥ чи «…») та позу вручення, а не рамку поверх мапи.
+      if (d.dialogue !== null && defs.story && own(defs.story.dialogues, d.dialogue.id)?.npcId === cmd.npcId) d.dialogue = null;
+      return null;
+    }
+    case 'Forage': {
+      if (!isContentId(cmd.itemId)) return 'INVALID_COMMAND';
+      const fr = defs.friendship;
+      if (!fr || !fr.forage.includes(cmd.itemId)) return 'UNKNOWN_ITEM';
+      if (!d.player) return 'NO_CHARACTER';
+      const have = own(d.inventory, cmd.itemId) ?? 0;
+      if (have >= FORAGE_CAP) return 'INVALID_AMOUNT';
+      d.inventory[cmd.itemId] = have + 1;
+      return null;
+    }
+    case 'HeartEvent': {
+      if (!isContentId(cmd.npcId)) return 'INVALID_COMMAND';
+      const fr = defs.friendship;
+      if (!fr) return 'UNKNOWN_TARGET';
+      if (!d.player) return 'NO_CHARACTER';
+      const ev = own(fr.heart, cmd.npcId);
+      const npc = defs.story ? own(defs.story.npcs, cmd.npcId) : undefined;
+      if (!ev || !npc) return 'UNKNOWN_TARGET';
+      if (d.player.locationId !== npc.locationId) return 'NOT_HERE';
+      if (!heartEventDue(d.friend, fr, cmd.npcId)) return 'CONDITION_FAILED';
+      const bad = applyStory({ type: 'StartScene', commandId: cmd.commandId, sceneId: ev.scene, facts: [] }, d, defs.story, isContentId, guard.grantId);
+      if (bad) return bad;
+      d.friend = markHeartSeen(d.friend, cmd.npcId);
       return null;
     }
     case 'Practise': {
@@ -328,6 +382,8 @@ function practiseAfter(cmd: Command, before: GameState, d: Draft, defs: CoreDefs
  * id видає місток із `seq` і не повторює.
  */
 export const PROCESSED_LIMIT = 256;
+/** Скільки одного дару природи можна носити (GAME-230): інвентар і сейв не ростуть без меж. */
+export const FORAGE_CAP = 20;
 
 /** Додати запис і відкинути найстаріші (порядок вставки ключів зберігається й у JSON сейву). */
 function remember(processed: Readonly<Record<string, CommandRecord>>, id: string, rec: CommandRecord): Record<string, CommandRecord> {
@@ -362,6 +418,7 @@ export function dispatch(state: GameState, cmd: Command, defs: CoreDefs, guard: 
     ...(state.wave !== undefined ? { wave: state.wave } : {}),
     ...(state.progress !== undefined ? { progress: state.progress } : {}),
     ...(state.stickers !== undefined ? { stickers: state.stickers } : {}),
+    ...(state.friend !== undefined ? { friend: state.friend } : {}),
   };
   const code = apply(cmd, draft, defs, guard, today, weather, now);
   // Стан спорядження — лише для того, що в руках (продали останній — запис зникає), і лише відхилення від нового.
@@ -382,6 +439,9 @@ export function dispatch(state: GameState, cmd: Command, defs: CoreDefs, guard: 
   if (!code) {
     for (const r of defs.story?.requestRewards ?? []) {
       if (!draft.flags.includes(r.flag) || state.flags.includes(r.flag)) continue;
+      // GAME-230: здане прохання — очки дружби просильнику (прапорець «здано» з'являється раз, тож і очки раз).
+      const giver = defs.friendship ? own(defs.friendship.requestGivers, r.flag) : undefined;
+      if (giver !== undefined) draft.friend = addPoints(draft.friend, giver, REQUEST_POINTS);
       const before = draft.progress;
       const p = award(draft.progress, [{ key: r.key, xp: r.xp, om: r.om }], guard.award !== false);
       if (p !== undefined) draft.progress = p;

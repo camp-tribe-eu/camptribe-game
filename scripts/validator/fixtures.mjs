@@ -480,6 +480,16 @@ export const FIXTURES = [
   { name: '[картка] одна фірмова фраза замість 2–3', expect: ['NPC_CARD_PHRASES'], rawCards: true, patch(c) { c.npcs[0].card.phrases = [c.npcs[0].card.phrases[0]]; } },
   { name: '[картка] чотири фірмові фрази', expect: ['NPC_CARD_PHRASES'], rawCards: true, patch(c) { c.npcs[0].card.phrases.push('card.fixture.habit', 'card.fixture.likes'); } },
   { name: '[картка] фрази повторюються', expect: ['NPC_CARD_PHRASES'], rawCards: true, patch(c) { c.npcs[0].card.phrases = ['card.fixture.phrase1', 'card.fixture.phrase1']; } },
+  // GAME-230 · подарунки й сцена серця (npcs[].gifts / heart): контроль, і по мутації на кожну гілку перевірки
+  { name: '[дружба] контроль: вподобання й сцена серця — коректно', expect: [], patch(c) { withScene(c); c.npcs[0].gifts = { likes: ['item.gift'], dislikes: ['item.map'] }; c.npcs[0].heart = { scene: 'dlg.fixture-fire', at: 2 }; } },
+  { name: '[дружба] МУТАЦІЯ: мешканець нічого не любить', expect: ['GIFT_PREF_INVALID'], count: { code: 'GIFT_PREF_INVALID', n: 1 }, patch(c) { c.npcs[0].gifts = { likes: [], dislikes: ['item.map'] }; } },
+  { name: '[дружба] предмет вподобання відсутній', expect: ['GIFT_PREF_INVALID'], patch(c) { c.npcs[0].gifts = { likes: ['item.nothing'], dislikes: [] }; } },
+  { name: '[дружба] предмет і любимий, і небажаний', expect: ['GIFT_PREF_INVALID'], patch(c) { c.npcs[0].gifts = { likes: ['item.gift'], dislikes: ['item.gift'] }; } },
+  { name: '[дружба] предмет у списку двічі', expect: ['GIFT_PREF_INVALID'], patch(c) { c.npcs[0].gifts = { likes: ['item.gift', 'item.gift'], dislikes: [] }; } },
+  { name: '[дружба] МУТАЦІЯ: сцена серця не існує', expect: ['HEART_EVENT_INVALID'], count: { code: 'HEART_EVENT_INVALID', n: 1 }, patch(c) { c.npcs[0].gifts = { likes: ['item.gift'], dislikes: [] }; c.npcs[0].heart = { scene: 'dlg.fixture-none', at: 2 }; } },
+  { name: '[дружба] сцена серця — розмова з NPC, а не сцена', expect: ['HEART_EVENT_INVALID'], patch(c) { c.npcs[0].gifts = { likes: ['item.gift'], dislikes: [] }; c.npcs[0].heart = { scene: 'dlg.fixture-ranger', at: 2 }; } },
+  { name: '[дружба] одна сцена серця в двох мешканців', expect: ['HEART_EVENT_INVALID'], count: { code: 'HEART_EVENT_INVALID', n: 1 }, patch(c) { withScene(c); for (const n of c.npcs) { n.gifts = { likes: ['item.gift'], dislikes: [] }; n.heart = { scene: 'dlg.fixture-fire', at: 2 }; } } },
+  { name: '[дружба] сцена серця без вподобань', expect: ['HEART_EVENT_INVALID'], patch(c) { withScene(c); c.npcs[0].heart = { scene: 'dlg.fixture-fire', at: 2 }; } },
   { name: '[картка] тексту розкладу немає в одній з мов', expect: ['LOCALE_MISSING'], rawCards: true, patch(c) { delete c.locales.en['card.fixture.schedule.morning']; } },
   { name: '[картка] невідоме поле картки (схема)', expect: ['SCHEMA_UNKNOWN_FIELD'], rawCards: true, patch(c) { c.npcs[0].card.mood = 'x'; } },
   // GAME-182 · наклейки Атласу

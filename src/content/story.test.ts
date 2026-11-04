@@ -39,9 +39,9 @@ const key = (s: GameState): string => stateHash(exploreView(s, STORY));
 
 /** Той самий стан, але з навичками на рангах 5 і без практики — контроль «навички не змінюють жодного ходу». */
 const MAXED = Object.fromEntries(SKILL_IDS.map((id) => [id, RANK_XP[5] as number]));
-const maxed = (s: GameState): GameState => ({ ...s, skills: MAXED, practice: {}, progress: { xp: 99_999, om: 99_999, keys: ['quest:everything'], cosmetics: [] } });   // GAME-181: і звання на максимумі
+const maxed = (s: GameState): GameState => ({ ...s, skills: MAXED, practice: {}, progress: { xp: 99_999, om: 99_999, keys: ['quest:everything'], cosmetics: [] }, friend: { pts: { 'npc.nora': 99, 'npc.luc': 99 }, gift: {}, seen: ['npc.luc', 'npc.nora'] } });   // GAME-230: і дружба на максимумі   // GAME-181: і звання на максимумі
 /** І з нулями: стан, до якого перебір дійшов першим, міг уже мати поріг, якого інший шлях до того ж ключа не має (рецензія fbd9c56). */
-const zeroed = (s: GameState): GameState => ({ ...s, skills: zeroSkills(), practice: {}, progress: { xp: 0, om: 0, keys: [], cosmetics: [] } });
+const zeroed = (s: GameState): GameState => ({ ...s, skills: zeroSkills(), practice: {}, progress: { xp: 0, om: 0, keys: [], cosmetics: [] }, friend: { pts: {}, gift: {}, seen: [] } });
 
 /**
  * Ті самі сюжетні поля (усе, крім лічильників команд і навичок — як progressView). Дешевше за повний key:
@@ -225,8 +225,8 @@ describe('дороги справжнього контенту: ядро ≡ в�
 describe('ключ перебору ховає рівно лічильники й навички (рецензія fbd9c56)', () => {
   // Сторож витоку вище доводить чесність ключа лише для полів, які він сам пропускає. Якщо progressView почне
   // ховати ще щось (прапорці, пам'ять NPC), сторож цього не побачить — тож список закріплено тут.
-  it('PROGRESS_IGNORED — саме processed, seq, skills, practice, progress, stickers (GAME-181, GAME-182)', () => {
-    expect([...PROGRESS_IGNORED].sort()).toEqual(['practice', 'processed', 'progress', 'seq', 'skills', 'stickers']);
+  it('PROGRESS_IGNORED — саме processed, seq, skills, practice, progress, stickers, friend (GAME-181, GAME-182, GAME-230)', () => {
+    expect([...PROGRESS_IGNORED].sort()).toEqual(['friend', 'practice', 'processed', 'progress', 'seq', 'skills', 'stickers']);
   });
   it('progressView обнуляє саме PROGRESS_IGNORED, решта полів стану — без змін', () => {
     const s = initialState(START_MONEY);
