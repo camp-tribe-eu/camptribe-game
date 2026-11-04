@@ -40,6 +40,8 @@ import { FISH_SPOT, FishRig, type FishProbe } from './fishing';
 import { LiveFx, type LiveProbe } from './fx-live-layer';
 import { groundKind, type Ground } from './fx-live';
 import { SwimRig, type SwimProbe } from './swim-rig';
+import { CampAlive, type CampProbe } from './camp-alive-rig';
+import { dayOf, weatherOf } from '../../core/weather';
 import { swimGridOf, swimRegionOf, withWater } from './swim';
 import { REVEAL_BEATS, revealCenter, type RevealAnchors } from '../camp-reveal';
 import { calmMotion } from '../../platform/motion';
@@ -224,6 +226,8 @@ export interface WorldProbe {
   live: LiveProbe;
   /** GAME-227 (лише для e2e): купання — стан під ногами (суша/мілина/глибина), гойдання, кола, краплі, мокрі сліди, звуки; Мія на воді (мусить бути 0). */
   swim: SwimProbe;
+  /** GAME-225 (лише для e2e): живий табір — лавка, сосни, кущі, калюжі, колонка, смітник, дошка, кроки по пірсу. */
+  camp: CampProbe;
 }
 
 /** Точка вогнища (об'єкт мапи obj.campfire) — центр світлої плями; нема — плями нема. */
@@ -271,6 +275,7 @@ export class WorldScene extends Phaser.Scene {
   /** GAME-212: скільки мс стоїть герой / слідувач / мешканець (дихання), куди й скільки ще дивиться слідувач на сплеск, видимий зсув героя. */
   private heroStandMs = 0;
   private heroBob = 0;
+  private sitCropped = false;
   private followStand: number[] = [];
   private followLook: { dir: Dir; s: number }[] = [];
   private resStand: number[] = [];
@@ -333,6 +338,9 @@ export class WorldScene extends Phaser.Scene {
   private carImg: { img: Phaser.GameObjects.Image; x: number; y: number } | null = null;
   private live!: LiveFx;
   private swim!: SwimRig;
+  private life!: CampAlive;
+  private lifeDay = -1;
+  private lifeRain = false;
   /** Набір terrain поточної мапи (перший gid і кількість тайлів) — для роду землі під ногами. */
   private terrain = { first: 0, count: 0 };
   private fx: MapFx | null = null;
@@ -578,6 +586,7 @@ export class WorldScene extends Phaser.Scene {
     this.fx = new MapFx(this);
     this.live = new LiveFx(this, DEPTH.decor - 50, DEPTH.always - 10);
     this.swim = new SwimRig(this, this.player, DEPTH.decor - 40);
+    this.life = new CampAlive(this, this.barkText, (text, lift) => this.fx?.pop(this.player.x, this.player.y, text, lift));
     this.tent = new TentRig(this, this.player, this.barkText);
     this.wood = new WoodRig(this, this.player, this.barkText);
     this.props = new CampProps(this, this.barkText);
@@ -637,6 +646,7 @@ export class WorldScene extends Phaser.Scene {
     this.fish?.reset();
     this.grill?.reset();
     this.live?.reset();
+    this.life?.reset();
     this.fireSprite = null;
     for (const o of this.owned) o.destroy();
     this.owned = [];
@@ -763,6 +773,7 @@ export class WorldScene extends Phaser.Scene {
       this.props.begin(cw, TILE, named('crate.start'), named(OLD_CRATE_SPOT), named(REPAIR_SPOT), this.hooks.spotDone?.(OLD_CRATE_SPOT) ?? false, this.hooks.spotDone?.(REPAIR_SPOT) ?? false);
       if (this.props.body) this.crateCollider = this.physics.add.collider(this.player, this.props.body);
     }
+    if (key === 'camp') this.life.begin(this.bands.map((b) => b.layer));
     this.cameras.main.setBounds(0, 0, map.widthInPixels, map.heightInPixels);
     this.cameras.main.centerOn(this.player.x, this.player.y);
     this.last = { x: this.player.x, y: this.player.y };
@@ -1162,7 +1173,12 @@ export class WorldScene extends Phaser.Scene {
   /** GAME-212: дихання героя (зсув спрайта, що знімається в PRE_UPDATE) і гліфи-емоції: ♪ — мешканець, що стоїть увечері; ? — над героєм, коли клює. */
   private updateEmotes(time: number, delta: number, moving: boolean): void {
     this.heroStandMs = moving || this.acting || this.fish.busy ? 0 : this.heroStandMs + delta;
-    const hb = idleBob(this.heroStandMs);
+    const look = this.life.sitLook;
+    const bend = this.life.bend;
+    if (look && !this.sitCropped) { this.player.setCrop(0, 0, FRAME, look.rows); this.sitCropped = true; }
+    else if (!look && this.sitCropped) { this.player.setCrop(); this.sitCropped = false; }
+    this.player.setScale(1, 1 - 0.1 * bend);   // GAME-225: колонка — герой нахиляється
+    const hb = look ? look.dy : idleBob(this.heroStandMs) + Math.round(bend * 2);
     if (hb && !this.heroBob) { this.player.y += hb; this.heroBob = hb; }
     const evening = isEvening(timeOfDay(this.bridge.state.clock.minutes));
     const marks: { at: Pt; kind: Glyph }[] = [];
@@ -1249,6 +1265,8 @@ export class WorldScene extends Phaser.Scene {
     // GAME-207: тема за мапою, вступом і годиною доби — чиста функція musicFor; перехід — у модулі звуку.
     music.setTrack(musicFor({ map: this.current, intro: isIntroOpen(), minuteOfDay: timeOfDay(this.bridge.state.clock.minutes) }));
     music.tick(delta);
+    const lifeDay = dayOf(this.bridge.state.clock);   // GAME-225: день й дощ для табору (калюжі, раз на день)
+    if (lifeDay !== this.lifeDay) { this.lifeDay = lifeDay; this.lifeRain = weatherOf(this.bridge.state.worldSeed, lifeDay) === 'rain'; }
     const held = consumeFrame(this.controls);
     // GAME-216: заставка приїзду — камера по таблиці бітів; будь-яка клавіша, дотик чи кінець таблиці — камера знову на героєві.
     if (this.reveal) {
@@ -1257,7 +1275,13 @@ export class WorldScene extends Phaser.Scene {
       if (c) this.cameras.main.centerOn(c.x, c.y); else this.endReveal();
     }
     // GAME-189: поки герой б'є кілки — стоїть; розміщення намету — ходить вільно (привид іде за ним).
-    const v = this.tent.holdsHero || this.wood.holdsHero || this.fire.holdsHero || this.grill.holdsHero || this.fish.busy ? { x: 0, y: 0 } : moveVector(held);
+    const handsBusy = this.tent.holdsHero || this.wood.holdsHero || this.fire.holdsHero || this.grill.holdsHero || this.fish.busy;
+    const vIn = handsBusy ? { x: 0, y: 0 } : moveVector(held);
+    // GAME-225: лавка. Зайшов на точку — сів (стоїть на ній, ноги сховані); будь-який рух — встав.
+    const seatEv = this.life.stepSeat(delta, { x: this.player.x, y: this.player.y }, vIn.x !== 0 || vIn.y !== 0, handsBusy || this.acting !== null || this.swim.inWater || this.current !== 'camp');
+    const seat = this.life.seatPoint;
+    if (seatEv === 'sit' && seat) { this.player.body.reset(seat.x, seat.y); this.player.setPosition(seat.x, seat.y); this.last = { x: seat.x, y: seat.y }; this.facing = seat.face; }
+    const v = this.life.sitting ? { x: 0, y: 0 } : vIn;
     // Рухається той, хто справді зсунувся з минулого кадру (по зсуву, а не по швидкості — вона лишається, коли тіло вперлося в стіну): упертий у стіну персонаж стоїть, а не «іде на місці».
     const movedPx = Math.hypot(this.player.x - this.last.x, this.player.y - this.last.y);
     const moving = movedPx > 0.25;
@@ -1345,6 +1369,7 @@ export class WorldScene extends Phaser.Scene {
       fire: this.fireSprite?.visible ? { x: this.fireSprite.x, y: this.fireSprite.y } : null,
       car: this.carImg && this.current === 'road' ? { x: this.carImg.x, y: this.carImg.y, back: -1 } : null,
     });
+    this.life.update(delta, { hero: { x: this.player.x, y: this.player.y }, moving, movedPx, day: lifeDay, rain: this.lifeRain, hintOn: !handsBusy && this.acting === null && !this.wood.active && !this.tent.active && (act === null || isFollower(act.name)) });
     if (this.carImg) this.carImg.img.setY(this.carImg.y + (sway?.dy ?? 0)).setRotation(sway?.angle ?? 0);
     const carrying = this.hooks.backpack() > 0;
     this.fx?.tick(dt);
@@ -1356,6 +1381,8 @@ export class WorldScene extends Phaser.Scene {
     // GAME-189: намет руками. E/кнопка/тап по спойлеру-цілі task.pitch-tent починає розміщення; далі кожна дія — розміщення чи удар по кілку. Справа в ядрі закривається лише після 4-го влучання.
     const pressed = this.gate(held.has('interact') || (this.tent.active || this.wood.chopping ? tapped !== null : tapSpot !== null), time);
     const woodBranch = this.wood.active ? this.wood.nearBranch({ x: this.player.x, y: this.player.y }, INTERACT_RANGE) : null;
+    // GAME-225: жива річ табору (сосна, кущ, колонка, смітник, дошка) — лише коли поруч нема сюжетної цілі (як ящик).
+    const lifeHit = pressed && inCamp && (act === null || isAutoSpot(act.name) || isFollower(act.name)) ? this.life.pick({ x: this.player.x, y: this.player.y }) : null;
     const woodBlock = this.wood.active && this.wood.atBlock({ x: this.player.x, y: this.player.y }, INTERACT_RANGE);
     if (this.grill.active) {
       // GAME-195: рибка на вогнищі забирає дію (нанизати, підняти): інша справа чи розмова чекає.
@@ -1411,6 +1438,11 @@ export class WorldScene extends Phaser.Scene {
       this.playAction('thrust', facingToward(this.player, this.props.oldPoint() ?? this.player));
       this.hooks.onObject(OLD_CRATE_SPOT);
       this.feedback(OLD_CRATE_SPOT);
+    } else if (lifeHit) {
+      this.faceTo(lifeHit.at);
+      const e = this.life.act(lifeHit, { x: this.player.x, y: this.player.y }, lifeDay);
+      if (e !== 'board' && e !== 'tap') this.playAction('thrust', facingToward(this.player, lifeHit.at));
+      this.life.refresh();
     } else if (pressed && act) {
       if (act.kind === 'npc') { this.faceEachOther(act); this.hooks.onNpc(act.name); }
       else if (carrying && (act.name === 'obj.vehicle' || act.name === 'obj.trunk')) this.unloadOne();
@@ -1513,6 +1545,7 @@ export class WorldScene extends Phaser.Scene {
       fish: this.fish.probe(),
       live: { ...this.live.probe },
       swim: { ...this.swim.probe },
+      camp: { ...this.life.probe },
       miaAt: [...this.miaSprites].flatMap(([n, sp]) => (sp.visible ? [n] : [])),
       npcMarks: Object.fromEntries([...this.npcMarks].flatMap(([id, m]) => (m.g.visible && m.kind ? [[id, m.kind] as const] : []))),
       fx: { target: tn, ring: this.ring.name ? this.ring.t : 0, ringName: this.ring.name, backpack: this.hooks.backpack(), guide: this.fx?.guideMode ?? 'none', pops: this.fx?.pops ?? 0, auto: this.autoCount, rewards: this.rewardPops, rewardLast: this.rewardLast },
