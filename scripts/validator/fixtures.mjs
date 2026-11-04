@@ -747,6 +747,9 @@ export const FIXTURES = [
       { textKey: K('help.c2'), next: 'bye' },
     ];
   } },
+  // GAME-213: перекладач — вузол translated без варіанта «Метью нема» (гілки) червоніє; з парою — ні (базова фікстура зелена).
+  { name: '[перекладач] translated без варіанта Метью', expect: ['TRANSLATE_VARIANT_MISSING'], patch(c) { node(c, 'thanks').translated = true; } },
+  { name: '[перекладач] гілка веде туди ж, куди next (варіанти однакові)', expect: ['TRANSLATE_VARIANT_MISSING'], patch(c) { const n = node(c, 'thanks'); n.translated = true; n.branches = [{ when: { flag: 'f.fixture-met' }, next: n.next }]; } },
   // GAME-221: межі читабельності. Кожна мутація межі (110 → 111, 4 → 5, вибір не обнуляє, гілка не рахується) має тут свого свідка.
   // (рядок K('bye') спільний із вузлом другого діалогу еталона, тому одна довга репліка дає 2 спрацювання — по одному на вузол)
   { name: '[діалог] контроль: репліка рівно 110 знаків у обох мовах — коректно', expect: [], patch(c) { for (const l of ['uk', 'en']) c.locales[l][K('bye')] = padUk(110); } },

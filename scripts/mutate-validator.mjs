@@ -28,6 +28,7 @@ const mutations = [
   { name: 'GAME-221: довжина реплік перевіряється лише в першій мові', file: CHECKS_FILE, from: 'for (const n of d.nodes) for (const lang of langs) {', to: 'for (const n of d.nodes) for (const lang of langs.slice(0, 1)) {' },
   { name: 'GAME-221: межа ланцюжка — 5 реплік дозволено', file: CHECKS_FILE, from: 'if (len > DIALOGUE_CHAIN_MAX)', to: 'if (len > DIALOGUE_CHAIN_MAX + 1)' },
   { name: 'GAME-221: вибір не обнуляє лічильник (ланцюжок іде крізь choices)', file: CHECKS_FILE, from: 'if (!n.choices) for (const v of [...(n.next', to: 'if (true) for (const v of [...(n.choices ?? []).map((x) => x.next), ...(n.next' },
+  { name: 'GAME-213: перекладач без варіанта Метью (translated без пари) проходить', file: CHECKS_FILE, from: 'if (n.next === undefined || alt.length === 0) out.push(I(', to: 'if (false) out.push(I(' },
   { name: 'GAME-221: гілки (branches) не входять до ланцюжка', file: CHECKS_FILE, from: '...(n.branches ?? []).map((b) => b.next)]) best', to: ']) best' },
   { name: 'GAME-221: ланцюжок рахується лише від start, а не від цілей вибору', file: CHECKS_FILE, from: 'for (const n of d.nodes) for (const ch of n.choices ?? []) starts.add(ch.next);', to: '' },
   { name: 'GAME-211: розклад картки не перевіряється (пора без тексту проходить)', file: CHECKS_FILE, from: "if (!filled(card.schedule?.[t]?.textKey)) out.push(I('NPC_CARD_NO_SCHEDULE'", to: "if (false) out.push(I('NPC_CARD_NO_SCHEDULE'" },

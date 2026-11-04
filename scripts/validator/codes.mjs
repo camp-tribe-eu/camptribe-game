@@ -78,6 +78,7 @@ export const CODES = {
   // діалоги, GAME-28 (TD-005 граф, TD-006 типізовані умови)
   DIALOGUE_REF_MISSING:      { check: 'dialogue-refs', spec: '§2 кожне посилання діалогу (NPC, квест, ціль, транспорт, вузол) веде на існуючий запис' },
   DIALOGUE_LINE_TOO_LONG:    { check: 'dialogue-length', spec: 'GAME-221: репліка діалогу — не довша за DIALOGUE_LINE_MAX знаків у кожній мові (≤ 2 рядки рамки розмови на телефоні)' },
+  TRANSLATE_VARIANT_MISSING: { check: 'translated-nodes', spec: 'GAME-213: вузол із translated: true мусить мати обидва варіанти — next (Метью поруч, точний переклад) і хоча б одну гілку branches в інший вузол (Метью немає, кумедна неточність); обидва ведуть далі, ніхто не глухий кут' },
   DIALOGUE_CHAIN_TOO_LONG:   { check: 'dialogue-length', spec: 'GAME-221: не більше DIALOGUE_CHAIN_MAX реплік поспіль без вибору (читання не має стати нудним)' },
   DIALOGUE_NODE_UNREACHABLE: { check: 'dialogue-reachable', spec: '§3 кожен вузол діалогу досяжний зі старту' },
   DIALOGUE_DEAD_END:         { check: 'dialogue-dead-end', spec: '§3 з кожного вузла діалогу є безумовний шлях до end' },
