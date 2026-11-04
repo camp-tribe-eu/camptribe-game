@@ -1,12 +1,12 @@
 // GAME-232 · «Теплий колір дня»: світ вкритий кольором доби (ранок рожево-жовтий, день нейтральний, після 18:00 фіолетовий, після 20:00 темно-синій),
 // а HUD (DOM поверх полотна) — ні. Час: ?atMinute=N — хвилини ядра від 08:00, на екрані 08:00 + N: 1380 → 07:00, 240 → 12:00, 630 → 18:30, 750 → 20:30.
-// Знімки (G232_SHOTS або /tmp/…/scratchpad/g232): 390×844, 844×390 + пропорції 9:16, 1:1, 16:9. Виміри: піксель світу відрізняється між 12:00 і 20:30,
+// Знімки (G232_SHOTS або test-results/g232-shots): 390×844, 844×390 + пропорції 9:16, 1:1, 16:9. Виміри: піксель світу відрізняється між 12:00 і 20:30,
 // піксель тексту HUD — ні; контраст тексту HUD (WCAG) під кожним кольором ≥ 4,5:1.
 import { mkdirSync } from 'node:fs';
 import { expect, test, type Page } from '@playwright/test';
 import { waitGameReady } from './ready';
 
-const SHOTS = process.env.G232_SHOTS ?? '/tmp/claude-0/-home-user/e4e60aad-24df-5bda-842d-7a964ea01a54/scratchpad/g232';
+const SHOTS = process.env.G232_SHOTS ?? 'test-results/g232-shots';
 const SETTINGS_KEY = 'camplife.settings.v1';
 const TIMES = [{ name: '07h', at: 1380 }, { name: '12h', at: 240 }, { name: '18h30', at: 630 }, { name: '20h30', at: 750 }] as const;
 const VIEWS = [
