@@ -1136,6 +1136,7 @@ export class WorldScene extends Phaser.Scene {
       const res = CAST[i];
       if (!s || !res || res.barks.length === 0 || !this.residentLines[i] || time < (this.barkReadyAt[i] ?? 0)) continue;
       if (Math.hypot(this.player.x - s.x, this.player.y - s.y) > BARK_RANGE) continue;
+      if (this.current === 'camp' && this.neigh.state(i) === 'sleep') continue;   // GAME-226: сплячий не кидає репліку
       const n = this.barkNext[i] ?? 0;
       const key = res.barks[n % res.barks.length] as Key;
       this.barkNext[i] = n + 1;

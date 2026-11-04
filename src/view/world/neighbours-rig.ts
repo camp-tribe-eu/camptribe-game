@@ -34,6 +34,9 @@ export class Neighbours {
   private top: Phaser.GameObjects.Graphics | null = null;
   private cropped: boolean[] = [];
   private waves: number[] = [];
+  /** День останнього привітання — живе довше за мапу: табір→крамниця→табір не махає вдруге того ж дня. */
+  private waveDays = new Map<string, number>();
+  private ids: readonly string[] = [];
   readonly probe: NeighbourProbe[] = [];
 
   constructor(private readonly scene: Phaser.Scene, private readonly depthTop: number) {}
@@ -41,7 +44,8 @@ export class Neighbours {
   /** Нова мапа: пам'ять і малюнки з нуля. Малюнки створюються під потрібну кількість сусідів. */
   begin(ids: readonly string[]): void {
     this.destroy();
-    this.minds = ids.map(() => MIND0);
+    this.ids = ids;
+    this.minds = ids.map((id) => ({ ...MIND0, waveDay: this.waveDays.get(id) ?? -1 }));
     this.holds = ids.map(() => 0);
     this.cropped = ids.map(() => false);
     this.waves = ids.map(() => 0);
@@ -90,6 +94,8 @@ export class Neighbours {
     const tod = mod(minutes + 480, 1440);
     const m = stepMind(prev, { tod, day: Math.floor((minutes + 480) / 1440), phase: route.phase, moving: route.moving, dist, raining, activity: activityFor(i, stopIdx, seat), side, bench, hold });
     this.minds[i] = m;
+    const id = this.ids[i];
+    if (id !== undefined && m.waveDay >= 0) this.waveDays.set(id, m.waveDay);
     if (m.state === 'wave' && prev.state !== 'wave') this.waves[i] = (this.waves[i] ?? 0) + 1;
     this.show(i, s, route, m, hero, facing, seatPt?.face ?? null);
     this.emoteOf(i, s, m, barking);
