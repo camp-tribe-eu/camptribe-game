@@ -41,7 +41,8 @@ const KEYS: readonly Key[] = [
   { at: 6 * 60 + 30, tint: MORNING_TINT, strength: 0.45 },     // 06:30 світанок: рожево-жовтий
   { at: 8 * 60, tint: MORNING_TINT, strength: 0 },             // 08:00 день — нейтрально
   { at: 17 * 60 + 50, tint: VIOLET_TINT, strength: 0 },        // 17:50 день триває
-  { at: 19 * 60 + 50, tint: VIOLET_TINT, strength: 0.41 },     // після 18:00 теплий фіолетовий, густішає до 19:50
+  { at: 18 * 60 + 30, tint: VIOLET_TINT, strength: 0.24 },     // 18:30 фіолетовий уже помітний (смак власника, варіант Б)
+  { at: 19 * 60 + 50, tint: VIOLET_TINT, strength: 0.45 },     // густішає до 19:50
   { at: 20 * 60, tint: NIGHT_TINT, strength: 0.45 },           // після 20:00 темно-синій
   { at: 21 * 60 + 30, tint: NIGHT_TINT, strength: MAX_DARKNESS }, // 21:30 ніч
   { at: DAY_MINUTES, tint: NIGHT_TINT, strength: MAX_DARKNESS },
