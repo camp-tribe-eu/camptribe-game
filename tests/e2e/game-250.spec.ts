@@ -1,19 +1,17 @@
 // GAME-250 · Атлас як зрозуміла мапа з однією кнопкою дії: вступ → Атлас («Ви тут», озеро з запискою, сірі силуети, одна кнопка) → кнопка веде далі;
 // з меню — «Закрити» й Escape. Знімки «до/після» (ATLAS_SHOT=before|after) — research/atlas/. Закон 1: негативний контроль — без ?intro=1 Атласу вступу немає.
 import { expect, test, type Page } from '@playwright/test';
+import { introTo, walkIntro } from './intro-walk';
 import { waitGameReady } from './ready';
 
 const TAG = process.env.ATLAS_SHOT ?? 'after';
 const VIEWS = [{ side: 'portrait', w: 390, h: 844 }, { side: 'landscape', w: 932, h: 430 }] as const;
-const next = async (page: Page): Promise<void> => { await page.locator('[data-ui="intro-next"]').click(); await page.waitForTimeout(280); };
 
 async function toAtlasStep(page: Page): Promise<void> {
   await page.goto('/?intro=1&seed=1');
   await waitGameReady(page);
-  await next(page); await next(page); await next(page);
-  await page.locator('[data-act="create"]').first().click();
-  for (let i = 0; i < 12 && (await page.locator('[data-kind="final"]').count()) === 0; i++) await next(page);
-  await expect(page.locator('[data-kind="final"]')).toBeVisible();
+  await introTo(page, 'atlas');
+  await expect(page.locator('[data-kind="atlas"]')).toBeVisible();
   await page.waitForTimeout(1100);
 }
 
@@ -40,13 +38,14 @@ for (const v of VIEWS) {
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
     await cta.focus();
     await page.keyboard.press('Enter');
-    await expect(page.locator('[data-ui="intro"]')).toHaveCount(0);   // історія пішла далі: вступ завершено, далі — розмова планування
+    await expect(page.locator('[data-ui="intro"]')).toHaveAttribute('data-kind', 'line');   // історія пішла далі: родинна розмова про план (GAME-249)
   });
 
   test(`Атлас із меню ${v.side}: «Закрити» і Escape`, async ({ page }) => {
     await page.setViewportSize({ width: v.w, height: v.h });
     await toAtlasStep(page);
     await page.locator('[data-ui="atlas-cta"]').click();
+    await walkIntro(page);
     await expect(page.locator('[data-ui="intro"]')).toHaveCount(0);
     for (const how of ['button', 'escape'] as const) {
       if ((await page.locator('[data-ui="atlas-open"]').count()) === 0) await page.locator('.ui-story-btn').click();   // після закриття Атласу меню саме відкривається знову
