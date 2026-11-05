@@ -10,6 +10,7 @@ import { Portrait, type PortraitLookup } from './Portrait';
 import { RequestCard } from './RequestCard';
 import { ACT_COOLDOWN_MS, actionLabel, money } from './StoryPanel';
 import { trapTab } from './focus-trap';
+import { freshPress, heldBlocks } from './inherited-hold';
 import type { OfferAction, StoryOffer } from './story-types';
 
 type Dialogue = NonNullable<StoryOffer['dialogue']>;
@@ -79,14 +80,19 @@ export function DialogueBox({ dialogue: d, lang, t, act, portrait }: { dialogue:
   useEffect(() => {
     inherited.current = new Set(downPointers);
     const lift = (e: PointerEvent): void => { const set = inherited.current; if (set?.delete(e.pointerId)) lastAct.current = e.timeStamp; };
+    const press = (): void => freshPress(inherited.current);   // загублений pointerup не лишає рамку глухою назавжди
     for (const type of ['pointerup', 'pointercancel'] as const) window.addEventListener(type, lift, { capture: true });
-    return () => { for (const type of ['pointerup', 'pointercancel'] as const) window.removeEventListener(type, lift, { capture: true }); };
+    window.addEventListener('pointerdown', press, { capture: true });
+    return () => {
+      for (const type of ['pointerup', 'pointercancel'] as const) window.removeEventListener(type, lift, { capture: true });
+      window.removeEventListener('pointerdown', press, { capture: true });
+    };
   }, []);
 
   const finish = (): void => { cancelAnimationFrame(raf.current); setN(chars.length); };
   /** Та сама «глухота» ~350 мс після прийнятої дії, що й у панелі: другий тап не влучає в нову першу кнопку. */
   const guarded = (e: Event, fn: () => void): void => {
-    if ((inherited.current?.size ?? 0) > 0) return;   // GAME-237: палець, що відкрив рамку, ще притиснутий
+    if (heldBlocks(e.type, inherited.current)) return;   // GAME-237: палець, що відкрив рамку, ще притиснутий (клавіатуру не глушить)
     if (e.timeStamp - lastAct.current < ACT_COOLDOWN_MS) return;
     lastAct.current = e.timeStamp;
     fn();
