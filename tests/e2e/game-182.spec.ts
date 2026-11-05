@@ -1,6 +1,7 @@
 // GAME-182 · вступ і Атлас: Нова гра → дощовий вечір, лист дідуся Генрі, ПЕРШИЙ ВИБІР гравця ≤ 15 с без ☰; наклейка «Дім» лягає на сторінку «Перша спроба» зі звуком «дзинь»;
 // Атлас із ☰ (12 слотів, печатка в центрі, мапа з «ми тут»); «Пропустити» працює; обидві орієнтації. Старі e2e обирають героя в ☰ — тож вступ у збірці e2e вмикає лише ?intro=1.
 // Негативні контролі (закон 1): без ?intro=1 вступу немає (перевірка «вступ видно» на цьому червоніє); завантажений сейв вступу не показує.
+import { walkIntro } from './intro-walk';
 import { expect, test, type Page } from '@playwright/test';
 import { waitGameReady } from './ready';
 
@@ -25,8 +26,8 @@ for (const v of VIEWS) {
     await expect(page.locator('.ui-story-btn')).toHaveCount(0);
     await expect(page.locator('[data-ui="line"]')).toContainText('Метью');
     await page.screenshot({ path: `research/visual-audit/intro-${v.side}-rain.png` });
-    await next(page);
-    await next(page);
+    await page.locator('[data-spot="shelf"]').click();   // GAME-249: шукаємо зарядку; полиця відкриває атлас і лист
+    await page.waitForTimeout(280);
     await expect(page.locator('[data-ui="letter"]')).toBeVisible();
     await expect(page.locator('[data-ui="letter-quote"]')).toHaveText('Найкращі подорожі починаються не з ідеального плану, а з рішення поїхати разом.');
     await page.screenshot({ path: `research/visual-audit/intro-${v.side}-letter.png` });
@@ -43,8 +44,8 @@ for (const v of VIEWS) {
     await pick.first().click();
     await expect.poll(async () => (await core(page)).game.player !== null).toBe(true);
     // Родинні репліки, далі сторінка Атласу з «Дім».
-    for (let i = 0; i < 12 && (await page.locator('[data-kind="final"]').count()) === 0; i++) await next(page);
-    await expect(page.locator('[data-kind="final"]')).toBeVisible();
+    for (let i = 0; i < 12 && (await page.locator('[data-kind="atlas"]').count()) === 0; i++) await next(page);
+    await expect(page.locator('[data-kind="atlas"]')).toBeVisible();
     const home = page.locator('[data-ui="home-sticker"]');
     await expect(home).toHaveAttribute('data-owned', 'yes');
     await expect(home).toHaveAttribute('data-fly', 'yes');
@@ -53,6 +54,7 @@ for (const v of VIEWS) {
     await page.waitForTimeout(1100);   // анімація польоту завершилась — кадр без розмиття
     await page.screenshot({ path: `research/visual-audit/intro-${v.side}-final.png` });
     await page.locator('[data-ui="atlas-cta"]').click();   // «Спланувати першу поїздку» (GAME-250)
+    await walkIntro(page);   // GAME-249: далі родинний план, ніч, ранок, метушня
     await expect(intro).toHaveCount(0);
     expect((await core(page)).game.stickers).toEqual(['sticker.home']);
     // Атлас із ☰.

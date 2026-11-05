@@ -67,7 +67,7 @@ export interface Credits {
 }
 
 /** GAME-191: малювання кімнати вступу: полотно, розмір екрана в CSS-пікселях, «менше руху», чи вже знято. */
-export type IntroRoomPainter = (target: HTMLCanvasElement, cssW: number, cssH: number, reduced: boolean, isDead: () => boolean) => Promise<() => void>;
+export type IntroRoomPainter = (target: HTMLCanvasElement, cssW: number, cssH: number, reduced: boolean, isDead: () => boolean, morning?: boolean) => Promise<() => void>;
 
 /** GAME-216: малювання холодного початку: полотно, елемент підпису, розмір екрана, «менше руху», чи вже знято, тексти, годинник сцени (мс, живе в компоненті), кінець сцени. */
 export type ColdOpenPainter = (target: HTMLCanvasElement, caption: HTMLElement, cssW: number, cssH: number, reduced: boolean, isDead: () => boolean, texts: { readonly line: (key: string) => string }, clock: { elapsed: number }, onEnd: () => void) => Promise<() => void>;

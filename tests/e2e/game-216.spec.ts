@@ -23,7 +23,7 @@ async function skipAndMeasure(page: Page): Promise<number> {
   const t0 = Date.now();
   await page.mouse.click(200, 150);
   await expect(cold(page)).toHaveCount(0);
-  await expect(page.locator('[data-ui="intro-next"]')).toBeVisible();
+  await expect(page.locator('[data-ui="intro-spots"]')).toBeVisible();
   return Date.now() - t0;
 }
 
@@ -74,7 +74,7 @@ test('«Пропустити» на картці «Почати» веде од�
   await waitGameReady(page);
   await page.locator('[data-ui="cold-open-skip"]').click();
   await expect(cold(page)).toHaveCount(0);
-  await expect(page.locator('[data-ui="intro-next"]')).toBeVisible();
+  await expect(page.locator('[data-ui="intro-spots"]')).toBeVisible();
 });
 
 // Окремий контекст, не перезавантаження: пауза вступу вже записала чистий сейв, і за правилом «сейв є → кіно немає» після reload кіно не було б.
@@ -89,7 +89,7 @@ test('Escape під час кіно — теж пропуск', async ({ page })
   await expect(cold(page)).toHaveCount(1);
   await page.keyboard.press('Escape');
   await expect(cold(page)).toHaveCount(0);
-  await expect(page.locator('[data-ui="intro-next"]')).toBeVisible();
+  await expect(page.locator('[data-ui="intro-spots"]')).toBeVisible();
 });
 
 test('сейв існує → кіно немає: «Нова гра» з меню показує кіно, перезавантаження з тим сейвом — лише вступ', async ({ page }) => {

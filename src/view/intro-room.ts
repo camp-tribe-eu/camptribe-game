@@ -11,7 +11,8 @@ const WALL_H = 96;          // стіна 3 тайли: полотно 87 px + �
 const WIN = { sx: 0, sy: 26, w: 64, h: 44 } as const;   // вікно в home_windows_doors.png (три панелі 4+4 шибки)
 const LAMP = { sx: 355, sy: 2, w: 24, h: 49 } as const;   // торшер у home_furniture.png (теплий абажур)
 const SHELF = { sx: 5, sy: 28, w: 54, h: 64 } as const; // книжкова полиця в home_shelf.png
-const SKY: readonly [number, number, number] = [30, 42, 70];
+const SKY_NIGHT: readonly [number, number, number] = [30, 42, 70];
+const SKY_DAY: readonly [number, number, number] = [150, 196, 232];   // GAME-249: ранок — дощ стих, небо світле
 const DROPS = 72;   // 26 читались як «кілька крапель» (знімки PR #121) — щільніше, щоб це був дощ
 
 export interface Layout { readonly scale: number; readonly w: number; readonly h: number }
@@ -37,7 +38,7 @@ const hash = (i: number, k: number): number => { const v = Math.sin(i * 127.1 + 
 /**
  * Малює кімнату на `target` і повертає функцію зупинки. `reduced` — «менше руху»: один кадр. Без 2d-полотна (jsdom) — тиха нічого-не-робить.
  */
-export async function paintRoom(target: HTMLCanvasElement, cssW: number, cssH: number, reduced: boolean, isDead: () => boolean): Promise<() => void> {
+export async function paintRoom(target: HTMLCanvasElement, cssW: number, cssH: number, reduced: boolean, isDead: () => boolean, morning = false): Promise<() => void> {
   const layout = roomLayout(cssW, cssH);
   const ctx = target.getContext('2d');
   if (!ctx) return () => undefined;
@@ -47,6 +48,7 @@ export async function paintRoom(target: HTMLCanvasElement, cssW: number, cssH: n
   ]);
   if (isDead()) return () => undefined;
   const { w, h } = layout;
+  const SKY = morning ? SKY_DAY : SKY_NIGHT;
   target.width = w;
   target.height = h;
   const ox = w >= 240 ? 4 : Math.floor((w - SCENE_W) / 2);   // вбік — сцена ліворуч, лист праворуч; у портреті — по центру
@@ -76,7 +78,7 @@ export async function paintRoom(target: HTMLCanvasElement, cssW: number, cssH: n
   px(c, furn, LAMP, lampX, floorY - LAMP.h + 4);
   px(c, shelf, SHELF, shelfX, floorY - SHELF.h + 4);
   // Вечірній присмерк на всьому, що намальоване вище (вікно, Метью й світло лампи — поверх нього).
-  c.fillStyle = 'rgba(18,22,48,0.34)';
+  c.fillStyle = morning ? 'rgba(255,226,170,0.12)' : 'rgba(18,22,48,0.34)';
   c.fillRect(0, 0, w, h);
 
   // Вікно: чорні шибки (за пікселями файла) перефарбовані на нічне небо; маска шибок обрізає дощ.
@@ -112,7 +114,7 @@ export async function paintRoom(target: HTMLCanvasElement, cssW: number, cssH: n
   // Тепле світло торшера: м'яка пляма на стіні й підлозі й загальна «кав'яна» тінь по краях.
   const gx = lampX + 12;
   const gy = floorY - 36;
-  const glow = c.createRadialGradient(gx, gy, 2, gx, gy, 92);
+  const glow = c.createRadialGradient(gx, gy, 2, gx, gy, morning ? 1 : 92);
   glow.addColorStop(0, 'rgba(255,205,120,0.50)');
   glow.addColorStop(0.5, 'rgba(255,170,80,0.16)');
   glow.addColorStop(1, 'rgba(255,170,80,0)');
@@ -123,7 +125,7 @@ export async function paintRoom(target: HTMLCanvasElement, cssW: number, cssH: n
   c.restore();
   const vig = c.createRadialGradient(w / 2, h * 0.45, Math.min(w, h) * 0.35, w / 2, h * 0.45, Math.max(w, h) * 0.8);
   vig.addColorStop(0, 'rgba(0,0,0,0)');
-  vig.addColorStop(1, 'rgba(0,0,0,0.4)');
+  vig.addColorStop(1, morning ? 'rgba(0,0,0,0.12)' : 'rgba(0,0,0,0.4)');
   c.fillStyle = vig;
   c.fillRect(0, 0, w, h);
   // Знімок усього, крім вікна, — щоб кадр дощу малював лише вікно, а не всю кімнату.
@@ -132,7 +134,7 @@ export async function paintRoom(target: HTMLCanvasElement, cssW: number, cssH: n
     const rc = rain[1];
     rc.clearRect(0, 0, WIN.w, WIN.h);
     rc.fillStyle = 'rgba(170,200,235,0.85)';
-    for (let i = 0; i < DROPS; i++) {
+    for (let i = 0; i < (morning ? 0 : DROPS); i++) {
       const len = 4 + Math.floor(hash(i, 3) * 4);
       const speed = 0.045 + hash(i, 2) * 0.03;   // px за мс
       const y = reduced ? hash(i, 4) * WIN.h : ((hash(i, 1) * (WIN.h + 8) + t * speed) % (WIN.h + 8)) - 4;
