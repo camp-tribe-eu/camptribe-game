@@ -195,11 +195,12 @@ test('пролог від вибору персонажа до кінця роз
   expect(c.game.grants).toEqual(expect.arrayContaining(['rw.q-elise-bike-area', 'rw.st-005']));
   // Журнал на екрані = журнал ядра, запис у запис.
   await panel(page).locator('[data-ui="journal"] summary').click();
+  await panel(page).locator('[data-ui="journal-more"]').click();   // GAME-253: довгий журнал згорнуто до останніх записів
   expect(await panel(page).locator('[data-ui="journal"] li').evaluateAll((els) => els.map((e) => (e as HTMLElement).dataset.type)))
-    .toEqual(c.journal.map((e) => e.type));
+    .toEqual(c.journal.map((e) => e.type).reverse());   // GAME-253: найновіше зверху
   expect(c.journal.length).toBeGreaterThan(10);   // GAME-84 №1: два «Прибуття» вдома й одне в таборі більше не пишуться — було 16, тепер 13
   // GAME-110: пам'ятні вибори (намет біля сосон; порада Елізи вдень 2) — у журналі на екрані текстом, кожен рівно раз.
-  await expect(panel(page).locator('[data-ui="journal"] li[data-type="Memory"]')).toHaveText(['Запам\'ятали: намет біля сосон', 'Запам\'ятали: порада Елізи сушити намет зранку — прийнято']);
+  await expect(panel(page).locator('[data-ui="journal"] li[data-type="Memory"]')).toHaveText(['Запам\'ятали: порада Елізи сушити намет зранку — прийнято', 'Запам\'ятали: намет біля сосон']);
   expect(await panel(page).textContent()).not.toContain('⟦');      // жодного ключа без тексту
   expect(errors).toEqual([]);
 });
@@ -302,8 +303,8 @@ test('подія в дорозі (GAME-31): трапляється на доро
   expect(c.journal.slice(-3).map((e) => e.type)).toEqual(['Visit', 'RoadEvent', 'Memory']);
   expect(c.journal.at(-1)?.ref).toBe('f.road-apple');
   await panel(page).locator('[data-ui="journal"] summary').click();
-  await expect(panel(page).locator('[data-ui="journal"] li').nth(-2)).toContainText('Яблука біля дороги');
-  await expect(panel(page).locator('[data-ui="journal"] li').last()).toHaveText('Запам\'ятали: яблуко з придорожнього ящика й записка «Дякую!»');
+  await expect(panel(page).locator('[data-ui="journal"] li').nth(1)).toContainText('Яблука біля дороги');   // GAME-253: найновіше зверху
+  await expect(panel(page).locator('[data-ui="journal"] li').first()).toHaveText('Запам\'ятали: яблуко з придорожнього ящика й записка «Дякую!»');
 });
 
 test('автівкою — без бічного квесту й без відповіді про велосипед, і так само до кінця розділу', async ({ page }) => {
