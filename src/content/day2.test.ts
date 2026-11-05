@@ -19,6 +19,7 @@ import { endReachable, type EndMemo } from './bot';
 import { moves, progressKey, type Move } from './moves';
 import { GAME_DEFS } from './slice-defs';
 import { CONTENT, STORY, compileStory, type RawContent } from './story';
+import { SLEEP, simSend } from './test-days';
 
 const ZONE = 'q.elise-bike-area';
 const ELISE = 'npc.elise';
@@ -45,7 +46,7 @@ const DAY1_HEAD: readonly Move[] = [
   { type: 'Visit', locationId: 'loc.shop' }, { type: 'Pickup', itemId: 'item.tent' }, { type: 'Pickup', itemId: 'item.sleeping-bag' },
   done('ST-003'), { type: 'Visit', locationId: 'loc.home' },
 ];
-const DAY1_TAIL: readonly Move[] = [{ type: 'Pickup', itemId: 'item.firewood' }, done('ST-005')];
+const DAY1_TAIL: readonly Move[] = [{ type: 'Pickup', itemId: 'item.firewood' }, done('ST-005'), SLEEP];
 const toLake: readonly Move[] = [done('CH1-HOME-001'), { type: 'Visit', locationId: 'loc.road' }, done('ST-004'), { type: 'Visit', locationId: 'loc.camp.lake' }];
 
 function startOf(kind: 'bike' | 'car-cat' | 'car-no-tent', defs: CoreDefs = GAME_DEFS): GameState {
@@ -167,16 +168,16 @@ describe('GAME-141 · межа дня й кінець розділу — різ�
   });
 
   it('підсумок дня: «день 1» закінчується на ST-005, «день 2» — на CH1-D2-FIRE-001, розділ триває (повний прохід авто)', () => {
-    const CTX = { defs: GAME_DEFS };
+
     let sim = newSim(7, 5_000);
-    const sendAll = (ms: readonly Move[]): void => { for (const m of ms) sim = step(sim, { kind: 'command', command: { ...m, commandId: `s${n++}` } as Command }, CTX); };
+    const sendAll = (ms: readonly Move[]): void => { for (const m of ms) sim = simSend(sim, m, `s${n++}`); };
     sendAll([{ type: 'CreateCharacter', profileId: 'profile.solo-explorer', transportId: 'transport.car' } as Move, ...DAY1_HEAD, ...toLake]);
     for (let i = 0; sim.game.dialogue && i < 10; i++) sendAll([next]);   // подія в дорозі, якщо кинулась
     sendAll([talk, choose(1), next, choose(0), next, ...DAY1_TAIL]);
     expect(daysEnded(sim, GAME_DEFS)).toBe(1);
     expect(daySummary(sim, 1, GAME_DEFS)?.sections.find((x) => x.kind === 'quests')?.ids.at(-1)).toBe('ST-005');
     expect(sim.game.campaignEnded).toBe(false);
-    sendAll([done('CH1-D2-001'), talk, choose(10), choose(1), next, done('CH1-D2-ELISE-001'), talk, choose(13), choose(0), next, next, done('CH1-D2-CAMP-001'), done('CH1-D2-FIRE-001')]);
+    sendAll([done('CH1-D2-001'), talk, choose(10), choose(1), next, done('CH1-D2-ELISE-001'), talk, choose(13), choose(0), next, next, done('CH1-D2-CAMP-001'), done('CH1-D2-FIRE-001'), SLEEP]);
     expect(sim.game.campaignEnded).toBe(false);                 // GAME-144: межа дня 2, розділ триває
     expect(sim.game.quests['CH1-D3-001']?.status).toBe('active');
     expect(daysEnded(sim, GAME_DEFS)).toBe(2);
@@ -281,9 +282,9 @@ describe('GAME-141 · сумісність сейвів: старий кінец
   const oldEnded = (): SimState => {
     let sim = newSim(28, 5_000);   // GAME-108: сід без події в дорозі (шанс події 82 %)
     const ms: Move[] = [{ type: 'CreateCharacter', profileId: 'profile.solo-explorer', transportId: 'transport.bike' } as Move, ...DAY1_HEAD, ...toLake];
-    for (const m of ms) sim = step(sim, { kind: 'command', command: { ...m, commandId: `o${n++}` } as Command }, CTX_OLD);
+    for (const m of ms) sim = simSend(sim, m, `o${n++}`, OLD);
     for (let i = 0; sim.game.dialogue && i < 10; i++) sim = step(sim, { kind: 'command', command: { type: 'Continue', commandId: `o${n++}` } }, CTX_OLD);
-    for (const m of [talk, choose(0), next, next, choose(0), next, ...DAY1_TAIL]) sim = step(sim, { kind: 'command', command: { ...m, commandId: `o${n++}` } as Command }, CTX_OLD);
+    for (const m of [talk, choose(0), next, next, choose(0), next, ...DAY1_TAIL]) sim = simSend(sim, m, `o${n++}`, OLD);
     return sim;
   };
 
@@ -362,7 +363,7 @@ describe('GAME-141 · сумісність сейвів: старий кінец
 
   it('розділ, закінчений на НИНІШНЬОМУ кінці, не відкривається знову; незакінчений — не змінюється', () => {
     // GAME-144: нинішній кінець — удома в день 3.
-    const now = play([done('CH1-D2-001'), talk, choose(10), choose(1), next, done('CH1-D2-ELISE-001'), talk, choose(13), choose(0), next, next, done('CH1-D2-CAMP-001'), done('CH1-D2-FIRE-001'),
+    const now = play([done('CH1-D2-001'), talk, choose(10), choose(1), next, done('CH1-D2-ELISE-001'), talk, choose(13), choose(0), next, next, done('CH1-D2-CAMP-001'), done('CH1-D2-FIRE-001'), SLEEP,
       done('CH1-D3-001'), done('CH1-D3-GEAR-001'), talk, choose(14), next, choose(0), next, next, done('CH1-D3-ELISE-001'),
       { type: 'Visit', locationId: 'loc.road' }, done('CH1-D3-RETURN-001'), { type: 'Visit', locationId: 'loc.home' }, done('CH1-D3-HOME-001')], startOf('car-cat'));
     expect(now.campaignEnded).toBe(true);

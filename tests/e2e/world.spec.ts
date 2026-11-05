@@ -351,8 +351,18 @@ for (const vp of VIEWPORTS) {
       };
       // День 2 тим самим дотиком: ранок, «Доброго ранку!», вечеря, вечір біля вогнища — і підсумок дня 2.
       for (const [k, key] of [['complete', 'q.ch1-d2-001'], ['talk', 'npc.elise'], ['choose', 'dlg.elise-greeting.hello.c11'], ['choose', 'dlg.elise-greeting.morning.c2'], ['continue', ''],
-        ['complete', 'q.ch1-d2-elise-001'], ['talk', 'npc.elise'], ['choose', 'dlg.elise-greeting.hello.c14'], ['choose', 'dlg.elise-greeting.dinner.c2'], ['continue', ''], ['continue', ''],
-        ['complete', 'q.ch1-d2-camp-001'], ['complete', 'q.ch1-d2-fire-001']] as const) await tapAct(k, key);
+        ['complete', 'q.ch1-d2-elise-001']] as const) await tapAct(k, key);
+      // GAME-256: вечеря й вогнище — з 18:00. Вечір — без очікування (?skipMinutes перемотує годинник після завантаження збереження, GAME-242); далі — тапи, а день закриває «Спати» в наметі.
+      const clock = (): Promise<number> => page.evaluate(() => (window as unknown as { __game: { read: () => { clock: { minutes: number } } } }).__game.read().clock.minutes);
+      const skip = (19 * 60 - (((await clock()) + 480) % 1440) + 1440) % 1440;
+      await page.goto(`/?skipMinutes=${skip}`);
+      await waitGameReady(page);
+      await page.locator('[data-ui="recovery-close"]').tap({ timeout: 800 }).catch(() => undefined);
+      await expect.poll(async () => (((await clock()) + 480) % 1440)).toBeGreaterThanOrEqual(19 * 60);
+      await page.locator('[data-touch="story"]').tap();
+      await expect(story).toBeVisible();
+      for (const [k, key] of [['talk', 'npc.elise'], ['choose', 'dlg.elise-greeting.hello.c14'], ['choose', 'dlg.elise-greeting.dinner.c2'], ['continue', ''], ['continue', ''],
+        ['complete', 'q.ch1-d2-camp-001'], ['complete', 'q.ch1-d2-fire-001'], ['sleep', '']] as const) await tapAct(k, key);
       await expect(page.locator('[data-ui="summary"] h2')).toHaveText('Підсумок дня 2');
       await page.locator('[data-ui="summary-continue"]').tap();
       await page.locator('[data-touch="story"]').tap();

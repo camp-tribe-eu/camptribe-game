@@ -429,7 +429,8 @@ function campNext(sim: SimState, defs: CoreDefs): Next | null {
   }
   // GAME-256: основний крок чекає на день чи вечір — гравцеві кажемо, що робити (вільний час, вечір, спати), а не ведемо до воріт, що замкнені.
   const held = heldGate(sim, defs);
-  if (held) return { key: held.sleepNext ? (minuteOfDay(sim.clock.minutes) >= EVENING ? 'next.camp.sleep' : 'next.camp.free') : 'next.camp.evening', spot: null };
+  // Стрілка — на живий об'єкт мапи: вільний час → берег (рибалка), сон → намет, чекаємо вечора → вогнище.
+  if (held) return held.sleepNext ? (minuteOfDay(sim.clock.minutes) >= EVENING ? { key: 'next.camp.sleep', spot: 'leisure.tent.1' } : { key: 'next.camp.free', spot: 'fish.shore' }) : { key: 'next.camp.evening', spot: 'obj.campfire' };
   const tent = (id: string): Next => ({ key: 'next.camp.tent', spot: `step.${id}` });
   const elise = (id: string, o: string): Next => (objDone(g, id, o) ? { key: 'next.camp.elise.done', spot: `step.${id}` } : { key: 'next.camp.elise', spot: 'npc.elise' });
   if (quest(g, 'ST-005')) {

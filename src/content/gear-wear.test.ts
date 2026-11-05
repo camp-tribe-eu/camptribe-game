@@ -17,6 +17,7 @@ import { endReachable, type EndMemo } from './bot';
 import type { Move } from './moves';
 import { GAME_DEFS, RAW_ITEMS } from './slice-defs';
 import { CONTENT, STORY } from './story';
+import { SLEEP } from './test-days';
 
 const END = 'CH1-D3-HOME-001';
 const ELISE = 'npc.elise';
@@ -49,9 +50,9 @@ function afterDay2(c: Combo): GameState {
     create, done('PROLOGUE-HOME-001'), done('ST-001'), done('ST-002'),
     visit('loc.shop'), { type: 'Pickup', itemId: 'item.tent' }, { type: 'Pickup', itemId: 'item.sleeping-bag' }, done('ST-003'),
     visit('loc.home'), done('CH1-HOME-001'), visit('loc.road'), done('ST-004'), visit('loc.camp.lake'),
-    ...meet, { type: 'Pickup', itemId: 'item.firewood' }, done('ST-005'),
+    ...meet, { type: 'Pickup', itemId: 'item.firewood' }, done('ST-005'), SLEEP,
     done('CH1-D2-001'), talk, choose(10), choose(1), next, done('CH1-D2-ELISE-001'),
-    talk, choose(13), choose(0), next, next, done('CH1-D2-CAMP-001'), done('CH1-D2-FIRE-001'),
+    talk, choose(13), choose(0), next, next, done('CH1-D2-CAMP-001'), done('CH1-D2-FIRE-001'), SLEEP,
   ], initialState(5_000));
 }
 const DAY3: Move[] = [done('CH1-D3-001'), done('CH1-D3-GEAR-001'), talk, choose(14), next, choose(0), next, next, done('CH1-D3-ELISE-001'), visit('loc.road'), done('CH1-D3-RETURN-001'), visit('loc.home'), done(END)];

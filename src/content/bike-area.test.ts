@@ -9,6 +9,7 @@ import { initialState, type GameState } from '../core/state';
 import type { Move } from './moves';
 import { GAME_DEFS } from './slice-defs';
 import { STORY } from './story';
+import { SLEEP } from './test-days';
 
 const QUEST = 'q.elise-bike-area';
 const OBJ = 'talk-elise';
@@ -42,7 +43,7 @@ const TO_BIKEZONE: readonly Move[] = [
   { type: 'CompleteQuest', questId: 'ST-003' }, { type: 'Visit', locationId: 'loc.home' }, { type: 'CompleteQuest', questId: 'CH1-HOME-001' },
   { type: 'Visit', locationId: 'loc.road' }, { type: 'CompleteQuest', questId: 'ST-004' }, { type: 'Visit', locationId: 'loc.camp.lake' },
   talk, choose(0), next, next, choose(0), next,                                  // hello.c1 (велосипед) → bike → intro → spot.c1 → bye
-  { type: 'Pickup', itemId: 'item.firewood' }, { type: 'CompleteQuest', questId: 'ST-005' },
+  { type: 'Pickup', itemId: 'item.firewood' }, { type: 'CompleteQuest', questId: 'ST-005' }, SLEEP,
   { type: 'CompleteQuest', questId: 'CH1-D2-001' },
   talk, choose(10), choose(1),                                                   // hello.c11 «Доброго ранку!» → morning.c2 → morning-tip (end)
   next,

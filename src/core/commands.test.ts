@@ -164,7 +164,11 @@ describe('команда — намір, а не ефект (рецензія TL
 describe('коди відмов: кожен код із реєстру має тест, на якому він повертається', () => {
   const s = initialState(1000);
   // GAME-170: хвиля з двома справами, одна — лише для лідера. Старт — прямим dispatch із годинником (now = 0).
-  const GATED_DEFS: CoreDefs = { ...STORY_DEFS, story: { ...(STORY_DEFS.story as NonNullable<CoreDefs['story']>), quests: { ...(STORY_DEFS.story as NonNullable<CoreDefs['story']>).quests, 'q.mid': { ...(STORY_DEFS.story as NonNullable<CoreDefs['story']>).quests['q.mid'] as never, gate: { day: 2 } } } } };
+  const GATED_DEFS: CoreDefs = (() => {
+    const st = STORY_DEFS.story as NonNullable<CoreDefs['story']>;
+    const mid = st.quests['q.mid'] as NonNullable<(typeof st.quests)[string]>;
+    return { ...STORY_DEFS, story: { ...st, quests: { ...st.quests, 'q.mid': { ...mid, gate: { day: 2 } } } } };
+  })();
   const WAVE_DEFS: CoreDefs = { ...STORY_DEFS, waves: { waves: { 'wave.w': { stage: 'q.start', tasks: [
     { id: 'a', limitMin: 5, leaderOnly: true, done: { effects: [] }, late: { effects: [] } }, { id: 'b', limitMin: 5, done: { effects: [] }, late: { effects: [] } }] } } } };
   const startWave: Command = { type: 'StartWave', commandId: 'sw', waveId: 'wave.w' };

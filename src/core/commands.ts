@@ -129,9 +129,10 @@ function apply(cmd: Command, d: Draft, defs: CoreDefs, guard: Safeguards, today:
     case 'CompleteTask': {
       // GAME-256: хвиля етапу, чий день чи вечір ще не настали, не стартує (строки хвилі — від ПРАВИЛЬНОГО дня).
       const stage = cmd.type === 'StartWave' ? own(defs.waves?.waves ?? {}, cmd.waveId)?.stage : undefined;
-      if (stage !== undefined && defs.story && !questOpen(defs.story, d, stage, now)) return 'QUEST_NOT_YET';
       // GAME-170: строки справ — в ігрових хвилинах, які знає лише симуляція (`now`); без годинника — INVALID_COMMAND.
-      return applyWave(cmd, d, defs.waves, now, isContentId);
+      const bad = applyWave(cmd, d, defs.waves, now, isContentId);
+      if (bad) return bad;   // спершу «не для цього гравця / етап неактивний» — ворота дня лише для хвилі, яка інакше стартувала б
+      return stage !== undefined && defs.story && !questOpen(defs.story, d, stage, now) ? 'QUEST_NOT_YET' : null;
     }
     case 'BuyItem': {
       if (!isContentId(cmd.itemId)) return 'INVALID_COMMAND';

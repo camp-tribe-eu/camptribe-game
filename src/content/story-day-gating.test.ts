@@ -6,7 +6,7 @@ import { dayRanges } from '../core/day-summary';
 import type { CoreDefs, StoryDefs } from '../core/defs';
 import { newSim, step, type JournalEntry, type SimState } from '../core/sim';
 import { initialState, type GameState } from '../core/state';
-import { gateOpen, questOpen, SLEEP_CAP } from '../core/story';
+import { gateOpen, SLEEP_CAP } from '../core/story';
 import { GAME_START_MINUTE } from '../core/clock';
 import { validate } from '../../scripts/validator/checks.mjs';
 import { SLEEP_CAP as VALIDATOR_SLEEP_CAP } from '../../scripts/validator/codes.mjs';
@@ -174,7 +174,7 @@ describe('валідатор: неможливі ворота — помилка
   const bad = (patch: (q: Record<string, unknown>) => void): string[] => {
     const content = structuredClone(CONTENT) as unknown as { quests: Record<string, unknown>[] } & Record<string, unknown>;
     patch(content.quests.find((q) => q.id === 'CH1-D2-001') as Record<string, unknown>);
-    return (validate(content as never, { today: '2026-11-05', maps: new Map() as never }) as { code: string }[]).map((i) => i.code);
+    return (validate(content as never, { today: '2026-11-05' }) as { code: string }[]).map((i) => i.code);
   };
   it('день 1, день за стелею, година після «пора спати» — відмови; чесні ворота — чисто', () => {
     expect(bad((q) => { q.gate = { day: 1 }; })).toContain('GATE_DAY_RANGE');

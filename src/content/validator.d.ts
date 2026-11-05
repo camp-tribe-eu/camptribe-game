@@ -7,6 +7,8 @@ declare module '*/validator/combos.mjs' {
   export function matches(when: unknown, k: Combo): boolean;
 }
 declare module '*/validator/codes.mjs' {
+  /** Стеля лічильника сну (GAME-256) — мусить збігатися з SLEEP_CAP ядра. */
+  export const SLEEP_CAP: number;
   /** Вісім напрямів навичок (GAME-72) — мусить збігатися з SKILL_IDS ядра. */
   export const SKILL_IDS: string[];
   /** Види погоди дня (GAME-208) — мусять збігатися з WEATHERS ядра. */
