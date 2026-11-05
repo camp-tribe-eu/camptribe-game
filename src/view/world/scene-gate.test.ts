@@ -1,9 +1,7 @@
 // GAME-235: проводка у scene.ts (Phaser у юніті не піднімається) — охоронці на текст: скид мапи чистить talkingTo, сцена серця стоїть за heroBusy, «+1» за canForage.
-import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-
-const scene = readFileSync(new URL('./scene.ts', import.meta.url), 'utf8');
-const rig = readFileSync(new URL('./camp-alive-rig.ts', import.meta.url), 'utf8');
+import scene from './scene.ts?raw';
+import rig from './camp-alive-rig.ts?raw';
 
 describe('scene.ts · GAME-235', () => {
   it('teardown (скид мапи) чистить talkingTo', () => {
