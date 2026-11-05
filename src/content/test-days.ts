@@ -26,7 +26,7 @@ export function sleepThrough(sim: SimState, defs: CoreDefs = GAME_DEFS, id?: str
   // Без намету й ліжка (ніч в авто) лягти можна лише після «пора спати» 22:00 — ядро (canSleep) саме каже, коли.
   const ready = canSleep(evening.game, evening.clock.minutes) ? evening : toClock(evening, 22, 0, defs);
   const next = step(ready, { kind: 'command', command: { type: 'Sleep', commandId: id ?? `sd-${ready.clock.minutes}-${ready.game.seq}` } as Command }, { defs });
-  if (storyDay(next.game.slept) <= storyDay(sim.game.slept)) throw new Error('sleepThrough: ядро не прийняло Sleep (герой не біля ліжка чи намету?)');
+  if (storyDay(next.game.slept) <= storyDay(sim.game.slept)) throw new Error('sleepThrough: core rejected Sleep (hero is not at a bed or tent)');
   return next;
 }
 

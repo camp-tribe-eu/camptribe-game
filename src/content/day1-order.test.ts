@@ -263,7 +263,7 @@ describe('GAME-138 · Спосіб перевірки 1: бот і реплей 
     for (const i of PROLOGUE_BIKE) s = step(s, i, { defs: GAME_DEFS });
     // GAME-256: межа дня — сон. Контроль: журнал БЕЗ запису Sleep (день 1 не закрито). Справжні правила й оракул «ended ⇔ ST-005 ∧ сон» мовчать;
     // мутація «ST-005 закриває день сам» (як до GAME-256) — підсумок каже «завершено» без сну, і оракул червоніє.
-    const noSleep = { game: s.game, journal: s.journal.filter((e) => e.type !== 'Sleep') };
+    const noSleep = { game: s.game, journal: s.journal.slice(0, s.journal.findIndex((e) => e.type === 'Sleep')) };   // журнал до першого сну: ST-005 завершено, ніч ще не настала
     expect(summaryViolations(s, GAME_DEFS)).toEqual([]);
     expect(summaryViolations(noSleep, GAME_DEFS)).toEqual([]);
     const story = GAME_DEFS.story as StoryDefs;
