@@ -2,6 +2,7 @@
 // до стану ядра (TD-003, сторож — eslint.config.js, блок GAME-25).
 import type { SkillUp } from './overlay-order';
 import type { StoryOffer } from './story-types';
+import type { MiniFrame } from '../content/agenda';
 
 /** GAME-181: що щойно нараховано. `title` — індекс нового звання (0…9), якщо воно з'явилось саме зараз; інакше null. */
 export interface RewardEvent { readonly xp: number; readonly om: number; readonly title: number | null }
@@ -54,6 +55,8 @@ export interface UiPort {
   loaded(): boolean;
   /** GAME-192: чи зараз показувати підказку «Далі» (гравець застряг або ціль щойно змінилась); підписка — onStory. */
   hintShown(): boolean;
+  /** GAME-243: мінімапа — останній знімок і підписка на кадри сцени (щокадру; без таймерів). */
+  minimap: { frame(): MiniFrame | null; subscribe(listener: (f: MiniFrame) => void): () => void };
   /** GAME-192: режим підказок з налаштувань. */
   setHintMode(mode: 'stuck' | 'always'): void;
   /** Гра просить відкрити екран подорожі (розмова з NPC на мапі); повертає відписку. */
