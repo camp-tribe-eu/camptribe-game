@@ -555,4 +555,4 @@ window.addEventListener('pagehide', () => saves.autosave());
 
 // Старт: підхопити останній цілий сейв. Позиція в пікселях не зберігається (DC-042):
 // після завантаження персонаж з'являється в точці появи. Правила гонок — у save-session.ts.
-void saves.start().then(() => { probe.saveLoaded = true; rebaseRewards(); rebaseRanks(); storyChanged(); });
+void saves.start().then(() => { if (seedSwitches.skipMinutes) bridge.load(step(bridge.state, { kind: 'advance', minutes: seedSwitches.skipMinutes })); probe.saveLoaded = true; rebaseRewards(); rebaseRanks(); storyChanged(); });
