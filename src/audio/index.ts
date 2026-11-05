@@ -3,7 +3,7 @@
 // гучність і mute — ті самі налаштування, що вже є (платформа керує звуком сама).
 import { createAmbient, type Ambient } from './ambient';
 import { createMixer, type Mixer } from './mixer';
-import { createMusic, type Music } from './music';
+import { createMusic, type Music, type MusicScreen } from './music';
 import { phaserSoundOut, type PhaserSoundManager } from './phaser-out';
 import { loadSettings } from '../platform/settings';
 
@@ -29,7 +29,11 @@ let introOpen = false;
 /** Вступ відкрито/закрито (Intro.tsx) — фон дощу. */
 export function setIntroOpen(open: boolean): void { introOpen = open; }
 export const isIntroOpen = (): boolean => introOpen;
+let musicScreen: MusicScreen = null;
+/** GAME-252: екран поверх світу з власною музикою (Атлас → menu); null — світ. */
+export function setMusicScreen(s: MusicScreen): void { musicScreen = s; }
+export const getMusicScreen = (): MusicScreen => musicScreen;
 
 export * from './mixer';
-export { MUSIC_FILES, MUSIC_BY_MAP, MUSIC_LEVEL, MUSIC_FADE_MS, musicFor, isEveningMinute, type MusicTrack, type MusicChoice, type MusicState } from './music';
+export { MUSIC_FILES, MUSIC_BY_MAP, MUSIC_LEVEL, MUSIC_FADE_MS, musicFor, isEveningMinute, type MusicTrack, type MusicChoice, type MusicState, type MusicScreen } from './music';
 export { AMBIENT_FILES, ambientMix, type AmbientLayer, type AmbientMix, type AmbientState } from './ambient';

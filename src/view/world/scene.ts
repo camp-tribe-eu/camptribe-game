@@ -6,7 +6,7 @@
 // GAME-93: графіка LPC (OD-013) — тайли 32 px, персонаж із шарів (ходьба 9 кадрів × 4 напрямки), анімоване вогнище,
 // 3/4-глибина: верхівки дерев і дах намету малюються над персонажем, коли той стоїть ПОЗАД об'єктом (див. `bands`).
 import Phaser from 'phaser';
-import { ambient, bindPhaser, isIntroOpen, ambientMix, music, musicFor } from '../../audio';
+import { ambient, bindPhaser, isIntroOpen, ambientMix, music, musicFor, getMusicScreen } from '../../audio';
 import { STEP_MS } from '../../core/clock';
 import type { HandAction } from '../../core/skills';
 import { KEY_BINDINGS, KEY_CODES, TAP_MAX_MOVE, TAP_MAX_MS, actionTarget, consumeFrame, createActionGate, moveVector, press, release, tapHitsSpot, type Action, type ActionTarget, type InputState } from './actions';
@@ -601,12 +601,11 @@ export class WorldScene extends Phaser.Scene {
     // GAME-207: музика довантажується ПІСЛЯ preload (перший кадр < 1,5 с, GAME-38) і лише коли ввімкнена (збірка e2e — за ?music=1).
     // Літерали — для check-scene-refs; відповідність таблиці MUSIC_FILES доводить src/audio/music.test.ts. До 'complete' петля не стартує (music.ready).
     if (music.enabled) {
-      this.load.audio('mus-intro', 'audio/mus-intro.ogg');
-      this.load.audio('mus-home', 'audio/mus-home.ogg');
-      this.load.audio('mus-road', 'audio/mus-road.ogg');
-      this.load.audio('mus-shop', 'audio/mus-shop.ogg');
-      this.load.audio('mus-camp-day', 'audio/mus-camp-day.ogg');
-      this.load.audio('mus-camp-evening', 'audio/mus-camp-evening.ogg');
+      this.load.audio('mus-main', 'audio/mus-main.ogg');
+      this.load.audio('mus-menu', 'audio/mus-menu.ogg');
+      this.load.audio('mus-hurry', 'audio/mus-hurry.ogg');
+      this.load.audio('mus-story', 'audio/mus-story.ogg');
+      this.load.audio('mus-night', 'audio/mus-night.ogg');
       this.load.once('complete', () => music.setReady(true));
       this.load.start();
     }
@@ -1435,7 +1434,7 @@ export class WorldScene extends Phaser.Scene {
       nearFire: this.fire.near(pp, FIRE_EAR), transport: this.hooks.transport(), swimming: this.swim.inWater }));
     ambient.tick(delta);
     // GAME-207: тема за мапою, вступом і годиною доби — чиста функція musicFor; перехід — у модулі звуку.
-    music.setTrack(musicFor({ map: this.current, intro: isIntroOpen(), minuteOfDay: timeOfDay(this.bridge.state.clock.minutes) }));
+    music.setTrack(musicFor({ map: this.current, intro: isIntroOpen(), screen: getMusicScreen(), minuteOfDay: timeOfDay(this.bridge.state.clock.minutes) }));
     music.tick(delta);
     // GAME-231: цвіркуни й сова вночі в таборі — звук лише через src/audio; час — ігрова хвилина (дробова), без таймерів.
     const nightClock = this.bridge.state.clock;

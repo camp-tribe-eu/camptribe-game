@@ -1,7 +1,7 @@
 // Оболонка UI над канвою (GAME-25): пауза й налаштування. Preact, DOM — для кирилиці, масштабу тексту
 // й екранного читача (TD-003).
 import { useEffect, useLayoutEffect, useRef, useState } from 'preact/hooks';
-import { mixer } from '../audio';
+import { mixer, setMusicScreen } from '../audio';
 import { playUi, soundForButton } from '../audio/ui-sounds';
 import { DEFAULT_SETTINGS, TEXT_SCALES, loadSettings, saveSettings, type Settings } from '../platform/settings';
 import type { Credits, UiPort } from './port';
@@ -220,6 +220,7 @@ export function Shell({ port, langOverride, credits, build, holdToast = false, h
   }, [paused, storyOpen, confirmNew, summary, talk, intro, atlasOpen, episode, ups, upsOn]);
 
   // GAME-182: Атлас із ☰ — окрема накладка (світ лишається на паузі); закрили — назад на екран подорожі.
+  useEffect(() => { setMusicScreen(atlasOpen ? 'menu' : null); return () => setMusicScreen(null); }, [atlasOpen]);   // GAME-252: Атлас — роль menu
   const openAtlas = (): void => { setOffer(port.story()); setStoryOpen(false); setAtlasOpen(true); };
   const closeAtlas = (): void => { setAtlasOpen(false); story(true); };
   const endIntro = (): void => { setIntro(false); port.setPaused(false); acted(); focusStage(); };
