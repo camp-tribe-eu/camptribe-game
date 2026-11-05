@@ -95,6 +95,15 @@ async function goAndDo(page: Page, car: boolean, shot?: string): Promise<string>
   const p = await probe(page);
   const target = p.fx.target;
   if (!target) throw new Error('стрілка не вказує мети (nextTarget порожній) — гравець не знає, що далі');
+  // GAME-245: «Завантажити» біля авто одразу питає «Куди їдемо?»; рамка вже відкрита, коли стрілка знов вказує на авто — відповідаємо в ній (без нової ходьби).
+  const open = page.locator('.ui-talk [data-ui="dialogue"] [data-act="visit"]');
+  if (target === 'obj.vehicle' && await open.count()) {
+    const framed = await signature(page);
+    await page.waitForTimeout(450);   // «глухота» рамки ~350 мс після появи
+    await open.first().click();
+    await expect.poll(() => signature(page), { timeout: 5_000, message: 'відповідь «їдемо» не повезла авто' }).not.toBe(framed);
+    return target;
+  }
   const c = await core(page);
   const key = MAPS[(c.game.player?.locationId ?? 'loc.home') as keyof typeof MAPS];
   if (!key) throw new Error(`локація ${c.game.player?.locationId} — не мапа зрізу 1`);
@@ -122,6 +131,8 @@ async function goAndDo(page: Page, car: boolean, shot?: string): Promise<string>
   }
   // GAME-185: авто питає «Куди їдемо?» — гравець погоджується (єдина відповідь-напрямок); «Не зараз» не обираємо, інакше прохід не рухається.
   const go = page.locator('.ui-talk [data-ui="dialogue"] [data-act="visit"]');
+  // GAME-245: завантаження авто тим самим дотиком одразу питає «Куди їдемо?» — рамка з'являється за кадр-два після зміни стану, тож чекаємо її, а не рахуємо миттєво.
+  if (target === 'obj.vehicle') await go.first().waitFor({ timeout: 2_000 }).catch(() => undefined);
   if (target === 'obj.vehicle' && await go.count()) {
     const framed = await signature(page);
     await page.waitForTimeout(450);   // «глухота» рамки ~350 мс після появи

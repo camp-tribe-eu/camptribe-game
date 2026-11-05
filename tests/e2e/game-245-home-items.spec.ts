@@ -50,6 +50,15 @@ test('взяти три речі: з місць зникли, картка ре�
     await expect(card).toBeVisible();
     await expect(card.locator('[data-ui="item-card-name"]')).not.toHaveText('');
     await expect(card.locator('[data-ui="item-card-line"]')).toContainText(/[«"]/);
+    if (n === 0) await expect(card.locator('[data-ui="item-card-xp"]')).toHaveText('+2 досвіду');   // видима нагорода за дію (needed/useful)
+    // Картка не налазить на смугу HUD і банер нагадування про збереження (GAME-245 візуальні ворота).
+    const cb = await card.boundingBox();
+    for (const sel of ['[data-ui="hud"]', '[data-ui="recovery-close"]', '[data-ui="goal"]', '[data-ui="next-hint"]']) {
+      const o = page.locator(sel).first();
+      if ((await o.count()) === 0 || !(await o.isVisible())) continue;
+      const ob = await o.boundingBox();
+      if (cb && ob) expect(cb.y >= ob.y + ob.height - 1 || cb.y + cb.height <= ob.y + 1, `картка не налазить на ${sel}`).toBe(true);
+    }
     const icon = await card.locator('[data-ui="itemcard-icon"]').boundingBox();
     expect(icon?.width ?? 0, 'піктограма ≥ 64 px').toBeGreaterThanOrEqual(64);
     if (n === 0) await card.screenshot({ path: `${SHOTS}/item-card-closeup.png` });

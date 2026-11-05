@@ -460,9 +460,10 @@ export function nextTarget(sim: SimState, defs: CoreDefs, carried: readonly stri
   // Пакування: «потрібне» ще не в багажнику (рукою дістали) — до нього; усе на місці — у дорогу.
   const pk = defs.packing;
   if (quest(g, 'CH1-HOME-001') && pk && packingOpen(pk, g)) {
-    if (carried.length > 0) return { key: car ? 'next.unload' : 'next.unload.bike', spot: 'obj.vehicle' };   // рюкзак повний — до авто, розвантажити
+    // GAME-245: спершу збираємо потрібне по дому (кожна річ — одна дія), і лише потім ОДИН похід до авто «Завантажити» (не по поїздці на кожну річ).
     const missing = packItemsFor(pk, p).find((i) => i.group === 'needed' && !g.flags.includes(packFlag(i.itemId)) && !carried.includes(i.itemId));
     if (missing) return { key: car ? 'next.pack' : 'next.pack.bike', spot: `pack.${missing.itemId}` };
+    if (carried.length > 0) return { key: car ? 'next.unload' : 'next.unload.bike', spot: 'obj.vehicle' };   // потрібне зібрано — до авто, завантажити
   }
   return { key: car ? 'next.depart.car' : 'next.depart.bike', spot: 'obj.vehicle' };
 }

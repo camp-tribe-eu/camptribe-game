@@ -267,7 +267,8 @@ const unloadOne = (manual = false): 'ok' | 'full' | 'none' => {
   }
   bridge.send({ type: 'LoadCar' });
   syncBackpack();
-  if (backpack.length === 0) { storyChanged(); return 'ok'; }
+  // Усе влізло: завантажили — і одразу питання «Куди їдемо?» (тим самим дотиком), без другого заходу до авто.
+  if (backpack.length === 0) { storyChanged(); if (!switches.panelActs) actOnMap('obj.vehicle'); return 'ok'; }
   overflowShown = true; trunkOpen = true;
   storyChanged();
   for (const l of openListeners) l();

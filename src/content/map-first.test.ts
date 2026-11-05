@@ -273,7 +273,8 @@ describe('рюкзак і потреби (GAME-175: дрібне — в рюкз
     if (!small) throw new Error('немає дрібного потрібного');
     expect(needsLeft(s, DEFS, [small])).toHaveLength(Math.max(0, all.length - 1));
     expect(needsLeft(s, DEFS, [small])).not.toContain(small);
-    expect(nextTarget(s, DEFS, [small])).toEqual({ key: 'next.unload', spot: 'obj.vehicle' });
+    expect(nextTarget(s, DEFS, [small])?.spot, 'GAME-245: ще є потрібне вдома — до нього, а не до авто').toMatch(/^pack\.item\./);
+    expect(nextTarget(s, DEFS, all)).toEqual({ key: 'next.unload', spot: 'obj.vehicle' });   // усе потрібне зібрано — одним походом до авто
     expect(needsLeft(newSim(1, 5_000), DEFS)).toEqual([]);
   });
   it('GAME-178: авто не рушає, поки бракує речей чи рюкзак не порожній; усе в багажнику — можна', () => {

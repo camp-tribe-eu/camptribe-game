@@ -8,6 +8,8 @@ import type { GameState } from './state';
 export const XP_DAY = 10;
 export const XP_CHAPTER = 30;
 export const XP_SECRET = 5;
+/** GAME-245: узяти вдома «потрібне»/«корисне» — +2 XP раз за річ (видима нагорода кожної дії; «можна лишити» — жарт, без XP). */
+export const XP_TAKE = 2;
 /** ОМ: побічка +10, чистий табір +10, відкриття (нова подія в дорозі) +5. */
 export const OM_SIDE = 10;
 export const OM_CLEAN = 10;
@@ -74,6 +76,10 @@ export function awardsFor(type: string, ref: string | null, defs: CoreDefs): Awa
     if (d?.award === 'secret') return [{ key: `i:${ref}`, xp: XP_SECRET, om: 0 }];
     if (d?.award === 'clean') return [{ key: `i:${ref}`, xp: 0, om: OM_CLEAN }];
     return [];
+  }
+  if (type === 'TakeItem') {
+    const it = defs.packing?.items.find((i) => i.itemId === ref);
+    return it && it.group !== 'leave' ? [{ key: `take:${ref}`, xp: XP_TAKE, om: 0 }] : [];
   }
   if (type === 'RoadEvent') return [{ key: `ev:${ref}`, xp: 0, om: OM_DISCOVERY }];
   return [];

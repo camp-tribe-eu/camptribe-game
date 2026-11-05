@@ -23,6 +23,7 @@ import { pageFill } from '../core/atlas-fill';
 import { nearestReward } from '../content/nearest-reward';
 import { LOCALES } from '../i18n';
 import { chapterComplete, matches, route } from '../core/story';
+import { awardsFor } from '../core/progress';
 import { capacityOf, carriedOf, overflowCandidates, packedOf, packFlag, packingOpen, packItemsFor, usedUnits } from '../core/packing';
 import { timeOfDay } from './world/daylight';
 import { bedtimeNight } from '../core/clock';
@@ -376,7 +377,7 @@ export function storyOffer(sim: SimState, defs: CoreDefs, view: StoryView = PANE
     next: reqT ? (reqT.startsWith('npc.') ? 'next.req.giver' : 'next.req.target') as Key : nextT?.key ?? null,
     nextSpot: reqT ?? nextT?.spot ?? null,
     blocked: view.mapFirst && view.departNote ? ((b) => (b ? { carry: b.kind === 'carry', itemKeys: b.kind === 'missing' ? b.items.map((i) => nameKey(i) ?? i) : [] } : null))(departBlock(sim, defs, view.backpack ?? [])) : null,
-    card: view.card ? { nameKey: nameKey(view.card) ?? view.card, reactKey: `pack.react.${view.card.replace(/^item\./, '')}`, spot: `pack.${view.card}` } : null,
+    card: view.card ? { nameKey: nameKey(view.card) ?? view.card, reactKey: `pack.react.${view.card.replace(/^item\./, '')}`, spot: `pack.${view.card}`, xp: awardsFor('TakeItem', view.card, defs).reduce((a, x) => a + x.xp, 0) } : null,
     near: nearL ? { label: nearL.label, itemKey: nearL.ref ? nameKey(nearL.ref) : null } : reqNear ? { label: 'near.req' as Key, itemKey: reqNear.labelKey }
       : view.near !== null && view.mapFirst && isTraceSpot(view.near) && liveTraceSpot(s, view.near) ? { label: 'near.trace' as Key, itemKey: null } : null,   // GAME-215: біля позначки олівцем
   };

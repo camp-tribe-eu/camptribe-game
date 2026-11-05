@@ -120,7 +120,7 @@ export interface OfferHint {
   /** GAME-178: чому авто не рушає (рюкзак повний чи бракує речей); null — не показувати. */
   readonly blocked: { readonly carry: boolean; readonly itemKeys: readonly string[] } | null;
   /** GAME-245: велика картка речі, щойно взятої вдома (~1,5 с, покадрово): назва й репліка — ключі контенту, spot — для піктограми. null — картки нема. */
-  readonly card: { readonly nameKey: string; readonly reactKey: string; readonly spot: string } | null;
+  readonly card: { readonly nameKey: string; readonly reactKey: string; readonly spot: string; readonly xp: number } | null;
 }
 
 /** Картка прохання (GAME-180): що зробити одним рядком, цілі-картинки (іконка + підпис) і нагорода (дані для GAME-181). */

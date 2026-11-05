@@ -406,7 +406,7 @@ export function practiceOf(cmd: Command, before: GameState, after: Pick<Draft, '
 
 /** Ціль команди для прогресії: квест, об'єкт взаємодії чи подія в дорозі (ті самі поля, що пише журнал — sim.refOf). */
 function progressRef(cmd: Command): string | null {
-  return cmd.type === 'CompleteQuest' ? cmd.questId : cmd.type === 'Interact' ? cmd.targetId : cmd.type === 'RoadEvent' ? cmd.eventId : null;
+  return cmd.type === 'CompleteQuest' ? cmd.questId : cmd.type === 'Interact' ? cmd.targetId : cmd.type === 'RoadEvent' ? cmd.eventId : cmd.type === 'TakeItem' ? cmd.itemId : null;
 }
 
 /** Записати практику прийнятої команди в чернетку. Без персонажа вчитись нікому — нічого. */

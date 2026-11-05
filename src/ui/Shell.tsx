@@ -388,6 +388,7 @@ export function Shell({ port, langOverride, credits, build, holdToast = false, h
           <BigItemIcon spot={offer.hint.card.spot} />
           <strong data-ui="item-card-name">{ct(lang, offer.hint.card.nameKey)}</strong>
           <span data-ui="item-card-line">{ct(lang, offer.hint.card.reactKey)}</span>
+          {offer.hint.card.xp > 0 && <em data-ui="item-card-xp">{`+${offer.hint.card.xp} ${t('pack.card.xp')}`}</em>}
         </div>
       )}
       {barkShown && <div class="ui-titleup" data-ui="bedtime-bark" role="status"><strong>{t('bark.bedtime')}</strong></div>}
