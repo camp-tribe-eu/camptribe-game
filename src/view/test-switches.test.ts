@@ -55,4 +55,10 @@ describe('перемикачі e2e (рецензія GAME-36)', () => {
     for (const bad of ['?atMinute=1440', '?atMinute=-1', '?atMinute=1.5', '?atMinute=x', '?atMinute=']) expect(testSwitches(bad, 'e2e').atMinute).toBeUndefined();
     expect(testSwitches('?atMinute=720', 'production').atMinute).toBeUndefined();
   });
+
+  it('skipMinutes: лише в e2e і лише ціле 1…2880 (GAME-242)', () => {
+    expect(testSwitches('?skipMinutes=600', 'e2e').skipMinutes).toBe(600);
+    for (const bad of ['?skipMinutes=0', '?skipMinutes=2881', '?skipMinutes=-5', '?skipMinutes=1.5', '?skipMinutes=x', '?skipMinutes=']) expect(testSwitches(bad, 'e2e').skipMinutes).toBeUndefined();
+    expect(testSwitches('?skipMinutes=600', 'production').skipMinutes).toBeUndefined();
+  });
 });

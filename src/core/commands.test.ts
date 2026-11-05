@@ -234,7 +234,8 @@ describe('коди відмов: кожен код із реєстру має т
   ];
 
   it('кожен код реєстру покрито рівно одним прикладом', () => {
-    expect(cases.map(([c]) => c).sort()).toEqual([...REJECT_CODES].sort());
+    // SHOP_CLOSED потребує годинник (now ≠ 0) — його покрито в rest.test.ts.
+    expect(cases.map(([c]) => c).sort()).toEqual(REJECT_CODES.filter((c) => c !== 'SHOP_CLOSED').sort());
   });
 
   for (const [code, state, cmd, defs, weather] of cases) {

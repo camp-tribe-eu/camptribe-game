@@ -1,7 +1,7 @@
 // Крок симуляції: стан гри + годинник + RNG. Вхід — лише журнал (кадри, команди, перемотування),
 // тож той самий seed і той самий журнал дають той самий стан (GAME-13).
 
-import { advance, newClock, pause, resume, tick, type GameClock } from './clock';
+import { advance, autoSleepDue, newClock, pause, resume, tick, type GameClock } from './clock';
 import { dispatch, type Command } from './commands';
 import { EMPTY_DEFS, type CoreDefs } from './defs';
 import { canonical } from './hash';
@@ -10,6 +10,7 @@ import { payroll } from './life';
 import { eventEligible, route } from './story';
 import { nextInt, seedRng, type RngState } from './rng';
 import { initialState, type GameState } from './state';
+import { minutesToOpen, sleepPlace, wakeMinute, type SleepPlace } from './rest';
 import { dayOf, forecastOf, tripMinutes, weatherOf, type Weather } from './weather';
 import { settleWave } from './wave';
 
@@ -43,7 +44,7 @@ export interface JournalEntry {
  * Repair (GAME-72) поки ні: ремонтів у контенті немає. Додати сюди разом із першим ремонтом у content/.
  * `Memory` (GAME-110) — не команда, а пам'ятний вибір: вибір у розмові поставив факт зі `story.memorable`; ref — назва факту.
  */
-export const JOURNAL_TYPES = ['CreateCharacter', 'Visit', 'Pickup', 'BuyItem', 'SellItem', 'Interact', 'CompleteQuest', 'DeclineQuest', 'RoadEvent', 'StartScene', 'PackItem', 'UnpackItem', 'AutoPack', 'Memory', 'CompleteTask'] as const;
+export const JOURNAL_TYPES = ['CreateCharacter', 'Visit', 'Pickup', 'BuyItem', 'SellItem', 'Interact', 'CompleteQuest', 'DeclineQuest', 'RoadEvent', 'StartScene', 'PackItem', 'UnpackItem', 'AutoPack', 'Memory', 'CompleteTask', 'Sleep'] as const;
 export type JournalType = (typeof JOURNAL_TYPES)[number];
 export const isJournalType = (t: unknown): t is JournalType => (JOURNAL_TYPES as readonly unknown[]).includes(t);
 
@@ -186,12 +187,25 @@ const settled = (s: SimState, ctx: StepCtx): SimState => {
 };
 const afterClock = (s: SimState, ctx: StepCtx): SimState => settled(paid(s, ctx), ctx);
 
+/**
+ * Сон (GAME-242): годинник — до ранку (07:00; після того, як герой заснув сам, — 07:30), у журнал іде запис `Sleep`
+ * (ref — де спали: bed | tent | late | auto). Запис потрібен підсумку дня (день закривається сном) і підказці «Джордж заснув…».
+ */
+export function fallAsleep(s: SimState, ref: SleepPlace | 'auto'): SimState {
+  const wake = wakeMinute(s.clock.minutes, ref === 'auto');
+  const entry: JournalEntry = { at: s.clock.minutes, commandId: `sleep-${s.clock.minutes}`, type: 'Sleep', ref, cents: s.game.moneyCents };
+  return { ...s, clock: advance(s.clock, wake - s.clock.minutes), journal: [...s.journal, entry].slice(-JOURNAL_LIMIT) };
+}
+
 export function step(s: SimState, input: Input, ctx: StepCtx = {}): SimState {
   const systems = ctx.systems ?? [findsSystem];
   switch (input.kind) {
     case 'frame': {
       const t = tick(s.clock, input.realMs);
-      return afterClock(systems.reduce((acc, sys) => sys(acc, t.steps), { ...s, clock: t.clock }), ctx);
+      const ticked = systems.reduce((acc, sys) => sys(acc, t.steps), { ...s, clock: t.clock });
+      // GAME-242: о 00:30 герой засинає сам де стоїть (без штрафу) і прокидається о 07:30. Лише в живому русі кадрів:
+      // перемотування (`advance`, дорога) — рішення гравця чи тестів і сон не вмикає.
+      return afterClock(s.game.player && autoSleepDue(s.clock.minutes, ticked.clock.minutes) ? fallAsleep(ticked, 'auto') : ticked, ctx);
     }
     case 'command': {
       // Спершу — дні виплати, що вже настали за годинником ДО команди (SIM-LIFE-007). У грі їх нуль: кожен крок, що
@@ -203,6 +217,12 @@ export function step(s: SimState, input: Input, ctx: StepCtx = {}): SimState {
       // Спорядження в дорозі (GAME-73, SIM-GEAR-002/003): погода дня ВИЇЗДУ, як і для хвилин дороги (SIM-WX-007).
       const tripWeather = travelled > 0 ? todayWeather(s, ctx) : null;
       if (travelled > 0) s = { ...s, clock: advance(s.clock, travelled) };
+      // GAME-242: сон і очікування біля зачиненої крамниці — перемотування часу прийнятою командою.
+      if (r.ok && !r.repeated && input.command.type === 'Sleep') {
+        const place = sleepPlace(s.game, s.clock.minutes) as SleepPlace;
+        return afterClock(fallAsleep({ ...s, game: r.state }, place), ctx);
+      }
+      if (r.ok && !r.repeated && input.command.type === 'WaitForShop') return afterClock({ ...s, game: r.state, clock: advance(s.clock, minutesToOpen(s.clock.minutes)) }, ctx);
       // Рівно один запис на прийняту нову команду з переліку, що щось змінила в грі. Відмова, повтор
       // commandId і «порожня» дія (прийти туди, де стоїш; вдруге погрітись біля вогнища) — нуль.
       let next: SimState = { ...s, game: r.state };

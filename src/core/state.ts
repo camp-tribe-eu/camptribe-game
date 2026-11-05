@@ -112,6 +112,8 @@ export const REJECT_CODES = [
   'NOT_FOR_SALE',
   // GAME-81 · крамниці
   'NOT_SOLD_HERE',
+  // GAME-242 · години крамниці (08:00–20:00)
+  'SHOP_CLOSED',
   // GAME-29 · квести й світ
   'NO_CHARACTER',
   'CHARACTER_EXISTS',
