@@ -104,6 +104,38 @@ test('при ≈ 8 fps герой іде зі швидкістю реально�
   }
 });
 
+// GAME-238 · крок героя за кадр обмежений (як у слідувачів, MAX_FOLLOW_DT = 0,1 с): при ≈ 4–5 fps (?frameLagMs=190, кадр ≈ 200–250 мс) герой
+// проходить за кадр не більше SPEED × 0,1 = 12,8 px, а не 25–32. Кадри рахуємо в самій сторінці (rAF = кадр Phaser), позиція — з проби.
+// Негативний контроль: прибрати stepK у scene.ts → крок ≈ 26–32 px, тест червоний.
+test('при ≈ 4 fps крок героя за кадр ≤ 12,8 px (крок обмежено, як у слідувачів)', async ({ page }) => {
+  const LAG_MS = 190;
+  await page.setViewportSize({ width: 932, height: 430 });
+  await page.goto(`/?seed=2&frameLagMs=${LAG_MS}`);
+  await waitGameReady(page);
+  await page.waitForFunction(() => (window as unknown as { __game: { probe: { fpsWindows: number } } }).__game.probe.fpsWindows >= 1, null, { timeout: 20_000, polling: 250 });
+  const fps = await page.evaluate(() => (window as unknown as { __game: { probe: { fps: number } } }).__game.probe.fps);
+  expect(fps, 'штучна затримка не спрацювала — тест нічого не доводить').toBeLessThan(8);
+  await page.keyboard.down('ArrowDown');
+  try {
+    const steps = await page.evaluate(() => new Promise<number[]>((resolve) => {
+      const g = (window as unknown as { __game: { probe: { playerX: number; playerY: number } } }).__game;
+      const out: number[] = []; let last = { x: g.probe.playerX, y: g.probe.playerY }; const t0 = performance.now();
+      const tick = (): void => {
+        const p = { x: g.probe.playerX, y: g.probe.playerY };
+        out.push(Math.hypot(p.x - last.x, p.y - last.y)); last = p;
+        if (performance.now() - t0 > 1_500) resolve(out); else requestAnimationFrame(tick);
+      };
+      requestAnimationFrame(tick);
+    }));
+    const moving = steps.filter((d) => d > 0);
+    console.log(`GAME-238 крок за кадр при lag ${LAG_MS} мс (fps ${fps.toFixed(1)}): max ${Math.max(...moving).toFixed(2)} px, кроків ${moving.length}`);
+    expect(moving.length, 'герой справді йшов').toBeGreaterThanOrEqual(3);
+    expect(Math.max(...moving)).toBeLessThanOrEqual(SPEED * 0.1 + 0.05);
+  } finally {
+    await page.keyboard.up('ArrowDown');
+  }
+});
+
 // GAME-38 · бюджет fps еталонної сцени (?seed=2, 1280×800, без ?frameLagMs): медіана з ≥ fpsSamples незалежних вікон probe.fps
 // (по ~3 с, scene.ts) ≥ fpsMedianMin — обидва пороги з budgets.json. Тут, а не окремим файлом: проєкт perf іде послідовно лише
 // в межах файла, а два файли perf розійшлися б різними воркерами й ділили б процесор.

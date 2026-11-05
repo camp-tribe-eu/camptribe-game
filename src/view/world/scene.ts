@@ -1420,7 +1420,10 @@ export class WorldScene extends Phaser.Scene {
     this.last = { x: this.player.x, y: this.player.y };
     // GAME-191: під час дії (замах, удар, руки) герой стоїть і дивиться туди, куди почав, — без «замаху на бігу» (рецензія #118).
     const swimK = this.swim.update(time, delta, { moving, movedPx, facing: this.facing, pets: [...this.miaSprites.values()].filter((m) => m.visible) });   // GAME-227: у глибині −40 %
-    this.player.setVelocity(this.acting ? 0 : v.x * SPEED * swimK, this.acting ? 0 : v.y * SPEED * swimK);
+    // GAME-238: крок героя за кадр обмежений, як у слідувачів (MAX_FOLLOW_DT): фізика бере сиру дельту (main.ts, smoothStep: false), і довгий кадр
+    // (≤ 10 fps: хитання, згорнута вкладка, CI на SwiftShader) не кидає героя на 32 px за раз — найбільше SPEED × 0,1 с = 12,8 px; до 10 fps швидкість справжня.
+    const stepK = Math.min(1, (MAX_FOLLOW_DT * 1000) / Math.max(1, delta));
+    this.player.setVelocity(this.acting ? 0 : v.x * SPEED * swimK * stepK, this.acting ? 0 : v.y * SPEED * swimK * stepK);
     if (!this.acting && (v.x !== 0 || v.y !== 0)) {
       const horizontal = v.x !== 0 && (v.y === 0 || this.facing === 'left' || this.facing === 'right');
       this.facing = horizontal ? (v.x < 0 ? 'left' : 'right') : (v.y < 0 ? 'up' : 'down');

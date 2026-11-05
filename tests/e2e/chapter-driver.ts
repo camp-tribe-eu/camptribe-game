@@ -75,14 +75,35 @@ export async function walk(page: Page, pts: [number, number][]): Promise<void> {
     };
     let i = 0;
     const t0 = performance.now();
+    // GAME-238: герой іде в реальному часі, тож на повільному CI (≈ 4–5 fps) один кадр — до 12,8 px (крок обмежено в сцені, як у слідувачів), а зміна
+    // клавіші діє через ДВА кадри (Phaser: черга клавіш → фізика на UPDATE → наш update ставить швидкість → інтегрується наступним кадром):
+    // після перемикання герой ще два кадри їде старим напрямком. Старе «тримати, доки |d| < 3» на 12,8-px кроках вічно перелітало точку.
+    // Тепер: на прямих відрізках точку вважаємо пройденою й не зупиняємось; перед поворотом і перед останньою точкою відпускаємо клавішу
+    // за ≈ 2 кроки (герой докочується), чекаємо повної зупинки й лише тоді міряємо; вікно «дійшов» — ≥ 3 px або 0,55 минулого кроку.
+    const axisKey = (dx: number, dy: number): string => (Math.abs(dx) >= Math.abs(dy) ? (dx < 0 ? 'ArrowLeft' : 'ArrowRight') : (dy < 0 ? 'ArrowUp' : 'ArrowDown'));
+    let last = { x: g.probe.playerX, y: g.probe.playerY };
+    let coasting = false;
     const tick = (): void => {
-      const p = pts[i];
-      if (!p || performance.now() - t0 > 45_000) { set(null); resolve(); return; }
-      const dx = p[0] - g.probe.playerX;
-      const dy = p[1] - g.probe.playerY;
-      if (Math.abs(dx) < 3 && Math.abs(dy) < 3) { i++; requestAnimationFrame(tick); return; }
-      set(Math.abs(dx) >= Math.abs(dy) ? (dx < 0 ? 'ArrowLeft' : 'ArrowRight') : (dy < 0 ? 'ArrowUp' : 'ArrowDown'));
-      requestAnimationFrame(tick);
+      if (performance.now() - t0 > 45_000) { set(null); resolve(); return; }
+      const here = { x: g.probe.playerX, y: g.probe.playerY };
+      const step = Math.hypot(here.x - last.x, here.y - last.y);
+      last = here;
+      const tol = Math.max(3, step * 0.55);
+      for (;;) {
+        const p = pts[i];
+        if (!p) { set(null); resolve(); return; }
+        const dx = p[0] - here.x; const dy = p[1] - here.y;
+        const key = axisKey(dx, dy);
+        const next = pts[i + 1];
+        const straight = next !== undefined && axisKey(next[0] - p[0], next[1] - p[1]) === key;
+        const along = key === 'ArrowLeft' ? -dx : key === 'ArrowRight' ? dx : key === 'ArrowUp' ? -dy : dy;   // відстань уздовж осі руху, < 0 — пройшли
+        if ((Math.abs(dx) < tol && Math.abs(dy) < tol) || (straight && along <= tol)) { i++; continue; }
+        if (coasting) { if (step > 0.1) { requestAnimationFrame(tick); return; } coasting = false; }   // докочується після відпускання — чекаємо зупинки
+        if (!straight && down.has(key) && along <= 2 * step + tol) { set(null); coasting = true; requestAnimationFrame(tick); return; }
+        set(key);
+        requestAnimationFrame(tick);
+        return;
+      }
     };
     requestAnimationFrame(tick);
   }), pts);
