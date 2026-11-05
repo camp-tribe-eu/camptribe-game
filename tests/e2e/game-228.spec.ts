@@ -32,6 +32,8 @@ async function goTo(page: Page, x: number, y: number): Promise<void> {
     const [px, py] = await at(page);
     if (Math.hypot(px - x, py - y) < 14) return;
   }
+  const [fx, fy] = await at(page);
+  throw new Error(`goTo: не дійшли до (${x}, ${y}) за 5 проходів; герой у (${Math.round(fx)}, ${Math.round(fy)})`);
 }
 const press = async (page: Page): Promise<void> => { await page.keyboard.down('KeyE'); await page.waitForTimeout(90); await page.keyboard.up('KeyE'); };
 
