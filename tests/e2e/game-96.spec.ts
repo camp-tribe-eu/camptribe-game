@@ -207,6 +207,7 @@ test('стоїть > 2 с: спрайт дихає (0/1 px), а проба по�
 // GAME-96 продовження (смак власника 25.10): вбік і на десктопі мапа на ВСЮ ширину екрана — без чорних смуг з боків; керування
 // поверх мапи; камера в межах мапи (порожнечі немає); пікселі чіткі (цілий zoom, image-rendering: pixelated).
 // Негативний контроль (мутація, звіт картки): старий кадр 640×352 під FIT → «≥ 99 % ширини» і «край — мапа» червоніють.
+const EDGE_ROWS = 12;   // довжина відрізка краю, ігрових рядків (GAME-240)
 const BG = new Set(['27,31,35', '0,0,0']);   // тло сторінки #1b1f23 і тло Phaser #000000 — те, що видно у смугах
 const FULL: { vp: Vp; touch: boolean }[] = [
   ...LANDSCAPE.map((vp) => ({ vp, touch: true })),
@@ -244,19 +245,20 @@ for (const c of FULL) {
     // Порожнечі немає: кадр не більший за мапу 640×384, і камера з межами мапи не може показати поза нею.
     expect(buf.w, 'кадр не ширший за мапу').toBeLessThanOrEqual(640);
     expect(buf.h, 'кадр не вищий за мапу').toBeLessThanOrEqual(384);
-    // Краї екрана (чверть, середина і три чверті висоти) — пікселі мапи, не тло смуг: УСІ шість точок (рецензія PR #77: «≥ 2 з 3»
-    // пропускало б смугу в дві третини висоти). Якщо тінь дерева колись впаде на край — це червоний тест і привід підвинути точку, не послабити.
+    // Краї екрана (чверть, середина і три чверті висоти) — пікселі мапи, не тло смуг: УСІ шість відрізків (рецензія PR #77: «≥ 2 з 3»
+    // пропускало б смугу в дві третини висоти). Кожен край береться ВІДРІЗКОМ у EDGE_ROWS ігрових рядків, а не однією точкою (GAME-240):
+    // мапа має власні чорні контури (стовпчик-вказівник tile 1145 має чорний контур у стовпці 17 → світовий x = 465, останній стовпець кадру
+    // 466 px при камері в x = 0), а камера з половинним scrollY (+0,5 від зсуву рамки HUD) за кадр-два зсувається на 1 px — і одна точка
+    // край-в-край то потрапляла на контур (0,0,0), то ні: ≈ 1 з 3 на повільному CI. Смуга тла — суцільна по ВСЬОМУ відрізку (100 %), контур — 3 рядки з 12.
     const ys = [0.25, 0.5, 0.75].map((f) => Math.round(vp.height * f));
-    const px = await pixels(page, [...ys.map((y) => [1, y] as const), ...ys.map((y) => [vp.width - 2, y] as const)]);
-    expect(px.length).toBe(6);
-    // TMP GAME-238 діагностика CI (прибрати): що намальовано, коли край — тло.
-    if (px.some((p) => BG.has(p))) {
-      const st = await page.evaluate(() => { const g = (window as unknown as { __game: { probe: Record<string, unknown>; read: () => { clock: unknown } } }).__game; const p = g.probe; return JSON.stringify({ reveal: p.reveal, scroll: [p.cameraScrollX, p.cameraScrollY], hero: [p.playerX, p.playerY], min: p.clockMinutes, fps: p.fps, followers: p.followers, leisure: p.leisure, residents: p.residents, neighbours: (p.neighbours as { id: string; state: string; x: number; y: number; emote: unknown }[]).map((n) => [n.id, n.state, n.x, n.y, n.emote]), fx: p.fx, npcMarks: p.npcMarks, bark: p.bark, miaAt: p.miaAt, daylight: p.daylight, lamps: p.lamps, live: p.live, camp: p.camp, clock: g.read().clock }); });
-      const crop = await page.screenshot({ clip: { x: vp.width - 132, y: 0, width: 132, height: Math.min(vp.height, 340) } });
-      console.log(`GAME-238-DIAG ${vp.width}x${vp.height} px=${px.join(' | ')} state=${st}\nGAME-238-PNG ${crop.toString('base64')}`);
-    }
-    expect(px.slice(0, 3).filter((p) => BG.has(p)).length, `лівий край — мапа: ${px.slice(0, 3).join(' | ')}`).toBe(0);
-    expect(px.slice(3).filter((p) => BG.has(p)).length, `правий край — мапа: ${px.slice(3).join(' | ')}`).toBe(0);
+    const segment = (x: number, y: number): (readonly [number, number])[] => Array.from({ length: EDGE_ROWS }, (_, i) => [x, y + i * k] as const);
+    const edges = [...ys.map((y) => segment(1, y)), ...ys.map((y) => segment(vp.width - 2, y))];
+    const all = await pixels(page, edges.flat());
+    expect(all.length).toBe(edges.length * EDGE_ROWS);
+    const shares = edges.map((_, i) => { const seg = all.slice(i * EDGE_ROWS, (i + 1) * EDGE_ROWS); return { bg: seg.filter((p) => BG.has(p)).length, seg }; });
+    const report = (part: typeof shares): string => part.map((e) => `${e.bg}/${EDGE_ROWS} тла [${[...new Set(e.seg)].join(' | ')}]`).join('; ');
+    expect(shares.slice(0, 3).filter((e) => e.bg > EDGE_ROWS / 2).length, `лівий край — мапа: ${report(shares.slice(0, 3))}`).toBe(0);
+    expect(shares.slice(3).filter((e) => e.bg > EDGE_ROWS / 2).length, `правий край — мапа: ${report(shares.slice(3))}`).toBe(0);
     // Керування поверх мапи: ☰ зліва вгорі, рамка справа вгорі, ‖ під рамкою, джойстик знизу зліва, дія знизу справа; ніщо не перетинається, цілі ≥ 44.
     const sels = ['[data-touch="story"]', '[data-ui="hud"]', '[data-touch="pause"]', ...(c.touch ? ['[data-touch="stick"]', '[data-touch="interact"]'] : [])];
     const rects = await Promise.all(sels.map((s) => rect(page, s)));
