@@ -190,8 +190,8 @@ export interface WorldProbe {
   playerFrame: number;
   playerDir: Dir;
   playerMoving: boolean;
-  /** GAME-238 (лише для e2e): зсув дихання спрайта героя (GAME-212), px — 0/1 по колу, коли стоїть > 2 с. У playerY його НЕМА: там справжня позиція. */
-  heroBob: number;
+  /** GAME-238 (лише для e2e): зсув ДИХАННЯ спрайта героя (GAME-212), px — 0/1 по колу, коли стоїть > 2 с. У playerY його нема; зсув сидіння (SIT_DY) і нахилу біля колонки — є, як і було. */
+  heroBreath: number;
   /** Глибина персонажа (= y ніг) і кількість тайлів верхівок, що зараз перекривають його кадр / лежать позаду нього. */
   playerDepth: number;
   coveredTiles: number;
@@ -299,6 +299,8 @@ export class WorldScene extends Phaser.Scene {
   /** GAME-212: скільки мс стоїть герой / слідувач / мешканець (дихання), куди й скільки ще дивиться слідувач на сплеск, видимий зсув героя. */
   private heroStandMs = 0;
   private heroBob = 0;
+  /** GAME-238: частка heroBob, що є диханням (idleBob), px — лише її проба playerY віднімає. */
+  private heroBreath = 0;
   private sitCropped = false;
   private followStand: number[] = [];
   private followLook: { dir: Dir; s: number }[] = [];
@@ -1302,7 +1304,9 @@ export class WorldScene extends Phaser.Scene {
     if (look && !this.sitCropped) { this.player.setCrop(0, 0, FRAME, look.rows); this.sitCropped = true; }
     else if (!look && this.sitCropped) { this.player.setCrop(); this.sitCropped = false; }
     this.player.setScale(1, 1 - 0.1 * bend);   // GAME-225: колонка — герой нахиляється
-    const hb = look ? look.dy : idleBob(this.heroStandMs) + Math.round(bend * 2);
+    const breath = look ? 0 : idleBob(this.heroStandMs);
+    const hb = look ? look.dy : breath + Math.round(bend * 2);
+    this.heroBreath = breath;
     if (hb && !this.heroBob) { this.player.y += hb; this.heroBob = hb; }
     const evening = isEvening(timeOfDay(this.bridge.state.clock.minutes));
     const marks: { at: Pt; kind: Glyph }[] = [];
@@ -1653,10 +1657,11 @@ export class WorldScene extends Phaser.Scene {
     Object.assign(this.probe, {
       reveal: this.reveal !== null,
       playerX: this.player.x,
-      // GAME-238: справжня позиція, без зсуву дихання (GAME-212 кладе ±1 px на спрайт після update і знімає в PRE_UPDATE; у пробі він
-      // робив героя «рухомим» на 1 px, щойно він постояв 2 с — game-96 «персонаж на місці» червонів на повільному CI).
-      playerY: this.player.y - this.heroBob,
-      heroBob: this.heroBob,
+      // GAME-238: без зсуву дихання (GAME-212 кладе 0/1 px на спрайт після update і знімає в PRE_UPDATE; у пробі він робив героя
+      // «рухомим» на 1 px, щойно він постояв 2 с — game-96 «персонаж на місці» червонів на повільному CI). Зсув сидіння на лавці
+      // (SIT_DY, game-225 «−4 px вниз») і нахил біля колонки лишаються в playerY, як на main.
+      playerY: this.player.y - (this.heroBob ? this.heroBreath : 0),
+      heroBreath: this.heroBob ? this.heroBreath : 0,
       nearObject: near,
       nearKind: spot ? actionTarget(spot.kind, spot.name) : null,
       commandsSent: this.bridge.sent,

@@ -194,6 +194,11 @@ test.describe('кнопка дії за ціллю', () => {
 
     // Вогнище (112,144) — вгору від Елізи: рід fire, значок інший.
     await driveUntil(page, cdp, 0, -50, (p) => p.nearObject === 'obj.campfire');
+    // GAME-238: герой іде в реальному часі й при 4 fps CI (кадр 250 мс) після відпускання джойстика проходить ще до 32 px — зону вогнища
+    // (48 px) проскакує. Довертаємо коротким ходом, як до Елізи вище (стан, не час): назад-вперед, доки ціль — вогнище.
+    for (let i = 0; i < 4 && (await probe(page)).nearObject !== 'obj.campfire'; i++) {
+      await driveUntil(page, cdp, 0, i % 2 === 0 ? 50 : -50, (p) => p.nearObject === 'obj.campfire', 2000);
+    }
     expect((await probe(page)).nearObject).toBe('obj.campfire');
     await expect(btn).toHaveAttribute('data-target', 'fire');
     expect(await btn.locator('path').getAttribute('d'), 'значок вогню відрізняється від розмови').not.toBe(talkIcon);
