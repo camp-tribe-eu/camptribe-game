@@ -4,7 +4,7 @@
 // кінець розділу; день 2 закінчується «Підсумком дня 2» і кінцем розділу (останній тест).
 import { mkdirSync, readFileSync } from 'node:fs';
 import AxeBuilder from '@axe-core/playwright';
-import { playTent } from './chapter-driver';
+import { playTent, sleepTheDay, skipToEvening } from './chapter-driver';
 import { expect, test, type Locator, type Page } from '@playwright/test';
 import { waitGameReady } from './ready';
 
@@ -107,6 +107,7 @@ for (const mode of MODES) {
       ['choose', 'dlg.elise-greeting.hello.c2'], ['continue', ''], ['choose', 'dlg.elise-greeting.spot.c1'], ['continue', ''], ['pickup', 'item.firewood']] as const) await act(k, key);
     await expect(summary(page)).toHaveCount(0);                     // контроль: до кінця дня підсумку немає
     await act('complete', 'q.st-005');
+    await sleepTheDay(page);   // GAME-256: день 1 закриває сон
 
     // Підсумок: діалог із заголовком у фокусі, екран подорожі й шапка сховані, світ на паузі.
     await expect(summary(page)).toBeVisible();
@@ -204,6 +205,7 @@ test('«Продовжити» — назад на мапу; день 2 до «�
   await page.locator('[data-touch="story"]').click();
   for (const [k, key] of [['talk', 'npc.elise'], ['choose', 'dlg.elise-greeting.hello.c2'], ['continue', ''],
     ['choose', 'dlg.elise-greeting.spot.c1'], ['continue', ''], ['pickup', 'item.firewood'], ['complete', 'q.st-005']] as const) await click(`[data-act="${k}"][data-key="${key}"]`);
+  await sleepTheDay(page);   // GAME-256
   await expect(summary(page)).toBeVisible();
   await expect(summary(page).locator('h2')).toHaveText('Підсумок дня 1');
   await summary(page).locator('[data-ui="summary-continue"]').click();
@@ -212,10 +214,13 @@ test('«Продовжити» — назад на мапу; день 2 до «�
   // День 2 (GAME-141): ранок → «Доброго ранку!» → табірний день (вечеря) → вечір біля вогнища.
   await page.locator('[data-touch="story"]').click();
   for (const [k, key] of [['complete', 'q.ch1-d2-001'], ['talk', 'npc.elise'], ['choose', 'dlg.elise-greeting.hello.c11'], ['choose', 'dlg.elise-greeting.morning.c2'], ['continue', ''],
-    ['complete', 'q.ch1-d2-elise-001'], ['talk', 'npc.elise'], ['choose', 'dlg.elise-greeting.hello.c14'], ['choose', 'dlg.elise-greeting.dinner.c1'], ['continue', ''], ['continue', ''],
+    ['complete', 'q.ch1-d2-elise-001']] as const) await click(`[data-act="${k}"][data-key="${key}"]`);
+  await skipToEvening(page);   // GAME-256: вечеря — з 18:00
+  for (const [k, key] of [['talk', 'npc.elise'], ['choose', 'dlg.elise-greeting.hello.c14'], ['choose', 'dlg.elise-greeting.dinner.c1'], ['continue', ''], ['continue', ''],
     ['complete', 'q.ch1-d2-camp-001']] as const) await click(`[data-act="${k}"][data-key="${key}"]`);
   await expect(summary(page)).toHaveCount(0);                                // контроль: до межі дня 2 підсумку немає
   await click('[data-act="complete"][data-key="q.ch1-d2-fire-001"]');
+  await click('[data-act="sleep"]');   // GAME-256: день 2 закриває сон
   await expect(summary(page)).toBeVisible();
   await expect(summary(page).locator('h2')).toHaveText('Підсумок дня 2');
   expect(await summary(page).locator('[data-kind="quests"] li').evaluateAll((els) => els.map((e) => (e as HTMLElement).dataset.key)))

@@ -373,3 +373,26 @@ export async function closeFishScene(page: Page): Promise<void> {
   const close = page.locator('[data-ui="story-close"]');
   if (await close.count()) await close.click({ timeout: 3_000 }).catch(() => undefined);
 }
+
+/**
+ * GAME-256 · вечір без очікування: ?skipMinutes=N перемотує годинник ПІСЛЯ завантаження збереження (GAME-242, збережений стан — з автозбереження); поточні перемикачі URL
+ * лишаються. Тест не про час, тому перемотування тут допустиме. Після перезавантаження ☰ відкрито знову.
+ */
+export async function skipToEvening(page: Page): Promise<void> {
+  const minutes = (await core(page) as unknown as { clock: { minutes: number } }).clock.minutes;
+  const delta = (19 * 60 - ((minutes + 480) % 1440) + 1440) % 1440;
+  const url = new URL(page.url());
+  url.searchParams.set('skipMinutes', String(delta));
+  await page.goto(url.toString());
+  await waitGameReady(page);
+  await page.locator('[data-ui="recovery-close"]').click({ timeout: 800 }).catch(() => undefined);
+  await expect.poll(async () => (((await core(page) as unknown as { clock: { minutes: number } }).clock.minutes + 480) % 1440)).toBeGreaterThanOrEqual(19 * 60);
+  await page.locator('[data-touch="story"]').click();
+  await expect(page.locator('[data-ui="story"]')).toBeVisible();
+}
+
+/** День закриває сон (GAME-256): вечір → ☰ → «Лягти спати» у наметі; далі гра сама показує підсумок дня. */
+export async function sleepTheDay(page: Page): Promise<void> {
+  await skipToEvening(page);
+  await page.locator('[data-ui="story"] [data-act="sleep"]').click({ timeout: 5_000 });
+}
