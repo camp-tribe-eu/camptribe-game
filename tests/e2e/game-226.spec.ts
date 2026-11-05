@@ -53,7 +53,7 @@ for (const v of VIEWS) {
     expect(errors).toEqual([]);
   });
 
-  test(`вночі (23:00) сусіди сплять із «Z», а дихання — 1 px — ${v.side}`, async ({ page }) => {
+  test(`вночі (23:00) сусіди сплять із «Z» без посмикування — ${v.side}`, async ({ page }) => {
     test.setTimeout(60_000);
     const errors = await open(page, NIGHT, v.w, v.h);
     const ns = await nb(page);
@@ -61,7 +61,7 @@ for (const v of VIEWS) {
     await expect.poll(async () => (await nb(page)).filter((n) => n.emote === 'zzz').length, { timeout: 5_000 }).toBeGreaterThanOrEqual(1);
     const ys = new Set<number>();
     for (let i = 0; i < 14; i++) { ys.add(Math.round((await one(page, 'npc.amina')).y)); await page.waitForTimeout(300); }
-    expect(ys.size, 'дихання: спрайт піднімається й опускається на 1 px').toBe(2);
+    expect(ys.size, 'GAME-248: без посмикування — дихання 1 px прибрано').toBe(1);
     await shot(page, 'night-23h', v.side);
     expect(errors).toEqual([]);
   });

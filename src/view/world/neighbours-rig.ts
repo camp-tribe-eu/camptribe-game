@@ -1,14 +1,14 @@
 // GAME-226 · «Живі сусіди»: малює й веде сусідів табору за станами з neighbours.ts. Нової графіки нема: той самий лист ходьби LPC; книга, рука привітання й значки —
 // кілька пікселів Graphics у палітрі гри. Усе покадрово (лічильник кадрів, жодних твінів і таймерів), звуку тут нема.
 import Phaser from 'phaser';
-import { idleBob } from './idle';
+import { idlePose } from './idle-poses';
 import { facingToward } from '../npc-talk';
 import { FRAME, frameIndex, type Dir } from './character';
 import { SEATS, SIT_DY, SIT_ROWS } from './camp-alive';
 import { walkableAt, type Timeline } from './ambient';
 import type { Grid, Pt } from './follow';
 import {
-  EMOTES, EMOTE_COLORS, EMOTE_DY, HOMES, MIND0, activityFor, breath, emoteScale, flipping, lookDir, nightOf, pagesTurned, planHome, routeAt, seatNear, sinceEvening, stepMind, stopIndexAt, waveFrame, workFrame,
+  EMOTES, EMOTE_COLORS, EMOTE_DY, HOMES, MIND0, activityFor, emoteScale, flipping, lookDir, nightOf, pagesTurned, planHome, routeAt, seatNear, sinceEvening, stepMind, stopIndexAt, waveFrame, workFrame,
   emoteShiftX, heldBy, type Emote, type HomePlan, type Mind, type NState, type Route, type RoutePhase,
 } from './neighbours';
 
@@ -26,7 +26,7 @@ const MAT_FILL = 0xc9a66b;
 const MAT_STRIPE = 0xa98550;
 
 export interface NeighbourProbe {
-  id: string; state: NState; phase: RoutePhase; x: number; y: number; emote: Emote | null; emoteAge: number; waveDay: number; waves: number; pages: number; off: Pt; sitting: boolean;
+  id: string; state: NState; phase: RoutePhase; x: number; y: number; emote: Emote | null; emoteAge: number; waveDay: number; waves: number; pages: number; off: Pt; sitting: boolean; /** GAME-248: назва пози простою ('' — іде/зайнятий, 'rest' — стоїть між звичками) і висота видимої частини спрайта (64 = повний зріст; менше — лише на лавці). */ pose: string; cropRows: number;
   /** GAME-231: кадрів у цьому стані (для e2e: «стоїть > 90 кадрів поспіль» — без залежності від fps). */
   f: number;
 }
@@ -43,6 +43,10 @@ export class Neighbours {
   private bodies: Phaser.GameObjects.Graphics[] = [];
   private top: Phaser.GameObjects.Graphics | null = null;
   private cropped: boolean[] = [];
+  private sat: boolean[] = [];
+  private standMs: number[] = [];
+  private poseName: string[] = [];
+  private dt = 1000 / 60;
   private waves: number[] = [];
   /** День останнього привітання — живе довше за мапу: табір→крамниця→табір не махає вдруге того ж дня. */
   private waveDays = new Map<string, number>();
@@ -58,6 +62,9 @@ export class Neighbours {
     this.minds = ids.map((id) => ({ ...MIND0, waveDay: this.waveDays.get(id) ?? -1 }));
     this.holds = ids.map(() => 0);
     this.cropped = ids.map(() => false);
+    this.sat = ids.map(() => false);
+    this.standMs = ids.map(() => 0);
+    this.poseName = ids.map(() => '');
     this.waves = ids.map(() => 0);
     this.plans.clear();
     this.bodies = ids.map(() => this.scene.add.graphics());
@@ -66,7 +73,7 @@ export class Neighbours {
     this.fire = null;
     this.top = this.scene.add.graphics().setDepth(this.depthTop);
     this.probe.length = 0;
-    ids.forEach((id) => this.probe.push({ id, state: 'stand', phase: 'out', x: 0, y: 0, emote: null, emoteAge: 0, waveDay: -1, waves: 0, pages: 0, off: { x: 0, y: 0 }, sitting: false, f: 0 }));
+    ids.forEach((id) => this.probe.push({ id, state: 'stand', phase: 'out', x: 0, y: 0, emote: null, emoteAge: 0, waveDay: -1, waves: 0, pages: 0, off: { x: 0, y: 0 }, sitting: false, pose: '', cropRows: FRAME, f: 0 }));
   }
 
   destroy(): void {
@@ -100,7 +107,8 @@ export class Neighbours {
   quiet(i: number): boolean { const s = this.minds[i]?.state; return s === 'sleep' || (s === 'sit' && this.probe[i]?.phase === 'home'); }
 
   /** Кадр сусіда `i`: рахує, де він і що робить, ставить спрайт і малює дрібниці. Повертає ЛОГІЧНУ точку (за розкладом/дорогою) для проби й дзвінка. */
-  drive(i: number, s: Phaser.GameObjects.Sprite, grid: Grid, tl: Timeline, minutes: number, hero: Pt | null, raining: boolean, barking: boolean, facing: Dir): Route {
+  drive(i: number, s: Phaser.GameObjects.Sprite, grid: Grid, tl: Timeline, minutes: number, hero: Pt | null, raining: boolean, barking: boolean, facing: Dir, dtMs = 1000 / 60): Route {
+    this.dt = dtMs;
     const res = tl.resident;
     const home = HOMES[res.id];
     const night = nightOf(minutes);
@@ -131,7 +139,7 @@ export class Neighbours {
     this.show(i, s, route, m, hero, facing, seatPt?.face ?? null);
     this.emoteOf(i, s, m, barking);
     const p = this.probe[i];
-    if (p) Object.assign(p, { state: m.state, phase: route.phase, x: s.x, y: s.y, emote: m.emote, emoteAge: m.emoteAge, waveDay: m.waveDay, waves: this.waves[i] ?? 0, pages: pagesTurned(m.f), off: { x: Math.round(m.off.x), y: Math.round(m.off.y) }, sitting: this.cropped[i] === true, f: m.f });
+    if (p) Object.assign(p, { state: m.state, phase: route.phase, x: s.x, y: s.y, emote: m.emote, emoteAge: m.emoteAge, waveDay: m.waveDay, waves: this.waves[i] ?? 0, pages: pagesTurned(m.f), off: { x: Math.round(m.off.x), y: Math.round(m.off.y) }, sitting: this.sat[i] === true, pose: this.poseName[i] ?? '', cropRows: this.cropped[i] ? SIT_ROWS : FRAME, f: m.f });
     return route;
   }
 
@@ -152,6 +160,7 @@ export class Neighbours {
     const y = route.y + m.off.y;
     const st = m.state;
     const sitting = st === 'sleep' || st === 'sit';
+    const onSeat = st === 'sit' && seatFace !== null;
     let dir: Dir = facing;
     let dy = 0;
     let squash = 1;
@@ -164,18 +173,29 @@ export class Neighbours {
     if (walking) {
       s.anims.timeScale = st === 'hurry' ? 1.5 : 1;
       s.anims.play(`walk-res-${look}-${dir}`, true);
-    } else { s.anims.stop(); s.setFrame(frameIndex(dir, 0)); }
+      this.standMs[i] = 0;
+      this.poseName[i] = '';
+    } else {
+      s.anims.stop();
+      // GAME-248: стоїть (або «біля намету») — звичка людини з листа ходьби; без дихання на 1 px (читалось як посмикування).
+      const calm = st === 'stand' || (st === 'sit' && !onSeat);
+      this.standMs[i] = calm ? (this.standMs[i] ?? 0) + this.dt : 0;
+      const pose = calm ? idlePose(look, this.standMs[i] ?? 0, i) : null;
+      this.poseName[i] = pose ? pose.name : calm ? 'rest' : '';
+      s.setFrame(frameIndex(pose?.dir ?? dir, pose && pose.sheet === 'walk' ? pose.col : 0));
+    }
     if (st === 'work') { const w = workFrame(m.f); dy = w; squash = 1 - 0.05 * w; }
-    if (sitting) dy = SIT_DY + (st === 'sleep' ? breath(m.f) : 0);
-    else if (st === 'stand' || st === 'look' || st === 'read' || st === 'wave') dy += idleBob(m.f * 17, i);
-    if (sitting && !this.cropped[i]) { s.setCrop(0, 0, FRAME, SIT_ROWS); this.cropped[i] = true; }
-    else if (!sitting && this.cropped[i]) { s.setCrop(); this.cropped[i] = false; }
+    // GAME-248: повний зріст скрізь; сидіння — лише на лавці (SIT_DY і підрізані ноги, як у героя), на голій землі й ночі не обрізаємо.
+    this.sat[i] = sitting;
+    if (onSeat) dy = SIT_DY;
+    if (onSeat && !this.cropped[i]) { s.setCrop(0, 0, FRAME, SIT_ROWS); this.cropped[i] = true; }
+    else if (!onSeat && this.cropped[i]) { s.setCrop(); this.cropped[i] = false; }
     s.setScale(1, squash).setPosition(x, y + dy).setDepth(y);
     // Книга в руках і рука привітання: кілька пікселів поверх спрайта.
     const mat = this.mats[i];
     if (mat) {
       mat.clear().setDepth(y - 1);
-      if (sitting && route.phase === 'home') {
+      if (sitting && route.phase === 'home' && !onSeat) {
         // Килимок під сидячим: спрайт (origin 0,9 висоти) обрізано на SIT_ROWS із 64, тож нижній край тіла — на y + SIT_DY − 0,1·FRAME + 0,9·… ≈ y − 5,6; килимок виглядає з-під нього на 2–6 px.
         const my = y - 3;
         mat.fillStyle(MAT_EDGE, 1).fillEllipse(x, my, 34, 13);
