@@ -10,7 +10,7 @@ export const JOURNAL_VISIBLE = 8;
 /** Значок на кожен тип запису (JOURNAL_TYPES ядра; повноту звіряє journal-model.test.ts). */
 export const JOURNAL_ICONS: Readonly<Record<string, string>> = {
   CreateCharacter: '🧭', Visit: '📍', Pickup: '🎒', BuyItem: '🛒', SellItem: '💶', Interact: '💬', CompleteQuest: '✅', DeclineQuest: '⏳',
-  RoadEvent: '🛣️', StartScene: '🔥', PackItem: '📦', UnpackItem: '📤', AutoPack: '🧳', Memory: '⭐', CompleteTask: '🔧', Sleep: '🌙',
+  RoadEvent: '🛣️', StartScene: '🔥', PackItem: '📦', UnpackItem: '📤', AutoPack: '🧳', Memory: '⭐', CompleteTask: '🔧', Sleep: '🌙', TakeItem: '🎒', LoadCar: '🚗', LeaveItem: '🏠',
 };
 /** Значок навички за id (8 навичок сценарію). */
 export const SKILL_ICONS: Readonly<Record<string, string>> = {
