@@ -1,6 +1,6 @@
 // GAME-13 · годинник, RNG, негативний контроль детермінізму.
 import { describe, expect, it } from 'vitest';
-import { STEP_MS, newClock, pause, resume, tick } from './clock';
+import { MAX_FRAME_MS, STEP_MS, clampFrame, newClock, pause, resume, tick } from './clock';
 import { DEFS, LOG, SEED } from './determinism.fixture';
 import { stateHash } from './hash';
 import { nextUint32, seedRng, type RngState } from './rng';
@@ -77,5 +77,16 @@ describe('негативний контроль: Math.random у системі �
     const a = stateHash(run(newSim(SEED, 10_000), LOG, { defs: DEFS, systems: [leaky] }));
     const b = stateHash(run(newSim(SEED, 10_000), LOG, { defs: DEFS, systems: [leaky] }));
     expect(a).not.toBe(b);
+  });
+});
+
+describe('GAME-262: довгий кадр не перемотує день', () => {
+  it('кадр 30 000 мс (згорнута вкладка, поворот телефону) додає не більше MAX_FRAME_MS', () => {
+    const r = tick(newClock(), clampFrame(30_000));
+    expect(r.steps).toBeLessThanOrEqual(Math.floor(MAX_FRAME_MS / STEP_MS));
+    expect(r.clock.minutes * STEP_MS + r.clock.accMs).toBeLessThanOrEqual(MAX_FRAME_MS);
+  });
+  it('кадр рівно MAX_FRAME_MS ще рахується повністю (межа не краде звичайні кадри)', () => {
+    expect(tick(newClock(), clampFrame(MAX_FRAME_MS)).clock.accMs).toBe(MAX_FRAME_MS % STEP_MS);
   });
 });

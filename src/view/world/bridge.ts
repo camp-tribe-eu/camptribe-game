@@ -2,6 +2,7 @@
 // через команди і вхід симуляції (кадр, пауза). commandId видає місток із `seq` стану ядра:
 // після завантаження сейву id не повторюється (рецензія TL PR #13).
 import { nextCommandId, type Command } from '../../core/commands';
+import { clampFrame } from '../../core/clock';
 import { checkDefs, freezeDefs, type CoreDefs } from '../../core/defs';
 import { newSim, step, type SimState } from '../../core/sim';
 
@@ -9,7 +10,7 @@ import { newSim, step, type SimState } from '../../core/sim';
 export type Intent = Command extends infer C ? (C extends Command ? Omit<C, 'commandId'> : never) : never;
 
 /** Реальний час кадру обрізаємо: згорнута вкладка не перемотує ігровий час стрибком (TL PR #13). */
-export const MAX_FRAME_MS = 250;
+export { MAX_FRAME_MS } from '../../core/clock';
 
 export interface Bridge {
   /** Скільки команд гравця надіслано. GAME-229: «Practise» — побічний наслідок дії руками, не окрема команда гравця, тому не рахується. */
@@ -49,7 +50,7 @@ export function createBridge(seed: number, catalog: CoreDefs, afterSend?: () => 
       afterSend?.();   // GAME-86: стан змінила команда — автозбереження (не кожен кадр)
     },
     frame(realMs) {
-      state = step(state, { kind: 'frame', realMs: Math.min(realMs, MAX_FRAME_MS) }, { defs });
+      state = step(state, { kind: 'frame', realMs: clampFrame(realMs) }, { defs });
     },
     setPaused(paused) {
       state = step(state, { kind: paused ? 'pause' : 'resume' }, { defs });
