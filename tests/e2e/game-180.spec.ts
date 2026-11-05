@@ -8,7 +8,7 @@ import { expect, test, type Page } from '@playwright/test';
 import { waitGameReady } from './ready';
 
 interface Pt { x: number; y: number }
-interface Probe { saveLoaded: boolean; playerX: number; playerY: number; nearObject: string | null; playerMoving: boolean; residents: { id: string; x: number; y: number }[]; npcMarks: Record<string, string>; fx: { target: string | null; guide: string; pops: number } }
+interface Probe { saveLoaded: boolean; playerX: number; playerY: number; nearObject: string | null; playerMoving: boolean; residents: { id: string; x: number; y: number }[]; npcMarks: Record<string, string>; bark: string | null; barkBy: string | null; fx: { target: string | null; guide: string; pops: number } }
 interface Core { game: { flags: string[]; dialogue: unknown }; journal: { type: string; ref?: string }[] }
 const probe = (page: Page): Promise<Probe> => page.evaluate(() => JSON.parse(JSON.stringify((window as unknown as { __game: { probe: Probe } }).__game.probe)) as Probe);
 const core = (page: Page): Promise<Core> => page.evaluate(() => (window as unknown as { __game: { read: () => Core } }).__game.read());
@@ -321,6 +321,16 @@ for (const o of ORIENTATIONS) {
 test.describe('GAME-180 негативні контролі', () => {
   test.use({ viewport: { width: 844, height: 390 }, hasTouch: false, isMobile: false });
   test.setTimeout(240_000);
+
+  // GAME-236: репліка-«бурчання» не ховає «!» — стан, а не час: чекаємо, поки НАД САМИМ просильником звучить репліка, і в тому ж знімку «!» має бути.
+  test('«!» видно й поки над просильником репліка (GAME-236)', async ({ page }) => {
+    await toCamp(page);
+    const r = REQS.sarah as Req;
+    const p = await walk(page, giverAt(r), (q) => q.barkBy === r.giver, `${r.giver}: репліки не діждались`);
+    expect(p.bark, 'репліка справді звучить').not.toBeNull();
+    await expect.poll(async () => { const q = await probe(page); return q.barkBy === r.giver ? q.npcMarks[r.giver] : 'request'; }, { message: `${r.giver}: «!» зник під час репліки`, timeout: 2_000 }).toBe('request');
+    expect(p.npcMarks[r.giver], `${r.giver}: «!» у кадрі першої репліки`).toBe('request');
+  });
 
   test('німий об\'єкт цілі (?breakSpot) → прохання не виконується: прохід червоніє', async ({ page }) => {
     await toCamp(page, '&breakSpot=req.luc-chain.t1');

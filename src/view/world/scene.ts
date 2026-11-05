@@ -222,6 +222,8 @@ export interface WorldProbe {
   /** GAME-172: ключ репліки, що зараз над головою мешканця (null — тиша), і скільки реплік уже прозвучало. */
   bark: string | null;
   barkCount: number;
+  /** GAME-236: id мешканця, над яким зараз репліка (null — тиша); разом із `npcMarks` доводить, що «!» не зникає під час бурчання. */
+  barkBy: string | null;
   /** GAME-38: мс від початку навігації до першого намальованого кадру Phaser; 0, доки кадру не було (ставить main.ts). */
   firstFrameMs: number;
   /** GAME-99 (лише для e2e): ефект «день і ніч» — що зараз намальовано. `on` — ефект увімкнено; `visible` — прямокутник/пляма видимі (вдень — ні). */
@@ -1340,15 +1342,17 @@ export class WorldScene extends Phaser.Scene {
     const hero = this.player;
     const seen = new Set<string>();
     const consider = (id: string, s: Phaser.GameObjects.Sprite | undefined, barking: boolean): void => {
-      if (!s || !s.visible || barking) return;
+      if (!s || !s.visible) return;
       const t = this.hooks.talk(id);
       const kind = markerFor(t !== null, t?.request === true, Math.hypot(hero.x - s.x, hero.y - s.y));
-      if (!kind) return;
+      // GAME-236: репліка заступає «…», але не «!»: прохання не можна пропустити через чотири секунди бурчання — «!» піднімається над репліку.
+      if (!kind || (barking && kind !== 'request')) return;
+      const lift = barking && this.residentBark ? this.residentBark.text.height + 4 : 0;
       seen.add(id);
       let m = this.npcMarks.get(id);
       if (!m) { m = { g: this.add.graphics().setDepth(DEPTH.always), kind: null }; this.npcMarks.set(id, m); }
       if (m.kind !== kind) { drawMarker(m.g, kind); m.kind = kind; }
-      m.g.setPosition(Math.round(s.x), Math.round(s.y - 50 + Math.sin(time / 260 + s.x) * 1.5)).setVisible(true);
+      m.g.setPosition(Math.round(s.x), Math.round(s.y - 50 - lift + Math.sin(time / 260 + s.x) * 1.5)).setVisible(true);
     };
     for (const [id, s] of this.npcSprites) consider(id, s, false);
     RESIDENTS.forEach((r, i) => consider(r.id, this.current === 'camp' ? this.residentSprites[i] : undefined, this.residentBark?.npc === i));
@@ -1709,6 +1713,7 @@ export class WorldScene extends Phaser.Scene {
       swim: { ...this.swim.probe },
       camp: { ...this.life.probe },
       miaAt: [...this.miaSprites].flatMap(([n, sp]) => (sp.visible ? [n] : [])),
+      barkBy: this.residentBark ? (RESIDENTS[this.residentBark.npc]?.id ?? null) : null,
       npcMarks: Object.fromEntries([...this.npcMarks].flatMap(([id, m]) => (m.g.visible && m.kind ? [[id, m.kind] as const] : []))),
       fx: { target: tn, ring: this.ring.name ? this.ring.t : 0, ringName: this.ring.name, backpack: this.hooks.backpack(), guide: this.fx?.guideMode ?? 'none', pops: this.fx?.pops ?? 0, auto: this.autoCount, rewards: this.rewardPops, rewardLast: this.rewardLast, headLabels: [...(this.fx?.labels ?? [])] },
     });
