@@ -25,8 +25,11 @@ export const PROLOGUE_BIKE: readonly Input[] = [
   c({ type: 'Pickup', itemId: 'item.tent' }),                                            // відмова (уже в руках) теж у журналі
   c({ type: 'CompleteQuest', questId: 'ST-003' }), ...frames(4),
   c({ type: 'Visit', locationId: 'loc.home' }),                                         // GAME-138: CH1-HOME-001 — пакування вдома (без кадрів: кидок події на дорозі лишається «не сталась», як до GAME-138)
-  // GAME-109: пакування (велосипед — 10 од.): міняємо ліхтар на перекуси, подушка не вміщається (відмова в журналі), «автоматично» повертає як було
-  c({ type: 'UnpackItem', itemId: 'item.lantern' }), c({ type: 'PackItem', itemId: 'item.snacks' }), c({ type: 'PackItem', itemId: 'item.big-cushion' }), c({ type: 'AutoPack' }),
+  // GAME-245: речі вдома (велосипед — 12 од.): ліхтар знімаємо з авто (розклад «за порадою»), беремо ліхтар, подушку й телефони (повторне «взяти» і старий «покласти» — відмови в журналі),
+  // «Завантажити» — потрібне й ліхтар в авто, подушка й телефони не влізли; «лишити» повертає їх додому, сумка порожня.
+  c({ type: 'UnpackItem', itemId: 'item.lantern' }), c({ type: 'TakeItem', itemId: 'item.lantern' }), c({ type: 'TakeItem', itemId: 'item.lantern' }),
+  c({ type: 'TakeItem', itemId: 'item.big-cushion' }), c({ type: 'PackItem', itemId: 'item.big-cushion' }), c({ type: 'TakeItem', itemId: 'item.phones' }),
+  c({ type: 'LoadCar' }), c({ type: 'LeaveItem', itemId: 'item.big-cushion' }), c({ type: 'LeaveItem', itemId: 'item.phones' }), c({ type: 'LoadCar' }), c({ type: 'AutoPack' }),
   c({ type: 'CompleteQuest', questId: 'CH1-HOME-001' }),
   c({ type: 'Visit', locationId: 'loc.road' }), ...frames(12, 1000),                     // дорога: хвилини й знахідки
   { kind: 'pause' }, ...frames(3, 1000), { kind: 'advance', minutes: 30 }, { kind: 'resume' }, // пауза меню, перемотування (рецензія GAME-34)

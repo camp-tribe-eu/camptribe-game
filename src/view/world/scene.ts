@@ -115,7 +115,9 @@ export interface WorldHooks {
   /** Рюкзак героя: скільки дрібних речей несе (0 — рюкзака на спині немає). */
   backpack(): number;
   /** Одна річ з рюкзака — в багажник (та сама команда ядра); 'full' — не вмістилась, відкрито сітку. */
-  unload(): 'ok' | 'full' | 'none';
+  unload(manual?: boolean): 'ok' | 'full' | 'none';
+  /** GAME-245: покадровий годинник HUD-картки речі (мс кадру). */
+  frame?(dtMs: number): void;
   /** Чого ще бракує в дорогу — для бульбашки над авто. */
   needs(): Needs;
   /** GAME-180: скільки прохань сусідів уже здано (по зростанню сцена показує «+» над героєм). Немає — прохань у грі нема. */
@@ -1096,8 +1098,8 @@ export class WorldScene extends Phaser.Scene {
     playUi(pick ? 'press' : 'confirm');
   }
 
-  private unloadOne(): void {
-    const res = this.hooks.unload();
+  private unloadOne(manual = false): void {
+    const res = this.hooks.unload(manual);
     if (res === 'none') return;
     this.fx?.pop(this.player.x, this.player.y, res === 'ok' ? '+' : '!');
     playUi(res === 'ok' ? 'press' : 'back');
@@ -1424,6 +1426,7 @@ export class WorldScene extends Phaser.Scene {
     // за реальний час. Межу кадру (згорнута вкладка) тримає сам міст — MAX_FRAME_MS.
     this.bridge.frame(this.game.loop.rawDelta);
     this.countFps(time);
+    this.hooks.frame?.(this.game.loop.rawDelta);
     if (!this.player) return;   // update може випередити create лише в першому кадрі завантаження
     // GAME-175: локація гравця змінилась (приїхав у крамницю, повернувся додому) — інша мапа; той самий кадр уже на ній.
     const want = this.hooks.mapKey();
@@ -1631,7 +1634,7 @@ export class WorldScene extends Phaser.Scene {
       this.life.refresh();
     } else if (pressed && act) {
       if (act.kind === 'npc') { this.faceEachOther(act); this.hooks.onNpc(act.name); this.talkingTo = this.bridge.state.game.dialogue !== null ? act.name : null; }
-      else if (carrying && (act.name === 'obj.vehicle' || act.name === 'obj.trunk')) this.unloadOne();
+      else if (carrying && (act.name === 'obj.vehicle' || act.name === 'obj.trunk')) this.unloadOne(true);
       else { this.hooks.onObject(act.name); this.feedback(act.name); }
     }
     // Кільце наближення: вийшов із зони — об'єкт знову «озброєний». Авто їде лише коли все потрібне вже в багажнику (а не повз нього) і герой стоїть.

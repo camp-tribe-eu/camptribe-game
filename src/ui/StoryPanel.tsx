@@ -10,17 +10,18 @@ import type { OfferAction, StoryOffer } from './story-types';
 
 const ACT: Readonly<Record<Exclude<OfferAction['kind'], 'choose' | 'continue' | 'cancel'>, Key>> = {
   visit: 'act.visit', talk: 'act.talk', pickup: 'act.pickup', buy: 'act.buy', sell: 'act.sell', dry: 'act.dry', complete: 'act.complete', decline: 'act.decline',
-  pack: 'pack.in', unpack: 'pack.out', autopack: 'pack.auto', task: 'act.task', gift: 'act.gift',
+  load: 'pack.load', leave: 'pack.leave', task: 'act.task', gift: 'act.gift',
 };
 
 // Записи журналу: тип команди → підпис. Перелік той самий, що JOURNAL_TYPES ядра (звіряє src/view/story-offer.test.ts).
 const JR: Readonly<Record<string, Key>> = {
   CreateCharacter: 'jr.CreateCharacter', Visit: 'jr.Visit', Pickup: 'jr.Pickup', BuyItem: 'jr.BuyItem', SellItem: 'jr.SellItem',
   Interact: 'jr.Interact', CompleteQuest: 'jr.CompleteQuest', DeclineQuest: 'jr.DeclineQuest', RoadEvent: 'jr.RoadEvent', StartScene: 'jr.StartScene',
-  PackItem: 'jr.PackItem', UnpackItem: 'jr.UnpackItem', AutoPack: 'jr.AutoPack', Memory: 'jr.Memory', CompleteTask: 'jr.CompleteTask',
+  PackItem: 'jr.PackItem', UnpackItem: 'jr.UnpackItem', AutoPack: 'jr.AutoPack', TakeItem: 'jr.TakeItem', LoadCar: 'jr.LoadCar', LeaveItem: 'jr.LeaveItem', Memory: 'jr.Memory', CompleteTask: 'jr.CompleteTask',
 };
 export const JOURNAL_LABELS = JR;
 
+const PACK_STATE = { home: 'pack.state.home', bag: 'pack.state.bag', car: 'pack.state.car' } as const satisfies Record<string, Key>;
 // Групи пакування (GAME-109) → підпис.
 const PACK_GROUP = { needed: 'pack.group.needed', useful: 'pack.group.useful', leave: 'pack.group.leave' } as const satisfies Record<string, Key>;
 
@@ -170,25 +171,30 @@ export function StoryPanel({ offer, lang, t, act, close, portrait, children, foo
           <div class="ui-answers">{offer.dialogue.answers.map(button)}</div>
         </section>
       )}
-      {offer.packing && !offer.dialogue && !compact && (
+      {offer.packing && !offer.dialogue && (!compact || page === 'journal' || offer.packing.overflow.length > 0) && (
         <fieldset data-ui="packing">
           <legend>{t('pack.title')}</legend>
           <p class="ui-status" data-ui="pack-space" data-used={offer.packing.used} data-capacity={offer.packing.capacity} role="status">
             {`${t('pack.space')}: ${offer.packing.used} / ${offer.packing.capacity} ${t('pack.units')}`}
           </p>
+          <p class="ui-status" data-ui="pack-progress" data-taken={offer.packing.taken} data-total={offer.packing.total} role="status">
+            {`${t('pack.taken')} ${offer.packing.taken}/${offer.packing.total}${offer.packing.leftKeys.length > 0 ? ` · ${t('pack.left')}: ${offer.packing.leftKeys.slice(0, 3).map((k) => ct(lang, k)).join(', ')}${offer.packing.leftKeys.length > 3 ? '…' : ''}` : ''}`}
+          </p>
           {offer.packing.groups.map((g) => (
             <div key={g.group} data-ui="pack-group" data-group={g.group} role="group" aria-label={t(PACK_GROUP[g.group])}>
               <h4>{t(PACK_GROUP[g.group])}</h4>
-              {g.items.map((i) => {
-                const text = `${ct(lang, i.key)} · ${i.units} ${t('pack.units')}`;
-                // Не вміщається — aria-disabled (лишається в порядку Tab, причина — в імені), без дії.
-                return i.action
-                  ? <button type="button" class="ui-btn" key={i.key} data-act={i.action.kind} data-key={i.key} data-units={i.units} aria-pressed={i.packed} onClick={guarded(i.action.id)}>{`${i.packed ? '✓' : '○'} ${text}`}</button>
-                  : <button type="button" class="ui-btn ui-btn-locked" key={i.key} data-act="pack-full" data-key={i.key} aria-disabled="true" onClick={(e) => e.preventDefault()}>{`${text} — ${t('pack.full')}`}</button>;
-              })}
+              <ul>
+                {g.items.map((i) => <li key={i.key} data-ui="pack-item" data-key={i.key} data-state={i.state}>{`${ct(lang, i.key)} · ${i.units} ${t('pack.units')} — ${t(PACK_STATE[i.state])}`}</li>)}
+              </ul>
             </div>
           ))}
-          <button type="button" class="ui-btn" data-act="autopack" data-key="" onClick={guarded(offer.packing.auto.id)}>{t('pack.auto')}</button>
+          {offer.packing.load && <button type="button" class="ui-btn" data-act="load" data-key="" onClick={guarded(offer.packing.load.id)}>{t('pack.load')}</button>}
+          {offer.packing.overflow.length > 0 && (
+            <div data-ui="pack-overflow" role="group" aria-label={t('pack.overflow')}>
+              <h4>{t('pack.overflow')}</h4>
+              {offer.packing.overflow.map((o) => <button type="button" class="ui-btn" key={o.key} data-act="leave" data-key={o.key} onClick={guarded(o.action.id)}>{`${t('pack.leave')} ${ct(lang, o.key)} · ${o.units} ${t('pack.units')}`}</button>)}
+            </div>
+          )}
           {offer.packing.noteKey && <p class="ui-status" data-ui="pack-note">{ct(lang, offer.packing.noteKey)}</p>}
         </fieldset>
       )}

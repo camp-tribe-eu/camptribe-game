@@ -51,7 +51,7 @@ import { errandMove, plannedErrands } from './content/errands';
 import { FORAGE_ITEMS, canForage, heartDue, reactionFor } from './content/friendship';
 import type { GiftReaction } from './core/friendship';
 import { MAP_SPOTS, departBlock, isBulky, isMapFirstSpot, mapKeyFor, moveKey, needsLeft, nextTarget, npcLive, resolveSpot, spotLook, unpackMoves } from './content/map-first';
-import { packFlag } from './core/packing';
+import { carriedOf, takeFlag } from './core/packing';
 import type { GameState } from './core/state';
 import { progressOf, titleOf } from './core/progress';
 import { rankUps, SKILL_IDS, type HandAction } from './core/skills';
@@ -98,11 +98,24 @@ let nearSpot: string | null = null;
 // GAME-175: рюкзак героя — дрібні речі, які він підібрав удома, але ще не розвантажив в авто. Стан ПОКАЗУ (ядро й сейв його не знають; перезавантаження
 // повертає речі на місця). Громіздке (намет, спальник) іде одразу в багажник.
 const backpack: string[] = [];
+// GAME-245: вміст сумки — НЕ окремий стан показу, а факти ядра (`f.take-*`): взята, ще не завантажена річ. Синхронізується з ядром при кожній зміні.
+const syncBackpack = (): void => {
+  const g = bridge.state.game;
+  const pk = GAME_DEFS.packing;
+  backpack.length = 0;
+  if (pk && g.player) backpack.push(...carriedOf(g.flags, pk, g.player));
+  if (backpack.length === 0) overflowShown = false;
+};
+// GAME-245: «Не влазить» уже показано (екран вибору відкрито; доки нічого не змінилось, авто не завантажує вдруге) і велика картка щойно взятої речі (мс, покадрово).
+let overflowShown = false;
+let cardItem: string | null = null;
+let cardLeftMs = 0;
+const CARD_MS = 1500;
 // GAME-183: об'єкт, що питає «що саме?» (авто — куди їхати, сушарка, приймальня, крок з вибором) — його варіанти показує рамка вибору. Стан ПОКАЗУ.
 let choiceSpot: string | null = null;
 // GAME-178: спроба рушити, коли авто не готове (бракує речей / рюкзак повний): HUD пояснює причину, поки гравець не відійде від об'єкта. Стан ПОКАЗУ (без таймера).
 let departNote = false;
-const viewOf = (): StoryView => ({ mapFirst: !switches.panelActs, trunk: trunkOpen, near: nearSpot, backpack, choice: choiceSpot, departNote });
+const viewOf = (): StoryView => ({ mapFirst: !switches.panelActs, trunk: trunkOpen, near: nearSpot, backpack, choice: choiceSpot, departNote, overflow: overflowShown, card: cardItem });
 /** Об'єкти табору (GAME-183) живуть лише в мапі-першій грі: збірка e2e без ?mapFirst=1 (старі e2e) бачить табір, як до них — кнопки ☰, а не об'єкти. */
 const campOnly = (name: string): boolean => switches.panelActs === true && (MAP_SPOTS.camp as readonly string[]).includes(name);
 // GAME-170 зріз 2 · режисер: перед кожним оновленням екрана — ходи СЮЖЕТУ (StartWave на етапі хвилі). Ядро — сторож законності;
@@ -162,6 +175,7 @@ const takeReward = (): string | null => {
   return [r.xp > 0 ? `+${r.xp} ${t(lang, 'ui.xp')}` : '', r.om > 0 ? `+${r.om} ${t(lang, 'ui.om')}` : ''].filter(Boolean).join(' ');
 };
 const storyChanged = (): void => {
+  syncBackpack();
   syncRewards();
   syncRanks();
   // GAME-175: мапа-перша гра — спакований «за порадою» набір розкладається, коли гравець удома; речі він переносить ногами (раз за гру).
@@ -215,8 +229,13 @@ const actOnMap = (name: string): void => {
     // GAME-183: вибір із кількох дій (куди їхати, що сушити, як завершити крок) — рамка вибору, команда піде з її кнопки.
     if (r.options || r.confirm) { choiceSpot = name; storyChanged(); for (const l of talkListeners) l(); return; }
     const first = r.moves[0];
-    // Дрібна річ удома: у рюкзак (команда пакування піде при розвантаженні біля авто), без розмови ядра.
-    if (first?.type === 'PackItem' && !isBulky(GAME_DEFS, first.itemId)) { backpack.push(first.itemId); storyChanged(); return; }
+    // GAME-245: узяти річ удома — одна команда TakeItem; річ зникає з місця, герой показує велику картку (назва + репліка) ~1,5 с.
+    if (first?.type === 'TakeItem') {
+      bridge.send(first);
+      if (bridge.state.game.flags.includes(takeFlag(first.itemId))) { cardItem = first.itemId; cardLeftMs = CARD_MS; overflowShown = false; }
+      storyChanged();
+      return;
+    }
     for (const move of r.moves) bridge.send(move);
     if (r.ui === 'trunk') trunkOpen = true;
     storyChanged();
@@ -234,17 +253,25 @@ const actOnMap = (name: string): void => {
   try { bridge.send(m); storyChanged(); } finally { mapTalk = false; }
   if (m.type === 'StartScene') for (const l of asTalk ? talkListeners : openListeners) l();
 };
-/** Розвантаження: одна річ з рюкзака в багажник (та сама команда PackItem). Не вмістилась — лишається не взятою (відкривається сітка), рюкзак порожніє на цю річ. */
-const unloadOne = (): 'ok' | 'full' | 'none' => {
-  const id = backpack.shift();
-  if (id === undefined) return 'none';
-  if (bridge.state.game.flags.includes(packFlag(id))) { storyChanged(); return 'ok'; }   // уже вкладена через сітку
-  const before = bridge.state.game.flags.length;
-  bridge.send({ type: 'PackItem', itemId: id });
-  const done = bridge.state.game.flags.length > before;
-  if (!done) { trunkOpen = true; for (const l of openListeners) l(); }
+/**
+ * Завантаження авто (GAME-245): ОДНА дія — усе взяте лягає в багажник за пріоритетом. Не влізло — один екран «Не влазить: що лишимо вдома?» (панель, кнопки LeaveItem);
+ * доки вибору не зроблено, авто не завантажує вдруге (auto), а E/тап (manual) відкриває екран знову.
+ */
+const unloadOne = (manual = false): 'ok' | 'full' | 'none' => {
+  syncBackpack();
+  if (backpack.length === 0) return 'none';
+  if (overflowShown) {
+    if (!manual || trunkOpen) return 'none';
+    trunkOpen = true; storyChanged(); for (const l of openListeners) l();
+    return 'full';
+  }
+  bridge.send({ type: 'LoadCar' });
+  syncBackpack();
+  if (backpack.length === 0) { storyChanged(); return 'ok'; }
+  overflowShown = true; trunkOpen = true;
   storyChanged();
-  return done ? 'ok' : 'full';
+  for (const l of openListeners) l();
+  return 'full';
 };
 const saves = createSaveSession(bridge, saveBackend, { story: STORY, stickers: GAME_DEFS.stickers ?? {}, ...(GAME_DEFS.life ? { life: GAME_DEFS.life } : {}), contentRev: STORY_REV, viable: (g) => saveViable(g, GAME_DEFS) });
 // Тестовий хук Playwright: лише ЧИТАННЯ — знімок стану копією, місток назовні не віддається
@@ -322,7 +349,8 @@ const worldHooks: WorldHooks = {
   grillDue: () => fireplaceDue(bridge.state) && fishEvening(bridge.state.game.flags) === 'kept',
   onGrilled: (charred) => { grilledCharred = charred; },
   onFish,
-  isLive: (name) => !campOnly(name) && liveSpot(bridge.state, name, GAME_DEFS) && !(name.startsWith('pack.') && backpack.includes(name.slice(5))),
+  isLive: (name) => !campOnly(name) && liveSpot(bridge.state, name, GAME_DEFS),
+  frame: (dtMs) => { if (cardItem !== null && (cardLeftMs -= dtMs) <= 0) { cardItem = null; storyChanged(); } },
   backpack: () => backpack.length,
   unload: unloadOne,
   needs: () => {

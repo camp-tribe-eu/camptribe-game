@@ -23,7 +23,7 @@ import { pageFill } from '../core/atlas-fill';
 import { nearestReward } from '../content/nearest-reward';
 import { LOCALES } from '../i18n';
 import { chapterComplete, matches, route } from '../core/story';
-import { capacityOf, packedOf, packFlag, packingOpen, packItemsFor, usedUnits } from '../core/packing';
+import { capacityOf, carriedOf, overflowCandidates, packedOf, packFlag, packingOpen, packItemsFor, usedUnits } from '../core/packing';
 import { timeOfDay } from './world/daylight';
 import { dayOf, tripMinutes, type Weather } from '../core/weather';
 import { CONTENT, memorableFacts } from '../content/story';
@@ -188,7 +188,7 @@ export function characterChoices(defs: CoreDefs): { offer: OfferCharacter; inten
  * Екран пакування (GAME-109): річ, яку ядро прийме, дістає наміру; та, що не вміщається, — без дії (UI покаже причину).
  * Пакування не серед `moves()`: інакше простір станів повного перебору множився б на 2^12. Його доводить окремий перебір (story.test).
  */
-function packingOffer(s: GameState, defs: CoreDefs, intents: Map<string, Move>): OfferPacking | null {
+function packingOffer(s: GameState, defs: CoreDefs, intents: Map<string, Move>, overflow: boolean): OfferPacking | null {
   const pk = defs.packing;
   const p = s.player;
   if (!pk || !p || !packingOpen(pk, s)) return null;
@@ -199,18 +199,20 @@ function packingOffer(s: GameState, defs: CoreDefs, intents: Map<string, Move>):
     return a;
   };
   const packed = new Set(packedOf(s.flags, pk, p));
+  const carried = new Set(carriedOf(s.flags, pk, p));
+  const all = packItemsFor(pk, p);
+  const stateOf = (id: string): 'home' | 'bag' | 'car' => (packed.has(id) ? 'car' : carried.has(id) ? 'bag' : 'home');
   const groups = (['needed', 'useful', 'leave'] as const).map((group) => ({
     group,
-    items: packItemsFor(pk, p).filter((i) => i.group === group).map((i) => {
-      const on = packed.has(i.itemId);
-      return { key: nameKey(i.itemId) ?? i.itemId, units: i.units, packed: on, action: action({ type: on ? 'UnpackItem' : 'PackItem', itemId: i.itemId }, on ? 'unpack' : 'pack', nameKey(i.itemId)) };
-    }),
+    items: all.filter((i) => i.group === group).map((i) => ({ key: nameKey(i.itemId) ?? i.itemId, units: i.units, state: stateOf(i.itemId) })),
   })).filter((g) => g.items.length > 0);
-  const note = pk.notes.find((n) => !s.flags.includes(packFlag(n.missing)) && packItemsFor(pk, p).some((i) => i.itemId === n.missing) && (!n.transports || n.transports.includes(p.transportId)));
-  // «Укласти автоматично» показується завжди; дія без наслідку (вже так складено) лишається натисканням «нічого не змінило».
-  const auto: OfferAction = { id: idOf({ type: 'AutoPack' }, s), kind: 'autopack', key: null };
-  intents.set(auto.id, { type: 'AutoPack' });
-  return { used: usedUnits(s.flags, pk, p), capacity: capacityOf(pk, p.transportId), groups, auto, noteKey: note?.textKey ?? null };
+  const note = pk.notes.find((n) => !s.flags.includes(packFlag(n.missing)) && !carried.has(n.missing) && all.some((i) => i.itemId === n.missing) && (!n.transports || n.transports.includes(p.transportId)));
+  const want = all.filter((i) => i.group !== 'leave');
+  const left = want.filter((i) => stateOf(i.itemId) === 'home').sort((a, b) => (a.group === b.group ? 0 : a.group === 'needed' ? -1 : 1));
+  const loadMove: Move = { type: 'LoadCar' };
+  const load = tryMove(s, loadMove, defs) ? ((): OfferAction => { const a: OfferAction = { id: idOf(loadMove, s), kind: 'load', key: null }; intents.set(a.id, loadMove); return a; })() : null;
+  const over = overflow ? overflowCandidates(pk, p, s.flags).flatMap((i) => { const a = action({ type: 'LeaveItem', itemId: i.itemId }, 'leave', nameKey(i.itemId)); return a ? [{ key: nameKey(i.itemId) ?? i.itemId, units: i.units, action: a }] : []; }) : [];
+  return { used: usedUnits(s.flags, pk, p), capacity: capacityOf(pk, p.transportId), groups, taken: want.length - left.length, total: want.length, leftKeys: left.map((i) => nameKey(i.itemId) ?? i.itemId), load, overflow: over, noteKey: note?.textKey ?? null };
 }
 
 /**
@@ -329,6 +331,10 @@ export interface StoryView {
   readonly choice?: string | null;
   /** GAME-178: гравець щойно спробував рушити, а авто не готове — HUD показує причину. Стан ПОКАЗУ. */
   readonly departNote?: boolean;
+  /** GAME-245: «Завантажити» щойно показало, що не влізло, — екран питає «що лишимо вдома». Стан ПОКАЗУ. */
+  readonly overflow?: boolean;
+  /** GAME-245: річ, щойно взята вдома (картка ~1,5 с). Стан ПОКАЗУ. */
+  readonly card?: string | null;
 }
 /** Питання рамки вибору за об'єктом (ключі UI). */
 /** id відповіді «Не зараз» у рамці вибору дії на мапі (GAME-183): команди не має — гра лише закриває рамку. */
@@ -360,6 +366,7 @@ export function storyOffer(sim: SimState, defs: CoreDefs, view: StoryView = PANE
     next: reqT ? (reqT.startsWith('npc.') ? 'next.req.giver' : 'next.req.target') as Key : nextT?.key ?? null,
     nextSpot: reqT ?? nextT?.spot ?? null,
     blocked: view.mapFirst && view.departNote ? ((b) => (b ? { carry: b.kind === 'carry', itemKeys: b.kind === 'missing' ? b.items.map((i) => nameKey(i) ?? i) : [] } : null))(departBlock(sim, defs, view.backpack ?? [])) : null,
+    card: view.card ? { nameKey: nameKey(view.card) ?? view.card, reactKey: `pack.react.${view.card.replace(/^item\./, '')}`, spot: `pack.${view.card}` } : null,
     near: nearL ? { label: nearL.label, itemKey: nearL.ref ? nameKey(nearL.ref) : null } : reqNear ? { label: 'near.req' as Key, itemKey: reqNear.labelKey }
       : view.near !== null && view.mapFirst && isTraceSpot(view.near) && liveTraceSpot(s, view.near) ? { label: 'near.trace' as Key, itemKey: null } : null,   // GAME-215: біля позначки олівцем
   };
@@ -459,7 +466,7 @@ export function storyOffer(sim: SimState, defs: CoreDefs, view: StoryView = PANE
       quests,
       dialogue,
       actions: dialogue ? [] : offered,
-      packing: dialogue || (view.mapFirst && !view.trunk) ? null : packingOffer(s, defs, intents),
+      packing: dialogue ? null : packingOffer(s, defs, intents, view.overflow === true),
       locked,
     },
   };

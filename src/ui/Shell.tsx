@@ -5,7 +5,7 @@ import { mixer } from '../audio';
 import { playUi, soundForButton } from '../audio/ui-sounds';
 import { DEFAULT_SETTINGS, TEXT_SCALES, loadSettings, saveSettings, type Settings } from '../platform/settings';
 import type { Credits, UiPort } from './port';
-import { ObjectiveIcon } from './ObjectiveIcon';
+import { BigItemIcon, ObjectiveIcon } from './ObjectiveIcon';
 import { t as tr, type AnyLang, type Key } from '../i18n';
 import { ct } from '../i18n/content';
 import { StoryPanel, money } from './StoryPanel';
@@ -372,6 +372,13 @@ export function Shell({ port, langOverride, credits, build, holdToast = false, h
         )}
         {reminder}
       </header>}
+      {offer.hint.card && (
+        <div class="ui-itemcard" data-ui="item-card" data-item={offer.hint.card.nameKey} role="status">
+          <BigItemIcon spot={offer.hint.card.spot} />
+          <strong data-ui="item-card-name">{ct(lang, offer.hint.card.nameKey)}</strong>
+          <span data-ui="item-card-line">{ct(lang, offer.hint.card.reactKey)}</span>
+        </div>
+      )}
       {titleUpShown && titleUp && (
         <div class="ui-titleup" data-ui="title-up" data-title={titleUp.index + 1} role="status">
           <strong>{`${t('ui.titleUp')}: ${ct(lang, `title.${titleUp.index + 1}`)}`}</strong>

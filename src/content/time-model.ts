@@ -46,7 +46,7 @@ export function moveSeconds(m: Move): number {
     case 'StartWave': return SECONDS.line;                         // хвиля напруги (GAME-170) відкривається рядком-зачіпкою
     case 'CompleteTask': return SECONDS.walkOnMap + SECONDS.menuTap; // підійти до справи й зробити її
     case 'Pickup': case 'BuyItem': case 'SellItem': case 'DryGear':
-    case 'PackItem': case 'UnpackItem': case 'AutoPack':
+    case 'PackItem': case 'UnpackItem': case 'AutoPack': case 'TakeItem': case 'LoadCar': case 'LeaveItem':
     case 'BookLeave': case 'CancelLeave':
       return SECONDS.menuTap;
     case 'CompleteQuest': case 'DeclineQuest': return SECONDS.questDone;

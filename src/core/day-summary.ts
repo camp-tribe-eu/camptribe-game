@@ -82,7 +82,7 @@ export function daySummary(sim: Pick<SimState, 'game' | 'journal'>, day: number,
   const latest = ended > 0 ? day === ended : day === 1;
   const p = sim.game.player;
   const night = latest ? sim.game.flags.filter((f) => f.startsWith(NIGHT_PREFIX)) : [];
-  const packedToday = r.from === 0 || entries.some((e) => e.type === 'PackItem' || e.type === 'UnpackItem' || e.type === 'AutoPack');
+  const packedToday = r.from === 0 || entries.some((e) => e.type === 'PackItem' || e.type === 'UnpackItem' || e.type === 'AutoPack' || e.type === 'TakeItem' || e.type === 'LoadCar' || e.type === 'LeaveItem');
   const packed = latest && packedToday && p && defs.packing ? packedOf(sim.game.flags, defs.packing, p) : [];
   // Нагорода предметами — факт лише тоді, коли квест завершено САМЕ цього дня й нагороду справді видано (grantId у стані).
   const quests = refs('CompleteQuest');
