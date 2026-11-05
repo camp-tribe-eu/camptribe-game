@@ -40,21 +40,23 @@ const STICK_OFFSETS: Readonly<Record<string, [number, number]>> = {
  * `action`: 'interact' — кругла кнопка дії; будь-який із STICK_OFFSETS — дотик у центр джойстика й відведення ручки (GAME-91).
  * false — елемента не видно, прохід неможливий.
  */
-async function holdTouch(page: Page, action: string, until: (p: Probe) => boolean, maxMs = 10_000): Promise<boolean> {
+async function holdTouch(page: Page, action: string, until: string, maxMs = 10_000): Promise<boolean> {
   const offset = STICK_OFFSETS[action];
-  const btn = page.locator(offset ? '[data-touch="stick"]' : `[data-touch="${action}"]`);
+  const sel = offset ? '[data-touch="stick"]' : `[data-touch="${action}"]`;
+  const btn = page.locator(sel);
   if (!(await btn.isVisible())) return false;
   const box = await btn.boundingBox();
   if (!box) return false;
   const cdp = await page.context().newCDPSession(page);
   const center = { x: box.x + box.width / 2, y: box.y + box.height / 2 };
+  // GAME-238: умова і ВІДПУСКАННЯ — всередині сторінки, кадр за кадром. Герой іде в реальному часі, а CDP-подія стоїть у черзі за зайнятим кадром
+  // (на ≈ 4 fps touchEnd доходив за ≈ 600 мс — три кроки по 8,5 px, герой пролітав ціль). Початок — справжній дотик (перевірка влучання лишається);
+  // відпускаємо той самий вказівник синтетичним pointerup у кадрі, коли умова настала; справжній touchEnd далі — лише закрити дотик у браузері.
+  await page.evaluate(() => { const w = window as unknown as { __pid: number | null; __t0: number }; w.__pid = null; w.__t0 = 0; window.addEventListener('pointerdown', (e) => { w.__pid = e.pointerId; }, { capture: true, once: true }); });
   await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [center] });
   if (offset) await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x: center.x + offset[0], y: center.y + offset[1] }] });
-  const start = Date.now();
-  for (;;) {
-    await page.waitForTimeout(16);
-    if (until(await probe(page)) || Date.now() - start >= maxMs) break;
-  }
+  // `until` — вираз над `p` (проба), напр. 'p.playerX <= 120'; 'false' — тримати рівно maxMs (кнопка дії).
+  await page.waitForFunction(`(() => { const w = window; if (!w.__t0) w.__t0 = performance.now(); const p = w.__game.probe; const ok = !!(${until}); const out = ok || performance.now() - w.__t0 > ${maxMs}; if (out) { const el = document.querySelector(${JSON.stringify(sel)}); if (el && w.__pid !== null) el.dispatchEvent(new PointerEvent('pointerup', { pointerId: w.__pid, bubbles: true })); } return out; })()`, null, { polling: 'raf', timeout: maxMs + 15_000 });
   await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
   await cdp.detach();
   await page.waitForTimeout(50);
@@ -64,9 +66,9 @@ async function holdTouch(page: Page, action: string, until: (p: Probe) => boolea
 /** Повний прохід дотиком: дійти до вогнища і взаємодіяти. Повертає кількість надісланих команд. */
 async function touchFlow(page: Page): Promise<number> {
   // GAME-97: межа ходьби 10 с — крок фізики йде від згладженої дельти, під навантаженням CI персонаж іде повільніше.
-  if (!(await holdTouch(page, 'left', (p) => p.playerX <= 120, 10_000))) return 0;
-  if (!(await holdTouch(page, 'up', (p) => p.nearObject !== null, 10_000))) return 0;
-  if (!(await holdTouch(page, 'interact', () => true, 100))) return 0;
+  if (!(await holdTouch(page, 'left', 'p.playerX <= 120', 10_000))) return 0;
+  if (!(await holdTouch(page, 'up', 'p.nearObject !== null', 10_000))) return 0;
+  if (!(await holdTouch(page, 'interact', 'false', 100))) return 0;
   await page.waitForTimeout(100);
   // Команда мусить дійти до ядра: нагорода записана рівно раз (рецензія PR #13).
   if ((await grants(page)).filter((g) => g === 'rw.campfire-warmth').length !== 1) return -1;
@@ -245,7 +247,7 @@ for (const vp of VIEWPORTS) {
         }
       }
       await page.locator('[data-ui="story-close"]').tap();
-      expect(await holdTouch(page, 'left', (p) => p.playerX <= 88)).toBe(true);
+      expect(await holdTouch(page, 'left', 'p.playerX <= 88')).toBe(true);
       // GAME-97: зону Елізи (радіус 48 px при 128 px/с) персонаж проходить за ~0,75 с; під навантаженням CI опитування буває
       // рідшим, і затиснутий стік її проскакував, часом не побувавши в ній жодного опитування (CI PR #53). Тому ціль —
       // сама точка Елізи з мапи (public/maps/camp-lake.tmj, y = 272): тримаємо стік до перетину цієї лінії й довертаємо
@@ -265,7 +267,7 @@ for (const vp of VIEWPORTS) {
         const neg = p0[axis] > target;
         const dir = axis === 'playerX' ? (neg ? 'left' : 'right') : (neg ? 'up' : 'down');
         const l = lead[axis];
-        expect(await holdTouch(page, dir, (p) => p.nearObject === 'npc.elise' || (neg ? p[axis] <= target + l : p[axis] >= target - l), 6_000)).toBe(true);
+        expect(await holdTouch(page, dir, `p.nearObject === 'npc.elise' || ${neg ? `p.${axis} <= ${target + l}` : `p.${axis} >= ${target - l}`}`, 6_000)).toBe(true);
         let last = (await probe(page))[axis];
         for (let since = Date.now(), t0 = since; Date.now() - since < 700 && Date.now() - t0 < 12_000; await page.waitForTimeout(50)) {
           const v = (await probe(page))[axis];
@@ -275,7 +277,7 @@ for (const vp of VIEWPORTS) {
         lead[axis] = Math.min(80, Math.max(0, l + overshoot));
       }
       expect((await probe(page)).nearObject).toBe('npc.elise');
-      expect(await holdTouch(page, 'interact', () => true, 100)).toBe(true);
+      expect(await holdTouch(page, 'interact', 'false', 100)).toBe(true);
       await expect(story.locator('[data-ui="dialogue"]')).toBeVisible();
       await page.waitForTimeout(400);   // GAME-179: рамка розмови, як і панель, глуха ~350 мс після появи (клік від пальця на кнопці дії)
       await story.locator('[data-key="dlg.elise-greeting.hello.c1"]').tap();   // велосипедна відповідь
@@ -377,7 +379,7 @@ test.describe('поворот екрана (телефон)', () => {
 
   test('поворот не втрачає стан сцени', async ({ page }) => {
     await open(page);
-    await holdTouch(page, 'down', (p) => p.playerY > 220);
+    await holdTouch(page, 'down', 'p.playerY > 220');
     // Після відпускання сцена гасить швидкість на наступному кадрі: на завантаженому CI `before` читався ще посеред ходу
     // (PR #31, CI). Чекаємо, доки позиція стоїть між двома зчитуваннями, — і лише тоді міряємо поворот.
     await expect.poll(async () => { const a = await probe(page); await page.waitForTimeout(120); const b = await probe(page); return Math.abs(a.playerY - b.playerY) + Math.abs(a.playerX - b.playerX); }, { timeout: 5_000 }).toBeLessThan(0.1);
@@ -398,7 +400,7 @@ test.describe('поворот екрана (телефон)', () => {
       (window as unknown as { __rot: number }).__rot = 0;
       screen.orientation.addEventListener('change', () => { (window as unknown as { __rot: number }).__rot++; });
     });
-    await holdTouch(page, 'down', (p) => p.playerY > 220);
+    await holdTouch(page, 'down', 'p.playerY > 220');
     // Як у тесті вище (PR #31): після відпускання персонаж ще кадр-два котиться — `before` міряємо, коли позиція стоїть.
     await expect.poll(async () => { const a = await probe(page); await page.waitForTimeout(120); const b = await probe(page); return Math.abs(a.playerY - b.playerY) + Math.abs(a.playerX - b.playerX); }, { timeout: 5_000 }).toBeLessThan(0.1);
     const before = await probe(page);
@@ -410,6 +412,6 @@ test.describe('поворот екрана (телефон)', () => {
     expect(after.playerX).toBeCloseTo(before.playerX, 0);
     expect(after.playerY).toBeCloseTo(before.playerY, 0);
     expect(after.commandsSent).toBe(before.commandsSent);
-    expect(await holdTouch(page, 'up', (p) => p.playerY < after.playerY - 5)).toBe(true);
+    expect(await holdTouch(page, 'up', `p.playerY < ${after.playerY - 5}`)).toBe(true);
   });
 });

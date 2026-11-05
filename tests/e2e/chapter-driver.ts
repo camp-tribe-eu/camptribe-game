@@ -48,6 +48,11 @@ export function routeXY(key: string, from: [number, number], o: { x: number; y: 
     if (goal(x, y)) {
       const out: [number, number][] = [];
       for (let k: string | null | undefined = `${x},${y}`; k; k = prev.get(k)) { const [a, b] = k.split(',').map(Number) as [number, number]; out.unshift([a * 32 + 16, b * 32 + 16]); }
+      // GAME-238: останній відрізок — до самої точки, а не до центру її клітинки (до 24 px убік): walk тепер сідає з точністю ≈ пів кроку кадру, і без
+      // цього goTo(x, y) «< 14 px» чи зона підказки не сходились на CI. Лише коли клітинка точки прохідна (не стіна, не ящик).
+      const tx = Math.floor(o.x / 32); const ty = Math.floor(o.y / 32);
+      const end = out.at(-1);
+      if (end && !blocked(tx, ty) && Math.hypot(o.x - end[0], o.y - end[1]) > 3) out.push([o.x, o.y]);
       return out;
     }
     for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]] as const) {
@@ -75,14 +80,12 @@ export async function walk(page: Page, pts: [number, number][]): Promise<void> {
     };
     let i = 0;
     const t0 = performance.now();
-    // GAME-238: герой іде в реальному часі, тож на повільному CI (≈ 4–5 fps) один кадр — до 12,8 px (крок обмежено в сцені, як у слідувачів), а зміна
-    // клавіші діє через ДВА кадри (Phaser: черга клавіш → фізика на UPDATE → наш update ставить швидкість → інтегрується наступним кадром):
-    // після перемикання герой ще два кадри їде старим напрямком. Старе «тримати, доки |d| < 3» на 12,8-px кроках вічно перелітало точку.
-    // Тепер: на прямих відрізках точку вважаємо пройденою й не зупиняємось; перед поворотом і перед останньою точкою відпускаємо клавішу
-    // за ≈ 2 кроки (герой докочується), чекаємо повної зупинки й лише тоді міряємо; вікно «дійшов» — ≥ 3 px або 0,55 минулого кроку.
+    // GAME-238: герой іде в реальному часі, тож на повільному CI (≈ 4–5 fps) один кадр — до 12,8 px (крок обмежено в сцені, як у слідувачів).
+    // Старе «тримати, доки |d| < 3» на таких кроках вічно перелітало точку; тепер вікно «дійшов» — ≥ 3 px або 0,55 кроку минулого кадру (ширше за
+    // пів кроку, тож завжди влучає), а на прямих відрізках точку вважаємо пройденою й не зупиняємось. Клавіша діє наступним же кадром (фізика
+    // в сцені йде після setVelocity), тож «фантомних» кроків після відпускання нема.
     const axisKey = (dx: number, dy: number): string => (Math.abs(dx) >= Math.abs(dy) ? (dx < 0 ? 'ArrowLeft' : 'ArrowRight') : (dy < 0 ? 'ArrowUp' : 'ArrowDown'));
     let last = { x: g.probe.playerX, y: g.probe.playerY };
-    let coasting = false;
     const tick = (): void => {
       if (performance.now() - t0 > 45_000) { set(null); resolve(); return; }
       const here = { x: g.probe.playerX, y: g.probe.playerY };
@@ -98,8 +101,6 @@ export async function walk(page: Page, pts: [number, number][]): Promise<void> {
         const straight = next !== undefined && axisKey(next[0] - p[0], next[1] - p[1]) === key;
         const along = key === 'ArrowLeft' ? -dx : key === 'ArrowRight' ? dx : key === 'ArrowUp' ? -dy : dy;   // відстань уздовж осі руху, < 0 — пройшли
         if ((Math.abs(dx) < tol && Math.abs(dy) < tol) || (straight && along <= tol)) { i++; continue; }
-        if (coasting) { if (step > 0.1) { requestAnimationFrame(tick); return; } coasting = false; }   // докочується після відпускання — чекаємо зупинки
-        if (!straight && down.has(key) && along <= 2 * step + tol) { set(null); coasting = true; requestAnimationFrame(tick); return; }
         set(key);
         requestAnimationFrame(tick);
         return;

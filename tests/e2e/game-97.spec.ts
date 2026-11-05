@@ -5,7 +5,7 @@
 import { expect, test, type Page } from '@playwright/test';
 import { budget } from './budgets';
 import { waitGameReady } from './ready';
-import { SPEED } from '../../src/view/world/follow';
+import { HERO_STEP_S, SPEED } from '../../src/view/world/follow';
 
 // Без сусідів: проєкт «perf» іде після всіх інших (playwright.config.ts), а тут — по одному тесту за раз.
 test.describe.configure({ mode: 'serial' });
@@ -70,12 +70,12 @@ test('при ≈ 11 fps годинник гри йде в ногу з реаль
 
 // GAME-238 · той самий корінь, що й годинник вище, але для ходьби. Phaser згладжує дельту кадру: 120 кадрів після старту (і поза
 // фокусом) ріже її до 16,7 мс, а понад 200 мс підміняє останньою «нормальною»; фізика Arcade рухає героя саме за цією дельтою.
-// При 8 fps герой ішов 2,13 px за кадр ≈ 17 px/с замість SPEED = 128: на слабкому телефоні перші ≈ 15 с він повзе, поки годинник
-// іде в реальному часі. У CI (шард e2e 2/3 після #166 + #167, main dd8dd2e) саме це червонило game-96:212 «932×430 … камера в межах
+// При 8–10 fps герой ішов 2,13 px за кадр ≈ 17–21 px/с замість SPEED = 128: на слабкому телефоні перші ≈ 15 с він повзе, поки годинник
+// іде в реальному часі. Нижче 15 fps крок за кадр обмежено (HERO_STEP_S), тож тут ≈ 10 fps: ≥ 50 % — із запасом над межею 1/15 с. У CI (шард e2e 2/3 після #166 + #167, main dd8dd2e) саме це червонило game-96:212 «932×430 … камера в межах
 // мапи»: 171 px до стіни не вкладались у 20 с. Тепер fps.smoothStep вимкнено (main.ts) — фізика бере сиру дельту, як і годинник.
-// Негативний контроль: smoothStep знову увімкнути → тут ≈ 17 px/с при ≈ 8 fps, тест червоний (заміряно: 16,9 px/с).
-test('при ≈ 8 fps герой іде зі швидкістю реального часу (≥ 50 % SPEED)', async ({ page }) => {
-  const LAG_MS = 120;
+// Негативний контроль: smoothStep знову увімкнути → тут ≈ 21 px/с при ≈ 10 fps, тест червоний (заміряно при 8 fps: 16,5 px/с).
+test('при ≈ 10 fps герой іде зі швидкістю реального часу (≥ 50 % SPEED)', async ({ page }) => {
+  const LAG_MS = 90;
   await page.setViewportSize({ width: 932, height: 430 });
   await page.goto(`/?seed=2&frameLagMs=${LAG_MS}`);
   await waitGameReady(page);
@@ -104,10 +104,10 @@ test('при ≈ 8 fps герой іде зі швидкістю реально�
   }
 });
 
-// GAME-238 · крок героя за кадр обмежений (як у слідувачів, MAX_FOLLOW_DT = 0,1 с): при ≈ 4–5 fps (?frameLagMs=190, кадр ≈ 200–250 мс) герой
-// проходить за кадр не більше SPEED × 0,1 = 12,8 px, а не 25–32. Кадри рахуємо в самій сторінці (rAF = кадр Phaser), позиція — з проби.
-// Негативний контроль: прибрати stepK у scene.ts → крок ≈ 26–32 px, тест червоний.
-test('при ≈ 4 fps крок героя за кадр ≤ 12,8 px (крок обмежено, як у слідувачів)', async ({ page }) => {
+// GAME-238 · крок героя за кадр обмежений (HERO_STEP_S = 1/15 с, за зразком MAX_FOLLOW_DT слідувачів): при ≈ 4–5 fps (?frameLagMs=190, кадр
+// ≈ 200–250 мс) герой проходить за кадр не більше SPEED / 15 ≈ 8,5 px, а не 25–32. Кадри рахуємо в самій сторінці (rAF = кадр Phaser), позиція — з проби.
+// Негативний контроль: прибрати stepK у scene.ts → крок ≈ 26–32 px, тест червоний (заміряно: 25,6 px).
+test('при ≈ 4 fps крок героя за кадр ≤ SPEED/15 ≈ 8,5 px (крок обмежено, як у слідувачів)', async ({ page }) => {
   const LAG_MS = 190;
   await page.setViewportSize({ width: 932, height: 430 });
   await page.goto(`/?seed=2&frameLagMs=${LAG_MS}`);
@@ -130,7 +130,7 @@ test('при ≈ 4 fps крок героя за кадр ≤ 12,8 px (крок �
     const moving = steps.filter((d) => d > 0);
     console.log(`GAME-238 крок за кадр при lag ${LAG_MS} мс (fps ${fps.toFixed(1)}): max ${Math.max(...moving).toFixed(2)} px, кроків ${moving.length}`);
     expect(moving.length, 'герой справді йшов').toBeGreaterThanOrEqual(3);
-    expect(Math.max(...moving)).toBeLessThanOrEqual(SPEED * 0.1 + 0.05);
+    expect(Math.max(...moving)).toBeLessThanOrEqual(SPEED * HERO_STEP_S + 0.05);
   } finally {
     await page.keyboard.up('ArrowDown');
   }

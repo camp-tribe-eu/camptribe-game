@@ -41,25 +41,37 @@ async function press(cdp: CDPSession, x: number, y: number, dx: number, dy: numb
   await touch(cdp, 'touchMove', x + dx, y + dy);
 }
 /** Утримати, доки умова не справдиться (межа maxMs), і відпустити. */
-async function driveUntil(page: Page, cdp: CDPSession, dx: number, dy: number, until: (p: Probe) => boolean, maxMs = 10_000): Promise<void> {
+/** Умова зупинки для driveUntil — як дані, бо перевіряється всередині сторінки (кадр за кадром), а не з тесту. */
+type Until = { readonly field: 'playerX' | 'playerY' | 'nearObject'; readonly op: '<=' | '>=' | '==='; readonly value: number | string | null };
+/**
+ * Утримувати джойстик, доки умова не справдиться (межа maxMs), і відпустити. Початок — справжній дотик (CDP, через конвеєр браузера з перевіркою
+ * влучання); умова і ВІДПУСКАННЯ — всередині сторінки: GAME-238 — герой іде в реальному часі, а CDP-подія стоїть у черзі за зайнятим кадром
+ * (заміряно на ≈ 4 fps: touchEnd доходив за 600 мс — три кроки по 8,5 px, і герой пролітав зону). Тож відпускаємо той самий вказівник
+ * синтетичним pointerup на джойстику в тому ж кадрі, коли умова настала; справжній touchEnd далі — лише щоб закрити дотик у браузері.
+ */
+async function driveUntil(page: Page, cdp: CDPSession, dx: number, dy: number, until: Until, maxMs = 10_000): Promise<void> {
   const y0 = Math.round((page.viewportSize()?.height ?? 844) * 0.5);   // середина висоти: поза спокійною основою й під шапкою в обох положеннях
+  await page.evaluate(() => { const w = window as unknown as { __pid: number | null }; w.__pid = null; window.addEventListener('pointerdown', (e) => { w.__pid = e.pointerId; }, { capture: true, once: true }); });
   await press(cdp, 70, y0, dx, dy);
-  const start = Date.now();
-  for (;;) {
-    await page.waitForTimeout(16);
-    if (until(await probe(page)) || Date.now() - start >= maxMs) break;
-  }
+  await page.evaluate(([u, limit]) => new Promise<void>((resolve) => {
+    const w = window as unknown as { __game: { probe: Record<string, unknown> }; __pid: number | null };
+    const t0 = performance.now();
+    const ok = (): boolean => { const v = w.__game.probe[u.field] as number | string | null; return u.op === '<=' ? (v as number) <= (u.value as number) : u.op === '>=' ? (v as number) >= (u.value as number) : v === u.value; };
+    const end = (): void => { const el = document.querySelector('[data-touch="stick"]'); if (el && w.__pid !== null) el.dispatchEvent(new PointerEvent('pointerup', { pointerId: w.__pid, bubbles: true })); resolve(); };
+    const tick = (): void => { if (ok() || performance.now() - t0 > limit) { end(); return; } requestAnimationFrame(tick); };
+    requestAnimationFrame(tick);
+  }), [until, maxMs] as const);
   await touch(cdp, 'touchEnd');
   await page.waitForTimeout(80);
 }
 /** Підвести персонажа до Елізи (так само, як e2e GAME-91: ліворуч, потім вниз), уже плаваючим джойстиком. */
 async function walkToEliza(page: Page, cdp: CDPSession): Promise<void> {
-  await driveUntil(page, cdp, -50, 0, (p) => p.playerX <= 88);
-  await driveUntil(page, cdp, 0, 50, (p) => p.nearObject === 'npc.elise');
+  await driveUntil(page, cdp, -50, 0, { field: 'playerX', op: '<=', value: 88 });
+  await driveUntil(page, cdp, 0, 50, { field: 'nearObject', op: '===', value: 'npc.elise' });
   // Зону Елізи (48 px при 128 px/с) персонаж проходить за ~0,75 с; під навантаженням CI опитування рідше і проскакує її
   // (CI #45: nearObject null). Тоді довертаємо коротким ходом назад, як зробив би гравець (так само, як world.spec, #43).
   for (let i = 0; i < 4 && (await probe(page)).nearObject !== 'npc.elise'; i++) {
-    await driveUntil(page, cdp, 0, i % 2 === 0 ? -50 : 50, (p) => p.nearObject === 'npc.elise', 2000);
+    await driveUntil(page, cdp, 0, i % 2 === 0 ? -50 : 50, { field: 'nearObject', op: '===', value: 'npc.elise' }, 2000);
   }
   expect((await probe(page)).nearObject).toBe('npc.elise');
 }
@@ -193,17 +205,17 @@ test.describe('кнопка дії за ціллю', () => {
     const talkIcon = await btn.locator('path').getAttribute('d');
 
     // Вогнище (112,144) — вгору від Елізи: рід fire, значок інший.
-    await driveUntil(page, cdp, 0, -50, (p) => p.nearObject === 'obj.campfire');
+    await driveUntil(page, cdp, 0, -50, { field: 'nearObject', op: '===', value: 'obj.campfire' });
     // GAME-238: герой іде в реальному часі й при 4 fps CI (кадр 250 мс) після відпускання джойстика проходить ще до 32 px — зону вогнища
     // (48 px) проскакує. Довертаємо коротким ходом, як до Елізи вище (стан, не час): назад-вперед, доки ціль — вогнище.
     for (let i = 0; i < 4 && (await probe(page)).nearObject !== 'obj.campfire'; i++) {
-      await driveUntil(page, cdp, 0, i % 2 === 0 ? 50 : -50, (p) => p.nearObject === 'obj.campfire', 2000);
+      await driveUntil(page, cdp, 0, i % 2 === 0 ? 50 : -50, { field: 'nearObject', op: '===', value: 'obj.campfire' }, 2000);
     }
     expect((await probe(page)).nearObject).toBe('obj.campfire');
     await expect(btn).toHaveAttribute('data-target', 'fire');
     expect(await btn.locator('path').getAttribute('d'), 'значок вогню відрізняється від розмови').not.toBe(talkIcon);
 
-    await driveUntil(page, cdp, 50, 0, (p) => p.nearObject === null);
+    await driveUntil(page, cdp, 50, 0, { field: 'nearObject', op: '===', value: null });
     await expect(btn).toHaveAttribute('data-state', 'idle');
     expect(await btn.locator('svg').count()).toBe(0);
     await page.context().close();
@@ -239,8 +251,8 @@ test.describe('тап по об\'єкту на канві', () => {
   test('тап по Елізі поза зоною дії нічого не робить (без шляху до неї): команд нема, панелі нема, персонаж стоїть', async ({ browser }) => {
     const { page, cdp } = await newPage(browser, VP);
     // На старті Eліза поза кадром (портрет): підходимо ліворуч так, щоб її було видно, але вона ще далеко від зони дії.
-    await driveUntil(page, cdp, -50, 0, (p) => p.playerX <= 165);
-    await driveUntil(page, cdp, 0, 50, (p) => p.playerY >= 215);
+    await driveUntil(page, cdp, -50, 0, { field: 'playerX', op: '<=', value: 165 });
+    await driveUntil(page, cdp, 0, 50, { field: 'playerY', op: '>=', value: 215 });
     // Спершу дочекатися, поки персонаж зупиниться: на повільному CI він ще котився після відпускання стіка, і зсув
     // «після тапу» був інерцією, а не ходом до Елізи (CI PR #65 і #69). Те саме очікування, що й у world.spec.
     await expect.poll(async () => { const a = await probe(page); await page.waitForTimeout(120); const b = await probe(page); return Math.hypot(a.playerX - b.playerX, a.playerY - b.playerY); }, { timeout: 10_000 }).toBeLessThan(0.1);
