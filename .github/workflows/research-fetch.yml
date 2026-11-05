@@ -33,7 +33,7 @@ jobs:
             [ -n "$f" ] || { echo "FAIL nofile $s"; continue; }
             curl -sfL -A "$UA" "$f" -o out/src || { echo "FAIL dl $s"; continue; }
             o="research/music-candidates/$slot-$n-$(echo "$s" | cut -c1-30 | sed 's/-$//').ogg"
-            ffmpeg -nostdin -loglevel error -y -i out/src -vn -c:a libvorbis -b:a 96k "$o" || { echo "FAIL ffmpeg $s"; continue; }
+            { which ffmpeg; file out/src; ls -l out/src; } ; ffmpeg -nostdin -loglevel error -y -i out/src -vn -c:a libvorbis -b:a 96k "$o" || { echo "FAIL ffmpeg $s"; continue; }
             sz=$(stat -c %s "$o")
             if [ "$sz" -gt 1600000 ]; then ffmpeg -nostdin -loglevel error -y -i out/src -vn -ac 1 -c:a libvorbis -b:a 64k "$o"; sz=$(stat -c %s "$o"); fi
             dur=$(ffprobe -v error -show_entries format=duration -of csv=p=0 "$o")
