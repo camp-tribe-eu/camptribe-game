@@ -1,6 +1,7 @@
 // GAME-24 (рух, камера, колізії, взаємодія) і GAME-69 (дотик, три в'юпорти) — у справжньому браузері.
 import { readFileSync } from 'node:fs';
 import { expect, test, type Page } from '@playwright/test';
+import { seedDay1 } from './day1-fixture';
 import { waitGameReady } from './ready';
 
 interface Probe { ready: boolean; playerX: number; playerY: number; nearObject: string | null; commandsSent: number; cameraScrollX: number; cameraScrollY: number }
@@ -237,8 +238,10 @@ for (const vp of VIEWPORTS) {
 
     // Звірка GAME-69 #1 «…і діалог»: персонаж біля озера (кроки меню — дотиком), до Елізи — дотиковими
     // стрілками, розмова — дотиком по відповідях, до кінця розмови.
-    test('пролог дотиком до кінця розділу: джойстик, кнопка дії й тапи по панелі (дійти до Елізи, розмова, кінець)', async ({ page }) => {
-      test.setTimeout(120_000);   // увесь пролог дотиком під навантаженням CI довший за 60 с (CI PR #53)
+    // GAME-255: було один тест на весь розділ (на CI ≈ 4 fps майже весь бюджет 120 с, червоний залежно від сусідів по шарду).
+    // Тепер A — дотиком до Елізи, розмова, день 1; B — дні 2–3 і кінець розділу зі СПРАВЖНЬОГО сейву дня 1 (tests/e2e/day1-fixture.ts).
+    test('пролог дотиком, день 1: джойстик, кнопка дії й тапи по панелі (дійти до Елізи, розмова, кінець дня)', async ({ page }) => {
+      test.setTimeout(120_000);   // ходьба дотиком до Елізи під навантаженням CI довга (CI PR #53); бюджет не збільшувати
       await open(page);
       await page.locator('[data-touch="story"]').tap();
       const story = page.locator('[data-ui="story"]');
@@ -321,7 +324,6 @@ for (const vp of VIEWPORTS) {
       await expect(story).toBeHidden();
       await page.locator('[data-touch="story"]').tap();
       await expect(story).toBeVisible();
-      // GAME-91: далі — до кінця розділу тим самим дотиком (панель подорожі: лише тапи), без клавіатури й без миші.
       const tapAct = async (kind: string, key = ''): Promise<void> => {
         await story.locator(`[data-act="${kind}"]${key ? `[data-key="${key}"]` : ''}`).tap();
         await page.waitForTimeout(400);   // GAME-80: панель глуха ~350 мс після дії
@@ -333,6 +335,20 @@ for (const vp of VIEWPORTS) {
       await page.locator('[data-ui="summary-continue"]').tap();
       await page.locator('[data-touch="story"]').tap();
       await expect(story.locator('[data-ui="ended"]')).toHaveCount(0);
+    });
+
+    test('дні 2–3 дотиком до кінця розділу зі збереженого дня 1: тапи по панелі, картка-«серія», кінець, перезавантаження', async ({ page }) => {
+      test.setTimeout(120_000);
+      await seedDay1(page);
+      const story = page.locator('[data-ui="story"]');
+      await page.locator('[data-touch="story"]').tap();
+      await expect(story).toBeVisible();
+      await expect(story.locator('[data-ui="ended"]')).toHaveCount(0);
+      await expect(story.locator('[data-act="complete"][data-key="q.ch1-d2-001"]')).toBeVisible();   // це справді ранок дня 2
+      const tapAct = async (kind: string, key = ''): Promise<void> => {
+        await story.locator(`[data-act="${kind}"]${key ? `[data-key="${key}"]` : ''}`).tap();
+        await page.waitForTimeout(400);   // GAME-80: панель глуха ~350 мс після дії
+      };
       // День 2 тим самим дотиком: ранок, «Доброго ранку!», вечеря, вечір біля вогнища — і підсумок дня 2.
       for (const [k, key] of [['complete', 'q.ch1-d2-001'], ['talk', 'npc.elise'], ['choose', 'dlg.elise-greeting.hello.c11'], ['choose', 'dlg.elise-greeting.morning.c2'], ['continue', ''],
         ['complete', 'q.ch1-d2-elise-001'], ['talk', 'npc.elise'], ['choose', 'dlg.elise-greeting.hello.c14'], ['choose', 'dlg.elise-greeting.dinner.c2'], ['continue', ''], ['continue', ''],

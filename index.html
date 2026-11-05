@@ -303,6 +303,19 @@
       .ui-cold-title { margin: 0; font-size: 1.6rem; letter-spacing: 0.08em; color: #ffd54a; text-shadow: 0 3px 0 #0009; }
       .ui-cold-sub { margin: 0 0 10px; font-size: 0.8rem; color: #c9c4b4; }
       .ui-cold-skip-start { font-size: 0.75rem; background: transparent; border-color: #e8e6e355; }
+      .ui-intro-black { position: relative; z-index: 2; margin: auto; display: grid; gap: 12px; justify-items: center; text-align: center; padding: 24px; max-width: min(92%, 420px); }
+      .ui-intro[data-kind="night"] { background: #05070d; }
+      .ui-intro[data-kind="night"] .ui-intro-room { opacity: 0; }
+      .ui-intro[data-kind="night"] > .ui-intro-black { position: absolute; inset: 0; max-width: none; align-content: center; }
+      .ui-intro-cap { margin: 0; font-size: 1.4rem; line-height: 1.4; color: #ffd54a; }
+      .ui-intro-zzz { margin: 0; font-size: 1.1rem; letter-spacing: 0.3em; color: #9fb4d8; }
+      .ui-intro-dawn { background: #1b1f23d9; border: 4px solid #4a3418; border-radius: 4px; }
+      .ui-intro-alarm, .ui-intro-goal-title { margin: 0; font-size: 0.85rem; line-height: 1.5; }
+      .ui-intro .ui-intro-stage.ui-intro-wake { align-items: flex-end; padding-bottom: 24px; }
+      .ui-intro .ui-intro-stage.ui-intro-spots { flex-direction: row; flex-wrap: wrap; gap: 8px; justify-content: center; align-content: flex-start; align-items: flex-start; padding: 46vh 16px 0; }
+      @media (orientation: landscape) and (max-height: 600px) { .ui-intro .ui-intro-stage.ui-intro-spots { flex-direction: column; flex-wrap: nowrap; justify-content: center; align-content: flex-end; align-items: flex-end; padding: 44px 24px 130px 55%; } .ui-intro .ui-intro-stage.ui-intro-wake { align-items: center; justify-content: flex-end; padding-bottom: 8px; } }
+      .ui-intro-spots .ui-btn { min-height: 56px; }
+      .ui-intro-spots .ui-btn[data-seen="yes"] { outline: 2px solid #ffd54a; }
       .ui-intro-skip { position: absolute; z-index: 3; top: var(--edge-top); right: var(--edge-right); min-height: 44px; font-size: 0.8rem; background: #1b1f23cc; }
       .ui-intro-stage { position: relative; z-index: 1; flex: 1 1 0; min-height: 0; display: flex; align-items: center; justify-content: center; padding: 56px var(--edge-right) 8px var(--edge-left); overflow-y: auto; }
       .ui-intro-stage:has(> .ui-intro-book) { align-items: flex-start; padding-top: 16vh; }
