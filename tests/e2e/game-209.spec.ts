@@ -83,7 +83,7 @@ for (const v of VIEWS) {
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), 'без горизонтальної прокрутки').toBe(true);
     await row.scrollIntoViewIfNeeded();
     await page.screenshot({ path: `${SHOTS_DIR}/old-crate-atlas-${v.side}.png` });
-    await page.locator('[data-ui="atlas-close"]').click();
+    await page.locator('[data-ui="atlas-cta"]').click();
     await page.reload();   // ☰ лишається відкритим і ставить гру на паузу: далі — свіжа сцена зі збереження
     await waitGameReady(page);
     await page.locator('[data-ui="recovery-close"]').click({ timeout: 800 }).catch(() => undefined);

@@ -365,6 +365,50 @@
       /* Перша наклейка «Дім» влітає на сторінку (кінець вступу); тільки рух — стан уже в ядрі. */
       .ui-sticker[data-fly="yes"] { animation: ui-sticker-fly 0.9s cubic-bezier(.2,.8,.3,1.2) both; z-index: 2; }
       @keyframes ui-sticker-fly { from { transform: translate(40vw, -60vh) scale(2.2) rotate(-25deg); opacity: 0; } 60% { opacity: 1; } to { transform: none; opacity: 1; } }
+      /* GAME-250 · S9: Атлас як мапа — пергамент, «Дім» світиться, озеро з запискою пульсує, решта — сірі силуети; одна головна кнопка. */
+      .ui-amap-page { display: grid; gap: 8px; width: min(100%, 520px); padding: 10px 12px 12px; border: 3px solid #6b5430; border-radius: 8px; background: #f1e6c8; color: #2b2f36; box-shadow: 0 5px 0 #0007; text-align: center; }
+      .ui-amap-title { margin: 0; font-size: 0.95rem; color: #6b3d1d; }
+      .ui-amap-board { position: relative; aspect-ratio: 10 / 8.5; border: 2px dashed #6b543088; border-radius: 6px; background: #ead9ab; }
+      .ui-amap-route { position: absolute; inset: 0; width: 100%; height: 100%; }
+      .ui-amap-places { list-style: none; margin: 0; padding: 0; }
+      .ui-amap-place { position: absolute; display: flex; flex-direction: column; align-items: center; transform: translate(-50%, -50%); gap: 1px; width: 24%; font-size: 0.6rem; line-height: 1.2; }
+      .ui-amap-place[data-place="home"] { left: 18%; top: 72%; } .ui-amap-place[data-place="lake"] { left: 52%; top: 36%; width: 38%; }
+      .ui-amap-place[data-place="mountains"] { left: 86%; top: 22%; } .ui-amap-place[data-place="sea"] { left: 86%; top: 74%; }
+      .ui-amap-place[data-place="castle"] { left: 18%; top: 20%; } .ui-amap-place[data-place="forest"] { left: 62%; top: 90%; }
+      .ui-amap-dot { display: grid; place-items: center; width: 40px; height: 40px; border-radius: 50%; border: 2px solid #6b5430; background: #fffaf0; }
+      .ui-amap-dot .ui-sticker-icon { width: 26px; height: 26px; }
+      .ui-amap-sil { width: 26px; height: 26px; color: #8a8f94; } .ui-amap-sil path { fill: currentColor; stroke: currentColor; stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; } .ui-amap-sil path[data-shape="sea"] { fill: none; }
+      .ui-amap-route path { fill: none; stroke: #8a5a34; stroke-width: 1.4; stroke-dasharray: 3 3; vector-effect: non-scaling-stroke; }
+      .ui-amap-place[data-state="ahead"] { opacity: 0.8; color: #5d6268; } .ui-amap-place[data-state="ahead"] .ui-amap-dot { border-style: dashed; border-color: #8a8f94; background: #e3dccb; }
+      .ui-amap-name { font-size: 0.75rem; color: #2b2f36; } .ui-amap-tag { font-size: 0.6rem; color: #5d6268; }
+      .ui-amap-place[data-state="here"] .ui-amap-dot { background: #ffe9a8; border-color: #c4482e; box-shadow: 0 0 0 4px #ffd54a99, 0 0 14px 4px #ffd54a; }
+      .ui-amap-place[data-state="here"] .ui-amap-tag { background: #2b2f36; color: #f4f1e8; border-radius: 4px; padding: 0 6px; }
+      .ui-amap-place[data-state="first"] .ui-amap-dot, .ui-amap-place[data-state="stamped"] .ui-amap-dot { border-color: #4a86c5; background: #e6f1fb; animation: ui-amap-pulse 1.6s ease-in-out infinite; }
+      .ui-amap-place[data-state="stamped"] .ui-amap-dot { animation: none; border-color: #c4482e; }
+      .ui-amap-place[data-state="first"] .ui-amap-tag { color: #1f5c99; font-weight: 700; }
+      .ui-amap-note { display: block; margin-top: 2px; padding: 3px 6px; background: #fffdf3; border: 1px solid #6b543088; border-radius: 3px; transform: rotate(-2deg); font-size: 0.6rem; line-height: 1.3; font-style: italic; color: #3a2a14; quotes: none; }
+      .ui-amap-home-sticker { position: absolute; top: -6px; right: 14%; width: 22px; height: 22px; display: grid; place-items: center; border-radius: 4px; background: #fff; border: 2px solid #6b5430; }
+      .ui-amap-home-sticker .ui-sticker-icon { width: 80%; height: 80%; }
+      .ui-amap-home-sticker[data-fly="yes"] { animation: ui-sticker-fly 0.9s cubic-bezier(.2,.8,.3,1.2) both; z-index: 2; }
+      @keyframes ui-amap-pulse { 0%, 100% { box-shadow: 0 0 0 0 #4a86c5aa; } 50% { box-shadow: 0 0 0 9px #4a86c500; } }
+      .ui-amap-side { display: grid; gap: 6px; justify-items: center; }
+      .ui-amap-side p { margin: 0; }
+      .ui-amap-sentence { font-size: 0.8rem; line-height: 1.5; font-weight: 700; } .ui-amap-legend { font-size: 0.65rem; line-height: 1.4; color: #4a3f2c; }
+      .ui-amap-gains { display: flex; flex-wrap: wrap; gap: 4px 10px; justify-content: center; align-items: center; font-size: 0.65rem; }
+      .ui-amap-gains-title { font-weight: 700; } .ui-amap-gain { display: inline-flex; align-items: center; gap: 3px; } .ui-amap-gain .ui-sticker-icon { width: 16px; height: 16px; }
+      .ui-amap-page .ui-atlas-count { font-size: 0.6rem; color: #4a3f2c; }
+      .ui-amap-cta { min-height: 48px; min-width: 220px; background: #386228; border-color: #ffd54a; color: #fff; font-weight: 700; }
+      .ui-amap-cta:focus-visible { outline: 3px solid #ffd54a; outline-offset: 2px; }
+      .ui-amap-details { max-width: 100%; color: #e8e6e3; } .ui-amap-details summary { min-height: 44px; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 0.75rem; }
+      /* Телефон вбік: мапа ліворуч, пояснення й кнопка — праворуч. */
+      @media (max-height: 500px) {
+        .ui-amap-page { grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); width: min(100%, 900px); align-items: center; gap: 4px 14px; padding: 6px 10px 8px; }
+        .ui-amap-title { grid-column: 1 / -1; font-size: 0.8rem; } .ui-amap-board { aspect-ratio: 16 / 9; max-height: 56vh; justify-self: center; width: 100%; }
+        .ui-amap-sentence { font-size: 0.7rem; line-height: 1.35; } .ui-amap-legend { font-size: 0.6rem; line-height: 1.3; } .ui-amap-side { gap: 3px; }
+        .ui-amap-cta { min-height: 44px; min-width: 0; width: 100%; padding: 4px 10px; }
+        .ui-amap-dot { width: 32px; height: 32px; } .ui-amap-note { font-size: 0.55rem; padding: 2px 4px; }
+        .ui-intro-atlas { flex-direction: row; } .ui-intro-stage:has(.ui-amap-page) { padding-top: 40px; align-items: center; }
+      }
       /* GAME-39 #3: гравець попросив менше руху — жодних анімацій і переходів в інтерфейсі, навіть доданих пізніше
          чи вписаних у style (!important перебиває інлайн). Перевірка — tests/e2e/a11y.spec.ts. */
       @media (prefers-reduced-motion: reduce) {

@@ -1,5 +1,6 @@
 // GAME-183 · розділ 1 з НОВОЇ ГРИ (вступ увімкнено): вступ → дім → крамниця → дім (пакування) → дорога з подіями й справами → приїзд у табір — ☰ жодного разу не відкрита
 // (спостерігач DOM). Друга половина — від табору до кінця розділу — tests/e2e/game-183.spec.ts. Обидві орієнтації: 390×844 і 844×390. Знімки дороги → research/visual-audit/.
+import { walkIntro } from './intro-walk';
 import { expect, test } from '@playwright/test';
 import { answerOne, core, installMenuObserver, loaded, menuSeen, playUntil, probe } from './chapter-driver';
 
@@ -20,11 +21,7 @@ for (const v of VIEWS) {
     // Вступ: лише «Далі» й вибір героя (соло, велосипед) — ☰ не потрібна.
     const intro = page.locator('[data-ui="intro"]');
     await expect(intro).toBeVisible();
-    for (let i = 0; i < 30 && (await intro.count()) > 0; i++) {
-      const pick = page.locator('[data-act="create"]', { hasText: /Велосипед|Bike/ });
-      if (await pick.count()) await pick.first().click(); else await page.locator('[data-ui="intro-next"]').click();
-      await page.waitForTimeout(320);
-    }
+    await walkIntro(page);   // GAME-250: за станом; кінцева кнопка — atlas-cta, без циклів «наосліп»
     await expect(intro).toHaveCount(0);
     expect((await core(page)).game.player?.locationId).toBe('loc.home');
     const log: string[] = [];

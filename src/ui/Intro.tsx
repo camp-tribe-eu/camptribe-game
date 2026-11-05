@@ -7,7 +7,7 @@ import { setIntroOpen } from '../audio';
 import { playUi } from '../audio/ui-sounds';
 import { ct } from '../i18n/content';
 import type { AnyLang, Key } from '../i18n';
-import { AtlasPage } from './Atlas';
+import { AtlasMapPage } from './Atlas';
 import { iconRects } from './atlas-icons';
 import { Portrait, type PortraitLookup } from './Portrait';
 import type { IntroRoomPainter } from './port';
@@ -75,7 +75,7 @@ export function Intro({ offer, lang, t, act, portrait, room, onDone }: { room?: 
   // Герой обраний (вибір зроблено тут чи гра вже мала персонажа) — крок вибору проминуто.
   useEffect(() => { if (step.kind === 'pick' && created) setI(PICK_AT + 1); }, [step.kind, created]);
   // Фокус — на кнопку «далі» (або на першу відповідь вибору): клавіатура й екранний читач починають із неї.
-  useEffect(() => { root.current?.querySelector<HTMLElement>('[data-ui="intro-next"], [data-act="create"]')?.focus({ preventScroll: true }); }, [i]);
+  useEffect(() => { root.current?.querySelector<HTMLElement>('[data-ui="intro-next"], [data-ui="atlas-cta"], [data-act="create"]')?.focus({ preventScroll: true }); }, [i]);
   // Кінець вступу: наклейка «Дім» влітає зі звуком «дзинь» (той самий єдиний мікшер UI, що й решта підтверджень).
   useEffect(() => { setIntroOpen(true); return () => setIntroOpen(false); }, []);   // GAME-194: дощ за вікном, поки вступ відкрито
   useEffect(() => { if (step.kind === 'final') playUi('confirm'); }, [step.kind]);
@@ -99,7 +99,10 @@ export function Intro({ offer, lang, t, act, portrait, room, onDone }: { room?: 
     return () => window.removeEventListener('keydown', onKey, true);
   }, []);
 
-  const nextBtn = <button type="button" class="ui-btn" data-ui="intro-next" onClick={next}>{step.kind === 'final' ? t('intro.go') : t('ui.continue')}</button>;
+  // Кінцевий крок — ОДНА головна кнопка дії (GAME-250): веде до розмови про першу поїздку; «Пропустити» лишається вторинною вгорі.
+  const nextBtn = step.kind === 'final'
+    ? <button type="button" class="ui-btn ui-amap-cta" data-ui="atlas-cta" data-cta="primary" onClick={next}>{t('atlas.cta.plan')}</button>
+    : <button type="button" class="ui-btn" data-ui="intro-next" onClick={next}>{t('ui.continue')}</button>;
   const who = step.kind === 'line' ? step.who : step.kind === 'pick' ? 'npc.victoria' : null;
   const name = who ? ct(lang, who) : t('ui.narrator');
   return (
@@ -119,9 +122,7 @@ export function Intro({ offer, lang, t, act, portrait, room, onDone }: { room?: 
       {step.kind === 'final' && (
         <div class="ui-intro-stage">
           <div class="ui-intro-atlas">
-            <AtlasPage atlas={offer.atlas} lang={lang} t={t} fly="sticker.home" />
-            <p class="ui-intro-final" data-ui="intro-final" role="status">{t('intro.final')}</p>
-            {nextBtn}
+            <AtlasMapPage atlas={offer.atlas} t={t} mode="intro" fly>{nextBtn}</AtlasMapPage>
           </div>
         </div>
       )}

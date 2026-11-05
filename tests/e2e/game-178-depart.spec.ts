@@ -1,5 +1,6 @@
 // GAME-178 · E/тап на авто вдома не їде, поки потрібна річ ще на полиці: локація лишається, HUD каже «Ще бракує: …».
 // Негативний контроль (закон 1): без гейта в actOnMap (старий код) тап на авто показував «Куди їдемо?» і їхав — цей тест червонів би (локація стає не домом / підказки немає).
+import { walkIntro } from './intro-walk';
 import { expect, test } from '@playwright/test';
 import { core, installMenuObserver, loaded, menuSeen, playUntil, probe, route, walk } from './chapter-driver';
 
@@ -17,12 +18,7 @@ for (const v of VIEWS) {
     await installMenuObserver(page);
     await page.goto('/?seed=7&mapFirst=1&intro=1');
     await loaded(page);
-    const intro = page.locator('[data-ui="intro"]');
-    for (let i = 0; i < 30 && (await intro.count()) > 0; i++) {
-      const pick = page.locator('[data-act="create"]', { hasText: /Велосипед|Bike/ });
-      if (await pick.count()) await pick.first().click(); else await page.locator('[data-ui="intro-next"]').click();
-      await page.waitForTimeout(320);
-    }
+    await walkIntro(page);   // GAME-250: за станом; кінцева кнопка — atlas-cta, без циклів «наосліп»
     // До пакування: крамниця зроблена, ST-003 завершено, активна CH1-HOME-001, гравець удома (авто з речами на полицях).
     await playUntil(page, v.side === 'landscape', [], (c) => c.game.quests['CH1-HOME-001']?.status === 'active' && c.game.player?.locationId === 'loc.home', () => menuSeen(page), 80);
     const before = await core(page);
