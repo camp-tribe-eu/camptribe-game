@@ -5,6 +5,8 @@
 
 /** Швидкість героя, px/с — 4 тайли за секунду (як було при 16 px: 64 px/с). Одне число для сцени й для сторожа слідувачів. */
 export const SPEED = 128;
+/** GAME-238: найбільший крок героя за кадр — SPEED × 1/15 с ≈ 8,5 px (scene.ts update): нижче 15 fps світ сповільнюється, а не стрибає. Сторож: tests/e2e/game-97.spec.ts «крок героя за кадр». */
+export const HERO_STEP_S = 1 / 15;
 
 export interface Pt { x: number; y: number }
 export interface Tile { readonly c: number; readonly r: number }

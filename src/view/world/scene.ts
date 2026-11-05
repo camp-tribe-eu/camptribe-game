@@ -14,7 +14,7 @@ import type { Bridge } from './bridge';
 import { PET_SHEETS, type WorldArt } from './art';
 import { ACTIONS, ACTION_COLS, COLS, DIR_ROW, FRAME, frameIndex, type Action as HeroAction, type Dir } from './character';
 import { FIRE_CORE, FIRE_GLOW, MAX_DARKNESS, ambientAt, glowAlpha, timeOfDay } from './daylight';
-import { FOLLOW_SPEED_FACTOR, SPEED, centerOf, findPath, gridFromWalls, isSolid, restPoints, stepFollowers, stepTo, tileOf, type Grid, type Pt, type Tile } from './follow';
+import { FOLLOW_SPEED_FACTOR, HERO_STEP_S, SPEED, centerOf, findPath, gridFromWalls, isSolid, restPoints, stepFollowers, stepTo, tileOf, type Grid, type Pt, type Tile } from './follow';
 import { MAX_HELPERS } from '../../content/tent-pitch';
 import type { MapKey } from '../../content/map-first';
 import { ICON_SIZE, iconIndex, objectiveIcon } from '../../content/objective-icons';
@@ -193,6 +193,8 @@ export interface WorldProbe {
   playerFrame: number;
   playerDir: Dir;
   playerMoving: boolean;
+  /** GAME-238 (лише для e2e): зсув ДИХАННЯ спрайта героя (GAME-212), px — 0/1 по колу, коли стоїть > 2 с. У playerY його нема; зсув сидіння (SIT_DY) і нахилу біля колонки — є, як і було. */
+  heroBreath: number;
   /** Глибина персонажа (= y ніг) і кількість тайлів верхівок, що зараз перекривають його кадр / лежать позаду нього. */
   playerDepth: number;
   coveredTiles: number;
@@ -300,6 +302,8 @@ export class WorldScene extends Phaser.Scene {
   /** GAME-212: скільки мс стоїть герой / слідувач / мешканець (дихання), куди й скільки ще дивиться слідувач на сплеск, видимий зсув героя. */
   private heroStandMs = 0;
   private heroBob = 0;
+  /** GAME-238: частка heroBob, що є диханням (idleBob), px — лише її проба playerY віднімає. */
+  private heroBreath = 0;
   private sitCropped = false;
   private followStand: number[] = [];
   private followLook: { dir: Dir; s: number }[] = [];
@@ -668,6 +672,13 @@ export class WorldScene extends Phaser.Scene {
     this.fish.onSplash = (at) => this.chain.forEach((p, i) => { const d = lookAt(p, at); if (d) this.followLook[i] = { dir: d, s: LOOK_S }; });
     // GAME-212: зсув дихання героя — лише на спрайті; перед кроком фізики знімаємо, щоб тіло й проба лишались справжніми.
     this.events.on(Phaser.Scenes.Events.PRE_UPDATE, () => { if (this.heroBob) { this.player.y -= this.heroBob; this.heroBob = 0; } });
+    // GAME-238: фізика — ПІСЛЯ того, як update() поставив швидкість, а не перед ним (Phaser в'яже world.update на UPDATE, що йде до update сцени):
+    // інакше клавіша діяла через два кадри — відпущена клавіша ще кадр везла героя (на 60 fps — 16 мс, на 4 fps CI — 12,8 px «фантомного» кроку).
+    // Знімаємо стандартну прив'язку й кличемо крок фізики самі одразу після setVelocity (postUpdate лишається на POST_UPDATE).
+    this.events.off(Phaser.Scenes.Events.UPDATE, this.physics.world.update, this.physics.world);
+    // GAME-238: позиція героя в пробі — ПІСЛЯ того, як Arcade перенесе тіло на спрайт (Body.postUpdate на POST_UPDATE, зареєстрований раніше
+    // за цей слухач): запис в update() бачив спрайт минулого кадру, і e2e-драйвери читали позицію з запізненням на кадр (на 4 fps — 12,8 px).
+    this.events.on(Phaser.Scenes.Events.POST_UPDATE, () => { if (this.player) { this.probe.playerX = this.player.x; this.probe.playerY = this.player.y - (this.heroBob ? this.heroBreath : 0); } });
     this.grill = new GrillRig(this, this.player, this.barkText);
 
     // lerp 1, 1 — камера стоїть на персонажі в тому ж кадрі, без згладженого «доїзду». Тож руху, який
@@ -1304,7 +1315,9 @@ export class WorldScene extends Phaser.Scene {
     if (look && !this.sitCropped) { this.player.setCrop(0, 0, FRAME, look.rows); this.sitCropped = true; }
     else if (!look && this.sitCropped) { this.player.setCrop(); this.sitCropped = false; }
     this.player.setScale(1, 1 - 0.1 * bend);   // GAME-225: колонка — герой нахиляється
-    const hb = look ? look.dy : idleBob(this.heroStandMs) + Math.round(bend * 2);
+    const breath = look ? 0 : idleBob(this.heroStandMs);
+    const hb = look ? look.dy : breath + Math.round(bend * 2);
+    this.heroBreath = breath;
     if (hb && !this.heroBob) { this.player.y += hb; this.heroBob = hb; }
     const evening = isEvening(timeOfDay(this.bridge.state.clock.minutes));
     const marks: { at: Pt; kind: Glyph }[] = [];
@@ -1396,6 +1409,10 @@ export class WorldScene extends Phaser.Scene {
     nightSounds.tick(delta, { map: this.current, intro: isIntroOpen(), raining: this.lifeRain, minuteOfDay: timeOfDay(nightClock.minutes + nightClock.accMs / STEP_MS) });
     const lifeDay = dayOf(this.bridge.state.clock);   // GAME-225: день й дощ для табору (калюжі, раз на день)
     if (lifeDay !== this.lifeDay) { this.lifeDay = lifeDay; this.lifeRain = weatherOf(this.bridge.state.worldSeed, lifeDay) === 'rain'; }
+    // GAME-238: Phaser розбирає чергу клавіш лише в preRender (ПІСЛЯ update усіх сцен), тож натискання доходило до update аж через кадр.
+    // Розбираємо чергу тут самі (повторний виклик Phaser знайде її порожньою): клавіша діє наступним же кадром — на 60 fps це −16 мс
+    // затримки, на 4 fps CI — мінус один «фантомний» крок 12,8 px після відпускання.
+    (this.input.keyboard as unknown as { update(): void } | null)?.update();   // внутрішній метод KeyboardPlugin (поза типами), той самий, що кличе InputManager.preRender
     const held = consumeFrame(this.controls);
     // GAME-216: заставка приїзду — камера по таблиці бітів; будь-яка клавіша, дотик чи кінець таблиці — камера знову на героєві.
     if (this.reveal) {
@@ -1418,7 +1435,12 @@ export class WorldScene extends Phaser.Scene {
     this.last = { x: this.player.x, y: this.player.y };
     // GAME-191: під час дії (замах, удар, руки) герой стоїть і дивиться туди, куди почав, — без «замаху на бігу» (рецензія #118).
     const swimK = this.swim.update(time, delta, { moving, movedPx, facing: this.facing, pets: [...this.miaSprites.values()].filter((m) => m.visible) });   // GAME-227: у глибині −40 %
-    this.player.setVelocity(this.acting ? 0 : v.x * SPEED * swimK, this.acting ? 0 : v.y * SPEED * swimK);
+    // GAME-238: крок героя за кадр обмежений (за зразком MAX_FOLLOW_DT у слідувачів): фізика бере сиру дельту (main.ts, smoothStep: false), і довгий
+    // кадр (хитання, згорнута вкладка, CI на SwiftShader ≈ 4 fps) не кидає героя на 32 px за раз — найбільше SPEED / 15 ≈ 8,5 px; до 15 fps швидкість
+    // справжня, нижче світ сповільнюється, а не стрибає. Саме 1/15 с: на CI це та сама точність зупинки (± пів кроку ≈ 4 px), що й була на main.
+    const stepK = Math.min(1, (HERO_STEP_S * 1000) / Math.max(1, delta));
+    this.player.setVelocity(this.acting ? 0 : v.x * SPEED * swimK * stepK, this.acting ? 0 : v.y * SPEED * swimK * stepK);
+    this.physics.world.update(time, delta);   // GAME-238: крок фізики тут (див. create) — швидкість цього кадру інтегрується цим же кадром
     if (!this.acting && (v.x !== 0 || v.y !== 0)) {
       const horizontal = v.x !== 0 && (v.y === 0 || this.facing === 'left' || this.facing === 'right');
       this.facing = horizontal ? (v.x < 0 ? 'left' : 'right') : (v.y < 0 ? 'up' : 'down');
@@ -1655,7 +1677,11 @@ export class WorldScene extends Phaser.Scene {
     Object.assign(this.probe, {
       reveal: this.reveal !== null,
       playerX: this.player.x,
-      playerY: this.player.y,
+      // GAME-238: без зсуву дихання (GAME-212 кладе 0/1 px на спрайт після update і знімає в PRE_UPDATE; у пробі він робив героя
+      // «рухомим» на 1 px, щойно він постояв 2 с — game-96 «персонаж на місці» червонів на повільному CI). Зсув сидіння на лавці
+      // (SIT_DY, game-225 «−4 px вниз») і нахил біля колонки лишаються в playerY, як на main.
+      playerY: this.player.y - (this.heroBob ? this.heroBreath : 0),   // свіжіше значення перепише слухач POST_UPDATE (див. create)
+      heroBreath: this.heroBob ? this.heroBreath : 0,
       nearObject: near,
       nearKind: spot ? actionTarget(spot.kind, spot.name) : null,
       commandsSent: this.bridge.sent,

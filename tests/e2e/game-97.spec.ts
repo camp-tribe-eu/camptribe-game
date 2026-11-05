@@ -4,6 +4,8 @@
 // цією межею, тож вимір не червоніє від шуму, але червоніє від довгої роботи в кадрі (негативний контроль: 300 мс у update).
 import { expect, test, type Page } from '@playwright/test';
 import { budget } from './budgets';
+import { waitGameReady } from './ready';
+import { HERO_STEP_S, SPEED } from '../../src/view/world/follow';
 
 // Без сусідів: проєкт «perf» іде після всіх інших (playwright.config.ts), а тут — по одному тесту за раз.
 test.describe.configure({ mode: 'serial' });
@@ -64,6 +66,74 @@ test('при ≈ 11 fps годинник гри йде в ногу з реаль
   console.log(`GAME-97 годинник при lag ${LAG_MS} мс: ${(b.ms - a.ms).toFixed(0)} мс гри за ${(b.at - a.at).toFixed(0)} мс, fps ${p.fps.toFixed(1)}`);
   expect(p.fps, 'штучна затримка не спрацювала — тест нічого не доводить').toBeLessThan(15);
   expect(ratio).toBeGreaterThanOrEqual(0.8);
+});
+
+// GAME-238 · той самий корінь, що й годинник вище, але для ходьби. Phaser згладжує дельту кадру: 120 кадрів після старту (і поза
+// фокусом) ріже її до 16,7 мс, а понад 200 мс підміняє останньою «нормальною»; фізика Arcade рухає героя саме за цією дельтою.
+// При 8–10 fps герой ішов 2,13 px за кадр ≈ 17–21 px/с замість SPEED = 128: на слабкому телефоні перші ≈ 15 с він повзе, поки годинник
+// іде в реальному часі. Нижче 15 fps крок за кадр обмежено (HERO_STEP_S), тож тут ≈ 10 fps: ≥ 50 % — із запасом над межею 1/15 с. У CI (шард e2e 2/3 після #166 + #167, main dd8dd2e) саме це червонило game-96:212 «932×430 … камера в межах
+// мапи»: 171 px до стіни не вкладались у 20 с. Тепер fps.smoothStep вимкнено (main.ts) — фізика бере сиру дельту, як і годинник.
+// Негативний контроль: smoothStep знову увімкнути → тут ≈ 21 px/с при ≈ 10 fps, тест червоний (заміряно при 8 fps: 16,5 px/с).
+test('при ≈ 10 fps герой іде зі швидкістю реального часу (≥ 50 % SPEED)', async ({ page }) => {
+  const LAG_MS = 90;
+  await page.setViewportSize({ width: 932, height: 430 });
+  await page.goto(`/?seed=2&frameLagMs=${LAG_MS}`);
+  await waitGameReady(page);
+  // fps — лише із ЗАКРИТОГО вікна (~3 с): до нього probe.fps = 0 і «< 15» проходило б ні про що.
+  await page.waitForFunction(() => (window as unknown as { __game: { probe: { fpsWindows: number } } }).__game.probe.fpsWindows >= 1, null, { timeout: 20_000, polling: 250 });
+  const fps = await page.evaluate(() => (window as unknown as { __game: { probe: { fps: number } } }).__game.probe.fps);
+  expect(fps, 'штучна затримка не спрацювала — тест нічого не доводить').toBeLessThan(15);
+  const y0 = await page.evaluate(() => (window as unknown as { __game: { probe: { playerY: number } } }).__game.probe.playerY);
+  await page.keyboard.down('ArrowDown');
+  try {
+    // Вікно виміру — всередині ходьби (герой уже рушив і ще не вперся в стіну за 171 px): a — зсув ≥ 8 px, b — ще ≥ 96 px; час і y — з однієї
+    // точки сторінки (performance.now поруч із probe), щоб затримка дротів не входила у швидкість.
+    const reached = async (from: number, px: number): Promise<{ y: number; t: number }> => {
+      const h = await page.waitForFunction(([y, d]) => { const p = (window as unknown as { __game: { probe: { playerY: number } } }).__game.probe; return p.playerY >= y + d ? { y: p.playerY, t: performance.now() } : null; }, [from, px] as const, { timeout: 20_000, polling: 50 });
+      const v = await h.jsonValue();
+      if (!v) throw new Error('waitForFunction повернув порожнє');
+      return v;
+    };
+    const a = await reached(y0, 8);
+    const b = await reached(a.y, 96);
+    const speed = ((b.y - a.y) / (b.t - a.t)) * 1000;
+    console.log(`GAME-238 ходьба при lag ${LAG_MS} мс: ${(b.y - a.y).toFixed(1)} px за ${(b.t - a.t).toFixed(0)} мс = ${speed.toFixed(1)} px/с (SPEED ${SPEED}), fps ${fps.toFixed(1)}`);
+    expect(speed, `герой іде ${speed.toFixed(1)} px/с при ${fps.toFixed(1)} fps — фізика рухає його за згладженою дельтою, а не за реальним часом`).toBeGreaterThanOrEqual(SPEED / 2);
+  } finally {
+    await page.keyboard.up('ArrowDown');
+  }
+});
+
+// GAME-238 · крок героя за кадр обмежений (HERO_STEP_S = 1/15 с, за зразком MAX_FOLLOW_DT слідувачів): при ≈ 4–5 fps (?frameLagMs=190, кадр
+// ≈ 200–250 мс) герой проходить за кадр не більше SPEED / 15 ≈ 8,5 px, а не 25–32. Кадри рахуємо в самій сторінці (rAF = кадр Phaser), позиція — з проби.
+// Негативний контроль: прибрати stepK у scene.ts → крок ≈ 26–32 px, тест червоний (заміряно: 25,6 px).
+test('при ≈ 4 fps крок героя за кадр ≤ SPEED/15 ≈ 8,5 px (крок обмежено, як у слідувачів)', async ({ page }) => {
+  const LAG_MS = 190;
+  await page.setViewportSize({ width: 932, height: 430 });
+  await page.goto(`/?seed=2&frameLagMs=${LAG_MS}`);
+  await waitGameReady(page);
+  await page.waitForFunction(() => (window as unknown as { __game: { probe: { fpsWindows: number } } }).__game.probe.fpsWindows >= 1, null, { timeout: 20_000, polling: 250 });
+  const fps = await page.evaluate(() => (window as unknown as { __game: { probe: { fps: number } } }).__game.probe.fps);
+  expect(fps, 'штучна затримка не спрацювала — тест нічого не доводить').toBeLessThan(8);
+  await page.keyboard.down('ArrowDown');
+  try {
+    const steps = await page.evaluate(() => new Promise<number[]>((resolve) => {
+      const g = (window as unknown as { __game: { probe: { playerX: number; playerY: number } } }).__game;
+      const out: number[] = []; let last = { x: g.probe.playerX, y: g.probe.playerY }; const t0 = performance.now();
+      const tick = (): void => {
+        const p = { x: g.probe.playerX, y: g.probe.playerY };
+        out.push(Math.hypot(p.x - last.x, p.y - last.y)); last = p;
+        if (performance.now() - t0 > 1_500) resolve(out); else requestAnimationFrame(tick);
+      };
+      requestAnimationFrame(tick);
+    }));
+    const moving = steps.filter((d) => d > 0);
+    console.log(`GAME-238 крок за кадр при lag ${LAG_MS} мс (fps ${fps.toFixed(1)}): max ${Math.max(...moving).toFixed(2)} px, кроків ${moving.length}`);
+    expect(moving.length, 'герой справді йшов').toBeGreaterThanOrEqual(3);
+    expect(Math.max(...moving)).toBeLessThanOrEqual(SPEED * HERO_STEP_S + 0.05);
+  } finally {
+    await page.keyboard.up('ArrowDown');
+  }
 });
 
 // GAME-38 · бюджет fps еталонної сцени (?seed=2, 1280×800, без ?frameLagMs): медіана з ≥ fpsSamples незалежних вікон probe.fps
