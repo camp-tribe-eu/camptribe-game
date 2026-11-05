@@ -12,6 +12,14 @@ export interface GameClock {
   readonly paused: boolean;
 }
 
+/**
+ * GAME-262: один кадр дає годиннику не більше стільки реального часу. Згорнута вкладка, поворот телефону, зміна розміру чи
+ * збій рендера зупиняють кадри на секунди, а перший кадр після цього приносить сиру дельту (GAME-238: Phaser без згладжування).
+ * Без межі така дельта перемотала б день. Межу ставить міст сцена→ядро (bridge.frame) через `clampFrame`: сам `tick` лишається чистим, бо тести й відтворення годують його довгими кадрами.
+ */
+export const MAX_FRAME_MS = 250;
+export const clampFrame = (realMs: number): number => Math.min(realMs, MAX_FRAME_MS);
+
 export const newClock = (): GameClock => ({ minutes: 0, accMs: 0, paused: false });
 
 /** Кадр: додає реальний час; повертає годинник і кількість зроблених ігрових кроків. */
