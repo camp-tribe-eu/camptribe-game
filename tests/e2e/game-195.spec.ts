@@ -2,7 +2,7 @@
 // Шлях до етапу вогнища — кнопками ☰ (як game-190); далі ногами: озеро → улов → вибір → вогнище руками → (узяв: рибка на патичку) → вечірня сцена.
 // Обидві орієнтації телефона.
 import { expect, test, type Page } from '@playwright/test';
-import { core, playFire, playFishing, probe, route, walk } from './chapter-driver';
+import { core, playFire, playFishing, probe, route, walk, sleepTheDay, skipToEvening } from './chapter-driver';
 import { waitGameReady } from './ready';
 
 const SETTINGS_KEY = 'camplife.settings.v1';
@@ -36,12 +36,15 @@ for (const v of VIEWS) {
         ['visit', 'loc.home'], ['complete', 'q.ch1-home-001'], ['visit', 'loc.road'], ['complete', 'q.st-004'], ['visit', 'loc.camp.lake'],
         ['talk', 'npc.elise'], ['choose', 'dlg.elise-greeting.hello.c1'], ['continue', ''], ['continue', ''], ['choose', 'dlg.elise-greeting.spot.c1'], ['continue', ''],
         ['pickup', 'item.firewood'], ['complete', 'q.st-005']] as const) await act(page, k, key);
+      await sleepTheDay(page);   // GAME-256: день 1 закриває сон
       await page.locator('[data-ui="summary-continue"]').click();
       await expect(page.locator('[data-ui="summary"]')).toHaveCount(0, { timeout: 15_000 });
       await page.locator('[data-touch="story"]').click();
       for (const [k, key] of [['complete', 'q.ch1-d2-001'], ['talk', 'npc.elise'], ['choose', 'dlg.elise-greeting.hello.c11'], ['choose', 'dlg.elise-greeting.morning.c1'],
-        ['choose', 'dlg.elise-greeting.advice.c1'], ['continue', ''], ['continue', ''], ['complete', 'q.ch1-d2-elise-001'],
-        ['talk', 'npc.elise'], ['choose', 'dlg.elise-greeting.hello.c14'], ['choose', 'dlg.elise-greeting.dinner.c2'], ['continue', ''], ['continue', ''], ['complete', 'q.ch1-d2-camp-001']] as const) await act(page, k, key);
+        ['choose', 'dlg.elise-greeting.advice.c1'], ['continue', ''], ['continue', ''], ['complete', 'q.ch1-d2-elise-001']] as const) await act(page, k, key);
+      await skipToEvening(page);   // GAME-256: вечеря — з 18:00
+      for (const [k, key] of [
+                ['talk', 'npc.elise'], ['choose', 'dlg.elise-greeting.hello.c14'], ['choose', 'dlg.elise-greeting.dinner.c2'], ['continue', ''], ['continue', ''], ['complete', 'q.ch1-d2-camp-001']] as const) await act(page, k, key);
       expect((await core(page)).game.quests['CH1-D2-FIRE-001']?.status).toBe('active');
       await panel(page).locator('[data-ui="story-close"]').click();
       const touch = v.side === 'landscape';

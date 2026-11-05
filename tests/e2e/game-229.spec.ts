@@ -3,7 +3,7 @@
 // Вимкнено в налаштуваннях — екрана немає, навички ростуть так само. Обидві орієнтації (390×844, 844×390) + знімки 9:16, 1:1, 16:9 (G229_SHOTS, типово test-results/g229).
 import { mkdirSync } from 'node:fs';
 import { expect, test, type Locator, type Page } from '@playwright/test';
-import { probe, routeXY, walk, sleepTheDay } from './chapter-driver';
+import { probe, routeXY, walk, skipToEvening } from './chapter-driver';
 import { waitGameReady } from './ready';
 import { heroLabelOk } from '../../src/view/world/hero-label';
 
@@ -83,8 +83,9 @@ for (const v of VIEWS) {
     for (const l of f.headLabels) expect(heroLabelOk(l), `підпис над героєм «${l}»`).toBe(true);
 
     await expect(levelup(page)).toHaveCount(0);   // до кінця дня екрана нема: ранги не перебивають гру
+    await skipToEvening(page);   // GAME-256: вечір — до завершення кроку (перезавантаження з'їло б екран рангу); день 1 закриває «Спати»
     await act(page, 'complete', 'q.st-005');
-    await sleepTheDay(page);   // GAME-256: день 1 закриває сон
+    await panel(page).locator('[data-act="sleep"]').click();
 
     // 1) Спершу «Що відкрилось»; підсумку під ним ще немає.
     await expect(levelup(page)).toBeVisible();
@@ -156,8 +157,9 @@ test('вимкнено в налаштуваннях: екрана «Що від
   test.setTimeout(240_000);
   const errors = await open(page, { w: 844, h: 390 }, { levelUps: false });
   await playToDayEnd(page, true);
+  await skipToEvening(page);   // GAME-256
   await act(page, 'complete', 'q.st-005');
-  await sleepTheDay(page);   // GAME-256
+  await panel(page).locator('[data-act="sleep"]').click();
   await expect(summary(page)).toBeVisible();
   await expect(levelup(page)).toHaveCount(0);
   const c = await core(page);
