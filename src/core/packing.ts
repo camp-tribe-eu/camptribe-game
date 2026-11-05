@@ -51,3 +51,43 @@ export function packingOpen(pk: PackingDefs, d: Pick<GameState, 'player' | 'ques
   if (!p || d.campaignEnded || d.dialogue !== null || p.locationId === null || !pk.at.includes(p.locationId)) return false;
   return pk.openAfter === undefined || (Object.hasOwn(d.quests, pk.openAfter) && d.quests[pk.openAfter]?.status === 'completed');
 }
+
+/** Прапорець «річ у сумці героя» (GAME-245): взяв удома, ще не завантажив у авто. `item.lantern` → `f.take-lantern`. */
+export const takeFlag = (itemId: string): string => `f.take-${itemId.replace(/^item\./, '')}`;
+
+/** Речі в сумці (взяті, ще не в авто), у порядку контенту. */
+export function carriedOf(flags: readonly string[], pk: PackingDefs, p: PlayerState): string[] {
+  return packItemsFor(pk, p).filter((i) => flags.includes(takeFlag(i.itemId))).map((i) => i.itemId);
+}
+
+/** Усе взяте з дому: у сумці або вже в авто. Тільки такі речі зникли зі своїх місць. */
+export function takenOf(flags: readonly string[], pk: PackingDefs, p: PlayerState): string[] {
+  return packItemsFor(pk, p).filter((i) => flags.includes(takeFlag(i.itemId)) || flags.includes(packFlag(i.itemId))).map((i) => i.itemId);
+}
+
+/**
+ * «Завантажити речі»: усе взяте (в авто й у сумці) розкладається заново за пріоритетом — потрібне, корисне, можна лишити — у межах місця.
+ * Те, що не влізло, лишається в сумці (це й є «не влазить»). Потрібне вміщається завжди (PACK_NEEDED_OVERFLOW), тож тупика немає.
+ */
+export function loadCarSet(pk: PackingDefs, p: PlayerState, flags: readonly string[]): { packed: string[]; overflow: string[] } {
+  const cap = capacityOf(pk, p.transportId);
+  const all = packItemsFor(pk, p).map((i, n) => ({ i, n })).filter(({ i }) => flags.includes(takeFlag(i.itemId)) || flags.includes(packFlag(i.itemId)));
+  all.sort((a, b) => ORDER[a.i.group] - ORDER[b.i.group] || a.n - b.n);
+  let used = 0;
+  const packed: string[] = [];
+  const overflow: string[] = [];
+  for (const { i } of all) if (used + i.units <= cap) { packed.push(i.itemId); used += i.units; } else overflow.push(i.itemId);
+  return { packed, overflow };
+}
+
+/** Кандидати «що лишимо вдома»: спершу «можна лишити», далі «корисне», «потрібне» (останнім). */
+export function overflowCandidates(pk: PackingDefs, p: PlayerState, flags: readonly string[]): PackItemDef[] {
+  const order = { leave: 0, useful: 1, needed: 2 } as const;
+  return carriedOf(flags, pk, p).map((id) => pk.items.find((i) => i.itemId === id) as PackItemDef).sort((a, b) => order[a.group] - order[b.group]);
+}
+
+/** Прапорці після завантаження: pack-/take- переписано за результатом loadCarSet. */
+export function withLoaded(flags: readonly string[], pk: PackingDefs, r: { packed: readonly string[]; overflow: readonly string[] }): string[] {
+  const all = new Set(pk.items.flatMap((i) => [packFlag(i.itemId), takeFlag(i.itemId)]));
+  return [...flags.filter((f) => !all.has(f)), ...r.packed.map(packFlag), ...r.overflow.map(takeFlag)].sort();
+}

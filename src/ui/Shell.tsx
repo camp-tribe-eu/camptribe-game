@@ -5,7 +5,7 @@ import { mixer, setMusicScreen } from '../audio';
 import { playUi, soundForButton } from '../audio/ui-sounds';
 import { DEFAULT_SETTINGS, TEXT_SCALES, loadSettings, saveSettings, type Settings } from '../platform/settings';
 import type { Credits, UiPort } from './port';
-import { ObjectiveIcon } from './ObjectiveIcon';
+import { BigItemIcon, ObjectiveIcon } from './ObjectiveIcon';
 import { t as tr, type AnyLang, type Key } from '../i18n';
 import { ct } from '../i18n/content';
 import { StoryPanel, money } from './StoryPanel';
@@ -384,6 +384,14 @@ export function Shell({ port, langOverride, credits, build, holdToast = false, h
         )}
         {reminder}
       </header>}
+      {offer.hint.card && (
+        <div class="ui-itemcard" data-ui="item-card" data-item={offer.hint.card.nameKey} role="status">
+          <BigItemIcon spot={offer.hint.card.spot} />
+          <strong data-ui="item-card-name">{ct(lang, offer.hint.card.nameKey)}</strong>
+          <span data-ui="item-card-line">{ct(lang, offer.hint.card.reactKey)}</span>
+          {offer.hint.card.xp > 0 && <em data-ui="item-card-xp">{`+${offer.hint.card.xp} ${t('pack.card.xp')}`}</em>}
+        </div>
+      )}
       {barkShown && <div class="ui-titleup" data-ui="bedtime-bark" role="status"><strong>{t('bark.bedtime')}</strong></div>}
       {offer.rest.autoSlept && !summary && !paused && <div class="ui-titleup" data-ui="sleep-auto" role="status"><strong>{t('bark.sleepAuto')}</strong></div>}
       {titleUpShown && titleUp && (

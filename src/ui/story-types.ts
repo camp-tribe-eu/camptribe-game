@@ -6,7 +6,7 @@ import type { Key } from '../i18n';
 export interface OfferAction {
   readonly id: string;
   /** `task` — справа живої хвилі з екрана подорожі (GAME-170 зріз 3: дім, зупинка в дорозі — локації без мапи). */
-  readonly kind: 'visit' | 'talk' | 'pickup' | 'buy' | 'sell' | 'dry' | 'complete' | 'decline' | 'choose' | 'continue' | 'pack' | 'unpack' | 'autopack' | 'task' | 'cancel' | 'gift' | 'sleep' | 'wait';
+  readonly kind: 'visit' | 'talk' | 'pickup' | 'buy' | 'sell' | 'dry' | 'complete' | 'decline' | 'choose' | 'continue' | 'load' | 'leave' | 'task' | 'cancel' | 'gift' | 'sleep' | 'wait';
   readonly key: string | null;
   readonly priceCents?: number;
   /** Скільки хвилин займе дорога (GAME-31); немає — дія на місці. */
@@ -25,15 +25,23 @@ export interface OfferCharacter {
 
 export interface OfferObjective { readonly key: string; readonly done: boolean; readonly required: boolean }
 
-/** Екран пакування (GAME-109): місце в одиницях, три групи, підпис за фактами стану. `action` null — річ не вміщається. */
+/**
+ * Екран пакування (GAME-109, GAME-245): місце в одиницях, три групи (лише читання — стан кожної речі: вдома / у сумці / в авто), прогрес «Взято N/M · ще: …»,
+ * одна дія «Завантажити речі» і, коли не влізло, вибір «що лишимо вдома» (кандидати: «можна лишити» першими).
+ */
 export interface OfferPacking {
   readonly used: number;
   readonly capacity: number;
   readonly groups: readonly {
     readonly group: 'needed' | 'useful' | 'leave';
-    readonly items: readonly { readonly key: string; readonly units: number; readonly packed: boolean; readonly action: OfferAction | null }[];
+    readonly items: readonly { readonly key: string; readonly units: number; readonly state: 'home' | 'bag' | 'car' }[];
   }[];
-  readonly auto: OfferAction;
+  /** Взято з дому (у сумці чи в авто) з усіх речей групи «потрібне» і «корисне»; `leftKeys` — що ще лежить удома (потрібне першим). */
+  readonly taken: number;
+  readonly total: number;
+  readonly leftKeys: readonly string[];
+  readonly load: OfferAction | null;
+  readonly overflow: readonly { readonly key: string; readonly units: number; readonly action: OfferAction }[];
   /** Ключ підпису (content/locales), коли бракує речі, яку радить гра; null — нічого казати. */
   readonly noteKey: string | null;
 }
@@ -111,6 +119,8 @@ export interface OfferHint {
   readonly near: { readonly label: Key; readonly itemKey: string | null } | null;
   /** GAME-178: чому авто не рушає (рюкзак повний чи бракує речей); null — не показувати. */
   readonly blocked: { readonly carry: boolean; readonly itemKeys: readonly string[] } | null;
+  /** GAME-245: велика картка речі, щойно взятої вдома (~1,5 с, покадрово): назва й репліка — ключі контенту, spot — для піктограми. null — картки нема. */
+  readonly card: { readonly nameKey: string; readonly reactKey: string; readonly spot: string; readonly xp: number } | null;
 }
 
 /** Картка прохання (GAME-180): що зробити одним рядком, цілі-картинки (іконка + підпис) і нагорода (дані для GAME-181). */

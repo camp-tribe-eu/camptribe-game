@@ -90,6 +90,13 @@
       .ui-oicon { display: inline-block; vertical-align: middle; margin-right: 6px; image-rendering: pixelated; background-repeat: no-repeat; flex: none; }
       .ui-goal[data-ended="yes"] { color: #9be28f; }
       /* GAME-181: банер нового звання — посередині поля, не ловить дотик, гасне сам. Рамка жовта (як цілі), текст світлий: контраст ≥ 4,5 на темному тлі. */
+      /* GAME-245: велика картка речі, щойно взятої вдома (~1,5 с, не ловить дотик): піктограма 80 px, назва, репліка. Ліворуч-вище центру, де стоїть герой. */
+      .ui-itemcard { position: fixed; left: 50%; top: max(32%, 150px); transform: translateX(-50%); z-index: 19; box-sizing: border-box; width: max-content; max-width: min(88vw, 360px); display: grid; justify-items: center; gap: 6px; padding: 10px 14px; text-align: center; pointer-events: none;
+        background: rgba(20, 24, 30, 0.92); color: #fff; border: 2px solid #ffd54a; border-radius: 10px; }
+      .ui-itemcard { font-family: 'CampPixel', system-ui, sans-serif; font-size: 0.875rem; line-height: 1.4; overflow-wrap: anywhere; }
+      .ui-itemcard em { color: #9be28f; font-style: normal; }
+      .ui-itemcard strong { color: #ffd54a; font-size: 1.05em; }
+      .ui-itemcard .ui-itemcard-icon { display: block; image-rendering: pixelated; background-repeat: no-repeat; margin: 0; }
       .ui-titleup { position: fixed; left: 50%; top: 50%; transform: translate(-50%, -50%); z-index: 20; box-sizing: border-box; width: max-content; max-width: min(88vw, 520px); display: grid; gap: 4px; padding: 10px 14px;
         border: 2px solid #ffd54a; border-radius: 12px; background: #1b1f23f2; color: #e8e6e3; font-family: 'CampPixel', system-ui, sans-serif; font-size: 0.875rem; line-height: 1.5; text-align: center; overflow-wrap: anywhere; pointer-events: none; }
       .ui-titleup strong { color: #ffd54a; }

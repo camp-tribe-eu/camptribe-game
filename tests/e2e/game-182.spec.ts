@@ -44,7 +44,14 @@ for (const v of VIEWS) {
     await pick.first().click();
     await expect.poll(async () => (await core(page)).game.player !== null).toBe(true);
     // Родинні репліки, далі сторінка Атласу з «Дім».
-    for (let i = 0; i < 12 && (await page.locator('[data-kind="atlas"]').count()) === 0; i++) await next(page);
+    // Гонка (CI ≈ 4 fps): після вибору Атлас малюється на кадр пізніше — спершу дочекатися ОДНОГО з двох станів («Далі» чи Атлас),
+    // і лише тоді вирішувати; інакше тест чекав «Далі», якої на сторінці Атласу немає, до кінця 120 с.
+    const atlas = page.locator('[data-kind="atlas"]');
+    for (let i = 0; i < 12; i++) {
+      await expect(page.locator('[data-ui="intro-next"]').or(atlas).first(), `вступ після вибору, крок ${i}: ні «Далі», ні Атласу`).toBeVisible();
+      if (await atlas.count()) break;
+      await next(page);
+    }
     await expect(page.locator('[data-kind="atlas"]')).toBeVisible();
     const home = page.locator('[data-ui="home-sticker"]');
     await expect(home).toHaveAttribute('data-owned', 'yes');
