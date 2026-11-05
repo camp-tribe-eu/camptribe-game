@@ -73,7 +73,8 @@ function walk(seed: number, steps: number, combo: number): Walk {
       w.campStates++;
       const { offer } = storyOffer(sim, DEFS, MAP_VIEW);
       // 1) панель у таборі: жодного ходу сюжету (усе дає мапа)
-      for (const a of offer.actions) w.problems.push(`${i}: ☰ пропонує «${a.kind} ${a.key ?? ''}» у таборі (квести: ${Object.entries(g.quests).filter(([, q]) => q.status === 'active').map(([id]) => id).join(',')})`);
+      // GAME-242: «Лягти спати» / «Почекати» — дії ритму дня, а не ходи сюжету: ядро дає їх ввечері й у зачиненій крамниці; сюжет вони не рухають.
+      for (const a of offer.actions.filter((x) => x.kind !== 'sleep' && x.kind !== 'wait')) w.problems.push(`${i}: ☰ пропонує «${a.kind} ${a.key ?? ''}» у таборі (квести: ${Object.entries(g.quests).filter(([, q]) => q.status === 'active').map(([id]) => id).join(',')})`);
       // 2) стрілка «Далі» — на живу ціль на мапі, поки розділ іде
       const spot = offer.hint.nextSpot;
       const live = spot !== null && (spot.startsWith('npc.') ? npcLive(g, DEFS, spot) : liveSpot(sim, spot, DEFS));

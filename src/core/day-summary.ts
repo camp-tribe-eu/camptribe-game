@@ -51,7 +51,9 @@ export function dayRanges(journal: readonly JournalEntry[], ends: ReadonlySet<st
   const out: { from: number; to: number; ended: boolean }[] = [];
   let from = 0;
   journal.forEach((e, i) => {
-    if (isDayEnd(e, ends)) { out.push({ from, to: i, ended: true }); from = i + 1; }
+    // GAME-242: сон теж закриває день — але лише якщо від попередньої межі вже щось було (день, який щойно показали на
+    // квест-межі, сном удруге не закривається: той самий підсумок двічі — шум).
+    if (isDayEnd(e, ends) || (e.type === 'Sleep' && i > from)) { out.push({ from, to: i, ended: true }); from = i + 1; }
   });
   if (from < journal.length) out.push({ from, to: journal.length - 1, ended: false });
   return out;
