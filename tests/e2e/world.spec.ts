@@ -52,10 +52,19 @@ async function holdTouch(page: Page, action: string, until: string, maxMs = 10_0
   // GAME-238: умова і ВІДПУСКАННЯ — всередині сторінки, кадр за кадром. Герой іде в реальному часі, а CDP-подія стоїть у черзі за зайнятим кадром
   // (на ≈ 4 fps touchEnd доходив за ≈ 600 мс — три кроки по 8,5 px, герой пролітав ціль). Початок — справжній дотик (перевірка влучання лишається);
   // відпускаємо той самий вказівник синтетичним pointerup у кадрі, коли умова настала; справжній touchEnd далі — лише закрити дотик у браузері.
+  // GAME-237: кнопка (не джойстик) — справжній тап: touchStart і touchEnd одразу (дія спрацьовує на фронт, засувка tapped її не губить). Тримати
+  // палець на кнопці, поки гра відкриває рамку, не можна: «клік» від підняття долітає вже в рамку (на ≈ 4 fps CI touchEnd запізнювався на 600 мс).
+  if (!offset) {
+    await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [center] });
+    await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+    await cdp.detach();
+    await page.waitForTimeout(50);
+    return true;
+  }
   await page.evaluate(() => { const w = window as unknown as { __pid: number | null; __t0: number }; w.__pid = null; w.__t0 = 0; window.addEventListener('pointerdown', (e) => { w.__pid = e.pointerId; }, { capture: true, once: true }); });
   await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [center] });
-  if (offset) await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x: center.x + offset[0], y: center.y + offset[1] }] });
-  // `until` — вираз над `p` (проба), напр. 'p.playerX <= 120'; 'false' — тримати рівно maxMs (кнопка дії).
+  await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x: center.x + offset[0], y: center.y + offset[1] }] });
+  // `until` — вираз над `p` (проба), напр. 'p.playerX <= 120'.
   await page.waitForFunction(`(() => { const w = window; if (!w.__t0) w.__t0 = performance.now(); const p = w.__game.probe; const ok = !!(${until}); const out = ok || performance.now() - w.__t0 > ${maxMs}; if (out) { const el = document.querySelector(${JSON.stringify(sel)}); if (el && w.__pid !== null) el.dispatchEvent(new PointerEvent('pointerup', { pointerId: w.__pid, bubbles: true })); } return out; })()`, null, { polling: 'raf', timeout: maxMs + 15_000 });
   await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
   await cdp.detach();
@@ -277,9 +286,23 @@ for (const vp of VIEWPORTS) {
         lead[axis] = Math.min(80, Math.max(0, l + overshoot));
       }
       expect((await probe(page)).nearObject).toBe('npc.elise');
-      expect(await holdTouch(page, 'interact', 'false', 100)).toBe(true);
+      // GAME-237: кнопку «дія» тримаємо 800 мс — довше за 350 мс глухоти рамки від появи. Рамка з'являється під пальцем і накриває кнопку; «клік»
+      // від підняття пальця долітає вже в неї і обирав відповідь під пальцем (hello.req0 → вузол req, і hello.c1 зникала: CI ×3 після #170).
+      // Тепер рамка глуха, доки палець, притиснутий у мить її появи, не піднято, і ще 350 мс після того (DialogueBox, inherited). Справжній дотик
+      // (CDP). Мутація: прибрати перевірку `inherited` у guarded → після підняття вузол не «hello» — червоний на телефоні.
+      const act = page.locator('[data-touch="interact"]');
+      const actBox = await act.boundingBox();
+      if (!actBox) throw new Error('кнопки дії нема');
+      const actCdp = await page.context().newCDPSession(page);
+      await actCdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: actBox.x + actBox.width / 2, y: actBox.y + actBox.height / 2 }] });
       await expect(story.locator('[data-ui="dialogue"]')).toBeVisible();
-      await page.waitForTimeout(400);   // GAME-179: рамка розмови, як і панель, глуха ~350 мс після появи (клік від пальця на кнопці дії)
+      const nodeOf = (): Promise<string | null> => page.evaluate(() => (window as unknown as { __game: { read: () => { game: { dialogue: { node: string } | null } } } }).__game.read().game.dialogue?.node ?? null);
+      expect(await nodeOf()).toBe('hello');
+      await page.waitForTimeout(800);
+      await actCdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+      await actCdp.detach();
+      await page.waitForTimeout(500);
+      expect(await nodeOf(), 'підняття пальця з кнопки «дія» не обрало відповідь під ним').toBe('hello');
       await story.locator('[data-key="dlg.elise-greeting.hello.c1"]').tap();   // велосипедна відповідь
       await page.waitForTimeout(400);   // GAME-80: панель глуха ~350 мс після дії
       await story.locator('[data-act="continue"]').tap();

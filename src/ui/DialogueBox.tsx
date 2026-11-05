@@ -23,9 +23,22 @@ function nameOf(offer: Dialogue, lang: AnyLang, t: (k: Key) => string): string {
   return t(offer.speakerId === 'player' ? 'ui.you' : 'ui.narrator');
 }
 
+/**
+ * GAME-237: які вказівники (пальці) зараз притиснуті — на рівні вікна, фаза перехоплення. Рамка, що з'явилась під притиснутим пальцем
+ * (кнопка «дія» на мапі), має лишатись глухою, доки той палець не підніметься, і ще ACT_COOLDOWN_MS після цього: «клік» від підняття
+ * долітає в рамку й обирав би відповідь під пальцем. Одні 350 мс від появи не рятували, коли палець тримали довше (або кадр повільний).
+ */
+const downPointers = new Set<number>();
+if (typeof window !== 'undefined') {
+  window.addEventListener('pointerdown', (e) => downPointers.add(e.pointerId), { capture: true });
+  for (const type of ['pointerup', 'pointercancel'] as const) window.addEventListener(type, (e) => downPointers.delete(e.pointerId), { capture: true });
+}
+
 export function DialogueBox({ dialogue: d, lang, t, act, portrait }: { dialogue: Dialogue; lang: AnyLang; t: (k: Key) => string; act: (id: string) => void; portrait: PortraitLookup }) {
   const root = useRef<HTMLDivElement>(null);
   const line = useRef<HTMLParagraphElement>(null);
+  // GAME-237: пальці, притиснуті в мить появи рамки, — поки хоч один із них не піднято, рамка глуха; підняття заново заводить відлік глухоти.
+  const inherited = useRef<Set<number> | null>(null);
   // Рамка щойно з'явилась під пальцем, що натиснув «дію» на мапі: його «клік» долітає вже в рамку й обирав би відповідь. Тому відлік глухоти — від появи (час події = той самий годинник, що в event.timeStamp).
   const lastAct = useRef(new Event('open').timeStamp);
   const raf = useRef(0);
@@ -63,10 +76,17 @@ export function DialogueBox({ dialogue: d, lang, t, act, portrait }: { dialogue:
   }, [text]);
   // Новий рядок — фокус на текст (екранний читач читає його), без прокрутки.
   useEffect(() => { line.current?.focus({ preventScroll: true }); }, [text]);
+  useEffect(() => {
+    inherited.current = new Set(downPointers);
+    const lift = (e: PointerEvent): void => { const set = inherited.current; if (set?.delete(e.pointerId)) lastAct.current = e.timeStamp; };
+    for (const type of ['pointerup', 'pointercancel'] as const) window.addEventListener(type, lift, { capture: true });
+    return () => { for (const type of ['pointerup', 'pointercancel'] as const) window.removeEventListener(type, lift, { capture: true }); };
+  }, []);
 
   const finish = (): void => { cancelAnimationFrame(raf.current); setN(chars.length); };
   /** Та сама «глухота» ~350 мс після прийнятої дії, що й у панелі: другий тап не влучає в нову першу кнопку. */
   const guarded = (e: Event, fn: () => void): void => {
+    if ((inherited.current?.size ?? 0) > 0) return;   // GAME-237: палець, що відкрив рамку, ще притиснутий
     if (e.timeStamp - lastAct.current < ACT_COOLDOWN_MS) return;
     lastAct.current = e.timeStamp;
     fn();
