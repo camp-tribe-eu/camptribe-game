@@ -314,6 +314,30 @@
         .ui-strip > * { max-width: 100%; background: #1b1f23d9; }
         .ui-strip .ui-next { max-width: 100%; }
       }
+      /* GAME-243: нотатник Вікторії (ліворуч під ☰) і мінімапа (праворуч під годинником). Лежать на полі поверх мапи; дотик ловлять лише кнопки. Один рядок біля дії — внизу над керуванням. */
+      :root { --radar: clamp(96px, 20vmin, 120px); }
+      .ui-agenda { position: absolute; left: var(--edge-left); top: 100%; margin-top: 6px; z-index: 1; max-width: calc(100% - var(--radar) - var(--edge-left) - var(--edge-right) - 12px); box-sizing: border-box; border-radius: 10px; background: #1b1f23d9; color: #e8e6e3; font-size: 0.75rem; line-height: 1.25; pointer-events: none; }
+      .ui-agenda-head { pointer-events: auto; display: flex; align-items: center; gap: 6px; min-width: 44px; min-height: 44px; padding: 0 10px; border: 0; background: transparent; color: inherit; font: inherit; font-weight: 700; cursor: pointer; }
+      .ui-agenda-head > span:first-child { font-size: 1.25rem; }
+      .ui-agenda-list { list-style: none; margin: 0; padding: 0 10px 8px; display: flex; flex-direction: column; gap: 3px; }
+      .ui-agenda-list li { display: flex; gap: 6px; align-items: flex-start; }
+      .ui-agenda-mark { flex: none; width: 14px; height: 14px; margin-top: 1px; box-sizing: border-box; border: 1.5px solid #8b8f94; border-radius: 3px; font-size: 0.6875rem; line-height: 11px; text-align: center; color: #1b1f23; }
+      .ui-agenda-list li[data-done="yes"] .ui-agenda-mark { background: #9be28f; border-color: #9be28f; }
+      .ui-agenda-list li[data-done="yes"] .ui-agenda-text { text-decoration: line-through; color: #9aa0a6; }
+      .ui-agenda-list li[data-current="yes"] .ui-agenda-text { color: #ffd54a; font-weight: 700; }
+      .ui-agenda-list li[data-current="yes"] .ui-agenda-mark { border-color: #ffd54a; }
+      .ui-agenda-place { color: #b9bdc2; font-weight: 400; }
+      .ui-radar { position: absolute; right: var(--edge-right); top: 100%; margin-top: 6px; z-index: 1; width: var(--radar); height: var(--radar); padding: 0; box-sizing: border-box; border: 2px solid #e8e6e3aa; border-radius: 12px; background: #1b1f23d9; overflow: hidden; cursor: pointer; pointer-events: auto; }
+      .ui-radar canvas, .ui-radar-big canvas { display: block; width: 100%; height: 100%; }
+      .ui-radar-big { position: fixed; inset: 0; z-index: 30; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; background: #000000b8; padding: 12px; box-sizing: border-box; }
+      .ui-radar-big canvas { width: min(92vw, calc(88vh - 120px) * 1.6); height: min(calc(92vw / 1.6), calc(88vh - 120px)); max-width: 100%; border: 2px solid #e8e6e3aa; border-radius: 12px; background: #1b1f23; }
+      .ui-radar-legend { margin: 0; color: #e8e6e3; font-size: 0.875rem; }
+      .ui-radar-you { color: #fff; } .ui-radar-goal { color: #ffd54a; }
+      .ui-radar-big .ui-btn { min-height: 44px; min-width: 44px; }
+      /* Рядок біля дії (єдина нижня підказка): над керуванням, по центру; поза дотиком. */
+      .ui-strip[data-agenda="yes"] { position: fixed; top: auto; margin: 0; left: var(--edge-left); right: var(--edge-right); bottom: calc(var(--edge-bottom) + max(var(--stick-size), var(--action-size)) + 8px); align-items: center; }
+      .ui-strip[data-agenda="yes"] > * { background: #1b1f23d9; }
+      @media (orientation: landscape) { .ui-strip[data-agenda="yes"] { bottom: calc(var(--edge-bottom) + 4px); } }
       /* GAME-182: вступ (дощовий вечір) і Атлас. Вступ — на весь екран, над усім (рамка розмови всередині нього — ті самі .ui-talk-*). Дощ — лише градієнтні смужки, що повільно
          зсуваються; «менше руху» (нижче) їх зупиняє. Книжка вгорі й лист — піксельні, без файлів. Сторінка Атласу — сітка 4×4: 12 слотів і печатка 2×2 в центрі. */
       .ui-intro { position: absolute; inset: 0; z-index: 40; display: flex; flex-direction: column; overflow: hidden; color: #f4f1e8; font-family: 'CampPixel', system-ui, sans-serif;
