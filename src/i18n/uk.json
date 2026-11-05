@@ -474,5 +474,9 @@
   "atlas.gain.routes": "нові маршрути",
   "atlas.cta.plan": "Спланувати першу поїздку",
   "atlas.cta.close": "Закрити",
-  "atlas.details": "Усі наклейки, сліди й фото"
+  "atlas.details": "Усі наклейки, сліди й фото",
+  "ui.journal.entries": "Записи",
+  "ui.journal.stickers": "наклейок",
+  "ui.journal.more": "Показати ще",
+  "ui.journal.less": "Показати менше"
 }
