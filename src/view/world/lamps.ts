@@ -9,6 +9,8 @@ export const LAMPS_ON_MINUTE = 18 * 60;
 export const LAMPS_OFF_MINUTE = 6 * 60 + 30;
 /** Радіус кола світла, px (2 м при 28 px/м). */
 export const LAMP_RADIUS = 56;
+/** GAME-235: після 06:30 ліхтарі не гаснуть одним кадром, а згасають за стільки ігрових хвилин (покадрово, без твінів і таймерів). */
+export const LAMP_FADE_MIN = 2;
 /** Де на тайлі верхівки світить скло ліхтаря (px від верху тайла): за малюнком 126 — рядки 22–27. */
 export const BULB_DY = 24;
 const TILE = 32;
@@ -36,8 +38,10 @@ export function lampsOn(minuteOfDay: number): boolean {
 
 /** Яскравість кола світла: 0, коли ліхтарі вимкнені; увімкнені — від м'якого (сутінки, світла ще вдосталь) до повного (ніч) з повільним мерехтінням від часу сцени. */
 export function lampAlpha(minuteOfDay: number, darkness: number, timeMs: number): number {
-  if (!lampsOn(minuteOfDay)) return 0;
+  const m = ((minuteOfDay % 1440) + 1440) % 1440;
+  const fade = !lampsOn(m) && m >= LAMPS_OFF_MINUTE && m < LAMPS_OFF_MINUTE + LAMP_FADE_MIN ? 1 - (m - LAMPS_OFF_MINUTE) / LAMP_FADE_MIN : lampsOn(m) ? 1 : 0;
+  if (fade <= 0) return 0;
   const flicker = 1 + 0.025 * Math.sin(timeMs / 410) + 0.015 * Math.sin(timeMs / 97);
   const dusk = Math.min(1, Math.max(0, darkness) / MAX_DARKNESS);
-  return Math.min(1, (0.35 + 0.5 * dusk) * flicker);
+  return Math.min(1, (0.35 + 0.5 * dusk) * flicker) * fade;
 }

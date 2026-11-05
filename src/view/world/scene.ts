@@ -28,6 +28,7 @@ import { MapFx, type Needs } from './map-fx';
 import { bandOverHero, nextCanopyAlpha } from './canopy';
 import { findWindows, patchAlpha, patchQuads } from './light-patches';
 import { LAMP_RADIUS, findLamps, lampAlpha, lampsOn } from './lamps';
+import { heroBusy } from './hero-busy';
 import { FEEDBACK_S, RING_IDLE, isAutoSpot, pickNearest, ringMayTake, stepRing, vehicleReady, type Insets, type Ring } from './proximity';
 import { IDLE_AFTER_S, LEISURE_BY_MAP, assignLeisure, leisureFromObjects, type LeisureSpot } from './leisure';
 import { Neighbours, type NeighbourProbe } from './neighbours-rig';
@@ -155,6 +156,8 @@ export interface WorldHooks {
   heart?(): void;
   /** GAME-230: герой підняв шишку чи ягоду в таборі — main кладе її в інвентар (Forage), щоб її можна було подарувати. */
   onForage?(kind: 'cone' | 'berry'): void;
+  /** GAME-235: чи прийме інвентар ще одну шишку/ягоду (ліміт 20): без цього «+1» не показуємо. */
+  canForage?(kind: 'cone' | 'berry'): boolean;
 }
 
 /** Хто з NPC якого листа ходьби має (лист — в art.ts); решта — як Еліза. */
@@ -720,6 +723,7 @@ export class WorldScene extends Phaser.Scene {
 
   /** Знищити все, що належить поточній мапі (шари, картинки, маркери, колізії) — перед побудовою наступної. */
   private teardown(): void {
+    this.talkingTo = null;   // GAME-235: розмова з минулої мапи не переходить на нову
     this.tent?.reset();
     this.wood?.reset();
     this.props?.reset();
@@ -1520,7 +1524,7 @@ export class WorldScene extends Phaser.Scene {
       fire: this.fireSprite?.visible ? { x: this.fireSprite.x, y: this.fireSprite.y } : null,
       car: this.carImg && this.current === 'road' ? { x: this.carImg.x, y: this.carImg.y, back: -1 } : null,
     });
-    this.life.update(delta, { hero: { x: this.player.x, y: this.player.y }, moving, movedPx, day: lifeDay, rain: this.lifeRain, toastAt: { x: this.cameras.main.worldView.x + 6, y: this.cameras.main.worldView.bottom - this.insets.bottom }, animals: this.petPoints(), hintOn: !handsBusy && this.acting === null && !this.wood.active && !this.tent.active && (act === null || isFollower(act.name)) });
+    this.life.update(delta, { hero: { x: this.player.x, y: this.player.y }, moving, movedPx, day: lifeDay, rain: this.lifeRain, toastAt: { x: this.cameras.main.worldView.x + 6, y: this.cameras.main.worldView.bottom - this.insets.bottom }, animals: this.petPoints(), canForage: (k) => this.hooks.canForage?.(k) ?? true, hintOn: !handsBusy && this.acting === null && !this.wood.active && !this.tent.active && (act === null || isFollower(act.name)) });
     if (this.carImg) this.carImg.img.setY(this.carImg.y + (sway?.dy ?? 0)).setRotation(sway?.angle ?? 0);
     const carrying = this.hooks.backpack() > 0;
     this.fx?.tick(dt);
@@ -1655,7 +1659,7 @@ export class WorldScene extends Phaser.Scene {
     this.stepMs = delta;
     this.moveResidents(time);
     this.stepGift();
-    if (this.heartHold > 0) this.heartHold--; else this.hooks.heart?.();   // GAME-230: після подарунка сцена серця чекає, поки догорить реакція (♥ і поза), а не обриває її паузою
+    if (this.heartHold > 0) this.heartHold--; else if (!heroBusy({ acting: this.acting !== null, inWater: this.swim.inWater, fishing: this.fish.busy, tent: this.tent.holdsHero, wood: this.wood.holdsHero, fire: this.fire.holdsHero, grill: this.grill.holdsHero, smash: this.life.holdsHero })) this.hooks.heart?.();   // GAME-235: не під час дії руками   // GAME-230: після подарунка сцена серця чекає, поки догорить реакція (♥ і поза), а не обриває її паузою
     this.updateNpcMarks(time);
     this.updateEmotes(time, delta, moving || v.x !== 0 || v.y !== 0);
 

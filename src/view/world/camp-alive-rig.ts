@@ -196,7 +196,7 @@ export class CampAlive {
   }
 
   /** Кадр світу: падіння/магніт, калюжі, кроки по пірсу, тремтіння крон, малювання. */
-  update(dtMs: number, f: { hero: Pt; moving: boolean; movedPx: number; day: number; rain: boolean; hintOn: boolean; toastAt?: Pt; animals?: readonly Pt[] }): void {
+  update(dtMs: number, f: { hero: Pt; moving: boolean; movedPx: number; day: number; rain: boolean; hintOn: boolean; toastAt?: Pt; animals?: readonly Pt[]; canForage?: (k: 'cone' | 'berry') => boolean }): void {
     const g = this.fxG; const gg = this.groundG;
     if (!this.active || !g || !gg) return;
     const p = this.probe;
@@ -207,6 +207,7 @@ export class CampAlive {
     st.collected.forEach((k) => {
       if (isFindKind(k)) { p[k]++; this.smash.toast(k); this.sound('pop'); return; }   // GAME-228: знахідка — плашка біля кута замість сплива над героєм
       if (k === 'cone') p.cones++; else p.berries++;
+      if (f.canForage && !f.canForage(k === 'cone' ? 'cone' : 'berry')) return;   // GAME-235: інвентар повний (20) — нічого не додано, плашки «+1» немає
       this.smash.toast(k === 'cone' ? 'cone' : 'berry'); this.sound('pop');   // GAME-229: «+1 Шишка» — плашка в куті, як знахідки (GAME-228), а не цифра над героєм
     });
     p.items = this.items.length;

@@ -7,12 +7,18 @@ import { heartEventDue, reactionOf, canGiftToday, type FriendDefs, type GiftPref
 import type { GameState } from '../core/state';
 import { requestFlag } from './requests';
 import { DAY_MINUTES } from '../core/weather';
+import { FORAGE_CAP } from '../core/commands';
 
 interface RawNpc { id: string; gifts?: { likes: string[]; dislikes: string[] }; heart?: HeartEventDef }
 interface RawRequest { id: string; giver?: string; weather?: string }
 
 /** Дари природи, які герой збирає в таборі (шишка, ягода): команда Forage кладе їх в інвентар. */
 export const FORAGE_ITEMS = { cone: 'item.pine-cone', berry: 'item.berries' } as const;
+/** GAME-235: чи додасть Forage ще одну штуку (ядро відхиляє на ліміті INVALID_AMOUNT) — вигляд не показує «+1», коли нічого не додалось. */
+export function canForage(inventory: Readonly<Record<string, number>>, itemId: string): boolean {
+  return (inventory[itemId] ?? 0) < FORAGE_CAP;
+}
+
 /** Що можна подарувати: дари природи й дрова (єдина річ табору, яку герой тримає в руках). */
 export const GIFTABLE: readonly string[] = [FORAGE_ITEMS.cone, FORAGE_ITEMS.berry, 'item.firewood'];
 

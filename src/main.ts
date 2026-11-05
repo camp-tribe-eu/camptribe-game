@@ -48,7 +48,7 @@ import { portraitFor } from './view/portraits';
 import { headCrop, sheetOf } from './view/world/portrait-art';
 import { miaSpots, requestMarker, requestTarget, requestsDone } from './content/requests';
 import { errandMove, plannedErrands } from './content/errands';
-import { FORAGE_ITEMS, heartDue, reactionFor } from './content/friendship';
+import { FORAGE_ITEMS, canForage, heartDue, reactionFor } from './content/friendship';
 import type { GiftReaction } from './core/friendship';
 import { MAP_SPOTS, departBlock, isBulky, isMapFirstSpot, mapKeyFor, moveKey, needsLeft, nextTarget, npcLive, resolveSpot, spotLook, unpackMoves } from './content/map-first';
 import { packFlag } from './core/packing';
@@ -312,6 +312,7 @@ const worldHooks: WorldHooks = {
     try { bridge.send({ type: 'HeartEvent', npcId: npc }); storyChanged(); } finally { mapTalk = false; }
     for (const l of talkListeners) l();
   },
+  canForage: (kind) => canForage(bridge.state.game.inventory, kind === 'cone' ? FORAGE_ITEMS.cone : FORAGE_ITEMS.berry),
   onForage: (kind) => { bridge.send({ type: 'Forage', itemId: kind === 'cone' ? FORAGE_ITEMS.cone : FORAGE_ITEMS.berry }); },
   // GAME-179: з ким можна говорити саме зараз — те саме, що прийме ядро (NPC тут, відкритий, розмови нема); «!» — гачок прохань GAME-180.
   talk: (id) => (npcLive(bridge.state.game, GAME_DEFS, id) ? { request: requestMarker(bridge.state.game, id) } : null),
