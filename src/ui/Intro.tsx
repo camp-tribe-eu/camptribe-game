@@ -28,7 +28,7 @@ function Book() {
 }
 
 /** Тло вступу: кімната з вікном і дощем (intro-room.ts). Розмір береться з вікна й перемальовується при зміні орієнтації. */
-function Room({ paint, morning }: { paint: IntroRoomPainter | undefined; morning: boolean }) {
+function Room({ paint, morning, family, speaker }: { paint: IntroRoomPainter | undefined; morning: boolean; family: boolean; speaker: string | null }) {
   const ref = useRef<HTMLCanvasElement>(null);
   const [size, setSize] = useState(() => `${window.innerWidth}x${window.innerHeight}`);
   useEffect(() => {
@@ -43,9 +43,9 @@ function Room({ paint, morning }: { paint: IntroRoomPainter | undefined; morning
     let stop: () => void = () => undefined;
     const [w, h] = size.split('x').map(Number) as [number, number];
     const reduced = calmMotion();
-    paint(el, w, h, reduced, () => dead, morning).then((s) => { if (dead) s(); else stop = s; }, () => undefined);
+    paint(el, w, h, reduced, () => dead, { morning, family, speaker }).then((s) => { if (dead) s(); else stop = s; }, () => undefined);
     return () => { dead = true; stop(); };
-  }, [size, morning]);
+  }, [size, morning, family, speaker]);
   return <canvas ref={ref} class="ui-intro-room" data-ui="intro-room" aria-hidden="true" />;
 }
 
@@ -102,7 +102,7 @@ export function Intro({ offer, lang, t, act, portrait, room, onDone }: { room?: 
   const talkLine = step.kind === 'search' ? (seen ? t(`intro.spot.${seen}.line` as Key) : t(step.text as Key)) : step.text ? t(step.text) : '';
   return (
     <div ref={root} class="ui-intro" data-ui="intro" data-step={i} data-kind={step.kind} data-phase={step.phase} role="dialog" aria-modal="true" aria-label={t('ui.story')}>
-      <Room paint={room} morning={morning} />
+      <Room paint={room} morning={morning} family={step.kind === 'line' || step.kind === 'morning' || step.kind === 'goal'} speaker={step.kind === 'line' ? step.who : null} />
       {step.kind !== 'pick' && <button type="button" class="ui-btn ui-intro-skip" data-ui="intro-skip" onClick={skip}>{t('intro.skip')}</button>}
       {step.kind === 'letter' && (
         <div class="ui-intro-stage">

@@ -2,9 +2,9 @@
 // стіна з вікном, торшер із теплим світлом, полиця, Метью з атласом у руках. Дощ видно ЛИШЕ крізь шибки вікна (маска за чорними пікселями шибок),
 // кадр за кадром від мітки requestAnimationFrame — без tweens і таймерів (no-realtime: виняток описано в src/guards/no-realtime.test.ts).
 // «Менше руху» → один статичний кадр із краплями. Усе малюється на одному <canvas> у логічних пікселях, у CSS він збільшується без згладжування.
-import { FAMILY_LOOKS, TILESET_IMAGES } from './world/art';
-import { FRAME, composeSheet, loadImage } from './world/character';
-import { iconRects } from '../ui/atlas-icons';
+import { FAMILY_LOOKS, FAMILY_THRUST_LOOK, TILESET_IMAGES } from './world/art';
+import { ACTION_COLS, DIR_ROW, FRAME, composeSheet, loadImage, type Dir } from './world/character';
+import { idlePose } from './world/idle-poses';
 
 const SCENE_W = 160;
 const WALL_H = 96;          // стіна 3 тайли: полотно 87 px + плінтус до 96
@@ -14,6 +14,13 @@ const SHELF = { sx: 5, sy: 28, w: 54, h: 64 } as const; // книжкова по
 const SKY_NIGHT: readonly [number, number, number] = [30, 42, 70];
 const SKY_DAY: readonly [number, number, number] = [150, 196, 232];   // GAME-249: ранок — дощ стих, небо світле
 const DROPS = 72;   // 26 читались як «кілька крапель» (знімки PR #121) — щільніше, щоб це був дощ
+
+/** GAME-249: ранок (світло, без дощу); `family` — Вікторія, Метью й Джордж у кімнаті (план і метушня), інакше лише Метью; `speaker` — хто говорить (позначка й підскок). */
+export interface IntroRoomOpts { readonly morning?: boolean; readonly family?: boolean; readonly speaker?: string | null }
+type Who = 'victoria' | 'matthew' | 'george';
+const CAST_DIR: Readonly<Record<Who, Dir>> = { victoria: 'down', matthew: 'down', george: 'left' };
+/** Позиція (лівий край кадру 64 px від краю сцени): ліворуч Вікторія, посередині Метью, праворуч Джордж — усі стоять НАД рамкою розмови. */
+const CAST_X: Readonly<Record<Who, number>> = { victoria: 6, matthew: 52, george: 98 };
 
 export interface Layout { readonly scale: number; readonly w: number; readonly h: number }
 
@@ -38,13 +45,15 @@ const hash = (i: number, k: number): number => { const v = Math.sin(i * 127.1 + 
 /**
  * Малює кімнату на `target` і повертає функцію зупинки. `reduced` — «менше руху»: один кадр. Без 2d-полотна (jsdom) — тиха нічого-не-робить.
  */
-export async function paintRoom(target: HTMLCanvasElement, cssW: number, cssH: number, reduced: boolean, isDead: () => boolean, morning = false): Promise<() => void> {
+export async function paintRoom(target: HTMLCanvasElement, cssW: number, cssH: number, reduced: boolean, isDead: () => boolean, opts: IntroRoomOpts = {}): Promise<() => void> {
+  const morning = opts.morning === true;
   const layout = roomLayout(cssW, cssH);
   const ctx = target.getContext('2d');
   if (!ctx) return () => undefined;
-  const [walls, floor, doors, furn, shelf, sheet] = await Promise.all([
+  const [walls, floor, doors, furn, shelf, sheet, victoria, george, vThrust, mThrust] = await Promise.all([
     loadImage(TILESET_IMAGES['home-walls'] as string), loadImage(TILESET_IMAGES['home-floor'] as string), loadImage(TILESET_IMAGES['home-windows-doors'] as string),
     loadImage(TILESET_IMAGES['home-furniture'] as string), loadImage(TILESET_IMAGES['home-shelf'] as string), composeSheet(FAMILY_LOOKS.matthew),
+    composeSheet(FAMILY_LOOKS.victoria), composeSheet(FAMILY_LOOKS.george), composeSheet(FAMILY_THRUST_LOOK.victoria, ACTION_COLS.thrust), composeSheet(FAMILY_THRUST_LOOK.matthew, ACTION_COLS.thrust),
   ]);
   if (isDead()) return () => undefined;
   const { w, h } = layout;
@@ -102,14 +111,26 @@ export async function paintRoom(target: HTMLCanvasElement, cssW: number, cssH: n
   win[1].putImageData(img, 0, 0);
   mask[1].putImageData(mk, 0, 0);
 
-  // Метью біля полиці з атласом у руках (кадр «вниз», стоїть); атлас — той самий піксельний значок 8×8, що й в Атласі.
-  const mx = shelfX - 34;
-  const my = floorY - 52 + 14 + (h > 300 ? 34 : 0);   // висока кімната (портрет): Метью ближче, на підлозі, а не під стіною — менше порожнечі
-  const drawMatthew = (): void => {
-    c.drawImage(sheet, 0, 2 * FRAME, FRAME, FRAME, mx, my, FRAME, FRAME);
-    for (const r of iconRects('atlas')) { c.fillStyle = r.fill; c.fillRect(mx + 34 + r.x * 2, my + 38 + r.y * 2, 2, 2); }   // ×2: 8×8 у руках губився
+  // Люди стоять НАД рамкою розмови: ноги — на лінії підлоги або вище за верх рамки (≈ 62 % висоти екрана), у портреті — трохи нижче стіни.
+  const feetY = Math.min(floorY + (h > 300 ? 40 : 0), Math.floor(h * 0.6));
+  const castY = feetY - 58;
+  const who: readonly Who[] = opts.family === true ? ['victoria', 'matthew', 'george'] : ['matthew'];
+  const sheets: Readonly<Record<Who, HTMLCanvasElement>> = { victoria, matthew: sheet, george };
+  const thrust: Partial<Record<Who, HTMLCanvasElement>> = { victoria: vThrust, matthew: mThrust };
+  const speaker = (opts.speaker ?? '').replace('npc.', '');
+  const drawCast = (t: number): void => {
+    who.forEach((id, k) => {
+      const pose = reduced ? null : idlePose(id, t, k * 3);
+      const tr = pose?.sheet === 'thrust' ? thrust[id] : undefined;
+      const dir = (pose?.dir ?? CAST_DIR[id]);
+      const src = tr ?? sheets[id];
+      const col = tr ? pose?.col ?? 0 : pose?.sheet === 'walk' ? pose.col : 0;
+      const bounce = !reduced && id === speaker && Math.floor(t / 320) % 2 === 1 ? 1 : 0;   // підскок за кадрами (мітка rAF), без таймерів
+      const x = ox + CAST_X[id] + (id === 'matthew' && !opts.family ? 18 : 0);
+      c.drawImage(src, col * FRAME, DIR_ROW[dir] * FRAME, FRAME, FRAME, x, castY - bounce, FRAME, FRAME);
+      if (id === speaker) { c.fillStyle = '#ffd54a'; c.fillRect(x + 29, castY + 2 - bounce, 6, 2); c.fillRect(x + 30, castY + 4 - bounce, 4, 2); c.fillRect(x + 31, castY + 6 - bounce, 2, 2); }   // жовта стрілка «говорить»
+    });
   };
-  drawMatthew();
 
   // Тепле світло торшера: м'яка пляма на стіні й підлозі й загальна «кав'яна» тінь по краях.
   const gx = lampX + 12;
@@ -128,6 +149,8 @@ export async function paintRoom(target: HTMLCanvasElement, cssW: number, cssH: n
   vig.addColorStop(1, morning ? 'rgba(0,0,0,0.12)' : 'rgba(0,0,0,0.4)');
   c.fillStyle = vig;
   c.fillRect(0, 0, w, h);
+  const bg = canvas(w, h);
+  bg?.[1].drawImage(target, 0, 0);
   // Знімок усього, крім вікна, — щоб кадр дощу малював лише вікно, а не всю кімнату.
   const frameWindow = (t: number): void => {
     c.drawImage(win[0], winX, winY);
@@ -147,13 +170,15 @@ export async function paintRoom(target: HTMLCanvasElement, cssW: number, cssH: n
     c.drawImage(rain[0], winX, winY);
   };
   frameWindow(0);
+  drawCast(0);
   if (reduced) return () => undefined;
   let raf = 0;
   let live = true;
   const tick = (t: number): void => {
     if (!live || isDead()) return;
+    if (bg) c.drawImage(bg[0], 0, 0);
     frameWindow(t);
-    drawMatthew();
+    drawCast(t);
     raf = requestAnimationFrame(tick);
   };
   raf = requestAnimationFrame(tick);

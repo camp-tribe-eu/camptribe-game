@@ -304,7 +304,9 @@
       .ui-intro-zzz { margin: 0; font-size: 1.1rem; letter-spacing: 0.3em; color: #9fb4d8; }
       .ui-intro-dawn { background: #1b1f23d9; border: 4px solid #4a3418; border-radius: 4px; }
       .ui-intro-alarm, .ui-intro-goal-title { margin: 0; font-size: 0.85rem; line-height: 1.5; }
-      .ui-intro-spots { gap: 8px; flex-wrap: wrap; align-content: center; padding-bottom: 40vh; }
+      .ui-intro .ui-intro-stage.ui-intro-wake { align-items: flex-end; padding-bottom: 24px; }
+      .ui-intro .ui-intro-stage.ui-intro-spots { flex-direction: row; flex-wrap: wrap; gap: 8px; justify-content: center; align-content: flex-start; align-items: flex-start; padding: 46vh 16px 0; }
+      @media (orientation: landscape) and (max-height: 600px) { .ui-intro .ui-intro-stage.ui-intro-spots { flex-direction: column; flex-wrap: nowrap; justify-content: center; align-content: flex-end; align-items: flex-end; padding: 44px 24px 130px 55%; } .ui-intro .ui-intro-stage.ui-intro-wake { align-items: center; justify-content: flex-end; padding-bottom: 8px; } }
       .ui-intro-spots .ui-btn { min-height: 56px; }
       .ui-intro-spots .ui-btn[data-seen="yes"] { outline: 2px solid #ffd54a; }
       .ui-intro-skip { position: absolute; z-index: 3; top: var(--edge-top); right: var(--edge-right); min-height: 44px; font-size: 0.8rem; background: #1b1f23cc; }
