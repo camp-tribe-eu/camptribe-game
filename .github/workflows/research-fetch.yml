@@ -1,49 +1,196 @@
 name: research-fetch
+# Мережа сесії чату Гри закрита для kenney.nl, opengameart.org, Steam, itch.io. Runner GitHub — ні.
+# Цей workflow забирає матеріали з ПЕРШОДЖЕРЕЛ для огляду й проб.
+# Запуск: ЛИШЕ вручну (workflow_dispatch, GAME-223): `gh workflow run research-fetch.yml --ref <гілка>` або кнопка Run workflow
+#   з вибором гілки. Пуш НЕ запускає: злиття main у гілку тягнуло fetch.txt і перезаписувало вичищені research/refs (двічі 31.10).
+# Рядок файлу: `назва<TAB>джерело`
+#   kenney:<slug>       — сторінка kenney.nl/assets/<slug>, zip першоджерела (CC0)
+#   oga:<slug>          — сторінка opengameart.org/content/<slug>: ліцензія з цієї сторінки + усі файли з неї
+#   ogasearch:<слова>   — лише список знайдених сторінок OGA (назва, посилання) у list.txt
+#   url                 — будь-який файл як є
+# 🔴 Комітиться в research/packs/<назва>/ ЛИШЕ те, у чого назва починається з `pack-`, і ЛИШЕ разом
+#    із ліцензією, процитованою зі сторінки першоджерела. Чужі скриншоти ігор (steam:) не комітяться ніколи.
+#    Звук (ogg/wav, кожен файл < 300 КБ) комітиться ЛИШЕ для наборів, назва яких починається з `pack-sfx-`;
+#    для решти `pack-*` — без звуку, як і раніше.
 on:
   workflow_dispatch:
+
 permissions:
   contents: write
+
 jobs:
-  s:
+  fetch:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Музика
+      - name: Фільтр ліцензій референсів (без мережі)
+        run: node --test scripts/research/refs.test.mjs
+      - name: Забрати
         run: |
           set -uo pipefail
-          UA='Mozilla/5.0 (X11; Linux x86_64) Chrome/130.0'
-          sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg >/dev/null
-          D=research/music-candidates-v2
-          mkdir -p out $D
-          : > $D/meta.tsv
-          declare -A cnt
-          while IFS=$'\t' read -r slot s pat; do
-            [ -z "$s" ] && continue
-            cnt[$slot]=$(( ${cnt[$slot]:-0} + 1 )); n=${cnt[$slot]}
-            [ "$slot" = M ] && n=$((n+1))
-            curl -sfL -A "$UA" "https://opengameart.org/content/$s" -o out/p.html || { echo "FAIL page $s"; continue; }
-            python3 - out/p.html "$pat" > out/m.txt <<'PY'
-          import re,sys,html,urllib.parse
-          t=open(sys.argv[1],encoding='utf-8',errors='replace').read(); pat=sys.argv[2]
-          ti=re.search(r'<title>([^<|]+)',t); ti=html.unescape(ti.group(1)).strip() if ti else '?'
-          i=t.find('License(s)'); blk=t[i:i+3000] if i>=0 else ''
-          lic=' / '.join(dict.fromkeys(l.strip() for l in re.findall(r"""class=['"]license-name['"][^>]*>([^<]+)<""",blk))) or 'NOTFOUND'
-          a=re.search(r'field-name-author-submitter.*?<a[^>]*>([^<]+)</a>',t,re.S); a=html.unescape(a.group(1)) if a else '?'
-          fs=list(dict.fromkeys(re.findall(r'href="(https://opengameart\.org/sites/default/files/[^"]+\.(?:ogg|mp3|wav|flac))"',t)))
-          pick=next((f for f in fs if pat.lower() in urllib.parse.unquote(f).lower()),'')
-          print(ti);print(a);print(lic);print(pick)
+          mkdir -p out
+          fail=0
+          while IFS=$'\t' read -r name src; do
+            [ -z "${name:-}" ] && continue
+            case "$name" in \#*) continue;; esac
+            d="out/$name"; mkdir -p "$d"
+            case "$src" in
+              kenney:*)
+                slug="${src#kenney:}"
+                page=$(curl -sfL "https://kenney.nl/assets/$slug") || { echo "::error::$name: сторінка $slug недоступна"; fail=1; continue; }
+                printf '%s' "$page" | grep -oiE 'Creative Commons[^<"]{0,60}|CC0[^<"]{0,60}|public domain[^<"]{0,40}' | head -3 > "$d/LICENSE-from-page.txt" || true
+                printf '%s' "$page" > "$d/page.html"
+                # Сторінка Kenney віддає zip через підписане посилання: кнопка «Continue without donating» має
+                # data-download-id, а fetch('https://kenney.nl/download-link/<id>') повертає свіже посилання.
+                # Спершу шукаємо пряме .zip на сторінці, далі — цей шлях (відповідь: JSON або голий URL).
+                zip=$(sed 's#\\/#/#g' "$d/page.html" | grep -oiE "(https://(www\.)?kenney\.nl)?/media/[^\"' <>)]+\.zip" | head -1 || true)
+                if [ -z "$zip" ]; then
+                  did=$(grep -oE "data-download-id='[0-9a-f]+'" "$d/page.html" | head -1 | cut -d"'" -f2 || true)
+                  if [ -n "$did" ]; then
+                    curl -sfL -H 'Accept: application/json, text/plain, */*' -H "Referer: https://kenney.nl/assets/$slug" "https://kenney.nl/download-link/$did" -o "$d/dl.json" || echo "::warning::$name: download-link не відповів"
+                    zip=$(sed 's#\\/#/#g' "$d/dl.json" 2>/dev/null | grep -oiE 'https?://[^"'"'"' <>)\\]+' | head -1 || true)
+                  fi
+                fi
+                if [ -z "$zip" ]; then
+                  echo "::error::$name: zip не знайдено на сторінці"; fail=1
+                  # Фрагмент розмітки навколо download/zip, щоб бачити причину (не арт).
+                  mkdir -p research/debug
+                  { echo "page bytes: $(wc -c < "$d/page.html")"; echo "id: ${did:-none}"; echo "dl.json: $(head -c 400 "$d/dl.json" 2>/dev/null)"; grep -oiE '.{0,120}(\.zip|licen[sc]e|cc0).{0,160}' "$d/page.html" | head -25 || true; } > "research/debug/$name.txt"
+                  continue
+                fi
+                case "$zip" in /*) zip="https://kenney.nl$zip";; esac
+                echo "https://kenney.nl/assets/$slug" > "$d/SOURCE.txt"   # сторінка першоджерела (підписане посилання на zip не зберігаємо)
+                curl -sfL "$zip" -o "$d/pack.zip" && unzip -q "$d/pack.zip" -d "$d/pack" && rm "$d/pack.zip"
+                ;;
+              oga:*)
+                slug="${src#oga:}"
+                url="https://opengameart.org/content/$slug"
+                curl -sfL "$url" -o "$d/page.html" || { echo "::error::$name: $url недоступна"; fail=1; continue; }
+                echo "$url" > "$d/SOURCE.txt"
+                # Ліцензія — дослівно з блоку License(s) сторінки першоджерела.
+                python3 - "$d/page.html" > "$d/LICENSE-from-page.txt" <<'PY'
+          import re,sys,html
+          t=open(sys.argv[1],encoding='utf-8',errors='replace').read()
+          i=t.find('License(s)')
+          blk=t[i:i+4000] if i>=0 else ''
+          open(sys.argv[1]+'.lic-snippet.txt','w').write(re.sub(r'<img[^>]*>','',blk[:1500]))
+          urls=re.findall(r"""href=['"](https?://(?:[a-z.]*creativecommons\.org|www\.gnu\.org/licenses|opengameart\.org/content/oga-by)[^'"]*)['"]""",blk)
+          names=re.findall(r"""class=['"]license-name['"][^>]*>([^<]+)<""",blk)
+          lic=[f'{n.strip()} | {u}' for n,u in zip(names+['?']*len(urls),urls)]
+          print('\n'.join(dict.fromkeys(lic)) or 'NOT FOUND')
+          a=re.search(r'field-name-author-submitter.*?<a[^>]*>([^<]+)</a>',t,re.S)
+          print('Submitted by:', html.unescape(a.group(1)) if a else 'NOT FOUND')
+          for f in re.findall(r'href="(https://opengameart\.org/sites/default/files/[^"]+)"',t):
+              print('FILE', f)
           PY
-            title=$(sed -n 1p out/m.txt); auth=$(sed -n 2p out/m.txt); lic=$(sed -n 3p out/m.txt); f=$(sed -n 4p out/m.txt)
-            [ -n "$f" ] || { echo "FAIL nofile $s"; continue; }
-            curl -sfL -A "$UA" "$f" -o out/src || { echo "FAIL dl $s"; continue; }
-            o="$D/$slot-$n-$(echo "$s" | cut -c1-30 | sed 's/-$//').ogg"
-            ffmpeg -nostdin -loglevel error -y -i out/src -vn -c:a libvorbis -b:a 96k "$o" || { echo "FAIL ffmpeg $s"; continue; }
-            sz=$(stat -c %s "$o")
-            if [ "$sz" -gt 1600000 ]; then ffmpeg -nostdin -loglevel error -y -i out/src -vn -ac 1 -c:a libvorbis -b:a 64k "$o"; sz=$(stat -c %s "$o"); fi
-            dur=$(ffprobe -v error -show_entries format=duration -of csv=p=0 "$o")
-            printf '%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n' "$slot" "$(basename $o)" "$title" "$auth" "https://opengameart.org/content/$s" "$lic" "$dur" "$sz" "$f" >> $D/meta.tsv
-            echo "ok $s $sz"
-          done < research/music-search2/picks.txt
-          git config user.name research-bot; git config user.email noreply@anthropic.com
-          git add $D
-          git commit -m "research: music candidates v2" && git push origin HEAD:${GITHUB_REF_NAME}
+                grep '^FILE ' "$d/LICENSE-from-page.txt" | cut -d' ' -f2 | sort -u | head -12 | while read -r f; do
+                  curl -sfL "$f" -o "$d/$(basename "$f")" || echo "::warning::$name: не скачано $f"
+                done
+                for z in "$d"/*.zip; do [ -f "$z" ] && unzip -q -o "$z" -d "$d/pack" && rm "$z"; done
+                ;;
+              ogasearch:*)
+                q="${src#ogasearch:}"
+                curl -sfL "https://opengameart.org/art-search-advanced?keys=$(printf '%s' "$q" | sed 's/ /+/g')&field_art_type_tid%5B%5D=9&sort_by=count&sort_order=DESC" -o "$d/search.html" || { fail=1; continue; }
+                grep -oE 'href="/content/[^"]+"[^>]*>[^<]+' "$d/search.html" | sed -E 's#href="(/content/[^"]+)"[^>]*>#\1\t#' | sort -u | head -40 > "$d/list.txt"
+                ;;
+              steam:*)
+                id="${src#steam:}"
+                curl -sf "https://store.steampowered.com/api/appdetails?appids=$id&l=english" -o "$d/appdetails.json" || { echo "::error::$name: steam api"; fail=1; continue; }
+                python3 - "$d" "$id" <<'PY'
+          import json,sys,urllib.request
+          d,i=sys.argv[1],sys.argv[2]
+          j=json.load(open(f"{d}/appdetails.json"))[i]["data"]
+          open(f"{d}/about.txt","w").write(j.get("short_description","")+"\n\n"+j.get("detailed_description",""))
+          for n,s in enumerate(j.get("screenshots",[])[:8]):
+              urllib.request.urlretrieve(s["path_full"],f"{d}/shot{n:02}.jpg")
+          PY
+                ;;
+              page:*)
+                # GAME-56: звірка факту зі сторінкою першоджерела — видимий текст у лог (цитата для checkedAt),
+                # у репозиторій нічого не комітиться. Порожній текст — збій, а не «нічого не сказано» (закон 4).
+                url="${src#page:}"
+                code=$(curl -sL -A 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0 Safari/537.36' \
+                  -H 'Accept: text/html,application/xhtml+xml' -H 'Accept-Language: nl,en;q=0.8' \
+                  -w '%{http_code}' "$url" -o "$d/page.html") || code=000
+                echo "$name: HTTP $code, $(wc -c < "$d/page.html" 2>/dev/null || echo 0) байт"
+                [ "$code" = 200 ] || { echo "::error::$name: $url → HTTP $code"; fail=1; continue; }
+                echo "$url" > "$d/SOURCE.txt"
+                python3 - "$d/page.html" > "$d/text.txt" <<'PY'
+          import re,sys,html
+          t=open(sys.argv[1],encoding='utf-8',errors='replace').read()
+          t=re.sub(r'(?is)<(script|style|noscript|svg)[^>]*>.*?</\1>',' ',t)
+          t=re.sub(r'(?i)<(br|/p|/li|/h[1-6]|/div)[^>]*>','\n',t)
+          t=html.unescape(re.sub(r'<[^>]+>',' ',t))
+          lines=[re.sub(r'[ \t\u00a0]+',' ',l).strip() for l in t.split('\n')]
+          print('\n'.join(l for l in lines if len(l)>2))
+          PY
+                # Порожнє тіло дає файл з одного переносу рядка — -s його пропускав (sha256 e3b0c442… у прогоні 39896865650).
+                grep -q '[[:alnum:]]' "$d/text.txt" || { echo "::error::$name: текст сторінки порожній"; fail=1; continue; }
+                echo "::group::$name · $url · sha256 $(sha256sum "$d/page.html" | cut -c1-16) · $(date -u +%F)"
+                # Чужий текст не сміє стати командою Actions (рядок «::error::…» зі сторінки) — рецензія GAME-56.
+                tok="stop-$(openssl rand -hex 12)"; echo "::stop-commands::$tok"
+                head -c 12000 "$d/text.txt"; echo
+                echo "::$tok::"
+                echo "::endgroup::"
+                ;;
+              refs:*)
+                # GAME-197 (OD-024): вільні фото Wikimedia Commons перед малюванням сцени; <мінімуму — збій.
+                node scripts/research/refs.mjs "$d" "${src#refs:}" || fail=1
+                ;;
+              *)
+                curl -sfL "$src" -o "$d/$(basename "${src%%\?*}")" || { echo "::error::$name: $src"; fail=1; }
+                ;;
+            esac
+            echo "$name: $(find "$d" -type f | wc -l) файлів"
+          done < research/fetch.txt
+          # Порожньо — не успіх (закон 4).
+          [ "$(find out -type f | wc -l)" -gt 0 ] || { echo "::error::нічого не забрано"; exit 1; }
+          exit $fail
+      - name: Закомітити дозволене
+        if: always()
+        run: |
+          set -euo pipefail
+          for d in out/pack-* out/list-* out/refs-*; do
+            [ -d "$d" ] || continue
+            n=$(basename "$d")
+            case "$n" in
+              refs-*)
+                # Лише мініатюри з вільною ліцензією й титрами (фільтр — scripts/research/refs.mjs).
+                [ -s "$d/CREDITS.txt" ] || { echo "::warning::$n: без CREDITS.txt — не комічу"; continue; }
+                mkdir -p "research/refs/${n#refs-}"; cp "$d"/* "research/refs/${n#refs-}/" ;;
+              pack-*)
+                # Без ліцензії, процитованої з першоджерела, не комітимо (aggregator-does-not-license).
+                [ -s "$d/LICENSE-from-page.txt" ] && [ -s "$d/SOURCE.txt" ] && ! grep -q '^NOT FOUND' "$d/LICENSE-from-page.txt" || {
+                  echo "::warning::$n: ліцензію не знайдено — не комічу"
+                  # Лише фрагмент розмітки блоку ліцензії, щоб бачити причину (не арт).
+                  mkdir -p research/debug; cp "$d/page.html.lic-snippet.txt" "research/debug/$n.txt" 2>/dev/null || true
+                  continue; }
+                mkdir -p "research/packs/$n"
+                cp "$d/LICENSE-from-page.txt" "$d/SOURCE.txt" "research/packs/$n/"
+                # Лише PNG і текстові ліцензії/титри, без zip і без звуку.
+                # Kenney має 1700 окремих тайлів — беремо лише зведені аркуші.
+                if [[ "$n" == pack-sfx-* ]]; then
+                  (cd "$d" && find . -type f \( -iname '*.ogg' -o -iname '*.wav' \) -size -300k) | while read -r f; do
+                    mkdir -p "research/packs/$n/$(dirname "$f")"; cp "$d/$f" "research/packs/$n/$f"
+                  done
+                fi
+                case "$n" in pack-kenney*) filt=( \( -ipath '*sheet*' -o -ipath '*tilemap*' \) -iname '*.png' -o -iname '*licen*' ) ;; *) filt=( -iname '*.png' -o -iname '*licen*' -o -iname '*credit*' -o -iname '*.txt' ) ;; esac
+                (cd "$d" && find . -type f \( "${filt[@]}" \) -size -3M) | while read -r f; do
+                  mkdir -p "research/packs/$n/$(dirname "$f")"; cp "$d/$f" "research/packs/$n/$f"
+                done ;;
+              list-*)
+                mkdir -p research/lists; cp "$d/list.txt" "research/lists/$n.txt" ;;
+            esac
+          done
+          git config user.name "research-bot"
+          git config user.email "noreply@anthropic.com"
+          # Лише наявні теки: git add із неіснуючим шляхом відкидає ВЕСЬ виклик (закон 4 — без || true).
+          for t in research/packs research/lists research/debug research/refs; do if [ -d "$t" ]; then git add "$t"; fi; done
+          echo "до коміту: $(git diff --staged --name-only | wc -l) файлів"
+          git diff --staged --quiet || { git commit -m "research: набори з першоджерел для проби графіки"; git push origin HEAD:${GITHUB_REF_NAME}; }
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: research
+          path: out
+          retention-days: 3
