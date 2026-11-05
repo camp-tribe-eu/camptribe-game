@@ -135,7 +135,10 @@ export function agendaOf(sim: SimState, defs: CoreDefs): Agenda | null {
     const n = nextTarget(sim, defs, defs.packing ? carriedOf(g.flags, defs.packing, p) : []);
     if (n) raw = [{ id: 'next', label: { ui: n.key }, placeKey: null, done: false, map: mapKeyFor(p.locationId), spot: n.spot }];
   }
-  const firstOpen = raw.findIndex((i) => !i.done);
+  // Підсвічений пункт — той, до якого веде підказка «Далі» (справа хвилі з горілим строком може бути перед розмовою); інакше перший відкритий.
+  const nt = phase === 'other' ? null : nextTarget(sim, defs, defs.packing ? carriedOf(g.flags, defs.packing, p) : []);
+  const byHint = nt?.spot ? raw.findIndex((i) => !i.done && i.spot === nt.spot) : -1;
+  const firstOpen = byHint >= 0 ? byHint : raw.findIndex((i) => !i.done);
   const items = windowOf(raw, firstOpen).map((i) => ({ ...i, current: i.id === raw[firstOpen]?.id }));
   return { phase, items, total: raw.length, doneCount: raw.filter((i) => i.done).length };
 }
