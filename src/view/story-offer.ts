@@ -25,6 +25,8 @@ import { LOCALES } from '../i18n';
 import { chapterComplete, matches, route } from '../core/story';
 import { capacityOf, packedOf, packFlag, packingOpen, packItemsFor, usedUnits } from '../core/packing';
 import { timeOfDay } from './world/daylight';
+import { bedtimeNight } from '../core/clock';
+import { canSleep, shopClosedHere, wakeMinute } from '../core/rest';
 import { dayOf, tripMinutes, type Weather } from '../core/weather';
 import { CONTENT, memorableFacts } from '../content/story';
 import { moves, progressKey, type Move } from '../content/moves';
@@ -217,6 +219,14 @@ function packingOffer(s: GameState, defs: CoreDefs, intents: Map<string, Move>):
  * Підсумок останнього завершеного дня (GAME-106) — для екрана: id фактів → ключі текстів. Сам підсумок (що є фактом) вирішує
  * ядро; тут лише назви. Ночівля — ключ UI `sum.night.<вид>` (наявність підписів для кожного f.night-* контенту звіряє тест).
  */
+/** Ритм дня для UI (GAME-242): усе з ядра — година, журнал сну; нічого не рахується тут вдруге. */
+export function restOffer(sim: SimState): StoryOffer['rest'] {
+  const now = sim.clock.minutes;
+  const last = sim.journal.at(-1);
+  const wake = last?.type === 'Sleep' && last.ref === 'auto' ? wakeMinute(last.at, true) : null;
+  return { bedtime: bedtimeNight(now), shopClosed: shopClosedHere(sim.game, now), autoSlept: wake !== null && now >= wake && now - wake < 10 };
+}
+
 export function summaryOffer(sim: SimState, defs: CoreDefs): { daysEnded: number; summary: OfferSummary | null } {
   const st = defs.story;
   const ended = daysEnded(sim, defs);
@@ -363,7 +373,7 @@ export function storyOffer(sim: SimState, defs: CoreDefs, view: StoryView = PANE
     near: nearL ? { label: nearL.label, itemKey: nearL.ref ? nameKey(nearL.ref) : null } : reqNear ? { label: 'near.req' as Key, itemKey: reqNear.labelKey }
       : view.near !== null && view.mapFirst && isTraceSpot(view.near) && liveTraceSpot(s, view.near) ? { label: 'near.trace' as Key, itemKey: null } : null,   // GAME-215: біля позначки олівцем
   };
-  const base = { mapFirst: view.mapFirst, hint, requests: trackerRows(s, REQUESTS, weather), goal: goalOf(s, st), progress: progressOffer(s), atlas: atlasOffer(s), nearest: nearestReward(s), goals: s.player ? openGoals(s, st, weather) : [], moneyCents: s.moneyCents, inventory, journal, lastTrip, weather, forecast: todayForecast(sim), day: dayOf(sim.clock) + 1, timeMinutes: timeOfDay(sim.clock.minutes), wave: waveOffer(sim), mia: miaState(s, defs), ...summaryOffer(sim, defs) };
+  const base = { mapFirst: view.mapFirst, hint, requests: trackerRows(s, REQUESTS, weather), goal: goalOf(s, st), progress: progressOffer(s), atlas: atlasOffer(s), nearest: nearestReward(s), goals: s.player ? openGoals(s, st, weather) : [], moneyCents: s.moneyCents, inventory, journal, lastTrip, weather, forecast: todayForecast(sim), day: dayOf(sim.clock) + 1, timeMinutes: timeOfDay(sim.clock.minutes), rest: restOffer(sim), wave: waveOffer(sim), mia: miaState(s, defs), ...summaryOffer(sim, defs) };
 
   if (!s.player) {
     const choices = characterChoices(defs);
@@ -406,7 +416,26 @@ export function storyOffer(sim: SimState, defs: CoreDefs, view: StoryView = PANE
   }
 
   // Недоступні купівлі: без наміру в `intents` — активувати їх нічим (і нічого не відправиться).
-  const locked: OfferAction[] = view.mapFirst ? [] : unaffordableBuys(s, defs).map(({ move, shortCents }) => ({ id: `locked|${idOf(move, s)}`, ...describe(move, defs, s, weather), shortCents }));
+  let locked: OfferAction[] = view.mapFirst ? [] : unaffordableBuys(s, defs).map(({ move, shortCents }) => ({ id: `locked|${idOf(move, s)}`, ...describe(move, defs, s, weather), shortCents }));
+
+  // GAME-242: крамниця зачинена — купівлі й продажі зникають (ядро відмовило б SHOP_CLOSED), лишаються дорога додому й «почекати»;
+  // «лягти спати» — де ядро дозволяє (ліжко, намет, будь-де після 22:00). Одна відповідь і для UI, і для бота: питаємо ядро.
+  if (!s.dialogue) {
+    const now = sim.clock.minutes;
+    if (shopClosedHere(s, now)) {
+      const trade = offered.filter((a) => a.kind === 'buy' || a.kind === 'sell');
+      for (const a of trade) offered.splice(offered.indexOf(a), 1);
+      locked = [];
+      const w: OfferAction = { id: 'rest|wait', kind: 'wait', key: null };
+      intents.set(w.id, { type: 'WaitForShop' });
+      offered.push(w);
+    }
+    if (canSleep(s, now)) {
+      const z: OfferAction = { id: 'rest|sleep', kind: 'sleep', key: null };
+      intents.set(z.id, { type: 'Sleep' });
+      offered.push(z);
+    }
+  }
 
   let dialogue: StoryOffer['dialogue'] = null;
   if (s.dialogue) {

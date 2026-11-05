@@ -3,10 +3,11 @@
 // пляма малюється з канви при старті. Удень (darkness = 0) обидва об'єкти приховані — кадр ідентичний до ефекту.
 // Гармонія (закон «новий ефект доводиться до палітри основного набору»): КЛЮЧОВІ кольори — з art/palette/lpc.json (daylight.test.ts
 // це доводить); проміжні — пряма інтерполяція між ключами.
+import { GAME_START_MINUTE } from '../../core/clock';
 export const DAY_MINUTES = 1440;
 /** Час доби на старті гри (08:00, «Ранок» першого квесту). Ядро стартує з clock.minutes = 0 і не змінюється (детермінізм, записані програвання, сейви) —
  *  зсув лише для ВІДОБРАЖЕННЯ: і ефект день-ніч, і час у HUD беруть доби через `timeOfDay`. */
-export const DAY_START_MINUTE = 8 * 60;
+export const DAY_START_MINUTE = GAME_START_MINUTE;
 /** Хвилина доби для показу (0…1439) з годинника ядра. */
 export const timeOfDay = (clockMinutes: number): number => (clockMinutes + DAY_START_MINUTE) % DAY_MINUTES;
 
