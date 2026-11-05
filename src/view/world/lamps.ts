@@ -43,5 +43,5 @@ export function lampAlpha(minuteOfDay: number, darkness: number, timeMs: number)
   if (fade <= 0) return 0;
   const flicker = 1 + 0.025 * Math.sin(timeMs / 410) + 0.015 * Math.sin(timeMs / 97);
   const dusk = Math.min(1, Math.max(0, darkness) / MAX_DARKNESS);
-  return Math.min(1, (0.35 + 0.5 * dusk) * flicker) * fade;
+  return Math.min(1, (0.42 + 0.55 * dusk) * flicker) * fade;
 }
