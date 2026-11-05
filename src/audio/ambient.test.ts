@@ -19,8 +19,8 @@ describe('ambientMix — фон за станом', () => {
     expect(mix({ fireLit: true, nearFire: true })).toEqual({ camp: 1, fire: 0.9 });
   });
   it('двір і вступ — дощ; вступ перекриває мапу', () => {
-    expect(mix({ map: 'home' })).toEqual({ rain: 0.8 });
-    expect(mix({ intro: true, map: 'camp', nearLake: true })).toEqual({ rain: 1 });
+    expect(mix({ map: 'home' })).toEqual({ rain: 0.4 });
+    expect(mix({ intro: true, map: 'camp', nearLake: true })).toEqual({ rain: 0.5 });
   });
   it('дорога — за транспортом (без вибору — авто)', () => {
     expect(mix({ map: 'road', transport: 'transport.bike' })).toEqual({ 'road-bike': 1 });

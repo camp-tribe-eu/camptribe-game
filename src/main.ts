@@ -563,7 +563,7 @@ game.events.on(Phaser.Core.Events.STEP, (_t: number, delta: number) => {
   if (!game.scene.isPaused('world')) return;
   if (isIntroOpen()) ambient.setAmbient(ambientMix({ map: null, intro: true, nearLake: false, fireLit: false, nearFire: false, transport: null }));
   ambient.tick(delta);
-  if (isIntroOpen()) music.setTrack('intro');   // GAME-207: музика вступу під дощ; інакше лишається тема, яку задала сцена
+  if (isIntroOpen()) music.setTrack('story');   // GAME-207: музика вступу під дощ; інакше лишається тема, яку задала сцена
   music.tick(delta);
 });
 game.events.on(Phaser.Core.Events.POST_STEP, () => {

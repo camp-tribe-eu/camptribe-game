@@ -6,7 +6,7 @@
 // GAME-93: графіка LPC (OD-013) — тайли 32 px, персонаж із шарів (ходьба 9 кадрів × 4 напрямки), анімоване вогнище,
 // 3/4-глибина: верхівки дерев і дах намету малюються над персонажем, коли той стоїть ПОЗАД об'єктом (див. `bands`).
 import Phaser from 'phaser';
-import { ambient, bindPhaser, isIntroOpen, ambientMix, music, musicFor } from '../../audio';
+import { ambient, bindPhaser, isIntroOpen, ambientMix, music, musicFor, getMusicScreen } from '../../audio';
 import { STEP_MS } from '../../core/clock';
 import type { HandAction } from '../../core/skills';
 import { KEY_BINDINGS, KEY_CODES, TAP_MAX_MOVE, TAP_MAX_MS, actionTarget, consumeFrame, createActionGate, moveVector, press, release, tapHitsSpot, type Action, type ActionTarget, type InputState } from './actions';
@@ -36,6 +36,7 @@ import { Neighbours, type NeighbourProbe } from './neighbours-rig';
 import { EMOTE_FRAMES } from './neighbours';
 import { BARK_RANGE, CAST, CAST_BY_MAP, RESIDENTS, buildTimeline, placeAt, residentGrid, type Timeline } from './ambient';
 import type { Key } from '../../i18n';
+import { idlePose } from './idle-poses';
 import { GLYPHS, LOOK_S, idleBob, isEvening, lookAt, type Glyph } from './idle';
 import { facingToward, markerFor, talkBeatsFishing, type NpcMarker } from '../npc-talk';
 import { TentRig, type TentProbe } from './tent';
@@ -164,7 +165,7 @@ export interface WorldHooks {
 }
 
 /** Хто з NPC якого листа ходьби має (лист — в art.ts); решта — як Еліза. */
-const NPC_SHEET: Readonly<Record<string, string>> = { 'npc.george': 'player', 'npc.cashier': 'res-lotte' };
+const NPC_SHEET: Readonly<Record<string, string>> = { 'npc.george': 'res-georgeNpc', 'npc.cashier': 'res-lotte' };
 /** Де стоїть авто відносно точки посадки `obj.vehicle` (ноги авто = нижній центр спрайта): праворуч-вниз; його колізія — нижня смуга. */
 const CAR_OFFSET = { x: 16, y: 80 };
 const CAR_BLOCK = { w: 104, h: 30 };
@@ -369,6 +370,7 @@ export class WorldScene extends Phaser.Scene {
   private markers = new Map<string, Marker>();
   /** NPC на мапі: видимі лише поки живі (Джордж — лише в профілі, де він є). */
   private npcSprites = new Map<string, Phaser.GameObjects.Sprite>();
+  private npcStand = new Map<string, number>();   // GAME-248: мс спокою нерухомих NPC для звичок простою
   /** GAME-175: мапа, що зараз побудована, і все, що до неї належить (знищується при переході): шари, картинки, маркери, колізії. */
   private current: MapKey | null = null;
   private tilemap: Phaser.Tilemaps.Tilemap | null = null;
@@ -603,12 +605,11 @@ export class WorldScene extends Phaser.Scene {
     // GAME-207: музика довантажується ПІСЛЯ preload (перший кадр < 1,5 с, GAME-38) і лише коли ввімкнена (збірка e2e — за ?music=1).
     // Літерали — для check-scene-refs; відповідність таблиці MUSIC_FILES доводить src/audio/music.test.ts. До 'complete' петля не стартує (music.ready).
     if (music.enabled) {
-      this.load.audio('mus-intro', 'audio/mus-intro.ogg');
-      this.load.audio('mus-home', 'audio/mus-home.ogg');
-      this.load.audio('mus-road', 'audio/mus-road.ogg');
-      this.load.audio('mus-shop', 'audio/mus-shop.ogg');
-      this.load.audio('mus-camp-day', 'audio/mus-camp-day.ogg');
-      this.load.audio('mus-camp-evening', 'audio/mus-camp-evening.ogg');
+      this.load.audio('mus-main', 'audio/mus-main.ogg');
+      this.load.audio('mus-menu', 'audio/mus-menu.ogg');
+      this.load.audio('mus-hurry', 'audio/mus-hurry.ogg');
+      this.load.audio('mus-story', 'audio/mus-story.ogg');
+      this.load.audio('mus-night', 'audio/mus-night.ogg');
       this.load.once('complete', () => music.setReady(true));
       this.load.start();
     }
@@ -1154,7 +1155,7 @@ export class WorldScene extends Phaser.Scene {
 
   /** GAME-112: родина йде за героєм у обхід стін (GAME-173: вільним строєм); поки він стоїть — кожен на своїй точці дозвілля. Анімація й напрямок — з зсуву за кадр.
    *  GAME-202/203: хто має роботу (доручення, відтяжка намету) — іде до неї сам і працює руками; у строю лишаються вільні. */
-  private moveFollowers(deltaMs: number, time: number, moving: boolean): void {
+  private moveFollowers(deltaMs: number, moving: boolean): void {
     const dt = Math.min(deltaMs / 1000, MAX_FOLLOW_DT);
     const before = this.chain.map((p) => ({ x: p.x, y: p.y }));
     const hero = this.swim.inWater ? { ...this.swim.lastLand } : { x: this.player.x, y: this.player.y };   // GAME-227: герой у воді — родина чекає на березі, де він зайшов
@@ -1207,11 +1208,16 @@ export class WorldScene extends Phaser.Scene {
       else {
         if (s.texture.key !== name) s.setTexture(name, frameIndex(dir, 0));   // повернувся з роботи — знову лист ходьби
         if (dx !== 0 || dy !== 0) s.anims.play(`walk-${name}-${dir}`, true);
-        else { s.anims.stop(); s.setFrame(frameIndex(dir, 0)); }
+        else {
+          s.anims.stop();
+          // GAME-248: стоїть — особиста звичка (Вікторія «підфарбовується», Метью тупцює й дивиться вниз); дихання на 1 px прибрано — читалось як посмикування.
+          const pose = still ? idlePose(name, this.followStand[i] ?? 0, i) : null;
+          const pd = pose?.dir && !(arrived && spot) && !(look && look.s > 0) ? pose.dir : dir;
+          if (pose && pose.sheet === 'thrust') s.setTexture(`${name}-thrust`, DIR_ROW[pd] * ACTION_COLS.thrust + pose.col);
+          else s.setFrame(frameIndex(pd, pose ? pose.col : 0));
+        }
       }
-      // Лише картинка гойдається на 1 px (проба й глибина — по справжній точці).
-      const bob = arrived && spot ? Math.round(Math.sin(time / 380 + i * 2.1)) : idleBob(this.followStand[i] ?? 0, i);
-      s.setPosition(p.x, p.y + bob).setDepth(p.y);
+      s.setPosition(p.x, p.y).setDepth(p.y);
       out.x = p.x;
       out.y = p.y;
       this.probe.leisure[i] = arrived && spot ? { kind: spot.kind, c: spot.c, r: spot.r } : null;
@@ -1233,7 +1239,7 @@ export class WorldScene extends Phaser.Scene {
       if (!out) return;
       if (this.current === 'camp' && i < RESIDENTS.length) {
         // GAME-226: сусід табору — стани, дорога додому, привітання (neighbours.ts); probe.residents лишається логічною точкою розкладу (game-211).
-        const q = this.neigh.drive(i, s, this.walkGrid, tl, minutes, this.player ? { x: this.player.x, y: this.player.y } : null, this.lifeRain, this.residentBark?.npc === i, this.residentFacing[i] ?? 'down');
+        const q = this.neigh.drive(i, s, this.walkGrid, tl, minutes, this.player ? { x: this.player.x, y: this.player.y } : null, this.lifeRain, this.residentBark?.npc === i, this.residentFacing[i] ?? 'down', this.stepMs);
         const pq = this.lastRes[i] ?? q;
         const movedQ = Math.hypot(q.x - pq.x, q.y - pq.y) > 0.05;
         this.lastRes[i] = { x: q.x, y: q.y };
@@ -1247,9 +1253,13 @@ export class WorldScene extends Phaser.Scene {
       const dir = p.moving ? p.dir : this.residentFacing[i] ?? 'down';
       this.residentFacing[i] = dir;
       if (moved && p.moving) s.anims.play(`walk-res-${tl.resident.look}-${dir}`, true);
-      else { s.anims.stop(); s.setFrame(frameIndex(dir, 0)); }
+      else {
+        s.anims.stop();
+        const pose = !moved && !p.moving ? idlePose(tl.resident.look, this.resStand[i] ?? 0, i) : null;
+        s.setFrame(frameIndex(pose?.dir ?? dir, pose && pose.sheet === 'walk' ? pose.col : 0));
+      }
       this.resStand[i] = moved || p.moving ? 0 : (this.resStand[i] ?? 0) + this.stepMs;
-      s.setPosition(p.x, p.y + idleBob(this.resStand[i] ?? 0, i)).setDepth(p.y);
+      s.setPosition(p.x, p.y).setDepth(p.y);
       out.x = p.x;
       out.y = p.y;
       out.moving = moved && p.moving;
@@ -1438,7 +1448,7 @@ export class WorldScene extends Phaser.Scene {
       nearFire: this.fire.near(pp, FIRE_EAR), transport: this.hooks.transport(), swimming: this.swim.inWater }));
     ambient.tick(delta);
     // GAME-207: тема за мапою, вступом і годиною доби — чиста функція musicFor; перехід — у модулі звуку.
-    music.setTrack(musicFor({ map: this.current, intro: isIntroOpen(), minuteOfDay: timeOfDay(this.bridge.state.clock.minutes) }));
+    music.setTrack(musicFor({ map: this.current, intro: isIntroOpen(), screen: getMusicScreen(), minuteOfDay: timeOfDay(this.bridge.state.clock.minutes) }));
     music.tick(delta);
     // GAME-231: цвіркуни й сова вночі в таборі — звук лише через src/audio; час — ігрова хвилина (дробова), без таймерів.
     const nightClock = this.bridge.state.clock;
@@ -1497,7 +1507,17 @@ export class WorldScene extends Phaser.Scene {
       m.img?.setY(ICON_Y - Math.round(Math.abs(Math.sin(time / 420)) * 2));   // GAME-201: ніжне гойдання, покадрово від часу сцени
       m.g.setScale(name === target && this.hintOn ? 1 + 0.2 * Math.abs(Math.sin(time / 280)) : 1);   // ціль підказки «Далі:» — пульсує
     }
-    for (const [name, sp] of this.npcSprites) sp.setVisible(this.hooks.isLive(name));
+    for (const [name, sp] of this.npcSprites) {
+      sp.setVisible(this.hooks.isLive(name));
+      // GAME-248: нерухомі NPC теж мають звичку простою (George — «другий тато» зі своїм листом), крім тих, до кого зараз повернуті для розмови.
+      const who = name.replace(/^npc\./, '');
+      const stand = (this.npcStand.get(name) ?? 0) + this.stepMs;
+      this.npcStand.set(name, stand);
+      if (this.faced !== name && sp.texture.key.startsWith('res-')) {
+        const pose = idlePose(who, stand, name.length);
+        sp.setFrame(frameIndex(pose?.dir ?? 'down', pose && pose.sheet === 'walk' ? pose.col : 0));
+      }
+    }
     const talkers = this.talkers();
     const live = [...this.spots.filter((s) => this.hooks.isLive(s.name)), ...talkers];
     // GAME-179/186: родина тупцює коло героя — говорить із нею лише тоді, коли в зоні дії нікого іншого нема; між слідувачами перевага тому, на кого дивиться герой.
@@ -1686,7 +1706,7 @@ export class WorldScene extends Phaser.Scene {
     // GAME-185: вбік верхній ряд HUD лежить поверх мапи — герой (а з ним слідувачі) стоїть посередині ВІЛЬНОЇ висоти, а не під ним. Сторч шапка в потоці, камера без зсуву.
     this.cameras.main.setFollowOffset(0, this.landscape ? Math.round(insets.top / 2) : 0);
 
-    this.moveFollowers(delta, time, moving || v.x !== 0 || v.y !== 0);
+    this.moveFollowers(delta, moving || v.x !== 0 || v.y !== 0);
     this.updateDaylight(time);
     this.stepMs = delta;
     this.moveResidents(time);

@@ -1,12 +1,13 @@
-// GAME-207 · сторож музики. Закон 1 — у кожної перевірки є мутація, під якою вона червоніє (перелік у описі коміту):
+// GAME-207/GAME-252 · сторож музики (ролі: main/menu/hurry/story/night). Закон 1 — у кожної перевірки є мутація, під якою вона червоніє (перелік у описі коміту):
 //  1) КОЖНА мапа сцени (літерали load.tilemapTiledJSON) має рядок у MUSIC_BY_MAP — тема або явна тиша;
-//  2) тема табору змінюється ввечері (картка: «музика не змінюється ввечері» → RED);
+//  2) роль табору змінюється ввечері (картка: «музика не змінюється ввечері» → RED);
 //  3) кожен файл таблиці є в public/audio і має літерал load.audio у сцені (а сам preload його НЕ вантажить — лазі після кадру);
 //  4) програвач: без жесту / до довантаження / у mute не стартує; перехресний перехід; вимкнено (e2e) — тиша й нічого не вантажиться.
 import { describe, expect, it } from 'vitest';
 import { MUSIC_BY_MAP, MUSIC_FADE_MS, MUSIC_FILES, MUSIC_LEVEL, createMusic, isEveningMinute, musicFor, type MapKey, type MusicTrack } from './music';
 import { DEFAULT_AUDIO, createMixer, type LoopHandle, type SoundOut } from './mixer';
 import { armFirstGesture } from './index';
+import { ambientMix } from './ambient';
 import scene from '../view/world/scene.ts?raw';
 
 const FILES = Object.keys(import.meta.glob('../../public/audio/*.ogg'));
@@ -29,25 +30,34 @@ describe('musicFor — тема за станом', () => {
     expect(mapsWithoutMusic(['camp'], { camp: 'disco' })).toEqual(['camp']);
     for (const m of maps) expect(musicFor({ map: m as MapKey, intro: false, minuteOfDay: 12 * 60 })).not.toBeUndefined();
   });
-  it('табір: удень одна тема, увечері інша (картка GAME-207: «музика не змінюється ввечері» → RED)', () => {
+  it('табір: удень main, увечері й уночі night (картка GAME-207: «музика не змінюється ввечері» → RED)', () => {
     const day = musicFor({ map: 'camp', intro: false, minuteOfDay: 12 * 60 });
     const evening = musicFor({ map: 'camp', intro: false, minuteOfDay: 20 * 60 });
     const night = musicFor({ map: 'camp', intro: false, minuteOfDay: 2 * 60 });
-    expect(day).toBe('camp-day');
-    expect(evening).toBe('camp-evening');
-    expect(night).toBe('camp-evening');
+    expect(day).toBe('main');
+    expect(evening).toBe('night');
+    expect(night).toBe('night');
     expect(day).not.toBe(evening);
     expect(isEveningMinute(18 * 60 + 59)).toBe(false); expect(isEveningMinute(19 * 60)).toBe(true);
     expect(isEveningMinute(6 * 60 + 29)).toBe(true); expect(isEveningMinute(6 * 60 + 30)).toBe(false);
     expect(isEveningMinute(-60)).toBe(true);   // від'ємна хвилина — по модулю доби, без NaN
   });
-  it('вступ перекриває мапу й годину; дім, дорога, крамниця (GAME-204) — свої теми; без мапи — тиша', () => {
-    expect(musicFor({ map: 'camp', intro: true, minuteOfDay: 12 * 60 })).toBe('intro');
-    expect(musicFor({ map: null, intro: true, minuteOfDay: 0 })).toBe('intro');
-    expect(musicFor({ map: 'home', intro: false, minuteOfDay: 20 * 60 })).toBe('home');
-    expect(musicFor({ map: 'road', intro: false, minuteOfDay: 20 * 60 })).toBe('road');
-    expect(musicFor({ map: 'shop', intro: false, minuteOfDay: 20 * 60 })).toBe('shop');
+  it('вступ → story (перекриває мапу й годину); Атлас → menu; hurry; дім/дорога/крамниця — main у будь-яку годину; без мапи — тиша', () => {
+    expect(musicFor({ map: 'camp', intro: true, minuteOfDay: 12 * 60 })).toBe('story');
+    expect(musicFor({ map: null, intro: true, minuteOfDay: 0 })).toBe('story');
+    expect(musicFor({ map: 'camp', intro: false, screen: 'menu', minuteOfDay: 12 * 60 })).toBe('menu');
+    expect(musicFor({ map: 'camp', intro: false, screen: null, minuteOfDay: 12 * 60 })).toBe('main');
+    expect(musicFor({ map: 'road', intro: false, hurry: true, minuteOfDay: 12 * 60 })).toBe('hurry');
+    expect(musicFor({ map: 'camp', intro: false, hurry: true, minuteOfDay: 22 * 60 })).toBe('hurry');   // поспіх сильніший за ніч
+    expect(musicFor({ map: 'camp', intro: false, hurry: false, minuteOfDay: 22 * 60 })).toBe('night');
+    expect(musicFor({ map: 'camp', intro: true, screen: 'menu', hurry: true, minuteOfDay: 0 })).toBe('story');   // вступ — найвищий пріоритет
+    for (const m of ['home', 'road', 'shop'] as const) expect(musicFor({ map: m, intro: false, minuteOfDay: 20 * 60 })).toBe('main');
     expect(musicFor({ map: null, intro: false, minuteOfDay: 0 })).toBe('silence');
+  });
+  it('рівні мікса GAME-252: дощ ≤ 0,5 (було 1,0 / 0,8), музика під ефектами', () => {
+    expect(ambientMix({ map: null, intro: true, nearLake: false, fireLit: false, nearFire: false, transport: null }).rain).toBeLessThanOrEqual(0.5);
+    expect(ambientMix({ map: 'home', intro: false, nearLake: false, fireLit: false, nearFire: false, transport: null }).rain).toBeLessThanOrEqual(0.4);
+    expect(MUSIC_LEVEL * DEFAULT_AUDIO.master * DEFAULT_AUDIO.music).toBeLessThan(DEFAULT_AUDIO.sfx * DEFAULT_AUDIO.master * 0.3);
   });
 });
 
@@ -64,29 +74,29 @@ function harness(settings = DEFAULT_AUDIO) {
 describe('createMusic — одна тема, перехід, запобіжники', () => {
   it('без жесту й до довантаження не стартує; після обох — стартує з рівнем MUSIC_LEVEL × master × music', () => {
     const { started, m } = harness();
-    m.setTrack('home'); m.tick(MUSIC_FADE_MS);
+    m.setTrack('main'); m.tick(MUSIC_FADE_MS);
     expect(started).toEqual([]);
     m.unlock(); m.tick(16);
     expect(started).toEqual([]);   // файлів ще нема в кеші
     m.setReady(true); m.tick(16);
-    expect(started.map((s) => s.key)).toEqual(['mus-home']);
+    expect(started.map((s) => s.key)).toEqual(['mus-main']);
     expect(started[0]?.vol).toBeCloseTo(MUSIC_LEVEL * DEFAULT_AUDIO.master * DEFAULT_AUDIO.music);
     expect(MUSIC_LEVEL).toBeLessThan(0.6);   // тихо, під ефектами
   });
   it('зміна мапи — перехресний перехід: стара гасне, нова наростає, стару звільнено', () => {
     const { started, m } = harness(); m.unlock(); m.setReady(true);
-    m.setTrack('home'); m.tick(MUSIC_FADE_MS);
-    m.setTrack('road'); m.tick((MUSIC_FADE_MS * MUSIC_LEVEL) / 2);   // крок переходу — в одиницях рівня 0..1 за MUSIC_FADE_MS
-    expect(m.levels().home).toBeCloseTo(MUSIC_LEVEL / 2); expect(m.levels().road).toBeCloseTo(MUSIC_LEVEL / 2);
+    m.setTrack('main'); m.tick(MUSIC_FADE_MS);
+    m.setTrack('menu'); m.tick((MUSIC_FADE_MS * MUSIC_LEVEL) / 2);   // крок переходу — в одиницях рівня 0..1 за MUSIC_FADE_MS
+    expect(m.levels().main).toBeCloseTo(MUSIC_LEVEL / 2); expect(m.levels().menu).toBeCloseTo(MUSIC_LEVEL / 2);
     m.tick(MUSIC_FADE_MS);
-    expect(m.levels()).toEqual({ road: MUSIC_LEVEL });
-    expect(started.find((s) => s.key === 'mus-home')?.stopped).toBe(true);
-    expect(started.find((s) => s.key === 'mus-road')?.stopped).toBe(false);
+    expect(m.levels()).toEqual({ menu: MUSIC_LEVEL });
+    expect(started.find((s) => s.key === 'mus-main')?.stopped).toBe(true);
+    expect(started.find((s) => s.key === 'mus-menu')?.stopped).toBe(false);
   });
   it('mute → не стартує; mute посеред гри глушить петлю наступним tick; silence гасить', () => {
-    const mute = harness({ ...DEFAULT_AUDIO, muted: true }); mute.m.unlock(); mute.m.setReady(true); mute.m.setTrack('shop'); mute.m.tick(MUSIC_FADE_MS);
+    const mute = harness({ ...DEFAULT_AUDIO, muted: true }); mute.m.unlock(); mute.m.setReady(true); mute.m.setTrack('story'); mute.m.tick(MUSIC_FADE_MS);
     expect(mute.started).toEqual([]);
-    const h = harness(); h.m.unlock(); h.m.setReady(true); h.m.setTrack('shop'); h.m.tick(MUSIC_FADE_MS);
+    const h = harness(); h.m.unlock(); h.m.setReady(true); h.m.setTrack('story'); h.m.tick(MUSIC_FADE_MS);
     expect(h.started[0]?.vol).toBeGreaterThan(0);
     h.mx.apply({ ...DEFAULT_AUDIO, muted: true }); h.m.tick(16);
     expect(h.started[0]?.vol).toBe(0);
@@ -95,10 +105,10 @@ describe('createMusic — одна тема, перехід, запобіжни�
   });
   it('вимкнено (збірка e2e без ?music=1): setTrack — тиша, нічого не стартує; увімкнення повертає', () => {
     const { started, m } = harness(); m.unlock(); m.setReady(true);
-    m.setEnabled(false); m.setTrack('camp-day'); m.tick(MUSIC_FADE_MS);
+    m.setEnabled(false); m.setTrack('main'); m.tick(MUSIC_FADE_MS);
     expect(started).toEqual([]); expect(m.levels()).toEqual({}); expect(m.enabled).toBe(false);
-    m.setEnabled(true); m.setTrack('camp-day'); m.tick(MUSIC_FADE_MS);
-    expect(started.map((s) => s.key)).toEqual(['mus-camp-day']);
+    m.setEnabled(true); m.setTrack('main'); m.tick(MUSIC_FADE_MS);
+    expect(started.map((s) => s.key)).toEqual(['mus-main']);
     m.setEnabled(false); m.tick(MUSIC_FADE_MS);   // вимкнули посеред теми — вона гасне, не чекаючи наступного setTrack
     expect(m.levels()).toEqual({}); expect(started[0]?.stopped).toBe(true);
   });

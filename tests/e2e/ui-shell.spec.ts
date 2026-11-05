@@ -152,7 +152,7 @@ test('кнопки UI грають звуки через мікшер: пауз�
 
 // GAME-207: музика — через той самий мікшер; у збірці e2e її немає без ?music=1 (детермінізм), з ним тема мапи звучить після першого жесту.
 const musicLevels = (page: Page): Promise<Record<string, number>> => page.evaluate(() => (window as unknown as { __game: { music: () => Record<string, number> } }).__game.music());
-test('музика: без ?music=1 — тиша навіть після жесту; з ?music=1 на мапі крамниці після жесту звучить тема крамниці (GAME-204)', async ({ page }) => {
+test('музика: без ?music=1 — тиша навіть після жесту; з ?music=1 на мапі крамниці після жесту звучить роль main (GAME-252)', async ({ page }) => {
   await open(page);
   await page.locator('.ui-pause-btn').click();
   await page.locator('[data-ui="resume"]').click();
@@ -164,6 +164,6 @@ test('музика: без ?music=1 — тиша навіть після жес�
   await page.locator('[data-ui="resume"]').click();
   await page.waitForFunction(() => Object.keys((window as unknown as { __game: { music: () => Record<string, number> } }).__game.music()).length > 0, null, { timeout: 15_000 });
   const levels = await musicLevels(page);
-  expect(Object.keys(levels)).toEqual(['shop']);
-  expect(levels.shop).toBeGreaterThan(0);
+  expect(Object.keys(levels)).toEqual(['main']);
+  expect(levels.main).toBeGreaterThan(0);
 });
