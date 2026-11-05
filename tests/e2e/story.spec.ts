@@ -3,6 +3,7 @@
 import { readFileSync } from 'node:fs';
 import ts from 'typescript';
 import { expect, test, type Browser, type Page } from '@playwright/test';
+import { checkOrWriteDay1, seedDay1 } from './day1-fixture';
 
 interface Core { game: { campaignEnded: boolean; grants: string[]; player: { transportId: string } | null }; clock: { paused: boolean; minutes: number }; journal: { type: string }[] }
 const core = (page: Page): Promise<Core> => page.evaluate(() => (window as unknown as { __game: { read: () => Core } }).__game.read());
@@ -166,25 +167,49 @@ async function finishDay(page: Page, reopen: boolean, day = 1): Promise<void> {
 
 test.use({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true });
 
-test('пролог від вибору персонажа до кінця розділу — кліками, кожна дія доходить до ядра', async ({ page }) => {
+// GAME-255 · було один тест на 3 дні (33–44 с локально, на CI ≈ 4 fps — майже весь бюджет 120 с). Тепер дві частини, кожна ≤ ~20 с:
+// A — вибір героя, пролог, день 1 і журнал на цю мить; B — дні 2–3, кінець розділу, нагороди — зі СПРАВЖНЬОГО сейву дня 1 (tests/e2e/day1-fixture.ts:
+// його записала гра, а частина A кожного разу звіряє свій стан із ним, тож фікстура не розходиться з проходом).
+test('день 1 (пролог від вибору персонажа) — кліками, кожна дія доходить до ядра; журнал на екрані = журнал ядра', async ({ page }) => {
   const errors = await open(page);
   await expect(panel(page).locator('[data-ui="create"]')).toBeVisible();
   expect((await core(page)).game.player).toBeNull();
-  const t0 = Date.now();   // GAME-144: реальний час усього розділу кліками (3 дні, без хвиль — вони на мапі, не на екрані подорожі)
   await playBikeProlog(page);
   await finishDay(page, true);
   // GAME-141: ST-005 — межа дня 1, не кінець розділу: далі ранок дня 2.
   await expect(panel(page).locator('[data-ui="ended"]')).toHaveCount(0);
+  const c = await core(page);
+  expect(c.game.campaignEnded).toBe(false);
+  expect(c.game.player?.transportId).toBe('transport.bike');
+  // Журнал на екрані = журнал ядра, запис у запис.
+  await panel(page).locator('[data-ui="journal"] summary').click();
+  expect(await panel(page).locator('[data-ui="journal"] li').evaluateAll((els) => els.map((e) => (e as HTMLElement).dataset.type)))
+    .toEqual(c.journal.map((e) => e.type));
+  expect(c.journal.length).toBeGreaterThan(6);
+  // GAME-110: пам'ятний вибір дня 1 (намет біля сосон) — у журналі на екрані текстом, рівно раз.
+  await expect(panel(page).locator('[data-ui="journal"] li[data-type="Memory"]')).toHaveText(['Запам\'ятали: намет біля сосон']);
+  expect(await panel(page).textContent()).not.toContain('⟦');      // жодного ключа без тексту
+  await checkOrWriteDay1(page);                                     // GAME-255: стан = фікстура, з якої стартує частина B
+  expect(errors).toEqual([]);
+});
+
+test('дні 2–3 до кінця розділу — кліками зі збереженого дня 1; кінець, нагороди, журнал', async ({ page }) => {
+  const errors: string[] = [];
+  page.on('pageerror', (e) => errors.push(e.message));
+  await seedDay1(page);
+  await page.locator('[data-touch="story"]').click();
+  await expect(panel(page)).toBeVisible();
   expect((await core(page)).game.campaignEnded).toBe(false);
+  await expect(panel(page).locator('[data-act="complete"][data-key="q.ch1-d2-001"]')).toBeVisible();   // це справді ранок дня 2
+  const t3 = Date.now();
   await playBikeDay2(page);
   await finishDay(page, true, 2);
   // GAME-144: вогнище — межа дня 2, не кінець розділу: далі ранок дня 3.
   await expect(panel(page).locator('[data-ui="ended"]')).toHaveCount(0);
   expect((await core(page)).game.campaignEnded).toBe(false);
-  const t3 = Date.now();
   await playBikeDay3(page);
   await finishDay(page, true, 3);
-  console.log(`GAME-144: день 3 кліками за ${((Date.now() - t3) / 1000).toFixed(1)} с, увесь розділ (3 дні) за ${((Date.now() - t0) / 1000).toFixed(1)} с реального часу; ігрових хвилин ${(await core(page)).clock.minutes}`);
+  console.log(`GAME-144: дні 2–3 кліками за ${((Date.now() - t3) / 1000).toFixed(1)} с; ігрових хвилин ${(await core(page)).clock.minutes}`);
   await expect(panel(page).locator('[data-ui="ended"]')).toBeVisible();
   // GAME-84 №6: на екрані кінця — що далі (Розділ I) і що зробити, щоб не загубити гру (зберегти в паузі).
   await expect(panel(page).locator('[data-ui="ended"]')).toContainText('Розділ I');
@@ -198,7 +223,7 @@ test('пролог від вибору персонажа до кінця роз
   expect(await panel(page).locator('[data-ui="journal"] li').evaluateAll((els) => els.map((e) => (e as HTMLElement).dataset.type)))
     .toEqual(c.journal.map((e) => e.type));
   expect(c.journal.length).toBeGreaterThan(10);   // GAME-84 №1: два «Прибуття» вдома й одне в таборі більше не пишуться — було 16, тепер 13
-  // GAME-110: пам'ятні вибори (намет біля сосон; порада Елізи вдень 2) — у журналі на екрані текстом, кожен рівно раз.
+  // GAME-110: пам'ятні вибори (намет біля сосон — з дня 1; порада Елізи вдень 2) — у журналі на екрані текстом, кожен рівно раз.
   await expect(panel(page).locator('[data-ui="journal"] li[data-type="Memory"]')).toHaveText(['Запам\'ятали: намет біля сосон', 'Запам\'ятали: порада Елізи сушити намет зранку — прийнято']);
   expect(await panel(page).textContent()).not.toContain('⟦');      // жодного ключа без тексту
   expect(errors).toEqual([]);
@@ -529,7 +554,7 @@ test('прохід керується лише кліками й клавіша�
   const src = readFileSync(new URL(import.meta.url), 'utf8');
   const sf = ts.createSourceFile('story.spec.ts', src, ts.ScriptTarget.Latest, true);
   const imports = sf.statements.filter(ts.isImportDeclaration).map((d) => (d.moduleSpecifier as ts.StringLiteral).text);
-  expect(imports.sort()).toEqual(['@playwright/test', 'node:fs', 'typescript']);
+  expect(imports.sort()).toEqual(['./day1-fixture', '@playwright/test', 'node:fs', 'typescript']);   // GAME-255: ./day1-fixture — лише сейв дня 1 для частини B; прохід (FLOW) нижче перевіряється, як і раніше
   expect(src).not.toMatch(/\brequire\s*\(|\bimport\s*\(/);                       // і жодних динамічних імпортів
   // Під перевіркою — сам прохід і помічники, якими він ходить (panel, act): за синтаксичним деревом
   // (рецензія: регулярні вирази обходились шаблоном `${…}` і «//» усередині рядка).
