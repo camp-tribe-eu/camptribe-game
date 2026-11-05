@@ -1319,6 +1319,9 @@ export class WorldScene extends Phaser.Scene {
     const hb = look ? look.dy : breath + Math.round(bend * 2);
     this.heroBreath = breath;
     if (hb && !this.heroBob) { this.player.y += hb; this.heroBob = hb; }
+    // GAME-239: камера слідкує за справжньою позицією героя (тіла), а не за косметичним зсувом спрайта (дихання, сидіння, нахил): віднімаємо його
+    // з цілі слідування (scroll = target − followOffset), тож світ не «дихає» разом із героєм. lerp 1 і межі камери — без змін.
+    this.cameras.main.followOffset.y = this.heroBob;
     const evening = isEvening(timeOfDay(this.bridge.state.clock.minutes));
     const marks: { at: Pt; kind: Glyph }[] = [];
     if (this.current === 'camp' && evening) RESIDENTS.forEach((r, i) => { const s = this.residentSprites[i]; if (s?.visible && (this.resStand[i] ?? 0) > 2000 && this.residentBark?.npc !== i && !this.neigh.quiet(i) && this.hooks.talk(r.id) === null) marks.push({ at: { x: s.x, y: s.y - 50 }, kind: 'note' }); });
