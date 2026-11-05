@@ -267,7 +267,9 @@ for (const v of VIEWS) {
     // До створення звання на нулі: рядок «Звання» й вісім навичок вже в ☰.
     const prog = panel.locator('[data-ui="progress"]');
     await expect(prog).toBeVisible();
-    await expect(prog.locator('[data-ui="title"]')).toContainText('Турист із запасними шкарпетками · 0 XP · 0 ОМ');
+    await expect(prog.locator('[data-ui="title"]')).toContainText('Турист із запасними шкарпетками');
+    await expect(prog.locator('[data-ui="stat-xp"]')).toHaveText('0 XP');
+    await expect(prog.locator('[data-ui="stat-om"]')).toHaveText('0 ОМ');
     const skills = panel.locator('[data-ui="skills"]');
     await expect(skills.locator('[data-ui="skill"]')).toHaveCount(8);
 
