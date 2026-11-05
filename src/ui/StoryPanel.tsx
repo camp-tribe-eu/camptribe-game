@@ -10,14 +10,14 @@ import type { OfferAction, StoryOffer } from './story-types';
 
 const ACT: Readonly<Record<Exclude<OfferAction['kind'], 'choose' | 'continue' | 'cancel'>, Key>> = {
   visit: 'act.visit', talk: 'act.talk', pickup: 'act.pickup', buy: 'act.buy', sell: 'act.sell', dry: 'act.dry', complete: 'act.complete', decline: 'act.decline',
-  pack: 'pack.in', unpack: 'pack.out', autopack: 'pack.auto', task: 'act.task', gift: 'act.gift',
+  pack: 'pack.in', unpack: 'pack.out', autopack: 'pack.auto', task: 'act.task', gift: 'act.gift', sleep: 'act.sleep', wait: 'act.waitShop',
 };
 
 // Записи журналу: тип команди → підпис. Перелік той самий, що JOURNAL_TYPES ядра (звіряє src/view/story-offer.test.ts).
 const JR: Readonly<Record<string, Key>> = {
   CreateCharacter: 'jr.CreateCharacter', Visit: 'jr.Visit', Pickup: 'jr.Pickup', BuyItem: 'jr.BuyItem', SellItem: 'jr.SellItem',
   Interact: 'jr.Interact', CompleteQuest: 'jr.CompleteQuest', DeclineQuest: 'jr.DeclineQuest', RoadEvent: 'jr.RoadEvent', StartScene: 'jr.StartScene',
-  PackItem: 'jr.PackItem', UnpackItem: 'jr.UnpackItem', AutoPack: 'jr.AutoPack', Memory: 'jr.Memory', CompleteTask: 'jr.CompleteTask',
+  PackItem: 'jr.PackItem', UnpackItem: 'jr.UnpackItem', AutoPack: 'jr.AutoPack', Memory: 'jr.Memory', CompleteTask: 'jr.CompleteTask', Sleep: 'jr.Sleep',
 };
 export const JOURNAL_LABELS = JR;
 
@@ -48,6 +48,7 @@ export function actionLabel(lang: AnyLang, t: (k: Key) => string, a: OfferAction
   if (a.kind === 'continue') return t('ui.continue');
   if (a.kind === 'cancel') return t('ui.notNow');
   if (a.kind === 'choose') return ct(lang, a.key);
+  if (a.kind === 'sleep' || a.kind === 'wait') return t(ACT[a.kind]);
   const extras = [
     ...(a.minutes !== undefined ? [`${a.minutes} ${t('ui.minutes')}`] : []),
     ...(a.priceCents !== undefined ? [money(lang, a.priceCents)] : []),
@@ -190,6 +191,14 @@ export function StoryPanel({ offer, lang, t, act, close, portrait, children, foo
           ))}
           <button type="button" class="ui-btn" data-act="autopack" data-key="" onClick={guarded(offer.packing.auto.id)}>{t('pack.auto')}</button>
           {offer.packing.noteKey && <p class="ui-status" data-ui="pack-note">{ct(lang, offer.packing.noteKey)}</p>}
+        </fieldset>
+      )}
+      {offer.rest.shopClosed && !offer.dialogue && <p data-ui="shop-closed" role="status">{t('shop.closed')}</p>}
+      {/* GAME-242: на мапі ☰ стиснуте й кнопок не має — але «Лягти спати» / «Почекати» мапа дати не може: лише вони лишаються. */}
+      {compact && !offer.dialogue && offer.actions.some((x) => x.kind === 'sleep' || x.kind === 'wait') && (
+        <fieldset data-ui="rest">
+          <legend>{t('ui.actions')}</legend>
+          {offer.actions.filter((x) => x.kind === 'sleep' || x.kind === 'wait').map(button)}
         </fieldset>
       )}
       {!compact && (offer.actions.length > 0 || offer.locked.length > 0) && (

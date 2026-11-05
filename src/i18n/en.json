@@ -391,5 +391,11 @@
   "life.hint.branch": "Shake the branch: E or ●",
   "life.board": "Notice board: quiet hours 10 pm to 7 am. Rubbish in the bins, campfire never unattended. Enjoy your stay!",
   "act.gift": "Give",
-  "ui.gift.open": "Give a gift"
+  "ui.gift.open": "Give a gift",
+  "act.sleep": "Go to sleep",
+  "act.waitShop": "Wait until 08:00",
+  "shop.closed": "Closed until 08:00. We can go home or wait.",
+  "bark.bedtime": "Victoria: \"Time for bed — early start tomorrow.\"",
+  "bark.sleepAuto": "George fell asleep with the map on his face.",
+  "jr.Sleep": "Night and morning"
 }

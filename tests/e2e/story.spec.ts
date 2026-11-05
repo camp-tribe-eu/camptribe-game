@@ -446,20 +446,21 @@ test('після закриття екрана подорожі фокус на 
   await expect(panel(page)).toHaveCount(0);
 });
 
+// GAME-242: раніше тест грав усі три дні перед перезавантаженням і на CI (≈ 4 fps) виходив за свої 120 с (заміряно локально
+// при CPU ×20: 2,8 хв і на main, і на гілці). Кінець розділу після трьох днів перевіряє сусідній тест «кінець розділу видно
+// поза ☰»; тут — сам сейв: після прологу й дня 1 стан ядра після перезавантаження ТОЙ САМИЙ, що до (сувора рівність, не одна ознака).
 test('сейв після прологу: перезавантаження — і кінець розділу на місці', async ({ page }) => {
   await open(page);
   await playBikeProlog(page);
-  await finishDay(page, true);
-  await playBikeDay2(page);
-  await finishDay(page, true, 2);
-  await playBikeDay3(page);
-  await finishDay(page, false, 3);
+  await finishDay(page, false);   // панель не відкриваємо знову — пауза ‖ поверх мапи
   await page.locator('[data-touch="pause"]').click();
   await page.locator('[data-ui="save"]').click();
   await expect(page.locator('[data-ui="status"]')).toBeVisible();
+  const before = (await core(page)).game;
+  expect(before.grants.length, 'пролог справді пройдено (є нагороди)').toBeGreaterThan(0);
   await page.reload();
   await open(page);
-  await expect(panel(page).locator('[data-ui="ended"]')).toBeVisible();
+  expect((await core(page)).game, 'стан ядра після перезавантаження = до нього').toEqual(before);
 });
 
 // GAME-89 №6: після кінця кампанії поза ☰ видно, що розділ завершено; мапа лишається живою (персонаж ходить).

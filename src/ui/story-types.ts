@@ -6,7 +6,7 @@ import type { Key } from '../i18n';
 export interface OfferAction {
   readonly id: string;
   /** `task` — справа живої хвилі з екрана подорожі (GAME-170 зріз 3: дім, зупинка в дорозі — локації без мапи). */
-  readonly kind: 'visit' | 'talk' | 'pickup' | 'buy' | 'sell' | 'dry' | 'complete' | 'decline' | 'choose' | 'continue' | 'pack' | 'unpack' | 'autopack' | 'task' | 'cancel' | 'gift';
+  readonly kind: 'visit' | 'talk' | 'pickup' | 'buy' | 'sell' | 'dry' | 'complete' | 'decline' | 'choose' | 'continue' | 'pack' | 'unpack' | 'autopack' | 'task' | 'cancel' | 'gift' | 'sleep' | 'wait';
   readonly key: string | null;
   readonly priceCents?: number;
   /** Скільки хвилин займе дорога (GAME-31); немає — дія на місці. */
@@ -151,6 +151,9 @@ export interface StoryOffer {
   readonly packing: OfferPacking | null;
   /** Речі в руках; для спорядження (GAME-73) — ще стан 0…100 і чи мокре. */
   readonly inventory: readonly { readonly key: string; readonly qty: number; readonly gear?: { readonly condition: number; readonly wet: boolean } }[];
+  /** Ритм дня (GAME-242): похідне від ядра. `bedtime` — номер ночі, поки триває вікно «пора спати» [22:00, 00:30), інакше null;
+   *  `shopClosed` — стоїмо в крамниці, а вона зачинена (08:00–20:00); `autoSlept` — щойно прокинулись після того, як герой заснув сам. */
+  readonly rest: { readonly bedtime: number | null; readonly shopClosed: boolean; readonly autoSlept: boolean };
   /** Продаються тут, але бракує грошей (GAME-83): показуються вимкненими з причиною, а не зникають. */
   readonly locked: readonly OfferAction[];
   /** День гри з 1 і хвилина доби 0…1439 — для HUD (GAME-83). */

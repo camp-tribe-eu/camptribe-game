@@ -74,7 +74,13 @@ export function Shell({ port, langOverride, credits, build, holdToast = false, h
   // читання — запам'ятати, не показувати (завантажений завершений сейв — не кінець розділу); далі — лише перехід play → ended (episodeStep).
   const endedRef = useRef<boolean | null>(null);
   const watchEnded = (o: StoryOffer): void => { const r = episodeStep(endedRef.current, port.loaded(), o.stage === 'ended'); endedRef.current = r.next; if (r.show) setEpisode(true); };
-  useEffect(() => { checkIntro(); return port.onStory(() => { const o = port.story(); setOffer(o); watchEnded(o); checkIntro(); }); }, []);
+  // GAME-242: герой заснув сам (00:30) — день закрито без дії гравця: підсумок показуємо, коли daysEnded зріс саме від сну в кадрах (не від завантаження сейву).
+  const endedSeen = useRef<number | null>(null);
+  useEffect(() => { checkIntro(); return port.onStory(() => {
+    const o = port.story(); setOffer(o); watchEnded(o); checkIntro();
+    if (endedSeen.current !== null && o.daysEnded > endedSeen.current && o.rest.autoSlept && o.summary) { setStoryOpen(false); setTalk(false); setSummary(o.summary); }
+    endedSeen.current = o.daysEnded;
+  }); }, []);
   const [atlasOpen, setAtlasOpen] = useState(false);
   // GAME-181: нове звання — маленьке свято: банер (назва + рядок родини) і звук підтвердження через єдиний мікшер. Банер не ловить дотики й гасне сам.
   // Гасне за ІГРОВИМ годинником (TITLE_UP_MIN хвилин, ≈ секунд живої гри): пауза й панелі його зупиняють — банер не зникає, поки його не видно; таймерів реального часу немає.
@@ -299,6 +305,11 @@ export function Shell({ port, langOverride, credits, build, holdToast = false, h
   const showHint = !settings.hintSeen && offer.stage === 'create';
   // Банер — лише на мапі (не поверх екрана подорожі, паузи чи підсумку дня) і лише поки не минуло TITLE_UP_MIN ігрових хвилин.
   const sinceUp = titleUp ? offer.day * 1440 + offer.timeMinutes - titleUp.at : -1;
+  // GAME-242: «Пора спати» — раз за ніч, гасне за ІГРОВИМ годинником (як банер звання): таймерів реального часу немає.
+  const [bark, setBark] = useState<{ night: number; at: number } | null>(null);
+  const nowAbs = offer.day * 1440 + offer.timeMinutes;
+  useEffect(() => { if (offer.rest.bedtime !== null && bark?.night !== offer.rest.bedtime) setBark({ night: offer.rest.bedtime, at: nowAbs }); }, [offer.rest.bedtime]);
+  const barkShown = bark !== null && offer.rest.bedtime === bark.night && nowAbs - bark.at < 10 && !paused && !summary && !storyOpen && !talk;
   const titleUpShown = titleUp !== null && sinceUp >= 0 && sinceUp < TITLE_UP_MIN && !paused && !storyOpen && !summary;
   const goalShown = offer.stage !== 'create' && (offer.goal !== null || offer.stage === 'ended') && !hideUi.includes('goal');
   const trackerShown = offer.stage !== 'create' && offer.requests.length > 0 && !hideUi.includes('requests');
@@ -373,6 +384,8 @@ export function Shell({ port, langOverride, credits, build, holdToast = false, h
         )}
         {reminder}
       </header>}
+      {barkShown && <div class="ui-titleup" data-ui="bedtime-bark" role="status"><strong>{t('bark.bedtime')}</strong></div>}
+      {offer.rest.autoSlept && !summary && !paused && <div class="ui-titleup" data-ui="sleep-auto" role="status"><strong>{t('bark.sleepAuto')}</strong></div>}
       {titleUpShown && titleUp && (
         <div class="ui-titleup" data-ui="title-up" data-title={titleUp.index + 1} role="status">
           <strong>{`${t('ui.titleUp')}: ${ct(lang, `title.${titleUp.index + 1}`)}`}</strong>

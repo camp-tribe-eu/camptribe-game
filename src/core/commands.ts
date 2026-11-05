@@ -3,6 +3,7 @@
 // і решта стану лишається вихідною. Успіх повертає події-факти (DC-061).
 
 import { canBuyAt, type CoreDefs } from './defs';
+import { canSleep, shopClosedHere } from './rest';
 import type { CommandRecord, GameState, RejectCode } from './state';
 import { HAND_ACTIONS, isHandAction, practise, rankOf, SKILL_IDS, type SkillId } from './skills';
 import { gearOf, pruneGear, sellPriceOf } from './gear';
@@ -47,7 +48,11 @@ export type Command =
   /** Збір дару природи (GAME-230): шишка чи ягода, яку герой підняв у таборі, лягає в інвентар (лише предмети з `friendship.forage`). */
   | { readonly type: 'Forage'; readonly commandId: string; readonly itemId: string }
   /** Сцена серця (GAME-230): серць достатньо й сцена ще не грана — відкрити її й записати «зіграно» (удруге — CONDITION_FAILED). */
-  | { readonly type: 'HeartEvent'; readonly commandId: string; readonly npcId: string };
+  | { readonly type: 'HeartEvent'; readonly commandId: string; readonly npcId: string }
+  /** Лягти спати (GAME-242): біля ліжка вдома, біля намету в таборі чи будь-де після 22:00. Час перемотує симуляція (до 07:00). */
+  | { readonly type: 'Sleep'; readonly commandId: string }
+  /** Дочекатися відчинення крамниці (GAME-242): лише в зачиненій крамниці; симуляція перемотує час до 08:00. */
+  | { readonly type: 'WaitForShop'; readonly commandId: string };
 
 /** Підтверджений факт (CR-031). Причина — commandId команди, що його спричинила. */
 export type GameEvent =
@@ -128,6 +133,8 @@ function apply(cmd: Command, d: Draft, defs: CoreDefs, guard: Safeguards, today:
       if (!isCents(def.buyCents)) return 'INVALID_AMOUNT';
       // Купівля — лише там, де предмет продається (GAME-81); меню питає це саме ядро, тож розбіжності немає.
       if (!canBuyAt(defs, cmd.itemId, d.player?.locationId)) return 'NOT_SOLD_HERE';
+      // Години крамниці (GAME-242): без годинника (тести ядра) перевірки немає, як і для строків хвиль.
+      if (now !== undefined && shopClosedHere(d, now)) return 'SHOP_CLOSED';
       // Спорядження — один примірник моделі в руках (SIM-GEAR-001): стан ведеться на id предмета.
       if (def.gear && (own(d.inventory, cmd.itemId) ?? 0) >= 1) return 'ITEM_ALREADY_HELD';
       d.moneyCents -= def.buyCents;
@@ -142,6 +149,7 @@ function apply(cmd: Command, d: Draft, defs: CoreDefs, guard: Safeguards, today:
       if (!def) return 'UNKNOWN_ITEM';
       if (def.sellCents === undefined) return 'NOT_FOR_SALE';
       if (!isCents(def.sellCents)) return 'INVALID_AMOUNT';
+      if (now !== undefined && shopClosedHere(d, now)) return 'SHOP_CLOSED';
       const have = own(d.inventory, cmd.itemId) ?? 0;
       if (have < 1) return 'ITEM_NOT_OWNED';
       // Останній примірник, потрібний активному квесту, не продається (SIM-INV-004): інакше квест не завершити.
@@ -156,6 +164,11 @@ function apply(cmd: Command, d: Draft, defs: CoreDefs, guard: Safeguards, today:
       d.events.push({ type: 'ItemSold', commandId: cmd.commandId, itemId: cmd.itemId, priceCents: price });
       return null;
     }
+    case 'Sleep':
+      // Сон не міняє стан гри — час і запис у журнал робить симуляція (sim.step), бо годинник знає лише вона.
+      return now !== undefined && canSleep(d, now) ? null : 'CONDITION_FAILED';
+    case 'WaitForShop':
+      return now !== undefined && shopClosedHere(d, now) ? null : 'CONDITION_FAILED';
     case 'Interact': {
       if (!isContentId(cmd.targetId)) return 'INVALID_COMMAND';
       const def = own(defs.interactions, cmd.targetId);
