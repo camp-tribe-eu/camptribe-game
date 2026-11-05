@@ -1,8 +1,11 @@
 // Атлас (GAME-182, brain/Сценарій/scenario.md §2): сторінка «Перша спроба» — 12 слотів-наклейок (не отримана — силует), печатка господаря в центрі
 // й маленька мапа Європи з позначкою «ми тут». Лише показує знімок (`offer.atlas`); наклейки видає ядро за умовами content/stickers.json.
+import type { ComponentChildren } from 'preact';
 import { useEffect, useRef } from 'preact/hooks';
 import { ct } from '../i18n/content';
 import type { AnyLang, Key } from '../i18n';
+import { ROUTE_PATH, SILHOUETTE_PATHS } from './atlas-shapes';
+import { atlasMapModel, type AtlasPlace } from './atlas-model';
 import { iconRects } from './atlas-icons';
 import { trapTab } from './focus-trap';
 import type { OfferAtlas } from './story-types';
@@ -102,7 +105,66 @@ function AtlasFill({ atlas, t }: { atlas: OfferAtlas; t: (k: Key) => string }) {
   );
 }
 
-/** Сторінка Атласу. `fly` — id наклейки, що влітає (кінець вступу): лише анімація, стан уже в ядрі. */
+
+/** Силует місця «попереду»: простий знак (гори, хвилі, вежі, ялинки) — сірий, без деталей: місце ще не відкрите. */
+function Silhouette({ id }: { id: string }) {
+  return (
+    <svg class="ui-amap-sil" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+      <path d={SILHOUETTE_PATHS[id] ?? ''} data-shape={id} />
+    </svg>
+  );
+}
+
+function Place({ p, t, stickerFly }: { p: AtlasPlace; t: (k: Key) => string; stickerFly: boolean }) {
+  const name = t(p.nameKey);
+  const tag = p.state === 'here' ? t('atlas.you.here') : p.state === 'first' ? t('atlas.first') : p.state === 'stamped' ? t('atlas.stamped') : t('atlas.ahead');
+  return (
+    <li class="ui-amap-place" data-ui="atlas-place" data-place={p.id} data-state={p.state} aria-label={`${name} — ${tag}`}>
+      <span class="ui-amap-dot" aria-hidden="true">
+        {p.state === 'ahead' ? <Silhouette id={p.id} /> : <Icon icon={p.id === 'home' ? 'home' : 'lake'} />}
+      </span>
+      {p.state === 'ahead' ? <span class="ui-amap-tag">{tag}</span> : (
+        <>
+          <strong class="ui-amap-name">{name}</strong>
+          <span class="ui-amap-tag" data-ui={p.state === 'here' ? 'atlas-here-tag' : undefined}>{tag}</span>
+        </>
+      )}
+      {p.id === 'home' && <span class="ui-amap-home-sticker" data-ui="home-sticker" data-id="sticker.home" data-owned="yes" data-fly={stickerFly ? 'yes' : undefined} aria-hidden="true"><Icon icon="star" /></span>}
+      {p.noteKey && <q class="ui-amap-note" data-ui="lake-note" aria-label={t('atlas.note.label')}>{t(p.noteKey)}</q>}
+    </li>
+  );
+}
+
+/**
+ * GAME-250 · S9: перша сторінка Атласу — мапа, а не звалище слів. «Дім» світиться як «Ви тут», озеро з запискою дідуся — перша мета (пульсує),
+ * решта — сірі силуети «ще попереду», одне речення про сенс, що дає Атлас і ОДНА кнопка дії (`children`: у вступі — до планування, з ☰ — «Закрити»).
+ */
+export function AtlasMapPage({ atlas, t, mode, fly = false, children }: { atlas: OfferAtlas; t: (k: Key) => string; mode: 'intro' | 'menu'; fly?: boolean; children: ComponentChildren }) {
+  const m = atlasMapModel(atlas, mode);
+  return (
+    <section class="ui-amap-page" data-ui="atlas-map-page" data-mode={mode} aria-label={t('atlas.map.title')}>
+      <h3 class="ui-amap-title">{t('atlas.map.title')}</h3>
+      <div class="ui-amap-board">
+        <svg class="ui-amap-route" viewBox="0 0 100 60" preserveAspectRatio="none" aria-hidden="true" focusable="false"><path d={ROUTE_PATH} /></svg>
+        <ul class="ui-amap-places">
+          {m.places.map((p) => <Place key={p.id} p={p} t={t} stickerFly={fly} />)}
+        </ul>
+      </div>
+      <div class="ui-amap-side">
+        <p class="ui-amap-sentence" data-ui="atlas-sentence">{t(m.sentenceKey)}</p>
+        <p class="ui-amap-legend" data-ui="atlas-legend">{t(m.legendKey)}</p>
+        <div class="ui-amap-gains" data-ui="atlas-gains" role="group" aria-label={t('atlas.gains')}>
+          <span class="ui-amap-gains-title">{`${t('atlas.gains')}:`}</span>
+          {m.gains.map((g) => <span key={g.id} class="ui-amap-gain" data-gain={g.id}><Icon icon={g.icon} />{t(g.labelKey)}</span>)}
+        </div>
+        <p class="ui-atlas-count" data-ui="atlas-count" data-count={atlas.count} data-total={atlas.total}>{`${t('atlas.count')}: ${atlas.count}/${atlas.total}`}</p>
+        {children}
+      </div>
+    </section>
+  );
+}
+
+/** Сторінка Атласу (повна: наклейки, сліди, фото — довідник під мапою). `fly` — id наклейки, що влітає (кінець вступу): лише анімація, стан уже в ядрі. */
 export function AtlasPage({ atlas, lang, t, fly = null }: { atlas: OfferAtlas; lang: AnyLang; t: (k: Key) => string; fly?: string | null }) {
   const slots = Array.from({ length: atlas.total }, (_, i) => atlas.slots[i] ?? null);
   const cell = (s: OfferAtlas['slots'][number] | null, i: number) => {
@@ -141,8 +203,10 @@ export function AtlasPanel({ atlas, lang, t, close }: { atlas: OfferAtlas; lang:
   return (
     <div ref={root} class="ui-overlay ui-atlas" role="dialog" aria-modal="true" aria-label={t('ui.atlas')} data-ui="atlas-panel" onKeyDown={(e) => { if (root.current) trapTab(e, root.current); }}>
       <h2 tabIndex={-1}>{t('ui.atlas')}</h2>
-      <AtlasPage atlas={atlas} lang={lang} t={t} />
-      <button type="button" class="ui-btn" data-ui="atlas-close" onClick={close}>{t('atlas.close')}</button>
+      <AtlasMapPage atlas={atlas} t={t} mode="menu">
+        <button type="button" class="ui-btn ui-amap-cta" data-ui="atlas-cta" data-cta="primary" onClick={close}>{t('atlas.cta.close')}</button>
+      </AtlasMapPage>
+      <details class="ui-amap-details" data-ui="atlas-details" open><summary>{t('atlas.details')}</summary><AtlasPage atlas={atlas} lang={lang} t={t} /></details>
     </div>
   );
 }

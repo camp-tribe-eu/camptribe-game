@@ -63,7 +63,7 @@ for (const v of VIEWS) {
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), 'без горизонтальної прокрутки').toBe(true);
     await henry.scrollIntoViewIfNeeded();
     await page.screenshot({ path: `${SHOTS_DIR}/henry-atlas-${v.side}.png` });
-    await page.locator('[data-ui="atlas-close"]').click();
+    await page.locator('[data-ui="atlas-cta"]').click();
     // Перезавантаження: слід у сейві.
     await page.reload();
     await loaded(page);
