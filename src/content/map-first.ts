@@ -14,7 +14,8 @@ import { canonical } from '../core/hash';
 import { autoPack, packFlag, packItemsFor, packedOf, packingOpen, takeFlag } from '../core/packing';
 import type { SimState } from '../core/sim';
 import type { GameState } from '../core/state';
-import { matches } from '../core/story';
+import { EVENING, minuteOfDay } from '../core/clock';
+import { matches, questOpen, storyDay } from '../core/story';
 import type { Key } from '../i18n';
 import { FIREPLACE_SCENE } from './fireplace';
 import type { Move } from './moves';
@@ -241,6 +242,7 @@ function compute(sim: SimState, defs: CoreDefs, name: string): Resolved | null {
   if (name.startsWith(SPOT_PREFIX.step)) {
     const questId = name.slice(SPOT_PREFIX.step.length);
     if (!active(g, questId)) return null;
+    if (defs.story && !questOpen(defs.story, g, questId, sim.clock.minutes)) return null;   // GAME-256: крок чекає свого дня / вечора — об'єкта кроку ще немає
     // Вечір дня 2: сцена біля вогнища — ПЕРШЕ (obj.campfire, director.ts), завершення — те саме вогнище, коли сцену зіграно.
     if (questId === 'CH1-D2-FIRE-001' && !firePlayed(sim)) return null;
     return choice(stepVariants(g, defs, questId));
@@ -399,6 +401,21 @@ function roadNext(sim: SimState, defs: CoreDefs): Next | null {
 /** Справа хвилі приїзду, яку гравець робить руками (view/world/tent.ts). */
 export const PITCH_TASK = 'pitch-tent';
 
+/**
+ * GAME-256 · основний крок, що чекає: активний, не побічний, ворота дня сюжету ще зачинені. `sleepNext` — чекає наступного ДНЯ (потрібен сон),
+ * інакше — вечора цього ж дня. null — нічого не чекає.
+ */
+export function heldGate(sim: SimState, defs: CoreDefs): { questId: string; sleepNext: boolean } | null {
+  const st = defs.story;
+  if (!st) return null;
+  for (const [id, q] of Object.entries(sim.game.quests)) {
+    const def = st.quests[id];
+    if (q.status !== 'active' || !def?.gate || def.optional || questOpen(st, sim.game, id, sim.clock.minutes)) continue;
+    return { questId: id, sleepNext: storyDay(sim.game.slept) < def.gate.day };
+  }
+  return null;
+}
+
 function campNext(sim: SimState, defs: CoreDefs): Next | null {
   const g = sim.game;
   const w = g.wave?.active;
@@ -410,6 +427,9 @@ function campNext(sim: SimState, defs: CoreDefs): Next | null {
     const open = live[0];
     if (open) return { key: 'next.camp.task', spot: `task.${open[0]}` };
   }
+  // GAME-256: основний крок чекає на день чи вечір — гравцеві кажемо, що робити (вільний час, вечір, спати), а не ведемо до воріт, що замкнені.
+  const held = heldGate(sim, defs);
+  if (held) return { key: held.sleepNext ? (minuteOfDay(sim.clock.minutes) >= EVENING ? 'next.camp.sleep' : 'next.camp.free') : 'next.camp.evening', spot: null };
   const tent = (id: string): Next => ({ key: 'next.camp.tent', spot: `step.${id}` });
   const elise = (id: string, o: string): Next => (objDone(g, id, o) ? { key: 'next.camp.elise.done', spot: `step.${id}` } : { key: 'next.camp.elise', spot: 'npc.elise' });
   if (quest(g, 'ST-005')) {

@@ -514,11 +514,22 @@
    "realMs": 250
   },
   {
+   "kind": "advance",
+   "minutes": 400
+  },
+  {
+   "kind": "command",
+   "command": {
+    "type": "Sleep",
+    "commandId": "r39"
+   }
+  },
+  {
    "kind": "command",
    "command": {
     "type": "CompleteQuest",
     "questId": "CH1-D2-001",
-    "commandId": "r39"
+    "commandId": "r40"
    }
   },
   {
@@ -526,14 +537,6 @@
    "command": {
     "type": "Talk",
     "npcId": "npc.elise",
-    "commandId": "r40"
-   }
-  },
-  {
-   "kind": "command",
-   "command": {
-    "type": "Choose",
-    "choice": 10,
     "commandId": "r41"
    }
   },
@@ -541,7 +544,7 @@
    "kind": "command",
    "command": {
     "type": "Choose",
-    "choice": 0,
+    "choice": 10,
     "commandId": "r42"
    }
   },
@@ -556,7 +559,8 @@
   {
    "kind": "command",
    "command": {
-    "type": "Continue",
+    "type": "Choose",
+    "choice": 0,
     "commandId": "r44"
    }
   },
@@ -570,10 +574,17 @@
   {
    "kind": "command",
    "command": {
+    "type": "Continue",
+    "commandId": "r46"
+   }
+  },
+  {
+   "kind": "command",
+   "command": {
     "type": "CompleteQuest",
     "questId": "CH1-D2-ELISE-001",
     "to": "q.elise-bike-area",
-    "commandId": "r46"
+    "commandId": "r47"
    }
   },
   {
@@ -597,14 +608,6 @@
    "command": {
     "type": "Talk",
     "npcId": "npc.elise",
-    "commandId": "r47"
-   }
-  },
-  {
-   "kind": "command",
-   "command": {
-    "type": "Choose",
-    "choice": 11,
     "commandId": "r48"
    }
   },
@@ -612,14 +615,15 @@
    "kind": "command",
    "command": {
     "type": "Choose",
-    "choice": 0,
+    "choice": 11,
     "commandId": "r49"
    }
   },
   {
    "kind": "command",
    "command": {
-    "type": "Continue",
+    "type": "Choose",
+    "choice": 0,
     "commandId": "r50"
    }
   },
@@ -633,9 +637,16 @@
   {
    "kind": "command",
    "command": {
+    "type": "Continue",
+    "commandId": "r52"
+   }
+  },
+  {
+   "kind": "command",
+   "command": {
     "type": "CompleteQuest",
     "questId": "q.elise-bike-area",
-    "commandId": "r52"
+    "commandId": "r53"
    }
   },
   {
@@ -643,7 +654,7 @@
    "command": {
     "type": "Talk",
     "npcId": "npc.elise",
-    "commandId": "r53"
+    "commandId": "r54"
    }
   },
   {
@@ -651,13 +662,6 @@
    "command": {
     "type": "Choose",
     "choice": 12,
-    "commandId": "r54"
-   }
-  },
-  {
-   "kind": "command",
-   "command": {
-    "type": "Continue",
     "commandId": "r55"
    }
   },
@@ -671,16 +675,19 @@
   {
    "kind": "command",
    "command": {
-    "type": "Talk",
-    "npcId": "npc.elise",
+    "type": "Continue",
     "commandId": "r57"
    }
   },
   {
+   "kind": "advance",
+   "minutes": 700
+  },
+  {
    "kind": "command",
    "command": {
-    "type": "Choose",
-    "choice": 13,
+    "type": "Talk",
+    "npcId": "npc.elise",
     "commandId": "r58"
    }
   },
@@ -688,14 +695,15 @@
    "kind": "command",
    "command": {
     "type": "Choose",
-    "choice": 1,
+    "choice": 13,
     "commandId": "r59"
    }
   },
   {
    "kind": "command",
    "command": {
-    "type": "Continue",
+    "type": "Choose",
+    "choice": 1,
     "commandId": "r60"
    }
   },
@@ -709,8 +717,7 @@
   {
    "kind": "command",
    "command": {
-    "type": "CompleteQuest",
-    "questId": "CH1-D2-CAMP-001",
+    "type": "Continue",
     "commandId": "r62"
    }
   },
@@ -718,8 +725,16 @@
    "kind": "command",
    "command": {
     "type": "CompleteQuest",
-    "questId": "CH1-D2-FIRE-001",
+    "questId": "CH1-D2-CAMP-001",
     "commandId": "r63"
+   }
+  },
+  {
+   "kind": "command",
+   "command": {
+    "type": "CompleteQuest",
+    "questId": "CH1-D2-FIRE-001",
+    "commandId": "r64"
    }
   },
   {
@@ -757,9 +772,16 @@
   {
    "kind": "command",
    "command": {
+    "type": "Sleep",
+    "commandId": "r65"
+   }
+  },
+  {
+   "kind": "command",
+   "command": {
     "type": "CompleteQuest",
     "questId": "CH1-D3-001",
-    "commandId": "r64"
+    "commandId": "r66"
    }
   },
   {
@@ -767,7 +789,7 @@
    "command": {
     "type": "CompleteQuest",
     "questId": "CH1-D3-GEAR-001",
-    "commandId": "r65"
+    "commandId": "r67"
    }
   },
   {
@@ -775,21 +797,6 @@
    "command": {
     "type": "Talk",
     "npcId": "npc.elise",
-    "commandId": "r66"
-   }
-  },
-  {
-   "kind": "command",
-   "command": {
-    "type": "Choose",
-    "choice": 14,
-    "commandId": "r67"
-   }
-  },
-  {
-   "kind": "command",
-   "command": {
-    "type": "Continue",
     "commandId": "r68"
    }
   },
@@ -797,7 +804,7 @@
    "kind": "command",
    "command": {
     "type": "Choose",
-    "choice": 1,
+    "choice": 14,
     "commandId": "r69"
    }
   },
@@ -811,8 +818,23 @@
   {
    "kind": "command",
    "command": {
-    "type": "Continue",
+    "type": "Choose",
+    "choice": 1,
     "commandId": "r71"
+   }
+  },
+  {
+   "kind": "command",
+   "command": {
+    "type": "Continue",
+    "commandId": "r72"
+   }
+  },
+  {
+   "kind": "command",
+   "command": {
+    "type": "Continue",
+    "commandId": "r73"
    }
   },
   {
@@ -820,7 +842,7 @@
    "command": {
     "type": "CompleteQuest",
     "questId": "CH1-D3-ELISE-001",
-    "commandId": "r72"
+    "commandId": "r74"
    }
   },
   {
@@ -828,7 +850,7 @@
    "command": {
     "type": "Visit",
     "locationId": "loc.road",
-    "commandId": "r73"
+    "commandId": "r75"
    }
   },
   {
@@ -860,7 +882,7 @@
    "command": {
     "type": "CompleteQuest",
     "questId": "CH1-D3-RETURN-001",
-    "commandId": "r74"
+    "commandId": "r76"
    }
   },
   {
@@ -868,14 +890,14 @@
    "command": {
     "type": "Choose",
     "choice": 1,
-    "commandId": "r75"
+    "commandId": "r77"
    }
   },
   {
    "kind": "command",
    "command": {
     "type": "Continue",
-    "commandId": "r76"
+    "commandId": "r78"
    }
   },
   {
@@ -883,7 +905,7 @@
    "command": {
     "type": "Visit",
     "locationId": "loc.home",
-    "commandId": "r77"
+    "commandId": "r79"
    }
   },
   {
@@ -907,7 +929,7 @@
    "command": {
     "type": "CompleteQuest",
     "questId": "CH1-D3-HOME-001",
-    "commandId": "r78"
+    "commandId": "r80"
    }
   },
   {
@@ -1035,75 +1057,79 @@
   "8f535c6b",
   "6676174c",
   "ae6dba18",
-  "fefaec80",
-  "d34dd770",
-  "c7b70395",
-  "57938884",
-  "b8f2455a",
-  "35b72747",
-  "c57af079",
-  "8ff709d7",
-  "831f255c",
-  "5a228f17",
-  "5e3ecf5e",
-  "d14db70a",
-  "2c1e297f",
-  "918fa93e",
-  "4ac57b39",
-  "6a2d3957",
-  "c75516f3",
-  "56455c9a",
-  "5fca9bf3",
-  "bcb12523",
-  "bcd95e93",
-  "d9b497e3",
-  "4b624ba0",
-  "3c92353d",
-  "76480fa5",
-  "69fdb2fb",
-  "2e3b8d3d",
-  "c7dc48cc",
-  "ad6fed00",
-  "2f8047ad",
-  "5a2e489a",
-  "9528054f",
-  "ad18da33",
-  "e5f07b6a",
-  "7371fe00",
-  "dc4dee5b",
-  "9dde5327",
-  "83d1b205",
-  "60307fe3",
-  "78db4815",
-  "c7ccce69",
-  "bfaa4f5e",
-  "6b81d0a6",
-  "dd63b537",
-  "4a0f23b1",
-  "652e3c7a",
-  "8bd13a92",
-  "2cd0b092",
-  "dbafe696",
-  "8bd055ad",
-  "856ce207",
-  "acd85db3",
-  "950c48b0",
-  "8bf010c4",
-  "e6e11312",
-  "37b8076a",
-  "a91bda80",
-  "1359668e",
-  "c155bbf2",
-  "ccb7d6bd",
-  "43567d06",
-  "503df33b",
-  "e0663202",
-  "5cb8e388",
-  "621fa9db",
-  "fd42d397",
-  "623ba7f8",
-  "d234e757",
-  "f8e43ca6",
-  "32e9b31a"
+  "e091dee4",
+  "a9955f7f",
+  "539addb2",
+  "fb292762",
+  "c131d75e",
+  "2078a142",
+  "5ce268ea",
+  "83a2d695",
+  "107b80e5",
+  "3d07eaf5",
+  "fd7b0ffa",
+  "ac5e68f5",
+  "9a28b558",
+  "1b135e14",
+  "94a6c05b",
+  "938faa99",
+  "e9c815ea",
+  "6c501042",
+  "90803c95",
+  "f6e93969",
+  "689527e5",
+  "20f078c9",
+  "cedbcb9d",
+  "749c5185",
+  "04d04b8b",
+  "232d785c",
+  "b98b0b89",
+  "d87b3b09",
+  "94fb1e2d",
+  "cef4027d",
+  "4f3ef843",
+  "d7cdc868",
+  "967e1e4b",
+  "f5d08cf2",
+  "b3b0e825",
+  "26f52741",
+  "02223042",
+  "291f624a",
+  "6c00d27f",
+  "55e3defb",
+  "8f6faaf5",
+  "dfb54390",
+  "9437cc97",
+  "3e5567ff",
+  "dec89f31",
+  "2ac28c37",
+  "32906d5b",
+  "a46e0be4",
+  "a63f371c",
+  "d9d1b2b8",
+  "13f3fffa",
+  "8825f2dc",
+  "90f1ec35",
+  "d033ea6e",
+  "a1628190",
+  "9b9edad0",
+  "068e3045",
+  "dda15627",
+  "75debe14",
+  "f4b35bb7",
+  "30ba5470",
+  "39eb3954",
+  "5bad684a",
+  "1c25349d",
+  "4dc208b8",
+  "83a7c818",
+  "0eec2ae7",
+  "b6bbf9e7",
+  "a2289f8e",
+  "e35b0762",
+  "b002d137",
+  "e8f081c6",
+  "82132cdd",
+  "4d85d3c9"
  ]
 }

@@ -18,8 +18,10 @@ import roads from '../../content/roads.json';
 import transports from '../../content/transports.json';
 
 interface RawWhen { profiles?: string[]; transports?: string[]; animals?: string[] }
+/** GAME-256: ворота дня сюжету (core/defs GateDef). */
+interface RawGate { day: number; fromMinute?: number }
 interface RawQuest {
-  id: string; optional: boolean; end?: boolean; dayEnd?: boolean; xp?: number; locationId?: string; when?: RawWhen;
+  id: string; optional: boolean; end?: boolean; dayEnd?: boolean; xp?: number; locationId?: string; when?: RawWhen; gate?: RawGate;
   requires?: { quests?: string[]; items?: string[] };
   objectives: { id: string; kind: string; target: string; required: boolean; byDialogue?: boolean; gearCheck?: boolean; when?: RawWhen }[];
   transitions: { on: string; to: string; choiceKey?: string; when?: RawWhen }[];
@@ -87,6 +89,7 @@ function quest(q: RawQuest): QuestDef {
     ...(q.dayEnd === true ? { dayEnd: true as const } : {}),
     ...(q.xp !== undefined ? { xp: q.xp } : {}),
     ...(q.locationId ? { locationId: q.locationId } : {}),
+    ...(q.gate ? { gate: { day: q.gate.day, ...(q.gate.fromMinute !== undefined ? { fromMinute: q.gate.fromMinute } : {}) } } : {}),
     ...when(q.when),
     ...(q.requires ? { requires: { quests: q.requires.quests ?? [], items: q.requires.items ?? [] } } : {}),
     objectives: q.objectives.map((o) => objective(q.id, o)),

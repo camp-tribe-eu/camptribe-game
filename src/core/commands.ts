@@ -10,7 +10,7 @@ import { gearOf, pruneGear, sellPriceOf } from './gear';
 import { bookLeave, cancelLeave } from './life';
 import { autoPack, capacityOf, carriedOf, loadCarSet, packFlag, packingOpen, packItemsFor, takeFlag, usedUnits, withLoaded, withPacked } from './packing';
 import type { Weather } from './weather';
-import { applyStory, questNeedsItem, type StoryCommand, type StoryDraft } from './story';
+import { applyStory, questNeedsItem, questOpen, SLEEP_CAP, type StoryCommand, type StoryDraft } from './story';
 import { applyWave, type WaveCommand } from './wave';
 import { award, awardsFor } from './progress';
 import { atlasAwards } from './atlas-fill';
@@ -126,9 +126,13 @@ function fingerprint(cmd: Command): string {
 function apply(cmd: Command, d: Draft, defs: CoreDefs, guard: Safeguards, today: number | undefined, weather: Weather | undefined, now: number | undefined): RejectCode | null {
   switch (cmd.type) {
     case 'StartWave':
-    case 'CompleteTask':
+    case 'CompleteTask': {
+      // GAME-256: хвиля етапу, чий день чи вечір ще не настали, не стартує (строки хвилі — від ПРАВИЛЬНОГО дня).
+      const stage = cmd.type === 'StartWave' ? own(defs.waves?.waves ?? {}, cmd.waveId)?.stage : undefined;
+      if (stage !== undefined && defs.story && !questOpen(defs.story, d, stage, now)) return 'QUEST_NOT_YET';
       // GAME-170: строки справ — в ігрових хвилинах, які знає лише симуляція (`now`); без годинника — INVALID_COMMAND.
       return applyWave(cmd, d, defs.waves, now, isContentId);
+    }
     case 'BuyItem': {
       if (!isContentId(cmd.itemId)) return 'INVALID_COMMAND';
       const def = own(defs.items, cmd.itemId);
@@ -170,7 +174,10 @@ function apply(cmd: Command, d: Draft, defs: CoreDefs, guard: Safeguards, today:
     }
     case 'Sleep':
       // Сон не міняє стан гри — час і запис у журнал робить симуляція (sim.step), бо годинник знає лише вона.
-      return now !== undefined && canSleep(d, now) ? null : 'CONDITION_FAILED';
+      // GAME-256: лічильник сну (день сюжету) росте тут; без годинника (перебір, бот) сон «абстрактний» — де завгодно, де є герой.
+      if (!(now === undefined ? d.player !== null : canSleep(d, now))) return 'CONDITION_FAILED';
+      d.slept = Math.min((d.slept ?? 0) + 1, SLEEP_CAP);
+      return null;
     case 'WaitForShop':
       return now !== undefined && shopClosedHere(d, now) ? null : 'CONDITION_FAILED';
     case 'Interact': {
@@ -242,7 +249,7 @@ function apply(cmd: Command, d: Draft, defs: CoreDefs, guard: Safeguards, today:
       if (!ev || !npc) return 'UNKNOWN_TARGET';
       if (d.player.locationId !== npc.locationId) return 'NOT_HERE';
       if (!heartEventDue(d.friend, fr, cmd.npcId)) return 'CONDITION_FAILED';
-      const bad = applyStory({ type: 'StartScene', commandId: cmd.commandId, sceneId: ev.scene, facts: [] }, d, defs.story, isContentId, guard.grantId);
+      const bad = applyStory({ type: 'StartScene', commandId: cmd.commandId, sceneId: ev.scene, facts: [] }, d, defs.story, isContentId, guard.grantId, now);
       if (bad) return bad;
       d.friend = markHeartSeen(d.friend, cmd.npcId);
       return null;
@@ -355,7 +362,7 @@ function apply(cmd: Command, d: Draft, defs: CoreDefs, guard: Safeguards, today:
       return null;
     }
     case 'CreateCharacter': {
-      const bad = applyStory(cmd, d, defs.story, isContentId, guard.grantId);
+      const bad = applyStory(cmd, d, defs.story, isContentId, guard.grantId, now);
       // Старт: усе спаковано «як радить гра» (GAME-109) — екран пакування лише уточнює, а не починає з порожнього.
       if (!bad && defs.packing && d.player) d.flags = withPacked(d.flags, defs.packing, autoPack(defs.packing, d.player));
       return bad;
@@ -369,7 +376,7 @@ function apply(cmd: Command, d: Draft, defs: CoreDefs, guard: Safeguards, today:
     case 'Continue':
     case 'RoadEvent':
     case 'StartScene':
-      return applyStory(cmd, d, defs.story, isContentId, guard.grantId);
+      return applyStory(cmd, d, defs.story, isContentId, guard.grantId, now);
     default:
       return 'INVALID_COMMAND';
   }
@@ -464,6 +471,7 @@ export function dispatch(state: GameState, cmd: Command, defs: CoreDefs, guard: 
     ...(state.progress !== undefined ? { progress: state.progress } : {}),
     ...(state.stickers !== undefined ? { stickers: state.stickers } : {}),
     ...(state.friend !== undefined ? { friend: state.friend } : {}),
+    ...(state.slept !== undefined ? { slept: state.slept } : {}),
   };
   const code = apply(cmd, draft, defs, guard, today, weather, now);
   // Стан спорядження — лише для того, що в руках (продали останній — запис зникає), і лише відхилення від нового.

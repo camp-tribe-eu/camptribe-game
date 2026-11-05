@@ -7,7 +7,7 @@ import { EMPTY_DEFS, type CoreDefs } from './defs';
 import { canonical } from './hash';
 import { wearAfterTrip } from './gear';
 import { payroll } from './life';
-import { eventEligible, route } from './story';
+import { eventEligible, route, SLEEP_CAP } from './story';
 import { nextInt, seedRng, type RngState } from './rng';
 import { initialState, type GameState } from './state';
 import { minutesToOpen, sleepPlace, wakeMinute, type SleepPlace } from './rest';
@@ -194,7 +194,9 @@ const afterClock = (s: SimState, ctx: StepCtx): SimState => settled(paid(s, ctx)
 export function fallAsleep(s: SimState, ref: SleepPlace | 'auto'): SimState {
   const wake = wakeMinute(s.clock.minutes, ref === 'auto');
   const entry: JournalEntry = { at: s.clock.minutes, commandId: `sleep-${s.clock.minutes}`, type: 'Sleep', ref, cents: s.game.moneyCents };
-  return { ...s, clock: advance(s.clock, wake - s.clock.minutes), journal: [...s.journal, entry].slice(-JOURNAL_LIMIT) };
+  // GAME-256: автосон теж перегортає день сюжету (Sleep-команда лічить себе сама, у dispatch).
+  const game = ref === 'auto' ? { ...s.game, slept: Math.min((s.game.slept ?? 0) + 1, SLEEP_CAP) } : s.game;
+  return { ...s, game, clock: advance(s.clock, wake - s.clock.minutes), journal: [...s.journal, entry].slice(-JOURNAL_LIMIT) };
 }
 
 export function step(s: SimState, input: Input, ctx: StepCtx = {}): SimState {

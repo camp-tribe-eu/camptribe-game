@@ -7,7 +7,7 @@
 // * контрольна сума — над станом у ТІЙ версії, у якій його записано (до міграцій);
 // * кожна випущена версія лишається фікстурою в tests/saves/ назавжди.
 import type { StoryDefs } from './defs';
-import { chapterComplete, exitsFor, matches } from './story';
+import { chapterComplete, exitsFor, matches, SLEEP_CAP } from './story';
 import { stateHash } from './hash';
 import { isJournalType, type SimState } from './sim';
 import { CONDITION_MAX } from './gear';
@@ -129,6 +129,8 @@ function shapeError(sim: unknown): string | null {
   if (pg !== undefined && (!isObj(pg) || !isInt(pg.xp) || !isInt(pg.om) || !sortedUniq(pg.keys) || !sortedUniq(pg.cosmetics))) return 'game: progress';
   // Наклейки (GAME-182): поле необов'язкове; є — відсортовані рядки без повторів (так пише лише ядро).
   if (game.stickers !== undefined && !sortedUniq(game.stickers)) return 'game: stickers';
+  // Сон (GAME-256): лічильник — ціле 0…SLEEP_CAP; поля немає — родина не спала (старі сейви).
+  if (game.slept !== undefined && (!isInt(game.slept) || (game.slept as number) > SLEEP_CAP)) return 'game: slept';
   // Дружба (GAME-230): поле необов'язкове (сейви до GAME-230 його не мають); є — очки й дні цілі ≥ 0 (очки ≤ стелі), `seen` — відсортовані рядки без повторів (так пише лише ядро).
   const fr = game.friend;
   if (fr !== undefined && (!isObj(fr) || !isObj(fr.pts) || !isObj(fr.gift) || !sortedUniq(fr.seen)

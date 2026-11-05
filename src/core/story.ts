@@ -11,7 +11,8 @@
 // * `requires` квесту-цілі перевіряється в мить переходу.
 import type { FriendState } from './friendship';
 import type { LifeState } from './life';
-import type { CondDef, EffectDef, QuestDef, RewardDef, StoryDefs, WayDef, WhenDef } from './defs';
+import { minuteOfDay } from './clock';
+import type { CondDef, EffectDef, GateDef, QuestDef, RewardDef, StoryDefs, WayDef, WhenDef } from './defs';
 import type { GameEvent } from './commands';
 import type { GearState } from './gear';
 import { startSkills } from './skills';
@@ -72,6 +73,8 @@ export interface StoryDraft {
   /** Наклейки Атласу (GAME-182); поля немає — жодної ще немає. */
   stickers?: readonly string[];
   friend?: FriendState;
+  /** GAME-256: скільки разів родина спала (див. GameState.slept). */
+  slept?: number;
 }
 
 const own = <T>(o: Readonly<Record<string, T>>, k: string): T | undefined => (Object.hasOwn(o, k) ? o[k] : undefined);
@@ -83,6 +86,27 @@ export function matches(when: WhenDef | undefined, p: PlayerState): boolean {
     && (!when.transports || when.transports.includes(p.transportId))
     && (!when.animals || when.animals.includes(p.animalId));
 }
+
+/** Скільки разів родина може спати до того, як лічильник перестає рости (стеля для ворота `day`: валідатор — GATE_DAY_RANGE). */
+export const SLEEP_CAP = 4;
+/** День сюжету з 1: скільки разів родина спала + 1 (GAME-256). */
+export const storyDay = (slept: number | undefined): number => (slept ?? 0) + 1;
+
+/**
+ * GAME-256 · ворота дня відчинені? День — за сном (`slept`), хвилина доби — за годинником (`now`, ігрові хвилини). Без годинника (повний перебір
+ * і бот ходять без нього) ворота хвилини вважаються відчиненими: час доби доводять тести на симуляції, а день — лічильник сну, який є й там.
+ */
+export function gateOpen(gate: GateDef | undefined, slept: number | undefined, now?: number): boolean {
+  if (!gate) return true;
+  const day = storyDay(slept);
+  if (day !== gate.day) return day > gate.day;
+  return gate.fromMinute === undefined || now === undefined || minuteOfDay(now) >= gate.fromMinute;
+}
+/** Ворота квесту відчинені (квесту без воріт — завжди). */
+export const questOpen = (st: Pick<StoryDefs, 'quests'>, d: { readonly slept?: number }, questId: string, now?: number): boolean => gateOpen(own(st.quests, questId)?.gate, d.slept, now);
+/** Квест активний І його ворота відчинені: лише такий крок «живий» для розмов, хвиль і сцен. */
+export const questLive = (st: Pick<StoryDefs, 'quests'>, d: { readonly quests: StoryDraft['quests']; readonly slept?: number }, questId: string, now?: number): boolean =>
+  own(d.quests, questId)?.status === 'active' && questOpen(st, d, questId, now);
 
 const completed = (d: StoryDraft, questId: string | undefined): boolean => questId === undefined || own(d.quests, questId)?.status === 'completed';
 
@@ -244,10 +268,11 @@ function giveReward(d: StoryDraft, commandId: string, questId: string, r: Reward
 }
 
 /** Завершити або відмовитись: вибрати перехід, перевірити `requires` цілі, відкрити її. */
-function leave(st: StoryDefs, d: StoryDraft, p: PlayerState, cmd: { commandId: string; questId: string; to?: string }, on: 'complete' | 'decline', guardGrant: boolean): RejectCode | null {
+function leave(st: StoryDefs, d: StoryDraft, p: PlayerState, cmd: { commandId: string; questId: string; to?: string }, on: 'complete' | 'decline', guardGrant: boolean, now?: number): RejectCode | null {
   const q = own(st.quests, cmd.questId);
   if (!q || !matches(q.when, p)) return 'UNKNOWN_TARGET';
   if (own(d.quests, cmd.questId)?.status !== 'active') return 'QUEST_NOT_ACTIVE';
+  if (!questOpen(st, d, cmd.questId, now)) return 'QUEST_NOT_YET';   // GAME-256: крок чекає на свій день / вечір
   if (on === 'decline' && !q.optional) return 'QUEST_NOT_OPTIONAL';
   if (on === 'complete' && objectivesFor(q, p).some((o) => o.required && !objectiveDone(d, cmd.questId, o))) return 'QUEST_OBJECTIVES_OPEN';
 
@@ -303,22 +328,23 @@ export function remembers(d: Pick<StoryDraft, 'npcMemory'>, npcId: string | unde
  * Умова діалогу (TD-006). Семантика — як у валідатора (scripts/validator/checks.mjs, GAME-28).
  * npcId — власник розмови: `remembers`/`notRemembers` читають пам'ять саме цього NPC (GAME-48).
  */
-export function holds(c: CondDef, d: StoryDraft, p: PlayerState, npcId?: string): boolean {
+export function holds(c: CondDef, d: StoryDraft, p: PlayerState, npcId?: string, gate?: { readonly st: Pick<StoryDefs, 'quests'>; readonly now?: number | undefined }): boolean {
   if ('flag' in c) return d.flags.includes(c.flag);
   if ('notFlag' in c) return !d.flags.includes(c.notFlag);
   if ('remembers' in c) return remembers(d, npcId, c.remembers);
   if ('notRemembers' in c) return !remembers(d, npcId, c.notRemembers);
-  if ('quest' in c) return own(d.quests, c.quest)?.status === c.status;
+  // GAME-256: «активний» для розмови — лише коли ворота дня відчинені (вечеря не пропонується вдень); без `gate` — як було.
+  if ('quest' in c) return own(d.quests, c.quest)?.status === c.status && (c.status !== 'active' || !gate || questOpen(gate.st, d, c.quest, gate.now));
   // GAME-202: справа відкрита лише в живій хвилі й зі статусом open; зроблена, спізнена чи хвиля минула — ні. Строк за годинником
   // уже розсудив settleWave перед командою (sim.afterClock), тож тут статусу досить.
   if ('taskOpen' in c) return own(d.wave?.active?.tasks ?? {}, c.taskOpen)?.outcome === 'open';
   if ('transport' in c) return p.transportId === c.transport;
   if ('animal' in c) return p.animalId === c.animal;
-  if ('all' in c) return c.all.every((x) => holds(x, d, p, npcId));
-  return c.any.some((x) => holds(x, d, p, npcId));
+  if ('all' in c) return c.all.every((x) => holds(x, d, p, npcId, gate));
+  return c.any.some((x) => holds(x, d, p, npcId, gate));
 }
 
-function runEffect(st: StoryDefs, d: StoryDraft, p: PlayerState, e: EffectDef, npcId: string | undefined): RejectCode | null {
+function runEffect(st: StoryDefs, d: StoryDraft, p: PlayerState, e: EffectDef, npcId: string | undefined, now?: number): RejectCode | null {
   if ('setFlag' in e) {
     if (!d.flags.includes(e.setFlag)) d.flags = [...d.flags, e.setFlag].sort();
     return null;
@@ -345,7 +371,7 @@ function runEffect(st: StoryDefs, d: StoryDraft, p: PlayerState, e: EffectDef, n
   // completeObjective: лише в активному квесті (як і позначки Visit/Talk); інакше — нічого.
   const { quest, objective } = e.completeObjective;
   const prog = own(d.quests, quest);
-  if (prog?.status === 'active' && !prog.done.includes(objective)) d.quests = { ...d.quests, [quest]: { ...prog, done: [...prog.done, objective].sort() } };
+  if (prog?.status === 'active' && questOpen(st, d, quest, now) && !prog.done.includes(objective)) d.quests = { ...d.quests, [quest]: { ...prog, done: [...prog.done, objective].sort() } };
   return null;
 }
 
@@ -358,7 +384,7 @@ function liveDialogue(st: StoryDefs, d: StoryDraft) {
   return node ? { id: d.dialogue.id, node } : null;
 }
 
-export function applyStory(cmd: StoryCommand, d: StoryDraft, st: StoryDefs | undefined, isId: (s: unknown) => boolean, guardGrant = true): RejectCode | null {
+export function applyStory(cmd: StoryCommand, d: StoryDraft, st: StoryDefs | undefined, isId: (s: unknown) => boolean, guardGrant = true, now?: number): RejectCode | null {
   if (!st) return 'UNKNOWN_TARGET';
   if (cmd.type === 'CreateCharacter') {
     if (d.player) return 'CHARACTER_EXISTS';
@@ -424,6 +450,7 @@ export function applyStory(cmd: StoryCommand, d: StoryDraft, st: StoryDefs | und
       if (liveDialogue(st, d)) return 'IN_DIALOGUE';
       // Законний хід лише на своєму етапі (GAME-141): квест сцени активний, а розділ ще не закінчено.
       if (sc.scene.atQuest !== undefined && (d.campaignEnded || own(d.quests, sc.scene.atQuest)?.status !== 'active')) return 'QUEST_NOT_ACTIVE';
+      if (sc.scene.atQuest !== undefined && !questOpen(st, d, sc.scene.atQuest, now)) return 'QUEST_NOT_YET';   // GAME-256: вечірня сцена — не раніше свого вечора
       const facts = cmd.facts ?? [];
       if (!Array.isArray(facts) || facts.some((f) => typeof f !== 'string' || !sc.scene?.facts.includes(f))) return 'INVALID_CHOICE';
       if (facts.length) d.flags = [...new Set([...d.flags, ...facts])].sort();
@@ -445,16 +472,16 @@ export function applyStory(cmd: StoryCommand, d: StoryDraft, st: StoryDefs | und
         if (node.next === undefined) { d.dialogue = null; return null; }
         // Автоматична розвилка (GAME-142): перша гілка, чия умова виконана; жодна — безумовний next.
         const npcOwner = own(st.dialogues, live.id)?.npcId;
-        const hit = (node.branches ?? []).find((b) => holds(b.when, d, p, npcOwner));
+        const hit = (node.branches ?? []).find((b) => holds(b.when, d, p, npcOwner, { st, now }));
         d.dialogue = { id: live.id, node: hit ? hit.next : node.next };
         return null;
       }
       const choice = Number.isSafeInteger(cmd.choice) && cmd.choice >= 0 ? node.choices?.[cmd.choice] : undefined;
       if (!choice) return 'INVALID_CHOICE';
       const npcId = own(st.dialogues, live.id)?.npcId;
-      if (choice.when && !holds(choice.when, d, p, npcId)) return 'CONDITION_FAILED';
+      if (choice.when && !holds(choice.when, d, p, npcId, { st, now })) return 'CONDITION_FAILED';
       for (const e of choice.effects) {
-        const bad = runEffect(st, d, p, e, npcId);
+        const bad = runEffect(st, d, p, e, npcId, now);
         if (bad) return bad;
       }
       d.dialogue = { id: live.id, node: choice.next };
@@ -473,6 +500,6 @@ export function applyStory(cmd: StoryCommand, d: StoryDraft, st: StoryDefs | und
     case 'DeclineQuest':
       if (!isId(cmd.questId) && !MAIN_QUEST_ID.test(cmd.questId)) return 'INVALID_COMMAND';
       if (cmd.to !== undefined && !isId(cmd.to) && !MAIN_QUEST_ID.test(cmd.to)) return 'INVALID_COMMAND';
-      return leave(st, d, p, cmd, cmd.type === 'CompleteQuest' ? 'complete' : 'decline', guardGrant);
+      return leave(st, d, p, cmd, cmd.type === 'CompleteQuest' ? 'complete' : 'decline', guardGrant, now);
   }
 }
