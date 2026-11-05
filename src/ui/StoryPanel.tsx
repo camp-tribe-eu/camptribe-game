@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from 'preact/hooks';
 import { ct } from '../i18n/content';
 import type { AnyLang, Key } from '../i18n';
 import { trapTab } from './focus-trap';
+import { EntriesBook, JournalBook, SkillsBook, TravelerCard } from './JournalBook';
 import { Portrait, type PortraitLookup } from './Portrait';
 import type { OfferAction, StoryOffer } from './story-types';
 
@@ -36,12 +37,6 @@ export function money(lang: AnyLang, cents: number): string {
   // GAME-84 №7: Intl ставить між числом і валютою нерозривний пробіл. Коли «249,00 EUR» не вміщується в рядок (текст 200 %),
   // браузер різав її посеред слова («EU R»). Звичайний пробіл — рядок рветься між числом і валютою, а слово лишається цілим.
   return new Intl.NumberFormat(lang === 'uk' ? 'uk-UA' : 'en-IE', { style: 'currency', currency: 'EUR' }).format(cents / 100).replace(/[\u00a0\u202f]/g, ' ');
-}
-
-/** Смужка прогресу (GAME-181): ціле 0…100 %; це читає й екранний читач (role=progressbar). Ширину задає лише дані, кольори — index.html. */
-function Bar({ pct, label }: { pct: number; label: string }) {
-  const v = Math.max(0, Math.min(100, pct));
-  return <div class="ui-bar" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={v} aria-label={label}><span style={{ width: `${v}%` }} /></div>;
 }
 
 /** Підпис дії-кнопки (панель подорожі й рамка розмови, GAME-179): однаково скрізь. */
@@ -124,15 +119,9 @@ export function StoryPanel({ offer, lang, t, act, close, portrait, children, foo
           <p data-ui="mia-state" role="status">{t(offer.mia === 'pause' ? 'ui.mia.pause' : 'ui.mia.settled')}</p>
         </section>
       )}
-      {offer.stage !== 'create' && showRest && (
-        // GAME-181: звання, XP й ОМ — один рядок і смужка до наступного звання. ОМ — лише на косметику (крамниця пізніше); гроші (€) окремо, у рядку вище.
-        <section class="ui-progress" data-ui="progress" data-xp={offer.progress.xp} data-om={offer.progress.om} data-title={offer.progress.title.index + 1} aria-label={t('ui.progress')}>
-          <p class="ui-status" data-ui="title">{`${t('ui.title')}: ${ct(lang, offer.progress.title.key)} · ${offer.progress.xp} ${t('ui.xp')} · ${offer.progress.om} ${t('ui.om')}`}</p>
-          {offer.progress.title.nextKey && (
-            <Bar pct={Math.floor((offer.progress.title.into * 100) / offer.progress.title.span)} label={`${t('ui.titleNext')}: ${ct(lang, offer.progress.title.nextKey)}`} />
-          )}
-        </section>
-      )}
+      {offer.stage !== 'create' && showRest && (compact
+        ? <JournalBook offer={offer} lang={lang} t={t} labels={JR} />   // GAME-253: щоденник — мандрівник, навички, записи по днях
+        : <TravelerCard offer={offer} lang={lang} t={t} />)}
       {offer.stage !== 'create' && showRest && offer.goals.length > 0 && (
         // GAME-200: 2–4 паралельні цілі — головна, побічні й «нагорода близько» (ще N). Без таймерів і покарань (OD-022).
         <section class="ui-goals" data-ui="goals" data-count={offer.goals.length} aria-label={t('ui.goals')}>
@@ -225,38 +214,10 @@ export function StoryPanel({ offer, lang, t, act, close, portrait, children, foo
           ))}
         </p>
       )}
-      {offer.stage !== 'create' && showRest && (
-        // GAME-181: вісім навичок — ранг (назва з контенту), смужка до наступного рангу й що відкриє наступний. З рангу 3 практика далі не веде: наступний ранг — урок наставника.
-        <section class="ui-skills" data-ui="skills" aria-label={t('ui.skills')}>
-          <h3>{t('ui.skills')}</h3>
-          <ul>
-            {offer.progress.skills.map((s) => (
-              <li key={s.id} data-ui="skill" data-skill={s.id} data-rank={s.rank} data-pct={s.pct}>
-                <span class="ui-skill-head">
-                  <strong>{ct(lang, s.key)}</strong>
-                  {` · ${t('ui.skills.rank')} ${s.rank} — ${s.rankKey ? ct(lang, s.rankKey) : t('ui.skills.rank0')}`}
-                </span>
-                {!s.maxed && !s.mentor && <Bar pct={s.pct} label={`${ct(lang, s.key)}: ${s.pct} %`} />}
-                {s.maxed && <span data-ui="skill-note">{t('ui.skills.max')}</span>}
-                {s.mentor && <span data-ui="skill-note">{t('ui.skills.mentor')}</span>}
-                {s.unlockKey && <span class="ui-skill-next" data-ui="skill-next">{`${t('ui.skills.next')}: ${ct(lang, s.unlockKey)}`}</span>}
-              </li>
-            ))}
-          </ul>
-        </section>
-      )}
-      {compact && page === 'journal' && (
-        <section class="ui-journal" data-ui="journal-log" aria-label={t('ui.journal')}>
-          {offer.journal.length === 0
-            ? <p>{t('ui.journalEmpty')}</p>
-            : <ol>{offer.journal.map((e, i) => <li key={i} data-type={e.type}>{`${t(JR[e.type] ?? 'ui.journal')}${e.key ? `: ${ct(lang, e.key)}` : ''}`}</li>)}</ol>}
-        </section>
-      )}
-      {!compact && <details class="ui-journal" data-ui="journal">
+      {offer.stage !== 'create' && showRest && !compact && <SkillsBook offer={offer} lang={lang} t={t} />}
+      {!compact && <details class="ui-journal-fold" data-ui="journal">
         <summary class="ui-btn">{t('ui.journal')}</summary>
-        {offer.journal.length === 0
-          ? <p>{t('ui.journalEmpty')}</p>
-          : <ol>{offer.journal.map((e, i) => <li key={i} data-type={e.type}>{`${t(JR[e.type] ?? 'ui.journal')}${e.key ? `: ${ct(lang, e.key)}` : ''}`}</li>)}</ol>}
+        <EntriesBook offer={offer} lang={lang} t={t} labels={JR} />
       </details>}
       {compact && page === 'menu' && <>
         {footer}

@@ -166,6 +166,40 @@
       .ui-answers { display: grid; gap: 8px; }
       .ui-journal { max-width: min(92vw, 640px); font-size: 0.7rem; text-align: left; }
       .ui-journal summary { list-style: none; display: inline-block; cursor: pointer; }
+      /* GAME-253: сторінка-щоденник — пергамент, як Атлас (#f1e6c8, рамка #6b5430). Текст ≥ 15 px, дотикові цілі ≥ 44 px; у ландшафті — дві колонки. */
+      .ui-journal-fold { max-width: min(92vw, 640px); text-align: left; }
+      .ui-journal-fold summary { list-style: none; display: inline-block; cursor: pointer; }
+      .jb-book { display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; width: 100%; max-width: min(92vw, 640px); text-align: left; box-sizing: border-box; }
+      .jb-col { display: grid; gap: 14px; align-content: start; min-width: 0; }
+      .jb-card { box-sizing: border-box; min-width: 0; max-width: min(92vw, 640px); padding: 14px 16px; border: 3px solid #6b5430; border-radius: 8px; background: #f1e6c8; color: #2b2f36; box-shadow: 0 4px 0 #0007; font-size: 0.95rem; line-height: 1.45; text-align: left; }
+      .jb-card .jb-h { margin: 0 0 10px; padding-bottom: 6px; border-bottom: 2px dashed #6b543066; font-size: 1.1rem; color: #6b3d1d; }
+      .jb-card ul, .jb-card ol { margin: 0; padding: 0; list-style: none; }
+      .jb-card .ui-bar { height: 12px; border-radius: 6px; background: #d8c79b; border: 2px solid #6b5430; }
+      .jb-card .ui-bar > span { background: #4f8a3a; }
+      .jb-ico { display: inline-block; flex: none; width: 1.6em; text-align: center; font-style: normal; }
+      .jb-ico::before { content: attr(data-icon); }
+      .jb-ico-lg { width: 2.2em; font-size: 1.35rem; }
+      .jb-rank { margin: 0 0 8px; font-size: 1.35rem; font-weight: 700; line-height: 1.25; color: #2b2f36; overflow-wrap: anywhere; }
+      .jb-rank-label { display: block; font-size: 0.9rem; font-weight: 400; color: #6b3d1d; }
+      .jb-next { margin: 6px 0 0; color: #5a4a2c; }
+      .jb-stats { display: flex; flex-wrap: wrap; gap: 8px 18px; margin-top: 12px !important; }
+      .jb-stats li { display: flex; align-items: center; min-height: 44px; font-size: 1rem; }
+      .jb-stats strong { margin-right: 0.3em; font-size: 1.15rem; }
+      .jb-skills ul { display: grid; gap: 10px; }
+      .jb-skills li { display: flex; align-items: flex-start; gap: 6px; min-height: 44px; padding-bottom: 10px; border-bottom: 1px dotted #6b543080; }
+      .jb-skills li:last-child { border-bottom: 0; padding-bottom: 0; }
+      .jb-skill-main { display: grid; gap: 4px; min-width: 0; flex: 1 1 auto; }
+      .jb-skills .ui-skill-head { font-size: 1rem; overflow-wrap: anywhere; }
+      .jb-pips { display: flex; gap: 5px; }
+      .jb-pips i { width: 16px; height: 8px; border: 2px solid #6b5430; background: transparent; box-sizing: border-box; }
+      .jb-pips i[data-on="yes"] { background: #c98a1b; border-color: #8a5a10; }
+      .jb-note { font-size: 0.9rem; color: #5a4a2c; overflow-wrap: anywhere; }
+      .jb-day + .jb-day { margin-top: 12px; }
+      .jb-day h4 { margin: 0 0 4px; font-size: 1rem; color: #6b3d1d; text-transform: uppercase; letter-spacing: 0.04em; }
+      .jb-day li { display: flex; align-items: flex-start; gap: 6px; padding: 6px 0; border-bottom: 1px dotted #6b543066; overflow-wrap: anywhere; }
+      .jb-empty { margin: 0; }
+      .jb-entries .ui-btn { margin-top: 12px; min-height: 48px; }
+      @media (orientation: landscape) and (min-width: 700px) { .jb-book { grid-template-columns: repeat(2, minmax(0, 1fr)); max-width: min(94vw, 900px); align-items: start; } .jb-card { max-width: 100%; } }
       /* GAME-179: портрет (голова по плечі) і хто дав завдання / говорить — у панелі подорожі. Піксельні спрайти — без згладжування. */
       .ui-portrait { display: block; flex: none; image-rendering: pixelated; border: 2px solid #1b1f23; border-radius: 6px; background: #4a5a63; box-sizing: border-box; }
       .ui-portrait-icon { shape-rendering: crispEdges; }

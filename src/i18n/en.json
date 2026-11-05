@@ -446,5 +446,9 @@
   "atlas.gain.routes": "new routes",
   "atlas.cta.plan": "Plan the first trip",
   "atlas.cta.close": "Close",
-  "atlas.details": "All stickers, traces and photos"
+  "atlas.details": "All stickers, traces and photos",
+  "ui.journal.entries": "Entries",
+  "ui.journal.stickers": "stickers",
+  "ui.journal.more": "Show more",
+  "ui.journal.less": "Show less"
 }
