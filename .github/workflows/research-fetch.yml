@@ -16,7 +16,7 @@ jobs:
           n=0; : > research/music-candidates/meta.tsv
           while IFS=$'\t' read -r slot s; do
             [ -z "$s" ] && continue
-            n=$(grep -c "^$slot	" research/music-candidates/meta.tsv); n=$((n+1))
+            X
             curl -sfL -A "$UA" "https://opengameart.org/content/$s" -o out/p.html || { echo "FAIL page $s"; continue; }
             python3 - out/p.html > out/m.txt <<'PY'
           import re,sys,html
