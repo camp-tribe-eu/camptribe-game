@@ -2,6 +2,7 @@
 // «Завантажити речі» біля авто; не влізло — один екран «що лишимо вдома»; після нього виїзд доступний (захист від тупика «спакував — не сісти в авто»).
 // Негативний контроль (закон 1): без TakeItem-гілки в actOnMap (старий PackItem у сумку) f.take-* не з'являється й тест червоніє; без LeaveItem (кнопки «Лишити вдома») рамка «Куди їдемо?» не з'являється.
 import { expect, test, type Page } from '@playwright/test';
+import { walkIntro } from './intro-walk';
 import { core, installMenuObserver, loaded, menuSeen, playUntil, probe, route, walk } from './chapter-driver';
 
 const SETTINGS_KEY = 'camplife.settings.v1';
@@ -14,12 +15,7 @@ async function startHome(page: Page, landscape: boolean): Promise<void> {
   await installMenuObserver(page);
   await page.goto('/?seed=7&mapFirst=1&intro=1');
   await loaded(page);
-  const intro = page.locator('[data-ui="intro"]');
-  for (let i = 0; i < 30 && (await intro.count()) > 0; i++) {
-    const pick = page.locator('[data-act="create"]', { hasText: /Велосипед|Bike/ });
-    if (await pick.count()) await pick.first().click(); else await page.locator('[data-ui="intro-next"]').click();
-    await page.waitForTimeout(320);
-  }
+  await walkIntro(page);   // GAME-250: спільний прохід вступу за станом (Атлас — atlas-cta), падає одразу, а не по колу
   await playUntil(page, !landscape, [], (c) => c.game.quests['CH1-HOME-001']?.status === 'active' && c.game.player?.locationId === 'loc.home', () => menuSeen(page), 80);
   expect(errors).toEqual([]);
 }
