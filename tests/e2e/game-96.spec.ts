@@ -204,6 +204,24 @@ test('стоїть > 2 с: спрайт дихає (0/1 px), а проба по�
   expect([...ys], `проба playerY під час дихання — одне число, а не ${[...ys].join(', ')}`).toHaveLength(1);
 });
 
+// GAME-239: «камера дихає» — дихання героя (GAME-212) зсувало спрайт на 0/1 px, а камера слідкує за спрайтом з lerp 1 → весь світ
+// посувався на 1 px у такт. Договір: камера слідкує за справжньою позицією героя, дихає лише герой. Сторож: стоїмо на таборі озера
+// (932×430), на місці, де камера не впирається в межі мапи по вертикалі; за ≥ 1,5 періоду cameraScrollY — одне число, а heroBreath
+// справді брав 0 і 1 (інакше тест порожній). Негативний контроль: прибрати followOffset.y = heroBob у scene.ts → два значення.
+test('стоїть > 2 с: спрайт дихає, а камера — ні (GAME-239: cameraScrollY одне число)', async ({ browser }) => {
+  const { page } = await open(browser, { width: 932, height: 430 }, true);
+  await page.waitForFunction(() => (window as unknown as { __game: { probe: { heroBreath: number } } }).__game.probe.heroBreath !== 0, null, { timeout: 15_000, polling: 25 });
+  const ys = new Set<number>(); const bobs = new Set<number>();
+  const until = Date.now() + 2_400;   // 1,5 × IDLE_PERIOD_MS (1600)
+  while (Date.now() < until) {
+    const s = await page.evaluate(() => { const p = (window as unknown as { __game: { probe: { cameraScrollY: number; heroBreath: number } } }).__game.probe; return { y: p.cameraScrollY, b: p.heroBreath }; });
+    ys.add(s.y); bobs.add(s.b);
+    await page.waitForTimeout(40);
+  }
+  expect([...bobs].sort(), 'дихання йде: зсув спрайта 0 і 1').toEqual([0, 1]);
+  expect([...ys], `cameraScrollY під час дихання — одне число, а не ${[...ys].join(', ')}`).toHaveLength(1);
+});
+
 // GAME-96 продовження (смак власника 25.10): вбік і на десктопі мапа на ВСЮ ширину екрана — без чорних смуг з боків; керування
 // поверх мапи; камера в межах мапи (порожнечі немає); пікселі чіткі (цілий zoom, image-rendering: pixelated).
 // Негативний контроль (мутація, звіт картки): старий кадр 640×352 під FIT → «≥ 99 % ширини» і «край — мапа» червоніють.
