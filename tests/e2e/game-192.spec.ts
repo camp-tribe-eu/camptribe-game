@@ -32,11 +32,11 @@ for (const v of VIEWS) {
     // Вікно показу нової цілі (1,5 с) спливає — стрілки й рядка «Далі» нема, а ціль у пробі лишається.
     await expect.poll(() => guide(page), { timeout: 15_000, message: 'після вікна нової цілі стрілка мусить сховатись' }).toBe('none');
     await expect(page.locator('[data-ui="next-hint"][data-kind="next"]')).toHaveCount(0);
-    await expect(page.locator('[data-ui="goal"]')).toBeVisible();   // рядок «Ціль» лишається завжди
+    await expect(page.locator('[data-ui="agenda-item"][data-current="yes"]')).toBeVisible();   // GAME-243: поточний пункт нотатника лишається завжди
     expect((await probe(page)).fx.target).not.toBeNull();
     // Бездіяльність → стрілка і рядок «Далі: …».
     await expect.poll(() => guide(page), { timeout: 15_000, message: 'після бездіяльності стрілка мусить з\'явитись' }).not.toBe('none');
-    await expect(page.locator('[data-ui="next-hint"]')).toBeVisible();
+    await expect(page.locator('[data-ui="minimap"]')).toBeVisible();   // GAME-243: рядка «Далі:» внизу немає — стрілка й радар
     // Дія (кнопка дії затиснута) — ховає.
     const box = await page.locator('[data-touch="interact"]').boundingBox();
     expect(box).not.toBeNull();
@@ -52,7 +52,7 @@ for (const v of VIEWS) {
     await expect.poll(() => guide(page), { timeout: 20_000 }).not.toBe('none');
     await page.waitForTimeout(5_000);   // довше за вікно нової цілі (1,5 с) і далі за нього: у режимі «стук» вже сховалась би
     expect(await guide(page), 'у режимі «завжди» стрілка не ховається').not.toBe('none');
-    await expect(page.locator('[data-ui="next-hint"]')).toBeVisible();
+    await expect(page.locator('[data-ui="minimap"]')).toBeVisible();
     await page.context().close();
   });
 

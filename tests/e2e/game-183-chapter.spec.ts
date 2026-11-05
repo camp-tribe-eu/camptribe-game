@@ -29,10 +29,12 @@ for (const v of VIEWS) {
     await playUntil(page, v.side === 'landscape', log, (c) => c.game.player?.locationId === 'loc.road', () => menuSeen(page), 80);
     // Подія в дорозі (шанс) відкриває рамку розмови — закриваємо її відповідями, далі знімок: смуга дороги із ціллю й стрілкою.
     for (let i = 0; i < 8 && (await page.locator('.ui-talk').count()) > 0; i++) { await answerOne(page); }
-    await expect(page.locator('[data-ui="goal"]')).toBeVisible();
+    await expect(page.locator('[data-ui="agenda"]')).toBeVisible();   // GAME-243: ціль — у нотатнику
     await expect.poll(async () => (await probe(page)).fx.target, { timeout: 15_000 }).not.toBeNull();
     await page.locator('[data-ui="recovery-close"]').click({ timeout: 1_000 }).catch(() => undefined);   // нагадування про збереження — не частина кадру
-    await expect.poll(async () => (await probe(page)).fx.guide, { timeout: 15_000 }).not.toBe('none');
+    // GAME-243: поза навчанням стрілки немає — ціль показує крапка на мінімапі.
+    await expect.poll(async () => (await probe(page)).fx.guide, { timeout: 15_000 }).toBe('none');
+    await expect.poll(async () => Number(await page.locator('[data-ui="minimap-canvas"]').getAttribute('data-dots')), { timeout: 15_000 }).toBeGreaterThanOrEqual(1);
     await expect(page.locator('[data-ui="title-up"]')).toHaveCount(0, { timeout: 60_000 });   // банер звання — лише кілька ігрових хвилин
     await page.screenshot({ path: `research/visual-audit/road-goal-arrow-${v.side}.png` });
     // Дорога: справи зупинки, крок «У дорогу», авто → у табір.

@@ -52,9 +52,10 @@ for (const v of VIEWS) {
     const page = await ctx.newPage();
     const errors = await arriveInCamp(page);
     // Кадр: ціль («Ціль: …») і стрілка «Далі» на мапі табору (картка PR).
-    await expect(page.locator('[data-ui="goal"]')).toBeVisible({ timeout: 20_000 });
-    await expect(page.locator('[data-ui="next-hint"]')).toBeVisible();
-    await expect.poll(async () => (await probe(page)).fx.guide, { timeout: 15_000 }).not.toBe('none');
+    // GAME-243: ціль — пункт нотатника, напрям — крапка на мінімапі; постійної стрілки поза навчанням немає.
+    await expect(page.locator('[data-ui="agenda-item"][data-current="yes"]')).toBeVisible({ timeout: 20_000 });
+    await expect.poll(async () => Number(await page.locator('[data-ui="minimap-canvas"]').getAttribute('data-dots')), { timeout: 15_000 }).toBeGreaterThanOrEqual(1);
+    await expect.poll(async () => (await probe(page)).fx.guide, { timeout: 15_000 }).toBe('none');
     await page.screenshot({ path: `research/visual-audit/camp-goal-arrow-${v.side}.png` });
     const log: string[] = [];
     // Табір → дорога додому → дім: до кінця розділу (кінцевий квест — «Знову вдома» вдома).

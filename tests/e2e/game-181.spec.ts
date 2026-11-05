@@ -143,18 +143,18 @@ for (const v of VIEWS) {
     const ctx = await browser.newContext({ viewport: { width: v.w, height: v.h }, hasTouch: true, isMobile: true });
     const page = await ctx.newPage();
     const errors = await startSolo(page);
-    const goal = page.locator('[data-ui="goal"]');
-    await expect(goal).toBeVisible();
-    await expect(goal).toHaveText('Ціль: Вечір удома');            // крок головного квесту (PROLOGUE-HOME-001), одним рядком
-    expect(await page.locator('[data-ui="goal"]').count(), 'ціль одна').toBe(1);
+    // GAME-243: поточна ціль — підсвічений пункт нотатника Вікторії (замість рядка «Ціль:» і «Далі:» внизу).
+    const goal = page.locator('[data-ui="agenda-item"][data-current="yes"]');
+    await expect(page.locator('[data-ui="agenda"]')).toBeVisible();
+    await expect(goal).toContainText('кухня — стіл з картою');   // крок головного квесту (PROLOGUE-HOME-001), одним рядком
+    expect(await goal.count(), 'поточний пункт один').toBe(1);
     expect((await goal.innerText()).length, 'коротко: ≤ 60 знаків').toBeLessThanOrEqual(60);
-    // Рядок «Далі» (GAME-175) з'являється з кадром сцени; чекаємо його, щоб міряти саме пару.
-    await expect(page.locator('[data-ui="next-hint"]')).toBeVisible({ timeout: 20_000 });
+    await expect(page.locator('[data-ui="goal"], [data-ui="nearest"]'), 'нижніх рядків «Ціль»/«Нагорода» немає').toHaveCount(0);
     const g = await rect(goal);
     expect(g).not.toBeNull();
     const vp = { l: 0, t: 0, r: v.w, b: v.h };
     if (g) { expect(g.l).toBeGreaterThanOrEqual(0); expect(g.r).toBeLessThanOrEqual(v.w); expect(overlap(g, vp)).toBeGreaterThan(0); }
-    for (const other of ['[data-ui="next-hint"]', '[data-ui="wave"]', '[data-touch="story"]', '[data-touch="pause"]', '[data-ui="hud"]']) {
+    for (const other of ['[data-ui="minimap"]', '[data-ui="wave"]', '[data-touch="story"]', '[data-touch="pause"]', '[data-ui="hud"]']) {
       const o = await rect(page.locator(other));
       if (g && o) expect(overlap(g, o), `ціль налазить на ${other}`).toBe(0);
     }
@@ -169,13 +169,13 @@ for (const v of VIEWS) {
   });
 }
 
-test('мутація: ?hideUi=goal — цілі на екрані немає (перевірка «ціль видна» на цьому червоніє)', async ({ browser }) => {
+test('мутація: ?hideUi=agenda — нотатника на екрані немає (перевірка «ціль видна» на цьому червоніє)', async ({ browser }) => {
   const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true });
   const page = await ctx.newPage();
-  await startSolo(page, '&hideUi=goal');
+  await startSolo(page, '&hideUi=agenda');
   await page.waitForTimeout(500);
-  await expect(page.locator('[data-ui="goal"]')).toHaveCount(0);
-  await expect(page.locator('[data-ui="hud"]')).toBeVisible();   // шапка жива — зникла саме ціль
+  await expect(page.locator('[data-ui="agenda"]')).toHaveCount(0);
+  await expect(page.locator('[data-ui="hud"]')).toBeVisible();   // шапка жива — зник саме нотатник
   await ctx.close();
 });
 
