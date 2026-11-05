@@ -78,5 +78,5 @@ export const ambientAtClock = (clockMinutes: number): Ambient => ambientAt(timeO
 export function glowAlpha(darkness: number, timeMs: number): number {
   if (darkness <= 0) return 0;
   const flicker = 1 + 0.06 * Math.sin(timeMs / 83) + 0.04 * Math.sin(timeMs / 37);
-  return Math.min(1, (darkness / MAX_DARKNESS) * 0.85 * flicker);
+  return Math.min(1, (darkness / MAX_DARKNESS) * 0.95 * flicker);
 }
