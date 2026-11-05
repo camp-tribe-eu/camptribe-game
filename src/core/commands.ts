@@ -8,7 +8,7 @@ import type { CommandRecord, GameState, RejectCode } from './state';
 import { HAND_ACTIONS, isHandAction, practise, rankOf, SKILL_IDS, type SkillId } from './skills';
 import { gearOf, pruneGear, sellPriceOf } from './gear';
 import { bookLeave, cancelLeave } from './life';
-import { autoPack, capacityOf, packFlag, packingOpen, packItemsFor, usedUnits, withPacked } from './packing';
+import { autoPack, capacityOf, carriedOf, loadCarSet, packFlag, packingOpen, packItemsFor, takeFlag, usedUnits, withLoaded, withPacked } from './packing';
 import type { Weather } from './weather';
 import { applyStory, questNeedsItem, type StoryCommand, type StoryDraft } from './story';
 import { applyWave, type WaveCommand } from './wave';
@@ -41,6 +41,10 @@ export type Command =
   | { readonly type: 'PackItem'; readonly commandId: string; readonly itemId: string }
   | { readonly type: 'UnpackItem'; readonly commandId: string; readonly itemId: string }
   | { readonly type: 'AutoPack'; readonly commandId: string }
+  /** GAME-245: узяти річ удома (в один бік), завантажити все взяте в авто, повернути зайву річ на її місце вдома. */
+  | { readonly type: 'TakeItem'; readonly commandId: string; readonly itemId: string }
+  | { readonly type: 'LoadCar'; readonly commandId: string }
+  | { readonly type: 'LeaveItem'; readonly commandId: string; readonly itemId: string }
   /** Практика руками (GAME-229): дія на мапі (сокира, кілок, вудка…) вчить навичку з таблиці HAND_ACTIONS. Нічого, крім досвіду, не змінює. */
   | { readonly type: 'Practise'; readonly commandId: string; readonly action: string }
   /** Подарунок мешканцю табору (GAME-230): предмет з інвентаря, не більше одного на NPC за день; реакцію й очки дає каталог дружби (ніколи не мінус). */
@@ -309,9 +313,37 @@ function apply(cmd: Command, d: Draft, defs: CoreDefs, guard: Safeguards, today:
         d.flags = d.flags.filter((f) => f !== flag);
         return null;
       }
-      if (packed) return 'PACK_ALREADY';
+      if (packed || d.flags.includes(takeFlag(item.itemId))) return 'PACK_ALREADY';
       if (usedUnits(d.flags, pk, d.player) + item.units > capacityOf(pk, d.player.transportId)) return 'PACK_FULL';
       d.flags = [...d.flags, flag].sort();
+      return null;
+    }
+    case 'TakeItem':
+    case 'LeaveItem': {
+      if (!isContentId(cmd.itemId)) return 'INVALID_COMMAND';
+      const pk = defs.packing;
+      if (!pk) return 'UNKNOWN_TARGET';
+      if (!d.player) return 'NO_CHARACTER';
+      const item = packItemsFor(pk, d.player).find((i) => i.itemId === cmd.itemId);
+      if (!item) return 'UNKNOWN_ITEM';
+      if (!packingOpen(pk, d)) return 'PACK_CLOSED';
+      const tf = takeFlag(item.itemId);
+      if (cmd.type === 'LeaveItem') {
+        if (!d.flags.includes(tf)) return 'PACK_NOT_PACKED';
+        d.flags = d.flags.filter((f) => f !== tf);
+        return null;
+      }
+      if (d.flags.includes(tf) || d.flags.includes(packFlag(item.itemId))) return 'PACK_ALREADY';
+      d.flags = [...d.flags, tf].sort();
+      return null;
+    }
+    case 'LoadCar': {
+      const pk = defs.packing;
+      if (!pk) return 'UNKNOWN_TARGET';
+      if (!d.player) return 'NO_CHARACTER';
+      if (!packingOpen(pk, d)) return 'PACK_CLOSED';
+      if (carriedOf(d.flags, pk, d.player).length === 0) return 'PACK_NOT_PACKED';
+      d.flags = withLoaded(d.flags, pk, loadCarSet(pk, d.player, d.flags));
       return null;
     }
     case 'AutoPack': {
@@ -374,7 +406,7 @@ export function practiceOf(cmd: Command, before: GameState, after: Pick<Draft, '
 
 /** Ціль команди для прогресії: квест, об'єкт взаємодії чи подія в дорозі (ті самі поля, що пише журнал — sim.refOf). */
 function progressRef(cmd: Command): string | null {
-  return cmd.type === 'CompleteQuest' ? cmd.questId : cmd.type === 'Interact' ? cmd.targetId : cmd.type === 'RoadEvent' ? cmd.eventId : null;
+  return cmd.type === 'CompleteQuest' ? cmd.questId : cmd.type === 'Interact' ? cmd.targetId : cmd.type === 'RoadEvent' ? cmd.eventId : cmd.type === 'TakeItem' ? cmd.itemId : null;
 }
 
 /** Записати практику прийнятої команди в чернетку. Без персонажа вчитись нікому — нічого. */

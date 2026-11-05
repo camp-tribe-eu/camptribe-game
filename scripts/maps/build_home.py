@@ -104,18 +104,27 @@ HOME_SPOTS = [
     ('step.PROLOGUE-HOME-001', 'trigger', (16, 5)),   # стіл на кухні: карта, телефон із прогнозом, аркуш «Одна вільна ніч»
     ('step.ST-001', 'trigger', (5, 4)),               # вітальня, під вікном: «озирнись удома»
     ('step.ST-002', 'trigger', (24, 4)),              # спальня, письмовий стіл із ноутбуком: «обери кемпінг»
-    ('pack.item.tent', 'trigger', (2, 7)),
-    ('pack.item.mia-carrier', 'trigger', (6, 7)),
-    ('pack.item.lantern', 'trigger', (9, 5)),
-    ('pack.item.lantern-3', 'trigger', (8, 9)),
-    ('pack.item.big-cushion', 'trigger', (1, 9)),
-    ('pack.item.water', 'trigger', (12, 4)),
-    ('pack.item.snacks', 'trigger', (12, 7)),
-    ('pack.item.simple-dinner', 'trigger', (16, 7)),
-    ('pack.item.mia-bowl-food', 'trigger', (15, 9)),
-    ('pack.item.lantern-2', 'trigger', (12, 9)),
-    ('pack.item.sleeping-bag', 'trigger', (20, 6)),
-    ('pack.item.mia-blanket', 'trigger', (23, 8)),
+    # GAME-245 · кожна річ живе там, де вона живе: лише біля меблів чи стін (лицьова сторона), не посеред підлоги. Клітинки прохідні (≥ 1,4 від інших цілей).
+    # Вітальня: диван (подушка), комора біля входу (намет), куточок Мії (переноска, плед, миска), книжкова шафа (ліхтар), передпокій (документи).
+    ('pack.item.big-cushion', 'trigger', (1, 6)),     # біля дивана зліва
+    ('pack.item.tent', 'trigger', (1, 8)),            # комора: куток біля лівої стіни
+    ('pack.item.mia-carrier', 'trigger', (0, 7)),     # куточок Мії
+    ('pack.item.mia-blanket', 'trigger', (0, 9)),     # куточок Мії
+    ('pack.item.mia-bowl-food', 'trigger', (9, 8)),   # куточок Мії
+    ('pack.item.lantern', 'trigger', (9, 5)),         # полиця біля книжкової шафи
+    ('pack.item.documents', 'trigger', (8, 9)),       # передпокій: шухляда біля порога
+    # Кухня: стільниця вздовж стіни, нижня стіна — полиці.
+    ('pack.item.water', 'trigger', (13, 6)),
+    ('pack.item.snacks', 'trigger', (13, 4)),
+    ('pack.item.simple-dinner', 'trigger', (17, 7)),
+    ('pack.item.lantern-2', 'trigger', (12, 9)),      # зайві ліхтарі — на полиці біля нижньої стіни
+    ('pack.item.lantern-3', 'trigger', (15, 9)),
+    ('pack.item.first-aid', 'trigger', (17, 9)),      # шафка з ліками (ванної в мапі немає — смак, див. PR)
+    # Спальня: тумба (гаманець), розетка біля столу (телефони й зарядки), шафа (спальники й одяг).
+    ('pack.item.wallet', 'trigger', (19, 4)),
+    ('pack.item.phones', 'trigger', (22, 6)),
+    ('pack.item.sleeping-bag', 'trigger', (20, 5)),
+    ('pack.item.clothes', 'trigger', (26, 5)),
     ('npc.george', 'npc', (3, 9)),
     ('obj.vehicle', 'trigger', (13, 12)),
     ('obj.trunk', 'trigger', (16, 14)),

@@ -364,7 +364,7 @@ describe('пакування (GAME-109): усі підмножини речей 
   };
 
   /** Перебір усіх наборів для однієї комбінації; повертає підсумок і набори, з яких розділ не завершити. */
-  function sweep(k: { profile: string | null; transport: string | null; animal: string | null }, defs: CoreDefs) {
+  function sweep(k: { profile: string | null; transport: string | null; animal: string | null }, defs: CoreDefs, stopAfterStuck = Infinity) {
     const open = atPacking(k, defs);
     const p = open.player as NonNullable<GameState['player']>;
     const items = packItemsFor(PK, p);
@@ -372,8 +372,16 @@ describe('пакування (GAME-109): усі підмножини речей 
     const read = readPackFlags(defs.story as typeof STORY);
     const witnesses = new Map<string, Move[] | null>();
     const out = { masks: 0, fit: 0, rejected: 0, completable: 0, stuck: [] as string[], oracleMismatch: 0, classes: 0 };
-    for (let mask = 0; mask < 1 << items.length; mask++) {
-      const want = new Set(items.filter((_, i) => (mask >> i) & 1).map((i) => i.itemId));
+    // GAME-245: 17 речей → 2^17 наборів задорого. Речі, яких не читає жодна розмова й які не «потрібні» (вільні), на завершуваність розділу не впливають:
+    // від них залежить лише «вміщається чи ні» (проста сума одиниць). Тому «ядро» (потрібне + прочитані умовами) перебираємо ПОВНІСТЮ, а вільні — представниками:
+    // жодної, усі, і кожна окремо (цього досить, щоб оракул вміщення бачив і «порожньо», і «переповнено», і кожну вільну річ як причину відмови).
+    const free = items.filter((i) => i.group !== 'needed' && !read.has(packFlag(i.itemId)));
+    const core = items.filter((i) => !free.includes(i));
+    const freeSets: ReadonlySet<string>[] = [new Set(), new Set(free.map((i) => i.itemId)), ...free.map((i) => new Set([i.itemId]))];
+    for (let mask = 0; mask < (1 << core.length) * freeSets.length; mask++) {
+      const cm = mask % (1 << core.length);
+      const fs = freeSets[Math.floor(mask / (1 << core.length))] as ReadonlySet<string>;
+      const want = new Set([...core.filter((_, i) => (cm >> i) & 1).map((i) => i.itemId), ...fs]);
       const units = items.reduce((a, i) => a + (want.has(i.itemId) ? i.units : 0), 0);
       const { state, full } = packSet(open, want, defs);
       out.masks++;
@@ -386,6 +394,7 @@ describe('пакування (GAME-109): усі підмножини речей 
       const w = witnesses.get(cls) ?? null;
       if (w !== null && replays(state, w, defs)) out.completable++;
       else out.stuck.push([...want].join(','));
+      if (out.stuck.length >= stopAfterStuck) break;   // лише негативний контроль: 40 застряглих наборів уже доводять, що сторож червоніє (і що всі вони без намету)
     }
     return out;
   }
@@ -397,7 +406,7 @@ describe('пакування (GAME-109): усі підмножини речей 
     it(`${k.profile} · ${k.transport} · ${k.animal}: кожна підмножина — або не вміщається, або завершуваний розділ`, () => {
       const r = sweep(k, DEFS);
       expect(r.oracleMismatch, 'вміщається ⇔ сума одиниць ≤ місця').toBe(0);
-      expect(r.masks).toBeGreaterThanOrEqual(2 ** 9);   // без кішки — 9 речей, з кішкою — 12
+      expect(r.masks).toBeGreaterThanOrEqual(2 ** 8);   // ядро — потрібне (6 без кішки, 8 з кішкою) + прочитане умовами, ×(вільні представники)
       expect(r.fit, 'пакування приймає й відхиляє: обидва боки').toBeGreaterThan(0);
       expect(r.rejected).toBeGreaterThan(0);
       expect(r.fit + r.rejected).toBe(r.masks);
@@ -435,7 +444,7 @@ describe('пакування (GAME-109): усі підмножини речей 
     if (spot?.choices) spot.choices = spot.choices.filter((ch) => !JSON.stringify(ch).includes('f.night-car') && !JSON.stringify(ch).includes('f.night-gazebo'));
     const mutated: CoreDefs = { ...DEFS, story: compileStory(c) };
     for (const k of combos) {
-      const r = sweep(k, mutated);
+      const r = sweep(k, mutated, 40);
       expect(r.stuck.length, `${k.transport}: без запасної ночівлі наборів без намету мало б не вистачати`).toBeGreaterThan(0);
       expect(r.stuck.every((s) => !s.split(',').includes('item.tent')), 'застрягають лише набори БЕЗ намету').toBe(true);
     }

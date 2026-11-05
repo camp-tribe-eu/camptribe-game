@@ -1,5 +1,5 @@
-// GAME-109 · пакування перед першою дорогою: «Ми точно все взяли?» — три групи, лічильник місця, «Укласти автоматично».
-// Дотиком на 844×390 і 390×844, мишею на 1280×800: покласти, дістати, місце не вміщається, автоукладання, далі — на дорогу.
+// GAME-109 (GAME-245: екран лише читає) · пакування перед першою дорогою: «Ми точно все взяли?» — три групи, лічильник місця, прогрес «Взято N/M», без тумблерів.
+// Дотиком на 844×390 і 390×844, мишею на 1280×800: далі — на дорогу. Взяти/завантажити/лишити — у game-245-home-items.spec.ts.
 // Кожна ціль ≥ 44 px. Кожна дія — справжній клік (дотик), команда йде в ядро; числа звіряємо з ядром (window.__game).
 import { expect, test, type Page } from '@playwright/test';
 import { waitGameReady } from './ready';
@@ -46,45 +46,18 @@ for (const mode of MODES) {
     await expect(packing(page)).toHaveCount(0);                        // ST-003 ще не завершено
     await act('complete', 'q.st-003');
 
-    // Екран пакування: заголовок, три групи, місце велосипеда 10 од., автоукладання вже виконане при старті (9 «потрібного» + ліхтар).
+    // Екран пакування (GAME-245: лише читання): заголовок, три групи, місце велосипеда 12 од., прогрес «Взято N/M», жодних тумблерів і «Укласти автоматично».
     await expect(packing(page)).toBeVisible();
     await expect(packing(page).locator('legend')).toHaveText('Ми точно все взяли?');
     expect(await packing(page).locator('[data-ui="pack-group"]').evaluateAll((els) => els.map((e) => (e as HTMLElement).dataset.group))).toEqual(['needed', 'useful', 'leave']);
-    await expect(packing(page).locator('[data-ui="pack-space"]')).toHaveText('Місце: 10 / 10 од.');
-    expect(await used()).toBe(10);
-    // Усі цілі ≥ 44 px (кнопки речей і «Укласти автоматично»), рахуємо їх — порожній перелік нічого б не довів.
-    const boxes = await packing(page).locator('button').evaluateAll((els) => els.map((e) => { const r = e.getBoundingClientRect(); return [Math.round(r.width), Math.round(r.height)]; }));
-    expect(boxes.length).toBe(9 + 1);                                   // 9 речей без кішки + автоукладання
-    for (const [w, h] of boxes) { expect(w).toBeGreaterThanOrEqual(44); expect(h).toBeGreaterThanOrEqual(44); }
-
-    // Дістати ліхтар: 10 → 9, прапорець у ядрі зник.
-    await act('unpack', 'item.lantern');
-    expect(await used()).toBe(9);
-    await expect(packing(page).locator('[data-ui="pack-space"]')).toHaveText('Місце: 9 / 10 од.');
-    expect((await core(page)).game.flags).not.toContain('f.pack-lantern');
-    // Покласти перекуси (1 од.): 9 → 10.
-    await act('pack', 'item.snacks');
-    expect(await used()).toBe(10);
-    expect((await core(page)).game.flags).toContain('f.pack-snacks');
-    // Подушка (2 од.) не вміщається: кнопка недоступна, натискання нічого не змінює.
-    const cushion = packing(page).locator('[data-act="pack-full"][data-key="item.big-cushion"]');
-    await expect(cushion).toHaveAttribute('aria-disabled', 'true');
-    await press(cushion, true);
-    expect(await used()).toBe(10);
-    expect((await core(page)).game.flags).not.toContain('f.pack-big-cushion');
-
-    // Дістати намет: місце 6, з'являється підпис про альтанку (велосипед).
-    await expect(packing(page).locator('[data-ui="pack-note"]')).toHaveCount(0);
-    await act('unpack', 'item.tent');
-    expect(await used()).toBe(6);
-    await expect(packing(page).locator('[data-ui="pack-note"]')).toContainText('альтанка');
-    // «Укласти автоматично»: намет, ліхтар на місці, перекусів нема, підпису нема.
-    await press(packing(page).locator('[data-act="autopack"]'));
-    expect(await used()).toBe(10);
-    const flags = (await core(page)).game.flags;
-    expect(flags).toEqual(expect.arrayContaining(['f.pack-tent', 'f.pack-lantern', 'f.pack-sleeping-bag', 'f.pack-water', 'f.pack-simple-dinner']));
-    expect(flags).not.toContain('f.pack-snacks');
-    await expect(packing(page).locator('[data-ui="pack-note"]')).toHaveCount(0);
+    await expect(packing(page).locator('[data-ui="pack-space"]')).toHaveText('Місце: 12 / 12 од.');
+    expect(await used()).toBe(12);
+    await expect(packing(page).locator('[data-ui="pack-progress"]')).toContainText('Взято 7/11');
+    expect(await packing(page).locator('[data-ui="pack-item"]').count()).toBe(14);   // 14 речей без кішки
+    await expect(packing(page).locator('button')).toHaveCount(0);                    // нічого натискати: усе вже в авто, завантажувати нічого
+    await expect(packing(page).locator('[aria-pressed]')).toHaveCount(0);
+    await expect(packing(page).locator('[data-act="pack"], [data-act="unpack"], [data-act="autopack"]')).toHaveCount(0);
+    expect((await core(page)).game.flags).toEqual(expect.arrayContaining(['f.pack-tent', 'f.pack-documents', 'f.pack-wallet', 'f.pack-sleeping-bag', 'f.pack-water', 'f.pack-simple-dinner']));
 
     // Далі — на дорогу: пакування зникає, гравець на дорозі, журнал пам'ятає пакування (лише факти стану).
     await act('visit', 'loc.home');                                   // GAME-138: CH1-HOME-001 — пакування вдома, тоді дорога
@@ -94,7 +67,7 @@ for (const mode of MODES) {
     const c = await core(page);
     expect(c.game.player?.locationId).toBe('loc.road');
     const types = c.journal.map((e) => e.type);
-    expect(types).toEqual(expect.arrayContaining(['UnpackItem', 'PackItem', 'AutoPack']));
+    expect(types).toEqual(expect.arrayContaining(['Visit', 'CompleteQuest']));
     expect(await panel(page).textContent()).not.toContain('⟦');         // жодного ключа без тексту
     expect(errors).toEqual([]);
     await ctx.close();

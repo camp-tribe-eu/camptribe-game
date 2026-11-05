@@ -2,11 +2,13 @@
   "openAfter": "ST-003",
   "at": ["loc.home", "loc.shop"],
   "capacity": [
-    { "transport": "transport.car", "units": 14 },
-    { "transport": "transport.bike", "units": 10 }
+    { "transport": "transport.car", "units": 16 },
+    { "transport": "transport.bike", "units": 12 }
   ],
   "items": [
     { "item": "item.tent", "group": "needed", "units": 4 },
+    { "item": "item.documents", "group": "needed", "units": 1 },
+    { "item": "item.wallet", "group": "needed", "units": 1 },
     { "item": "item.sleeping-bag", "group": "needed", "units": 2 },
     { "item": "item.water", "group": "needed", "units": 2 },
     { "item": "item.simple-dinner", "group": "needed", "units": 1 },
@@ -14,6 +16,9 @@
     { "item": "item.mia-bowl-food", "group": "needed", "units": 1, "when": { "animals": ["animal.cat"] } },
     { "item": "item.lantern", "group": "useful", "units": 1 },
     { "item": "item.snacks", "group": "useful", "units": 1 },
+    { "item": "item.phones", "group": "useful", "units": 1 },
+    { "item": "item.first-aid", "group": "useful", "units": 1 },
+    { "item": "item.clothes", "group": "useful", "units": 2 },
     { "item": "item.mia-blanket", "group": "useful", "units": 1, "when": { "animals": ["animal.cat"] } },
     { "item": "item.lantern-2", "group": "leave", "units": 1 },
     { "item": "item.lantern-3", "group": "leave", "units": 1 },

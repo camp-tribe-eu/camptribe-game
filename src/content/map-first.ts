@@ -11,7 +11,7 @@
 import { dispatch, nextCommandId, type Command } from '../core/commands';
 import type { CoreDefs } from '../core/defs';
 import { canonical } from '../core/hash';
-import { autoPack, packFlag, packItemsFor, packedOf, packingOpen } from '../core/packing';
+import { autoPack, packFlag, packItemsFor, packedOf, packingOpen, takeFlag } from '../core/packing';
 import type { SimState } from '../core/sim';
 import type { GameState } from '../core/state';
 import { matches } from '../core/story';
@@ -44,7 +44,7 @@ export const MAP_SPOTS = {
   home: [
     'step.PROLOGUE-HOME-001', 'step.ST-001', 'step.ST-002',
     'pack.item.tent', 'pack.item.sleeping-bag', 'pack.item.water', 'pack.item.simple-dinner', 'pack.item.mia-carrier', 'pack.item.mia-bowl-food',
-    'pack.item.lantern', 'pack.item.snacks', 'pack.item.mia-blanket', 'pack.item.lantern-2', 'pack.item.lantern-3', 'pack.item.big-cushion',
+    'pack.item.lantern', 'pack.item.snacks', 'pack.item.documents', 'pack.item.wallet', 'pack.item.phones', 'pack.item.first-aid', 'pack.item.clothes', 'pack.item.mia-blanket', 'pack.item.lantern-2', 'pack.item.lantern-3', 'pack.item.big-cushion',
     'npc.george', 'obj.vehicle', 'obj.trunk',
     // GAME-183 · решта дому: справи хвилі «Виїзд о шостій», кроки поза основним шляхом, сушарка й приймальня.
     'task.mia-carrier', 'task.map-to-luggage', 'task.lights-window', 'task.anna-goodbye', 'task.iron-clothes', 'step.ST-004', 'step.CH1-D3-HOME-001', 'obj.drying', 'obj.sell',
@@ -269,14 +269,15 @@ function compute(sim: SimState, defs: CoreDefs, name: string): Resolved | null {
     const pk = defs.packing;
     const itemId = name.slice(SPOT_PREFIX.pack.length);
     if (!pk || !packingOpen(pk, g) || !packItemsFor(pk, p).some((i) => i.itemId === itemId)) return null;
-    const packed = g.flags.includes(packFlag(itemId));
-    const move: Move = { type: packed ? 'UnpackItem' : 'PackItem', itemId };
-    // Не вміщається (PACK_FULL) — об'єкт живий, але дія веде до багажника: сітка скаже, чому, і що можна дістати.
-    return chain(g, defs, [move]) ? { moves: [move] } : { moves: [], ui: 'trunk' };
+    // GAME-245: річ узято раз і назавжди (в один бік): узята чи завантажена — з місця зникла, об'єкт мовчить; повернути її може лише «що лишимо вдома».
+    if (g.flags.includes(takeFlag(itemId)) || g.flags.includes(packFlag(itemId))) return null;
+    return { moves: [{ type: 'TakeItem', itemId }] };
   }
   if (name === 'obj.trunk') {
     const pk = defs.packing;
-    return pk && packingOpen(pk, g) ? { moves: [], ui: 'trunk' } : null;
+    if (!pk || !packingOpen(pk, g)) return null;
+    const load: Move = { type: 'LoadCar' };
+    return chain(g, defs, [load]) ? { moves: [load], ui: 'trunk' } : { moves: [], ui: 'trunk' };
   }
   if (name === 'obj.vehicle') {
     const v = vehicleMoves(g, defs);
@@ -459,9 +460,10 @@ export function nextTarget(sim: SimState, defs: CoreDefs, carried: readonly stri
   // Пакування: «потрібне» ще не в багажнику (рукою дістали) — до нього; усе на місці — у дорогу.
   const pk = defs.packing;
   if (quest(g, 'CH1-HOME-001') && pk && packingOpen(pk, g)) {
-    if (carried.length > 0) return { key: car ? 'next.unload' : 'next.unload.bike', spot: 'obj.vehicle' };   // рюкзак повний — до авто, розвантажити
+    // GAME-245: спершу збираємо потрібне по дому (кожна річ — одна дія), і лише потім ОДИН похід до авто «Завантажити» (не по поїздці на кожну річ).
     const missing = packItemsFor(pk, p).find((i) => i.group === 'needed' && !g.flags.includes(packFlag(i.itemId)) && !carried.includes(i.itemId));
     if (missing) return { key: car ? 'next.pack' : 'next.pack.bike', spot: `pack.${missing.itemId}` };
+    if (carried.length > 0) return { key: car ? 'next.unload' : 'next.unload.bike', spot: 'obj.vehicle' };   // потрібне зібрано — до авто, завантажити
   }
   return { key: car ? 'next.depart.car' : 'next.depart.bike', spot: 'obj.vehicle' };
 }
@@ -484,7 +486,7 @@ export function spotLabel(sim: SimState, defs: CoreDefs, name: string): SpotLabe
   if (name.startsWith(SPOT_PREFIX.take)) return { label: 'act.pickup', ref: name.slice(SPOT_PREFIX.take.length) };
   if (name.startsWith(SPOT_PREFIX.pack)) {
     const itemId = name.slice(SPOT_PREFIX.pack.length);
-    return { label: sim.game.flags.includes(packFlag(itemId)) ? 'pack.out' : 'pack.in', ref: itemId };
+    return { label: 'pack.take', ref: itemId };
   }
   if (name === 'obj.trunk') return { label: car ? 'near.trunk' : 'near.trunk.bike', ref: null };
   if (name === 'obj.vehicle') return { label: car ? 'near.vehicle.car' : 'near.vehicle.bike', ref: null };

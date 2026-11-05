@@ -10,3 +10,9 @@ export function ObjectiveIcon({ spot }: { spot: string | null | undefined }) {
   const key = objectiveIcon(spot).key;
   return <span class="ui-oicon" data-ui="oicon" data-icon={key} aria-hidden="true" style={iconCss(key, sheet, SCALE)} />;
 }
+
+/** GAME-245: велика піктограма речі (картка «взято»): 16 px клітинка в 5× = 80 px на екрані. */
+export function BigItemIcon({ spot }: { spot: string }) {
+  const key = objectiveIcon(spot).key;
+  return <span class="ui-itemcard-icon" data-ui="itemcard-icon" data-icon={key} aria-hidden="true" style={iconCss(key, sheet, 5)} />;
+}

@@ -3,7 +3,7 @@
 import { describe, expect, it } from 'vitest';
 import { dispatch, type Command, type Safeguards } from './commands';
 import { daySummary } from './day-summary';
-import { OM_CLEAN, OM_DISCOVERY, OM_SIDE, TITLE_COUNT, TITLE_XP, XP_CHAPTER, XP_DAY, XP_SECRET, award, awardsFor, backfillProgress, progressOf, questAwards, titleOf, titleStep } from './progress';
+import { XP_TAKE, OM_CLEAN, OM_DISCOVERY, OM_SIDE, TITLE_COUNT, TITLE_XP, XP_CHAPTER, XP_DAY, XP_SECRET, award, awardsFor, backfillProgress, progressOf, questAwards, titleOf, titleStep } from './progress';
 import { fromSave, serialize } from './save';
 import { newSim, step, type SimState } from './sim';
 import { initialState } from './state';
@@ -43,12 +43,12 @@ describe('XP за квести: числа — з контенту, межі д�
     const s = play();
     const stepXp = (quests as { xp: number }[]).reduce((a, q) => a + q.xp, 0);
     const events = s.journal.filter((e) => e.type === 'RoadEvent').length;
-    expect(progressOf(s.game).xp).toBe(stepXp + 3 * XP_DAY + XP_CHAPTER + XP_SECRET);
+    expect(progressOf(s.game).xp).toBe(stepXp + 3 * XP_DAY + XP_CHAPTER + XP_SECRET + 2 * XP_TAKE);   // GAME-245: у сценарії «взято» ліхтар і телефони (подушка — жарт, без XP; повтор — відмова)
     expect(progressOf(s.game).om).toBe(OM_SIDE + events * OM_DISCOVERY);
     const keys = progressOf(s.game).keys;
     expect(new Set(keys).size).toBe(keys.length);
     expect([...keys]).toEqual([...keys].sort());
-    expect(titleOf(progressOf(s.game).xp)).toBe(3);      // 310 XP — четверте звання (поріг 300)
+    expect(titleOf(progressOf(s.game).xp)).toBe(3);      // 316 XP — четверте звання (поріг 300)
   });
 });
 
@@ -86,6 +86,11 @@ describe('нагорода раз за ключ (закон: повтор = 0)',
     expect(awardsFor('Interact', 'obj.litter', GAME_DEFS)).toEqual([{ key: 'i:obj.litter', xp: 0, om: OM_CLEAN }]);
     expect(awardsFor('RoadEvent', 'dlg.ev.ch1.road-002', GAME_DEFS)).toEqual([{ key: 'ev:dlg.ev.ch1.road-002', xp: 0, om: OM_DISCOVERY }]);
     expect(awardsFor('Interact', 'obj.nothing', GAME_DEFS)).toEqual([]);
+    // GAME-245: узяти «потрібне»/«корисне» вдома — +2 XP раз за річ; «можна лишити» (жарт) і невідома річ — нічого.
+    expect(awardsFor('TakeItem', 'item.documents', GAME_DEFS)).toEqual([{ key: 'take:item.documents', xp: XP_TAKE, om: 0 }]);
+    expect(awardsFor('TakeItem', 'item.snacks', GAME_DEFS)).toEqual([{ key: 'take:item.snacks', xp: XP_TAKE, om: 0 }]);
+    expect(awardsFor('TakeItem', 'item.big-cushion', GAME_DEFS)).toEqual([]);
+    expect(awardsFor('TakeItem', 'item.nothing', GAME_DEFS)).toEqual([]);
     expect(awardsFor('Pickup', 'item.tent', GAME_DEFS)).toEqual([]);
     expect(awardsFor('CompleteQuest', null, GAME_DEFS)).toEqual([]);
   });
@@ -151,7 +156,7 @@ describe('підсумок дня: що день дав', () => {
   it('день 1 реплей-сценарію: XP кроків дня 1 + межа дня; лише видане', () => {
     const s = play();
     const day1 = ['PROLOGUE-HOME-001', 'ST-001', 'ST-002', 'ST-003', 'CH1-HOME-001', 'ST-004', 'ST-005'];
-    const xp = day1.reduce((a, id) => a + ((quests as { id: string; xp: number }[]).find((q) => q.id === id)?.xp ?? 0), 0) + XP_DAY + XP_SECRET;
+    const xp = day1.reduce((a, id) => a + ((quests as { id: string; xp: number }[]).find((q) => q.id === id)?.xp ?? 0), 0) + XP_DAY + XP_SECRET + 2 * XP_TAKE;   // GAME-245: взято ліхтар і телефони
     expect(daySummary(s, 1, GAME_DEFS)?.reward.xp).toBe(xp);
     // День 2: велозона (побічка) — +10 ОМ; XP — кроки дня 2 + межа дня 2.
     const day2 = ['CH1-D2-001', 'CH1-D2-ELISE-001', 'q.elise-bike-area', 'CH1-D2-CAMP-001', 'CH1-D2-FIRE-001'];
