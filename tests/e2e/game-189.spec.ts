@@ -49,7 +49,7 @@ for (const v of VIEWS) {
     const errors = await arriveInCamp(page);
     // 1) підпис цілі й стрілка — на одне місце: стрілка веде до task.pitch-tent, а рядок «Далі» каже «постав намет».
     await expect.poll(async () => (await probe(page)).fx.target, { timeout: 20_000, message: 'стрілка мусить вказувати ціль' }).toBe('task.pitch-tent');
-    await expect(page.locator('[data-ui="next-hint"]')).toContainText(/намет/i);
+    await expect(page.locator('[data-ui="agenda-item"][data-current="yes"]')).toHaveAttribute('data-item', 'pitch');   // GAME-243: поточний пункт нотатника — «Поставити намет»
     // 2) без вводу намет не ставиться: чекаємо, ядро не бачить «done», фаза автомата — idle.
     await page.waitForTimeout(4_000);
     expect(await pitchOutcome(page), 'без вводу намет не поставлено').toBe('open');

@@ -1,6 +1,7 @@
 // Знімок сюжету для UI (GAME-32): лише дані й ключі текстів. Команд у ньому немає — UI просить дію
 // за її `id`, а що це за команда, знає тільки шар view (src/view/story-offer.ts).
 import type { Key } from '../i18n';
+import type { AgendaItem } from '../content/agenda';
 
 /** Що можна зробити зараз. `key` — ключ тексту контенту (content/locales), `null` — без назви. */
 export interface OfferAction {
@@ -135,7 +136,13 @@ export interface OfferRequestCard {
 /** Рядок трекера прохання в HUD (GAME-180): «Сміття 2/3»; `ready` — усе зроблено, лишилось повернутись до просильника. */
 export interface OfferTracker { readonly id: string; readonly trackKey: string; readonly done: number; readonly total: number; readonly ready: boolean }
 
+/** GAME-243: пункт нотатника для екрана: назва — ключ UI чи ключ контенту речі. */
+export interface OfferAgendaItem extends Omit<AgendaItem, 'label'> { readonly label: { readonly ui: Key } | { readonly content: string } }
+export interface OfferAgenda { readonly phase: string; readonly items: readonly OfferAgendaItem[]; readonly total: number; readonly doneCount: number }
+
 export interface StoryOffer {
+  /** GAME-243: нотатник Вікторії (мапа-перша гра); null — його немає (панельний режим, персонажа ще немає). */
+  readonly agenda: OfferAgenda | null;
   /** GAME-185: мапа-перша гра — ☰ це лише меню (Атлас, Журнал, налаштування, закрити), без дій сюжету; квести, навички й речі живуть на екрані «Журнал». */
   readonly mapFirst: boolean;
   /** create — персонажа ще немає; play — гра йде; ended — кінець розділу. */
