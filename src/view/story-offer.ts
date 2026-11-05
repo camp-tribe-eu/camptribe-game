@@ -387,7 +387,8 @@ export function storyOffer(sim: SimState, defs: CoreDefs, view: StoryView = PANE
     near: nearL ? { label: nearL.label, itemKey: nearL.ref ? nameKey(nearL.ref) : null } : reqNear ? { label: 'near.req' as Key, itemKey: reqNear.labelKey }
       : view.near !== null && view.mapFirst && isTraceSpot(view.near) && liveTraceSpot(s, view.near) ? { label: 'near.trace' as Key, itemKey: null } : null,   // GAME-215: біля позначки олівцем
   };
-  const base = { mapFirst: view.mapFirst, hint, requests: trackerRows(s, REQUESTS, weather), goal: goalOf(s, st, sim.clock.minutes), progress: progressOffer(s), atlas: atlasOffer(s), nearest: nearestReward(s), goals: s.player ? openGoals(s, st, weather, sim.clock.minutes) : [], moneyCents: s.moneyCents, inventory, journal, lastTrip, weather, forecast: todayForecast(sim), day: storyDay(s.slept), timeMinutes: timeOfDay(sim.clock.minutes), rest: restOffer(sim), wave: waveOffer(sim), mia: miaState(s, defs), ...summaryOffer(sim, defs) };
+  // GAME-256: «День N» у HUD — після сну одразу новий день (07:00), а не лише з 08:00 (dayOf).
+  const base = { mapFirst: view.mapFirst, hint, requests: trackerRows(s, REQUESTS, weather), goal: goalOf(s, st, sim.clock.minutes), progress: progressOffer(s), atlas: atlasOffer(s), nearest: nearestReward(s), goals: s.player ? openGoals(s, st, weather, sim.clock.minutes) : [], moneyCents: s.moneyCents, inventory, journal, lastTrip, weather, forecast: todayForecast(sim), day: Math.max(dayOf(sim.clock) + 1, storyDay(s.slept)), timeMinutes: timeOfDay(sim.clock.minutes), rest: restOffer(sim), wave: waveOffer(sim), mia: miaState(s, defs), ...summaryOffer(sim, defs) };
 
   if (!s.player) {
     const choices = characterChoices(defs);

@@ -14,6 +14,7 @@ import enUi from '../i18n/en.json';
 import { GAME_DEFS } from './slice-defs';
 import quests from '../../content/quests.json';
 import type { Move } from './moves';
+import { waitMoves } from './test-days';
 
 const DEFS: CoreDefs = GAME_DEFS;
 const CTX = { defs: DEFS };
@@ -54,6 +55,7 @@ function walk(intent: Move, label: string): Visited {
       const k = key(next);
       if (!seen.has(k)) { seen.add(k); queue.push(next); }
     }
+    for (const next of waitMoves(s)) { seen.add(key(next)); queue.push(next); }   // ключ не бачить годинника: стан «вечір» має той самий ключ, що й «ранок» — його вивчаємо завжди, інакше вечірні кроки недосяжні   // GAME-256: «Спати» й «дочекатися вечора» — дії гравця поза меню
     if (seen.size > 20_000) throw new Error('простір станів вибухнув — тест не доводить нічого');
   }
   return out;

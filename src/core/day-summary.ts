@@ -45,8 +45,11 @@ export const NIGHT_PREFIX = 'f.night-';
  * (намет стоїть о 10:50), а сон потім відкривав другий підсумок того ж дня. Квест із `dayEnd: true` лишається міткою «кінець дня історії» (дані, XP), але день не
  * закриває; кінець розділу (`end: true`) закриває його й без сну — розділ закінчено, спати вже не треба.
  */
-export const dayEndQuests = (defs: CoreDefs): ReadonlySet<string> =>
+export const dayCloseQuests = (defs: CoreDefs): ReadonlySet<string> =>
   new Set(Object.entries(defs.story?.quests ?? {}).filter(([, q]) => q.end).map(([id]) => id));
+/** Мітки «кінець дня історії» у даних (`dayEnd`/`end`): GAME-141. День вони самі НЕ закривають (див. dayCloseQuests), але лишаються даними сюжету. */
+export const dayEndQuests = (defs: CoreDefs): ReadonlySet<string> =>
+  new Set(Object.entries(defs.story?.quests ?? {}).filter(([, q]) => q.dayEnd === true || q.end).map(([id]) => id));
 
 const isDayEnd = (e: JournalEntry, ends: ReadonlySet<string>): boolean => e.type === 'CompleteQuest' && e.ref !== null && ends.has(e.ref);
 
@@ -65,7 +68,7 @@ export function dayRanges(journal: readonly JournalEntry[], ends: ReadonlySet<st
 
 /** Скільки днів уже завершено (межу пройдено). */
 export const daysEnded = (sim: Pick<SimState, 'journal'>, defs: CoreDefs): number =>
-  dayRanges(sim.journal, dayEndQuests(defs)).filter((r) => r.ended).length;
+  dayRanges(sim.journal, dayCloseQuests(defs)).filter((r) => r.ended).length;
 
 const uniq = (xs: readonly string[]): string[] => [...new Set(xs)];
 
@@ -78,7 +81,7 @@ const uniq = (xs: readonly string[]): string[] => [...new Set(xs)];
 export function daySummary(sim: Pick<SimState, 'game' | 'journal'>, day: number, defs: CoreDefs): DaySummary | null {
   if (!Number.isSafeInteger(day) || day < 1) return null;
   if (sim.journal[0]?.type !== 'CreateCharacter') return null;
-  const ranges = dayRanges(sim.journal, dayEndQuests(defs));
+  const ranges = dayRanges(sim.journal, dayCloseQuests(defs));
   const r = ranges[day - 1];
   if (!r) return null;
   const entries = sim.journal.slice(r.from, r.to + 1);

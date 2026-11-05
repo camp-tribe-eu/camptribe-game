@@ -2,6 +2,7 @@
 // Лічильник сну (`slept`) тут НІКОЛИ не ставиться руками: інакше тест перевіряв би власну підміну, а не ворота дня сюжету.
 import { EVENING, GAME_START_MINUTE, minuteOfDay, nextAt } from '../core/clock';
 import { dispatch, nextCommandId, type Command } from '../core/commands';
+import { canSleep } from '../core/rest';
 import type { CoreDefs } from '../core/defs';
 import { step, type SimState } from '../core/sim';
 import type { GameState } from '../core/state';
@@ -22,7 +23,9 @@ export function toClock(sim: SimState, hh: number, mm = 0, defs: CoreDefs = GAME
 /** Лягти спати: до вечора (18:00), якщо ще вдень, далі — справжня команда Sleep (ядро саме перевіряє ліжко/намет). Прокидання — 07:00 наступної доби. */
 export function sleepThrough(sim: SimState, defs: CoreDefs = GAME_DEFS, id?: string): SimState {
   const evening = minuteOfDay(sim.clock.minutes) >= EVENING || minuteOfDay(sim.clock.minutes) < 7 * 60 ? sim : toClock(sim, 18, 0, defs);
-  const next = step(evening, { kind: 'command', command: { type: 'Sleep', commandId: id ?? `sd-${evening.clock.minutes}-${evening.game.seq}` } as Command }, { defs });
+  // Без намету й ліжка (ніч в авто) лягти можна лише після «пора спати» 22:00 — ядро (canSleep) саме каже, коли.
+  const ready = canSleep(evening.game, evening.clock.minutes) ? evening : toClock(evening, 22, 0, defs);
+  const next = step(ready, { kind: 'command', command: { type: 'Sleep', commandId: id ?? `sd-${ready.clock.minutes}-${ready.game.seq}` } as Command }, { defs });
   if (storyDay(next.game.slept) <= storyDay(sim.game.slept)) throw new Error('sleepThrough: ядро не прийняло Sleep (герой не біля ліжка чи намету?)');
   return next;
 }
@@ -67,4 +70,16 @@ export function simSend(sim: SimState, m: Move, id: string, defs: CoreDefs = GAM
     if (q.status === 'active' && gate?.fromMinute !== undefined && storyDay(s.game.slept) === gate.day && minuteOfDay(s.clock.minutes) < gate.fromMinute) s = toClock(s, Math.floor(gate.fromMinute / 60), gate.fromMinute % 60, defs);
   }
   return step(s, { kind: 'command', command: { ...m, commandId: id } as Command }, { defs });
+}
+
+/**
+ * Дії очікування, яких меню не пропонує як ходи, але гравець робить сам (GAME-256): «лягти спати» (коли активний крок чекає наступного дня) і «дочекатися вечора»
+ * (крок чекає години цього дня). Для перебору через симуляцію: повертає наступні стани.
+ */
+export function waitMoves(sim: SimState, defs: CoreDefs = GAME_DEFS): SimState[] {
+  const out: SimState[] = [];
+  const g = sim.game;
+  if (g.player && Object.entries(g.quests).some(([id, q]) => q.status === 'active' && defs.story?.quests[id]?.gate && storyDay(g.slept) < (defs.story.quests[id]?.gate?.day ?? 0))) out.push(sleepThrough(sim, defs));
+  for (const [id, q] of Object.entries(g.quests)) if (q.status === 'active') { const t = awaitGate(sim, id, defs); if (t !== sim) out.push(t); }
+  return out;
 }

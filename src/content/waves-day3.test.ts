@@ -14,6 +14,7 @@ import { loadContent } from '../../scripts/validator/load.mjs';
 import { GAME_DEFS } from './slice-defs';
 import { CONTENT } from './story';
 import { RAW_WAVES, type RawWave } from './waves';
+import { toDayMinute } from './test-days';
 type Cmd = Command extends infer C ? (C extends Command ? Omit<C, 'commandId'> : never) : never;
 
 const STAGE = 'CH1-D3-001';
@@ -59,7 +60,7 @@ describe('W5 «Не залишати слідів до 11:00» — дані дн
       if (!matches(W.when, p)) continue;
       combosTried++;
       let s = cmd(newSim(3, 5_000), { type: 'CreateCharacter', profileId: k.profile ?? '', transportId: k.transport ?? '', ...(k.animal === 'animal.none' ? {} : { animalId: k.animal }) });
-      s = step(s, { kind: 'advance', minutes: 3 * 1440 + 10 * 60 }, CTX);
+      s = toDayMinute(s, 3, 10);   // GAME-256: день 3, 10:00 — двома справжніми снами
       s = { ...s, game: { ...s.game, quests: { ...s.game.quests, [STAGE]: { status: 'active', done: [] } } } };
       s = cmd(s, { type: 'StartWave', waveId: W5.id });
       expect(ok(s), `${k.profile} ${k.transport} ${k.animal}`).toBe(true);
