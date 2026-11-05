@@ -45,14 +45,14 @@ for (const v of VIEWS) {
     // Родинні репліки, далі сторінка Атласу з «Дім».
     for (let i = 0; i < 12 && (await page.locator('[data-kind="final"]').count()) === 0; i++) await next(page);
     await expect(page.locator('[data-kind="final"]')).toBeVisible();
-    const home = page.locator('[data-ui="sticker"][data-id="sticker.home"]');
+    const home = page.locator('[data-ui="home-sticker"]');
     await expect(home).toHaveAttribute('data-owned', 'yes');
     await expect(home).toHaveAttribute('data-fly', 'yes');
     expect(await sounds(page)).toContain('ui-confirmation');   // «дзинь» — єдиний UI-звук підтвердження
     await expect(page.locator('[data-ui="atlas-count"]')).toHaveAttribute('data-count', '1');
     await page.waitForTimeout(1100);   // анімація польоту завершилась — кадр без розмиття
     await page.screenshot({ path: `research/visual-audit/intro-${v.side}-final.png` });
-    await next(page);   // «До мапи»
+    await page.locator('[data-ui="atlas-cta"]').click();   // «Спланувати першу поїздку» (GAME-250)
     await expect(intro).toHaveCount(0);
     expect((await core(page)).game.stickers).toEqual(['sticker.home']);
     // Атлас із ☰.
@@ -72,9 +72,9 @@ for (const v of VIEWS) {
     expect(g && s && Math.abs(s.x + s.width / 2 - (g.x + g.width / 2)) < 4 && Math.abs(s.y + s.height / 2 - (g.y + g.height / 2)) < 4).toBe(true);
     // Усе вміщається в екран: без горизонтальної прокрутки, кнопка закриття досяжна дотиком.
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
-    await expect(panel.locator('[data-ui="atlas-close"]')).toBeVisible();
+    await expect(panel.locator('[data-ui="atlas-cta"]')).toBeVisible();
     await page.screenshot({ path: `research/visual-audit/atlas-${v.side}-page.png` });
-    await panel.locator('[data-ui="atlas-close"]').click();
+    await panel.locator('[data-ui="atlas-cta"]').click();
     await expect(page.locator('[data-ui="story"]')).toBeVisible();
     // Перезавантаження після вступу: сейв прочитано — вступу немає, наклейка лишилась.
     await page.reload();

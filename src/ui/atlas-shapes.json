@@ -1,0 +1,9 @@
+{
+ "silhouettes": {
+  "mountains": "M2 20 L9 7 L13 13 L16 9 L22 20 Z",
+  "sea": "M2 9 Q5 6 8 9 T14 9 T22 9 M2 14 Q5 11 8 14 T14 14 T22 14 M2 19 Q5 16 8 19 T14 19 T22 19",
+  "castle": "M3 20 V9 H6 V12 H8 V9 H11 V6 H13 V9 H16 V12 H18 V9 H21 V20 Z",
+  "forest": "M6 20 L2 20 L6 9 L10 20 M14 20 L9 20 L14 6 L19 20 M20 20 L17 20 L20 11 L23 20"
+ },
+ "route": "M18 46 C30 40 34 26 50 28"
+}
