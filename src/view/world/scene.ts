@@ -27,6 +27,7 @@ import { GIFT_POSE_FRAMES, giftEmote, giftSound, nextPoseAge, poseColumn } from 
 import { MapFx, type Needs } from './map-fx';
 import { bandOverHero, nextCanopyAlpha } from './canopy';
 import { findWindows, patchAlpha, patchQuads } from './light-patches';
+import { HERO_LIGHT_RADIUS, heroLightAlpha } from './hero-light';
 import { LAMP_RADIUS, findLamps, lampAlpha, lampsOn } from './lamps';
 import { heroBusy } from './hero-busy';
 import { FEEDBACK_S, RING_IDLE, isAutoSpot, pickNearest, ringMayTake, stepRing, vehicleReady, type Insets, type Ring } from './proximity';
@@ -227,7 +228,7 @@ export interface WorldProbe {
   /** GAME-38: мс від початку навігації до першого намальованого кадру Phaser; 0, доки кадру не було (ставить main.ts). */
   firstFrameMs: number;
   /** GAME-99 (лише для e2e): ефект «день і ніч» — що зараз намальовано. `on` — ефект увімкнено; `visible` — прямокутник/пляма видимі (вдень — ні). */
-  daylight: { on: boolean; visible: boolean; minuteOfDay: number; darkness: number; color: number; glow: number };
+  daylight: { on: boolean; visible: boolean; minuteOfDay: number; darkness: number; color: number; glow: number; heroLight: { radius: number; alpha: number } };
   /** GAME-175 (лише для e2e): кільце наближення (0..1, об'єкт), рюкзак, стрілка до мети (none/line/edge), лічильник спливів, дії-від-наближення. */
   fx: { target: string | null; ring: number; ringName: string | null; backpack: number; guide: 'none' | 'line' | 'edge'; pops: number; auto: number; rewards: number; rewardLast: string; headLabels: string[] };
   /** GAME-179 (лише для e2e): які маркери зараз над головами NPC — id → chat («…») / request («!»). */
@@ -354,6 +355,7 @@ export class WorldScene extends Phaser.Scene {
   /** GAME-99: нічна маска (на весь екран, MULTIPLY) і світла пляма вогнища (ADD); null, якщо ефект вимкнено. */
   private night: Phaser.GameObjects.Rectangle | null = null;
   private glow: Phaser.GameObjects.Image | null = null;
+  private heroLightImg: Phaser.GameObjects.Image | null = null;
   private patches: Phaser.GameObjects.Image | null = null;
   private patchCount = 0;
   /** GAME-231: кола світла під ліхтарями табору (ADD, покадрова прозорість). */
@@ -749,6 +751,7 @@ export class WorldScene extends Phaser.Scene {
     this.carFor = '';
     this.carImg = null;
     this.glow = null;
+    this.heroLightImg = null;
     this.patches = null;
     this.patchCount = 0;
     this.lampGlows = [];
@@ -853,7 +856,7 @@ export class WorldScene extends Phaser.Scene {
     this.leisureSpots = fromMap.length > 0 ? fromMap : [...(LEISURE_BY_MAP[key === 'camp' ? 'camp-lake' : key] ?? [])];
     this.idleS = 0;
     this.leisure = null;
-    if (this.daylightOn) this.makeGlow(spawnFire(this.spots));
+    if (this.daylightOn) { this.makeGlow(spawnFire(this.spots)); this.makeHeroLight(); }
 
     this.player.setPosition(spawn.x ?? 0, spawn.y ?? 0);
     this.player.body.reset(spawn.x ?? 0, spawn.y ?? 0);
@@ -1022,6 +1025,27 @@ export class WorldScene extends Phaser.Scene {
     this.night = this.add.rectangle(0, 0, cam.width, cam.height, 0xffffff).setOrigin(0, 0).setScrollFactor(0).setDepth(DEPTH.always + 1).setBlendMode(Phaser.BlendModes.MULTIPLY).setVisible(false);
   }
 
+  /** GAME-251: світле коло героя — створюється на кожен вхід у мапу (як пляма вогнища: `owned` знищується при зміні мапи). */
+  private makeHeroLight(): void {
+    // GAME-251: світле коло героя — той самий прийом, що світло ліхтарів: градієнт з канви, ADD над маскою; позицію ставить updateDaylight.
+    if (!this.textures.exists('hero-light')) {
+      const R = HERO_LIGHT_RADIUS;
+      const tex = this.textures.createCanvas('hero-light', R * 2, R * 2);
+      if (!tex) throw new Error('texture hero-light failed');
+      const ctx = tex.getContext();
+      const css = (c: number): string => `#${c.toString(16).padStart(6, '0')}`;
+      const g = ctx.createRadialGradient(R, R, 0, R, R, R);
+      g.addColorStop(0, `${css(FIRE_CORE)}ff`);
+      g.addColorStop(0.45, `${css(FIRE_CORE)}80`);
+      g.addColorStop(1, `${css(FIRE_CORE)}00`);
+      ctx.fillStyle = g;
+      ctx.fillRect(0, 0, R * 2, R * 2);
+      tex.refresh();
+    }
+    this.heroLightImg = this.add.image(0, 0, 'hero-light').setDepth(DEPTH.always + 2).setBlendMode(Phaser.BlendModes.ADD).setVisible(false);
+    this.owned.push(this.heroLightImg);
+  }
+
   /** Світла пляма вогнища — лише на мапі, де є вогнище (табір); текстура одна на всі входи в табір. */
   private makeGlow(fire: Pt | null): void {
     if (!fire) return;
@@ -1056,11 +1080,13 @@ export class WorldScene extends Phaser.Scene {
     this.night.setVisible(visible);
     if (visible) this.night.setFillStyle(a.color, 1);
     this.glow?.setVisible(visible).setAlpha(glow);
+    const hero = heroLightAlpha(a.darkness);
+    if (this.heroLightImg && this.player) this.heroLightImg.setPosition(this.player.x, this.player.y - 8).setVisible(hero > 0).setAlpha(hero);
     this.patches?.setAlpha(patchAlpha(a.darkness, MAX_DARKNESS));
     const lamp = lampAlpha(minuteOfDay, a.darkness, time);
     for (const g of this.lampGlows) g.setVisible(lamp > 0).setAlpha(lamp);
     Object.assign(this.probe.lamps, { count: this.lampGlows.length, on: lampsOn(minuteOfDay), alpha: this.lampGlows.length ? lamp : 0, radius: LAMP_RADIUS });
-    Object.assign(d, { visible, minuteOfDay, darkness: a.darkness, color: a.color, glow: this.glow ? glow : 0 });
+    Object.assign(d, { visible, minuteOfDay, darkness: a.darkness, color: a.color, glow: this.glow ? glow : 0, heroLight: { radius: HERO_LIGHT_RADIUS, alpha: this.heroLightImg ? hero : 0 } });
   }
 
   /** Сплив і звук на дію: підібрав/поклав — «+1» і клацання, крок/авто — «OK» і підтвердження. */
