@@ -130,7 +130,7 @@ test.describe('HUD не лежить на героєві й родині (вбі
     const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true });
     const page = await ctx.newPage();
     const errors = await arriveInCamp(page);
-    await expect(page.locator('[data-ui="goal"]')).toBeVisible({ timeout: 20_000 });
+    await expect(page.locator('[data-ui="agenda"]')).toBeVisible({ timeout: 20_000 });
     await page.waitForTimeout(1500);
     await page.screenshot({ path: 'research/visual-audit/hud-portrait-390x844.png' });
     expect(errors).toEqual([]);
@@ -144,8 +144,8 @@ test.describe('HUD вбік не лежить на героєві й родин�
   test('табір: екранні прямокутники героя й слідувачів не перетинають жодного рядка HUD і смуга внизу не лягає на джойстик та кнопку дії', async ({ page }) => {
     test.setTimeout(240_000);
     const errors = await arriveInCamp(page);
-    await expect(page.locator('[data-ui="goal"]')).toBeVisible({ timeout: 20_000 });
-    await expect(page.locator('[data-ui="next-hint"]')).toBeVisible();
+    await expect(page.locator('[data-ui="agenda"]')).toBeVisible({ timeout: 20_000 });
+    await expect(page.locator('[data-ui="minimap"]')).toBeVisible();
     await page.waitForTimeout(1500);   // слідувачі дійшли до героя
     const hit = await page.evaluate(() => {
       const g = (window as unknown as { __game: { probe: { playerX: number; playerY: number; cameraScrollX: number; cameraScrollY: number; followers: { x: number; y: number }[] } } }).__game.probe;

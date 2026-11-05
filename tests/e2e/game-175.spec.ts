@@ -252,17 +252,17 @@ test('мутація: німий об\'єкт крамниці (?breakSpot=) —
   await ctx.close();
 });
 
-test('рядок «Далі» не з\'їдає мапу: 375×667 з підказкою канва ≥ 75 % висоти, а рядок на екрані й не налазить на ☰', async ({ browser }) => {
+test('нотатник не з\'їдає мапу: 375×667 із нотатником канва ≥ 75 % висоти, а нотатник на екрані й не налазить на ☰', async ({ browser }) => {
   const ctx = await browser.newContext({ viewport: { width: 375, height: 667 }, hasTouch: true, isMobile: true });
   const page = await ctx.newPage();
   await start(page, /Велосипед|Bike/);
   const m = await page.evaluate(() => {
     const c = document.querySelector('#stage canvas') as HTMLCanvasElement;
     const r = c.getBoundingClientRect();
-    const n = document.querySelector('[data-ui="next-hint"]')?.getBoundingClientRect();
+    const n = document.querySelector('[data-ui="agenda"]')?.getBoundingClientRect();   // GAME-243: рядок «Далі» замінив нотатник
     return { h: r.height, vh: innerHeight, hint: n ? { top: n.top, bottom: n.bottom, w: n.width } : null };
   });
-  expect(m.hint, 'рядок «Далі» є').not.toBeNull();
+  expect(m.hint, 'нотатник є').not.toBeNull();
   expect(m.h, `висота ${m.h} з ${m.vh}`).toBeGreaterThanOrEqual(m.vh * 0.75);
   await ctx.close();
 });

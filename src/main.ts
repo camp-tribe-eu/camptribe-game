@@ -50,6 +50,8 @@ import { miaSpots, requestMarker, requestTarget, requestsDone } from './content/
 import { errandMove, plannedErrands } from './content/errands';
 import { FORAGE_ITEMS, canForage, heartDue, reactionFor } from './content/friendship';
 import type { GiftReaction } from './core/friendship';
+import { agendaOf, minimapTargets, onboarding, type MiniFrame } from './content/agenda';
+import type { MapKey } from './content/map-first';
 import { MAP_SPOTS, departBlock, isBulky, isMapFirstSpot, mapKeyFor, moveKey, needsLeft, nextTarget, npcLive, resolveSpot, spotLook, unpackMoves } from './content/map-first';
 import { carriedOf, takeFlag } from './core/packing';
 import type { GameState } from './core/state';
@@ -318,6 +320,13 @@ applyHintMode();
 let errandsFor: GameState | null = null;
 let errandsMin = -1;
 let errandsMemo: ReturnType<typeof plannedErrands> = [];
+let guideFor: unknown = null;
+let guideOn = true;
+let spotsFor: GameState | null = null;
+let spotsMap: MapKey | '' = '';
+let spotsMemo: readonly string[] = [];
+let miniFrame: MiniFrame | null = null;
+const miniListeners = new Set<(f: MiniFrame) => void>();
 const worldHooks: WorldHooks = {
   hintTick: (dt) => {
     if (bridge.state.game.dialogue !== null) hintIdle.poke();
@@ -326,6 +335,18 @@ const worldHooks: WorldHooks = {
     return v;
   },
   hintPoke: () => hintIdle.poke(),
+  // GAME-243: стрілка — лише навчання (день 1, перші пункти нотатника); у збірці e2e без ?mapFirst=1 — як раніше. Раз на стан ядра, а не на кадр.
+  guide: () => {
+    if (switches.panelActs) return true;
+    if (guideFor !== bridge.state) { guideFor = bridge.state; guideOn = onboarding(bridge.state); }
+    return guideOn;
+  },
+  agendaSpots: () => {
+    if (switches.panelActs) return [];
+    if (spotsFor !== bridge.state.game || spotsMap !== worldHooks.mapKey()) { spotsFor = bridge.state.game; spotsMap = worldHooks.mapKey(); spotsMemo = minimapTargets(agendaOf(bridge.state, GAME_DEFS), spotsMap); }
+    return spotsMemo;
+  },
+  minimap: (f) => { miniFrame = f; for (const l of miniListeners) l(f); },
   onNpc: talkOnMap,
   // GAME-230: реакція на щойно вручений подарунок (одноразово) і гачок сцени серця (раз на стан ядра й хвилину, а не на кадр).
   takeGift: () => { const g = giftFx; giftFx = null; return g; },
@@ -468,6 +489,7 @@ render(h(Shell, {
       return ok;
     },
     hintShown: () => hintIdle.visible(),
+    minimap: { frame: () => miniFrame, subscribe: (l) => { miniListeners.add(l); return () => { miniListeners.delete(l); }; } },
     setHintMode: (m) => { hintMode = m; applyHintMode(); },
     exportCode: () => encodeRestoreCode(saves.exportJson()),
     staleCode: () => (saves.stale ? encodeRestoreCode(saves.stale) : Promise.resolve(null)),
