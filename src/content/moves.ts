@@ -1,5 +1,6 @@
 // Усі дії, які гравець може спробувати в стані, — спільні для повного перебору (story.test) і
 // бота (bot.ts). Ядро саме відмовить у недоречному; тут лише перелік спроб.
+import { basketOf } from '../core/basket';
 import type { Command } from '../core/commands';
 import type { CoreDefs, StoryDefs } from '../core/defs';
 import { canonical } from '../core/hash';
@@ -67,6 +68,7 @@ export function moves(s: GameState, defs: CoreDefs, withRequests = false): Move[
     out.push({ type: 'Continue' });
   }
   for (const l of Object.values(st.locations)) for (const id of l.items) out.push({ type: 'Pickup', itemId: id });
+  if (basketOf(s.flags, defs).length > 0) out.push({ type: 'Checkout' });
   for (const id of Object.keys(defs.items)) {
     if (!s.inventory[id]) out.push({ type: 'BuyItem', itemId: id }); // лише перший примірник — інакше простір станів нескінченний
     out.push({ type: 'SellItem', itemId: id });

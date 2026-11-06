@@ -10,7 +10,7 @@ import { Portrait, type PortraitLookup } from './Portrait';
 import type { OfferAction, StoryOffer } from './story-types';
 
 const ACT: Readonly<Record<Exclude<OfferAction['kind'], 'choose' | 'continue' | 'cancel'>, Key>> = {
-  visit: 'act.visit', talk: 'act.talk', pickup: 'act.pickup', buy: 'act.buy', sell: 'act.sell', dry: 'act.dry', complete: 'act.complete', decline: 'act.decline',
+  visit: 'act.visit', talk: 'act.talk', pickup: 'act.pickup', buy: 'act.buy', checkout: 'act.checkout', sell: 'act.sell', dry: 'act.dry', complete: 'act.complete', decline: 'act.decline',
   load: 'pack.load', leave: 'pack.leave', task: 'act.task', gift: 'act.gift', sleep: 'act.sleep', wait: 'act.waitShop',
 };
 
@@ -18,7 +18,7 @@ const ACT: Readonly<Record<Exclude<OfferAction['kind'], 'choose' | 'continue' | 
 const JR: Readonly<Record<string, Key>> = {
   CreateCharacter: 'jr.CreateCharacter', Visit: 'jr.Visit', Pickup: 'jr.Pickup', BuyItem: 'jr.BuyItem', SellItem: 'jr.SellItem',
   Interact: 'jr.Interact', CompleteQuest: 'jr.CompleteQuest', DeclineQuest: 'jr.DeclineQuest', RoadEvent: 'jr.RoadEvent', StartScene: 'jr.StartScene',
-  PackItem: 'jr.PackItem', UnpackItem: 'jr.UnpackItem', AutoPack: 'jr.AutoPack', TakeItem: 'jr.TakeItem', LoadCar: 'jr.LoadCar', LeaveItem: 'jr.LeaveItem', Memory: 'jr.Memory', CompleteTask: 'jr.CompleteTask', Sleep: 'jr.Sleep',
+  Checkout: 'jr.Checkout', PackItem: 'jr.PackItem', UnpackItem: 'jr.UnpackItem', AutoPack: 'jr.AutoPack', TakeItem: 'jr.TakeItem', LoadCar: 'jr.LoadCar', LeaveItem: 'jr.LeaveItem', Memory: 'jr.Memory', CompleteTask: 'jr.CompleteTask', Sleep: 'jr.Sleep',
 };
 export const JOURNAL_LABELS = JR;
 

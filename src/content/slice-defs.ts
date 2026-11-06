@@ -27,10 +27,18 @@ export const RAW_ITEMS: readonly RawItem[] = items as RawItem[];
  * крамниці-локації, ціль `collect`): їм ціни в грі немає — інакше «підняв, продав, підняв знову» (DEFS_STORY_ITEM_SELLABLE),
  * а купівля другого примірника множила б простір станів. Ціна в картці лишається фактом каталогу (ринкова вартість).
  */
+/**
+ * GAME-246: ціни полиці стартового набору — «база по кишені»: намет + спальник + ліхтар (24,99 + 9,99 + 4,99 = 39,97 €) менші
+ * за стартові 50 € кожного профілю (START_MONEY у bridge.ts; бот не стартує з меншим). Кращі речі — тир 2+ у «Що беремо?».
+ */
+export const SHELF_CENTS: Readonly<Record<string, number>> = { 'item.tent': 2499, 'item.sleeping-bag': 999, 'item.lantern': 499 };
+
 export function compileGear(raw: readonly RawItem[], story: ReadonlySet<string>, soldAt: readonly string[] = [SHOP]): Record<string, ItemDef> {
   return Object.fromEntries(raw.filter((i) => i.kind !== undefined).map((i) => {
     const gear: GearDef = { kind: i.kind as GearDef['kind'], tier: i.tier as number };
-    const prices = story.has(i.id) ? {} : { buyCents: i.priceCents as number, sellCents: i.resaleCents as number, soldAt };
+    // GAME-246: стартовий набір лежить на полиці з ціною, але в руки не йде: Pickup кладе його в кошик, власністю робить каса.
+    const shelf = SHELF_CENTS[i.id];
+    const prices = story.has(i.id) ? (shelf !== undefined ? { shelfCents: shelf } : {}) : { buyCents: i.priceCents as number, sellCents: i.resaleCents as number, soldAt };
     return [i.id, { ...prices, gear }];
   }));
 }
@@ -42,7 +50,7 @@ export const SLICE_DEFS: CoreDefs = {
     ...GEAR_ITEMS,
     // Дрова й ліхтар лежать у локаціях (табір, крамниця) — сюжет дає їх задарма, тож ціни в них немає (GAME-81, DEFS_STORY_ITEM_BUYABLE).
     'item.firewood': {},
-    'item.lantern': {},
+    'item.lantern': { shelfCents: SHELF_CENTS['item.lantern'] as number },
   },
   interactions: {
     // GAME-224: побічні взаємодії (вогнище, сміття, прохання, сліди, фото, лавка) — єдине джерело content/side.ts.

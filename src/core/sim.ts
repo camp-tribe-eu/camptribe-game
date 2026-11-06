@@ -44,7 +44,7 @@ export interface JournalEntry {
  * Repair (GAME-72) поки ні: ремонтів у контенті немає. Додати сюди разом із першим ремонтом у content/.
  * `Memory` (GAME-110) — не команда, а пам'ятний вибір: вибір у розмові поставив факт зі `story.memorable`; ref — назва факту.
  */
-export const JOURNAL_TYPES = ['CreateCharacter', 'Visit', 'Pickup', 'BuyItem', 'SellItem', 'Interact', 'CompleteQuest', 'DeclineQuest', 'RoadEvent', 'StartScene', 'PackItem', 'UnpackItem', 'AutoPack', 'TakeItem', 'LoadCar', 'LeaveItem', 'Memory', 'CompleteTask', 'Sleep'] as const;
+export const JOURNAL_TYPES = ['CreateCharacter', 'Visit', 'Pickup', 'BuyItem', 'SellItem', 'Checkout', 'Interact', 'CompleteQuest', 'DeclineQuest', 'RoadEvent', 'StartScene', 'PackItem', 'UnpackItem', 'AutoPack', 'TakeItem', 'LoadCar', 'LeaveItem', 'Memory', 'CompleteTask', 'Sleep'] as const;
 export type JournalType = (typeof JOURNAL_TYPES)[number];
 export const isJournalType = (t: unknown): t is JournalType => (JOURNAL_TYPES as readonly unknown[]).includes(t);
 

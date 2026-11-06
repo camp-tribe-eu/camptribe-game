@@ -8,6 +8,7 @@
 // Закон «жодних тупиків»: кнопку панелі ховає ЛИШЕ ті дії, для яких на мапі зараз є ЖИВИЙ об'єкт з тією самою командою
 // (coveredKeys будується з resolveSpot — прийнятих ядром ходів). Об'єкт мертвий — кнопка лишається в панелі. Тож пройти
 // можна завжди: або ногами, або (як було) кнопкою. Що саме ногами — доводить map-first.test.ts повним перебором.
+import { basketOf } from '../core/basket';
 import { dispatch, nextCommandId, type Command } from '../core/commands';
 import type { CoreDefs } from '../core/defs';
 import { canonical } from '../core/hash';
@@ -260,8 +261,9 @@ function compute(sim: SimState, defs: CoreDefs, name: string): Resolved | null {
   }
   if (name === 'obj.buy') {
     // GAME-185: прилавок ЗАВЖДИ питає «Що беремо?» (навіть з одним варіантом) і живий, поки є що купити хоч би й на недостатні гроші: недоступні рядки з причиною додає storyOffer.
-    const list = acceptedOf(g, defs, Object.keys(defs.items).flatMap((itemId): Move[] => [{ type: 'BuyItem', itemId }, { type: 'SellItem', itemId }]));
-    const short = Object.keys(defs.items).some((itemId) => { const r = dispatch(g, asCommand(g, { type: 'BuyItem', itemId }), defs); return !r.ok && r.code === 'INSUFFICIENT_FUNDS'; });
+    // GAME-246: у кошику є речі — перший рядок «Сплатити» (каса); лише він і береться з кошика, решта купівель — як було.
+    const list = acceptedOf(g, defs, [{ type: 'Checkout' }, ...Object.keys(defs.items).flatMap((itemId): Move[] => [{ type: 'BuyItem', itemId }, { type: 'SellItem', itemId }])]);
+    const short = basketOf(g.flags, defs).length > 0 || Object.keys(defs.items).some((itemId) => { const r = dispatch(g, asCommand(g, { type: 'BuyItem', itemId }), defs); return !r.ok && r.code === 'INSUFFICIENT_FUNDS'; });
     return list.length === 0 && !short ? null : { moves: [], options: list };
   }
   if (name === 'obj.drying') return choice(acceptedOf(g, defs, Object.entries(g.gear).filter(([, x]) => x.wet).map(([itemId]): Move => ({ type: 'DryGear', itemId }))));
@@ -285,6 +287,8 @@ function compute(sim: SimState, defs: CoreDefs, name: string): Resolved | null {
     return chain(g, defs, [load]) ? { moves: [load], ui: 'trunk' } : { moves: [], ui: 'trunk' };
   }
   if (name === 'obj.vehicle') {
+    // GAME-246: з неоплаченим кошиком авто не їде: «Спершу каса» — пропонується лише оплата (розрахуватись можна й не підходячи до прилавка).
+    if (basketOf(g.flags, defs).length > 0) { const pay = acceptedOf(g, defs, [{ type: 'Checkout' }]); return pay.length > 0 ? { moves: [], options: pay } : null; }
     const v = vehicleMoves(g, defs);
     if (!v) return null;
     if (v.options) return { moves: [], options: v.options };
