@@ -288,6 +288,15 @@ export async function playUntil(page: Page, touch: boolean, log: string[], stop:
     before = await menuSeen();
     if (await page.locator('[data-ui="summary-continue"]').count()) { await page.locator('[data-ui="summary-continue"]').click(); log.push('summary'); await page.waitForTimeout(500); continue; }
     if (await talk(page).count()) { log.push(await answerOne(page)); continue; }
+    // GAME-256: крок чекає свій день/вечір (стрілка каже «вільний час» / «вечір ще попереду»): гравець у грі просто чекає — тут це перемотування годинника до вечора
+    // без ☰ (?skipMinutes). Перед перезавантаженням звіряємо, що ☰ до цього не відкривалась (інакше «без ☰» нічого б не доводило після скачка).
+    const hint = (await page.locator('[data-ui="next-hint"]').textContent().catch(() => '')) ?? '';
+    if (/вільний час|вечір ще попереду/.test(hint)) {
+      expect(await menuSeen(), 'до очікування вечора ☰ не відкривалась').toEqual([]);
+      await skipClockToEvening(page);
+      log.push('wait-evening');
+      continue;
+    }
     log.push(await goAndDo(page, touch));
   }
   throw new Error(`розділ не дійшов до мети за ${max} кроків: ${log.slice(-12).join(' → ')}`);
@@ -378,7 +387,7 @@ export async function closeFishScene(page: Page): Promise<void> {
  * GAME-256 · вечір без очікування: ?skipMinutes=N перемотує годинник ПІСЛЯ завантаження збереження (GAME-242, збережений стан — з автозбереження); поточні перемикачі URL
  * лишаються. Тест не про час, тому перемотування тут допустиме. Після перезавантаження ☰ відкрито знову.
  */
-export async function skipToEvening(page: Page): Promise<void> {
+export async function skipClockToEvening(page: Page): Promise<void> {
   const minutes = (await core(page) as unknown as { clock: { minutes: number } }).clock.minutes;
   const delta = (19 * 60 - ((minutes + 480) % 1440) + 1440) % 1440;
   const url = new URL(page.url());
@@ -387,6 +396,11 @@ export async function skipToEvening(page: Page): Promise<void> {
   await waitGameReady(page);
   await page.locator('[data-ui="recovery-close"]').click({ timeout: 800 }).catch(() => undefined);
   await expect.poll(async () => (((await core(page) as unknown as { clock: { minutes: number } }).clock.minutes + 480) % 1440)).toBeGreaterThanOrEqual(19 * 60);
+}
+
+/** Те саме + відкрити ☰ (для проходів, що працюють через панель). */
+export async function skipToEvening(page: Page): Promise<void> {
+  await skipClockToEvening(page);
   await page.locator('[data-touch="story"]').click();
   await expect(page.locator('[data-ui="story"]')).toBeVisible();
 }

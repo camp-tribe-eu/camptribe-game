@@ -57,6 +57,8 @@ async function playToDayEnd(page: Page, withHands: boolean): Promise<void> {
   for (const [k, key] of [['complete', 'q.prologue-home-001'], ['complete', 'q.st-001'], ['complete', 'q.st-002'], ['visit', 'loc.shop'], ['pickup', 'item.tent'], ['pickup', 'item.sleeping-bag'],
     ['complete', 'q.st-003'], ['visit', 'loc.home'], ['complete', 'q.ch1-home-001'], ['visit', 'loc.road'], ['complete', 'q.st-004'], ['visit', 'loc.camp.lake'], ['talk', 'npc.elise'],
     ['choose', 'dlg.elise-greeting.hello.c2'], ['continue', ''], ['choose', 'dlg.elise-greeting.spot.c1'], ['continue', ''], ['pickup', 'item.firewood']] as const) await act(page, k, key);
+  // GAME-256: день 1 закриває сон, а вечір настає лише з перемотуванням (?skipMinutes = перезавантаження). Перемотуємо ДО дій руками: перезавантаження перебазовує показ рангів (екран «Що відкрилось» — стан показу, не гри), тож усе заслужене має статись після нього.
+  await skipToEvening(page);
   if (withHands) {
     await press(page, panel(page).locator('[data-ui="story-close"]'));
     expect((await core(page)).game.skills['skill.mechanics'], 'до дії «Майстер» на нулі').toBe(0);
@@ -83,7 +85,6 @@ for (const v of VIEWS) {
     for (const l of f.headLabels) expect(heroLabelOk(l), `підпис над героєм «${l}»`).toBe(true);
 
     await expect(levelup(page)).toHaveCount(0);   // до кінця дня екрана нема: ранги не перебивають гру
-    await skipToEvening(page);   // GAME-256: вечір — до завершення кроку (перезавантаження з'їло б екран рангу); день 1 закриває «Спати»
     await act(page, 'complete', 'q.st-005');
     await panel(page).locator('[data-act="sleep"]').click();
 
@@ -157,7 +158,6 @@ test('вимкнено в налаштуваннях: екрана «Що від
   test.setTimeout(240_000);
   const errors = await open(page, { w: 844, h: 390 }, { levelUps: false });
   await playToDayEnd(page, true);
-  await skipToEvening(page);   // GAME-256
   await act(page, 'complete', 'q.st-005');
   await panel(page).locator('[data-act="sleep"]').click();
   await expect(summary(page)).toBeVisible();
