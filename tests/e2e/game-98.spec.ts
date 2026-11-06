@@ -8,6 +8,7 @@
 // без ?holdToast=1 тост зникає, з ним — лишається.
 import { expect, test, type Browser, type Locator, type Page } from '@playwright/test';
 import { waitGameReady } from './ready';
+import { sleepTheDay } from './chapter-driver';
 
 const SETTINGS_KEY = 'camplife.settings.v1';
 const AA = 4.5;
@@ -218,6 +219,7 @@ test('844×390 дотик: підсумок дня → «Продовжити» 
   for (let i = 0; i < 6 && await dlg.isVisible({ timeout: 400 }).catch(() => false); i++) await tap(dlg.locator('[data-act]').last());
   for (const [k, key] of [['complete', 'q.st-004'], ['visit', 'loc.camp.lake'], ['talk', 'npc.elise'], ['choose', 'dlg.elise-greeting.hello.c2'], ['continue', ''],
     ['choose', 'dlg.elise-greeting.spot.c1'], ['continue', ''], ['pickup', 'item.firewood'], ['complete', 'q.st-005']] as const) await tap(panel.locator(`[data-act="${k}"][data-key="${key}"]`));
+  await sleepTheDay(page);   // GAME-256: день 1 закриває сон (вечір — ?skipMinutes, далі «Спати»)
   const summary = page.locator('[data-ui="summary"]');
   await expect(summary).toBeVisible();
   await tap(summary.locator('[data-ui="summary-continue"]'));

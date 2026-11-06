@@ -4,6 +4,7 @@
 import { mkdirSync } from 'node:fs';
 import { expect, test, type Locator, type Page } from '@playwright/test';
 import { waitGameReady } from './ready';
+import { sleepTheDay } from './chapter-driver';
 
 interface Core { game: { stickers?: string[]; flags: string[]; quests: Record<string, { status: string }> } }
 const core = (page: Page): Promise<Core> => page.evaluate(() => (window as unknown as { __game: { read: () => Core } }).__game.read());
@@ -53,6 +54,7 @@ for (const v of VIEWS) {
 
     // Кінець дня 1: тизер видно; рядок із i18n, не ключ.
     await act('complete', 'q.st-005');
+    await sleepTheDay(page);   // GAME-256: день 1 закриває сон
     await expect(summary(page)).toBeVisible();
     const tomorrow = summary(page).locator('[data-ui="summary-tomorrow"]');
     await expect(tomorrow).toBeVisible();
