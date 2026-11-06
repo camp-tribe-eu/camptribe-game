@@ -2,7 +2,7 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { t, type AnyLang, type Key } from '../i18n';
 import { ct } from '../i18n/content';
-import { paintMini } from '../platform/minimap-draw';
+import { miniSig, paintMini } from '../platform/minimap-draw';
 import type { UiPort } from './port';
 import type { OfferAgenda } from './story-types';
 
@@ -38,12 +38,17 @@ export function Radar({ port, lang }: { port: UiPort; lang: AnyLang }) {
   const big = useRef<HTMLCanvasElement>(null);
   const [open, setOpen] = useState(false);
   useEffect(() => {
+    let last = '';   // GAME-267: щокадру сцена шле знімок, а малюємо лише коли він змінився (стоїмо на місці — 0 перемальовувань)
     const draw = (f: NonNullable<ReturnType<UiPort['minimap']['frame']>>): void => {
+      const sig = miniSig(f);
+      if (sig === last) return;
+      last = sig;
       for (const cv of [small.current, big.current]) {
         if (!cv) continue;
         const n = paintMini(cv, f);
         if (cv.dataset.dots !== String(n)) cv.dataset.dots = String(n);
         if (cv.dataset.map !== f.key) cv.dataset.map = f.key;
+        cv.dataset.draws = String(Number(cv.dataset.draws ?? '0') + 1);
         cv.dataset.px = f.px.toFixed(1); cv.dataset.py = f.py.toFixed(1); cv.dataset.dir = f.dir;
       }
     };
