@@ -125,6 +125,7 @@ export const CODES = {
   REQUEST_GATES_QUEST:    { check: 'requests', spec: 'GAME-180: сюжет від прохань не залежить — діалог не рухає квест за прапорцем прохання' },
   WAVE_FLAG_GATES_QUEST:  { check: 'waves', spec: 'GAME-170: кінець розділу від хвиль не залежить — діалог не рухає квест (startQuest/completeObjective) за умовою на прапорець, який ставить наслідок хвилі' },
   WAVE_STAGE_OVERLAP:     { check: 'waves', spec: 'GAME-170: на етапі в кожній комбінації діє не більше однієї хвилі — when двох хвиль одного етапу не перекриваються' },
+  WAVE_AFTER_INVALID:     { check: 'waves', spec: 'GAME-258: `after` справи хвилі веде лише на наявну ціль квесту етапу чи іншу справу цієї хвилі, без циклу й самопосилання' },
   WAVE_ANIMAL_HELPER:     { check: 'waves', spec: 'GAME-170: справу про тварину робить лише лідер (leaderOnly) — помічники шукати Мію не можуть' },
 
   // наклейки Атласу, GAME-182 (content/stickers.json; сценарій §2.1: сторінка — 12 слотів)

@@ -1433,6 +1433,14 @@ export const CHECKS = [
         for (const t of w.tasks) {
           const where = `${w.id}/${t.id}`;
           if (!Number.isInteger(t.limitMin) || t.limitMin < 1 || t.limitMin > WAVE_MAX_LIMIT) out.push(I('WAVE_LIMIT_INVALID', `${where}.limitMin`, `строк ${JSON.stringify(t.limitMin)}: ціле 1…${WAVE_MAX_LIMIT} ігрових хвилин`));
+          // GAME-258: порядок справ за даними — `after` посилається лише на ціль квесту етапу й ІНШІ справи цієї хвилі; цикл чи самопосилання замкнули б справу назавжди.
+          const stageQuest = (c.content.quests ?? []).find((q) => q.id === w.stage);
+          for (const o of t.after?.objectives ?? []) if (!(stageQuest?.objectives ?? []).some((x) => x.id === o)) out.push(I('WAVE_AFTER_INVALID', `${where}.after.objectives`, `ціль «${o}» не існує в квесті етапу ${w.stage}`));
+          for (const id of t.after?.tasks ?? []) {
+            const dep = w.tasks.find((x) => x.id === id);
+            if (!dep || id === t.id) out.push(I('WAVE_AFTER_INVALID', `${where}.after.tasks`, `справа «${id}» ${id === t.id ? 'це сама справа' : 'не існує в цій хвилі'}`));
+            else if ((dep.after?.tasks ?? []).includes(t.id)) out.push(I('WAVE_AFTER_INVALID', `${where}.after.tasks`, `цикл: «${id}» теж чекає на «${t.id}» — обидві справи зависли б`));
+          }
           for (const k of ['done', 'late']) if (t[k] === undefined) out.push(I('WAVE_OUTCOME_MISSING', `${where}.${k}`, `немає наслідку «${k}»: у справи завжди два виходи — встиг і не встиг`));
           // Справа «про кота» визначається не лише полем animal (воно необов’язкове): ще й ціллю animal.* / npc.mia* та словом mia/cat в id справи.
           if (isAnimalTask(t)) {

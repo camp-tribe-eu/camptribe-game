@@ -67,6 +67,15 @@ export class TentRig {
     this.hint = this.scene.add.text(0, 0, '', FONT).setOrigin(0.5, 1).setDepth(TOP + 1);
   }
 
+  private note: Phaser.GameObjects.Text | null = null;
+  /** GAME-258: м'який рядок над героєм (справа ще не в черзі). Гасне сам за 2,6 с; нічого не змінює в стані. */
+  nudge(key: Key): void {
+    this.note?.destroy();
+    const t = this.scene.add.text(this.player.x, meterTop(this.scene, this.player), this.text(key), FONT).setOrigin(0.5, 0).setDepth(TOP + 1);
+    this.note = t;
+    this.scene.time.delayedCall(2600, () => { if (this.note === t) this.note = null; t.destroy(); });
+  }
+
   /** Четвертий кілок забито: лишається готовий намет, шкала й підказка зникають. */
   finish(): void {
     if (this.g) { this.g.clear(); this.g.setAngle(0).setDepth(this.at.y - 8); drawTent(this.g, PEGS, null, 1, PEGS, -1, 0, 0); }

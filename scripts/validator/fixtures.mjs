@@ -503,6 +503,10 @@ export const FIXTURES = [
   { name: '[наклейка] контроль: рівно 12 — коректно', expect: [], patch(c) { for (let i = 0; i < 11; i++) c.stickers.push({ ...c.stickers[0], id: `sticker.fixture-extra-${i}` }); } },
   { name: '[наклейка] без тексту (textKey) — схема', expect: ['SCHEMA_INVALID'], patch(c) { delete c.stickers[0].textKey; } },
   { name: '[наклейка] немає англійського тексту', expect: ['LOCALE_MISSING'], patch(c) { delete c.locales.en['sticker.fixture-first.text']; } },
+  { name: '[хвиля] after: справа чекає сама на себе', expect: ['WAVE_AFTER_INVALID'], patch(c) { wave(c).tasks.push(extraTask('a', { after: { tasks: ['a'] } })); } },
+  { name: '[хвиля] after: цикл двох справ', expect: ['WAVE_AFTER_INVALID'], patch(c) { wave(c).tasks.push(extraTask('a', { after: { tasks: ['b'] } }), extraTask('b', { after: { tasks: ['a'] } })); } },
+  { name: '[хвиля] after: цілі квесту етапу не існує', expect: ['WAVE_AFTER_INVALID'], patch(c) { wave(c).tasks.push(extraTask('a', { after: { objectives: ['no-such-objective'] } })); } },
+  { name: '[хвиля] контроль: after на наявну справу — коректно', expect: [], patch(c) { wave(c).tasks.push(extraTask('a'), extraTask('b', { after: { tasks: ['a'] } })); } },
   { name: '[хвиля] одна справа', expect: ['WAVE_TOO_FEW_TASKS'], patch(c) { wave(c).tasks.pop(); } },
   { name: '[хвиля] п’ять справ — забагато', expect: ['WAVE_TOO_MANY_TASKS'], patch(c) { for (const id of ['a', 'b', 'c']) wave(c).tasks.push(extraTask(id)); } },
   // GAME-202: варіанти за транспортом не складаються — п’ять записів, але гравцеві видно щонайбільше чотири.

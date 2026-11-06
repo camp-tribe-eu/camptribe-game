@@ -247,6 +247,7 @@ const mutations = [
   { name: '[Мія] подія про Мію без умови не перевіряється', file: CHECKS_FILE, from: 'if (d.trigger && isMiaId(d.id) && !gated(d.trigger.when))', to: 'if (false)' },
   { name: '[Мія] ціль квесту про Мію без умови не перевіряється', file: CHECKS_FILE, from: 'if (isMiaId(o.id) && !gated(o.when, q.when))', to: 'if (false)' },
   { name: '[Мія] річ пакування для Мії без умови не перевіряється', file: CHECKS_FILE, from: 'if (isMiaId(x.item) && !gated(x.when))', to: 'if (false)' },
+  { name: '[хвиля] after: цикл і самопосилання проходять', file: CHECKS_FILE, from: "if (!dep || id === t.id) out.push(I('WAVE_AFTER_INVALID'", to: "if (false) out.push(I('WAVE_AFTER_INVALID'" },
   { name: '[хвиля] помічник може шукати тварину', file: CHECKS_FILE, from: "if (t.leaderOnly !== true) out.push(I('WAVE_ANIMAL_HELPER'", to: "if (false) out.push(I('WAVE_ANIMAL_HELPER'" },
   { name: '[хвиля] варіант рахує і справи поза when', file: CHECKS_FILE, from: 'const visible = w.tasks.filter((t) => matches(t.when, k));', to: 'const visible = w.tasks;' },
   { name: '[хвиля] варіант перевіряється й у комбінаціях поза when хвилі', file: CHECKS_FILE, from: 'if (!matches(w.when, k)) continue;\n          const visible', to: 'const visible' },
