@@ -57,10 +57,10 @@ for (const v of VIEWS) {
 
     test('б) після дії над героєм немає тексту «OK» — значок і звук', async ({ page }) => {
       await seedDay1(page);
-      // Дія без «+»: торкнутись автомобіля на мапі табору (obj.vehicle, не прибирання з рюкзака) — сцена дає значок і звук підтвердження.
+      // Дія без «+»: торкнутись кінця пірса на мапі табору (далеко від мешканців, не прибирання з рюкзака) — сцена дає значок і звук підтвердження.
       const p = (await worldProbe(page)) as unknown as { playerX: number; playerY: number };
-      await walk(page, routeXY('camp-lake', [p.playerX, p.playerY], { x: 528, y: 592 }, false, 'obj.vehicle'));
-      await expect.poll(async () => (await worldProbe(page)).nearObject, { timeout: 10_000 }).toBe('obj.vehicle');
+      await walk(page, routeXY('camp-lake', [p.playerX, p.playerY], { x: 1168, y: 240 }, false, 'obj.pier-end'));
+      await expect.poll(async () => (await worldProbe(page)).nearObject, { timeout: 10_000 }).toBe('obj.pier-end');
       await page.locator('[data-touch="interact"]').tap();
       await expect.poll(async () => (await fx(page)).headIcons.length, { timeout: 5_000, message: 'дія без «+» мусить дати значок над героєм' }).toBeGreaterThan(0);
       const f = await fx(page);
