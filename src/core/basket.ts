@@ -10,8 +10,12 @@ export const basketFlag = (itemId: string): string => `${BASKET_PREFIX}${itemId.
 
 const shelfOf = (defs: CoreDefs, itemId: string): number | undefined => (Object.hasOwn(defs.items, itemId) ? defs.items[itemId]?.shelfCents : undefined);
 
-/** Речі в кошику: лише ті, що мають ціну полиці; порядок — за каталогом (детермінований). */
+/** Чи є хоч один прапорець кошика — дешева перевірка (O(прапорців)): її кличе кожен Visit/Pickup перебору й moves() на кожному стані. */
+export const hasBasket = (flags: readonly string[]): boolean => flags.some((f) => f.startsWith(BASKET_PREFIX));
+
+/** Речі в кошику: лише ті, що мають ціну полиці; порядок — за каталогом (детермінований). Порожній кошик — без обходу каталогу. */
 export function basketOf(flags: readonly string[], defs: CoreDefs): string[] {
+  if (!hasBasket(flags)) return [];
   return Object.keys(defs.items).filter((id) => shelfOf(defs, id) !== undefined && flags.includes(basketFlag(id)));
 }
 
