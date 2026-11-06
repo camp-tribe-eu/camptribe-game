@@ -105,3 +105,12 @@ describe('гілки на справжній мапі табору', () => {
     expect(seen.has(`${Math.floor(block.x / 32)},${Math.floor(block.y / 32)}`)).toBe(true);
   });
 });
+
+describe('GAME-270 · perfect (лише e2e)', () => {
+  it('perfect: удар поза зеленим влучає; без perfect — промах', () => {
+    const chop: WoodState = { ...startWood(), phase: 'chop', got: [true, true, true], t: 0 };
+    expect(inBand(markerAt(chop.t))).toBe(false);
+    expect(stepWood(chop, { kind: 'act', branch: null, atBlock: true, perfect: true }).event).toBe('hit');
+    expect(stepWood(chop, { kind: 'act', branch: null, atBlock: true }).event).toBe('miss');
+  });
+});

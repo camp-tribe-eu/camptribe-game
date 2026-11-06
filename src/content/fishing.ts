@@ -45,7 +45,7 @@ export interface FishState {
   readonly released: number;
 }
 export type FishEvent = 'none' | 'charge' | 'cast' | 'bite' | 'hook' | 'slipped' | 'caught' | 'away' | 'kept' | 'released';
-export type FishInput = { readonly kind: 'tick'; readonly dtMs: number; readonly down: boolean } | { readonly kind: 'choose'; readonly keep: boolean };
+export type FishInput = { readonly kind: 'tick'; readonly dtMs: number; readonly down: boolean; /** GAME-270 (лише e2e, ?perfectHits=1): вікно «клює» не спливає — підсікання не залежить від затримки кадрів. */ readonly patient?: boolean } | { readonly kind: 'choose'; readonly keep: boolean };
 
 export const FISH_IDLE: FishState = { phase: 'idle', down: false, power: 0, t: 0, waitMs: 0, species: 0, zone: ZONE / 2, progress: 0, reelT: 0, ph1: 0, ph2: 0, casts: 0, slipped: 0, aways: 0, kept: 0, released: 0 };
 export const catches = (s: FishState): number => s.kept + s.released;
@@ -96,7 +96,7 @@ export function stepFish(s: FishState, i: FishInput, rng: () => number): { state
         return { state: { ...n, phase: 'reel', species, zone: ZONE / 2, progress: START_PROGRESS, reelT: 0, ph1: rng() * Math.PI * 2, ph2: rng() * Math.PI * 2 }, event: 'hook' };
       }
       const t = s.t + i.dtMs;
-      return t >= BITE_MS ? { state: { ...n, phase: 'idle', t: 0, slipped: s.slipped + 1 }, event: 'slipped' } : { state: { ...n, t }, event: 'none' };
+      return t >= BITE_MS && i.patient !== true ? { state: { ...n, phase: 'idle', t: 0, slipped: s.slipped + 1 }, event: 'slipped' } : { state: { ...n, t }, event: 'none' };
     }
     case 'reel': {
       const dt = i.dtMs / 1000;

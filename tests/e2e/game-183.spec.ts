@@ -35,7 +35,7 @@ async function arriveInCamp(page: Page, extra = ''): Promise<string[]> {
   expect((await core(page)).game.player?.locationId).toBe(CAMP);
   await page.waitForTimeout(600);   // автозбереження — на кожну команду
   await installMenuObserver(page);
-  await page.goto(`/?seed=7&mapFirst=1${extra}`);
+  await page.goto(`/?seed=7&mapFirst=1&perfectHits=1${extra}`);   // GAME-270: довгий прохід — міні-ігри без таймінгу   // GAME-270: довгий прохід — міні-ігри без таймінгу
   await waitGameReady(page);
   await page.locator('[data-ui="recovery-close"]').click({ timeout: 800 }).catch(() => undefined);
   expect((await core(page)).game.player?.locationId, 'сейв підхопився: гравець у таборі').toBe(CAMP);

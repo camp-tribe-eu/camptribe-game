@@ -23,7 +23,7 @@ export interface WoodState {
   readonly misses: number;
 }
 export type WoodEvent = 'none' | 'picked' | 'need' | 'chopStart' | 'hit' | 'miss' | 'done';
-export type WoodInput = { readonly kind: 'tick'; readonly dtMs: number } | { readonly kind: 'act'; readonly branch: number | null; readonly atBlock: boolean };
+export type WoodInput = { readonly kind: 'tick'; readonly dtMs: number } | { readonly kind: 'act'; readonly branch: number | null; readonly atBlock: boolean; /** GAME-270 (лише e2e, ?perfectHits=1): удар — завжди влучання, маркер не питаємо. */ readonly perfect?: boolean };
 
 export const WOOD_IDLE: WoodState = { phase: 'idle', got: [false, false, false], strikes: 0, t: 0, misses: 0 };
 export const startWood = (): WoodState => ({ ...WOOD_IDLE, phase: 'gather' });
@@ -52,7 +52,7 @@ export function stepWood(s: WoodState, i: WoodInput): { state: WoodState; event:
     return gotCount(s) >= BRANCHES ? { state: { ...s, phase: 'chop', t: 0 }, event: 'chopStart' } : { state: s, event: 'need' };
   }
   if (s.phase !== 'chop') return { state: s, event: 'none' };
-  if (!inBand(markerAt(s.t))) return { state: { ...s, t: 0, misses: s.misses + 1 }, event: 'miss' };
+  if (i.perfect !== true && !inBand(markerAt(s.t))) return { state: { ...s, t: 0, misses: s.misses + 1 }, event: 'miss' };
   const strikes = s.strikes + 1;
   return strikes >= STRIKES ? { state: { ...s, phase: 'done', strikes, t: 0 }, event: 'done' } : { state: { ...s, strikes, t: 0 }, event: 'hit' };
 }
