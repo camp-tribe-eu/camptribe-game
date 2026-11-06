@@ -54,3 +54,17 @@ export function skipTarget(i: number, created: boolean): number | null {
 export const afterPick = (skipped: boolean): number => (skipped ? MORNING_AT : PICK_AT + 1);
 
 export { GAME_START_MINUTE };
+
+/**
+ * GAME-257: вступ уже показав «лист → Атлас → план на одну ніч», тож однойменні кроки Прологу (PROLOGUE-HOME-001, ST-001, ST-002) закриваються самим вступом — світ
+ * стартує зі зборів (ST-003), а не з повтору. Біт вступу → квести, які він закриває (накопичувально; завершення ідемпотентне — неактивний квест пропускається).
+ * Без вступу (старі сейви, тести з пропуском через панель) цього не викликають — поведінка як була.
+ */
+export type IntroBeat = 'atlas' | 'night' | 'morning';
+export const INTRO_BEAT_QUESTS: Readonly<Record<IntroBeat, readonly string[]>> = {
+  atlas: ['PROLOGUE-HOME-001', 'ST-001'],          // лист знайдено, Атлас відкрито — «Вечір удома» і «Одна вільна ніч»
+  night: ['PROLOGUE-HOME-001', 'ST-001', 'ST-002'], // родинний план розказано — «План на одну ніч»
+  morning: ['PROLOGUE-HOME-001', 'ST-001', 'ST-002'], // також для «Пропустити вступ»: ранок завжди застає пролог закритим
+};
+/** Біт вступу для кроку розкадровки; null — крок нічого не закриває. */
+export const introBeatOf = (kind: StepKind): IntroBeat | null => (kind === 'atlas' || kind === 'night' || kind === 'morning' ? kind : null);

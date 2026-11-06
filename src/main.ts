@@ -4,6 +4,7 @@ import { render, h } from 'preact';
 import { Shell } from './ui/Shell';
 import { t } from './i18n';
 import { loadSettings } from './platform/settings';
+import { INTRO_BEAT_QUESTS } from './content/intro-story';
 import { HINT_FLASH_MS, HintIdle, type HintMode } from './content/hint-idle';
 import { buildLabel } from './core/build-info';
 import { newInput } from './view/world/actions';
@@ -535,6 +536,16 @@ render(h(Shell, {
     onTalk(listener: () => void) {
       talkListeners.add(listener);
       return () => { talkListeners.delete(listener); };
+    },
+    // GAME-257: вступ уже показав лист, Атлас і план — відповідні кроки Прологу закриваються тут тими самими командами CompleteQuest (нагороди й прапорці — з ядра).
+    introBeat(beat) {
+      let any = false;
+      for (const q of INTRO_BEAT_QUESTS[beat]) {
+        if (bridge.state.game.quests[q]?.status !== 'active') continue;
+        bridge.send({ type: 'CompleteQuest', questId: q });
+        any = true;
+      }
+      if (any) storyChanged();
     },
     introRoom: paintRoom,
     coldOpenScene: paintColdOpen,

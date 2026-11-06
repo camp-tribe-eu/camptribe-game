@@ -1,7 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import { shopOpen, isNight, minuteOfDay } from '../core/clock';
 import uk from '../i18n/uk.json';
-import { INTRO_START_LABEL, INTRO_START_TOD, INTRO_STEPS, MORNING_AT, PICK_AT, afterPick, skipTarget } from './intro-story';
+import { dispatch, nextCommandId } from '../core/commands';
+import { initialState, type GameState } from '../core/state';
+import { GAME_DEFS } from './slice-defs';
+import { INTRO_BEAT_QUESTS, INTRO_START_LABEL, introBeatOf, INTRO_START_TOD, INTRO_STEPS, MORNING_AT, PICK_AT, afterPick, skipTarget } from './intro-story';
 
 describe('вступ як розкадровка (GAME-249)', () => {
   it('порядок: пошук → лист → вибір → Атлас → план → ніч → ранок → метушня → мета', () => {
@@ -26,5 +29,45 @@ describe('вступ як розкадровка (GAME-249)', () => {
     expect(isNight(0)).toBe(false);
     expect(shopOpen(0)).toBe(true);
     expect(uk['intro.morning' as keyof typeof uk]).toContain(INTRO_START_LABEL);
+  });
+});
+
+describe('GAME-257: вступ закриває пролог, світ стартує зі зборів', () => {
+  const create = (): GameState => {
+    const r = dispatch(initialState(10_000), { type: 'CreateCharacter', commandId: 'c0', profileId: 'profile.solo-explorer', transportId: 'transport.bike' }, GAME_DEFS);
+    if (!r.ok) throw new Error(r.code);
+    return r.state;
+  };
+  /** Те саме, що робить main.introBeat: CompleteQuest для кожного ще активного квесту біта. */
+  const play = (g: GameState, beat: 'atlas' | 'night' | 'morning'): GameState => {
+    let s = g;
+    for (const q of INTRO_BEAT_QUESTS[beat]) {
+      if (s.quests[q]?.status !== 'active') continue;
+      const r = dispatch(s, { type: 'CompleteQuest', commandId: nextCommandId(s), questId: q }, GAME_DEFS);
+      if (!r.ok) throw new Error(`${q}: ${r.code}`);
+      s = r.state;
+    }
+    return s;
+  };
+  const activeOf = (g: GameState): string[] => Object.entries(g.quests).filter(([, v]) => v.status === 'active').map(([k]) => k);
+
+  it('після героя активний PROLOGUE-HOME-001; усі біти разом ведуть до єдиного активного ST-003', () => {
+    const g = create();
+    expect(activeOf(g)).toEqual(['PROLOGUE-HOME-001']);
+    const a = play(g, 'atlas');
+    expect(activeOf(a)).toEqual(['ST-002']);
+    const n = play(a, 'night');
+    expect(activeOf(n)).toEqual(['ST-003']);
+    expect(play(n, 'morning')).toBe(n);   // ідемпотентно
+  });
+  it('«Пропустити вступ» (одразу біт morning) дає той самий стан, що й повний вступ', () => {
+    const full = play(play(create(), 'atlas'), 'night');
+    const skipped = play(create(), 'morning');
+    expect(activeOf(skipped)).toEqual(['ST-003']);
+    expect(skipped.quests).toEqual(full.quests);
+    expect(skipped.moneyCents).toBe(full.moneyCents);
+  });
+  it('кроки розкадровки, що кличуть біт: atlas, night, morning', () => {
+    expect(INTRO_STEPS.map((s) => introBeatOf(s.kind)).filter((b) => b !== null)).toEqual(['atlas', 'night', 'morning']);
   });
 });
