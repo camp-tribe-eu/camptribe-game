@@ -7,9 +7,10 @@ import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { dispatch, type Command } from '../core/commands';
 import { serialize } from '../core/save';
+import { GAME_START_MINUTE } from '../core/clock';
 import { newSim, step, type SimState } from '../core/sim';
 import { initialState } from '../core/state';
-import { canSleepNow, chapterComplete } from '../core/story';
+import { canSleepNow, chapterComplete, SLEEP_CAP } from '../core/story';
 import { storyOffer } from '../view/story-offer';
 import type { Move } from './moves';
 import { GAME_DEFS } from './slice-defs';
@@ -60,7 +61,8 @@ const atEnd = (s: SimState): SimState => cmd(cmd(s, visit("loc.home")), done("CH
 describe('GAME-264 · кінець розділу: завжди є наступна дія', () => {
   it('фікстура e2e (дорога додому, день 3) = те, що ядро збирає зараз', () => {
     const json = `${serialize(onRoadHome())}\n`;
-    if (process.env.G264_WRITE === '1' || !existsSync(FILE)) { writeFileSync(FILE, json); return; }
+    if (process.env.G264_WRITE === '1') { writeFileSync(FILE, json); return; }
+    expect(existsSync(FILE), 'немає tests/e2e/fixtures/day3-return.json: створи його G264_WRITE=1 (мовчки не створюється — інакше сторож не вміє червоніти)').toBe(true);
     expect(readFileSync(FILE, 'utf8'), 'фікстура розійшлась із ядром: перезапиши G264_WRITE=1').toBe(json);
   });
 
@@ -70,11 +72,11 @@ describe('GAME-264 · кінець розділу: завжди є наступ�
     expect(chapterComplete(end.game, STORY)).toBe(true);
     expect(end.game.player?.locationId).toBe('loc.home');
     for (let hour = 0; hour < 24; hour++) {
-      const sim: SimState = { ...end, clock: { ...end.clock, minutes: Math.floor(end.clock.minutes / 1440) * 1440 + hour * 60 } };
-      expect(canSleepNow(STORY, sim.game, sim.clock.minutes), `${hour}:00 — спати можна`).toBe(true);
+      const sim: SimState = { ...end, clock: { ...end.clock, minutes: Math.floor(end.clock.minutes / 1440) * 1440 + ((hour * 60 - GAME_START_MINUTE + 1440) % 1440) } };
+      expect(canSleepNow(STORY, sim.game, sim.clock.minutes), `${hour}:00 (година доби) — спати можна`).toBe(true);
       const o = storyOffer(sim, GAME_DEFS).offer;
       expect(o.stage).toBe('ended');
-      expect(o.actions.some((a) => a.kind === 'sleep'), `${hour}:00 — у пропозиції є «спати»`).toBe(true);
+      expect(o.actions.some((a) => a.kind === 'sleep'), `${hour}:00 (година доби) — у пропозиції є «спати»`).toBe(true);
     }
     const o = storyOffer(end, GAME_DEFS).offer;
     expect(o.daysEnded).toBeGreaterThanOrEqual(3);
@@ -82,11 +84,16 @@ describe('GAME-264 · кінець розділу: завжди є наступ�
     expect(o.summary?.nextKey, 'розділ завершено — «наступного разу» немає').toBeNull();
   });
 
-  it('сон на кінці розділу справді рахується: rest.slept росте (з нього Shell показує тизер розділу 2), розділ лишається завершеним', () => {
-    const end = atEnd(onRoadHome());
-    const before = storyOffer(end, GAME_DEFS).offer.rest.slept;
-    const slept = cmd(end, { type: 'Sleep' });
-    expect(storyOffer(slept, GAME_DEFS).offer.rest.slept).toBe(before + 1);
-    expect(slept.game.campaignEnded).toBe(true);
+  it('сон на кінці розділу дає НОВУ позначку rest.sleepMark — і після стелі SLEEP_CAP, коли лічильник slept уже не росте (з неї Shell показує тизер розділу 2)', () => {
+    let s = atEnd(onRoadHome());
+    const marks = new Set<string>();
+    for (let i = 0; i < SLEEP_CAP + 2; i++) {
+      s = cmd(s, { type: 'Sleep' });
+      const mark = storyOffer(s, GAME_DEFS).offer.rest.sleepMark;
+      expect(marks.has(mark), `сон №${i + 1}: позначка нова`).toBe(false);
+      marks.add(mark);
+      expect(s.game.campaignEnded).toBe(true);
+    }
+    expect(s.game.slept, 'стеля досягнута — лічильник уже не рос би').toBe(SLEEP_CAP);
   });
 });
