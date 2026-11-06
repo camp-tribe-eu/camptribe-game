@@ -14,7 +14,7 @@ import type { GameState } from '../core/state';
 import { storyOffer } from '../view/story-offer';
 import flags from '../../content/flags.json';
 import uk from '../../content/locales/uk.json';
-import { GAME_DEFS } from './slice-defs';
+import { GAME_DEFS, SHELF_CENTS } from './slice-defs';
 import { CONTENT, STORY, memorableFacts, type RawContent } from './story';
 import { exploreView, type Move } from './moves';
 import { leaveMove } from './road-events.test.helpers';
@@ -35,11 +35,12 @@ const CHOICES = {
 type Pick5 = { readonly [K in keyof typeof CHOICES]: 0 | 1 };
 
 /**
- * Мінімум кінця розділу 1 (для PR): стартові 50 € + нагорода «Прибуття» (rw.st-005, 10 €) = 60 €; у руках намет, спальник і
+ * Мінімум кінця розділу 1 (для PR): стартові 50 € − каса стартового набору (GAME-246: намет 24,99 € + спальник 9,99 €, SHELF_CENTS)
+ * + нагорода «Прибуття» (rw.st-005, 10 €) = 25,02 €; у руках намет, спальник і
  * дрова; ST-001…ST-005, сцени дня 2 (GAME-141) і дня 3 (GAME-144) завершено, розділ закінчено. Жодна комбінація не сміє бути гіршою — і всі мусять бути однаковими.
  */
 const MIN = {
-  moneyCents: START_MONEY + 1_000,
+  moneyCents: START_MONEY - (SHELF_CENTS['item.tent'] as number) - (SHELF_CENTS['item.sleeping-bag'] as number) + 1_000,
   items: ['item.tent', 'item.sleeping-bag', 'item.firewood'],
   quests: ['CH1-HOME-001', 'PROLOGUE-HOME-001', 'ST-001', 'ST-002', 'ST-003', 'ST-004', 'ST-005', 'CH1-D2-001', 'CH1-D2-ELISE-001', 'CH1-D2-CAMP-001', 'CH1-D2-FIRE-001',
     'CH1-D3-001', 'CH1-D3-GEAR-001', 'CH1-D3-ELISE-001', 'CH1-D3-RETURN-001', 'CH1-D3-HOME-001'],

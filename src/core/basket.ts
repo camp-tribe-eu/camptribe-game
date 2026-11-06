@@ -16,12 +16,13 @@ export function basketOf(flags: readonly string[], defs: CoreDefs): string[] {
 }
 
 /**
- * Чи є чим заплатити `cents`: готівка плюс викуп усього, що крамниця забирає назад (sellPriceOf — за станом). Речі Анни (0 €,
+ * Чи є чим заплатити `cents`: готівка поза кошиком (кошик — уже обіцяні гроші) плюс викуп усього, що крамниця забирає назад
+ * (sellPriceOf — за станом). Речі Анни (0 €,
  * `asItem`) ядро дає ЛИШЕ коли платити нічим: інакше дарунок — паралельна гілка (інший стан спорядження й гаманця) через усі
  * дні розділу, і повний перебір (menu-here, bot) ріс у 1,7 раза без нового досяжного кінця (виміряно в GAME-246).
  */
-export function canPay(g: Pick<GameState, 'moneyCents' | 'inventory' | 'gear'>, defs: CoreDefs, cents: number): boolean {
-  let have = g.moneyCents;
+export function canPay(g: Pick<GameState, 'moneyCents' | 'inventory' | 'gear' | 'flags'>, defs: CoreDefs, cents: number): boolean {
+  let have = g.moneyCents - basketTotal(g.flags, defs);
   for (const [id, qty] of Object.entries(g.inventory)) {
     const price = Object.hasOwn(defs.items, id) ? sellPriceOf(defs.items[id], g.gear, id) : undefined;
     if (price !== undefined) have += price * qty;

@@ -270,8 +270,16 @@ function compute(sim: SimState, defs: CoreDefs, name: string): Resolved | null {
   if (name === 'obj.drying') return choice(acceptedOf(g, defs, Object.entries(g.gear).filter(([, x]) => x.wet).map(([itemId]): Move => ({ type: 'DryGear', itemId }))));
   if (name === 'obj.sell') return choice(acceptedOf(g, defs, Object.keys(defs.items).map((itemId): Move => ({ type: 'SellItem', itemId }))));
   if (name.startsWith(SPOT_PREFIX.take)) {
-    const moves: Move[] = [{ type: 'Pickup', itemId: name.slice(SPOT_PREFIX.take.length) }];
-    return chain(g, defs, moves) ? { moves } : null;
+    const itemId = name.slice(SPOT_PREFIX.take.length);
+    const moves: Move[] = [{ type: 'Pickup', itemId }];
+    if (chain(g, defs, moves)) return { moves };
+    // GAME-246: полиця не по кишені (INSUFFICIENT_FUNDS) — та сама полиця дає дарунок Анни (`asItem` → ця річ, стан 60), коли платити
+    // нічим (інакше ядро каже CAN_PAY — спершу продати). Так стрілка «Далі» до намету лишається живою і без грошей, а ☰ не пропонує
+    // дарунок, якого мапа не покриває (camp-first). Є чим платити, але не готівкою — об'єкт мертвий: кнопка лишається в панелі.
+    const r = dispatch(g, asCommand(g, moves[0] as Move), defs);
+    if (r.ok || r.code !== 'INSUFFICIENT_FUNDS') return null;
+    const gift = Object.entries(defs.items).find(([id, d]) => d.asItem?.itemId === itemId && chain(g, defs, [{ type: 'Pickup', itemId: id }]));
+    return gift ? { moves: [{ type: 'Pickup', itemId: gift[0] }] } : null;
   }
   if (name.startsWith(SPOT_PREFIX.pack)) {
     const pk = defs.packing;

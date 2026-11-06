@@ -6,6 +6,8 @@ import { storyItems } from '../core/defs';
 import { initialState, type GameState } from '../core/state';
 import { menuMoves } from '../view/story-offer';
 import { GAME_DEFS, SHOP } from './slice-defs';
+import { resolveSpot } from './map-first';
+import { newSim, step, type SimState } from '../core/sim';
 import { exploreView, moves } from './moves';
 import { canonical } from '../core/hash';
 
@@ -159,6 +161,17 @@ describe('GAME-246 · дарунок Анни лише коли платити �
     expect(dispatch(mid2, { type: 'Pickup', commandId: nextCommandId(mid2), itemId: 'item.sleeping-bag' }, GAME_DEFS).ok).toBe(true);
     // з кошиком у меню/переборі — лише каса й «піти»
     expect([...new Set(moves(mid2, GAME_DEFS).map((m) => m.type))].sort()).toEqual(['Checkout', 'Visit']);
+  });
+  it('30 € і спальник у кошику (9,99 €): намет (24,99 €) у кошик не лягає, а дарунок Анни дають — готівки поза кошиком 20,01 €', () => {
+    const s = atShop(3_000, [{ type: 'Pickup', itemId: 'item.sleeping-bag' }]);
+    expect(dispatch(s, { type: 'Pickup', commandId: nextCommandId(s), itemId: 'item.tent' }, GAME_DEFS)).toMatchObject({ ok: false, code: 'INSUFFICIENT_FUNDS' });
+    expect(accepted(s)).toEqual(['item.tent-anna']);
+    expect(resolveSpot({ ...newSim(1, 0), game: s }, GAME_DEFS, 'take.item.tent')?.moves).toEqual([{ type: 'Pickup', itemId: 'item.tent-anna' }]);
+  });
+  it('мапа: полиця намету без грошей дає дарунок Анни, з грошима — намет (resolveSpot take.item.tent)', () => {
+    const at = (money: number): SimState => { let sim = newSim(1, money); for (const c of [{ type: 'CreateCharacter', profileId: 'profile.solo-explorer', transportId: 'transport.bike' }, { type: 'CompleteQuest', questId: 'PROLOGUE-HOME-001' }, { type: 'CompleteQuest', questId: 'ST-001' }, { type: 'CompleteQuest', questId: 'ST-002' }, { type: 'Visit', locationId: 'loc.shop' }]) sim = step(sim, { kind: 'command', command: { ...c, commandId: nextCommandId(sim.game) } as unknown as Command }, { defs: GAME_DEFS }); return sim; };
+    expect(resolveSpot(at(0), GAME_DEFS, 'take.item.tent')?.moves).toEqual([{ type: 'Pickup', itemId: 'item.tent-anna' }]);
+    expect(resolveSpot(at(5_000), GAME_DEFS, 'take.item.tent')?.moves).toEqual([{ type: 'Pickup', itemId: 'item.tent' }]);
   });
   it('дарунок — звичайна річ у стані 60 і 0 € з гаманця', () => {
     const s = atShop(0);
