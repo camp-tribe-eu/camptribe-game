@@ -1032,5 +1032,10 @@
   "dlg.heart-nora.s3.c1": "I feel calm here too.",
   "dlg.heart-nora.s3.c2": "Tell me more.",
   "dlg.heart-ingrid.s3.c1": "Show me where.",
-  "dlg.heart-ingrid.s3.c2": "I like old maps."
+  "dlg.heart-ingrid.s3.c2": "I like old maps.",
+  "dlg.rest-evening.title": "A quiet while",
+  "dlg.rest-evening.s1": "You settle in by the tent. The sun drifts slowly over the lake while the camp dozes in the pine shade.",
+  "dlg.rest-evening.s2": "Victoria: \"Nobody is in a hurry. Let's just sit for a while.\"",
+  "dlg.rest-evening.s3": "Someone dozes in a chair, someone browses the map, and Mia curls up in the shade of the tent.",
+  "dlg.rest-evening.s4": "When you look around, golden light is already thickening over the camp. Dinner soon."
 }

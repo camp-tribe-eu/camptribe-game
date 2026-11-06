@@ -6,6 +6,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { nextCommandId, type Command } from '../core/commands';
 import { seedRng, nextInt } from '../core/rng';
+import { canRestNow } from '../core/story';
 import { newSim, step, type SimState } from '../core/sim';
 import quests from '../../content/quests.json';
 import campMap from '../../public/maps/camp-lake.tmj?raw';
@@ -74,7 +75,9 @@ function walk(seed: number, steps: number, combo: number): Walk {
       const { offer } = storyOffer(sim, DEFS, MAP_VIEW);
       // 1) панель у таборі: жодного ходу сюжету (усе дає мапа)
       // GAME-242: «Лягти спати» / «Почекати» — дії ритму дня, а не ходи сюжету: ядро дає їх ввечері й у зачиненій крамниці; сюжет вони не рухають.
-      for (const a of offer.actions.filter((x) => x.kind !== 'sleep' && x.kind !== 'wait')) w.problems.push(`${i}: ☰ пропонує «${a.kind} ${a.key ?? ''}» у таборі (квести: ${Object.entries(g.quests).filter(([, q]) => q.status === 'active').map(([id]) => id).join(',')})`);
+      // GAME-269: «Відпочити до вечора» — теж дія ритму дня, але лише в мертвому вікні: поза ним (canRestNow хибне) її поява — проблема, як і раніше.
+      const restOk = canRestNow(DEFS.story, g, sim.clock.minutes);
+      for (const a of offer.actions.filter((x) => x.kind !== 'sleep' && x.kind !== 'wait' && !(x.kind === 'rest' && restOk))) w.problems.push(`${i}: ☰ пропонує «${a.kind} ${a.key ?? ''}» у таборі (квести: ${Object.entries(g.quests).filter(([, q]) => q.status === 'active').map(([id]) => id).join(',')})`);
       // 2) стрілка «Далі» — на живу ціль на мапі, поки розділ іде
       const spot = offer.hint.nextSpot;
       const live = spot !== null && (spot.startsWith('npc.') ? npcLive(g, DEFS, spot) : liveSpot(sim, spot, DEFS));

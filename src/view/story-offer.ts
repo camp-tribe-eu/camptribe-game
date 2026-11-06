@@ -24,7 +24,7 @@ import { pageFill } from '../core/atlas-fill';
 import { nearestReward } from '../content/nearest-reward';
 import { LOCALES } from '../i18n';
 import { dayPartOf, resolveGreeting, trackTalk } from './greeting';
-import { canSleepNow, chapterComplete, matches, questOpen, route, storyDay } from '../core/story';
+import { canRestNow, canSleepNow, chapterComplete, matches, questOpen, route, storyDay } from '../core/story';
 import { awardsFor } from '../core/progress';
 import { capacityOf, carriedOf, overflowCandidates, packedOf, packFlag, packingOpen, packItemsFor, usedUnits } from '../core/packing';
 import { timeOfDay } from './world/daylight';
@@ -450,6 +450,11 @@ export function storyOffer(sim: SimState, defs: CoreDefs, view: StoryView = PANE
       const w: OfferAction = { id: 'rest|wait', kind: 'wait', key: null };
       intents.set(w.id, { type: 'WaitForShop' });
       offered.push(w);
+    }
+    if (canRestNow(st, s, now)) {
+      const r: OfferAction = { id: 'rest|evening', kind: 'rest', key: null };
+      intents.set(r.id, { type: 'RestUntilEvening' });
+      offered.push(r);
     }
     if (canSleepNow(st, s, now)) {
       const z: OfferAction = { id: 'rest|sleep', kind: 'sleep', key: null };

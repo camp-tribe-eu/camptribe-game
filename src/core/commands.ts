@@ -10,7 +10,7 @@ import { gearOf, pruneGear, sellPriceOf } from './gear';
 import { bookLeave, cancelLeave } from './life';
 import { autoPack, capacityOf, carriedOf, loadCarSet, packFlag, packingOpen, packItemsFor, takeFlag, usedUnits, withLoaded, withPacked } from './packing';
 import type { Weather } from './weather';
-import { applyStory, canSleepNow, questNeedsItem, questOpen, SLEEP_CAP, type StoryCommand, type StoryDraft } from './story';
+import { applyStory, canRestNow, canSleepNow, REST_SCENE, questNeedsItem, questOpen, SLEEP_CAP, type StoryCommand, type StoryDraft } from './story';
 import { basketFlag, basketOf, basketTotal, canPay } from './basket';
 import { applyWave, type WaveCommand } from './wave';
 import { award, awardsFor } from './progress';
@@ -59,7 +59,9 @@ export type Command =
   /** Лягти спати (GAME-242): біля ліжка вдома, біля намету в таборі чи будь-де після 22:00. Час перемотує симуляція (до 07:00). */
   | { readonly type: 'Sleep'; readonly commandId: string }
   /** Дочекатися відчинення крамниці (GAME-242): лише в зачиненій крамниці; симуляція перемотує час до 08:00. */
-  | { readonly type: 'WaitForShop'; readonly commandId: string };
+  | { readonly type: 'WaitForShop'; readonly commandId: string }
+  /** Відпочити до вечора (GAME-269): у мертвому вікні дня в таборі; симуляція перемотує час до 17:30, ядро відкриває коротку родинну сцену. Без штрафів. */
+  | { readonly type: 'RestUntilEvening'; readonly commandId: string };
 
 /** Підтверджений факт (CR-031). Причина — commandId команди, що його спричинила. */
 export type GameEvent =
@@ -200,6 +202,13 @@ function apply(cmd: Command, d: Draft, defs: CoreDefs, guard: Safeguards, today:
       if (!(now === undefined ? d.player !== null : canSleepNow(defs.story, d, now))) return 'CONDITION_FAILED';
       d.slept = Math.min((d.slept ?? 0) + 1, SLEEP_CAP);
       return null;
+    case 'RestUntilEvening': {
+      // Без годинника (перебір, бот) відпочинок недоступний: «до вечора» без часу не має змісту, мертвого вікна в них немає.
+      if (now === undefined || !canRestNow(defs.story, d, now)) return 'CONDITION_FAILED';
+      const sc = defs.story ? own(defs.story.dialogues, REST_SCENE) : undefined;
+      if (defs.story && sc) d.dialogue = { id: REST_SCENE, node: sc.start };
+      return null;
+    }
     case 'WaitForShop':
       return now !== undefined && shopClosedHere(d, now) ? null : 'CONDITION_FAILED';
     case 'Interact': {
