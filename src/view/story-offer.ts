@@ -106,7 +106,7 @@ function describe(m: Move, defs: CoreDefs, s: GameState, weather: Weather): Omit
     case 'Pickup': return { kind: 'pickup', key: nameKey(m.itemId) };
     case 'BuyItem': return { kind: 'buy', key: nameKey(m.itemId), priceCents: defs.items[m.itemId]?.buyCents ?? 0 };
     // Уживане спорядження — за станом (SIM-GEAR-004): та сама ціна, яку дасть ядро.
-    case 'Checkout': return { kind: 'checkout', key: null, priceCents: basketTotal(s.flags, defs) };
+    case 'Checkout': return { kind: 'checkout', key: 'basket.all' as Key, priceCents: basketTotal(s.flags, defs) };
     case 'SellItem': return { kind: 'sell', key: nameKey(m.itemId), priceCents: sellPriceOf(defs.items[m.itemId], s.gear, m.itemId) ?? 0 };
     case 'DryGear': return { kind: 'dry', key: nameKey(m.itemId) };
     case 'CompleteQuest':

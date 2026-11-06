@@ -195,6 +195,14 @@ describe('коди відмов: кожен код із реєстру має т
     ['INVALID_CHOICE', s, { ...DRIVER, transportId: 'transport.bike', commandId: 's3' }, STORY_DEFS],
     ['LOCKED', play([DRIVER]), { type: 'Visit', commandId: 's4', locationId: 'loc.shop' }, STORY_DEFS],
     ['NOT_HERE', play([DRIVER, { type: 'Visit', locationId: 'loc.home' }, { type: 'CompleteQuest', questId: 'q.start' }]), { type: 'Talk', commandId: 's5', npcId: 'npc.ann' }, STORY_DEFS],
+    // GAME-246 · кошик: Checkout без речей — BASKET_EMPTY; з речами в кошику вийти не можна — UNPAID_BASKET
+    ['BASKET_EMPTY', play([DRIVER], initialState(1000), STORY_DEFS), { type: 'Checkout', commandId: 's5a' }, STORY_DEFS],
+    ((): [RejectCode, GameState, Command, CoreDefs] => {
+      const defs: CoreDefs = { ...STORY_DEFS, items: { ...STORY_DEFS.items, 'item.wood': { shelfCents: 300 } } };
+      const g = play([DRIVER, { type: 'Pickup', itemId: 'item.wood' }], initialState(1000), defs);
+      const to = Object.keys(defs.story?.locations ?? {}).find((l) => l !== g.player?.locationId) as string;
+      return ['UNPAID_BASKET', g, { type: 'Visit', commandId: 's5b', locationId: to }, defs];
+    })(),
     ['ITEM_ALREADY_HELD', play([DRIVER, { type: 'Pickup', itemId: 'item.wood' }]), { type: 'Pickup', commandId: 's6', itemId: 'item.wood' }, STORY_DEFS],
     // GAME-256 · крок чекає свій день (gate) — активний, але ще не завершується
     ['QUEST_NOT_YET', play([DRIVER, { type: 'Visit', locationId: 'loc.home' }, { type: 'CompleteQuest', questId: 'q.start' }], undefined, GATED_DEFS), { type: 'CompleteQuest', commandId: 's7g', questId: 'q.mid' }, GATED_DEFS],

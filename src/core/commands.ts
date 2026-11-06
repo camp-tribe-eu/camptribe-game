@@ -402,7 +402,12 @@ function apply(cmd: Command, d: Draft, defs: CoreDefs, guard: Safeguards, today:
     }
     case 'Visit':
       // GAME-246: з непорожнім кошиком із крамниці не вийти — спершу каса (крадіжка = ми не маємо речей).
-      if (basketOf(d.flags, defs).length > 0 && d.player && d.player.locationId !== cmd.locationId) return 'UNPAID_BASKET';
+      // Крамниця зачинилась (GAME-242), а кошик неоплачений: не тупик — речі лишаються на полиці (кошик порожніє), вийти можна.
+      if (basketOf(d.flags, defs).length > 0 && d.player && d.player.locationId !== cmd.locationId) {
+        if (now === undefined || !shopClosedHere(d, now)) return 'UNPAID_BASKET';
+        const left = new Set(basketOf(d.flags, defs).map(basketFlag));
+        d.flags = d.flags.filter((f) => !left.has(f));
+      }
       return applyStory(cmd, d, defs.story, isContentId, guard.grantId, now);
     case 'Talk':
     case 'CompleteQuest':

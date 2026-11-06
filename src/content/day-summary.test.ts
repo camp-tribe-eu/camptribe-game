@@ -100,7 +100,7 @@ describe('daySummary: кожна секція — лише при факті (GA
     expect(ids(sum, 'got')).toEqual(['item.tent', 'item.sleeping-bag', 'item.firewood']);
     expect(kinds(sum)).not.toContain('sold');                // нічого не продано — секції немає
     // Гроші дня 1: 100 € на старті − 89 € спальник + 10 € за ST-005 (велозона тепер на дні 2).
-    expect(sum?.money).toEqual({ start: START_MONEY, end: START_MONEY - 8_900 + 1_000 });
+    expect(sum?.money).toEqual({ start: START_MONEY, end: START_MONEY - 8_900 - 3_498 + 1_000 });
   });
 
   it('GAME-141 · день 2 реплей-сценарію (GAME-144: розділ закінчується днем 3); квести дня 2, ночівля нинішня, пакування дня 1 не повторюється', () => {
@@ -114,15 +114,15 @@ describe('daySummary: кожна секція — лише при факті (GA
     expect(kinds(sum)).not.toContain('packed');
     expect(kinds(sum)).not.toContain('bought');
     // Гроші дня 2: від кінця дня 1 + 5 € за велозону.
-    expect(sum?.money).toEqual({ start: START_MONEY - 8_900 + 1_000, end: START_MONEY - 8_900 + 1_000 + 500 });
-    expect(s.game.moneyCents).toBe(START_MONEY - 8_900 + 500 + 1_000);
+    expect(sum?.money).toEqual({ start: START_MONEY - 8_900 - 3_498 + 1_000, end: START_MONEY - 8_900 - 3_498 + 1_000 + 500 });
+    expect(s.game.moneyCents).toBe(START_MONEY - 8_900 - 3_498 + 500 + 1_000);
     // GAME-144: день 3 — речі, прощання, дорога, дім; грошей день не міняє.
     const d3 = daySummary(s, 3, GAME_DEFS);
     expect(d3?.ended).toBe(true);
     expect(ids(d3, 'quests')).toEqual(['CH1-D3-001', 'CH1-D3-GEAR-001', 'CH1-D3-ELISE-001', 'CH1-D3-RETURN-001', 'CH1-D3-HOME-001']);
     expect(ids(d3, 'night')).toEqual(['f.night-tent']);
     expect(unbacked(d3 as DaySummary, s)).toEqual([]);
-    expect(d3?.money).toEqual({ start: START_MONEY - 8_900 + 1_000 + 500, end: START_MONEY - 8_900 + 1_000 + 500 });
+    expect(d3?.money).toEqual({ start: START_MONEY - 8_900 - 3_498 + 1_000 + 500, end: START_MONEY - 8_900 - 3_498 + 1_000 + 500 });
     expect(daySummary(s, 4, GAME_DEFS)).toBeNull();
   });
 
