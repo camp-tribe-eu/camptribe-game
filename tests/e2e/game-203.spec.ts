@@ -14,7 +14,7 @@ for (const c of CASES) {
     test.setTimeout(600_000);
     const ctx = await browser.newContext({ viewport: { width: c.view.w, height: c.view.h }, hasTouch: true, isMobile: true });
     const page = await ctx.newPage();
-    const errors = await arriveInCamp(page, c.alone ? '&tentAlone=1' : '');
+    const errors = await arriveInCamp(page, '&perfectHits=1' + (c.alone ? '&tentAlone=1' : ''));
     await reachPitchTurn(page);   // GAME-258
     expect(await taskOutcome(page, 'pitch-tent')).toBe('open');
     const q = await probe(page);
