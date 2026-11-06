@@ -7,6 +7,8 @@ import { core, installMenuObserver, loaded, menuSeen, playUntil, probe, route, w
 
 const SETTINGS_KEY = 'camplife.settings.v1';
 const SHOTS = 'research/home-items';
+// GAME-267: знімки картки речі — лише за HOME_SHOTS=1: картка живе ≈ 1,5 с покадрово, на повільному CI вона зникала до знімка (Element is not attached). Перевірки картки лишились.
+const SHOT_CARD = process.env.HOME_SHOTS === '1';
 
 async function startHome(page: Page, landscape: boolean): Promise<void> {
   const errors: string[] = [];
@@ -57,8 +59,8 @@ test('взяти три речі: з місць зникли, картка ре�
     }
     const icon = await card.locator('[data-ui="itemcard-icon"]').boundingBox();
     expect(icon?.width ?? 0, 'піктограма ≥ 64 px').toBeGreaterThanOrEqual(64);
-    if (n === 0) await card.screenshot({ path: `${SHOTS}/item-card-closeup.png` });
-    await page.screenshot({ path: `${SHOTS}/after-take-${n + 1}-390x844.png` });
+    if (n === 0 && SHOT_CARD) await card.screenshot({ path: `${SHOTS}/item-card-closeup.png` });
+    if (SHOT_CARD) await page.screenshot({ path: `${SHOTS}/after-take-${n + 1}-390x844.png` });
     expect((await probe(page)).commandsSent).toBeGreaterThan(commands);
     await expect(card).toHaveCount(0, { timeout: 4_000 });   // ~1,5 с покадрово
     // Річ зникла: маркера більше немає, біля місця нічого не стоїть (нема «● Взяти»), повторна спроба команди не шле.
