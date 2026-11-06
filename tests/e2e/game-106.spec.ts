@@ -246,18 +246,23 @@ test('«Продовжити» — назад на мапу; день 2 до «�
   for (const [k, key] of [['complete', 'q.ch1-d3-return-001'], ['visit', 'loc.home']] as const) await click(`[data-act="${k}"][data-key="${key}"]`);
   await expect(summary(page)).toHaveCount(0);                                // контроль: до межі дня 3 підсумку немає
   await click('[data-act="complete"][data-key="q.ch1-d3-home-001"]');
-  // GAME-216: кінець розділу — спершу картка-«серія», підсумок дня 3 — після неї.
-  await expect(page.locator('[data-ui="episode"]')).toBeVisible();
-  await expect(summary(page)).toHaveCount(0);
-  await page.locator('[data-ui="episode-skip"]').click();
+  // GAME-264: кінець розділу — спершу підсумок дня 3, картка-«серія» (тизер розділу 2) — лише після сну з підсумку.
   await expect(summary(page)).toBeVisible();
+  await expect(page.locator('[data-ui="episode"]')).toHaveCount(0);
   await expect(summary(page).locator('h2')).toHaveText('Підсумок дня 3');
   expect(await summary(page).locator('[data-kind="quests"] li').evaluateAll((els) => els.map((e) => (e as HTMLElement).dataset.key)))
     .toEqual(['q.ch1-d3-001', 'q.ch1-d3-gear-001', 'q.ch1-d3-elise-001', 'q.ch1-d3-return-001', 'q.ch1-d3-home-001']);
   expect(await summary(page).textContent()).not.toContain('⟦');
+  await expect(summary(page).locator('[data-ui="summary-continue"]')).toHaveText(/Лягти спати|Go to sleep/);
   await summary(page).locator('[data-ui="summary-continue"]').click();
   await expect(summary(page)).toHaveCount(0);
   await expect(panel(page)).toHaveCount(0);
+  await expect(page.locator('[data-ui="episode"]'), 'після сну — тизер розділу 2').toBeVisible();
+  await page.locator('[data-ui="episode-skip"]').click();
+  await expect(page.locator('[data-ui="episode"]')).toHaveCount(0);
+  // Після тизера гру збережено й відкрито меню паузи (не мертва мапа); «Продовжити» повертає живу мапу з підказкою кінця розділу.
+  await expect(page.locator('[data-ui="pause"]')).toBeVisible();
+  await page.locator('[data-ui="resume"]').click();
   await expect(page.locator('[data-ui="ended-hint"]')).toBeVisible();
   await expect.poll(() => page.evaluate(() => document.activeElement?.id)).toBe('stage');
   const read = () => page.evaluate(() => (window as unknown as { __game: { read: () => { clock: { paused: boolean; minutes: number } } } }).__game.read().clock);

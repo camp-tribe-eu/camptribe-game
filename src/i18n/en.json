@@ -192,6 +192,7 @@
   "sum.sold": "Sold",
   "sum.money": "Money",
   "sum.continue": "Continue",
+  "sum.sleep": "Go to sleep",
   "sum.endSession": "End session",
   "ui.sessionSaved": "Session saved. You can close the game: next time you'll continue from here.",
   "ui.hints": "Hints",
