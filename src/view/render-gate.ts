@@ -30,7 +30,8 @@ export function installRenderGate(game: Phaser.Game): RenderGate {
     drawn += 1;
     preRender.call(renderer);
   };
-  game.scene.render = (r): void => { if (drawing) sceneRender(r); };
+  // Пропущений кадр: SceneManager.render сам скидає isProcessing — скидаємо й тут, інакше add/bringToTop під час закритого світу мовчки стануть у чергу (рецензія Fable #195).
+  game.scene.render = (r): void => { if (drawing) sceneRender(r); else (game.scene as unknown as { isProcessing: boolean }).isProcessing = false; };
   renderer.postRender = function (): void { if (drawing) postRender.call(renderer); };
   return {
     setCovered(next) { if (next && !covered) once = true; covered = next; },
