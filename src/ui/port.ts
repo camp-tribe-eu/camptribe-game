@@ -9,6 +9,8 @@ export interface RewardEvent { readonly xp: number; readonly om: number; readonl
 
 export interface UiPort {
   setPaused(paused: boolean): void;
+  /** GAME-268: світ повністю закрито екраном на все поле — сцена не малює кадрів (рамка розмови не рахується). */
+  setWorldCovered(covered: boolean): void;
   /** Записати сейв у сховище браузера (GAME-33). */
   save(): Promise<boolean>;
   /** Нова гра: стерти поточну й записати чисту; false — у пам'яті нова, але в сховище не записалась. */

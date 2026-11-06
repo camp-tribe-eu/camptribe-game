@@ -15,6 +15,7 @@ import { LevelUp } from './LevelUp';
 import { queueUps, topOverlay, type SkillUp } from './overlay-order';
 import { DialogueBox } from './DialogueBox';
 import { AtlasPanel } from './Atlas';
+import { worldCovered } from './world-cover';
 import { Intro } from './Intro';
 import { ColdOpen } from './ColdOpen';
 import { EpisodeCard } from './EpisodeCard';
@@ -306,6 +307,9 @@ export function Shell({ port, langOverride, credits, build, holdToast = false, h
   const hh = String(Math.floor(offer.timeMinutes / 60)).padStart(2, '0');
   const mm = String(offer.timeMinutes % 60).padStart(2, '0');
   // GAME-229: який із екранів кінця дня зараз зверху (картка розділу → «Що відкрилось» → підсумок).
+  // GAME-268: світ закрито на все поле — сцена не малює (рамка розмови світ не закриває).
+  const covered = worldCovered({ paused, storyOpen, summary: summary !== null, atlasOpen });
+  useEffect(() => { port.setWorldCovered(covered); }, [covered]);
   const top = topOverlay({ episode, ups: shownUps.length, summary: summary !== null });
   const showHint = !settings.hintSeen && offer.stage === 'create';
   // Банер — лише на мапі (не поверх екрана подорожі, паузи чи підсумку дня) і лише поки не минуло TITLE_UP_MIN ігрових хвилин.

@@ -37,6 +37,7 @@ import { frameSize } from './view/world/frame';
 import { CHOICE_CANCEL_ID, storyOffer, type StoryView } from './view/story-offer';
 import { testSwitches } from './view/test-switches';
 import { addFrameLag, bootDelay, onFirstFrame } from './view/frame-lag';
+import { installRenderGate } from './view/render-gate';
 import type { StoryOffer } from './ui/story-types';
 import { uiSounds } from './audio/ui-sounds';
 import { ambient, ambientMix, isIntroOpen, music } from './audio';
@@ -281,10 +282,11 @@ const unloadOne = (manual = false): 'ok' | 'full' | 'none' => {
 const saves = createSaveSession(bridge, saveBackend, { story: STORY, stickers: GAME_DEFS.stickers ?? {}, ...(GAME_DEFS.life ? { life: GAME_DEFS.life } : {}), contentRev: STORY_REV, viable: (g) => saveViable(g, GAME_DEFS) });
 // Тестовий хук Playwright: лише ЧИТАННЯ — знімок стану копією, місток назовні не віддається
 // (рецензія PR #13: раніше скрипт сторінки міг надіслати команду в ядро).
-(window as unknown as { __game: { probe: WorldProbe; read: () => unknown; sounds: () => readonly string[]; ambient: () => Readonly<Record<string, number>>; music: () => Readonly<Record<string, number>>; night: () => { level: number; cricket: number; owl: number } } }).__game = {
+(window as unknown as { __game: { probe: WorldProbe; read: () => unknown; sounds: () => readonly string[]; ambient: () => Readonly<Record<string, number>>; music: () => Readonly<Record<string, number>>; night: () => { level: number; cricket: number; owl: number }; frames: () => number } }).__game = {
   probe,
   sounds: () => [...uiSounds.played, ...sfxPlayer.played], ambient: () => ambient.levels(), music: () => music.levels(), night: () => ({ level: nightSounds.level, ...nightSounds.counts }),   // GAME-40: що мікшер прийняв до відтворення (лише читання)
   read: () => JSON.parse(JSON.stringify(bridge.state)) as unknown,
+  frames: () => renderGate.rendered(),   // GAME-268: скільки кадрів Phaser справді намалював (лише читання)
 };
 
 const stage = document.createElement('div');
@@ -449,6 +451,8 @@ const game = new Phaser.Game({
   physics: { default: 'arcade', arcade: { debug: false } },
   scene: [new WorldScene(bridge, input, probe, worldArt, worldHooks, !switches.noDaylight, (key) => t(langOverride ?? loadSettings().language, key))],
 });
+// GAME-268: шлюз малювання — світ під повним екраном не малюється.
+const renderGate = installRenderGate(game);
 // ?frameLagMs — лише збірка e2e (GAME-97): штучно довгий кадр.
 if (switches.frameLagMs) addFrameLag(game, switches.frameLagMs);
 // GAME-38: перший кадр від початку навігації → probe.firstFrameMs (бюджет 1,5 с, tests/e2e/game-38.spec.ts).
@@ -463,6 +467,7 @@ const applyFrame = (): void => {
   const canvas = game.canvas;
   canvas.style.width = `${f.width * f.zoom}px`;
   canvas.style.height = `${f.height * f.zoom}px`;
+  renderGate.refresh();   // GAME-268: полотно стерто зміною розміру — один кадр, навіть коли світ закрито
   game.scale.refresh();   // межі полотна й displayScale для вводу — з нового style
 };
 new ResizeObserver(applyFrame).observe(stage);
@@ -573,6 +578,7 @@ render(h(Shell, {
       openListeners.add(listener);
       return () => { openListeners.delete(listener); };
     },
+    setWorldCovered: (covered) => renderGate.setCovered(covered),
     setPaused(paused: boolean) {
       // Відпускання клавіші під час паузи сцена не бачить — скидаємо введення на межі паузи,
       // інакше клавіша «залипає» і персонаж іде сам (рецензія PR #13).
