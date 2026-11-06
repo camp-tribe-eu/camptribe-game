@@ -3,7 +3,7 @@
 // разом — в обох орієнтаціях телефона, знімок — посеред забивання, поки помічники тягнуть.
 import { expect, test } from '@playwright/test';
 import { playTent, probe, route, walk } from './chapter-driver';
-import { arriveInCamp, taskOutcome } from './camp-arrival';
+import { arriveInCamp, reachPitchTurn, taskOutcome } from './camp-arrival';
 
 const SHOTS = process.env.FAMILY_SHOTS ?? 'test-results';
 const VIEWS = [{ side: 'landscape', w: 844, h: 390, name: 'ландшафт' }, { side: 'portrait', w: 390, h: 844, name: 'портрет' }] as const;
@@ -15,6 +15,7 @@ for (const c of CASES) {
     const ctx = await browser.newContext({ viewport: { width: c.view.w, height: c.view.h }, hasTouch: true, isMobile: true });
     const page = await ctx.newPage();
     const errors = await arriveInCamp(page, c.alone ? '&tentAlone=1' : '');
+    await reachPitchTurn(page);   // GAME-258
     expect(await taskOutcome(page, 'pitch-tent')).toBe('open');
     const q = await probe(page);
     await walk(page, route('camp-lake', [q.playerX, q.playerY], 'task.pitch-tent'));
