@@ -36,6 +36,7 @@ import { daySummary, daysEnded, NIGHT_PREFIX } from '../core/day-summary';
 import { type OfferAction, type OfferAtlas, type OfferGoal, type OfferCharacter, type OfferPacking, type OfferProgress, type OfferSummary, type OfferWave, type StoryOffer } from '../ui/story-types';
 import { RAW_WAVES } from '../content/waves';
 import { menuTasks } from '../content/director';
+import { agendaOf } from '../content/agenda';
 import { coveredKeys, departBlock, moveKey, nextTarget, resolveSpot, spotLabel } from '../content/map-first';
 import { waveView } from '../core/wave';
 import type { Key } from '../i18n';
@@ -388,7 +389,9 @@ export function storyOffer(sim: SimState, defs: CoreDefs, view: StoryView = PANE
       : view.near !== null && view.mapFirst && isTraceSpot(view.near) && liveTraceSpot(s, view.near) ? { label: 'near.trace' as Key, itemKey: null } : null,   // GAME-215: біля позначки олівцем
   };
   // GAME-256: «День N» у HUD — після сну одразу новий день (07:00), а не лише з 08:00 (dayOf).
-  const base = { mapFirst: view.mapFirst, hint, requests: trackerRows(s, REQUESTS, weather), goal: goalOf(s, st, sim.clock.minutes), progress: progressOffer(s), atlas: atlasOffer(s), nearest: nearestReward(s), goals: s.player ? openGoals(s, st, weather, sim.clock.minutes) : [], moneyCents: s.moneyCents, inventory, journal, lastTrip, weather, forecast: todayForecast(sim), day: Math.max(dayOf(sim.clock) + 1, storyDay(s.slept)), timeMinutes: timeOfDay(sim.clock.minutes), rest: restOffer(sim), wave: waveOffer(sim), mia: miaState(s, defs), ...summaryOffer(sim, defs) };
+  const ag = s.player && view.mapFirst ? agendaOf(sim, defs) : null;
+  const agenda = ag ? { ...ag, items: ag.items.map((i) => ({ ...i, label: 'item' in i.label ? { content: nameKey(i.label.item) ?? i.label.item } : i.label })) } : null;
+  const base = { mapFirst: view.mapFirst, agenda, hint, requests: trackerRows(s, REQUESTS, weather), goal: goalOf(s, st, sim.clock.minutes), progress: progressOffer(s), atlas: atlasOffer(s), nearest: nearestReward(s), goals: s.player ? openGoals(s, st, weather, sim.clock.minutes) : [], moneyCents: s.moneyCents, inventory, journal, lastTrip, weather, forecast: todayForecast(sim), day: Math.max(dayOf(sim.clock) + 1, storyDay(s.slept)), timeMinutes: timeOfDay(sim.clock.minutes), rest: restOffer(sim), wave: waveOffer(sim), mia: miaState(s, defs), ...summaryOffer(sim, defs) };
 
   if (!s.player) {
     const choices = characterChoices(defs);

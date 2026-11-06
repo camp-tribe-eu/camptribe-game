@@ -17,6 +17,7 @@ import { FIRE_CORE, FIRE_GLOW, MAX_DARKNESS, ambientAt, glowAlpha, timeOfDay } f
 import { FOLLOW_SPEED_FACTOR, HERO_STEP_S, SPEED, centerOf, findPath, gridFromWalls, isSolid, restPoints, stepFollowers, stepTo, tileOf, type Grid, type Pt, type Tile } from './follow';
 import { MAX_HELPERS } from '../../content/tent-pitch';
 import type { MapKey } from '../../content/map-first';
+import type { MiniFrame } from '../../content/agenda';
 import { ICON_SIZE, iconIndex, objectiveIcon } from '../../content/objective-icons';
 import { playUi } from '../../audio/ui-sounds';
 import { nightSounds } from '../../audio/night-sounds';
@@ -135,6 +136,12 @@ export interface WorldHooks {
   onFish?(keep: boolean): void;
   /** GAME-192: крок таймера підказки (мс кадру, ціль) → чи показувати стрілку «Далі»; немає — завжди. */
   hintTick?(dtMs: number): boolean;
+  /** GAME-243: чи досі навчання (стрілка-підказка лише в перший день, поки не закрито перші пункти нотатника); немає — як раніше, завжди. */
+  guide?(): boolean;
+  /** GAME-243: об'єкти мапи відкритих пунктів нотатника (крапки мінімапи). */
+  agendaSpots?(): readonly string[];
+  /** GAME-243: знімок мінімапи щокадру (UI малює). */
+  minimap?(frame: MiniFrame): void;
   /** GAME-192: гравець діє (кнопка дії затиснута) — бездіяльність скидається. */
   hintPoke?(): void;
   /** Транспорт гравця (авто малюється спрайтом на подвір'ї, велосипед — маркером). */
@@ -300,6 +307,8 @@ export class WorldScene extends Phaser.Scene {
   private spots: Spot[] = [];
   private bands: Band[] = [];
   private facing: Dir = 'down';
+  /** GAME-243: плитки поточної мапи для мінімапи (будуються при вході в мапу). */
+  private mini: { readonly key: string; readonly cols: number; readonly rows: number; readonly tones: Uint8Array } | null = null;
   private last = { x: 0, y: 0 };
   private grid!: Grid;
   private chain: Pt[] = [];
@@ -825,6 +834,8 @@ export class WorldScene extends Phaser.Scene {
     const swimGrid = key === 'camp' ? swimGridOf(map.width, map.height, groundData, swimRegionOf(objects as never, TILE)) : null;
     this.swim.begin(swimGrid, TILE);
     this.grid = gridFromWalls(map.width, map.height, TILE, swimGrid ? withWater(wallsData, swimGrid) : wallsData);
+    this.mini = { key, cols: map.width, rows: map.height, tones: Uint8Array.from(wallsData, (w) => (w !== -1 && w !== 0 ? 1 : 0)) };
+    if (swimGrid) { const wet = withWater(new Array<number>(map.width * map.height).fill(0), swimGrid); wet.forEach((w, i) => { if (w) (this.mini as { tones: Uint8Array }).tones[i] = 2; }); }
     this.chain = restPoints(this.grid, { x: spawn.x ?? 0, y: spawn.y ?? 0 }, FOLLOWERS.length, this.spots);
     this.followSprites.forEach((sp, i) => sp.setPosition(this.chain[i]?.x ?? 0, this.chain[i]?.y ?? 0).setDepth(this.chain[i]?.y ?? 0));
     this.probe.followers = this.chain.map((p) => ({ x: p.x, y: p.y }));
@@ -1012,6 +1023,19 @@ export class WorldScene extends Phaser.Scene {
   }
 
   /** Запекти шари мапи (у заданому порядку) в одну статичну картинку на всю мапу: піксель у піксель те, що малювали б самі шари. */
+  /** GAME-243: знімок мінімапи — гравець і крапки відкритих пунктів нотатника (у плитках); без вікон і таймерів, щокадру. */
+  private sendMinimap(): void {
+    const m = this.mini;
+    if (!m || !this.hooks.minimap) return;
+    const dots: { x: number; y: number }[] = [];
+    for (const name of this.hooks.agendaSpots?.() ?? []) {
+      const sp = this.spots.find((x) => x.name === name);
+      const pt = sp ? { x: sp.x, y: sp.y } : this.wood.pointOf(name);
+      if (pt) dots.push({ x: pt.x / TILE, y: pt.y / TILE });
+    }
+    this.hooks.minimap({ key: m.key, cols: m.cols, rows: m.rows, tones: m.tones, px: this.player.x / TILE, py: this.player.y / TILE, dir: this.facing, dots });
+  }
+
   private bake(key: string, map: Phaser.Tilemaps.Tilemap, layers: Phaser.Tilemaps.TilemapLayer[]): void {
     const tex = this.textures.addDynamicTexture(key, map.widthInPixels, map.heightInPixels);
     if (!tex) throw new Error(`bake texture ${key} failed`);
@@ -1700,9 +1724,10 @@ export class WorldScene extends Phaser.Scene {
     const tnpc = tn?.startsWith('npc.') && this.hooks.talk(tn) !== null ? this.sprite(tn)?.s : undefined;
     const tpos = ts && (branchPt !== null || this.hooks.isLive(ts.name)) ? { x: ts.x, y: ts.y } : tnpc?.visible ? { x: tnpc.x, y: tnpc.y } : null;
     const insets = this.safeInsets(time);
-    this.hintOn = this.hooks.hintTick?.(delta) ?? true;
+    this.hintOn = (this.hooks.hintTick?.(delta) ?? true) && (this.hooks.guide?.() ?? true);   // GAME-243: поза навчанням стрілки й пульсу цілі немає
     if (held.has('interact')) this.hooks.hintPoke?.();
     this.fx?.drawGuide({ x: this.player.x, y: this.player.y }, this.hintOn ? tpos : null, this.cameras.main.worldView, insets, INTERACT_RANGE * 1.2, time);
+    this.sendMinimap();
     // GAME-185: вбік верхній ряд HUD лежить поверх мапи — герой (а з ним слідувачі) стоїть посередині ВІЛЬНОЇ висоти, а не під ним. Сторч шапка в потоці, камера без зсуву.
     this.cameras.main.setFollowOffset(0, this.landscape ? Math.round(insets.top / 2) : 0);
 

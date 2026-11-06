@@ -54,7 +54,7 @@ for (const v of VIEWS) {
     }
     // 1) стрілка веде до першої гілки; підпис — про дрова.
     await expect.poll(async () => (await probe(page)).fx.target, { timeout: 20_000, message: 'стрілка мусить вказувати першу гілку' }).toBe('wood.branch.0');
-    await expect(page.locator('[data-ui="next-hint"]')).toContainText(/гілки|дрова/i);
+    await expect(page.locator('[data-ui="agenda-item"][data-current="yes"]')).toHaveAttribute('data-item', 'wood');   // GAME-243: поточний пункт нотатника — «Назбирати дров»
     // 2) без вводу дрова не з'являються.
     await page.waitForTimeout(4_000);
     expect(await wood(page), 'без вводу дров нема').toBe(0);
