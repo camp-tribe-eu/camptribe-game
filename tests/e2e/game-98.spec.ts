@@ -204,7 +204,11 @@ test('844×390 дотик: підсумок дня → «Продовжити» 
   test.setTimeout(120_000);
   const page = await open(browser, { width: 844, height: 390 }, true);
   const panel = page.locator('[data-ui="story"]');
-  const tap = async (loc: Locator): Promise<void> => { await loc.scrollIntoViewIfNeeded(); await loc.tap(); await page.waitForTimeout(400); };   // GAME-80: панель глуха ~350 мс
+  // GAME-267: лише tap (він сам прокручує до кнопки й чекає стабільності). Окремий scrollIntoViewIfNeeded перед ним подвоював обміни
+  // з рендерером: при ≈ 4 fps SwiftShader у CI кожен обмін чекає на зайнятий ігровим циклом головний потік (CPU ×20 локально: scroll ≈ 1,3 с
+  // + tap ≈ 1,8 с на крок), і 26 кроків виходили за 120 с бюджету тесту — кнопка при цьому стояла (25 замірів прямокутника — один і той
+  // самий, 0 мутацій DOM у відкритій панелі за 5 с). 400 мс після дії — GAME-80: панель глуха ~350 мс.
+  const tap = async (loc: Locator): Promise<void> => { await loc.tap(); await page.waitForTimeout(400); };
   await tap(page.locator('[data-touch="story"]'));
   await tap(panel.locator('[data-act="create"]', { hasText: /Авто|Car/ }).first());
   for (const [k, key] of [['complete', 'q.prologue-home-001'], ['complete', 'q.st-001'], ['complete', 'q.st-002'], ['visit', 'loc.shop'], ['pickup', 'item.tent'], ['pickup', 'item.sleeping-bag'],
