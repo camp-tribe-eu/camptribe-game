@@ -112,7 +112,7 @@ function play(pick: Pick5, tamper?: Tamper): Run {
   go({ type: 'Choose', choice: pick.roles }); go({ type: 'Continue' }); go({ type: 'Continue' });
   expect(s.game.dialogue).toBeNull();
   go({ type: 'CompleteQuest', questId: 'PROLOGUE-HOME-001' }); go({ type: 'CompleteQuest', questId: 'ST-001' }); go({ type: 'CompleteQuest', questId: 'ST-002' });
-  go({ type: 'Visit', locationId: 'loc.shop' }); go({ type: 'Pickup', itemId: 'item.tent' }); go({ type: 'Pickup', itemId: 'item.sleeping-bag' });
+  go({ type: 'Visit', locationId: 'loc.shop' }); go({ type: 'Pickup', itemId: 'item.tent' }); go({ type: 'Pickup', itemId: 'item.sleeping-bag' }); go({ type: 'Checkout' });
   go({ type: 'CompleteQuest', questId: 'ST-003' }); go({ type: 'Visit', locationId: 'loc.home' }); go({ type: 'CompleteQuest', questId: 'CH1-HOME-001' });
   // Вибір 2 — яблука. Подію може кинути сама симуляція після дороги; не кинула — шлемо її, як шле симуляція.
   go({ type: 'Visit', locationId: 'loc.road' });

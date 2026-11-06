@@ -148,7 +148,7 @@ function beforeRoad(k: Combo): GameState {
   const must = (m: Move): void => { const r = dispatch(s, { ...m, commandId: nextCommandId(s) } as Command, GAME_DEFS); if (!r.ok) throw new Error(`${label(k)}: ${JSON.stringify(m)} відмовлено`); s = r.state; };
   must({ type: 'CreateCharacter', profileId: k.profile ?? '', transportId: k.transport ?? '', animalId: k.animal } as Move);
   for (const m of [{ type: 'CompleteQuest', questId: 'PROLOGUE-HOME-001' }, { type: 'CompleteQuest', questId: 'ST-001' }, { type: 'CompleteQuest', questId: 'ST-002' },
-    { type: 'Visit', locationId: 'loc.shop' }, { type: 'Pickup', itemId: 'item.tent' }, { type: 'Pickup', itemId: 'item.sleeping-bag' },
+    { type: 'Visit', locationId: 'loc.shop' }, { type: 'Pickup', itemId: 'item.tent' }, { type: 'Pickup', itemId: 'item.sleeping-bag' }, { type: 'Checkout' },
     { type: 'CompleteQuest', questId: 'ST-003' }, { type: 'Visit', locationId: 'loc.home' }, { type: 'CompleteQuest', questId: 'CH1-HOME-001' }] as Move[]) must(m);
   return s;
 }
@@ -200,7 +200,7 @@ describe('GAME-111 · Спосіб перевірки 3: п’ять момен�
     const go = (m: Move): void => { s = step(s, { kind: 'command', command: { ...m, commandId: nextCommandId(s.game) } as Command }, { defs: GAME_DEFS }); };
     go({ type: 'CreateCharacter', profileId: k.profile ?? '', transportId: k.transport ?? '', animalId: k.animal } as Move);
     for (const m of [{ type: 'CompleteQuest', questId: 'PROLOGUE-HOME-001' }, { type: 'CompleteQuest', questId: 'ST-001' }, { type: 'CompleteQuest', questId: 'ST-002' },
-      { type: 'Visit', locationId: 'loc.shop' }, { type: 'Pickup', itemId: 'item.tent' }, { type: 'Pickup', itemId: 'item.sleeping-bag' },
+      { type: 'Visit', locationId: 'loc.shop' }, { type: 'Pickup', itemId: 'item.tent' }, { type: 'Pickup', itemId: 'item.sleeping-bag' }, { type: 'Checkout' },
       { type: 'CompleteQuest', questId: 'ST-003' }, { type: 'Visit', locationId: 'loc.home' }, { type: 'CompleteQuest', questId: 'CH1-HOME-001' }] as Move[]) go(m);
     const seen: string[] = [];
     for (let n = 0; n < times; n++) {

@@ -48,7 +48,7 @@ function afterDay2(c: Combo): GameState {
   const create = { type: 'CreateCharacter', profileId: c.profile, transportId: c.transport, ...(c.animal === 'animal.none' ? {} : { animalId: c.animal }) } as Move;
   return play([
     create, done('PROLOGUE-HOME-001'), done('ST-001'), done('ST-002'),
-    visit('loc.shop'), { type: 'Pickup', itemId: 'item.tent' }, { type: 'Pickup', itemId: 'item.sleeping-bag' }, done('ST-003'),
+    visit('loc.shop'), { type: 'Pickup', itemId: 'item.tent' }, { type: 'Pickup', itemId: 'item.sleeping-bag' }, { type: 'Checkout' }, done('ST-003'),
     visit('loc.home'), done('CH1-HOME-001'), visit('loc.road'), done('ST-004'), visit('loc.camp.lake'),
     ...meet, { type: 'Pickup', itemId: 'item.firewood' }, done('ST-005'), SLEEP,
     done('CH1-D2-001'), talk, choose(10), choose(1), next, done('CH1-D2-ELISE-001'),

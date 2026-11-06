@@ -17,7 +17,7 @@ const cmd = (s: SimState, c: Record<string, unknown>): SimState => step(s, { kin
 function carDay(seed: number): SimState {
   let s = cmd(newSim(seed, 5_000), { type: 'CreateCharacter', profileId: 'profile.solo-explorer', transportId: 'transport.car' });
   for (const c of [{ type: 'CompleteQuest', questId: 'PROLOGUE-HOME-001' }, { type: 'CompleteQuest', questId: 'ST-001' }, { type: 'CompleteQuest', questId: 'ST-002' }, { type: 'Visit', locationId: 'loc.shop' },
-    { type: 'Pickup', itemId: 'item.tent' }, { type: 'Pickup', itemId: 'item.sleeping-bag' }, { type: 'CompleteQuest', questId: 'ST-003' },
+    { type: 'Pickup', itemId: 'item.tent' }, { type: 'Pickup', itemId: 'item.sleeping-bag' }, { type: 'Checkout' }, { type: 'CompleteQuest', questId: 'ST-003' },
     { type: 'Visit', locationId: 'loc.home' }, { type: 'CompleteQuest', questId: 'CH1-HOME-001' }, { type: 'Visit', locationId: 'loc.road' }]) s = cmd(s, c);
   for (let i = 0; s.game.dialogue && i < 20; i++) { const d = s.game.dialogue; s = cmd(s, { type: 'Continue' }); if (s.game.dialogue === d) s = cmd(s, { type: 'Choose', choice: 1 }); }
   for (const c of [{ type: 'CompleteQuest', questId: 'ST-004' }, { type: 'Visit', locationId: 'loc.camp.lake' }, { type: 'Talk', npcId: 'npc.elise' }, { type: 'Choose', choice: 1 },

@@ -474,8 +474,11 @@ export function nextTarget(sim: SimState, defs: CoreDefs, carried: readonly stri
   if (p.locationId === MAP_LOCATION.camp) return campNext(sim, defs);
   if (p.locationId === MAP_LOCATION.shop) {
     if (quest(g, 'ST-003')) {
-      if (!g.inventory['item.tent']) return { key: 'next.take-tent', spot: 'take.item.tent' };
-      if (!g.inventory['item.sleeping-bag']) return { key: 'next.take-bag', spot: 'take.item.sleeping-bag' };
+      // GAME-246: узяте лежить у кошику, власністю його робить каса: спершу все на полиці, потім до каси, потім крок завершується.
+      const inBasket = (id: string): boolean => basketOf(g.flags, defs).includes(id);
+      if (!g.inventory['item.tent'] && !inBasket('item.tent')) return { key: 'next.take-tent', spot: 'take.item.tent' };
+      if (!g.inventory['item.sleeping-bag'] && !inBasket('item.sleeping-bag')) return { key: 'next.take-bag', spot: 'take.item.sleeping-bag' };
+      if (basketOf(g.flags, defs).length > 0) return { key: 'next.pay', spot: 'obj.buy' };
       return { key: 'next.pay', spot: 'step.ST-003' };
     }
     return { key: 'next.back-home', spot: 'obj.vehicle' };

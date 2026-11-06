@@ -33,8 +33,13 @@ function progressSpots(sim: SimState): { name: string; moves: readonly Move[] }[
   const map = mapKeyFor(sim.game.player?.locationId);
   if (map === 'camp' || map === 'road') return [];
   // GAME-183: справи хвилі, сушарка, приймальня й прилавок — не рухають сюжет дня 1 (множили б простір станів): їх доводить camp-first.test повним шляхом усього розділу.
-  return (MAP_SPOTS[map] as readonly string[]).filter((n) => !n.startsWith('pack.') && !n.startsWith('task.') && !['obj.trunk', 'obj.drying', 'obj.sell', 'obj.buy', 'step.ST-004', 'step.CH1-D3-HOME-001'].includes(n) && !n.startsWith('npc.'))
-    .flatMap((name) => { const r = resolveSpot(sim, DEFS, name); return r && r.moves.length > 0 ? [{ name, moves: r.moves }] : []; });
+  return (MAP_SPOTS[map] as readonly string[]).filter((n) => !n.startsWith('pack.') && !n.startsWith('task.') && !['obj.trunk', 'obj.drying', 'obj.sell', 'step.ST-004', 'step.CH1-D3-HOME-001'].includes(n) && !n.startsWith('npc.'))
+    .flatMap((name) => {
+      const r = resolveSpot(sim, DEFS, name);
+      // GAME-246: каса — вибір (options), але в ньому єдина відповідь «Сплатити»: гравець руками її й натисне; решту прилавка (купівлі) тест не рухає.
+      const pay = name === 'obj.buy' ? (r?.options ?? []).filter((m) => m.type === 'Checkout') : [];
+      return r && r.moves.length > 0 ? [{ name, moves: r.moves }] : pay.length > 0 ? [{ name, moves: pay }] : [];
+    });
 }
 const applyAll = (sim: SimState, moves: readonly Move[]): SimState => moves.reduce(send, sim);
 
@@ -111,7 +116,7 @@ describe('панель ховає кнопку лише там, де мапа д
   const orphans = (sim: SimState, onMap: Readonly<Record<'home' | 'shop' | 'road', readonly string[]>>): string[] => {
     const map = mapKeyFor(sim.game.player?.locationId);
     if (map === 'camp' || map === 'road') return hidden(sim);
-    return hidden(sim).filter((k) => !(MAP_SPOTS[map] as readonly string[]).some((n) => onMap[map].includes(n) && (resolveSpot(sim, DEFS, n)?.moves ?? []).some((m) => moveKey(m) === k) || (k.startsWith('Talk|') && onMap[map].includes(k.slice(5))) || (k.startsWith('Visit|') && onMap[map].includes('obj.vehicle') && resolveSpot(sim, DEFS, 'obj.vehicle') !== null)));   // GAME-183: живе авто покриває всі відкриті дороги звідси
+    return hidden(sim).filter((k) => !(MAP_SPOTS[map] as readonly string[]).some((n) => onMap[map].includes(n) && [...(resolveSpot(sim, DEFS, n)?.moves ?? []), ...(k === 'Checkout|' ? resolveSpot(sim, DEFS, n)?.options ?? [] : [])].some((m) => moveKey(m) === k) || (k.startsWith('Talk|') && onMap[map].includes(k.slice(5))) || (k.startsWith('Visit|') && onMap[map].includes('obj.vehicle') && resolveSpot(sim, DEFS, 'obj.vehicle') !== null)));   // GAME-183: живе авто покриває всі відкриті дороги звідси
   };
   const real = { home: placed('home'), shop: placed('shop'), road: placed('road') };
 
