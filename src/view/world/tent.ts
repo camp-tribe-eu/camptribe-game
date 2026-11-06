@@ -43,6 +43,8 @@ export class TentRig {
   private helpers = 0;
   /** Куди дивитись герою на останньому ударі (до кілка); сцена грає thrust у цей бік. */
   strikeDir: Dir = 'down';
+  /** GAME-270 (лише e2e, ?perfectHits=1): кожен удар по кілку влучає. */
+  perfect = false;
 
   constructor(private readonly scene: Phaser.Scene, private readonly player: Phaser.GameObjects.Sprite, private readonly text: (key: Key) => string) {}
 
@@ -114,7 +116,7 @@ export class TentRig {
   act(facing: Dir): TentEvent {
     if (!this.active) return 'none';
     const placing = this.s.phase === 'place';
-    const e = this.feed({ kind: 'act', placeOk: this.ok });
+    const e = this.feed({ kind: 'act', placeOk: this.ok, perfect: this.perfect });
     const peg = CORNERS[Math.min(this.s.pegs - (e === 'hit' || e === 'done' ? 1 : 0), PEGS - 1)] as Pt;   // тато б'є кути по черзі з першого; решту (need..PEGS) тримають відтяжками помічники
     switch (e) {
       case 'placed': playUi('confirm'); this.dust(this.at.x, this.at.y + 8, 5); break;

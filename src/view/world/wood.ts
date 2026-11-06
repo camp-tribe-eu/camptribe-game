@@ -34,6 +34,8 @@ export class WoodRig {
 
   get phase(): WoodState['phase'] { return this.s.phase; }
   get active(): boolean { return this.s.phase === 'gather' || this.s.phase === 'chop'; }
+  /** GAME-270 (лише e2e, ?perfectHits=1): кожен удар по колоді влучає. */
+  perfect = false;
   get chopping(): boolean { return this.s.phase === 'chop'; }
   /** Герой стоїть, поки рубає (поки збирає гілки — ходить вільно). */
   get holdsHero(): boolean { return this.s.phase === 'chop'; }
@@ -112,7 +114,7 @@ export class WoodRig {
   /** Дія гравця (E / кнопка / тап). Повертає подію; `done` — час віддати ядру команду. */
   act(branch: number | null, atBlock: boolean): WoodEvent {
     if (!this.active) return 'none';
-    const e = this.feed({ kind: 'act', branch, atBlock });
+    const e = this.feed({ kind: 'act', branch, atBlock, perfect: this.perfect });
     const g = branch !== null ? this.sticks[branch] : undefined;
     switch (e) {
       case 'picked': sfx('branch'); playUi('press'); if (g) { this.fx.burst(g.x, g.y, 4, 0xcdbfa0, { r: 8, rise: 2 }); g.setVisible(false); } break;

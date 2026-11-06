@@ -34,6 +34,8 @@ export const FISH_PROBE_IDLE: FishProbe = { phase: 'idle', power: 0, waitMs: 0, 
 export interface FishFrame { readonly down: boolean; readonly near: boolean; readonly left: boolean; readonly right: boolean; readonly tap: Pt | null; readonly time: number }
 
 export class FishRig {
+  /** GAME-270 (лише e2e, ?perfectHits=1): вікно «клює» не спливає. */
+  patient = false;
   private s: FishState = FISH_IDLE;
   private readonly fx: FrameFx;
   private readonly rng = makeRng(193);
@@ -132,7 +134,7 @@ export class FishRig {
       if (pick !== null) { const e = this.feed({ kind: 'choose', keep: pick === 1 }); out.push(e); this.react(e); }
     } else {
       // Поза рибалкою дія рахується лише біля берега; щойно рибалка почалась — тримання ведеться де завгодно (герой стоїть).
-      const e = this.feed({ kind: 'tick', dtMs: dt, down: f.down && (f.near || this.busy) });
+      const e = this.feed({ kind: 'tick', dtMs: dt, down: f.down && (f.near || this.busy), patient: this.patient });
       if (e !== 'none') { out.push(e); this.react(e); }
     }
     this.prevDown = f.down; this.prevL = f.left; this.prevR = f.right;

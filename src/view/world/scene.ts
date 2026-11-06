@@ -159,6 +159,8 @@ export interface WorldHooks {
   onErrand?(task: string): boolean;
   /** GAME-203 (лише збірка e2e, ?tentAlone=1): тато ставить намет сам, навіть коли родина поруч — шлях «без помічників». */
   tentAlone?(): boolean;
+  /** GAME-270 (лише збірка e2e, ?perfectHits=1): міні-ігри на час (кілки, рубання, «клює») не залежать від таймінгу — довгі e2e не дрижать від навантаження CI. */
+  perfectHits?(): boolean;
   /** GAME-216: чи зіграти заставку першого приїзду в табір (камера: герой → озеро → табір → герой, ≤ 10 с, будь-який дотик виходить). Немає — ніколи. */
   campReveal?(): boolean;
   /** GAME-230: подарунок щойно вручено — хто (id мешканця) і як відреагував; забирає його (наступний виклик — null). Реакція — лише вигляд і звук, очки веде ядро. */
@@ -685,6 +687,8 @@ export class WorldScene extends Phaser.Scene {
     this.props = new CampProps(this, this.barkText);
     this.fire = new FireRig(this, this.player, this.barkText);
     this.fish = new FishRig(this, this.player, this.barkText);
+    const perfect = this.hooks.perfectHits?.() === true;
+    this.tent.perfect = perfect; this.wood.perfect = perfect; this.fish.patient = perfect;
     this.fish.onSplash = (at) => this.chain.forEach((p, i) => { const d = lookAt(p, at); if (d) this.followLook[i] = { dir: d, s: LOOK_S }; });
     // GAME-212: зсув дихання героя — лише на спрайті; перед кроком фізики знімаємо, щоб тіло й проба лишались справжніми.
     this.events.on(Phaser.Scenes.Events.PRE_UPDATE, () => { if (this.heroBob) { this.player.y -= this.heroBob; this.heroBob = 0; } });

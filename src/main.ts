@@ -415,6 +415,7 @@ const worldHooks: WorldHooks = {
     return !plannedErrands(bridge.state.game.flags, (spot) => liveSpot(bridge.state, spot, GAME_DEFS)).some((x) => x.task === task);
   },
   tentAlone: () => switches.tentAlone === true,
+  perfectHits: () => switches.perfectHits === true,
   // GAME-216: заставка — лише на першому приїзді в табір (ST-005 живий, з Елізою ще не говорили); ?noReveal=1 — негативний контроль e2e.
   campReveal: () => switches.noReveal !== true && bridge.state.game.quests['ST-005']?.status === 'active' && !(bridge.state.game.quests['ST-005']?.done ?? []).includes('meet-elise'),
 };

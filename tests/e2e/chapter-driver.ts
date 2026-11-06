@@ -143,6 +143,9 @@ export async function answerOne(page: Page): Promise<string> {
   return `${choiceBox ? 'choice' : 'talk'}:${a.act}:${a.key || a.text.slice(0, 24)}`;
 }
 
+/** GAME-270: сторінка відкрита з ?perfectHits=1 — удар влучає без огляду на маркер, тож водій не чекає на нього (довгі проходи не залежать від таймінгу CI). Короткі спеки міні-ігор перемикача не вмикають. */
+export const perfectHits = (page: Page): boolean => new URL(page.url()).searchParams.get('perfectHits') === '1';
+
 /**
  * GAME-189 · намет руками: гравець уже натиснув дію біля task.pitch-tent (фаза «place»). Дальше — як людина: дочекатись, що привид зелений, поставити; на кожен із 4 кілків
  * стежити за шкалою й натискати, коли маркер у зеленому (зонд tent.marker/inBand — лише читання). Тиснемо, коли маркер ≈ посередині зеленого: запас ≈ ±0,11 шкали (≈130 мс затримки).
@@ -162,7 +165,7 @@ export async function playTent(page: Page, touch: boolean, midShot?: () => Promi
   expect(need, 'кілків на руки тата: 2..4').toBeGreaterThanOrEqual(2);
   for (let k = 0; k < need; k++) {
     await page.waitForTimeout(450);   // затвор (маркер за цей час не дійде до середини: хід від краю ≥ 0,3 с)
-    await page.waitForFunction((n) => { const t = (window as unknown as { __game: { probe: { tent: { phase: string; pegs: number; marker: number } } } }).__game.probe.tent; return t.phase !== 'peg' || (t.pegs === n && Math.abs(t.marker - 0.5) < 0.07); }, k, { timeout: 10_000, polling: 'raf' });
+    if (!perfectHits(page)) await page.waitForFunction((n) => { const t = (window as unknown as { __game: { probe: { tent: { phase: string; pegs: number; marker: number } } } }).__game.probe.tent; return t.phase !== 'peg' || (t.pegs === n && Math.abs(t.marker - 0.5) < 0.07); }, k, { timeout: 10_000, polling: 'raf' });
     await press();
     await expect.poll(async () => { const t = (await probe(page)).tent; return t.phase !== 'peg' || t.pegs > k; }, { timeout: 5_000, message: `кілок ${k + 1} не забито` }).toBe(true);
     if (k === Math.floor(need / 2) - 1 && midShot) await midShot();
@@ -203,7 +206,7 @@ export async function playWood(page: Page, touch: boolean, midShot?: () => Promi
   await expect.poll(async () => (await probe(page)).wood.phase, { timeout: 5_000, message: 'дія біля колоди з 3 гілками починає рубання' }).toBe('chop');
   for (let k = 0; k < 3; k++) {
     await page.waitForTimeout(450);
-    await page.waitForFunction((n) => { const t = (window as unknown as { __game: { probe: { wood: { phase: string; strikes: number; marker: number } } } }).__game.probe.wood; return t.phase !== 'chop' || (t.strikes === n && Math.abs(t.marker - 0.5) < 0.07); }, k, { timeout: 10_000, polling: 'raf' });
+    if (!perfectHits(page)) await page.waitForFunction((n) => { const t = (window as unknown as { __game: { probe: { wood: { phase: string; strikes: number; marker: number } } } }).__game.probe.wood; return t.phase !== 'chop' || (t.strikes === n && Math.abs(t.marker - 0.5) < 0.07); }, k, { timeout: 10_000, polling: 'raf' });
     await press();
     await expect.poll(async () => { const t = (await probe(page)).wood; return t.phase !== 'chop' || t.strikes > k; }, { timeout: 5_000, message: `удар ${k + 1} не влучив` }).toBe(true);
     if (k === 1 && midShot) await midShot();
