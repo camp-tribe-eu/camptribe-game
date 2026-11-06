@@ -7,7 +7,7 @@
 // Способи перевірки картки (кожен — із мутацією, що червонить ту саму перевірку, закон 1):
 //  1) бот і реплей-еталон проходять послідовність; повторний вибір кемпінгу після ST-002 недосяжний;
 //  2) сейв посеред прологу → нова сесія відновлює саме поточний етап;
-//  3) з 0 € на старті ST-003 має безкоштовний шлях — кінець розділу досяжний у кожній комбінації.
+//  3) з 0 € на старті ST-003 має безкоштовний шлях — старий намет і спальник Анни (GAME-246, сценарій §4.1 крок 4: 0 €, «трохи протікає»); каса для решти. Кінець розділу досяжний у кожній комбінації.
 import { beforeAll, describe, expect, it } from 'vitest';
 import { dispatch } from '../core/commands';
 import { daySummary, dayEndQuests } from '../core/day-summary';
@@ -334,7 +334,7 @@ describe('GAME-138 · Спосіб перевірки 2: перерваний п
   });
 });
 
-describe('GAME-138 · Спосіб перевірки 3: 0 € на старті — ST-003 має безкоштовний шлях, кінець розділу досяжний', () => {
+describe('GAME-138 · Спосіб перевірки 3: 0 € на старті — ST-003 має безкоштовний шлях (речі Анни, стан 60), кінець розділу досяжний; каса не тупик', () => {
   const create = (defs: CoreDefs, money: number, k: { profile: string | null; transport: string | null; animal: string }): GameState => {
     const r = dispatch(initialState(money), {
       type: 'CreateCharacter', commandId: 'z0', profileId: k.profile ?? '', transportId: k.transport ?? '', ...(k.animal === NO_ANIMAL ? {} : { animalId: k.animal }),
