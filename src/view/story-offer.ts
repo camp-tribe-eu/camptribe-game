@@ -22,12 +22,12 @@ import { ATLAS_PAGES, STICKER_META } from '../content/stickers';
 import { pageFill } from '../core/atlas-fill';
 import { nearestReward } from '../content/nearest-reward';
 import { LOCALES } from '../i18n';
-import { chapterComplete, matches, questOpen, route, storyDay } from '../core/story';
+import { canSleepNow, chapterComplete, matches, questOpen, route, storyDay } from '../core/story';
 import { awardsFor } from '../core/progress';
 import { capacityOf, carriedOf, overflowCandidates, packedOf, packFlag, packingOpen, packItemsFor, usedUnits } from '../core/packing';
 import { timeOfDay } from './world/daylight';
 import { bedtimeNight, EVENING, minuteOfDay } from '../core/clock';
-import { canSleep, shopClosedHere, wakeMinute } from '../core/rest';
+import { shopClosedHere, wakeMinute } from '../core/rest';
 import { dayOf, tripMinutes, type Weather } from '../core/weather';
 import { CONTENT, memorableFacts } from '../content/story';
 import { moves, progressKey, type Move } from '../content/moves';
@@ -448,7 +448,7 @@ export function storyOffer(sim: SimState, defs: CoreDefs, view: StoryView = PANE
       intents.set(w.id, { type: 'WaitForShop' });
       offered.push(w);
     }
-    if (canSleep(s, now)) {
+    if (canSleepNow(st, s, now)) {
       const z: OfferAction = { id: 'rest|sleep', kind: 'sleep', key: null };
       intents.set(z.id, { type: 'Sleep' });
       offered.push(z);

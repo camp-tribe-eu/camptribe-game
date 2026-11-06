@@ -3,14 +3,14 @@
 // і решта стану лишається вихідною. Успіх повертає події-факти (DC-061).
 
 import { canBuyAt, type CoreDefs } from './defs';
-import { canSleep, shopClosedHere } from './rest';
+import { shopClosedHere } from './rest';
 import type { CommandRecord, GameState, RejectCode } from './state';
 import { HAND_ACTIONS, isHandAction, practise, rankOf, SKILL_IDS, type SkillId } from './skills';
 import { gearOf, pruneGear, sellPriceOf } from './gear';
 import { bookLeave, cancelLeave } from './life';
 import { autoPack, capacityOf, carriedOf, loadCarSet, packFlag, packingOpen, packItemsFor, takeFlag, usedUnits, withLoaded, withPacked } from './packing';
 import type { Weather } from './weather';
-import { applyStory, questNeedsItem, questOpen, SLEEP_CAP, type StoryCommand, type StoryDraft } from './story';
+import { applyStory, canSleepNow, questNeedsItem, questOpen, SLEEP_CAP, type StoryCommand, type StoryDraft } from './story';
 import { applyWave, type WaveCommand } from './wave';
 import { award, awardsFor } from './progress';
 import { atlasAwards } from './atlas-fill';
@@ -176,7 +176,7 @@ function apply(cmd: Command, d: Draft, defs: CoreDefs, guard: Safeguards, today:
     case 'Sleep':
       // Сон не міняє стан гри — час і запис у журнал робить симуляція (sim.step), бо годинник знає лише вона.
       // GAME-256: лічильник сну (день сюжету) росте тут; без годинника (перебір, бот) сон «абстрактний» — де завгодно, де є герой.
-      if (!(now === undefined ? d.player !== null : canSleep(d, now))) return 'CONDITION_FAILED';
+      if (!(now === undefined ? d.player !== null : canSleepNow(defs.story, d, now))) return 'CONDITION_FAILED';
       d.slept = Math.min((d.slept ?? 0) + 1, SLEEP_CAP);
       return null;
     case 'WaitForShop':

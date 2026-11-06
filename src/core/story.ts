@@ -11,7 +11,8 @@
 // * `requires` квесту-цілі перевіряється в мить переходу.
 import type { FriendState } from './friendship';
 import type { LifeState } from './life';
-import { minuteOfDay } from './clock';
+import { isNight, minuteOfDay } from './clock';
+import { canSleep } from './rest';
 import type { CondDef, EffectDef, GateDef, QuestDef, RewardDef, StoryDefs, WayDef, WhenDef } from './defs';
 import type { GameEvent } from './commands';
 import type { GearState } from './gear';
@@ -107,6 +108,16 @@ export const questOpen = (st: Pick<StoryDefs, 'quests'>, d: { readonly slept?: n
 /** Квест активний І його ворота відчинені: лише такий крок «живий» для розмов, хвиль і сцен. */
 export const questLive = (st: Pick<StoryDefs, 'quests'>, d: { readonly quests: StoryDraft['quests']; readonly slept?: number }, questId: string, now?: number): boolean =>
   own(d.quests, questId)?.status === 'active' && questOpen(st, d, questId, now);
+
+/**
+ * GAME-256 · вечірній крок СЬОГОДНІ ще не зроблено: активний квест із `gate.fromMinute`, чий день настав і чия година минула. Спати, поки він активний, не можна
+ * (інакше вечір (вечеря, вогнище) переїхав би на ранок наступного дня): спершу вечірні кроки. Після «пора спати» (22:00) діє старе правило GAME-242 — лягти можна де застала ніч.
+ */
+export const eveningPending = (st: Pick<StoryDefs, 'quests'> | undefined, d: { readonly quests: StoryDraft['quests']; readonly slept?: number }, now: number): boolean =>
+  st !== undefined && Object.entries(d.quests).some(([id, q]) => { const gate = own(st.quests, id)?.gate; return q.status === 'active' && gate?.fromMinute !== undefined && storyDay(d.slept) === gate.day && minuteOfDay(now) >= gate.fromMinute; });
+/** Можна лягти спати: правило GAME-242 (ліжко/намет з 18:00, будь-де після 22:00) І немає незробленого вечірнього кроку дня (до 22:00). */
+export const canSleepNow = (st: Pick<StoryDefs, 'quests'> | undefined, d: Parameters<typeof canSleep>[0] & { readonly quests: StoryDraft['quests']; readonly slept?: number }, now: number): boolean =>
+  canSleep(d, now) && (isNight(now) || !eveningPending(st, d, now));
 
 const completed = (d: StoryDraft, questId: string | undefined): boolean => questId === undefined || own(d.quests, questId)?.status === 'completed';
 
