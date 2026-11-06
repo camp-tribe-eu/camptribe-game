@@ -51,7 +51,7 @@ for (const v of VIEWS) {
       await panel(page).locator('[data-act="visit"]').first().click();
       await page.waitForTimeout(400);
       await panel(page).locator('[data-ui="story-close"]').click();
-      await page.waitForTimeout(4_000);   // довше за REMIND_CALM_S (3 с): друге нагадування вже було б
+      await page.waitForTimeout(4_000);   // ігровий час іде (REMIND_AFTER_GAME_MIN): друге нагадування вже було б
       await expect(reminder(page), 'раз за все життя: друге прибуття — тиша').toHaveCount(0);
     });
 

@@ -124,7 +124,7 @@ for (const viewport of [{ width: 390, height: 844 }, { width: 844, height: 390 }
       await closeStory(page);
       const trip2 = (await core(page)).journal.filter((e) => e.type === 'Visit').at(-1)?.commandId;
       expect(trip2).not.toBe(trip1);
-      await page.waitForTimeout(4_000);                                  // довше за REMIND_CALM_S (3 с): якби нагадування мало з'явитись — воно вже було б
+      await page.waitForTimeout(4_000);                                  // довше за REMIND_AFTER_GAME_MIN (3 ігрові хв, 1 хв = 1 с): якби нагадування мало з'явитись — воно вже було б
       await expect(reminder(page), 'GAME-261: друга подорож — нагадування не повертається').toHaveCount(0);
       await ctx.close();
     });

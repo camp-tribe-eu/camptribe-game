@@ -21,7 +21,7 @@ import { ColdOpen } from './ColdOpen';
 import { EpisodeCard } from './EpisodeCard';
 import { episodeStep } from './episode-beats';
 import { trapTab } from './focus-trap';
-import { REMIND_CALM_S, remindArmed } from './remind';
+import { remindArmed, remindDue } from './remind';
 import type { OfferSummary, StoryOffer } from './story-types';
 
 /** Скільки тост-підказка висить на екрані (мс), якщо гравець нічого не зробив (GAME-95). Картка: ≤ 6 с. */
@@ -275,17 +275,18 @@ export function Shell({ port, langOverride, credits, build, holdToast = false, h
     }
   }, [settings]);
 
+  const armedAt = useRef<{ trip: string; at: number } | null>(null);
+  const nowAbsRemind = offer.day * 1440 + offer.timeMinutes;
   useEffect(() => {
     const trip = offer.lastTrip;
     const busy = Boolean(paused || storyOpen || talk || summary) || offer.stage === 'create' || remind !== null;
     if (!remindArmed({ shownEver: settings.remindShown, trip, remindedTrip: settings.remindedTrip, busy }) || trip === null) return;
-    // GAME-261: не на кадрі прибуття (там шапка HUD), а після REMIND_CALM_S с спокійної гри; будь-яка пауза чи розмова скидає відлік.
-    const timer = window.setTimeout(() => {
-      setRemind({ trip, state: 'ask', code: '' });
-      update({ ...settings, remindedTrip: trip, remindShown: true });
-    }, REMIND_CALM_S * 1000);
-    return () => window.clearTimeout(timer);
-  }, [paused, storyOpen, talk, summary, offer.lastTrip, offer.stage, settings.remindShown, settings.remindedTrip, remind]);
+    // GAME-261: не на кадрі прибуття (там шапка HUD): відлік стартує з ігрового часу прибуття, а нагадування виринає за ігровий годинник (без realtime-таймерів).
+    if (armedAt.current?.trip !== trip) armedAt.current = { trip, at: nowAbsRemind };
+    if (!remindDue({ shownEver: settings.remindShown, trip, remindedTrip: settings.remindedTrip, busy, armedAt: armedAt.current.at, now: nowAbsRemind })) return;
+    setRemind({ trip, state: 'ask', code: '' });
+    update({ ...settings, remindedTrip: trip, remindShown: true });
+  }, [paused, storyOpen, talk, summary, offer.lastTrip, offer.stage, offer.day, offer.timeMinutes, settings.remindShown, settings.remindedTrip, remind]);
   const copyCode = (): void => {
     void port.exportCode().then(async (code) => {
       try {
