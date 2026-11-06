@@ -8,7 +8,7 @@
 // Закон «жодних тупиків»: кнопку панелі ховає ЛИШЕ ті дії, для яких на мапі зараз є ЖИВИЙ об'єкт з тією самою командою
 // (coveredKeys будується з resolveSpot — прийнятих ядром ходів). Об'єкт мертвий — кнопка лишається в панелі. Тож пройти
 // можна завжди: або ногами, або (як було) кнопкою. Що саме ногами — доводить map-first.test.ts повним перебором.
-import { basketOf } from '../core/basket';
+import { basketOf, hasBasket } from '../core/basket';
 import { taskGate } from '../core/wave';
 import { dispatch, nextCommandId, type Command } from '../core/commands';
 import type { CoreDefs } from '../core/defs';
@@ -163,14 +163,14 @@ export interface Resolved { readonly moves: readonly Move[]; readonly ui?: 'trun
 
 const asCommand = (g: GameState, m: Move): Command => ({ ...m, commandId: nextCommandId(g) }) as Command;
 /** Хід, який ядро прийме, → наступний стан; інакше null. */
-function accepted(g: GameState, defs: CoreDefs, m: Move): GameState | null {
-  const r = dispatch(g, asCommand(g, m), defs);
+function accepted(g: GameState, defs: CoreDefs, m: Move, now?: number): GameState | null {
+  const r = dispatch(g, asCommand(g, m), defs, undefined, undefined, undefined, now);
   return r.ok ? r.state : null;
 }
-/** Усі ходи по черзі приймає ядро (кожен — на стані після попереднього). */
-function chain(g: GameState, defs: CoreDefs, moves: readonly Move[]): boolean {
+/** Усі ходи по черзі приймає ядро (кожен — на стані після попереднього). `now` — годинник симуляції там, де ядро звіряє години (каса, кошик). */
+function chain(g: GameState, defs: CoreDefs, moves: readonly Move[], now?: number): boolean {
   let s: GameState | null = g;
-  for (const m of moves) { s = s && accepted(s, defs, m); if (!s) return false; }
+  for (const m of moves) { s = s && accepted(s, defs, m, now); if (!s) return false; }
   return true;
 }
 
@@ -179,8 +179,9 @@ const active = (g: GameState, q: string): boolean => own(g.quests, q)?.status ==
 
 const ROAD = 'loc.road';
 /** Усі дороги, які ядро зараз приймає звідси (куди можна поїхати): порядок — дорога, дім, крамниця, табір. */
-const openVisits = (g: GameState, defs: CoreDefs): Move[] =>
-  [ROAD, MAP_LOCATION.home, MAP_LOCATION.shop, MAP_LOCATION.camp].map((locationId): Move => ({ type: 'Visit', locationId })).filter((m) => accepted(g, defs, m) !== null && (m as { locationId: string }).locationId !== g.player?.locationId);
+/** Відкриті дороги звідси. `now` — лише з кошиком (GAME-246): вийти з неоплаченим кошиком ядро пускає за годинником крамниці (зачинена → речі на полицю). */
+const openVisits = (g: GameState, defs: CoreDefs, now?: number): Move[] =>
+  [ROAD, MAP_LOCATION.home, MAP_LOCATION.shop, MAP_LOCATION.camp].map((locationId): Move => ({ type: 'Visit', locationId })).filter((m) => accepted(g, defs, m, now) !== null && (m as { locationId: string }).locationId !== g.player?.locationId);
 
 /**
  * Куди везе авто (велосипед) звідси зараз: ходи однієї ведучої дії (сюжет каже, куди) або вибір із відкритих напрямків (GAME-183 — «Куди їдемо?»); null — нікуди.
@@ -297,7 +298,16 @@ function compute(sim: SimState, defs: CoreDefs, name: string): Resolved | null {
   }
   if (name === 'obj.vehicle') {
     // GAME-246: з неоплаченим кошиком авто не їде: «Спершу каса» — пропонується лише оплата (розрахуватись можна й не підходячи до прилавка).
-    if (basketOf(g.flags, defs).length > 0) { const pay = acceptedOf(g, defs, [{ type: 'Checkout' }]); return pay.length > 0 ? { moves: [], options: pay } : null; }
+    // Каса — за годинником симуляції: крамниця зачинилась (SHOP_CLOSED) або платити нічим — авто їде, як і меню: ядро (Visit) лишає речі
+    // на полиці. Без годинника мапа вважала касу живою о 20:30, а меню вже пропонувало «Піти» — панель показувала хід, якого мапа не покриває (camp-first).
+    if (basketOf(g.flags, defs).length > 0) {
+      const pay: Move = { type: 'Checkout' };
+      if (accepted(g, defs, pay, sim.clock.minutes)) return { moves: [], options: [pay] };
+      const v = vehicleMoves(g, defs);
+      if (!v) return null;
+      if (v.options) return { moves: [], options: v.options };
+      return chain(g, defs, v.moves, sim.clock.minutes) ? { moves: v.moves, confirm: true } : null;
+    }
     const v = vehicleMoves(g, defs);
     if (!v) return null;
     if (v.options) return { moves: [], options: v.options };
@@ -315,7 +325,9 @@ export function resolveSpot(sim: SimState, defs: CoreDefs, name: string): Resolv
   if (!(MAP_SPOTS[map] as readonly string[]).includes(name) || p.locationId !== MAP_LOCATION[map]) return null;
   let byName = memo.get(g);
   if (!byName) { byName = new Map(); memo.set(g, byName); }
-  if (!name.startsWith('task.') && name !== TENT_SPOT && byName.has(name)) return byName.get(name) ?? null;   // справи хвилі залежать від годинника, якого немає в GameState — без кешу
+  // Справи хвилі, намет (сон/відпочинок) і авто з кошиком (каса за годинами крамниці, GAME-246) залежать від годинника, якого немає в GameState — без кешу.
+  const timed = name.startsWith('task.') || name === TENT_SPOT || (name === 'obj.vehicle' && hasBasket(g.flags));
+  if (!timed && byName.has(name)) return byName.get(name) ?? null;
   const r = compute(sim, defs, name);
   byName.set(name, r);
   return r;
@@ -349,7 +361,7 @@ const coveredMemo = new WeakMap<GameState, Set<string>>();
 export function coveredKeys(sim: SimState, defs: CoreDefs): ReadonlySet<string> {
   const g = sim.game;
   const hit = coveredMemo.get(g);
-  if (hit) return hit;
+  if (hit && !hasBasket(g.flags)) return hit;   // з кошиком покриття залежить від годинника (каса за годинами крамниці) — без кешу
   const out = new Set<string>();
   const p = g.player;
   const map = mapKeyFor(p?.locationId);
@@ -363,7 +375,7 @@ export function coveredKeys(sim: SimState, defs: CoreDefs): ReadonlySet<string> 
       const r = resolveSpot(sim, defs, name);
       for (const m of [...(r?.moves ?? []), ...(r?.options ?? [])]) out.add(moveKey(m));
       // Авто живе — усі відкриті дороги звідси покриті ним (веде квест — одна ціль, ні — вибір; решта «Піти:» не лишається кнопками ☰).
-      if (name === 'obj.vehicle' && r) for (const m of openVisits(g, defs)) out.add(moveKey(m));
+      if (name === 'obj.vehicle' && r) for (const m of openVisits(g, defs, hasBasket(g.flags) ? sim.clock.minutes : undefined)) out.add(moveKey(m));
     }
     // Квест, чий крок стоїть на мапі ІНШОЇ локації (виїхали з табору посеред дня): завершується там, де він живе, — авто туди повертає (vehicleMoves), тож тут кнопка не потрібна.
     for (const [qid, q] of Object.entries(g.quests)) {

@@ -173,6 +173,15 @@ describe('GAME-246 · дарунок Анни лише коли платити �
     expect(resolveSpot(at(0), GAME_DEFS, 'take.item.tent')?.moves).toEqual([{ type: 'Pickup', itemId: 'item.tent-anna' }]);
     expect(resolveSpot(at(5_000), GAME_DEFS, 'take.item.tent')?.moves).toEqual([{ type: 'Pickup', itemId: 'item.tent' }]);
   });
+  it('мапа: авто з кошиком — удень лише «Сплатити»; о 20:30 (крамниця зачинена) — їде додому, речі лишаються на полиці (як ядро й меню)', () => {
+    const g = atShop(5_000, [{ type: 'Pickup', itemId: 'item.lantern' }]);
+    const at = (minutes: number): SimState => ({ ...newSim(1, 0), game: g, clock: { ...newSim(1, 0).clock, minutes } });
+    expect(resolveSpot(at(240), GAME_DEFS, 'obj.vehicle')?.options).toEqual([{ type: 'Checkout' }]);                 // 12:00
+    const night = resolveSpot(at(750), GAME_DEFS, 'obj.vehicle');                                                     // 20:30
+    expect(night?.moves).toEqual([{ type: 'Visit', locationId: 'loc.home' }]);
+    const r = dispatch(g, { type: 'Visit', commandId: nextCommandId(g), locationId: 'loc.home' }, GAME_DEFS, undefined, undefined, undefined, 750);
+    expect(r.ok && r.state.flags.filter((f) => f.startsWith('f.basket-'))).toEqual([]);
+  });
   it('дарунок — звичайна річ у стані 60 і 0 € з гаманця', () => {
     const s = atShop(0);
     const r = dispatch(s, { type: 'Pickup', commandId: nextCommandId(s), itemId: 'item.tent-anna' }, GAME_DEFS);
