@@ -9,6 +9,7 @@ import { HINT_FLASH_MS, HintIdle, type HintMode } from './content/hint-idle';
 import { buildLabel } from './core/build-info';
 import { newInput } from './view/world/actions';
 import { GAME_DEFS } from './content/slice-defs';
+import { dayOf } from './core/weather';
 import { STORY, STORY_REV } from './content/story';
 import { saveViable } from './content/viability';
 import { decodeRestoreCode, encodeRestoreCode } from './platform/save-code';
@@ -70,7 +71,7 @@ const probe: WorldProbe = { ready: false, reveal: false, gift: { count: 0, npc: 
   playerFrame: 0, playerDir: 'down', playerMoving: false, heroBreath: 0, playerDepth: 0, coveredTiles: 0, behindTiles: 0, canopy: { bands: 0, over: 0, minAlpha: 1 }, light: { patches: 0, depth: 0, alpha: 0 }, lamps: { count: 0, on: false, alpha: 0, radius: 0 }, fps: 0, fpsWindows: 0, firstFrameMs: 0,
   residents: [], neighbours: [], visitors: [], bark: null, barkCount: 0, barkBy: null, npcMarks: {}, miaAt: [], tent: TENT_PROBE_IDLE, wood: WOOD_PROBE_IDLE, crate: CRATE_PROBE_IDLE, fire: FIRE_PROBE_IDLE, grill: GRILL_PROBE_IDLE, fish: FISH_PROBE_IDLE, live: LIVE_PROBE_IDLE, swim: SWIM_PROBE_IDLE, camp: CAMP_PROBE_IDLE,
   daylight: { on: false, visible: false, minuteOfDay: 0, darkness: 0, color: 0xffffff, glow: 0, heroLight: { radius: 0, alpha: 0 } },
-  fx: { target: null, ring: 0, ringName: null, backpack: 0, guide: 'none', pops: 0, auto: 0, rewards: 0, rewardLast: '', headLabels: [] } };
+  fx: { target: null, ring: 0, ringName: null, backpack: 0, guide: 'none', pops: 0, auto: 0, rewards: 0, rewardLast: '', headLabels: [], headIcons: [] } };
 // GAME-86: кожна команда ядру (дія екрана, розмова, взаємодія на мапі) → автозбереження одразу, а не лише на паузі.
 // GAME-89 №2: сід світу (а з ним погода дня 1) — свіжий для кожної гри, з crypto на межі; ядро лишається детермінованим,
 // бо сід записується в worldSeed сейву. ?seed=N (лише збірка e2e) закріплює сід — для відтворюваних тестів.
@@ -195,12 +196,15 @@ const storyChanged = (): void => {
   if (talking && !hadDialogue && !mapTalk) for (const l of switches.panelActs ? openListeners : talkListeners) l();
   hadDialogue = talking;
 };
+/** GAME-261: з ким уже говорили сьогодні (день|npc); не в сейві — після перезапуску «…» повертається один раз, це лише підказка. */
+const chatted = new Set<string>();
 /** Розмова з NPC на мапі: команда в ядро (ядро саме відмовить, якщо гравець не тут), і екран подорожі —
  *  там видно розмову або те, чого бракує (немає персонажа, не та локація). */
 const talkOnMap = (npcId: string): void => {
   mapTalk = true;
   try {
     bridge.send({ type: 'Talk', npcId });
+    if (bridge.state.game.dialogue !== null) chatted.add(`${dayOf(bridge.state.clock)}|${npcId}`);   // GAME-261: сьогодні з ним уже говорили — «…» гасне
     storyChanged();
   } finally { mapTalk = false; }
   for (const l of talkListeners) l();   // рамка розмови, якщо ядро прийняло розмову; інакше UI сам відкриє екран подорожі
@@ -368,7 +372,7 @@ const worldHooks: WorldHooks = {
   canForage: (kind) => canForage(bridge.state.game.inventory, kind === 'cone' ? FORAGE_ITEMS.cone : FORAGE_ITEMS.berry),
   onForage: (kind) => { bridge.send({ type: 'Forage', itemId: kind === 'cone' ? FORAGE_ITEMS.cone : FORAGE_ITEMS.berry }); },
   // GAME-179: з ким можна говорити саме зараз — те саме, що прийме ядро (NPC тут, відкритий, розмови нема); «!» — гачок прохань GAME-180.
-  talk: (id) => (npcLive(bridge.state.game, GAME_DEFS, id) ? { request: requestMarker(bridge.state.game, id) } : null),
+  talk: (id) => (npcLive(bridge.state.game, GAME_DEFS, id) ? { request: requestMarker(bridge.state.game, id), line: !chatted.has(`${dayOf(bridge.state.clock)}|${id}`) } : null),
   onObject: actOnMap,
   onHand: handPractise,
   fireDue: () => fireplaceDue(bridge.state),

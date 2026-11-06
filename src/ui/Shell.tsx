@@ -21,6 +21,7 @@ import { ColdOpen } from './ColdOpen';
 import { EpisodeCard } from './EpisodeCard';
 import { episodeStep } from './episode-beats';
 import { trapTab } from './focus-trap';
+import { REMIND_CALM_S, remindArmed } from './remind';
 import type { OfferSummary, StoryOffer } from './story-types';
 
 /** Скільки тост-підказка висить на екрані (мс), якщо гравець нічого не зробив (GAME-95). Картка: ≤ 6 с. */
@@ -276,10 +277,15 @@ export function Shell({ port, langOverride, credits, build, holdToast = false, h
 
   useEffect(() => {
     const trip = offer.lastTrip;
-    if (paused || storyOpen || talk || summary || offer.stage === 'create' || trip === null || trip === settings.remindedTrip || remind?.trip === trip) return;
-    setRemind({ trip, state: 'ask', code: '' });
-    update({ ...settings, remindedTrip: trip });
-  }, [paused, storyOpen, talk, summary, offer, settings.remindedTrip]);
+    const busy = Boolean(paused || storyOpen || talk || summary) || offer.stage === 'create' || remind !== null;
+    if (!remindArmed({ shownEver: settings.remindShown, trip, remindedTrip: settings.remindedTrip, busy }) || trip === null) return;
+    // GAME-261: не на кадрі прибуття (там шапка HUD), а після REMIND_CALM_S с спокійної гри; будь-яка пауза чи розмова скидає відлік.
+    const timer = window.setTimeout(() => {
+      setRemind({ trip, state: 'ask', code: '' });
+      update({ ...settings, remindedTrip: trip, remindShown: true });
+    }, REMIND_CALM_S * 1000);
+    return () => window.clearTimeout(timer);
+  }, [paused, storyOpen, talk, summary, offer, settings, remind]);
   const copyCode = (): void => {
     void port.exportCode().then(async (code) => {
       try {
@@ -498,7 +504,7 @@ export function Shell({ port, langOverride, credits, build, holdToast = false, h
           <fieldset>
             <legend>{t('ui.gameMenu')}</legend>
             <button type="button" class="ui-btn" data-ui="new-game" onClick={() => setConfirmNew(true)}>{t('ui.newGame')}</button>
-            <button type="button" class="ui-btn" data-ui="reset" onClick={() => update({ ...DEFAULT_SETTINGS, hintSeen: settings.hintSeen, remindedTrip: settings.remindedTrip })}>{t('ui.reset')}</button>
+            <button type="button" class="ui-btn" data-ui="reset" onClick={() => update({ ...DEFAULT_SETTINGS, hintSeen: settings.hintSeen, remindedTrip: settings.remindedTrip, remindShown: settings.remindShown })}>{t('ui.reset')}</button>
           </fieldset>
           {/* GAME-91: підпис збірки (версія + повний SHA) — тут, а не на екрані гри; для баг-репортів. */}
           <p class="ui-build" data-ui="build">{build}</p>

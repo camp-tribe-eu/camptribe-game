@@ -147,12 +147,14 @@ describe('GAME-179 · знімок для UI: хто говорить і хто 
 
 describe('GAME-179 · маркер над головою і розворот', () => {
   it('«…» — лише коли можна говорити й герой близько; «!» — коли є прохання (видно й здалеку); не говорить — без маркера', () => {
-    expect(markerFor(true, false, 10)).toBe('chat');
-    expect(markerFor(true, false, CHAT_MARKER_RANGE)).toBe('chat');
-    expect(markerFor(true, false, CHAT_MARKER_RANGE + 1)).toBeNull();
-    expect(markerFor(true, true, 10_000)).toBe('request');
-    expect(markerFor(false, false, 0), 'не говорить — без маркера').toBeNull();
-    expect(markerFor(false, true, 0), 'прохання без розмови — теж без маркера').toBeNull();
+    expect(markerFor(true, false, 10, true)).toBe('chat');
+    expect(markerFor(true, false, CHAT_MARKER_RANGE, true)).toBe('chat');
+    expect(markerFor(true, false, CHAT_MARKER_RANGE + 1, true)).toBeNull();
+    expect(markerFor(true, true, 10_000, false)).toBe('request');
+    expect(markerFor(true, false, 10, false), 'GAME-261: нічого сказати — без «…», хоч поруч').toBeNull();
+    expect(markerFor(true, true, 10, false), 'GAME-261: прохання — «!» і без нової репліки').toBe('request');
+    expect(markerFor(false, false, 0, true), 'не говорить — без маркера').toBeNull();
+    expect(markerFor(false, true, 0, true), 'прохання без розмови — теж без маркера').toBeNull();
   });
 
   it('NPC повертається до героя: вісь із більшим зсувом, нічия — по вертикалі', () => {

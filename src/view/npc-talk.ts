@@ -10,12 +10,13 @@ export const CHAT_MARKER_RANGE = 200;
 
 /**
  * Маркер над NPC. `canTalk` — ядро зараз прийме розмову (NPC тут, відкритий); `hasRequest` — гачок прохань (GAME-180);
- * `dist` — відстань від героя, px. Хто не готовий говорити, не має ніякого маркера: підходити нема до кого.
+ * `dist` — відстань від героя, px; `hasLine` — NPC має нову репліку (сьогодні з ним ще не говорили). Хто не готовий говорити, не має ніякого маркера: підходити нема до кого.
  */
-export function markerFor(canTalk: boolean, hasRequest: boolean, dist: number): NpcMarker | null {
+export function markerFor(canTalk: boolean, hasRequest: boolean, dist: number, hasLine: boolean): NpcMarker | null {
   if (!canTalk) return null;
   if (hasRequest) return 'request';
-  return dist <= CHAT_MARKER_RANGE ? 'chat' : null;
+  // GAME-261: «…» — лише коли в NPC є що сказати (ще не говорили сьогодні); порожня вічна бульба — шум над сім'єю.
+  return hasLine && dist <= CHAT_MARKER_RANGE ? 'chat' : null;
 }
 
 /**

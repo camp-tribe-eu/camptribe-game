@@ -9,8 +9,8 @@ const mem = (): Storage => {
 describe('налаштування (GAME-25)', () => {
   it('зберігаються й читаються', () => {
     const s = mem();
-    expect(saveSettings({ textScale: 150, language: 'en', hintSeen: true, remindedTrip: null, audio: DEFAULT_SETTINGS.audio, hintMode: 'always', levelUps: true }, s)).toBe(true);
-    expect(loadSettings(s)).toEqual({ textScale: 150, language: 'en', hintSeen: true, remindedTrip: null, audio: DEFAULT_SETTINGS.audio, hintMode: 'always', levelUps: true });
+    expect(saveSettings({ textScale: 150, language: 'en', hintSeen: true, remindedTrip: null, remindShown: false, audio: DEFAULT_SETTINGS.audio, hintMode: 'always', levelUps: true }, s)).toBe(true);
+    expect(loadSettings(s)).toEqual({ textScale: 150, language: 'en', hintSeen: true, remindedTrip: null, remindShown: false, audio: DEFAULT_SETTINGS.audio, hintMode: 'always', levelUps: true });
     s.setItem('camplife.settings.v1', JSON.stringify({ hintMode: 'junk' }));
     expect(loadSettings(s).hintMode).toBe('stuck');   // GAME-192: типово «коли застряг»
     s.setItem('camplife.settings.v1', JSON.stringify({ levelUps: false }));
@@ -20,7 +20,7 @@ describe('налаштування (GAME-25)', () => {
   });
   it('200 % (GAME-39) зберігається й читається; 175 — чуже значення, типове', () => {
     const s = mem();
-    saveSettings({ textScale: 200, language: 'uk', hintSeen: false, remindedTrip: null, audio: DEFAULT_SETTINGS.audio, hintMode: 'stuck', levelUps: true }, s);
+    saveSettings({ textScale: 200, language: 'uk', hintSeen: false, remindedTrip: null, remindShown: false, audio: DEFAULT_SETTINGS.audio, hintMode: 'stuck', levelUps: true }, s);
     expect(loadSettings(s).textScale).toBe(200);
     s.setItem('camplife.settings.v1', JSON.stringify({ textScale: 175, language: 'uk' }));
     expect(loadSettings(s).textScale).toBe(DEFAULT_SETTINGS.textScale);
