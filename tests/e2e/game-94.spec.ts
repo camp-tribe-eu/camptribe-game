@@ -105,7 +105,7 @@ for (const viewport of [{ width: 390, height: 844 }, { width: 844, height: 390 }
       await ctx.close();
     });
 
-    test('та сама подорож після перезавантаження — без повтору; інша подорож — знову', async ({ browser }) => {
+    test('GAME-261: раз за все життя — після перезавантаження й після другої подорожі без повтору', async ({ browser }) => {
       const { ctx, page } = await start(browser, viewport);
       await act(page, 'visit', 'loc.shop');
       await closeStory(page);
@@ -124,11 +124,12 @@ for (const viewport of [{ width: 390, height: 844 }, { width: 844, height: 390 }
       await closeStory(page);
       const trip2 = (await core(page)).journal.filter((e) => e.type === 'Visit').at(-1)?.commandId;
       expect(trip2).not.toBe(trip1);
-      await expect(reminder(page)).toBeVisible();
+      await page.waitForTimeout(4_000);                                  // довше за REMIND_AFTER_GAME_MIN (3 ігрові хв, 1 хв = 1 с): якби нагадування мало з'явитись — воно вже було б
+      await expect(reminder(page), 'GAME-261: друга подорож — нагадування не повертається').toHaveCount(0);
       await ctx.close();
     });
 
-    test('нова гра тим самим маршрутом — нагадування знову є (commandId — лічильник, рецензія PR #44)', async ({ browser }) => {
+    test('GAME-261: нова гра тим самим маршрутом — нагадування не повертається (показано раз; commandId — лічильник, рецензія PR #44)', async ({ browser }) => {
       const { ctx, page } = await start(browser, viewport);
       await act(page, 'visit', 'loc.shop');
       await closeStory(page);
@@ -145,7 +146,8 @@ for (const viewport of [{ width: 390, height: 844 }, { width: 844, height: 390 }
       await act(page, 'visit', 'loc.shop');
       await closeStory(page);
       expect((await core(page)).journal.filter((e) => e.type === 'Visit').at(-1)?.commandId, 'той самий id приїзду — інакше тест нічого не доводить').toBe(trip1);
-      await expect(reminder(page)).toBeVisible();
+      await page.waitForTimeout(4_000);
+      await expect(reminder(page)).toHaveCount(0);
       await ctx.close();
     });
   });

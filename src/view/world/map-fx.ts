@@ -22,7 +22,9 @@ export class MapFx {
   pops = 0;
   /** GAME-229 (лише проба): тексти, що справді намальовано над героєм, останні 24 — на них стоїть сторож «над героєм немає цифр» (hero-label.ts). */
   readonly labels: string[] = [];
-  private floaters: { t: Phaser.GameObjects.Text; y0: number; age: number }[] = [];
+  /** GAME-261 (лише проба): значки-спливи над героєм (замість тексту «OK»), останні 24. */
+  readonly icons: string[] = [];
+  private floaters: { t: Phaser.GameObjects.Text | Phaser.GameObjects.Graphics; y0: number; age: number }[] = [];
   guideMode: 'none' | 'line' | 'edge' = 'none';
 
   constructor(private readonly scene: Phaser.Scene) {
@@ -142,6 +144,18 @@ export class MapFx {
     this.labels.push(text);
     if (this.labels.length > 24) this.labels.shift();
     this.floaters.push({ t: this.scene.add.text(x, y - 44 - lift, text, FONT).setOrigin(0.5, 1).setDepth(TOP), y0: y - 44 - lift, age: 0 });
+  }
+
+  /** GAME-261: значок-галочка над героєм замість тексту «OK» (той самий підйом і згасання, що в `pop`; без жодного текстового вузла). */
+  popIcon(x: number, y: number, icon: 'check', lift = 0): void {
+    this.pops++;
+    this.icons.push(icon);
+    if (this.icons.length > 24) this.icons.shift();
+    const y0 = y - 44 - lift;
+    const g = this.scene.add.graphics().setDepth(TOP).setPosition(x, y0);
+    g.fillStyle(0x1b1f23, 0.85).fillCircle(0, -8, 9);
+    g.lineStyle(3, 0x7be08a, 1).beginPath().moveTo(-4, -8).lineTo(-1, -4).lineTo(5, -12).strokePath();
+    this.floaters.push({ t: g, y0, age: 0 });
   }
 
   /** Кадр: спливи пливуть угору й гаснуть за час гри (dt — секунди кадру). */
