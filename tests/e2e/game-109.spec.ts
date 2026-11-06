@@ -43,6 +43,7 @@ for (const mode of MODES) {
     await act('visit', 'loc.shop');
     await act('pickup', 'item.tent');
     await act('pickup', 'item.sleeping-bag');
+    await act('checkout', 'basket.all');                               // GAME-246: узяте лежить у кошику — власністю робить каса
     await expect(packing(page)).toHaveCount(0);                        // ST-003 ще не завершено
     await act('complete', 'q.st-003');
 

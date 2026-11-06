@@ -32,8 +32,12 @@ describe('кільце наближення (GAME-175)', () => {
     expect(ringMayTake('step.ST-001', null)).toBe(true);
     expect(ringMayTake('obj.vehicle', 'pack.item.water')).toBe(true);
     expect(ringMayTake(null, null)).toBe(false);
+    // GAME-246: каса — лише як поточна ціль (з кошиком стрілка веде «Сплатити»); повз прилавок без кошика кільце мовчить
+    expect(ringMayTake('obj.buy', 'obj.buy')).toBe(true);
+    expect(ringMayTake('obj.buy', 'take.item.tent')).toBe(false);
+    expect(ringMayTake('obj.buy', null)).toBe(false);
   });
-  it('isAutoSpot', () => { expect(isAutoSpot('pack.item.water')).toBe(true); expect(isAutoSpot('task.firewood')).toBe(false); });
+  it('isAutoSpot', () => { expect(isAutoSpot('pack.item.water')).toBe(true); expect(isAutoSpot('task.firewood')).toBe(false); expect(isAutoSpot('obj.buy')).toBe(true); expect(isAutoSpot('obj.sell')).toBe(false); });
 });
 
 describe('авто їде лише коли все потрібне вкладене (GAME-175, закон 1)', () => {

@@ -12,6 +12,9 @@ const VIEWS = [
   { side: '9x16', w: 360, h: 640 }, { side: '1x1', w: 600, h: 600 }, { side: '16x9', w: 800, h: 450 },
 ] as const;
 const DAY = 240; const DUSK_EARLY = 590; const SIX = 600; const NIGHT = 750;
+// GAME-246: каса — за годинами крамниці (08:00–20:00, GAME-242), тож пролог не можна почати вночі: старт о 19:30 (690) — оплата о 19:55
+// (дім→крамниця велосипедом 25 хв), приїзд у табір о 22:35 (ще 25+15+120 хв), коли Нора вже спить (SLEEP_AT 20:00).
+const NIGHT_ARRIVAL_START = 690;
 
 interface Lamps { count: number; on: boolean; alpha: number; radius: number }
 interface Night { level: number; cricket: number; owl: number }
@@ -166,7 +169,7 @@ test.describe('розмова вночі', () => {
   test.use({ viewport: { width: 1280, height: 800 }, hasTouch: false, isMobile: false });
   test('сусід стоїть усю розмову (4 с і більше), без «Z» і не лежить; після розмови ще мить стоїть, потім знову спить', async ({ page }) => {
     test.setTimeout(240_000);
-    const errors = await toCamp(page, `&noAutosave=1&atMinute=${NIGHT}`);
+    const errors = await toCamp(page, `&noAutosave=1&atMinute=${NIGHT_ARRIVAL_START}`);
     const id = 'npc.nora';
     await expect.poll(async () => (await nbs(page)).find((n) => n.id === id)?.state, { timeout: 10_000, message: 'о цій порі Нора спить' }).toBe('sleep');
     const box = page.locator('[data-ui="story"] [data-ui="dialogue"]');

@@ -104,6 +104,15 @@ async function goAndDo(page: Page, car: boolean, shot?: string): Promise<string>
     await expect.poll(() => signature(page), { timeout: 5_000, message: 'відповідь «їдемо» не повезла авто' }).not.toBe(framed);
     return target;
   }
+  // GAME-246: з кошиком стрілка веде до каси; наближення відкриває рамку «Сплатити» (кільце — як у авто), гравець відповідає — гроші й речі змінюються.
+  const pay = page.locator('.ui-talk [data-ui="dialogue"] [data-act="checkout"]');
+  if (target === 'obj.buy' && await pay.count()) {
+    const framed = await signature(page);
+    await page.waitForTimeout(450);
+    await pay.first().click();
+    await expect.poll(() => signature(page), { timeout: 5_000, message: 'відповідь «Сплатити» не зняла гроші за кошик' }).not.toBe(framed);
+    return target;
+  }
   const c = await core(page);
   const key = MAPS[(c.game.player?.locationId ?? 'loc.home') as keyof typeof MAPS];
   if (!key) throw new Error(`локація ${c.game.player?.locationId} — не мапа зрізу 1`);
@@ -225,7 +234,9 @@ for (const v of VIEWS) {
       expect(acts.filter((a) => !a.startsWith('create:')), 'жодної дії панелі — лише ходьба').toEqual([]);
       const frame = await page.evaluate(() => (window as unknown as { __frame: string[] }).__frame);
       expect(frame.length, 'кожну поїздку авто підтверджено в рамці «Куди їдемо?»').toBeGreaterThanOrEqual(3);
-      expect(frame.every((a) => a.startsWith('visit:')), `у рамці лише напрямки: ${frame.join(', ')}`).toBe(true);
+      // GAME-246: у рамці ще й каса «Сплатити» (рівно одна: кошик оплачено раз) — решта лише напрямки.
+      expect(frame.filter((a) => a === 'checkout:basket.all'), 'кошик оплачено в рамці каси рівно раз').toHaveLength(1);
+      expect(frame.every((a) => a.startsWith('visit:') || a === 'checkout:basket.all'), `у рамці лише напрямки й каса: ${frame.join(', ')}`).toBe(true);
       const p = await probe(page);
       expect(p.fx.auto, 'дії від наближення').toBeGreaterThanOrEqual(6);
       expect(p.fx.pops, 'сплив «+1»/«OK» на кожну дію').toBeGreaterThanOrEqual(6);
