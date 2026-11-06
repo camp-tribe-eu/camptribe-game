@@ -494,6 +494,7 @@ render(h(Shell, {
     save: () => saves.save(),
     newGame: async () => {
       backpack.length = 0;
+      chatted.clear();   // GAME-261: «…» нової гри не гасне від розмов попередньої (рецензія #197)
       unpackedOnce = false;
       const ok = await saves.newGame();
       rebaseRewards();
