@@ -11,8 +11,8 @@
 import { beforeAll, describe, expect, it } from 'vitest';
 import { dispatch } from '../core/commands';
 import { daySummary, dayEndQuests } from '../core/day-summary';
-import { compileGear, GAME_DEFS, RAW_ITEMS } from './slice-defs';
-import { storyItems, type CoreDefs, type StoryDefs } from '../core/defs';
+import { GAME_DEFS } from './slice-defs';
+import { type CoreDefs, type StoryDefs } from '../core/defs';
 import { initialState, type GameState } from '../core/state';
 import { changedGame, isJournalType, newSim, step, type JournalEntry, type SimState } from '../core/sim';
 import { MAIN_QUEST_ID } from '../core/story';
@@ -344,14 +344,14 @@ describe('GAME-138 · Спосіб перевірки 3: 0 € на старті
   };
   const combos = enumerateCombos(CONTENT);
 
-  /** Мутація: намет і спальник більше не лежать у крамниці (не «взяти»), лише продаються — безкоштовного шляху немає. */
+  /** Мутація (GAME-246): речей Анни (0 €) на полиці немає — лишається лише каса: за гроші шлях є, без грошей — немає. */
   function paidOnly(): CoreDefs {
     const mut = structuredClone(CONTENT);
     const shop = mut.locations.find((l) => l.id === 'loc.shop');
-    if (shop) shop.items = (shop.items ?? []).filter((i) => i !== 'item.tent' && i !== 'item.sleeping-bag');
+    const anna = new Set(['item.tent-anna', 'item.sleeping-bag-anna']);
+    if (shop) shop.items = (shop.items ?? []).filter((i) => !anna.has(i));
     const story = compileStory(mut);
-    const free = new Set([...storyItems(story)].filter((i) => i !== 'item.tent' && i !== 'item.sleeping-bag'));
-    return { ...GAME_DEFS, story, items: { ...GAME_DEFS.items, ...compileGear(RAW_ITEMS, free) } };
+    return { ...GAME_DEFS, story, items: Object.fromEntries(Object.entries(GAME_DEFS.items).filter(([id]) => !anna.has(id))) };
   }
 
   it('кожна комбінація з 0 € доходить до кінця розділу (повний пошук від створення персонажа)', () => {

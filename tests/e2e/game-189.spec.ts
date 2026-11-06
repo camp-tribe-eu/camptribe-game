@@ -26,7 +26,7 @@ async function arriveInCamp(page: Page): Promise<string[]> {
   await page.locator('[data-touch="story"]').click();
   await panel(page).locator('[data-act="create"]', { hasText: /Велосипед|Bike/ }).first().click();
   await page.waitForTimeout(400);
-  for (const [k, key] of [['complete', 'q.prologue-home-001'], ['complete', 'q.st-001'], ['complete', 'q.st-002'], ['visit', 'loc.shop'], ['pickup', 'item.tent'], ['pickup', 'item.sleeping-bag'], ['complete', 'q.st-003'],
+  for (const [k, key] of [['complete', 'q.prologue-home-001'], ['complete', 'q.st-001'], ['complete', 'q.st-002'], ['visit', 'loc.shop'], ['pickup', 'item.tent'], ['pickup', 'item.sleeping-bag'], ['checkout', 'basket.all'], ['complete', 'q.st-003'],
     ['visit', 'loc.home'], ['complete', 'q.ch1-home-001'], ['visit', 'loc.road'], ['complete', 'q.st-004'], ['visit', 'loc.camp.lake']] as const) await act(page, k, key);
   expect((await core(page)).game.player?.locationId).toBe(CAMP);
   await page.waitForTimeout(600);

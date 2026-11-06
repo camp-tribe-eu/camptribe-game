@@ -47,7 +47,7 @@ async function toShop(page: Page): Promise<void> {
 }
 /** Далі з крамниці: намет і спальник, завершити st-003 і додому пакуватись (GAME-138: CH1-HOME-001) — перша дорога з наметом (дощ чи сонце — за зерном). */
 async function shopToHome(page: Page): Promise<void> {
-  for (const [k, key] of [['pickup', 'item.tent'], ['pickup', 'item.sleeping-bag'], ['complete', 'q.st-003'], ['visit', 'loc.home']] as const) await act(page, k, key);
+  for (const [k, key] of [['pickup', 'item.tent'], ['pickup', 'item.sleeping-bag'], ['checkout', 'basket.all'], ['complete', 'q.st-003'], ['visit', 'loc.home']] as const) await act(page, k, key);
 }
 
 test.describe('мобільний екран подорожі', () => {

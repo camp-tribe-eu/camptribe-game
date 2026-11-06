@@ -199,7 +199,7 @@ test.describe('№8 текст 200 % на десктопі: завдання й 
     expect(Math.abs(centre(quest) - centre(h2)), `завдання ${JSON.stringify(quest)} проти заголовка ${JSON.stringify(h2)}`).toBeLessThan(3);
     expect(quest.width, 'завдання розтягнулось на весь екран: текст знову притиснутий до лівого краю').toBeLessThanOrEqual(660);   // межа макета: min(92vw, 640px)
     // Діалог: до Елізи — повний прохід (кліком), далі беремо рамку діалогу.
-    for (const [k, key] of [['complete', 'q.st-002'], ['visit', 'loc.shop'], ['pickup', 'item.tent'], ['pickup', 'item.sleeping-bag'], ['complete', 'q.st-003'], ['visit', 'loc.home'], ['complete', 'q.ch1-home-001'], ['visit', 'loc.road']] as const) await act(page, k, key);
+    for (const [k, key] of [['complete', 'q.st-002'], ['visit', 'loc.shop'], ['pickup', 'item.tent'], ['pickup', 'item.sleeping-bag'], ['checkout', 'basket.all'], ['complete', 'q.st-003'], ['visit', 'loc.home'], ['complete', 'q.ch1-home-001'], ['visit', 'loc.road']] as const) await act(page, k, key);
     const event = panel(page).locator('[data-ui="dialogue"]');
     if (await event.isVisible({ timeout: 400 }).catch(() => false)) {
       // Подія в дорозі — теж діалог: перевіряємо на ньому, інакше йдемо до Елізи.

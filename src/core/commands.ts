@@ -398,13 +398,21 @@ function apply(cmd: Command, d: Draft, defs: CoreDefs, guard: Safeguards, today:
         d.flags = [...d.flags, basketFlag(cmd.itemId)].sort();
         return null;
       }
+      const alt = own(defs.items, cmd.itemId)?.asItem;
+      if (alt && defs.story && isContentId(cmd.itemId) && d.player && here != null && own(defs.story.locations, here)?.items.includes(cmd.itemId)) {
+        if ((own(d.inventory, alt.itemId) ?? 0) >= 1 || d.flags.includes(basketFlag(alt.itemId))) return 'ITEM_ALREADY_HELD';
+        d.inventory[alt.itemId] = 1;
+        d.gear = { ...d.gear, [alt.itemId]: { condition: alt.condition, wet: false } };
+        return null;
+      }
       return applyStory(cmd, d, defs.story, isContentId, guard.grantId, now);
     }
     case 'Visit':
       // GAME-246: з непорожнім кошиком із крамниці не вийти — спершу каса (крадіжка = ми не маємо речей).
       // Крамниця зачинилась (GAME-242), а кошик неоплачений: не тупик — речі лишаються на полиці (кошик порожніє), вийти можна.
       if (basketOf(d.flags, defs).length > 0 && d.player && d.player.locationId !== cmd.locationId) {
-        if (now === undefined || !shopClosedHere(d, now)) return 'UNPAID_BASKET';
+        // Платити нічим (грошей менше за суму кошика) — теж не тупик: речі лишаються на полиці, а безкоштовний шлях (речі Анни) лишається.
+        if ((now === undefined || !shopClosedHere(d, now)) && d.moneyCents >= basketTotal(d.flags, defs)) return 'UNPAID_BASKET';
         const left = new Set(basketOf(d.flags, defs).map(basketFlag));
         d.flags = d.flags.filter((f) => !left.has(f));
       }

@@ -41,7 +41,7 @@ for (const v of VIEWS) {
       };
       await press(page.locator('[data-touch="story"]'));
       await press(panel(page).locator('[data-act="create"]', { hasText: /Авто|Car/ }).first());
-      const steps = [['complete', 'q.prologue-home-001'], ['complete', 'q.st-001'], ['complete', 'q.st-002'], ['visit', 'loc.shop'], ['pickup', 'item.tent'], ['pickup', 'item.sleeping-bag'],
+      const steps = [['complete', 'q.prologue-home-001'], ['complete', 'q.st-001'], ['complete', 'q.st-002'], ['visit', 'loc.shop'], ['pickup', 'item.tent'], ['pickup', 'item.sleeping-bag'], ['checkout', 'basket.all'],
         ['complete', 'q.st-003'], ['visit', 'loc.home'], ['complete', 'q.ch1-home-001'], ['visit', 'loc.road'], ['complete', 'q.st-004']] as const;
       for (const [k, key] of steps) await act(k, key);
       // Негативний контроль: поза табором справ за погодою в цілях немає.

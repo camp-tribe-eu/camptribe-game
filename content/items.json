@@ -13,6 +13,8 @@
   { "id": "item.first-aid", "nameKey": "item.first-aid" },
   { "id": "item.clothes", "nameKey": "item.clothes" },
   { "id": "item.lantern", "nameKey": "item.lantern" },
+  { "id": "item.tent-anna", "nameKey": "item.tent-anna" },
+  { "id": "item.sleeping-bag-anna", "nameKey": "item.sleeping-bag-anna" },
   { "id": "item.firewood", "nameKey": "item.firewood" },
   { "id": "item.water", "nameKey": "item.water" },
   { "id": "item.simple-dinner", "nameKey": "item.simple-dinner" },

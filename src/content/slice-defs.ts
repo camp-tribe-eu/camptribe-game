@@ -50,6 +50,9 @@ export const SLICE_DEFS: CoreDefs = {
     ...GEAR_ITEMS,
     // Дрова й ліхтар лежать у локаціях (табір, крамниця) — сюжет дає їх задарма, тож ціни в них немає (GAME-81, DEFS_STORY_ITEM_BUYABLE).
     'item.firewood': {},
+    // GAME-246 (сценарій §4.1 крок 4): старий намет Анни — 0 €, «трохи протікає»: дає звичайний намет зі станом 60.
+    'item.tent-anna': { asItem: { itemId: 'item.tent', condition: 60 } },
+    'item.sleeping-bag-anna': { asItem: { itemId: 'item.sleeping-bag', condition: 60 } },
     'item.lantern': { shelfCents: SHELF_CENTS['item.lantern'] as number },
   },
   interactions: {

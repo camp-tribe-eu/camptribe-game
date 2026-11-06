@@ -27,7 +27,7 @@ for (const v of VIEWS) {
       await page.locator('[data-touch="story"]').click();
       await panel(page).locator('[data-act="create"]', { hasText: /Велосипед|Bike/ }).first().click();
       await page.waitForTimeout(400);
-      for (const [k, key] of [['complete', 'q.prologue-home-001'], ['complete', 'q.st-001'], ['complete', 'q.st-002'], ['visit', 'loc.shop'], ['pickup', 'item.tent'], ['pickup', 'item.sleeping-bag'], ['complete', 'q.st-003'], ['visit', 'loc.home'], ['complete', 'q.ch1-home-001'], ['visit', 'loc.road']] as const) await act(page, k, key);
+      for (const [k, key] of [['complete', 'q.prologue-home-001'], ['complete', 'q.st-001'], ['complete', 'q.st-002'], ['visit', 'loc.shop'], ['pickup', 'item.tent'], ['pickup', 'item.sleeping-bag'], ['checkout', 'basket.all'], ['complete', 'q.st-003'], ['visit', 'loc.home'], ['complete', 'q.ch1-home-001'], ['visit', 'loc.road']] as const) await act(page, k, key);
       expect((await core(page)).journal.length).toBeGreaterThan(8);   // є що згортати
       await page.goto('/?seed=7&mapFirst=1');
       await loaded(page);
