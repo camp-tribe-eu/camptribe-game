@@ -285,7 +285,7 @@ export function Shell({ port, langOverride, credits, build, holdToast = false, h
       update({ ...settings, remindedTrip: trip, remindShown: true });
     }, REMIND_CALM_S * 1000);
     return () => window.clearTimeout(timer);
-  }, [paused, storyOpen, talk, summary, offer, settings, remind]);
+  }, [paused, storyOpen, talk, summary, offer.lastTrip, offer.stage, settings.remindShown, settings.remindedTrip, remind]);
   const copyCode = (): void => {
     void port.exportCode().then(async (code) => {
       try {
