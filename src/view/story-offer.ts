@@ -22,12 +22,12 @@ import { ATLAS_PAGES, STICKER_META } from '../content/stickers';
 import { pageFill } from '../core/atlas-fill';
 import { nearestReward } from '../content/nearest-reward';
 import { LOCALES } from '../i18n';
-import { chapterComplete, matches, route } from '../core/story';
+import { canSleepNow, chapterComplete, matches, questOpen, route, storyDay } from '../core/story';
 import { awardsFor } from '../core/progress';
 import { capacityOf, carriedOf, overflowCandidates, packedOf, packFlag, packingOpen, packItemsFor, usedUnits } from '../core/packing';
 import { timeOfDay } from './world/daylight';
-import { bedtimeNight } from '../core/clock';
-import { canSleep, shopClosedHere, wakeMinute } from '../core/rest';
+import { bedtimeNight, EVENING, minuteOfDay } from '../core/clock';
+import { shopClosedHere, wakeMinute } from '../core/rest';
 import { dayOf, tripMinutes, type Weather } from '../core/weather';
 import { CONTENT, memorableFacts } from '../content/story';
 import { moves, progressKey, type Move } from '../content/moves';
@@ -79,8 +79,8 @@ const TRANSITIONS: ReadonlyMap<string, readonly RawTransition[]> = new Map(
  */
 export const outcomeKey = progressKey;
 
-const tryMove = (s: GameState, m: Move | Omit<Command, 'commandId'>, defs: CoreDefs, weather?: Weather): GameState | null => {
-  const r = dispatch(s, { ...m, commandId: nextCommandId(s) } as Command, defs, undefined, undefined, weather);
+const tryMove = (s: GameState, m: Move | Omit<Command, 'commandId'>, defs: CoreDefs, weather?: Weather, now?: number): GameState | null => {
+  const r = dispatch(s, { ...m, commandId: nextCommandId(s) } as Command, defs, undefined, undefined, weather, now);
   return r.ok ? r.state : null;
 };
 
@@ -134,15 +134,15 @@ const refOf = (m: Move): string => {
 export interface Offered { readonly offer: StoryOffer; readonly intents: ReadonlyMap<string, Move> }
 
 /** Спроби, які меню пропонує в стані: прийняті ядром, без Interact, у розмові — лише розмова, без дублів наслідку. */
-export function menuMoves(s: GameState, defs: CoreDefs, weather?: Weather): { move: Move; next: GameState }[] {
+export function menuMoves(s: GameState, defs: CoreDefs, weather?: Weather, now?: number): { move: Move; next: GameState }[] {
   const talking = s.dialogue !== null;
   const here = outcomeKey(s);
   const seen = new Set<string>();
   const out: { move: Move; next: GameState }[] = [];
   for (const m of moves(s, defs, true)) {
-    if (m.type === 'Interact' || m.type === 'RoadEvent') continue; // справа сцени й симуляції, не меню
+    if (m.type === 'Interact' || m.type === 'RoadEvent' || m.type === 'Sleep') continue; // справа сцени й симуляції, не меню; сон — окремою дією нижче (canSleep, GAME-242)
     if (talking && m.type !== 'Choose' && m.type !== 'Continue') continue;
-    const next = tryMove(s, m, defs, weather);
+    const next = tryMove(s, m, defs, weather, now);
     if (!next) continue;
     const outcome = outcomeKey(next);
     if (outcome === here) continue; // дія, що нічого не змінює (прийти туди, де стоїш), — не пропонуємо
@@ -253,10 +253,16 @@ export function summaryOffer(sim: SimState, defs: CoreDefs): { daysEnded: number
  * GAME-181 · поточна ціль у HUD: назва першого активного ГОЛОВНОГО квесту, доречного цьому гравцеві (бічні не рахуються: ціль одна). Немає персонажа чи розділ
  * завершено — цілі немає. Той самий квест, що в ☰ під «Квест»: гравець бачить одне й те саме в двох місцях.
  */
-export function goalOf(s: GameState, st: StoryDefs): { key: string } | null {
+export function goalOf(s: GameState, st: StoryDefs, now?: number): { key: string } | null {
   const p = s.player;
   if (!p || chapterComplete(s, st)) return null;
   const id = Object.entries(s.quests).find(([qid, q]) => q.status === 'active' && st.quests[qid] && !st.quests[qid].optional && matches(st.quests[qid].when, p))?.[0];
+  // GAME-256: крок чекає свій день чи вечір — ціль каже, що робити (вільний час / вечір / спати), а не називає крок, який ще не можна зробити.
+  const gate = id === undefined ? undefined : st.quests[id]?.gate;
+  if (id !== undefined && gate && !questOpen(st, s, id, now)) {
+    if (storyDay(s.slept) < gate.day) return { key: now !== undefined && minuteOfDay(now) >= EVENING ? 'goal.wait.sleep' : 'goal.wait.free' };
+    return { key: 'goal.wait.evening' };
+  }
   const key = id === undefined ? null : nameKey(id);
   return key ? { key } : null;
 }
@@ -283,10 +289,10 @@ export const tomorrowKeyOf = (day: number): Key | null => (Object.hasOwn(LOCALES
  * GAME-200 · відкриті цілі журналу: головна, побічні (бічний квест у роботі, прохання сусіда в роботі) і «нагорода близько» (nearestReward).
  * Не більше 4; головна й нагорода — завжди, поки є, побічні — між ними. Нічого не вигадує: порожньо там, де справді нічого немає.
  */
-export function openGoals(s: GameState, st: StoryDefs, weather?: Weather): OfferGoal[] {
+export function openGoals(s: GameState, st: StoryDefs, weather?: Weather, now?: number): OfferGoal[] {
   const p = s.player;
   if (!p) return [];
-  const main = goalOf(s, st);
+  const main = goalOf(s, st, now);
   const sides: OfferGoal[] = [
     // GAME-208: справа дня за погодою — перша серед побічних: дощ і ясний день дають РІЗНІ цілі (не провал, а інше заняття).
     ...REQUESTS.filter((r) => r.weather !== undefined && p.locationId === REQUEST_LOCATION && ['active', 'ready'].includes(requestStatus(s.flags, r, REQUESTS, weather))).map((r) => ({ kind: 'side' as const, key: r.titleKey, ui: false })),
@@ -382,9 +388,10 @@ export function storyOffer(sim: SimState, defs: CoreDefs, view: StoryView = PANE
     near: nearL ? { label: nearL.label, itemKey: nearL.ref ? nameKey(nearL.ref) : null } : reqNear ? { label: 'near.req' as Key, itemKey: reqNear.labelKey }
       : view.near !== null && view.mapFirst && isTraceSpot(view.near) && liveTraceSpot(s, view.near) ? { label: 'near.trace' as Key, itemKey: null } : null,   // GAME-215: біля позначки олівцем
   };
+  // GAME-256: «День N» у HUD — після сну одразу новий день (07:00), а не лише з 08:00 (dayOf).
   const ag = s.player && view.mapFirst ? agendaOf(sim, defs) : null;
   const agenda = ag ? { ...ag, items: ag.items.map((i) => ({ ...i, label: 'item' in i.label ? { content: nameKey(i.label.item) ?? i.label.item } : i.label })) } : null;
-  const base = { mapFirst: view.mapFirst, agenda, hint, requests: trackerRows(s, REQUESTS, weather), goal: goalOf(s, st), progress: progressOffer(s), atlas: atlasOffer(s), nearest: nearestReward(s), goals: s.player ? openGoals(s, st, weather) : [], moneyCents: s.moneyCents, inventory, journal, lastTrip, weather, forecast: todayForecast(sim), day: dayOf(sim.clock) + 1, timeMinutes: timeOfDay(sim.clock.minutes), rest: restOffer(sim), wave: waveOffer(sim), mia: miaState(s, defs), ...summaryOffer(sim, defs) };
+  const base = { mapFirst: view.mapFirst, agenda, hint, requests: trackerRows(s, REQUESTS, weather), goal: goalOf(s, st, sim.clock.minutes), progress: progressOffer(s), atlas: atlasOffer(s), nearest: nearestReward(s), goals: s.player ? openGoals(s, st, weather, sim.clock.minutes) : [], moneyCents: s.moneyCents, inventory, journal, lastTrip, weather, forecast: todayForecast(sim), day: Math.max(dayOf(sim.clock) + 1, storyDay(s.slept)), timeMinutes: timeOfDay(sim.clock.minutes), rest: restOffer(sim), wave: waveOffer(sim), mia: miaState(s, defs), ...summaryOffer(sim, defs) };
 
   if (!s.player) {
     const choices = characterChoices(defs);
@@ -419,7 +426,7 @@ export function storyOffer(sim: SimState, defs: CoreDefs, view: StoryView = PANE
     intents.set(a.id, move);
     offered.push(a);
   }
-  for (const { move } of menuMoves(s, defs, weather)) {
+  for (const { move } of menuMoves(s, defs, weather, sim.clock.minutes)) {
     if (covered.has(moveKey(move))) continue;
     const a: OfferAction = { id: idOf(move, s), ...describe(move, defs, s, weather) };
     intents.set(a.id, move);
@@ -441,7 +448,7 @@ export function storyOffer(sim: SimState, defs: CoreDefs, view: StoryView = PANE
       intents.set(w.id, { type: 'WaitForShop' });
       offered.push(w);
     }
-    if (canSleep(s, now)) {
+    if (canSleepNow(st, s, now)) {
       const z: OfferAction = { id: 'rest|sleep', kind: 'sleep', key: null };
       intents.set(z.id, { type: 'Sleep' });
       offered.push(z);

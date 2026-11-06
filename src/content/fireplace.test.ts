@@ -15,6 +15,8 @@ import uk from '../../content/locales/uk.json';
 import { FIREPLACE_FACTS, FIREPLACE_SCENE, fireplaceFacts, startFireplace, type FireplaceSetup } from './fireplace';
 import { GAME_DEFS } from './slice-defs';
 import { CONTENT, compileStory, type RawContent } from './story';
+import { sleepStateTo, toDayMinute } from './test-days';
+import type { SimState } from '../core/sim';
 
 const RAW = CONTENT.dialogues.find((d) => d.id === FIREPLACE_SCENE) as RawContent['dialogues'][number];
 const UK = uk as Record<string, string>;
@@ -29,7 +31,8 @@ function fresh(defs: CoreDefs): GameState {
 
 const FIRE_QUEST = 'CH1-D2-FIRE-001';
 /** Стан на своєму етапі (GAME-141): CH1-D2-FIRE-001 активний — єдине місце, де сцену вогнища дозволено починати. */
-const atFireQuest = (s: GameState): GameState => ({ ...s, quests: { ...s.quests, [FIRE_QUEST]: { status: 'active', done: [] } } });
+const atFireQuest = (s: GameState): GameState => sleepStateTo({ ...s, quests: { ...s.quests, [FIRE_QUEST]: { status: 'active', done: [] } } }, 2);   // GAME-256: вечір дня 2 — після справжнього сну
+const atFireSim = (sim: SimState): SimState => toDayMinute({ ...sim, game: { ...sim.game, quests: { ...sim.game.quests, [FIRE_QUEST]: { status: 'active', done: [] } } } }, 2, 19);
 
 /** Провести сцену ядром: «Далі», доки є next; на вузлі з вибором — A (0) чи B (1). Повертає вузли по черзі. */
 function play(defs: CoreDefs, setup: FireplaceSetup, pick: 0 | 1): string[] {
@@ -156,7 +159,7 @@ describe('GAME-142 · команда StartScene і точка старту дл�
     let sim = newSim(20261024, 5_000);
     const ctx = { defs: GAME_DEFS };
     sim = step(sim, { kind: 'command', command: { type: 'CreateCharacter', commandId: nextCommandId(sim.game), profileId: 'profile.family-teen', transportId: 'transport.car', animalId: 'animal.cat' } }, ctx);
-    sim = { ...sim, game: atFireQuest(sim.game) };
+    sim = atFireSim(sim);
     sim = step(sim, { kind: 'command', command: startFireplace(nextCommandId(sim.game), { fireAllowed: true, dinnerDone: true, photoTaken: false }) }, ctx);
     expect(sim.game.dialogue).toEqual({ id: FIREPLACE_SCENE, node: 'open' });
     for (let i = 0; i < 50 && sim.game.dialogue; i++) {
@@ -192,9 +195,10 @@ describe('GAME-142 · команда StartScene і точка старту дл�
     sim = step(sim, { kind: 'command', command: startFireplace(nextCommandId(sim.game), { fireAllowed: true, dinnerDone: true, photoTaken: false }) }, ctx);
     expect(sim.journal).toHaveLength(n);
     expect(sim.game.dialogue).toBeNull();
-    sim = { ...sim, game: atFireQuest(sim.game) };
+    sim = atFireSim(sim);
+    const afterSetup = sim.journal.length;   // GAME-256: сон до вечора дня 2 — частина налаштування, не дії сцени
     sim = step(sim, { kind: 'command', command: startFireplace(nextCommandId(sim.game), { fireAllowed: true, dinnerDone: true, photoTaken: false }) }, ctx);
-    expect(sim.journal.slice(n).map((e) => [e.type, e.ref])).toEqual([['StartScene', FIREPLACE_SCENE]]);
+    expect(sim.journal.slice(afterSetup).map((e) => [e.type, e.ref])).toEqual([['StartScene', FIREPLACE_SCENE]]);
   });
 
   it('GAME-141: мутація «сцена законна всюди» (atQuest прибрано) → тести законності червоніють', () => {

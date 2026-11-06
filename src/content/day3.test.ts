@@ -28,6 +28,7 @@ import { CONTENT, STORY } from './story';
 import flags from '../../content/flags.json';
 import EN from '../../content/locales/en.json';
 import UK from '../../content/locales/uk.json';
+import { SLEEP } from './test-days';
 
 const LOCALES: Record<string, Record<string, string>> = { uk: UK, en: EN };
 
@@ -66,12 +67,12 @@ function afterDay2(c: { profile: string; transport: string; animal: string }, de
     create, done('PROLOGUE-HOME-001'), done('ST-001'), done('ST-002'),
     visit('loc.shop'), { type: 'Pickup', itemId: 'item.tent' }, { type: 'Pickup', itemId: 'item.sleeping-bag' }, done('ST-003'),
     visit('loc.home'), done('CH1-HOME-001'), visit('loc.road'), done('ST-004'), visit('loc.camp.lake'),
-    ...meet, { type: 'Pickup', itemId: 'item.firewood' }, done('ST-005'),
+    ...meet, { type: 'Pickup', itemId: 'item.firewood' }, done('ST-005'), SLEEP,
   ];
   // День 2 (GAME-141): ранок → «Доброго ранку!» (по-своєму) → вечеря просто → вогнище.
   const day2: Move[] = [
     done('CH1-D2-001'), talk, choose(10), choose(1), next, done('CH1-D2-ELISE-001'),
-    talk, choose(13), choose(0), next, next, done('CH1-D2-CAMP-001'), done('CH1-D2-FIRE-001'),
+    talk, choose(13), choose(0), next, next, done('CH1-D2-CAMP-001'), done('CH1-D2-FIRE-001'), SLEEP,
   ];
   const s = play([...day1, ...day2], initialState(5_000), defs);
   expect(s.quests['CH1-D2-FIRE-001']?.status).toBe('completed');

@@ -96,8 +96,8 @@ describe('пакування: журнал, детермінізм, сейв', (
     expect(JSON.stringify(sim())).toBe(JSON.stringify(sim()));
   });
 
-  it('сейв: формат лишається v3, прапорці пакування переживають збереження й завантаження', () => {
-    expect(SAVE_VERSION).toBe(3);
+  it('сейв: формат — поточна версія, прапорці пакування переживають збереження й завантаження', () => {
+    expect(SAVE_VERSION).toBe(4);   // GAME-256: v4 — лічильник сну; пакування формат не ламає
     const s = step(sim(), cmd('j7', { type: 'UnpackItem', itemId: 'item.bag' }), { defs: PACK_DEFS });
     const back = fromSave(serialize(s));
     expect(back.ok && JSON.stringify(back.sim)).toBe(JSON.stringify(s));

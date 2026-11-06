@@ -132,7 +132,8 @@ export function runBot(defs: CoreDefs, variant: Variant, seed: number, memo: End
     // 126+ ходів (за 80 — 0 із 2000). Гравець-людина, бачачи готовий крок сюжету, зазвичай його й робить: якщо є хід, що рухає
     // квести (ціль виконано, квест завершено чи відхилено), бот підкидає монету — орел: обирає серед таких ходів, решка: серед
     // усіх, як раніше. Бічна гілка, відмови, купівлі й розмови лишаються випадковими; «дійшов» — лише справжній стан кінця.
-    const ahead = options.filter((o) => o.n.quests !== s.quests);
+    // GAME-256: сон теж «вперед», коли крок чекає наступного дня (moves() дає Sleep лише тоді): гравець, якому нічого більше робити, лягає спати.
+    const ahead = options.filter((o) => o.n.quests !== s.quests || o.n.slept !== s.slept);
     let pool = options;
     if (ahead.length > 0) {
       const coin = nextInt(rng, 2);

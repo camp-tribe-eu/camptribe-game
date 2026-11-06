@@ -98,6 +98,11 @@ export interface GameState {
    * читаються без міграції версії). Похідне від уже відомого перебору станів нічого не змінює — у ключі ходів не бере участі (moves.ts, PROGRESS_IGNORED).
    */
   readonly friend?: FriendState;
+  /**
+   * GAME-256: скільки разів родина спала (Sleep або автосон о 00:30), не більше SLEEP_CAP. Поля немає — не спала жодного разу.
+   * День сюжету = slept + 1: квести з `gate` (дні 2–3) відчиняються лише після сну. Лічильник у ключі перебору береться як є.
+   */
+  readonly slept?: number;
 }
 
 export const REJECT_CODES = [
@@ -122,6 +127,7 @@ export const REJECT_CODES = [
   'NOT_HERE',
   'ITEM_ALREADY_HELD',
   'QUEST_NOT_ACTIVE',
+  'QUEST_NOT_YET',
   'QUEST_OBJECTIVES_OPEN',
   'QUEST_REQUIRES_UNMET',
   'QUEST_NOT_OPTIONAL',

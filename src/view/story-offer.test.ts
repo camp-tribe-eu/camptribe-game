@@ -12,7 +12,7 @@ import type { GameState } from '../core/state';
 import { enumerateCombos } from '../../scripts/validator/combos.mjs';
 import { GAME_DEFS } from '../content/slice-defs';
 import { CONTENT, STORY } from '../content/story';
-import { exploreView } from '../content/moves';
+import { exploreView, moves } from '../content/moves';
 import { canonical } from '../core/hash';
 import type { Move } from '../content/moves';
 import uk from '../../content/locales/uk.json';
@@ -32,7 +32,13 @@ const EXHAUSTIVE_MS = 240_000;
 
 const DEFS: CoreDefs = GAME_DEFS;
 type Menu = (s: GameState) => { move: Move; next: GameState }[];
-const realMenu: Menu = (s) => menuMoves(s, DEFS);
+// GAME-256: «Спати» — окрема дія панелі (ввечері біля намету, GAME-242), а не хід меню; у перебірі без годинника вона доступна, коли активний крок чекає наступного дня
+// (так само, як у ботові): без неї день 2 недосяжний, і «кінець досяжний» не мав би сенсу.
+const sleepMoves: Menu = (s) => moves(s, DEFS).filter((m) => m.type === 'Sleep').flatMap((move) => {
+  const r = dispatch(s, { ...move, commandId: `z${s.seq}` } as Command, DEFS);
+  return r.ok ? [{ move, next: r.state }] : [];
+});
+const realMenu: Menu = (s) => [...menuMoves(s, DEFS), ...sleepMoves(s)];
 
 function create(intent: Move): GameState {
   const r = dispatch(newSim(1, 5_000).game, { ...intent, commandId: 'c0' } as Command, DEFS);

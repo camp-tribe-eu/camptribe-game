@@ -245,7 +245,7 @@ describe('екран: ціль у HUD і блок прогресу в знімк
     expect(progressOffer(initialState(0)).title).toMatchObject({ index: 0, key: 'title.1', nextKey: 'title.2', into: 0, span: 60 });
   });
   it('підсумок дня в знімку: нагорода, «Наступного разу» — активний головний квест; після кінця розділу — null', () => {
-    const day1 = PROLOGUE_BIKE.reduce((s, i) => (s.game.quests['ST-005']?.status === 'completed' ? s : step(s, i, { defs: GAME_DEFS })), newSim(SEED, START_MONEY));
+    const day1 = PROLOGUE_BIKE.reduce((s, i) => (s.journal.some((e) => e.type === 'Sleep') ? s : step(s, i, { defs: GAME_DEFS })), newSim(SEED, START_MONEY));
     const sum = storyOffer(day1, GAME_DEFS).offer.summary;
     expect(sum?.nextKey).toBe('q.ch1-d2-001');
     expect(sum?.reward.xp).toBeGreaterThan(0);

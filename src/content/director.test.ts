@@ -11,7 +11,6 @@
 //  * пакети біля води: прапорець, запис журналу, вдруге — GRANT_ALREADY_GIVEN і об'єкт німий.
 import campLake from '../../public/maps/camp-lake.tmj?raw';
 import { describe, expect, it } from 'vitest';
-import type { Command } from '../core/commands';
 import { newSim, step, type SimState } from '../core/sim';
 import { progressKey, moves, type Move } from './moves';
 import { GAME_DEFS } from './slice-defs';
@@ -20,11 +19,12 @@ import { FIRE_STAGE, MAP_LOCATION, TASK_SPOT, fireplaceDue, fireplacePlayed, liv
 import { leaveMove } from './road-events.test.helpers';
 import { CONTENT, STORY } from './story';
 import { waveOffer } from '../view/story-offer';
+import { awaitGate, simSend } from './test-days';
 
 const CTX = { defs: GAME_DEFS };
 const CAMP = 'CH1-D2-CAMP-001';
 let n = 0;
-const send = (s: SimState, m: Move): SimState => step(s, { kind: 'command', command: { ...m, commandId: `dir-${n++}` } as Command }, CTX);
+const send = (s: SimState, m: Move): SimState => simSend(s, m, `dir-${n++}`);
 const last = (s: SimState): { ok: boolean; code?: string | undefined } => {
   const r = s.game.processed[`dir-${n - 1}`];
   if (!r) throw new Error('команду не оброблено');
@@ -57,10 +57,10 @@ function toStage(kind: 'bike' | 'car-cat', stage: string): SimState {
   const queue: SimState[] = [s];
   for (let guard = 0; queue.length && guard < 5_000; guard++) {
     const cur = queue.shift() as SimState;
-    if (cur.game.quests[stage]?.status === 'active') return cur;
+    if (cur.game.quests[stage]?.status === 'active') return awaitGate(cur, stage);
     if (cur.game.campaignEnded) continue;
     for (const m of moves(cur.game, GAME_DEFS)) {
-      if (!['Talk', 'Choose', 'Continue', 'CompleteQuest'].includes(m.type)) continue;
+      if (!['Talk', 'Choose', 'Continue', 'CompleteQuest', 'Sleep'].includes(m.type)) continue;
       if (m.type === 'CompleteQuest' && (m.to === 'q.elise-bike-area' || m.questId === CAMP || m.questId === FIRE_STAGE)) continue;
       const t = send(cur, m);
       if (!last(t).ok) continue;

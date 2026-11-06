@@ -7,6 +7,7 @@ import { newSim, step, type SimState } from '../core/sim';
 import { GAME_DEFS } from '../content/slice-defs';
 import { PROLOGUE_BIKE, SEED, START_MONEY } from '../content/replay.scenario';
 import { nameKey, storyOffer, summaryOffer } from './story-offer';
+import { sleepThrough } from '../content/test-days';
 
 const CTX = { defs: GAME_DEFS };
 let n = 0;
@@ -21,7 +22,7 @@ function carDay(seed: number): SimState {
   for (let i = 0; s.game.dialogue && i < 20; i++) { const d = s.game.dialogue; s = cmd(s, { type: 'Continue' }); if (s.game.dialogue === d) s = cmd(s, { type: 'Choose', choice: 1 }); }
   for (const c of [{ type: 'CompleteQuest', questId: 'ST-004' }, { type: 'Visit', locationId: 'loc.camp.lake' }, { type: 'Talk', npcId: 'npc.elise' }, { type: 'Choose', choice: 1 },
     { type: 'Continue' }, { type: 'Choose', choice: 0 }, { type: 'Continue' }, { type: 'Pickup', itemId: 'item.firewood' }, { type: 'CompleteQuest', questId: 'ST-005' }]) s = cmd(s, c);
-  return s;
+  return sleepThrough(s);   // GAME-256: день 1 закриває сон (ніч без намету — після 22:00)
 }
 
 const expected = (sim: SimState, day = 1) => {

@@ -12,6 +12,7 @@ import { FISH_FACTS, FISH_KEEP_SCENE, FISH_RELEASE_SCENE, fishChoiceMove, fishEv
 import { FIREPLACE_SCENE, startFireplace } from './fireplace';
 import { GAME_DEFS } from './slice-defs';
 import { CONTENT, compileStory, type RawContent } from './story';
+import { sleepStateTo } from './test-days';
 
 const UK = uk as Record<string, string>;
 const EN = en as Record<string, string>;
@@ -20,7 +21,7 @@ const FIRE_QUEST = 'CH1-D2-FIRE-001';
 function fresh(defs: CoreDefs): GameState {
   const r = dispatch(initialState(5_000), { type: 'CreateCharacter', commandId: 'c0', profileId: 'profile.family-teen', transportId: 'transport.car', animalId: 'animal.cat' }, defs);
   if (!r.ok) throw new Error(`CreateCharacter: ${r.code}`);
-  return { ...r.state, quests: { ...r.state.quests, [FIRE_QUEST]: { status: 'active', done: [] } } };
+  return sleepStateTo({ ...r.state, quests: { ...r.state.quests, [FIRE_QUEST]: { status: 'active', done: [] } } }, 2);   // GAME-256: вечір дня 2 — після справжнього сну
 }
 
 type Fish = 'none' | 'kept' | 'released' | 'both';

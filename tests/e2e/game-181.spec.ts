@@ -4,6 +4,7 @@
 import { readFileSync } from 'node:fs';
 import { expect, test, type Locator, type Page } from '@playwright/test';
 import { waitGameReady } from './ready';
+import { sleepTheDay } from './chapter-driver';
 
 interface Progress { xp: number; om: number; keys: string[] }
 interface Core { clock: { minutes: number }; game: { player: { locationId: string } | null; flags: string[]; quests: Record<string, { status: string }>; inventory: Record<string, number>; progress?: Progress } }
@@ -294,6 +295,7 @@ for (const v of VIEWS) {
     await page.screenshot({ path: shot(v.side, 'skills') });
     await expect(panel.locator('[data-ui="summary"]')).toHaveCount(0);   // контроль: до кінця дня картки підсумку немає
     await act('complete', 'q.st-005');
+    await sleepTheDay(page);   // GAME-256: день 1 закриває сон
 
     const summary = page.locator('[data-ui="summary"]');
     await expect(summary).toBeVisible();

@@ -7,7 +7,7 @@
 // * контрольна сума — над станом у ТІЙ версії, у якій його записано (до міграцій);
 // * кожна випущена версія лишається фікстурою в tests/saves/ назавжди.
 import type { StoryDefs } from './defs';
-import { chapterComplete, exitsFor, matches } from './story';
+import { chapterComplete, exitsFor, matches, SLEEP_CAP } from './story';
 import { stateHash } from './hash';
 import { isJournalType, type SimState } from './sim';
 import { CONDITION_MAX } from './gear';
@@ -20,7 +20,8 @@ import { paydaysThrough, type LifeDefs } from './life';
 import { DAY_MINUTES } from './weather';
 
 export const SAVE_FORMAT = 'camplife-save';
-export const SAVE_VERSION = 3;
+/** v4 (GAME-256): лічильник сну `game.slept`. `game.schemaVersion` лишається 3 — форма GameState не ламається (поле необов'язкове); версіонується конверт. */
+export const SAVE_VERSION = 4;
 
 export interface SaveFile {
   readonly format: typeof SAVE_FORMAT;
@@ -47,6 +48,8 @@ export type LoadResult =
 /** Що міграції можуть знати про нинішню гру (не сам сейв): календар життя — для v2 → v3. */
 export interface MigrationCtx {
   readonly life?: LifeDefs;
+  /** Сюжет — для v3 → v4: які ворота днів уже пройдено сейвом. */
+  readonly story?: StoryDefs;
 }
 
 /** Міграції: MIGRATIONS[v] переводить сейв версії v у v+1. Кожна — чиста й не губить жодного поля. */
@@ -72,6 +75,21 @@ export const MIGRATIONS: Readonly<Record<number, (sim: unknown, ctx: MigrationCt
     const minutes = typeof s.clock?.minutes === 'number' && Number.isSafeInteger(s.clock.minutes) && s.clock.minutes >= 0 ? s.clock.minutes : 0;
     const paydays = ctx.life ? paydaysThrough(ctx.life.calendar, Math.floor(minutes / DAY_MINUTES)) : 0;
     return { ...s, game: { ...s.game, schemaVersion: 3, life: { paydays, leave: [] } } };
+  },
+  // v3 → v4 (GAME-256): лічильник сну. v3 вийшов до гравців без нього — сейв посеред дня 2–3 мусить лишитись ГРАБЕЛЬНИМ, а не впасти в «день 1» і замкнути крок (QUEST_NOT_YET).
+  // slept = max(скільки разів родина спала за журналом, найвищий день воріт серед активних і завершених кроків − 1), не більше SLEEP_CAP. Без сюжету в ctx — лише за журналом.
+  3: (sim, ctx) => {
+    const s = sim as { game: Record<string, unknown>; journal?: { type?: unknown }[] };
+    if (s.game.slept !== undefined) return s;
+    const slept = (s.journal ?? []).filter((e) => e.type === 'Sleep').length;
+    const quests = isObj(s.game.quests) ? (s.game.quests as Record<string, { status?: unknown }>) : {};
+    let need = 0;
+    for (const [id, q] of Object.entries(quests)) {
+      const gate = ctx.story ? Object.hasOwn(ctx.story.quests, id) ? ctx.story.quests[id]?.gate : undefined : undefined;
+      if (gate && (q.status === 'active' || q.status === 'completed')) need = Math.max(need, gate.day - 1);
+    }
+    const n = Math.min(SLEEP_CAP, Math.max(slept, need));
+    return n > 0 ? { ...s, game: { ...s.game, slept: n } } : s;
   },
 };
 
@@ -129,6 +147,8 @@ function shapeError(sim: unknown): string | null {
   if (pg !== undefined && (!isObj(pg) || !isInt(pg.xp) || !isInt(pg.om) || !sortedUniq(pg.keys) || !sortedUniq(pg.cosmetics))) return 'game: progress';
   // Наклейки (GAME-182): поле необов'язкове; є — відсортовані рядки без повторів (так пише лише ядро).
   if (game.stickers !== undefined && !sortedUniq(game.stickers)) return 'game: stickers';
+  // Сон (GAME-256): лічильник — ціле 0…SLEEP_CAP; поля немає — родина не спала (старі сейви).
+  if (game.slept !== undefined && (!isInt(game.slept) || (game.slept as number) > SLEEP_CAP)) return 'game: slept';
   // Дружба (GAME-230): поле необов'язкове (сейви до GAME-230 його не мають); є — очки й дні цілі ≥ 0 (очки ≤ стелі), `seen` — відсортовані рядки без повторів (так пише лише ядро).
   const fr = game.friend;
   if (fr !== undefined && (!isObj(fr) || !isObj(fr.pts) || !isObj(fr.gift) || !sortedUniq(fr.seen)
@@ -259,7 +279,7 @@ export function fromSave(text: string, opts: { readonly story?: StoryDefs; reado
   for (let v = version as number; v < SAVE_VERSION; v++) {
     const migrate = MIGRATIONS[v];
     if (!migrate) return { ok: false, code: 'SAVE_VERSION_UNSUPPORTED', detail: `no migration ${v}→${v + 1}` };
-    sim = migrate(sim, opts.life ? { life: opts.life } : {});
+    sim = migrate(sim, { ...(opts.life ? { life: opts.life } : {}), ...(opts.story ? { story: opts.story } : {}) });
   }
   const bad = shapeError(sim);
   if (bad) return { ok: false, code: 'SAVE_SHAPE', detail: bad };

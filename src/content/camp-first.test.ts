@@ -80,6 +80,7 @@ function walk(seed: number, steps: number, combo: number): Walk {
       const live = spot !== null && (spot.startsWith('npc.') ? npcLive(g, DEFS, spot) : liveSpot(sim, spot, DEFS));
       if (offer.stage === 'play' && !live) w.problems.push(`${i}: стрілка «Далі» (${String(offer.hint.next)} → ${String(spot)}) не веде до живої цілі в таборі; квести: ${Object.entries(g.quests).filter(([, q]) => q.status === 'active').map(([id, q]) => `${id}[${q.done.join('+')}]`).join(',')}; хвиля: ${g.wave?.active?.waveId ?? '-'}; предмети: ${Object.keys(g.inventory).join('+')}`);
       cands = campMapMoves(sim, w);
+      if (offer.actions.some((a) => a.kind === 'sleep')) cands.push({ type: 'Sleep' });   // GAME-256: «Спати» у наметі з 18:00 — справжня команда; без сну день 2 не настане
       // Авто в таборі лишає його: поки сюжет табору триває, виїжджаємо рідко (інакше прогулянка тікала б на дорогу й крок вогнища, вечір дня 2, не ставав би живим).
       const leaving = g.quests['CH1-D3-RETURN-001']?.status === 'active' || g.quests['CH1-D3-HOME-001']?.status === 'active';
       if (atCamp && !leaving && rnd(12) !== 0) { const stay = cands.filter((m) => m.type !== 'Visit'); if (stay.length > 0) cands = stay; }

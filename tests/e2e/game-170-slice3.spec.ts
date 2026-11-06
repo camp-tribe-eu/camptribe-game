@@ -5,7 +5,7 @@
 //  (b) вбік 844×390, дотик: W1 — один тап по кнопці, решта спізнюється на мапі (міряємо, скільки хвиля згасає); W2 — один тап; W3 — одна
 //      ціль джойстиком і кнопкою дії, решта спізнюється → намет вологий (wetGear); розділ не зламано (ST-005 завершується);
 //  (c) негативні контролі (закон 1): ?hideAct=task — кнопок справ немає; ?breakSpot=task.pick-spot — E біля ділянки нічого не шле.
-import { playTent } from './chapter-driver';
+import { playTent, sleepTheDay } from './chapter-driver';
 import { readFileSync } from 'node:fs';
 import { expect, test, type Browser, type CDPSession, type Page } from '@playwright/test';
 import { waitGameReady } from './ready';
@@ -256,6 +256,7 @@ test.describe('(b) вбік 844×390, дотик: одна справа тапо
     // Розділ не зламано: день 1 завершується, як і раніше (Еліза, дрова, ST-005 → підсумок дня 1).
     await page.locator('[data-touch="story"]').click();
     for (const [k, key] of [['talk', 'npc.elise'], ['choose', 'dlg.elise-greeting.hello.c2'], ['continue', ''], ['choose', 'dlg.elise-greeting.spot.c1'], ['continue', ''], ['pickup', 'item.firewood'], ['complete', 'q.st-005']] as const) await act(page, k, key);
+    await sleepTheDay(page);   // GAME-256: день 1 закриває сон
     await expect(page.locator('[data-ui="summary"] h2')).toHaveText('Підсумок дня 1');
     expect((await core(page)).game.campaignEnded).toBe(false);
     expect(errors).toEqual([]);

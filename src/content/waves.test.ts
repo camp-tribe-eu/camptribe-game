@@ -16,6 +16,7 @@ import * as REGISTRY from '../../scripts/validator/codes.mjs';
 import { GAME_DEFS } from './slice-defs';
 import { CONTENT } from './story';
 import { RAW_WAVES, WAVE_CH1_ARRIVAL, WAVE_CH1_CHECKOUT, WAVE_CH1_DEPARTURE, WAVE_CH1_EVENING, WAVE_CH1_ROAD, WAVE_CH1_ROAD_BIKE, WAVES } from './waves';
+import { toDayMinute } from './test-days';
 
 const DEFS: CoreDefs = GAME_DEFS;
 const CTX = { defs: DEFS };
@@ -25,7 +26,7 @@ const cmd = (s: SimState, c: Cmd): SimState => step(s, { kind: 'command', comman
 const ok = (s: SimState): boolean => s.game.processed[`w${s.game.seq - 1}`]?.ok === true;
 const started = (waveId: string, W: WaveDef, k: Combo): SimState => {
   let s = cmd(newSim(7, 5_000), { type: 'CreateCharacter', profileId: k.profile ?? '', transportId: k.transport ?? '', ...(k.animal === 'animal.none' ? {} : { animalId: k.animal }) });
-  s = step(s, { kind: 'advance', minutes: 2 * 1440 + 19 * 60 }, CTX);
+  s = toDayMinute(s, 3, 19);   // GAME-256: день 3, 19:00 — двома справжніми снами (ворота днів 2–3 і вечора відчинені)
   // Ядро (GAME-170, рецензія) не стартує хвилю, поки її етап не активний; тут сюжет «дійшов» до етапу прямою підстановкою.
   s = { ...s, game: { ...s.game, quests: { ...s.game.quests, [W.stage]: { status: 'active', done: [] } } } };
   s = cmd(s, { type: 'StartWave', waveId });

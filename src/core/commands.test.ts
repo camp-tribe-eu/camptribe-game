@@ -164,6 +164,11 @@ describe('команда — намір, а не ефект (рецензія TL
 describe('коди відмов: кожен код із реєстру має тест, на якому він повертається', () => {
   const s = initialState(1000);
   // GAME-170: хвиля з двома справами, одна — лише для лідера. Старт — прямим dispatch із годинником (now = 0).
+  const GATED_DEFS: CoreDefs = (() => {
+    const st = STORY_DEFS.story as NonNullable<CoreDefs['story']>;
+    const mid = st.quests['q.mid'] as NonNullable<(typeof st.quests)[string]>;
+    return { ...STORY_DEFS, story: { ...st, quests: { ...st.quests, 'q.mid': { ...mid, gate: { day: 2 } } } } };
+  })();
   const WAVE_DEFS: CoreDefs = { ...STORY_DEFS, waves: { waves: { 'wave.w': { stage: 'q.start', tasks: [
     { id: 'a', limitMin: 5, leaderOnly: true, done: { effects: [] }, late: { effects: [] } }, { id: 'b', limitMin: 5, done: { effects: [] }, late: { effects: [] } }] } } } };
   const startWave: Command = { type: 'StartWave', commandId: 'sw', waveId: 'wave.w' };
@@ -191,6 +196,8 @@ describe('коди відмов: кожен код із реєстру має т
     ['LOCKED', play([DRIVER]), { type: 'Visit', commandId: 's4', locationId: 'loc.shop' }, STORY_DEFS],
     ['NOT_HERE', play([DRIVER, { type: 'Visit', locationId: 'loc.home' }, { type: 'CompleteQuest', questId: 'q.start' }]), { type: 'Talk', commandId: 's5', npcId: 'npc.ann' }, STORY_DEFS],
     ['ITEM_ALREADY_HELD', play([DRIVER, { type: 'Pickup', itemId: 'item.wood' }]), { type: 'Pickup', commandId: 's6', itemId: 'item.wood' }, STORY_DEFS],
+    // GAME-256 · крок чекає свій день (gate) — активний, але ще не завершується
+    ['QUEST_NOT_YET', play([DRIVER, { type: 'Visit', locationId: 'loc.home' }, { type: 'CompleteQuest', questId: 'q.start' }], undefined, GATED_DEFS), { type: 'CompleteQuest', commandId: 's7g', questId: 'q.mid' }, GATED_DEFS],
     ['QUEST_NOT_ACTIVE', play([DRIVER]), { type: 'CompleteQuest', commandId: 's7', questId: 'q.mid' }, STORY_DEFS],
     // GAME-84 №1: «озирнись» стартового квесту вже виконано самим стартом (гравець там стоїть) — відкриті цілі лишаються в q.mid.
     ['QUEST_OBJECTIVES_OPEN', play([DRIVER, { type: 'CompleteQuest', questId: 'q.start' }]), { type: 'CompleteQuest', commandId: 's8', questId: 'q.mid' }, STORY_DEFS],

@@ -40,7 +40,9 @@ export const PROLOGUE_BIKE: readonly Input[] = [
   c({ type: 'Interact', targetId: 'obj.campfire' }),
   c({ type: 'Talk', npcId: 'npc.elise' }), c({ type: 'Choose', choice: 3 }), c({ type: 'Choose', choice: 5 }), c({ type: 'Continue' }), // друга розмова: «нагадай» (вона вже знайома)
   c({ type: 'Pickup', itemId: 'item.firewood' }),
-  c({ type: 'CompleteQuest', questId: 'ST-005' }), ...frames(8),                        // межа дня 1 (dayEnd), розділ триває
+  c({ type: 'CompleteQuest', questId: 'ST-005' }), ...frames(8),                        // намет стоїть (dayEnd), розділ триває
+  // GAME-256: день 2 чекає сну. Вільний час до вечора (перемотування), «Спати» у наметі → 07:00 дня 2 — це й закриває день 1.
+  { kind: 'advance', minutes: 400 }, c({ type: 'Sleep' }),
   // День 2 (GAME-141): ранок → порада Елізи (прийнято) → велозона (погодились) → «дякую за велозону» → вечеря просто → кінець розділу.
   c({ type: 'CompleteQuest', questId: 'CH1-D2-001' }),                                  // ціль «ранок» виконано входом (гравець біля озера)
   c({ type: 'Talk', npcId: 'npc.elise' }), c({ type: 'Choose', choice: 10 }), c({ type: 'Choose', choice: 0 }), c({ type: 'Choose', choice: 0 }), c({ type: 'Continue' }), c({ type: 'Continue' }),
@@ -48,9 +50,11 @@ export const PROLOGUE_BIKE: readonly Input[] = [
   c({ type: 'Talk', npcId: 'npc.elise' }), c({ type: 'Choose', choice: 11 }), c({ type: 'Choose', choice: 0 }), c({ type: 'Continue' }), c({ type: 'Continue' }),
   c({ type: 'CompleteQuest', questId: 'q.elise-bike-area' }),
   c({ type: 'Talk', npcId: 'npc.elise' }), c({ type: 'Choose', choice: 12 }), c({ type: 'Continue' }), c({ type: 'Continue' }),
+  { kind: 'advance', minutes: 700 },                                                    // GAME-256: вечеря — не раніше 18:00 дня 2
   c({ type: 'Talk', npcId: 'npc.elise' }), c({ type: 'Choose', choice: 13 }), c({ type: 'Choose', choice: 1 }), c({ type: 'Continue' }), c({ type: 'Continue' }),
   c({ type: 'CompleteQuest', questId: 'CH1-D2-CAMP-001' }),
-  c({ type: 'CompleteQuest', questId: 'CH1-D2-FIRE-001' }), ...frames(8),               // вечір біля вогнища (гачок GAME-142): межа дня 2
+  c({ type: 'CompleteQuest', questId: 'CH1-D2-FIRE-001' }), ...frames(8),               // вечір біля вогнища (гачок GAME-142)
+  c({ type: 'Sleep' }),                                                                  // GAME-256: сон закриває день 2 → день 3
   // День 3 (GAME-144): ранок → речі (спорядження сухе — нейтральна сцена) → прощання з Елізою (питання про тишу) → дорога → дім = кінець розділу.
   c({ type: 'CompleteQuest', questId: 'CH1-D3-001' }),
   c({ type: 'CompleteQuest', questId: 'CH1-D3-GEAR-001' }),

@@ -70,7 +70,7 @@
     "reward": { "grantId": "rw.st-005", "money": 1000 }
   },
   {
-    "id": "CH1-D2-001", "titleKey": "q.ch1-d2-001", "optional": false, "xp": 10, "locationId": "loc.camp.lake",
+    "id": "CH1-D2-001", "gate": { "day": 2 }, "titleKey": "q.ch1-d2-001", "optional": false, "xp": 10, "locationId": "loc.camp.lake",
     "objectives": [
       { "id": "morning", "textKey": "q.ch1-d2-001.o1", "kind": "visit", "target": "loc.camp.lake", "required": true },
       { "id": "cat-morning", "textKey": "q.ch1-d2-001.o2", "kind": "visit", "target": "loc.camp.lake", "required": false, "when": { "animals": ["animal.cat"] } }
@@ -88,7 +88,7 @@
     ]
   },
   {
-    "id": "CH1-D2-CAMP-001", "titleKey": "q.ch1-d2-camp-001", "optional": false, "xp": 15, "locationId": "loc.camp.lake",
+    "id": "CH1-D2-CAMP-001", "gate": { "day": 2, "fromMinute": 1080 }, "titleKey": "q.ch1-d2-camp-001", "optional": false, "xp": 15, "locationId": "loc.camp.lake",
     "objectives": [
       { "id": "dinner", "textKey": "q.ch1-d2-camp-001.o1", "kind": "talk", "target": "npc.elise", "required": true, "byDialogue": true },
       { "id": "cat-sun", "textKey": "q.ch1-d2-camp-001.o2", "kind": "visit", "target": "loc.camp.lake", "required": false, "when": { "animals": ["animal.cat"] } }
@@ -96,14 +96,14 @@
     "transitions": [{ "on": "complete", "to": "CH1-D2-FIRE-001" }]
   },
   {
-    "id": "CH1-D2-FIRE-001", "titleKey": "q.ch1-d2-fire-001", "optional": false, "xp": 20, "dayEnd": true, "locationId": "loc.camp.lake",
+    "id": "CH1-D2-FIRE-001", "gate": { "day": 2, "fromMinute": 1080 }, "titleKey": "q.ch1-d2-fire-001", "optional": false, "xp": 20, "dayEnd": true, "locationId": "loc.camp.lake",
     "objectives": [
       { "id": "evening", "textKey": "q.ch1-d2-fire-001.o1", "kind": "visit", "target": "loc.camp.lake", "required": true }
     ],
     "transitions": [{ "on": "complete", "to": "CH1-D3-001" }]
   },
   {
-    "id": "CH1-D3-001", "titleKey": "q.ch1-d3-001", "optional": false, "xp": 10, "locationId": "loc.camp.lake",
+    "id": "CH1-D3-001", "gate": { "day": 3 }, "titleKey": "q.ch1-d3-001", "optional": false, "xp": 10, "locationId": "loc.camp.lake",
     "objectives": [
       { "id": "morning", "textKey": "q.ch1-d3-001.o1", "kind": "visit", "target": "loc.camp.lake", "required": true },
       { "id": "mia-list", "textKey": "q.ch1-d3-001.o2", "kind": "visit", "target": "loc.camp.lake", "required": false, "when": { "profiles": ["profile.family-teen"], "animals": ["animal.cat"] } }

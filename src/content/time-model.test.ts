@@ -56,7 +56,8 @@ describe('GAME-106 · модель часу розділу 1 (ціль конт�
 
   it('число хвилин рахується з ходів і > 0; друкується проти цілі 15–18 (ціль НЕ перевіряється — контенту мало)', () => {
     const med = median(minutes);
-    const fast = { car: fastestPath(start('transport.car'), GAME_DEFS), bike: fastestPath(start('transport.bike'), GAME_DEFS) };
+    // GAME-256: сон (стан `slept`) подвоює простір станів дня 2–3 — запас пошуку ×3 (стеля вузлів, не результат).
+    const fast = { car: fastestPath(start('transport.car'), GAME_DEFS, undefined, 300_000), bike: fastestPath(start('transport.bike'), GAME_DEFS, undefined, 300_000) };
     const fastMin = { car: fast.car ? minutesOf(fast.car) : NaN, bike: fast.bike ? minutesOf(fast.bike) : NaN };
     console.info(`GAME-106 розділ 1: ${med.toFixed(1)} хв гри (ціль 15–18)`);
     console.info(`GAME-106 деталі: медіана бота ${med.toFixed(1)} хв за ${traces.length} дійшлими прогонами з ${N} (мін ${Math.min(...minutes).toFixed(1)}, макс ${Math.max(...minutes).toFixed(1)}); `

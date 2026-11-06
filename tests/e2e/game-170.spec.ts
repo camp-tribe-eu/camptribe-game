@@ -6,7 +6,7 @@
 // Розкладка — числами: картка в межах екрана, не перетинає ☰, ‖ і HUD; сторч — поле гри починається під карткою.
 import { readFileSync } from 'node:fs';
 import { expect, test, type Browser, type CDPSession, type Page } from '@playwright/test';
-import { playFire } from './chapter-driver';
+import { playFire, sleepTheDay, skipToEvening } from './chapter-driver';
 import { waitGameReady } from './ready';
 
 interface Core { game: { campaignEnded: boolean; quests: Record<string, { status: string }>; flags: string[]; wave?: { active: { tasks: Record<string, { dueAt: number; outcome: string }> } | null; past: Record<string, Record<string, string>> } }; clock: { minutes: number }; journal: { type: string; ref: string | null }[] }
@@ -55,6 +55,7 @@ async function toEvening(page: Page): Promise<void> {
     ['complete', 'q.st-003'], ['visit', 'loc.home'], ['complete', 'q.ch1-home-001'], ['visit', 'loc.road'], ['complete', 'q.st-004'], ['visit', 'loc.camp.lake'],
     ['talk', 'npc.elise'], ['choose', 'dlg.elise-greeting.hello.c1'], ['continue', ''], ['continue', ''], ['choose', 'dlg.elise-greeting.spot.c1'], ['continue', ''],
     ['pickup', 'item.firewood'], ['complete', 'q.st-005']] as const) await act(page, k, key);
+  await sleepTheDay(page);   // GAME-256: день 1 закриває сон
   await expect(page.locator('[data-ui="summary"] h2')).toHaveText('Підсумок дня 1');
   await page.locator('[data-ui="summary-continue"]').click();
   await expect(page.locator('[data-ui="summary"]')).toHaveCount(0, { timeout: 15_000 });
@@ -62,6 +63,7 @@ async function toEvening(page: Page): Promise<void> {
   for (const [k, key] of [['complete', 'q.ch1-d2-001'], ['talk', 'npc.elise'], ['choose', 'dlg.elise-greeting.hello.c11'], ['choose', 'dlg.elise-greeting.morning.c1'],
     ['choose', 'dlg.elise-greeting.advice.c1'], ['continue', ''], ['continue', ''], ['complete', 'q.ch1-d2-elise-001']] as const) await act(page, k, key);
   expect((await core(page)).game.quests['CH1-D2-CAMP-001']?.status).toBe('active');
+  await skipToEvening(page);   // GAME-256: вечір дня 2 — з 18:00; хвилю W4 режисер відкриває на завантаженні
 }
 /** Вечеря з Елізою (ціль CAMP-001), завершення етапу — відкривається етап вогнища. */
 async function dinnerAndCamp(page: Page): Promise<void> {
@@ -82,6 +84,7 @@ async function playFireplace(page: Page, branchText: string): Promise<void> {
     await page.waitForTimeout(400);
   }
   await act(page, 'complete', 'q.ch1-d2-fire-001');
+  await act(page, 'sleep');   // GAME-256: день 2 закриває сон
   await expect(page.locator('[data-ui="summary"] h2')).toHaveText('Підсумок дня 2');
   await page.locator('[data-ui="summary-continue"]').click();
   await expect(page.locator('[data-ui="summary"]')).toHaveCount(0, { timeout: 15_000 });

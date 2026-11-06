@@ -14,7 +14,7 @@ import { canonical } from '../core/hash';
 import { autoPack, packFlag, packItemsFor, packedOf, packingOpen, takeFlag } from '../core/packing';
 import type { SimState } from '../core/sim';
 import type { GameState } from '../core/state';
-import { matches } from '../core/story';
+import { canSleepNow, matches, questOpen, storyDay } from '../core/story';
 import type { Key } from '../i18n';
 import { FIREPLACE_SCENE } from './fireplace';
 import type { Move } from './moves';
@@ -72,6 +72,8 @@ export const CAMP_STEP_QUESTS: readonly string[] = (MAP_SPOTS.camp as readonly s
 export const FINISH_QUESTS: ReadonlySet<string> = new Set((['camp', 'road', 'home'] as const).flatMap((k) => (MAP_SPOTS[k] as readonly string[]).filter((n) => n.startsWith('step.')).map((n) => n.slice(5))).filter((q) => !['PROLOGUE-HOME-001', 'ST-001', 'ST-002', 'ST-003'].includes(q)));
 
 /** Спорядження в багажнику: те, що вдома кладуть руками (ядро автоукладає його на старті; рука лише уточнює). */
+/** Намет у таборі: об'єкт мапи, що в дні 1 завершує ST-005 (step.ST-005), а далі — місце сну (GAME-256: «Спати» дотиком, з 18:00 чи після «пора спати»). */
+export const TENT_SPOT = 'step.ST-005';
 export const SPOT_PREFIX = { step: 'step.', pack: 'pack.', take: 'take.' } as const;
 
 /**
@@ -240,7 +242,10 @@ function compute(sim: SimState, defs: CoreDefs, name: string): Resolved | null {
   if (!p) return null;
   if (name.startsWith(SPOT_PREFIX.step)) {
     const questId = name.slice(SPOT_PREFIX.step.length);
+    // GAME-256: коли ST-005 уже завершено, намет — це ліжко: «Спати» тією ж командою ядра, що й у ☰ (ядро саме скаже, чи можна: ліжко/намет з 18:00, будь-де після 22:00).
+    if (name === TENT_SPOT && own(g.quests, questId)?.status === 'completed') return canSleepNow(defs.story, g, sim.clock.minutes) ? { moves: [{ type: 'Sleep' }] } : null;
     if (!active(g, questId)) return null;
+    if (defs.story && !questOpen(defs.story, g, questId, sim.clock.minutes)) return null;   // GAME-256: крок чекає свого дня / вечора — об'єкта кроку ще немає
     // Вечір дня 2: сцена біля вогнища — ПЕРШЕ (obj.campfire, director.ts), завершення — те саме вогнище, коли сцену зіграно.
     if (questId === 'CH1-D2-FIRE-001' && !firePlayed(sim)) return null;
     return choice(stepVariants(g, defs, questId));
@@ -297,7 +302,7 @@ export function resolveSpot(sim: SimState, defs: CoreDefs, name: string): Resolv
   if (!(MAP_SPOTS[map] as readonly string[]).includes(name) || p.locationId !== MAP_LOCATION[map]) return null;
   let byName = memo.get(g);
   if (!byName) { byName = new Map(); memo.set(g, byName); }
-  if (!name.startsWith('task.') && byName.has(name)) return byName.get(name) ?? null;   // справи хвилі залежать від годинника, якого немає в GameState — без кешу
+  if (!name.startsWith('task.') && name !== TENT_SPOT && byName.has(name)) return byName.get(name) ?? null;   // справи хвилі залежать від годинника, якого немає в GameState — без кешу
   const r = compute(sim, defs, name);
   byName.set(name, r);
   return r;
@@ -399,6 +404,21 @@ function roadNext(sim: SimState, defs: CoreDefs): Next | null {
 /** Справа хвилі приїзду, яку гравець робить руками (view/world/tent.ts). */
 export const PITCH_TASK = 'pitch-tent';
 
+/**
+ * GAME-256 · основний крок, що чекає: активний, не побічний, ворота дня сюжету ще зачинені. `sleepNext` — чекає наступного ДНЯ (потрібен сон),
+ * інакше — вечора цього ж дня. null — нічого не чекає.
+ */
+export function heldGate(sim: SimState, defs: CoreDefs): { questId: string; sleepNext: boolean } | null {
+  const st = defs.story;
+  if (!st) return null;
+  for (const [id, q] of Object.entries(sim.game.quests)) {
+    const def = st.quests[id];
+    if (q.status !== 'active' || !def?.gate || def.optional || questOpen(st, sim.game, id, sim.clock.minutes)) continue;
+    return { questId: id, sleepNext: storyDay(sim.game.slept) < def.gate.day };
+  }
+  return null;
+}
+
 function campNext(sim: SimState, defs: CoreDefs): Next | null {
   const g = sim.game;
   const w = g.wave?.active;
@@ -410,6 +430,11 @@ function campNext(sim: SimState, defs: CoreDefs): Next | null {
     const open = live[0];
     if (open) return { key: 'next.camp.task', spot: `task.${open[0]}` };
   }
+  // GAME-256: основний крок чекає на день чи вечір — гравцеві кажемо, що робити (вільний час, вечір, спати), а не ведемо до воріт, що замкнені.
+  const held = heldGate(sim, defs);
+  // Стрілка — на живий об'єкт мапи: вільний час → берег (рибалка), сон → намет, чекаємо вечора → вогнище.
+  // Сон — дія МАПИ: дотик до намету (TENT_SPOT), коли ядро дозволяє лягти (з 18:00 біля намету, після «пора спати» 22:00 будь-де); до того — вогнище табору.
+  if (held) return held.sleepNext ? (canSleepNow(defs.story, g, sim.clock.minutes) ? { key: 'next.camp.sleep', spot: TENT_SPOT } : { key: 'next.camp.free', spot: 'obj.campfire' }) : { key: 'next.camp.evening', spot: 'obj.campfire' };
   const tent = (id: string): Next => ({ key: 'next.camp.tent', spot: `step.${id}` });
   const elise = (id: string, o: string): Next => (objDone(g, id, o) ? { key: 'next.camp.elise.done', spot: `step.${id}` } : { key: 'next.camp.elise', spot: 'npc.elise' });
   if (quest(g, 'ST-005')) {
@@ -475,6 +500,7 @@ export function spotLabel(sim: SimState, defs: CoreDefs, name: string): SpotLabe
   const p = sim.game.player;
   if (!p || !liveMapSpot(sim, defs, name)) return null;
   const car = p.transportId === 'transport.car';
+  if (name === TENT_SPOT && sim.game.quests['ST-005']?.status === 'completed') return { label: 'near.sleep', ref: null };
   if (name.startsWith(SPOT_PREFIX.step)) {
     const q = name.slice(SPOT_PREFIX.step.length);
     // Табір (GAME-183): один підпис «Завершити: <назва квесту>»; удома — власні підписи кроків дня 1.

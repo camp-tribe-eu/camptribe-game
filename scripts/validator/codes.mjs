@@ -71,6 +71,10 @@ export const CODES = {
   // GAME-141: межа дня (dayEnd) окремо від кінця розділу (end)
   DAY_END_OPTIONAL:     { check: 'day-end', spec: 'GAME-141: межа дня — лише на основному етапі, відмова не лишає день незавершеним' },
 
+  // GAME-256: ворота дня сюжету (gate) — день після сну й година вечора
+  GATE_DAY_RANGE:       { check: 'gates', spec: 'GAME-256: gate.day — ціле 2…5 (день 1 — без воріт; день понад стелю сну недосяжний: лічильник сну обмежений)' },
+  GATE_MINUTE_RANGE:    { check: 'gates', spec: 'GAME-256: gate.fromMinute — ціле 0…1319 (до «пора спати» 22:00): пізніша година не відчинилась би до сну, а після сну вже інший день' },
+
   // GAME-181: прогресія — кожен квест розділу дає XP мандрівника (крок головного 10–20, побічка 15; scenario §2.1)
   QUEST_NO_XP:          { check: 'quest-xp', spec: 'GAME-181: кожен квест має xp ≥ 1 — крок без нагороди не рухає звання, і гравець не бачить, що просувається' },
   QUEST_XP_RANGE:       { check: 'quest-xp', spec: 'GAME-181: XP кроку головного квесту — 10…20, побічного — рівно 15 (scenario §2.1); інакше звання ростуть непередбачувано' },
@@ -191,6 +195,8 @@ export const FLAG_FAMILIES = {
 };
 
 // GAME-170: найбільший строк справи хвилі, ігрові хвилини (1 хв ≈ 1 с вільної сцени, SIM-TIME-002). Дзеркало WAVE_MAX_LIMIT ядра (src/core/defs.ts): рівність стереже src/content/waves.test.ts.
+/** GAME-256: стеля лічильника сну (дзеркало SLEEP_CAP у src/core/story.ts; збіг стереже gates.test.ts). */
+export const SLEEP_CAP = 4;
 export const WAVE_MAX_LIMIT = 60;
 // GAME-182: слотів на сторінці Атласу. Дзеркало STICKER_SLOTS ядра (src/core/stickers.ts): рівність стереже src/content/stickers.test.ts.
 export const STICKER_SLOTS = 12;

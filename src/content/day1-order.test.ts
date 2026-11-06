@@ -60,10 +60,10 @@ function orderViolations(journal: readonly Entry[], ended: boolean): string[] {
   return out;
 }
 
-/** CH1-D1-SUMMARY: підсумок дня 1 завершений рівно тоді, коли завершено ST-005, і межа дня — саме ST-005 (останній етап дня). */
+/** CH1-D1-SUMMARY: підсумок дня 1 завершений рівно тоді, коли після завершеного ST-005 родина лягла спати (GAME-256: день закриває сон), і останній етап дня — саме ST-005. */
 function summaryViolations(sim: Pick<SimState, 'game' | 'journal'>, defs: CoreDefs): string[] {
   const sum = daySummary(sim, 1, defs);
-  const ended = sim.game.quests['ST-005']?.status === 'completed';
+  const ended = sim.game.quests['ST-005']?.status === 'completed' && sim.journal.some((e) => e.type === 'Sleep');
   if (!sum) return ['підсумку дня 1 немає'];
   if (sum.ended !== ended) return [`підсумок дня 1: ended=${sum.ended}, а ST-005 ${ended ? 'завершено' : 'ні'}`];
   if (!ended) return [];
@@ -80,6 +80,7 @@ function summaryViolations(sim: Pick<SimState, 'game' | 'journal'>, defs: CoreDe
 function journalOf(v: Variant, startCents: number, trace: readonly { m: Move; before: GameState; after: GameState }[]): JournalEntry[] {
   const out: JournalEntry[] = [{ at: 0, commandId: 'b0', type: 'CreateCharacter', ref: v.profile, cents: startCents }];
   trace.forEach(({ m, before, after }, i) => {
+    if (m.type === 'Sleep') { out.push({ at: 0, commandId: `t${i}`, type: 'Sleep', ref: 'tent', cents: after.moneyCents }); return; }   // GAME-256: сон — запис журналу, що закриває день
     if (!isJournalType(m.type) || !changedGame(before, after)) return;
     const r = m as unknown as Record<string, unknown>;
     const ref = r.questId ?? r.locationId ?? r.itemId ?? r.targetId ?? r.eventId;
@@ -260,11 +261,14 @@ describe('GAME-138 · Спосіб перевірки 1: бот і реплей 
     expect(orderViolations(j(['ST-001', 'ST-002']), false).length).toBeGreaterThan(0);
     let s = newSim(SEED, START_MONEY);
     for (const i of PROLOGUE_BIKE) s = step(s, i, { defs: GAME_DEFS });
+    // GAME-256: межа дня — сон. Контроль: журнал БЕЗ запису Sleep (день 1 не закрито). Справжні правила й оракул «ended ⇔ ST-005 ∧ сон» мовчать;
+    // мутація «ST-005 закриває день сам» (як до GAME-256) — підсумок каже «завершено» без сну, і оракул червоніє.
+    const noSleep = { game: s.game, journal: s.journal.slice(0, s.journal.findIndex((e) => e.type === 'Sleep')) };   // журнал до першого сну: ST-005 завершено, ніч ще не настала
+    expect(summaryViolations(s, GAME_DEFS)).toEqual([]);
+    expect(summaryViolations(noSleep, GAME_DEFS)).toEqual([]);
     const story = GAME_DEFS.story as StoryDefs;
-    const st005: StoryDefs['quests'][string] = { ...(story.quests['ST-005'] as StoryDefs['quests'][string]) };
-    delete (st005 as { dayEnd?: true }).dayEnd;
-    const shifted: CoreDefs = { ...GAME_DEFS, story: { ...story, quests: { ...story.quests, 'ST-005': st005, 'ST-004': { ...(story.quests['ST-004'] as StoryDefs['quests'][string]), dayEnd: true } } } };
-    expect(summaryViolations(s, shifted).length).toBeGreaterThan(0);
+    const shifted: CoreDefs = { ...GAME_DEFS, story: { ...story, quests: { ...story.quests, 'ST-005': { ...(story.quests['ST-005'] as StoryDefs['quests'][string]), end: true } } } };
+    expect(summaryViolations(noSleep, shifted).length).toBeGreaterThan(0);
   });
 });
 

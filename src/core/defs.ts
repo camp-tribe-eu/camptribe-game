@@ -83,7 +83,19 @@ export interface RewardDef {
   readonly items: readonly { readonly itemId: string; readonly qty: number }[];
 }
 
+/**
+ * GAME-256 · ворота дня сюжету: квест активний (граф і `requires` ті самі), але завершити його, скористатись його репліками чи стартувати
+ * його хвилю/сцену можна лише коли ворота відчинені: `day` — день історії з 1 (скільки разів родина спала + 1), `fromMinute` — хвилина доби
+ * (0…1439), раніше якої цього дня не можна (вечірні кроки — 18:00). Сон відчиняє наступний день, а не годинник стіни.
+ */
+export interface GateDef {
+  readonly day: number;
+  readonly fromMinute?: number;
+}
+
 export interface QuestDef {
+  /** GAME-256: ворота дня (див. GateDef). Немає — крок доступний одразу. */
+  readonly gate?: GateDef;
   readonly optional: boolean;
   /** Кінець розділу: завершення ставить campaignEnded. */
   readonly end: boolean;

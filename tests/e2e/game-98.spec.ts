@@ -8,6 +8,8 @@
 // без ?holdToast=1 тост зникає, з ним — лишається.
 import { expect, test, type Browser, type Locator, type Page } from '@playwright/test';
 import { waitGameReady } from './ready';
+import { core } from './chapter-driver';
+import { seedDay1 } from './day1-fixture';
 
 const SETTINGS_KEY = 'camplife.settings.v1';
 const AA = 4.5;
@@ -209,15 +211,14 @@ test('844×390 дотик: підсумок дня → «Продовжити» 
   // + tap ≈ 1,8 с на крок), і 26 кроків виходили за 120 с бюджету тесту — кнопка при цьому стояла (25 замірів прямокутника — один і той
   // самий, 0 мутацій DOM у відкритій панелі за 5 с). 400 мс після дії — GAME-80: панель глуха ~350 мс.
   const tap = async (loc: Locator): Promise<void> => { await loc.tap(); await page.waitForTimeout(400); };
+  // Мета тесту — лише «після підсумку дня «Продовжити» повертає фокус на #stage» (844×390, дотик). Увесь день 1 в панелі + сон не вміщались у 120 с, тож
+  // стартуємо зі справжнього стану кінця дня 1 (GAME-255, tests/e2e/day1-fixture.ts: ранок дня 2, велосипед), перемотуємо годинник до 22:30 (?skipMinutes,
+  // після завантаження сейву) — «Пора спати» — і лягаємо спати з ☰: це закриває день 2 і дає підсумок, який тест і перевіряє.
+  await seedDay1(page, '?skipMinutes=930');
+  await expect.poll(async () => ((await core(page)).clock.minutes + 480) % 1440, { timeout: 10_000 }).toBeGreaterThanOrEqual(22 * 60);
   await tap(page.locator('[data-touch="story"]'));
-  await tap(panel.locator('[data-act="create"]', { hasText: /Авто|Car/ }).first());
-  for (const [k, key] of [['complete', 'q.prologue-home-001'], ['complete', 'q.st-001'], ['complete', 'q.st-002'], ['visit', 'loc.shop'], ['pickup', 'item.tent'], ['pickup', 'item.sleeping-bag'],
-    ['complete', 'q.st-003'], ['visit', 'loc.home'], ['complete', 'q.ch1-home-001'], ['visit', 'loc.road']] as const) await tap(panel.locator(`[data-act="${k}"][data-key="${key}"]`));
-  // GAME-108: на дорозі трапляється одна з десяти подій (не лише «Яблука») — як гравець, що поспішає: остання відповідь до кінця розмови.
-  const dlg = panel.locator('[data-ui="dialogue"]');
-  for (let i = 0; i < 6 && await dlg.isVisible({ timeout: 400 }).catch(() => false); i++) await tap(dlg.locator('[data-act]').last());
-  for (const [k, key] of [['complete', 'q.st-004'], ['visit', 'loc.camp.lake'], ['talk', 'npc.elise'], ['choose', 'dlg.elise-greeting.hello.c2'], ['continue', ''],
-    ['choose', 'dlg.elise-greeting.spot.c1'], ['continue', ''], ['pickup', 'item.firewood'], ['complete', 'q.st-005']] as const) await tap(panel.locator(`[data-act="${k}"][data-key="${key}"]`));
+  await tap(panel.locator('[data-act="complete"][data-key="q.ch1-d2-001"]'));   // день має хоч один запис, інакше сон порожній день не закриває (немає підсумку)
+  await tap(panel.locator('[data-act="sleep"]'));
   const summary = page.locator('[data-ui="summary"]');
   await expect(summary).toBeVisible();
   await tap(summary.locator('[data-ui="summary-continue"]'));

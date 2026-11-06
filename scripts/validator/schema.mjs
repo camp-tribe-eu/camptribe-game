@@ -151,6 +151,7 @@ export const SCHEMAS = {
   quests: obj({
     id: req(str), titleKey: req(str), optional: req(bool), end: bool, dayEnd: bool, xp: int0,
     giverId: str, locationId: str, when,
+    gate: obj({ day: req(int0), fromMinute: int0 }),
     requires: obj({ quests: arr(str), items: arr(str) }),
     objectives: req(arr(obj({
       id: req(str), textKey: req(str), kind: req(en('talk', 'visit', 'collect', 'deliver')),

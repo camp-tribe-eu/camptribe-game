@@ -35,9 +35,9 @@ function closeDialogue(s: SimState): SimState {
  */
 function unbacked(sum: DaySummary, sim: SimState): string[] {
   const out: string[] = [];
-  // Межі днів — незалежно від dayRanges: квест-межа дня (`dayEnd`, GAME-141) або кінець розділу (`end`).
-  const isBoundary = (q: string | null): boolean => { const d = GAME_DEFS.story?.quests[q ?? '']; return d?.dayEnd === true || d?.end === true; };
-  const ends = sim.journal.map((e, i) => (e.type === 'CompleteQuest' && isBoundary(e.ref) ? i : -1)).filter((i) => i >= 0);
+  // Межі днів — незалежно від dayRanges: СОН (GAME-256: день закриває сон, а не квест-межа `dayEnd`) або кінець розділу (`end`).
+  const isEnd = (q: string | null): boolean => GAME_DEFS.story?.quests[q ?? '']?.end === true;
+  const ends = sim.journal.map((e, i) => (e.type === 'Sleep' || (e.type === 'CompleteQuest' && isEnd(e.ref)) ? i : -1)).filter((i) => i >= 0);
   const from = sum.day === 1 ? 0 : (ends[sum.day - 2] ?? Infinity) + 1;
   const to = ends[sum.day - 1] ?? sim.journal.length - 1;
   const day = sim.journal.slice(from, to + 1);
@@ -67,10 +67,10 @@ const prologue = (): SimState => {
   for (const i of PROLOGUE_BIKE) s = step(s, i, CTX);
   return s;
 };
-/** Реплей-сценарій до межі дня 1 (ST-005 завершено) — далі не йдемо. */
+/** Реплей-сценарій до межі дня 1 (GAME-256: ST-005 завершено й родина лягла спати) — далі не йдемо. */
 const untilDay1End = (): SimState => {
   let s = newSim(SEED, START_MONEY);
-  for (const i of PROLOGUE_BIKE) { s = step(s, i, CTX); if (s.game.quests['ST-005']?.status === 'completed') break; }
+  for (const i of PROLOGUE_BIKE) { s = step(s, i, CTX); if (s.journal.some((e) => e.type === 'Sleep')) break; }
   return s;
 };
 
@@ -126,15 +126,14 @@ describe('daySummary: кожна секція — лише при факті (GA
     expect(daySummary(s, 4, GAME_DEFS)).toBeNull();
   });
 
-  it('МУТАЦІЯ межі дня: ST-005 без dayEnd — день 1 не закінчується на ST-005 (підсумок дня 1 тягнеться до кінця розділу)', () => {
-    const story = GAME_DEFS.story as NonNullable<typeof GAME_DEFS.story>;
-    const st005: { dayEnd?: true } & NonNullable<(typeof story.quests)[string]> = { ...(story.quests['ST-005'] as NonNullable<(typeof story.quests)[string]>) };
-    delete st005.dayEnd;
-    const mutated = { ...GAME_DEFS, story: { ...story, quests: { ...story.quests, 'ST-005': st005 } } };
+  it('МУТАЦІЯ межі дня (GAME-256: межа — сон): журнал без запису Sleep — день 1 не закінчується на ST-005 (підсумок дня 1 тягнеться далі)', () => {
     const s = untilDay1End();
+    const noSleep = { ...s, journal: s.journal.filter((e) => e.type !== 'Sleep') };
     expect(daysEnded(s, GAME_DEFS)).toBe(1);                 // справжній контент: межа є
-    expect(daysEnded(s, mutated)).toBe(0);                   // без dayEnd — межі немає
-    expect(daySummary(prologue(), 1, mutated)?.sections.find((x) => x.kind === 'quests')?.ids).toContain('CH1-D2-FIRE-001');
+    expect(daysEnded(noSleep, GAME_DEFS)).toBe(0);           // без сну — межі немає (завершення ST-005 день не закриває)
+    const full = prologue();
+    const mutatedFull = { ...full, journal: full.journal.filter((e) => e.type !== 'Sleep') };
+    expect(daySummary(mutatedFull, 1, GAME_DEFS)?.sections.find((x) => x.kind === 'quests')?.ids).toContain('CH1-D2-FIRE-001');
   });
 
   it('після межі дня 1 далі ходиш — це відкритий день 2 без ночівлі й пакування; день 1 свої зберігає', () => {

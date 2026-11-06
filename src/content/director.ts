@@ -14,7 +14,8 @@
 import type { CoreDefs } from '../core/defs';
 import { todayWeather, type SimState } from '../core/sim';
 import type { GameState } from '../core/state';
-import { matches } from '../core/story';
+import { matches, questOpen } from '../core/story';
+import { STORY } from './story';
 import { taskOutcome, tasksFor } from '../core/wave';
 import { FIREPLACE_SCENE, fireplaceFacts } from './fireplace';
 import { isMapFirstSpot, liveMapSpot } from './map-first';
@@ -39,11 +40,12 @@ const own = <T>(o: Readonly<Record<string, T>>, k: string): T | undefined => (Ob
  * не з'їдає, штрафу немає, а `past` не дає хвилі повторитись. Це зафіксовано в director.test («завантаження на CAMP-001»).
  */
 /** Хвиля, яку сюжет мусить відкрити зараз (та сама перевірка, що в applyWave/StartWave), або null. */
-export function pendingWave(game: GameState, defs: CoreDefs): string | null {
+export function pendingWave(game: GameState, defs: CoreDefs, now?: number): string | null {
   const p = game.player;
   if (!p || game.campaignEnded || game.wave?.active) return null;
   for (const [id, w] of Object.entries(defs.waves?.waves ?? {})) {
     if (own(game.quests, w.stage)?.status !== 'active') continue;
+    if (defs.story && !questOpen(defs.story, game, w.stage, now)) continue;   // GAME-256: хвиля етапу, що чекає день чи вечір, не стартує (строки — від правильного дня)
     const where = own(defs.story?.quests ?? {}, w.stage)?.locationId;
     if (where !== undefined && where !== p.locationId) continue;
     if (own(game.wave?.past ?? {}, id)) continue;
@@ -55,7 +57,7 @@ export function pendingWave(game: GameState, defs: CoreDefs): string | null {
 
 /** Автоматичні ходи сюжету для цього стану — у порядку надсилання. Порожньо — сюжету нічого робити. */
 export function storyMoves(sim: SimState, defs: CoreDefs): Move[] {
-  const waveId = pendingWave(sim.game, defs);
+  const waveId = pendingWave(sim.game, defs, sim.clock.minutes);
   return waveId ? [{ type: 'StartWave', waveId }] : [];
 }
 
@@ -85,7 +87,8 @@ export const fireplacePlayed = (sim: SimState): boolean => sim.journal.some((e) 
 /** Вечір дня 2 готовий відкритись: етап вогнища активний, розмови немає, хвиля закінчилась, сцени ще не було. */
 export function fireplaceDue(sim: SimState): boolean {
   const g = sim.game;
-  return own(g.quests, FIRE_STAGE)?.status === 'active' && !g.campaignEnded && g.dialogue === null && !g.wave?.active && !fireplacePlayed(sim);
+  return own(g.quests, FIRE_STAGE)?.status === 'active' && questOpen(STORY, g, FIRE_STAGE, sim.clock.minutes) &&   // GAME-256: вечір — з 18:00 дня 2
+     !g.campaignEnded && g.dialogue === null && !g.wave?.active && !fireplacePlayed(sim);
 }
 
 /** Команда сцени з фактами ЛИШЕ з наслідків хвилі W4 (не вигадувати факт, якого не було). */

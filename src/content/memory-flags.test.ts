@@ -7,7 +7,7 @@
 // Закон 1: кожен сторож має негативний контроль — підставлений «вибір, що бере гроші», «вибір, що забирає річ»,
 // «згадка, що закриває ціль» — і мусить почервоніти.
 import { describe, expect, it } from 'vitest';
-import { nextCommandId, type Command } from '../core/commands';
+import { nextCommandId } from '../core/commands';
 import { canonical } from '../core/hash';
 import { newSim, step, type SimState } from '../core/sim';
 import type { GameState } from '../core/state';
@@ -18,6 +18,7 @@ import { GAME_DEFS } from './slice-defs';
 import { CONTENT, STORY, memorableFacts, type RawContent } from './story';
 import { exploreView, type Move } from './moves';
 import { leaveMove } from './road-events.test.helpers';
+import { SLEEP, simSend } from './test-days';
 
 const CTX = { defs: GAME_DEFS };
 const START_MONEY = 5_000;          // як у createBridge
@@ -91,7 +92,7 @@ type Tamper = (before: SimState, after: SimState, move: Move) => SimState;
 
 function send(s: SimState, move: Move, tamper?: Tamper): SimState {
   const id = nextCommandId(s.game);
-  const next = step(s, { kind: 'command', command: { ...move, commandId: id } as Command }, CTX);
+  const next = simSend(s, move, id);   // GAME-256: Sleep — справжній сон; вечірній крок чекає 18:00
   const rec = next.game.processed[id];
   if (!rec?.ok) throw new Error(`${JSON.stringify(move)} → ${rec?.code ?? 'немає запису'} (діалог ${JSON.stringify(s.game.dialogue)})`);
   return tamper ? tamper(s, next, move) : next;
@@ -132,6 +133,7 @@ function play(pick: Pick5, tamper?: Tamper): Run {
   go({ type: 'Choose', choice: 5 }); go({ type: 'Continue' });   // spot.c6 «Намет уже стоїть»
   go({ type: 'Pickup', itemId: 'item.firewood' });
   go({ type: 'CompleteQuest', questId: 'ST-005' });
+  go(SLEEP);   // GAME-256: день 2 — після сну
   expect(s.game.campaignEnded).toBe(false);                     // GAME-141: ST-005 — межа дня 1, розділ триває
   // Вибір 4 — порада Елізи на ранок (лише після «Прибуття», тобто вже вранці дня 2): прийняти чи по-своєму.
   go({ type: 'Talk', npcId: 'npc.elise' }); go({ type: 'Choose', choice: 8 }); go({ type: 'Choose', choice: pick.advice }); go({ type: 'Continue' }); go({ type: 'Continue' });
@@ -155,6 +157,7 @@ function play(pick: Pick5, tamper?: Tamper): Run {
   go({ type: 'CompleteQuest', questId: 'CH1-D2-ELISE-001' });
   go({ type: 'Talk', npcId: 'npc.elise' }); go({ type: 'Choose', choice: 13 }); go({ type: 'Choose', choice: 0 }); go({ type: 'Continue' }); go({ type: 'Continue' });
   go({ type: 'CompleteQuest', questId: 'CH1-D2-CAMP-001' }); go({ type: 'CompleteQuest', questId: 'CH1-D2-FIRE-001' });
+  go(SLEEP);   // GAME-256: день 3 — після сну
   expect(s.game.campaignEnded).toBe(false);                     // GAME-144: вогнище — межа дня 2; кінець розділу — удома в день 3
   // День 3 (GAME-144) — однаково для всіх: ранок, речі, прощання з Елізою (hello.c15 → goodbye.c1), дорога, дім.
   go({ type: 'CompleteQuest', questId: 'CH1-D3-001' }); go({ type: 'CompleteQuest', questId: 'CH1-D3-GEAR-001' });

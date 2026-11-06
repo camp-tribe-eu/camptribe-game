@@ -108,6 +108,10 @@ async function playBikeDay2(page: Page): Promise<void> {
   await act(page, 'continue');
   await act(page, 'continue');
   await act(page, 'complete', 'q.elise-bike-area');
+}
+
+/** GAME-256 · вечір дня 2 (після 18:00): вечеря, вогнище. Окремо від ранку — між ними тест перемотує годинник до вечора. */
+async function playBikeDay2Evening(page: Page): Promise<void> {
   await act(page, 'talk', 'npc.elise');
   await act(page, 'choose', 'dlg.elise-greeting.hello.c14');
   await act(page, 'choose', 'dlg.elise-greeting.dinner.c2');
@@ -165,6 +169,28 @@ async function finishDay(page: Page, reopen: boolean, day = 1): Promise<void> {
   if (reopen) await page.locator('[data-touch="story"]').click();
 }
 
+/**
+ * GAME-256 · день сюжету закриває СОН, а вечірні кроки чекають 18:00. Вечір — без очікування: ?skipMinutes=N перемотує годинник ПІСЛЯ завантаження збереження
+ * (GAME-242), тож скачок — лише в часі; усе, що відбувається далі, — справжні кліки. Тест не про час, тому перемотування тут допустиме.
+ */
+async function skipToEvening(page: Page): Promise<void> {
+  const minutes = (await core(page)).clock.minutes;
+  const delta = (19 * 60 - ((minutes + 480) % 1440) + 1440) % 1440;
+  await page.goto(`/?skipMinutes=${delta}`);
+  await page.waitForFunction(() => { const p = (window as unknown as { __game?: { probe: { ready: boolean; saveLoaded: boolean } } }).__game?.probe; return p?.saveLoaded === true && p.ready === true; });
+  await page.locator('[data-ui="recovery-close"]').click({ timeout: 800 }).catch(() => undefined);
+  await expect.poll(async () => ((await core(page)).clock.minutes + 480) % 1440, { timeout: 10_000 }).toBeGreaterThanOrEqual(19 * 60);
+  await page.locator('[data-touch="story"]').click();
+  await expect(page.locator('[data-ui="story"]')).toBeVisible();
+}
+
+/** Вечір → «Лягти спати» у наметі → ранок і підсумок дня `day` (GAME-242/256). */
+async function sleepDay(page: Page, day: number, reopen = true): Promise<void> {
+  await skipToEvening(page);
+  await panel(page).locator('[data-act="sleep"]').click({ timeout: 5_000 });
+  await finishDay(page, reopen, day);
+}
+
 test.use({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true });
 
 // GAME-255 · було один тест на 3 дні (33–44 с локально, на CI ≈ 4 fps — майже весь бюджет 120 с). Тепер дві частини, кожна ≤ ~20 с:
@@ -175,8 +201,8 @@ test('день 1 (пролог від вибору персонажа) — кл�
   await expect(panel(page).locator('[data-ui="create"]')).toBeVisible();
   expect((await core(page)).game.player).toBeNull();
   await playBikeProlog(page);
-  await finishDay(page, true);
-  // GAME-141: ST-005 — межа дня 1, не кінець розділу: далі ранок дня 2.
+  await sleepDay(page, 1);   // GAME-256: день 1 закриває сон у наметі, а не завершення ST-005
+  // GAME-141: ST-005 — не кінець розділу: далі ранок дня 2.
   await expect(panel(page).locator('[data-ui="ended"]')).toHaveCount(0);
   const c = await core(page);
   expect(c.game.campaignEnded).toBe(false);
@@ -204,8 +230,10 @@ test('дні 2–3 до кінця розділу — кліками зі збе
   await expect(panel(page).locator('[data-act="complete"][data-key="q.ch1-d2-001"]')).toBeVisible();   // це справді ранок дня 2
   const t3 = Date.now();
   await playBikeDay2(page);
-  await finishDay(page, true, 2);
-  // GAME-144: вогнище — межа дня 2, не кінець розділу: далі ранок дня 3.
+  await skipToEvening(page);
+  await playBikeDay2Evening(page);
+  await sleepDay(page, 2);
+  // GAME-144: вогнище — вечір дня 2, не кінець розділу: далі ранок дня 3.
   await expect(panel(page).locator('[data-ui="ended"]')).toHaveCount(0);
   expect((await core(page)).game.campaignEnded).toBe(false);
   await playBikeDay3(page);
@@ -353,7 +381,7 @@ test('автівкою — без бічного квесту й без відп
   await expect(panel(page).locator('[data-act="visit"][data-key="loc.camp.lake"]')).toHaveCount(0);
   await act(page, 'pickup', 'item.firewood');
   await act(page, 'complete', 'q.st-005');
-  await finishDay(page, true);
+  await sleepDay(page, 1);
   // День 2 автом (GAME-141): без вибору велозони.
   await act(page, 'complete', 'q.ch1-d2-001');
   await act(page, 'talk', 'npc.elise');
@@ -362,6 +390,7 @@ test('автівкою — без бічного квесту й без відп
   await act(page, 'continue');
   await expect(panel(page).locator('[data-key="q.elise-bike-area.choice"]')).toHaveCount(0);
   await act(page, 'complete', 'q.ch1-d2-elise-001');
+  await skipToEvening(page);   // GAME-256: вечеря — після 18:00
   await act(page, 'talk', 'npc.elise');
   await act(page, 'choose', 'dlg.elise-greeting.hello.c14');
   await act(page, 'choose', 'dlg.elise-greeting.dinner.c1');
@@ -369,7 +398,7 @@ test('автівкою — без бічного квесту й без відп
   await act(page, 'continue');
   await act(page, 'complete', 'q.ch1-d2-camp-001');
   await act(page, 'complete', 'q.ch1-d2-fire-001');
-  await finishDay(page, true, 2);
+  await sleepDay(page, 2);
   // День 3 автом (GAME-144): кінець розділу — лише тепер; усе на ядрі, без вибору велозони.
   await expect(panel(page).locator('[data-ui="ended"]')).toHaveCount(0);
   expect((await core(page)).game.campaignEnded).toBe(false);
@@ -479,7 +508,7 @@ test('після закриття екрана подорожі фокус на 
 test('сейв після прологу: перезавантаження — і кінець розділу на місці', async ({ page }) => {
   await open(page);
   await playBikeProlog(page);
-  await finishDay(page, false);   // панель не відкриваємо знову — пауза ‖ поверх мапи
+  await sleepDay(page, 1, false);   // панель не відкриваємо знову — пауза ‖ поверх мапи
   await page.locator('[data-touch="pause"]').click();
   await page.locator('[data-ui="save"]').click();
   await expect(page.locator('[data-ui="status"]')).toBeVisible();
@@ -495,10 +524,12 @@ test('кінець розділу видно поза ☰: підказка в H
   await open(page);
   await expect(page.locator('[data-ui="ended-hint"]')).toHaveCount(0);   // до кінця підказки немає (контроль)
   await playBikeProlog(page);
-  await finishDay(page, true);
+  await sleepDay(page, 1);
   await expect(page.locator('[data-ui="ended-hint"]')).toHaveCount(0);   // GAME-141: межа дня 1 — ще не кінець
   await playBikeDay2(page);
-  await finishDay(page, true, 2);
+  await skipToEvening(page);
+  await playBikeDay2Evening(page);
+  await sleepDay(page, 2);
   await expect(page.locator('[data-ui="ended-hint"]')).toHaveCount(0);   // GAME-144: межа дня 2 — теж ще не кінець
   await playBikeDay3(page);
   await finishDay(page, false, 3);
@@ -560,14 +591,14 @@ test('прохід керується лише кліками й клавіша�
   expect(src).not.toMatch(/\brequire\s*\(|\bimport\s*\(/);                       // і жодних динамічних імпортів
   // Під перевіркою — сам прохід і помічники, якими він ходить (panel, act): за синтаксичним деревом
   // (рецензія: регулярні вирази обходились шаблоном `${…}` і «//» усередині рядка).
-  const FLOW = ['panel', 'act', 'leaveRoadEvent', 'playBikeProlog', 'playBikeDay2'];   // GAME-141: і день 2
+  const FLOW = ['panel', 'act', 'leaveRoadEvent', 'playBikeProlog', 'playBikeDay2', 'playBikeDay2Evening'];   // GAME-141: і день 2
   const roots: ts.Node[] = [];
   ts.forEachChild(sf, (n) => {
     if (ts.isFunctionDeclaration(n) && n.name && FLOW.includes(n.name.text)) roots.push(n);
     if (ts.isVariableStatement(n)) for (const d of n.declarationList.declarations) if (ts.isIdentifier(d.name) && FLOW.includes(d.name.text)) roots.push(d);
   });
   expect(roots.length).toBe(FLOW.length);
-  const ALLOWED = new Set(['playBikeProlog', 'playBikeDay2', 'act', 'leaveRoadEvent', 'panel', 'locator', 'first', 'last', 'click', 'tap', 'press', 'down', 'up', 'expect', 'toBeVisible', 'toHaveCount', 'Error', 'isVisible', 'catch', 'waitForTimeout']);
+  const ALLOWED = new Set(['playBikeProlog', 'playBikeDay2', 'playBikeDay2Evening', 'act', 'leaveRoadEvent', 'panel', 'locator', 'first', 'last', 'click', 'tap', 'press', 'down', 'up', 'expect', 'toBeVisible', 'toHaveCount', 'Error', 'isVisible', 'catch', 'waitForTimeout']);
   const called: string[] = [];
   const bad: string[] = [];
   const walk = (n: ts.Node): void => {

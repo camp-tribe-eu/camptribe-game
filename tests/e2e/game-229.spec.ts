@@ -28,7 +28,8 @@ async function open(page: Page, v: { w: number; h: number }, settings: Record<st
   page.on('pageerror', (e) => errors.push(e.message));
   await page.addInitScript(([k, s]) => { try { localStorage.setItem(k as string, JSON.stringify({ textScale: 100, language: 'uk', hintSeen: true, ...(s as object) })); } catch { /* сховища немає */ } }, [SETTINGS_KEY, settings] as const);
   await page.setViewportSize({ width: v.w, height: v.h });
-  await page.goto('/?seed=2&levelUps=1');   // збірка e2e: екран рангів у старих e2e вимкнено, тут — справжня поведінка
+  // GAME-256: день 1 закриває сон, а «Спати» — з 18:00. Вечір — без очікування й без перезавантаження посеред дня (воно перебазувало б показ нагород і рангів): старт гри о 18:00 (?atMinute=600, перемикач e2e; зсув від 08:00), далі дорога набігає ще години.
+  await page.goto('/?seed=2&levelUps=1&atMinute=600');   // збірка e2e: екран рангів у старих e2e вимкнено, тут — справжня поведінка
   await waitGameReady(page);
   return errors;
 }
@@ -84,6 +85,7 @@ for (const v of VIEWS) {
 
     await expect(levelup(page)).toHaveCount(0);   // до кінця дня екрана нема: ранги не перебивають гру
     await act(page, 'complete', 'q.st-005');
+    await panel(page).locator('[data-act="sleep"]').click();
 
     // 1) Спершу «Що відкрилось»; підсумку під ним ще немає.
     await expect(levelup(page)).toBeVisible();
@@ -156,6 +158,7 @@ test('вимкнено в налаштуваннях: екрана «Що від
   const errors = await open(page, { w: 844, h: 390 }, { levelUps: false });
   await playToDayEnd(page, true);
   await act(page, 'complete', 'q.st-005');
+  await panel(page).locator('[data-act="sleep"]').click();
   await expect(summary(page)).toBeVisible();
   await expect(levelup(page)).toHaveCount(0);
   const c = await core(page);

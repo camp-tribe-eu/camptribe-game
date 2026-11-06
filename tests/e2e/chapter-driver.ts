@@ -115,7 +115,7 @@ export const signature = async (page: Page): Promise<string> => {
   const c = await core(page);
   const p = await probe(page);
   // Рамка вибору (авто, сушарка, крок із кількома виходами) — теж «дія спрацювала»: стан ядра ще не змінився, але гравцю вже питають, що саме.
-  return JSON.stringify([await page.locator('.ui-talk').count(), c.game.player?.locationId, c.game.flags, Object.entries(c.game.quests).map(([k, v]) => `${k}:${v.status}`), c.game.inventory, c.game.dialogue, c.game.wave, p.fx.backpack]);
+  return JSON.stringify([await page.locator('.ui-talk').count(), c.game.player?.locationId, c.game.flags, Object.entries(c.game.quests).map(([k, v]) => `${k}:${v.status}`), c.game.inventory, c.game.dialogue, c.game.wave, p.fx.backpack, (c.game as unknown as { slept?: number }).slept ?? 0]);   // GAME-256: сон — теж дія (лічильник сну)
 };
 
 /** Яку відповідь вибирає гравець у розмові (за текстом): те, що веде сюжет; «просто привіталась» і прохання — ні. */
@@ -288,6 +288,20 @@ export async function playUntil(page: Page, touch: boolean, log: string[], stop:
     before = await menuSeen();
     if (await page.locator('[data-ui="summary-continue"]').count()) { await page.locator('[data-ui="summary-continue"]').click(); log.push('summary'); await page.waitForTimeout(500); continue; }
     if (await talk(page).count()) { log.push(await answerOne(page)); continue; }
+    // GAME-256: крок чекає свій день/вечір (стрілка каже «вільний час» / «вечір ще попереду»): гравець у грі просто чекає — тут це перемотування годинника до вечора
+    // без ☰ (?skipMinutes). Перед перезавантаженням звіряємо, що ☰ до цього не відкривалась (інакше «без ☰» нічого б не доводило після скачка).
+    const st = c as unknown as { game: { quests: Record<string, { status: string }>; slept?: number }; clock: { minutes: number } };
+    const live = (q: string): boolean => st.game.quests[q]?.status === 'active';
+    const slept = st.game.slept ?? 0;
+    const beforeEvening = (st.clock.minutes + 480) % 1440 < 18 * 60;
+    // Ворота дня сюжету (content/quests.json gate): день 2 — після 1 сну, день 3 — після 2, вечір дня 2 — з 18:00. Станом, а не за текстом підказки.
+    const gateClosed = (live('CH1-D2-001') && slept < 1) || (live('CH1-D3-001') && slept < 2) || ((live('CH1-D2-CAMP-001') || live('CH1-D2-FIRE-001')) && beforeEvening);
+    if (gateClosed && beforeEvening) {
+      expect(await menuSeen(), 'до очікування вечора ☰ не відкривалась').toEqual([]);
+      await skipClockToEvening(page);
+      log.push('wait-evening');
+      continue;
+    }
     log.push(await goAndDo(page, touch));
   }
   throw new Error(`розділ не дійшов до мети за ${max} кроків: ${log.slice(-12).join(' → ')}`);
@@ -372,4 +386,32 @@ export async function closeFishScene(page: Page): Promise<void> {
   expect((await core(page)).game.dialogue, 'сцена-однорядник закінчилась').toBeNull();
   const close = page.locator('[data-ui="story-close"]');
   if (await close.count()) await close.click({ timeout: 3_000 }).catch(() => undefined);
+}
+
+/**
+ * GAME-256 · вечір без очікування: ?skipMinutes=N перемотує годинник ПІСЛЯ завантаження збереження (GAME-242, збережений стан — з автозбереження); поточні перемикачі URL
+ * лишаються. Тест не про час, тому перемотування тут допустиме. Після перезавантаження ☰ відкрито знову.
+ */
+export async function skipClockToEvening(page: Page): Promise<void> {
+  const minutes = (await core(page) as unknown as { clock: { minutes: number } }).clock.minutes;
+  const delta = (19 * 60 - ((minutes + 480) % 1440) + 1440) % 1440;
+  const url = new URL(page.url());
+  url.searchParams.set('skipMinutes', String(delta));
+  await page.goto(url.toString());
+  await waitGameReady(page);
+  await page.locator('[data-ui="recovery-close"]').click({ timeout: 800 }).catch(() => undefined);
+  await expect.poll(async () => (((await core(page) as unknown as { clock: { minutes: number } }).clock.minutes + 480) % 1440)).toBeGreaterThanOrEqual(18 * 60);   // ціль 19:00; автозбереження ішло по командах, тож після завантаження годинник може бути на кілька хвилин раніше — вечір (18:00) уже є
+}
+
+/** Те саме + відкрити ☰ (для проходів, що працюють через панель). */
+export async function skipToEvening(page: Page): Promise<void> {
+  await skipClockToEvening(page);
+  await page.locator('[data-touch="story"]').click();
+  await expect(page.locator('[data-ui="story"]')).toBeVisible();
+}
+
+/** День закриває сон (GAME-256): вечір → ☰ → «Лягти спати» у наметі; далі гра сама показує підсумок дня. */
+export async function sleepTheDay(page: Page): Promise<void> {
+  await skipToEvening(page);
+  await page.locator('[data-ui="story"] [data-act="sleep"]').click({ timeout: 5_000 });
 }

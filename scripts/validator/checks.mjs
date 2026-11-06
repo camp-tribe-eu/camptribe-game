@@ -6,7 +6,7 @@ import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { loadMapObjects } from './load.mjs';
 import { checkSchema } from './schema.mjs';
-import { DIALOGUE_CHAIN_MAX, DIALOGUE_LINE_MAX, STICKER_SLOTS, TRACE_MIN, TRACE_MAX, ECON_FLOOR_CENTS, FACT_KINDS, FACT_STALE_DAYS, FLAG_FAMILIES, GEAR_CHECK_VARIANTS, GEAR_FIELDS, isWarning, LOAN_RE, SKILL_IDS, WEATHER_KINDS, WAVE_MAX_LIMIT, WAVE_MAX_TASKS, WAVE_MIN_TASKS } from './codes.mjs';
+import { DIALOGUE_CHAIN_MAX, DIALOGUE_LINE_MAX, STICKER_SLOTS, TRACE_MIN, TRACE_MAX, ECON_FLOOR_CENTS, FACT_KINDS, FACT_STALE_DAYS, FLAG_FAMILIES, GEAR_CHECK_VARIANTS, GEAR_FIELDS, isWarning, LOAN_RE, SKILL_IDS, SLEEP_CAP, WEATHER_KINDS, WAVE_MAX_LIMIT, WAVE_MAX_TASKS, WAVE_MIN_TASKS } from './codes.mjs';
 import { checkCombos, checkOptions, comboLabel, enumerateCombos, matches, NO_ANIMAL } from './combos.mjs';
 
 const I = (code, where, msg) => ({ code, where, msg });
@@ -660,6 +660,20 @@ export const CHECKS = [
       return [...c.ix.by.quests.values()]
         .filter((q) => q.dayEnd === true && q.optional)
         .map((q) => I('DAY_END_OPTIONAL', q.id, 'межа дня на необов\u2019язковому квесті: відмова лишила б день незавершеним'));
+    },
+  },
+  {
+    id: 'gates',
+    run(c) { // @check:gates
+      // GAME-256: ворота кроку сюжету. День — ціле 2…(стеля сну + 1): день 1 без воріт, а дня за стелею лічильник сну не досягне ніколи —
+      // крок лишився б замкненим навіки. Година — до 22:00 («пора спати»), інакше цього дня ворота не відчинилися б до сну.
+      const out = [];
+      for (const q of c.ix.by.quests.values()) {
+        if (!q.gate) continue;
+        if (!Number.isInteger(q.gate.day) || q.gate.day < 2 || q.gate.day > SLEEP_CAP + 1) out.push(I('GATE_DAY_RANGE', q.id, `gate.day ${q.gate.day}: має бути цілим 2…${SLEEP_CAP + 1}`));
+        if (q.gate.fromMinute !== undefined && (!Number.isInteger(q.gate.fromMinute) || q.gate.fromMinute < 0 || q.gate.fromMinute >= 22 * 60)) out.push(I('GATE_MINUTE_RANGE', q.id, `gate.fromMinute ${q.gate.fromMinute}: має бути цілим 0…1319 (до 22:00)`));
+      }
+      return out;
     },
   },
   {
