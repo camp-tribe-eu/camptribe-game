@@ -3,7 +3,7 @@
 // Вимкнено в налаштуваннях — екрана немає, навички ростуть так само. Обидві орієнтації (390×844, 844×390) + знімки 9:16, 1:1, 16:9 (G229_SHOTS, типово test-results/g229).
 import { mkdirSync } from 'node:fs';
 import { expect, test, type Locator, type Page } from '@playwright/test';
-import { probe, routeXY, walk, skipToEvening } from './chapter-driver';
+import { probe, routeXY, walk } from './chapter-driver';
 import { waitGameReady } from './ready';
 import { heroLabelOk } from '../../src/view/world/hero-label';
 
@@ -28,7 +28,8 @@ async function open(page: Page, v: { w: number; h: number }, settings: Record<st
   page.on('pageerror', (e) => errors.push(e.message));
   await page.addInitScript(([k, s]) => { try { localStorage.setItem(k as string, JSON.stringify({ textScale: 100, language: 'uk', hintSeen: true, ...(s as object) })); } catch { /* сховища немає */ } }, [SETTINGS_KEY, settings] as const);
   await page.setViewportSize({ width: v.w, height: v.h });
-  await page.goto('/?seed=2&levelUps=1');   // збірка e2e: екран рангів у старих e2e вимкнено, тут — справжня поведінка
+  // GAME-256: день 1 закриває сон, а «Спати» — з 18:00. Вечір — без очікування й без перезавантаження посеред дня (воно перебазувало б показ нагород і рангів): старт гри о 18:00 (?atMinute=600, перемикач e2e; зсув від 08:00), далі дорога набігає ще години.
+  await page.goto('/?seed=2&levelUps=1&atMinute=600');   // збірка e2e: екран рангів у старих e2e вимкнено, тут — справжня поведінка
   await waitGameReady(page);
   return errors;
 }
@@ -57,8 +58,6 @@ async function playToDayEnd(page: Page, withHands: boolean): Promise<void> {
   for (const [k, key] of [['complete', 'q.prologue-home-001'], ['complete', 'q.st-001'], ['complete', 'q.st-002'], ['visit', 'loc.shop'], ['pickup', 'item.tent'], ['pickup', 'item.sleeping-bag'],
     ['complete', 'q.st-003'], ['visit', 'loc.home'], ['complete', 'q.ch1-home-001'], ['visit', 'loc.road'], ['complete', 'q.st-004'], ['visit', 'loc.camp.lake'], ['talk', 'npc.elise'],
     ['choose', 'dlg.elise-greeting.hello.c2'], ['continue', ''], ['choose', 'dlg.elise-greeting.spot.c1'], ['continue', ''], ['pickup', 'item.firewood']] as const) await act(page, k, key);
-  // GAME-256: день 1 закриває сон, а вечір настає лише з перемотуванням (?skipMinutes = перезавантаження). Перемотуємо ДО дій руками: перезавантаження перебазовує показ рангів (екран «Що відкрилось» — стан показу, не гри), тож усе заслужене має статись після нього.
-  await skipToEvening(page);
   if (withHands) {
     await press(page, panel(page).locator('[data-ui="story-close"]'));
     expect((await core(page)).game.skills['skill.mechanics'], 'до дії «Майстер» на нулі').toBe(0);

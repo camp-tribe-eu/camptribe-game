@@ -290,7 +290,8 @@ export async function playUntil(page: Page, touch: boolean, log: string[], stop:
     if (await talk(page).count()) { log.push(await answerOne(page)); continue; }
     // GAME-256: крок чекає свій день/вечір (стрілка каже «вільний час» / «вечір ще попереду»): гравець у грі просто чекає — тут це перемотування годинника до вечора
     // без ☰ (?skipMinutes). Перед перезавантаженням звіряємо, що ☰ до цього не відкривалась (інакше «без ☰» нічого б не доводило після скачка).
-    const hint = (await page.locator('[data-ui="next-hint"]').textContent().catch(() => '')) ?? '';
+    const hintBox = page.locator('[data-ui="next-hint"]');   // у дворі дому/дорозі підказки може не бути — не чекати 30 с на кожному кроці
+    const hint = (await hintBox.count()) > 0 ? ((await hintBox.first().textContent({ timeout: 500 }).catch(() => '')) ?? '') : '';
     if (/вільний час|вечір ще попереду/.test(hint)) {
       expect(await menuSeen(), 'до очікування вечора ☰ не відкривалась').toEqual([]);
       await skipClockToEvening(page);
