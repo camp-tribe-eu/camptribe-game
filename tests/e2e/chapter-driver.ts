@@ -400,7 +400,7 @@ export async function skipClockToEvening(page: Page): Promise<void> {
   await page.goto(url.toString());
   await waitGameReady(page);
   await page.locator('[data-ui="recovery-close"]').click({ timeout: 800 }).catch(() => undefined);
-  await expect.poll(async () => (((await core(page) as unknown as { clock: { minutes: number } }).clock.minutes + 480) % 1440)).toBeGreaterThanOrEqual(19 * 60);
+  await expect.poll(async () => (((await core(page) as unknown as { clock: { minutes: number } }).clock.minutes + 480) % 1440)).toBeGreaterThanOrEqual(18 * 60);   // ціль 19:00; автозбереження ішло по командах, тож після завантаження годинник може бути на кілька хвилин раніше — вечір (18:00) уже є
 }
 
 /** Те саме + відкрити ☰ (для проходів, що працюють через панель). */
