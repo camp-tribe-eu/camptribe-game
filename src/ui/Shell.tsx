@@ -98,10 +98,14 @@ export function Shell({ port, langOverride, credits, build, holdToast = false, h
   useEffect(() => port.onSkillUp((u) => setUps((prev) => [...prev, ...queueUps(upsOn, u)])), [upsOn]);
   const shownUps = queueUps(upsOn, ups);
   const storyAct = (id: string): void => {
-    const before = port.story().daysEnded;
+    const was = port.story();
+    const before = was.daysEnded;
+    const before_dialogue = was.dialogue !== null;
     port.act(id);
     const after = port.story();
     watchEnded(after);
+    // GAME-269: дія з ☰ відкрила розмову (родинна сцена «Відпочити до вечора»): у мапі-першій панель її не показує — віддаємо рамці розмови.
+    if (!before_dialogue && after.dialogue && after.mapFirst && storyOpen) { setStoryOpen(false); setOffer(after); setTalk(true); }
     if (after.daysEnded > before && after.summary) {
       setStoryOpen(false);   // екран подорожі ховається без відпускання паузи: підсумок тримає її далі
       setTalk(false);        // так само рамка розмови: розмова привела до кінця дня

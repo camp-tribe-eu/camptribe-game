@@ -12,12 +12,13 @@ for (const v of VIEWS) {
     const ctx = await browser.newContext({ viewport: { width: v.w, height: v.h }, hasTouch: true, isMobile: true });
     const page = await ctx.newPage();
     await installMenuObserver(page);
-    const errors = await arriveInCamp(page);
+    const errors = await arriveInCamp(page, '&perfectHits=1');
     const panel = page.locator('.ui-story');
     await page.locator('[data-touch="story"]').tap();
     await expect(panel).toBeVisible();
     expect(await panel.locator('[data-act="rest"]').count(), 'крок приїзду відкритий — відпочивати не можна').toBe(0);
-    await page.locator('[data-touch="story"]').tap().catch(() => undefined);
+    await page.getByRole('button', { name: 'Назад до мапи' }).tap();
+    await expect(panel).toBeHidden();
 
     await playUntil(page, true, [], (c) => c.game.quests['ST-005']?.status === 'completed' && !c.game.dialogue, () => menuSeen(page));
     const t0 = Date.now();
@@ -26,13 +27,14 @@ for (const v of VIEWS) {
     await page.locator('[data-touch="story"]').tap();
     await panel.locator('[data-act="rest"]').tap({ timeout: 5_000 });
     await expect.poll(async () => (await core(page)).game.dialogue !== null, { timeout: 5_000, message: 'родинна сцена відкрилась' }).toBe(true);
-    for (let i = 0; i < 10 && await talk(page).count(); i++) await answerOne(page);
+    // Дія з ☰ віддає сцену рамці розмови поверх мапи (Shell.storyAct).
+    await expect(talk(page)).toBeVisible({ timeout: 5_000 });
+    for (let i = 0; i < 10 && (await core(page)).game.dialogue !== null; i++) { await answerOne(page); await page.waitForTimeout(300); }
     const after = await core(page);
     expect(tod(after), 'час перемотано до 17:30').toBeGreaterThanOrEqual(17 * 60 + 30);
     expect(tod(after)).toBeLessThan(18 * 60);
     expect(Date.now() - t0, 'від налаштованого табору до вечора — ≤ 2 реальних хвилин').toBeLessThan(120_000);
-    await page.locator('[data-touch="story"]').tap().catch(() => undefined);
-    expect(await panel.locator('[data-act="rest"]').count(), 'вдруге в тому ж вікні — немає (17:30)').toBe(0);
+    expect(after.game.dialogue, 'сцена закрилась').toBeNull();
     expect(errors).toEqual([]);
     await ctx.close();
   });
