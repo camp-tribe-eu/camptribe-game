@@ -117,15 +117,7 @@ export const eveningPending = (st: Pick<StoryDefs, 'quests'> | undefined, d: { r
   st !== undefined && Object.entries(d.quests).some(([id, q]) => { const gate = own(st.quests, id)?.gate; return q.status === 'active' && gate?.fromMinute !== undefined && storyDay(d.slept) === gate.day && minuteOfDay(now) >= gate.fromMinute; });
 /** Можна лягти спати: правило GAME-242 (ліжко/намет з 18:00, будь-де після 22:00) І немає незробленого вечірнього кроку дня (до 22:00). */
 export const canSleepNow = (st: Pick<StoryDefs, 'quests'> | undefined, d: Parameters<typeof canSleep>[0] & { readonly quests: StoryDraft['quests']; readonly slept?: number }, now: number): boolean =>
-  chapterEndSleep(st, d) || (canSleep(d, now) && (isNight(now) || !eveningPending(st, d, now)));
-
-/**
- * GAME-264 · кінець розділу вдома: розділ закрито, вечірніх кроків уже немає, а гравець прийшов додому серед дня — спати можна відразу, в будь-яку годину.
- * Інакше після «Кінець дня 3» (приїхали вдень) не лишалось жодної дії: стрілка й нотатник мовчать (розділ завершено), сон — лише з 18:00 і лише з ☰.
- * Сон тут — те, що веде до тизера розділу 2; без цього правила кінець розділу — глухий кут.
- */
-export const chapterEndSleep = (st: Pick<StoryDefs, 'quests'> | undefined, d: { readonly player: { readonly locationId: string | null } | null; readonly quests: StoryDraft['quests'] }): boolean =>
-  st !== undefined && d.player?.locationId === 'loc.home' && chapterComplete(d, st);
+  canSleep(d, now) && (isNight(now) || !eveningPending(st, d, now));
 
 /** GAME-269 · хвилина доби, до якої «Відпочити до вечора» перемотує час (17:30: ще пів години до 18:00, коли збираються на вечір). */
 export const REST_TO = 17 * 60 + 30;

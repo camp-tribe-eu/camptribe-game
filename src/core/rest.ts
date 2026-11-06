@@ -15,7 +15,7 @@ export function sleepPlace(g: Pick<GameState, 'player' | 'flags'> & { readonly c
   if (!g.player) return null;
   const at = g.player.locationId ?? '';
   if (isNight(now)) return at === HOME_LOCATION ? 'bed' : g.flags.includes(TENT_FLAG) && at.startsWith('loc.camp.') ? 'tent' : 'late';
-  // GAME-264: розділ закінчено вдома — ліжко чекає в будь-яку годину (story.chapterEndSleep): гравець прийшов серед дня, а далі лише сон і тизер.
+  // GAME-264: розділ закінчено вдома — ліжко чекає в будь-яку годину: гравець прийшов серед дня, а далі лише сон і тизер.
   if (g.campaignEnded === true && at === HOME_LOCATION) return 'bed';
   if (!isEveningOrNight(now)) return null;
   if (at === HOME_LOCATION) return 'bed';
