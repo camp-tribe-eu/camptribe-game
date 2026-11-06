@@ -1,7 +1,7 @@
 {
   "fallback": "star",
   "items": {
-    "item.tent": "tent", "item.tent-trek": "tent", "item.tent-family": "tent", "item.trailer-tent": "tent",
+    "item.tent": "tent", "item.tent-anna": "tent", "item.sleeping-bag-anna": "bag", "item.tent-trek": "tent", "item.tent-family": "tent", "item.trailer-tent": "tent",
     "item.sleeping-bag": "bag", "item.sleeping-bag-synthetic": "bag", "item.sleeping-bag-down": "bag", "item.sleeping-bag-winter": "bag",
     "item.lantern": "lantern", "item.lantern-2": "lantern", "item.lantern-3": "lantern",
     "item.firewood": "firewood", "item.water": "water", "item.simple-dinner": "dinner", "item.snacks": "snack",

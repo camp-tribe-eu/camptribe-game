@@ -67,7 +67,15 @@ export function moves(s: GameState, defs: CoreDefs, withRequests = false): Move[
     (node?.choices ?? []).forEach((c, i) => { const w = JSON.stringify(c.when ?? null); if (withRequests || !(w.includes('"f.req-') || w.includes(`"${ERRAND_PREFIX}`))) out.push({ type: 'Choose', choice: i }); });
     out.push({ type: 'Continue' });
   }
-  for (const l of Object.values(st.locations)) for (const id of l.items) out.push({ type: 'Pickup', itemId: id });
+  // GAME-246: речі Анни (0 €, стан 60) пропонуються лише коли за звичайну річ нічим платити: інакше кожна подвоює простір станів
+  // (інший стан спорядження) без нового досяжного кінця. Безкоштовний шлях з 0 € доводить day1-order (вісь money=none).
+  for (const l of Object.values(st.locations)) for (const id of l.items) {
+    const alt = defs.items[id]?.asItem;
+    const price = alt ? defs.items[alt.itemId]?.shelfCents : undefined;
+    // Меню/бот кладуть у кошик по одній речі (оплата — окремий хід): підмножини кошика множили б стани вчетверо. Мапа (resolveSpot) кладе будь-що в будь-якому порядку.
+    if (defs.items[id]?.shelfCents !== undefined && basketOf(s.flags, defs).length > 0) continue;
+    if (price === undefined || s.moneyCents < price) out.push({ type: 'Pickup', itemId: id });
+  }
   if (basketOf(s.flags, defs).length > 0) out.push({ type: 'Checkout' });
   for (const id of Object.keys(defs.items)) {
     if (!s.inventory[id]) out.push({ type: 'BuyItem', itemId: id }); // лише перший примірник — інакше простір станів нескінченний

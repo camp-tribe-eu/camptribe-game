@@ -61,21 +61,6 @@ const progressOf = (s: GameState): number => Object.values(s.quests).filter((q) 
  * з днем 2 кінець розділу на ~40 ходів глибше, і пошук у ширину перебирав майже весь простір, перш ніж дійти до кінця. Порядок
  * не змінює відповіді: «так» — лише коли знайдено справжній стан кінця, «ні» — лише коли досяжний простір вичерпано повністю.
  */
-/**
- * GAME-246: ходи для бота й вичерпного пошуку. Речі Анни (0 €, стан 60) беруться лише коли нічим платити за звичайну (кошик цієї речі
- * не оплатити): інакше кожна з них подвоювала простір станів (інший стан спорядження) без нового досяжного кінця. Безкоштовний
- * шлях при цьому доводиться тим, що саме з 0 € його лишається єдиним (day1-order, вісь money=none).
- */
-export function botMoves(s: GameState, defs: CoreDefs): Move[] {
-  return moves(s, defs).filter((m) => {
-    if (m.type !== 'Pickup') return true;
-    const alt = defs.items[m.itemId]?.asItem;
-    if (!alt) return true;
-    const price = defs.items[alt.itemId]?.shelfCents;
-    return price === undefined || s.moneyCents < price;
-  });
-}
-
 export function endReachable(start: GameState, defs: CoreDefs, memo: EndMemo, cap: number): boolean | undefined {
   const k0 = key(start);
   const known = memo.get(k0);
@@ -90,7 +75,7 @@ export function endReachable(start: GameState, defs: CoreDefs, memo: EndMemo, ca
   push(start);
   for (let s = pop(); s; s = pop()) {
     if (s.campaignEnded || memo.get(key(s)) === true) { memo.set(k0, true); return true; }
-    for (const m of botMoves(s, defs)) {
+    for (const m of moves(s, defs)) {
       if (isLuckMove(m)) continue; // кінець — без удачі (SIM-EV-003); у випадкову прогулянку подія входить
       const n = tryMove(s, m, defs);
       if (!n) continue;
@@ -137,7 +122,7 @@ export function runBot(defs: CoreDefs, variant: Variant, seed: number, memo: End
   // прогону йшли на те, чого гравець ніколи не побачить.
   let arrived = false;
   for (; steps < opts.maxSteps && !s.campaignEnded; steps++) {
-    const options = botMoves(s, defs)
+    const options = moves(s, defs)
       .filter((m) => !(isLuckMove(m) && !arrived))
       // Ставлення до бічної гілки: «skip» не бере переходів-виборів (лише шлях за замовчуванням).
       .filter((m) => !(variant.side === 'skip' && isChoice(m)))
