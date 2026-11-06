@@ -199,12 +199,14 @@ test('«Продовжити» — назад на мапу; день 2 до «�
   for (let i = 0; i < 6 && await panel(page).locator('[data-ui="dialogue"]').isVisible({ timeout: 400 }).catch(() => false); i++) await click('[data-ui="dialogue"] [data-act] >> nth=-1');
   await click('[data-act="task"][data-key="wave.ch1-day1-road.fix-luggage"]');   // вчасно: інакше late → намет мокне (wetGear)
   for (const [k, key] of [['complete', 'q.st-004'], ['visit', 'loc.camp.lake']] as const) await click(`[data-act="${k}"][data-key="${key}"]`);
-  // Табір: «Поставити намет» (хвиля W3) — пішки до цілі на мапі, поки строк не минув; далі знайомство з Елізою.
+  // Табір (GAME-258): порядок приїзду — знайомство з Елізою → «Ділянка» → «Намет» (хвиля W3); справи на мапі — пішки, поки строк не минув.
+  for (const [k, key] of [['talk', 'npc.elise'], ['choose', 'dlg.elise-greeting.hello.c2'], ['continue', ''],
+    ['choose', 'dlg.elise-greeting.spot.c1'], ['continue', '']] as const) await click(`[data-act="${k}"][data-key="${key}"]`);
   await panel(page).locator('[data-ui="story-close"]').click();
+  await doSpotTask(page, 'task.pick-spot');
   await doSpotTask(page, 'task.pitch-tent');
   await page.locator('[data-touch="story"]').click();
-  for (const [k, key] of [['talk', 'npc.elise'], ['choose', 'dlg.elise-greeting.hello.c2'], ['continue', ''],
-    ['choose', 'dlg.elise-greeting.spot.c1'], ['continue', ''], ['pickup', 'item.firewood'], ['complete', 'q.st-005']] as const) await click(`[data-act="${k}"][data-key="${key}"]`);
+  for (const [k, key] of [['pickup', 'item.firewood'], ['complete', 'q.st-005']] as const) await click(`[data-act="${k}"][data-key="${key}"]`);
   await sleepTheDay(page);   // GAME-256
   await expect(summary(page)).toBeVisible();
   await expect(summary(page).locator('h2')).toHaveText('Підсумок дня 1');

@@ -10,7 +10,7 @@ import type { Command } from '../core/commands';
 import { newSim, step, type SimState } from '../core/sim';
 type Cmd = Command extends infer C ? (C extends Command ? Omit<C, 'commandId'> : never) : never;
 import { matches } from '../core/story';
-import { tasksFor, waveView } from '../core/wave';
+import { taskGate, tasksFor, waveView } from '../core/wave';
 import { enumerateCombos } from '../../scripts/validator/combos.mjs';
 import * as REGISTRY from '../../scripts/validator/codes.mjs';
 import { GAME_DEFS } from './slice-defs';
@@ -28,7 +28,7 @@ const started = (waveId: string, W: WaveDef, k: Combo): SimState => {
   let s = cmd(newSim(7, 5_000), { type: 'CreateCharacter', profileId: k.profile ?? '', transportId: k.transport ?? '', ...(k.animal === 'animal.none' ? {} : { animalId: k.animal }) });
   s = toDayMinute(s, 3, 19);   // GAME-256: день 3, 19:00 — двома справжніми снами (ворота днів 2–3 і вечора відчинені)
   // Ядро (GAME-170, рецензія) не стартує хвилю, поки її етап не активний; тут сюжет «дійшов» до етапу прямою підстановкою.
-  s = { ...s, game: { ...s.game, quests: { ...s.game.quests, [W.stage]: { status: 'active', done: [] } } } };
+  s = { ...s, game: { ...s.game, quests: { ...s.game.quests, [W.stage]: { status: 'active', done: [...new Set(W.tasks.flatMap((t) => t.after?.objectives ?? []))] } } } };   // GAME-258: цілі, що відкривають справи (знайомство з Елізою), зроблено
   s = cmd(s, { type: 'StartWave', waveId });
   if (!ok(s)) throw new Error(`StartWave ${waveId} відмовив: ${JSON.stringify(s.game.processed[`w${s.game.seq - 1}`])}`);
   return s;
@@ -107,7 +107,7 @@ describe('хвилі розділу 1 у симуляції (GAME-170)', () => {
           if (ended(s, waveId)) { finals++; continue; }
           const v = view(s);
           const next: SimState[] = [];
-          for (const t of v.tasks) if (t.outcome === 'open') {
+          for (const t of v.tasks) if (t.outcome === 'open' && taskGate(s.game, WAVES, t.id) === null) {   // GAME-258: справа не в черзі — чекає, а не відхиляється
             const n = cmd(s, { type: 'CompleteTask', taskId: t.id });
             expect(ok(n), `${t.id} за ${t.remainingMin} хв до строку`).toBe(true);
             next.push(n);

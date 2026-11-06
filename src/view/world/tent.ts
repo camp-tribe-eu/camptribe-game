@@ -43,6 +43,8 @@ export class TentRig {
   private helpers = 0;
   /** Куди дивитись герою на останньому ударі (до кілка); сцена грає thrust у цей бік. */
   strikeDir: Dir = 'down';
+  /** GAME-270 (лише e2e, ?perfectHits=1): кожен удар по кілку влучає. */
+  perfect = false;
 
   constructor(private readonly scene: Phaser.Scene, private readonly player: Phaser.GameObjects.Sprite, private readonly text: (key: Key) => string) {}
 
@@ -63,6 +65,15 @@ export class TentRig {
     this.g = this.scene.add.graphics();
     this.meter = this.scene.add.graphics().setDepth(TOP);
     this.hint = this.scene.add.text(0, 0, '', FONT).setOrigin(0.5, 1).setDepth(TOP + 1);
+  }
+
+  private note: Phaser.GameObjects.Text | null = null;
+  private noteLeft = 0;
+  /** GAME-258: м'який рядок над героєм (справа ще не в черзі). Гасне сам за 2,6 с; нічого не змінює в стані. */
+  nudge(key: Key): void {
+    this.note?.destroy();
+    this.note = this.scene.add.text(this.player.x, meterTop(this.scene, this.player), this.text(key), FONT).setOrigin(0.5, 0).setDepth(TOP + 1);
+    this.noteLeft = 2600;
   }
 
   /** Четвертий кілок забито: лишається готовий намет, шкала й підказка зникають. */
@@ -93,6 +104,7 @@ export class TentRig {
 
   /** Кадр: привид іде за героєм (до розміщення), шкала рухається, малюємо. */
   update(dtMs: number, facing: Dir, time: number): void {
+    if (this.note) { this.noteLeft -= dtMs; this.note.setPosition(this.player.x, meterTop(this.scene, this.player)); if (this.noteLeft <= 0) { this.note.destroy(); this.note = null; } }   // GAME-258: рядок гасне кадрами, без таймера
     for (const f of this.fx) { f.age += dtMs; f.apply(Math.min(1, f.age / f.dur)); }
     this.fx = this.fx.filter((f) => { if (f.age < f.dur) return true; f.end(); return false; });
     if (!this.active || !this.g) { this.wobbleLeft = 0; return; }
@@ -114,7 +126,7 @@ export class TentRig {
   act(facing: Dir): TentEvent {
     if (!this.active) return 'none';
     const placing = this.s.phase === 'place';
-    const e = this.feed({ kind: 'act', placeOk: this.ok });
+    const e = this.feed({ kind: 'act', placeOk: this.ok, perfect: this.perfect });
     const peg = CORNERS[Math.min(this.s.pegs - (e === 'hit' || e === 'done' ? 1 : 0), PEGS - 1)] as Pt;   // тато б'є кути по черзі з першого; решту (need..PEGS) тримають відтяжками помічники
     switch (e) {
       case 'placed': playUi('confirm'); this.dust(this.at.x, this.at.y + 8, 5); break;

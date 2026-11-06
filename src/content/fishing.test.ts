@@ -125,3 +125,13 @@ describe('місце на справжній мапі табору', () => {
     for (const p of [0, 0.25, 0.5, 0.75, 1]) expect(solid(s.x + 24 + castDistance(p), s.y), `сила ${p}`).toBe(true);
   });
 });
+
+describe('GAME-270 · patient (лише e2e)', () => {
+  it('patient: вікно «клює» не спливає; без patient — мимо за BITE_MS', () => {
+    const bite: FishState = { ...FISH_IDLE, phase: 'bite', t: 0 };
+    const rng = makeRng(1);
+    expect(stepFish(bite, { kind: 'tick', dtMs: BITE_MS + 50, down: false }, rng).event).toBe('slipped');
+    expect(stepFish(bite, { kind: 'tick', dtMs: BITE_MS + 50, down: false, patient: true }, rng).event).toBe('none');
+    expect(stepFish(bite, { kind: 'tick', dtMs: 16, down: true, patient: true }, rng).event).toBe('hook');
+  });
+});

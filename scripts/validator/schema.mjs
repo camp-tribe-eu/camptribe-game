@@ -76,7 +76,7 @@ export const DIALOGUE_SCHEMA = obj({ id: req(str), npcId: str, trigger, scene, s
 const waveEffect = union({ setFlag: obj({ setFlag: req(str) }), wetGear: obj({ wetGear: req({ t: 'boolean', only: true }) }) });
 const waveOutcome = obj({ textKey: req(str), effects: arr(waveEffect) });
 const waveTask = obj({
-  id: req(str), textKey: req(str), limitMin: { t: 'int' }, leaderOnly: bool, animal: str,
+  id: req(str), textKey: req(str), limitMin: { t: 'int' }, leaderOnly: bool, animal: str, after: obj({ objectives: arr(str), tasks: arr(str) }),
   targets: { t: 'array', of: obj({ id: req(str), safe: req(bool) }), min: 1 }, when, done: waveOutcome, late: waveOutcome,
 });
 export const WAVE_SCHEMA = obj({ id: req(str), titleKey: req(str), hookKey: req(str), stage: req(str), when, tasks: req(arr(waveTask)), allDone: waveOutcome, fallback: obj({ textKey: req(str) }) });

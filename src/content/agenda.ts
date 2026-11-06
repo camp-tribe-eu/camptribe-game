@@ -80,13 +80,19 @@ function packItems(sim: SimState, defs: CoreDefs): Raw[] {
   return list;
 }
 
+/** GAME-258 · «Поставити намет» зроблено, коли справа хвилі приїзду вирішена (зроблена чи спізнилась); розмова з Елізою про місце (ціль квесту pitch-tent) намету ще не ставить. Хвилі немає — ціль квесту. */
+function pitched(g: SimState['game']): boolean {
+  const t = g.wave?.active?.tasks['pitch-tent']?.outcome ?? g.wave?.past['wave.ch1-day1-arrival']?.['pitch-tent'];
+  return t === undefined ? doneObj(g, 'ST-005', 'pitch-tent') : t !== 'open';
+}
+
 /** Табір, вечір дня 1: знайти Елізу → намет → дрова → у намет. */
 function campItems(sim: SimState): Raw[] {
   const g = sim.game;
   const fin = status(g, 'ST-005') === 'completed';
   return [
     { id: 'elise', label: { ui: 'agenda.camp.elise' }, placeKey: 'agenda.place.reception', done: fin || doneObj(g, 'ST-005', 'meet-elise'), map: 'camp', spot: 'npc.elise' },
-    { id: 'pitch', label: { ui: 'agenda.camp.pitch' }, placeKey: 'agenda.place.pitch', done: fin || doneObj(g, 'ST-005', 'pitch-tent'), map: 'camp', spot: `task.pitch-tent` },
+    { id: 'pitch', label: { ui: 'agenda.camp.pitch' }, placeKey: 'agenda.place.pitch', done: fin || pitched(g), map: 'camp', spot: `task.pitch-tent` },
     { id: 'wood', label: { ui: 'agenda.camp.wood' }, placeKey: 'agenda.place.forest', done: fin || doneObj(g, 'ST-005', 'gather-firewood') || have(g, 'item.firewood'), map: 'camp', spot: 'take.item.firewood' },
     { id: 'bed', label: { ui: 'agenda.camp.bed' }, placeKey: 'agenda.place.tent', done: fin, map: 'camp', spot: 'step.ST-005' },
   ];

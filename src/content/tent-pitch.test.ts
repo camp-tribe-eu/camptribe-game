@@ -143,3 +143,13 @@ describe('місце під намет на справжній мапі табо
     expect(placeOk({ x: 4, y: 4 }, { x: 4, y: 4 }, solidAt, [])).toBe(false);
   });
 });
+
+describe('GAME-270 · perfect (лише e2e)', () => {
+  it('perfect: удар поза зеленим влучає; без perfect — промах (мутація «perfect ігнорується» червонить перший рядок)', () => {
+    const peg = { ...startTent(), phase: 'peg' as const, t: 0 };   // маркер на краю шкали — поза зеленим
+    expect(inBand(markerAt(peg.t))).toBe(false);
+    expect(stepTent(peg, { kind: 'act', placeOk: true, perfect: true }).event).toBe('hit');
+    expect(stepTent(peg, { kind: 'act', placeOk: true }).event).toBe('miss');
+    expect(stepTent(peg, { kind: 'act', placeOk: true, perfect: false }).event).toBe('miss');
+  });
+});

@@ -278,6 +278,8 @@ export interface WaveTaskDef {
   readonly leaderOnly?: boolean;
   /** Справа про тварину (`animal.cat`): її ціль ніколи не біля води чи вогню — валідатор WAVE_ANIMAL_UNSAFE. */
   readonly animal?: string;
+  /** GAME-258: порядок приїзду — справа відкривається, коли зроблено цілі квесту етапу (`objectives`) і вирішено справи цієї ж хвилі (`tasks`: зроблена чи спізнилась). */
+  readonly after?: { readonly objectives?: readonly string[]; readonly tasks?: readonly string[] };
   readonly when?: WhenDef;
   readonly done: WaveOutcomeDef;
   readonly late: WaveOutcomeDef;

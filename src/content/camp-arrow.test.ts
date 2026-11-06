@@ -27,7 +27,7 @@ function at(c: Case): SimState {
 const CASES: Case[] = [];
 for (const meet of [false, true]) for (const pitch of [false, true]) for (const task of ['open', 'done', 'late', 'none'] as const) for (const wood of [false, true]) CASES.push({ meet, pitch, task, wood });
 /** Що кожен підпис обіцяє: куди веде стрілка. */
-const SPOT_OF: Readonly<Record<string, string>> = { 'next.camp.pitch': `task.${PITCH_TASK}`, 'next.camp.elise': 'npc.elise', 'next.camp.elise.spot': 'npc.elise', 'next.camp.firewood': 'take.item.firewood', 'next.camp.task': '' };
+const SPOT_OF: Readonly<Record<string, string>> = { 'next.camp.pitch': `task.${PITCH_TASK}`, 'next.camp.elise': 'npc.elise', 'next.camp.elise.spot': 'npc.elise', 'next.camp.firewood': 'take.item.firewood', 'next.camp.spot': 'task.pick-spot', 'next.camp.task': '' };
 
 describe('ST-005 у таборі: підпис і стрілка збігаються', () => {
   it(`усі ${CASES.length} станів: ключ підпису ↔ місце стрілки; «постав намет» лише коли справа жива й місце є; «спитай Елізу» лише коли намет-крок не зроблено`, () => {
@@ -43,8 +43,8 @@ describe('ST-005 у таборі: підпис і стрілка збігают�
       else expect(key.startsWith('next.camp.'), `${label}: несподіваний підпис ${key}`).toBe(true);
       if (key === 'next.camp.pitch') { expect(c.task, label).toBe('open'); expect(liveSpot(s, spot, DEFS), `${label}: ціль «постав намет» мусить бути живим об'єктом`).toBe(true); }
       if (key === 'next.camp.elise.spot') { expect(c.meet && !c.pitch, label).toBe(true); expect(c.task === 'open', label).toBe(false); }
-      // Головне: поки справа «Намет» відкрита, стрілка НІКОЛИ не на Елізу.
-      if (c.task === 'open') expect(spot, label).toBe(`task.${PITCH_TASK}`);
+      // Головне: поки справа «Намет» відкрита, стрілка не на Елізу — окрім початку (GAME-258: спершу привітатися з нею, потім намет).
+      if (c.task === 'open') expect(spot, label).toBe(c.meet ? `task.${PITCH_TASK}` : 'npc.elise');
     }
   });
   it('після знайомства з Елізою й відкритої справи стрілка — на місце намету з підписом «постав намет тут» (не на Елізу)', () => {

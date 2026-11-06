@@ -159,6 +159,10 @@ export interface WorldHooks {
   onErrand?(task: string): boolean;
   /** GAME-203 (лише збірка e2e, ?tentAlone=1): тато ставить намет сам, навіть коли родина поруч — шлях «без помічників». */
   tentAlone?(): boolean;
+  /** GAME-258: справа табору ще не в черзі (Еліза → ділянка → намет) — ключ м'якого рядка; null — можна. */
+  taskGate?(name: string): Key | null;
+  /** GAME-270 (лише збірка e2e, ?perfectHits=1): міні-ігри на час (кілки, рубання, «клює») не залежать від таймінгу — довгі e2e не дрижать від навантаження CI. */
+  perfectHits?(): boolean;
   /** GAME-216: чи зіграти заставку першого приїзду в табір (камера: герой → озеро → табір → герой, ≤ 10 с, будь-який дотик виходить). Немає — ніколи. */
   campReveal?(): boolean;
   /** GAME-230: подарунок щойно вручено — хто (id мешканця) і як відреагував; забирає його (наступний виклик — null). Реакція — лише вигляд і звук, очки веде ядро. */
@@ -685,6 +689,8 @@ export class WorldScene extends Phaser.Scene {
     this.props = new CampProps(this, this.barkText);
     this.fire = new FireRig(this, this.player, this.barkText);
     this.fish = new FishRig(this, this.player, this.barkText);
+    const perfect = this.hooks.perfectHits?.() === true;
+    this.tent.perfect = perfect; this.wood.perfect = perfect; this.fish.patient = perfect;
     this.fish.onSplash = (at) => this.chain.forEach((p, i) => { const d = lookAt(p, at); if (d) this.followLook[i] = { dir: d, s: LOOK_S }; });
     // GAME-212: зсув дихання героя — лише на спрайті; перед кроком фізики знімаємо, щоб тіло й проба лишались справжніми.
     this.events.on(Phaser.Scenes.Events.PRE_UPDATE, () => { if (this.heroBob) { this.player.y -= this.heroBob; this.heroBob = 0; } });
@@ -1546,7 +1552,7 @@ export class WorldScene extends Phaser.Scene {
     const live = [...this.spots.filter((s) => this.hooks.isLive(s.name)), ...talkers];
     // GAME-179/186: родина тупцює коло героя — говорить із нею лише тоді, коли в зоні дії нікого іншого нема; між слідувачами перевага тому, на кого дивиться герой.
     const isFollower = (n: string): boolean => (FOLLOWER_NPC as readonly string[]).includes(n);
-    const nearName = pickNearest(this.player.x, this.player.y, this.facing, live.map((s) => ({ name: s.name, x: s.x, y: s.y, follower: isFollower(s.name) })), INTERACT_RANGE);
+    const nearName = pickNearest(this.player.x, this.player.y, this.facing, live.map((s) => ({ name: s.name, x: s.x, y: s.y, follower: isFollower(s.name), request: s.kind === 'npc' && this.hooks.talk(s.name)?.request === true })), INTERACT_RANGE, this.hooks.target());
     const spot: Spot | null = nearName === null ? null : live.find((s) => s.name === nearName) ?? null;
     const near = spot?.name ?? null;
     // Тап: лише по цілі, що в зоні дії. Поза зоною нічого (без прокладання шляху, GAME-95).
@@ -1642,6 +1648,8 @@ export class WorldScene extends Phaser.Scene {
       // Дрова беруться лише руками (гілки → колода → удари): E біля купи без гілок нічого не бере; рига ще не стартувала (кадр до begin) — теж.
     } else if (pressed && act?.name === 'obj.campfire' && this.fire.phase !== 'idle' && this.fire.phase !== 'done') {
       // Вогнище, що чекає на вогонь, — лише руками (поліна → сірник); поліна й сірник вище, тут — коли герой ще не готовий (сірник, а не полінця).
+    } else if (pressed && act !== null && this.hooks.taskGate?.(act.name)) {
+      this.tent.nudge(this.hooks.taskGate(act.name) as Key);   // GAME-258: ласкавий рядок, жодного штрафу; справа лишається, доки не настане її черга
     } else if (pressed && act?.name === 'task.pitch-tent') {
       const at = this.spots.find((x) => x.name === 'task.pitch-tent');
       if (at) {

@@ -28,7 +28,7 @@ export interface TentState {
   readonly misses: number;
 }
 export type TentEvent = 'none' | 'started' | 'placed' | 'blocked' | 'hit' | 'miss' | 'done';
-export type TentInput = { readonly kind: 'tick'; readonly dtMs: number } | { readonly kind: 'act'; readonly placeOk: boolean };
+export type TentInput = { readonly kind: 'tick'; readonly dtMs: number } | { readonly kind: 'act'; readonly placeOk: boolean; /** GAME-270 (лише e2e, ?perfectHits=1): удар по кілку — завжди влучання, маркер не питаємо. */ readonly perfect?: boolean };
 
 export const IDLE: TentState = { phase: 'idle', pegs: 0, need: PEGS, t: 0, misses: 0 };
 /** `helpers` — скільки членів родини тягнуть відтяжки (GAME-203): з ними кілків на руки тата менше. */
@@ -49,7 +49,7 @@ export function stepTent(s: TentState, i: TentInput): { state: TentState; event:
   }
   if (s.phase === 'place') return i.placeOk ? { state: { ...s, phase: 'peg', t: 0 }, event: 'placed' } : { state: s, event: 'blocked' };
   if (s.phase !== 'peg') return { state: s, event: 'none' };
-  if (!inBand(markerAt(s.t))) return { state: { ...s, t: 0, misses: s.misses + 1 }, event: 'miss' };
+  if (i.perfect !== true && !inBand(markerAt(s.t))) return { state: { ...s, t: 0, misses: s.misses + 1 }, event: 'miss' };
   const pegs = s.pegs + 1;
   return pegs >= s.need ? { state: { ...s, phase: 'done', pegs, t: 0 }, event: 'done' } : { state: { ...s, pegs, t: 0 }, event: 'hit' };
 }

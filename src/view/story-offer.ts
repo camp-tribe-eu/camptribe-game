@@ -23,6 +23,7 @@ import { ATLAS_PAGES, STICKER_META } from '../content/stickers';
 import { pageFill } from '../core/atlas-fill';
 import { nearestReward } from '../content/nearest-reward';
 import { LOCALES } from '../i18n';
+import { dayPartOf, resolveGreeting, trackTalk } from './greeting';
 import { canSleepNow, chapterComplete, matches, questOpen, route, storyDay } from '../core/story';
 import { awardsFor } from '../core/progress';
 import { capacityOf, carriedOf, overflowCandidates, packedOf, packFlag, packingOpen, packItemsFor, usedUnits } from '../core/packing';
@@ -457,6 +458,8 @@ export function storyOffer(sim: SimState, defs: CoreDefs, view: StoryView = PANE
     }
   }
 
+  const firstToday = trackTalk(s.dialogue ? st.dialogues[s.dialogue.id]?.npcId : undefined, dayOf(sim.clock));
+  const greet = (k: string): string => resolveGreeting(k, dayPartOf(sim.clock.minutes), firstToday, (x) => Object.hasOwn(LOCALES.uk, x));
   let dialogue: StoryOffer['dialogue'] = null;
   if (s.dialogue) {
     const node = DIALOGUE_NODES.get(`${s.dialogue.id}#${s.dialogue.node}`);
@@ -481,7 +484,7 @@ export function storyOffer(sim: SimState, defs: CoreDefs, view: StoryView = PANE
         gifts.push(a);
       }
     }
-    dialogue = { speakerKey, speakerId, key: node?.textKey ?? null, answers: offered, ...(card ? { request: card } : {}), ...(gifts.length > 0 ? { gifts } : {}) };
+    dialogue = { speakerKey, speakerId, key: node?.textKey ? greet(node.textKey) : null, answers: offered.map((a) => (a.kind === 'choose' && a.key ? { ...a, key: greet(a.key) } : a)), ...(card ? { request: card } : {}), ...(gifts.length > 0 ? { gifts } : {}) };
   }
 
   // GAME-183: об'єкт мапи питає «що саме?» — варіанти в рамці вибору (те саме місце, що рамка розмови), а не кнопки ☰. Лише на мапі й без розмови.

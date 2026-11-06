@@ -7,7 +7,7 @@ import waves from '../../content/waves.json';
 interface RawOutcome { textKey: string; effects?: ({ setFlag: string } | { wetGear: boolean })[] }
 export interface RawWave {
   id: string; titleKey: string; hookKey: string; stage: string; when?: WhenDef; fallback?: { textKey: string }; allDone?: RawOutcome;
-  tasks: { id: string; textKey: string; limitMin: number; leaderOnly?: boolean; animal?: string; when?: WhenDef; targets?: { id: string; safe: boolean }[]; done: RawOutcome; late: RawOutcome }[];
+  tasks: { id: string; textKey: string; limitMin: number; leaderOnly?: boolean; animal?: string; after?: { objectives?: string[]; tasks?: string[] }; when?: WhenDef; targets?: { id: string; safe: boolean }[]; done: RawOutcome; late: RawOutcome }[];
 }
 
 const outcome = (o: RawOutcome | undefined) => ({
@@ -23,6 +23,7 @@ function wave(w: RawWave): WaveDef {
       id: t.id, limitMin: t.limitMin,
       ...(t.leaderOnly === true ? { leaderOnly: true } : {}),
       ...(t.animal !== undefined ? { animal: t.animal } : {}),
+      ...(t.after ? { after: t.after } : {}),
       ...(t.when ? { when: t.when } : {}),
       done: outcome(t.done), late: outcome(t.late),
     })),

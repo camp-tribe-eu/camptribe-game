@@ -25,6 +25,14 @@ describe('перемикачі e2e (рецензія GAME-36)', () => {
     expect(testSwitches('?noAutosave=1', 'production').noAutosave).toBeUndefined();
   });
 
+  it('perfectHits: лише в e2e і лише =1 (GAME-270); у збірці YouTube/звичайній — ніколи', () => {
+    expect(testSwitches('?perfectHits=1', 'e2e').perfectHits).toBe(true);
+    expect(testSwitches('?perfectHits=0', 'e2e').perfectHits).toBeUndefined();
+    expect(testSwitches('?perfectHits=true', 'e2e').perfectHits).toBeUndefined();
+    expect(testSwitches('', 'e2e').perfectHits).toBeUndefined();
+    for (const mode of ['production', 'development']) expect(testSwitches('?perfectHits=1', mode).perfectHits).toBeUndefined();
+  });
+
   it('freshSeed: лише в e2e і лише =1 (GAME-89 №2)', () => {
     expect(testSwitches('?freshSeed=1', 'e2e').freshSeed).toBe(true);
     expect(testSwitches('?freshSeed=0', 'e2e').freshSeed).toBeUndefined();

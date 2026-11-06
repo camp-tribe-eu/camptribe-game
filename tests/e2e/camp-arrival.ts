@@ -1,7 +1,7 @@
 // GAME-202/203 · спільний приїзд у табір для e2e родини: день 1 кнопками панелі (не цей зріз), далі перезавантаження з ?mapFirst=1 — справжня гра на мапі
 // (автозбереження підхоплює табір). Той самий шлях, що в game-189.spec (там — своя копія).
 import { expect, type Page } from '@playwright/test';
-import { core } from './chapter-driver';
+import { core, goAndDo, probe, talk } from './chapter-driver';
 import { waitGameReady } from './ready';
 
 export const CAMP = 'loc.camp.lake';
@@ -39,4 +39,16 @@ export async function arriveInCamp(page: Page, extra = ''): Promise<string[]> {
 export async function taskOutcome(page: Page, task: string): Promise<string> {
   const w = (await core(page)).game.wave as { active: { tasks: Record<string, { outcome: string }> } | null; past: Record<string, Record<string, string>> } | undefined;
   return w?.active?.tasks[task]?.outcome ?? w?.past['wave.ch1-day1-arrival']?.[task] ?? 'none';
+}
+
+/** GAME-258 · порядок приїзду: Еліза → «Ділянка» → «Намет». Іде за стрілкою «Далі», доки вона не покаже намет (стан, а не час). */
+export async function reachPitchTurn(page: Page, touch = true): Promise<void> {
+  for (let i = 0; i < 8; i++) {
+    await expect.poll(async () => (await probe(page)).fx.target, { timeout: 20_000, message: 'стрілка мусить вказувати ціль' }).not.toBeNull();
+    if ((await probe(page)).fx.target === 'task.pitch-tent') return;
+    await goAndDo(page, touch);
+    // Розмова з Елізою: перший вибір (знайомство й місце), далі «Далі» — доки рамка не закриється.
+    for (let k = 0; k < 8 && await talk(page).isVisible({ timeout: 700 }).catch(() => false); k++) { await talk(page).locator('[data-act]').first().click(); await page.waitForTimeout(350); }
+  }
+  throw new Error('стрілка так і не привела до намету за 8 кроків');
 }

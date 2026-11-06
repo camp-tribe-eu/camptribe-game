@@ -3,6 +3,7 @@
 import { expect, test, type Page } from '@playwright/test';
 import { core, playTent, probe, route, walk } from './chapter-driver';
 import { waitGameReady } from './ready';
+import { reachPitchTurn } from './camp-arrival';
 
 const CAMP = 'loc.camp.lake';
 const SETTINGS_KEY = 'camplife.settings.v1';
@@ -47,6 +48,7 @@ for (const v of VIEWS) {
     const ctx = await browser.newContext({ viewport: { width: v.w, height: v.h }, hasTouch: true, isMobile: true });
     const page = await ctx.newPage();
     const errors = await arriveInCamp(page);
+    await reachPitchTurn(page);   // GAME-258: спершу Еліза й «Ділянка»
     // 1) підпис цілі й стрілка — на одне місце: стрілка веде до task.pitch-tent, а рядок «Далі» каже «постав намет».
     await expect.poll(async () => (await probe(page)).fx.target, { timeout: 20_000, message: 'стрілка мусить вказувати ціль' }).toBe('task.pitch-tent');
     await expect(page.locator('[data-ui="agenda-item"][data-current="yes"]')).toHaveAttribute('data-item', 'pitch');   // GAME-243: поточний пункт нотатника — «Поставити намет»
