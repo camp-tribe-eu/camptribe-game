@@ -159,8 +159,12 @@ describe('GAME-246 · дарунок Анни лише коли платити �
     expect(dispatch(mid, { type: 'Pickup', commandId: nextCommandId(mid), itemId: 'item.sleeping-bag' }, GAME_DEFS)).toMatchObject({ ok: false, code: 'INSUFFICIENT_FUNDS' });
     const mid2 = atShop(3_600, [{ type: 'Pickup', itemId: 'item.tent' }]);
     expect(dispatch(mid2, { type: 'Pickup', commandId: nextCommandId(mid2), itemId: 'item.sleeping-bag' }, GAME_DEFS).ok).toBe(true);
-    // з кошиком у меню/переборі — лише каса й «піти»
-    expect([...new Set(moves(mid2, GAME_DEFS).map((m) => m.type))].sort()).toEqual(['Checkout', 'Visit']);
+    // з кошиком у меню/переборі — каса, «піти» і полиця, за яку вистачить готівки понад кошик (36 € − намет 24,99 € → спальник 9,99 € і ліхтар 4,99 €
+    // ще лягають): гравець кладе кілька речей і платить раз (e2e game-246, intro-walk). Розмов/купівель/продажів з кошиком немає.
+    expect([...new Set(moves(mid2, GAME_DEFS).map((m) => m.type))].sort()).toEqual(['Checkout', 'Pickup', 'Visit']);
+    expect(moves(mid2, GAME_DEFS).filter((m) => m.type === 'Pickup').map((m) => m.itemId).sort()).toEqual(['item.lantern', 'item.sleeping-bag']);
+    // 30 € − намет 24,99 € = 5,01 €: ліхтар (4,99 €) ще лягає, спальник (9,99 €) — ні
+    expect(moves(mid, GAME_DEFS).filter((m) => m.type === 'Pickup').map((m) => m.itemId)).toEqual(['item.lantern']);
   });
   it('30 € і спальник у кошику (9,99 €): намет (24,99 €) у кошик не лягає, а дарунок Анни дають — готівки поза кошиком 20,01 €', () => {
     const s = atShop(3_000, [{ type: 'Pickup', itemId: 'item.sleeping-bag' }]);

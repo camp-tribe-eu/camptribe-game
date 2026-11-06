@@ -1,6 +1,6 @@
 // Усі дії, які гравець може спробувати в стані, — спільні для повного перебору (story.test) і
 // бота (bot.ts). Ядро саме відмовить у недоречному; тут лише перелік спроб.
-import { basketOf, canPay } from '../core/basket';
+import { basketOf, basketTotal, canPay } from '../core/basket';
 import type { Command } from '../core/commands';
 import type { CoreDefs, StoryDefs } from '../core/defs';
 import { canonical } from '../core/hash';
@@ -67,10 +67,15 @@ export function moves(s: GameState, defs: CoreDefs, withRequests = false): Move[
     (node?.choices ?? []).forEach((c, i) => { const w = JSON.stringify(c.when ?? null); if (withRequests || !(w.includes('"f.req-') || w.includes(`"${ERRAND_PREFIX}`))) out.push({ type: 'Choose', choice: i }); });
     out.push({ type: 'Continue' });
   }
-  // GAME-246: з речами в кошику — спершу каса: лише «Сплатити» й «Піти» (ядро пускає піти лише коли платити нічим або крамниця зачинена —
-  // речі лишаються на полиці; інакше UNPAID_BASKET). Так само мапа (obj.vehicle → «Спершу каса»). Без цього кожен стан з кошиком мав
-  // усі ходи крамниці (розмови, купівлі, продажі), і випадкова прогулянка на 400 кроків (day-summary) не доходила до кінця дня 1.
-  if (basketOf(s.flags, defs).length > 0) return [...out.filter((m) => m.type === 'Visit' || m.type === 'Choose' || m.type === 'Continue'), { type: 'Checkout' }] as Move[];
+  // GAME-246: з речами в кошику — спершу каса: «Сплатити», «Піти» (ядро пускає піти лише коли платити нічим або крамниця зачинена —
+  // речі лишаються на полиці; інакше UNPAID_BASKET) і ще полиця, за яку вистачить готівки понад кошик (гравець кладе намет І спальник,
+  // потім платить — e2e game-246, вступ intro-walk). Решти ходів крамниці (розмови, купівлі, продажі) з кошиком немає: без цього кожен
+  // стан з кошиком мав їх усі, і випадкова прогулянка на 400 кроків (day-summary) не доходила до кінця дня 1. Так само мапа (obj.vehicle → «Спершу каса»).
+  if (basketOf(s.flags, defs).length > 0) {
+    const total = basketTotal(s.flags, defs);
+    const shelf: Move[] = Object.values(st.locations).flatMap((l) => l.items.filter((id) => { const c = defs.items[id]?.shelfCents; return c !== undefined && s.moneyCents >= total + c && !s.inventory[id] && !basketOf(s.flags, defs).includes(id); }).map((itemId): Move => ({ type: 'Pickup', itemId })));
+    return [...out.filter((m) => m.type === 'Visit' || m.type === 'Choose' || m.type === 'Continue'), ...shelf, { type: 'Checkout' }] as Move[];
+  }
   // GAME-246: речі Анни (0 €, стан 60) — лише коли за звичайну річ нічим платити (ядро: CAN_PAY, canPay — готівка + викуп наявного):
   // інакше кожна подвоює простір станів (інший стан спорядження й гаманця) через усі дні розділу без нового досяжного кінця
   // (виміряно: menu-here 17 550 → 29 810 станів, коли дарунок був досяжний після купівлі синтетичного спальника). Фільтр тут — той
