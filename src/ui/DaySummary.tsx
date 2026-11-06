@@ -12,8 +12,8 @@ const TITLE: Readonly<Record<OfferSummary['sections'][number]['kind'], Key>> = {
   night: 'sum.night', packed: 'sum.packed', events: 'sum.events', quests: 'sum.quests', bought: 'sum.bought', got: 'sum.got', sold: 'sum.sold',
 };
 
-export function DaySummary({ summary, lang, t, onContinue, onEnd }: {
-  summary: OfferSummary; lang: AnyLang; t: (k: Key) => string; onContinue: () => void; onEnd: () => void;
+export function DaySummary({ summary, lang, t, onContinue, onEnd, sleep = false }: {
+  summary: OfferSummary; lang: AnyLang; t: (k: Key) => string; onContinue: () => void; onEnd: () => void; sleep?: boolean;
 }) {
   const root = useRef<HTMLDivElement>(null);
   // Фокус — на заголовок: екранний читач починає з «Підсумок дня N», далі Tab веде секціями до кнопок.
@@ -47,7 +47,7 @@ export function DaySummary({ summary, lang, t, onContinue, onEnd }: {
         <p class="ui-summary-sec" data-ui="summary-safe" style={at(4 + summary.sections.length)}>{t('sum.safe')}</p>
       </div>
       <div class="ui-summary-actions">
-        <button type="button" class="ui-btn" data-ui="summary-continue" onClick={onContinue}>{t('sum.continue')}</button>
+        <button type="button" class="ui-btn" data-ui="summary-continue" onClick={onContinue}>{t(sleep ? 'sum.sleep' : 'sum.continue')}</button>
         <button type="button" class="ui-btn" data-ui="summary-end" onClick={onEnd}>{t('sum.endSession')}</button>
       </div>
     </div>

@@ -75,13 +75,17 @@ export function Shell({ port, langOverride, credits, build, holdToast = false, h
   // Рецензія PR #145: Shell монтується до того, як сейв прочитано (saves.start), тож стан стежимо лише після port.loaded(): перший знімок після
   // читання — запам'ятати, не показувати (завантажений завершений сейв — не кінець розділу); далі — лише перехід play → ended (episodeStep).
   const endedRef = useRef<boolean | null>(null);
-  const watchEnded = (o: StoryOffer): void => { const r = episodeStep(endedRef.current, port.loaded(), o.stage === 'ended'); endedRef.current = r.next; if (r.show) setEpisode(true); };
+  // GAME-264: кінець розділу — це підсумок розділу (сам, без ☰), потім сон, і лише тоді тизер розділу 2 (картка серії): див. onStory і summaryContinue.
+  const watchEnded = (o: StoryOffer): boolean => { const r = episodeStep(endedRef.current, port.loaded(), o.stage === 'ended'); endedRef.current = r.next; return r.show; };
+  const sleptSeen = useRef<number | null>(null);
   // GAME-242: герой заснув сам (00:30) — день закрито без дії гравця: підсумок показуємо, коли daysEnded зріс саме від сну в кадрах (не від завантаження сейву).
   const endedSeen = useRef<number | null>(null);
   useEffect(() => { checkIntro(); return port.onStory(() => {
-    const o = port.story(); setOffer(o); watchEnded(o); checkIntro();
-    if (endedSeen.current !== null && o.daysEnded > endedSeen.current && o.rest.autoSlept && o.summary) { setStoryOpen(false); setTalk(false); setSummary(o.summary); }
+    const o = port.story(); setOffer(o); const chapterEnd = watchEnded(o); checkIntro();
+    if (endedSeen.current !== null && o.daysEnded > endedSeen.current && (o.rest.autoSlept || chapterEnd) && o.summary) { setStoryOpen(false); setTalk(false); setSummary(o.summary); }
     endedSeen.current = o.daysEnded;
+    // Сон після кінця розділу (з підсумку чи з ☰) → тизер розділу 2; завантаження вже завершеного сейву тизера не показує (sleptSeen стартує після читання).
+    if (port.loaded()) { if (sleptSeen.current !== null && o.stage === 'ended' && o.rest.slept > sleptSeen.current) setEpisode(true); sleptSeen.current = o.rest.slept; }
   }); }, []);
   const [atlasOpen, setAtlasOpen] = useState(false);
   // GAME-181: нове звання — маленьке свято: банер (назва + рядок родини) і звук підтвердження через єдиний мікшер. Банер не ловить дотики й гасне сам.
@@ -114,9 +118,12 @@ export function Shell({ port, langOverride, credits, build, holdToast = false, h
     }
   };
   // «Продовжити»: назад до мапи — день іде далі (кінець Прологу: мапа жива, ☰ скаже, що далі).
+  // GAME-264: у кінці розділу «Продовжити» — це «Лягти спати»: сон веде до тизера розділу 2 (Shell.onStory), ☰ не потрібна.
+  const sleepAction = offer.stage === 'ended' ? offer.actions.find((a) => a.kind === 'sleep') : undefined;
   const summaryContinue = (): void => {
     setSummary(null);
     story(false);
+    if (sleepAction) storyAct(sleepAction.id);
   };
   // «Завершити сесію»: записати сейв і вийти в меню паузи з підтвердженням — гру можна закривати, прогрес на місці.
   const summaryEnd = (): void => {
@@ -416,11 +423,11 @@ export function Shell({ port, langOverride, credits, build, holdToast = false, h
       {storyOpen && <StoryPanel offer={offer} lang={lang} t={t} act={storyAct} close={() => story(false)} portrait={portrait} settings={() => { setStoryOpen(false); toggle(true); }} footer={offer.stage !== 'create' && <button type="button" class="ui-btn" data-ui="atlas-open" onClick={openAtlas}>{`${t('ui.atlas')}: ${offer.atlas.count}/${offer.atlas.total}`}</button>}>{staleNotice}</StoryPanel>}
       {atlasOpen && <AtlasPanel atlas={offer.atlas} lang={lang} t={t} close={closeAtlas} />}
       {intro && cold && <ColdOpen paint={port.coldOpenScene} t={t} onDone={() => setCold(false)} />}
-      {episode && !intro && port.episodeFlags && <EpisodeCard flags={port.episodeFlags()} t={t} onDone={() => { setEpisode(false); focusStage(); }} />}
+      {episode && !intro && port.episodeFlags && <EpisodeCard flags={port.episodeFlags()} t={t} onDone={() => { setEpisode(false); focusStage(); if (offer.stage === 'ended' && offer.rest.slept > 0) summaryEnd(); /* GAME-264: після тизера — збережена гра й меню паузи, а не мертва мапа */ }} />}
       {intro && !cold && <Intro offer={offer} lang={lang} t={t} act={storyAct} portrait={portrait} room={port.introRoom} beat={port.introBeat} onDone={endIntro} />}
       {talk && !paused && !storyOpen && !summary && offer.dialogue && <DialogueBox dialogue={offer.dialogue} lang={lang} t={t} act={storyAct} portrait={portrait} />}
       {summary && !paused && top === 'levelup' && <LevelUp ups={shownUps} lang={lang} t={t} onContinue={() => setUps([])} />}
-      {summary && !paused && top === 'summary' && <DaySummary summary={summary} lang={lang} t={t} onContinue={summaryContinue} onEnd={summaryEnd} />}
+      {summary && !paused && top === 'summary' && <DaySummary summary={summary} lang={lang} t={t} onContinue={summaryContinue} onEnd={summaryEnd} sleep={sleepAction !== undefined} />}
       {paused && confirmNew && (
         <div class="ui-overlay" role="dialog" aria-modal="true" aria-label={t('ui.newGame')} data-ui="confirm-new" onKeyDown={(e) => trapTab(e, e.currentTarget)}>
           <h2>{t('ui.newGame')}</h2>
