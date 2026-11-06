@@ -63,14 +63,14 @@ for (const v of VIEWS) {
     await page.locator('[data-ui="atlas-cta"]').click();   // «Спланувати першу поїздку» (GAME-250)
     await walkIntro(page);   // GAME-249: далі родинний план, ніч, ранок, метушня
     await expect(intro).toHaveCount(0);
-    expect((await core(page)).game.stickers).toEqual(['sticker.home']);
+    expect((await core(page)).game.stickers).toEqual(['sticker.home', 'sticker.plan']);   // GAME-257: ST-002 закрито вступом — наклейка плану разом із домом
     // Атлас із ☰.
     await page.locator('.ui-story-btn').click();
     await page.locator('[data-ui="atlas-open"]').click();
     const panel = page.locator('[data-ui="atlas-panel"]');
     await expect(panel).toBeVisible();
     expect(await panel.locator('[data-ui="sticker"]').count()).toBe(12);
-    expect(await panel.locator('[data-ui="sticker"][data-owned="yes"]').count()).toBe(1);
+    expect(await panel.locator('[data-ui="sticker"][data-owned="yes"]').count()).toBe(2);
     await expect(panel.locator('[data-ui="sticker"][data-id="sticker.home"]')).toHaveAttribute('data-owned', 'yes');
     await expect(panel.locator('[data-ui="stamp"]')).toBeVisible();
     await expect(panel.locator('[data-ui="atlas-here"]')).toHaveText('ми тут');
@@ -89,7 +89,7 @@ for (const v of VIEWS) {
     await page.reload();
     await loaded(page);
     await expect(page.locator('[data-ui="intro"]')).toHaveCount(0);
-    expect((await core(page)).game.stickers).toEqual(['sticker.home']);
+    expect((await core(page)).game.stickers).toEqual(['sticker.home', 'sticker.plan']);
   });
 }
 
@@ -107,7 +107,7 @@ test('«Пропустити»: до вибору — на вибір героя
   await expect(page.locator('[data-ui="intro"]')).toHaveCount(0);
   const c = await core(page);
   expect(c.game.player).not.toBeNull();
-  expect(c.game.stickers).toEqual(['sticker.home']);   // наклейка належить ядру, а не анімації: пропуск її не губить
+  expect(c.game.stickers).toEqual(['sticker.home', 'sticker.plan']);   // наклейка належить ядру, а не анімації: пропуск її не губить
   await expect(page.locator('.ui-story-btn')).toBeVisible();
 });
 

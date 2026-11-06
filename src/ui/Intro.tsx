@@ -14,7 +14,7 @@ import type { IntroRoomPainter } from './port';
 import type { StoryOffer } from './story-types';
 import { calmMotion } from '../platform/motion';
 import { sfx } from '../audio/sfx';
-import { INTRO_STEPS, INTRO_STEPS_TO_PICK, afterPick, skipTarget, type Step } from '../content/intro-story';
+import { INTRO_STEPS, INTRO_STEPS_TO_PICK, afterPick, introBeatOf, skipTarget, type IntroBeat, type Step } from '../content/intro-story';
 
 /** Розкадровка — чиста модель intro-story.ts; тут лише малювання кроків. */
 export { INTRO_STEPS_TO_PICK };
@@ -52,7 +52,7 @@ function Room({ paint, morning, family, speaker }: { paint: IntroRoomPainter | u
 const SPOTS = ['drawer', 'box', 'shelf'] as const;
 type Spot = (typeof SPOTS)[number];
 
-export function Intro({ offer, lang, t, act, portrait, room, onDone }: { room?: IntroRoomPainter | undefined; offer: StoryOffer; lang: AnyLang; t: (k: Key) => string; act: (id: string) => void; portrait: PortraitLookup; onDone: () => void }) {
+export function Intro({ offer, lang, t, act, portrait, room, beat, onDone }: { beat?: ((b: IntroBeat) => void) | undefined; room?: IntroRoomPainter | undefined; offer: StoryOffer; lang: AnyLang; t: (k: Key) => string; act: (id: string) => void; portrait: PortraitLookup; onDone: () => void }) {
   const [i, setI] = useState(0);
   const [seen, setSeen] = useState<Spot | null>(null);
   const skipped = useRef(false);
@@ -67,6 +67,7 @@ export function Intro({ offer, lang, t, act, portrait, room, onDone }: { room?: 
   useEffect(() => { root.current?.querySelector<HTMLElement>('[data-ui="intro-next"], [data-ui="atlas-cta"], [data-act="create"], [data-ui="intro-spot"]')?.focus({ preventScroll: true }); }, [i]);
   // Дощ за вікном і шум — лише вночі (GAME-194); вранці дощ стих. Наклейка «Дім» влітає зі звуком «дзинь»; будильник — дзвіночок (існуючий sfx, без нового синтезу).
   useEffect(() => { setIntroOpen(!morning); return () => setIntroOpen(false); }, [morning]);
+  useEffect(() => { const b = introBeatOf(step.kind); if (b !== null && created) beat?.(b); }, [step.kind, created]);
   useEffect(() => { if (step.kind === 'atlas') playUi('confirm'); if (step.kind === 'morning') sfx('chime'); }, [step.kind]);
   // Дотик двічі за мить не пропускає два кроки: пауза між кроками за event.timeStamp (без таймерів).
   const last = useRef(Number.NEGATIVE_INFINITY);

@@ -409,7 +409,7 @@ export function Shell({ port, langOverride, credits, build, holdToast = false, h
       {atlasOpen && <AtlasPanel atlas={offer.atlas} lang={lang} t={t} close={closeAtlas} />}
       {intro && cold && <ColdOpen paint={port.coldOpenScene} t={t} onDone={() => setCold(false)} />}
       {episode && !intro && port.episodeFlags && <EpisodeCard flags={port.episodeFlags()} t={t} onDone={() => { setEpisode(false); focusStage(); }} />}
-      {intro && !cold && <Intro offer={offer} lang={lang} t={t} act={storyAct} portrait={portrait} room={port.introRoom} onDone={endIntro} />}
+      {intro && !cold && <Intro offer={offer} lang={lang} t={t} act={storyAct} portrait={portrait} room={port.introRoom} beat={port.introBeat} onDone={endIntro} />}
       {talk && !paused && !storyOpen && !summary && offer.dialogue && <DialogueBox dialogue={offer.dialogue} lang={lang} t={t} act={storyAct} portrait={portrait} />}
       {summary && !paused && top === 'levelup' && <LevelUp ups={shownUps} lang={lang} t={t} onContinue={() => setUps([])} />}
       {summary && !paused && top === 'summary' && <DaySummary summary={summary} lang={lang} t={t} onContinue={summaryContinue} onEnd={summaryEnd} />}
