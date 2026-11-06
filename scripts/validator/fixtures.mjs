@@ -504,6 +504,7 @@ export const FIXTURES = [
   { name: '[наклейка] без тексту (textKey) — схема', expect: ['SCHEMA_INVALID'], patch(c) { delete c.stickers[0].textKey; } },
   { name: '[наклейка] немає англійського тексту', expect: ['LOCALE_MISSING'], patch(c) { delete c.locales.en['sticker.fixture-first.text']; } },
   { name: '[хвиля] after: справа чекає сама на себе', expect: ['WAVE_AFTER_INVALID'], patch(c) { wave(c).tasks.push(extraTask('a', { after: { tasks: ['a'] } })); } },
+  { name: '[хвиля] after: справи-попередниці не існує', expect: ['WAVE_AFTER_INVALID'], patch(c) { wave(c).tasks.push(extraTask('a', { after: { tasks: ['no-such-task'] } })); } },
   { name: '[хвиля] after: цикл двох справ', expect: ['WAVE_AFTER_INVALID'], patch(c) { wave(c).tasks.push(extraTask('a', { after: { tasks: ['b'] } }), extraTask('b', { after: { tasks: ['a'] } })); } },
   { name: '[хвиля] after: цілі квесту етапу не існує', expect: ['WAVE_AFTER_INVALID'], patch(c) { wave(c).tasks.push(extraTask('a', { after: { objectives: ['no-such-objective'] } })); } },
   { name: '[хвиля] контроль: after на наявну справу — коректно', expect: [], patch(c) { wave(c).tasks.push(extraTask('a'), extraTask('b', { after: { tasks: ['a'] } })); } },
