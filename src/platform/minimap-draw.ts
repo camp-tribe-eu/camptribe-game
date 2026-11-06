@@ -17,6 +17,14 @@ export function baseOf(f: MiniFrame): HTMLCanvasElement {
   return c;
 }
 
+/** Підпис кадру: гравець з кроком 1/4 плитки (на екрані це < 1 px), напрям і крапки. Однаковий підпис — малювати знову нема чого (GAME-267). */
+export function miniSig(f: MiniFrame): string {
+  const q = (v: number): number => Math.round(v * 4);
+  let s = `${f.key}|${q(f.px)}|${q(f.py)}|${f.dir}`;
+  for (const d of f.dots) s += `|${q(d.x)},${q(d.y)}`;
+  return s;
+}
+
 /** Малює знімок у полотно `cv` (розмір беремо з його CSS-розміру); повертає кількість крапок цілей. */
 export function paintMini(cv: HTMLCanvasElement, f: MiniFrame): number {
   const dpr = Math.min(2, window.devicePixelRatio || 1);

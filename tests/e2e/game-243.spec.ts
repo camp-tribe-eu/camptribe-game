@@ -82,6 +82,12 @@ test('удома: нотатник з речами й місцями, пункт
   expect(mb?.width ?? 0, 'радар ≥ 96 px').toBeGreaterThanOrEqual(96);
   expect(mb?.width ?? 999, 'радар ≤ 120 px').toBeLessThanOrEqual(121);
   const dotsBefore = Number(await mini.getAttribute('data-dots'));
+  // GAME-267: мінімапа малює лише коли знімок змінився. Герой стоїть → за 2 с жодного перемальовування (раніше — щокадру).
+  const draws = async (): Promise<number> => Number(await mini.getAttribute('data-draws'));
+  const d0 = await draws();
+  expect(d0, 'перше малювання було').toBeGreaterThanOrEqual(1);
+  await page.waitForTimeout(2_000);
+  expect(await draws() - d0, 'герой стоїть: 0 перемальовувань мінімапи за 2 с').toBe(0);
   // Нижні підказки зникли; навчання скінчилось — стрілки немає (але ціль досяжна: probe знає її).
   await expect(page.locator('[data-ui="goal"], [data-ui="nearest"]')).toHaveCount(0);
   await expect.poll(async () => (await probe(page)).fx.target, { timeout: 5_000 }).not.toBeNull();
@@ -90,6 +96,7 @@ test('удома: нотатник з речами й місцями, пункт
   await page.screenshot({ path: `${SHOTS}/home-390x844.png` });
   // Узяти річ — пункт закреслився сам, крапка її зникла.
   await takeSpot(page, true, 'pack.item.documents');
+  expect(await draws(), 'герой пішов → мінімапа перемалювалась').toBeGreaterThan(d0);
   await expect(page.locator('[data-ui="agenda-item"][data-item="item.documents"]')).toHaveAttribute('data-done', 'yes');
   await expect(page.locator('[data-ui="agenda-item"][data-done="no"]').first()).toHaveAttribute('data-current', 'yes');
   await expect.poll(async () => Number(await mini.getAttribute('data-dots')), { timeout: 5_000 }).toBeLessThan(dotsBefore);
