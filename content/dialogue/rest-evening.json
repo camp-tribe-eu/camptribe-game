@@ -1,0 +1,34 @@
+{
+  "id": "dlg.rest-evening",
+  "scene": {
+    "titleKey": "dlg.rest-evening.title",
+    "facts": []
+  },
+  "start": "s1",
+  "nodes": [
+    {
+      "id": "s1",
+      "speaker": "player",
+      "textKey": "dlg.rest-evening.s1",
+      "next": "s2"
+    },
+    {
+      "id": "s2",
+      "speaker": "player",
+      "textKey": "dlg.rest-evening.s2",
+      "next": "s3"
+    },
+    {
+      "id": "s3",
+      "speaker": "player",
+      "textKey": "dlg.rest-evening.s3",
+      "next": "s4"
+    },
+    {
+      "id": "s4",
+      "speaker": "player",
+      "textKey": "dlg.rest-evening.s4",
+      "end": true
+    }
+  ]
+}

@@ -3,11 +3,12 @@
 // тож закреслити пункт руками неможливо (закон 1: мутація «пункт не тікає від стану» червоніє в agenda.test.ts).
 import type { CoreDefs } from '../core/defs';
 import { carriedOf, packFlag, packingOpen, packItemsFor, takeFlag } from '../core/packing';
+import { canRestNow } from '../core/story';
 import type { SimState } from '../core/sim';
 import type { GameState } from '../core/state';
 import { dayOf } from '../core/weather';
 import type { Key } from '../i18n';
-import { MAP_LOCATION, mapKeyFor, nextTarget, type MapKey } from './map-first';
+import { MAP_LOCATION, mapKeyFor, nextTarget, TENT_SPOT as MAP_SPOT_TENT, type MapKey } from './map-first';
 
 /** Скільки перших пунктів агенди треба закрити, щоб підказка-стрілка зникла (вона лише для навчання в перший день). */
 export const ONBOARDING_ITEMS = 2;
@@ -137,7 +138,15 @@ export function agendaOf(sim: SimState, defs: CoreDefs): Agenda | null {
   if (status(g, 'ST-003') === 'active') { phase = 'shop'; raw = shopItems(sim); }
   else if (defs.packing && status(g, 'CH1-HOME-001') === 'active' && packingOpen(defs.packing, g)) { phase = 'pack'; raw = packItems(sim, defs); }
   else if (status(g, 'ST-005') === 'active' && p.locationId === MAP_LOCATION.camp) { phase = 'camp'; raw = campItems(sim); }
-  else {
+  else if (canRestNow(defs.story, g, sim.clock.minutes)) {
+    // GAME-269: мертве вікно дня — «Відпочити до вечора» (намет) і дві необов'язкові справи, що вже є в грі (риболовля, сусіди).
+    phase = 'other';
+    raw = [
+      { id: 'rest', label: { ui: 'agenda.rest' }, placeKey: 'agenda.place.tent', done: false, map: 'camp', spot: MAP_SPOT_TENT },
+      { id: 'fish', label: { ui: 'agenda.fish' }, placeKey: null, done: false, map: 'camp', spot: null },
+      { id: 'neighbours', label: { ui: 'agenda.neighbours' }, placeKey: null, done: false, map: 'camp', spot: 'npc.nora' },
+    ];
+  } else {
     const n = nextTarget(sim, defs, defs.packing ? carriedOf(g.flags, defs.packing, p) : []);
     if (n) raw = [{ id: 'next', label: { ui: n.key }, placeKey: null, done: false, map: mapKeyFor(p.locationId), spot: n.spot }];
   }

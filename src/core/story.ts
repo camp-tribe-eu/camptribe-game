@@ -119,6 +119,21 @@ export const eveningPending = (st: Pick<StoryDefs, 'quests'> | undefined, d: { r
 export const canSleepNow = (st: Pick<StoryDefs, 'quests'> | undefined, d: Parameters<typeof canSleep>[0] & { readonly quests: StoryDraft['quests']; readonly slept?: number }, now: number): boolean =>
   canSleep(d, now) && (isNight(now) || !eveningPending(st, d, now));
 
+/** GAME-269 · хвилина доби, до якої «Відпочити до вечора» перемотує час (17:30: ще пів години до 18:00, коли збираються на вечір). */
+export const REST_TO = 17 * 60 + 30;
+/** Сцена «Відпочити до вечора» (content/dialogue/rest-evening.json): коротка родинна розмова після перемотування. */
+export const REST_SCENE = 'dlg.rest-evening';
+/**
+ * GAME-269 · мертве вікно: у таборі, намет стоїть, до 17:30, жодного обов'язкового кроку, що вже чекає на гравця (відкритий квест без `optional`) чи відкритої справи хвилі,
+ * і є обов'язковий крок, що чекає свого дня чи вечора (інакше відпочивати нема до чого). Розмова чи сцена в ході — ні.
+ */
+export const canRestNow = (st: Pick<StoryDefs, 'quests'> | undefined, d: { readonly player: { readonly locationId: string | null } | null; readonly flags: readonly string[]; readonly quests: StoryDraft['quests']; readonly slept?: number; readonly dialogue?: unknown; readonly wave?: { readonly active?: { readonly tasks: Readonly<Record<string, { readonly outcome: string }>> } | null } | null }, now: number): boolean => {
+  if (!st || !d.player || d.dialogue || !(d.player.locationId ?? '').startsWith('loc.camp.') || !d.flags.includes('f.night-tent') || minuteOfDay(now) >= REST_TO) return false;
+  if (Object.values(d.wave?.active?.tasks ?? {}).some((t) => t.outcome === 'open')) return false;
+  const required = Object.entries(d.quests).filter(([id, q]) => q.status === 'active' && !own(st.quests, id)?.optional);
+  return required.length > 0 && required.every(([id]) => !questOpen(st, d, id, now));
+};
+
 const completed = (d: StoryDraft, questId: string | undefined): boolean => questId === undefined || own(d.quests, questId)?.status === 'completed';
 
 export function locationOpen(st: StoryDefs, d: StoryDraft, p: PlayerState, id: string): boolean {

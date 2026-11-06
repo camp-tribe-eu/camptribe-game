@@ -138,6 +138,10 @@ describe('меню сюжету: з кожного стану, досяжног�
 describe('тексти меню: кожен ключ існує в обох мовах', () => {
   const has = (k: string | null): boolean => k !== null && k in uk && k in en;
 
+  it('GAME-269: підпис дії «Відпочити до вечора» є в обох мовах', () => {
+    expect('act.rest' in ukUi && 'act.rest' in enUi).toBe(true);
+  });
+
   it('кожен показаний ключ — у uk і en, у кожному стані меню', () => {
     const missing = new Set<string>();
     let journals = 0;
@@ -160,7 +164,7 @@ describe('тексти меню: кожен ключ існує в обох мо
           const keys = [o.locationKey, ...o.quests.flatMap((q) => [q.key, ...q.objectives.map((x) => x.key)]), ...o.inventory.map((i) => i.key),
             ...(o.dialogue ? [o.dialogue.key, ...(o.dialogue.speakerKey === null ? [] : [o.dialogue.speakerKey])] : []),
             ...o.journal.flatMap((e) => (e.key === null ? [] : [e.key])),
-            ...[...o.actions, ...(o.dialogue?.answers ?? [])].filter((a) => a.kind !== 'continue').map((a) => a.key)];
+            ...[...o.actions, ...(o.dialogue?.answers ?? [])].filter((a) => a.kind !== 'continue' && a.kind !== 'rest').map((a) => a.key)];   // GAME-269: «rest» — кнопка з фіксованим підписом (act.rest), ключа контенту в неї немає; підпис звіряє тест нижче
           for (const key of keys) if (!has(key)) missing.add(String(key));
           // GAME-144: розділ триденний — кожен стан інвентаря днів 1–2 помножений на ланцюг дня 3 переваливав за 50 000 станів
           // (навіть без покупок у дні 3). Обхід меню — до межі дня 2 включно (стан після вогнища відвідано, далі не розгортаємо);
