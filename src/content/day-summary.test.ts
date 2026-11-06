@@ -228,7 +228,23 @@ describe('властивість: 400 випадкових днів — у пі�
     const roadNoApples = runs.filter((x) => x.sim.journal.some((e) => e.type === 'Visit' && e.ref === 'loc.road') && !ids(x.sum, 'events').includes('dlg.road-apples')).length;
     expect(apples).toBeGreaterThan(0);
     expect(roadNoApples).toBeGreaterThan(0);
-    expect(runs.some((x) => x.sum.ended)).toBe(true);
+    // «Хоч якийсь день завершено» тут НЕ перевіряється: випадкова прогулянка на 400 кроків закривала день 1 у 1 з 400 прогонів на main
+    // і в 0 з 400 на гілці GAME-246 (виміряно тим самим зерном; до дня 2 гілка доходить частіше — 17 проти 13). Це везіння зерна, а не
+    // властивість. Кінець дня доводить детермінований сценарій нижче — з мутацією.
+  });
+
+  // Детерміноване джерело тієї самої властивості: реплей-сценарій до межі дня 1 (ST-005 і сон) ДАЄ підсумок із ended: true, квестами дня
+  // й ночівлею, і оракул «лише факти» на ньому порожній. Мутація (закон 1): журнал без запису Sleep — день не закрито (ended: false), дня 2 немає.
+  it('кінець дня — детерміновано: сценарій до межі дня 1 дає підсумок ended: true з фактами; без запису Sleep у журналі — не дає', () => {
+    const s = untilDay1End();
+    const sum = daySummary(s, 1, GAME_DEFS);
+    expect(sum?.ended).toBe(true);
+    expect(ids(sum, 'quests')).toContain('ST-005');
+    expect(ids(sum, 'night')).toEqual(['f.night-tent']);
+    expect(unbacked(sum as DaySummary, s)).toEqual([]);
+    const noSleep: SimState = { ...s, journal: s.journal.filter((e) => e.type !== 'Sleep') };
+    expect(daySummary(noSleep, 1, GAME_DEFS)?.ended).toBe(false);
+    expect(daySummary(noSleep, 2, GAME_DEFS)).toBeNull();
   });
 
   // Мутація (закон 1): підсумок, що показує подію яблук без факту, — оракул червоніє на кожному дні без цієї події.
