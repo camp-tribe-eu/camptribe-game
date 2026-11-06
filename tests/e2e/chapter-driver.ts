@@ -268,6 +268,9 @@ export async function goAndDo(page: Page, touch: boolean, car = false): Promise<
     const settled = await expect.poll(async () => { const s = await probe(page); return (s.nearObject === target && !s.playerMoving) || (await signature(page)) !== before; }, { timeout: 2_500 }).toBe(true).then(() => true, () => false);
     if (!settled && t < 2) continue;
     if (!AUTO(target)) {
+      // GAME-270: ціль могла піти, поки ішли: справу «Доручити Метью» закрив помічник (errand) — стрілка вже веде далі, тиснути нічого. Чекаємо «поруч АБО ціль змінилась»; далі — як було.
+      const gone = await expect.poll(async () => { const z = await probe(page); return z.nearObject === target ? 'near' : z.fx.target !== target ? 'gone' : 'wait'; }, { timeout: 5_000, message: `біля ${target} кнопка дії мусить знати, що поруч` }).not.toBe('wait').then(async () => (await probe(page)).fx.target !== target && (await probe(page)).nearObject !== target);
+      if (gone) { expect(await signature(page), `ціль ${target} зникла без зміни стану`).not.toBe(before); await page.waitForTimeout(150); return target; }
       await expect.poll(async () => (await probe(page)).nearObject, { timeout: 5_000, message: `біля ${target} кнопка дії мусить знати, що поруч` }).toBe(target);
       if (touch) await page.locator('[data-touch="interact"]').tap();
       else { await page.keyboard.down('KeyE'); await page.waitForTimeout(200); await page.keyboard.up('KeyE'); }

@@ -89,3 +89,16 @@ describe('вибір співрозмовника серед слідувачі�
     expect(pickNearest(100, 100, 'right', [{ ...M, x: 120, y: 100 }, { name: 'obj.fire', follower: false, x: 100, y: 146 }], 48)).toBe('obj.fire');
   });
 });
+
+describe('GAME-270 · ціль «Далі» проти мешканця на ній', () => {
+  const E = { name: 'npc.elise', follower: false, x: 100, y: 110 };
+  const T = { name: 'task.walk-site', follower: false, x: 100, y: 130 };
+  it('мешканець без прохання ближче, але ціль у зоні — виграє ціль', () => {
+    expect(pickNearest(100, 100, 'down', [E, T], 48, 'task.walk-site')).toBe('task.walk-site');
+    expect(pickNearest(100, 100, 'down', [E, T], 48)).toBe('npc.elise');   // без цілі — як раніше
+  });
+  it('мешканець із проханням («!») усе ще виграє; ціль поза зоною — не береться', () => {
+    expect(pickNearest(100, 100, 'down', [{ ...E, request: true }, T], 48, 'task.walk-site')).toBe('npc.elise');
+    expect(pickNearest(100, 100, 'down', [E, { ...T, y: 200 }], 48, 'task.walk-site')).toBe('npc.elise');
+  });
+});
