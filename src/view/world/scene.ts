@@ -159,6 +159,8 @@ export interface WorldHooks {
   onErrand?(task: string): boolean;
   /** GAME-203 (лише збірка e2e, ?tentAlone=1): тато ставить намет сам, навіть коли родина поруч — шлях «без помічників». */
   tentAlone?(): boolean;
+  /** GAME-258: справа табору ще не в черзі (Еліза → ділянка → намет) — ключ м'якого рядка; null — можна. */
+  taskGate?(name: string): Key | null;
   /** GAME-270 (лише збірка e2e, ?perfectHits=1): міні-ігри на час (кілки, рубання, «клює») не залежать від таймінгу — довгі e2e не дрижать від навантаження CI. */
   perfectHits?(): boolean;
   /** GAME-216: чи зіграти заставку першого приїзду в табір (камера: герой → озеро → табір → герой, ≤ 10 с, будь-який дотик виходить). Немає — ніколи. */
@@ -1646,6 +1648,8 @@ export class WorldScene extends Phaser.Scene {
       // Дрова беруться лише руками (гілки → колода → удари): E біля купи без гілок нічого не бере; рига ще не стартувала (кадр до begin) — теж.
     } else if (pressed && act?.name === 'obj.campfire' && this.fire.phase !== 'idle' && this.fire.phase !== 'done') {
       // Вогнище, що чекає на вогонь, — лише руками (поліна → сірник); поліна й сірник вище, тут — коли герой ще не готовий (сірник, а не полінця).
+    } else if (pressed && act !== null && this.hooks.taskGate?.(act.name)) {
+      this.tent.nudge(this.hooks.taskGate(act.name) as Key);   // GAME-258: ласкавий рядок, жодного штрафу; справа лишається, доки не настане її черга
     } else if (pressed && act?.name === 'task.pitch-tent') {
       const at = this.spots.find((x) => x.name === 'task.pitch-tent');
       if (at) {

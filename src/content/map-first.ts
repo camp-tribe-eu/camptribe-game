@@ -8,6 +8,7 @@
 // Закон «жодних тупиків»: кнопку панелі ховає ЛИШЕ ті дії, для яких на мапі зараз є ЖИВИЙ об'єкт з тією самою командою
 // (coveredKeys будується з resolveSpot — прийнятих ядром ходів). Об'єкт мертвий — кнопка лишається в панелі. Тож пройти
 // можна завжди: або ногами, або (як було) кнопкою. Що саме ногами — доводить map-first.test.ts повним перебором.
+import { taskGate } from '../core/wave';
 import { dispatch, nextCommandId, type Command } from '../core/commands';
 import type { CoreDefs } from '../core/defs';
 import { canonical } from '../core/hash';
@@ -403,6 +404,8 @@ function roadNext(sim: SimState, defs: CoreDefs): Next | null {
 
 /** Справа хвилі приїзду, яку гравець робить руками (view/world/tent.ts). */
 export const PITCH_TASK = 'pitch-tent';
+/** GAME-258 · справа хвилі приїзду «обрати ділянку» — іде перед наметом. */
+export const PICK_SPOT_TASK = 'pick-spot';
 
 /**
  * GAME-256 · основний крок, що чекає: активний, не побічний, ворота дня сюжету ще зачинені. `sleepNext` — чекає наступного ДНЯ (потрібен сон),
@@ -426,9 +429,13 @@ function campNext(sim: SimState, defs: CoreDefs): Next | null {
   if (w && stage !== undefined && own(defs.story?.quests ?? {}, stage)?.locationId === MAP_LOCATION.camp) {
     const live = Object.entries(w.tasks).filter(([, t]) => t.outcome === 'open' && sim.clock.minutes <= t.dueAt);
     // GAME-189: намет руками — стрілка й підпис однаково кажуть «постав намет тут» (раніше ціль «Намет» у HUD, а стрілка — на Елізу).
-    if (live.some(([id]) => id === PITCH_TASK)) return { key: 'next.camp.pitch', spot: `task.${PITCH_TASK}` };
-    const open = live[0];
-    if (open) return { key: 'next.camp.task', spot: `task.${open[0]}` };
+    // GAME-258: порядок приїзду за даними (waves.json `after`): Еліза → ділянка → намет. Хоч одна справа чекає на ціль «познайомитись» — спершу Еліза; далі лише справи, чия черга настала.
+    const gate = (id: string): ReturnType<typeof taskGate> => taskGate(g, defs.waves, id);
+    if (live.some(([id]) => gate(id) === 'objective')) return { key: 'next.camp.elise', spot: 'npc.elise' };
+    const ready = live.filter(([id]) => gate(id) === null);
+    if (ready.some(([id]) => id === PITCH_TASK)) return { key: 'next.camp.pitch', spot: `task.${PITCH_TASK}` };
+    const open = ready[0];
+    if (open) return { key: open[0] === PICK_SPOT_TASK ? 'next.camp.spot' : 'next.camp.task', spot: `task.${open[0]}` };
   }
   // GAME-256: основний крок чекає на день чи вечір — гравцеві кажемо, що робити (вільний час, вечір, спати), а не ведемо до воріт, що замкнені.
   const held = heldGate(sim, defs);

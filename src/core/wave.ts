@@ -55,6 +55,22 @@ const own = <T>(o: Readonly<Record<string, T>>, k: string): T | undefined => (Ob
 /** Справи хвилі, що існують для цього гравця (варіант за транспортом / профілем / твариною). */
 export const tasksFor = (w: WaveDef, p: PlayerState): WaveTaskDef[] => w.tasks.filter((t) => matches(t.when, p));
 
+/**
+ * GAME-258 · порядок приїзду за даними: що ще не зроблено перед справою. 'objective' — не виконано ціль квесту етапу (напр. привітатись з Елізою),
+ * 'task' — справа-попередниця ще відкрита (напр. спершу обрати ділянку). Спізнена попередниця не тримає: порядок підказка, не пастка. null — відкрито.
+ */
+export type TaskGate = 'objective' | 'task' | null;
+export function taskGate(game: { readonly quests: GameState['quests']; readonly wave?: WaveState | undefined }, defs: WaveDefs | undefined, taskId: string): TaskGate {
+  const a = game.wave?.active;
+  const w = a ? own(defs?.waves ?? {}, a.waveId) : undefined;
+  const after = w?.tasks.find((t) => t.id === taskId)?.after;
+  if (!a || !w || !after) return null;
+  const done = own(game.quests, w.stage)?.done ?? [];
+  if ((after.objectives ?? []).some((o) => !done.includes(o))) return 'objective';
+  if ((after.tasks ?? []).some((id) => own(a.tasks, id)?.outcome === 'open')) return 'task';
+  return null;
+}
+
 function setFlags(d: WaveDraft, flags: readonly string[]): void {
   const next = flags.filter((f) => !d.flags.includes(f));
   if (next.length) d.flags = [...d.flags, ...next].sort();
@@ -100,6 +116,7 @@ export function applyWave(cmd: WaveCommand, d: WaveDraft, defs: WaveDefs | undef
   const t = own(a.tasks, cmd.taskId);
   if (!t || t.outcome !== 'open' || now > t.dueAt) return 'TASK_NOT_OPEN'; // строк минув — справу вже вирішить settleWave як late
   if (def.leaderOnly === true && (cmd.actor ?? 'leader') !== 'leader') return 'TASK_LEADER_ONLY';
+  if (taskGate(d, defs, cmd.taskId) !== null) return 'TASK_NOT_OPEN'; // GAME-258: ще не черга цієї справи (привітатись з Елізою → обрати ділянку → намет)
   d.wave = { ...state, active: { ...a, tasks: { ...a.tasks, [cmd.taskId]: { ...t, outcome: 'done' } } } };
   setFlags(d, def.done.effects);
   finishIfResolved(d, defs);

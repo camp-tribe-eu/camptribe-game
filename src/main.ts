@@ -53,6 +53,7 @@ import { FORAGE_ITEMS, canForage, heartDue, reactionFor } from './content/friend
 import type { GiftReaction } from './core/friendship';
 import { agendaOf, minimapTargets, onboarding, type MiniFrame } from './content/agenda';
 import type { MapKey } from './content/map-first';
+import { taskGate } from './core/wave';
 import { MAP_SPOTS, departBlock, isBulky, isMapFirstSpot, mapKeyFor, moveKey, needsLeft, nextTarget, npcLive, resolveSpot, spotLook, unpackMoves } from './content/map-first';
 import { carriedOf, takeFlag } from './core/packing';
 import type { GameState } from './core/state';
@@ -416,6 +417,7 @@ const worldHooks: WorldHooks = {
     return !plannedErrands(bridge.state.game.flags, (spot) => liveSpot(bridge.state, spot, GAME_DEFS)).some((x) => x.task === task);
   },
   tentAlone: () => switches.tentAlone === true,
+  taskGate: (name) => { const g = name.startsWith('task.') ? taskGate(bridge.state.game, GAME_DEFS.waves, name.slice(5)) : null; return g === 'objective' ? 'tent.needElise' : g === 'task' ? 'tent.needSpot' : null; },
   perfectHits: () => switches.perfectHits === true,
   // GAME-216: заставка — лише на першому приїзді в табір (ST-005 живий, з Елізою ще не говорили); ?noReveal=1 — негативний контроль e2e.
   campReveal: () => switches.noReveal !== true && bridge.state.game.quests['ST-005']?.status === 'active' && !(bridge.state.game.quests['ST-005']?.done ?? []).includes('meet-elise'),

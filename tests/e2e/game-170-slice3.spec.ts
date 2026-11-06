@@ -110,6 +110,24 @@ async function cardLayout(page: Page, vp: { width: number; height: number }): Pr
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
 }
 /** Дорога до табору: виїзд (W1 закривається), зупинка (W2), приїзд (W3 відкрита, гравець у таборі). */
+/** GAME-258 · порядок приїзду: «Ділянка» і «Намет» відкриваються після знайомства з Елізою — робимо його з відкритої панелі (кроки діалогу як у game-106). */
+async function meetElise(page: Page): Promise<void> {
+  // Стан, а не сліпий сценарій: що саме на екрані — те й тиснемо (talk → перший вибір знайомства → «Далі» → «місце: не зараз» → «Далі»).
+  const has = (sel: string) => panel(page).locator(sel).first().isVisible({ timeout: 500 }).catch(() => false);
+  const done = async () => (((await core(page)).game.quests['ST-005'] as { done?: string[] } | undefined)?.done ?? []).includes('meet-elise');
+  for (let i = 0; i < 10; i++) {
+    const dlg = await has('[data-ui="dialogue"]');
+    if ((await done()) && !dlg) return;
+    const sel = dlg
+      ? ((await has('[data-act="choose"][data-key="dlg.elise-greeting.spot.c4"]')) ? '[data-act="choose"][data-key="dlg.elise-greeting.spot.c4"]'
+        : (await has('[data-act="choose"][data-key="dlg.elise-greeting.hello.c2"]')) ? '[data-act="choose"][data-key="dlg.elise-greeting.hello.c2"]'
+        : (await has('[data-act="continue"]')) ? '[data-act="continue"]' : '[data-ui="dialogue"] [data-act] >> nth=-1')
+      : '[data-act="talk"][data-key="npc.elise"]';
+    await panel(page).locator(sel).first().click({ timeout: 5_000 });
+    await page.waitForTimeout(300);
+  }
+  expect(await done(), 'знайомство з Елізою зараховано').toBe(true);
+}
 async function roadToCamp(page: Page, onRoad: (page: Page) => Promise<void>): Promise<void> {
   await act(page, 'complete', 'q.ch1-home-001');
   await act(page, 'visit', 'loc.road');
@@ -155,6 +173,7 @@ test.describe('(a) сторч 390×844, клавіатура: W1 і W3 усе в
     console.log(`GAME-170 зріз 3 (a): W1 чотири справи клавіатурою за ${w1.toFixed(1)} с`);
 
     await roadToCamp(page, async () => { /* W2 без дій — усе спізниться від'їздом */ });
+    await meetElise(page);
     await panel(page).locator('[data-ui="story-close"]').click();
     await expect(card(page)).toBeVisible();
     await expect(card(page)).toHaveAttribute('data-total', '4');
@@ -230,6 +249,7 @@ test.describe('(b) вбік 844×390, дотик: одна справа тапо
       await expect(taskButtons(p)).toHaveCount(2);
     });
     expect((await core(page)).game.wave?.past[W2]).toEqual({ 'fix-luggage': 'late', 'mia-water-blanket': 'late', 'check-route': 'done' });
+    await meetElise(page);
     await panel(page).locator('[data-ui="story-close"]').click();
     await expect(card(page)).toBeVisible();
     await cardLayout(page, VP);
@@ -255,7 +275,7 @@ test.describe('(b) вбік 844×390, дотик: одна справа тапо
     console.log(`GAME-170 зріз 3 (b): W3 згасла сама за ${w3.toFixed(1)} с (${c3.clock.minutes - m1} ігрових хв)`);
     // Розділ не зламано: день 1 завершується, як і раніше (Еліза, дрова, ST-005 → підсумок дня 1).
     await page.locator('[data-touch="story"]').click();
-    for (const [k, key] of [['talk', 'npc.elise'], ['choose', 'dlg.elise-greeting.hello.c2'], ['continue', ''], ['choose', 'dlg.elise-greeting.spot.c1'], ['continue', ''], ['pickup', 'item.firewood'], ['complete', 'q.st-005']] as const) await act(page, k, key);
+    for (const [k, key] of [['talk', 'npc.elise'], ['choose', 'dlg.elise-greeting.hello.c4'], ['choose', 'dlg.elise-greeting.spot.c1'], ['continue', ''], ['pickup', 'item.firewood'], ['complete', 'q.st-005']] as const) await act(page, k, key);
     await sleepTheDay(page);   // GAME-256: день 1 закриває сон
     await expect(page.locator('[data-ui="summary"] h2')).toHaveText('Підсумок дня 1');
     expect((await core(page)).game.campaignEnded).toBe(false);

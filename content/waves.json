@@ -53,9 +53,9 @@
     "fallback": { "textKey": "wave.ch1-day1-arrival.fallback" },
     "allDone": { "textKey": "wave.ch1-day1-arrival.all-done" },
     "tasks": [
-      { "id": "pick-spot", "textKey": "wave.ch1-day1-arrival.pick-spot", "limitMin": 50, "leaderOnly": true,
+      { "id": "pick-spot", "textKey": "wave.ch1-day1-arrival.pick-spot", "limitMin": 50, "leaderOnly": true, "after": { "objectives": ["meet-elise"] },
         "done": { "textKey": "wave.ch1-day1-arrival.pick-spot.done" }, "late": { "textKey": "wave.ch1-day1-arrival.pick-spot.late" } },
-      { "id": "pitch-tent", "textKey": "wave.ch1-day1-arrival.pitch-tent", "limitMin": 55,
+      { "id": "pitch-tent", "textKey": "wave.ch1-day1-arrival.pitch-tent", "limitMin": 55, "after": { "objectives": ["meet-elise"], "tasks": ["pick-spot"] },
         "done": { "textKey": "wave.ch1-day1-arrival.pitch-tent.done" }, "late": { "textKey": "wave.ch1-day1-arrival.pitch-tent.late", "effects": [{ "wetGear": true }] } },
       { "id": "gear-shelter", "textKey": "wave.ch1-day1-arrival.gear-shelter", "limitMin": 45,
         "done": { "textKey": "wave.ch1-day1-arrival.gear-shelter.done" }, "late": { "textKey": "wave.ch1-day1-arrival.gear-shelter.late" } },
