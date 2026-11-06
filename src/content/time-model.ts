@@ -48,7 +48,7 @@ export function moveSeconds(m: Move): number {
     case 'Pickup': case 'BuyItem': case 'SellItem': case 'DryGear':
     case 'PackItem': case 'UnpackItem': case 'AutoPack': case 'TakeItem': case 'LoadCar': case 'LeaveItem':
     case 'BookLeave': case 'CancelLeave':
-    case 'Sleep': case 'WaitForShop':   // GAME-242: кнопка «Лягти спати» / «Чекати до 08:00»; бот їх не обирає (не серед moves())
+    case 'Sleep': case 'WaitForShop': case 'RestUntilEvening':   // GAME-242: кнопка «Лягти спати» / «Чекати до 08:00»; бот їх не обирає (не серед moves())
       return SECONDS.menuTap;
     case 'CompleteQuest': case 'DeclineQuest': return SECONDS.questDone;
     case 'Repair': return SECONDS.repair;

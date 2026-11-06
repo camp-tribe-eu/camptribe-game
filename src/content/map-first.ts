@@ -15,7 +15,7 @@ import { canonical } from '../core/hash';
 import { autoPack, packFlag, packItemsFor, packedOf, packingOpen, takeFlag } from '../core/packing';
 import type { SimState } from '../core/sim';
 import type { GameState } from '../core/state';
-import { canSleepNow, matches, questOpen, storyDay } from '../core/story';
+import { canRestNow, canSleepNow, matches, questOpen, storyDay } from '../core/story';
 import type { Key } from '../i18n';
 import { FIREPLACE_SCENE } from './fireplace';
 import type { Move } from './moves';
@@ -244,7 +244,7 @@ function compute(sim: SimState, defs: CoreDefs, name: string): Resolved | null {
   if (name.startsWith(SPOT_PREFIX.step)) {
     const questId = name.slice(SPOT_PREFIX.step.length);
     // GAME-256: коли ST-005 уже завершено, намет — це ліжко: «Спати» тією ж командою ядра, що й у ☰ (ядро саме скаже, чи можна: ліжко/намет з 18:00, будь-де після 22:00).
-    if (name === TENT_SPOT && own(g.quests, questId)?.status === 'completed') return canSleepNow(defs.story, g, sim.clock.minutes) ? { moves: [{ type: 'Sleep' }] } : null;
+    if (name === TENT_SPOT && own(g.quests, questId)?.status === 'completed') return canSleepNow(defs.story, g, sim.clock.minutes) ? { moves: [{ type: 'Sleep' }] } : canRestNow(defs.story, g, sim.clock.minutes) ? { moves: [{ type: 'RestUntilEvening' }] } : null;
     if (!active(g, questId)) return null;
     if (defs.story && !questOpen(defs.story, g, questId, sim.clock.minutes)) return null;   // GAME-256: крок чекає свого дня / вечора — об'єкта кроку ще немає
     // Вечір дня 2: сцена біля вогнища — ПЕРШЕ (obj.campfire, director.ts), завершення — те саме вогнище, коли сцену зіграно.

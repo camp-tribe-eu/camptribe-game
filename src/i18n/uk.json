@@ -488,5 +488,9 @@
   "ui.journal.entries": "Записи",
   "ui.journal.stickers": "наклейок",
   "ui.journal.more": "Показати ще",
-  "ui.journal.less": "Показати менше"
+  "ui.journal.less": "Показати менше",
+  "act.rest": "Відпочити до вечора",
+  "agenda.rest": "Відпочити до вечора (намет)",
+  "agenda.fish": "Порибалити на березі (за бажанням)",
+  "agenda.neighbours": "Поговорити з сусідами (за бажанням)"
 }

@@ -1,13 +1,13 @@
 // Крок симуляції: стан гри + годинник + RNG. Вхід — лише журнал (кадри, команди, перемотування),
 // тож той самий seed і той самий журнал дають той самий стан (GAME-13).
 
-import { advance, autoSleepDue, newClock, pause, resume, tick, type GameClock } from './clock';
+import { advance, autoSleepDue, newClock, nextAt, pause, resume, tick, type GameClock } from './clock';
 import { dispatch, type Command } from './commands';
 import { EMPTY_DEFS, type CoreDefs } from './defs';
 import { canonical } from './hash';
 import { wearAfterTrip } from './gear';
 import { payroll } from './life';
-import { eventEligible, route, SLEEP_CAP } from './story';
+import { eventEligible, REST_TO, route, SLEEP_CAP } from './story';
 import { nextInt, seedRng, type RngState } from './rng';
 import { initialState, type GameState } from './state';
 import { minutesToOpen, sleepPlace, wakeMinute, type SleepPlace } from './rest';
@@ -224,6 +224,7 @@ export function step(s: SimState, input: Input, ctx: StepCtx = {}): SimState {
         const place = sleepPlace(s.game, s.clock.minutes) as SleepPlace;
         return afterClock(fallAsleep({ ...s, game: r.state }, place, input.command.commandId), ctx);
       }
+      if (r.ok && !r.repeated && input.command.type === 'RestUntilEvening') return afterClock({ ...s, game: r.state, clock: advance(s.clock, nextAt(s.clock.minutes, REST_TO) - s.clock.minutes) }, ctx);
       if (r.ok && !r.repeated && input.command.type === 'WaitForShop') return afterClock({ ...s, game: r.state, clock: advance(s.clock, minutesToOpen(s.clock.minutes)) }, ctx);
       // Рівно один запис на прийняту нову команду з переліку, що щось змінила в грі. Відмова, повтор
       // commandId і «порожня» дія (прийти туди, де стоїш; вдруге погрітись біля вогнища) — нуль.

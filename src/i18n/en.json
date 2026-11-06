@@ -488,5 +488,9 @@
   "ui.journal.entries": "Entries",
   "ui.journal.stickers": "stickers",
   "ui.journal.more": "Show more",
-  "ui.journal.less": "Show less"
+  "ui.journal.less": "Show less",
+  "act.rest": "Rest until evening",
+  "agenda.rest": "Rest until evening (tent)",
+  "agenda.fish": "Fish by the shore (optional)",
+  "agenda.neighbours": "Chat with the neighbours (optional)"
 }
