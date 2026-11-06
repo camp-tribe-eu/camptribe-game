@@ -204,6 +204,14 @@ describe('коди відмов: кожен код із реєстру має т
       return ['UNPAID_BASKET', g, { type: 'Visit', commandId: 's5b', locationId: to }, defs];
     })(),
     ['ITEM_ALREADY_HELD', play([DRIVER, { type: 'Pickup', itemId: 'item.wood' }]), { type: 'Pickup', commandId: 's6', itemId: 'item.wood' }, STORY_DEFS],
+    // GAME-246 · дарунок (`asItem`, 0 €) — лише тому, кому нічим платити: з 10 € за річ полиці в 3 € — CAN_PAY
+    ((): [RejectCode, GameState, Command, CoreDefs] => {
+      const story = STORY_DEFS.story as NonNullable<CoreDefs['story']>;
+      const home = story.locations['loc.home'] as NonNullable<typeof story.locations[string]>;
+      const defs: CoreDefs = { ...STORY_DEFS, items: { ...STORY_DEFS.items, 'item.wood': { shelfCents: 300 }, 'item.wood-old': { asItem: { itemId: 'item.wood', condition: 60 } } },
+        story: { ...story, locations: { ...story.locations, 'loc.home': { ...home, items: [...home.items, 'item.wood-old'] } } } };
+      return ['CAN_PAY', play([DRIVER], initialState(1000), defs), { type: 'Pickup', commandId: 's6a', itemId: 'item.wood-old' }, defs];
+    })(),
     // GAME-256 · крок чекає свій день (gate) — активний, але ще не завершується
     ['QUEST_NOT_YET', play([DRIVER, { type: 'Visit', locationId: 'loc.home' }, { type: 'CompleteQuest', questId: 'q.start' }], undefined, GATED_DEFS), { type: 'CompleteQuest', commandId: 's7g', questId: 'q.mid' }, GATED_DEFS],
     ['QUEST_NOT_ACTIVE', play([DRIVER]), { type: 'CompleteQuest', commandId: 's7', questId: 'q.mid' }, STORY_DEFS],

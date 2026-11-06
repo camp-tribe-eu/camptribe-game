@@ -11,7 +11,7 @@ import { bookLeave, cancelLeave } from './life';
 import { autoPack, capacityOf, carriedOf, loadCarSet, packFlag, packingOpen, packItemsFor, takeFlag, usedUnits, withLoaded, withPacked } from './packing';
 import type { Weather } from './weather';
 import { applyStory, canSleepNow, questNeedsItem, questOpen, SLEEP_CAP, type StoryCommand, type StoryDraft } from './story';
-import { basketFlag, basketOf, basketTotal } from './basket';
+import { basketFlag, basketOf, basketTotal, canPay } from './basket';
 import { applyWave, type WaveCommand } from './wave';
 import { award, awardsFor } from './progress';
 import { atlasAwards } from './atlas-fill';
@@ -395,12 +395,18 @@ function apply(cmd: Command, d: Draft, defs: CoreDefs, guard: Safeguards, today:
       const here = d.player?.locationId;
       if (shelf !== undefined && defs.story && isContentId(cmd.itemId) && d.player && here != null && own(defs.story.locations, here)?.items.includes(cmd.itemId)) {
         if ((own(d.inventory, cmd.itemId) ?? 0) >= 1 || d.flags.includes(basketFlag(cmd.itemId))) return 'ITEM_ALREADY_HELD';
+        // У кошик — лише те, за що є готівка разом із рештою кошика (та сама умова, що й у каси): інакше кошик без грошей — пастка,
+        // з якої лише «вийти» (речі на полицю), і випадкова прогулянка з 0 € не доходила до кінця дня 1 (day-summary).
+        if (d.moneyCents < basketTotal(d.flags, defs) + shelf) return 'INSUFFICIENT_FUNDS';
         d.flags = [...d.flags, basketFlag(cmd.itemId)].sort();
         return null;
       }
       const alt = own(defs.items, cmd.itemId)?.asItem;
       if (alt && defs.story && isContentId(cmd.itemId) && d.player && here != null && own(defs.story.locations, here)?.items.includes(cmd.itemId)) {
         if ((own(d.inventory, alt.itemId) ?? 0) >= 1 || d.flags.includes(basketFlag(alt.itemId))) return 'ITEM_ALREADY_HELD';
+        // Дарунок — лише тому, кому нічим платити за звичайну річ (готівка + викуп наявного < ціни полиці): правило ядра, а не меню.
+        const shelfAlt = own(defs.items, alt.itemId)?.shelfCents;
+        if (shelfAlt !== undefined && canPay(d, defs, shelfAlt)) return 'CAN_PAY';
         d.inventory[alt.itemId] = 1;
         d.gear = { ...d.gear, [alt.itemId]: { condition: alt.condition, wet: false } };
         return null;

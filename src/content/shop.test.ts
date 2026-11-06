@@ -114,3 +114,57 @@ describe('купівля в справжньому каталозі гри (GAME
     expect(checked).toBeGreaterThan(0);
   });
 });
+
+// GAME-246 · речі Анни (0 €, стан 60) — лише тому, кому нічим платити: правило ядра (CAN_PAY, canPay = готівка + викуп наявного),
+// і фільтр moves() — той самий предикат. Закон 1: мутація «canPay без викупу» червонить випадок «11 € + синтетичний спальник»;
+// мутація «фільтр moves() = гроші < ціни» червонить рівність «пропоновано = прийнято ядром».
+describe('GAME-246 · дарунок Анни лише коли платити нічим', () => {
+  const ANNA = ['item.tent-anna', 'item.sleeping-bag-anna'];
+  const atShop = (money: number, cmds: readonly Record<string, unknown>[] = []): GameState => {
+    let s = initialState(money);
+    const all: Record<string, unknown>[] = [
+      { type: 'CreateCharacter', profileId: 'profile.solo-explorer', transportId: 'transport.bike' },
+      { type: 'CompleteQuest', questId: 'PROLOGUE-HOME-001' }, { type: 'CompleteQuest', questId: 'ST-001' }, { type: 'CompleteQuest', questId: 'ST-002' },
+      { type: 'Visit', locationId: 'loc.shop' }, ...cmds,
+    ];
+    for (const c of all) { const r = dispatch(s, { ...c, commandId: nextCommandId(s) } as unknown as Command, GAME_DEFS); if (!r.ok) throw new Error(`${String(c.type)}: ${r.code}`); s = r.state; }
+    return s;
+  };
+  const offered = (s: GameState): string[] => moves(s, GAME_DEFS).filter((m) => m.type === 'Pickup' && ANNA.includes(m.itemId)).map((m) => (m as { itemId: string }).itemId);
+  const accepted = (s: GameState): string[] => ANNA.filter((id) => dispatch(s, { type: 'Pickup', commandId: nextCommandId(s), itemId: id }, GAME_DEFS).ok);
+  const cases: [string, GameState, string[]][] = [
+    ['100 € — нічого', atShop(10_000), []],
+    ['0 € — обидві', atShop(0), ANNA],
+    ['11 € готівки без викупу — лише намет (24,99 €); спальник (9,99 €) по кишені', atShop(1_100), ['item.tent-anna']],
+    ['11 € + синтетичний спальник (викуп 30 €) — нічого: продай і заплати', atShop(10_000, [{ type: 'BuyItem', itemId: 'item.sleeping-bag-synthetic' }]), []],
+    ['6 € + синтетичний спальник — нічого (викуп покриває і намет)', atShop(9_500, [{ type: 'BuyItem', itemId: 'item.sleeping-bag-synthetic' }]), []],
+  ];
+  it.each(cases)('%s', (_label, s, want) => {
+    expect(accepted(s)).toEqual(want);
+    expect(offered(s)).toEqual(accepted(s));                                   // фільтр перебору = правило ядра
+    for (const id of ANNA) if (!want.includes(id)) expect(dispatch(s, { type: 'Pickup', commandId: nextCommandId(s), itemId: id }, GAME_DEFS)).toMatchObject({ ok: false, code: 'CAN_PAY' });
+  });
+  it('полиця — лише за готівку: з 0 € намет (24,99 €) у кошик не лягає (INSUFFICIENT_FUNDS) і не пропонується; з 50 € — лягає', () => {
+    const poor = atShop(0);
+    expect(dispatch(poor, { type: 'Pickup', commandId: nextCommandId(poor), itemId: 'item.tent' }, GAME_DEFS)).toMatchObject({ ok: false, code: 'INSUFFICIENT_FUNDS' });
+    expect(moves(poor, GAME_DEFS).some((m) => m.type === 'Pickup' && m.itemId === 'item.tent')).toBe(false);
+    const rich = atShop(5_000);
+    expect(dispatch(rich, { type: 'Pickup', commandId: nextCommandId(rich), itemId: 'item.tent' }, GAME_DEFS)).toMatchObject({ ok: true, state: { flags: expect.arrayContaining(['f.basket-tent']) } });
+    expect(moves(rich, GAME_DEFS).some((m) => m.type === 'Pickup' && m.itemId === 'item.tent')).toBe(true);
+    // з наметом у кошику (24,99 €) і 30 € ліхтар (4,99 €) ще лягає, спальник (9,99 €) — уже ні: готівки на весь кошик бракує
+    const mid = atShop(3_000, [{ type: 'Pickup', itemId: 'item.tent' }]);
+    expect(dispatch(mid, { type: 'Pickup', commandId: nextCommandId(mid), itemId: 'item.lantern' }, GAME_DEFS).ok).toBe(true);
+    expect(dispatch(mid, { type: 'Pickup', commandId: nextCommandId(mid), itemId: 'item.sleeping-bag' }, GAME_DEFS)).toMatchObject({ ok: false, code: 'INSUFFICIENT_FUNDS' });
+    const mid2 = atShop(3_600, [{ type: 'Pickup', itemId: 'item.tent' }]);
+    expect(dispatch(mid2, { type: 'Pickup', commandId: nextCommandId(mid2), itemId: 'item.sleeping-bag' }, GAME_DEFS).ok).toBe(true);
+    // з кошиком у меню/переборі — лише каса й «піти»
+    expect([...new Set(moves(mid2, GAME_DEFS).map((m) => m.type))].sort()).toEqual(['Checkout', 'Visit']);
+  });
+  it('дарунок — звичайна річ у стані 60 і 0 € з гаманця', () => {
+    const s = atShop(0);
+    const r = dispatch(s, { type: 'Pickup', commandId: nextCommandId(s), itemId: 'item.tent-anna' }, GAME_DEFS);
+    expect(r.ok && r.state.inventory['item.tent']).toBe(1);
+    expect(r.ok && r.state.gear['item.tent']).toEqual({ condition: 60, wet: false });
+    expect(r.ok && r.state.moneyCents).toBe(0);
+  });
+});

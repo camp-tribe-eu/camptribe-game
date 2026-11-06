@@ -1,6 +1,6 @@
 // Усі дії, які гравець може спробувати в стані, — спільні для повного перебору (story.test) і
 // бота (bot.ts). Ядро саме відмовить у недоречному; тут лише перелік спроб.
-import { basketOf } from '../core/basket';
+import { basketOf, canPay } from '../core/basket';
 import type { Command } from '../core/commands';
 import type { CoreDefs, StoryDefs } from '../core/defs';
 import { canonical } from '../core/hash';
@@ -67,16 +67,21 @@ export function moves(s: GameState, defs: CoreDefs, withRequests = false): Move[
     (node?.choices ?? []).forEach((c, i) => { const w = JSON.stringify(c.when ?? null); if (withRequests || !(w.includes('"f.req-') || w.includes(`"${ERRAND_PREFIX}`))) out.push({ type: 'Choose', choice: i }); });
     out.push({ type: 'Continue' });
   }
-  // GAME-246: речі Анни (0 €, стан 60) пропонуються лише коли за звичайну річ нічим платити: інакше кожна подвоює простір станів
-  // (інший стан спорядження) без нового досяжного кінця. Безкоштовний шлях з 0 € доводить day1-order (вісь money=none).
+  // GAME-246: з речами в кошику — спершу каса: лише «Сплатити» й «Піти» (ядро пускає піти лише коли платити нічим або крамниця зачинена —
+  // речі лишаються на полиці; інакше UNPAID_BASKET). Так само мапа (obj.vehicle → «Спершу каса»). Без цього кожен стан з кошиком мав
+  // усі ходи крамниці (розмови, купівлі, продажі), і випадкова прогулянка на 400 кроків (day-summary) не доходила до кінця дня 1.
+  if (basketOf(s.flags, defs).length > 0) return [...out.filter((m) => m.type === 'Visit' || m.type === 'Choose' || m.type === 'Continue'), { type: 'Checkout' }] as Move[];
+  // GAME-246: речі Анни (0 €, стан 60) — лише коли за звичайну річ нічим платити (ядро: CAN_PAY, canPay — готівка + викуп наявного):
+  // інакше кожна подвоює простір станів (інший стан спорядження й гаманця) через усі дні розділу без нового досяжного кінця
+  // (виміряно: menu-here 17 550 → 29 810 станів, коли дарунок був досяжний після купівлі синтетичного спальника). Фільтр тут — той
+  // самий предикат, що й у ядра: перебір не витрачає хід на відмову. Безкоштовний шлях з 0 € доводить day1-order (вісь money=none).
   for (const l of Object.values(st.locations)) for (const id of l.items) {
     const alt = defs.items[id]?.asItem;
     const price = alt ? defs.items[alt.itemId]?.shelfCents : undefined;
-    // Меню/бот кладуть у кошик по одній речі (оплата — окремий хід): підмножини кошика множили б стани вчетверо. Мапа (resolveSpot) кладе будь-що в будь-якому порядку.
-    if (defs.items[id]?.shelfCents !== undefined && basketOf(s.flags, defs).length > 0) continue;
-    if (price === undefined || s.moneyCents < price) out.push({ type: 'Pickup', itemId: id });
+    // Полиця (shelfCents) — лише коли є готівка (ядро: INSUFFICIENT_FUNDS; кошик тут порожній — див. вище); дарунок — лише коли платити нічим.
+    const shelf = defs.items[id]?.shelfCents;
+    if (shelf !== undefined ? s.moneyCents >= shelf : price === undefined || !canPay(s, defs, price)) out.push({ type: 'Pickup', itemId: id });
   }
-  if (basketOf(s.flags, defs).length > 0) out.push({ type: 'Checkout' });
   for (const id of Object.keys(defs.items)) {
     if (!s.inventory[id]) out.push({ type: 'BuyItem', itemId: id }); // лише перший примірник — інакше простір станів нескінченний
     out.push({ type: 'SellItem', itemId: id });

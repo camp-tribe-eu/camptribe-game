@@ -298,7 +298,8 @@ describe('GAME-138 · Спосіб перевірки 2: перерваний п
     return s;
   }
   // Точки: щойно створено (PROLOGUE-HOME-001), після прологу вдома (ST-001), у крамниці (ST-003), удома на пакуванні (CH1-HOME-001).
-  const CUTS = [1, 2, 5, 11];
+  // GAME-246: у крамниці сценарію на дві команди більше (вихід з кошиком — відмова, каса), тож пакування — після 13-ї.
+  const CUTS = [1, 2, 5, 13];
 
   /** Перервати в точці й відкрити нову сесію: що відновилось. */
   async function interrupt(n: number, resetOnLoad: boolean): Promise<{ before: GameState; after: GameState }> {
