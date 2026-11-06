@@ -35,8 +35,8 @@ for (const [name, viewport] of [['390×844', { width: 390, height: 844 }], ['932
 
       await page.locator('[data-touch="story"]').tap();
       await expect(page.locator('[data-ui="story-close"]')).toBeVisible();
+      if (process.env.G268_PERF === '1') await perf(page, name);   // до проби «≈ 0»: у мутанті вона червона й далі не дійшла б
       await covered(page, '☰');
-      if (process.env.G268_PERF === '1') await perf(page, name);
       // Атлас — з ☰, лишається під повним екраном без проміжного кадру світу.
       await page.locator('[data-ui="atlas-open"]').tap();
       await expect(page.locator('[data-ui="atlas-map"]')).toBeVisible();
