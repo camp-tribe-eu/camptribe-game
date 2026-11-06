@@ -3,10 +3,11 @@
 // Мутація «перемикач ігнорується» (perfectHits: () => false у main.ts) робить перший тест червоним.
 import { expect, test, type Page } from '@playwright/test';
 import { probe, route, walk } from './chapter-driver';
-import { arriveInCamp } from './camp-arrival';
+import { arriveInCamp, reachPitchTurn } from './camp-arrival';
 
 async function startPegging(page: Page, extra: string): Promise<void> {
   await arriveInCamp(page, extra);
+  await reachPitchTurn(page);   // GAME-258: спершу Еліза й «Ділянка», потім намет
   const q = await probe(page);
   await walk(page, route('camp-lake', [q.playerX, q.playerY], 'task.pitch-tent'));
   await expect.poll(async () => (await probe(page)).nearObject, { timeout: 8_000 }).toBe('task.pitch-tent');

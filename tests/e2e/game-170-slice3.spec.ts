@@ -112,11 +112,21 @@ async function cardLayout(page: Page, vp: { width: number; height: number }): Pr
 /** Дорога до табору: виїзд (W1 закривається), зупинка (W2), приїзд (W3 відкрита, гравець у таборі). */
 /** GAME-258 · порядок приїзду: «Ділянка» і «Намет» відкриваються після знайомства з Елізою — робимо його з відкритої панелі (кроки діалогу як у game-106). */
 async function meetElise(page: Page): Promise<void> {
-  for (const [k, key] of [['talk', 'npc.elise'], ['choose', 'dlg.elise-greeting.hello.c2'], ['continue', ''], ['choose', 'dlg.elise-greeting.spot.c4'], ['continue', '']] as const) {
-    await panel(page).locator(`[data-act="${k}"][data-key="${key}"]`).click({ timeout: 5_000 });
+  // Стан, а не сліпий сценарій: що саме на екрані — те й тиснемо (talk → перший вибір знайомства → «Далі» → «місце: не зараз» → «Далі»).
+  const has = (sel: string) => panel(page).locator(sel).first().isVisible({ timeout: 500 }).catch(() => false);
+  const done = async () => (((await core(page)).game.quests['ST-005'] as { done?: string[] } | undefined)?.done ?? []).includes('meet-elise');
+  for (let i = 0; i < 10; i++) {
+    const dlg = await has('[data-ui="dialogue"]');
+    if ((await done()) && !dlg) return;
+    const sel = dlg
+      ? ((await has('[data-act="choose"][data-key="dlg.elise-greeting.spot.c4"]')) ? '[data-act="choose"][data-key="dlg.elise-greeting.spot.c4"]'
+        : (await has('[data-act="choose"][data-key="dlg.elise-greeting.hello.c2"]')) ? '[data-act="choose"][data-key="dlg.elise-greeting.hello.c2"]'
+        : (await has('[data-act="continue"]')) ? '[data-act="continue"]' : '[data-ui="dialogue"] [data-act] >> nth=-1')
+      : '[data-act="talk"][data-key="npc.elise"]';
+    await panel(page).locator(sel).first().click({ timeout: 5_000 });
     await page.waitForTimeout(300);
   }
-  expect(((await core(page)).game.quests['ST-005'] as { done?: string[] } | undefined)?.done, 'знайомство з Елізою зараховано').toContain('meet-elise');
+  expect(await done(), 'знайомство з Елізою зараховано').toBe(true);
 }
 async function roadToCamp(page: Page, onRoad: (page: Page) => Promise<void>): Promise<void> {
   await act(page, 'complete', 'q.ch1-home-001');
