@@ -441,6 +441,8 @@ function campNext(sim: SimState, defs: CoreDefs): Next | null {
   const held = heldGate(sim, defs);
   // Стрілка — на живий об'єкт мапи: вільний час → берег (рибалка), сон → намет, чекаємо вечора → вогнище.
   // Сон — дія МАПИ: дотик до намету (TENT_SPOT), коли ядро дозволяє лягти (з 18:00 біля намету, після «пора спати» 22:00 будь-де); до того — вогнище табору.
+  // GAME-269: мертве вікно до вечора — стрілка й підпис ведуть до намету «Відпочити до вечора», як і нотатник.
+  if (held && !canSleepNow(defs.story, g, sim.clock.minutes) && canRestNow(defs.story, g, sim.clock.minutes)) return { key: 'next.camp.rest', spot: TENT_SPOT };
   if (held) return held.sleepNext ? (canSleepNow(defs.story, g, sim.clock.minutes) ? { key: 'next.camp.sleep', spot: TENT_SPOT } : { key: 'next.camp.free', spot: 'obj.campfire' }) : { key: 'next.camp.evening', spot: 'obj.campfire' };
   const tent = (id: string): Next => ({ key: 'next.camp.tent', spot: `step.${id}` });
   const elise = (id: string, o: string): Next => (objDone(g, id, o) ? { key: 'next.camp.elise.done', spot: `step.${id}` } : { key: 'next.camp.elise', spot: 'npc.elise' });
@@ -507,7 +509,7 @@ export function spotLabel(sim: SimState, defs: CoreDefs, name: string): SpotLabe
   const p = sim.game.player;
   if (!p || !liveMapSpot(sim, defs, name)) return null;
   const car = p.transportId === 'transport.car';
-  if (name === TENT_SPOT && sim.game.quests['ST-005']?.status === 'completed') return { label: 'near.sleep', ref: null };
+  if (name === TENT_SPOT && sim.game.quests['ST-005']?.status === 'completed') return { label: !canSleepNow(defs.story, sim.game, sim.clock.minutes) && canRestNow(defs.story, sim.game, sim.clock.minutes) ? 'act.rest' : 'near.sleep', ref: null };
   if (name.startsWith(SPOT_PREFIX.step)) {
     const q = name.slice(SPOT_PREFIX.step.length);
     // Табір (GAME-183): один підпис «Завершити: <назва квесту>»; удома — власні підписи кроків дня 1.

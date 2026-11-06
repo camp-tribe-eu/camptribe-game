@@ -8,6 +8,7 @@ import { initialState, type GameState } from '../core/state';
 import { canRestNow, REST_SCENE, REST_TO } from '../core/story';
 import { storyOffer } from '../view/story-offer';
 import { agendaOf } from './agenda';
+import { nextTarget, spotLabel, TENT_SPOT } from './map-first';
 import { GAME_DEFS } from './slice-defs';
 import { STORY } from './story';
 
@@ -58,5 +59,11 @@ describe('GAME-269 · команда', () => {
     expect(agendaOf(inWin, GAME_DEFS)?.items.map((i) => i.id)).toEqual(['rest', 'fish', 'neighbours']);
     const out = simOf(camp({ ...HELD2, 'ST-005': { status: 'active', done: [] } }, 1), at(2, 12));
     expect(storyOffer(out, GAME_DEFS, { mapFirst: true, trunk: false, near: null }).offer.actions.some((a) => a.kind === 'rest')).toBe(false);
+    expect(agendaOf(out, GAME_DEFS)?.items.some((i) => i.id === 'rest') ?? false).toBe(false);
+  });
+  it('підказки узгоджені: стрілка «Далі» веде до намету, підпис намету — «Відпочити до вечора»', () => {
+    const inWin = simOf(camp({ ...HELD2, 'ST-005': { status: 'completed', done: [] } }, 1), at(2, 12));   // у грі намет (ST-005) на цей час уже завершено
+    expect(nextTarget(inWin, GAME_DEFS)).toEqual({ key: 'next.camp.rest', spot: TENT_SPOT });
+    expect(spotLabel(inWin, GAME_DEFS, TENT_SPOT)?.label).toBe('act.rest');
   });
 });
