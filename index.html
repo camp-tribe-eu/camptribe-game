@@ -212,24 +212,27 @@
       .ui-talk { position: absolute; inset: 0; z-index: 30; display: flex; align-items: flex-end; justify-content: center; pointer-events: none; box-sizing: border-box;
         padding: 0 var(--edge-right) var(--edge-bottom) var(--edge-left); font-family: 'CampPixel', system-ui, sans-serif; color: #f4f1e8; text-align: left; }
       .ui-talk-box { pointer-events: auto; position: relative; display: flex; align-items: flex-start; gap: 14px; width: min(100%, 780px); max-height: min(64%, 100%); box-sizing: border-box;
-        padding: 22px 14px 14px; border: 3px solid #f1d9a0; border-radius: 10px; background: #2a2f35; box-shadow: 0 0 0 3px #1b1f23, 0 6px 0 3px #0009; cursor: pointer; }
+        padding: 16px 14px 14px; border: 3px solid #f1d9a0; border-radius: 10px; background: #2a2f35; box-shadow: 0 0 0 3px #1b1f23, 0 6px 0 3px #0009; cursor: pointer; }
       .ui-talk-box .ui-portrait-lg { box-shadow: 0 0 0 2px #f1d9a0; margin-top: 2px; }
-      /* Табличка з іменем лежить на верхній рамці, праворуч від портрета — як у Stardew. */
-      .ui-talk-name { position: absolute; top: -17px; left: 150px; margin: 0; max-width: calc(100% - 170px); padding: 4px 12px; border: 3px solid #1b1f23; border-radius: 6px; background: #ffd54a; color: #1b1f23;
+      /* Табличка з іменем стоїть НАД верхнім краєм рамки (GAME-259: раніше top:-17px у px налазила на перший рядок, коли шрифт ×2 робив її вищою за відступ) — як у Stardew. */
+      .ui-talk-name { position: absolute; bottom: calc(100% - 3px); left: 150px; margin: 0; max-width: calc(100% - 170px); padding: 4px 12px; border: 3px solid #1b1f23; border-radius: 6px; background: #ffd54a; color: #1b1f23;
         font-size: 0.8rem; line-height: 1.3; overflow-wrap: anywhere; }
-      .ui-talk-main { flex: 1 1 0; min-width: 0; align-self: stretch; display: flex; flex-direction: column; gap: 10px; overflow-y: auto; max-height: 100%; }
-      .ui-talk-line { margin: 0; font-size: 0.8rem; line-height: 1.75; outline-offset: 4px; overflow-wrap: anywhere; }
+      .ui-talk-main { flex: 1 1 0; min-width: 0; align-self: stretch; display: flex; flex-direction: column; gap: 10px; overflow-y: auto; max-height: 100%; overscroll-behavior: contain;
+        /* GAME-259: рамка росте до max-height, далі прокручується; «тіні» зверху й знизу показують, що там ще є текст чи відповіді (CSS, без скриптів). */
+        background: linear-gradient(#2a2f35 30%, #2a2f3500) top / 100% 18px local no-repeat, linear-gradient(#2a2f3500, #2a2f35 70%) bottom / 100% 18px local no-repeat,
+          radial-gradient(farthest-side at 50% 0, #000a, #0000) top / 100% 8px scroll no-repeat, radial-gradient(farthest-side at 50% 100%, #000a, #0000) bottom / 100% 8px scroll no-repeat; }
+      .ui-talk-line { flex: none; margin: 0; font-size: 0.8rem; line-height: 1.75; outline-offset: 4px; overflow-wrap: anywhere; hyphens: auto; }
       .ui-talk-line:focus { outline: none; }
       /* Ще не надруковане — на місці, але невидиме: рамка не стрибає, поки рядок дописується, а читач і тест бачать увесь текст. */
       .ui-ghost { opacity: 0; }
       .ui-talk-answers { display: grid; gap: 6px; justify-items: stretch; }
-      .ui-talk-answers .ui-btn { text-align: left; min-height: 44px; padding: 6px 12px; max-width: 100%; font-size: 0.75rem; line-height: 1.5; }
+      .ui-talk-answers .ui-btn { text-align: left; min-height: 44px; padding: 6px 12px; max-width: 100%; font-size: 0.75rem; line-height: 1.5; overflow-wrap: anywhere; hyphens: auto; }
       .ui-talk-answers .ui-btn[data-act="continue"] { justify-self: end; text-align: center; min-width: 120px; }
       .ui-talk-answers .ui-btn[data-act="continue"]::before { content: '\25BC  '; }
       .ui-talk-answers .ui-btn:focus-visible { outline: 3px solid #ffd54a; outline-offset: 2px; }
       /* Телефон вбік (844×390): рамка низька, портрет менший (80 = ×2 від обрізка 40 px), відповіді в два стовпці. */
       @media (max-height: 500px) {
-        .ui-talk-box { gap: 10px; padding: 18px 10px 10px; max-height: 78%; }
+        .ui-talk-box { gap: 10px; padding: 12px 10px 10px; max-height: 78%; }
         .ui-portrait-lg { width: 80px; height: 80px; }
         .ui-talk-name { left: 108px; max-width: calc(100% - 128px); font-size: 0.7rem; padding: 3px 10px; }
         .ui-talk-line { font-size: 0.72rem; line-height: 1.6; }
