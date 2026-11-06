@@ -347,6 +347,7 @@ describe('режисер W1–W3: стартер за локацією етап�
     expect(storyMoves(s, GAME_DEFS)).toEqual([{ type: 'StartWave', waveId: WAVE_CH1_ARRIVAL }]);
     s = direct(s);
     expect(taskIds(s)).toEqual(['gear-shelter', 'mia-car', 'pick-spot', 'pitch-tent']);
+    s = { ...s, game: { ...s.game, quests: { ...s.game.quests, 'ST-005': { ...(s.game.quests['ST-005'] as { status: 'active' }), done: ['meet-elise'] } } } } as SimState;   // GAME-258: порядок приїзду — спершу Еліза
     expect(menuTasks(s, GAME_DEFS), 'справи табору — цілі мапи, не меню').toEqual([]);
     for (const id of ['pick-spot', 'pitch-tent', 'gear-shelter', 'mia-car']) expect(liveSpot(s, spot(id)), id).toBe(true);
     expect(spotMove(s, spot('pick-spot'))).toEqual({ type: 'CompleteTask', taskId: 'pick-spot' });

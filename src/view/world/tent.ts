@@ -68,12 +68,12 @@ export class TentRig {
   }
 
   private note: Phaser.GameObjects.Text | null = null;
+  private noteLeft = 0;
   /** GAME-258: м'який рядок над героєм (справа ще не в черзі). Гасне сам за 2,6 с; нічого не змінює в стані. */
   nudge(key: Key): void {
     this.note?.destroy();
-    const t = this.scene.add.text(this.player.x, meterTop(this.scene, this.player), this.text(key), FONT).setOrigin(0.5, 0).setDepth(TOP + 1);
-    this.note = t;
-    this.scene.time.delayedCall(2600, () => { if (this.note === t) this.note = null; t.destroy(); });
+    this.note = this.scene.add.text(this.player.x, meterTop(this.scene, this.player), this.text(key), FONT).setOrigin(0.5, 0).setDepth(TOP + 1);
+    this.noteLeft = 2600;
   }
 
   /** Четвертий кілок забито: лишається готовий намет, шкала й підказка зникають. */
@@ -104,6 +104,7 @@ export class TentRig {
 
   /** Кадр: привид іде за героєм (до розміщення), шкала рухається, малюємо. */
   update(dtMs: number, facing: Dir, time: number): void {
+    if (this.note) { this.noteLeft -= dtMs; this.note.setPosition(this.player.x, meterTop(this.scene, this.player)); if (this.noteLeft <= 0) { this.note.destroy(); this.note = null; } }   // GAME-258: рядок гасне кадрами, без таймера
     for (const f of this.fx) { f.age += dtMs; f.apply(Math.min(1, f.age / f.dur)); }
     this.fx = this.fx.filter((f) => { if (f.age < f.dur) return true; f.end(); return false; });
     if (!this.active || !this.g) { this.wobbleLeft = 0; return; }
