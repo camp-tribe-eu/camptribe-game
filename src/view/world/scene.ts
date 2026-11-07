@@ -192,7 +192,8 @@ const ICON_Y = -4;   // GAME-201: низ піктограми цілі над т
 interface Marker { readonly g: Phaser.GameObjects.Container; readonly shape: Phaser.GameObjects.Graphics; img: Phaser.GameObjects.Image | null; look: string }
 
 /** Смуга шару `above`: тайли верхівок, що мають одну «базову» лінію (низ стовбура під ними). */
-interface Band { readonly layer: Phaser.Tilemaps.TilemapLayer; readonly depth: number; alpha: number }
+/** GAME-263: `fade` — крони дерев (тайли lpc-terrain) напівпрозорі над героєм; меблі, виставковий намет, дах авто — ніколи (непрозорий предмет не «тане»). */
+interface Band { readonly layer: Phaser.Tilemaps.TilemapLayer; readonly depth: number; alpha: number; readonly fade: boolean }
 
 export interface WorldProbe {
   ready: boolean;
@@ -973,7 +974,9 @@ export class WorldScene extends Phaser.Scene {
       const layer = map.createBlankLayer(`above@${depth}`, tilesets, 0, 0, map.width, map.height, TILE, TILE);
       if (!layer || !(layer instanceof Phaser.Tilemaps.TilemapLayer)) throw new Error('band layer failed');
       for (const t of tiles) layer.putTileAt(t.index, t.x, t.y);
-      return { layer: layer.setDepth(depth), depth, alpha: 1 };
+      const terrain = tilesets.find((ts) => ts.name === 'lpc-terrain');
+      const fade = !!terrain && tiles.some((t) => t.index >= terrain.firstgid && t.index < terrain.firstgid + terrain.total);
+      return { layer: layer.setDepth(depth), depth, alpha: 1, fade };
     });
   }
 
@@ -1835,7 +1838,7 @@ export class WorldScene extends Phaser.Scene {
       const above = bandOverHero(b.layer.depth, this.player.depth);   // глибина — з живого шару, не з нашого запису: тест бачить, що справді малюється
       if (above) { covered += n; over++; } else behind += n;
       // GAME-210: під кроною герой не зникає — крона напівпрозора, поки його кадр її перекриває (покадрово від dt, без tween).
-      const next = nextCanopyAlpha(b.alpha, above, n > 0, delta / 1000);
+      const next = nextCanopyAlpha(b.alpha, above && b.fade, n > 0, delta / 1000);
       if (next !== b.alpha) { b.alpha = next; b.layer.setAlpha(next); }
       minAlpha = Math.min(minAlpha, b.alpha);
     }
