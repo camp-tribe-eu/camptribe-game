@@ -197,8 +197,12 @@ export function Shell({ port, langOverride, credits, build, holdToast = false, h
   };
 
   // GAME-179: заговорили з NPC на мапі. Ядро прийняло розмову — рамка внизу; не прийняло (NPC не тут, ще закритий) — екран подорожі, де видно чому.
+  // GAME-275: «рамка вже відкрита» — за живим значенням, не за замиканням: рамку події, сховану до перемикання мапи, Shell закриває в ефекті
+  // (кадр N), а сцена відкриває її знову з mapEntered у тому ж кадрі — підписка з talk=true ще стара, і подія загубилась би.
+  const talkRef = useRef(talk);
+  talkRef.current = talk;
   useEffect(() => port.onTalk(() => {
-    if (paused || storyOpen || talk) return;
+    if (paused || storyOpen || talkRef.current) return;
     const now = port.story();
     if (!now.dialogue) { story(true); return; }
     acted();
