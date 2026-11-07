@@ -16,6 +16,7 @@ import { queueUps, topOverlay, type SkillUp } from './overlay-order';
 import { DialogueBox } from './DialogueBox';
 import { AtlasPanel } from './Atlas';
 import { worldCovered } from './world-cover';
+import { BackpackPanel } from './Backpack';
 import { bannersOpen } from './banner-queue';
 import { Intro } from './Intro';
 import { ColdOpen } from './ColdOpen';
@@ -91,6 +92,9 @@ export function Shell({ port, langOverride, credits, build, holdToast = false, h
     if (port.loaded()) { if (sleptSeen.current !== null && o.stage === 'ended' && o.rest.sleepMark !== sleptSeen.current) { teaserSleep.current = true; setEpisode(true); } sleptSeen.current = o.rest.sleepMark; }
   }); }, []);
   const [atlasOpen, setAtlasOpen] = useState(false);
+  // GAME-244: рюкзак — накладка на все поле (з кнопки в шапці чи з ☰); з ☰ закриття веде назад на екран подорожі, як в Атласу.
+  const [backpackOpen, setBackpackOpen] = useState(false);
+  const bpFromStory = useRef(false);
   // GAME-181: нове звання — маленьке свято: банер (назва + рядок родини) і звук підтвердження через єдиний мікшер. Банер не ловить дотики й гасне сам.
   // Гасне за ІГРОВИМ годинником (TITLE_UP_MIN хвилин, ≈ секунд живої гри): пауза й панелі його зупиняють — банер не зникає, поки його не видно; таймерів реального часу немає.
   const [titleUp, setTitleUp] = useState<{ index: number; at: number } | null>(null);
@@ -238,17 +242,21 @@ export function Shell({ port, langOverride, credits, build, holdToast = false, h
       if (e.code !== 'Escape' || intro) return;   // у вступі Escape = «Пропустити» (Intro.tsx)
       e.preventDefault();
       if (atlasOpen) { playUi('back'); closeAtlas(); return; }
+      if (backpackOpen) { playUi('back'); closeBackpack(); return; }
       if (confirmNew || summary || talk || storyOpen || paused) playUi('back');   // Escape закрив/скасував — «назад»; відкриття паузи звуку не має
       if (confirmNew) setConfirmNew(false); else if (summary) { if (!episode && shownUps.length > 0) setUps([]); else summaryContinue(); } else if (talk) { if (offer.dialogue?.ui) storyAct(offer.dialogue.answers.find((a) => a.kind === 'cancel')?.id ?? ''); else if (!offer.mapFirst) { setTalk(false); story(true); } /* GAME-185: у мапі-першій Escape не відкриває ☰ з відповідями розмови — рамка лишається */ } else if (storyOpen) story(false); else toggle(!paused);
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [paused, storyOpen, confirmNew, summary, talk, intro, atlasOpen, episode, ups, upsOn]);
+  }, [paused, storyOpen, confirmNew, summary, talk, intro, atlasOpen, backpackOpen, episode, ups, upsOn]);
 
   // GAME-182: Атлас із ☰ — окрема накладка (світ лишається на паузі); закрили — назад на екран подорожі.
   useEffect(() => { setMusicScreen(atlasOpen ? 'menu' : null); return () => setMusicScreen(null); }, [atlasOpen]);   // GAME-252: Атлас — роль menu
   const openAtlas = (): void => { setOffer(port.story()); setStoryOpen(false); setAtlasOpen(true); };
   const closeAtlas = (): void => { setAtlasOpen(false); story(true); };
+  const openBackpack = (fromStory: boolean): void => { acted(); bpFromStory.current = fromStory; setOffer(port.story()); setStoryOpen(false); setBackpackOpen(true); port.setPaused(true); };
+  const closeBackpack = (): void => { setBackpackOpen(false); if (bpFromStory.current) story(true); else { port.setPaused(false); focusStage(); } };
+  useEffect(() => { setMusicScreen(backpackOpen ? 'menu' : null); return () => setMusicScreen(null); }, [backpackOpen]);
   const endIntro = (): void => { setIntro(false); port.setPaused(false); acted(); focusStage(); };
 
   // Фокус — у діалог, щоб клавіатура й екранний читач починали з «Продовжити».
@@ -270,6 +278,7 @@ export function Shell({ port, langOverride, credits, build, holdToast = false, h
   // До малювання (useLayoutEffect): екранний читач не застає кнопки без підпису (рецензія).
   useLayoutEffect(() => {
     document.documentElement.style.fontSize = `${settings.textScale}%`;
+    document.documentElement.dataset.textScale = String(settings.textScale);   // GAME-244: CSS шапки (☰ + рюкзак) знає про крупний текст
     document.documentElement.lang = settings.language;
     document.getElementById('stage')?.setAttribute('aria-label', t('ui.stage'));
     // Дотикові кнопки сцени (src/view/world/touch.ts) — підписи мовою гравця, а не id дії англійською.
@@ -328,7 +337,7 @@ export function Shell({ port, langOverride, credits, build, holdToast = false, h
   const mm = String(offer.timeMinutes % 60).padStart(2, '0');
   // GAME-229: який із екранів кінця дня зараз зверху (картка розділу → «Що відкрилось» → підсумок).
   // GAME-268: світ закрито на все поле — сцена не малює (рамка розмови світ не закриває).
-  const covered = worldCovered({ paused, storyOpen, summary: summary !== null, atlasOpen });
+  const covered = worldCovered({ paused, storyOpen, summary: summary !== null, atlasOpen, backpackOpen });
   useEffect(() => { port.setWorldCovered(covered); }, [covered]);
   const top = topOverlay({ episode, ups: shownUps.length, summary: summary !== null });
   const showHint = !settings.hintSeen && offer.stage === 'create';
@@ -339,7 +348,7 @@ export function Shell({ port, langOverride, credits, build, holdToast = false, h
   const nowAbs = offer.day * 1440 + offer.timeMinutes;
   useEffect(() => { if (offer.rest.bedtime !== null && bark?.night !== offer.rest.bedtime) setBark({ night: offer.rest.bedtime, at: nowAbs }); }, [offer.rest.bedtime]);
   // GAME-260: усі банери — в одній черзі за екранами (banner-queue.ts): ні поверх рамки розмови, ні поверх панелей.
-  const bannerSlot = bannersOpen({ paused, storyOpen, talk, summary: summary !== null, atlasOpen, episode, intro });
+  const bannerSlot = bannersOpen({ paused, storyOpen, talk, summary: summary !== null, atlasOpen, backpackOpen, episode, intro });
   const barkShown = bark !== null && offer.rest.bedtime === bark.night && nowAbs - bark.at < 10 && bannerSlot;
   const titleUpShown = titleUp !== null && sinceUp >= 0 && sinceUp < TITLE_UP_MIN && bannerSlot;
   // GAME-243: мапа-перша гра має нотатник Вікторії й мінімапу — три нижні підказки (ціль, найближча нагорода, «Далі: …») зникають; лишається ОДИН короткий рядок біля дії.
@@ -357,8 +366,11 @@ export function Shell({ port, langOverride, credits, build, holdToast = false, h
       {/* GAME-91: шапка — ☰ ліворуч, ‖ праворуч, текст (HUD) між ними. Усе в одному ряду потоку, а не абсолютом: кнопки
           ніколи не лежать на тексті, при 200 % текст переноситься в середній колонці. Під діалогом шапки немає: дані HUD є
           в самому діалозі, а схована смуга під ним збивала вимірювання контрасту (axe). */}
-      {!paused && !storyOpen && !talk && !summary && !intro && !atlasOpen && <header class="ui-header">
+      {!paused && !storyOpen && !talk && !summary && !intro && !atlasOpen && !backpackOpen && <header class="ui-header">
+        <div class="ui-header-left">
         <button type="button" class="ui-story-btn" data-hint={showHint || offer.stage === 'ended' ? 'yes' : undefined} data-touch="story" aria-label={t('ui.story')} onClick={() => story(true)}>{'☰'}</button>
+        <button type="button" class="ui-bag-btn" data-touch="backpack" data-ui="backpack-open" aria-label={t('backpack.open')} onClick={() => openBackpack(false)}><ObjectiveIcon spot="obj.trunk" /></button>
+        </div>
         <div class="ui-hud" data-ui="hud" role="group" aria-label={t('ui.hud')}>
           <span data-ui="hud-place">{offer.locationKey ? ct(lang, offer.locationKey) : t('ui.noPlace')}</span>
           <span class="ui-hud-line"><span data-ui="hud-time">{`${t('ui.day')} ${offer.day}, ${hh}:${mm}`}</span>{' · '}<span data-ui="hud-money">{money(lang, offer.moneyCents)}</span></span>
@@ -435,7 +447,8 @@ export function Shell({ port, langOverride, credits, build, holdToast = false, h
           <span>{ct(lang, `title.${titleUp.index + 1}.family`)}</span>
         </div>
       )}
-      {storyOpen && <StoryPanel offer={offer} lang={lang} t={t} act={storyAct} close={() => story(false)} portrait={portrait} settings={() => { setStoryOpen(false); toggle(true); }} footer={offer.stage !== 'create' && <button type="button" class="ui-btn" data-ui="atlas-open" onClick={openAtlas}>{`${t('ui.atlas')}: ${offer.atlas.count}/${offer.atlas.total}`}</button>}>{staleNotice}</StoryPanel>}
+      {storyOpen && <StoryPanel offer={offer} lang={lang} t={t} act={storyAct} close={() => story(false)} portrait={portrait} settings={() => { setStoryOpen(false); toggle(true); }} footer={offer.stage !== 'create' && <><button type="button" class="ui-btn" data-ui="backpack-open-story" onClick={() => openBackpack(true)}>{t('ui.backpack')}</button><button type="button" class="ui-btn" data-ui="atlas-open" onClick={openAtlas}>{`${t('ui.atlas')}: ${offer.atlas.count}/${offer.atlas.total}`}</button></>}>{staleNotice}</StoryPanel>}
+      {backpackOpen && <BackpackPanel backpack={offer.backpack} lang={lang} t={t} sell={storyAct} close={closeBackpack} />}
       {atlasOpen && <AtlasPanel atlas={offer.atlas} lang={lang} t={t} close={closeAtlas} />}
       {intro && cold && <ColdOpen paint={port.coldOpenScene} t={t} onDone={() => setCold(false)} />}
       {episode && !intro && port.episodeFlags && <EpisodeCard flags={port.episodeFlags()} t={t} onDone={() => { setEpisode(false); focusStage(); if (teaserSleep.current) { teaserSleep.current = false; summaryEnd(); } /* GAME-264: після тизера — збережена гра й меню паузи, а не мертва мапа */ }} />}

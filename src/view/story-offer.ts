@@ -36,6 +36,7 @@ import { moves, progressKey, type Move } from '../content/moves';
 import items from '../../content/items.json';
 import { daySummary, daysEnded, NIGHT_PREFIX } from '../core/day-summary';
 import { type OfferAction, type OfferAtlas, type OfferGoal, type OfferCharacter, type OfferPacking, type OfferProgress, type OfferSummary, type OfferWave, type StoryOffer } from '../ui/story-types';
+import { backpackModel } from './backpack-model';
 import { RAW_WAVES } from '../content/waves';
 import { menuTasks } from '../content/director';
 import { agendaOf } from '../content/agenda';
@@ -375,6 +376,15 @@ export function storyOffer(sim: SimState, defs: CoreDefs, view: StoryView = PANE
     ...(Object.hasOwn(defs.items, id) && defs.items[id]?.gear ? { gear: gearOf(s.gear, id) } : {}),
   }));
   const weather = todayWeather(sim);
+  // GAME-244: рюкзак. Приймальня — об'єкт мапи obj.sell, до якого гравець підійшов (view.near); «Продати» — лише коли ядро саме приймає SellItem (сухий прогін, час крамниці й квест-замок — його).
+  const atReception = view.mapFirst && view.near === 'obj.sell';
+  const bpSells = new Map<string, Move>();
+  const backpack = backpackModel(s, sim.journal, defs, atReception, (itemId) => {
+    const m: Move = { type: 'SellItem', itemId };
+    const ok = dispatch(s, { ...m, commandId: nextCommandId(s) } as Command, defs, undefined, undefined, undefined, sim.clock.minutes).ok;
+    if (ok) bpSells.set(`bp|sell|${itemId}`, m);
+    return ok;
+  });
   const lastTrip = [...sim.journal].reverse().find((e) => e.type === 'Visit')?.commandId ?? null;
   const nextT = s.player && view.mapFirst ? nextTarget(sim, defs, view.backpack ?? []) : null;
   const nearL = s.player && view.mapFirst && view.near !== null ? spotLabel(sim, defs, view.near) : null;
@@ -394,7 +404,8 @@ export function storyOffer(sim: SimState, defs: CoreDefs, view: StoryView = PANE
   // GAME-256: «День N» у HUD — після сну одразу новий день (07:00), а не лише з 08:00 (dayOf).
   const ag = s.player && view.mapFirst ? agendaOf(sim, defs) : null;
   const agenda = ag ? { ...ag, items: ag.items.map((i) => ({ ...i, label: 'item' in i.label ? { content: nameKey(i.label.item) ?? i.label.item } : i.label })) } : null;
-  const base = { mapFirst: view.mapFirst, agenda, hint, requests: trackerRows(s, REQUESTS, weather), goal: goalOf(s, st, sim.clock.minutes), progress: progressOffer(s), atlas: atlasOffer(s), nearest: nearestReward(s), goals: s.player ? openGoals(s, st, weather, sim.clock.minutes) : [], moneyCents: s.moneyCents, inventory, journal, lastTrip, weather, forecast: todayForecast(sim), day: Math.max(dayOf(sim.clock) + 1, storyDay(s.slept)), timeMinutes: timeOfDay(sim.clock.minutes), rest: restOffer(sim), wave: waveOffer(sim), mia: miaState(s, defs), ...summaryOffer(sim, defs) };
+  for (const [id, m] of bpSells) intents.set(id, m);
+  const base = { backpack, mapFirst: view.mapFirst, agenda, hint, requests: trackerRows(s, REQUESTS, weather), goal: goalOf(s, st, sim.clock.minutes), progress: progressOffer(s), atlas: atlasOffer(s), nearest: nearestReward(s), goals: s.player ? openGoals(s, st, weather, sim.clock.minutes) : [], moneyCents: s.moneyCents, inventory, journal, lastTrip, weather, forecast: todayForecast(sim), day: Math.max(dayOf(sim.clock) + 1, storyDay(s.slept)), timeMinutes: timeOfDay(sim.clock.minutes), rest: restOffer(sim), wave: waveOffer(sim), mia: miaState(s, defs), ...summaryOffer(sim, defs) };
 
   if (!s.player) {
     const choices = characterChoices(defs);

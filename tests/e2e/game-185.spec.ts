@@ -47,14 +47,14 @@ for (const v of VIEWS) {
   test.describe(`${v.side} ${v.w}×${v.h}`, () => {
     test.use({ viewport: { width: v.w, height: v.h }, hasTouch: true, isMobile: true });
 
-    test('☰ у мапі-першій: лише Атлас, Журнал, налаштування й закрити; журнал — окремий екран із квестами, навичками й речами', async ({ page }) => {
+    test('☰ у мапі-першій: лише Рюкзак, Атлас, Журнал, налаштування й закрити; журнал — окремий екран із квестами, навичками й речами', async ({ page }) => {
       test.setTimeout(240_000);
       const errors = await arriveInShop(page);
       await page.locator('[data-touch="story"]').click();
       await expect(panel(page)).toBeVisible();
-      // Меню: рівно чотири кнопки; жодної дії сюжету, жодного списку.
-      await expect(panel(page).locator('button')).toHaveCount(4);
-      for (const ui of ['atlas-open', 'journal', 'settings-open', 'story-close']) await expect(panel(page).locator(`[data-ui="${ui}"]`), ui).toBeVisible();
+      // Меню: рівно п'ять кнопок (GAME-244: додано «Рюкзак»); жодної дії сюжету, жодного списку.
+      await expect(panel(page).locator('button')).toHaveCount(5);
+      for (const ui of ['atlas-open', 'backpack-open-story', 'journal', 'settings-open', 'story-close']) await expect(panel(page).locator(`[data-ui="${ui}"]`), ui).toBeVisible();
       for (const ui of ['quest', 'skills', 'inventory', 'actions', 'packing', 'journal-log']) await expect(panel(page).locator(`[data-ui="${ui}"]`), `у меню є «${ui}»`).toHaveCount(0);
       await expect(panel(page).locator('[data-act]'), 'у меню немає кнопок дій').toHaveCount(0);
       await page.screenshot({ path: `research/visual-audit/menu-mapfirst-${v.side}.png` });

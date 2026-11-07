@@ -4,6 +4,30 @@ import type { Key } from '../i18n';
 import type { AgendaItem } from '../content/agenda';
 
 /** Що можна зробити зараз. `key` — ключ тексту контенту (content/locales), `null` — без назви. */
+// GAME-244 · рюкзак (модель — src/view/backpack-model.ts)
+export type BackpackGroup = 'gear' | 'story' | 'finds';
+/** `home` — узято вдома (TakeItem/PackItem), `other` — журнал про річ мовчить (обрізаний чи сейв до журналу). */
+export type BackpackOrigin = 'bought' | 'found' | 'gift' | 'reward' | 'home' | 'other';
+
+export interface BackpackRow {
+  readonly id: string;
+  readonly qty: number;
+  readonly group: BackpackGroup;
+  readonly origin: BackpackOrigin;
+  /** Скільки дасть приймальня (центи) — коли річ взагалі продається (є sellCents); інакше null. Показується й далеко від приймальні. */
+  readonly sellCents: number | null;
+  /** Спорядження зі станом (GAME-73). */
+  readonly gear?: { readonly condition: number; readonly wet: boolean };
+  /** Id продажу — лише біля приймальні й коли ядро прийме SellItem. */
+  readonly sellId: string | null;
+}
+
+export interface OfferBackpack {
+  readonly groups: readonly { readonly group: BackpackGroup; readonly rows: readonly BackpackRow[] }[];
+  readonly atReception: boolean;
+  readonly count: number;
+}
+
 export interface OfferAction {
   readonly id: string;
   /** `task` — справа живої хвилі з екрана подорожі (GAME-170 зріз 3: дім, зупинка в дорозі — локації без мапи). */
@@ -167,6 +191,8 @@ export interface StoryOffer {
   /** Пакування перед дорогою; null — зараз закрите. */
   readonly packing: OfferPacking | null;
   /** Речі в руках; для спорядження (GAME-73) — ще стан 0…100 і чи мокре. */
+  /** GAME-244: екран рюкзака — що є, звідки, ціна; «Продати» лише біля приймальні. */
+  readonly backpack: OfferBackpack;
   readonly inventory: readonly { readonly key: string; readonly qty: number; readonly gear?: { readonly condition: number; readonly wet: boolean } }[];
   /** Ритм дня (GAME-242): похідне від ядра. `bedtime` — номер ночі, поки триває вікно «пора спати» [22:00, 00:30), інакше null;
    *  `shopClosed` — стоїмо в крамниці, а вона зачинена (08:00–20:00); `autoSlept` — щойно прокинулись після того, як герой заснув сам. */

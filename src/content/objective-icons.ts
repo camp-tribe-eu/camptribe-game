@@ -48,3 +48,6 @@ export function iconCss(key: string, sheetUrl: string, scale: number): Record<st
   const px = ICON_SIZE * scale;
   return { width: `${px}px`, height: `${px}px`, backgroundImage: `url(${sheetUrl})`, backgroundSize: `${ICON_COLS * px}px auto`, backgroundPosition: `-${c.x * scale}px -${c.y * scale}px` };
 }
+
+/** GAME-244: «місце» речі для піктограми (рюкзак): та сама клітинка аркуша, що й у пакуванні вдома. */
+export const itemSpot = (itemId: string): string => `pack.${itemId}`;

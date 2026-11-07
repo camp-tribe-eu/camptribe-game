@@ -10,8 +10,10 @@ export interface CoverState {
   readonly summary: boolean;
   /** Атлас. */
   readonly atlasOpen: boolean;
+  /** GAME-244: рюкзак (екран на все поле). */
+  readonly backpackOpen: boolean;
 }
 
 export function worldCovered(s: CoverState): boolean {
-  return s.paused || s.storyOpen || s.summary || s.atlasOpen;
+  return s.paused || s.storyOpen || s.summary || s.atlasOpen || s.backpackOpen;
 }

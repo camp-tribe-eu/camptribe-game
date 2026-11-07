@@ -46,6 +46,14 @@ for (const [name, viewport] of [['390×844', { width: 390, height: 844 }], ['932
       await page.locator('[data-ui="story-close"]').tap();
       await moving(page, 'після ☰ і Атласу');
 
+      // GAME-244: рюкзак (кнопка в шапці) — теж повний екран.
+      await page.locator('[data-ui="backpack-open"]').tap();
+      await expect(page.locator('[data-ui="backpack-panel"]')).toBeVisible();
+      await covered(page, 'рюкзак');
+      await page.keyboard.press('Escape');
+      await expect(page.locator('[data-ui="backpack-panel"]')).toHaveCount(0);
+      await moving(page, 'після рюкзака');
+
       await page.locator('.ui-pause-btn').tap();
       await expect(page.locator('[data-ui="resume"]')).toBeVisible();
       await covered(page, 'пауза ‖');

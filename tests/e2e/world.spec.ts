@@ -232,7 +232,7 @@ for (const vp of VIEWPORTS) {
       await open(page);
       const boxes = await page.locator('[data-touch]').evaluateAll((els) =>
         els.map((e) => { const r = e.getBoundingClientRect(); return { a: (e as HTMLElement).dataset.touch, w: r.width, h: r.height }; }));
-      expect(boxes.map((b) => b.a).sort()).toEqual(['interact', 'pause', 'stick', 'story']); // джойстик + дія сцени, пауза й «Подорож» оболонки UI
+      expect(boxes.map((b) => b.a).sort()).toEqual(['backpack', 'interact', 'pause', 'stick', 'story']); // джойстик + дія сцени, пауза, «Подорож» і «Рюкзак» (GAME-244) оболонки UI; кожна ≥ 44×44 — перевірка нижче
       for (const b of boxes) { expect(b.w, b.a).toBeGreaterThanOrEqual(44); expect(b.h, b.a).toBeGreaterThanOrEqual(44); }
     });
 

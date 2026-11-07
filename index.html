@@ -151,7 +151,11 @@
       .touch-interact[data-state="idle"] { opacity: 0.45; }
       .touch-interact[data-state="ready"] { opacity: 1; border-color: #ffd54a; background: #000000bb; color: #ffd54a; }
       .touch-stick[hidden], .touch-interact[hidden] { display: none; }
-      .ui-pause-btn, .ui-story-btn { flex: none; min-width: var(--header-btn); min-height: var(--header-btn); border-radius: 12px;
+      /* GAME-244 · ☰ і рюкзак в одній клітинці сітки шапки: стовпчиком (портрет), рядком (вбік) — колонок у шапці не додається. */
+      .ui-header-left { display: flex; flex-direction: row; gap: 6px; }
+      /* Крупний текст: слово «08:00» у HUD ~160 px — ширини ще на кнопку немає, тож рюкзак стає під ☰ (висота при 200 % не критична). */
+      :root[data-text-scale="150"] .ui-header-left, :root[data-text-scale="200"] .ui-header-left { flex-direction: column; }
+      .ui-pause-btn, .ui-story-btn, .ui-bag-btn { flex: none; min-width: var(--header-btn); min-height: var(--header-btn); border-radius: 12px;
         border: 2px solid #e8e6e3aa; background: #00000066; color: #e8e6e3; font-size: 1.25rem; padding: 0; }
       /* safe center (GAME-39): діалог, вищий за екран (титри, текст 200 %), притискається до верху, а не
          вилазить за нього — інакше «Продовжити» лишалась вище за межу прокрутки. start — для браузерів без safe. */
@@ -296,14 +300,14 @@
         /* GAME-181: шапка вбік стала вищою (ціль + «Далі» — ряди сітки), тож рядок нагадування лежить нижче й міг накрити місце, де гравець кладе палець на джойстик (game-170-slice3). Сам рядок дотику не ловить — лише кнопки й поле коду. */
         .ui-reminder { pointer-events: none; }
         .ui-reminder button, .ui-reminder textarea { pointer-events: auto; }
-        .ui-story-btn { grid-area: 1 / 1; }
         .ui-hud { grid-area: 1 / 3; align-self: center; align-items: flex-end; text-align: right; min-height: 0; padding: 4px 10px; border-radius: 8px; background: #1b1f23d9; }
         /* Назву місця сховано лише з екрана — скрінрідер її читає (рецензія PR #53). */
         .ui-hud [data-ui="hud-place"] { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
         /* Рамка притиснута до правого краю, тож ширина тексту двигала б її лівий край щохвилини: цифри однакової ширини (tabular-nums) цього не дозволяють. */
         .ui-hud-line { white-space: nowrap; font-variant-numeric: tabular-nums; }
+        .ui-header-left, :root[data-text-scale] .ui-header-left { grid-area: 1 / 1; flex-direction: row; }
         .ui-pause-btn { grid-area: 1 / 4; justify-self: end; }
-        .ui-story-btn, .ui-pause-btn { background: #000000aa; }
+        .ui-story-btn, .ui-pause-btn, .ui-bag-btn { background: #000000aa; }
         /* Тост-підказка — ліворуч від рамки. */
         .ui-toast { left: auto; right: calc(100% + 8px); top: 0; width: max-content; max-width: 40vw; padding: 4px 8px; border-radius: 8px; }
         /* GAME-185: вбік HUD не лежить на героєві й родині. Верхній ряд — ☰ · картка мети · час і гроші · ‖ (один ряд 44 px замість стовпчика з п'яти); ціль, прохання й «Далі: …» —
@@ -403,6 +407,19 @@
       .ui-intro-final { margin: 0; flex: 1 1 100%; text-align: center; font-size: 0.8rem; line-height: 1.5; }
       .ui-intro-atlas .ui-btn { flex: none; }
       .ui-atlas { place-content: start center; }
+      /* GAME-244 · рюкзак: накладка на все поле, ✕ праворуч угорі; рядок — іконка · назва з «звідки» · ціна · «Продати». */
+      .ui-backpack { place-content: start center; align-content: start; background: #1b1f23; }
+      .ui-bp-name { text-align: left; }
+      .ui-backpack-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; width: min(100%, 560px); }
+      .ui-backpack-head h2 { margin: 0; }
+      .ui-backpack-x { min-width: 44px; min-height: 44px; }
+      .ui-bp-group { width: min(100%, 560px); } .ui-bp-group h3 { margin: 4px 0; font-size: 1rem; }
+      .ui-bp-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+      .ui-bp-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 6px 8px; border: 2px solid #e8e6e344; border-radius: 10px; background: #00000055; }
+      .ui-bp-name { flex: 1 1 140px; display: grid; min-width: 0; overflow-wrap: anywhere; } .ui-bp-name small { opacity: 0.8; }
+      .ui-bp-price { font-variant-numeric: tabular-nums; } .ui-bp-sell { min-height: 44px; }
+      .ui-bp-hint { width: min(100%, 560px); margin: 0; opacity: 0.8; }
+
       .ui-atlas-page { --sticker: clamp(40px, min(17vw, 10.5vh), 72px); display: flex; flex-wrap: wrap; gap: 8px 18px; justify-content: center; align-items: center; padding: 10px 12px; border: 3px solid #6b5430; border-radius: 8px;
         background: #f1e6c8; color: #2b2f36; box-shadow: 0 5px 0 #0007; max-width: 100%; }
       .ui-atlas-title { flex: 1 1 100%; margin: 0; text-align: center; font-size: 0.95rem; color: #6b3d1d; }

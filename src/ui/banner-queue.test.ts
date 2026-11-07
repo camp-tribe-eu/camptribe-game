@@ -2,7 +2,7 @@
 import { describe, expect, it } from 'vitest';
 import { bannersOpen, type BannerBlockers } from './banner-queue';
 
-const CLEAR: BannerBlockers = { paused: false, storyOpen: false, talk: false, summary: false, atlasOpen: false, episode: false, intro: false };
+const CLEAR: BannerBlockers = { paused: false, storyOpen: false, talk: false, summary: false, atlasOpen: false, backpackOpen: false, episode: false, intro: false };
 
 describe('bannersOpen (GAME-260)', () => {
   it('нічого не закриває поле — банер видно', () => { expect(bannersOpen(CLEAR)).toBe(true); });
