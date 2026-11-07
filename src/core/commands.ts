@@ -16,6 +16,7 @@ import { applyWave, type WaveCommand } from './wave';
 import { award, awardsFor } from './progress';
 import { atlasAwards } from './atlas-fill';
 import { grantStickers } from './stickers';
+import { forageKindOf, forageLeft, foraged, FORAGE_SOURCE_ITEM } from './forage';
 import { addPoints, canGiftToday, giveGift, heartEventDue, markHeartSeen, reactionOf, REQUEST_POINTS } from './friendship';
 
 export type { StoryCommand } from './story';
@@ -53,7 +54,7 @@ export type Command =
   /** Подарунок мешканцю табору (GAME-230): предмет з інвентаря, не більше одного на NPC за день; реакцію й очки дає каталог дружби (ніколи не мінус). */
   | { readonly type: 'GiveGift'; readonly commandId: string; readonly npcId: string; readonly itemId: string }
   /** Збір дару природи (GAME-230): шишка чи ягода, яку герой підняв у таборі, лягає в інвентар (лише предмети з `friendship.forage`). */
-  | { readonly type: 'Forage'; readonly commandId: string; readonly itemId: string }
+  | { readonly type: 'Forage'; readonly commandId: string; readonly itemId: string; readonly sourceId: string }
   /** Сцена серця (GAME-230): серць достатньо й сцена ще не грана — відкрити її й записати «зіграно» (удруге — CONDITION_FAILED). */
   | { readonly type: 'HeartEvent'; readonly commandId: string; readonly npcId: string }
   /** Лягти спати (GAME-242): біля ліжка вдома, біля намету в таборі чи будь-де після 22:00. Час перемотує симуляція (до 07:00). */
@@ -265,9 +266,15 @@ function apply(cmd: Command, d: Draft, defs: CoreDefs, guard: Safeguards, today:
       const fr = defs.friendship;
       if (!fr || !fr.forage.includes(cmd.itemId)) return 'UNKNOWN_ITEM';
       if (!d.player) return 'NO_CHARACTER';
+      // Джерело (дерево, кущ) дає раз на день стільки, скільки випало за (дерево, день): ліміт — у ядрі, тож перебудова сцени й перезавантаження його не скидають.
+      const kind = typeof cmd.sourceId === 'string' ? forageKindOf(cmd.sourceId) : null;
+      if (kind === null || FORAGE_SOURCE_ITEM[kind] !== cmd.itemId) return 'UNKNOWN_TARGET';
+      if (today === undefined) return 'INVALID_COMMAND';
+      if (forageLeft(d.friend, cmd.sourceId, today) < 1) return 'FORAGE_USED_TODAY';
       const have = own(d.inventory, cmd.itemId) ?? 0;
       if (have >= FORAGE_CAP) return 'INVALID_AMOUNT';
       d.inventory[cmd.itemId] = have + 1;
+      d.friend = foraged(d.friend, cmd.sourceId, today);
       return null;
     }
     case 'HeartEvent': {

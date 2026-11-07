@@ -39,6 +39,12 @@ interface Crown { readonly tiles: Phaser.Tilemaps.Tile[]; readonly layer: Phaser
 export class CampAlive {
   private seatState: SeatState = SEAT_IDLE;
   private log: UseLog = {};
+  /** GAME-244 ч.2: чи ядро вже віддало все з джерела сьогодні (ліміт «раз на день» живе в ядрі; власний `log` лише згладжує показ у межах сцени). Ставить сцена. */
+  coreUsed: ((id: string, day: number) => boolean) | null = null;
+  private foragedQueue: { kind: 'cone' | 'berry'; src: string }[] = [];
+  private used(id: string, day: number): boolean { return usedToday(this.log, id, day) || (this.coreUsed?.(id, day) ?? false); }
+  /** Підняті шишки й ягоди з джерелом — сцена віддає їх ядру (Forage) і спорожнює чергу. */
+  takeForaged(): { kind: 'cone' | 'berry'; src: string }[] { const q = this.foragedQueue; this.foragedQueue = []; return q; }
   private items: Item[] = [];
   private leaves: { l: Leaf; age: number }[] = [];
   private anims: Anim[] = [];
@@ -118,7 +124,7 @@ export class CampAlive {
     this.owned = []; this.berryG.clear();
     this.fxG = null; this.groundG = null; this.hint = null; this.board = null;
     this.smash.reset();
-    this.seatState = SEAT_IDLE; this.log = {}; this.items = []; this.leaves = []; this.anims = []; this.puddleIn = []; this.rings = []; this.pierAcc = 0; this.boardLeft = 0;
+    this.seatState = SEAT_IDLE; this.log = {}; this.foragedQueue = []; this.items = []; this.leaves = []; this.anims = []; this.puddleIn = []; this.rings = []; this.pierAcc = 0; this.boardLeft = 0;
     Object.assign(this.probe, CAMP_PROBE_IDLE, { sounds: [], usedToday: [] });
   }
 
@@ -144,7 +150,7 @@ export class CampAlive {
 
   /** GAME-228: розбивна річ поруч (розбиті сьогодні не беруться). Тварини передаються як `animals`, але ніколи не цілі (pickSmash). */
   private pickBreakable(hero: Pt, animals: readonly Pt[]): SmashProp | null {
-    const standing = SMASH_PROPS.filter((p) => !(breaksAway(p.kind) && usedToday(this.log, p.id, this.day)));
+    const standing = SMASH_PROPS.filter((p) => !(breaksAway(p.kind) && this.used(p.id, this.day)));
     const others: Entity[] = animals.map((at, i) => ({ id: `animal.${i}`, kind: 'animal', at, range: 40 }));
     return pickSmash(hero, standing, others);
   }
@@ -156,7 +162,7 @@ export class CampAlive {
     r = r as Reaction;
     if (r.kind === 'pine' || r.kind === 'bush') {
       const pine = r.kind === 'pine';
-      if (usedToday(this.log, r.id, day)) {
+      if (this.used(r.id, day)) {
         this.anims.push({ r, age: 0, mode: 'tremble' }); p.trembles++;   // той самий день: лише ледь здригнулось, нічого не впало
         this.sound('leaf');
         return 'tremble';
@@ -183,7 +189,7 @@ export class CampAlive {
 
   /** Удар по речі табору: раз на день (ящик, бочка, горщик — зникають до наступної доби; гілка лишається й повторно лише здригається). */
   private actSmash(r: SmashProp, hero: Pt, day: number): 'smash' | 'tremble' {
-    if (usedToday(this.log, r.id, day)) { this.smash.tremble(r); this.probe.trembles++; return 'tremble'; }
+    if (this.used(r.id, day)) { this.smash.tremble(r); this.probe.trembles++; return 'tremble'; }
     this.log = markUsed(this.log, r.id, day);
     this.smash.hit(r, day, this.calm);
     const finds = planFinds(r, day, hero, this.nextId, this.calm);
@@ -196,7 +202,7 @@ export class CampAlive {
   }
 
   /** Кадр світу: падіння/магніт, калюжі, кроки по пірсу, тремтіння крон, малювання. */
-  update(dtMs: number, f: { hero: Pt; moving: boolean; movedPx: number; day: number; rain: boolean; hintOn: boolean; toastAt?: Pt; animals?: readonly Pt[]; canForage?: (k: 'cone' | 'berry') => boolean }): void {
+  update(dtMs: number, f: { hero: Pt; moving: boolean; movedPx: number; day: number; rain: boolean; hintOn: boolean; toastAt?: Pt; animals?: readonly Pt[]; canForage?: (k: 'cone' | 'berry', src: string) => boolean }): void {
     const g = this.fxG; const gg = this.groundG;
     if (!this.active || !g || !gg) return;
     const p = this.probe;
@@ -204,10 +210,12 @@ export class CampAlive {
     // Предмети: падіння, магніт, підбір («поп» і «+1» над героєм).
     const st = stepItems(this.items, f.hero, dtMs);
     this.items = st.items;
-    st.collected.forEach((k) => {
+    st.collected.forEach((k, i) => {
       if (isFindKind(k)) { p[k]++; this.smash.toast(k); this.sound('pop'); return; }   // GAME-228: знахідка — плашка біля кута замість сплива над героєм
       if (k === 'cone') p.cones++; else p.berries++;
-      if (f.canForage && !f.canForage(k === 'cone' ? 'cone' : 'berry')) return;   // GAME-235: інвентар повний (20) — нічого не додано, плашки «+1» немає
+      const src = st.collectedSrc[i];
+      if (src !== undefined) this.foragedQueue.push({ kind: k === 'cone' ? 'cone' : 'berry', src });
+      if (f.canForage && !f.canForage(k === 'cone' ? 'cone' : 'berry', src ?? '')) return;   // GAME-235: інвентар повний (20) — нічого не додано, плашки «+1» немає
       this.smash.toast(k === 'cone' ? 'cone' : 'berry'); this.sound('pop');   // GAME-229: «+1 Шишка» — плашка в куті, як знахідки (GAME-228), а не цифра над героєм
     });
     p.items = this.items.length;
@@ -271,7 +279,7 @@ export class CampAlive {
     }
     const near = f.hintOn && !this.sitting ? this.pick(f.hero, f.animals) : null;
     const show = near && near.kind !== 'board' || (near?.kind === 'board' && this.boardLeft <= 0) ? near : null;
-    const has = show && ((show.kind !== 'pine' && show.kind !== 'bush' && !isSmashKind(show.kind)) || !usedToday(this.log, show.id, f.day));
+    const has = show && ((show.kind !== 'pine' && show.kind !== 'bush' && !isSmashKind(show.kind)) || !this.used(show.id, f.day));
     if (hint) {
       if (show && has) { const m = this.text(isSmashKind(show.kind) ? SMASH_HINT[show.kind] : HINT_KEY[show.kind]); if (hint.text !== m) hint.setText(m); hint.setPosition(Math.round(show.at.x), Math.round(show.at.y - (show.kind === 'pine' ? 14 : isSmashKind(show.kind) ? 28 : 32))).setVisible(true); p.hint = show.id; }
       else { hint.setVisible(false); p.hint = ''; }
@@ -300,11 +308,11 @@ export class CampAlive {
     if (!gg) return;
     gg.clear();
     if (this.rain) for (const q of PUDDLES) { gg.fillStyle(FX_PALETTE.water, 0.5).fillEllipse(q.x, q.y, PUDDLE_R * 2, 8); gg.fillStyle(FX_PALETTE.foam, 0.45).fillEllipse(q.x - 3, q.y - 1, 8, 2); }
-    this.smash.redraw(SMASH_PROPS.filter((q) => usedToday(this.log, q.id, this.day)).map((q) => q.id));
+    this.smash.redraw(SMASH_PROPS.filter((q) => this.used(q.id, this.day)).map((q) => q.id));
     for (const [id, bg] of this.berryG) {
       bg.clear();
       const r = REACTIONS.find((x) => x.id === id);
-      if (!r || usedToday(this.log, id, this.day)) continue;
+      if (!r || this.used(id, this.day)) continue;
       for (let i = 0; i < 7; i++) { const x = Math.round(r.at.x + ((i * 37) % 61) - 30); const y = Math.round(r.at.y - 30 + ((i * 23) % 31)); bg.fillStyle(0x7a2a6b, 1).fillCircle(x, y, 2).fillStyle(0xd9a0f0, 1).fillRect(x, y - 1, 1, 1); }
     }
   }

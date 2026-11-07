@@ -53,6 +53,7 @@ import { miaSpots, requestMarker, requestTarget, requestsDone } from './content/
 import { errandMove, plannedErrands } from './content/errands';
 import { FORAGE_ITEMS, canForage, heartDue, reactionFor } from './content/friendship';
 import type { GiftReaction } from './core/friendship';
+import { forageLeft, forageSpent } from './core/forage';
 import { agendaOf, minimapTargets, onboarding, type MiniFrame } from './content/agenda';
 import type { MapKey } from './content/map-first';
 import { taskGate } from './core/wave';
@@ -383,8 +384,9 @@ const worldHooks: WorldHooks = {
     try { bridge.send({ type: 'HeartEvent', npcId: npc }); storyChanged(); } finally { mapTalk = false; }
     for (const l of talkListeners) l();
   },
-  canForage: (kind) => canForage(bridge.state.game.inventory, kind === 'cone' ? FORAGE_ITEMS.cone : FORAGE_ITEMS.berry),
-  onForage: (kind) => { bridge.send({ type: 'Forage', itemId: kind === 'cone' ? FORAGE_ITEMS.cone : FORAGE_ITEMS.berry }); },
+  canForage: (kind, sourceId) => canForage(bridge.state.game.inventory, kind === 'cone' ? FORAGE_ITEMS.cone : FORAGE_ITEMS.berry) && forageLeft(bridge.state.game.friend, sourceId, dayOf(bridge.state.clock)) > 0,
+  onForage: (kind, sourceId) => { bridge.send({ type: 'Forage', itemId: kind === 'cone' ? FORAGE_ITEMS.cone : FORAGE_ITEMS.berry, sourceId }); },
+  sourceUsed: (sourceId, day) => forageSpent(bridge.state.game.friend, sourceId, day),
   // GAME-179: з ким можна говорити саме зараз — те саме, що прийме ядро (NPC тут, відкритий, розмови нема); «!» — гачок прохань GAME-180.
   talk: (id) => (npcLive(bridge.state.game, GAME_DEFS, id) ? { request: requestMarker(bridge.state.game, id), line: !chatted.has(`${dayOf(bridge.state.clock)}|${id}`) } : null),
   onObject: actOnMap,

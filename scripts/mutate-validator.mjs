@@ -173,6 +173,8 @@ const mutations = [
   { name: '[спорядження] відсутнє поле не звітується', file: CHECKS_FILE, from: "if (missing.length) { out.push(I('GEAR_FIELD_MISSING'", to: "if (missing.length) { (I('GEAR_FIELD_MISSING'" },
   { name: '[спорядження] реєстр полів забув ціну викупу', file: 'validator/codes.mjs', from: "'priceCents', 'resaleCents'];", to: "'priceCents'];" },
   { name: '[спорядження] предмет без виду не вважається спорядженням', file: CHECKS_FILE, from: "(i) => i.kind !== undefined || GEAR_FIELDS.some((f) => i[f] !== undefined)", to: '(i) => i.kind !== undefined' },
+  { name: '[знахідки] межа викупу знахідки не перевіряється', file: CHECKS_FILE, from: 'i.resaleCents > FIND_RESALE_MAX_CENTS) out.push', to: 'false) void' },
+  { name: '[знахідки] викуп знахідки без виду вважається неповним спорядженням', file: CHECKS_FILE, from: 'const isFind = (i) => i.kind === undefined', to: 'const isFind = (i) => false && i.kind === undefined' },
   { name: '[спорядження] викуп дорожчий за купівлю пропускається', file: CHECKS_FILE, from: 'if (i.resaleCents > i.priceCents) out.push', to: 'if (false) out.push' },
   { name: '[спорядження] викуп, рівний ціні, — помилка (межа зсунута)', file: CHECKS_FILE, from: 'if (i.resaleCents > i.priceCents) out.push', to: 'if (i.resaleCents >= i.priceCents) out.push' },
   { name: '[спорядження] точна копія не вважається домінуванням', file: CHECKS_FILE, from: '(!same(x, a) || complete.indexOf(x) < complete.indexOf(a))', to: '!same(x, a)' },

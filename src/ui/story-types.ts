@@ -20,11 +20,15 @@ export interface BackpackRow {
   readonly gear?: { readonly condition: number; readonly wet: boolean };
   /** Id продажу — лише біля приймальні й коли ядро прийме SellItem. */
   readonly sellId: string | null;
+  /** GAME-244 ч.2: id дарунка сусіду поруч — лише коли гравець стоїть біля мешканця, що приймає дари, і ядро прийме GiveGift. */
+  readonly giftId: string | null;
 }
 
 export interface OfferBackpack {
   readonly groups: readonly { readonly group: BackpackGroup; readonly rows: readonly BackpackRow[] }[];
   readonly atReception: boolean;
+  /** Мешканець поруч, що приймає дари (npc.*), або null. */
+  readonly giftTo: string | null;
   readonly count: number;
 }
 

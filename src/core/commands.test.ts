@@ -183,6 +183,8 @@ describe('коди відмов: кожен код із реєстру має т
     ['INSUFFICIENT_FUNDS', s, { type: 'BuyItem', commandId: 'c3', itemId: 'item.tent' }, DEFS],
     ['ITEM_NOT_OWNED', s, { type: 'SellItem', commandId: 'c4', itemId: 'item.tent' }, DEFS],
     ['GRANT_ALREADY_GIVEN', granted.state, { type: 'Interact', commandId: 'g2', targetId: 'obj.ranger' }, DEFS],
+    // GAME-244 ч.2 · джерело дарів уже дало своє сьогодні (книга збору в ядрі)
+    ['FORAGE_USED_TODAY', { ...play([DRIVER], initialState(1000), STORY_DEFS), friend: { pts: {}, gift: {}, seen: [], forage: { day: 0, n: { 'pine.camp': 99 } } } }, { type: 'Forage', commandId: 'fg1', itemId: 'item.pine-cone', sourceId: 'pine.camp' }, { ...STORY_DEFS, friendship: { prefs: {}, giftable: [], forage: ['item.pine-cone'], heart: {}, requestGivers: {} } }],
     ['COMMAND_ID_REUSED', reused.state, { type: 'BuyItem', commandId: 'u1', itemId: 'item.stove' }, DEFS],
     ['UNKNOWN_ITEM', s, { type: 'BuyItem', commandId: 'c5', itemId: 'item.ghost' }, DEFS],
     ['UNKNOWN_TARGET', s, { type: 'Interact', commandId: 'c6', targetId: 'obj.ghost' }, DEFS],

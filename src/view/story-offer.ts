@@ -45,7 +45,7 @@ import { waveView } from '../core/wave';
 import type { Key } from '../i18n';
 import { liveRequestSpot as liveSpotFor, REQUEST_LOCATION } from '../content/requests';
 import { miaState } from '../content/mia';
-import { giftOptions } from '../content/friendship';
+import { canReceiveGifts, giftOptions } from '../content/friendship';
 import { photoPage } from '../content/photos';
 import { henryPage, isTraceSpot, liveTraceSpot } from '../content/traces';
 import { isRequestSpot, offerNodeOf, REQUESTS, requestOf, requestStatus, requestDoneFlags, requestTarget, trackerRows } from '../content/requests';
@@ -378,13 +378,20 @@ export function storyOffer(sim: SimState, defs: CoreDefs, view: StoryView = PANE
   const weather = todayWeather(sim);
   // GAME-244: рюкзак. Приймальня — об'єкт мапи obj.sell, до якого гравець підійшов (view.near); «Продати» — лише коли ядро саме приймає SellItem (сухий прогін, час крамниці й квест-замок — його).
   const atReception = view.mapFirst && view.near === 'obj.sell';
+  // Подарунок із рюкзака: гравець стоїть біля мешканця (view.near = npc.*), що приймає дари; чи можна саме зараз — вирішує сухий прогін GiveGift.
+  const bpGiftNpc = view.mapFirst && view.near !== null && view.near.startsWith('npc.') && canReceiveGifts(view.near, defs.friendship) ? view.near : null;
   const bpSells = new Map<string, Move>();
   const backpack = backpackModel(s, sim.journal, defs, atReception, (itemId) => {
     const m: Move = { type: 'SellItem', itemId };
     const ok = dispatch(s, { ...m, commandId: nextCommandId(s) } as Command, defs, undefined, undefined, undefined, sim.clock.minutes).ok;
     if (ok) bpSells.set(`bp|sell|${itemId}`, m);
     return ok;
-  });
+  }, bpGiftNpc !== null ? { npcId: bpGiftNpc, can: (itemId) => {
+    const m: Move = { type: 'GiveGift', npcId: bpGiftNpc, itemId };
+    const ok = dispatch(s, { ...m, commandId: nextCommandId(s) } as Command, defs, undefined, dayOf(sim.clock)).ok;
+    if (ok) bpSells.set(`bp|gift|${bpGiftNpc}|${itemId}`, m);
+    return ok;
+  } } : null);
   const lastTrip = [...sim.journal].reverse().find((e) => e.type === 'Visit')?.commandId ?? null;
   const nextT = s.player && view.mapFirst ? nextTarget(sim, defs, view.backpack ?? []) : null;
   const nearL = s.player && view.mapFirst && view.near !== null ? spotLabel(sim, defs, view.near) : null;

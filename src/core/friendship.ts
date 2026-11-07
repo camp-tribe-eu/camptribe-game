@@ -19,6 +19,8 @@ export interface FriendState {
   readonly pts: Readonly<Record<string, number>>;
   readonly gift: Readonly<Record<string, number>>;
   readonly seen: readonly string[];
+  /** GAME-244 ч.2: книга збору дарів за ОДИН день (джерело → скільки дало); новий день — нова книга. Немає — нічого сьогодні не зібрано. */
+  readonly forage?: { readonly day: number; readonly n: Readonly<Record<string, number>> };
 }
 export const NO_FRIEND: FriendState = { pts: {}, gift: {}, seen: [] };
 

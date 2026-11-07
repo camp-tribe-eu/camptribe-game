@@ -15,13 +15,8 @@ export const FX_COLORS: readonly number[] = Object.values(FX_PALETTE);
 /** Межі частинок на кадр (телефон): іскри, пил, дим, краплі сплеску, кільця, стебла. Понад — не малюється. */
 export const CAP = { sparks: 6, dust: 8, exhaust: 4, drops: 8, ripples: 3, blades: 6 } as const;
 
-/** Детерміноване «випадкове» 0..1 від номера й зерна (ціле хешування, без стану). */
-export function hash01(i: number, seed: number): number {
-  let t = (Math.imul(i + 1, 0x9e3779b1) ^ Math.imul(seed + 0x7f4a7c15, 0x85ebca6b)) >>> 0;
-  t = Math.imul(t ^ (t >>> 15), t | 1);
-  t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
-  return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-}
+import { hash01 } from '../../core/hash01';
+export { hash01 };
 
 const frac = (v: number): number => v - Math.floor(v);
 export const clamp01 = (k: number): number => (k <= 0 ? 0 : k >= 1 ? 1 : k);

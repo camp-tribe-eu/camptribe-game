@@ -4,6 +4,7 @@
 // Стан тут — лише показ: ні ядро, ні сейв його не знають (жодного прапорця → нічого в SIDE, content/side.ts); день і погоду сцена бере з годинника й зерна світу.
 import type { Key } from '../../i18n';
 import { hash01 } from './fx-live';
+import { dropCount, idSeed } from '../../core/forage';
 import type { Dir } from './character';
 
 export type Pt = { readonly x: number; readonly y: number };
@@ -91,6 +92,8 @@ export const markUsed = (log: UseLog, id: string, day: number): UseLog => ({ ...
 export type ItemKind = 'cone' | 'berry' | 'plank' | 'shard' | 'twig';
 export interface Item {
   readonly id: number; readonly kind: ItemKind;
+  /** Джерело дару (дерево чи кущ): без нього ядро не знає, чий це дар (Forage.sourceId). */
+  readonly src?: string;
   /** Звідки впало, куди лягло. */
   readonly x0: number; readonly y0: number; readonly x1: number; readonly y1: number;
   readonly age: number;
@@ -112,13 +115,7 @@ export const EAT_FRAMES = 3;
 export const EAT_MS = EAT_FRAMES * FRAME_MS;
 export const POP_MAGNET_R = 40;
 
-export const idSeed = (id: string): number => { let h = 7; for (let i = 0; i < id.length; i++) h = (Math.imul(h, 31) + id.charCodeAt(i)) | 0; return h >>> 0; };
-
-/** Скільки впало: шишок 1–3, ягід 2–4; залежить від дерева й дня, не від випадку. */
-export function dropCount(kind: ReactionKind, id: string, day: number): number {
-  const h = hash01(day, idSeed(id));
-  return kind === 'pine' ? 1 + Math.floor(h * 3) : 2 + Math.floor(h * 3);
-}
+export { dropCount, idSeed };
 
 /**
  * План падіння: предмети стартують із `from` (крона чи кущ) і лягають навколо `land` (низ стовбура чи бік куща до героя). Пріоритет — те, що впало СПРАВДІ:
@@ -131,7 +128,7 @@ export function planDrops(kind: ReactionKind, id: string, day: number, from: Pt,
   for (let i = 0; i < n; i++) {
     const x1 = land.x + (hash01(i, seed) - 0.5) * 36;
     const y1 = land.y + 4 + hash01(i + 40, seed) * 14;
-    out.push({ id: firstId + i, kind: kind === 'pine' ? 'cone' : 'berry', x0: from.x + (hash01(i + 80, seed) - 0.5) * 16, y0: from.y, x1, y1, age: calm ? FALL_MS + BOUNCE_MS : 0, x: x1, y: y1, magnet: -1 });
+    out.push({ id: firstId + i, src: id, kind: kind === 'pine' ? 'cone' : 'berry', x0: from.x + (hash01(i + 80, seed) - 0.5) * 16, y0: from.y, x1, y1, age: calm ? FALL_MS + BOUNCE_MS : 0, x: x1, y: y1, magnet: -1 });
   }
   return out.map((it) => (calm ? it : { ...it, x: it.x0, y: it.y0 }));
 }
@@ -149,15 +146,15 @@ export function itemAt(it: Item): Pt {
 }
 
 /** Кадр предметів: падають, лежать, а герой поруч — летять до нього, пришвидшуючись, і підбираються. Повертає підібрані (за видом). */
-export function stepItems(items: readonly Item[], hero: Pt, dtMs: number): { items: Item[]; collected: ItemKind[] } {
+export function stepItems(items: readonly Item[], hero: Pt, dtMs: number): { items: Item[]; collected: ItemKind[]; collectedSrc: (string | undefined)[] } {
   const dt = Math.max(0, dtMs);
-  const keep: Item[] = []; const collected: ItemKind[] = [];
+  const keep: Item[] = []; const collected: ItemKind[] = []; const collectedSrc: (string | undefined)[] = [];
   const target = { x: hero.x, y: hero.y - 10 };
   for (const it of items) {
     const age = it.age + dt;
     if (it.eat !== undefined && it.eat >= 0) {   // GAME-228: уже на торсі — зменшується до 0 за EAT_FRAMES кадри, тримається на герої
       const eat = it.eat + dt;
-      if (eat >= EAT_MS) { collected.push(it.kind); continue; }
+      if (eat >= EAT_MS) { collected.push(it.kind); collectedSrc.push(it.src); continue; }
       keep.push({ ...it, age, x: target.x, y: target.y, eat });
       continue;
     }
@@ -171,13 +168,13 @@ export function stepItems(items: readonly Item[], hero: Pt, dtMs: number): { ite
       const step = ((80 + 520 * (magnet / 1000)) * dt) / 1000;
       if (d <= COLLECT_R || step >= d) {
         if (it.eat !== undefined) { keep.push({ ...it, age, x: target.x, y: target.y, magnet, eat: 0 }); continue; }   // знахідка: спершу зменшення на торсі, потім «поп»
-        collected.push(it.kind); continue;
+        collected.push(it.kind); collectedSrc.push(it.src); continue;
       }
       x = sx + (dx / d) * step; y = sy + (dy / d) * step;
     }
     keep.push({ ...it, age, x, y, magnet });
   }
-  return { items: keep, collected };
+  return { items: keep, collected, collectedSrc };
 }
 
 // ---------- Листя, тремтіння, кільця, краплі ----------

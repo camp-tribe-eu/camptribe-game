@@ -88,6 +88,8 @@ export function moves(s: GameState, defs: CoreDefs, withRequests = false): Move[
     if (shelf !== undefined ? s.moneyCents >= shelf : price === undefined || !canPay(s, defs, price)) out.push({ type: 'Pickup', itemId: id });
   }
   for (const id of Object.keys(defs.items)) {
+    // GAME-244 ч.2: знахідки (шишка, ягоди) приходять лише з Forage — побічного, поза ходами бота; купити їх не можна, а продаж — побічний (приймальня). У перебір не входять (як і дарунки).
+    if (defs.friendship?.forage.includes(id)) continue;
     if (!s.inventory[id]) out.push({ type: 'BuyItem', itemId: id }); // лише перший примірник — інакше простір станів нескінченний
     out.push({ type: 'SellItem', itemId: id });
   }

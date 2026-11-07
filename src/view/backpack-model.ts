@@ -35,6 +35,7 @@ export function originOf(itemId: string, journal: readonly JournalEntry[], defs:
 export function backpackModel(
   game: Pick<GameState, 'inventory' | 'gear' | 'grants'>, journal: readonly JournalEntry[], defs: Pick<CoreDefs, 'items' | 'story' | 'friendship'>,
   atReception: boolean, canSell: (itemId: string) => boolean,
+  gift: { readonly npcId: string; readonly can: (itemId: string) => boolean } | null = null,
 ): OfferBackpack {
   const forage = new Set(defs.friendship?.forage ?? []);
   const rows = Object.entries(game.inventory).filter(([, q]) => q > 0).sort(([a], [b]) => a.localeCompare(b)).map(([id, qty]): BackpackRow => {
@@ -46,7 +47,9 @@ export function backpackModel(
       id, qty, group, origin, sellCents,
       ...(def?.gear ? { gear: gearOf(game.gear, id) } : {}),
       sellId: atReception && sellCents !== null && canSell(id) ? `bp|sell|${id}` : null,
+      // Подарунок — лише біля мешканця й лише те, що ядро саме прийме (сухий прогін GiveGift: той самий НПС у локації, раз на день, квест-замок).
+      giftId: gift !== null && gift.can(id) ? `bp|gift|${gift.npcId}|${id}` : null,
     };
   });
-  return { groups: GROUP_ORDER.map((group) => ({ group, rows: rows.filter((r) => r.group === group) })).filter((g) => g.rows.length > 0), atReception, count: rows.reduce((n, r) => n + r.qty, 0) };
+  return { groups: GROUP_ORDER.map((group) => ({ group, rows: rows.filter((r) => r.group === group) })).filter((g) => g.rows.length > 0), atReception, giftTo: gift?.npcId ?? null, count: rows.reduce((n, r) => n + r.qty, 0) };
 }

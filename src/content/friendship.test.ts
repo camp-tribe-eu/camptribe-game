@@ -3,11 +3,13 @@
 // Мутації (закон 1; виводи — у PR): небажаний −1 очко; без ліміту дня; без перевірки «сцена вже грана»; прибрати кроки очок за прохання;
 // дозволити останні дрова квесту; Forage без стелі.
 import { describe, expect, it } from 'vitest';
-import { nextCommandId, type Command } from '../core/commands';
+import { dispatch, nextCommandId, type Command } from '../core/commands';
 import { newSim, step, type SimState } from '../core/sim';
 import { fromSave, serialize } from '../core/save';
 import { HEART_AT, LIKED_POINTS, REQUEST_POINTS, heartsFor, ptsOf } from '../core/friendship';
 import { characterChoices } from '../view/story-offer';
+import { dropCount, forageSpent } from '../core/forage';
+import type { GameState } from '../core/state';
 import { FORAGE_ITEMS, FRIEND_DEFS, canForage, GIFTABLE, HEART_FROM_TOD, HEART_TO_TOD, giftOptions, heartDue, inHeartWindow, reactionFor, todOf } from './friendship';
 import type { Move } from './moves';
 import { GAME_DEFS as DEFS } from './slice-defs';
@@ -121,16 +123,40 @@ describe('подарунок', () => {
   });
   it('Forage: шишка й ягода лягають в інвентар (стеля 20); решта — UNKNOWN_ITEM', () => {
     let s = camp();
-    s = send(s, { type: 'Forage', itemId: FORAGE_ITEMS.cone });
+    s = send(s, { type: 'Forage', itemId: FORAGE_ITEMS.cone, sourceId: 'pine.camp' });
     expect(s.game.inventory[FORAGE_ITEMS.cone]).toBe(1);
-    expect(codeOf(s, { type: 'Forage', itemId: 'item.tent' })).toBe('UNKNOWN_ITEM');
+    expect(codeOf(s, { type: 'Forage', itemId: 'item.tent', sourceId: 'pine.camp' })).toBe('UNKNOWN_ITEM');
     const full = { ...s, game: { ...s.game, inventory: { [FORAGE_ITEMS.cone]: 20 } } };
-    expect(codeOf(full, { type: 'Forage', itemId: FORAGE_ITEMS.cone })).toBe('INVALID_AMOUNT');
+    expect(codeOf(full, { type: 'Forage', itemId: FORAGE_ITEMS.cone, sourceId: 'pine.forest.4' })).toBe('INVALID_AMOUNT');
+  });
+  it('GAME-244 ч.2: джерело дає раз на день рівно dropCount; вдруге — FORAGE_USED_TODAY; завтра знову; перезавантаження ліміт не скидає', () => {
+    const src = 'pine.camp'; const itemId = FORAGE_ITEMS.cone;
+    const take = (st: GameState, sourceId: string, day: number, item: string = itemId) => dispatch(st, { type: 'Forage', commandId: nextCommandId(st), itemId: item, sourceId } as Command, DEFS, undefined, day);
+    const n0 = dropCount('pine', src, 0);
+    let st = camp().game;
+    for (let i = 0; i < n0; i++) { const r = take(st, src, 0); expect(r.ok, `збір ${i + 1} з ${n0}`).toBe(true); if (r.ok) st = r.state; }
+    expect(st.inventory[itemId]).toBe(n0);
+    const again = take(st, src, 0);
+    expect(again.ok ? 'ok' : again.code, 'джерело вичерпане сьогодні').toBe('FORAGE_USED_TODAY');
+    const reloaded = JSON.parse(JSON.stringify(st)) as GameState;   // збереження → завантаження
+    const afterReload = take(reloaded, src, 0);
+    expect(afterReload.ok ? 'ok' : afterReload.code, 'перезавантаження не скидає ліміт').toBe('FORAGE_USED_TODAY');
+    expect(take(st, 'pine.forest.1', 0).ok, 'інше джерело — окремий ліміт').toBe(true);
+    const next = take(st, src, 1);
+    expect(next.ok, 'наступного дня джерело знову дає').toBe(true);
+    if (next.ok) expect(Object.keys(next.state.friend?.forage?.n ?? {}), 'книга веде один день — старі відпадають').toEqual([src]);
+    const wrong = take(st, src, 1, FORAGE_ITEMS.berry);
+    expect(wrong.ok ? 'ok' : wrong.code, 'сосна не дає ягід').toBe('UNKNOWN_TARGET');
+    expect(forageSpent(st.friend, src, 0), 'вичерпане джерело — спожите').toBe(true);
+    expect(forageSpent(st.friend, src, 1), 'завтра — ні').toBe(false);
+    expect(forageSpent(st.friend, 'obj.crate', 0), 'ящик — не джерело дарів: вигляд його не блокує').toBe(false);
+    const noSrc = take(st, 'obj.crate', 1);
+    expect(noSrc.ok ? 'ok' : noSrc.code, 'не джерело').toBe('UNKNOWN_TARGET');
   });
   it('GAME-235: canForage збігається з ядром — на стелі 20 «+1» не показуємо, нічого не додалось', () => {
     for (const have of [0, 1, 19, 20, 25]) {
       const st = { ...camp(), game: { ...camp().game, inventory: { [FORAGE_ITEMS.cone]: have } } };
-      const accepted = codeOf(st, { type: 'Forage', itemId: FORAGE_ITEMS.cone }) === null;
+      const accepted = codeOf(st, { type: 'Forage', itemId: FORAGE_ITEMS.cone, sourceId: 'pine.camp' }) === null;
       expect(canForage(st.game.inventory, FORAGE_ITEMS.cone), `у руках ${have}`).toBe(accepted);
     }
     expect(canForage({}, FORAGE_ITEMS.berry)).toBe(true);
@@ -237,6 +263,10 @@ describe('сейв', () => {
     expect(bad({ pts: { 'npc.nora': 100 }, gift: {}, seen: [] })).toBe('SAVE_SHAPE');
     expect(bad({ pts: {}, gift: { 'npc.nora': 'x' }, seen: [] })).toBe('SAVE_SHAPE');
     expect(bad({ pts: {}, gift: {}, seen: ['npc.b', 'npc.a'] })).toBe('SAVE_SHAPE');
+    // GAME-244 ч.2: книга збору дарів (friend.forage) — сейв із нею повертається; зіпсована відхиляється (рецензія Fable #206).
+    expect(bad({ pts: {}, gift: {}, seen: [], forage: { day: 0, n: { 'pine.camp': 1 } } })).toBe('ok');
+    expect(bad({ pts: {}, gift: {}, seen: [], forage: { day: 'x', n: {} } })).toBe('SAVE_SHAPE');
+    expect(bad({ pts: {}, gift: {}, seen: [], forage: { day: 0, n: { 'pine.camp': -1 } } })).toBe('SAVE_SHAPE');
   });
 });
 

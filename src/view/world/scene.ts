@@ -172,9 +172,11 @@ export interface WorldHooks {
   /** GAME-230: щокадру в таборі — чи час для сцени серця; main її відкриває (HeartEvent), сцена нічого не вирішує. */
   heart?(): void;
   /** GAME-230: герой підняв шишку чи ягоду в таборі — main кладе її в інвентар (Forage), щоб її можна було подарувати. */
-  onForage?(kind: 'cone' | 'berry'): void;
+  onForage?(kind: 'cone' | 'berry', sourceId: string): void;
   /** GAME-235: чи прийме інвентар ще одну шишку/ягоду (ліміт 20): без цього «+1» не показуємо. */
-  canForage?(kind: 'cone' | 'berry'): boolean;
+  canForage?(kind: 'cone' | 'berry', sourceId: string): boolean;
+  /** GAME-244 ч.2: чи ядро вже віддало все з джерела цього дня — вигляд читає ядро, а не власний журнал. */
+  sourceUsed?(sourceId: string, day: number): boolean;
 }
 
 /** Хто з NPC якого листа ходьби має (лист — в art.ts); решта — як Еліза. */
@@ -360,7 +362,6 @@ export class WorldScene extends Phaser.Scene {
   /** GAME-230: скільки кадрів сцена серця ще чекає після подарунка. */
   private heartHold = 0;
   /** GAME-230: скільки шишок і ягід уже передано в інвентар (лічильник риґу показує зібране, тут — що з нього вже в ядрі). */
-  private foraged = { cones: 0, berries: 0 };
   private leisure: (LeisureSpot | null)[] | null = null;
   private leisureSpots: LeisureSpot[] = [];
   private heading: Pt = { x: 0, y: 0 };
@@ -572,11 +573,7 @@ export class WorldScene extends Phaser.Scene {
 
   /** GAME-230: реакція на подарунок і поза героя — покадрово (30 кадрів), без таймерів. Поки поза триває, ходьба її скасовує. */
   private stepGift(): void {
-    const c = this.life.collected;
-    if (c.cones < this.foraged.cones) this.foraged.cones = c.cones;   // лічильник риґу почався знову (нова мапа) — не дублюємо
-    if (c.berries < this.foraged.berries) this.foraged.berries = c.berries;
-    while (this.foraged.cones < c.cones) { this.foraged.cones++; this.hooks.onForage?.('cone'); }
-    while (this.foraged.berries < c.berries) { this.foraged.berries++; this.hooks.onForage?.('berry'); }
+    for (const f of this.life.takeForaged()) this.hooks.onForage?.(f.kind, f.src);   // кожен підняний дар іде в ядро разом із джерелом; ліміт «раз на день» — його
     const g = this.hooks.takeGift?.();
     if (g) {
       const i = RESIDENTS.findIndex((r) => r.id === g.npc);
@@ -688,6 +685,7 @@ export class WorldScene extends Phaser.Scene {
     this.swim = new SwimRig(this, this.player, DEPTH.decor - 40);
     this.neigh = new Neighbours(this, DEPTH.always);
     this.life = new CampAlive(this, this.barkText);
+    this.life.coreUsed = (id, day) => this.hooks.sourceUsed?.(id, day) ?? false;
     this.tent = new TentRig(this, this.player, this.barkText);
     this.wood = new WoodRig(this, this.player, this.barkText);
     this.props = new CampProps(this, this.barkText);
@@ -1612,7 +1610,7 @@ export class WorldScene extends Phaser.Scene {
       fire: this.fireSprite?.visible ? { x: this.fireSprite.x, y: this.fireSprite.y } : null,
       car: this.carImg && this.current === 'road' ? { x: this.carImg.x, y: this.carImg.y, back: -1 } : null,
     });
-    this.life.update(delta, { hero: { x: this.player.x, y: this.player.y }, moving, movedPx, day: lifeDay, rain: this.lifeRain, toastAt: { x: this.cameras.main.worldView.x + 6, y: this.cameras.main.worldView.bottom - this.insets.bottom }, animals: this.petPoints(), canForage: (k) => this.hooks.canForage?.(k) ?? true, hintOn: !handsBusy && this.acting === null && !this.wood.active && !this.tent.active && (act === null || isFollower(act.name)) });
+    this.life.update(delta, { hero: { x: this.player.x, y: this.player.y }, moving, movedPx, day: lifeDay, rain: this.lifeRain, toastAt: { x: this.cameras.main.worldView.x + 6, y: this.cameras.main.worldView.bottom - this.insets.bottom }, animals: this.petPoints(), canForage: (k, src) => this.hooks.canForage?.(k, src) ?? true, hintOn: !handsBusy && this.acting === null && !this.wood.active && !this.tent.active && (act === null || isFollower(act.name)) });
     if (this.carImg) this.carImg.img.setY(this.carImg.y + (sway?.dy ?? 0)).setRotation(sway?.angle ?? 0);
     const carrying = this.hooks.backpack() > 0;
     this.fx?.tick(dt);
