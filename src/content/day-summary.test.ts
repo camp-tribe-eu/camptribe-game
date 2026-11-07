@@ -49,7 +49,7 @@ function unbacked(sum: DaySummary, sim: SimState): string[] {
       packed: () => sim.game.flags.includes(packFlag(id)) && (sum.day === 1 || day.some((e) => e.type === 'PackItem' || e.type === 'UnpackItem' || e.type === 'AutoPack')),
       events: () => had('RoadEvent', id),
       quests: () => had('CompleteQuest', id),
-      bought: () => had('BuyItem', id),
+      bought: () => had('BuyItem', id) || (had('Pickup', id) && day.some((e, i) => e.type === 'Checkout' && day.findIndex((x) => x.type === 'Pickup' && x.ref === id) < i)),   // GAME-271: каса — теж купівля
       got: () => had('Pickup', id) || day.some((e) => e.type === 'CompleteQuest' && GAME_DEFS.story?.quests[e.ref ?? '']?.reward?.items.some((i) => i.itemId === id)),
       sold: () => had('SellItem', id),
     }[sec.kind]();
@@ -96,8 +96,10 @@ describe('daySummary: кожна секція — лише при факті (GA
     expect(ids(sum, 'night')).toEqual([]);                   // день 1 уже не останній завершений: ночівля — секція дня 2
     expect(ids(daySummary(untilDay1End(), 1, GAME_DEFS), 'night')).toEqual(['f.night-tent']);   // на самій межі дня 1 — є
     expect(ids(sum, 'quests')).toEqual(['PROLOGUE-HOME-001', 'ST-001', 'ST-002', 'ST-003', 'CH1-HOME-001', 'ST-004', 'ST-005']);
-    expect(ids(sum, 'bought')).toEqual(['item.sleeping-bag-synthetic']);
-    expect(ids(sum, 'got')).toEqual(['item.tent', 'item.sleeping-bag', 'item.firewood']);
+    // GAME-271: намет і спальник оплачено на касі (Checkout) — це «куплено», а не «знайдено» (раніше тут стояло got: гравцю неправда:
+    // гроші списано, а підсумок каже «знайшов»). Знайдено лишаються лише речі без ціни (дрова).
+    expect(ids(sum, 'bought')).toEqual(['item.sleeping-bag-synthetic', 'item.tent', 'item.sleeping-bag']);
+    expect(ids(sum, 'got')).toEqual(['item.firewood']);
     expect(kinds(sum)).not.toContain('sold');                // нічого не продано — секції немає
     // Гроші дня 1: 150 € на старті − 89 € синтетичний спальник − каса (24,99 € намет + 9,99 € спальник, GAME-246) + 10 € за ST-005 (велозона тепер на дні 2).
     expect(sum?.money).toEqual({ start: START_MONEY, end: START_MONEY - 8_900 - 2_499 - 999 + 1_000 });

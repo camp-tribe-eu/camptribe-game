@@ -31,7 +31,10 @@ export const RAW_ITEMS: readonly RawItem[] = items as RawItem[];
  * GAME-246: ціни полиці стартового набору — «база по кишені»: намет + спальник + ліхтар (24,99 + 9,99 + 4,99 = 39,97 €) менші
  * за стартові 50 € кожного профілю (START_MONEY у bridge.ts; бот не стартує з меншим). Кращі речі — тир 2+ у «Що беремо?».
  */
-export const SHELF_CENTS: Readonly<Record<string, number>> = { 'item.tent': 2499, 'item.sleeping-bag': 999, 'item.lantern': 499 };
+export const LANTERN_SHELF_CENTS = 499;   // ліхтар — предмет сюжету без картки спорядження в items.json, тож єдине місце його ціни — тут
+/** GAME-271: ціни намету й спальника — НЕ копія, а priceCents із content/items.json (одне джерело правди); ліхтар — константа вище. */
+const cardCents = (id: string): number => (RAW_ITEMS.find((i) => i.id === id)?.priceCents as number);
+export const SHELF_CENTS: Readonly<Record<string, number>> = { 'item.tent': cardCents('item.tent'), 'item.sleeping-bag': cardCents('item.sleeping-bag'), 'item.lantern': LANTERN_SHELF_CENTS };
 
 export function compileGear(raw: readonly RawItem[], story: ReadonlySet<string>, soldAt: readonly string[] = [SHOP]): Record<string, ItemDef> {
   return Object.fromEntries(raw.filter((i) => i.kind !== undefined).map((i) => {

@@ -26,7 +26,7 @@ export interface Bridge {
   restart(): void;
 }
 
-const START_MONEY_CENTS = 5_000;
+export const START_MONEY_CENTS = 5_000;
 
 /**
  * `freshSeed` — звідки береться сід НОВОЇ гри (GAME-89 №2). Раніше кожна нова гра мала той самий сід 20261022, тож
