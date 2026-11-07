@@ -1,0 +1,52 @@
+// GAME-244 (S3, ч.1) · рюкзак: чиста модель екрана «що в мене є». Лише читає стан і журнал — нічого не змінює й не вигадує:
+// «звідки» береться з журналу (останній запис про річ), ціна продажу — та сама, яку дасть ядро (sellPriceOf), а кнопка «Продати»
+// з'являється, лише коли гравець стоїть біля приймальні (`atReception`) І ядро саме це продаж прийняло (`canSell` — сухий прогін
+// SellItem у ядрі). Ніяких своїх економічних правил: модель не знає, скільки що коштує і чи можна — вона питає ядро.
+import type { CoreDefs } from '../core/defs';
+import { gearOf, sellPriceOf } from '../core/gear';
+import type { JournalEntry } from '../core/sim';
+import type { GameState } from '../core/state';
+
+import type { BackpackGroup, BackpackOrigin, BackpackRow, OfferBackpack } from '../ui/story-types';
+export type { BackpackGroup, BackpackOrigin, BackpackRow, OfferBackpack };
+
+export const GROUP_ORDER: readonly BackpackGroup[] = ['gear', 'story', 'finds'];
+
+/** Звідки річ: останній запис журналу про неї. Покупка на касі: Pickup речі з ціною полиці + пізніший Checkout. */
+export function originOf(itemId: string, journal: readonly JournalEntry[], defs: Pick<CoreDefs, 'items' | 'story' | 'friendship'>, grants: readonly string[]): BackpackOrigin {
+  for (let i = journal.length - 1; i >= 0; i--) {
+    const e = journal[i] as JournalEntry;
+    if (e.type === 'BuyItem' && e.ref === itemId) return 'bought';
+    if (e.type === 'Pickup' && e.ref !== null) {
+      const d = Object.hasOwn(defs.items, e.ref) ? defs.items[e.ref] : undefined;
+      // «Узяти» безкоштовне дає ІНШУ річ (дарунок Анни, asItem): запис про Pickup — на річ-дарунок, а в руках — звичайна.
+      if (d?.asItem?.itemId === itemId) return 'gift';
+      if (e.ref === itemId) return d?.shelfCents !== undefined ? (journal.slice(i + 1).some((x) => x.type === 'Checkout') ? 'bought' : 'other') : 'found';
+    }
+    if (e.type === 'TakeItem' && e.ref === itemId) return 'home';
+    if (e.type === 'CompleteQuest' && e.ref !== null) {
+      const rw = Object.hasOwn(defs.story?.quests ?? {}, e.ref) ? defs.story?.quests[e.ref]?.reward : undefined;
+      if (rw && grants.includes(rw.grantId) && rw.items.some((x) => x.itemId === itemId)) return 'reward';
+    }
+  }
+  return defs.friendship?.forage.includes(itemId) ? 'found' : 'other';
+}
+
+export function backpackModel(
+  game: Pick<GameState, 'inventory' | 'gear' | 'grants'>, journal: readonly JournalEntry[], defs: Pick<CoreDefs, 'items' | 'story' | 'friendship'>,
+  atReception: boolean, canSell: (itemId: string) => boolean,
+): OfferBackpack {
+  const forage = new Set(defs.friendship?.forage ?? []);
+  const rows = Object.entries(game.inventory).filter(([, q]) => q > 0).sort(([a], [b]) => a.localeCompare(b)).map(([id, qty]): BackpackRow => {
+    const def = Object.hasOwn(defs.items, id) ? defs.items[id] : undefined;
+    const origin = originOf(id, journal, defs, game.grants);
+    const group: BackpackGroup = def?.gear ? 'gear' : forage.has(id) || origin === 'found' ? 'finds' : 'story';
+    const sellCents = def && def.sellCents !== undefined ? (sellPriceOf(def, game.gear, id) ?? null) : null;
+    return {
+      id, qty, group, origin, sellCents,
+      ...(def?.gear ? { gear: gearOf(game.gear, id) } : {}),
+      sellId: atReception && sellCents !== null && canSell(id) ? `bp|sell|${id}` : null,
+    };
+  });
+  return { groups: GROUP_ORDER.map((group) => ({ group, rows: rows.filter((r) => r.group === group) })).filter((g) => g.rows.length > 0), atReception, count: rows.reduce((n, r) => n + r.qty, 0) };
+}

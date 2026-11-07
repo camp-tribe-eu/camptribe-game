@@ -7,8 +7,10 @@ export interface BannerBlockers {
   readonly talk: boolean;
   readonly summary: boolean;
   readonly atlasOpen: boolean;
+  /** GAME-244: рюкзак. */
+  readonly backpackOpen: boolean;
   readonly episode: boolean;
   readonly intro: boolean;
 }
 
-export const bannersOpen = (b: BannerBlockers): boolean => !(b.paused || b.storyOpen || b.talk || b.summary || b.atlasOpen || b.episode || b.intro);
+export const bannersOpen = (b: BannerBlockers): boolean => !(b.paused || b.storyOpen || b.talk || b.summary || b.atlasOpen || b.backpackOpen || b.episode || b.intro);
