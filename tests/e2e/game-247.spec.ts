@@ -62,7 +62,8 @@ for (const v of VIEWS) {
       await expect(sticker(page)).toBeVisible({ timeout: 5_000 });
       const parts = await sticker(page).locator('.ui-reward-part').allInnerTexts();
       expect(parts.map((p) => p.trim()), 'точні суми ядра в наклейці').toEqual(['+5,50 €', '+15 XP', expect.stringMatching(/^\+3 \S+/)]);
-      const box = (await sticker(page).boundingBox())!;
+      const box = await sticker(page).boundingBox();
+      if (!box) throw new Error('наклейка без рамки');
       expect(box.x, 'наклейка не виходить за лівий край').toBeGreaterThanOrEqual(0);
       expect(box.x + box.width, 'і за правий').toBeLessThanOrEqual(v.w);
       expect(box.y + box.height, 'і за нижній').toBeLessThanOrEqual(v.h);
@@ -93,7 +94,8 @@ for (const v of VIEWS) {
       await shot(page, `merged-${v.side}`);
       await give(page, { cents: 100, xp: 0, om: 0, skills: {} });   // ще одна, поки жива — теж злилась
       await expect(sticker(page).locator('.ui-reward-part').first()).toHaveText('+6 €');
-      const seen = await page.evaluate(() => window.__g247!);
+      const seen = await page.evaluate(() => window.__g247);
+      if (!seen) throw new Error('спостерігач кадрів не стартував');
       expect(seen.max, 'за весь час ніколи більше однієї наклейки').toBeLessThanOrEqual(1);
       expect(seen.overlap, 'кадрів, де наклейка перекривала рамку чи банер').toBe(0);
       expect(errors).toEqual([]);
