@@ -6,8 +6,10 @@ import { core, probe, route, routeXY, walk } from './chapter-driver';
 import { stateHash } from '../../src/core/hash';
 import { seedDay1 } from './day1-fixture';
 import { giveGift, reactionOf } from '../../src/core/friendship';
-import { FRIEND_DEFS } from '../../src/content/friendship';
+import { readFileSync } from 'node:fs';
 
+/** Вподобання з content/npcs.json (JSON з src/content у Node-ESM Playwright не імпортується — читаємо файл, як game-230). */
+const PREFS: Record<string, { likes: string[]; dislikes: string[] }> = Object.fromEntries((JSON.parse(readFileSync(new URL('../../content/npcs.json', import.meta.url), 'utf8')) as { id: string; gifts?: { likes: string[]; dislikes: string[] } }[]).filter((n) => n.gifts).map((n) => [n.id, n.gifts as { likes: string[]; dislikes: string[] }]));
 const CONE = 'item.pine-cone';
 const BERRY = 'item.berries';
 const WITH_FINDS = (save: string): string => {
@@ -34,31 +36,11 @@ for (const size of SIZES) {
     const openBag = async (): Promise<void> => { await page.locator('[data-ui="backpack-open"]').click(); await expect(panel).toBeVisible(); };
     const closeBag = async (): Promise<void> => { await page.keyboard.press('Escape'); await expect(panel).toHaveCount(0); };
 
-    // 1. Далеко від сусідів (на старті): ціна знахідок видна, «Подарувати» немає, «Продати» немає.
-    expect(((await probe(page)).nearObject ?? '').startsWith('npc.'), 'на старті герой не біля сусіда').toBe(false);
-    await openBag();
-    await expect(panel.locator(`[data-ui="backpack-item"][data-id="${BERRY}"] [data-ui="backpack-price"]`)).toHaveAttribute('data-cents', '50');
-    await expect(panel.locator(`[data-ui="backpack-item"][data-id="${CONE}"] [data-ui="backpack-price"]`)).toHaveAttribute('data-cents', '20');
-    await expect(panel.locator('[data-ui="backpack-gift"]'), 'далеко від сусіда — кнопки «Подарувати» немає').toHaveCount(0);
-    await expect(panel.locator('[data-ui="backpack-gift-to"]')).toHaveCount(0);
-    await closeBag();
-
-    // 2. Рецепція: продаж ягоди → гроші +50, на одну менше; «Подарувати» й тут немає.
-    const at = await probe(page);
-    await walk(page, route('camp-lake', [at.playerX, at.playerY], 'obj.sell'));
-    await expect.poll(async () => (await probe(page)).nearObject, { timeout: 8_000 }).toBe('obj.sell');
-    await openBag();
-    const m0 = (await game(page)).moneyCents;
-    await expect(panel.locator('[data-ui="backpack-gift"]')).toHaveCount(0);
-    await panel.locator(`[data-ui="backpack-sell"][data-id="${BERRY}"]`).click();
-    await expect.poll(async () => (await game(page)).moneyCents, { message: 'гроші +ціна ягоди' }).toBe(m0 + 50);
-    expect((await game(page)).inventory[BERRY]).toBe(1);
-    await closeBag();
-
-    // 3. Підійти до сусіда, що приймає дари: «Подарувати» → ядро міняє дружбу так, як каже giveGift, річ іде з рюкзака.
-    const receivers = Object.keys(FRIEND_DEFS.prefs);
+    // 1. Біля сусіда (у фікстурі дня 1 герой стоїть біля нього; інакше підходимо), що приймає дари: «Подарувати» → ядро міняє дружбу так, як каже giveGift, річ іде з рюкзака.
+    const receivers = Object.keys(PREFS);
     const here = await probe(page) as unknown as { residents: { id: string; x: number; y: number }[] };
-    const npc = here.residents.map((r) => r.id).find((id) => receivers.includes(id));
+    const startNear = (await probe(page)).nearObject ?? '';
+    const npc = receivers.includes(startNear) ? startNear : here.residents.map((r) => r.id).find((id) => receivers.includes(id));
     expect(npc, 'у таборі є сусід, що приймає дари').toBeTruthy();
     const id = npc as string;
     for (let attempt = 0; attempt < 6 && (await probe(page)).nearObject !== id; attempt++) {
@@ -69,7 +51,7 @@ for (const size of SIZES) {
     await expect.poll(async () => (await probe(page)).nearObject, { timeout: 8_000, message: `біля ${id}` }).toBe(id);
     await openBag();
     await expect(panel).toHaveAttribute('data-gift-to', id);
-    const prefs = FRIEND_DEFS.prefs[id];
+    const prefs = PREFS[id];
     const item = [CONE, BERRY].sort((a, b) => Number(reactionOf(prefs, b) === 'liked') - Number(reactionOf(prefs, a) === 'liked'))[0] as string;
     const before = await game(page);
     await page.locator(`[data-ui="backpack-gift"][data-id="${item}"]`).click();
@@ -81,6 +63,25 @@ for (const size of SIZES) {
     expect(after.moneyCents, 'подарунок грошей не дає').toBe(before.moneyCents);
     // вдруге того ж дня тому ж сусіду — кнопок немає (ядро відмовляє).
     await expect(panel.locator('[data-ui="backpack-gift"]'), 'раз на день: кнопок немає').toHaveCount(0);
+    await closeBag();
+
+    // 2. Рецепція — далеко від сусіда: ціна знахідок видна, «Подарувати» немає; продаж ягоди → гроші +50, на одну менше.
+    const at = await probe(page);
+    await walk(page, route('camp-lake', [at.playerX, at.playerY], 'obj.sell'));
+    await expect.poll(async () => (await probe(page)).nearObject, { timeout: 8_000 }).toBe('obj.sell');
+    await openBag();
+    await expect(panel).toHaveAttribute('data-gift-to', '');
+    await expect(panel.locator(`[data-ui="backpack-item"][data-id="${BERRY}"] [data-ui="backpack-price"]`)).toHaveAttribute('data-cents', '50');
+    await expect(panel.locator(`[data-ui="backpack-item"][data-id="${CONE}"] [data-ui="backpack-price"]`)).toHaveAttribute('data-cents', '20');
+    await expect(panel.locator('[data-ui="backpack-gift-to"]')).toHaveCount(0);
+    const m0 = (await game(page)).moneyCents;
+    const berries0 = (await game(page)).inventory[BERRY] ?? 0;
+    await expect(panel.locator('[data-ui="backpack-gift"]')).toHaveCount(0);
+    await panel.locator(`[data-ui="backpack-sell"][data-id="${BERRY}"]`).click();
+    await expect.poll(async () => (await game(page)).moneyCents, { message: 'гроші +ціна ягоди' }).toBe(m0 + 50);
+    expect((await game(page)).inventory[BERRY] ?? 0, 'на одну ягоду менше').toBe(berries0 - 1);
+    await closeBag();
+
     expect(errors).toEqual([]);
     await ctx.close();
   });
