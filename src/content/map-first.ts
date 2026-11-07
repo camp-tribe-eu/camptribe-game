@@ -515,7 +515,9 @@ export function nextTarget(sim: SimState, defs: CoreDefs, carried: readonly stri
       const inBasket = (id: string): boolean => basketOf(g.flags, defs).includes(id);
       if (!g.inventory['item.tent'] && !inBasket('item.tent')) return { key: 'next.take-tent', spot: 'take.item.tent' };
       if (!g.inventory['item.sleeping-bag'] && !inBasket('item.sleeping-bag')) return { key: 'next.take-bag', spot: 'take.item.sleeping-bag' };
-      if (basketOf(g.flags, defs).length > 0) return { key: 'next.pay', spot: 'obj.buy' };
+      // GAME-271: каса мертва (крамниця зачинена за годинником чи нічим платити) — «розрахуйся» хибне: ядро каси не прийме. Реальний
+      // наступний крок — піти (речі лишаються на полиці, як у меню) — до авто.
+      if (basketOf(g.flags, defs).length > 0) return accepted(g, defs, { type: 'Checkout' }, sim.clock.minutes) !== null ? { key: 'next.pay', spot: 'obj.buy' } : { key: 'next.back-home', spot: 'obj.vehicle' };
       return { key: 'next.pay', spot: 'step.ST-003' };
     }
     return { key: 'next.back-home', spot: 'obj.vehicle' };

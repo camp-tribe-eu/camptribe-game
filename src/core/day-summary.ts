@@ -99,13 +99,23 @@ export function daySummary(sim: Pick<SimState, 'game' | 'journal'>, day: number,
     const rw = defs.story?.quests[q]?.reward;
     return rw && sim.game.grants.includes(rw.grantId) ? rw.items.map((i) => i.itemId) : [];
   });
+  // Кошик по журналу: Pickup речі з ціною полиці кладе її в кошик, Checkout платить за все в ньому, Visit звідси (кошик неоплачений —
+  // крамниця зачинена чи нічим платити) повертає речі на полицю. Лише сплачене — куплене (ядро: ті самі правила, commands.ts).
+  const paidAtTill: string[] = [];
+  let basket: string[] = [];
+  for (const e of entries) {
+    if (e.type === 'Pickup' && e.ref !== null && defs.items[e.ref]?.shelfCents !== undefined) basket.push(e.ref);
+    else if (e.type === 'Checkout') { paidAtTill.push(...basket); basket = []; }
+    else if (e.type === 'Visit') basket = [];
+  }
   const sections: Record<SummaryKind, string[]> = {
     night,
     packed,
     events: refs('RoadEvent'),
     quests,
-    bought: refs('BuyItem'),
-    got: uniq([...refs('Pickup'), ...rewards]),
+    // GAME-271: куплене на касі — «куплено», а не «знайдено»: Pickup речі з ціною полиці лише кладе її в кошик, власністю робить Checkout.
+    bought: uniq([...refs('BuyItem'), ...paidAtTill]),
+    got: uniq([...refs('Pickup').filter((i) => !paidAtTill.includes(i)), ...rewards]),
     sold: refs('SellItem'),
   };
 
