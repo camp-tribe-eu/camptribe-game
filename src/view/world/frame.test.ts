@@ -1,7 +1,7 @@
 // GAME-84 №13 · кадр гри під форму поля: на телефоні сторч — не смужка 3:2 посеред чорного екрана.
 // GAME-96 (смак власника 25.10) · широке поле: мапа на всю ширину, без смуг з боків, цілий масштаб.
 import { describe, expect, it } from 'vitest';
-import { frameSize, HERO_BODY_PX, MAP_HEIGHT, MAP_WIDTH } from './frame';
+import { frameSize, HERO_BODY_PX, MAP_HEIGHT, MAP_WIDTH, PHONE_LANDSCAPE_MAX_H } from './frame';
 
 describe('frameSize (GAME-84 №13, GAME-96)', () => {
   it('широке поле (GAME-254): цілий zoom, полотно покриває поле, зріст героя ≈ 1/9 висоти (0,07–0,16), більше світу, ніж за старим правилом', () => {
@@ -13,14 +13,15 @@ describe('frameSize (GAME-84 №13, GAME-96)', () => {
       expect(f.height * f.zoom, `${w}×${h}: покриває висоту`).toBeGreaterThanOrEqual(h);
       expect(f.width * f.zoom - w, `${w}×${h}: зайве по ширині < zoom`).toBeLessThan(f.zoom);
       expect(f.height * f.zoom - h, `${w}×${h}: зайве по висоті < zoom`).toBeLessThan(f.zoom);
+      const old = Math.max(1, Math.ceil(w / MAP_WIDTH), Math.ceil(h / MAP_HEIGHT));
+      if (h <= PHONE_LANDSCAPE_MAX_H) { expect(f.zoom, `${w}×${h}: телефон вбік — масштаб як був (OD-030)`).toBe(old); continue; }
       const frac = (HERO_BODY_PX * f.zoom) / h;
       expect(frac, `${w}×${h}: зріст героя ${(frac * 100).toFixed(1)} % висоти`).toBeGreaterThanOrEqual(0.07);
       expect(frac, `${w}×${h}: зріст героя ${(frac * 100).toFixed(1)} % висоти`).toBeLessThanOrEqual(0.16);
-      const old = Math.max(1, Math.ceil(w / MAP_WIDTH), Math.ceil(h / MAP_HEIGHT));
       expect(f.zoom, `${w}×${h}: не більший масштаб, ніж було (${old})`).toBeLessThanOrEqual(old);
     }
-    expect(frameSize(844, 390)).toEqual({ width: 844, height: 390, zoom: 1 });    // було zoom 2: 422×195
-    expect(frameSize(932, 430)).toEqual({ width: 932, height: 430, zoom: 1 });    // було zoom 2
+    expect(frameSize(844, 390)).toEqual({ width: 422, height: 195, zoom: 2 });    // OD-030: телефон вбік — як було
+    expect(frameSize(932, 430)).toEqual({ width: 466, height: 215, zoom: 2 });    // OD-030: телефон вбік — як було
     expect(frameSize(1920, 1080)).toEqual({ width: 960, height: 540, zoom: 2 });  // було zoom 3
     expect(frameSize(1280, 720)).toEqual({ width: 640, height: 360, zoom: 2 });
     expect(frameSize(1280, 800)).toEqual({ width: 640, height: 400, zoom: 2 });   // було zoom 3: 427×267

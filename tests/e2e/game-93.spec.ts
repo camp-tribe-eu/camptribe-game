@@ -127,15 +127,15 @@ test.describe('LPC на сцені (десктоп 1280×800)', () => {
     expect(back.coveredTiles, 'позаду намету дах закриває кадр персонажа').toBeGreaterThan(0);
   });
 
-  test('мапа 32 px: камера їде за персонажем у межах мапи (GAME-172: 1280×768 із файлу; було 640×384) (GAME-96: кадр 427×267 на 1280×800 — по обох осях, порожнечі немає)', async ({ page }) => {
+  test('мапа 32 px: камера їде за персонажем у межах мапи (GAME-172: 1280×768 із файлу; було 640×384) (OD-030: кадр 640×400 на 1280×800, раніше 427×267 — по обох осях, порожнечі немає)', async ({ page }) => {
     await open(page);
-    // GAME-97: за умовою, а не за часом; далі ще тиснемо, щоб камера дійшла до краю і межа ≤ 384 − 267 щось доводила.
+    // GAME-97: за умовою, а не за часом; далі ще тиснемо, щоб камера дійшла до краю і межа ≤ 384 − 400 щось доводила.
     await hold(page, 'ArrowDown', (q) => q.cameraScrollY > 0, 10_000);
-    const p = (await hold(page, 'ArrowDown', (q) => q.cameraScrollY >= MAP_H - 267, 10_000)).end;
+    const p = (await hold(page, 'ArrowDown', (q) => q.cameraScrollY >= MAP_H - 400, 10_000)).end;
     expect(p.cameraScrollY).toBeGreaterThan(0);
-    expect(p.cameraScrollY).toBeLessThanOrEqual(MAP_H - 267);
-    const r = (await hold(page, 'ArrowRight', (q) => q.cameraScrollX >= MAP_W - 427, 10_000)).end;
+    expect(p.cameraScrollY).toBeLessThanOrEqual(MAP_H - 400);
+    const r = (await hold(page, 'ArrowRight', (q) => q.cameraScrollX >= MAP_W - 640, 10_000)).end;
     expect(r.cameraScrollX).toBeGreaterThanOrEqual(0);
-    expect(r.cameraScrollX).toBeLessThanOrEqual(MAP_W - 427);
+    expect(r.cameraScrollX).toBeLessThanOrEqual(MAP_W - 640);
   });
 });

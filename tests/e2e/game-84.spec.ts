@@ -249,10 +249,10 @@ test.describe('№13 телефон: поле гри заповнює екран
     await page.waitForFunction(() => { const c = document.querySelector('#stage canvas') as HTMLCanvasElement | null; return !!c && c.width / c.height < 1; }, null, { timeout: 5_000 });
   });
 
-  test('на десктопі 1280×800 кадр — 427×267 ×3 (GAME-96: ⌈поле / zoom⌉, zoom найменший цілий, за якого кадр не більший за мапу 640×384; було 640×352 ×2 із чорним низом)', async ({ browser }) => {
+  test('на десктопі 1280×800 кадр — 640×400 ×2 (OD-030/GAME-254: ПК дрібніше; раніше GAME-96 427×267 ×3: ⌈поле / zoom⌉, zoom найменший цілий, за якого кадр не більший за мапу 640×384; було 640×352 ×2 із чорним низом)', async ({ browser }) => {
     const page = await newPage(browser, { width: 1280, height: 800 }, 100, false);
     await load(page);
     const size = await page.locator('#stage canvas').evaluate((c) => [(c as HTMLCanvasElement).width, (c as HTMLCanvasElement).height]);
-    expect(size).toEqual([427, 267]);
+    expect(size).toEqual([640, 400]);   // OD-030 (07.11): ПК — зріст героя ≈ 1/9 поля, ×2
   });
 });

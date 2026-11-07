@@ -352,8 +352,8 @@ test.describe('десктоп без дотику', () => {
     await expect(page.locator('[data-touch="stick"]')).toBeHidden();
     await expect(page.locator('[data-touch="interact"]')).toBeHidden();
     await expect(page.locator('[data-touch="story"]')).toBeVisible();
-    // GAME-96: кадр 427×267 ×3 на 1280×800 — полотно покриває екран по ширині (було 640×352 ×2 зі смугами/чорним низом).
-    expect(await page.evaluate(() => { const c = document.querySelector('#stage canvas') as HTMLCanvasElement; return [c.width, c.height, c.getBoundingClientRect().width >= 1280]; })).toEqual([427, 267, true]);
+    // OD-030 (07.11, GAME-254): кадр 640×400 ×2 на 1280×800 (раніше GAME-96: 427×267 ×3) — полотно покриває екран по ширині (було 640×352 ×2 зі смугами/чорним низом).
+    expect(await page.evaluate(() => { const c = document.querySelector('#stage canvas') as HTMLCanvasElement; return [c.width, c.height, c.getBoundingClientRect().width >= 1280]; })).toEqual([640, 400, true]);
     const a = await probe(page);
     await page.keyboard.down('ArrowDown');
     await expect.poll(async () => (await probe(page)).playerY - a.playerY, { timeout: 5000 }).toBeGreaterThan(20);

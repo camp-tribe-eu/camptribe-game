@@ -10,6 +10,8 @@ export const MAP_HEIGHT = 384;
 export const HERO_BODY_PX = 49;
 /** GAME-254: зріст героя на екрані ≈ 1/HERO_FRACTION висоти поля (смак власника 05.11: «здоровенні пікселі»). Цілий масштаб — найближчий до цього. */
 export const HERO_FRACTION = 9;
+/** OD-030: поле вбік не вище за це — телефон; на ньому масштаб як до GAME-254 (крупніше). */
+export const PHONE_LANDSCAPE_MAX_H = 520;
 
 /**
  * Широке поле (телефон вбік, десктоп; GAME-96, смак власника 25.10): мапа на ВСЮ ширину екрана, без чорних смуг з боків. Масштаб k —
@@ -26,7 +28,9 @@ export function frameSize(w: number, h: number): Frame {
   if (aspect >= 1.2) {
     // GAME-254: цілий k, за якого зріст героя найближчий до 1/9 висоти поля (було ⌈w/640⌉, ⌈h/384⌉: 1280×800 → 3, 932×430 → 2). Кадр не обмежений
     // мапою табору: камера клампить, а мала мапа (крамниця) отримує смуги кольору землі (scene: setBackgroundColor).
-    const k = Math.max(1, Math.round(h / (HERO_FRACTION * HERO_BODY_PX)));
+    // OD-030 (власник 07.11, «як у Долині»): телефон вбік (поле ≤ PHONE_LANDSCAPE_MAX_H заввишки) лишає попередній крупніший масштаб — на малому екрані
+    // герой і цілі мусять бути великі; дрібніше — лише ПК (і далі — повзунок «Масштаб» у налаштуваннях, окрема картка).
+    const k = h <= PHONE_LANDSCAPE_MAX_H ? Math.max(1, Math.ceil(w / MAP_WIDTH), Math.ceil(h / MAP_HEIGHT)) : Math.max(1, Math.round(h / (HERO_FRACTION * HERO_BODY_PX)));
     return { width: Math.ceil(w / k), height: Math.ceil(h / k), zoom: k };
   }
   const k = Math.max(1, Math.round(h / MAP_HEIGHT));
