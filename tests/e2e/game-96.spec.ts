@@ -260,9 +260,11 @@ for (const c of FULL) {
     const k = cv.width / buf.w;
     expect(Math.abs(k - Math.round(k)), `масштаб ${k} цілий`).toBeLessThan(0.001);
     expect(buf.ir, 'image-rendering: pixelated').toBe('pixelated');
-    // Порожнечі немає: кадр не більший за мапу 640×384, і камера з межами мапи не може показати поза нею.
-    expect(buf.w, 'кадр не ширший за мапу').toBeLessThanOrEqual(640);
-    expect(buf.h, 'кадр не вищий за мапу').toBeLessThanOrEqual(384);
+    // Порожнечі немає (GAME-254: кадр може бути більшим за малу мапу — тоді за нею смуги кольору землі, їх ловить перевірка країв нижче):
+    // камера не виходить за межі мапи, а коли кадр менший за мапу — вікно камери цілком усередині неї.
+    const pv = (await page.evaluate(() => (window as unknown as { __game: { probe: { view: { x: number; y: number; w: number; h: number; mapW: number; mapH: number } } } }).__game.probe.view));
+    if (pv.w <= pv.mapW) { expect(pv.x, 'камера не лівіше мапи').toBeGreaterThanOrEqual(-0.5); expect(pv.x + pv.w, 'і не правіше').toBeLessThanOrEqual(pv.mapW + 0.5); }
+    if (pv.h <= pv.mapH) { expect(pv.y, 'камера не вище мапи').toBeGreaterThanOrEqual(-0.5); expect(pv.y + pv.h, 'і не нижче').toBeLessThanOrEqual(pv.mapH + 0.5); }
     // Краї екрана (чверть, середина і три чверті висоти) — пікселі мапи, не тло смуг: УСІ шість відрізків (рецензія PR #77: «≥ 2 з 3»
     // пропускало б смугу в дві третини висоти). Кожен край береться ВІДРІЗКОМ у EDGE_ROWS ігрових рядків, а не однією точкою (GAME-240):
     // мапа має власні чорні контури (стовпчик-вказівник tile 1145 має чорний контур у стовпці 17 → світовий x = 465, останній стовпець кадру
