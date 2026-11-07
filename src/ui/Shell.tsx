@@ -375,7 +375,7 @@ export function Shell({ port, langOverride, credits, build, holdToast = false, h
           {/* GAME-89 №6: кампанія завершена — мапа лишається живою (можна ходити), але про кінець видно й поза ☰. */}
           {offer.stage === 'ended' && <span class="ui-hint" data-ui="ended-hint" role="status">{t('ui.endedHint')}</span>}
         </div>
-        <button type="button" class="ui-bag-btn" data-touch="backpack" data-ui="backpack-open" aria-label={t('backpack.open')} onClick={() => openBackpack(false)}><svg viewBox="0 0 16 16" width="22" height="22" aria-hidden="true" focusable="false"><path d="M5 4a3 3 0 0 1 6 0v1h1.5A1.5 1.5 0 0 1 14 6.5v7a1.5 1.5 0 0 1-1.5 1.5h-9A1.5 1.5 0 0 1 2 13.5v-7A1.5 1.5 0 0 1 3.5 5H5zm1.5 0v1h3V4a1.5 1.5 0 0 0-3 0zM4 9v1.5h8V9z" fill="currentColor" /></svg></button>
+        <button type="button" class="ui-bag-btn" data-touch="backpack" data-ui="backpack-open" aria-label={t('backpack.open')} onClick={() => openBackpack(false)}><ObjectiveIcon spot="obj.trunk" /></button>
         <button type="button" class="ui-pause-btn" data-touch="pause" aria-label={t('ui.pause')} onClick={() => toggle(true)}>{'‖'}</button>
         {/* GAME-170 зріз 2: картка поточної мети — жива хвиля напруги: «назва · зроблено/усього» і хвилини ІГРОВОГО часу на кожну справу
             (з годинника ядра: пауза й панелі його зупиняють — і числа стоять). Окремий ряд сітки під ☰ · HUD · ‖, тож кнопок не торкається. */}

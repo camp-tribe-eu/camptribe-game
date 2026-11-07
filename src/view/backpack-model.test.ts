@@ -22,8 +22,8 @@ const game = (inv: Record<string, number>, grants: string[] = []) => ({ inventor
 
 describe('originOf (GAME-244)', () => {
   it('BuyItem → bought', () => expect(originOf('item.tent', [j('BuyItem', 'item.tent')], defs, [])).toBe('bought'));
-  it('Pickup з полиці без каси не «куплено», з Checkout після — куплено', () => {
-    expect(originOf('item.shelf', [j('Pickup', 'item.shelf')], defs, [])).toBe('other');
+  it('Pickup речі з ціною полиці, що лежить в інвентарі, — куплено (власність лише після каси); з Checkout чи без нього', () => {
+    expect(originOf('item.shelf', [j('Pickup', 'item.shelf')], defs, [])).toBe('bought');
     expect(originOf('item.shelf', [j('Pickup', 'item.shelf'), j('Checkout', null)], defs, [])).toBe('bought');
   });
   it('Pickup речі без ціни полиці → found; дарунок Анни (asItem) → gift', () => {

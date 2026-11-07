@@ -45,14 +45,14 @@ export async function checkOrWriteDay1(page: Page): Promise<void> {
 }
 
 /** Частина B: покласти фікстуру в основний слот сховища й завантажити гру з неї (як після F5). */
-export async function seedDay1(page: Page, query = ''): Promise<void> {
+export async function seedDay1(page: Page, query = '', edit?: (save: string) => string): Promise<void> {
   await page.goto(`/${query}`);
   await waitGameReady(page);
   await page.evaluate((json) => new Promise<void>((resolve, reject) => {
     const req = indexedDB.open('camplife', 1);
     req.onerror = () => reject(req.error);
     req.onsuccess = () => { const tx = req.result.transaction('saves', 'readwrite'); tx.objectStore('saves').put(json, 'main'); tx.oncomplete = () => { req.result.close(); resolve(); }; tx.onerror = () => reject(tx.error); };
-  }), fixture().save);
+  }), edit ? edit(fixture().save) : fixture().save);
   await page.goto(`/${query}`);
   await waitGameReady(page);
 }

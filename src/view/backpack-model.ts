@@ -12,7 +12,7 @@ export type { BackpackGroup, BackpackOrigin, BackpackRow, OfferBackpack };
 
 export const GROUP_ORDER: readonly BackpackGroup[] = ['gear', 'story', 'finds'];
 
-/** Звідки річ: останній запис журналу про неї. Покупка на касі: Pickup речі з ціною полиці + пізніший Checkout. */
+/** Звідки річ: останній запис журналу про неї. Річ з ціною полиці (shelfCents) лежить у руках лише після каси (ядро: власність — після Checkout; сам Checkout у журналі ланцюга ходів не завжди є), тож Pickup такої речі в інвентарі = куплено. */
 export function originOf(itemId: string, journal: readonly JournalEntry[], defs: Pick<CoreDefs, 'items' | 'story' | 'friendship'>, grants: readonly string[]): BackpackOrigin {
   for (let i = journal.length - 1; i >= 0; i--) {
     const e = journal[i] as JournalEntry;
@@ -21,7 +21,7 @@ export function originOf(itemId: string, journal: readonly JournalEntry[], defs:
       const d = Object.hasOwn(defs.items, e.ref) ? defs.items[e.ref] : undefined;
       // «Узяти» безкоштовне дає ІНШУ річ (дарунок Анни, asItem): запис про Pickup — на річ-дарунок, а в руках — звичайна.
       if (d?.asItem?.itemId === itemId) return 'gift';
-      if (e.ref === itemId) return d?.shelfCents !== undefined ? (journal.slice(i + 1).some((x) => x.type === 'Checkout') ? 'bought' : 'other') : 'found';
+      if (e.ref === itemId) return d?.shelfCents !== undefined ? 'bought' : 'found';
     }
     if (e.type === 'TakeItem' && e.ref === itemId) return 'home';
     if (e.type === 'CompleteQuest' && e.ref !== null) {

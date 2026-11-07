@@ -3,6 +3,7 @@
 import { useEffect, useRef } from 'preact/hooks';
 import { ct } from '../i18n/content';
 import type { AnyLang, Key } from '../i18n';
+import { itemSpot } from '../content/objective-icons';
 import { trapTab } from './focus-trap';
 import { ObjectiveIcon } from './ObjectiveIcon';
 import { money } from './StoryPanel';
@@ -25,7 +26,7 @@ export function BackpackPanel({ backpack, lang, t, sell, close }: { backpack: Of
           <ul class="ui-bp-list">
             {g.rows.map((r) => (
               <li key={r.id} class="ui-bp-row" data-ui="backpack-item" data-id={r.id} data-origin={r.origin} data-sellable={r.sellCents !== null ? 'yes' : 'no'}>
-                <ObjectiveIcon spot={`pack.${r.id}`} />
+                <ObjectiveIcon spot={itemSpot(r.id)} />
                 <span class="ui-bp-name">
                   <b data-ui="backpack-name">{`${ct(lang, r.id)}${r.qty > 1 ? ` ×${r.qty}` : ''}`}</b>
                   <small data-ui="backpack-origin">{t(`backpack.origin.${r.origin}` as Key)}{r.gear ? ` · ${t('ui.condition')} ${r.gear.condition} %${r.gear.wet ? `, ${t('ui.wet')}` : ''}` : ''}</small>
