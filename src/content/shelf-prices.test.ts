@@ -48,3 +48,18 @@ describe('GAME-271 · стрілка «Сплатити» і мертва кас
     expect(nextTarget(shopWithBasket(NOON, 1_000), DEFS)).toEqual({ key: 'next.back-home', spot: 'obj.vehicle' });
   });
 });
+
+describe('GAME-272 · крамниця зачинена — стрілка не веде до полиці', () => {
+  const empty = (minutes: number): SimState => { const s = shopWithBasket(minutes, 5_000); return { ...s, game: { ...s.game, flags: s.game.flags.filter((f) => !f.includes('basket')) } } as SimState; };
+  it('20:30 у крамниці без речей — авто + підказка «відкриється о 08:00», не полиця', () => {
+    const n = nextTarget(empty(20 * 60 + 30 - GAME_START_MINUTE), DEFS);
+    expect(n).toEqual({ key: 'next.shop-closed', spot: 'obj.vehicle' });
+  });
+  it('10:00 — полиця, як раніше', () => {
+    expect(nextTarget(empty(10 * 60 - GAME_START_MINUTE), DEFS)).toEqual({ key: 'next.take-tent', spot: 'take.item.tent' });
+  });
+  it('ключ є в uk і en', async () => {
+    const uk = (await import('../i18n/uk.json')).default as Record<string, string>, en = (await import('../i18n/en.json')).default as Record<string, string>;
+    expect(uk['next.shop-closed']).toBeTruthy(); expect(en['next.shop-closed']).toBeTruthy();
+  });
+});
