@@ -262,10 +262,18 @@ function compute(sim: SimState, defs: CoreDefs, name: string): Resolved | null {
     return t !== undefined && t.outcome === 'open' && sim.clock.minutes <= t.dueAt && dispatch(g, asCommand(g, m), defs, undefined, undefined, undefined, sim.clock.minutes).ok ? { moves: [m] } : null;
   }
   if (name === 'obj.buy') {
+    // GAME-246 (рішення власника): з кошиком каса — пряма дія наближення, а не рамка: оплата, і якщо після неї список покупок (ST-003:
+    // намет і спальник у руках) закрито — крок завершується тут же. Каса — єдине місце, де закінчуються покупки; без цього до першого
+    // звання було 16 дій замість 15 (game-181). Зачинено (за годинником) чи платити нічим — каса мертва: вийти можна авто (речі на полицю).
+    if (basketOf(g.flags, defs).length > 0) {
+      const pay: Move = { type: 'Checkout' };
+      if (!accepted(g, defs, pay, sim.clock.minutes)) return null;
+      const done: Move = { type: 'CompleteQuest', questId: 'ST-003' };
+      return { moves: chain(g, defs, [pay, done], sim.clock.minutes) ? [pay, done] : [pay] };
+    }
     // GAME-185: прилавок ЗАВЖДИ питає «Що беремо?» (навіть з одним варіантом) і живий, поки є що купити хоч би й на недостатні гроші: недоступні рядки з причиною додає storyOffer.
-    // GAME-246: у кошику є речі — перший рядок «Сплатити» (каса); лише він і береться з кошика, решта купівель — як було.
-    const list = acceptedOf(g, defs, [{ type: 'Checkout' }, ...Object.keys(defs.items).flatMap((itemId): Move[] => [{ type: 'BuyItem', itemId }, { type: 'SellItem', itemId }])]);
-    const short = basketOf(g.flags, defs).length > 0 || Object.keys(defs.items).some((itemId) => { const r = dispatch(g, asCommand(g, { type: 'BuyItem', itemId }), defs); return !r.ok && r.code === 'INSUFFICIENT_FUNDS'; });
+    const list = acceptedOf(g, defs, Object.keys(defs.items).flatMap((itemId): Move[] => [{ type: 'BuyItem', itemId }, { type: 'SellItem', itemId }]));
+    const short = Object.keys(defs.items).some((itemId) => { const r = dispatch(g, asCommand(g, { type: 'BuyItem', itemId }), defs); return !r.ok && r.code === 'INSUFFICIENT_FUNDS'; });
     return list.length === 0 && !short ? null : { moves: [], options: list };
   }
   if (name === 'obj.drying') return choice(acceptedOf(g, defs, Object.entries(g.gear).filter(([, x]) => x.wet).map(([itemId]): Move => ({ type: 'DryGear', itemId }))));
@@ -326,7 +334,7 @@ export function resolveSpot(sim: SimState, defs: CoreDefs, name: string): Resolv
   let byName = memo.get(g);
   if (!byName) { byName = new Map(); memo.set(g, byName); }
   // Справи хвилі, намет (сон/відпочинок) і авто з кошиком (каса за годинами крамниці, GAME-246) залежать від годинника, якого немає в GameState — без кешу.
-  const timed = name.startsWith('task.') || name === TENT_SPOT || (name === 'obj.vehicle' && hasBasket(g.flags));
+  const timed = name.startsWith('task.') || name === TENT_SPOT || ((name === 'obj.vehicle' || name === 'obj.buy') && hasBasket(g.flags));
   if (!timed && byName.has(name)) return byName.get(name) ?? null;
   const r = compute(sim, defs, name);
   byName.set(name, r);

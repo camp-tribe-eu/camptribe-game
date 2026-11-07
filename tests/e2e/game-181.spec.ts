@@ -111,14 +111,6 @@ async function goAndDo(page: Page): Promise<string> {
     await go.first().click();
     await expect.poll(() => signature(page), { timeout: 5_000, message: 'відповідь «їдемо» не повезла авто' }).not.toBe(framed);
   }
-  // GAME-246: з кошиком стрілка веде до каси; наближення відкриває рамку «Сплатити» — гравець відповідає, гроші й речі змінюються.
-  const pay = page.locator('.ui-talk [data-ui="dialogue"] [data-act="checkout"]');
-  if (target === 'obj.buy' && await pay.count()) {
-    const framed = await signature(page);
-    await page.waitForTimeout(450);
-    await pay.first().click();
-    await expect.poll(() => signature(page), { timeout: 5_000, message: 'відповідь «Сплатити» не зняла гроші за кошик' }).not.toBe(framed);
-  }
   await page.waitForTimeout(150);
   return target;
 }

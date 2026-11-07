@@ -36,9 +36,9 @@ function progressSpots(sim: SimState): { name: string; moves: readonly Move[] }[
   return (MAP_SPOTS[map] as readonly string[]).filter((n) => !n.startsWith('pack.') && !n.startsWith('task.') && !['obj.trunk', 'obj.drying', 'obj.sell', 'step.ST-004', 'step.CH1-D3-HOME-001'].includes(n) && !n.startsWith('npc.'))
     .flatMap((name) => {
       const r = resolveSpot(sim, DEFS, name);
-      // GAME-246: каса — вибір (options), але в ньому єдина відповідь «Сплатити»: гравець руками її й натисне; решту прилавка (купівлі) тест не рухає.
-      const pay = name === 'obj.buy' ? (r?.options ?? []).filter((m) => m.type === 'Checkout') : [];
-      return r && r.moves.length > 0 ? [{ name, moves: r.moves }] : pay.length > 0 ? [{ name, moves: pay }] : [];
+      // GAME-246 (рішення): з кошиком каса — пряма дія (оплата + завершення ST-003 одним заходом), тож вона рухає сюжет дня 1 як звичайний
+      // крок; без кошика прилавок — рамка «Що беремо?» (options), яку тест не рухає.
+      return r && r.moves.length > 0 ? [{ name, moves: r.moves }] : [];
     });
 }
 const applyAll = (sim: SimState, moves: readonly Move[]): SimState => moves.reduce(send, sim);

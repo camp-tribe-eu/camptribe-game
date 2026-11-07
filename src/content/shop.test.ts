@@ -186,6 +186,19 @@ describe('GAME-246 · дарунок Анни лише коли платити �
     const r = dispatch(g, { type: 'Visit', commandId: nextCommandId(g), locationId: 'loc.home' }, GAME_DEFS, undefined, undefined, undefined, 750);
     expect(r.ok && r.state.flags.filter((f) => f.startsWith('f.basket-'))).toEqual([]);
   });
+  it('мапа: каса з кошиком — пряма дія: намет і спальник у кошику → оплата + завершення ST-003 одним заходом; лише ліхтар → лише оплата; о 20:30 — мертва', () => {
+    const sim = (g: GameState, minutes: number): SimState => ({ ...newSim(1, 0), game: g, clock: { ...newSim(1, 0).clock, minutes } });
+    const full = atShop(5_000, [{ type: 'Pickup', itemId: 'item.tent' }, { type: 'Pickup', itemId: 'item.sleeping-bag' }]);
+    expect(resolveSpot(sim(full, 240), GAME_DEFS, 'obj.buy')).toEqual({ moves: [{ type: 'Checkout' }, { type: 'CompleteQuest', questId: 'ST-003' }] });
+    expect(resolveSpot(sim(full, 750), GAME_DEFS, 'obj.buy')).toBeNull();                                        // 20:30 — зачинено
+    const lantern = atShop(5_000, [{ type: 'Pickup', itemId: 'item.lantern' }]);
+    expect(resolveSpot(sim(lantern, 240), GAME_DEFS, 'obj.buy')).toEqual({ moves: [{ type: 'Checkout' }] });
+    // каса обов'язкова: з неоплаченим кошиком ST-003 не завершити (намет не в руках) і не вийти
+    const done = dispatch(full, { type: 'CompleteQuest', commandId: nextCommandId(full), questId: 'ST-003' }, GAME_DEFS);
+    expect(done.ok).toBe(false);
+    expect(!done.ok && ['QUEST_OBJECTIVES_OPEN', 'QUEST_REQUIRES_UNMET'].includes(done.code), !done.ok ? done.code : 'ok').toBe(true);
+    expect(dispatch(full, { type: 'Visit', commandId: nextCommandId(full), locationId: 'loc.home' }, GAME_DEFS, undefined, undefined, undefined, 240)).toMatchObject({ ok: false, code: 'UNPAID_BASKET' });
+  });
   it('дарунок — звичайна річ у стані 60 і 0 € з гаманця', () => {
     const s = atShop(0);
     const r = dispatch(s, { type: 'Pickup', commandId: nextCommandId(s), itemId: 'item.tent-anna' }, GAME_DEFS);
