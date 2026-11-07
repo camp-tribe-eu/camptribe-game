@@ -35,7 +35,7 @@ function onRoadHome(): SimState {
   const script: Move[] = [
     { type: 'CreateCharacter', profileId: 'profile.family-teen', transportId: 'transport.car', animalId: 'animal.cat' } as Move,
     done('PROLOGUE-HOME-001'), done('ST-001'), done('ST-002'),
-    visit('loc.shop'), { type: 'Pickup', itemId: 'item.tent' }, { type: 'Pickup', itemId: 'item.sleeping-bag' }, done('ST-003'),
+    visit('loc.shop'), { type: 'Pickup', itemId: 'item.tent' }, { type: 'Pickup', itemId: 'item.sleeping-bag' }, { type: 'Checkout' }, done('ST-003'),   // GAME-246: полиця — у кошик, власністю робить каса
     visit('loc.home'), done('CH1-HOME-001'), visit('loc.road'), done('ST-004'), visit('loc.camp.lake'),
     talk, choose(1), next, choose(0), next, { type: 'Pickup', itemId: 'item.firewood' }, done('ST-005'), SLEEP,
     done('CH1-D2-001'), talk, choose(10), choose(1), next, done('CH1-D2-ELISE-001'),
