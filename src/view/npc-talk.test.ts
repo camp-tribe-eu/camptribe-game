@@ -76,7 +76,7 @@ describe('GAME-179 · ядро проводить кожну розмову ме
     const done = (questId: string): Move => ({ type: 'CompleteQuest', questId });
     let s = newSim(7, 5_000);
     for (const m of [{ type: 'CreateCharacter', profileId: 'profile.solo-explorer', transportId: 'transport.bike' } as Move, done('PROLOGUE-HOME-001'), done('ST-001'), done('ST-002'),
-      { type: 'Visit', locationId: 'loc.shop' } as Move, { type: 'Pickup', itemId: 'item.tent' } as Move, { type: 'Pickup', itemId: 'item.sleeping-bag' } as Move, done('ST-003'),
+      { type: 'Visit', locationId: 'loc.shop' } as Move, { type: 'Pickup', itemId: 'item.tent' } as Move, { type: 'Pickup', itemId: 'item.sleeping-bag' } as Move, { type: 'Checkout' } as Move, done('ST-003'),
       { type: 'Visit', locationId: 'loc.home' } as Move, done('CH1-HOME-001'), { type: 'Visit', locationId: 'loc.road' } as Move, done('ST-004'), { type: 'Visit', locationId: 'loc.camp.lake' } as Move]) {
       s = send(s, m);
       if (!ok(s)) throw new Error(`${JSON.stringify(m)} → ${JSON.stringify(s.game.processed[`nt-${n - 1}`])}`);
@@ -132,7 +132,7 @@ describe('GAME-179 · знімок для UI: хто говорить і хто 
     let s = newSim(7, 5_000);
     const done = (questId: string): Move => ({ type: 'CompleteQuest', questId });
     for (const m of [{ type: 'CreateCharacter', profileId: 'profile.solo-explorer', transportId: 'transport.bike' } as Move, done('PROLOGUE-HOME-001'), done('ST-001'), done('ST-002'),
-      { type: 'Visit', locationId: 'loc.shop' } as Move, { type: 'Pickup', itemId: 'item.tent' } as Move, { type: 'Pickup', itemId: 'item.sleeping-bag' } as Move, done('ST-003'),
+      { type: 'Visit', locationId: 'loc.shop' } as Move, { type: 'Pickup', itemId: 'item.tent' } as Move, { type: 'Pickup', itemId: 'item.sleeping-bag' } as Move, { type: 'Checkout' } as Move, done('ST-003'),
       { type: 'Visit', locationId: 'loc.home' } as Move, done('CH1-HOME-001'), { type: 'Visit', locationId: 'loc.road' } as Move, done('ST-004'), { type: 'Visit', locationId: 'loc.camp.lake' } as Move]) s = go(s, m);
     const quests = json<{ id: string; giverId?: string }[]>('content/quests.json');
     const before = storyOffer(s, GAME_DEFS).offer;

@@ -289,7 +289,7 @@ describe('пакування (GAME-109): усі підмножини речей 
     run({ type: 'CompleteQuest', questId: 'ST-002' });
     run({ type: 'Visit', locationId: 'loc.shop' });
     run({ type: 'Pickup', itemId: 'item.tent' });
-    run({ type: 'Pickup', itemId: 'item.sleeping-bag' });
+    run({ type: 'Pickup', itemId: 'item.sleeping-bag' }); run({ type: 'Checkout' });
     run({ type: 'CompleteQuest', questId: 'ST-003' });
     return s;
   }

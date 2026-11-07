@@ -25,7 +25,7 @@ async function homePacking(page: Page): Promise<string[]> {
   await page.locator('[data-touch="story"]').click();
   await panel(page).locator('[data-act="create"]', { hasText: /Авто|Car/ }).first().click();
   await page.waitForTimeout(400);
-  for (const [k, key] of [['complete', 'q.prologue-home-001'], ['complete', 'q.st-001'], ['complete', 'q.st-002'], ['visit', 'loc.shop'], ['pickup', 'item.tent'], ['pickup', 'item.sleeping-bag'], ['complete', 'q.st-003'], ['visit', 'loc.home']] as const) await act(page, k, key);
+  for (const [k, key] of [['complete', 'q.prologue-home-001'], ['complete', 'q.st-001'], ['complete', 'q.st-002'], ['visit', 'loc.shop'], ['pickup', 'item.tent'], ['pickup', 'item.sleeping-bag'], ['checkout', 'basket.all'], ['complete', 'q.st-003'], ['visit', 'loc.home']] as const) await act(page, k, key);
   const c = await core(page);
   expect(c.game.player?.locationId).toBe('loc.home');
   expect(c.game.quests['CH1-HOME-001']?.status).toBe('active');

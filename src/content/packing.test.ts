@@ -60,7 +60,7 @@ describe('укласти автоматично: завжди в межах мі
       };
       send({ type: 'CreateCharacter', profileId: k.profile, transportId: k.transport, ...(k.animal === NO_ANIMAL ? {} : { animalId: k.animal }) });
       send({ type: 'CompleteQuest', questId: 'PROLOGUE-HOME-001' }); send({ type: 'CompleteQuest', questId: 'ST-001' }); send({ type: 'CompleteQuest', questId: 'ST-002' });
-      send({ type: 'Visit', locationId: 'loc.shop' }); send({ type: 'Pickup', itemId: 'item.tent' }); send({ type: 'Pickup', itemId: 'item.sleeping-bag' });
+      send({ type: 'Visit', locationId: 'loc.shop' }); send({ type: 'Pickup', itemId: 'item.tent' }); send({ type: 'Pickup', itemId: 'item.sleeping-bag' }); send({ type: 'Checkout' });
       send({ type: 'CompleteQuest', questId: 'ST-003' });
       const p = s.player as PlayerState;
       for (const [n, i] of packItemsFor(PK, p).entries()) {
@@ -93,7 +93,7 @@ describe('екран пакування (знімок для UI) ≡ ядро', 
     send({ type: 'CreateCharacter', profileId: 'profile.solo-explorer', transportId: transport });
     const before = storyOffer(sim, GAME_DEFS).offer.packing;
     send({ type: 'CompleteQuest', questId: 'PROLOGUE-HOME-001' }); send({ type: 'CompleteQuest', questId: 'ST-001' }); send({ type: 'CompleteQuest', questId: 'ST-002' });
-    send({ type: 'Visit', locationId: 'loc.shop' }); send({ type: 'Pickup', itemId: 'item.tent' }); send({ type: 'Pickup', itemId: 'item.sleeping-bag' });
+    send({ type: 'Visit', locationId: 'loc.shop' }); send({ type: 'Pickup', itemId: 'item.tent' }); send({ type: 'Pickup', itemId: 'item.sleeping-bag' }); send({ type: 'Checkout' });
     const midway = storyOffer(sim, GAME_DEFS).offer.packing;
     send({ type: 'CompleteQuest', questId: 'ST-003' });
     return { sim, before, midway, offer: storyOffer(sim, GAME_DEFS) };
@@ -152,7 +152,7 @@ describe('GAME-245: узяти / завантажити / лишити (ядро
     };
     send({ type: 'CreateCharacter', profileId: 'profile.solo-explorer', transportId: transport, ...(animal ? { animalId: animal } : {}) });
     for (const q of ['PROLOGUE-HOME-001', 'ST-001', 'ST-002']) send({ type: 'CompleteQuest', questId: q });
-    send({ type: 'Visit', locationId: 'loc.shop' }); send({ type: 'Pickup', itemId: 'item.tent' }); send({ type: 'Pickup', itemId: 'item.sleeping-bag' });
+    send({ type: 'Visit', locationId: 'loc.shop' }); send({ type: 'Pickup', itemId: 'item.tent' }); send({ type: 'Pickup', itemId: 'item.sleeping-bag' }); send({ type: 'Checkout' });
     send({ type: 'CompleteQuest', questId: 'ST-003' });
     // Старт «за порадою» складає все в авто; удома його розкладають (як map-first unpackMoves) — речі знову на своїх місцях.
     for (const id of packedOf(s.flags, PK, s.player as PlayerState)) send({ type: 'UnpackItem', itemId: id });

@@ -195,7 +195,23 @@ describe('коди відмов: кожен код із реєстру має т
     ['INVALID_CHOICE', s, { ...DRIVER, transportId: 'transport.bike', commandId: 's3' }, STORY_DEFS],
     ['LOCKED', play([DRIVER]), { type: 'Visit', commandId: 's4', locationId: 'loc.shop' }, STORY_DEFS],
     ['NOT_HERE', play([DRIVER, { type: 'Visit', locationId: 'loc.home' }, { type: 'CompleteQuest', questId: 'q.start' }]), { type: 'Talk', commandId: 's5', npcId: 'npc.ann' }, STORY_DEFS],
+    // GAME-246 · кошик: Checkout без речей — BASKET_EMPTY; з речами в кошику вийти не можна — UNPAID_BASKET
+    ['BASKET_EMPTY', play([DRIVER], initialState(1000), STORY_DEFS), { type: 'Checkout', commandId: 's5a' }, STORY_DEFS],
+    ((): [RejectCode, GameState, Command, CoreDefs] => {
+      const defs: CoreDefs = { ...STORY_DEFS, items: { ...STORY_DEFS.items, 'item.wood': { shelfCents: 300 } } };
+      const g = play([DRIVER, { type: 'Pickup', itemId: 'item.wood' }], initialState(1000), defs);
+      const to = Object.keys(defs.story?.locations ?? {}).find((l) => l !== g.player?.locationId) as string;
+      return ['UNPAID_BASKET', g, { type: 'Visit', commandId: 's5b', locationId: to }, defs];
+    })(),
     ['ITEM_ALREADY_HELD', play([DRIVER, { type: 'Pickup', itemId: 'item.wood' }]), { type: 'Pickup', commandId: 's6', itemId: 'item.wood' }, STORY_DEFS],
+    // GAME-246 · дарунок (`asItem`, 0 €) — лише тому, кому нічим платити: з 10 € за річ полиці в 3 € — CAN_PAY
+    ((): [RejectCode, GameState, Command, CoreDefs] => {
+      const story = STORY_DEFS.story as NonNullable<CoreDefs['story']>;
+      const home = story.locations['loc.home'] as NonNullable<typeof story.locations[string]>;
+      const defs: CoreDefs = { ...STORY_DEFS, items: { ...STORY_DEFS.items, 'item.wood': { shelfCents: 300 }, 'item.wood-old': { asItem: { itemId: 'item.wood', condition: 60 } } },
+        story: { ...story, locations: { ...story.locations, 'loc.home': { ...home, items: [...home.items, 'item.wood-old'] } } } };
+      return ['CAN_PAY', play([DRIVER], initialState(1000), defs), { type: 'Pickup', commandId: 's6a', itemId: 'item.wood-old' }, defs];
+    })(),
     // GAME-256 · крок чекає свій день (gate) — активний, але ще не завершується
     ['QUEST_NOT_YET', play([DRIVER, { type: 'Visit', locationId: 'loc.home' }, { type: 'CompleteQuest', questId: 'q.start' }], undefined, GATED_DEFS), { type: 'CompleteQuest', commandId: 's7g', questId: 'q.mid' }, GATED_DEFS],
     ['QUEST_NOT_ACTIVE', play([DRIVER]), { type: 'CompleteQuest', commandId: 's7', questId: 'q.mid' }, STORY_DEFS],

@@ -10,8 +10,10 @@ const c = (cmd: Record<string, unknown>): Input => ({ kind: 'command', command: 
 const frames = (k: number, ms = 250): Input[] => Array.from({ length: k }, () => ({ kind: 'frame', realMs: ms }) as Input);
 
 export const SEED = 20261023;
-// 10 000: найдешевше, що крамниця справді продає (синтетичний спальник, 8 900), — GAME-81: дрова й ліхтар більше не продаються.
-export const START_MONEY = 10_000;
+// 15 000: каса стартового набору (намет 2 499 + спальник 999, GAME-246) і найдешевше, що крамниця справді продає (синтетичний
+// спальник, 8 900 — GAME-81: дрова й ліхтар більше не продаються). Речей Анни (0 €) з такими грошима ядро не дає (CAN_PAY):
+// їх шлях доводять day1-order (0 €) і бот з money=none.
+export const START_MONEY = 15_000;
 
 export const PROLOGUE_BIKE: readonly Input[] = [
   ...frames(8),
@@ -20,7 +22,9 @@ export const PROLOGUE_BIKE: readonly Input[] = [
   c({ type: 'CompleteQuest', questId: 'ST-001' }), ...frames(4),                         // GAME-84 №1: «Піти: Дім» удома більше не потрібне — ціль виконано стартом
   c({ type: 'CompleteQuest', questId: 'ST-002' }),
   c({ type: 'Visit', locationId: 'loc.shop' }), ...frames(6),
-  c({ type: 'Pickup', itemId: 'item.tent' }), c({ type: 'Pickup', itemId: 'item.sleeping-bag' }),
+  c({ type: 'Pickup', itemId: 'item.tent' }), c({ type: 'Pickup', itemId: 'item.sleeping-bag' }),        // GAME-246: намет і спальник — у кошику, ще не власність
+  c({ type: 'Visit', locationId: 'loc.home' }),                                          // відмова UNPAID_BASKET: з неоплаченим кошиком не вийти
+  c({ type: 'Checkout' }),                                                               // каса: гроші в хеші, речі в руках
   c({ type: 'BuyItem', itemId: 'item.sleeping-bag-synthetic' }),                         // купівля в крамниці: гроші в хеші
   c({ type: 'Pickup', itemId: 'item.tent' }),                                            // відмова (уже в руках) теж у журналі
   c({ type: 'CompleteQuest', questId: 'ST-003' }), ...frames(4),

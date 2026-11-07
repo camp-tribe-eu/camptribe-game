@@ -6,8 +6,9 @@ export const RING_S = 0.7;
 /** Крок відгуку при роботі (розвантаження речей), с: приблизно кожні півсекунди. */
 export const FEEDBACK_S = 0.5;
 
+/** GAME-246: каса (obj.buy) — теж, але лише як поточна ціль підказки (ringMayTake): з кошиком стрілка веде до каси, і наближення відкриває «Сплатити»; повз прилавок без кошика кільце мовчить — «Що беремо?» відкривають E/тап (GAME-185).
 /** Об'єкти, що спрацьовують самі від наближення (GAME-190: крім дров — їх беруть руками: гілки → колода → удари); решта (NPC, багажник, справи хвиль, вогнище) — лише E/тап. */
-export const isAutoSpot = (name: string): boolean => name.startsWith('step.') || (name.startsWith('take.') && name !== 'take.item.firewood') || name.startsWith('pack.') || name.startsWith('req.') || (name.startsWith('trace.') && name !== 'trace.camp-crate') || name === 'obj.vehicle';   // GAME-180: req.* — цілі прохань сусідів; GAME-215: trace.* — сліди дідуся
+export const isAutoSpot = (name: string): boolean => name === 'obj.buy' || name.startsWith('step.') || (name.startsWith('take.') && name !== 'take.item.firewood') || name.startsWith('pack.') || name.startsWith('req.') || (name.startsWith('trace.') && name !== 'trace.camp-crate') || name === 'obj.vehicle';   // GAME-180: req.* — цілі прохань сусідів; GAME-215: trace.* — сліди дідуся
 
 export interface Ring { readonly name: string | null; readonly t: number }
 export const RING_IDLE: Ring = { name: null, t: 0 };
@@ -24,7 +25,7 @@ export function stepRing(r: Ring, near: string | null, armed: boolean, hold: boo
 }
 
 /** Чи кільце може взяти об'єкт `near` само: річ на полиці — лише коли вона поточна ціль підказки (повз зайву річ іти можна); решта автооб'єктів — як є. */
-export const ringMayTake = (near: string | null, target: string | null): boolean => near !== null && (!near.startsWith('pack.') || near === target);
+export const ringMayTake = (near: string | null, target: string | null): boolean => near !== null && ((!near.startsWith('pack.') && near !== 'obj.buy') || near === target);
 
 /**
  * Авто/велосипед рушає лише тоді, коли ВСЕ потрібне вже вкладене: рюкзак порожній і немає жодної потрібної речі поза багажником

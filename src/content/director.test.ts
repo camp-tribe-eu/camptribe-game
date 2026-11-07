@@ -45,7 +45,7 @@ function toStage(kind: 'bike' | 'car-cat', stage: string): SimState {
   const meet: Move[] = kind === 'bike' ? [talk, choose(0), next, next, choose(0), next] : [talk, choose(1), next, choose(0), next];
   let s = newSim(7, 5_000);
   for (const m of [create, done('PROLOGUE-HOME-001'), done('ST-001'), done('ST-002'), { type: 'Visit', locationId: 'loc.shop' } as Move,
-    { type: 'Pickup', itemId: 'item.tent' } as Move, { type: 'Pickup', itemId: 'item.sleeping-bag' } as Move, done('ST-003'), { type: 'Visit', locationId: 'loc.home' } as Move,
+    { type: 'Pickup', itemId: 'item.tent' } as Move, { type: 'Pickup', itemId: 'item.sleeping-bag' } as Move, { type: 'Checkout' } as Move, done('ST-003'), { type: 'Visit', locationId: 'loc.home' } as Move,
     done('CH1-HOME-001'), { type: 'Visit', locationId: 'loc.road' } as Move, done('ST-004'), { type: 'Visit', locationId: 'loc.camp.lake' } as Move,
     ...meet, { type: 'Pickup', itemId: 'item.firewood' } as Move, done('ST-005')]) {
     s = must(s, m);
@@ -282,7 +282,7 @@ describe('режисер W1–W3: стартер за локацією етап�
   const toShopDone = (kind: 'bike' | 'car-cat' | 'car'): SimState => {
     let s = newSim(7, 5_000);
     for (const m of [create(kind), done('PROLOGUE-HOME-001'), done('ST-001'), done('ST-002'), { type: 'Visit', locationId: 'loc.shop' } as Move,
-      { type: 'Pickup', itemId: 'item.tent' } as Move, { type: 'Pickup', itemId: 'item.sleeping-bag' } as Move, done('ST-003')]) s = must(s, m);
+      { type: 'Pickup', itemId: 'item.tent' } as Move, { type: 'Pickup', itemId: 'item.sleeping-bag' } as Move, { type: 'Checkout' } as Move, done('ST-003')]) s = must(s, m);
     return s;
   };
   /** Режисер + ядро: усі ходи сюжету для стану (як main.ts direct()). */

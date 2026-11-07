@@ -102,7 +102,7 @@ for (const mode of MODES) {
     // День 1 автом: Пролог до ST-005 — так само, як tests/e2e/story.spec.ts (кроки меню; до Елізи — «Поговорити» в меню).
     await press(page.locator('[data-touch="story"]'));
     await press(panel(page).locator('[data-act="create"]', { hasText: /Авто|Car/ }).first());
-    for (const [k, key] of [['complete', 'q.prologue-home-001'], ['complete', 'q.st-001'], ['complete', 'q.st-002'], ['visit', 'loc.shop'], ['pickup', 'item.tent'], ['pickup', 'item.sleeping-bag'],
+    for (const [k, key] of [['complete', 'q.prologue-home-001'], ['complete', 'q.st-001'], ['complete', 'q.st-002'], ['visit', 'loc.shop'], ['pickup', 'item.tent'], ['pickup', 'item.sleeping-bag'], ['checkout', 'basket.all'],
       ['complete', 'q.st-003'], ['visit', 'loc.home'], ['complete', 'q.ch1-home-001'], ['visit', 'loc.road'], ['complete', 'q.st-004'], ['visit', 'loc.camp.lake'], ['talk', 'npc.elise'],
       ['choose', 'dlg.elise-greeting.hello.c2'], ['continue', ''], ['choose', 'dlg.elise-greeting.spot.c1'], ['continue', ''], ['pickup', 'item.firewood']] as const) await act(k, key);
     await expect(summary(page)).toHaveCount(0);                     // контроль: до кінця дня підсумку немає
@@ -138,7 +138,7 @@ for (const mode of MODES) {
     // Гроші: 50 € на старті (START_MONEY_CENTS) + 10 € за «Прибуття» (ST-005) — і в ядрі те саме.
     await expect(summary(page).locator('[data-ui="summary-money"]')).toHaveAttribute('data-start', '5000');
     await expect(summary(page).locator('[data-ui="summary-money"]')).toHaveAttribute('data-end', String(c.game.moneyCents));
-    expect(c.game.moneyCents).toBe(6000);
+    expect(c.game.moneyCents).toBe(2502);
     expect(await summary(page).textContent()).not.toContain('⟦');   // жодного ключа без тексту
 
     // Цілі ≥ 44 px; обидві кнопки в межах екрана (після прокрутки діалогу).
@@ -175,7 +175,7 @@ for (const mode of MODES) {
     await loaded();
     const after = await core(page);
     expect(after.game.campaignEnded).toBe(false);
-    expect(after.game.moneyCents).toBe(6000);
+    expect(after.game.moneyCents).toBe(2502);
     expect(after.game.flags).toContain('f.night-tent');
     expect(after.journal.length).toBe(journalLen);
     await expect(summary(page)).toHaveCount(0);
@@ -193,7 +193,7 @@ test('«Продовжити» — назад на мапу; день 2 до «�
   await page.locator('[data-touch="story"]').click();
   const click = async (sel: string): Promise<void> => { await panel(page).locator(sel).first().click(); await page.waitForTimeout(400); };
   await click('[data-act="create"]:has-text("Авто")');
-  for (const [k, key] of [['complete', 'q.prologue-home-001'], ['complete', 'q.st-001'], ['complete', 'q.st-002'], ['visit', 'loc.shop'], ['pickup', 'item.tent'], ['pickup', 'item.sleeping-bag'],
+  for (const [k, key] of [['complete', 'q.prologue-home-001'], ['complete', 'q.st-001'], ['complete', 'q.st-002'], ['visit', 'loc.shop'], ['pickup', 'item.tent'], ['pickup', 'item.sleeping-bag'], ['checkout', 'basket.all'],
     ['complete', 'q.st-003'], ['visit', 'loc.home'], ['complete', 'q.ch1-home-001'], ['visit', 'loc.road']] as const) await click(`[data-act="${k}"][data-key="${key}"]`);
   // GAME-108: на дорозі одна з десяти подій — з будь-якої виходимо останньою відповіддю (у подій дороги вона безумовна).
   for (let i = 0; i < 6 && await panel(page).locator('[data-ui="dialogue"]').isVisible({ timeout: 400 }).catch(() => false); i++) await click('[data-ui="dialogue"] [data-act] >> nth=-1');

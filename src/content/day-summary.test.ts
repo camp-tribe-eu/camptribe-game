@@ -99,8 +99,8 @@ describe('daySummary: кожна секція — лише при факті (GA
     expect(ids(sum, 'bought')).toEqual(['item.sleeping-bag-synthetic']);
     expect(ids(sum, 'got')).toEqual(['item.tent', 'item.sleeping-bag', 'item.firewood']);
     expect(kinds(sum)).not.toContain('sold');                // нічого не продано — секції немає
-    // Гроші дня 1: 100 € на старті − 89 € спальник + 10 € за ST-005 (велозона тепер на дні 2).
-    expect(sum?.money).toEqual({ start: START_MONEY, end: START_MONEY - 8_900 + 1_000 });
+    // Гроші дня 1: 150 € на старті − 89 € синтетичний спальник − каса (24,99 € намет + 9,99 € спальник, GAME-246) + 10 € за ST-005 (велозона тепер на дні 2).
+    expect(sum?.money).toEqual({ start: START_MONEY, end: START_MONEY - 8_900 - 2_499 - 999 + 1_000 });
   });
 
   it('GAME-141 · день 2 реплей-сценарію (GAME-144: розділ закінчується днем 3); квести дня 2, ночівля нинішня, пакування дня 1 не повторюється', () => {
@@ -114,15 +114,15 @@ describe('daySummary: кожна секція — лише при факті (GA
     expect(kinds(sum)).not.toContain('packed');
     expect(kinds(sum)).not.toContain('bought');
     // Гроші дня 2: від кінця дня 1 + 5 € за велозону.
-    expect(sum?.money).toEqual({ start: START_MONEY - 8_900 + 1_000, end: START_MONEY - 8_900 + 1_000 + 500 });
-    expect(s.game.moneyCents).toBe(START_MONEY - 8_900 + 500 + 1_000);
+    expect(sum?.money).toEqual({ start: START_MONEY - 8_900 - 2_499 - 999 + 1_000, end: START_MONEY - 8_900 - 2_499 - 999 + 1_000 + 500 });
+    expect(s.game.moneyCents).toBe(START_MONEY - 8_900 - 2_499 - 999 + 500 + 1_000);
     // GAME-144: день 3 — речі, прощання, дорога, дім; грошей день не міняє.
     const d3 = daySummary(s, 3, GAME_DEFS);
     expect(d3?.ended).toBe(true);
     expect(ids(d3, 'quests')).toEqual(['CH1-D3-001', 'CH1-D3-GEAR-001', 'CH1-D3-ELISE-001', 'CH1-D3-RETURN-001', 'CH1-D3-HOME-001']);
     expect(ids(d3, 'night')).toEqual(['f.night-tent']);
     expect(unbacked(d3 as DaySummary, s)).toEqual([]);
-    expect(d3?.money).toEqual({ start: START_MONEY - 8_900 + 1_000 + 500, end: START_MONEY - 8_900 + 1_000 + 500 });
+    expect(d3?.money).toEqual({ start: START_MONEY - 8_900 - 2_499 - 999 + 1_000 + 500, end: START_MONEY - 8_900 - 2_499 - 999 + 1_000 + 500 });
     expect(daySummary(s, 4, GAME_DEFS)).toBeNull();
   });
 
@@ -228,7 +228,23 @@ describe('властивість: 400 випадкових днів — у пі�
     const roadNoApples = runs.filter((x) => x.sim.journal.some((e) => e.type === 'Visit' && e.ref === 'loc.road') && !ids(x.sum, 'events').includes('dlg.road-apples')).length;
     expect(apples).toBeGreaterThan(0);
     expect(roadNoApples).toBeGreaterThan(0);
-    expect(runs.some((x) => x.sum.ended)).toBe(true);
+    // «Хоч якийсь день завершено» тут НЕ перевіряється: випадкова прогулянка на 400 кроків закривала день 1 у 1 з 400 прогонів на main
+    // і в 0 з 400 на гілці GAME-246 (виміряно тим самим зерном; до дня 2 гілка доходить частіше — 17 проти 13). Це везіння зерна, а не
+    // властивість. Кінець дня доводить детермінований сценарій нижче — з мутацією.
+  });
+
+  // Детерміноване джерело тієї самої властивості: реплей-сценарій до межі дня 1 (ST-005 і сон) ДАЄ підсумок із ended: true, квестами дня
+  // й ночівлею, і оракул «лише факти» на ньому порожній. Мутація (закон 1): журнал без запису Sleep — день не закрито (ended: false), дня 2 немає.
+  it('кінець дня — детерміновано: сценарій до межі дня 1 дає підсумок ended: true з фактами; без запису Sleep у журналі — не дає', () => {
+    const s = untilDay1End();
+    const sum = daySummary(s, 1, GAME_DEFS);
+    expect(sum?.ended).toBe(true);
+    expect(ids(sum, 'quests')).toContain('ST-005');
+    expect(ids(sum, 'night')).toEqual(['f.night-tent']);
+    expect(unbacked(sum as DaySummary, s)).toEqual([]);
+    const noSleep: SimState = { ...s, journal: s.journal.filter((e) => e.type !== 'Sleep') };
+    expect(daySummary(noSleep, 1, GAME_DEFS)?.ended).toBe(false);
+    expect(daySummary(noSleep, 2, GAME_DEFS)).toBeNull();
   });
 
   // Мутація (закон 1): підсумок, що показує подію яблук без факту, — оракул червоніє на кожному дні без цієї події.

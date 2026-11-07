@@ -43,7 +43,7 @@ const done = (questId: string): Move => ({ type: 'CompleteQuest', questId });
 /** День 1 до межі (ST-005 завершено) для трьох видів гравця: велосипед із наметом, авто з кішкою й наметом, авто без намету. */
 const DAY1_HEAD: readonly Move[] = [
   done('PROLOGUE-HOME-001'), done('ST-001'), done('ST-002'),
-  { type: 'Visit', locationId: 'loc.shop' }, { type: 'Pickup', itemId: 'item.tent' }, { type: 'Pickup', itemId: 'item.sleeping-bag' },
+  { type: 'Visit', locationId: 'loc.shop' }, { type: 'Pickup', itemId: 'item.tent' }, { type: 'Pickup', itemId: 'item.sleeping-bag' }, { type: 'Checkout' },
   done('ST-003'), { type: 'Visit', locationId: 'loc.home' },
 ];
 const DAY1_TAIL: readonly Move[] = [{ type: 'Pickup', itemId: 'item.firewood' }, done('ST-005'), SLEEP];

@@ -11,6 +11,7 @@ import { bookLeave, cancelLeave } from './life';
 import { autoPack, capacityOf, carriedOf, loadCarSet, packFlag, packingOpen, packItemsFor, takeFlag, usedUnits, withLoaded, withPacked } from './packing';
 import type { Weather } from './weather';
 import { applyStory, canRestNow, canSleepNow, REST_SCENE, questNeedsItem, questOpen, SLEEP_CAP, type StoryCommand, type StoryDraft } from './story';
+import { basketFlag, basketOf, basketTotal, canPay } from './basket';
 import { applyWave, type WaveCommand } from './wave';
 import { award, awardsFor } from './progress';
 import { atlasAwards } from './atlas-fill';
@@ -25,6 +26,8 @@ export type Command =
   | WaveCommand
   | { readonly type: 'BuyItem'; readonly commandId: string; readonly itemId: string }
   | { readonly type: 'SellItem'; readonly commandId: string; readonly itemId: string }
+  /** GAME-246: каса — оплатити весь кошик крамниці одним розрахунком (ціни — з каталогу `shelfCents`, ніколи з команди). */
+  | { readonly type: 'Checkout'; readonly commandId: string }
   | { readonly type: 'Interact'; readonly commandId: string; readonly targetId: string }
   /** Полагодити ціль (GAME-72): вимоги — з каталогу `repairs`, ніколи з команди. */
   | { readonly type: 'Repair'; readonly commandId: string; readonly targetId: string }
@@ -152,6 +155,24 @@ function apply(cmd: Command, d: Draft, defs: CoreDefs, guard: Safeguards, today:
       d.inventory[cmd.itemId] = (own(d.inventory, cmd.itemId) ?? 0) + 1;
       if (d.moneyCents < 0) return 'INSUFFICIENT_FUNDS';
       d.events.push({ type: 'ItemPurchased', commandId: cmd.commandId, itemId: cmd.itemId, priceCents: def.buyCents });
+      return null;
+    }
+    case 'Checkout': {
+      if (!d.player) return 'NO_CHARACTER';
+      const inBasket = basketOf(d.flags, defs);
+      if (inBasket.length === 0) return 'BASKET_EMPTY';
+      if (now !== undefined && shopClosedHere(d, now)) return 'SHOP_CLOSED';
+      const total = basketTotal(d.flags, defs);
+      if (!isCents(total)) return 'INVALID_AMOUNT';
+      if (d.moneyCents < total) return 'INSUFFICIENT_FUNDS';
+      for (const id of inBasket) {
+        const price = (own(defs.items, id)?.shelfCents) as number;
+        d.moneyCents -= price;
+        d.inventory[id] = (own(d.inventory, id) ?? 0) + 1;
+        d.events.push({ type: 'ItemPurchased', commandId: cmd.commandId, itemId: id, priceCents: price });
+      }
+      const gone = new Set(inBasket.map(basketFlag));
+      d.flags = d.flags.filter((f) => !gone.has(f));
       return null;
     }
     case 'SellItem': {
@@ -377,9 +398,41 @@ function apply(cmd: Command, d: Draft, defs: CoreDefs, guard: Safeguards, today:
       if (!bad && defs.packing && d.player) d.flags = withPacked(d.flags, defs.packing, autoPack(defs.packing, d.player));
       return bad;
     }
+    case 'Pickup': {
+      // GAME-246: річ із ціною полиці лягає в кошик, а не в руки (власністю її робить каса).
+      const shelf = own(defs.items, cmd.itemId)?.shelfCents;
+      const here = d.player?.locationId;
+      if (shelf !== undefined && defs.story && isContentId(cmd.itemId) && d.player && here != null && own(defs.story.locations, here)?.items.includes(cmd.itemId)) {
+        if ((own(d.inventory, cmd.itemId) ?? 0) >= 1 || d.flags.includes(basketFlag(cmd.itemId))) return 'ITEM_ALREADY_HELD';
+        // У кошик — лише те, за що є готівка разом із рештою кошика (та сама умова, що й у каси): інакше кошик без грошей — пастка,
+        // з якої лише «вийти» (речі на полицю), і випадкова прогулянка з 0 € не доходила до кінця дня 1 (day-summary).
+        if (d.moneyCents < basketTotal(d.flags, defs) + shelf) return 'INSUFFICIENT_FUNDS';
+        d.flags = [...d.flags, basketFlag(cmd.itemId)].sort();
+        return null;
+      }
+      const alt = own(defs.items, cmd.itemId)?.asItem;
+      if (alt && defs.story && isContentId(cmd.itemId) && d.player && here != null && own(defs.story.locations, here)?.items.includes(cmd.itemId)) {
+        if ((own(d.inventory, alt.itemId) ?? 0) >= 1 || d.flags.includes(basketFlag(alt.itemId))) return 'ITEM_ALREADY_HELD';
+        // Дарунок — лише тому, кому нічим платити за звичайну річ (готівка + викуп наявного < ціни полиці): правило ядра, а не меню.
+        const shelfAlt = own(defs.items, alt.itemId)?.shelfCents;
+        if (shelfAlt !== undefined && canPay(d, defs, shelfAlt)) return 'CAN_PAY';
+        d.inventory[alt.itemId] = 1;
+        d.gear = { ...d.gear, [alt.itemId]: { condition: alt.condition, wet: false } };
+        return null;
+      }
+      return applyStory(cmd, d, defs.story, isContentId, guard.grantId, now);
+    }
     case 'Visit':
+      // GAME-246: з непорожнім кошиком із крамниці не вийти — спершу каса (крадіжка = ми не маємо речей).
+      // Крамниця зачинилась (GAME-242), а кошик неоплачений: не тупик — речі лишаються на полиці (кошик порожніє), вийти можна.
+      if (basketOf(d.flags, defs).length > 0 && d.player && d.player.locationId !== cmd.locationId) {
+        // Платити нічим (грошей менше за суму кошика) — теж не тупик: речі лишаються на полиці, а безкоштовний шлях (речі Анни) лишається.
+        if ((now === undefined || !shopClosedHere(d, now)) && d.moneyCents >= basketTotal(d.flags, defs)) return 'UNPAID_BASKET';
+        const left = new Set(basketOf(d.flags, defs).map(basketFlag));
+        d.flags = d.flags.filter((f) => !left.has(f));
+      }
+      return applyStory(cmd, d, defs.story, isContentId, guard.grantId, now);
     case 'Talk':
-    case 'Pickup':
     case 'CompleteQuest':
     case 'DeclineQuest':
     case 'Choose':
@@ -409,7 +462,8 @@ export function practiceOf(cmd: Command, before: GameState, after: Pick<Draft, '
       return { key: `pickup:${cmd.itemId}`, skills: ['skill.camping'] };
     case 'BuyItem':
     case 'SellItem':
-      return { key: `trade:${cmd.itemId}`, skills: ['skill.finance'] };
+    case 'Checkout':
+      return cmd.type === 'Checkout' ? { key: 'trade:checkout', skills: ['skill.finance'] } : { key: `trade:${cmd.itemId}`, skills: ['skill.finance'] };
     case 'Repair': {
       const def = own(defs.repairs ?? {}, cmd.targetId);
       return def ? { key: `repair:${cmd.targetId}`, skills: [def.skill] } : null;

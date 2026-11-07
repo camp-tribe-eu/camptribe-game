@@ -126,6 +126,10 @@ export const REJECT_CODES = [
   'LOCKED',
   'NOT_HERE',
   'ITEM_ALREADY_HELD',
+  'UNPAID_BASKET',
+  'BASKET_EMPTY',
+  /** GAME-246: безкоштовну річ (`asItem`) не дають тому, хто може заплатити за звичайну (готівкою чи викупом наявного). */
+  'CAN_PAY',
   'QUEST_NOT_ACTIVE',
   'QUEST_NOT_YET',
   'QUEST_OBJECTIVES_OPEN',

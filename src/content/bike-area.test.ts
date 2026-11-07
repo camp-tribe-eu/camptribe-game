@@ -39,7 +39,7 @@ const next: Move = { type: 'Continue' };
 const TO_BIKEZONE: readonly Move[] = [
   { type: 'CreateCharacter', profileId: 'profile.solo-explorer', transportId: 'transport.bike' } as Move,
   { type: 'CompleteQuest', questId: 'PROLOGUE-HOME-001' }, { type: 'CompleteQuest', questId: 'ST-001' }, { type: 'CompleteQuest', questId: 'ST-002' },
-  { type: 'Visit', locationId: 'loc.shop' }, { type: 'Pickup', itemId: 'item.tent' }, { type: 'Pickup', itemId: 'item.sleeping-bag' },
+  { type: 'Visit', locationId: 'loc.shop' }, { type: 'Pickup', itemId: 'item.tent' }, { type: 'Pickup', itemId: 'item.sleeping-bag' }, { type: 'Checkout' },
   { type: 'CompleteQuest', questId: 'ST-003' }, { type: 'Visit', locationId: 'loc.home' }, { type: 'CompleteQuest', questId: 'CH1-HOME-001' },
   { type: 'Visit', locationId: 'loc.road' }, { type: 'CompleteQuest', questId: 'ST-004' }, { type: 'Visit', locationId: 'loc.camp.lake' },
   talk, choose(0), next, next, choose(0), next,                                  // hello.c1 (велосипед) → bike → intro → spot.c1 → bye
@@ -149,11 +149,12 @@ describe('GAME-87/141 · «Нова велозона» (день 2) закрив
   });
 
   it('велосипедист, що в день 1 не казав про велосипед (hello.c2), у день 2 доходить до велозони через hello.c6', () => {
-    const quiet = TO_BIKEZONE.map((m, i) => (i === 14 ? choose(1) : m));          // hello.c2 замість c1
-    const plain = play(quiet.slice(0, 15), initialState(5_000));
+    // GAME-246: у шляху з'явилась каса (індекс 7), тож розмова Елізи зсунулась на +1: talk — 14, перша відповідь — 15.
+    const quiet = TO_BIKEZONE.map((m, i) => (i === 15 ? choose(1) : m));          // hello.c2 замість c1
+    const plain = play(quiet.slice(0, 16), initialState(5_000));
     expect(plain.npcMemory['npc.elise'] ?? []).not.toContain('m.came-by-bike');
     // hello.c2 → intro → spot: далі «далі» один раз менше, ніж у гілці велосипеда.
-    const s = play([next, choose(0), next, ...TO_BIKEZONE.slice(19)], plain);
+    const s = play([next, choose(0), next, ...TO_BIKEZONE.slice(20)], plain);
     expect(s.quests[QUEST]?.status).toBe('active');
     expect(allPaths(play([talk], s)).some(viaHelp)).toBe(true);
   });

@@ -225,6 +225,7 @@ for (const v of VIEWS) {
       expect(acts.filter((a) => !a.startsWith('create:')), 'жодної дії панелі — лише ходьба').toEqual([]);
       const frame = await page.evaluate(() => (window as unknown as { __frame: string[] }).__frame);
       expect(frame.length, 'кожну поїздку авто підтверджено в рамці «Куди їдемо?»').toBeGreaterThanOrEqual(3);
+      // GAME-246: каса (obj.buy) з кошиком — пряма дія наближення (оплата + завершення ST-003), без рамки: у рамці, як і раніше, лише напрямки.
       expect(frame.every((a) => a.startsWith('visit:')), `у рамці лише напрямки: ${frame.join(', ')}`).toBe(true);
       const p = await probe(page);
       expect(p.fx.auto, 'дії від наближення').toBeGreaterThanOrEqual(6);
