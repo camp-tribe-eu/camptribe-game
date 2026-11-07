@@ -142,6 +142,8 @@ export const SCHEMAS = {
     // Узгодженість (предмет існує, любить ≥ 1, сцена справді сцена й єдина) стереже перевірка gifts кодами GIFT_PREF_INVALID / HEART_EVENT_INVALID.
     gifts: obj({ likes: arr(str), dislikes: arr(str) }),
     heart: obj({ scene: str, at: { t: 'int', min: 1, max: 5 } }),
+    // trades (GAME-276): обмін «річ за річ» із сусідом; узгодженість (предмети є, не дорожче, ніж віддано) — перевірка gifts кодом TRADE_OFFER_INVALID.
+    trades: arr(obj({ id: req(str), give: req(arr(obj({ itemId: req(str), qty: req(int1) }))), get: req(arr(obj({ itemId: req(str), qty: req(int1) }))) })),
     card: obj({
       habit: str, likes: str, dislikes: str, dream: str, phrases: arr(str),
       schedule: obj({ morning: obj({ textKey: str, zone: str }), day: obj({ textKey: str, zone: str }), evening: obj({ textKey: str, zone: str }) }),

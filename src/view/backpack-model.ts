@@ -7,8 +7,8 @@ import { gearOf, sellPriceOf } from '../core/gear';
 import type { JournalEntry } from '../core/sim';
 import type { GameState } from '../core/state';
 
-import type { BackpackGroup, BackpackOrigin, BackpackRow, OfferBackpack } from '../ui/story-types';
-export type { BackpackGroup, BackpackOrigin, BackpackRow, OfferBackpack };
+import type { BackpackGroup, BackpackOrigin, BackpackRow, BackpackTrade, OfferBackpack } from '../ui/story-types';
+export type { BackpackGroup, BackpackOrigin, BackpackRow, BackpackTrade, OfferBackpack };
 
 export const GROUP_ORDER: readonly BackpackGroup[] = ['gear', 'story', 'finds'];
 
@@ -36,6 +36,8 @@ export function backpackModel(
   game: Pick<GameState, 'inventory' | 'gear' | 'grants'>, journal: readonly JournalEntry[], defs: Pick<CoreDefs, 'items' | 'story' | 'friendship'>,
   atReception: boolean, canSell: (itemId: string) => boolean,
   gift: { readonly npcId: string; readonly can: (itemId: string) => boolean } | null = null,
+  /** GAME-276: сусід поруч з обміном: його пропозиції; `can` — сухий прогін TradeItem у ядрі. */
+  trade: { readonly npcId: string; readonly can: (offerId: string) => boolean } | null = null,
 ): OfferBackpack {
   const forage = new Set(defs.friendship?.forage ?? []);
   const rows = Object.entries(game.inventory).filter(([, q]) => q > 0).sort(([a], [b]) => a.localeCompare(b)).map(([id, qty]): BackpackRow => {
@@ -51,5 +53,9 @@ export function backpackModel(
       giftId: gift !== null && gift.can(id) ? `bp|gift|${gift.npcId}|${id}` : null,
     };
   });
-  return { groups: GROUP_ORDER.map((group) => ({ group, rows: rows.filter((r) => r.group === group) })).filter((g) => g.rows.length > 0), atReception, giftTo: gift?.npcId ?? null, count: rows.reduce((n, r) => n + r.qty, 0) };
+  const trades = trade === null ? [] : (defs.friendship?.trades ?? []).filter((t) => t.npcId === trade.npcId).map((t): BackpackTrade => ({
+    id: t.id, give: t.give.map((l) => ({ id: l.itemId, qty: l.qty })), get: t.get.map((l) => ({ id: l.itemId, qty: l.qty })),
+    tradeId: trade.can(t.id) ? `bp|trade|${trade.npcId}|${t.id}` : null,
+  }));
+  return { trades, groups: GROUP_ORDER.map((group) => ({ group, rows: rows.filter((r) => r.group === group) })).filter((g) => g.rows.length > 0), atReception, giftTo: gift?.npcId ?? null, count: rows.reduce((n, r) => n + r.qty, 0) };
 }

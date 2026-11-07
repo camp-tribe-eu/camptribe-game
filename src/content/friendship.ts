@@ -3,13 +3,13 @@
 // Нічого з цього не читає сюжет: стан `friend` — поза ключем перебору (PROGRESS_IGNORED), прапорців і нагород побічного немає (side.ts не чіпаємо).
 import npcsRaw from '../../content/npcs.json';
 import requestsRaw from '../../content/requests.json';
-import { heartEventDue, reactionOf, canGiftToday, type FriendDefs, type GiftPrefs, type GiftReaction, type HeartEventDef } from '../core/friendship';
+import { heartEventDue, reactionOf, canGiftToday, type FriendDefs, type TradeDef, type TradeLine, type GiftPrefs, type GiftReaction, type HeartEventDef } from '../core/friendship';
 import type { GameState } from '../core/state';
 import { requestFlag } from './requests';
 import { DAY_MINUTES } from '../core/weather';
 import { FORAGE_CAP } from '../core/commands';
 
-interface RawNpc { id: string; gifts?: { likes: string[]; dislikes: string[] }; heart?: HeartEventDef }
+interface RawNpc { id: string; trades?: { id: string; give: TradeLine[]; get: TradeLine[] }[]; gifts?: { likes: string[]; dislikes: string[] }; heart?: HeartEventDef }
 interface RawRequest { id: string; giver?: string; weather?: string }
 
 /** Дари природи, які герой збирає в таборі (шишка, ягода): команда Forage кладе їх в інвентар. */
@@ -25,13 +25,15 @@ export const GIFTABLE: readonly string[] = [FORAGE_ITEMS.cone, FORAGE_ITEMS.berr
 export function buildFriendDefs(npcs: readonly RawNpc[], requests: readonly RawRequest[]): FriendDefs {
   const prefs: Record<string, GiftPrefs> = {};
   const heart: Record<string, HeartEventDef> = {};
+  const trades: TradeDef[] = [];
   for (const n of npcs) {
     if (n.gifts) prefs[n.id] = { likes: n.gifts.likes, dislikes: n.gifts.dislikes };
     if (n.heart) heart[n.id] = n.heart;
+    for (const t of n.trades ?? []) trades.push({ id: t.id, npcId: n.id, give: t.give, get: t.get });
   }
   // Очки за здане прохання отримує просильник (прохання за погодою просильника не мають).
   const requestGivers = Object.fromEntries(requests.flatMap((r) => (r.giver !== undefined ? [[requestFlag(r.id, 'done'), r.giver] as const] : [])));
-  return { prefs, giftable: GIFTABLE, forage: [FORAGE_ITEMS.cone, FORAGE_ITEMS.berry], heart, requestGivers };
+  return { prefs, giftable: GIFTABLE, forage: [FORAGE_ITEMS.cone, FORAGE_ITEMS.berry], heart, trades, requestGivers };
 }
 export const FRIEND_DEFS: FriendDefs = buildFriendDefs(npcsRaw as RawNpc[], requestsRaw as RawRequest[]);
 

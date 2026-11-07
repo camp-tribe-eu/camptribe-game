@@ -137,6 +137,7 @@ const mutations = [
   // Семантика «гілки any — не кон'юнкти» тепер у satisfiable (contradictions лише називає прапорці мертвої умови).
   { name: '[діалог] гілки any всередині all рахуються кон\u2019юнктами', file: CHECKS_FILE, from: '    const cj = conjuncts(cond);\n    const yes = new Set(cj.filter((x) => x.flag !== undefined).map((x) => x.flag));\n    if (cj.some(', to: '    const cj = condLeaves(cond);\n    const yes = new Set(cj.filter((x) => x.flag !== undefined).map((x) => x.flag));\n    if (cj.some(' },
   { name: '[діалог] суперечність в одній гілці any звітується, хоч інша гілка жива', file: CHECKS_FILE, from: 'return satisfiable(cond, every, facts) ? new Set() : conflicts(cond);', to: 'return conflicts(cond);' },
+  { name: '[обмін] «гроші з нічого» не ловиться (worth(get) > worth(give))', file: CHECKS_FILE, from: 'if (worth(t.get) > worth(t.give))', to: 'if (false)' },
   { name: '[діалог] completeObjective не звіряє kind цілі', file: CHECKS_FILE, from: "if (o.kind !== 'talk') out.push", to: 'if (false) out.push' },
   { name: '[діалог] completeObjective не звіряє NPC цілі', file: CHECKS_FILE, from: 'o.target !== d.npcId && by.npcs.has(o.target)', to: 'false && by.npcs.has(o.target)' },
   { name: '[діалог] byDialogue не обмежений цілями talk', file: CHECKS_FILE, from: "if (o.kind !== 'talk') { out.push(I('OBJECTIVE_BY_DIALOGUE_KIND'", to: "if (false) { out.push(I('OBJECTIVE_BY_DIALOGUE_KIND'" },

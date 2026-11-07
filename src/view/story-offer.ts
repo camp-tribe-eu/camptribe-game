@@ -380,6 +380,8 @@ export function storyOffer(sim: SimState, defs: CoreDefs, view: StoryView = PANE
   const atReception = view.mapFirst && view.near === 'obj.sell';
   // Подарунок із рюкзака: гравець стоїть біля мешканця (view.near = npc.*), що приймає дари; чи можна саме зараз — вирішує сухий прогін GiveGift.
   const bpGiftNpc = view.mapFirst && view.near !== null && view.near.startsWith('npc.') && canReceiveGifts(view.near, defs.friendship) ? view.near : null;
+  // Обмін — з сусідом поруч, що має пропозиції (сухий прогін TradeItem вирішує, чи зараз можна).
+  const bpTradeNpc = view.mapFirst && view.near !== null && view.near.startsWith('npc.') && (defs.friendship?.trades ?? []).some((t) => t.npcId === view.near) ? view.near : null;
   const bpSells = new Map<string, Move>();
   const backpack = backpackModel(s, sim.journal, defs, atReception, (itemId) => {
     const m: Move = { type: 'SellItem', itemId };
@@ -390,6 +392,11 @@ export function storyOffer(sim: SimState, defs: CoreDefs, view: StoryView = PANE
     const m: Move = { type: 'GiveGift', npcId: bpGiftNpc, itemId };
     const ok = dispatch(s, { ...m, commandId: nextCommandId(s) } as Command, defs, undefined, dayOf(sim.clock)).ok;
     if (ok) bpSells.set(`bp|gift|${bpGiftNpc}|${itemId}`, m);
+    return ok;
+  } } : null, bpTradeNpc !== null ? { npcId: bpTradeNpc, can: (offerId) => {
+    const m: Move = { type: 'TradeItem', npcId: bpTradeNpc, offerId };
+    const ok = dispatch(s, { ...m, commandId: nextCommandId(s) } as Command, defs, undefined, dayOf(sim.clock)).ok;
+    if (ok) bpSells.set(`bp|trade|${bpTradeNpc}|${offerId}`, m);
     return ok;
   } } : null);
   const lastTrip = [...sim.journal].reverse().find((e) => e.type === 'Visit')?.commandId ?? null;
