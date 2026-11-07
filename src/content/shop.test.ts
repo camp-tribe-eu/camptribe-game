@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest';
 import { dispatch, nextCommandId, type Command } from '../core/commands';
 import { storyItems } from '../core/defs';
 import { initialState, type GameState } from '../core/state';
-import { menuMoves } from '../view/story-offer';
+import { menuMoves, storyOffer } from '../view/story-offer';
 import { GAME_DEFS, SHOP } from './slice-defs';
 import { resolveSpot } from './map-first';
 import { newSim, step, type SimState } from '../core/sim';
@@ -205,5 +205,51 @@ describe('GAME-246 · дарунок Анни лише коли платити �
     expect(r.ok && r.state.inventory['item.tent']).toBe(1);
     expect(r.ok && r.state.gear['item.tent']).toEqual({ condition: 60, wet: false });
     expect(r.ok && r.state.moneyCents).toBe(0);
+  });
+});
+
+describe('GAME-273 · зачинена крамниця не дає брати з полиці', () => {
+  const run = (money: number, cmds: readonly Record<string, unknown>[]): GameState => {
+    let s = initialState(money);
+    for (const c of cmds) { const r = dispatch(s, { ...c, commandId: nextCommandId(s) } as unknown as Command, GAME_DEFS); if (!r.ok) throw new Error(`${String(c.type)}: ${r.code}`); s = r.state; }
+    return s;
+  };
+  const toShop = [
+    { type: 'CreateCharacter', profileId: 'profile.solo-explorer', transportId: 'transport.bike' },
+    { type: 'CompleteQuest', questId: 'PROLOGUE-HOME-001' }, { type: 'CompleteQuest', questId: 'ST-001' }, { type: 'CompleteQuest', questId: 'ST-002' },
+    { type: 'Visit', locationId: 'loc.shop' },
+  ];
+  const T2030 = 750, T1000 = 120;   // хвилини від 08:00
+  const pick = (s: GameState, itemId: string, now?: number) => dispatch(s, { type: 'Pickup', commandId: nextCommandId(s), itemId } as Command, GAME_DEFS, undefined, undefined, undefined, now);
+  /** Те саме, але крізь sim.step (світ і журнал як у грі) — мапа питає й їх. */
+  const simAt = (money: number, minutes: number): SimState => { let x = newSim(1, money); for (const c of toShop) x = step(x, { kind: 'command', command: { ...c, commandId: nextCommandId(x.game) } as unknown as Command }, { defs: GAME_DEFS }); return { ...x, clock: { ...x.clock, minutes } }; };
+
+  it('ядро: 20:30 Pickup полиці → SHOP_CLOSED (стан не змінено); 10:00 → ок', () => {
+    const s = run(5_000, toShop);
+    expect(pick(s, 'item.tent', T2030)).toMatchObject({ ok: false, code: 'SHOP_CLOSED', state: { flags: s.flags } });
+    expect(pick(s, 'item.lantern', T2030)).toMatchObject({ ok: false, code: 'SHOP_CLOSED' });
+    const day = pick(s, 'item.tent', T1000);
+    expect(day.ok && day.state.flags.some((f) => f.startsWith('f.basket-'))).toBe(true);
+  });
+  it('дарунок Анни (персонал крамниці) о 20:30 теж SHOP_CLOSED; вдень без грошей — ок', () => {
+    const s = run(0, toShop);
+    expect(pick(s, 'item.tent-anna', T2030)).toMatchObject({ ok: false, code: 'SHOP_CLOSED' });
+    expect(pick(s, 'item.tent-anna', T1000).ok).toBe(true);
+  });
+  it('не полиця: Pickup поза крамницею о 20:30 не відхиляється годинником крамниці', () => {
+    const s = run(5_000, toShop);
+    const home = run(5_000, [...toShop.slice(0, 4), { type: 'Visit', locationId: 'loc.home' }]);
+    const r = pick(home, 'item.tent', T2030);
+    expect(!r.ok && r.code).not.toBe('SHOP_CLOSED');
+    expect(s.player?.locationId).toBe('loc.shop');
+  });
+  it('мапа й меню: о 20:30 немає ні take.*, ні кнопок «взяти»; о 10:00 є', () => {
+    for (const spot of ['take.item.tent', 'take.item.sleeping-bag', 'take.item.lantern']) {
+      expect(resolveSpot(simAt(5_000, T2030), GAME_DEFS, spot), spot).toBeNull();
+      expect(resolveSpot(simAt(5_000, T1000), GAME_DEFS, spot), spot).not.toBeNull();
+    }
+    const kinds = (m: number) => storyOffer(simAt(5_000, m), GAME_DEFS).offer.actions.map((a) => a.kind);
+    expect(kinds(T2030)).not.toContain('pickup');
+    expect(kinds(T1000)).toContain('pickup');
   });
 });
