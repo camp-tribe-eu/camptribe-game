@@ -16,6 +16,7 @@ import { queueUps, topOverlay, type SkillUp } from './overlay-order';
 import { DialogueBox } from './DialogueBox';
 import { AtlasPanel } from './Atlas';
 import { worldCovered } from './world-cover';
+import { bannersOpen } from './banner-queue';
 import { Intro } from './Intro';
 import { ColdOpen } from './ColdOpen';
 import { EpisodeCard } from './EpisodeCard';
@@ -333,8 +334,10 @@ export function Shell({ port, langOverride, credits, build, holdToast = false, h
   const [bark, setBark] = useState<{ night: number; at: number } | null>(null);
   const nowAbs = offer.day * 1440 + offer.timeMinutes;
   useEffect(() => { if (offer.rest.bedtime !== null && bark?.night !== offer.rest.bedtime) setBark({ night: offer.rest.bedtime, at: nowAbs }); }, [offer.rest.bedtime]);
-  const barkShown = bark !== null && offer.rest.bedtime === bark.night && nowAbs - bark.at < 10 && !paused && !summary && !storyOpen && !talk;
-  const titleUpShown = titleUp !== null && sinceUp >= 0 && sinceUp < TITLE_UP_MIN && !paused && !storyOpen && !summary;
+  // GAME-260: усі банери — в одній черзі за екранами (banner-queue.ts): ні поверх рамки розмови, ні поверх панелей.
+  const bannerSlot = bannersOpen({ paused, storyOpen, talk, summary: summary !== null, atlasOpen, episode, intro });
+  const barkShown = bark !== null && offer.rest.bedtime === bark.night && nowAbs - bark.at < 10 && bannerSlot;
+  const titleUpShown = titleUp !== null && sinceUp >= 0 && sinceUp < TITLE_UP_MIN && bannerSlot;
   // GAME-243: мапа-перша гра має нотатник Вікторії й мінімапу — три нижні підказки (ціль, найближча нагорода, «Далі: …») зникають; лишається ОДИН короткий рядок біля дії.
   const agendaOn = offer.agenda !== null;
   const goalShown = !agendaOn && offer.stage !== 'create' && (offer.goal !== null || offer.stage === 'ended') && !hideUi.includes('goal');
@@ -421,7 +424,7 @@ export function Shell({ port, langOverride, credits, build, holdToast = false, h
         </div>
       )}
       {barkShown && <div class="ui-titleup" data-ui="bedtime-bark" role="status"><strong>{t('bark.bedtime')}</strong></div>}
-      {offer.rest.autoSlept && !summary && !paused && <div class="ui-titleup" data-ui="sleep-auto" role="status"><strong>{t('bark.sleepAuto')}</strong></div>}
+      {offer.rest.autoSlept && bannerSlot && <div class="ui-titleup" data-ui="sleep-auto" role="status"><strong>{t('bark.sleepAuto')}</strong></div>}
       {titleUpShown && titleUp && (
         <div class="ui-titleup" data-ui="title-up" data-title={titleUp.index + 1} role="status">
           <strong>{`${t('ui.titleUp')}: ${ct(lang, `title.${titleUp.index + 1}`)}`}</strong>

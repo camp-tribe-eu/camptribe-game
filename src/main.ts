@@ -62,12 +62,13 @@ import type { GameState } from './core/state';
 import { progressOf, titleOf } from './core/progress';
 import { rankUps, SKILL_IDS, type HandAction } from './core/skills';
 import type { SkillUp } from './ui/overlay-order';
+import { openGate } from './view/open-gate';
 import type { RewardEvent } from './ui/port';
 
 const app = document.querySelector<HTMLElement>('#app');
 if (!app) throw new Error('#app is missing');
 
-const probe: WorldProbe = { ready: false, reveal: false, gift: { count: 0, npc: null, reaction: null, emote: null, poseAge: -1, poseColumn: null, poseFrames: 0, sounds: [] }, playerX: 0, playerY: 0, nearObject: null, nearKind: null, commandsSent: 0, cameraScrollX: 0, cameraScrollY: 0, clockMinutes: 0, saveLoaded: false, cameraLerp: [0, 0], followers: [], leisure: [], jobs: [],
+const probe: WorldProbe = { ready: false, map: null, reveal: false, gift: { count: 0, npc: null, reaction: null, emote: null, poseAge: -1, poseColumn: null, poseFrames: 0, sounds: [] }, playerX: 0, playerY: 0, nearObject: null, nearKind: null, commandsSent: 0, cameraScrollX: 0, cameraScrollY: 0, clockMinutes: 0, saveLoaded: false, cameraLerp: [0, 0], followers: [], leisure: [], jobs: [],
   playerFrame: 0, playerDir: 'down', playerMoving: false, heroBreath: 0, playerDepth: 0, coveredTiles: 0, behindTiles: 0, canopy: { bands: 0, over: 0, minAlpha: 1 }, light: { patches: 0, depth: 0, alpha: 0 }, lamps: { count: 0, on: false, alpha: 0, radius: 0 }, fps: 0, fpsWindows: 0, firstFrameMs: 0,
   residents: [], neighbours: [], visitors: [], bark: null, barkCount: 0, barkBy: null, npcMarks: {}, miaAt: [], tent: TENT_PROBE_IDLE, wood: WOOD_PROBE_IDLE, crate: CRATE_PROBE_IDLE, fire: FIRE_PROBE_IDLE, grill: GRILL_PROBE_IDLE, fish: FISH_PROBE_IDLE, live: LIVE_PROBE_IDLE, swim: SWIM_PROBE_IDLE, camp: CAMP_PROBE_IDLE,
   daylight: { on: false, visible: false, minuteOfDay: 0, darkness: 0, color: 0xffffff, glow: 0, heroLight: { radius: 0, alpha: 0 } },
@@ -180,6 +181,9 @@ const takeReward = (): string | null => {
   const lang = langOverride ?? loadSettings().language;
   return [r.xp > 0 ? `+${r.xp} ${t(lang, 'ui.xp')}` : '', r.om > 0 ? `+${r.om} ${t(lang, 'ui.om')}` : ''].filter(Boolean).join(' ');
 };
+let pendingFrame = false;
+let worldRunning = (): boolean => false;   // з'являється разом із грою (нижче); до того сцени немає
+const fireFrame = (): void => { for (const l of switches.panelActs ? openListeners : talkListeners) l(); };
 const storyChanged = (): void => {
   syncBackpack();
   syncRewards();
@@ -193,7 +197,11 @@ const storyChanged = (): void => {
   for (const l of storyListeners) l();
   const talking = bridge.state.game.dialogue !== null;
   // Подія в дорозі (GAME-183): у мапі-першій грі — рамка розмови з портретом оповідача (як сцена біля вогнища), а не екран ☰.
-  if (talking && !hadDialogue && !mapTalk) for (const l of switches.panelActs ? openListeners : talkListeners) l();
+  // GAME-260: рамка не раніше, ніж сцена показала мапу дороги (на паузі вона б не перемкнулась) — решту доведе mapEntered.
+  if (talking && !hadDialogue && !mapTalk) {
+    if (openGate({ sceneMap: probe.map, wantMap: worldHooks.mapKey(), sceneRunning: worldRunning() }) === 'wait') pendingFrame = true; else fireFrame();
+  }
+  if (!talking) pendingFrame = false;
   hadDialogue = talking;
 };
 /** GAME-261: з ким уже говорили сьогодні (день|npc); не в сейві — після перезапуску «…» повертається один раз, це лише підказка. */
@@ -286,10 +294,12 @@ const unloadOne = (manual = false): 'ok' | 'full' | 'none' => {
 const saves = createSaveSession(bridge, saveBackend, { story: STORY, stickers: GAME_DEFS.stickers ?? {}, ...(GAME_DEFS.life ? { life: GAME_DEFS.life } : {}), contentRev: STORY_REV, viable: (g) => saveViable(g, GAME_DEFS) });
 // Тестовий хук Playwright: лише ЧИТАННЯ — знімок стану копією, місток назовні не віддається
 // (рецензія PR #13: раніше скрипт сторінки міг надіслати команду в ядро).
-(window as unknown as { __game: { probe: WorldProbe; read: () => unknown; sounds: () => readonly string[]; ambient: () => Readonly<Record<string, number>>; music: () => Readonly<Record<string, number>>; night: () => { level: number; cricket: number; owl: number }; frames: () => number } }).__game = {
+(window as unknown as { __game: { probe: WorldProbe; read: () => unknown; sounds: () => readonly string[]; ambient: () => Readonly<Record<string, number>>; music: () => Readonly<Record<string, number>>; night: () => { level: number; cricket: number; owl: number }; frames: () => number; rewardTitle?: (title: number) => void } }).__game = {
   probe,
   sounds: () => [...uiSounds.played, ...sfxPlayer.played], ambient: () => ambient.levels(), music: () => music.levels(), night: () => ({ level: nightSounds.level, ...nightSounds.counts }),   // GAME-40: що мікшер прийняв до відтворення (лише читання)
   read: () => JSON.parse(JSON.stringify(bridge.state)) as unknown,
+  // GAME-260 (лише збірка e2e): показати банер звання без заробітку XP — подія нагороди для UI; стан ядра не змінюється.
+  ...(import.meta.env.MODE === 'e2e' ? { rewardTitle: (title: number) => { for (const l of rewardListeners) l({ xp: 0, om: 0, title }); } } : {}),
   frames: () => renderGate.rendered(),   // GAME-268: скільки кадрів Phaser справді намалював (лише читання)
 };
 
@@ -404,6 +414,7 @@ const worldHooks: WorldHooks = {
     return targetSpot;
   },
   // Збірка e2e без ?mapFirst=1 — як до GAME-175: завжди табір (старі e2e ходять по ньому й перевіряють не прохід дня 1).
+  mapEntered: () => { if (pendingFrame) { pendingFrame = false; fireFrame(); } },
   mapKey: () => switches.map ?? (switches.panelActs ? 'camp' : mapKeyFor(bridge.state.game.player?.locationId)),
   transport: () => bridge.state.game.player?.transportId ?? null,
   takeReward,
@@ -457,6 +468,7 @@ const game = new Phaser.Game({
 });
 // GAME-268: шлюз малювання — світ під повним екраном не малюється.
 const renderGate = installRenderGate(game);
+worldRunning = () => game.scene.isActive('world');
 // ?frameLagMs — лише збірка e2e (GAME-97): штучно довгий кадр.
 if (switches.frameLagMs) addFrameLag(game, switches.frameLagMs);
 // GAME-38: перший кадр від початку навігації → probe.firstFrameMs (бюджет 1,5 с, tests/e2e/game-38.spec.ts).

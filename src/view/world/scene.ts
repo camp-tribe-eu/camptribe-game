@@ -114,6 +114,8 @@ export interface WorldHooks {
   target(): string | null;
   /** Яку мапу показувати зараз (за локацією гравця; ?map= — лише в збірці e2e). */
   mapKey(): MapKey;
+  /** GAME-260: сцена створила мапу (перемкнулась) — подія в дорозі, що чекала, відкривається тепер. */
+  mapEntered?(key: MapKey): void;
   /** Рюкзак героя: скільки дрібних речей несе (0 — рюкзака на спині немає). */
   backpack(): number;
   /** Одна річ з рюкзака — в багажник (та сама команда ядра); 'full' — не вмістилась, відкрито сітку. */
@@ -191,6 +193,8 @@ interface Band { readonly layer: Phaser.Tilemaps.TilemapLayer; readonly depth: n
 
 export interface WorldProbe {
   ready: boolean;
+  /** GAME-260: яку мапу сцена показує зараз (e2e: подія в дорозі відкривається вже на дорозі). */
+  map: MapKey | null;
   playerX: number;
   playerY: number;
   nearObject: string | null;
@@ -783,6 +787,7 @@ export class WorldScene extends Phaser.Scene {
   private enterMap(key: MapKey, arrived: boolean): void {
     this.teardown();
     this.current = key;
+    this.probe.map = key;
     if (key === 'shop' && arrived) sfx('chime');   // GAME-204: дзвіночок — лише коли герой справді зайшов у двері (завантаження сейву всередині — без нього)
     const map = this.make.tilemap({ key });
     this.tilemap = map;
@@ -1471,7 +1476,7 @@ export class WorldScene extends Phaser.Scene {
     if (!this.player) return;   // update може випередити create лише в першому кадрі завантаження
     // GAME-175: локація гравця змінилась (приїхав у крамницю, повернувся додому) — інша мапа; той самий кадр уже на ній.
     const want = this.hooks.mapKey();
-    if (want !== this.current) this.enterMap(want, true);
+    if (want !== this.current) { this.enterMap(want, true); this.hooks.mapEntered?.(want); }
     else this.placeCar();
     // GAME-194: фон за станом — чиста функція ambientMix; перехід і гучність — у модулі звуку.
     const pp = { x: this.player.x, y: this.player.y };
