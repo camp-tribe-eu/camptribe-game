@@ -53,6 +53,9 @@ export function Shell({ port, langOverride, credits, build, holdToast = false, h
   const [confirmNew, setConfirmNew] = useState(false);
   const noRef = useRef<HTMLButtonElement>(null);
   const [settings, setSettings] = useState<Settings>(() => loadSettings());
+  // GAME-279: поле змінило розмір (поворот, resize) із відкритим меню — перемалювати список кроків і «Авто».
+  const [, setFieldTick] = useState(0);
+  useEffect(() => port.onFieldResize(() => setFieldTick((n) => n + 1)), [port]);
   const resumeRef = useRef<HTMLButtonElement>(null);
   const [status, setStatus] = useState<Key | null>(null);
   const [codeOut, setCodeOut] = useState('');
@@ -519,7 +522,7 @@ export function Shell({ port, langOverride, credits, build, holdToast = false, h
           <fieldset data-ui="zoom">
             <legend>{t('ui.zoom')}</legend>
             {[0, ...port.zoomSteps()].map((k) => (
-              <button type="button" class="ui-btn" data-ui={`zoom-${k === 0 ? 'auto' : k}`} aria-pressed={k === 0 ? !port.zoomSteps().includes(settings.zoom) : settings.zoom === k}
+              <button type="button" class="ui-btn" data-ui={`zoom-${k === 0 ? 'auto' : k}`} aria-label={k === 0 ? undefined : `${t('ui.zoom')} ×${k}`} aria-pressed={k === 0 ? !port.zoomSteps().includes(settings.zoom) : settings.zoom === k}
                 onClick={() => update({ ...settings, zoom: k })}>{k === 0 ? t('ui.zoomAuto') : `×${k}`}</button>
             ))}
           </fieldset>
