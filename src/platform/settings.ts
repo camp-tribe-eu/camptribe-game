@@ -56,14 +56,25 @@ const listeners = new Set<(s: Settings) => void>();
 /** GAME-278: підписка на збереження налаштувань (main.ts перераховує кадр світу одразу). Повертає відписку. */
 export function onSettingsSaved(fn: (s: Settings) => void): () => void { listeners.add(fn); return () => { listeners.delete(fn); }; }
 
+/** GAME-279: поточні налаштування в пам'яті — сховище best-effort (приватний режим: setItem кидає), масштаб діє й без нього. */
+let live: Settings | undefined;
+/** Поточні налаштування без читання сховища на кожен виклик (ResizeObserver): раз зі сховища, далі — з пам'яті, її оновлює saveSettings. */
+export function currentSettings(storage?: Pick<Storage, 'getItem'>): Settings { return (live ??= loadSettings(storage)); }
+/** Лише для тестів: забути пам'ять. */
+export function resetSettingsMemory(): void { live = undefined; }
+
 export function saveSettings(s: Settings, storage: Pick<Storage, 'setItem'> | undefined = safeStorage()): boolean {
+  live = s;
+  let ok: boolean;
   try {
     storage?.setItem(KEY, JSON.stringify(s));
-    for (const fn of listeners) fn(s);
-    return storage !== undefined;
+    ok = storage !== undefined;
   } catch {
-    return false;
+    ok = false;
   }
+  // Слухачі чують і тоді, коли сховище відмовило: гравець бачить зміну одразу, збереження — найкраще, що можна.
+  for (const fn of listeners) fn(s);
+  return ok;
 }
 
 function safeStorage(): Storage | undefined {

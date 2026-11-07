@@ -82,3 +82,22 @@ test('GAME-278: зміна розміру поля — збережений кр
   await expect.poll(async () => (await view(page)).zoom, { message: 'поле повернулось — ×4' }).toBe(4);
   await ctx.close();
 });
+
+// GAME-279 · хвости рецензії PR #212. Мутація 3 (Shell не підписаний на port.onFieldResize) → червоніє «кроки оновились після повороту».
+test('GAME-279: поворот із відкритим меню — список кроків і «Авто» оновлюються; кнопки мають aria-label «Масштаб ×k»', async ({ browser }) => {
+  test.setTimeout(180_000);
+  const ctx = await browser.newContext({ viewport: { width: 932, height: 430 }, hasTouch: true, isMobile: true });
+  const page = await ctx.newPage();
+  await load(page);
+  await openPause(page);
+  const before = await steps(page);
+  const ks = before.slice(1).map(Number);
+  for (const k of ks) await expect(page.locator(`[data-ui="zoom-${k}"]`)).toHaveAttribute('aria-label', `Масштаб ×${k}`);
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expect.poll(() => steps(page), { message: 'кроки оновились після повороту' }).not.toEqual(before);
+  const after = await steps(page);
+  expect(after[0]).toBe('auto');
+  await expect(page.locator('[data-ui="zoom-auto"]')).toHaveAttribute('aria-pressed', 'true');
+  for (const k of after.slice(1).map(Number)) await expect(page.locator(`[data-ui="zoom-${k}"]`)).toHaveAttribute('aria-label', `Масштаб ×${k}`);
+  await ctx.close();
+});

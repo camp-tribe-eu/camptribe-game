@@ -3,7 +3,7 @@ import Phaser from 'phaser';
 import { render, h } from 'preact';
 import { Shell } from './ui/Shell';
 import { t } from './i18n';
-import { loadSettings, onSettingsSaved } from './platform/settings';
+import { currentSettings, loadSettings, onSettingsSaved } from './platform/settings';
 import { INTRO_BEAT_QUESTS } from './content/intro-story';
 import { HINT_FLASH_MS, HintIdle, type HintMode } from './content/hint-idle';
 import { buildLabel } from './core/build-info';
@@ -458,7 +458,7 @@ const worldHooks: WorldHooks = {
 const spriteCrops = new Map<string, string>();
 /** GAME-278: дотиковий пристрій (pointer: coarse) — планшет до 820 px заввишки теж «телефон». */
 const coarse = (): boolean => { try { return matchMedia('(pointer: coarse)').matches; } catch { return false; } };
-const fieldFrame = (): ReturnType<typeof frameSize> => frameSize(stage.clientWidth, stage.clientHeight, coarse(), loadSettings().zoom);
+const fieldFrame = (): ReturnType<typeof frameSize> => frameSize(stage.clientWidth, stage.clientHeight, coarse(), currentSettings().zoom);
 const frame0 = fieldFrame();
 
 const game = new Phaser.Game({
@@ -492,6 +492,7 @@ if (switches.frameLagMs) addFrameLag(game, switches.frameLagMs);
 onFirstFrame(game, (ms) => { probe.firstFrameMs = ms; });
 
 // Поле змінило розмір (поворот телефону, смуга HUD, текст 200 %) — кадр підлаштовується під його форму.
+const fieldListeners = new Set<() => void>();
 const applyFrame = (): void => {
   const f = fieldFrame();
   if (f.zoom !== game.scale.zoom) game.scale.setZoom(f.zoom);
@@ -502,9 +503,10 @@ const applyFrame = (): void => {
   canvas.style.height = `${f.height * f.zoom}px`;
   renderGate.refresh();   // GAME-268: полотно стерто зміною розміру — один кадр, навіть коли світ закрито
   game.scale.refresh();   // межі полотна й displayScale для вводу — з нового style
+  for (const fn of fieldListeners) fn();   // GAME-279: меню з кроками масштабу перемальовується під нове поле
 };
 new ResizeObserver(applyFrame).observe(stage);
-onSettingsSaved(applyFrame);   // GAME-278: «Масштаб» у налаштуваннях — застосовується одразу
+onSettingsSaved(() => applyFrame());   // GAME-278: «Масштаб» у налаштуваннях — застосовується одразу
 
 // Оболонка UI (GAME-25): пауза зупиняє і сцену, і ігровий годинник ядра.
 const ui = document.createElement('div');
@@ -538,6 +540,7 @@ render(h(Shell, {
     setHintMode: (m) => { hintMode = m; applyHintMode(); },
     zoomSteps: () => zoomSteps(stage.clientWidth, stage.clientHeight, coarse()),
     zoomActive: () => game.scale.zoom,
+    onFieldResize: (fn) => { fieldListeners.add(fn); return () => { fieldListeners.delete(fn); }; },
     exportCode: () => encodeRestoreCode(saves.exportJson()),
     staleCode: () => (saves.stale ? encodeRestoreCode(saves.stale) : Promise.resolve(null)),
     dismissStale: () => saves.dismissStale(),

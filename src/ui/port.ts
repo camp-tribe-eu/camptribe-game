@@ -68,6 +68,8 @@ export interface UiPort {
   /** GAME-278: явні цілі масштаби, дозволені для поля зараз (без «Авто»), і масштаб, що діє. */
   zoomSteps(): readonly number[];
   zoomActive(): number;
+  /** GAME-279: поле світу змінило розмір (поворот, resize) — кроки масштабу застаріли; повертає відписку. */
+  onFieldResize(fn: () => void): () => void;
   /** Гра просить відкрити екран подорожі (розмова з NPC на мапі); повертає відписку. */
   onOpenStory(listener: () => void): () => void;
 }

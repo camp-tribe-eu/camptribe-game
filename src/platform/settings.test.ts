@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { DEFAULT_SETTINGS, loadSettings, onSettingsSaved, saveSettings } from './settings';
+import { DEFAULT_SETTINGS, currentSettings, loadSettings, onSettingsSaved, resetSettingsMemory, saveSettings } from './settings';
 
 const mem = (): Storage => {
   const m = new Map<string, string>();
@@ -60,5 +60,28 @@ describe('GAME-278 · zoom у налаштуваннях', () => {
     off();
     saveSettings({ ...DEFAULT_SETTINGS, zoom: 4 }, { setItem: () => undefined });
     expect(seen).toEqual([3]);
+  });
+});
+
+describe('GAME-279 · приватний режим і пам\'ять', () => {
+  const throwing = { setItem: () => { throw new Error('private'); } };
+  it('setItem кидає: слухач усе одно чує збереження, currentSettings віддає нове значення (масштаб діє)', () => {
+    resetSettingsMemory();
+    const seen: number[] = [];
+    const off = onSettingsSaved((s) => seen.push(s.zoom));
+    expect(saveSettings({ ...DEFAULT_SETTINGS, zoom: 3 }, throwing)).toBe(false);
+    off();
+    expect(seen, 'слухач викликано попри відмову сховища').toEqual([3]);
+    expect(currentSettings({ getItem: () => null }).zoom, 'пам\'ять, а не сховище').toBe(3);
+  });
+  it('currentSettings читає сховище не більше раза (ResizeObserver не парсить JSON щоразу)', () => {
+    resetSettingsMemory();
+    let reads = 0;
+    const st = { getItem: () => { reads++; return JSON.stringify({ zoom: 2 }); } };
+    for (let i = 0; i < 50; i++) expect(currentSettings(st).zoom).toBe(2);
+    expect(reads).toBe(1);
+    saveSettings({ ...DEFAULT_SETTINGS, zoom: 4 }, { setItem: () => undefined });
+    expect(currentSettings(st).zoom).toBe(4);
+    expect(reads).toBe(1);
   });
 });
