@@ -39,6 +39,7 @@ export const CODES = {
   SKILL_DUPLICATE:      { check: 'skills', spec: 'GAME-72: навичка в startSkills профілю — щонайбільше раз (інакше стартовий ранг неоднозначний)' },
   // GAME-73: спорядження — повна картка характеристик, викуп ≤ ціни, тир — компроміс, а не «сильніше».
   GEAR_FIELD_MISSING:   { check: 'gear', spec: 'GAME-73: предмет спорядження (kind) має всі поля: tier, weightG, volumeL, waterproofMm, comfortC, sleeps, priceCents, resaleCents' },
+  FIND_RESALE_INVALID:  { check: 'gear', spec: 'GAME-244 ч.2: знахідка (картка без виду лише з resaleCents) — ціле число центів у межах 1…FIND_RESALE_MAX_CENTS; більше — це вже спорядження з повною карткою' },
   GEAR_RESALE_ABOVE_PRICE: { check: 'gear', spec: 'SIM-INV-004: викуп уживаного (resaleCents) не дорожчий за купівлю (priceCents) — інакше купи-продай дає гроші з нічого' },
   GEAR_DOMINATED:       { check: 'gear', spec: 'SIM-INV-005: річ корисна у своїй ситуації — немає іншої речі того ж виду, не гіршої ні в чому (вага, об’єм, вологостійкість, тепло, місця, ціна)' },
   // GAME-113: економіка розділу 1 — брак грошей має дешевший вихід, позик немає.
@@ -173,6 +174,8 @@ export const WEATHER_KINDS = ['sunny', 'cloudy', 'rain'];
 export const SKILL_IDS = ['skill.planning', 'skill.camping', 'skill.mechanics', 'skill.electrics', 'skill.cooking', 'skill.finance', 'skill.endurance', 'skill.communication'];
 
 // GAME-73: поля картки спорядження (крім kind — він і робить предмет спорядженням).
+/** GAME-244 ч.2: найдорожча знахідка (шишка, ягоди…) — 1 €: картка без характеристик спорядження не може коштувати як спорядження. */
+export const FIND_RESALE_MAX_CENTS = 100;
 export const GEAR_FIELDS = ['tier', 'weightG', 'volumeL', 'waterproofMm', 'comfortC', 'sleeps', 'priceCents', 'resaleCents'];
 
 // GAME-113: стартові гроші гри в центах (createBridge: START_MONEY_CENTS у src/view/world/bridge.ts) — база кожного виду

@@ -69,4 +69,14 @@ describe('backpackModel (GAME-244)', () => {
     expect(at.find((r) => r.id === 'item.tent')?.sellId).toBeNull();     // ядро відмовило (квест-замок, зачинено)
     expect(at.find((r) => r.id === 'item.wood')?.sellId).toBeNull();     // ціни викупу немає
   });
+  it('GAME-244 ч.2: подарунок — лише біля мешканця й лише коли ядро приймає; без сусіда кнопки немає', () => {
+    const near = backpackModel(game(inv), journal, defs, false, () => false, { npcId: 'npc.nora', can: (id) => id === 'item.cone' });
+    const rows = near.groups.flatMap((g) => g.rows);
+    expect(near.giftTo).toBe('npc.nora');
+    expect(rows.find((r) => r.id === 'item.cone')?.giftId).toBe('bp|gift|npc.nora|item.cone');
+    expect(rows.find((r) => r.id === 'item.wood')?.giftId).toBeNull();   // ядро відмовило (не дарується)
+    const away = backpackModel(game(inv), journal, defs, false, () => false, null);
+    expect(away.giftTo).toBeNull();
+    expect(away.groups.flatMap((g) => g.rows).every((r) => r.giftId === null)).toBe(true);
+  });
 });

@@ -46,11 +46,18 @@ export function compileGear(raw: readonly RawItem[], story: ReadonlySet<string>,
   }));
 }
 
+/** GAME-244 ч.2: знахідки (шишка, ягоди) — картка без `kind`, але з `resaleCents`: приймальня викуповує їх за копійки (не купуються). Ціни тримає коротка межа дня 1 (slice-defs.test). */
+export function compileFinds(raw: readonly RawItem[], story: ReadonlySet<string>): Record<string, ItemDef> {
+  return Object.fromEntries(raw.filter((i) => i.kind === undefined && i.resaleCents !== undefined && !story.has(i.id)).map((i) => [i.id, { sellCents: i.resaleCents as number }]));
+}
+export const FIND_ITEMS: Readonly<Record<string, ItemDef>> = compileFinds(RAW_ITEMS, storyItems(STORY));
+
 export const GEAR_ITEMS: Readonly<Record<string, ItemDef>> = compileGear(RAW_ITEMS, storyItems(STORY));
 
 export const SLICE_DEFS: CoreDefs = {
   items: {
     ...GEAR_ITEMS,
+    ...FIND_ITEMS,
     // Дрова й ліхтар лежать у локаціях (табір, крамниця) — сюжет дає їх задарма, тож ціни в них немає (GAME-81, DEFS_STORY_ITEM_BUYABLE).
     'item.firewood': {},
     // GAME-246 (сценарій §4.1 крок 4): старий намет Анни — 0 €, «трохи протікає»: дає звичайний намет зі станом 60.

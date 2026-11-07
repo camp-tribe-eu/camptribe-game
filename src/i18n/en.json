@@ -512,6 +512,8 @@
   "backpack.origin.home": "brought from home",
   "backpack.origin.other": "carried along",
   "backpack.worth": "Resale",
+  "backpack.gift": "Give",
+  "backpack.giftTo": "Neighbour nearby",
   "backpack.sell": "Sell",
   "backpack.sellHint": "You can sell at the camp reception."
 }

@@ -1010,6 +1010,9 @@ export const FIXTURES = [
   { base: 'combo', name: '[навички] порожній startSkills', expect: ['SCHEMA_INVALID'], patch(c) { c.profiles[0].startSkills = []; } },
   // GAME-73: спорядження.
   { name: '[спорядження] контроль: три намети-компроміси — коректно', expect: [], patch(c) { withGear(c, tents()); } },
+  { name: '[знахідки] контроль: картка без виду лише з викупом 20 центів — не спорядження', expect: [], patch(c) { withGear(c, [{ id: 'item.fixture-cone', nameKey: 'item.fixture-cone', resaleCents: 20 }]); } },
+  { name: '[знахідки] викуп знахідки 1500 центів — задорого', expect: ['FIND_RESALE_INVALID'], count: { code: 'FIND_RESALE_INVALID', n: 1 }, patch(c) { withGear(c, [{ id: 'item.fixture-cone', nameKey: 'item.fixture-cone', resaleCents: 1500 }]); } },
+  { name: '[знахідки] викуп 0 центів — помилка', expect: ['FIND_RESALE_INVALID'], patch(c) { withGear(c, [{ id: 'item.fixture-cone', nameKey: 'item.fixture-cone', resaleCents: 0 }]); } },
   { name: '[спорядження] контроль: викуп дорівнює ціні — межа дозволена', expect: [], patch(c) { const t = tents(); t[0].resaleCents = t[0].priceCents; withGear(c, t); } },
   { name: '[спорядження] контроль: спальник кращий за намет у всьому — інший вид, не домінування', expect: [], patch(c) {
     withGear(c, [...tents(), { ...tentCard('item.fixture-bag', {}), kind: 'sleeping-bag', weightG: 900, volumeL: 3, waterproofMm: 5000, comfortC: -5, sleeps: 5, priceCents: 1000, resaleCents: 100 }]);

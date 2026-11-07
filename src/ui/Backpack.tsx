@@ -14,11 +14,12 @@ export function BackpackPanel({ backpack, lang, t, sell, close }: { backpack: Of
   useEffect(() => { root.current?.querySelector<HTMLElement>('h2')?.focus({ preventScroll: true }); }, []);
   const anySellable = backpack.groups.some((g) => g.rows.some((r) => r.sellCents !== null));
   return (
-    <div ref={root} class="ui-overlay ui-backpack" role="dialog" aria-modal="true" aria-label={t('backpack.title')} data-ui="backpack-panel" data-at-reception={backpack.atReception ? 'yes' : 'no'} onKeyDown={(e) => { if (root.current) trapTab(e, root.current); }}>
+    <div ref={root} class="ui-overlay ui-backpack" role="dialog" aria-modal="true" aria-label={t('backpack.title')} data-ui="backpack-panel" data-at-reception={backpack.atReception ? 'yes' : 'no'} data-gift-to={backpack.giftTo ?? ''} onKeyDown={(e) => { if (root.current) trapTab(e, root.current); }}>
       <div class="ui-backpack-head">
         <h2 tabIndex={-1}>{t('backpack.title')}</h2>
         <button type="button" class="ui-btn ui-backpack-x" data-ui="backpack-close" aria-label={t('backpack.close')} onClick={close}>{'✕'}</button>
       </div>
+      {backpack.giftTo !== null && <p class="ui-bp-hint" data-ui="backpack-gift-to">{`${t('backpack.giftTo')}: ${ct(lang, backpack.giftTo)}`}</p>}
       {backpack.groups.length === 0 && <p data-ui="backpack-empty">{t('backpack.empty')}</p>}
       {backpack.groups.map((g) => (
         <section key={g.group} class="ui-bp-group" data-ui="backpack-group" data-group={g.group} aria-label={t(`backpack.group.${g.group}` as Key)}>
@@ -33,6 +34,7 @@ export function BackpackPanel({ backpack, lang, t, sell, close }: { backpack: Of
                 </span>
                 {r.sellCents !== null && <span class="ui-bp-price" data-ui="backpack-price" data-cents={r.sellCents}>{`${t('backpack.worth')}: ${money(lang, r.sellCents)}`}</span>}
                 {r.sellId !== null && <button type="button" class="ui-btn ui-bp-sell" data-ui="backpack-sell" data-id={r.id} onClick={() => sell(r.sellId as string)}>{t('backpack.sell')}</button>}
+                {r.giftId !== null && <button type="button" class="ui-btn ui-bp-sell" data-ui="backpack-gift" data-id={r.id} onClick={() => sell(r.giftId as string)}>{t('backpack.gift')}</button>}
               </li>
             ))}
           </ul>

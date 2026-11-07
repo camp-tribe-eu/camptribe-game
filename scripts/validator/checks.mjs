@@ -6,7 +6,7 @@ import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { loadMapObjects } from './load.mjs';
 import { checkSchema } from './schema.mjs';
-import { DIALOGUE_CHAIN_MAX, DIALOGUE_LINE_MAX, STICKER_SLOTS, TRACE_MIN, TRACE_MAX, ECON_FLOOR_CENTS, FACT_KINDS, FACT_STALE_DAYS, FLAG_FAMILIES, GEAR_CHECK_VARIANTS, GEAR_FIELDS, isWarning, LOAN_RE, SKILL_IDS, SLEEP_CAP, WEATHER_KINDS, WAVE_MAX_LIMIT, WAVE_MAX_TASKS, WAVE_MIN_TASKS } from './codes.mjs';
+import { DIALOGUE_CHAIN_MAX, DIALOGUE_LINE_MAX, STICKER_SLOTS, TRACE_MIN, TRACE_MAX, ECON_FLOOR_CENTS, FACT_KINDS, FACT_STALE_DAYS, FIND_RESALE_MAX_CENTS, FLAG_FAMILIES, GEAR_CHECK_VARIANTS, GEAR_FIELDS, isWarning, LOAN_RE, SKILL_IDS, SLEEP_CAP, WEATHER_KINDS, WAVE_MAX_LIMIT, WAVE_MAX_TASKS, WAVE_MIN_TASKS } from './codes.mjs';
 import { checkCombos, checkOptions, comboLabel, enumerateCombos, matches, NO_ANIMAL } from './combos.mjs';
 
 const I = (code, where, msg) => ({ code, where, msg });
@@ -270,7 +270,12 @@ export const CHECKS = [
       // GAME-73: спорядження. Предмет із kind або з будь-яким полем картки — спорядження, і картка мусить бути повною:
       // забута вага чи ціна мовчки дала б «безкоштовний невагомий намет».
       const out = [];
-      const gear = (c.content.items ?? []).filter((i) => i.kind !== undefined || GEAR_FIELDS.some((f) => i[f] !== undefined));
+      // GAME-244 ч.2: «знахідка» — картка без виду з єдиним полем resaleCents (шишка, ягоди): ціну викупу бачить приймальня, а повної картки не треба.
+      const isFind = (i) => i.kind === undefined && i.resaleCents !== undefined && GEAR_FIELDS.every((f) => f === 'resaleCents' || i[f] === undefined);
+      for (const i of (c.content.items ?? []).filter(isFind)) {
+        if (!Number.isInteger(i.resaleCents) || i.resaleCents < 1 || i.resaleCents > FIND_RESALE_MAX_CENTS) out.push(I('FIND_RESALE_INVALID', i.id, `викуп знахідки ${i.resaleCents} поза 1…${FIND_RESALE_MAX_CENTS} центів`));
+      }
+      const gear = (c.content.items ?? []).filter((i) => !isFind(i)).filter((i) => i.kind !== undefined || GEAR_FIELDS.some((f) => i[f] !== undefined));
       const complete = [];
       for (const i of gear) {
         const missing = ['kind', ...GEAR_FIELDS].filter((f) => i[f] === undefined);
