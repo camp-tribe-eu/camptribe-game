@@ -21,11 +21,16 @@ export interface FriendState {
   readonly seen: readonly string[];
   /** GAME-244 ч.2: книга збору дарів за ОДИН день (джерело → скільки дало); новий день — нова книга. Немає — нічого сьогодні не зібрано. */
   readonly forage?: { readonly day: number; readonly n: Readonly<Record<string, number>> };
+  /** GAME-276: обміни за ОДИН день (id пропозицій, відсортовані, без повторів); новий день — новий список. Немає — сьогодні нічого не обміняно. */
+  readonly trade?: { readonly day: number; readonly done: readonly string[] };
 }
 export const NO_FRIEND: FriendState = { pts: {}, gift: {}, seen: [] };
 
 /** Вподобання мешканця (content/npcs.json → gifts) і сцена серця (heart). */
 export interface GiftPrefs { readonly likes: readonly string[]; readonly dislikes: readonly string[] }
+/** GAME-276: обмін «річ за річ» із сусідом (content/npcs.json → trades). Грошей не створює: цінність «віддаю» ≥ цінності «отримую» (tradeIsFair). */
+export interface TradeLine { readonly itemId: string; readonly qty: number }
+export interface TradeDef { readonly id: string; readonly npcId: string; readonly give: readonly TradeLine[]; readonly get: readonly TradeLine[] }
 export interface HeartEventDef { readonly scene: string; readonly at: number }
 /** Каталог дружби для ядра (content/npcs.json): хто що любить, що можна дарувати/збирати, яка в кого сцена серця. */
 export interface FriendDefs {
@@ -35,6 +40,8 @@ export interface FriendDefs {
   /** Дари природи: герой збирає їх у таборі (шишка, ягода) — команда Forage кладе їх в інвентар. */
   readonly forage: readonly string[];
   readonly heart: Readonly<Record<string, HeartEventDef>>;
+  /** GAME-276: пропозиції обміну сусідів (немає — обмінів немає). */
+  readonly trades?: readonly TradeDef[];
   /** Прапорець «здано» прохання → просильник (очки дружби за здане прохання). */
   readonly requestGivers: Readonly<Record<string, string>>;
 }
@@ -82,4 +89,20 @@ export function heartEventDue(f: FriendState | undefined, defs: FriendDefs | und
 export function markHeartSeen(f: FriendState | undefined, npc: string): FriendState {
   const cur = friendOf(f);
   return cur.seen.includes(npc) ? cur : { ...cur, seen: [...cur.seen, npc].sort() };
+}
+
+/** GAME-276: цінність набору речей за ціною перепродажу (`sell`: річ → центи, без ціни — 0). */
+export const tradeValue = (lines: readonly TradeLine[], sell: (itemId: string) => number): number => lines.reduce((n, l) => n + sell(l.itemId) * l.qty, 0);
+/** Обмін не створює грошей: те, що отримуєш, не дорожче за те, що віддаєш (за ціною перепродажу). */
+export const tradeIsFair = (t: TradeDef, sell: (itemId: string) => number): boolean => tradeValue(t.get, sell) <= tradeValue(t.give, sell);
+/** Чи вже зроблено цей обмін сьогодні: раз на день на пропозицію. */
+export const tradeDoneToday = (f: FriendState | undefined, offerId: string, day: number): boolean => {
+  const t = friendOf(f).trade;
+  return t !== undefined && t.day === day && t.done.includes(offerId);
+};
+/** Обмін зроблено: книга веде лише один день (старі дні відпадають самі — сейв не росте). */
+export function traded(f: FriendState | undefined, offerId: string, day: number): FriendState {
+  const cur = friendOf(f);
+  const same = cur.trade !== undefined && cur.trade.day === day ? cur.trade.done : [];
+  return { ...cur, trade: { day, done: [...new Set([...same, offerId])].sort() } };
 }

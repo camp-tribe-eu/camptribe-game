@@ -24,7 +24,15 @@ export interface BackpackRow {
   readonly giftId: string | null;
 }
 
+/** GAME-276: пропозиція обміну сусіда поруч; `tradeId` — лише коли у гравця є потрібне й ядро саме прийме обмін (сухий прогін TradeItem). */
+export interface BackpackTrade {
+  readonly id: string;
+  readonly give: readonly { readonly id: string; readonly qty: number }[];
+  readonly get: readonly { readonly id: string; readonly qty: number }[];
+  readonly tradeId: string | null;
+}
 export interface OfferBackpack {
+  readonly trades: readonly BackpackTrade[];
   readonly groups: readonly { readonly group: BackpackGroup; readonly rows: readonly BackpackRow[] }[];
   readonly atReception: boolean;
   /** Мешканець поруч, що приймає дари (npc.*), або null. */

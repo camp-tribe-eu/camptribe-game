@@ -21,6 +21,16 @@ export function BackpackPanel({ backpack, lang, t, sell, close }: { backpack: Of
       </div>
       {backpack.giftTo !== null && <p class="ui-bp-hint" data-ui="backpack-gift-to">{`${t('backpack.giftTo')}: ${ct(lang, backpack.giftTo)}`}</p>}
       {backpack.groups.length === 0 && <p data-ui="backpack-empty">{t('backpack.empty')}</p>}
+      {backpack.trades.length > 0 && (
+        <section class="ui-bp-group" data-ui="backpack-trades">
+          {backpack.trades.map((o) => (
+            <p key={o.id} class="ui-bp-hint" data-ui="backpack-trade" data-id={o.id} data-can={o.tradeId !== null ? 'yes' : 'no'}>
+              {`${o.give.map((l) => `${ct(lang, l.id)} ×${l.qty}`).join(', ')} → ${o.get.map((l) => `${ct(lang, l.id)} ×${l.qty}`).join(', ')}`}
+              {o.tradeId !== null && <button type="button" class="ui-btn ui-bp-sell" data-ui="backpack-trade-do" data-id={o.id} onClick={() => sell(o.tradeId as string)}>{t('backpack.trade')}</button>}
+            </p>
+          ))}
+        </section>
+      )}
       {backpack.groups.map((g) => (
         <section key={g.group} class="ui-bp-group" data-ui="backpack-group" data-group={g.group} aria-label={t(`backpack.group.${g.group}` as Key)}>
           <h3>{t(`backpack.group.${g.group}` as Key)}</h3>

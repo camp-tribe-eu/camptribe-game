@@ -67,6 +67,12 @@ export function withCards(c) {
   return c;
 }
 
+/** GAME-276: два предмети з ціною перепродажу (20 і 50) і одна пропозиція обміну в першого мешканця. */
+export function withTrade(c, offer) {
+  c.items.push({ id: 'item.res-a', nameKey: 'item.res-a', resaleCents: 20 }, { id: 'item.res-b', nameKey: 'item.res-b', resaleCents: 50 });
+  c.npcs[0].trades = [{ id: 'trade.fixture', ...offer }];
+}
+
 export function baseline() {
   return withCards({
     meta: { start: 'ST-001', locales: ['uk', 'en'] },
@@ -486,6 +492,12 @@ export const FIXTURES = [
   { name: '[дружба] предмет вподобання відсутній', expect: ['GIFT_PREF_INVALID'], patch(c) { c.npcs[0].gifts = { likes: ['item.nothing'], dislikes: [] }; } },
   { name: '[дружба] предмет і любимий, і небажаний', expect: ['GIFT_PREF_INVALID'], patch(c) { c.npcs[0].gifts = { likes: ['item.gift'], dislikes: ['item.gift'] }; } },
   { name: '[дружба] предмет у списку двічі', expect: ['GIFT_PREF_INVALID'], patch(c) { c.npcs[0].gifts = { likes: ['item.gift', 'item.gift'], dislikes: [] }; } },
+  // GAME-276 · обмін із сусідом (npcs[].trades): контроль, мутація «гроші з нічого» і гілки
+  { name: '[обмін] контроль: 3 шишки → 1 ягода (60 ≥ 50)', expect: [], patch(c) { withTrade(c, { give: [{ itemId: 'item.res-a', qty: 3 }], get: [{ itemId: 'item.res-b', qty: 1 }] }); } },
+  { name: '[обмін] МУТАЦІЯ: отримане дорожче за віддане (гроші з нічого)', expect: ['TRADE_OFFER_INVALID'], count: { code: 'TRADE_OFFER_INVALID', n: 1 }, patch(c) { withTrade(c, { give: [{ itemId: 'item.res-a', qty: 3 }], get: [{ itemId: 'item.res-b', qty: 2 }] }); } },
+  { name: '[обмін] предмет отримання відсутній', expect: ['TRADE_OFFER_INVALID'], count: { code: 'TRADE_OFFER_INVALID', n: 1 }, patch(c) { withTrade(c, { give: [{ itemId: 'item.res-a', qty: 3 }], get: [{ itemId: 'item.nothing', qty: 1 }] }); } },
+  { name: '[обмін] віддаю порожнє', expect: ['TRADE_OFFER_INVALID'], patch(c) { withTrade(c, { give: [], get: [{ itemId: 'item.res-b', qty: 1 }] }); } },
+  { name: '[обмін] та сама річ і віддається, і отримується', expect: ['TRADE_OFFER_INVALID'], patch(c) { withTrade(c, { give: [{ itemId: 'item.res-a', qty: 3 }], get: [{ itemId: 'item.res-a', qty: 1 }] }); } },
   { name: '[дружба] МУТАЦІЯ: сцена серця не існує', expect: ['HEART_EVENT_INVALID'], count: { code: 'HEART_EVENT_INVALID', n: 1 }, patch(c) { c.npcs[0].gifts = { likes: ['item.gift'], dislikes: [] }; c.npcs[0].heart = { scene: 'dlg.fixture-none', at: 2 }; } },
   { name: '[дружба] сцена серця — розмова з NPC, а не сцена', expect: ['HEART_EVENT_INVALID'], patch(c) { c.npcs[0].gifts = { likes: ['item.gift'], dislikes: [] }; c.npcs[0].heart = { scene: 'dlg.fixture-ranger', at: 2 }; } },
   { name: '[дружба] одна сцена серця в двох мешканців', expect: ['HEART_EVENT_INVALID'], count: { code: 'HEART_EVENT_INVALID', n: 1 }, patch(c) { withScene(c); for (const n of c.npcs) { n.gifts = { likes: ['item.gift'], dislikes: [] }; n.heart = { scene: 'dlg.fixture-fire', at: 2 }; } } },
