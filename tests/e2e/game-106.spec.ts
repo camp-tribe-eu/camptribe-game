@@ -127,8 +127,9 @@ for (const mode of MODES) {
     expect(await keys('night')).toEqual(['sum.night.tent']);
     await expect(summary(page).locator('[data-kind="night"]')).toContainText('у наметі');
     expect(await keys('quests')).toEqual(['q.prologue-home-001', 'q.st-001', 'q.st-002', 'q.st-003', 'q.ch1-home-001', 'q.st-004', 'q.st-005']);
-    expect(await keys('got')).toEqual(['item.tent', 'item.sleeping-bag', 'item.firewood']);
-    expect(kinds).not.toContain('bought');                           // нічого не купували
+    // GAME-271: намет і спальник оплачено на касі (GAME-246) — «куплено», а не «знайдено»; знайдено лише дрова (раніше очікувалось інакше — це була неправда гравцю).
+    expect(await keys('got')).toEqual(['item.firewood']);
+    expect(await keys('bought')).toEqual(['item.tent', 'item.sleeping-bag']);
     expect(kinds).not.toContain('sold');
     // Подія в дорозі (кидок RNG): секція «У дорозі» — рівно коли в журналі ядра є RoadEvent.
     const hadEvent = c.journal.some((e) => e.type === 'RoadEvent');
