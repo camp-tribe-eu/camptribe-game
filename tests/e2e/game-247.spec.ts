@@ -90,15 +90,32 @@ for (const v of VIEWS) {
       await expect(talk(page)).toBeVisible();
       await expect(sticker(page), 'під рамкою розмови наклейки нема').toHaveCount(0);
       await shot(page, `waits-${v.side}`);
+      // GAME-280: наклейка живе 5 ІГРОВИХ хвилин (STICKER_MIN, 1 хв = 1 с живої гри), а кожен виклик Playwright під навантаженням (4 воркери) триває секунди:
+      // «видно → прочитати → дати ще одну → прочитати» як окремі виклики вилітали за ці 5 с (нагорода ставала новою наклейкою або зникала — 14 з 24 червоних).
+      // Тож спостерігач у сторінці, на кожному кадрі: першу появу фіксує ЗНІМКОМ, у ту ж мить дає третю нагороду й фіксує злиту наклейку. Тест читає знімки, а не живий DOM.
+      type Rec = { first: string[] | null; firstCount: number; merged: string[] | null };
+      await page.evaluate(() => {
+        const w = window as unknown as { __game: { rewardSum: (r: Sum) => void }; __g280?: Rec };
+        const rec: Rec = { first: null, firstCount: 0, merged: null };
+        w.__g280 = rec;
+        const parts = (el: Element): string[] => [...el.querySelectorAll('.ui-reward-part')].map((p) => (p.textContent ?? '').trim());
+        const tick = (): void => {
+          const all = [...document.querySelectorAll('[data-ui="reward-sticker"]')];
+          if (all[0] && rec.first === null) { rec.first = parts(all[0]); rec.firstCount = all.length; w.__game.rewardSum({ cents: 100, xp: 0, om: 0, skills: {} }); }   // ще одна, поки жива — теж злилась
+          else if (all[0] && rec.first !== null && rec.merged === null && parts(all[0])[0] === '+6 €') rec.merged = parts(all[0]);
+          if (rec.merged === null) requestAnimationFrame(tick);
+        };
+        requestAnimationFrame(tick);
+      });
       await talk(page).locator('[data-act="cancel"]').first().click({ timeout: 5_000 });
       await expect(talk(page)).toHaveCount(0);
-      await expect(sticker(page), 'рамку закрито — наклейка вийшла з черги').toBeVisible({ timeout: 5_000 });
-      await expect(sticker(page), 'одна наклейка, а не стос').toHaveCount(1);
-      const parts = await sticker(page).locator('.ui-reward-part').allInnerTexts();
-      expect(parts.map((p) => p.trim()), 'злиття: суми додано').toEqual(['+5 €', '+15 XP', '+2 ОМ', expect.stringMatching(/^\+4 \S+/)]);
+      const snap = (): Promise<Rec> => page.evaluate(() => (window as unknown as { __g280: Rec }).__g280);
+      await expect.poll(async () => (await snap()).merged !== null, { message: 'рамку закрито — наклейка вийшла з черги, і третя нагорода злилась у неї' }).toBe(true);
+      const rec = await snap();
+      expect(rec.firstCount, 'одна наклейка, а не стос').toBe(1);
+      expect(rec.first, 'злиття: суми додано').toEqual(['+5 €', '+15 XP', '+2 ОМ', expect.stringMatching(/^\+4 \S+/)]);
+      expect(rec.merged?.[0], 'третя нагорода злилась у ту саму наклейку').toBe('+6 €');
       await shot(page, `merged-${v.side}`);
-      await give(page, { cents: 100, xp: 0, om: 0, skills: {} });   // ще одна, поки жива — теж злилась
-      await expect(sticker(page).locator('.ui-reward-part').first()).toHaveText('+6 €');
       const seen = await page.evaluate(() => window.__g247);
       if (!seen) throw new Error('спостерігач кадрів не стартував');
       expect(seen.max, 'за весь час ніколи більше однієї наклейки').toBeLessThanOrEqual(1);

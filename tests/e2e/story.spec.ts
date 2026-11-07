@@ -487,7 +487,15 @@ test('два Enter з інтервалом 150 мс — одна дія; фок�
 
 test('затиснутий Enter не пробігає кроки: одне натискання — одна дія', async ({ page }) => {
   await open(page);
-  await panel(page).locator('[data-act="create"]').first().focus();
+  // GAME-280: фокус на кнопці — ПЕРЕДУМОВА натискання, а не припущення. StoryPanel повертає фокус на рядок стану щоразу, як приходить новий offer
+  // (port.onStory → setOffer), тож `.focus()` одним викликом міг упасти ДО такого оновлення, і перший Enter йшов у порожнє місце (журнал 0 — CI 42414046498).
+  // Тут фокус ставиться знову й перевіряється через два кадри, доки кнопка справді тримає його; жодного очікування за часом.
+  await expect.poll(() => page.evaluate(async () => {
+    const b = document.querySelector<HTMLElement>('[data-ui="story"] [data-act="create"]');
+    b?.focus();
+    await new Promise<void>((r) => requestAnimationFrame(() => requestAnimationFrame(() => r())));
+    return b !== null && document.activeElement === b;
+  }), { message: 'кнопка «create» тримає фокус перед натисканням' }).toBe(true);
   // Повторний down тієї самої клавіші Playwright шле з repeat: true — як автоповтор затиснутої клавіші.
   for (let i = 0; i < 4; i++) { await page.keyboard.down('Enter'); await page.waitForTimeout(30); }
   await page.keyboard.up('Enter');
