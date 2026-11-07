@@ -61,6 +61,7 @@ import { MAP_SPOTS, departBlock, isBulky, isMapFirstSpot, mapKeyFor, moveKey, ne
 import { carriedOf, takeFlag } from './core/packing';
 import type { GameState } from './core/state';
 import { progressOf, titleOf } from './core/progress';
+import { isEmptySum, rewardDelta, type CoreSnap } from './ui/reward-sticker';
 import { rankUps, SKILL_IDS, type HandAction } from './core/skills';
 import type { SkillUp } from './ui/overlay-order';
 import { openGate } from './view/open-gate';
@@ -145,18 +146,27 @@ let seenOm = 0;
 let rewardsReady = false;
 let pendingPop: { xp: number; om: number } | null = null;
 const rewardListeners = new Set<(r: RewardEvent) => void>();
-const rebaseRewards = (): void => { const p = progressOf(bridge.state.game); seenXp = p.xp; seenOm = p.om; rewardsReady = true; pendingPop = null; };
+// GAME-247: до XP/ОМ додано XP навичок і нові grantId (гроші) — з них модель reward-sticker.ts виводить наклейку в кутку HUD.
+const GRANT_CENTS: Record<string, number> = {};
+for (const d of Object.values(GAME_DEFS.interactions)) GRANT_CENTS[d.grantId] = d.moneyCents;
+for (const q of Object.values(GAME_DEFS.story?.quests ?? {})) if (q.reward) GRANT_CENTS[q.reward.grantId] = q.reward.moneyCents;
+const snapOf = (): CoreSnap => { const g = bridge.state.game; const p = progressOf(g); return { xp: p.xp, om: p.om, skills: g.skills, grants: g.grants }; };
+let seenSnap: CoreSnap = { xp: 0, om: 0, skills: {}, grants: [] };
+const rebaseRewards = (): void => { const p = progressOf(bridge.state.game); seenXp = p.xp; seenOm = p.om; seenSnap = snapOf(); rewardsReady = true; pendingPop = null; };
 const syncRewards = (): void => {
   if (!rewardsReady) return;
   const p = progressOf(bridge.state.game);
   if (p.xp < seenXp || p.om < seenOm) { rebaseRewards(); return; }   // стан замінено (нова гра, інший сейв) — тиха нова база
   const xp = p.xp - seenXp;
   const om = p.om - seenOm;
-  if (xp === 0 && om === 0) return;
+  const now = snapOf();
+  const sum = rewardDelta(seenSnap, now, GRANT_CENTS);
+  seenSnap = now;
+  if (xp === 0 && om === 0 && isEmptySum(sum)) return;
   const up = titleOf(p.xp) > titleOf(seenXp) ? titleOf(p.xp) : null;
   seenXp = p.xp; seenOm = p.om;
-  pendingPop = { xp: (pendingPop?.xp ?? 0) + xp, om: (pendingPop?.om ?? 0) + om };
-  for (const l of rewardListeners) l({ xp, om, title: up });
+  if (xp !== 0 || om !== 0) pendingPop = { xp: (pendingPop?.xp ?? 0) + xp, om: (pendingPop?.om ?? 0) + om };
+  for (const l of rewardListeners) l({ xp, om, title: up, cents: sum.cents, skills: sum.skills });
 };
 // GAME-229 · нові ранги навичок для екрана «Що відкрилось». Той самий принцип, що в нагород: стан ПОКАЗУ. База — зараз у ядрі; завантаження, нова гра, імпорт коду
 // і поява персонажа (старт професії одразу дає ранги) рангом не вважаються. Екран показує Shell наприкінці дня, а не посеред гри.
@@ -299,12 +309,12 @@ const unloadOne = (manual = false): 'ok' | 'full' | 'none' => {
 const saves = createSaveSession(bridge, saveBackend, { story: STORY, stickers: GAME_DEFS.stickers ?? {}, ...(GAME_DEFS.life ? { life: GAME_DEFS.life } : {}), contentRev: STORY_REV, viable: (g) => saveViable(g, GAME_DEFS) });
 // Тестовий хук Playwright: лише ЧИТАННЯ — знімок стану копією, місток назовні не віддається
 // (рецензія PR #13: раніше скрипт сторінки міг надіслати команду в ядро).
-(window as unknown as { __game: { probe: WorldProbe; read: () => unknown; sounds: () => readonly string[]; ambient: () => Readonly<Record<string, number>>; music: () => Readonly<Record<string, number>>; night: () => { level: number; cricket: number; owl: number }; frames: () => number; rewardTitle?: (title: number) => void } }).__game = {
+(window as unknown as { __game: { probe: WorldProbe; read: () => unknown; sounds: () => readonly string[]; ambient: () => Readonly<Record<string, number>>; music: () => Readonly<Record<string, number>>; night: () => { level: number; cricket: number; owl: number }; frames: () => number; rewardTitle?: (title: number) => void; rewardSum?: (r: { cents: number; xp: number; om: number; skills: Record<string, number> }) => void } }).__game = {
   probe,
   sounds: () => [...uiSounds.played, ...sfxPlayer.played], ambient: () => ambient.levels(), music: () => music.levels(), night: () => ({ level: nightSounds.level, ...nightSounds.counts }),   // GAME-40: що мікшер прийняв до відтворення (лише читання)
   read: () => JSON.parse(JSON.stringify(bridge.state)) as unknown,
   // GAME-260 (лише збірка e2e): показати банер звання без заробітку XP — подія нагороди для UI; стан ядра не змінюється.
-  ...(import.meta.env.MODE === 'e2e' ? { rewardTitle: (title: number) => { for (const l of rewardListeners) l({ xp: 0, om: 0, title }); } } : {}),
+  ...(import.meta.env.MODE === 'e2e' ? { rewardTitle: (title: number) => { for (const l of rewardListeners) l({ xp: 0, om: 0, title, cents: 0, skills: {} }); }, rewardSum: (r: { cents: number; xp: number; om: number; skills: Record<string, number> }) => { for (const l of rewardListeners) l({ xp: r.xp, om: r.om, title: null, cents: r.cents, skills: r.skills }); } } : {}),
   frames: () => renderGate.rendered(),   // GAME-268: скільки кадрів Phaser справді намалював (лише читання)
 };
 

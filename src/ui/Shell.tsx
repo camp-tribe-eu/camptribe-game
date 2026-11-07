@@ -3,6 +3,8 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'preact/hooks';
 import { mixer, setMusicScreen } from '../audio';
 import { playUi, soundForButton } from '../audio/ui-sounds';
+import { sfx } from '../audio/sfx';
+import { isEmptySum, mergeSums, NO_REWARD, STICKER_MIN, stickerParts, type RewardSum } from './reward-sticker';
 import { DEFAULT_SETTINGS, TEXT_SCALES, loadSettings, saveSettings, type Settings } from '../platform/settings';
 import type { Credits, UiPort } from './port';
 import { BigItemIcon, ObjectiveIcon } from './ObjectiveIcon';
@@ -99,6 +101,16 @@ export function Shell({ port, langOverride, credits, build, holdToast = false, h
   // Гасне за ІГРОВИМ годинником (TITLE_UP_MIN хвилин, ≈ секунд живої гри): пауза й панелі його зупиняють — банер не зникає, поки його не видно; таймерів реального часу немає.
   const [titleUp, setTitleUp] = useState<{ index: number; at: number } | null>(null);
   useEffect(() => { port.setHintMode(settings.hintMode); }, [settings.hintMode]);
+  // GAME-247: наклейка нагороди в кутку HUD (не над героєм — GAME-229). Нагороди, що прийшли, доки наклейка жива чи чекає за рамкою розмови, ЗЛИВАЮТЬСЯ в одну.
+  // Життя — за ігровим годинником від останньої нагороди; дзвіночок (src/audio) — раз на наклейку, коли вона справді з'явилась.
+  const [sticker, setSticker] = useState<{ id: number; sum: RewardSum; at: number } | null>(null);
+  const stickerId = useRef(0);
+  useEffect(() => port.onReward((r) => {
+    const sum: RewardSum = { cents: r.cents, xp: r.xp, om: r.om, skills: r.skills };
+    if (isEmptySum(sum)) return;
+    const o = port.story(); const at = o.day * 1440 + o.timeMinutes;
+    setSticker((prev) => (prev && at - prev.at < STICKER_MIN ? { id: prev.id, sum: mergeSums(prev.sum, sum), at } : { id: ++stickerId.current, sum: mergeSums(NO_REWARD, sum), at }));
+  }), []);
   useEffect(() => port.onReward((r) => { if (r.title !== null) { const o = port.story(); setTitleUp({ index: r.title, at: o.day * 1440 + o.timeMinutes }); playUi('confirm'); } }), []);
   // Підсумок дня (GAME-106): з'являється, коли ДІЯ гравця завершила день (daysEnded зріс саме на ній), а не при завантаженні
   // сейву вже завершеного дня — після «Завершити сесію» й перезавантаження гравець повертається на мапу, а не в підсумок.
@@ -350,6 +362,8 @@ export function Shell({ port, langOverride, credits, build, holdToast = false, h
   // GAME-260: усі банери — в одній черзі за екранами (banner-queue.ts): ні поверх рамки розмови, ні поверх панелей.
   const bannerSlot = bannersOpen({ paused, storyOpen, talk, summary: summary !== null, atlasOpen, backpackOpen, episode, intro });
   const barkShown = bark !== null && offer.rest.bedtime === bark.night && nowAbs - bark.at < 10 && bannerSlot;
+  const stickerShown = sticker !== null && nowAbs - sticker.at >= 0 && nowAbs - sticker.at < STICKER_MIN && bannerSlot;
+  useEffect(() => { if (stickerShown) sfx('chime'); }, [stickerShown, sticker?.id]);
   const titleUpShown = titleUp !== null && sinceUp >= 0 && sinceUp < TITLE_UP_MIN && bannerSlot;
   // GAME-243: мапа-перша гра має нотатник Вікторії й мінімапу — три нижні підказки (ціль, найближча нагорода, «Далі: …») зникають; лишається ОДИН короткий рядок біля дії.
   const agendaOn = offer.agenda !== null;
@@ -441,6 +455,11 @@ export function Shell({ port, langOverride, credits, build, holdToast = false, h
       )}
       {barkShown && <div class="ui-titleup" data-ui="bedtime-bark" role="status"><strong>{t('bark.bedtime')}</strong></div>}
       {offer.rest.autoSlept && bannerSlot && <div class="ui-titleup" data-ui="sleep-auto" role="status"><strong>{t('bark.sleepAuto')}</strong></div>}
+      {stickerShown && sticker && (
+        <div class="ui-reward" data-ui="reward-sticker" role="status" aria-label={t('ui.rewardSticker')}>
+          {stickerParts(sticker.sum, { xp: t('ui.xp'), om: t('ui.om'), skill: (id) => ct(lang, id) }).map((p) => <span key={p.kind + (p.skill ?? '')} class="ui-reward-part" data-kind={p.kind}>{p.text}</span>)}
+        </div>
+      )}
       {titleUpShown && titleUp && (
         <div class="ui-titleup" data-ui="title-up" data-title={titleUp.index + 1} role="status">
           <strong>{`${t('ui.titleUp')}: ${ct(lang, `title.${titleUp.index + 1}`)}`}</strong>
