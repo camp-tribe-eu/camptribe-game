@@ -46,7 +46,7 @@ for (const c of CASES) {
     const tiles = (p.view.w * p.view.h) / 1024;
     expect(tiles, `видно ${tiles.toFixed(0)} клітинок`).toBeGreaterThanOrEqual(c.tiles);
     // Полотно на екрані = кадр × k, цілим числом, і покриває поле.
-    const cv = await page.evaluate(() => { const r = document.querySelector('canvas')!.getBoundingClientRect(); return { w: r.width, h: r.height }; });
+    const cv = await page.evaluate(() => { const r = (document.querySelector('canvas') as HTMLCanvasElement).getBoundingClientRect(); return { w: r.width, h: r.height }; });
     expect(cv.w, 'ширина полотна кратна zoom').toBe(Math.round(cv.w / k) * k);
     expect(cv.w).toBeGreaterThanOrEqual(c.w);
     if (c.w / c.h >= 1.2) expect(cv.h).toBeGreaterThanOrEqual(c.h);   // вузьке поле (GAME-91) — кадр ≤ мапи по висоті, як було
@@ -60,7 +60,7 @@ for (const c of CASES) {
 }
 
 // Мала мапа (крамниця 448×384) у широкому кадрі: що камера показує за мапою — колір землі, а не чорна діра.
-for (const c of [CASES[0]!, CASES[1]!]) {
+for (const c of CASES.slice(0, 2)) {
   test(`GAME-254 ${c.w}×${c.h}: за малою мапою (крамниця) — не чорна діра на краях полотна`, async ({ browser }) => {
     test.setTimeout(120_000);
     const ctx = await browser.newContext({ viewport: { width: c.w, height: c.h }, hasTouch: c.touch, isMobile: c.touch });
@@ -76,11 +76,11 @@ for (const c of [CASES[0]!, CASES[1]!]) {
     const black = await page.evaluate(async (b64) => {
       const img = new Image(); img.src = `data:image/png;base64,${b64}`; await img.decode();
       const cv = document.createElement('canvas'); cv.width = img.width; cv.height = img.height;
-      const g = cv.getContext('2d')!; g.drawImage(img, 0, 0);
-      const px = (x: number, y: number): number[] => Array.from(g.getImageData(x, y, 1, 1).data);
+      const g = cv.getContext('2d') as CanvasRenderingContext2D; g.drawImage(img, 0, 0);
+      const dark = (x: number, y: number): boolean => { const [r = 0, gg = 0, b = 0, a = 0] = Array.from(g.getImageData(x, y, 1, 1).data); return r + gg + b < 6 || a < 255; };
       const out: string[] = [];
-      for (let x = 0; x < img.width; x += 4) for (const y of [0, img.height - 1]) { const q = px(x, y); if (q[0]! + q[1]! + q[2]! < 6 || q[3]! < 255) out.push(`${x},${y}`); }
-      for (let y = 0; y < img.height; y += 4) for (const x of [0, img.width - 1]) { const q = px(x, y); if (q[0]! + q[1]! + q[2]! < 6 || q[3]! < 255) out.push(`${x},${y}`); }
+      for (let x = 0; x < img.width; x += 4) for (const y of [0, img.height - 1]) { if (dark(x, y)) out.push(`${x},${y}`); }
+      for (let y = 0; y < img.height; y += 4) for (const x of [0, img.width - 1]) { if (dark(x, y)) out.push(`${x},${y}`); }
       return out;
     }, png);
     expect(black.slice(0, 5), `чорних/прозорих пікселів на краях: ${black.length}`).toEqual([]);
