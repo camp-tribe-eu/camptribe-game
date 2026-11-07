@@ -156,15 +156,20 @@ async function playBikeDay3(page: Page): Promise<void> {
 
 /** GAME-106: кінець дня відкриває підсумок дня N; «Продовжити» — на мапу. reopen — знову відкрити ☰. */
 async function finishDay(page: Page, reopen: boolean, day = 1): Promise<void> {
-  // GAME-216: у кінці розділу спершу картка-«серія» (підсумок дня — після неї); закрити її кнопкою, як гравець.
-  await expect(page.locator('[data-ui="summary"], [data-ui="episode"]').first()).toBeVisible();
-  if (await page.locator('[data-ui="episode"]').count() > 0) {
+  // GAME-264: підсумок дня з'являється сам; у кінці розділу його кнопка — «Лягти спати»: сон → картка-«серія» (тизер розділу 2) → меню паузи зі збереженням → «Продовжити».
+  await expect(page.locator('[data-ui="summary"]')).toBeVisible();
+  await expect(page.locator('[data-ui="episode"]')).toHaveCount(0);
+  await expect(page.locator('[data-ui="summary"] h2')).toHaveText(`Підсумок дня ${day}`);
+  const go = page.locator('[data-ui="summary-continue"]');
+  const endOfChapter = /Лягти спати|Go to sleep/.test((await go.textContent()) ?? '');
+  await go.click();
+  if (endOfChapter) {
+    await expect(page.locator('[data-ui="episode"]')).toBeVisible();
     await page.locator('[data-ui="episode-skip"]').click();
     await expect(page.locator('[data-ui="episode"]')).toHaveCount(0);
+    await expect(page.locator('[data-ui="pause"]')).toBeVisible();
+    await page.locator('[data-ui="resume"]').click();
   }
-  await expect(page.locator('[data-ui="summary"]')).toBeVisible();
-  await expect(page.locator('[data-ui="summary"] h2')).toHaveText(`Підсумок дня ${day}`);
-  await page.locator('[data-ui="summary-continue"]').click();
   // 15 с: на CI PR #53 сторінка під навантаженням 5 с не відповідала на запит лічильника («Received: undefined»).
   await expect(page.locator('[data-ui="summary"]')).toHaveCount(0, { timeout: 15_000 });
   if (reopen) await page.locator('[data-touch="story"]').click();

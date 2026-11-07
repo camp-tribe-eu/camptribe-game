@@ -11,6 +11,8 @@ export interface Settings {
   readonly hintSeen: boolean;
   /** Подорож, про яку вже нагадали скопіювати код відновлення (GAME-94); null — ще ні. Не частина сейву: формат сейву не змінюється. */
   readonly remindedTrip: string | null;
+  /** GAME-261: нагадування про код відновлення вже показано колись — більше ніколи (хоч би скільки подорожей). Не частина сейву. */
+  readonly remindShown: boolean;
   /** Гучність (GAME-40): загальна, ефекти, музика, mute. Не частина сейву. */
   readonly audio: AudioSettings;
   /** GAME-192: стрілка «Далі» — лише коли застряг (типово) чи завжди. Не частина сейву. */
@@ -19,7 +21,7 @@ export interface Settings {
   readonly levelUps: boolean;
 }
 
-export const DEFAULT_SETTINGS: Settings = { textScale: 100, language: 'uk', hintSeen: false, remindedTrip: null, audio: DEFAULT_AUDIO, hintMode: 'stuck', levelUps: true };
+export const DEFAULT_SETTINGS: Settings = { textScale: 100, language: 'uk', hintSeen: false, remindedTrip: null, remindShown: false, audio: DEFAULT_AUDIO, hintMode: 'stuck', levelUps: true };
 const KEY = 'camplife.settings.v1';
 // 200 % — WCAG 1.4.4 (GAME-39): текст удвічі без обрізання й без втрати функцій.
 export const TEXT_SCALES = [100, 125, 150, 200] as const;
@@ -35,6 +37,7 @@ export function loadSettings(storage: Pick<Storage, 'getItem'> | undefined = saf
       language: v.language === 'en' ? 'en' : 'uk',
       hintSeen: v.hintSeen === true,
       remindedTrip: typeof v.remindedTrip === 'string' && v.remindedTrip !== '' ? v.remindedTrip : null,
+      remindShown: v.remindShown === true,
       audio: parseAudio(v.audio),
       hintMode: v.hintMode === 'always' ? 'always' : 'stuck',
       levelUps: v.levelUps !== false,

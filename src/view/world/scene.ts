@@ -103,7 +103,7 @@ export interface WorldHooks {
   /** Гравець заговорив із NPC на мапі (розмову веде рамка розмови, GAME-179). */
   onNpc(npcId: string): void;
   /** GAME-179: чи NPC зараз можна заговорити (ядро прийме розмову) і чи є в нього прохання («!»); null — мовчить, маркера нема. */
-  talk(npcId: string): { readonly request: boolean } | null;
+  talk(npcId: string): { readonly request: boolean; /** GAME-261: є нова репліка (сьогодні ще не говорили) — без неї «…» не малюємо. */ readonly line: boolean } | null;
   /** Дотик до тригера: режисер вирішує, що це зараз. */
   onObject(name: string): void;
   /** Чи об'єкт зараз діє й видимий. */
@@ -244,7 +244,7 @@ export interface WorldProbe {
   /** GAME-99 (лише для e2e): ефект «день і ніч» — що зараз намальовано. `on` — ефект увімкнено; `visible` — прямокутник/пляма видимі (вдень — ні). */
   daylight: { on: boolean; visible: boolean; minuteOfDay: number; darkness: number; color: number; glow: number; heroLight: { radius: number; alpha: number } };
   /** GAME-175 (лише для e2e): кільце наближення (0..1, об'єкт), рюкзак, стрілка до мети (none/line/edge), лічильник спливів, дії-від-наближення. */
-  fx: { target: string | null; ring: number; ringName: string | null; backpack: number; guide: 'none' | 'line' | 'edge'; pops: number; auto: number; rewards: number; rewardLast: string; headLabels: string[] };
+  fx: { target: string | null; ring: number; ringName: string | null; backpack: number; guide: 'none' | 'line' | 'edge'; pops: number; auto: number; rewards: number; rewardLast: string; headLabels: string[]; headIcons: string[] };
   /** GAME-179 (лише для e2e): які маркери зараз над головами NPC — id → chat («…») / request («!»). */
   npcMarks: Record<string, NpcMarker>;
   /** GAME-184: цілі прохань, біля яких намальована Мія (видимі спрайти). */
@@ -1125,7 +1125,8 @@ export class WorldScene extends Phaser.Scene {
   /** Сплив і звук на дію: підібрав/поклав — «+1» і клацання, крок/авто — «OK» і підтвердження. */
   private feedback(name: string): void {
     const pick = name.startsWith('take.') || name.startsWith('pack.');
-    this.fx?.pop(this.player.x, this.player.y, pick ? '+' : 'OK');   // GAME-229: без цифр над героєм («+», не «+1»)
+    if (pick) this.fx?.pop(this.player.x, this.player.y, '+');   // GAME-229: без цифр над героєм («+», не «+1»)
+    else this.fx?.popIcon(this.player.x, this.player.y, 'check');   // GAME-261: галочка-значок, не текст «OK»
     playUi(pick ? 'press' : 'confirm');
   }
 
@@ -1220,7 +1221,7 @@ export class WorldScene extends Phaser.Scene {
           this.followFacing[i] = facingToward(p, job.spot);
           if (job.kind === 'errand') {
             job.workS += dt;
-            if (!job.sent && job.workS >= ERRAND_WORK_S) { if (this.hooks.onErrand?.(job.task) === false) { job.workS = 0; } else { job.sent = true; this.fx?.pop(p.x, p.y, 'OK'); playUi('confirm'); } }
+            if (!job.sent && job.workS >= ERRAND_WORK_S) { if (this.hooks.onErrand?.(job.task) === false) { job.workS = 0; } else { job.sent = true; this.fx?.popIcon(p.x, p.y, 'check'); playUi('confirm'); } }
           }
         }
       } else if (spot) arrived = stepTo(this.grid, p, spot, dt, SPEED * FOLLOW_SPEED_FACTOR);
@@ -1412,7 +1413,7 @@ export class WorldScene extends Phaser.Scene {
     const consider = (id: string, s: Phaser.GameObjects.Sprite | undefined, barking: boolean): void => {
       if (!s || !s.visible) return;
       const t = this.hooks.talk(id);
-      const kind = markerFor(t !== null, t?.request === true, Math.hypot(hero.x - s.x, hero.y - s.y));
+      const kind = markerFor(t !== null, t?.request === true, Math.hypot(hero.x - s.x, hero.y - s.y), t?.line === true);
       // GAME-236: репліка заступає «…», але не «!»: прохання не можна пропустити через чотири секунди бурчання — «!» піднімається над репліку.
       if (!kind || (barking && kind !== 'request')) return;
       const lift = barking && this.residentBark ? this.residentBark.text.height + 4 : 0;
@@ -1797,7 +1798,7 @@ export class WorldScene extends Phaser.Scene {
       miaAt: [...this.miaSprites].flatMap(([n, sp]) => (sp.visible ? [n] : [])),
       barkBy: this.residentBark ? (RESIDENTS[this.residentBark.npc]?.id ?? null) : null,
       npcMarks: Object.fromEntries([...this.npcMarks].flatMap(([id, m]) => (m.g.visible && m.kind ? [[id, m.kind] as const] : []))),
-      fx: { target: tn, ring: this.ring.name ? this.ring.t : 0, ringName: this.ring.name, backpack: this.hooks.backpack(), guide: this.fx?.guideMode ?? 'none', pops: this.fx?.pops ?? 0, auto: this.autoCount, rewards: this.rewardPops, rewardLast: this.rewardLast, headLabels: [...(this.fx?.labels ?? [])] },
+      fx: { target: tn, ring: this.ring.name ? this.ring.t : 0, ringName: this.ring.name, backpack: this.hooks.backpack(), guide: this.fx?.guideMode ?? 'none', pops: this.fx?.pops ?? 0, auto: this.autoCount, rewards: this.rewardPops, rewardLast: this.rewardLast, headLabels: [...(this.fx?.labels ?? [])], headIcons: [...(this.fx?.icons ?? [])] },
     });
   }
 }

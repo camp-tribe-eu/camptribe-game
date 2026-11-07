@@ -386,16 +386,19 @@ for (const vp of VIEWPORTS) {
         await page.waitForTimeout(400);
       }
       for (const [k, key] of [['complete', 'q.ch1-d3-return-001'], ['visit', 'loc.home'], ['complete', 'q.ch1-d3-home-001']] as const) await tapAct(k, key);
-      // GAME-216: кінець розділу — спершу картка-«серія» (три рядки, слід дідуся, кліфхенгер): перший тап показує все, другий закриває; лише тоді підсумок дня 3.
+      // GAME-264: кінець розділу — спершу підсумок дня 3, «Лягти спати», і лише тоді картка-«серія» (три рядки, слід дідуся, кліфхенгер): перший тап показує все, другий закриває.
       const episode = page.locator('[data-ui="episode"]');
+      await expect(episode).toHaveCount(0);
+      await expect(page.locator('[data-ui="summary"] h2')).toHaveText('Підсумок дня 3');
+      await page.locator('[data-ui="summary-continue"]').tap();
       await expect(episode).toBeVisible();
       await expect(episode.locator('[data-ui="episode-line"][data-kind="recap"]')).toHaveCount(3);
       await episode.tap();
       await expect(episode).toHaveAttribute('data-state', 'all');
       await episode.tap();
       await expect(episode).toHaveCount(0);
-      await expect(page.locator('[data-ui="summary"] h2')).toHaveText('Підсумок дня 3');
-      await page.locator('[data-ui="summary-continue"]').tap();
+      await expect(page.locator('[data-ui="pause"]')).toBeVisible();   // після тизера — збережена гра й меню паузи
+      await page.locator('[data-ui="resume"]').tap();
       await page.locator('[data-touch="story"]').tap();
       await expect(story.locator('[data-ui="ended"]')).toBeVisible();
       expect((await page.evaluate(() => (window as unknown as { __game: { read: () => { game: { campaignEnded: boolean } } } }).__game.read().game.campaignEnded))).toBe(true);

@@ -170,7 +170,7 @@ export interface StoryOffer {
   readonly inventory: readonly { readonly key: string; readonly qty: number; readonly gear?: { readonly condition: number; readonly wet: boolean } }[];
   /** Ритм дня (GAME-242): похідне від ядра. `bedtime` — номер ночі, поки триває вікно «пора спати» [22:00, 00:30), інакше null;
    *  `shopClosed` — стоїмо в крамниці, а вона зачинена (08:00–20:00); `autoSlept` — щойно прокинулись після того, як герой заснув сам. */
-  readonly rest: { readonly bedtime: number | null; readonly shopClosed: boolean; readonly autoSlept: boolean };
+  readonly rest: { readonly bedtime: number | null; readonly shopClosed: boolean; readonly autoSlept: boolean; /** GAME-264: id останнього сну в журналі — кожна команда сну дає новий (лічильник slept після SLEEP_CAP не росте, а тизер мусить спрацьовувати на сам сон). */ readonly sleepMark: string };
   /** Продаються тут, але бракує грошей (GAME-83): показуються вимкненими з причиною, а не зникають. */
   readonly locked: readonly OfferAction[];
   /** День гри з 1 і хвилина доби 0…1439 — для HUD (GAME-83). */

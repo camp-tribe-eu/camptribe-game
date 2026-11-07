@@ -231,7 +231,7 @@ export function restOffer(sim: SimState): StoryOffer['rest'] {
   const now = sim.clock.minutes;
   const last = sim.journal.at(-1);
   const wake = last?.type === 'Sleep' && last.ref === 'auto' ? wakeMinute(last.at, true) : null;
-  return { bedtime: bedtimeNight(now), shopClosed: shopClosedHere(sim.game, now), autoSlept: wake !== null && now >= wake && now - wake < 10 };
+  return { bedtime: bedtimeNight(now), shopClosed: shopClosedHere(sim.game, now), autoSlept: wake !== null && now >= wake && now - wake < 10, sleepMark: [...sim.journal].reverse().find((e) => e.type === 'Sleep')?.commandId ?? '' };
 }
 
 export function summaryOffer(sim: SimState, defs: CoreDefs): { daysEnded: number; summary: OfferSummary | null } {
