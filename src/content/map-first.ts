@@ -10,6 +10,7 @@
 // можна завжди: або ногами, або (як було) кнопкою. Що саме ногами — доводить map-first.test.ts повним перебором.
 import { basketOf, hasBasket } from '../core/basket';
 import { taskGate } from '../core/wave';
+import { shopClosedHere } from '../core/rest';
 import { dispatch, nextCommandId, type Command } from '../core/commands';
 import type { CoreDefs } from '../core/defs';
 import { canonical } from '../core/hash';
@@ -513,6 +514,9 @@ export function nextTarget(sim: SimState, defs: CoreDefs, carried: readonly stri
     if (quest(g, 'ST-003')) {
       // GAME-246: узяте лежить у кошику, власністю його робить каса: спершу все на полиці, потім до каси, потім крок завершується.
       const inBasket = (id: string): boolean => basketOf(g.flags, defs).includes(id);
+      // GAME-272: крамниця зачинена за годинником (GAME-242) — меню ховає купівлі, а стрілка вела до полиці: той самий предикат ядра, що в меню й каси.
+      const closed = shopClosedHere(g, sim.clock.minutes);
+      if (closed && (!g.inventory['item.tent'] || !g.inventory['item.sleeping-bag']) && basketOf(g.flags, defs).length === 0) return { key: 'next.shop-closed', spot: 'obj.vehicle' };
       if (!g.inventory['item.tent'] && !inBasket('item.tent')) return { key: 'next.take-tent', spot: 'take.item.tent' };
       if (!g.inventory['item.sleeping-bag'] && !inBasket('item.sleeping-bag')) return { key: 'next.take-bag', spot: 'take.item.sleeping-bag' };
       // GAME-271: каса мертва (крамниця зачинена за годинником чи нічим платити) — «розрахуйся» хибне: ядро каси не прийме. Реальний
