@@ -69,7 +69,7 @@ for (const size of SIZES) {
   });
 }
 
-test('крамниця: намет на полиці не з крон (fadeBands = 0), у таборі крони лишились', async ({ page }) => {
+test('крамниця: намет на полиці не тане (fadeBands = 0), у таборі крони й дахи лишились', async ({ page }) => {
   const open = async (q: string): Promise<{ bands: number; fadeBands: number }> => {
     await page.goto(`/?${q}`);
     await page.waitForFunction(() => (window as unknown as { __game?: { probe: { ready: boolean } } }).__game?.probe.ready === true, null, { timeout: 30_000 });

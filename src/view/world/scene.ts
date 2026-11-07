@@ -192,7 +192,7 @@ const ICON_Y = -4;   // GAME-201: низ піктограми цілі над т
 interface Marker { readonly g: Phaser.GameObjects.Container; readonly shape: Phaser.GameObjects.Graphics; img: Phaser.GameObjects.Image | null; look: string }
 
 /** Смуга шару `above`: тайли верхівок, що мають одну «базову» лінію (низ стовбура під ними). */
-/** GAME-263: `fade` — крони дерев (тайли lpc-terrain) напівпрозорі над героєм; меблі, виставковий намет, дах авто — ніколи (непрозорий предмет не «тане»). */
+/** GAME-263: `fade` — крони й дахи просто неба напівпрозорі над героєм; смуга, що ціла з меблів крамниці (shop-gear / shop-decor / рами дверей: виставковий намет, полиці), — ніколи (непрозорий предмет не «тане»). */
 interface Band { readonly layer: Phaser.Tilemaps.TilemapLayer; readonly depth: number; alpha: number; readonly fade: boolean }
 
 export interface WorldProbe {
@@ -974,8 +974,8 @@ export class WorldScene extends Phaser.Scene {
       const layer = map.createBlankLayer(`above@${depth}`, tilesets, 0, 0, map.width, map.height, TILE, TILE);
       if (!layer || !(layer instanceof Phaser.Tilemaps.TilemapLayer)) throw new Error('band layer failed');
       for (const t of tiles) layer.putTileAt(t.index, t.x, t.y);
-      const terrain = tilesets.find((ts) => ts.name === 'lpc-terrain');
-      const fade = !!terrain && tiles.some((t) => t.index >= terrain.firstgid && t.index < terrain.firstgid + terrain.total);
+      const furniture = tilesets.filter((ts) => ts.name === 'shop-gear' || ts.name === 'shop-decor' || ts.name === 'home-windows-doors');
+      const fade = !tiles.every((t) => furniture.some((ts) => t.index >= ts.firstgid && t.index < ts.firstgid + ts.total));
       return { layer: layer.setDepth(depth), depth, alpha: 1, fade };
     });
   }
