@@ -308,12 +308,12 @@ const unloadOne = (manual = false): 'ok' | 'full' | 'none' => {
 const saves = createSaveSession(bridge, saveBackend, { story: STORY, stickers: GAME_DEFS.stickers ?? {}, ...(GAME_DEFS.life ? { life: GAME_DEFS.life } : {}), contentRev: STORY_REV, viable: (g) => saveViable(g, GAME_DEFS) });
 // Тестовий хук Playwright: лише ЧИТАННЯ — знімок стану копією, місток назовні не віддається
 // (рецензія PR #13: раніше скрипт сторінки міг надіслати команду в ядро).
-(window as unknown as { __game: { probe: WorldProbe; read: () => unknown; sounds: () => readonly string[]; ambient: () => Readonly<Record<string, number>>; music: () => Readonly<Record<string, number>>; night: () => { level: number; cricket: number; owl: number }; frames: () => number; rewardTitle?: (title: number) => void; rewardSum?: (r: { cents: number; xp: number; om: number; skills: Record<string, number> }) => void } }).__game = {
+(window as unknown as { __game: { probe: WorldProbe; read: () => unknown; sounds: () => readonly string[]; ambient: () => Readonly<Record<string, number>>; music: () => Readonly<Record<string, number>>; night: () => { level: number; cricket: number; owl: number }; frames: () => number; rewardTitle?: (title: number) => void; storyPing?: () => void; rewardSum?: (r: { cents: number; xp: number; om: number; skills: Record<string, number> }) => void } }).__game = {
   probe,
   sounds: () => [...uiSounds.played, ...sfxPlayer.played], ambient: () => ambient.levels(), music: () => music.levels(), night: () => ({ level: nightSounds.level, ...nightSounds.counts }),   // GAME-40: що мікшер прийняв до відтворення (лише читання)
   read: () => JSON.parse(JSON.stringify(bridge.state)) as unknown,
   // GAME-260 (лише збірка e2e): показати банер звання без заробітку XP — подія нагороди для UI; стан ядра не змінюється.
-  ...(import.meta.env.MODE === 'e2e' ? { rewardTitle: (title: number) => { for (const l of rewardListeners) l({ xp: 0, om: 0, title, cents: 0, skills: {} }); }, rewardSum: (r: { cents: number; xp: number; om: number; skills: Record<string, number> }) => { for (const l of rewardListeners) l({ xp: r.xp, om: r.om, title: null, cents: r.cents, skills: r.skills }); } } : {}),
+  ...(import.meta.env.MODE === 'e2e' ? { storyPing: () => { storyChanged(); }, rewardTitle: (title: number) => { for (const l of rewardListeners) l({ xp: 0, om: 0, title, cents: 0, skills: {} }); }, rewardSum: (r: { cents: number; xp: number; om: number; skills: Record<string, number> }) => { for (const l of rewardListeners) l({ xp: r.xp, om: r.om, title: null, cents: r.cents, skills: r.skills }); } } : {}),
   frames: () => renderGate.rendered(),   // GAME-268: скільки кадрів Phaser справді намалював (лише читання)
 };
 

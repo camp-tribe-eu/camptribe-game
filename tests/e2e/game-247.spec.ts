@@ -92,20 +92,25 @@ for (const v of VIEWS) {
       await shot(page, `waits-${v.side}`);
       // GAME-280: наклейка живе 5 ІГРОВИХ хвилин (STICKER_MIN, 1 хв = 1 с живої гри), а кожен виклик Playwright під навантаженням (4 воркери) триває секунди:
       // «видно → прочитати → дати ще одну → прочитати» як окремі виклики вилітали за ці 5 с (нагорода ставала новою наклейкою або зникала — 14 з 24 червоних).
-      // Тож спостерігач у сторінці, на кожному кадрі: першу появу фіксує ЗНІМКОМ, у ту ж мить дає третю нагороду й фіксує злиту наклейку. Тест читає знімки, а не живий DOM.
+      // Тож спостерігач у сторінці: першу появу фіксує ЗНІМКОМ, у ту ж мить дає третю нагороду й далі по кадрах фіксує злиту наклейку. Тест читає знімки, а не живий DOM.
+      // Перша поява — через MutationObserver: його колбек іде мікрозадачею одразу за записом у DOM, ДО ефектів Preact (afterPaint: rAF або 35 мс). Третя нагорода
+      // саме в цю щілину — детермінований стрес злиття: ефект «seen» у Shell, що переписував стан старим замиканням, губив її (1 з 8 червоних на rAF; тут — завжди).
       type Rec = { first: string[] | null; firstCount: number; merged: string[] | null };
       await page.evaluate(() => {
         const w = window as unknown as { __game: { rewardSum: (r: Sum) => void }; __g280?: Rec };
         const rec: Rec = { first: null, firstCount: 0, merged: null };
         w.__g280 = rec;
+        const all = (): Element[] => [...document.querySelectorAll('[data-ui="reward-sticker"]')];
         const parts = (el: Element): string[] => [...el.querySelectorAll('.ui-reward-part')].map((p) => (p.textContent ?? '').trim());
-        const tick = (): void => {
-          const all = [...document.querySelectorAll('[data-ui="reward-sticker"]')];
-          if (all[0] && rec.first === null) { rec.first = parts(all[0]); rec.firstCount = all.length; w.__game.rewardSum({ cents: 100, xp: 0, om: 0, skills: {} }); }   // ще одна, поки жива — теж злилась
-          else if (all[0] && rec.first !== null && rec.merged === null && parts(all[0])[0] === '+6 €') rec.merged = parts(all[0]);
-          if (rec.merged === null) requestAnimationFrame(tick);
-        };
-        requestAnimationFrame(tick);
+        const tick = (): void => { const el = all()[0]; if (el && parts(el)[0] === '+6 €') rec.merged = parts(el); else requestAnimationFrame(tick); };
+        const mo = new MutationObserver(() => {
+          const el = all()[0];
+          if (!el || rec.first !== null) return;
+          rec.first = parts(el); rec.firstCount = all().length; mo.disconnect();
+          w.__game.rewardSum({ cents: 100, xp: 0, om: 0, skills: {} });   // ще одна, поки жива — теж злилась
+          requestAnimationFrame(tick);
+        });
+        mo.observe(document.body, { childList: true, subtree: true });
       });
       await talk(page).locator('[data-act="cancel"]').first().click({ timeout: 5_000 });
       await expect(talk(page)).toHaveCount(0);
