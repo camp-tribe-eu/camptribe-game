@@ -1,0 +1,17 @@
+{
+ "size": 32,
+ "cols": 11,
+ "cells": {
+  "tent": 0,
+  "bag": 1,
+  "lantern": 2,
+  "firewood": 3,
+  "pine-cone": 4,
+  "berries": 5,
+  "documents": 6,
+  "wallet": 7,
+  "phone": 8,
+  "first-aid": 9,
+  "clothes": 10
+ }
+}

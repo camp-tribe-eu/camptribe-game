@@ -229,7 +229,7 @@ export interface WorldProbe {
   coveredTiles: number;
   behindTiles: number;
   /** GAME-210 (лише для e2e): крони/дахи над героєм (глибина смуги > глибини героя) і найменша їхня прозорість зараз (1 — ніхто не під кроною; нижче — герой під кроною). */
-  canopy: { bands: number; over: number; minAlpha: number };
+  canopy: { bands: number; over: number; minAlpha: number; fadeBands: number };
   /** GAME-210 (лише для e2e): плями світла з вікон на підлозі — скільки намальовано, глибина шару й прозорість (гасне до ночі). */
   light: { patches: number; depth: number; alpha: number };
   /** GAME-231 (лише для e2e): ліхтарі табору — скільки стоїть, чи горять (з 18:00), прозорість кола світла й його радіус, px. */
@@ -1867,7 +1867,7 @@ export class WorldScene extends Phaser.Scene {
       playerDepth: this.player.depth,
       coveredTiles: covered,
       behindTiles: behind,
-      canopy: { bands: this.bands.length, over, minAlpha },
+      canopy: { bands: this.bands.length, over, minAlpha, fadeBands: this.bands.filter((b) => b.fade).length },
       light: { patches: this.patchCount, depth: this.patches?.depth ?? 0, alpha: this.patches?.alpha ?? 0 },
       tent: this.tent.probe(),
       wood: this.wood.probe(),
