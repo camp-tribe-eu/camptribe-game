@@ -5,7 +5,7 @@ import type { StoryOffer } from './story-types';
 import type { MiniFrame } from '../content/agenda';
 
 /** GAME-181: що щойно нараховано. `title` — індекс нового звання (0…9), якщо воно з'явилось саме зараз; інакше null. */
-export interface RewardEvent { readonly xp: number; readonly om: number; readonly title: number | null }
+export interface RewardEvent { readonly xp: number; readonly om: number; readonly title: number | null; /** GAME-247: гроші з нових нагород і XP навичок — для наклейки. */ readonly cents: number; readonly skills: Readonly<Record<string, number>> }
 
 export interface UiPort {
   setPaused(paused: boolean): void;
