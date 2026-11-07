@@ -219,6 +219,10 @@ export interface WorldProbe {
   heroBreath: number;
   /** OD-029: спрайт героя на екрані, CSS px (для наклейки нагороди над головою; e2e звіряє, що вона не на ньому). */
   heroRect: { x: number; y: number; w: number; h: number };
+  /** GAME-254 (лише для e2e): висота НЕпрозорої частини кадру героя (його справжній зріст), px гри — з текстури, а не з сталої. */
+  heroBody: number;
+  /** GAME-254 (лише для e2e): що видно зараз — вікно камери у світі (px гри), розмір мапи й zoom полотна. */
+  view: { x: number; y: number; w: number; h: number; zoom: number; mapW: number; mapH: number };
   /** Глибина персонажа (= y ніг) і кількість тайлів верхівок, що зараз перекривають його кадр / лежать позаду нього. */
   playerDepth: number;
   coveredTiles: number;
@@ -898,6 +902,7 @@ export class WorldScene extends Phaser.Scene {
     }
     if (key === 'camp') this.life.begin(this.bands.map((b) => b.layer));
     this.cameras.main.setBounds(0, 0, map.widthInPixels, map.heightInPixels);
+    this.paintLetterbox(bakeKey);   // GAME-254: кадр ширший за малу мапу — смуги кольору землі, не чорна діра
     this.cameras.main.centerOn(this.player.x, this.player.y);
     this.last = { x: this.player.x, y: this.player.y };
     // GAME-216: перший приїзд у табір — заставка: камера відпливає до озера й табору і вертається (таблиця бітів camp-reveal.ts, кадр за кадром).
@@ -1467,6 +1472,51 @@ export class WorldScene extends Phaser.Scene {
     this.fpsStart = time;
   }
 
+  private heroBodyCache = 0;
+  /** GAME-254: висота непрозорих рядків кадру «стоїть, обличчям вниз» — справжній зріст героя (HERO_BODY_PX у frame.ts мусить дорівнювати). */
+  private heroBodyPx(): number {
+    if (this.heroBodyCache > 0) return this.heroBodyCache;
+    const fr = this.textures.get('player').get(frameIndex('down', 0));
+    const c = document.createElement('canvas'); c.width = fr.cutWidth; c.height = fr.cutHeight;
+    const g = c.getContext('2d', { willReadFrequently: true });
+    if (!g) return 0;
+    g.drawImage(fr.source.image as CanvasImageSource, fr.cutX, fr.cutY, fr.cutWidth, fr.cutHeight, 0, 0, fr.cutWidth, fr.cutHeight);
+    const d = g.getImageData(0, 0, c.width, c.height).data;
+    let top = -1; let bot = -1;
+    for (let y = 0; y < c.height; y++) for (let x = 0; x < c.width; x++) if ((d[(y * c.width + x) * 4 + 3] ?? 0) > 0) { if (top < 0) top = y; bot = y; }
+    this.heroBodyCache = top < 0 ? 0 : bot - top + 1;
+    return this.heroBodyCache;
+  }
+  private edgeColours = new Map<string, string>();
+  /** GAME-254: колір «землі» мапи = найчастіший піксель її краю (запеченої текстури) — ним заливається все, що камера покаже за мапою. Знімок текстури асинхронний — колір ставиться, щойно готовий (і кешується). */
+  private paintLetterbox(texKey: string): void {
+    const cam = this.cameras.main;
+    const known = this.edgeColours.get(texKey);
+    if (known) { cam.setBackgroundColor(known); return; }
+    const tex = this.textures.get(texKey);
+    if (!(tex instanceof Phaser.Textures.DynamicTexture)) return;
+    tex.snapshotArea(0, 0, tex.width, tex.height, (img) => {
+      try {
+        const im = img as HTMLImageElement;
+        const w = im.width; const h = im.height;
+        const c = document.createElement('canvas'); c.width = w; c.height = h;
+        const g = c.getContext('2d', { willReadFrequently: true });
+        if (!g) return;
+        g.drawImage(im, 0, 0);
+        const d = g.getImageData(0, 0, w, h).data;
+        const count = new Map<number, number>();
+        const add = (x: number, y: number): void => { const i = (y * w + x) * 4; if ((d[i + 3] ?? 0) < 255) return; const k = ((d[i] ?? 0) << 16) | ((d[i + 1] ?? 0) << 8) | (d[i + 2] ?? 0); count.set(k, (count.get(k) ?? 0) + 1); };
+        for (let x = 0; x < w; x++) { add(x, 0); add(x, h - 1); }
+        for (let y = 0; y < h; y++) { add(0, y); add(w - 1, y); }
+        let best = -1; let bn = -1;
+        for (const [k, n] of count) if (n > bn) { best = k; bn = n; }
+        if (best < 0) return;
+        const css = `#${best.toString(16).padStart(6, '0')}`;
+        this.edgeColours.set(texKey, css);
+        if (this.current && `bake-${this.current}` === texKey) this.cameras.main.setBackgroundColor(css);
+      } catch { /* лишається чорне тло: смуги чорні, гра йде */ }
+    });
+  }
   /** OD-029: спрайт героя в CSS px екрана (камера + розтяг полотна). */
   private heroRect(): { x: number; y: number; w: number; h: number } {
     const cam = this.cameras.main; const v = cam.worldView; const cv = this.game.canvas.getBoundingClientRect();
@@ -1800,6 +1850,8 @@ export class WorldScene extends Phaser.Scene {
       playerY: this.player.y - (this.heroBob ? this.heroBreath : 0),   // свіжіше значення перепише слухач POST_UPDATE (див. create)
       heroBreath: this.heroBob ? this.heroBreath : 0,
       heroRect: this.heroRect(),
+      heroBody: this.heroBodyPx(),
+      view: { x: this.cameras.main.worldView.x, y: this.cameras.main.worldView.y, w: this.cameras.main.worldView.width, h: this.cameras.main.worldView.height, zoom: this.game.scale.zoom, mapW: this.tilemap?.widthInPixels ?? 0, mapH: this.tilemap?.heightInPixels ?? 0 },
       nearObject: near,
       nearKind: spot ? actionTarget(spot.kind, spot.name) : null,
       commandsSent: this.bridge.sent,
