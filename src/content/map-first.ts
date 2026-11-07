@@ -282,6 +282,8 @@ function compute(sim: SimState, defs: CoreDefs, name: string): Resolved | null {
   if (name.startsWith(SPOT_PREFIX.take)) {
     const itemId = name.slice(SPOT_PREFIX.take.length);
     const moves: Move[] = [{ type: 'Pickup', itemId }];
+    // GAME-273: годинник — зачинена крамниця не дає брати з полиці (ядро: SHOP_CLOSED), ні речі, ні дарунок Анни.
+    if (shopClosedHere(g, sim.clock.minutes)) return null;
     if (chain(g, defs, moves)) return { moves };
     // GAME-246: полиця не по кишені (INSUFFICIENT_FUNDS) — та сама полиця дає дарунок Анни (`asItem` → ця річ, стан 60), коли платити
     // нічим (інакше ядро каже CAN_PAY — спершу продати). Так стрілка «Далі» до намету лишається живою і без грошей, а ☰ не пропонує

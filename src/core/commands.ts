@@ -403,6 +403,8 @@ function apply(cmd: Command, d: Draft, defs: CoreDefs, guard: Safeguards, today:
       const shelf = own(defs.items, cmd.itemId)?.shelfCents;
       const here = d.player?.locationId;
       if (shelf !== undefined && defs.story && isContentId(cmd.itemId) && d.player && here != null && own(defs.story.locations, here)?.items.includes(cmd.itemId)) {
+        // GAME-273: крамниця зачинена за годинником (GAME-242) — полицю не можна ні брати, ні платити: кошик, який не оплатити, не наповнюємо.
+        if (now !== undefined && shopClosedHere(d, now)) return 'SHOP_CLOSED';
         if ((own(d.inventory, cmd.itemId) ?? 0) >= 1 || d.flags.includes(basketFlag(cmd.itemId))) return 'ITEM_ALREADY_HELD';
         // У кошик — лише те, за що є готівка разом із рештою кошика (та сама умова, що й у каси): інакше кошик без грошей — пастка,
         // з якої лише «вийти» (речі на полицю), і випадкова прогулянка з 0 € не доходила до кінця дня 1 (day-summary).
@@ -412,6 +414,8 @@ function apply(cmd: Command, d: Draft, defs: CoreDefs, guard: Safeguards, today:
       }
       const alt = own(defs.items, cmd.itemId)?.asItem;
       if (alt && defs.story && isContentId(cmd.itemId) && d.player && here != null && own(defs.story.locations, here)?.items.includes(cmd.itemId)) {
+        // GAME-273: дарунок Анни — теж із полиці крамниці (її персонал), тож за зачиненою крамницею його немає.
+        if (now !== undefined && shopClosedHere(d, now)) return 'SHOP_CLOSED';
         if ((own(d.inventory, alt.itemId) ?? 0) >= 1 || d.flags.includes(basketFlag(alt.itemId))) return 'ITEM_ALREADY_HELD';
         // Дарунок — лише тому, кому нічим платити за звичайну річ (готівка + викуп наявного < ціни полиці): правило ядра, а не меню.
         const shelfAlt = own(defs.items, alt.itemId)?.shelfCents;
