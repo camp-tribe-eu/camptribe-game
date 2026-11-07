@@ -174,9 +174,9 @@ export const WEATHER_KINDS = ['sunny', 'cloudy', 'rain'];
 export const SKILL_IDS = ['skill.planning', 'skill.camping', 'skill.mechanics', 'skill.electrics', 'skill.cooking', 'skill.finance', 'skill.endurance', 'skill.communication'];
 
 // GAME-73: поля картки спорядження (крім kind — він і робить предмет спорядженням).
+export const GEAR_FIELDS = ['tier', 'weightG', 'volumeL', 'waterproofMm', 'comfortC', 'sleeps', 'priceCents', 'resaleCents'];
 /** GAME-244 ч.2: найдорожча знахідка (шишка, ягоди…) — 1 €: картка без характеристик спорядження не може коштувати як спорядження. */
 export const FIND_RESALE_MAX_CENTS = 100;
-export const GEAR_FIELDS = ['tier', 'weightG', 'volumeL', 'waterproofMm', 'comfortC', 'sleeps', 'priceCents', 'resaleCents'];
 
 // GAME-113: стартові гроші гри в центах (createBridge: START_MONEY_CENTS у src/view/world/bridge.ts) — база кожного виду
 // спорядження мусить бути не дорожчою. Рівність із мостом стереже src/content/economy-ch1.test.ts.
