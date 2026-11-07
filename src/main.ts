@@ -61,7 +61,8 @@ import { MAP_SPOTS, departBlock, isBulky, isMapFirstSpot, mapKeyFor, moveKey, ne
 import { carriedOf, takeFlag } from './core/packing';
 import type { GameState } from './core/state';
 import { progressOf, titleOf } from './core/progress';
-import { isEmptySum, rewardDelta, type CoreSnap } from './ui/reward-sticker';
+import { grantCentsMap, isEmptySum, rewardDelta, type CoreSnap, type RawRewardRow } from './ui/reward-sticker';
+import contentEvents from '../content/events.json';
 import { rankUps, SKILL_IDS, type HandAction } from './core/skills';
 import type { SkillUp } from './ui/overlay-order';
 import { openGate } from './view/open-gate';
@@ -71,7 +72,7 @@ const app = document.querySelector<HTMLElement>('#app');
 if (!app) throw new Error('#app is missing');
 
 const probe: WorldProbe = { ready: false, map: null, reveal: false, gift: { count: 0, npc: null, reaction: null, emote: null, poseAge: -1, poseColumn: null, poseFrames: 0, sounds: [] }, playerX: 0, playerY: 0, nearObject: null, nearKind: null, commandsSent: 0, cameraScrollX: 0, cameraScrollY: 0, clockMinutes: 0, saveLoaded: false, cameraLerp: [0, 0], followers: [], leisure: [], jobs: [],
-  playerFrame: 0, playerDir: 'down', playerMoving: false, heroBreath: 0, playerDepth: 0, coveredTiles: 0, behindTiles: 0, canopy: { bands: 0, over: 0, minAlpha: 1 }, light: { patches: 0, depth: 0, alpha: 0 }, lamps: { count: 0, on: false, alpha: 0, radius: 0 }, fps: 0, fpsWindows: 0, firstFrameMs: 0,
+  playerFrame: 0, playerDir: 'down', playerMoving: false, heroBreath: 0, heroRect: { x: 0, y: 0, w: 0, h: 0 }, playerDepth: 0, coveredTiles: 0, behindTiles: 0, canopy: { bands: 0, over: 0, minAlpha: 1 }, light: { patches: 0, depth: 0, alpha: 0 }, lamps: { count: 0, on: false, alpha: 0, radius: 0 }, fps: 0, fpsWindows: 0, firstFrameMs: 0,
   residents: [], neighbours: [], visitors: [], bark: null, barkCount: 0, barkBy: null, npcMarks: {}, miaAt: [], tent: TENT_PROBE_IDLE, wood: WOOD_PROBE_IDLE, crate: CRATE_PROBE_IDLE, fire: FIRE_PROBE_IDLE, grill: GRILL_PROBE_IDLE, fish: FISH_PROBE_IDLE, live: LIVE_PROBE_IDLE, swim: SWIM_PROBE_IDLE, camp: CAMP_PROBE_IDLE,
   daylight: { on: false, visible: false, minuteOfDay: 0, darkness: 0, color: 0xffffff, glow: 0, heroLight: { radius: 0, alpha: 0 } },
   fx: { target: null, ring: 0, ringName: null, backpack: 0, guide: 'none', pops: 0, auto: 0, rewards: 0, rewardLast: '', headLabels: [], headIcons: [] } };
@@ -147,9 +148,7 @@ let rewardsReady = false;
 let pendingPop: { xp: number; om: number } | null = null;
 const rewardListeners = new Set<(r: RewardEvent) => void>();
 // GAME-247: до XP/ОМ додано XP навичок і нові grantId (гроші) — з них модель reward-sticker.ts виводить наклейку в кутку HUD.
-const GRANT_CENTS: Record<string, number> = {};
-for (const d of Object.values(GAME_DEFS.interactions)) GRANT_CENTS[d.grantId] = d.moneyCents;
-for (const q of Object.values(GAME_DEFS.story?.quests ?? {})) if (q.reward) GRANT_CENTS[q.reward.grantId] = q.reward.moneyCents;
+const GRANT_CENTS = grantCentsMap(GAME_DEFS, contentEvents as readonly RawRewardRow[]);   // GAME-277: усі джерела грошей нагороди в одній чистій функції (сторож — reward-sticker.test.ts)
 const snapOf = (): CoreSnap => { const g = bridge.state.game; const p = progressOf(g); return { xp: p.xp, om: p.om, skills: g.skills, grants: g.grants }; };
 let seenSnap: CoreSnap = { xp: 0, om: 0, skills: {}, grants: [] };
 const rebaseRewards = (): void => { const p = progressOf(bridge.state.game); seenXp = p.xp; seenOm = p.om; seenSnap = snapOf(); rewardsReady = true; pendingPop = null; };

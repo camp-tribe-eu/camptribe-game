@@ -4,7 +4,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'preact/hooks';
 import { mixer, setMusicScreen } from '../audio';
 import { playUi, soundForButton } from '../audio/ui-sounds';
 import { sfx } from '../audio/sfx';
-import { isEmptySum, mergeSums, NO_REWARD, STICKER_MIN, stickerParts, type RewardSum } from './reward-sticker';
+import { isEmptySum, mergeSums, NO_REWARD, stickerAt, stickerLive, stickerParts, type RewardSum } from './reward-sticker';
 import { DEFAULT_SETTINGS, TEXT_SCALES, loadSettings, saveSettings, type Settings } from '../platform/settings';
 import type { Credits, UiPort } from './port';
 import { BigItemIcon, ObjectiveIcon } from './ObjectiveIcon';
@@ -103,13 +103,13 @@ export function Shell({ port, langOverride, credits, build, holdToast = false, h
   useEffect(() => { port.setHintMode(settings.hintMode); }, [settings.hintMode]);
   // GAME-247: наклейка нагороди в кутку HUD (не над героєм — GAME-229). Нагороди, що прийшли, доки наклейка жива чи чекає за рамкою розмови, ЗЛИВАЮТЬСЯ в одну.
   // Життя — за ігровим годинником від останньої нагороди; дзвіночок (src/audio) — раз на наклейку, коли вона справді з'явилась.
-  const [sticker, setSticker] = useState<{ id: number; sum: RewardSum; at: number } | null>(null);
+  const [sticker, setSticker] = useState<{ id: number; sum: RewardSum; at: number; seen: boolean } | null>(null);
   const stickerId = useRef(0);
   useEffect(() => port.onReward((r) => {
     const sum: RewardSum = { cents: r.cents, xp: r.xp, om: r.om, skills: r.skills };
     if (isEmptySum(sum)) return;
     const o = port.story(); const at = o.day * 1440 + o.timeMinutes;
-    setSticker((prev) => (prev && at - prev.at < STICKER_MIN ? { id: prev.id, sum: mergeSums(prev.sum, sum), at } : { id: ++stickerId.current, sum: mergeSums(NO_REWARD, sum), at }));
+    setSticker((prev) => { const pa = prev ? stickerAt(prev, at) : 0; return prev && stickerLive(pa, at) ? { id: prev.id, sum: mergeSums(prev.sum, sum), at, seen: prev.seen } : { id: ++stickerId.current, sum: mergeSums(NO_REWARD, sum), at, seen: false }; });   // GAME-277: прострочена, але не показана наклейка живе від першого показу (stickerAt) — її не губимо
   }), []);
   useEffect(() => port.onReward((r) => { if (r.title !== null) { const o = port.story(); setTitleUp({ index: r.title, at: o.day * 1440 + o.timeMinutes }); playUi('confirm'); } }), []);
   // Підсумок дня (GAME-106): з'являється, коли ДІЯ гравця завершила день (daysEnded зріс саме на ній), а не при завантаженні
@@ -362,7 +362,10 @@ export function Shell({ port, langOverride, credits, build, holdToast = false, h
   // GAME-260: усі банери — в одній черзі за екранами (banner-queue.ts): ні поверх рамки розмови, ні поверх панелей.
   const bannerSlot = bannersOpen({ paused, storyOpen, talk, summary: summary !== null, atlasOpen, backpackOpen, episode, intro });
   const barkShown = bark !== null && offer.rest.bedtime === bark.night && nowAbs - bark.at < 10 && bannerSlot;
-  const stickerShown = sticker !== null && nowAbs - sticker.at >= 0 && nowAbs - sticker.at < STICKER_MIN && bannerSlot;
+  // GAME-277: дія, що перестрибнула годинник (сон, кінець дня), не губить наклейку: поки її не бачили, життя відлічується від першого показу — на мапі після підсумку/пробудження.
+  const stickerFrom = sticker ? stickerAt(sticker, nowAbs) : 0;
+  const stickerShown = sticker !== null && stickerLive(stickerFrom, nowAbs) && bannerSlot;
+  useEffect(() => { if (stickerShown && sticker && (!sticker.seen || sticker.at !== stickerFrom)) setSticker({ ...sticker, at: stickerFrom, seen: true }); }, [stickerShown, sticker?.id, stickerFrom]);
   useEffect(() => { if (stickerShown) sfx('chime'); }, [stickerShown, sticker?.id]);
   const titleUpShown = titleUp !== null && sinceUp >= 0 && sinceUp < TITLE_UP_MIN && bannerSlot;
   // GAME-243: мапа-перша гра має нотатник Вікторії й мінімапу — три нижні підказки (ціль, найближча нагорода, «Далі: …») зникають; лишається ОДИН короткий рядок біля дії.

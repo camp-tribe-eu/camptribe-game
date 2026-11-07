@@ -5,6 +5,7 @@
 // яких валідатор довів досяжність пішки (а не числа, вписані в код окремо від мапи).
 // GAME-93: графіка LPC (OD-013) — тайли 32 px, персонаж із шарів (ходьба 9 кадрів × 4 напрямки), анімоване вогнище,
 // 3/4-глибина: верхівки дерев і дах намету малюються над персонажем, коли той стоїть ПОЗАД об'єктом (див. `bands`).
+import { stickerPlace } from '../../ui/reward-sticker';
 import Phaser from 'phaser';
 import { ambient, bindPhaser, isIntroOpen, ambientMix, music, musicFor, getMusicScreen } from '../../audio';
 import { STEP_MS } from '../../core/clock';
@@ -216,6 +217,8 @@ export interface WorldProbe {
   playerMoving: boolean;
   /** GAME-238 (лише для e2e): зсув ДИХАННЯ спрайта героя (GAME-212), px — 0/1 по колу, коли стоїть > 2 с. У playerY його нема; зсув сидіння (SIT_DY) і нахилу біля колонки — є, як і було. */
   heroBreath: number;
+  /** OD-029: спрайт героя на екрані, CSS px (для наклейки нагороди над головою; e2e звіряє, що вона не на ньому). */
+  heroRect: { x: number; y: number; w: number; h: number };
   /** Глибина персонажа (= y ніг) і кількість тайлів верхівок, що зараз перекривають його кадр / лежать позаду нього. */
   playerDepth: number;
   coveredTiles: number;
@@ -1464,6 +1467,26 @@ export class WorldScene extends Phaser.Scene {
     this.fpsStart = time;
   }
 
+  /** OD-029: спрайт героя в CSS px екрана (камера + розтяг полотна). */
+  private heroRect(): { x: number; y: number; w: number; h: number } {
+    const cam = this.cameras.main; const v = cam.worldView; const cv = this.game.canvas.getBoundingClientRect();
+    const k = cv.width / this.game.scale.gameSize.width * cam.zoom;
+    const b = this.player.getBounds();
+    return { x: cv.left + (b.x - v.x) * k, y: cv.top + (b.y - v.y) * k, w: b.width * k, h: b.height * k };
+  }
+  /** OD-029 · наклейка нагороди як у Stardew: спливає над головою героя, піднімається й згасає за ЛІЧИЛЬНИКОМ КАДРІВ (таймерів нема), іде за героєм. */
+  private placeRewardPop(): void {
+    const el = document.querySelector<HTMLElement>('[data-ui="reward-sticker"]');
+    if (!el) return;
+    const age = Number(el.dataset.age ?? '0');
+    el.dataset.age = String(age + 1);
+    const r = this.heroRect();
+    const hd = document.querySelector('.ui-header')?.getBoundingClientRect();
+    const p = stickerPlace({ heroX: r.x + r.w / 2, heroTop: r.y, w: el.offsetWidth, h: el.offsetHeight, vw: window.innerWidth, age, topInset: hd ? hd.bottom + 4 : 4 });
+    el.style.transform = `translate(${p.left.toFixed(1)}px, ${p.top.toFixed(1)}px)`;
+    el.style.opacity = String(p.opacity);
+  }
+
   override update(time: number, delta: number): void {
     // GAME-97: годинник ядра — від сирої дельти кадру, а не від згладженої. Phaser 120 кадрів після старту (і поза фокусом)
     // ріже дельту до 16,7 мс, а понад 200 мс підміняє останньою «нормальною»: при 8 fps годинник ішов у 8 разів повільніше
@@ -1767,6 +1790,7 @@ export class WorldScene extends Phaser.Scene {
       minAlpha = Math.min(minAlpha, b.alpha);
     }
     const frame = Number(this.player.frame.name);
+    this.placeRewardPop();
     Object.assign(this.probe, {
       reveal: this.reveal !== null,
       playerX: this.player.x,
@@ -1775,6 +1799,7 @@ export class WorldScene extends Phaser.Scene {
       // (SIT_DY, game-225 «−4 px вниз») і нахил біля колонки лишаються в playerY, як на main.
       playerY: this.player.y - (this.heroBob ? this.heroBreath : 0),   // свіжіше значення перепише слухач POST_UPDATE (див. create)
       heroBreath: this.heroBob ? this.heroBreath : 0,
+      heroRect: this.heroRect(),
       nearObject: near,
       nearKind: spot ? actionTarget(spot.kind, spot.name) : null,
       commandsSent: this.bridge.sent,

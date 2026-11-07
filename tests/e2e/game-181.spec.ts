@@ -181,7 +181,7 @@ test('мутація: ?hideUi=agenda — нотатника на екрані н
 });
 
 for (const v of VIEWS) {
-  test(`перше нове звання — ходьбою: нагорода є (над героєм цифр нема — GAME-229), банер, звук, час до нього; після перезавантаження банера нема — ${v.name}`, async ({ browser }) => {
+  test(`перше нове звання — ходьбою: нагорода є (Phaser-підписи над героєм без цифр — GAME-229; наклейка нагороди — DOM-підпис над героєм, OD-029), банер, звук, час до нього; після перезавантаження банера нема — ${v.name}`, async ({ browser }) => {
     test.setTimeout(540_000);
     const ctx = await browser.newContext({ viewport: { width: v.w, height: v.h }, hasTouch: true, isMobile: true });
     const page = await ctx.newPage();
@@ -222,7 +222,7 @@ for (const v of VIEWS) {
     const p = await probe(page);
     expect(p.fx.rewards, 'подій нагороди').toBeGreaterThanOrEqual(1);
     expect(seenPop, 'підпис нагороди в пробі: «+N XP»').toMatch(/^\+\d+ XP/);
-    expect(p.fx.headLabels.filter((l) => /\d|XP|ОМ/.test(l)), 'над героєм ні цифр, ні нагород (GAME-229)').toEqual([]);
+    expect(p.fx.headLabels.filter((l) => /\d|XP|ОМ/.test(l)), 'Phaser-підписи над героєм: ні цифр, ні нагород (GAME-229; наклейка нагороди — окремий DOM-підпис, OD-029 від 07.11.2026 «давай як у Stardew»)').toEqual([]);
     await page.locator('[data-ui="recovery-close"]').click({ timeout: 800 }).catch(() => undefined);   // нагадування про код відновлення не закриває банер на знімку
     await page.screenshot({ path: shot(v.side, 'titleup') });
     // Міряємо живий час ходьби скриптом (стіна годинника, що тече лише коли гра на мапі) і число дій гравця. Ігровий годинник (clockMin) тут НЕ міра: дорога (Visit) перемотує його на хвилини маршруту.
