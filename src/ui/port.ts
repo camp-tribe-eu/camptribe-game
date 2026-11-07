@@ -65,6 +65,9 @@ export interface UiPort {
   minimap: { frame(): MiniFrame | null; subscribe(listener: (f: MiniFrame) => void): () => void };
   /** GAME-192: режим підказок з налаштувань. */
   setHintMode(mode: 'stuck' | 'always'): void;
+  /** GAME-278: явні цілі масштаби, дозволені для поля зараз (без «Авто»), і масштаб, що діє. */
+  zoomSteps(): readonly number[];
+  zoomActive(): number;
   /** Гра просить відкрити екран подорожі (розмова з NPC на мапі); повертає відписку. */
   onOpenStory(listener: () => void): () => void;
 }

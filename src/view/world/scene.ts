@@ -1491,6 +1491,7 @@ export class WorldScene extends Phaser.Scene {
   /** GAME-254: колір «землі» мапи = найчастіший піксель її краю (запеченої текстури) — ним заливається все, що камера покаже за мапою. Знімок текстури асинхронний — колір ставиться, щойно готовий (і кешується). */
   private paintLetterbox(texKey: string): void {
     const cam = this.cameras.main;
+    cam.setBackgroundColor('#000000');   // GAME-278: колір попередньої мапи не лишається, поки знімок асинхронний (чи текстура не DynamicTexture)
     const known = this.edgeColours.get(texKey);
     if (known) { cam.setBackgroundColor(known); return; }
     const tex = this.textures.get(texKey);

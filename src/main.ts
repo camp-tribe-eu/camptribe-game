@@ -3,7 +3,7 @@ import Phaser from 'phaser';
 import { render, h } from 'preact';
 import { Shell } from './ui/Shell';
 import { t } from './i18n';
-import { loadSettings } from './platform/settings';
+import { loadSettings, onSettingsSaved } from './platform/settings';
 import { INTRO_BEAT_QUESTS } from './content/intro-story';
 import { HINT_FLASH_MS, HintIdle, type HintMode } from './content/hint-idle';
 import { buildLabel } from './core/build-info';
@@ -34,7 +34,7 @@ import { LIVE_PROBE_IDLE } from './view/world/fx-live-layer';
 import { SWIM_PROBE_IDLE } from './view/world/swim-rig';
 import { CAMP_PROBE_IDLE } from './view/world/camp-alive-rig';
 import { mountTouchControls, setActionTarget } from './view/world/touch';
-import { frameSize } from './view/world/frame';
+import { frameSize, zoomSteps } from './view/world/frame';
 import { CHOICE_CANCEL_ID, storyOffer, type StoryView } from './view/story-offer';
 import { testSwitches } from './view/test-switches';
 import { addFrameLag, bootDelay, onFirstFrame } from './view/frame-lag';
@@ -456,7 +456,10 @@ const worldHooks: WorldHooks = {
 };
 /** GAME-179: запасні портрети — обрізки спрайтів, зроблені раз на лист. */
 const spriteCrops = new Map<string, string>();
-const frame0 = frameSize(stage.clientWidth, stage.clientHeight);
+/** GAME-278: дотиковий пристрій (pointer: coarse) — планшет до 820 px заввишки теж «телефон». */
+const coarse = (): boolean => { try { return matchMedia('(pointer: coarse)').matches; } catch { return false; } };
+const fieldFrame = (): ReturnType<typeof frameSize> => frameSize(stage.clientWidth, stage.clientHeight, coarse(), loadSettings().zoom);
+const frame0 = fieldFrame();
 
 const game = new Phaser.Game({
   type: Phaser.AUTO,
@@ -490,7 +493,7 @@ onFirstFrame(game, (ms) => { probe.firstFrameMs = ms; });
 
 // Поле змінило розмір (поворот телефону, смуга HUD, текст 200 %) — кадр підлаштовується під його форму.
 const applyFrame = (): void => {
-  const f = frameSize(stage.clientWidth, stage.clientHeight);
+  const f = fieldFrame();
   if (f.zoom !== game.scale.zoom) game.scale.setZoom(f.zoom);
   if (f.width !== game.scale.gameSize.width || f.height !== game.scale.gameSize.height) game.scale.resize(f.width, f.height);
   // Phaser (NONE) пише style лише коли zoom ≠ 1 або zoom щойно змінився: при поверненні до zoom 1 лишався б старий розмір. Ставимо самі, завжди.
@@ -501,6 +504,7 @@ const applyFrame = (): void => {
   game.scale.refresh();   // межі полотна й displayScale для вводу — з нового style
 };
 new ResizeObserver(applyFrame).observe(stage);
+onSettingsSaved(applyFrame);   // GAME-278: «Масштаб» у налаштуваннях — застосовується одразу
 
 // Оболонка UI (GAME-25): пауза зупиняє і сцену, і ігровий годинник ядра.
 const ui = document.createElement('div');
@@ -532,6 +536,8 @@ render(h(Shell, {
     hintShown: () => hintIdle.visible(),
     minimap: { frame: () => miniFrame, subscribe: (l) => { miniListeners.add(l); return () => { miniListeners.delete(l); }; } },
     setHintMode: (m) => { hintMode = m; applyHintMode(); },
+    zoomSteps: () => zoomSteps(stage.clientWidth, stage.clientHeight, coarse()),
+    zoomActive: () => game.scale.zoom,
     exportCode: () => encodeRestoreCode(saves.exportJson()),
     staleCode: () => (saves.stale ? encodeRestoreCode(saves.stale) : Promise.resolve(null)),
     dismissStale: () => saves.dismissStale(),
