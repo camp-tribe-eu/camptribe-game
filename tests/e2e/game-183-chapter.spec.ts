@@ -16,7 +16,7 @@ for (const v of VIEWS) {
     page.on('pageerror', (e) => errors.push(e.message));
     await page.addInitScript(([k]) => { try { localStorage.setItem(k as string, JSON.stringify({ textScale: 100, language: 'uk', hintSeen: true })); } catch { /* сховища немає */ } }, [SETTINGS_KEY] as const);
     await installMenuObserver(page);
-    await page.goto('/?seed=7&mapFirst=1&intro=1&perfectHits=1');   // GAME-270: довгий прохід — міні-ігри без таймінгу
+    await page.goto('/?seed=7&mapFirst=1&intro=1&soloHero=1&perfectHits=1');   // GAME-270: довгий прохід — міні-ігри без таймінгу
     await loaded(page);
     // Вступ: лише «Далі» й вибір героя (соло, велосипед) — ☰ не потрібна.
     const intro = page.locator('[data-ui="intro"]');

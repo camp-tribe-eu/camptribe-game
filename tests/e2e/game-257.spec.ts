@@ -9,7 +9,7 @@ const PROLOGUE = ['PROLOGUE-HOME-001', 'ST-001', 'ST-002'] as const;
 
 for (const how of ['повний вступ', 'пропуск вступу'] as const) {
   test(`${how}: світ починається зі ST-003, пролог закрито самим вступом, підказки про пролог немає`, async ({ page }) => {
-    await page.goto('/?intro=1&seed=1');
+    await page.goto('/?intro=1&soloHero=1&seed=1');
     await waitGameReady(page);
     if (how === 'повний вступ') await walkIntro(page); else { await skipIntroToMorning(page); await page.locator('[data-ui="intro-skip"]').click(); }
     await expect(page.locator('[data-ui="intro"]')).toHaveCount(0);

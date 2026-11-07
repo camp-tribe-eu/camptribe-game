@@ -12,16 +12,16 @@ const todOf = async (page: Page): Promise<number> => (((await core(page)) as unk
 for (const v of VIEWS) {
   test(`повний вступ ${v.w}×${v.h}: 3 місця → лист → герой → Атлас → план → ніч → ранок → метушня → світ о 08:xx`, async ({ page }) => {
     await page.setViewportSize({ width: v.w, height: v.h });
-    await page.goto('/?intro=1&seed=1');
+    await page.goto('/?intro=1&soloHero=1&seed=1');
     await waitGameReady(page);
     const shot = (n: string): Promise<Buffer> => page.screenshot({ path: `research/intro-story/${n}-${v.w}x${v.h}.png` });
     await introTo(page, 'search');
     await expect(page.locator('[data-ui="intro-spot"]')).toHaveCount(3);
-    await page.locator('[data-spot="drawer"]').click();
-    await expect(page.locator('[data-ui="line"]')).toContainText('пральки');
+    await page.locator('[data-spot="lamp"]').click();
+    await expect(page.locator('[data-ui="line"]')).toContainText('Торшер');
     await page.waitForTimeout(280);
-    await page.locator('[data-spot="box"]').click();
-    await expect(page.locator('[data-ui="line"]')).toContainText('кабелів');
+    await page.locator('[data-spot="window"]').click();
+    await expect(page.locator('[data-ui="line"]')).toContainText('дощ');
     await shot('1-search');
     await page.waitForTimeout(280);
     await page.locator('[data-spot="shelf"]').click();
@@ -55,7 +55,7 @@ for (const v of VIEWS) {
 
   test(`пропуск ${v.w}×${v.h}: «Пропустити вступ» → вибір героя → ранок удома, а не машина`, async ({ page }) => {
     await page.setViewportSize({ width: v.w, height: v.h });
-    await page.goto('/?intro=1&seed=1');
+    await page.goto('/?intro=1&soloHero=1&seed=1');
     await waitGameReady(page);
     await expect(page.locator('[data-ui="intro-skip"]')).toHaveText('Пропустити вступ');
     await skipIntroToMorning(page);

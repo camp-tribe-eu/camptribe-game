@@ -7,7 +7,9 @@ import { expect, type Page } from '@playwright/test';
 export async function stepIntro(page: Page, hero: RegExp = /Велосипед|Bike/): Promise<string | null> {
   const intro = page.locator('[data-ui="intro"]');
   if ((await intro.count()) === 0) return null;
-  const pick = page.locator('[data-act="create"]', { hasText: hero });
+  // GAME-265: вступ пропонує лише родину (велосипед — тільки з ?soloHero=1): немає героя за `hero` — беремо першого, що є.
+  const heroPick = page.locator('[data-act="create"]', { hasText: hero });
+  const pick = (await heroPick.count()) > 0 ? heroPick.first() : page.locator('[data-act="create"]').first();
   const next = page.locator('[data-ui="intro-next"]');
   const cta = page.locator('[data-ui="atlas-cta"]');
   const shelf = page.locator('[data-ui="intro-spot"][data-spot="shelf"]');

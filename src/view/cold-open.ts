@@ -123,11 +123,11 @@ export async function paintColdOpen(target: HTMLCanvasElement, caption: HTMLElem
     const key = beat.text;
     if (key === null) { if (shownKey !== null) { caption.textContent = ''; shownKey = null; } return true; }
     const chars = Array.from(texts.line(key));
-    if (shownKey !== key) { shownKey = key; shownN = -1; blips = blipIndices(chars); caption.dataset['voice'] = beat.voice; caption.dataset['beat'] = beat.kind; }
+    if (shownKey !== key) { shownKey = key; shownN = -1; blips = blipIndices(chars); caption.dataset['voice'] = beat.voice; caption.dataset['beat'] = beat.kind; caption.textContent = chars.join(''); }   // GAME-265: ціле речення одразу — друк літера за літерою обривав його («Мама…») на знімку й екранному читачі
+    // Голос (blip) іде за «віртуальним друком», текст на екрані вже повний; «менше руху» — без писку.
     const n = reduced ? chars.length : Math.min(chars.length, Math.floor(Math.max(0, local - 500) / CHAR_MS));
     if (n !== shownN) {
       if (!reduced && shownN >= 0 && blipDue(blips, shownN, n)) blipper.blip(pitch(beat.voice));
-      caption.textContent = chars.slice(0, n).join('');
       shownN = n;
     }
     return true;

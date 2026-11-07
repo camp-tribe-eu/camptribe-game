@@ -32,6 +32,12 @@ export const INTRO_STEPS: readonly Step[] = [
   m('goal'),
 ];
 
+/** GAME-265: у виборі вступу — лише родинні профілі (профіль «самостійний дослідник» лишається в контенті для панелі й тестів, але вступ його не пропонує); `soloHero` — лише збірка e2e (?soloHero=1: старі e2e їдуть на велосипеді). */
+export const SOLO_PROFILE = 'profile.solo-explorer';
+export function introHeroes<T extends { readonly profileKey: string }>(all: readonly T[], soloHero = false): readonly T[] {
+  return soloHero ? all : all.filter((c) => c.profileKey !== SOLO_PROFILE);
+}
+
 export const PICK_AT = INTRO_STEPS.findIndex((s) => s.kind === 'pick');
 export const MORNING_AT = INTRO_STEPS.findIndex((s) => s.kind === 'morning');
 /** Кількість кроків до вибору героя (включно з ним) — e2e міряє «перший вибір ≤ 15 с». */

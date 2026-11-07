@@ -17,7 +17,7 @@ const next = async (page: Page): Promise<void> => { await page.locator('[data-ui
 for (const v of VIEWS) {
   test(`вступ ${v.side}: перший вибір ≤ 15 с без ☰ → «Дім» в Атласі → Атлас із ☰`, async ({ page }) => {
     await page.setViewportSize({ width: v.w, height: v.h });
-    await page.goto('/?intro=1&seed=1');
+    await page.goto('/?intro=1&soloHero=1&seed=1');
     await loaded(page);
     const t0 = Date.now();
     const intro = page.locator('[data-ui="intro"]');
@@ -94,7 +94,7 @@ for (const v of VIEWS) {
 }
 
 test('«Пропустити»: до вибору — на вибір героя (він лишається), після — одразу на мапу; Escape теж пропускає', async ({ page }) => {
-  await page.goto('/?intro=1&seed=1');
+  await page.goto('/?intro=1&soloHero=1&seed=1');
   await loaded(page);
   await expect(page.locator('[data-ui="intro"]')).toBeVisible();
   await page.locator('[data-ui="intro-skip"]').click();

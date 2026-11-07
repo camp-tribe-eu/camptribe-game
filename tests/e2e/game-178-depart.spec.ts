@@ -16,7 +16,7 @@ for (const v of VIEWS) {
     page.on('pageerror', (e) => errors.push(e.message));
     await page.addInitScript(([k]) => { try { localStorage.setItem(k as string, JSON.stringify({ textScale: 100, language: 'uk', hintSeen: true })); } catch { /* сховища немає */ } }, [SETTINGS_KEY] as const);
     await installMenuObserver(page);
-    await page.goto('/?seed=7&mapFirst=1&intro=1');
+    await page.goto('/?seed=7&mapFirst=1&intro=1&soloHero=1');
     await loaded(page);
     await walkIntro(page);   // GAME-250: за станом; кінцева кнопка — atlas-cta, без циклів «наосліп»
     // До пакування: крамниця зроблена, ST-003 завершено, активна CH1-HOME-001, гравець удома (авто з речами на полицях).

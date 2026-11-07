@@ -4,7 +4,7 @@ import uk from '../i18n/uk.json';
 import { dispatch, nextCommandId } from '../core/commands';
 import { initialState, type GameState } from '../core/state';
 import { GAME_DEFS } from './slice-defs';
-import { INTRO_BEAT_QUESTS, INTRO_START_LABEL, introBeatOf, INTRO_START_TOD, INTRO_STEPS, MORNING_AT, PICK_AT, afterPick, skipTarget } from './intro-story';
+import { INTRO_BEAT_QUESTS, INTRO_START_LABEL, SOLO_PROFILE, introHeroes, introBeatOf, INTRO_START_TOD, INTRO_STEPS, MORNING_AT, PICK_AT, afterPick, skipTarget } from './intro-story';
 
 describe('вступ як розкадровка (GAME-249)', () => {
   it('порядок: пошук → лист → вибір → Атлас → план → ніч → ранок → метушня → мета', () => {
@@ -69,5 +69,10 @@ describe('GAME-257: вступ закриває пролог, світ стар�
   });
   it('кроки розкадровки, що кличуть біт: atlas, night, morning', () => {
     expect(INTRO_STEPS.map((s) => introBeatOf(s.kind)).filter((b) => b !== null)).toEqual(['atlas', 'night', 'morning']);
+  });
+  it('GAME-265: вступ пропонує лише родину; соло — тільки з перемикачем e2e', () => {
+    const all = [{ profileKey: 'profile.family-teen', n: 1 }, { profileKey: SOLO_PROFILE, n: 2 }, { profileKey: 'profile.family-teen', n: 3 }];
+    expect(introHeroes(all).map((c) => c.n)).toEqual([1, 3]);
+    expect(introHeroes(all, true)).toHaveLength(3);
   });
 });
