@@ -14,7 +14,8 @@ import type { IntroRoomPainter } from './port';
 import type { StoryOffer } from './story-types';
 import { calmMotion } from '../platform/motion';
 import { sfx } from '../audio/sfx';
-import { INTRO_STEPS, INTRO_STEPS_TO_PICK, afterPick, introBeatOf, skipTarget, type IntroBeat, type Step } from '../content/intro-story';
+import { roomGeometry } from '../view/intro-geometry';
+import { INTRO_STEPS, introHeroes, INTRO_STEPS_TO_PICK, afterPick, introBeatOf, skipTarget, type IntroBeat, type Step } from '../content/intro-story';
 
 /** Розкадровка — чиста модель intro-story.ts; тут лише малювання кроків. */
 export { INTRO_STEPS_TO_PICK };
@@ -49,12 +50,19 @@ function Room({ paint, morning, family, speaker }: { paint: IntroRoomPainter | u
   return <canvas ref={ref} class="ui-intro-room" data-ui="intro-room" aria-hidden="true" />;
 }
 
-const SPOTS = ['drawer', 'box', 'shelf'] as const;
+// GAME-265: пошук зарядки — дотик по ОБ'ЄКТАХ намальованої кімнати (торшер, вікно, полиця); ті самі прямокутники, що й у малюванні (intro-geometry.ts).
+const SPOTS = ['lamp', 'window', 'shelf'] as const;
 type Spot = (typeof SPOTS)[number];
 
-export function Intro({ offer, lang, t, act, portrait, room, beat, onDone }: { beat?: ((b: IntroBeat) => void) | undefined; room?: IntroRoomPainter | undefined; offer: StoryOffer; lang: AnyLang; t: (k: Key) => string; act: (id: string) => void; portrait: PortraitLookup; onDone: () => void }) {
+export function Intro({ soloHero, offer, lang, t, act, portrait, room, beat, onDone }: { soloHero?: boolean | undefined; beat?: ((b: IntroBeat) => void) | undefined; room?: IntroRoomPainter | undefined; offer: StoryOffer; lang: AnyLang; t: (k: Key) => string; act: (id: string) => void; portrait: PortraitLookup; onDone: () => void }) {
   const [i, setI] = useState(0);
   const [seen, setSeen] = useState<Spot | null>(null);
+  const [vp, setVp] = useState(() => `${window.innerWidth}x${window.innerHeight}`);
+  useEffect(() => {
+    const on = (): void => setVp(`${window.innerWidth}x${window.innerHeight}`);
+    window.addEventListener('resize', on);
+    return () => window.removeEventListener('resize', on);
+  }, []);
   const skipped = useRef(false);
   const root = useRef<HTMLDivElement>(null);
   const steps = INTRO_STEPS;
@@ -123,7 +131,7 @@ export function Intro({ offer, lang, t, act, portrait, room, beat, onDone }: { b
         </div>
       )}
       {step.kind === 'night' && (
-        <div class="ui-intro-black" data-ui="intro-night">
+        <div class="ui-intro-black ui-intro-dusk" data-ui="intro-night">
           <p class="ui-intro-cap" data-ui="intro-caption">{t('intro.night')}</p>
           <p class="ui-intro-zzz" aria-hidden="true">{t('intro.zzz')}</p>
           {nextBtn}
@@ -148,8 +156,15 @@ export function Intro({ offer, lang, t, act, portrait, room, beat, onDone }: { b
         </div>
       )}
       {step.kind === 'search' && (
-        <div class="ui-intro-stage ui-intro-spots" data-ui="intro-spots" role="group">
-          {SPOTS.map((sp) => <button key={sp} type="button" class="ui-btn" data-ui="intro-spot" data-spot={sp} data-seen={seen === sp ? 'yes' : 'no'} onClick={(e) => spotTap(e, sp)}>{t(`intro.spot.${sp}` as Key)}</button>)}
+        <div class="ui-intro-spots" data-ui="intro-spots" role="group">
+          {SPOTS.map((sp) => {
+            const [vw, vh] = vp.split('x').map(Number) as [number, number];
+            const g = roomGeometry(vw, vh)[sp];
+            return (
+              <button key={sp} type="button" class="ui-intro-obj" data-ui="intro-spot" data-spot={sp} data-seen={seen === sp ? 'yes' : 'no'} aria-label={t(`intro.spot.${sp}` as Key)}
+                style={{ left: `${g.x}px`, top: `${g.y}px`, width: `${g.w}px`, height: `${g.h}px` }} onClick={(e) => spotTap(e, sp)}><span class="ui-intro-obj-tag">{t(`intro.spot.${sp}` as Key)}</span></button>
+            );
+          })}
         </div>
       )}
       {(step.kind === 'line' || step.kind === 'pick' || step.kind === 'search') && (
@@ -166,7 +181,7 @@ export function Intro({ offer, lang, t, act, portrait, room, beat, onDone }: { b
                   {step.kind === 'pick' && (
                     <div class="ui-intro-pick" data-ui="create" role="group" aria-labelledby="ui-intro-pick-title">
                       <p id="ui-intro-pick-title" class="ui-intro-pick-title">{t('ui.createTitle')}</p>
-                      {offer.characters.map((c) => (
+                      {introHeroes(offer.characters, soloHero === true).map((c) => (
                         <button type="button" class="ui-btn" key={c.id} data-act="create" onClick={() => act(c.id)}>
                           {`${ct(lang, c.profileKey)} · ${ct(lang, c.transportKey)} · ${c.animalKey ? ct(lang, c.animalKey) : t('ui.noAnimal')}`}
                         </button>

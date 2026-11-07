@@ -561,6 +561,7 @@ render(h(Shell, {
       if (any) storyChanged();
     },
     introRoom: paintRoom,
+    introSolo: () => switches.soloHero === true,
     coldOpenScene: paintColdOpen,
     // GAME-216: кіно перед вступом — раз на нову гру; при завантаженні лише коли жодного сейву не прочитано (існуючий сейв кіно не показує).
     coldOpen: (reason) => switches.coldOpen && (reason === 'new' || !saves.loadedSave),

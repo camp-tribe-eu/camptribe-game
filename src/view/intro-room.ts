@@ -5,10 +5,12 @@
 import { FAMILY_LOOKS, FAMILY_THRUST_LOOK, TILESET_IMAGES } from './world/art';
 import { ACTION_COLS, DIR_ROW, FRAME, composeSheet, loadImage, type Dir } from './world/character';
 import { idlePose } from './world/idle-poses';
+import { CAST_X, OBJ, roomGeometry, roomLayout, type Who } from './intro-geometry';
 
-const SCENE_W = 160;
-const WALL_H = 96;          // стіна 3 тайли: полотно 87 px + плінтус до 96
-const WIN = { sx: 0, sy: 26, w: 64, h: 44 } as const;   // вікно в home_windows_doors.png (три панелі 4+4 шибки)
+export { roomLayout };
+export type { Layout } from './intro-geometry';
+
+const WIN = { sx: 0, sy: 26, w: OBJ.window.w, h: OBJ.window.h } as const;   // вікно в home_windows_doors.png (три панелі 4+4 шибки)
 const LAMP = { sx: 355, sy: 2, w: 24, h: 49 } as const;   // торшер у home_furniture.png (теплий абажур)
 const SHELF = { sx: 5, sy: 28, w: 54, h: 64 } as const; // книжкова полиця в home_shelf.png
 const SKY_NIGHT: readonly [number, number, number] = [30, 42, 70];
@@ -17,19 +19,7 @@ const DROPS = 72;   // 26 читались як «кілька крапель» 
 
 /** GAME-249: ранок (світло, без дощу); `family` — Вікторія, Метью й Джордж у кімнаті (план і метушня), інакше лише Метью; `speaker` — хто говорить (позначка й підскок). */
 export interface IntroRoomOpts { readonly morning?: boolean; readonly family?: boolean; readonly speaker?: string | null }
-type Who = 'victoria' | 'matthew' | 'george';
 const CAST_DIR: Readonly<Record<Who, Dir>> = { victoria: 'down', matthew: 'down', george: 'left' };
-/** Позиція (лівий край кадру 64 px від краю сцени): ліворуч Вікторія, посередині Метью, праворуч Джордж — усі стоять НАД рамкою розмови. */
-const CAST_X: Readonly<Record<Who, number>> = { victoria: 6, matthew: 52, george: 98 };
-
-export interface Layout { readonly scale: number; readonly w: number; readonly h: number }
-
-/** Ціле збільшення, щоб сцена 160 px влізла за шириною, а стіна з підлогою — за висотою; полотно вкриває весь екран. */
-export function roomLayout(cssW: number, cssH: number): Layout {
-  const scale = Math.max(1, Math.min(Math.floor(cssW / SCENE_W), Math.floor(cssH / 120), 6));
-  return { scale, w: Math.ceil(cssW / scale), h: Math.ceil(cssH / scale) };
-}
-
 const px = (c: CanvasRenderingContext2D, img: CanvasImageSource, r: { sx: number; sy: number; w: number; h: number }, dx: number, dy: number): void => { c.drawImage(img, r.sx, r.sy, r.w, r.h, dx, dy, r.w, r.h); };
 function canvas(w: number, h: number): [HTMLCanvasElement, CanvasRenderingContext2D] | null {
   const el = document.createElement('canvas');
@@ -60,9 +50,7 @@ export async function paintRoom(target: HTMLCanvasElement, cssW: number, cssH: n
   const SKY = morning ? SKY_DAY : SKY_NIGHT;
   target.width = w;
   target.height = h;
-  const ox = w >= 240 ? 4 : Math.floor((w - SCENE_W) / 2);   // вбік — сцена ліворуч, лист праворуч; у портреті — по центру
-  const y0 = Math.max(0, Math.min(Math.round(h * 0.1), h - WALL_H - 34));   // висока кімната (портрет) — стіна трохи нижче верху; низька (вбік) — від самого верху
-  const floorY = y0 + WALL_H;
+  const { ox, y0, floorY, castY } = roomGeometry(cssW, cssH);
   const c = ctx;
   c.imageSmoothingEnabled = false;
 
@@ -80,8 +68,8 @@ export async function paintRoom(target: HTMLCanvasElement, cssW: number, cssH: n
   c.fillStyle = 'rgba(30,15,10,0.25)';
   c.fillRect(0, floorY, w, 3);
 
-  const winX = ox + 22;
-  const winY = y0 + 14;
+  const winX = ox + OBJ.window.dx;
+  const winY = y0 + OBJ.window.dy;
   const lampX = ox + 2;
   const shelfX = ox + 104;
   px(c, furn, LAMP, lampX, floorY - LAMP.h + 4);
@@ -112,8 +100,6 @@ export async function paintRoom(target: HTMLCanvasElement, cssW: number, cssH: n
   mask[1].putImageData(mk, 0, 0);
 
   // Люди стоять НАД рамкою розмови: ноги — на лінії підлоги або вище за верх рамки (≈ 62 % висоти екрана), у портреті — трохи нижче стіни.
-  const feetY = Math.min(floorY + (h > 300 ? 40 : 0), Math.floor(h * 0.6));
-  const castY = feetY - 58;
   const who: readonly Who[] = opts.family === true ? ['victoria', 'matthew', 'george'] : ['matthew'];
   const sheets: Readonly<Record<Who, HTMLCanvasElement>> = { victoria, matthew: sheet, george };
   const thrust: Partial<Record<Who, HTMLCanvasElement>> = { victoria: vThrust, matthew: mThrust };

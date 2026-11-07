@@ -31,7 +31,7 @@ for (const v of VIEWS) {
   test(`${v.side}: три біти на знімках, тап на ~30 с → керування у вступі ≤ 1 с`, async ({ page }) => {
     test.setTimeout(90_000);
     await page.setViewportSize({ width: v.w, height: v.h });
-    await page.goto('/?intro=1&coldOpen=1&seed=1');
+    await page.goto('/?intro=1&soloHero=1&coldOpen=1&seed=1');
     await waitGameReady(page);
     await expect(cold(page)).toBeVisible();
     await expect(page.locator('[data-ui="intro"]')).toHaveCount(0);   // вступ іще не показаний: спершу кіно
@@ -59,7 +59,7 @@ for (const v of VIEWS) {
 for (const tapAt of [500, 10_000]) {
   test(`тап на ${tapAt} мс → керування у вступі ≤ 1 с`, async ({ page }) => {
     await page.setViewportSize({ width: 844, height: 390 });
-    await page.goto('/?intro=1&coldOpen=1&seed=1');
+    await page.goto('/?intro=1&soloHero=1&coldOpen=1&seed=1');
     await waitGameReady(page);
     await begin(page);
     await page.waitForTimeout(tapAt);
@@ -70,7 +70,7 @@ for (const tapAt of [500, 10_000]) {
 }
 
 test('«Пропустити» на картці «Почати» веде одразу у вступ', async ({ page }) => {
-  await page.goto('/?intro=1&coldOpen=1&seed=1');
+  await page.goto('/?intro=1&soloHero=1&coldOpen=1&seed=1');
   await waitGameReady(page);
   await page.locator('[data-ui="cold-open-skip"]').click();
   await expect(cold(page)).toHaveCount(0);
@@ -79,7 +79,7 @@ test('«Пропустити» на картці «Почати» веде од�
 
 // Окремий контекст, не перезавантаження: пауза вступу вже записала чистий сейв, і за правилом «сейв є → кіно немає» після reload кіно не було б.
 test('Escape під час кіно — теж пропуск', async ({ page }) => {
-  await page.goto('/?intro=1&coldOpen=1&seed=1');
+  await page.goto('/?intro=1&soloHero=1&coldOpen=1&seed=1');
   await waitGameReady(page);
   await begin(page);
   await page.waitForTimeout(1_500);
@@ -93,7 +93,7 @@ test('Escape під час кіно — теж пропуск', async ({ page })
 });
 
 test('сейв існує → кіно немає: «Нова гра» з меню показує кіно, перезавантаження з тим сейвом — лише вступ', async ({ page }) => {
-  await page.goto('/?intro=1&coldOpen=1&seed=1');
+  await page.goto('/?intro=1&soloHero=1&coldOpen=1&seed=1');
   await waitGameReady(page);
   await page.locator('[data-ui="cold-open-skip"]').click();
   await page.locator('[data-ui="intro-skip"]').click();
@@ -114,7 +114,7 @@ test('сейв існує → кіно немає: «Нова гра» з мен
 });
 
 test('негативний контроль: без ?coldOpen=1 кіно немає — вступ одразу', async ({ page }) => {
-  await page.goto('/?intro=1&seed=1');
+  await page.goto('/?intro=1&soloHero=1&seed=1');
   await waitGameReady(page);
   await expect(page.locator('[data-ui="intro"]')).toBeVisible();
   await expect(cold(page)).toHaveCount(0);

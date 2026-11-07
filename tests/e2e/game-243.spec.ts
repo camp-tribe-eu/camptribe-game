@@ -13,7 +13,7 @@ async function startAt(page: Page, portrait: boolean, until: (c: Awaited<ReturnT
   page.on('pageerror', (e) => errors.push(e.message));
   await page.addInitScript(([k]) => { try { localStorage.setItem(k as string, JSON.stringify({ textScale: 100, language: 'uk', hintSeen: true })); } catch { /* сховища немає */ } }, [SETTINGS_KEY] as const);
   await installMenuObserver(page);
-  await page.goto('/?seed=7&mapFirst=1&intro=1');
+  await page.goto('/?seed=7&mapFirst=1&intro=1&soloHero=1');
   await loaded(page);
   await walkIntro(page);
   await playUntil(page, portrait, [], until, () => menuSeen(page), 80);

@@ -8,7 +8,7 @@ const TAG = process.env.ATLAS_SHOT ?? 'after';
 const VIEWS = [{ side: 'portrait', w: 390, h: 844 }, { side: 'landscape', w: 932, h: 430 }] as const;
 
 async function toAtlasStep(page: Page): Promise<void> {
-  await page.goto('/?intro=1&seed=1');
+  await page.goto('/?intro=1&soloHero=1&seed=1');
   await waitGameReady(page);
   await introTo(page, 'atlas');
   await expect(page.locator('[data-kind="atlas"]')).toBeVisible();
