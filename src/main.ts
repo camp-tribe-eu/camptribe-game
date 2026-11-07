@@ -509,6 +509,7 @@ render(h(Shell, {
     save: () => saves.save(),
     newGame: async () => {
       backpack.length = 0;
+      pendingFrame = false;   // GAME-275: розмова, схована до mapEntered, не переживає нову гру (рецензія #204)
       chatted.clear();   // GAME-261: «…» нової гри не гасне від розмов попередньої (рецензія #197)
       unpackedOnce = false;
       const ok = await saves.newGame();
@@ -524,6 +525,7 @@ render(h(Shell, {
     staleCode: () => (saves.stale ? encodeRestoreCode(saves.stale) : Promise.resolve(null)),
     dismissStale: () => saves.dismissStale(),
     importCode: async (code: string) => {
+      pendingFrame = false;   // GAME-275: після завантаження сцена може вже стояти на потрібній мапі — mapEntered не прийде (рецензія #204)
       backpack.length = 0;
       unpackedOnce = false;
       const r = await saves.adopt(await decodeRestoreCode(code));
