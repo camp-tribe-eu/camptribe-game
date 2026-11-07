@@ -129,8 +129,11 @@ export async function answerOne(page: Page): Promise<string> {
     // Рамка вибору дії: авто — за кінцем сюжету (табір ← дорога; дорога ← табір), решта — перший варіант (не «Не зараз»). Куди саме — за квестами в ядрі.
     const c = await core(page);
     const want = c.game.player?.locationId === 'loc.camp.lake' ? 'loc.road' : c.game.player?.locationId === 'loc.road' ? (c.game.quests['ST-005']?.status === 'active' ? 'loc.camp.lake' : 'loc.home') : '';
-    idx = acts.findIndex((a) => a.act !== 'cancel' && a.key === want);   // GAME-185: «Не зараз» теж має порожній ключ — без цього на вимкненому «want» водій вибирав скасування
-    if (idx < 0) idx = acts.findIndex((a) => a.act !== 'cancel');
+    // GAME-267: у прилавку магазину (GAME-246) недоступні «Купити» — це buy-locked (disabled): водій їх не вибирає, а виходить «Не зараз».
+    const pickable = (a: { act: string }): boolean => a.act !== 'cancel' && a.act !== 'buy-locked';
+    idx = acts.findIndex((a) => pickable(a) && a.key === want);   // GAME-185: «Не зараз» теж має порожній ключ — без цього на вимкненому «want» водій вибирав скасування
+    if (idx < 0) idx = acts.findIndex((a) => pickable(a));
+    if (idx < 0) idx = acts.findIndex((a) => a.act === 'cancel');
   } else {
     for (const re of PREFER) { idx = acts.findIndex((a) => re.test(a.text)); if (idx >= 0) break; }
     if (idx < 0) idx = acts.findIndex((a) => a.act === 'continue');
@@ -138,7 +141,8 @@ export async function answerOne(page: Page): Promise<string> {
   }
   const a = acts[idx];
   if (!a) throw new Error('у рамці розмови немає жодної відповіді');
-  await box.locator('[data-act]').nth(idx).click();
+  // GAME-267: клік без власної межі чекав «enabled» до кінця тесту (10 хв); тепер — зрозуміла відмова за 5 с.
+  await box.locator('[data-act]').nth(idx).click({ timeout: 5_000 }).catch((e: unknown) => { throw new Error(`водій не зміг натиснути «${a.text.slice(0, 40)}» (data-act=${a.act}) серед [${acts.map((x) => x.act).join(', ')}]: ${String(e).split('\n')[0]}`); });
   await page.waitForTimeout(450);   // «глухота» рамки ~350 мс після відповіді
   return `${choiceBox ? 'choice' : 'talk'}:${a.act}:${a.key || a.text.slice(0, 24)}`;
 }
