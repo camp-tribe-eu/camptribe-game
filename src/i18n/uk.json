@@ -498,7 +498,6 @@
   "agenda.rest": "Відпочити до вечора (намет)",
   "agenda.fish": "Порибалити на березі (за бажанням)",
   "agenda.neighbours": "Поговорити з сусідами (за бажанням)",
-  "ui.backpack": "Рюкзак",
   "backpack.title": "Рюкзак",
   "backpack.close": "Закрити рюкзак",
   "backpack.open": "Відкрити рюкзак",
@@ -514,7 +513,5 @@
   "backpack.origin.other": "із собою",
   "backpack.worth": "Викуп",
   "backpack.sell": "Продати",
-  "backpack.sellHint": "Продати можна на рецепції табору.",
-  "backpack.noSale": "не продається",
-  "backpack.total": "Усього речей"
+  "backpack.sellHint": "Продати можна на рецепції табору."
 }

@@ -498,7 +498,6 @@
   "agenda.rest": "Rest until evening (tent)",
   "agenda.fish": "Fish by the shore (optional)",
   "agenda.neighbours": "Chat with the neighbours (optional)",
-  "ui.backpack": "Backpack",
   "backpack.title": "Backpack",
   "backpack.close": "Close backpack",
   "backpack.open": "Open backpack",
@@ -514,7 +513,5 @@
   "backpack.origin.other": "carried along",
   "backpack.worth": "Resale",
   "backpack.sell": "Sell",
-  "backpack.sellHint": "You can sell at the camp reception.",
-  "backpack.noSale": "not for sale",
-  "backpack.total": "Items in total"
+  "backpack.sellHint": "You can sell at the camp reception."
 }

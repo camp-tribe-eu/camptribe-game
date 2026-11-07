@@ -278,6 +278,7 @@ export function Shell({ port, langOverride, credits, build, holdToast = false, h
   // До малювання (useLayoutEffect): екранний читач не застає кнопки без підпису (рецензія).
   useLayoutEffect(() => {
     document.documentElement.style.fontSize = `${settings.textScale}%`;
+    document.documentElement.dataset.textScale = String(settings.textScale);   // GAME-244: CSS шапки (☰ + рюкзак) знає про крупний текст
     document.documentElement.lang = settings.language;
     document.getElementById('stage')?.setAttribute('aria-label', t('ui.stage'));
     // Дотикові кнопки сцени (src/view/world/touch.ts) — підписи мовою гравця, а не id дії англійською.
@@ -366,7 +367,10 @@ export function Shell({ port, langOverride, credits, build, holdToast = false, h
           ніколи не лежать на тексті, при 200 % текст переноситься в середній колонці. Під діалогом шапки немає: дані HUD є
           в самому діалозі, а схована смуга під ним збивала вимірювання контрасту (axe). */}
       {!paused && !storyOpen && !talk && !summary && !intro && !atlasOpen && !backpackOpen && <header class="ui-header">
+        <div class="ui-header-left">
         <button type="button" class="ui-story-btn" data-hint={showHint || offer.stage === 'ended' ? 'yes' : undefined} data-touch="story" aria-label={t('ui.story')} onClick={() => story(true)}>{'☰'}</button>
+        <button type="button" class="ui-bag-btn" data-touch="backpack" data-ui="backpack-open" aria-label={t('backpack.open')} onClick={() => openBackpack(false)}><ObjectiveIcon spot="obj.trunk" /></button>
+        </div>
         <div class="ui-hud" data-ui="hud" role="group" aria-label={t('ui.hud')}>
           <span data-ui="hud-place">{offer.locationKey ? ct(lang, offer.locationKey) : t('ui.noPlace')}</span>
           <span class="ui-hud-line"><span data-ui="hud-time">{`${t('ui.day')} ${offer.day}, ${hh}:${mm}`}</span>{' · '}<span data-ui="hud-money">{money(lang, offer.moneyCents)}</span></span>
@@ -375,7 +379,6 @@ export function Shell({ port, langOverride, credits, build, holdToast = false, h
           {/* GAME-89 №6: кампанія завершена — мапа лишається живою (можна ходити), але про кінець видно й поза ☰. */}
           {offer.stage === 'ended' && <span class="ui-hint" data-ui="ended-hint" role="status">{t('ui.endedHint')}</span>}
         </div>
-        <button type="button" class="ui-bag-btn" data-touch="backpack" data-ui="backpack-open" aria-label={t('backpack.open')} onClick={() => openBackpack(false)}><ObjectiveIcon spot="obj.trunk" /></button>
         <button type="button" class="ui-pause-btn" data-touch="pause" aria-label={t('ui.pause')} onClick={() => toggle(true)}>{'‖'}</button>
         {/* GAME-170 зріз 2: картка поточної мети — жива хвиля напруги: «назва · зроблено/усього» і хвилини ІГРОВОГО часу на кожну справу
             (з годинника ядра: пауза й панелі його зупиняють — і числа стоять). Окремий ряд сітки під ☰ · HUD · ‖, тож кнопок не торкається. */}
