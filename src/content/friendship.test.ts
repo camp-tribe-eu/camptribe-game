@@ -263,6 +263,10 @@ describe('сейв', () => {
     expect(bad({ pts: { 'npc.nora': 100 }, gift: {}, seen: [] })).toBe('SAVE_SHAPE');
     expect(bad({ pts: {}, gift: { 'npc.nora': 'x' }, seen: [] })).toBe('SAVE_SHAPE');
     expect(bad({ pts: {}, gift: {}, seen: ['npc.b', 'npc.a'] })).toBe('SAVE_SHAPE');
+    // GAME-244 ч.2: книга збору дарів (friend.forage) — сейв із нею повертається; зіпсована відхиляється (рецензія Fable #206).
+    expect(bad({ pts: {}, gift: {}, seen: [], forage: { day: 0, n: { 'pine.camp': 1 } } })).toBe('ok');
+    expect(bad({ pts: {}, gift: {}, seen: [], forage: { day: 'x', n: {} } })).toBe('SAVE_SHAPE');
+    expect(bad({ pts: {}, gift: {}, seen: [], forage: { day: 0, n: { 'pine.camp': -1 } } })).toBe('SAVE_SHAPE');
   });
 });
 
