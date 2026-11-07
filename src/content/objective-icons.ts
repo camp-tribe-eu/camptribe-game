@@ -53,7 +53,7 @@ export function iconCss(key: string, sheetUrl: string, scale: number): Record<st
 /** GAME-244: «місце» речі для піктограми (рюкзак): та сама клітинка аркуша, що й у пакуванні вдома. */
 export const itemSpot = (itemId: string): string => `pack.${itemId}`;
 
-// GAME-263 · іконки речей 32×32 (assets/icons/item_icons.png, ART-033): рюкзак показує їх у 2× = 64 px, картка «взято» — у 3×. Речі без такої іконки лишаються
+// GAME-263 · іконки речей 32×32 (assets/icons/item_icons.png, ART-033): рюкзак показує їх у 2× = 64 px, картка «взято» — у 2× (нижча за стару 80-px, не налазить на підказку «Далі»). Речі без такої іконки лишаються
 // на 16-px атласі цілей (він показується в 4× = 64 px). Ключ клітинки — з item-icon-atlas.json (його пише scripts/assets/build_item_icons.py).
 const ITEM_ICON_OF: Readonly<Record<string, string>> = {
   'item.tent': 'tent', 'item.tent-anna': 'tent', 'item.tent-trek': 'tent', 'item.tent-family': 'tent', 'item.trailer-tent': 'tent',

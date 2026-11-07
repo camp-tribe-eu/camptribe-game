@@ -15,7 +15,7 @@ export function ObjectiveIcon({ spot, scale = SCALE }: { spot: string | null | u
 /** GAME-245: велика піктограма речі (картка «взято»): 16 px клітинка в 5× = 80 px на екрані. */
 export function BigItemIcon({ spot }: { spot: string }) {
   const ik = itemIconKey(spot);
-  if (ik) return <span class="ui-itemcard-icon" data-ui="itemcard-icon" data-icon={ik} aria-hidden="true" style={itemIconCss(ik, itemSheet, 3)} />;
+  if (ik) return <span class="ui-itemcard-icon" data-ui="itemcard-icon" data-icon={ik} aria-hidden="true" style={itemIconCss(ik, itemSheet, 2)} />;
   const key = objectiveIcon(spot).key;
   return <span class="ui-itemcard-icon" data-ui="itemcard-icon" data-icon={key} aria-hidden="true" style={iconCss(key, sheet, 5)} />;
 }

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""GAME-263 · атлас assets/icons/item_icons.png — іконки речей 32×32 (показ у рюкзаку 2× = 64 px, у картці «взято» 3× = 96 px) + src/content/item-icon-atlas.json.
+"""GAME-263 · атлас assets/icons/item_icons.png — іконки речей 32×32 (показ у рюкзаку 2× = 64 px, у картці «взято» теж 2×) + src/content/item-icon-atlas.json.
 
     python3 scripts/assets/build_item_icons.py [--check]
 
