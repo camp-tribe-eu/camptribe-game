@@ -516,6 +516,13 @@ export function Shell({ port, langOverride, credits, build, holdToast = false, h
               onClick={() => update({ ...settings, audio: { ...settings.audio, muted: !settings.audio.muted } })}>{t('ui.mute')}</button>
           </fieldset>
           {staleNotice}
+          <fieldset data-ui="zoom">
+            <legend>{t('ui.zoom')}</legend>
+            {[0, ...port.zoomSteps()].map((k) => (
+              <button type="button" class="ui-btn" data-ui={`zoom-${k === 0 ? 'auto' : k}`} aria-pressed={k === 0 ? !port.zoomSteps().includes(settings.zoom) : settings.zoom === k}
+                onClick={() => update({ ...settings, zoom: k })}>{k === 0 ? t('ui.zoomAuto') : `×${k}`}</button>
+            ))}
+          </fieldset>
           <fieldset>
             <legend>{t('ui.hints')}</legend>
             {(['stuck', 'always'] as const).map((m) => (

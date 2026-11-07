@@ -19,9 +19,13 @@ export interface Settings {
   readonly hintMode: 'stuck' | 'always';
   /** GAME-229: екран «Що відкрилось» (нові ранги) перед підсумком дня; вимкнено — навички ростуть так само, але екрана немає. Не частина сейву. */
   readonly levelUps: boolean;
+  /** GAME-278 (OD-030): масштаб картинки світу — 0 «Авто» (правило frameSize) або явний ЦІЛИЙ множник (чіткі пікселі). Не частина сейву. */
+  readonly zoom: number;
 }
 
-export const DEFAULT_SETTINGS: Settings = { textScale: 100, language: 'uk', hintSeen: false, remindedTrip: null, remindShown: false, audio: DEFAULT_AUDIO, hintMode: 'stuck', levelUps: true };
+export const DEFAULT_SETTINGS: Settings = { textScale: 100, language: 'uk', hintSeen: false, remindedTrip: null, remindShown: false, audio: DEFAULT_AUDIO, hintMode: 'stuck', levelUps: true, zoom: 0 };
+/** Найбільший явний масштаб, який можна зберегти (далі — сміття у сховищі → Авто). */
+export const MAX_ZOOM = 8;
 const KEY = 'camplife.settings.v1';
 // 200 % — WCAG 1.4.4 (GAME-39): текст удвічі без обрізання й без втрати функцій.
 export const TEXT_SCALES = [100, 125, 150, 200] as const;
@@ -41,15 +45,21 @@ export function loadSettings(storage: Pick<Storage, 'getItem'> | undefined = saf
       audio: parseAudio(v.audio),
       hintMode: v.hintMode === 'always' ? 'always' : 'stuck',
       levelUps: v.levelUps !== false,
+      zoom: typeof v.zoom === 'number' && Number.isInteger(v.zoom) && v.zoom >= 1 && v.zoom <= MAX_ZOOM ? v.zoom : 0,
     };
   } catch {
     return DEFAULT_SETTINGS;
   }
 }
 
+const listeners = new Set<(s: Settings) => void>();
+/** GAME-278: підписка на збереження налаштувань (main.ts перераховує кадр світу одразу). Повертає відписку. */
+export function onSettingsSaved(fn: (s: Settings) => void): () => void { listeners.add(fn); return () => { listeners.delete(fn); }; }
+
 export function saveSettings(s: Settings, storage: Pick<Storage, 'setItem'> | undefined = safeStorage()): boolean {
   try {
     storage?.setItem(KEY, JSON.stringify(s));
+    for (const fn of listeners) fn(s);
     return storage !== undefined;
   } catch {
     return false;

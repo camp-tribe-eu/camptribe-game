@@ -1,7 +1,7 @@
 // GAME-84 №13 · кадр гри під форму поля: на телефоні сторч — не смужка 3:2 посеред чорного екрана.
 // GAME-96 (смак власника 25.10) · широке поле: мапа на всю ширину, без смуг з боків, цілий масштаб.
 import { describe, expect, it } from 'vitest';
-import { frameSize, HERO_BODY_PX, MAP_HEIGHT, MAP_WIDTH, PHONE_LANDSCAPE_MAX_H } from './frame';
+import { frameSize, HERO_BODY_PX, MAP_HEIGHT, MAP_WIDTH, PHONE_LANDSCAPE_MAX_H, TOUCH_PHONE_MAX_H, zoomSteps } from './frame';
 
 describe('frameSize (GAME-84 №13, GAME-96)', () => {
   it('широке поле (GAME-254): цілий zoom, полотно покриває поле, зріст героя ≈ 1/9 висоти (0,07–0,16), більше світу, ніж за старим правилом', () => {
@@ -56,5 +56,39 @@ describe('frameSize (GAME-84 №13, GAME-96)', () => {
   it('межа 1,2: поле 1,2 — ще широке (покриття), трохи вужче — уже вузьке (на всю висоту)', () => {
     expect(frameSize(1200, 1000)).toEqual({ width: 600, height: 500, zoom: 2 });
     expect(frameSize(1190, 1000)).toEqual({ width: 396, height: 333, zoom: 3 });   // k=3: уже вузька гілка (GAME-91, без змін)
+  });
+});
+
+describe('GAME-278 · «Масштаб» у налаштуваннях (OD-030)', () => {
+  it('Авто: планшет з дотиком до 820 px — як телефон (1024×600 → ×2, не ×1), а без дотику правило ПК; стрибка 520/521 на дотику немає', () => {
+    expect(frameSize(1024, 600)).toEqual({ width: 1024, height: 600, zoom: 1 });                    // ПК/миша: без змін
+    expect(frameSize(1024, 600, true)).toEqual({ width: 512, height: 300, zoom: 2 });               // планшет: крупніше
+    expect(frameSize(1024, 520, true).zoom).toBe(frameSize(1024, 521, true).zoom);                  // на дотику 520/521 однакові
+    expect(frameSize(1024, 520).zoom).not.toBe(frameSize(1024, 521).zoom);                          // миша: межа OD-030 лишилась
+    expect(frameSize(1366, TOUCH_PHONE_MAX_H, true).zoom).toBe(Math.max(1, Math.ceil(1366 / MAP_WIDTH), Math.ceil(TOUCH_PHONE_MAX_H / MAP_HEIGHT)));
+    expect(frameSize(1366, TOUCH_PHONE_MAX_H + 1, true).zoom).toBe(frameSize(1366, TOUCH_PHONE_MAX_H + 1).zoom);   // вище 820 — правило ПК
+  });
+  it('кроки: лише цілі, зріст героя 6–30 % висоти, на дотику плитка ≥ 44 px (без ×1)', () => {
+    expect(zoomSteps(1280, 800)).toEqual([1, 2, 3, 4]);
+    expect(zoomSteps(1280, 800, true)).toEqual([2, 3, 4]);
+    expect(zoomSteps(932, 430)).toEqual([1, 2]);                  // ×3: герой 34 % > 30
+    expect(zoomSteps(932, 430, true)).toEqual([2]);
+    expect(zoomSteps(390, 844, true)).toEqual([2, 3]);       // ×1: герой 5,8 % < 6; ×4: кадр 97 px завширшки < 120
+    expect(zoomSteps(0, 0)).toEqual([]);
+    for (const [w, h, c] of [[1280, 800, false], [932, 430, true], [390, 844, true], [600, 600, false], [1920, 1080, false]] as [number, number, boolean][]) {
+      for (const k of zoomSteps(w, h, c)) {
+        const f = (HERO_BODY_PX * k) / h;
+        expect(Number.isInteger(k) && f >= 0.06 && f <= 0.3, `${w}×${h} ×${k}: ${(f * 100).toFixed(1)} %`).toBe(true);
+        if (c) expect(32 * k).toBeGreaterThanOrEqual(44);
+      }
+    }
+  });
+  it('явний крок змінює zoom у широкій і вузькій гілці; непридатний — Авто без помилки', () => {
+    for (const k of zoomSteps(1280, 800)) expect(frameSize(1280, 800, false, k).zoom).toBe(k);
+    expect(frameSize(1280, 800, false, 3)).toEqual({ width: 427, height: 267, zoom: 3 });
+    expect(frameSize(390, 844, true, 3).zoom).toBe(3);
+    expect(frameSize(1280, 800, false, 7)).toEqual(frameSize(1280, 800));     // ×7 — героя 43 % висоти, не крок
+    expect(frameSize(390, 844, true, 1)).toEqual(frameSize(390, 844, true));  // ×1 на дотику — не крок
+    expect(frameSize(1280, 800, false, 0)).toEqual(frameSize(1280, 800));
   });
 });

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { DEFAULT_SETTINGS, loadSettings, saveSettings } from './settings';
+import { DEFAULT_SETTINGS, loadSettings, onSettingsSaved, saveSettings } from './settings';
 
 const mem = (): Storage => {
   const m = new Map<string, string>();
@@ -9,8 +9,8 @@ const mem = (): Storage => {
 describe('налаштування (GAME-25)', () => {
   it('зберігаються й читаються', () => {
     const s = mem();
-    expect(saveSettings({ textScale: 150, language: 'en', hintSeen: true, remindedTrip: null, remindShown: false, audio: DEFAULT_SETTINGS.audio, hintMode: 'always', levelUps: true }, s)).toBe(true);
-    expect(loadSettings(s)).toEqual({ textScale: 150, language: 'en', hintSeen: true, remindedTrip: null, remindShown: false, audio: DEFAULT_SETTINGS.audio, hintMode: 'always', levelUps: true });
+    expect(saveSettings({ textScale: 150, language: 'en', hintSeen: true, remindedTrip: null, remindShown: false, audio: DEFAULT_SETTINGS.audio, hintMode: 'always', levelUps: true, zoom: 0 }, s)).toBe(true);
+    expect(loadSettings(s)).toEqual({ textScale: 150, language: 'en', hintSeen: true, remindedTrip: null, remindShown: false, audio: DEFAULT_SETTINGS.audio, hintMode: 'always', levelUps: true, zoom: 0 });
     s.setItem('camplife.settings.v1', JSON.stringify({ hintMode: 'junk' }));
     expect(loadSettings(s).hintMode).toBe('stuck');   // GAME-192: типово «коли застряг»
     s.setItem('camplife.settings.v1', JSON.stringify({ levelUps: false }));
@@ -20,7 +20,7 @@ describe('налаштування (GAME-25)', () => {
   });
   it('200 % (GAME-39) зберігається й читається; 175 — чуже значення, типове', () => {
     const s = mem();
-    saveSettings({ textScale: 200, language: 'uk', hintSeen: false, remindedTrip: null, remindShown: false, audio: DEFAULT_SETTINGS.audio, hintMode: 'stuck', levelUps: true }, s);
+    saveSettings({ textScale: 200, language: 'uk', hintSeen: false, remindedTrip: null, remindShown: false, audio: DEFAULT_SETTINGS.audio, hintMode: 'stuck', levelUps: true, zoom: 0 }, s);
     expect(loadSettings(s).textScale).toBe(200);
     s.setItem('camplife.settings.v1', JSON.stringify({ textScale: 175, language: 'uk' }));
     expect(loadSettings(s).textScale).toBe(DEFAULT_SETTINGS.textScale);
@@ -43,5 +43,22 @@ describe('налаштування (GAME-25)', () => {
     const broken = { getItem: () => { throw new Error('blocked'); }, setItem: () => { throw new Error('blocked'); } };
     expect(loadSettings(broken)).toEqual(DEFAULT_SETTINGS);
     expect(saveSettings(DEFAULT_SETTINGS, broken)).toBe(false);
+  });
+});
+
+describe('GAME-278 · zoom у налаштуваннях', () => {
+  it('типово Авто (0); ціле 1..8 зберігається; сміття (дробове, 0, 9, текст) — Авто', () => {
+    expect(loadSettings({ getItem: () => null }).zoom).toBe(0);
+    for (const [z, want] of [[2, 2], [8, 8], [1.5, 0], [0, 0], [9, 0], ['2', 0], [-1, 0]] as [unknown, number][]) {
+      expect(loadSettings({ getItem: () => JSON.stringify({ zoom: z }) }).zoom, String(z)).toBe(want);
+    }
+  });
+  it('onSettingsSaved: слухач чує збереження, відписка працює', () => {
+    const seen: number[] = [];
+    const off = onSettingsSaved((s) => seen.push(s.zoom));
+    saveSettings({ ...DEFAULT_SETTINGS, zoom: 3 }, { setItem: () => undefined });
+    off();
+    saveSettings({ ...DEFAULT_SETTINGS, zoom: 4 }, { setItem: () => undefined });
+    expect(seen).toEqual([3]);
   });
 });
