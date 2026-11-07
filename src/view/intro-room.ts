@@ -5,10 +5,10 @@
 import { FAMILY_LOOKS, FAMILY_THRUST_LOOK, TILESET_IMAGES } from './world/art';
 import { ACTION_COLS, DIR_ROW, FRAME, composeSheet, loadImage, type Dir } from './world/character';
 import { idlePose } from './world/idle-poses';
-import { CAST_X, OBJ, roomGeometry, roomLayout, type Who } from './intro-geometry';
+import { CAST_X, OBJ, roomGeometry, roomLayout, type Who } from '../ui/intro-geometry';
 
 export { roomLayout };
-export type { Layout } from './intro-geometry';
+export type { Layout } from '../ui/intro-geometry';
 
 const WIN = { sx: 0, sy: 26, w: OBJ.window.w, h: OBJ.window.h } as const;   // вікно в home_windows_doors.png (три панелі 4+4 шибки)
 const LAMP = { sx: 355, sy: 2, w: 24, h: 49 } as const;   // торшер у home_furniture.png (теплий абажур)

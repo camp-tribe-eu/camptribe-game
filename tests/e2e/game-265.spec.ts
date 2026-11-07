@@ -9,7 +9,7 @@
 // Знімки до/після: G265_SHOTS=before|after → research/game-265/ (не на критичному шляху).
 import { readFileSync } from 'node:fs';
 import { expect, test, type Page } from '@playwright/test';
-import { roomGeometry, type Rect } from '../../src/view/intro-geometry';
+import { roomGeometry, type Rect } from '../../src/ui/intro-geometry';
 import { introTo, walkIntro } from './intro-walk';
 import { waitGameReady } from './ready';
 

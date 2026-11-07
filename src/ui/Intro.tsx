@@ -14,7 +14,7 @@ import type { IntroRoomPainter } from './port';
 import type { StoryOffer } from './story-types';
 import { calmMotion } from '../platform/motion';
 import { sfx } from '../audio/sfx';
-import { roomGeometry } from '../view/intro-geometry';
+import { roomGeometry } from './intro-geometry';
 import { INTRO_STEPS, introHeroes, INTRO_STEPS_TO_PICK, afterPick, introBeatOf, skipTarget, type IntroBeat, type Step } from '../content/intro-story';
 
 /** Розкадровка — чиста модель intro-story.ts; тут лише малювання кроків. */
