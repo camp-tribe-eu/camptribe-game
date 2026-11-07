@@ -277,13 +277,13 @@ function apply(cmd: Command, d: Draft, defs: CoreDefs, guard: Safeguards, today:
       if (tradeDoneToday(d.friend, offer.id, today)) return 'GRANT_ALREADY_GIVEN';
       // Страж «гроші з нічого»: навіть зіпсований контент не дасть отримати дорожче, ніж віддано.
       if (!tradeIsFair(offer, (id) => own(defs.items, id)?.sellCents ?? 0)) return 'CONDITION_FAILED';
-      const inv: Record<string, number> = { ...d.inventory };
+      let inv: Record<string, number> = { ...d.inventory };
       for (const l of offer.give) {
         const have = own(inv, l.itemId) ?? 0;
         if (have < l.qty) return 'ITEM_NOT_OWNED';
         // Остання річ, потрібна активному квесту, не віддається (як і не дарується й не продається).
         if (have === l.qty && defs.story && questNeedsItem(defs.story, d, d.player, l.itemId)) return 'ITEM_QUEST_LOCKED';
-        if (have === l.qty) delete inv[l.itemId]; else inv[l.itemId] = have - l.qty;
+        inv = have === l.qty ? Object.fromEntries(Object.entries(inv).filter(([k]) => k !== l.itemId)) : { ...inv, [l.itemId]: have - l.qty };
       }
       for (const l of offer.get) {
         const next = (own(inv, l.itemId) ?? 0) + l.qty;

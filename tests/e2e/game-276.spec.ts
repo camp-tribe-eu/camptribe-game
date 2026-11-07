@@ -1,6 +1,7 @@
 // GAME-276 · рюкзак: обмін із сусідом (Клер: 3 шишки → 1 ягода). Є речі поруч із нею → «Обміняти» → рюкзак змінився рівно так, як каже контент/ядро;
 // речей замало → кнопки немає; вдруге того ж дня → кнопки немає. Обидві орієнтації: 390×844 і 932×430.
-// Закон 1 (мутації з PR): ядро без перевірки «раз на день» → вдруге кнопка є; обмін без списання шишок → «шишки пішли» червоніє.
+// Шишок вдвічі більше, ніж треба: друга кнопка зникає лише через «раз на день» у ядрі, а не через брак речей.
+// Закон 1 (мутації з PR): ядро без перевірки «раз на день» → вдруге кнопка є → тест червоніє.
 import { expect, test, type Page } from '@playwright/test';
 import { core, probe, routeXY, walk } from './chapter-driver';
 import { stateHash } from '../../src/core/hash';
@@ -15,8 +16,7 @@ const GIVE = OFFER.give[0] as Line;
 const GET = OFFER.get[0] as Line;
 const WITH = (cones: number) => (save: string): string => {
   const s = JSON.parse(save) as { sim: { game: { inventory: Record<string, number> } }; checksum: string };
-  s.sim.game.inventory[GIVE.itemId] = cones;
-  delete s.sim.game.inventory[GET.itemId];
+  s.sim.game.inventory = { ...Object.fromEntries(Object.entries(s.sim.game.inventory).filter(([k]) => k !== GET.itemId)), [GIVE.itemId]: cones };
   s.checksum = stateHash(s.sim as never);
   return JSON.stringify(s);
 };
@@ -42,7 +42,7 @@ for (const size of SIZES) {
       const errors: string[] = [];
       page.on('pageerror', (e) => errors.push(e.message));
       await page.addInitScript(() => { try { localStorage.setItem('camplife.settings.v1', JSON.stringify({ textScale: 100, language: 'uk', hintSeen: true })); } catch { /* сховища немає */ } });
-      await seedDay1(page, '?seed=7&mapFirst=1', WITH(mode === 'with-items' ? GIVE.qty : GIVE.qty - 1));
+      await seedDay1(page, '?seed=7&mapFirst=1', WITH(mode === 'with-items' ? GIVE.qty * 2 : GIVE.qty - 1));
       const panel = page.locator('[data-ui="backpack-panel"]');
       await toNeighbour(page);
       await page.locator('[data-ui="backpack-open"]').click();

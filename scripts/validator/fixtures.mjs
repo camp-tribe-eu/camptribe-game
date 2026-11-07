@@ -70,6 +70,7 @@ export function withCards(c) {
 /** GAME-276: два предмети з ціною перепродажу (20 і 50) і одна пропозиція обміну в першого мешканця. */
 export function withTrade(c, offer) {
   c.items.push({ id: 'item.res-a', nameKey: 'item.res-a', resaleCents: 20 }, { id: 'item.res-b', nameKey: 'item.res-b', resaleCents: 50 });
+  for (const lang of c.meta.locales) if (c.locales?.[lang]) for (const id of ['item.res-a', 'item.res-b']) c.locales[lang][id] ??= `[${lang}] ${id}`;
   c.npcs[0].trades = [{ id: 'trade.fixture', ...offer }];
 }
 
