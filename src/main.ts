@@ -182,7 +182,6 @@ const takeReward = (): string | null => {
   return [r.xp > 0 ? `+${r.xp} ${t(lang, 'ui.xp')}` : '', r.om > 0 ? `+${r.om} ${t(lang, 'ui.om')}` : ''].filter(Boolean).join(' ');
 };
 let pendingFrame = false;
-let worldRunning = (): boolean => false;   // з'являється разом із грою (нижче); до того сцени немає
 const fireFrame = (): void => { for (const l of switches.panelActs ? openListeners : talkListeners) l(); };
 const storyChanged = (): void => {
   syncBackpack();
@@ -193,16 +192,21 @@ const storyChanged = (): void => {
     const moves = unpackMoves(bridge.state, GAME_DEFS);
     if (moves.length > 0) { unpackedOnce = true; for (const m of moves) bridge.send(m); }
   }
-  direct();
-  for (const l of storyListeners) l();
   const talking = bridge.state.game.dialogue !== null;
   // Подія в дорозі (GAME-183): у мапі-першій грі — рамка розмови з портретом оповідача (як сцена біля вогнища), а не екран ☰.
-  // GAME-260: рамка не раніше, ніж сцена показала мапу дороги (на паузі вона б не перемкнулась) — решту доведе mapEntered.
+  // GAME-260: рамка не раніше, ніж сцена показала мапу дороги — решту доведе mapEntered.
+  // GAME-275: справжній шлях QA — виїзд із рамки вибору «Куди їдемо?»: сцена ВЖЕ на паузі, ядро кидає подію в тому ж кроці, що й Visit, і подія
+  // заступала рамку вибору на старій мапі. Тому, поки pendingFrame, story() ховає розмову (рішення — ДО слухачів, інакше Shell уже взяв би її в offer):
+  // Shell закриває рамку й знімає паузу, сцена перемикає мапу, mapEntered відкриває рамку події вже на дорозі.
+  let openNow = false;
   if (talking && !hadDialogue && !mapTalk) {
-    if (openGate({ sceneMap: probe.map, wantMap: worldHooks.mapKey(), sceneRunning: worldRunning() }) === 'wait') pendingFrame = true; else fireFrame();
+    if (openGate({ sceneMap: probe.map, wantMap: worldHooks.mapKey() }) === 'wait') pendingFrame = true; else openNow = true;
   }
   if (!talking) pendingFrame = false;
   hadDialogue = talking;
+  direct();
+  for (const l of storyListeners) l();
+  if (openNow) fireFrame();
 };
 /** GAME-261: з ким уже говорили сьогодні (день|npc); не в сейві — після перезапуску «…» повертається один раз, це лише підказка. */
 const chatted = new Set<string>();
@@ -468,7 +472,6 @@ const game = new Phaser.Game({
 });
 // GAME-268: шлюз малювання — світ під повним екраном не малюється.
 const renderGate = installRenderGate(game);
-worldRunning = () => game.scene.isActive('world');
 // ?frameLagMs — лише збірка e2e (GAME-97): штучно довгий кадр.
 if (switches.frameLagMs) addFrameLag(game, switches.frameLagMs);
 // GAME-38: перший кадр від початку навігації → probe.firstFrameMs (бюджет 1,5 с, tests/e2e/game-38.spec.ts).
@@ -506,6 +509,7 @@ render(h(Shell, {
     save: () => saves.save(),
     newGame: async () => {
       backpack.length = 0;
+      pendingFrame = false;   // GAME-275: розмова, схована до mapEntered, не переживає нову гру (рецензія #204)
       chatted.clear();   // GAME-261: «…» нової гри не гасне від розмов попередньої (рецензія #197)
       unpackedOnce = false;
       const ok = await saves.newGame();
@@ -521,6 +525,7 @@ render(h(Shell, {
     staleCode: () => (saves.stale ? encodeRestoreCode(saves.stale) : Promise.resolve(null)),
     dismissStale: () => saves.dismissStale(),
     importCode: async (code: string) => {
+      pendingFrame = false;   // GAME-275: після завантаження сцена може вже стояти на потрібній мапі — mapEntered не прийде (рецензія #204)
       backpack.length = 0;
       unpackedOnce = false;
       const r = await saves.adopt(await decodeRestoreCode(code));
@@ -530,7 +535,7 @@ render(h(Shell, {
       return r;
     },
     loaded: () => probe.saveLoaded,
-    story: () => shown(storyOffer(bridge.state, GAME_DEFS, viewOf()).offer),
+    story: () => { const o = shown(storyOffer(bridge.state, GAME_DEFS, viewOf()).offer); return pendingFrame ? { ...o, dialogue: null } : o; },   // GAME-275: розмова схована до mapEntered
     act(id: string) {
       if (id === CHOICE_CANCEL_ID) { choiceSpot = null; storyChanged(); return; }
       const intent = storyOffer(bridge.state, GAME_DEFS, viewOf()).intents.get(id);
