@@ -69,7 +69,7 @@ async function playToDayEnd(page: Page, withHands: boolean): Promise<void> {
 }
 
 for (const v of VIEWS) {
-  test(`день з рангом: «Що відкрилось» ПЕРЕД підсумком; фанфара; підсумок розгортається; над героєм без цифр — ${v.side}`, async ({ page }) => {
+  test(`день з рангом: «Що відкрилось» ПЕРЕД підсумком; фанфара; підсумок розгортається; Phaser-підписи над героєм без цифр (наклейка нагороди — DOM, OD-029) — ${v.side}`, async ({ page }) => {
     test.setTimeout(240_000);
     const errors = await open(page, v);
     await playToDayEnd(page, true);

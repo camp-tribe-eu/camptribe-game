@@ -1,4 +1,4 @@
-// GAME-247 · «Нагорода видна одразу»: наклейка «+€ · +XP · +навичка» у кутку HUD (над героєм цифр нема — GAME-229), дзвіночок (src/audio, ключ sfx-chime).
+// GAME-247 · «Нагорода видна одразу»: наклейка «+€ · +XP · +навичка» спливає НАД головою героя (OD-029, 07.11.2026, «давай як у Stardew»; для наклейки це змінило правило GAME-229 «над героєм цифр нема»), дзвіночок (src/audio, ключ sfx-chime).
 // Обидві орієнтації: 390×844 і 932×430. Усе за кадрами й станом — таймерів реального часу немає.
 // Сума в події йде з хука e2e-збірки (rewardSum) — точна сума ядра з нових grantId перевірена юнітом src/ui/reward-sticker.test.ts на справжніх визначеннях гри.
 // Мутації (див. PR): сума в наклейці +1 → червоніє «точні суми»; bannersOpen ігнорує talk → червоніє «під рамкою розмови нема»; злиття вимкнено → «одна наклейка».
@@ -10,7 +10,7 @@ import { seedDay1 } from './day1-fixture';
 
 test.use({ hasTouch: true, isMobile: true });
 const VIEWS = [{ side: 'portrait', w: 390, h: 844 }, { side: 'landscape', w: 932, h: 430 }] as const;
-const SHOTS = process.env.G247_SHOTS === '1' ? 'research/game-247' : null;
+const SHOTS = process.env.G247_SHOTS === '1' ? 'research/game-277' : null;   // OD-029: знімки наклейки над героєм
 const sticker = (page: Page) => page.locator('[data-ui="reward-sticker"]');
 interface Sum { cents: number; xp: number; om: number; skills: Record<string, number> }
 declare global { interface Window { __g247?: { overlap: number; frames: number; max: number } } }
@@ -69,7 +69,12 @@ for (const v of VIEWS) {
       expect(box.y + box.height, 'і за нижній').toBeLessThanOrEqual(v.h);
       const after = (await page.evaluate(() => (window as unknown as { __game: { sounds: () => string[] } }).__game.sounds())).filter((k) => k === 'sfx-chime').length;
       expect(after - before, 'дзвіночок через мікшер — рівно раз').toBe(1);
-      expect((await page.evaluate(() => [...(window as unknown as { __game: { probe: { fx: { headLabels: string[] } } } }).__game.probe.fx.headLabels])).filter((l) => /\d|XP/.test(l)), 'над героєм цифр нема (GAME-229)').toEqual([]);
+      expect((await page.evaluate(() => [...(window as unknown as { __game: { probe: { fx: { headLabels: string[] } } } }).__game.probe.fx.headLabels])).filter((l) => /\d|XP/.test(l)), 'Phaser-підписи над героєм без цифр (GAME-229 лишається для них; наклейка — DOM, OD-029)').toEqual([]);
+      // OD-029: підпис над героєм — його рамка цілком вище спрайта героя й не перетинає його (мутація «поставити на героя» — StickerPlace gap < 0 — червоніє тут).
+      const hero = (await probe(page)).heroRect;
+      expect(hero.w, 'проба віддає рамку героя').toBeGreaterThan(0);
+      expect(box.y + box.height, 'наклейка вища за верх героя').toBeLessThanOrEqual(hero.y);
+      expect(Math.abs(box.x + box.width / 2 - (hero.x + hero.w / 2)), 'і по центру над ним (у межах екрана)').toBeLessThanOrEqual(Math.max(hero.w, box.width / 2 + 8));
       await shot(page, `sticker-${v.side}`);
       expect(errors).toEqual([]);
       await ctx.close();
