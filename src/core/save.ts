@@ -154,6 +154,7 @@ function shapeError(sim: unknown): string | null {
   if (fr !== undefined && (!isObj(fr) || !isObj(fr.pts) || !isObj(fr.gift) || !sortedUniq(fr.seen)
     || Object.values(fr.pts).some((n) => !isInt(n) || (n as number) > POINTS_CAP) || Object.values(fr.gift).some((n) => !isInt(n)))) return 'game: friend';
   if (fr?.forage !== undefined && (!isObj(fr.forage) || !isInt(fr.forage.day) || !isObj(fr.forage.n) || Object.values(fr.forage.n).some((n) => !isInt(n)))) return 'game: friend.forage';
+  if (fr?.trade !== undefined && (!isObj(fr.trade) || !isInt(fr.trade.day) || !sortedUniq(fr.trade.done))) return 'game: friend.trade';
   const dl = game.dialogue;
   if (dl !== null && (!isObj(dl) || typeof dl.id !== 'string' || typeof dl.node !== 'string')) return 'game: dialogue';
   const p = game.player;

@@ -1191,6 +1191,8 @@ export const CHECKS = [
       const items = new Set((c.content.items ?? []).map((i) => i.id));
       const scenes = new Map((c.content.dialogues ?? []).filter((d) => d.scene !== undefined && d.npcId === undefined && d.trigger === undefined).map((d) => [d.id, d]));
       const used = new Map();
+      const tradeIds = new Set();
+      const resale = new Map((c.content.items ?? []).map((i) => [i.id, i.resaleCents ?? 0]));
       for (const n of c.content.npcs ?? []) {
         const g = n.gifts;
         if (g !== undefined) {
@@ -1202,6 +1204,17 @@ export const CHECKS = [
             for (const it of list) if (!items.has(it)) out.push(I('GIFT_PREF_INVALID', `${n.id}.gifts.${kind}`, `предмет «${it}» відсутній у items.json`));
           }
           for (const it of likes) if (dislikes.includes(it)) out.push(I('GIFT_PREF_INVALID', `${n.id}.gifts`, `«${it}» і любимий, і небажаний одночасно`));
+        }
+        // GAME-276: обмін із сусідом. Ціна хибного спрацювання (закон 5): автор правит один рядок trades. Ціна пропуску — гроші з нічого: річ, яку продають дорожче, ніж віддали.
+        for (const t of n.trades ?? []) {
+          const where = `${n.id}.trades.${t.id}`;
+          if (tradeIds.has(t.id)) out.push(I('TRADE_OFFER_INVALID', where, 'id пропозиції вже є'));
+          tradeIds.add(t.id);
+          if ((t.give ?? []).length === 0 || (t.get ?? []).length === 0) out.push(I('TRADE_OFFER_INVALID', where, 'обмін без «віддаю» або без «отримую»'));
+          for (const l of [...(t.give ?? []), ...(t.get ?? [])]) if (!items.has(l.itemId)) out.push(I('TRADE_OFFER_INVALID', where, `предмет «${l.itemId}» відсутній у items.json`));
+          if ((t.give ?? []).some((l) => (t.get ?? []).some((m) => m.itemId === l.itemId))) out.push(I('TRADE_OFFER_INVALID', where, 'одна й та сама річ і віддається, і отримується'));
+          const worth = (ls) => (ls ?? []).reduce((s, l) => s + (resale.get(l.itemId) ?? 0) * l.qty, 0);
+          if (worth(t.get) > worth(t.give)) out.push(I('TRADE_OFFER_INVALID', where, `отримане (${worth(t.get)}) дорожче за віддане (${worth(t.give)}) за resaleCents: обмін створює гроші`));
         }
         const h = n.heart;
         if (h !== undefined) {

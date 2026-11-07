@@ -16,6 +16,7 @@ import { applyWave, type WaveCommand } from './wave';
 import { award, awardsFor } from './progress';
 import { atlasAwards } from './atlas-fill';
 import { grantStickers } from './stickers';
+import { tradeDoneToday, tradeIsFair, traded } from './friendship';
 import { forageKindOf, forageLeft, foraged, FORAGE_SOURCE_ITEM } from './forage';
 import { addPoints, canGiftToday, giveGift, heartEventDue, markHeartSeen, reactionOf, REQUEST_POINTS } from './friendship';
 
@@ -52,6 +53,8 @@ export type Command =
   /** Практика руками (GAME-229): дія на мапі (сокира, кілок, вудка…) вчить навичку з таблиці HAND_ACTIONS. Нічого, крім досвіду, не змінює. */
   | { readonly type: 'Practise'; readonly commandId: string; readonly action: string }
   /** Подарунок мешканцю табору (GAME-230): предмет з інвентаря, не більше одного на NPC за день; реакцію й очки дає каталог дружби (ніколи не мінус). */
+  /** Обмін із сусідом (GAME-276): річ за річ за пропозицією з content/npcs.json (trades); раз на день на пропозицію, поруч із сусідом, грошей не дає. */
+  | { readonly type: 'TradeItem'; readonly commandId: string; readonly npcId: string; readonly offerId: string }
   | { readonly type: 'GiveGift'; readonly commandId: string; readonly npcId: string; readonly itemId: string }
   /** Збір дару природи (GAME-230): шишка чи ягода, яку герой підняв у таборі, лягає в інвентар (лише предмети з `friendship.forage`). */
   | { readonly type: 'Forage'; readonly commandId: string; readonly itemId: string; readonly sourceId: string }
@@ -259,6 +262,36 @@ function apply(cmd: Command, d: Draft, defs: CoreDefs, guard: Safeguards, today:
       d.friend = giveGift(d.friend, cmd.npcId, reactionOf(prefs, cmd.itemId), today);
       // Подарунок — гарний привід закінчити розмову: рамка зникає, світ іде далі, і гравець бачить реакцію (♥ чи «…») та позу вручення, а не рамку поверх мапи.
       if (d.dialogue !== null && defs.story && own(defs.story.dialogues, d.dialogue.id)?.npcId === cmd.npcId) d.dialogue = null;
+      return null;
+    }
+    case 'TradeItem': {
+      if (!isContentId(cmd.npcId) || !isContentId(cmd.offerId)) return 'INVALID_COMMAND';
+      if (today === undefined) return 'INVALID_COMMAND';
+      const fr = defs.friendship;
+      if (!fr) return 'UNKNOWN_TARGET';
+      if (!d.player) return 'NO_CHARACTER';
+      const offer = (fr.trades ?? []).find((t) => t.id === cmd.offerId && t.npcId === cmd.npcId);
+      const npc = defs.story ? own(defs.story.npcs, cmd.npcId) : undefined;
+      if (!offer || !npc) return 'UNKNOWN_TARGET';
+      if (d.player.locationId !== npc.locationId) return 'NOT_HERE';
+      if (tradeDoneToday(d.friend, offer.id, today)) return 'GRANT_ALREADY_GIVEN';
+      // Страж «гроші з нічого»: навіть зіпсований контент не дасть отримати дорожче, ніж віддано.
+      if (!tradeIsFair(offer, (id) => own(defs.items, id)?.sellCents ?? 0)) return 'CONDITION_FAILED';
+      let inv: Record<string, number> = { ...d.inventory };
+      for (const l of offer.give) {
+        const have = own(inv, l.itemId) ?? 0;
+        if (have < l.qty) return 'ITEM_NOT_OWNED';
+        // Остання річ, потрібна активному квесту, не віддається (як і не дарується й не продається).
+        if (have === l.qty && defs.story && questNeedsItem(defs.story, d, d.player, l.itemId)) return 'ITEM_QUEST_LOCKED';
+        inv = have === l.qty ? Object.fromEntries(Object.entries(inv).filter(([k]) => k !== l.itemId)) : { ...inv, [l.itemId]: have - l.qty };
+      }
+      for (const l of offer.get) {
+        const next = (own(inv, l.itemId) ?? 0) + l.qty;
+        if (next > FORAGE_CAP) return 'INVALID_AMOUNT';
+        inv[l.itemId] = next;
+      }
+      d.inventory = inv;
+      d.friend = traded(d.friend, offer.id, today);
       return null;
     }
     case 'Forage': {
