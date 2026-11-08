@@ -78,6 +78,8 @@ function packItems(sim: SimState, defs: CoreDefs): Raw[] {
   const list: Raw[] = needed.map((i) => ({ id: i.itemId, label: { item: itemKey(i.itemId) }, placeKey: PLACE[i.itemId] ?? null, done: taken(i.itemId), map: 'home', spot: `pack.${i.itemId}` }));
   const loaded = needed.every((i) => g.flags.includes(packFlag(i.itemId))) && carriedOf(g.flags, pk, p).length === 0;
   list.push({ id: 'load', label: { ui: 'agenda.load' }, placeKey: 'agenda.place.yard', done: loaded, map: 'home', spot: 'obj.vehicle' });
+  // GAME-174: усе спаковано й завантажено — список не закінчується: останній пункт «у дорогу» лишається відкритим (раніше всі пункти були закреслені і нотатник не казав, що далі).
+  list.push({ id: 'depart', label: { ui: p.transportId === 'transport.car' ? 'next.depart.car' : 'next.depart.bike' }, placeKey: 'agenda.place.yard', done: false, map: 'home', spot: 'obj.vehicle' });
   return list;
 }
 
