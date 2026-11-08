@@ -22,6 +22,26 @@ const chatMemo = new WeakMap<StoryDefs, ReadonlySet<string>>();
  * не змінює сюжету, тож не входить у перелік спроб перебору й бота (інакше кожен із цих NPC множив би простір станів: shop.test вибухає), а меню ☰ не
  * засмічується кнопками — говорять із ними на мапі. Ядро розмову приймає як завжди (Talk), а що вона справді нічого не чіпає, доводить npc-talk.test.
  */
+const inertLocMemo = new WeakMap<StoryDefs, ReadonlySet<string>>();
+/**
+ * GAME-283: локації, на які не посилається жоден квест, NPC чи розмова і де немає предметів, — вузли мапи без сюжету
+ * (розділ 2: стежки, водоспад, пам'ятник — спершу мапа, сцени потім). Візит туди лише змінює місце гравця й не відкриває
+ * жодного ходу, а простір станів перебору (story.test) і бота множився б на кожну таку точку. Щойно картка розділу
+ * посилається на локацію (quest.locationId, ціль, NPC), вона перестає бути інертною сама, без правки цього списку.
+ */
+export function inertLocations(st: StoryDefs): ReadonlySet<string> {
+  const hit = inertLocMemo.get(st);
+  if (hit) return hit;
+  const refs = JSON.stringify([st.quests, st.npcs, st.dialogues]);
+  const out = new Set<string>();
+  for (const [id, l] of Object.entries(st.locations)) {
+    const live = (l as { items?: unknown[]; unlockedBy?: string }).items?.length || (l as { unlockedBy?: string }).unlockedBy;
+    if (!live && !refs.includes(`"${id}"`)) out.add(id);
+  }
+  inertLocMemo.set(st, out);
+  return out;
+}
+
 export function chatOnlyNpcs(st: StoryDefs): ReadonlySet<string> {
   const hit = chatMemo.get(st);
   if (hit) return hit;
@@ -51,7 +71,8 @@ export function moves(s: GameState, defs: CoreDefs, withRequests = false): Move[
   const st = defs.story as StoryDefs;
   const out: Record<string, unknown>[] = [];
   const chat = chatOnlyNpcs(st);
-  for (const id of Object.keys(st.locations)) out.push({ type: 'Visit', locationId: id });
+  const inertLoc = inertLocations(st);
+  for (const id of Object.keys(st.locations)) if (!inertLoc.has(id)) out.push({ type: 'Visit', locationId: id });
   // GAME-256: сон — хід лише тоді, коли активний крок чекає наступного дня (ворота `gate.day`). Без годинника сон «абстрактний» (де є герой), а лічильник
   // обмежений стелею — простір станів перебору й бота росте лише там, де сюжет справді чекає на день; у решті станів ходу немає.
   if (!s.dialogue && s.player && Object.entries(s.quests).some(([id, q]) => q.status === 'active' && !gateOpen(st.quests[id]?.gate, s.slept))) out.push({ type: 'Sleep' });
