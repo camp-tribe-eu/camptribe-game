@@ -38,6 +38,12 @@ YARD_TS = [
 ]
 GRASS = [182, 183, 184]      # terrain_atlas (672|704|736, 160): трава, як у camp-lake
 DIRT = 181                   # стежка (640, 160)
+GRASS_ALT = [183, 184]
+def atlas_gid(c, r):
+    """(колонка, рядок) у terrain_atlas → gid у camp-lake (firstgid 1)."""
+    return r * 32 + c + 1
+DIRT_LIGHT = atlas_gid(16, 3)   # світлий ґрунт (пісок)
+DIRT_DARK = atlas_gid(19, 3)    # темніший брук
 BUSH = [473, 474, 475]       # кущі (768.., 384): нижня кромка двору, як у camp-lake
 
 
@@ -315,9 +321,26 @@ def build_road():
     for r in range(H):
         for c in range(W):
             put(layers, W, H, 'ground', c, r, terrain(rnd.choice(GRASS)))
-    for r in (4, 5):
+    # GAME-266 ч.2 · справжня дорога з тайлів terrain_atlas (LPC): ґрунтове полотно (брук + світлий пісок вперемішку), обабіч — узбіччя з кромкою
+    # (напівпрозорі краї блоку «ґрунт» (16,2)/(16,4) лягають у decor поверх трави), трава двох відтінків уздовж дороги, кілька дерев/пеньків/каменів.
+    ROAD_TOP, ROAD_ROWS = 3, 4
+    for r in range(ROAD_TOP, ROAD_TOP + ROAD_ROWS):
         for c in range(W):
-            put(layers, W, H, 'ground', c, r, terrain(DIRT))      # стежка-дорога через усю смугу
+            if r in (ROAD_TOP + 1, ROAD_TOP + 2):
+                put(layers, W, H, 'ground', c, r, terrain(rnd.choice([DIRT] * 5 + [DIRT_LIGHT, DIRT_DARK])))   # колія: брук із латками піску
+            else:
+                put(layers, W, H, 'ground', c, r, terrain(DIRT))
+    for c in range(W):
+        put(layers, W, H, 'decor', c, ROAD_TOP, terrain(atlas_gid(16, 2)))               # верхнє узбіччя (кромка ґрунту)
+        put(layers, W, H, 'decor', c, ROAD_TOP + ROAD_ROWS - 1, terrain(atlas_gid(16, 4)))   # нижнє узбіччя
+    for c in range(W):
+        for r in (2, 7):
+            if rnd.random() < 0.35:
+                put(layers, W, H, 'ground', c, r, terrain(rnd.choice(GRASS_ALT)))   # інший відтінок трави біля дороги
+    # Кущі, пеньки й камені (дерева LPC — 2×5 тайлів, на вузьку смугу не лягають) вздовж дороги. Не на клітинках слідів (16,2) і (22,2) та не на точках дії.
+    for c, r, gid in [(3, 1, 600), (9, 1, 699), (13, 2, 700), (26, 1, 600), (5, 8, 699), (20, 8, 600), (28, 7, 700),
+                      (7, 2, 600), (19, 2, 600), (11, 7, 600), (24, 7, 600), (2, 7, 699), (14, 8, 700), (25, 2, 699)]:
+        put(layers, W, H, 'decor', c, r, terrain(gid))
     for c in range(W):
         put(layers, W, H, 'walls', c, 0, terrain(BUSH[c % 3]))    # живопліт зверху й знизу
         put(layers, W, H, 'walls', c, H - 1, terrain(BUSH[(c + 1) % 3]))
