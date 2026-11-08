@@ -24,12 +24,15 @@
       "name": "adrix89",
       "files": [
         "tiles/base_out_atlas.png",
+        "tiles/ch2_muellerthal.png",
         "tiles/terrain_atlas.png"
       ],
       "licences": [
         "CC-BY-SA 3.0"
       ],
       "sources": [
+        "https://opengameart.org/content/liberated-pixel-cup-lpc-base-assets-sprites-map-tiles",
+        "https://opengameart.org/content/lpc-terrains",
         "https://opengameart.org/content/lpc-tile-atlas"
       ]
     },
@@ -136,6 +139,34 @@
       ]
     },
     {
+      "name": "Bertram",
+      "files": [
+        "tiles/ch2_muellerthal.png"
+      ],
+      "licences": [
+        "CC-BY-SA 3.0"
+      ],
+      "sources": [
+        "https://opengameart.org/content/liberated-pixel-cup-lpc-base-assets-sprites-map-tiles",
+        "https://opengameart.org/content/lpc-terrains",
+        "https://opengameart.org/content/lpc-tile-atlas"
+      ]
+    },
+    {
+      "name": "billknye",
+      "files": [
+        "tiles/ch2_muellerthal.png"
+      ],
+      "licences": [
+        "CC-BY-SA 3.0"
+      ],
+      "sources": [
+        "https://opengameart.org/content/liberated-pixel-cup-lpc-base-assets-sprites-map-tiles",
+        "https://opengameart.org/content/lpc-terrains",
+        "https://opengameart.org/content/lpc-tile-atlas"
+      ]
+    },
+    {
       "name": "bleutailfly",
       "files": [
         "tiles/home_floor.png",
@@ -221,6 +252,8 @@
         "portraits/npc.victoria.png",
         "sprites/cat_mia.png",
         "tiles/camp_props.png",
+        "tiles/ch2_monument.png",
+        "tiles/ch2_objects.png",
         "tiles/home_floor.png",
         "tiles/home_furniture.png",
         "tiles/home_walls.png",
@@ -271,6 +304,20 @@
       ]
     },
     {
+      "name": "Bluecarrot16",
+      "files": [
+        "tiles/ch2_muellerthal.png"
+      ],
+      "licences": [
+        "CC-BY-SA 3.0"
+      ],
+      "sources": [
+        "https://opengameart.org/content/liberated-pixel-cup-lpc-base-assets-sprites-map-tiles",
+        "https://opengameart.org/content/lpc-terrains",
+        "https://opengameart.org/content/lpc-tile-atlas"
+      ]
+    },
+    {
       "name": "Bonsaiheldin",
       "files": [
         "tiles/home_floor.png"
@@ -295,9 +342,38 @@
       ]
     },
     {
+      "name": "Buko Studios",
+      "files": [
+        "tiles/ch2_muellerthal.png"
+      ],
+      "licences": [
+        "CC-BY-SA 3.0"
+      ],
+      "sources": [
+        "https://opengameart.org/content/liberated-pixel-cup-lpc-base-assets-sprites-map-tiles",
+        "https://opengameart.org/content/lpc-terrains",
+        "https://opengameart.org/content/lpc-tile-atlas"
+      ]
+    },
+    {
+      "name": "caeles",
+      "files": [
+        "tiles/ch2_muellerthal.png"
+      ],
+      "licences": [
+        "CC-BY-SA 3.0"
+      ],
+      "sources": [
+        "https://opengameart.org/content/liberated-pixel-cup-lpc-base-assets-sprites-map-tiles",
+        "https://opengameart.org/content/lpc-terrains",
+        "https://opengameart.org/content/lpc-tile-atlas"
+      ]
+    },
+    {
       "name": "Casper Nilsson",
       "files": [
         "tiles/base_out_atlas.png",
+        "tiles/ch2_muellerthal.png",
         "tiles/home_floor.png",
         "tiles/home_walls.png",
         "tiles/home_windows_doors.png",
@@ -308,7 +384,9 @@
         "CC-BY-SA 4.0"
       ],
       "sources": [
+        "https://opengameart.org/content/liberated-pixel-cup-lpc-base-assets-sprites-map-tiles",
         "https://opengameart.org/content/lpc-floors",
+        "https://opengameart.org/content/lpc-terrains",
         "https://opengameart.org/content/lpc-tile-atlas",
         "https://opengameart.org/content/lpc-walls",
         "https://opengameart.org/content/lpc-windows-doors"
@@ -393,6 +471,20 @@
         "CC-BY-SA 3.0"
       ],
       "sources": [
+        "https://opengameart.org/content/lpc-tile-atlas"
+      ]
+    },
+    {
+      "name": "Daniel Eddeland (Daneeklu)",
+      "files": [
+        "tiles/ch2_muellerthal.png"
+      ],
+      "licences": [
+        "CC-BY-SA 3.0"
+      ],
+      "sources": [
+        "https://opengameart.org/content/liberated-pixel-cup-lpc-base-assets-sprites-map-tiles",
+        "https://opengameart.org/content/lpc-terrains",
         "https://opengameart.org/content/lpc-tile-atlas"
       ]
     },
@@ -503,6 +595,8 @@
         "portraits/npc.sarah.png",
         "portraits/npc.victoria.png",
         "tiles/camp_props.png",
+        "tiles/ch2_monument.png",
+        "tiles/ch2_objects.png",
         "tiles/home_furniture.png",
         "tiles/home_office.png",
         "tiles/shop_decor.png",
@@ -646,6 +740,9 @@
       "name": "Hyptosis",
       "files": [
         "tiles/camp_props.png",
+        "tiles/ch2_monument.png",
+        "tiles/ch2_muellerthal.png",
+        "tiles/ch2_objects.png",
         "tiles/home_floor.png",
         "tiles/home_furniture.png",
         "tiles/home_walls.png",
@@ -657,8 +754,11 @@
         "CC-BY-SA 4.0"
       ],
       "sources": [
+        "https://opengameart.org/content/liberated-pixel-cup-lpc-base-assets-sprites-map-tiles",
         "https://opengameart.org/content/lpc-floors",
         "https://opengameart.org/content/lpc-revised-base-object-kit",
+        "https://opengameart.org/content/lpc-terrains",
+        "https://opengameart.org/content/lpc-tile-atlas",
         "https://opengameart.org/content/lpc-walls"
       ]
     },
@@ -776,18 +876,6 @@
     },
     {
       "name": "jestan",
-      "files": [
-        "tiles/home_floor.png"
-      ],
-      "licences": [
-        "CC-BY-SA 4.0"
-      ],
-      "sources": [
-        "https://opengameart.org/content/lpc-floors"
-      ]
-    },
-    {
-      "name": "Jetrel",
       "files": [
         "tiles/home_floor.png"
       ],
@@ -1002,6 +1090,9 @@
         "icons/objective_icons.png",
         "tiles/base_out_atlas.png",
         "tiles/camp_props.png",
+        "tiles/ch2_monument.png",
+        "tiles/ch2_muellerthal.png",
+        "tiles/ch2_objects.png",
         "tiles/home_floor.png",
         "tiles/home_furniture.png",
         "tiles/home_office.png",
@@ -1020,11 +1111,13 @@
       "sources": [
         "https://github.com/camp-tribe-eu/camptribe-game/blob/main/scripts/assets/build_item_icons.py",
         "https://github.com/camp-tribe-eu/camptribe-game/blob/main/scripts/assets/build_objective_icons.py",
+        "https://opengameart.org/content/liberated-pixel-cup-lpc-base-assets-sprites-map-tiles",
         "https://opengameart.org/content/lpc-floors",
         "https://opengameart.org/content/lpc-food",
         "https://opengameart.org/content/lpc-revised-base-object-kit",
         "https://opengameart.org/content/lpc-revised-the-office",
         "https://opengameart.org/content/lpc-shelves-rework",
+        "https://opengameart.org/content/lpc-terrains",
         "https://opengameart.org/content/lpc-tile-atlas",
         "https://opengameart.org/content/lpc-walls",
         "https://opengameart.org/content/lpc-windows-doors",
@@ -1275,6 +1368,20 @@
       ]
     },
     {
+      "name": "Nushio",
+      "files": [
+        "tiles/ch2_muellerthal.png"
+      ],
+      "licences": [
+        "CC-BY-SA 3.0"
+      ],
+      "sources": [
+        "https://opengameart.org/content/liberated-pixel-cup-lpc-base-assets-sprites-map-tiles",
+        "https://opengameart.org/content/lpc-terrains",
+        "https://opengameart.org/content/lpc-tile-atlas"
+      ]
+    },
+    {
       "name": "Nyom",
       "files": [
         "characters/torso/clothes/shortsleeve/shortsleeve/teen/slash.png",
@@ -1360,6 +1467,20 @@
       ]
     },
     {
+      "name": "Rayane Félix (RayaneFLX)",
+      "files": [
+        "tiles/ch2_muellerthal.png"
+      ],
+      "licences": [
+        "CC-BY-SA 3.0"
+      ],
+      "sources": [
+        "https://opengameart.org/content/liberated-pixel-cup-lpc-base-assets-sprites-map-tiles",
+        "https://opengameart.org/content/lpc-terrains",
+        "https://opengameart.org/content/lpc-tile-atlas"
+      ]
+    },
+    {
       "name": "Reemax",
       "files": [
         "tiles/home_floor.png",
@@ -1372,6 +1493,23 @@
       "sources": [
         "https://opengameart.org/content/lpc-floors",
         "https://opengameart.org/content/lpc-walls"
+      ]
+    },
+    {
+      "name": "Richard Kettering (Jetrel)",
+      "files": [
+        "tiles/ch2_muellerthal.png",
+        "tiles/home_floor.png"
+      ],
+      "licences": [
+        "CC-BY-SA 3.0",
+        "CC-BY-SA 4.0"
+      ],
+      "sources": [
+        "https://opengameart.org/content/liberated-pixel-cup-lpc-base-assets-sprites-map-tiles",
+        "https://opengameart.org/content/lpc-floors",
+        "https://opengameart.org/content/lpc-terrains",
+        "https://opengameart.org/content/lpc-tile-atlas"
       ]
     },
     {
@@ -1481,6 +1619,7 @@
         "portraits/npc.sarah.png",
         "portraits/npc.victoria.png",
         "tiles/base_out_atlas.png",
+        "tiles/ch2_muellerthal.png",
         "tiles/home_floor.png",
         "tiles/home_walls.png",
         "tiles/terrain_atlas.png"
@@ -1516,6 +1655,7 @@
         "https://opengameart.org/content/lpc-runcycle-for-male-muscular-and-pregnant-character-bases-with-modular-heads",
         "https://opengameart.org/content/lpc-teen-androgynous-short-sleeve-shirt",
         "https://opengameart.org/content/lpc-teen-unisex-base-clothes",
+        "https://opengameart.org/content/lpc-terrains",
         "https://opengameart.org/content/lpc-tile-atlas",
         "https://opengameart.org/content/lpc-walls",
         "https://opengameart.org/content/ponytail-and-plain-hairstyles"
@@ -1567,6 +1707,20 @@
       ],
       "sources": [
         "https://opengameart.org/content/lpc-floors"
+      ]
+    },
+    {
+      "name": "William Thompson",
+      "files": [
+        "tiles/ch2_muellerthal.png"
+      ],
+      "licences": [
+        "CC-BY-SA 3.0"
+      ],
+      "sources": [
+        "https://opengameart.org/content/liberated-pixel-cup-lpc-base-assets-sprites-map-tiles",
+        "https://opengameart.org/content/lpc-terrains",
+        "https://opengameart.org/content/lpc-tile-atlas"
       ]
     },
     {
@@ -1657,9 +1811,10 @@
       ]
     },
     {
-      "name": "Zabin",
+      "name": "Zachariah Husiar (Zabin)",
       "files": [
         "sprites/campfire.png",
+        "tiles/ch2_muellerthal.png",
         "tiles/home_walls.png"
       ],
       "licences": [
@@ -1667,7 +1822,24 @@
       ],
       "sources": [
         "https://opengameart.org/content/camp-fire-animation-for-rpgs-finished",
+        "https://opengameart.org/content/liberated-pixel-cup-lpc-base-assets-sprites-map-tiles",
+        "https://opengameart.org/content/lpc-terrains",
+        "https://opengameart.org/content/lpc-tile-atlas",
         "https://opengameart.org/content/lpc-walls"
+      ]
+    },
+    {
+      "name": "ZaPaper",
+      "files": [
+        "tiles/ch2_muellerthal.png"
+      ],
+      "licences": [
+        "CC-BY-SA 3.0"
+      ],
+      "sources": [
+        "https://opengameart.org/content/liberated-pixel-cup-lpc-base-assets-sprites-map-tiles",
+        "https://opengameart.org/content/lpc-terrains",
+        "https://opengameart.org/content/lpc-tile-atlas"
       ]
     }
   ],
@@ -3427,7 +3599,7 @@
     {
       "file": "sprites/campfire.png",
       "authors": [
-        "Zabin"
+        "Zachariah Husiar (Zabin)"
       ],
       "licence": "CC-BY-SA 3.0",
       "sources": [
@@ -3503,6 +3675,63 @@
       "modified": "scaled 2x with nearest-neighbour, set on a 96x64 canvas, one outline colour recoloured onto the base palette (scripts/palette/quantize.py)"
     },
     {
+      "file": "tiles/ch2_monument.png",
+      "authors": [
+        "Eliza Wyatt (ElizaWy)",
+        "Lanea Zimmerman (Sharm)",
+        "bluecarrot16",
+        "Hyptosis"
+      ],
+      "licence": "CC-BY-SA 3.0",
+      "sources": [
+        "https://opengameart.org/content/lpc-revised-base-object-kit"
+      ],
+      "modified": "AI-derived work from a CC-BY-SA 3.0 reference sheet; magenta background keyed out, scaled to 70 px height with a box filter, bottom-aligned on a 96x80 canvas, quantized onto the base palette (scripts/assets/build_ch2_muellerthal.py)"
+    },
+    {
+      "file": "tiles/ch2_muellerthal.png",
+      "authors": [
+        "Bluecarrot16",
+        "Lanea Zimmerman (Sharm)",
+        "Daniel Eddeland (Daneeklu)",
+        "Richard Kettering (Jetrel)",
+        "Zachariah Husiar (Zabin)",
+        "Hyptosis",
+        "Casper Nilsson",
+        "Buko Studios",
+        "Nushio",
+        "ZaPaper",
+        "billknye",
+        "William Thompson",
+        "caeles",
+        "Stephen Challener (Redshrike)",
+        "Bertram",
+        "Rayane Félix (RayaneFLX)",
+        "adrix89"
+      ],
+      "licence": "CC-BY-SA 3.0",
+      "sources": [
+        "https://opengameart.org/content/liberated-pixel-cup-lpc-base-assets-sprites-map-tiles",
+        "https://opengameart.org/content/lpc-terrains",
+        "https://opengameart.org/content/lpc-tile-atlas"
+      ],
+      "modified": "cropped from three LPC sheets and arranged onto one 672x688 sheet, quantized onto the base palette (scripts/assets/build_ch2_muellerthal.py)"
+    },
+    {
+      "file": "tiles/ch2_objects.png",
+      "authors": [
+        "Eliza Wyatt (ElizaWy)",
+        "Lanea Zimmerman (Sharm)",
+        "bluecarrot16",
+        "Hyptosis"
+      ],
+      "licence": "CC-BY-SA 3.0",
+      "sources": [
+        "https://opengameart.org/content/lpc-revised-base-object-kit"
+      ],
+      "modified": "three single flowers cut out unchanged; the small glass bottle has a half-medallion (6 px) painted inside; arranged on a 128x32 sheet, quantized onto the base palette (scripts/assets/build_ch2_muellerthal.py)"
+    },
+    {
       "file": "tiles/home_floor.png",
       "authors": [
         "bluecarrot16",
@@ -3514,7 +3743,7 @@
         "Stephen Challener (Redshrike)",
         "Bonsaiheldin",
         "Tyler Olsen (Roots)",
-        "Jetrel",
+        "Richard Kettering (Jetrel)",
         "jestan",
         "The Open Surge team",
         "Gaurav Munjal",
@@ -3582,7 +3811,7 @@
         "Daniel Armstrong (HughSpectrum)",
         "William Thompson (William.Thompsonj)",
         "Hyptosis",
-        "Zabin",
+        "Zachariah Husiar (Zabin)",
         "Daniel Cook",
         "Guido Bos",
         "SpiderDave",

@@ -1,0 +1,40 @@
+{
+ "batch": [
+  {
+   "name": "monument_0",
+   "endpoint": "fal-ai/flux-pro/kontext",
+   "payload": {
+    "prompt": "Using the exact pixel art style of this reference furniture sprite sheet (same dark outline, same limited palette and shading, one tile is 32 pixels), draw ONE new object: a small outdoor monument made of THREE tall slim vertical brushed-steel pillars of slightly different heights standing side by side on a low grey stone plinth, each pillar with a narrow glass panel inset, about 2.5 metres tall, tall and thin. LPC style pixel art, 3/4 top-down ORTHOGRAPHIC view like classic 16-bit RPGs, front face parallel to the screen, NO isometric angle, NO perspective, light from top-left, flat magenta #FF00FF background, single object. Isolated, no floor, no shadow, no text, no logo, no flags, no people.",
+    "image_url": "https://raw.githubusercontent.com/camp-tribe-eu/camptribe-game/main/assets/tiles/home_furniture.png",
+    "num_images": 1,
+    "output_format": "png",
+    "safety_tolerance": "2",
+    "seed": 20261108
+   }
+  },
+  {
+   "name": "monument_1",
+   "endpoint": "fal-ai/flux-pro/kontext",
+   "payload": {
+    "prompt": "Using the exact pixel art style of this reference furniture sprite sheet (same dark outline, same limited palette and shading, one tile is 32 pixels), draw ONE new object: a small outdoor monument made of THREE tall slim vertical brushed-steel pillars of slightly different heights standing side by side on a low grey stone plinth, each pillar with a narrow glass panel inset, about 2.5 metres tall, tall and thin. LPC style pixel art, 3/4 top-down ORTHOGRAPHIC view like classic 16-bit RPGs, front face parallel to the screen, NO isometric angle, NO perspective, light from top-left, flat magenta #FF00FF background, single object. Isolated, no floor, no shadow, no text, no logo, no flags, no people.",
+    "image_url": "https://raw.githubusercontent.com/camp-tribe-eu/camptribe-game/main/assets/tiles/home_furniture.png",
+    "num_images": 1,
+    "output_format": "png",
+    "safety_tolerance": "2",
+    "seed": 20261109
+   }
+  },
+  {
+   "name": "monument_2",
+   "endpoint": "fal-ai/flux-pro/kontext",
+   "payload": {
+    "prompt": "Using the exact pixel art style of this reference furniture sprite sheet (same dark outline, same limited palette and shading, one tile is 32 pixels), draw ONE new object: a small outdoor monument made of THREE tall slim vertical brushed-steel pillars of slightly different heights standing side by side on a low grey stone plinth, each pillar with a narrow glass panel inset, about 2.5 metres tall, tall and thin. LPC style pixel art, 3/4 top-down ORTHOGRAPHIC view like classic 16-bit RPGs, front face parallel to the screen, NO isometric angle, NO perspective, light from top-left, flat magenta #FF00FF background, single object. Isolated, no floor, no shadow, no text, no logo, no flags, no people.",
+    "image_url": "https://raw.githubusercontent.com/camp-tribe-eu/camptribe-game/main/assets/tiles/home_furniture.png",
+    "num_images": 1,
+    "output_format": "png",
+    "safety_tolerance": "2",
+    "seed": 20261110
+   }
+  }
+ ]
+}
