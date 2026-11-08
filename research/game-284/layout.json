@@ -1,0 +1,285 @@
+{
+ "px_per_m": 28,
+ "objects": [
+  {
+   "id": "cliff-l",
+   "kind": "cliff",
+   "x": 150,
+   "y": 170,
+   "w": 65,
+   "h": 125,
+   "foot": [
+    80,
+    14
+   ],
+   "solid": true,
+   "z": 0
+  },
+  {
+   "id": "waterfall",
+   "kind": "waterfall",
+   "x": 240,
+   "y": 170,
+   "w": 84,
+   "h": 110,
+   "foot": [
+    96,
+    6
+   ],
+   "solid": false,
+   "z": 1
+  },
+  {
+   "id": "cliff-r",
+   "kind": "cliff",
+   "x": 330,
+   "y": 170,
+   "w": 65,
+   "h": 125,
+   "foot": [
+    80,
+    14
+   ],
+   "solid": true,
+   "z": 2
+  },
+  {
+   "id": "pine-3",
+   "kind": "tree",
+   "x": 60,
+   "y": 245,
+   "w": 85,
+   "h": 131,
+   "foot": [
+    14,
+    8
+   ],
+   "solid": true,
+   "z": 3,
+   "real_h_m": 4.5
+  },
+  {
+   "id": "pine-4",
+   "kind": "tree",
+   "x": 430,
+   "y": 250,
+   "w": 85,
+   "h": 131,
+   "foot": [
+    14,
+    8
+   ],
+   "solid": true,
+   "z": 4,
+   "real_h_m": 4.5
+  },
+  {
+   "id": "pebble-1",
+   "kind": "pebble",
+   "x": 140,
+   "y": 300,
+   "w": 20,
+   "h": 14,
+   "foot": [
+    10,
+    4
+   ],
+   "solid": false,
+   "z": 5
+  },
+  {
+   "id": "rock-2",
+   "kind": "rock",
+   "x": 350,
+   "y": 300,
+   "w": 36,
+   "h": 32,
+   "foot": [
+    26,
+    8
+   ],
+   "solid": true,
+   "z": 6,
+   "real_h_m": 1.0
+  },
+  {
+   "id": "pine-1",
+   "kind": "tree",
+   "x": 40,
+   "y": 330,
+   "w": 85,
+   "h": 131,
+   "foot": [
+    14,
+    8
+   ],
+   "solid": true,
+   "z": 7,
+   "real_h_m": 4.5
+  },
+  {
+   "id": "bush-1",
+   "kind": "bush",
+   "x": 110,
+   "y": 330,
+   "w": 47,
+   "h": 40,
+   "foot": [
+    36,
+    10
+   ],
+   "solid": true,
+   "z": 8,
+   "real_h_m": 1.6
+  },
+  {
+   "id": "monument",
+   "kind": "monument",
+   "x": 240,
+   "y": 330,
+   "w": 75,
+   "h": 70,
+   "foot": [
+    69,
+    14
+   ],
+   "solid": true,
+   "z": 9,
+   "real_h_m": 2.5
+  },
+  {
+   "id": "pine-2",
+   "kind": "tree",
+   "x": 440,
+   "y": 340,
+   "w": 85,
+   "h": 131,
+   "foot": [
+    14,
+    8
+   ],
+   "solid": true,
+   "z": 10,
+   "real_h_m": 4.5
+  },
+  {
+   "id": "rock-1",
+   "kind": "rock",
+   "x": 150,
+   "y": 345,
+   "w": 36,
+   "h": 32,
+   "foot": [
+    26,
+    8
+   ],
+   "solid": true,
+   "z": 11,
+   "real_h_m": 1.0
+  },
+  {
+   "id": "bush-2",
+   "kind": "bush",
+   "x": 380,
+   "y": 360,
+   "w": 47,
+   "h": 40,
+   "foot": [
+    36,
+    10
+   ],
+   "solid": true,
+   "z": 12,
+   "real_h_m": 1.6
+  },
+  {
+   "id": "person",
+   "kind": "person",
+   "x": 215,
+   "y": 372,
+   "w": 14,
+   "h": 47,
+   "foot": [
+    10,
+    6
+   ],
+   "solid": false,
+   "z": 13,
+   "real_h_m": 1.7
+  },
+  {
+   "id": "bottle",
+   "kind": "bottle",
+   "x": 272,
+   "y": 372,
+   "w": 8,
+   "h": 13,
+   "foot": [
+    6,
+    3
+   ],
+   "solid": false,
+   "z": 14,
+   "real_h_m": 0.46
+  },
+  {
+   "id": "orchid-1",
+   "kind": "orchid",
+   "x": 190,
+   "y": 395,
+   "w": 7,
+   "h": 13,
+   "foot": [
+    6,
+    3
+   ],
+   "solid": false,
+   "z": 15,
+   "real_h_m": 0.46
+  },
+  {
+   "id": "orchid-3",
+   "kind": "orchid",
+   "x": 300,
+   "y": 398,
+   "w": 7,
+   "h": 13,
+   "foot": [
+    6,
+    3
+   ],
+   "solid": false,
+   "z": 16,
+   "real_h_m": 0.46
+  },
+  {
+   "id": "orchid-2",
+   "kind": "orchid",
+   "x": 205,
+   "y": 400,
+   "w": 7,
+   "h": 13,
+   "foot": [
+    6,
+    3
+   ],
+   "solid": false,
+   "z": 17,
+   "real_h_m": 0.46
+  },
+  {
+   "id": "pond",
+   "kind": "water",
+   "x": 240,
+   "y": 234,
+   "w": 128,
+   "h": 64,
+   "foot": [
+    128,
+    64
+   ],
+   "solid": false,
+   "water": true
+  }
+ ]
+}
