@@ -32,7 +32,7 @@ import { findWindows, patchAlpha, patchQuads } from './light-patches';
 import { HERO_LIGHT_RADIUS, heroLightAlpha } from './hero-light';
 import { LAMP_RADIUS, findLamps, lampAlpha, lampsOn } from './lamps';
 import { heroBusy } from './hero-busy';
-import { FEEDBACK_S, RING_IDLE, isAutoSpot, pickNearest, ringMayTake, stepRing, vehicleReady, type Insets, type Ring } from './proximity';
+import { FEEDBACK_S, RING_IDLE, isAutoSpot, markHandled, pickNearest, ringMayTake, stepRing, vehicleReady, type Insets, type Ring } from './proximity';
 import { IDLE_AFTER_S, LEISURE_BY_MAP, assignLeisure, leisureFromObjects, type LeisureSpot } from './leisure';
 import { Neighbours, type NeighbourProbe } from './neighbours-rig';
 import { EMOTE_FRAMES } from './neighbours';
@@ -1765,7 +1765,7 @@ export class WorldScene extends Phaser.Scene {
     } else if (pressed && act) {
       if (act.kind === 'npc') { this.faceEachOther(act); this.hooks.onNpc(act.name); this.talkingTo = this.bridge.state.game.dialogue !== null ? act.name : null; }
       else if (carrying && (act.name === 'obj.vehicle' || act.name === 'obj.trunk')) this.unloadOne(true);
-      else { this.hooks.onObject(act.name); this.feedback(act.name); }
+      else { this.hooks.onObject(act.name); this.feedback(act.name); this.ring = markHandled(this.fired, this.ring, act.name); }   // GAME-281
     }
     // Кільце наближення: вийшов із зони — об'єкт знову «озброєний». Авто їде лише коли все потрібне вже в багажнику (а не повз нього) і герой стоїть.
     for (const n of [...this.fired]) { const f = this.spots.find((x) => x.name === n); if (!f || Phaser.Math.Distance.Between(this.player.x, this.player.y, f.x, f.y) > INTERACT_RANGE) this.fired.delete(n); }
