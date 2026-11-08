@@ -7,6 +7,7 @@ import type { AnyLang, Key } from '../i18n';
 import { trapTab } from './focus-trap';
 import { EntriesBook, JournalBook, SkillsBook, TravelerCard } from './JournalBook';
 import { Portrait, type PortraitLookup } from './Portrait';
+import { offerFocusKey } from './story-focus';
 import type { OfferAction, StoryOffer } from './story-types';
 
 const ACT: Readonly<Record<Exclude<OfferAction['kind'], 'choose' | 'continue' | 'cancel'>, Key>> = {
@@ -64,13 +65,16 @@ export function StoryPanel({ offer, lang, t, act, close, portrait, children, foo
   // рядок стану (де ти, гроші, погода), а не на кнопку; (б) панель ігнорує активації ще ACT_COOLDOWN_MS
   // після прийнятої. Мірка — event.timeStamp двох подій (без таймерів і без годинника: див. no-realtime).
   const lastAct = useRef(Number.NEGATIVE_INFINITY);
+  // GAME-280: фокус іде на рядок стану лише коли ЗМІНИЛОСЬ те, що тут можна натиснути чи прочитати (offerFocusKey), а не на кожен новий знімок offer:
+  // port.onStory → setOffer дає новий об'єкт і при тому самому вмісті (крок сцени, нова хвилина, об'єкт поруч) — і фокус зіскакував із кнопки між її вибором і Enter.
+  const focusKey = offerFocusKey(offer);
   useEffect(() => {
     const el = root.current;
     // GAME-84 №7: фокус без прокрутки (інакше браузер тягнув рядок стану нагору панелі, і заголовок зникав за межею),
     // а панель повертається на початок — гравець бачить заголовок, де він і що змінилось.
     (el?.querySelector<HTMLElement>('[data-ui="where"]') ?? el?.querySelector<HTMLElement>('h2'))?.focus({ preventScroll: true });
     if (el) el.scrollTop = 0;
-  }, [offer, page]);
+  }, [focusKey, page]);
   const guarded = (id: string) => (e: Event): void => {
     if (e.timeStamp - lastAct.current < ACT_COOLDOWN_MS) return;
     lastAct.current = e.timeStamp;
