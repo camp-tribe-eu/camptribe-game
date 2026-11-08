@@ -242,6 +242,8 @@ export interface WorldProbe {
   leisure: ({ kind: string; c: number; r: number } | null)[];
   /** GAME-112 (лише для e2e): де стоять слідувачі (ноги, піксельні координати мапи) — у порядку ланцюжка. */
   followers: Pt[];
+  /** GAME-266 (лише для e2e): назва цілі → ключ піктограми, що над нею намальована. */
+  markerIcons: Record<string, string>;
   /** GAME-172 (лише для e2e): де стоять фонові мешканці табору (ноги, піксельні координати мапи) і чи йдуть. */
   residents: { id: string; x: number; y: number; moving: boolean }[];
   /** GAME-226 (лише для e2e): що зараз робить кожен сусід табору — стан, фаза дороги, де видно спрайт, значок над головою. */
@@ -499,7 +501,9 @@ export class WorldScene extends Phaser.Scene {
     }
     if (name.startsWith('trace.')) { this.drawTrace(g); return; }   // GAME-215: позначка олівцем, без піктограми атласу
     // GAME-201: замість кубика — піктограма речі завдання (objective-icons), над точкою; гойдається покадрово в update (без твінів).
-    m.img = this.add.image(0, ICON_Y, 'objective-icons', iconIndex(objectiveIcon(name).key)).setOrigin(0.5, 1);
+    const icon = objectiveIcon(name).key;
+    this.probe.markerIcons[name] = icon;   // GAME-266: для e2e — які піктограми зараз на мапі (жодної «зірки»-запасної)
+    m.img = this.add.image(0, ICON_Y, 'objective-icons', iconIndex(icon)).setOrigin(0.5, 1);
     m.g.add(m.img);
     if (look === 'trunk' && (name.startsWith('pack.') || name.startsWith('take.') || name.startsWith('req.'))) g.fillStyle(0x9be28f, 1).fillCircle(8, ICON_Y - 15, 4).lineStyle(1, 0x1b1f23, 1).strokeCircle(8, ICON_Y - 15, 4)
       .lineStyle(2, 0x1b1f23, 1).beginPath().moveTo(6, ICON_Y - 15).lineTo(7.5, ICON_Y - 13).lineTo(10.5, ICON_Y - 17).strokePath();   // галочка: уже в багажнику
@@ -520,8 +524,7 @@ export class WorldScene extends Phaser.Scene {
       if (i === 0) g.moveTo(x, y); else g.lineTo(x, y);
     }
     g.strokePath();
-    g.lineStyle(1.5, GRAPHITE, 1).beginPath();   // зірочка-хрестик у колі
-    g.moveTo(-3, -17).lineTo(3, -11).moveTo(3, -17).lineTo(-3, -11).moveTo(0, -18.5).lineTo(0, -9.5).strokePath();
+    g.fillStyle(GRAPHITE, 0.9).fillCircle(0, -14, 1.6);   // GAME-266: замість зірочки-хрестика (чужий стиль) — крапка олівцем у колі
     g.lineStyle(1.5, GRAPHITE, 0.9).beginPath().moveTo(11, -5).lineTo(19, -7).strokePath();   // короткий підпис-риска
   }
 
@@ -773,6 +776,7 @@ export class WorldScene extends Phaser.Scene {
     this.tilemap = null;
     for (const m of this.markers.values()) m.g.destroy(true);
     this.markers.clear();
+    this.probe.markerIcons = {};
     this.npcSprites.clear();   // самі спрайти — у `owned`
     for (const p of this.carParts) p.destroy();
     this.carParts = [];

@@ -1,5 +1,5 @@
 {
-  "fallback": "star",
+  "fallback": "flag",
   "items": {
     "item.tent": "tent", "item.tent-anna": "tent", "item.sleeping-bag-anna": "bag", "item.tent-trek": "tent", "item.tent-family": "tent", "item.trailer-tent": "tent",
     "item.sleeping-bag": "bag", "item.sleeping-bag-synthetic": "bag", "item.sleeping-bag-down": "bag", "item.sleeping-bag-winter": "bag",
@@ -9,7 +9,7 @@
     "item.documents": "map", "item.wallet": "coins", "item.phones": "camera", "item.first-aid": "heart", "item.clothes": "suitcase",
     "item.pine-cone": "firewood", "item.berries": "apple"
   },
-  "requestIcons": { "litter": "litter", "bird": "bird", "chain": "chain", "lantern": "lantern", "cookie": "snack", "apple": "apple", "camera": "camera", "star": "star", "wire": "wire" },
+  "requestIcons": { "litter": "litter", "bird": "bird", "chain": "chain", "lantern": "lantern", "cookie": "snack", "apple": "apple", "camera": "camera", "star": "map", "wire": "wire" },
   "spots": {
     "obj.vehicle": "car", "obj.trunk": "suitcase", "obj.buy": "coins", "obj.sell": "coins", "obj.drying": "line", "obj.litter": "litter", "repair.bench": "wrench",
     "task.mia-carrier": "carrier", "task.mia-carrier-home": "carrier", "task.map-to-luggage": "map", "task.lights-window": "lantern", "task.anna-goodbye": "heart", "task.iron-clothes": "bag",
