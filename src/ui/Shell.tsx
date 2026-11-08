@@ -53,6 +53,9 @@ export function Shell({ port, langOverride, credits, build, holdToast = false, h
   const [confirmNew, setConfirmNew] = useState(false);
   const noRef = useRef<HTMLButtonElement>(null);
   const [settings, setSettings] = useState<Settings>(() => loadSettings());
+  // GAME-279: поле змінило розмір (поворот, resize) із відкритим меню — перемалювати список кроків і «Авто».
+  const [, setFieldTick] = useState(0);
+  useEffect(() => port.onFieldResize(() => setFieldTick((n) => n + 1)), [port]);
   const resumeRef = useRef<HTMLButtonElement>(null);
   const [status, setStatus] = useState<Key | null>(null);
   const [codeOut, setCodeOut] = useState('');
@@ -365,7 +368,13 @@ export function Shell({ port, langOverride, credits, build, holdToast = false, h
   // GAME-277: дія, що перестрибнула годинник (сон, кінець дня), не губить наклейку: поки її не бачили, життя відлічується від першого показу — на мапі після підсумку/пробудження.
   const stickerFrom = sticker ? stickerAt(sticker, nowAbs) : 0;
   const stickerShown = sticker !== null && stickerLive(stickerFrom, nowAbs) && bannerSlot;
-  useEffect(() => { if (stickerShown && sticker && (!sticker.seen || sticker.at !== stickerFrom)) setSticker({ ...sticker, at: stickerFrom, seen: true }); }, [stickerShown, sticker?.id, stickerFrom]);
+  // GAME-280: оновлення ФУНКЦІЙНЕ. Ефект іде після кадру (afterPaint: rAF або 35 мс), і нагорода, що прийшла між записом наклейки в DOM і цим ефектом, уже злилась у стан —
+  // `setSticker({ ...sticker })` зі старого замикання переписував би її (так губилась третя нагорода в e2e game-247 «дві нагороди зливаються», 1 з 8 червоних).
+  useEffect(() => {
+    if (!stickerShown || !sticker || sticker.seen) return;
+    const id = sticker.id;
+    setSticker((s) => (s && s.id === id && !s.seen ? { ...s, at: Math.max(s.at, stickerFrom), seen: true } : s));
+  }, [stickerShown, sticker?.id, stickerFrom]);
   useEffect(() => { if (stickerShown) sfx('chime'); }, [stickerShown, sticker?.id]);
   const titleUpShown = titleUp !== null && sinceUp >= 0 && sinceUp < TITLE_UP_MIN && bannerSlot;
   // GAME-243: мапа-перша гра має нотатник Вікторії й мінімапу — три нижні підказки (ціль, найближча нагорода, «Далі: …») зникають; лишається ОДИН короткий рядок біля дії.
@@ -516,6 +525,13 @@ export function Shell({ port, langOverride, credits, build, holdToast = false, h
               onClick={() => update({ ...settings, audio: { ...settings.audio, muted: !settings.audio.muted } })}>{t('ui.mute')}</button>
           </fieldset>
           {staleNotice}
+          <fieldset data-ui="zoom">
+            <legend>{t('ui.zoom')}</legend>
+            {[0, ...port.zoomSteps()].map((k) => (
+              <button type="button" class="ui-btn" data-ui={`zoom-${k === 0 ? 'auto' : k}`} aria-label={k === 0 ? undefined : `${t('ui.zoom')} ×${k}`} aria-pressed={k === 0 ? !port.zoomSteps().includes(settings.zoom) : settings.zoom === k}
+                onClick={() => update({ ...settings, zoom: k })}>{k === 0 ? t('ui.zoomAuto') : `×${k}`}</button>
+            ))}
+          </fieldset>
           <fieldset>
             <legend>{t('ui.hints')}</legend>
             {(['stuck', 'always'] as const).map((m) => (

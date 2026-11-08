@@ -65,6 +65,11 @@ export interface UiPort {
   minimap: { frame(): MiniFrame | null; subscribe(listener: (f: MiniFrame) => void): () => void };
   /** GAME-192: режим підказок з налаштувань. */
   setHintMode(mode: 'stuck' | 'always'): void;
+  /** GAME-278: явні цілі масштаби, дозволені для поля зараз (без «Авто»), і масштаб, що діє. */
+  zoomSteps(): readonly number[];
+  zoomActive(): number;
+  /** GAME-279: поле світу змінило розмір (поворот, resize) — кроки масштабу застаріли; повертає відписку. */
+  onFieldResize(fn: () => void): () => void;
   /** Гра просить відкрити екран подорожі (розмова з NPC на мапі); повертає відписку. */
   onOpenStory(listener: () => void): () => void;
 }

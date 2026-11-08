@@ -3,7 +3,7 @@ import Phaser from 'phaser';
 import { render, h } from 'preact';
 import { Shell } from './ui/Shell';
 import { t } from './i18n';
-import { loadSettings } from './platform/settings';
+import { currentSettings, loadSettings, onSettingsSaved } from './platform/settings';
 import { INTRO_BEAT_QUESTS } from './content/intro-story';
 import { HINT_FLASH_MS, HintIdle, type HintMode } from './content/hint-idle';
 import { buildLabel } from './core/build-info';
@@ -34,7 +34,7 @@ import { LIVE_PROBE_IDLE } from './view/world/fx-live-layer';
 import { SWIM_PROBE_IDLE } from './view/world/swim-rig';
 import { CAMP_PROBE_IDLE } from './view/world/camp-alive-rig';
 import { mountTouchControls, setActionTarget } from './view/world/touch';
-import { frameSize } from './view/world/frame';
+import { frameSize, zoomSteps } from './view/world/frame';
 import { CHOICE_CANCEL_ID, storyOffer, type StoryView } from './view/story-offer';
 import { testSwitches } from './view/test-switches';
 import { addFrameLag, bootDelay, onFirstFrame } from './view/frame-lag';
@@ -308,12 +308,12 @@ const unloadOne = (manual = false): 'ok' | 'full' | 'none' => {
 const saves = createSaveSession(bridge, saveBackend, { story: STORY, stickers: GAME_DEFS.stickers ?? {}, ...(GAME_DEFS.life ? { life: GAME_DEFS.life } : {}), contentRev: STORY_REV, viable: (g) => saveViable(g, GAME_DEFS) });
 // Тестовий хук Playwright: лише ЧИТАННЯ — знімок стану копією, місток назовні не віддається
 // (рецензія PR #13: раніше скрипт сторінки міг надіслати команду в ядро).
-(window as unknown as { __game: { probe: WorldProbe; read: () => unknown; sounds: () => readonly string[]; ambient: () => Readonly<Record<string, number>>; music: () => Readonly<Record<string, number>>; night: () => { level: number; cricket: number; owl: number }; frames: () => number; rewardTitle?: (title: number) => void; rewardSum?: (r: { cents: number; xp: number; om: number; skills: Record<string, number> }) => void } }).__game = {
+(window as unknown as { __game: { probe: WorldProbe; read: () => unknown; sounds: () => readonly string[]; ambient: () => Readonly<Record<string, number>>; music: () => Readonly<Record<string, number>>; night: () => { level: number; cricket: number; owl: number }; frames: () => number; rewardTitle?: (title: number) => void; storyPing?: () => void; rewardSum?: (r: { cents: number; xp: number; om: number; skills: Record<string, number> }) => void } }).__game = {
   probe,
   sounds: () => [...uiSounds.played, ...sfxPlayer.played], ambient: () => ambient.levels(), music: () => music.levels(), night: () => ({ level: nightSounds.level, ...nightSounds.counts }),   // GAME-40: що мікшер прийняв до відтворення (лише читання)
   read: () => JSON.parse(JSON.stringify(bridge.state)) as unknown,
   // GAME-260 (лише збірка e2e): показати банер звання без заробітку XP — подія нагороди для UI; стан ядра не змінюється.
-  ...(import.meta.env.MODE === 'e2e' ? { rewardTitle: (title: number) => { for (const l of rewardListeners) l({ xp: 0, om: 0, title, cents: 0, skills: {} }); }, rewardSum: (r: { cents: number; xp: number; om: number; skills: Record<string, number> }) => { for (const l of rewardListeners) l({ xp: r.xp, om: r.om, title: null, cents: r.cents, skills: r.skills }); } } : {}),
+  ...(import.meta.env.MODE === 'e2e' ? { storyPing: () => { storyChanged(); }, rewardTitle: (title: number) => { for (const l of rewardListeners) l({ xp: 0, om: 0, title, cents: 0, skills: {} }); }, rewardSum: (r: { cents: number; xp: number; om: number; skills: Record<string, number> }) => { for (const l of rewardListeners) l({ xp: r.xp, om: r.om, title: null, cents: r.cents, skills: r.skills }); } } : {}),
   frames: () => renderGate.rendered(),   // GAME-268: скільки кадрів Phaser справді намалював (лише читання)
 };
 
@@ -456,7 +456,10 @@ const worldHooks: WorldHooks = {
 };
 /** GAME-179: запасні портрети — обрізки спрайтів, зроблені раз на лист. */
 const spriteCrops = new Map<string, string>();
-const frame0 = frameSize(stage.clientWidth, stage.clientHeight);
+/** GAME-278: дотиковий пристрій (pointer: coarse) — планшет до 820 px заввишки теж «телефон». */
+const coarse = (): boolean => { try { return matchMedia('(pointer: coarse)').matches; } catch { return false; } };
+const fieldFrame = (): ReturnType<typeof frameSize> => frameSize(stage.clientWidth, stage.clientHeight, coarse(), currentSettings().zoom);
+const frame0 = fieldFrame();
 
 const game = new Phaser.Game({
   type: Phaser.AUTO,
@@ -489,8 +492,9 @@ if (switches.frameLagMs) addFrameLag(game, switches.frameLagMs);
 onFirstFrame(game, (ms) => { probe.firstFrameMs = ms; });
 
 // Поле змінило розмір (поворот телефону, смуга HUD, текст 200 %) — кадр підлаштовується під його форму.
+const fieldListeners = new Set<() => void>();
 const applyFrame = (): void => {
-  const f = frameSize(stage.clientWidth, stage.clientHeight);
+  const f = fieldFrame();
   if (f.zoom !== game.scale.zoom) game.scale.setZoom(f.zoom);
   if (f.width !== game.scale.gameSize.width || f.height !== game.scale.gameSize.height) game.scale.resize(f.width, f.height);
   // Phaser (NONE) пише style лише коли zoom ≠ 1 або zoom щойно змінився: при поверненні до zoom 1 лишався б старий розмір. Ставимо самі, завжди.
@@ -499,8 +503,10 @@ const applyFrame = (): void => {
   canvas.style.height = `${f.height * f.zoom}px`;
   renderGate.refresh();   // GAME-268: полотно стерто зміною розміру — один кадр, навіть коли світ закрито
   game.scale.refresh();   // межі полотна й displayScale для вводу — з нового style
+  for (const fn of fieldListeners) fn();   // GAME-279: меню з кроками масштабу перемальовується під нове поле
 };
 new ResizeObserver(applyFrame).observe(stage);
+onSettingsSaved(() => applyFrame());   // GAME-278: «Масштаб» у налаштуваннях — застосовується одразу
 
 // Оболонка UI (GAME-25): пауза зупиняє і сцену, і ігровий годинник ядра.
 const ui = document.createElement('div');
@@ -532,6 +538,9 @@ render(h(Shell, {
     hintShown: () => hintIdle.visible(),
     minimap: { frame: () => miniFrame, subscribe: (l) => { miniListeners.add(l); return () => { miniListeners.delete(l); }; } },
     setHintMode: (m) => { hintMode = m; applyHintMode(); },
+    zoomSteps: () => zoomSteps(stage.clientWidth, stage.clientHeight, coarse()),
+    zoomActive: () => game.scale.zoom,
+    onFieldResize: (fn) => { fieldListeners.add(fn); return () => { fieldListeners.delete(fn); }; },
     exportCode: () => encodeRestoreCode(saves.exportJson()),
     staleCode: () => (saves.stale ? encodeRestoreCode(saves.stale) : Promise.resolve(null)),
     dismissStale: () => saves.dismissStale(),

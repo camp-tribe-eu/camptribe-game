@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { RING_IDLE, RING_S, edgeArrow, inSafeZone, isAutoSpot, pickNearest, ringMayTake, stepRing, vehicleReady } from './proximity';
+import { RING_IDLE, RING_S, edgeArrow, inSafeZone, isAutoSpot, markHandled, pickNearest, ringMayTake, stepRing, vehicleReady } from './proximity';
 
 function run(near: string | null, armed: boolean, hold: boolean, seconds: number, dt = 1 / 60): string | null {
   let r = RING_IDLE;
@@ -104,5 +104,28 @@ describe('GAME-270 · ціль «Далі» проти мешканця на н�
   it('мешканець із проханням («!») усе ще виграє; ціль поза зоною — не береться', () => {
     expect(pickNearest(100, 100, 'down', [{ ...E, request: true }, T], 48, 'task.walk-site')).toBe('npc.elise');
     expect(pickNearest(100, 100, 'down', [E, { ...T, y: 200 }], 48, 'task.walk-site')).toBe('npc.elise');
+  });
+});
+
+describe('GAME-281: ручна дія на авто-об\'єкті гасить кільце (рамка «Куди їдемо?» не відкривається вдруге сама)', () => {
+  it('кільце, що вже наповнювалось, після ручної дії й паузи не спрацьовує знову', () => {
+    const fired = new Set<string>();
+    let ring = stepRing(RING_IDLE, 'obj.vehicle', true, true, RING_S * 0.6).ring;   // герой стоїть біля авто, кільце наповнюється
+    expect(ring.name).toBe('obj.vehicle');
+    ring = markHandled(fired, ring, 'obj.vehicle');   // E / ● / тап відкрили рамку раніше за кільце; гравець: «Не зараз»
+    expect(fired.has('obj.vehicle')).toBe(true);
+    expect(ring).toBe(RING_IDLE);
+    // світ іде далі після закриття рамки: великий перший dt (повільний кадр) не мусить добити старе кільце
+    const next = stepRing(ring, 'obj.vehicle', !fired.has('obj.vehicle'), true, RING_S * 5);
+    expect(next.fire, 'кільце не відкриває рамку вдруге').toBeNull();
+  });
+  it('без ручної дії кільце спрацьовує, як і було (контроль)', () => {
+    expect(stepRing(stepRing(RING_IDLE, 'obj.vehicle', true, true, RING_S * 0.6).ring, 'obj.vehicle', true, true, RING_S * 0.6).fire).toBe('obj.vehicle');
+  });
+  it('не авто-об\'єкт (NPC) кільця не чіпає і нічого не позначає', () => {
+    const fired = new Set<string>();
+    const ring = { name: 'obj.vehicle', t: 0.5 };
+    expect(markHandled(fired, ring, 'npc.sara')).toBe(ring);
+    expect(fired.size).toBe(0);
   });
 });
