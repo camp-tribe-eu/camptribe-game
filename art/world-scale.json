@@ -11,7 +11,8 @@
   "assets/tiles/home_office.png",
   "assets/tiles/home_shelf.png",
   "assets/tiles/home_walls.png",
-  "assets/tiles/home_windows_doors.png"
+  "assets/tiles/home_windows_doors.png",
+  "assets/tiles/ch2_muellerthal.png"
  ],
  "entries": [
   {
@@ -464,6 +465,50 @@
    "real_height_m": 0.8,
    "view": "front",
    "note": "GAME-204 ч.3: постер із наметом 0,6×0,8 м (програмно)"
+  },
+  {
+   "id": "ch2-monument",
+   "file": "assets/tiles/ch2_monument.png",
+   "crop": [
+    0,
+    0,
+    96,
+    80
+   ],
+   "real_width_m": 2.7,
+   "real_height_m": 2.5,
+   "view": "front",
+   "note": "GAME-284 FAL: пам'ятник трьом країнам (Шенген), три сталеві стовпи на плінтусі 2,7×2,5 м (вигаданий за фото-описом, не точна копія)"
+  },
+  {
+   "id": "ch2-orchid",
+   "file": "assets/tiles/ch2_objects.png",
+   "crop": [
+    0,
+    0,
+    32,
+    32
+   ],
+   "real_width_m": 0.22,
+   "real_height_m": 0.46,
+   "view": "front",
+   "note": "GAME-284: орхідея (LPC Flowers, одинока квітка) ≈0,46 м, як Orchis purpurea",
+   "measure": "height"
+  },
+  {
+   "id": "ch2-bottle",
+   "file": "assets/tiles/ch2_objects.png",
+   "crop": [
+    96,
+    0,
+    32,
+    32
+   ],
+   "real_width_m": 0.2,
+   "real_height_m": 0.46,
+   "view": "front",
+   "note": "GAME-284: скляна пляшка (LPC Base Object Kit) із дорисованою половинкою медальйона ≈0,46 м",
+   "measure": "height"
   }
  ]
 }

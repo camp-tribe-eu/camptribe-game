@@ -82,9 +82,28 @@ def build(wd):
     return [os.path.join(wd, 'ch2_muellerthal.png'), os.path.join(wd, 'ch2_objects.png')], [OUT1, OUT2]
 
 
+MONUMENT_PX = 70            # 2,5 м × 28 px/м (OD-026); за висотою — тонкий предмет
+MONUMENT_CANVAS = (96, 80)
+OUT3 = os.path.join(ROOT, 'assets/tiles/ch2_monument.png')
+
+
+def build_monument(wd):
+    """Пам'ятник трьом країнам: fal-ai/flux-pro/kontext, варіант monument_2 (art/out/ch2-monument/); постобробка як у build_camp_props.py."""
+    sys.path.insert(0, os.path.join(ROOT, 'scripts', 'assets'))
+    import build_camp_props as bcp
+    sp = bcp.sprite('monument_2', 'ch2-monument', 0, ('h', MONUMENT_PX))
+    sheet = Image.new('RGBA', MONUMENT_CANVAS)
+    sheet.alpha_composite(sp, ((MONUMENT_CANVAS[0] - sp.width) // 2, MONUMENT_CANVAS[1] - sp.height))
+    sheet.save(os.path.join(wd, 'c.png'))
+    quantize(os.path.join(wd, 'c.png'), os.path.join(wd, 'ch2_monument.png'), load_palette(PAL)[1])
+    return os.path.join(wd, 'ch2_monument.png')
+
+
 def main(argv):
     with tempfile.TemporaryDirectory() as wd:
         built, dst = build(wd)
+        built.append(build_monument(wd))
+        dst.append(OUT3)
         for b, d in zip(built, dst):
             if '--check' in argv:
                 same = os.path.exists(d) and open(d, 'rb').read() == open(b, 'rb').read()
