@@ -92,10 +92,11 @@ describe('мінімапа: крапки лише для відкритих пу
     expect(minimapTargets(null, 'home')).toEqual([]);
     // Мутація: прибрати фільтр `!i.done` — у dots з'явиться `pack.item.documents`, перший expect червоніє.
   });
-  it('усе завантажено — «Завантажити» закреслене, пакування-крапки зникли', () => {
+  it('усе завантажено — «Завантажити» закреслене, пакування-крапки зникли; лишається «у дорогу» до авто (GAME-174)', () => {
     const all = NEEDED.flatMap((n) => [packFlag(n)]);
     const a = agendaOf(packing(all), DEFS);
-    expect(a?.items.every((i) => i.done)).toBe(true);
-    expect(minimapTargets(a, 'home')).toEqual([]);
+    // GAME-174: нотатник не закінчується закресленим списком — останній відкритий пункт «у дорогу» веде до авто.
+    expect(a?.items.filter((i) => !i.done).map((i) => i.id)).toEqual(['depart']);
+    expect(minimapTargets(a, 'home')).toEqual(['obj.vehicle']);
   });
 });
