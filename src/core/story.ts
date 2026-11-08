@@ -345,6 +345,12 @@ export function chapterComplete(game: Pick<GameState, 'quests'>, st: Pick<StoryD
   return Object.entries(st.quests).some(([id, q]) => q.end && own(game.quests, id)?.status === 'completed');
 }
 
+/** Квест-кінець розділу 2 (GAME-285). `chapter2_complete` — ПОХІДНЕ від його завершення; окремого прапорця немає й не буде (як для розділу 1). */
+export const CHAPTER2_END = 'CH2-D3-HOME-001';
+export function chapter2Complete(game: Pick<GameState, 'quests'>, st: Pick<StoryDefs, 'quests'>): boolean {
+  return own(st.quests, CHAPTER2_END)?.end === true && own(game.quests, CHAPTER2_END)?.status === 'completed';
+}
+
 /** Чи пам'ятає NPC факт (GAME-48). Без NPC (подія в дорозі) — ніхто нічого не пам'ятає. */
 export function remembers(d: Pick<StoryDraft, 'npcMemory'>, npcId: string | undefined, fact: string): boolean {
   return npcId !== undefined && (own(d.npcMemory, npcId) ?? []).includes(fact);

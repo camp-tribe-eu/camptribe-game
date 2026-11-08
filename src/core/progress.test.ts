@@ -19,6 +19,7 @@ import { SKILL_IDS } from './skills';
 import v1 from '../../tests/saves/v1.json';
 import v2 from '../../tests/saves/v2.json';
 import v3 from '../../tests/saves/v3.json';
+import { isCh1Quest } from '../content/ch2-scope.test.helpers';
 
 const play = (): SimState => PROLOGUE_BIKE.reduce((s, i) => step(s, i, { defs: GAME_DEFS }), newSim(SEED, START_MONEY));
 const SAFE: Safeguards = { commandId: true, grantId: true, rollback: true };
@@ -41,7 +42,7 @@ describe('XP за квести: числа — з контенту, межі д�
 
   it('повний прохід розділу (реплей-сценарій): XP = кроки + 3 межі дня + розділ + секрет; ОМ = побічка + відкриття; ключі без повторів', () => {
     const s = play();
-    const stepXp = (quests as { xp: number }[]).reduce((a, q) => a + q.xp, 0);
+    const stepXp = (quests as { id: string; xp: number }[]).filter((q) => isCh1Quest(q.id)).reduce((a, q) => a + q.xp, 0);
     const events = s.journal.filter((e) => e.type === 'RoadEvent').length;
     expect(progressOf(s.game).xp).toBe(stepXp + 3 * XP_DAY + XP_CHAPTER + XP_SECRET + 2 * XP_TAKE);   // GAME-245: у сценарії «взято» ліхтар і телефони (подушка — жарт, без XP; повтор — відмова)
     expect(progressOf(s.game).om).toBe(OM_SIDE + events * OM_DISCOVERY);
@@ -192,7 +193,7 @@ describe('сейв: поле progress, старі сейви', () => {
     const r = fromSave(serialize(old), OPTS);
     expect(r.ok).toBe(true);
     if (!r.ok) return;
-    const stepXp = (quests as { xp: number }[]).reduce((a, q) => a + q.xp, 0);
+    const stepXp = (quests as { id: string; xp: number }[]).filter((q) => isCh1Quest(q.id)).reduce((a, q) => a + q.xp, 0);
     expect(progressOf(r.sim.game).xp).toBe(stepXp + 3 * XP_DAY + XP_CHAPTER);   // секрети й відкриття зі старого сейву не відновити
     const again = fromSave(serialize(r.sim), OPTS);
     expect(again.ok && progressOf(again.sim.game)).toEqual(progressOf(r.sim.game));

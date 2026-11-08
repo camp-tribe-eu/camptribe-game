@@ -13,6 +13,7 @@ import { STORY } from './story';
 import { daysEnded } from '../core/day-summary';
 import uk from '../i18n/uk.json';
 import en from '../i18n/en.json';
+import { isCh1Quest } from './ch2-scope.test.helpers';
 
 const created = (): GameState => {
   const n = PROLOGUE_BIKE.findIndex((i) => i.kind === 'command') + 1;
@@ -90,7 +91,7 @@ describe('цілі журналу та тизер «Завтра…»', () => {
     expect(openGoals(g, STORY).map((x) => x.kind)).toEqual(['main', 'side', 'reward']);
   });
   it('тизер: кожен день розділу, після якого є продовження, має рядок uk+en; кінець розділу — без тизера', () => {
-    const ends = [...new Set(Object.entries(STORY.quests).filter(([, q]) => q.dayEnd === true || q.end).map(([id]) => id))];
+    const ends = [...new Set(Object.entries(STORY.quests).filter(([id, q]) => isCh1Quest(id) && (q.dayEnd === true || q.end)).map(([id]) => id))];
     expect(ends.length).toBeGreaterThanOrEqual(3);
     // дні 1…(N-1) мають тизер; останній день — кінець розділу (end) — ні.
     for (let d = 1; d < ends.length; d++) {

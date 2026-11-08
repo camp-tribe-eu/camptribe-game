@@ -97,7 +97,8 @@ export const SCHEMAS = {
   stickers: STICKER_SCHEMA,
   dialogues: DIALOGUE_SCHEMA,
   waves: WAVE_SCHEMA,
-  meta: obj({ start: req(str), locales: req(arr(str)) }),
+  // chapterLinks (GAME-285): розділ N+1 стартує після кінця розділу N не переходом квесту (розділ 1 заморожений), а зв'язком у мета: валідатор бачить граф цілим.
+  meta: obj({ start: req(str), locales: req(arr(str)), chapterLinks: arr(obj({ from: req(str), to: req(str) })) }),
   // transports — з якими транспортами сумісний запис; немає поля — з усіма. Несумісні комбінації
   // не перебираються: гравець не може їх обрати, тож тупик у них — не тупик (закон 5).
   // startSkills (GAME-72, DC-022): стартові ранги професії 0–5; які id відомі — перевірка skills.

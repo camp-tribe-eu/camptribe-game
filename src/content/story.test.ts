@@ -18,6 +18,7 @@ import { RANK_XP, SKILL_IDS, zeroSkills } from '../core/skills';
 import { checkDefs, type CondDef, type CoreDefs, type PackingDefs } from '../core/defs';
 import { packFlag, packItemsFor } from '../core/packing';
 import { route } from '../core/story';
+import { isCh1Quest } from './ch2-scope.test.helpers';
 
 // Повний перебір — свідомо важкий (велосипедна гілка з подією й пам'яттю ≈ 5 с локально, з контролем навичок GAME-72 ≈ 7.5 с, на CI довше): власна межа
 // часу замість типових 5 с, щоб падіння означало «доказ не вкладається», а не «повільна машина».
@@ -112,7 +113,7 @@ describe('сюжет: ядро ≡ валідатор на справжньом�
       const opened = new Set<string>();
       for (const s of seen.values()) for (const q of Object.keys(s.quests)) opened.add(q);
       const expected = buildIndex(project(CONTENT, k)).reachable;
-      expect([...opened].sort()).toEqual([...expected].sort());
+      expect([...opened].sort()).toEqual([...expected].filter(isCh1Quest).sort());   // GAME-285: розділ 2 — окремий старт (GAME-286); ядро ≡ валідатор для нього — наступні картки
 
       // 2–3) кінець досяжний із кожного стану
       const ended = [...seen].filter(([, s]) => s.campaignEnded).map(([h]) => h);

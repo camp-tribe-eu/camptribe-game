@@ -10,6 +10,7 @@ import { resolveSpot } from './map-first';
 import { newSim, step, type SimState } from '../core/sim';
 import { exploreView, inertLocations, moves } from './moves';
 import { canonical } from '../core/hash';
+import { ch2Locations } from './ch2-scope.test.helpers';
 
 const MONEY = 10_000;              // достатньо для найдешевшого тир 2 (8 900): купівлі в переборі справді бувають
 const STORY = GAME_DEFS.story as NonNullable<typeof GAME_DEFS.story>;
@@ -54,7 +55,7 @@ describe('купівля в справжньому каталозі гри (GAME
         const locations = new Set(r.states.map(here));
         // GAME-283: інертні локації (без посилань із сюжету) перебір не відвідує; решта — усі.
         const inert = inertLocations(STORY);
-        for (const id of Object.keys(STORY.locations)) expect(locations.has(id), id).toBe(!inert.has(id));
+        for (const id of Object.keys(STORY.locations)) expect(locations.has(id), id).toBe(!inert.has(id) && !ch2Locations(STORY).has(id));   // розділ 2 — GAME-285: ще замкнений для розділу 1
         expect(r.buys.length).toBeGreaterThan(0);
         expect(r.menuBuys.length).toBeGreaterThan(0);
       });
