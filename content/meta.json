@@ -1,1 +1,1 @@
-{ "start": "PROLOGUE-HOME-001", "locales": ["uk", "en"] }
+{ "start": "PROLOGUE-HOME-001", "locales": ["uk", "en"], "chapterLinks": [{ "from": "CH1-D3-HOME-001", "to": "CH2-ARRIVAL-001" }] }

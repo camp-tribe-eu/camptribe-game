@@ -26,6 +26,7 @@ import type { Move } from './moves';
 import { PROLOGUE_BIKE, SEED, START_MONEY } from './replay.scenario';
 import { CONTENT, STORY, STORY_REV, compileStory, type RawContent } from './story';
 import { saveViable } from './viability';
+import { isCh1Quest } from './ch2-scope.test.helpers';
 
 /** Етапи дня 1 у порядку картки, з тим, як кожен видно в журналі ядра. */
 const ORDER_QUESTS = ['PROLOGUE-HOME-001', 'ST-001', 'ST-002', 'ST-003', 'CH1-HOME-001', 'ST-004', 'ST-005'] as const;
@@ -177,7 +178,7 @@ describe('GAME-138 · порядок дня 1 у контенті', () => {
       chain.push(next);
     }
     expect(chain).toEqual([...ORDER_QUESTS, ...DAY2_QUESTS, ...DAY3_QUESTS]);
-    expect([...dayEndQuests(GAME_DEFS)]).toEqual(['ST-005', 'CH1-D2-FIRE-001', 'CH1-D3-HOME-001']);   // GAME-144: три межі дня
+    expect([...dayEndQuests(GAME_DEFS)].filter(isCh1Quest)).toEqual(['ST-005', 'CH1-D2-FIRE-001', 'CH1-D3-HOME-001']);   // GAME-144: три межі дня
     expect(STORY.quests['ST-005']?.end).toBe(false);                                     // межа дня 1 — не кінець розділу
     // EV-APPLE-001 — подія лише на дорозі, а дорога відкривається після CH1-HOME-001: яблука не трапляються раніше за ST-004.
     expect(STORY.dialogues[APPLE]?.trigger?.at).toEqual(['loc.road']);

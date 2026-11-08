@@ -20,6 +20,7 @@ import { moves, progressKey, type Move } from './moves';
 import { GAME_DEFS } from './slice-defs';
 import { CONTENT, STORY, compileStory, type RawContent } from './story';
 import { SLEEP, simSend } from './test-days';
+import { isCh1Quest } from './ch2-scope.test.helpers';
 
 const ZONE = 'q.elise-bike-area';
 const ELISE = 'npc.elise';
@@ -138,8 +139,8 @@ describe('GAME-141 · межа дня й кінець розділу — різ�
   it('ST-005 — межа дня 1, не кінець; межа дня 2 — CH1-D2-FIRE-001 (вечір біля вогнища); кінець розділу — удома в день 3 (GAME-144)', () => {
     expect(STORY.quests['ST-005']).toMatchObject({ dayEnd: true, end: false });
     expect(STORY.quests['CH1-D2-FIRE-001']).toMatchObject({ dayEnd: true, end: false });
-    expect([...dayEndQuests(GAME_DEFS)]).toEqual(['ST-005', 'CH1-D2-FIRE-001', 'CH1-D3-HOME-001']);
-    expect(Object.entries(STORY.quests).filter(([, q]) => q.end).map(([id]) => id)).toEqual(['CH1-D3-HOME-001']);
+    expect([...dayEndQuests(GAME_DEFS)].filter(isCh1Quest)).toEqual(['ST-005', 'CH1-D2-FIRE-001', 'CH1-D3-HOME-001']);
+    expect(Object.entries(STORY.quests).filter(([id, q]) => isCh1Quest(id) && q.end).map(([id]) => id)).toEqual(['CH1-D3-HOME-001']);
   });
 
   it('порядок дня 2 за замовчуванням: ST-005 → CH1-D2-001 → CH1-D2-ELISE-001 → CH1-D2-CAMP-001 → CH1-D2-FIRE-001; велозона — лише вибір велосипедиста', () => {

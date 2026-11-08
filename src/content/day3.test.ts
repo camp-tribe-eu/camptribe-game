@@ -29,6 +29,7 @@ import flags from '../../content/flags.json';
 import EN from '../../content/locales/en.json';
 import UK from '../../content/locales/uk.json';
 import { SLEEP } from './test-days';
+import { isCh1Quest } from './ch2-scope.test.helpers';
 
 const LOCALES: Record<string, Record<string, string>> = { uk: UK, en: EN };
 
@@ -94,7 +95,7 @@ describe('день 3 — порядок і межі (GAME-144)', () => {
   it('вогнище — межа дня 2, не кінець; кінець розділу — CH1-D3-HOME-001 (`end` + `dayEnd`); ланцюг дня 3 без розгалужень', () => {
     expect([STORY.quests['CH1-D2-FIRE-001']?.dayEnd, STORY.quests['CH1-D2-FIRE-001']?.end ?? false]).toEqual([true, false]);
     expect([STORY.quests[END]?.dayEnd, STORY.quests[END]?.end]).toEqual([true, true]);
-    expect(Object.entries(STORY.quests).filter(([, q]) => q.end).map(([id]) => id)).toEqual([END]);
+    expect(Object.entries(STORY.quests).filter(([id, q]) => isCh1Quest(id) && q.end).map(([id]) => id)).toEqual([END]);
     const chain = ['CH1-D2-FIRE-001', ...DAY3];
     for (let i = 0; i + 1 < chain.length; i++) expect(STORY.quests[chain[i] as string]?.transitions.map((t) => t.to), chain[i]).toEqual([chain[i + 1]]);
     expect(STORY.quests[END]?.transitions).toEqual([]);

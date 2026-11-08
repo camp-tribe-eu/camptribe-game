@@ -56,6 +56,8 @@ export function buildIndex(content) {
   const start = content.meta.start;
   const edges = new Map();
   for (const q of Q.values()) edges.set(q.id, q.transitions.filter((t) => Q.has(t.to)));
+  // GAME-285: зв'язок розділів — віртуальне ребро «завершено» від кінця розділу N до першого квесту розділу N+1.
+  for (const l of content.meta.chapterLinks ?? []) if (Q.has(l.from) && Q.has(l.to)) edges.get(l.from).push({ on: 'complete', to: l.to });
 
   const reach = (from, skip) => {
     const seen = new Set();
@@ -191,6 +193,7 @@ export const CHECKS = [
       const { by } = c.ix;
       const ref = (t, id, where) => { if (id !== undefined && !by[t].has(id)) out.push(I('REF_MISSING', where, `${t} «${id}» не існує`)); };
       ref('quests', c.content.meta.start, 'meta.start');
+      for (const [i, l] of (c.content.meta.chapterLinks ?? []).entries()) { ref('quests', l.from, `meta.chapterLinks[${i}].from`); ref('quests', l.to, `meta.chapterLinks[${i}].to`); }
       for (const [where, w] of whens(c.content)) {
         for (const [dim, t] of Object.entries(WHEN_TYPE)) {
           for (const id of w[dim] ?? []) if (!(dim === 'animals' && id === NO_ANIMAL)) ref(t, id, `${where}.when.${dim}`);

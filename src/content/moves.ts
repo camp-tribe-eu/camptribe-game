@@ -72,7 +72,9 @@ export function moves(s: GameState, defs: CoreDefs, withRequests = false): Move[
   const out: Record<string, unknown>[] = [];
   const chat = chatOnlyNpcs(st);
   const inertLoc = inertLocations(st);
-  for (const id of Object.keys(st.locations)) if (!inertLoc.has(id)) out.push({ type: 'Visit', locationId: id });
+  // GAME-285: замкнена локація (unlockedBy ще не завершено) — не хід: ядро відповіло б LOCKED. Сім локацій розділу 2 інакше додавали б до кожного стану
+  // розділу 1 сім відмов (бот: 560–630 с → 915 с). Простір досяжних станів не міняється — відкидається лише те, що ядро й так відхиляло.
+  for (const [id, l] of Object.entries(st.locations)) if (!inertLoc.has(id) && (l.unlockedBy === undefined || s.quests[l.unlockedBy]?.status === 'completed')) out.push({ type: 'Visit', locationId: id });
   // GAME-256: сон — хід лише тоді, коли активний крок чекає наступного дня (ворота `gate.day`). Без годинника сон «абстрактний» (де є герой), а лічильник
   // обмежений стелею — простір станів перебору й бота росте лише там, де сюжет справді чекає на день; у решті станів ходу немає.
   if (!s.dialogue && s.player && Object.entries(s.quests).some(([id, q]) => q.status === 'active' && !gateOpen(st.quests[id]?.gate, s.slept))) out.push({ type: 'Sleep' });

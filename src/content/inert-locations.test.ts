@@ -34,3 +34,16 @@ describe('inertLocations (GAME-283)', () => {
     expect(visits).toContain('loc.t.items');
   });
 });
+
+describe('inertLocations: згадка квестом (GAME-285)', () => {
+  it('локація, на яку посилається лише quest.locationId або ціль, — не інертна; решта — інертна', () => {
+    const st = base() as unknown as { locations: Record<string, unknown>; quests: Record<string, Record<string, unknown>> };
+    st.locations['loc.t.q'] = { id: 'loc.t.q', items: [] };
+    st.locations['loc.t.o'] = { id: 'loc.t.o', items: [] };
+    st.quests['q.t'] = { id: 'q.t', locationId: 'loc.t.q', objectives: [{ id: 'o', kind: 'visit', target: 'loc.t.o', required: false }], transitions: [] };
+    const inert = inertLocations(st as unknown as StoryDefs);
+    expect(inert.has('loc.t.q')).toBe(false);
+    expect(inert.has('loc.t.o')).toBe(false);
+    expect(inert.has('loc.t.free')).toBe(true);
+  });
+});

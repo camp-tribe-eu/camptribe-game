@@ -74,6 +74,8 @@ export function withTrade(c, offer) {
   c.npcs[0].trades = [{ id: 'trade.fixture', ...offer }];
 }
 
+const ch2 = (c) => { c.quests.push({ id: 'ST-099', titleKey: 'q.st-004', optional: false, xp: 10, end: true, objectives: [], transitions: [] }); };
+
 export function baseline() {
   return withCards({
     meta: { start: 'ST-001', locales: ['uk', 'en'] },
@@ -757,6 +759,9 @@ export const FIXTURES = [
     c.quests.push({ id: 'ST-005', titleKey: 'q.st-004', optional: false, xp: 10, objectives: [], transitions: [] });
     q(c, 'ST-002').transitions.push({ on: 'complete', to: 'ST-005', choiceKey: 'q.st-002' });
   } },
+  { name: 'GAME-285: розділ 2 зі зв\u2019язком розділів — коректно', expect: [], patch(c) { ch2(c); c.meta.chapterLinks = [{ from: 'ST-004', to: 'ST-099' }]; } },
+  { name: 'GAME-285: розділ 2 без зв\u2019язку з розділом 1 — недосяжний', expect: ['NODE_UNREACHABLE'], patch(c) { ch2(c); } },
+  { name: 'GAME-285: зв\u2019язок розділів на неіснуючий квест', expect: ['REF_MISSING'], patch(c) { c.meta.chapterLinks = [{ from: 'ST-004', to: 'CH9-NOPE' }]; } },
   { name: 'фінал втратив позначку кінця', expect: ['BRANCH_NO_NEXT', 'NO_PATH_TO_END'], patch(c) { q(c, 'ST-004').end = false; } },
   { name: 'межа дня на необов\u2019язковому квесті', expect: ['DAY_END_OPTIONAL'], patch(c) { q(c, 'ST-003').dayEnd = true; } },
   { name: 'межа дня на основному етапі — коректно', expect: [], patch(c) { q(c, 'ST-002').dayEnd = true; } },

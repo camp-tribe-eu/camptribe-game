@@ -138,5 +138,157 @@
       { "id": "home", "textKey": "q.ch1-d3-home-001.o1", "kind": "visit", "target": "loc.home", "required": true }
     ],
     "transitions": []
+  },
+  {
+    "id": "CH2-ARRIVAL-001",
+    "titleKey": "q.ch2-arrival-001",
+    "optional": false,
+    "xp": 15,
+    "locationId": "loc.camp.mullerthal",
+    "objectives": [
+      {"id": "o1-mullerthal", "textKey": "q.ch2-arrival-001.o1", "kind": "visit", "target": "loc.camp.mullerthal", "required": true}
+    ],
+    "transitions": [{"on": "complete", "to": "CH2-D1-WALK-001"}]
+  },
+  {
+    "id": "CH2-D1-WALK-001",
+    "titleKey": "q.ch2-d1-walk-001",
+    "optional": false,
+    "xp": 15,
+    "locationId": "loc.trail.official",
+    "objectives": [
+      {"id": "o1-official", "textKey": "q.ch2-d1-walk-001.o1", "kind": "visit", "target": "loc.trail.official", "required": true}
+    ],
+    "transitions": [{"on": "complete", "to": "CH2-D1-SUMMARY-001"}]
+  },
+  {
+    "id": "CH2-D1-SUMMARY-001",
+    "titleKey": "q.ch2-d1-summary-001",
+    "optional": false,
+    "xp": 20,
+    "dayEnd": true,
+    "locationId": "loc.camp.mullerthal",
+    "objectives": [
+      {"id": "o1-mullerthal", "textKey": "q.ch2-d1-summary-001.o1", "kind": "visit", "target": "loc.camp.mullerthal", "required": true}
+    ],
+    "transitions": [{"on": "complete", "to": "CH2-D2-PLAN-001"}]
+  },
+  {
+    "id": "CH2-D2-PLAN-001",
+    "gate": {"day": 2},
+    "titleKey": "q.ch2-d2-plan-001",
+    "optional": false,
+    "xp": 15,
+    "locationId": "loc.camp.mullerthal",
+    "objectives": [
+      {"id": "o1-mullerthal", "textKey": "q.ch2-d2-plan-001.o1", "kind": "visit", "target": "loc.camp.mullerthal", "required": true}
+    ],
+    "transitions": [{"on": "complete", "to": "CH2-D2-TRAIL-FORGOTTEN-001", "choiceKey": "q.ch2-d2-plan-001.forgotten"}, {"on": "complete", "to": "CH2-D2-TRAIL-OTHER-001", "choiceKey": "q.ch2-d2-plan-001.other"}]
+  },
+  {
+    "id": "CH2-D2-TRAIL-FORGOTTEN-001",
+    "titleKey": "q.ch2-d2-trail-forgotten-001",
+    "optional": false,
+    "xp": 15,
+    "locationId": "loc.trail.forgotten",
+    "objectives": [
+      {"id": "o1-forgotten", "textKey": "q.ch2-d2-trail-forgotten-001.o1", "kind": "visit", "target": "loc.trail.forgotten", "required": true}
+    ],
+    "transitions": [{"on": "complete", "to": "CH2-D2-ACTIVITY-001"}]
+  },
+  {
+    "id": "CH2-D2-TRAIL-OTHER-001",
+    "titleKey": "q.ch2-d2-trail-other-001",
+    "optional": false,
+    "xp": 15,
+    "locationId": "loc.trail.other",
+    "objectives": [
+      {"id": "o1-other", "textKey": "q.ch2-d2-trail-other-001.o1", "kind": "visit", "target": "loc.trail.other", "required": true}
+    ],
+    "transitions": [{"on": "complete", "to": "CH2-D2-ACTIVITY-001"}]
+  },
+  {
+    "id": "CH2-D2-ACTIVITY-001",
+    "titleKey": "q.ch2-d2-activity-001",
+    "optional": false,
+    "xp": 15,
+    "locationId": "loc.camp.mullerthal",
+    "objectives": [
+      {"id": "o1-mullerthal", "textKey": "q.ch2-d2-activity-001.o1", "kind": "visit", "target": "loc.camp.mullerthal", "required": true}
+    ],
+    "transitions": [{"on": "complete", "to": "CH2-D2-WATERFALL-001", "choiceKey": "q.ch2-d2-activity-001.waterfall"}, {"on": "complete", "to": "CH2-D2-WORKSHOP-001", "choiceKey": "q.ch2-d2-activity-001.workshop"}]
+  },
+  {
+    "id": "CH2-D2-WATERFALL-001",
+    "titleKey": "q.ch2-d2-waterfall-001",
+    "optional": false,
+    "xp": 15,
+    "locationId": "loc.waterfall",
+    "objectives": [
+      {"id": "o1-waterfall", "textKey": "q.ch2-d2-waterfall-001.o1", "kind": "visit", "target": "loc.waterfall", "required": true},
+      {"id": "o2-orchid", "textKey": "q.ch2-d2-waterfall-001.o2", "kind": "visit", "target": "loc.meadow.orchid", "required": false}
+    ],
+    "transitions": [{"on": "complete", "to": "CH2-D2-EVENING-001"}]
+  },
+  {
+    "id": "CH2-D2-WORKSHOP-001",
+    "titleKey": "q.ch2-d2-workshop-001",
+    "optional": false,
+    "xp": 15,
+    "locationId": "loc.camp.mullerthal",
+    "objectives": [
+      {"id": "o1-mullerthal", "textKey": "q.ch2-d2-workshop-001.o1", "kind": "visit", "target": "loc.camp.mullerthal", "required": true},
+      {"id": "o2-waterfall", "textKey": "q.ch2-d2-workshop-001.o2", "kind": "visit", "target": "loc.waterfall", "required": false}
+    ],
+    "transitions": [{"on": "complete", "to": "CH2-D2-EVENING-001"}]
+  },
+  {
+    "id": "CH2-D2-EVENING-001",
+    "gate": {"day": 2, "fromMinute": 1080},
+    "titleKey": "q.ch2-d2-evening-001",
+    "optional": false,
+    "xp": 20,
+    "dayEnd": true,
+    "locationId": "loc.camp.mullerthal",
+    "objectives": [
+      {"id": "o1-mullerthal", "textKey": "q.ch2-d2-evening-001.o1", "kind": "visit", "target": "loc.camp.mullerthal", "required": true}
+    ],
+    "transitions": [{"on": "complete", "to": "CH2-SCHENGEN-001"}]
+  },
+  {
+    "id": "CH2-SCHENGEN-001",
+    "gate": {"day": 3},
+    "titleKey": "q.ch2-schengen-001",
+    "optional": false,
+    "xp": 15,
+    "locationId": "loc.schengen",
+    "objectives": [
+      {"id": "o1-schengen", "textKey": "q.ch2-schengen-001.o1", "kind": "visit", "target": "loc.schengen", "required": true}
+    ],
+    "transitions": [{"on": "complete", "to": "CH2-D3-PACK-001"}]
+  },
+  {
+    "id": "CH2-D3-PACK-001",
+    "titleKey": "q.ch2-d3-pack-001",
+    "optional": false,
+    "xp": 15,
+    "locationId": "loc.camp.mullerthal",
+    "objectives": [
+      {"id": "o1-mullerthal", "textKey": "q.ch2-d3-pack-001.o1", "kind": "visit", "target": "loc.camp.mullerthal", "required": true}
+    ],
+    "transitions": [{"on": "complete", "to": "CH2-D3-HOME-001"}]
+  },
+  {
+    "id": "CH2-D3-HOME-001",
+    "titleKey": "q.ch2-d3-home-001",
+    "optional": false,
+    "xp": 20,
+    "end": true,
+    "dayEnd": true,
+    "locationId": "loc.home",
+    "objectives": [
+      {"id": "o1-home", "textKey": "q.ch2-d3-home-001.o1", "kind": "visit", "target": "loc.home", "required": true}
+    ],
+    "transitions": []
   }
 ]
