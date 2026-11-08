@@ -1,0 +1,125 @@
+{
+  "id": "dlg.host-mullerthal",
+  "npcId": "npc.host-mullerthal",
+  "start": "hello",
+  "nodes": [
+    {
+      "id": "hello",
+      "speaker": "npc",
+      "textKey": "dlg.host-mullerthal.hello",
+      "choices": [
+        {
+          "textKey": "dlg.host-mullerthal.hello.c1",
+          "next": "spots"
+        },
+        {
+          "textKey": "dlg.host-mullerthal.hello.c2",
+          "next": "spots"
+        },
+        {
+          "textKey": "dlg.host-mullerthal.hello.c3",
+          "next": "thanks",
+          "when": {
+            "any": [
+              {
+                "flag": "f.ch2-spot-shade"
+              },
+              {
+                "flag": "f.ch2-spot-stream"
+              },
+              {
+                "flag": "f.ch2-spot-edge"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "spots",
+      "speaker": "npc",
+      "textKey": "dlg.host-mullerthal.spots",
+      "choices": [
+        {
+          "textKey": "dlg.host-mullerthal.spots.c1",
+          "next": "shade",
+          "effects": [
+            {
+              "setFlag": "f.ch2-spot-shade"
+            },
+            {
+              "completeObjective": {
+                "quest": "CH2-ARRIVAL-001",
+                "objective": "o2-host"
+              }
+            }
+          ]
+        },
+        {
+          "textKey": "dlg.host-mullerthal.spots.c2",
+          "next": "stream",
+          "effects": [
+            {
+              "setFlag": "f.ch2-spot-stream"
+            },
+            {
+              "completeObjective": {
+                "quest": "CH2-ARRIVAL-001",
+                "objective": "o2-host"
+              }
+            }
+          ]
+        },
+        {
+          "textKey": "dlg.host-mullerthal.spots.c3",
+          "next": "edge",
+          "effects": [
+            {
+              "setFlag": "f.ch2-spot-edge"
+            },
+            {
+              "completeObjective": {
+                "quest": "CH2-ARRIVAL-001",
+                "objective": "o2-host"
+              }
+            }
+          ]
+        },
+        {
+          "textKey": "dlg.host-mullerthal.spots.c4",
+          "next": "later"
+        }
+      ]
+    },
+    {
+      "id": "shade",
+      "speaker": "npc",
+      "textKey": "dlg.host-mullerthal.shade",
+      "end": true
+    },
+    {
+      "id": "stream",
+      "speaker": "npc",
+      "textKey": "dlg.host-mullerthal.stream",
+      "end": true
+    },
+    {
+      "id": "edge",
+      "speaker": "npc",
+      "textKey": "dlg.host-mullerthal.edge",
+      "end": true
+    },
+    {
+      "id": "later",
+      "speaker": "npc",
+      "textKey": "dlg.host-mullerthal.later",
+      "end": true
+    },
+    {
+      "id": "thanks",
+      "speaker": "npc",
+      "textKey": "dlg.host-mullerthal.thanks",
+      "end": true
+    }
+  ]
+}

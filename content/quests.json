@@ -146,7 +146,8 @@
     "xp": 15,
     "locationId": "loc.camp.mullerthal",
     "objectives": [
-      {"id": "o1-mullerthal", "textKey": "q.ch2-arrival-001.o1", "kind": "visit", "target": "loc.camp.mullerthal", "required": true}
+      {"id": "o1-mullerthal", "textKey": "q.ch2-arrival-001.o1", "kind": "visit", "target": "loc.camp.mullerthal", "required": true},
+      {"id": "o2-host", "textKey": "q.ch2-arrival-001.o2", "kind": "talk", "target": "npc.host-mullerthal", "byDialogue": true, "required": true}
     ],
     "transitions": [{"on": "complete", "to": "CH2-D1-WALK-001"}]
   },

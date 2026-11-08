@@ -10,7 +10,7 @@ import { gearOf, pruneGear, sellPriceOf } from './gear';
 import { bookLeave, cancelLeave } from './life';
 import { autoPack, capacityOf, carriedOf, loadCarSet, packFlag, packingOpen, packItemsFor, takeFlag, usedUnits, withLoaded, withPacked } from './packing';
 import type { Weather } from './weather';
-import { applyStory, canRestNow, canSleepNow, REST_SCENE, questNeedsItem, questOpen, SLEEP_CAP, type StoryCommand, type StoryDraft } from './story';
+import { applyStory, CHAPTER2_START, chapter2Startable, canRestNow, canSleepNow, REST_SCENE, questNeedsItem, questOpen, sleepCap, type StoryCommand, type StoryDraft } from './story';
 import { basketFlag, basketOf, basketTotal, canPay } from './basket';
 import { applyWave, type WaveCommand } from './wave';
 import { award, awardsFor } from './progress';
@@ -65,7 +65,9 @@ export type Command =
   /** Дочекатися відчинення крамниці (GAME-242): лише в зачиненій крамниці; симуляція перемотує час до 08:00. */
   | { readonly type: 'WaitForShop'; readonly commandId: string }
   /** Відпочити до вечора (GAME-269): у мертвому вікні дня в таборі; симуляція перемотує час до 17:30, ядро відкриває коротку родинну сцену. Без штрафів. */
-  | { readonly type: 'RestUntilEvening'; readonly commandId: string };
+  | { readonly type: 'RestUntilEvening'; readonly commandId: string }
+  /** Почати розділ 2 (GAME-286): лише після завершення розділу 1; ставить маркер дня розділу й запускає CH2-ARRIVAL-001. Не хід бота (поза moves()). */
+  | { readonly type: 'StartChapter2'; readonly commandId: string };
 
 /** Підтверджений факт (CR-031). Причина — commandId команди, що його спричинила. */
 export type GameEvent =
@@ -204,8 +206,15 @@ function apply(cmd: Command, d: Draft, defs: CoreDefs, guard: Safeguards, today:
       // Сон не міняє стан гри — час і запис у журнал робить симуляція (sim.step), бо годинник знає лише вона.
       // GAME-256: лічильник сну (день сюжету) росте тут; без годинника (перебір, бот) сон «абстрактний» — де завгодно, де є герой.
       if (!(now === undefined ? d.player !== null : canSleepNow(defs.story, d, now))) return 'CONDITION_FAILED';
-      d.slept = Math.min((d.slept ?? 0) + 1, SLEEP_CAP);
+      d.slept = Math.min((d.slept ?? 0) + 1, sleepCap(d));
       return null;
+    case 'StartChapter2': {
+      if (!defs.story || !chapter2Startable(d, defs.story) || d.dialogue !== null) return 'CONDITION_FAILED';
+      d.campaignEnded = false;
+      d.chapterStart = d.slept ?? 0;
+      d.quests = { ...d.quests, [CHAPTER2_START]: { status: 'active', done: [] } };
+      return null;
+    }
     case 'RestUntilEvening': {
       // Без годинника (перебір, бот) відпочинок недоступний: «до вечора» без часу не має змісту, мертвого вікна в них немає.
       if (now === undefined || !canRestNow(defs.story, d, now)) return 'CONDITION_FAILED';
@@ -580,6 +589,7 @@ export function dispatch(state: GameState, cmd: Command, defs: CoreDefs, guard: 
     ...(state.stickers !== undefined ? { stickers: state.stickers } : {}),
     ...(state.friend !== undefined ? { friend: state.friend } : {}),
     ...(state.slept !== undefined ? { slept: state.slept } : {}),
+    ...(state.chapterStart !== undefined ? { chapterStart: state.chapterStart } : {}),
   };
   const code = apply(cmd, draft, defs, guard, today, weather, now);
   // Стан спорядження — лише для того, що в руках (продали останній — запис зникає), і лише відхилення від нового.

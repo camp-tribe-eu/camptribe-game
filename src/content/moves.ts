@@ -5,7 +5,7 @@ import type { Command } from '../core/commands';
 import type { CoreDefs, StoryDefs } from '../core/defs';
 import { canonical } from '../core/hash';
 import type { GameState } from '../core/state';
-import { eventSeenFlag, gateOpen } from '../core/story';
+import { eventSeenFlag, gateOpen, questSlept } from '../core/story';
 import { ERRAND_PREFIX } from './errands';
 
 /**
@@ -77,7 +77,7 @@ export function moves(s: GameState, defs: CoreDefs, withRequests = false): Move[
   for (const [id, l] of Object.entries(st.locations)) if (!inertLoc.has(id) && (l.unlockedBy === undefined || s.quests[l.unlockedBy]?.status === 'completed')) out.push({ type: 'Visit', locationId: id });
   // GAME-256: сон — хід лише тоді, коли активний крок чекає наступного дня (ворота `gate.day`). Без годинника сон «абстрактний» (де є герой), а лічильник
   // обмежений стелею — простір станів перебору й бота росте лише там, де сюжет справді чекає на день; у решті станів ходу немає.
-  if (!s.dialogue && s.player && Object.entries(s.quests).some(([id, q]) => q.status === 'active' && !gateOpen(st.quests[id]?.gate, s.slept))) out.push({ type: 'Sleep' });
+  if (!s.dialogue && s.player && Object.entries(s.quests).some(([id, q]) => q.status === 'active' && !gateOpen(st.quests[id]?.gate, questSlept(id, s)))) out.push({ type: 'Sleep' });
   for (const id of Object.keys(st.npcs)) if (!chat.has(id)) out.push({ type: 'Talk', npcId: id });
   // Подія в дорозі — хід СЕРЕДОВИЩА (кидок симуляції), а не гравця: перебір бачить і «сталась», і «ні».
   for (const [id, d] of Object.entries(st.dialogues)) if (d.trigger) out.push({ type: 'RoadEvent', eventId: id });

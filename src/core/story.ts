@@ -76,6 +76,8 @@ export interface StoryDraft {
   friend?: FriendState;
   /** GAME-256: скільки разів родина спала (див. GameState.slept). */
   slept?: number;
+  /** GAME-286: див. GameState.chapterStart. */
+  chapterStart?: number;
 }
 
 const own = <T>(o: Readonly<Record<string, T>>, k: string): T | undefined => (Object.hasOwn(o, k) ? o[k] : undefined);
@@ -93,6 +95,19 @@ export const SLEEP_CAP = 4;
 /** День сюжету з 1: скільки разів родина спала + 1 (GAME-256). */
 export const storyDay = (slept: number | undefined): number => (slept ?? 0) + 1;
 
+/** GAME-286: перший квест розділу 2 — його запускає команда StartChapter2 (у переходах його немає: розділ 1 заморожений, зв'язок — meta.chapterLinks). */
+export const CHAPTER2_START = 'CH2-ARRIVAL-001';
+/** Квест розділу 2 — за префіксом id (формат GAME-285: `CH2-…`). */
+export const isCh2Quest = (questId: string): boolean => questId.startsWith('CH2-');
+/**
+ * GAME-286: лічильник сну, яким квест міряє СВІЙ день: розділ 1 — абсолютний `slept`, розділ 2 — відносно старту розділу (`chapterStart`).
+ * Сон до старту розділу 2 (сон кінця розділу 1) у дні розділу 2 не входить.
+ */
+export const questSlept = (questId: string, d: { readonly slept?: number; readonly chapterStart?: number }): number | undefined =>
+  isCh2Quest(questId) ? Math.max(0, (d.slept ?? 0) - (d.chapterStart ?? 0)) : d.slept;
+/** Стеля лічильника сну: SLEEP_CAP днів від старту розділу (для розділу 1 — від нуля). */
+export const sleepCap = (d: { readonly chapterStart?: number }): number => (d.chapterStart ?? 0) + SLEEP_CAP;
+
 /**
  * GAME-256 · ворота дня відчинені? День — за сном (`slept`), хвилина доби — за годинником (`now`, ігрові хвилини). Без годинника (повний перебір
  * і бот ходять без нього) ворота хвилини вважаються відчиненими: час доби доводять тести на симуляції, а день — лічильник сну, який є й там.
@@ -104,19 +119,19 @@ export function gateOpen(gate: GateDef | undefined, slept: number | undefined, n
   return gate.fromMinute === undefined || now === undefined || minuteOfDay(now) >= gate.fromMinute;
 }
 /** Ворота квесту відчинені (квесту без воріт — завжди). */
-export const questOpen = (st: Pick<StoryDefs, 'quests'>, d: { readonly slept?: number }, questId: string, now?: number): boolean => gateOpen(own(st.quests, questId)?.gate, d.slept, now);
+export const questOpen = (st: Pick<StoryDefs, 'quests'>, d: { readonly slept?: number; readonly chapterStart?: number }, questId: string, now?: number): boolean => gateOpen(own(st.quests, questId)?.gate, questSlept(questId, d), now);
 /** Квест активний І його ворота відчинені: лише такий крок «живий» для розмов, хвиль і сцен. */
-export const questLive = (st: Pick<StoryDefs, 'quests'>, d: { readonly quests: StoryDraft['quests']; readonly slept?: number }, questId: string, now?: number): boolean =>
+export const questLive = (st: Pick<StoryDefs, 'quests'>, d: { readonly quests: StoryDraft['quests']; readonly slept?: number; readonly chapterStart?: number }, questId: string, now?: number): boolean =>
   own(d.quests, questId)?.status === 'active' && questOpen(st, d, questId, now);
 
 /**
  * GAME-256 · вечірній крок СЬОГОДНІ ще не зроблено: активний квест із `gate.fromMinute`, чий день настав і чия година минула. Спати, поки він активний, не можна
  * (інакше вечір (вечеря, вогнище) переїхав би на ранок наступного дня): спершу вечірні кроки. Після «пора спати» (22:00) діє старе правило GAME-242 — лягти можна де застала ніч.
  */
-export const eveningPending = (st: Pick<StoryDefs, 'quests'> | undefined, d: { readonly quests: StoryDraft['quests']; readonly slept?: number }, now: number): boolean =>
-  st !== undefined && Object.entries(d.quests).some(([id, q]) => { const gate = own(st.quests, id)?.gate; return q.status === 'active' && gate?.fromMinute !== undefined && storyDay(d.slept) === gate.day && minuteOfDay(now) >= gate.fromMinute; });
+export const eveningPending = (st: Pick<StoryDefs, 'quests'> | undefined, d: { readonly quests: StoryDraft['quests']; readonly slept?: number; readonly chapterStart?: number }, now: number): boolean =>
+  st !== undefined && Object.entries(d.quests).some(([id, q]) => { const gate = own(st.quests, id)?.gate; return q.status === 'active' && gate?.fromMinute !== undefined && storyDay(questSlept(id, d)) === gate.day && minuteOfDay(now) >= gate.fromMinute; });
 /** Можна лягти спати: правило GAME-242 (ліжко/намет з 18:00, будь-де після 22:00) І немає незробленого вечірнього кроку дня (до 22:00). */
-export const canSleepNow = (st: Pick<StoryDefs, 'quests'> | undefined, d: Parameters<typeof canSleep>[0] & { readonly quests: StoryDraft['quests']; readonly slept?: number }, now: number): boolean =>
+export const canSleepNow = (st: Pick<StoryDefs, 'quests'> | undefined, d: Parameters<typeof canSleep>[0] & { readonly quests: StoryDraft['quests']; readonly slept?: number; readonly chapterStart?: number }, now: number): boolean =>
   canSleep(d, now) && (isNight(now) || !eveningPending(st, d, now));
 
 /** GAME-269 · хвилина доби, до якої «Відпочити до вечора» перемотує час (17:30: ще пів години до 18:00, коли збираються на вечір). */
@@ -350,6 +365,15 @@ export const CHAPTER2_END = 'CH2-D3-HOME-001';
 export function chapter2Complete(game: Pick<GameState, 'quests'>, st: Pick<StoryDefs, 'quests'>): boolean {
   return own(st.quests, CHAPTER2_END)?.end === true && own(game.quests, CHAPTER2_END)?.status === 'completed';
 }
+
+/** GAME-286: розділ 1 завершено, а розділ 2 ще не починали — гравцеві пропонують «Продовжити подорож». */
+export const chapter2Startable = (game: Pick<GameState, 'quests'>, st: Pick<StoryDefs, 'quests'>): boolean =>
+  own(st.quests, CHAPTER2_START) !== undefined && chapterComplete(game, st) && own(game.quests, CHAPTER2_START) === undefined;
+/** GAME-286: печатка Люксембургу в Атласі — лише коли родина справді приїхала в Мюллерталь (ціль `visit`), а не коли розділ лише розпочато. */
+export const luxembourgStamp = (game: Pick<GameState, 'quests'>): boolean => {
+  const q = own(game.quests, CHAPTER2_START);
+  return q !== undefined && (q.status === 'completed' || q.done.includes('o1-mullerthal'));
+};
 
 /** Чи пам'ятає NPC факт (GAME-48). Без NPC (подія в дорозі) — ніхто нічого не пам'ятає. */
 export function remembers(d: Pick<StoryDraft, 'npcMemory'>, npcId: string | undefined, fact: string): boolean {

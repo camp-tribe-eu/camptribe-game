@@ -17,7 +17,7 @@ import { canonical } from '../core/hash';
 import { autoPack, packFlag, packItemsFor, packedOf, packingOpen, takeFlag } from '../core/packing';
 import type { SimState } from '../core/sim';
 import type { GameState } from '../core/state';
-import { canRestNow, canSleepNow, matches, questOpen, storyDay } from '../core/story';
+import { canRestNow, canSleepNow, matches, questOpen, questSlept, storyDay } from '../core/story';
 import type { Key } from '../i18n';
 import { FIREPLACE_SCENE } from './fireplace';
 import type { Move } from './moves';
@@ -452,7 +452,7 @@ export function heldGate(sim: SimState, defs: CoreDefs): { questId: string; slee
   for (const [id, q] of Object.entries(sim.game.quests)) {
     const def = st.quests[id];
     if (q.status !== 'active' || !def?.gate || def.optional || questOpen(st, sim.game, id, sim.clock.minutes)) continue;
-    return { questId: id, sleepNext: storyDay(sim.game.slept) < def.gate.day };
+    return { questId: id, sleepNext: storyDay(questSlept(id, sim.game)) < def.gate.day };
   }
   return null;
 }

@@ -43,7 +43,7 @@ export interface OfferBackpack {
 export interface OfferAction {
   readonly id: string;
   /** `task` — справа живої хвилі з екрана подорожі (GAME-170 зріз 3: дім, зупинка в дорозі — локації без мапи). */
-  readonly kind: 'visit' | 'talk' | 'pickup' | 'buy' | 'checkout' | 'sell' | 'dry' | 'complete' | 'decline' | 'choose' | 'continue' | 'load' | 'leave' | 'task' | 'cancel' | 'gift' | 'sleep' | 'wait' | 'rest';
+  readonly kind: 'visit' | 'talk' | 'pickup' | 'buy' | 'checkout' | 'sell' | 'dry' | 'complete' | 'decline' | 'choose' | 'continue' | 'load' | 'leave' | 'task' | 'cancel' | 'gift' | 'sleep' | 'wait' | 'rest' | 'chapter';
   readonly key: string | null;
   readonly priceCents?: number;
   /** Скільки хвилин займе дорога (GAME-31); немає — дія на місці. */

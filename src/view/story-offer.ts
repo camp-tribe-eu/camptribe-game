@@ -24,7 +24,7 @@ import { pageFill } from '../core/atlas-fill';
 import { nearestReward } from '../content/nearest-reward';
 import { LOCALES } from '../i18n';
 import { dayPartOf, resolveGreeting, trackTalk } from './greeting';
-import { canRestNow, canSleepNow, chapterComplete, matches, questOpen, route, storyDay } from '../core/story';
+import { canRestNow, canSleepNow, chapter2Startable, chapterComplete, matches, questOpen, questSlept, route, storyDay } from '../core/story';
 import { awardsFor } from '../core/progress';
 import { capacityOf, carriedOf, overflowCandidates, packedOf, packFlag, packingOpen, packItemsFor, usedUnits } from '../core/packing';
 import { timeOfDay } from './world/daylight';
@@ -264,7 +264,7 @@ export function goalOf(s: GameState, st: StoryDefs, now?: number): { key: string
   // GAME-256: крок чекає свій день чи вечір — ціль каже, що робити (вільний час / вечір / спати), а не називає крок, який ще не можна зробити.
   const gate = id === undefined ? undefined : st.quests[id]?.gate;
   if (id !== undefined && gate && !questOpen(st, s, id, now)) {
-    if (storyDay(s.slept) < gate.day) return { key: now !== undefined && minuteOfDay(now) >= EVENING ? 'goal.wait.sleep' : 'goal.wait.free' };
+    if (storyDay(id === undefined ? s.slept : questSlept(id, s)) < gate.day) return { key: now !== undefined && minuteOfDay(now) >= EVENING ? 'goal.wait.sleep' : 'goal.wait.free' };
     return { key: 'goal.wait.evening' };
   }
   const key = id === undefined ? null : nameKey(id);
@@ -481,6 +481,12 @@ export function storyOffer(sim: SimState, defs: CoreDefs, view: StoryView = PANE
       intents.set(r.id, { type: 'RestUntilEvening' });
       offered.push(r);
     }
+    // GAME-286: розділ 1 завершено — «Продовжити подорож» (розділ 2). Тизер уже показано, дія лишається в ☰ і в меню паузи.
+    if (chapter2Startable(s, st)) {
+      const c2: OfferAction = { id: 'chapter|2', kind: 'chapter', key: null };
+      intents.set(c2.id, { type: 'StartChapter2' });
+      offered.push(c2);
+    }
     if (canSleepNow(st, s, now)) {
       const z: OfferAction = { id: 'rest|sleep', kind: 'sleep', key: null };
       intents.set(z.id, { type: 'Sleep' });
@@ -535,7 +541,8 @@ export function storyOffer(sim: SimState, defs: CoreDefs, view: StoryView = PANE
     intents,
     offer: {
       ...base,
-      stage: chapterComplete(s, st) ? 'ended' : 'play',   // GAME-144: кінець розділу — завершений квест-кінець, не прапорець
+      stage: chapterComplete(s, st) && s.chapterStart === undefined ? 'ended' : 'play',   // GAME-286: після старту розділу 2 розділ 1 більше не «кінець»
+        // GAME-144: кінець розділу — завершений квест-кінець, не прапорець
       characters: [],
       locationKey: nameKey(p.locationId),
       quests,
