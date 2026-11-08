@@ -7,7 +7,7 @@
 
 Коди: PLACE_OVERLAP (сліди двох твердих предметів перетинаються: камінь у кущі), PLACE_ORDER (предмет намальовано поверх іншого, але його
 база вище на екрані: порушено y-sort), PLACE_WATER (твердий предмет стоїть у воді), PLACE_SIZE (висота спрайта поза ±40 % від справжньої,
-28 px/м), PLACE_EMPTY (не перевірено жодного предмета: тиша — не факт, закон 4).
+28 px/м), PLACE_PATCH (у видимій сцені layout['view']=[x0,y0,x1,y1] є вікно 96x96 px, яке не перетинає жодного предмета: порожнеча), PLACE_EMPTY (не перевірено жодного предмета: тиша — не факт, закон 4).
 Формат layout.json: {"px_per_m":28,"objects":[{id,kind,x,y(база),w,h(спрайт),foot:[w,h],solid,z,real_h_m?,water?}]}; слід — прямокутник foot, центр по x, низ у y.
 Мапи: об'єкти objectgroup із type 'solid'/'prop' і width>0 — це сліди (x,y — лівий верх, як у Tiled).
 """
@@ -20,7 +20,8 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(os.path.dirname(HERE))
 PXM = 28
 SIZE_TOL = 0.4
-ENABLED = {'overlap': True, 'order': True, 'water': True, 'size': True, 'empty': True}
+ENABLED = {'overlap': True, 'order': True, 'water': True, 'size': True, 'empty': True, 'patches': True}
+PATCH = 96   # 3x3 тайли
 
 
 def foot(o):
@@ -34,6 +35,19 @@ def inter(a, b):
 
 def sprite_rect(o):
     return (o['x'] - o['w'] / 2, o['y'] - o['h'], o['x'] + o['w'] / 2, o['y'])
+
+
+def empty_patches(layout, size=PATCH, step=16):
+    """Верхні-ліві кути вікон size x size у layout['view'], що не перетинають спрайт жодного предмета (вода теж предмет: берег і брижі)."""
+    x0, y0, x1, y1 = layout['view']
+    rects = [sprite_rect(o) for o in layout['objects']]
+    res = []
+    for y in range(y0, y1 - size + 1, step):
+        for x in range(x0, x1 - size + 1, step):
+            win = (x, y, x + size, y + size)
+            if not any(inter(win, r) for r in rects):
+                res.append((x, y))
+    return res
 
 
 def check(layout, name='layout'):
@@ -60,6 +74,10 @@ def check(layout, name='layout'):
                     continue
                 if a['z'] > b['z'] and inter(sprite_rect(a), sprite_rect(b)) and a['y'] < b['y']:
                     out.append(('PLACE_ORDER', name, f"{a['id']} (база y={a['y']}) намальовано поверх {b['id']} (база y={b['y']}): нижчий на екрані має бути попереду"))
+    if ENABLED['patches'] and layout.get('view'):
+        ep = empty_patches(layout)
+        if len(ep) > layout.get('max_empty_patches', 0):
+            out.append(('PLACE_PATCH', name, f'{len(ep)} порожніх вікон {PATCH}x{PATCH} px (перше {ep[0]}), дозволено {layout.get("max_empty_patches", 0)}'))
     if ENABLED['size']:
         for o in objs:
             if o.get('real_h_m'):
@@ -99,6 +117,7 @@ BAD = {
     'PLACE_WATER': {'px_per_m': 28, 'objects': [ob('rock', 100, 200, 34, 28, [28, 8], z=0), ob('pond', 100, 200, 128, 64, [128, 64], solid=False, water=True)]},
     'PLACE_SIZE': {'px_per_m': 28, 'objects': [ob('bush', 80, 100, 96, 90, [36, 10], z=0, real_h_m=1.0)]},
     'PLACE_EMPTY': {'px_per_m': 28, 'objects': []},
+    'PLACE_PATCH': {'px_per_m': 28, 'view': [0, 0, 300, 200], 'objects': [ob('bush', 40, 60, 48, 45, [36, 10], z=0)]},   # праворуч порожнеча
 }
 
 
