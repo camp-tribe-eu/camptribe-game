@@ -13,7 +13,8 @@ import { GAME_DEFS } from './slice-defs';
 const DEFS: CoreDefs = GAME_DEFS;
 const LOCATIONS = Object.keys((DEFS.story as NonNullable<CoreDefs['story']>).locations);
 /** Закріплено літерально, а не виводиться з контенту: змінити «під дахом» мусить свідома правка тесту. */
-const SHELTERED = new Set(['loc.home', 'loc.camp.lake']);
+// GAME-283: кемпінг Мюллерталь — теж кемпінг (sheltered, рецепція й навіс): у дощ сушити можна, як на озері. Стежки — просто неба.
+const SHELTERED = new Set(['loc.home', 'loc.camp.lake', 'loc.camp.mullerthal']);
 
 const wetAt = (locationId: string): GameState => {
   const r = dispatch(newSim(1, 5_000).game, { type: 'CreateCharacter', commandId: 'c0', profileId: 'profile.solo-explorer', transportId: 'transport.bike' }, DEFS);
