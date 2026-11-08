@@ -18,6 +18,28 @@ const solid = (c: number, r: number): boolean => c < 0 || r < 0 || c >= MAP.widt
 const tile = (p: Pt): { c: number; r: number } => ({ c: Math.floor(p.x / TILE), r: Math.floor(p.y / TILE) });
 const ELISE = (MAP.layers.find((l) => l.name === 'objects')?.objects ?? []).find((o) => o.name === 'npc.elise') as Pt;
 
+/** GAME-282: відкриті місця табору (5×5 вільних тайлів, досяжні від старту героя) і вибір того, що зараз найдалі від мешканців та предметів мапи. */
+const OBJECTS = (MAP.layers.find((l) => l.name === 'objects')?.objects ?? []) as Pt[];
+const OPEN: Pt[] = (() => {
+  const seen = new Set<number>();
+  const start = { c: 18, r: 13 }; const key = (c: number, r: number): number => r * MAP.width + c;
+  seen.add(key(start.c, start.r)); const q = [start];
+  for (let i = 0; i < q.length; i++) {
+    const t = q[i] as { c: number; r: number };
+    for (const [dc, dr] of [[0, -1], [-1, 0], [0, 1], [1, 0]] as const) { const c = t.c + dc; const r = t.r + dr; if (!solid(c, r) && !seen.has(key(c, r))) { seen.add(key(c, r)); q.push({ c, r }); } }
+  }
+  return q.filter((t) => t.c % 2 === 0 && t.r % 2 === 0 && [-2, -1, 0, 1, 2].every((a) => [-2, -1, 0, 1, 2].every((b) => !solid(t.c + a, t.r + b)))).map((t) => ({ x: (t.c + 0.5) * TILE, y: (t.r + 0.5) * TILE }));
+})();
+function clearSpot(p: Probe): Pt {
+  const others = [...p.residents, ...OBJECTS];
+  const far = (o: Pt): number => Math.min(...others.map((r) => Math.hypot(r.x - o.x, r.y - o.y)));
+  const hero = (o: Pt): number => Math.hypot(p.playerX - o.x, p.playerY - o.y);
+  // не ближче 5 тайлів до будь-кого; з таких — найближче до героя (коротша дорога, менше часу, поки мешканці рухаються)
+  const good = OPEN.filter((o) => far(o) >= 5 * TILE);
+  const pool = good.length > 0 ? good : [...OPEN].sort((x, y) => far(y) - far(x)).slice(0, 5);
+  return pool.reduce((m, o) => (hero(o) < hero(m) ? o : m));
+}
+
 /** Усі, з ким говоримо на мапі табору, і як їх звати (uk). Джордж — на мапі дому: покритий сторожем npc-talk.test (мапа ⇄ контент). */
 const CAST: [string, string][] = [
   ['npc.elise', 'Еліза'], ['npc.amina', 'Аміна'], ['npc.luc', 'Люк'], ['npc.nora', 'Нора'], ['npc.ingrid', 'Інгрід'], ['npc.sarah', 'Сара'], ['npc.claire', 'Клер'],
@@ -121,18 +143,24 @@ async function talkTo(page: Page, id: string, name: string): Promise<void> {
     return p.residents.find((r) => r.id === id) as Pt;
   };
   const box = panel(page).locator('[data-ui="dialogue"]');
-  // Слідувачі (родина) тупцюють коло героя: «найближчий» міг помінятись між кроком і дією — тоді розмова не з тим; закриваємо її й пробуємо ще.
-  // Родина тупцює коло героя, тому в грі розмова з нею — лише коли в зоні дії нікого іншого (вогнище, Еліза, предмет): ідемо на чисте місце — галявину.
-  if (id === 'npc.victoria' || id === 'npc.matthew') {
-    const clearing = { x: 21.5 * TILE, y: 18.5 * TILE };
-    await walkToNpc(page, '', () => clearing, 80_000, (p) => Math.hypot(p.playerX - clearing.x, p.playerY - clearing.y) < 12);
-  }
+  // Родина тупцює коло героя, тому в грі розмова з нею — лише коли в зоні дії нікого іншого (вогнище, Еліза, предмет, МЕШКАНЕЦЬ): ідемо на чисте місце.
+  // GAME-282: мешканці ходять по всьому табору (Інгрід стоїть саме на колишній фіксованій галявині 21,5×18,5, Нора й Аміна заходять і на інші), тож «чисте місце» — те,
+  // що ЗАРАЗ найдалі від усіх мешканців (і від предметів мапи); його обирають за станом, а не раз і назавжди, і заново — якщо до героя хтось підійшов.
+  const toClear = async (): Promise<void> => {
+    const p = await probe(page);
+    const spot = clearSpot(p);
+    await walkToNpc(page, '', () => spot, 80_000, (q) => Math.hypot(q.playerX - spot.x, q.playerY - spot.y) < 12);
+  };
+  if (id === 'npc.victoria' || id === 'npc.matthew') await toClear();
   for (let attempt = 0; ; attempt++) {
     const near = await walkToNpc(page, id, where);
     expect(near.nearObject).toBe(id);
-    await expect.poll(async () => (await probe(page)).npcMarks[id], { message: `${id}: над головою нема «…» чи «!»`, timeout: 5_000 }).toMatch(/^(chat|request)$/);   // GAME-180: у просильників «!»
-    const still = (await probe(page)).nearObject === id;
-    if (still) await page.keyboard.press('Space');
+    // GAME-282: «хто в зоні» і «що над головою» — один знімок стану, і Space — одразу за ним. Раніше між перевіркою зони й дією лежали окремі 5 с опитування «…»:
+    // за стільки родина встигала піти на дозвілля (IDLE_AFTER_S), а мешканець — стати ближчим, і дія не обирала нікого. Зона змінилась — не тиснемо, а підходимо знову.
+    let ready = false;
+    await expect.poll(async () => { const p = await probe(page); ready = p.nearObject === id; return ready ? p.npcMarks[id] : 'не в зоні'; }, { message: `${id}: над головою нема «…» чи «!»`, timeout: 5_000 }).toMatch(/^(chat|request|не в зоні)$/);   // GAME-180: у просильників «!»
+    if (ready) await page.keyboard.press('Space');
+    else if (id === 'npc.victoria' || id === 'npc.matthew') await toClear();   // поруч опинився хтось інший — на нове чисте місце
     await expect(box, `${id}: рамка розмови не відкрилась`).toBeVisible({ timeout: 8_000 }).catch(() => undefined);
     const who = (await box.isVisible()) ? await panel(page).locator('[data-ui="speaker"]').getAttribute('data-npc') : null;
     if (who === id) break;

@@ -22,6 +22,14 @@ async function open(browser: Browser, vp: { width: number; height: number }, tou
   await page.addInitScript(([k, seen]) => { try { localStorage.setItem(k as string, JSON.stringify({ textScale: 100, language: 'uk', hintSeen: seen })); } catch { /* сховища немає */ } }, [SETTINGS_KEY, hintSeen] as const);
   // holdToast: тост живе 5 с від старту, а на повільному CI сторінка готова пізніше — без перемикача тест червонів би
   // за часом, а не за контрастом (рецензія Fable, GAME-98).
+  // GAME-282: тост без holdToast живе 5 с від старту й під навантаженням міг зникнути ДО першої перевірки «видно» (open() чекає на готовність гри й полотно).
+  // Спостерігач у сторінці фіксує сам факт появи — перевірка «тост був» не залежить від того, коли її виконано.
+  await page.addInitScript(() => {
+    const w = window as unknown as { __hintShown?: boolean };
+    const look = (): void => { if (document.querySelector('[data-ui="hint"]')) w.__hintShown = true; };
+    new MutationObserver(look).observe(document, { childList: true, subtree: true });
+    look();
+  });
   await page.goto(hold ? '/?seed=2&holdToast=1' : '/?seed=2');
   await waitGameReady(page);
   // Полотно Phaser має встигнути намалювати мапу: інакше «тло» — порожній чорний, і контраст вийшов би завищеним.
@@ -157,7 +165,7 @@ test('негативний контроль тосту: без ?holdToast=1 то
   test.setTimeout(60_000);
   const vp = { width: 844, height: 390 };
   const free = await open(browser, vp, true, false, false);
-  await expect(free.locator('[data-ui="hint"]')).toBeVisible();
+  await expect.poll(() => free.evaluate(() => (window as unknown as { __hintShown?: boolean }).__hintShown === true), { message: 'тост-підказка жодного разу не з\'явився' }).toBe(true);
   await expect(free.locator('[data-ui="hint"]')).toHaveCount(0, { timeout: 12_000 });
   await free.context().close();
   const held = await open(browser, vp, true, false, true);
