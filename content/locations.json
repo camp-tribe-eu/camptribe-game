@@ -2,5 +2,12 @@
   { "id": "loc.home", "nameKey": "loc.home", "sheltered": true },
   { "id": "loc.shop", "nameKey": "loc.shop", "unlockedBy": "ST-002", "items": ["item.tent-anna", "item.tent", "item.sleeping-bag-anna", "item.sleeping-bag", "item.lantern"] },
   { "id": "loc.road", "nameKey": "loc.road", "unlockedBy": "CH1-HOME-001" },
-  { "id": "loc.camp.lake", "nameKey": "loc.camp.lake", "unlockedBy": "ST-004", "items": ["item.firewood"], "sheltered": true }
+  { "id": "loc.camp.lake", "nameKey": "loc.camp.lake", "unlockedBy": "ST-004", "items": ["item.firewood"], "sheltered": true },
+  { "id": "loc.camp.mullerthal", "nameKey": "loc.camp.mullerthal", "sheltered": true },
+  { "id": "loc.trail.official", "nameKey": "loc.trail.official" },
+  { "id": "loc.trail.forgotten", "nameKey": "loc.trail.forgotten" },
+  { "id": "loc.trail.other", "nameKey": "loc.trail.other" },
+  { "id": "loc.waterfall", "nameKey": "loc.waterfall" },
+  { "id": "loc.meadow.orchid", "nameKey": "loc.meadow.orchid" },
+  { "id": "loc.schengen", "nameKey": "loc.schengen" }
 ]

@@ -8,7 +8,7 @@ import { menuMoves, storyOffer } from '../view/story-offer';
 import { GAME_DEFS, SHOP } from './slice-defs';
 import { resolveSpot } from './map-first';
 import { newSim, step, type SimState } from '../core/sim';
-import { exploreView, moves } from './moves';
+import { exploreView, inertLocations, moves } from './moves';
 import { canonical } from '../core/hash';
 
 const MONEY = 10_000;              // достатньо для найдешевшого тир 2 (8 900): купівлі в переборі справді бувають
@@ -52,7 +52,9 @@ describe('купівля в справжньому каталозі гри (GAME
     describe(transport, () => {
       it('перебір не порожній: стани в усіх локаціях, купівлі справді бувають (інакше нижче все зелене нічого не доводить)', () => {
         const locations = new Set(r.states.map(here));
-        for (const id of Object.keys(STORY.locations)) expect(locations.has(id), id).toBe(true);
+        // GAME-283: інертні локації (без посилань із сюжету) перебір не відвідує; решта — усі.
+        const inert = inertLocations(STORY);
+        for (const id of Object.keys(STORY.locations)) expect(locations.has(id), id).toBe(!inert.has(id));
         expect(r.buys.length).toBeGreaterThan(0);
         expect(r.menuBuys.length).toBeGreaterThan(0);
       });
