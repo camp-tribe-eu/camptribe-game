@@ -1,7 +1,6 @@
 // GAME-266 ч.2 · дорога з тайлів LPC (не пласка смуга), без емодзі-знаків, кемпер у масштабі сторожа GAME-222. Два вьюпорти.
 // Міра дороги: у правій третині кадру беремо рядки, де домінує коричневий (R−G > 20); у них σ яскравості пікселів ≥ 9 і σ середніх рядків ≥ 5
 // (стара пласка стежка: 4,6 і 1,5; нова: 13–16 і 10–12). Мутація: повернути одну плитку ґрунту в build_road → тест червоніє.
-import { execFileSync } from 'node:child_process';
 import { expect, test, type Page } from '@playwright/test';
 
 interface Probe { ready: boolean; markerIcons: Record<string, string> }
@@ -51,13 +50,6 @@ for (const vp of [{ width: 390, height: 844 }, { width: 932, height: 430 }]) {
   });
 }
 
-test('кемпер: висота й ширина в межах сторожа масштабу GAME-222', () => {
-  const out = execFileSync('python3', ['scripts/art/check_world.py'], { encoding: 'utf8' });
-  const row = out.split('\n').find((l) => l.startsWith('motorhome'));
-  if (!row) throw new Error('кемпер зник зі звіту сторожа');
-  const [, w = 0, h = 0, pxm = 0] = row.trim().split(/\s+/).map(Number);
-  console.log(`GAME-266b кемпер ${w}×${h} px, ${pxm} px/м`);
-  expect(h, 'кемпер вищий за 3 тайли').toBeLessThanOrEqual(96);
-  expect(pxm).toBeGreaterThanOrEqual(21); expect(pxm).toBeLessThanOrEqual(35);
-  expect(out).toContain('помилок 0');
-});
+// Кемпер: масштаб стереже scripts/art/check_world.py у npm run validate:py (job check-static, із --self-test і --mutate) — у e2e-раннері
+// Python/PIL нема, тож дубль звідси прибрано (CI #219: ModuleNotFoundError: PIL).
+
