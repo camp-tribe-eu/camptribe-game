@@ -1,0 +1,100 @@
+{
+ "batch": [
+  {
+   "name": "tent",
+   "endpoint": "fal-ai/flux-pro/kontext",
+   "payload": {
+    "prompt": "Using the exact pixel art style of this reference sprite sheet (same dark outline, limited palette, soft shading, light from the top-left, 3/4 top-down view, front face parallel to the screen), draw ONE inventory ICON: a small green dome camping tent seen from the front, with a lighter triangular door opening and tent poles, tan ground line. Bold simple silhouette, high contrast, clearly recognisable even at 32x32 pixels, centered and filling most of the frame, isolated on a solid flat pure magenta #FF00FF background, no text, no frame, no shadow.",
+    "image_url": "https://raw.githubusercontent.com/camp-tribe-eu/camptribe-game/main/assets/tiles/home_furniture.png",
+    "num_images": 2,
+    "output_format": "png",
+    "safety_tolerance": "2",
+    "seed": 20261107
+   }
+  },
+  {
+   "name": "bag",
+   "endpoint": "fal-ai/flux-pro/kontext",
+   "payload": {
+    "prompt": "Using the exact pixel art style of this reference sprite sheet (same dark outline, limited palette, soft shading, light from the top-left, 3/4 top-down view, front face parallel to the screen), draw ONE inventory ICON: a rolled-up blue sleeping bag lying with a white drawstring and a visible zipper and orange tie strap. Bold simple silhouette, high contrast, clearly recognisable even at 32x32 pixels, centered and filling most of the frame, isolated on a solid flat pure magenta #FF00FF background, no text, no frame, no shadow.",
+    "image_url": "https://raw.githubusercontent.com/camp-tribe-eu/camptribe-game/main/assets/tiles/home_furniture.png",
+    "num_images": 2,
+    "output_format": "png",
+    "safety_tolerance": "2",
+    "seed": 20261107
+   }
+  },
+  {
+   "name": "lantern",
+   "endpoint": "fal-ai/flux-pro/kontext",
+   "payload": {
+    "prompt": "Using the exact pixel art style of this reference sprite sheet (same dark outline, limited palette, soft shading, light from the top-left, 3/4 top-down view, front face parallel to the screen), draw ONE inventory ICON: a camping gas lantern with a glowing yellow glass and a black metal handle and base. Bold simple silhouette, high contrast, clearly recognisable even at 32x32 pixels, centered and filling most of the frame, isolated on a solid flat pure magenta #FF00FF background, no text, no frame, no shadow.",
+    "image_url": "https://raw.githubusercontent.com/camp-tribe-eu/camptribe-game/main/assets/tiles/home_furniture.png",
+    "num_images": 2,
+    "output_format": "png",
+    "safety_tolerance": "2",
+    "seed": 20261107
+   }
+  },
+  {
+   "name": "documents",
+   "endpoint": "fal-ai/flux-pro/kontext",
+   "payload": {
+    "prompt": "Using the exact pixel art style of this reference sprite sheet (same dark outline, limited palette, soft shading, light from the top-left, 3/4 top-down view, front face parallel to the screen), draw ONE inventory ICON: a small stack of white paper documents with a red passport booklet on top. Bold simple silhouette, high contrast, clearly recognisable even at 32x32 pixels, centered and filling most of the frame, isolated on a solid flat pure magenta #FF00FF background, no text, no frame, no shadow.",
+    "image_url": "https://raw.githubusercontent.com/camp-tribe-eu/camptribe-game/main/assets/tiles/home_furniture.png",
+    "num_images": 2,
+    "output_format": "png",
+    "safety_tolerance": "2",
+    "seed": 20261107
+   }
+  },
+  {
+   "name": "wallet",
+   "endpoint": "fal-ai/flux-pro/kontext",
+   "payload": {
+    "prompt": "Using the exact pixel art style of this reference sprite sheet (same dark outline, limited palette, soft shading, light from the top-left, 3/4 top-down view, front face parallel to the screen), draw ONE inventory ICON: a brown leather wallet, slightly open, with a few euro banknotes sticking out. Bold simple silhouette, high contrast, clearly recognisable even at 32x32 pixels, centered and filling most of the frame, isolated on a solid flat pure magenta #FF00FF background, no text, no frame, no shadow.",
+    "image_url": "https://raw.githubusercontent.com/camp-tribe-eu/camptribe-game/main/assets/tiles/home_furniture.png",
+    "num_images": 2,
+    "output_format": "png",
+    "safety_tolerance": "2",
+    "seed": 20261107
+   }
+  },
+  {
+   "name": "phone",
+   "endpoint": "fal-ai/flux-pro/kontext",
+   "payload": {
+    "prompt": "Using the exact pixel art style of this reference sprite sheet (same dark outline, limited palette, soft shading, light from the top-left, 3/4 top-down view, front face parallel to the screen), draw ONE inventory ICON: a modern black smartphone standing upright with a lit blue screen. Bold simple silhouette, high contrast, clearly recognisable even at 32x32 pixels, centered and filling most of the frame, isolated on a solid flat pure magenta #FF00FF background, no text, no frame, no shadow.",
+    "image_url": "https://raw.githubusercontent.com/camp-tribe-eu/camptribe-game/main/assets/tiles/home_furniture.png",
+    "num_images": 2,
+    "output_format": "png",
+    "safety_tolerance": "2",
+    "seed": 20261107
+   }
+  },
+  {
+   "name": "firstaid",
+   "endpoint": "fal-ai/flux-pro/kontext",
+   "payload": {
+    "prompt": "Using the exact pixel art style of this reference sprite sheet (same dark outline, limited palette, soft shading, light from the top-left, 3/4 top-down view, front face parallel to the screen), draw ONE inventory ICON: a white first-aid kit box with a big red cross and a small handle. Bold simple silhouette, high contrast, clearly recognisable even at 32x32 pixels, centered and filling most of the frame, isolated on a solid flat pure magenta #FF00FF background, no text, no frame, no shadow.",
+    "image_url": "https://raw.githubusercontent.com/camp-tribe-eu/camptribe-game/main/assets/tiles/home_furniture.png",
+    "num_images": 2,
+    "output_format": "png",
+    "safety_tolerance": "2",
+    "seed": 20261107
+   }
+  },
+  {
+   "name": "clothes",
+   "endpoint": "fal-ai/flux-pro/kontext",
+   "payload": {
+    "prompt": "Using the exact pixel art style of this reference sprite sheet (same dark outline, limited palette, soft shading, light from the top-left, 3/4 top-down view, front face parallel to the screen), draw ONE inventory ICON: a neatly folded stack of colourful clothes: a red t-shirt and blue jeans and a grey hoodie. Bold simple silhouette, high contrast, clearly recognisable even at 32x32 pixels, centered and filling most of the frame, isolated on a solid flat pure magenta #FF00FF background, no text, no frame, no shadow.",
+    "image_url": "https://raw.githubusercontent.com/camp-tribe-eu/camptribe-game/main/assets/tiles/home_furniture.png",
+    "num_images": 2,
+    "output_format": "png",
+    "safety_tolerance": "2",
+    "seed": 20261107
+   }
+  }
+ ]
+}

@@ -230,10 +230,7 @@ def build_shop():
         put(layers, W, H, 'walls', last, r, 8)
         for c in range(1, last):
             put(layers, W, H, 'ground', c, r, 13)         # дубова підлога
-    rnd = random.Random(204)
-    for r in (8, 9):
-        for c in (1, 2, 3):
-            put(layers, W, H, 'ground', c, r, terrain(rnd.choice(GRASS)))   # малий трав'яний килимок під виставковим наметом (ref17)
+    # GAME-263: трав'яного килимка під виставковим наметом більше нема — спрайт стоїть на дубовій підлозі (тайл 13), як усе приміщення.
     for c in (6, 7):                                      # прохід у дверях
         for r in (10, 11):
             put(layers, W, H, 'walls', c, r, 0)

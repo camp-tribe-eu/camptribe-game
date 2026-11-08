@@ -205,6 +205,7 @@
         "characters/torso/clothes/shortsleeve/shortsleeve/teen/spellcast.png",
         "characters/torso/clothes/shortsleeve/shortsleeve/teen/thrust.png",
         "characters/torso/clothes/shortsleeve/shortsleeve/teen/walk.png",
+        "icons/item_icons.png",
         "icons/objective_icons.png",
         "portraits/animal.cat.png",
         "portraits/npc.amina.png",
@@ -237,6 +238,7 @@
         "http://opengameart.org/content/lpc-revised-character-basics",
         "https://github.com/ElizaWy/LPC/tree/main/Characters/Clothing",
         "https://github.com/LiberatedPixelCup/Universal-LPC-Spritesheet-Character-Generator",
+        "https://github.com/camp-tribe-eu/camptribe-game/blob/main/scripts/assets/build_item_icons.py",
         "https://github.com/camp-tribe-eu/camptribe-game/blob/main/scripts/assets/build_objective_icons.py",
         "https://gitlab.com/vagabondgame/lpc-characters",
         "https://opengameart.org/content/",
@@ -251,6 +253,7 @@
         "https://opengameart.org/content/lpc-expanded-sit-run-jump-more",
         "https://opengameart.org/content/lpc-expanded-socks-shoes",
         "https://opengameart.org/content/lpc-floors",
+        "https://opengameart.org/content/lpc-food",
         "https://opengameart.org/content/lpc-jump-expanded",
         "https://opengameart.org/content/lpc-ladies",
         "https://opengameart.org/content/lpc-male-jumping-animation-by-durrani",
@@ -263,6 +266,7 @@
         "https://opengameart.org/content/lpc-teen-unisex-base-clothes",
         "https://opengameart.org/content/lpc-walls",
         "https://opengameart.org/content/lpc-windows-doors",
+        "https://opengameart.org/content/lpc-woodshop",
         "https://opengameart.org/content/ponytail-and-plain-hairstyles"
       ]
     },
@@ -485,6 +489,7 @@
         "characters/torso/clothes/shortsleeve/shortsleeve/teen/spellcast.png",
         "characters/torso/clothes/shortsleeve/shortsleeve/teen/thrust.png",
         "characters/torso/clothes/shortsleeve/shortsleeve/teen/walk.png",
+        "icons/item_icons.png",
         "icons/objective_icons.png",
         "portraits/npc.amina.png",
         "portraits/npc.cashier.png",
@@ -512,6 +517,7 @@
         "http://opengameart.org/content/lpc-revised-character-basics",
         "https://github.com/ElizaWy/LPC/tree/main/Characters/Clothing",
         "https://github.com/LiberatedPixelCup/Universal-LPC-Spritesheet-Character-Generator",
+        "https://github.com/camp-tribe-eu/camptribe-game/blob/main/scripts/assets/build_item_icons.py",
         "https://github.com/camp-tribe-eu/camptribe-game/blob/main/scripts/assets/build_objective_icons.py",
         "https://gitlab.com/vagabondgame/lpc-characters",
         "https://opengameart.org/content/",
@@ -524,6 +530,7 @@
         "https://opengameart.org/content/lpc-expanded-simple-shirts",
         "https://opengameart.org/content/lpc-expanded-sit-run-jump-more",
         "https://opengameart.org/content/lpc-expanded-socks-shoes",
+        "https://opengameart.org/content/lpc-food",
         "https://opengameart.org/content/lpc-jump-expanded",
         "https://opengameart.org/content/lpc-ladies",
         "https://opengameart.org/content/lpc-male-jumping-animation-by-durrani",
@@ -535,6 +542,7 @@
         "https://opengameart.org/content/lpc-runcycle-for-male-muscular-and-pregnant-character-bases-with-modular-heads",
         "https://opengameart.org/content/lpc-teen-androgynous-short-sleeve-shirt",
         "https://opengameart.org/content/lpc-teen-unisex-base-clothes",
+        "https://opengameart.org/content/lpc-woodshop",
         "https://opengameart.org/content/ponytail-and-plain-hairstyles"
       ]
     },
@@ -657,14 +665,18 @@
     {
       "name": "Hyptosis (стильовий еталон LPC)",
       "files": [
+        "icons/item_icons.png",
         "icons/objective_icons.png"
       ],
       "licences": [
         "CC-BY-SA 3.0"
       ],
       "sources": [
+        "https://github.com/camp-tribe-eu/camptribe-game/blob/main/scripts/assets/build_item_icons.py",
         "https://github.com/camp-tribe-eu/camptribe-game/blob/main/scripts/assets/build_objective_icons.py",
-        "https://opengameart.org/content/lpc-revised-base-object-kit"
+        "https://opengameart.org/content/lpc-food",
+        "https://opengameart.org/content/lpc-revised-base-object-kit",
+        "https://opengameart.org/content/lpc-woodshop"
       ]
     },
     {
@@ -986,6 +998,7 @@
     {
       "name": "Lanea Zimmerman (Sharm)",
       "files": [
+        "icons/item_icons.png",
         "icons/objective_icons.png",
         "tiles/base_out_atlas.png",
         "tiles/camp_props.png",
@@ -1005,14 +1018,47 @@
         "OGA-BY 3.0"
       ],
       "sources": [
+        "https://github.com/camp-tribe-eu/camptribe-game/blob/main/scripts/assets/build_item_icons.py",
         "https://github.com/camp-tribe-eu/camptribe-game/blob/main/scripts/assets/build_objective_icons.py",
         "https://opengameart.org/content/lpc-floors",
+        "https://opengameart.org/content/lpc-food",
         "https://opengameart.org/content/lpc-revised-base-object-kit",
         "https://opengameart.org/content/lpc-revised-the-office",
         "https://opengameart.org/content/lpc-shelves-rework",
         "https://opengameart.org/content/lpc-tile-atlas",
         "https://opengameart.org/content/lpc-walls",
-        "https://opengameart.org/content/lpc-windows-doors"
+        "https://opengameart.org/content/lpc-windows-doors",
+        "https://opengameart.org/content/lpc-woodshop"
+      ]
+    },
+    {
+      "name": "LPC Foods: bluecarrot16, Daniel Eddeland (daneeklu), Joshua Taylor, Richard Kettering (Jetrel), thekingphoenix, RedVoxel, Molly Willits",
+      "files": [
+        "icons/item_icons.png"
+      ],
+      "licences": [
+        "CC-BY-SA 3.0"
+      ],
+      "sources": [
+        "https://github.com/camp-tribe-eu/camptribe-game/blob/main/scripts/assets/build_item_icons.py",
+        "https://opengameart.org/content/lpc-food",
+        "https://opengameart.org/content/lpc-revised-base-object-kit",
+        "https://opengameart.org/content/lpc-woodshop"
+      ]
+    },
+    {
+      "name": "LPC Woodshop: bluecarrot16",
+      "files": [
+        "icons/item_icons.png"
+      ],
+      "licences": [
+        "CC-BY-SA 3.0"
+      ],
+      "sources": [
+        "https://github.com/camp-tribe-eu/camptribe-game/blob/main/scripts/assets/build_item_icons.py",
+        "https://opengameart.org/content/lpc-food",
+        "https://opengameart.org/content/lpc-revised-base-object-kit",
+        "https://opengameart.org/content/lpc-woodshop"
       ]
     },
     {
@@ -2874,6 +2920,25 @@
         "https://opengameart.org/content/lpc-expanded-simple-shirts"
       ],
       "modified": "no"
+    },
+    {
+      "file": "icons/item_icons.png",
+      "authors": [
+        "Eliza Wyatt (ElizaWy)",
+        "Lanea Zimmerman (Sharm)",
+        "bluecarrot16",
+        "Hyptosis (стильовий еталон LPC)",
+        "LPC Foods: bluecarrot16, Daniel Eddeland (daneeklu), Joshua Taylor, Richard Kettering (Jetrel), thekingphoenix, RedVoxel, Molly Willits",
+        "LPC Woodshop: bluecarrot16"
+      ],
+      "licence": "CC-BY-SA 3.0",
+      "sources": [
+        "https://opengameart.org/content/lpc-food",
+        "https://opengameart.org/content/lpc-woodshop",
+        "https://opengameart.org/content/lpc-revised-base-object-kit",
+        "https://github.com/camp-tribe-eu/camptribe-game/blob/main/scripts/assets/build_item_icons.py"
+      ],
+      "modified": "AI-generated from LPC reference (8 icons): magenta keyed out, cropped, BOX-downscaled to 28 px, quantized to the LPC base palette; 3 icons are 1:1 cell crops of LPC Foods/Woodshop, quantized to the base palette"
     },
     {
       "file": "icons/objective_icons.png",

@@ -192,7 +192,8 @@ const ICON_Y = -4;   // GAME-201: низ піктограми цілі над т
 interface Marker { readonly g: Phaser.GameObjects.Container; readonly shape: Phaser.GameObjects.Graphics; img: Phaser.GameObjects.Image | null; look: string }
 
 /** Смуга шару `above`: тайли верхівок, що мають одну «базову» лінію (низ стовбура під ними). */
-interface Band { readonly layer: Phaser.Tilemaps.TilemapLayer; readonly depth: number; alpha: number }
+/** GAME-263: `fade` — крони й дахи просто неба напівпрозорі над героєм; смуга, що ціла з меблів крамниці (shop-gear / shop-decor / рами дверей: виставковий намет, полиці), — ніколи (непрозорий предмет не «тане»). */
+interface Band { readonly layer: Phaser.Tilemaps.TilemapLayer; readonly depth: number; alpha: number; readonly fade: boolean }
 
 export interface WorldProbe {
   ready: boolean;
@@ -228,7 +229,7 @@ export interface WorldProbe {
   coveredTiles: number;
   behindTiles: number;
   /** GAME-210 (лише для e2e): крони/дахи над героєм (глибина смуги > глибини героя) і найменша їхня прозорість зараз (1 — ніхто не під кроною; нижче — герой під кроною). */
-  canopy: { bands: number; over: number; minAlpha: number };
+  canopy: { bands: number; over: number; minAlpha: number; fadeBands: number };
   /** GAME-210 (лише для e2e): плями світла з вікон на підлозі — скільки намальовано, глибина шару й прозорість (гасне до ночі). */
   light: { patches: number; depth: number; alpha: number };
   /** GAME-231 (лише для e2e): ліхтарі табору — скільки стоїть, чи горять (з 18:00), прозорість кола світла й його радіус, px. */
@@ -973,7 +974,9 @@ export class WorldScene extends Phaser.Scene {
       const layer = map.createBlankLayer(`above@${depth}`, tilesets, 0, 0, map.width, map.height, TILE, TILE);
       if (!layer || !(layer instanceof Phaser.Tilemaps.TilemapLayer)) throw new Error('band layer failed');
       for (const t of tiles) layer.putTileAt(t.index, t.x, t.y);
-      return { layer: layer.setDepth(depth), depth, alpha: 1 };
+      const furniture = tilesets.filter((ts) => ts.name === 'shop-gear' || ts.name === 'shop-decor' || ts.name === 'home-windows-doors');
+      const fade = !tiles.every((t) => furniture.some((ts) => t.index >= ts.firstgid && t.index < ts.firstgid + ts.total));
+      return { layer: layer.setDepth(depth), depth, alpha: 1, fade };
     });
   }
 
@@ -1836,7 +1839,7 @@ export class WorldScene extends Phaser.Scene {
       const above = bandOverHero(b.layer.depth, this.player.depth);   // глибина — з живого шару, не з нашого запису: тест бачить, що справді малюється
       if (above) { covered += n; over++; } else behind += n;
       // GAME-210: під кроною герой не зникає — крона напівпрозора, поки його кадр її перекриває (покадрово від dt, без tween).
-      const next = nextCanopyAlpha(b.alpha, above, n > 0, delta / 1000);
+      const next = nextCanopyAlpha(b.alpha, above && b.fade, n > 0, delta / 1000);
       if (next !== b.alpha) { b.alpha = next; b.layer.setAlpha(next); }
       minAlpha = Math.min(minAlpha, b.alpha);
     }
@@ -1865,7 +1868,7 @@ export class WorldScene extends Phaser.Scene {
       playerDepth: this.player.depth,
       coveredTiles: covered,
       behindTiles: behind,
-      canopy: { bands: this.bands.length, over, minAlpha },
+      canopy: { bands: this.bands.length, over, minAlpha, fadeBands: this.bands.filter((b) => b.fade).length },
       light: { patches: this.patchCount, depth: this.patches?.depth ?? 0, alpha: this.patches?.alpha ?? 0 },
       tent: this.tent.probe(),
       wood: this.wood.probe(),
