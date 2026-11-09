@@ -1,0 +1,108 @@
+{
+  "id": "dlg.ch2-evening",
+  "scene": {
+    "titleKey": "dlg.ch2-evening.title",
+    "facts": [],
+    "atQuest": "CH2-D2-EVENING-001"
+  },
+  "start": "open",
+  "nodes": [
+    {
+      "id": "open",
+      "speaker": "player",
+      "textKey": "dlg.ch2-evening.open",
+      "next": "dish"
+    },
+    {
+      "id": "dish",
+      "speaker": "player",
+      "textKey": "dlg.ch2-evening.dish",
+      "choices": [
+        {
+          "textKey": "dlg.ch2-evening.dish.c1",
+          "next": "d1"
+        },
+        {
+          "textKey": "dlg.ch2-evening.dish.c2",
+          "next": "d2"
+        },
+        {
+          "textKey": "dlg.ch2-evening.dish.c3",
+          "next": "d3"
+        }
+      ]
+    },
+    {
+      "id": "d1",
+      "speaker": "player",
+      "textKey": "dlg.ch2-evening.d1",
+      "next": "g1"
+    },
+    {
+      "id": "d2",
+      "speaker": "player",
+      "textKey": "dlg.ch2-evening.d2",
+      "next": "g1"
+    },
+    {
+      "id": "d3",
+      "speaker": "player",
+      "textKey": "dlg.ch2-evening.d3",
+      "next": "g1"
+    },
+    {
+      "id": "g1",
+      "speaker": "player",
+      "textKey": "dlg.ch2-evening.g1",
+      "next": "w2",
+      "branches": [
+        {
+          "when": {
+            "quest": "CH2-D2-WATERFALL-001",
+            "status": "completed"
+          },
+          "next": "w1"
+        }
+      ]
+    },
+    {
+      "id": "w1",
+      "speaker": "player",
+      "textKey": "dlg.ch2-evening.w1",
+      "next": "ask"
+    },
+    {
+      "id": "w2",
+      "speaker": "player",
+      "textKey": "dlg.ch2-evening.w2",
+      "next": "ask"
+    },
+    {
+      "id": "ask",
+      "speaker": "player",
+      "textKey": "dlg.ch2-evening.ask",
+      "choices": [
+        {
+          "textKey": "dlg.ch2-evening.ask.c1",
+          "next": "listen"
+        },
+        {
+          "textKey": "dlg.ch2-evening.ask.c2",
+          "next": "close"
+        }
+      ]
+    },
+    {
+      "id": "listen",
+      "speaker": "player",
+      "textKey": "dlg.ch2-evening.listen",
+      "next": "close"
+    },
+    {
+      "id": "close",
+      "speaker": "player",
+      "textKey": "dlg.ch2-evening.close",
+      "end": true
+    }
+  ]
+}

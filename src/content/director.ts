@@ -23,6 +23,7 @@ import { isTraceSpot, liveTraceSpot } from './traces';
 import { isPhotoSpot, livePhotoSpot } from './photos';
 import { DINNER_SPOT, dinnerDue, dinnerFinishMove, dinnerMove } from './ch2-dinner';
 import { ch2FinishMove } from './ch2-live';
+import { activityDue, activityFinishMoves, activityMove, eveningDue, eveningFinishMove, eveningMove } from './ch2-activity';
 import { dispatch, nextCommandId, type Command } from '../core/commands';
 import { isPlanSpot, planFinishMove, planSpotLive, planSpotMove, trailFinishMove } from './ch2-plan';
 import { REPAIR_FLAG, REPAIR_SPOT } from './repair';
@@ -65,8 +66,14 @@ export function storyMoves(sim: SimState, defs: CoreDefs): Move[] {
   // GAME-288: після вечері розділу 2 день-квест завершується сам. GAME-289: після вибору стежки квест плану переходить у обрану гілку, а після вставки гілка завершується.
   // GAME-296: решта кроків розділу 2, що закриваються самими візитами (приїзд, прогулянка, водоспад, Шенген, додому), — теж самі; шле лише те, що ядро прийме.
   const accepts = (m: Move): boolean => dispatch(sim.game, { ...m, commandId: nextCommandId(sim.game) } as Command, defs, undefined, undefined, undefined, sim.clock.minutes).ok;
-  const auto = [dinnerFinishMove(sim), planFinishMove(sim), trailFinishMove(sim), ch2FinishMove(sim, accepts)].filter((m): m is Move => m !== null);
-  return [...(waveId ? [{ type: 'StartWave', waveId } as Move] : []), ...auto];
+  const auto = [dinnerFinishMove(sim), planFinishMove(sim), trailFinishMove(sim), eveningFinishMove(sim), ch2FinishMove(sim, accepts)].filter((m): m is Move => m !== null);
+  // GAME-290: водоспад і майстер-клас дня 2 відкриваються самі, щойно гравець на місці (сцена за погодою дня); після сцени квест завершується ланцюгом (галявина → завершення → назад). Шле лише те, що ядро прийме.
+  const weather = todayWeather(sim);
+  const act = activityDue(sim, weather);
+  const scene: Move[] = act !== null && accepts(activityMove(act, weather)) ? [activityMove(act, weather)] : [];
+  const fin = activityFinishMoves(sim, weather);
+  const finish: Move[] = fin.length > 0 && accepts(fin[0] as Move) ? fin : [];
+  return [...(waveId ? [{ type: 'StartWave', waveId } as Move] : []), ...scene, ...finish, ...auto];
 }
 
 /** Локація етапу живої хвилі (звідки й де її справи): квест етапу без локації — null. */
@@ -113,7 +120,7 @@ export function fireplaceMove(game: GameState): Move {
 export function spotMove(sim: SimState, name: string): Move | null {
   if (name.startsWith(TASK_SPOT)) return liveSpot(sim, name) ? { type: 'CompleteTask', taskId: name.slice(TASK_SPOT.length) } : null;
   if (name === 'obj.campfire' && fireplaceDue(sim)) return fireplaceMove(sim.game);
-  if (name === DINNER_SPOT) return dinnerDue(sim) ? dinnerMove() : null;   // GAME-288: стіл вечері розділу 2 — сцена, поки її не було; інакше німий
+  if (name === DINNER_SPOT) return dinnerDue(sim) ? dinnerMove() : eveningDue(sim) ? eveningMove() : null;   // GAME-288: стіл вечері розділу 2 — сцена, поки її не було; інакше німий
   if (isPlanSpot(name)) return planSpotMove(sim, name);   // GAME-289 (GAME-296: поїздку з вказівника веде main.ts через resolveSpot, коли сцени немає): вказівники стежок у Мюллерталі — табличка плану й вставки гілок (сцени), інакше німі
   return { type: 'Interact', targetId: name };
 }
@@ -130,7 +137,7 @@ export function liveSpot(sim: SimState, name: string, defs?: CoreDefs): boolean 
   if (isRequestSpot(name)) return liveRequestSpot(sim.game, name, undefined, todayWeather(sim));   // GAME-180: ціль прохання — лише поки прохання взято й ціль не зроблена
   if (isTraceSpot(name)) return liveTraceSpot(sim.game, name);   // GAME-215: слід дідуся — поки не знайдено
   if (isPhotoSpot(name)) return livePhotoSpot(sim.game, name, todayWeather(sim));   // GAME-213: кадр, поки фото не зроблено
-  if (name === DINNER_SPOT) return dinnerDue(sim);   // GAME-288
+  if (name === DINNER_SPOT) return dinnerDue(sim) || eveningDue(sim);   // GAME-288; GAME-290: той самий стіл — вечеря дня 2
   if (name === REPAIR_SPOT) return sim.game.player?.locationId === MAP_LOCATION && sim.game.dialogue === null && !sim.game.flags.includes(REPAIR_FLAG);   // GAME-209: лавка, поки не полагоджена
   if (name === 'obj.litter') return !sim.game.flags.includes('f.litter-cleaned-ch1');
   return true;

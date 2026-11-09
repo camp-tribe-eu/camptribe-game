@@ -12,6 +12,8 @@ import { exitsFor, isCh2Quest, questOpen, CHAPTER2_END } from '../core/story';
 import type { GameState } from '../core/state';
 import type { SimState } from '../core/sim';
 import { DINNER_QUEST } from './ch2-dinner';
+import { ACTIVITIES, EVENING_QUEST, MEADOW, WATERFALL, WATERFALL_QUEST, activityOfQuest, offeredActivities, type ActivityDef } from './ch2-activity';
+import type { Weather } from '../core/weather';
 import { PLAN_QUEST, PLAN_SPOT, TRAIL_BRANCHES } from './ch2-plan';
 import type { Move } from './moves';
 import { STORY } from './story';
@@ -19,7 +21,7 @@ import { STORY } from './story';
 export const MULLERTHAL = 'loc.camp.mullerthal';
 export const WALK_QUEST = 'CH2-D1-WALK-001';
 export const ACTIVITY_QUEST = 'CH2-D2-ACTIVITY-001';
-export const WATERFALL_QUEST = 'CH2-D2-WATERFALL-001';
+export { WATERFALL_QUEST };
 export const SCHENGEN_QUEST = 'CH2-SCHENGEN-001';
 /** Вказівник офіційної стежки: на дні 1 — вихід на прогулянку (поїздка), на дні 2 — табличка плану (сцена, ch2-plan.ts). */
 export const WALK_SPOT = PLAN_SPOT;
@@ -46,7 +48,7 @@ export const ch2WalkTrip = (g: Pick<GameState, 'quests'>): Move[] | null => (act
  * Кожне рішення — ланцюг, що відповідь називає за ПЕРШИМ ходом (вибір виходу): «Піти до водоспаду» одразу їде туди й назад (і завершує крок водоспаду сам), «Майстер-клас» лишається в кемпінгу.
  * Так відповідь на запитання «Як проведемо день?» не лишає гравця біля авто з новою ціллю, яку авто не відкриє, доки він не відійде й не підійде знову.
  */
-export function ch2CarDecisions(g: GameState): Move[][] {
+export function ch2CarDecisions(g: GameState, weather?: Weather, activities: readonly ActivityDef[] = ACTIVITIES): Move[][] {
   const p = g.player;
   if (!p) return [];
   const out: Move[][] = [];
@@ -56,7 +58,12 @@ export function ch2CarDecisions(g: GameState): Move[][] {
     if (!def.objectives.every((o) => !o.required || q.done.includes(o.id))) continue;
     const exits = exitsFor(STORY, def, 'complete', p);
     if (exits.length < 2 || exits.some((t) => !t.choice)) continue;
-    for (const t of exits) out.push([{ type: 'CompleteQuest', questId: id, to: t.to }, ...(t.to === WATERFALL_QUEST ? [visit('loc.waterfall'), home()] : [])]);
+    // GAME-290: рішення дня — за погодою: дощ лишає лише безпечний вихід (майстер-клас); погоду не передано — усі виходи (☰ і перебір).
+    const offered = weather === undefined ? null : new Set(offeredActivities(weather, activities).map((a) => a.quest));
+    for (const t of exits) {
+      if (offered !== null && activityOfQuest(t.to, activities) !== undefined && !offered.has(t.to)) continue;
+      out.push([{ type: 'CompleteQuest', questId: id, to: t.to }, ...(t.to === WATERFALL_QUEST ? [visit(WATERFALL)] : [])]);   // водоспад: поїздка кінчається НА водоспаді — сцену відкриває режисер
+    }
   }
   return out;
 }
@@ -65,16 +72,16 @@ export function ch2CarDecisions(g: GameState): Move[][] {
 export function ch2CarTrips(g: Pick<GameState, 'quests'>): Move[][] {
   const out: Move[][] = [];
   if (active(g, WATERFALL_QUEST)) {
-    if (!done(g, WATERFALL_QUEST, 'o1-waterfall')) out.push([visit('loc.waterfall'), home()]);
-    if (!done(g, WATERFALL_QUEST, 'o2-orchid')) out.push([visit('loc.meadow.orchid'), home()]);
+    if (!done(g, WATERFALL_QUEST, 'o1-waterfall')) out.push([visit(WATERFALL)]);   // GAME-290: лишаємось на водоспаді — там відкривається сцена
+    if (!done(g, WATERFALL_QUEST, 'o2-orchid')) out.push([visit(MEADOW), home()]);
   }
   if (active(g, SCHENGEN_QUEST)) out.push([visit('loc.schengen'), home()]);
   if (active(g, CHAPTER2_END)) out.push([visit('loc.home')]);   // кінець розділу: додому назавжди, назад не повертаємось
   return out;
 }
 
-/** Квести, які веде інший модуль: вечеря (сцена), план і вставки стежок (сцени). Решту, що закривається самими візитами, завершує сюжет. */
-const OTHER_OWNER = new Set<string>([DINNER_QUEST, PLAN_QUEST, ...TRAIL_BRANCHES.map((b) => b.quest)]);
+/** Квести, які веде інший модуль: вечеря (сцена), план і вставки стежок (сцени), водоспад/майстер-клас/вечір дня 2 (GAME-290, ch2-activity.ts). Решту, що закривається самими візитами, завершує сюжет. */
+const OTHER_OWNER = new Set<string>([DINNER_QUEST, PLAN_QUEST, ...TRAIL_BRANCHES.map((b) => b.quest), ...ACTIVITIES.map((a) => a.quest), EVENING_QUEST]);
 
 /**
  * Крок розділу 2, який нічого від гравця не чекає, завершується сам (той самий CompleteQuest, що й у ☰): квест без вибору виходу (або кінець розділу), усі обов'язкові цілі зроблені

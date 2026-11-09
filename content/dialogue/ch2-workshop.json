@@ -1,0 +1,94 @@
+{
+  "id": "dlg.ch2-workshop",
+  "scene": {
+    "titleKey": "dlg.ch2-workshop.title",
+    "facts": [
+      "f.ch2-rain-day"
+    ],
+    "atQuest": "CH2-D2-WORKSHOP-001"
+  },
+  "start": "open",
+  "nodes": [
+    {
+      "id": "open",
+      "speaker": "player",
+      "textKey": "dlg.ch2-workshop.open",
+      "next": "cocoa",
+      "branches": [
+        {
+          "when": {
+            "flag": "f.ch2-rain-day"
+          },
+          "next": "open-rain"
+        }
+      ]
+    },
+    {
+      "id": "open-rain",
+      "speaker": "player",
+      "textKey": "dlg.ch2-workshop.open-rain",
+      "next": "cocoa"
+    },
+    {
+      "id": "cocoa",
+      "speaker": "player",
+      "textKey": "dlg.ch2-workshop.cocoa",
+      "next": "pick"
+    },
+    {
+      "id": "pick",
+      "speaker": "player",
+      "textKey": "dlg.ch2-workshop.pick",
+      "choices": [
+        {
+          "textKey": "dlg.ch2-workshop.pick.c1",
+          "next": "map"
+        },
+        {
+          "textKey": "dlg.ch2-workshop.pick.c2",
+          "next": "game"
+        },
+        {
+          "textKey": "dlg.ch2-workshop.pick.c3",
+          "next": "cabin"
+        }
+      ]
+    },
+    {
+      "id": "map",
+      "speaker": "player",
+      "textKey": "dlg.ch2-workshop.map",
+      "next": "hint"
+    },
+    {
+      "id": "game",
+      "speaker": "player",
+      "textKey": "dlg.ch2-workshop.game",
+      "next": "hint"
+    },
+    {
+      "id": "cabin",
+      "speaker": "player",
+      "textKey": "dlg.ch2-workshop.cabin",
+      "next": "hint"
+    },
+    {
+      "id": "hint",
+      "speaker": "player",
+      "textKey": "dlg.ch2-workshop.hint",
+      "next": "shot"
+    },
+    {
+      "id": "shot",
+      "speaker": "player",
+      "textKey": "dlg.ch2-workshop.shot",
+      "next": "close"
+    },
+    {
+      "id": "close",
+      "speaker": "player",
+      "textKey": "dlg.ch2-workshop.close",
+      "end": true
+    }
+  ]
+}
