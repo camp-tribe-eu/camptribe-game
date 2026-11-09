@@ -482,7 +482,7 @@ export function Shell({ port, langOverride, credits, build, holdToast = false, h
       {backpackOpen && <BackpackPanel backpack={offer.backpack} lang={lang} t={t} sell={storyAct} close={closeBackpack} />}
       {atlasOpen && <AtlasPanel atlas={offer.atlas} lang={lang} t={t} close={closeAtlas} />}
       {intro && cold && <ColdOpen paint={port.coldOpenScene} t={t} onDone={() => setCold(false)} />}
-      {episode && !intro && port.episodeFlags && <EpisodeCard flags={port.episodeFlags()} t={t} label={teaserSleep.current && offer.actions.some((a) => a.kind === 'chapter') ? 'act.chapter' : undefined} onDone={() => { setEpisode(false); focusStage(); if (teaserSleep.current) { teaserSleep.current = false; const go = offer.actions.find((a) => a.kind === 'chapter'); if (go) storyAct(go.id); else summaryEnd(); /* GAME-286: після тизера — «Продовжити подорож» (розділ 2) */ } /* GAME-264: після тизера — збережена гра й меню паузи, а не мертва мапа */ }} />}
+      {episode && !intro && port.episodeFlags && <EpisodeCard flags={port.episodeFlags()} t={t} onDone={() => { setEpisode(false); focusStage(); if (teaserSleep.current) { teaserSleep.current = false; summaryEnd(); } /* GAME-264: після тизера — збережена гра й меню паузи, а не мертва мапа */ }} />}
       {intro && !cold && <Intro soloHero={port.introSolo?.() === true} offer={offer} lang={lang} t={t} act={storyAct} portrait={portrait} room={port.introRoom} beat={port.introBeat} onDone={endIntro} />}
       {talk && !paused && !storyOpen && !summary && offer.dialogue && <DialogueBox dialogue={offer.dialogue} lang={lang} t={t} act={storyAct} portrait={portrait} />}
       {summary && !paused && top === 'levelup' && <LevelUp ups={shownUps} lang={lang} t={t} onContinue={() => setUps([])} />}

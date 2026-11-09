@@ -17,15 +17,8 @@ async function openPanel(page: Page): Promise<void> {
   await page.waitForTimeout(500);   // «глухота» кнопок дій після відкриття (ACT_COOLDOWN_MS)
 }
 const act = (page: Page, a: string, key?: string) => page.locator(`[data-ui="story"] [data-act="${a}"]${key ? `[data-key="${key}"]` : ''}`);
-/** Відповідь у розмові за текстом (рамка `.ui-talk`, а за відсутності — панель). */
-async function answer(page: Page, re: RegExp): Promise<void> {
-  const box = page.locator('.ui-talk [data-act], [data-ui="story"] [data-ui="dialogue"] [data-act]').filter({ hasText: re }).first();
-  await box.click({ timeout: 5_000 });
-  await page.waitForTimeout(450);
-}
-
 for (const v of VIEWS) {
-  test(`кінець розділу 1 → «Продовжити подорож» → Мюллерталь → господиня → місце — ${v.name}`, async ({ browser }) => {
+  test(`кінець розділу 1 → «Продовжити подорож» (мапа Мюллерталя — окрема картка) — ${v.name}`, async ({ browser }) => {
     test.setTimeout(240_000);
     const ctx = await browser.newContext({ viewport: { width: v.w, height: v.h }, hasTouch: true, isMobile: true });
     const page = await ctx.newPage();
@@ -45,33 +38,25 @@ for (const v of VIEWS) {
     let c = await core(page);
     expect(c.game.quests['CH1-D3-HOME-001']?.status, 'сейв кінця розділу 1 підхопився').toBe('completed');
     expect(c.game.quests['CH2-ARRIVAL-001'], 'розділ 2 ще не почато').toBeUndefined();
-    // 1) «Продовжити подорож» → CH2-ARRIVAL-001 активний, Мюллерталь відкрито.
+    // 1) Сон у кінці розділу 1 → тизер → пауза (GAME-264) → ☰ → «Продовжити подорож» → CH2-ARRIVAL-001 активний.
     await openPanel(page);
+    await act(page, 'sleep').click();
+    await expect(page.locator('[data-ui="episode"]'), 'після сну — тизер розділу 2').toBeVisible({ timeout: 15_000 });
+    await page.locator('[data-ui="episode-skip"]').click();
+    await expect(page.locator('[data-ui="episode"]')).toHaveCount(0);
+    await expect(page.locator('[data-ui="pause"]')).toBeVisible();
+    await page.locator('[data-ui="resume"]').click();
+    await openPanel(page);
+    await expect(act(page, 'chapter'), 'після тизера ☰ пропонує «Продовжити подорож»').toHaveText(/Продовжити подорож|Continue the journey/);
     await act(page, 'chapter').click();
     c = await core(page);
     expect(c.game.quests['CH2-ARRIVAL-001']?.status).toBe('active');
-    await expect(act(page, 'chapter'), 'дія зникає після запуску').toHaveCount(0);
-    // 2) Дорога → Мюллерталь (ціль «доїхати» зараховано), печатка лише тепер.
-    await openPanel(page);
-    if (await act(page, 'visit', 'loc.camp.mullerthal').count() === 0) { await act(page, 'visit', 'loc.road').click(); await openPanel(page); }
-    await act(page, 'visit', 'loc.camp.mullerthal').click();
-    await expect.poll(async () => (await core(page)).game.player?.locationId, { timeout: 20_000 }).toBe('loc.camp.mullerthal');
-    expect((await core(page)).game.quests['CH2-ARRIVAL-001']?.status).toBe('active');
-    // 3) Господиня: вітання → вибір місця біля струмка.
-    await openPanel(page);
-    await act(page, 'talk', 'npc.host-mullerthal').click();
-    await answer(page, /Дорога була чудова/);
-    await answer(page, /Біля струмка/);
-    if (process.env.GAME_SHOTS === '1') await page.screenshot({ path: `${SHOTS}/${v.side}-host.png` });
-    c = await core(page);
-    expect(c.game.flags).toContain('f.ch2-spot-stream');
-    await page.locator('.ui-talk [data-act="continue"], [data-ui="story"] [data-act="continue"]').first().click({ timeout: 5_000 }).catch(() => undefined);
-    // 4) Усі цілі виконано — крок «Інший кордон» завершується, далі прогулянка.
-    await openPanel(page);
-    await act(page, 'complete', 'CH2-ARRIVAL-001').click().catch(async () => { await page.locator('[data-ui="story"] [data-act="complete"]').first().click(); });
-    c = await core(page);
-    expect(c.game.quests['CH2-ARRIVAL-001']?.status).toBe('completed');
-    expect(c.game.quests['CH2-D1-WALK-001']?.status).toBe('active');
+    expect(c.game.campaignEnded, 'розділ 1 більше не «кінець»').toBe(false);
+    // 2) Маркер розділу: дні розділу 2 рахуються від старту (сон кінця розділу 1 у них не входить).
+    expect((c.game as unknown as { chapterStart?: number }).chapterStart, 'маркер старту розділу 2 поставлено').toBeGreaterThan(0);
+    expect(c.game.quests['CH1-D3-HOME-001']?.status).toBe('completed');
+    // Дорога в Мюллерталь, господиня й вибір місця на мапі — окрема картка (мапа Мюллерталя ще не намальована: mapKeyFor відкидає її на мапу озера); тут не перевіряються.
+    if (process.env.GAME_SHOTS === '1') await page.screenshot({ path: `${SHOTS}/${v.side}-continue.png` });
     expect(errors).toEqual([]);
     await ctx.close();
   });

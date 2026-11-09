@@ -7,7 +7,7 @@ import type { Key } from '../i18n';
 import { calmMotion } from '../platform/motion';
 import { type EpisodeLine, episodeLines } from './episode-beats';
 
-export function EpisodeCard({ flags, t, onDone, label }: { flags: readonly string[]; t: (k: Key) => string; onDone: () => void; label?: Key | undefined }) {
+export function EpisodeCard({ flags, t, onDone }: { flags: readonly string[]; t: (k: Key) => string; onDone: () => void }) {
   const lines = useRef<EpisodeLine[]>(episodeLines(flags));
   const [all, setAll] = useState(() => calmMotion());
   const ended = useRef(false);
@@ -34,7 +34,7 @@ export function EpisodeCard({ flags, t, onDone, label }: { flags: readonly strin
           </p>
         ))}
       </div>
-      <button type="button" class="ui-btn ui-intro-skip" data-ui="episode-skip" ref={btn} onClick={(e) => { e.stopPropagation(); finish(); }}>{t(label ?? 'ep.continue')}</button>
+      <button type="button" class="ui-btn ui-intro-skip" data-ui="episode-skip" ref={btn} onClick={(e) => { e.stopPropagation(); finish(); }}>{t('ep.continue')}</button>
     </div>
   );
 }

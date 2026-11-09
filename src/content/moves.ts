@@ -78,7 +78,9 @@ export function moves(s: GameState, defs: CoreDefs, withRequests = false): Move[
   // GAME-256: сон — хід лише тоді, коли активний крок чекає наступного дня (ворота `gate.day`). Без годинника сон «абстрактний» (де є герой), а лічильник
   // обмежений стелею — простір станів перебору й бота росте лише там, де сюжет справді чекає на день; у решті станів ходу немає.
   if (!s.dialogue && s.player && Object.entries(s.quests).some(([id, q]) => q.status === 'active' && !gateOpen(st.quests[id]?.gate, questSlept(id, s)))) out.push({ type: 'Sleep' });
-  for (const id of Object.keys(st.npcs)) if (!chat.has(id)) out.push({ type: 'Talk', npcId: id });
+  // GAME-286: NPC у замкненій локації (господиня Мюллерталя в розділі 1) — не хід: ядро відмовило б, а бот розділу 1 отримав би зайву відмову в кожному стані.
+  const lockedLoc = (id: string): boolean => { const u = st.locations[st.npcs[id]?.locationId ?? '']?.unlockedBy; return u !== undefined && s.quests[u]?.status !== 'completed'; };
+  for (const id of Object.keys(st.npcs)) if (!chat.has(id) && !lockedLoc(id)) out.push({ type: 'Talk', npcId: id });
   // Подія в дорозі — хід СЕРЕДОВИЩА (кидок симуляції), а не гравця: перебір бачить і «сталась», і «ні».
   for (const [id, d] of Object.entries(st.dialogues)) if (d.trigger) out.push({ type: 'RoadEvent', eventId: id });
   // StartScene — хід СЮЖЕТУ (гачок кінця дня), не гравця; тут його навмисно немає: 16 проходжень сцени множили б простір станів

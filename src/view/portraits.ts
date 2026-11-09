@@ -14,6 +14,7 @@ export type Portrait =
 export const SPRITE_SHEET: Readonly<Record<string, SheetId>> = {
   'npc.elise': 'elise', 'npc.george': 'player', 'npc.victoria': 'victoria', 'npc.matthew': 'matthew',
   ...Object.fromEntries(RESIDENTS.map((r) => [r.id, `res:${r.look}` as SheetId])),
+  'npc.host-mullerthal': 'res:lotte',   // GAME-286: господиня Мюллерталя — поки лист продавчині (дорослий LPC-спрайт); власний портрет/мапа — картка мапи Мюллерталя
   'npc.cashier': 'res:lotte',   // GAME-204: Лотте; портрет — assets/portraits/npc.cashier.png (FAL, art/requests/portraits-cashier.json), обрізок — лише запасний
 };
 
