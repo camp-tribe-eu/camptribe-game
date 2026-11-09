@@ -21,6 +21,7 @@ import { FIREPLACE_SCENE, fireplaceFacts } from './fireplace';
 import { isMapFirstSpot, liveMapSpot } from './map-first';
 import { isTraceSpot, liveTraceSpot } from './traces';
 import { isPhotoSpot, livePhotoSpot } from './photos';
+import { DINNER_SPOT, dinnerDue, dinnerFinishMove, dinnerMove } from './ch2-dinner';
 import { REPAIR_FLAG, REPAIR_SPOT } from './repair';
 import type { Move } from './moves';
 import { isRequestSpot, liveRequestSpot } from './requests';
@@ -58,7 +59,8 @@ export function pendingWave(game: GameState, defs: CoreDefs, now?: number): stri
 /** Автоматичні ходи сюжету для цього стану — у порядку надсилання. Порожньо — сюжету нічого робити. */
 export function storyMoves(sim: SimState, defs: CoreDefs): Move[] {
   const waveId = pendingWave(sim.game, defs, sim.clock.minutes);
-  return waveId ? [{ type: 'StartWave', waveId }] : [];
+  const finish = dinnerFinishMove(sim);   // GAME-288: після вечері розділу 2 день-квест завершується сам
+  return [...(waveId ? [{ type: 'StartWave', waveId } as Move] : []), ...(finish ? [finish] : [])];
 }
 
 /** Локація етапу живої хвилі (звідки й де її справи): квест етапу без локації — null. */
@@ -105,6 +107,7 @@ export function fireplaceMove(game: GameState): Move {
 export function spotMove(sim: SimState, name: string): Move | null {
   if (name.startsWith(TASK_SPOT)) return liveSpot(sim, name) ? { type: 'CompleteTask', taskId: name.slice(TASK_SPOT.length) } : null;
   if (name === 'obj.campfire' && fireplaceDue(sim)) return fireplaceMove(sim.game);
+  if (name === DINNER_SPOT) return dinnerDue(sim) ? dinnerMove() : null;   // GAME-288: стіл вечері розділу 2 — сцена, поки її не було; інакше німий
   return { type: 'Interact', targetId: name };
 }
 
@@ -119,6 +122,7 @@ export function liveSpot(sim: SimState, name: string, defs?: CoreDefs): boolean 
   if (isRequestSpot(name)) return liveRequestSpot(sim.game, name, undefined, todayWeather(sim));   // GAME-180: ціль прохання — лише поки прохання взято й ціль не зроблена
   if (isTraceSpot(name)) return liveTraceSpot(sim.game, name);   // GAME-215: слід дідуся — поки не знайдено
   if (isPhotoSpot(name)) return livePhotoSpot(sim.game, name, todayWeather(sim));   // GAME-213: кадр, поки фото не зроблено
+  if (name === DINNER_SPOT) return dinnerDue(sim);   // GAME-288
   if (name === REPAIR_SPOT) return sim.game.player?.locationId === MAP_LOCATION && sim.game.dialogue === null && !sim.game.flags.includes(REPAIR_FLAG);   // GAME-209: лавка, поки не полагоджена
   if (name === 'obj.litter') return !sim.game.flags.includes('f.litter-cleaned-ch1');
   return true;

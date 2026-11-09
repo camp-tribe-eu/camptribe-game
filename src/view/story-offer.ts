@@ -24,7 +24,7 @@ import { pageFill } from '../core/atlas-fill';
 import { nearestReward } from '../content/nearest-reward';
 import { LOCALES } from '../i18n';
 import { dayPartOf, resolveGreeting, trackTalk } from './greeting';
-import { canRestNow, canSleepNow, chapter2Startable, chapterComplete, matches, questOpen, questSlept, route, storyDay } from '../core/story';
+import { canRestNow, canSleepNow, chapter2Complete, chapter2Startable, chapterComplete, isCh2Quest, matches, questOpen, questSlept, route, storyDay } from '../core/story';
 import { awardsFor } from '../core/progress';
 import { capacityOf, carriedOf, overflowCandidates, packedOf, packFlag, packingOpen, packItemsFor, usedUnits } from '../core/packing';
 import { timeOfDay } from './world/daylight';
@@ -34,7 +34,7 @@ import { dayOf, tripMinutes, type Weather } from '../core/weather';
 import { CONTENT, memorableFacts } from '../content/story';
 import { moves, progressKey, type Move } from '../content/moves';
 import items from '../../content/items.json';
-import { daySummary, daysEnded, NIGHT_PREFIX } from '../core/day-summary';
+import { dayCloseQuests, dayRanges, firstCh2Index, daySummary, daysEnded, NIGHT_PREFIX } from '../core/day-summary';
 import { type OfferAction, type OfferAtlas, type OfferGoal, type OfferCharacter, type OfferPacking, type OfferProgress, type OfferSummary, type OfferWave, type StoryOffer } from '../ui/story-types';
 import { backpackModel } from './backpack-model';
 import { RAW_WAVES } from '../content/waves';
@@ -240,14 +240,18 @@ export function summaryOffer(sim: SimState, defs: CoreDefs): { daysEnded: number
   const ended = daysEnded(sim, defs);
   const sum = ended > 0 ? daySummary(sim, ended, defs) : null;
   if (!sum) return { daysEnded: ended, summary: null };
+  // GAME-288: день розділу 2 лічиться від ЙОГО старту (день 1 розділу 2, а не день 4 гри); розділ 1 — як було (base = 0).
+  const base = chapterDayBase(sim, defs, sum.day);
+  const day = sum.day - base;
+  const ch2 = base > 0 && st !== undefined && sim.game.player !== null && !chapter2Complete(sim.game, st);
   return {
     daysEnded: ended,
     summary: {
-      day: sum.day,
+      day,
       money: sum.money,
       reward: sum.reward,
-      nextKey: st && sim.game.player && !chapterComplete(sim.game, st) ? goalOf(sim.game, st)?.key ?? null : null,
-      tomorrowKey: st && sim.game.player && !chapterComplete(sim.game, st) ? tomorrowKeyOf(sum.day) : null,
+      nextKey: st && sim.game.player && base === 0 && !chapterComplete(sim.game, st) ? goalOf(sim.game, st)?.key ?? null : ch2 ? ch2GoalKey(sim.game, st) : null,
+      tomorrowKey: st && sim.game.player && base === 0 && !chapterComplete(sim.game, st) ? tomorrowKeyOf(sum.day) : ch2 ? tomorrowKeyOf(day, true) : null,
       sections: sum.sections.map((x) => ({ kind: x.kind, keys: x.ids.map((id) => (x.kind === 'night' ? `sum.night.${id.slice(NIGHT_PREFIX.length)}` : nameKey(id) ?? id)) })),
     },
   };
@@ -287,7 +291,27 @@ export function progressOffer(s: GameState): OfferProgress {
 }
 
 /** GAME-200 · тизер «Завтра…»: рядок `sum.tomorrow.<день>` у src/i18n (uk+en). Дня без рядка тизера не має — екран просто його не показує. */
-export const tomorrowKeyOf = (day: number): Key | null => (Object.hasOwn(LOCALES.uk, `sum.tomorrow.${day}`) ? (`sum.tomorrow.${day}` as Key) : null);
+export const tomorrowKeyOf = (day: number, ch2 = false): Key | null => {
+  const key = `sum.tomorrow.${ch2 ? 'ch2.' : ''}${day}`;   // GAME-288: розділ 2 — свої тизери (sum.tomorrow.ch2.<день розділу>)
+  return Object.hasOwn(LOCALES.uk, key) ? (key as Key) : null;
+};
+
+/**
+ * GAME-288 · скільки днів завершено ДО першого запису розділу 2 в журналі (квест CH2-* або приїзд у Мюллерталь): від цього числа лічаться дні розділу 2.
+ * Розділ 2 не почався (записів нема) чи підсумок стосується дня розділу 1 (`day` ≤ base) — 0. Журнал, обрізаний з голови, номерів днів не дає (daySummary тоді null).
+ */
+export function chapterDayBase(sim: Pick<SimState, 'journal'>, defs: CoreDefs, day: number): number {
+  const first = firstCh2Index(sim.journal);
+  if (first < 0) return 0;
+  const base = dayRanges(sim.journal, dayCloseQuests(defs)).filter((r) => r.ended && r.to < first).length;
+  return day > base ? base : 0;
+}
+
+/** GAME-288 · «Наступного разу» для розділу 2: перший активний головний квест розділу (chapterComplete тут уже правдиве — від кінця розділу 1 — і ціль HUD не дає). */
+const ch2GoalKey = (g: GameState, st: StoryDefs): string | null => {
+  const id = Object.entries(g.quests).find(([qid, q]) => q.status === 'active' && isCh2Quest(qid) && st.quests[qid] && !st.quests[qid].optional)?.[0];
+  return nameKey(id);
+};
 
 /**
  * GAME-200 · відкриті цілі журналу: головна, побічні (бічний квест у роботі, прохання сусіда в роботі) і «нагорода близько» (nearestReward).

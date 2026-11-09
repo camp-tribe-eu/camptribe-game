@@ -257,6 +257,8 @@ SPOTS = [  # (id, name, type, cell c, r)
     ('exit.trail.official', 'trigger', 33, 15), ('exit.trail.forgotten', 'trigger', 2, 15), ('exit.trail.other', 'trigger', 29, 8),
     # GAME-287 · кадри дня 1 розділу 2 (src/content/photos.ts CH2_PHOTOS): суха погода — орхідея на краю лісу біля виходу на офіційну стежку, дощ — орхідея під навісом рецепції.
     ('obj.photo-orchid', 'anchor', 33, 13), ('obj.photo-drops', 'anchor', 8, 13),
+    # GAME-288 · вечеря дня 1 розділу 2: стіл на ділянці 1 (src/content/ch2-dinner.ts); якір (як кадри) живий лише ввечері дня 1, поки вечері ще не було.
+    ('obj.dinner', 'anchor', 6, 21),
 ]
 PHOTO_SPOTS = ('obj.photo-orchid', 'obj.photo-drops')
 
