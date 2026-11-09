@@ -18,7 +18,7 @@ export const SCHENGEN = 'loc.schengen';
 export const MULLERTHAL = 'loc.camp.mullerthal';
 export const SCHENGEN_QUEST = 'CH2-SCHENGEN-001';
 export const SCHENGEN_SCENE = 'dlg.ch2-schengen';
-/** Дощ у день Шенгену: сцена починається під дахом павільйону (локація sheltered). Косметика — жоден квест його не читає. */
+/** Дощ у день Шенгену: сцена починається під дахом павільйону. Косметика — жоден квест його не читає. */
 export const SCHENGEN_RAIN_FLAG = 'f.ch2-schengen-rain';
 /** Гравець свідомо обрав скласти половинки (вибір у сцені). Після нього режисер шле JoinItems. */
 export const JOIN_FLAG = 'f.ch2-medallion-join';

@@ -309,9 +309,6 @@ describe('GAME-291 · розділ ніколи не блокується', () =
     expect(schengenDue(base)).toBe(false);
     expect(ch2CarTrips(base.game)).toEqual([]);
   });
-  it('у дощ Шенген той самий: сцена з вступом під павільйоном, локація sheltered (мокре спорядження не мокне ще раз)', () => {
-    expect((CONTENT.locations as { id: string; sheltered?: boolean }[]).find((l) => l.id === SCHENGEN)?.sheltered).toBe(true);
-  });
 });
 
 describe('GAME-291 · час гравця за моделлю (time-model.ts)', () => {

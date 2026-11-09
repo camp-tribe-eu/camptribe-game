@@ -3,7 +3,7 @@
   "items": {
     "item.tent": "tent", "item.tent-anna": "tent", "item.sleeping-bag-anna": "bag", "item.tent-trek": "tent", "item.tent-family": "tent", "item.trailer-tent": "tent",
     "item.sleeping-bag": "bag", "item.sleeping-bag-synthetic": "bag", "item.sleeping-bag-down": "bag", "item.sleeping-bag-winter": "bag",
-    "item.photo.orchid": "camera", "item.photo.perfect": "camera", "item.lantern": "lantern", "item.lantern-2": "lantern", "item.lantern-3": "lantern",
+    "item.photo.orchid": "camera", "item.photo.perfect": "camera", "item.medallion.half1": "heart", "item.medallion.half2": "heart", "item.medallion": "heart", "item.microcard": "map", "item.lantern": "lantern", "item.lantern-2": "lantern", "item.lantern-3": "lantern",
     "item.firewood": "firewood", "item.water": "water", "item.simple-dinner": "dinner", "item.snacks": "snack",
     "item.mia-carrier": "carrier", "item.mia-blanket": "blanket", "item.mia-bowl-food": "bowl", "item.big-cushion": "cushion",
     "item.documents": "map", "item.wallet": "coins", "item.phones": "camera", "item.first-aid": "heart", "item.clothes": "suitcase",
