@@ -1102,5 +1102,13 @@
   "card.host-mullerthal.phrase3": "«Приїжджайте ще — стежки нікуди не подінуться.»",
   "card.host-mullerthal.schedule.morning": "Зранку вона поливає квіти біля рецепції.",
   "card.host-mullerthal.schedule.day": "Вдень зустрічає гостей і показує місця.",
-  "card.host-mullerthal.schedule.evening": "Увечері заварює чай для тих, хто ще не спить."
+  "card.host-mullerthal.schedule.evening": "Увечері заварює чай для тих, хто ще не спить.",
+  "item.photo.orchid": "Фото: орхідея",
+  "dlg.victoria-chat.walk": "Пройдемось лісом? Кажуть, там цвітуть дикі орхідеї.",
+  "dlg.victoria-chat.walk.c1": "Ходімо!",
+  "dlg.victoria-chat.walk.c2": "Трохи згодом.",
+  "dlg.victoria-chat.walk-go": "Стежка вузька, пахне мохом. Телефон при тобі?",
+  "dlg.victoria-chat.walk-tip": "Орхідея — на краю лісу, де стежка. Мрячить? Зніми краплі на листі під навісом.",
+  "dlg.victoria-chat.walk-shown": "Ого, який кадр! Наче привіт від когось, хто тут уже бував.",
+  "dlg.victoria-chat.walk-later": "Добре. Ліс нікуди не втече."
 }

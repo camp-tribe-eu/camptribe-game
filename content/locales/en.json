@@ -1102,5 +1102,13 @@
   "card.host-mullerthal.phrase3": "\"Come back — the trails aren't going anywhere.\"",
   "card.host-mullerthal.schedule.morning": "In the morning she waters the flowers by reception.",
   "card.host-mullerthal.schedule.day": "By day she greets guests and shows them the spots.",
-  "card.host-mullerthal.schedule.evening": "In the evening she brews tea for those still awake."
+  "card.host-mullerthal.schedule.evening": "In the evening she brews tea for those still awake.",
+  "item.photo.orchid": "Photo: orchid",
+  "dlg.victoria-chat.walk": "Shall we walk in the forest? They say wild orchids bloom there.",
+  "dlg.victoria-chat.walk.c1": "Let's go!",
+  "dlg.victoria-chat.walk.c2": "A bit later.",
+  "dlg.victoria-chat.walk-go": "The path is narrow and smells of moss. Got your phone?",
+  "dlg.victoria-chat.walk-tip": "Orchid's by the trail, forest edge. Drizzling? Shoot the leaf drops under the awning.",
+  "dlg.victoria-chat.walk-shown": "Wow, what a shot! Like a hello from someone who has been here before.",
+  "dlg.victoria-chat.walk-later": "Fine. The forest isn't going anywhere."
 }

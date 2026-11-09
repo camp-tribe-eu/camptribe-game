@@ -24,7 +24,7 @@ export function objectiveIcon(spot: string): ObjectiveIcon {
   const fb: ObjectiveIcon = { key: ICON_FALLBACK, fallback: true };
   const hit = (k: string | undefined): ObjectiveIcon => (k !== undefined && k in CELLS ? { key: k, fallback: false } : fb);
   if (spot in SPOTS) return hit(SPOTS[spot]);
-  const item = /^(?:pack|take)\.(item\.[\w-]+)$/.exec(spot);
+  const item = /^(?:pack|take)\.(item\.[\w.-]+)$/.exec(spot);
   if (item?.[1]) return hit(ITEMS[item[1]]);
   if (spot.startsWith('wood.branch.')) return hit(ITEMS['item.firewood']);
   for (const r of REQUESTS) {
@@ -68,7 +68,7 @@ export const ITEM_ICON_KEYS: readonly string[] = Object.keys(ITEM_CELLS);
 
 /** Ключ 32-px іконки речі за місцем (`pack.item.tent`, `take.item.wallet`); null — для речі іконки в цьому атласі нема. */
 export function itemIconKey(spot: string): string | null {
-  const m = /^(?:pack|take)\.(item\.[\w-]+)$/.exec(spot);
+  const m = /^(?:pack|take)\.(item\.[\w.-]+)$/.exec(spot);
   const k = m?.[1] === undefined ? undefined : ITEM_ICON_OF[m[1]];
   return k !== undefined && k in ITEM_CELLS ? k : null;
 }

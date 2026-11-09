@@ -219,6 +219,12 @@ def finish(g):
     def lay():
         objs = [{'id': n, 'solid': t == 'solid', 'x': x + w / 2, 'y': y + h, 'foot': [w, h], 'w': sw, 'h': sh} for n, t, x, y, w, h, sw, sh in g.objs]
         return {'view': view, 'objects': objs}
+    for n, t, c, r in SPOTS:                                   # кадри дня 1: на місці кадру — справжня орхідея на траві (не на стежці й не на майданчику)
+        if n in PHOTO_SPOTS:
+            assert (c, r) not in g.bare and not g.L['walls'][r * W + c] and not g.L['decor'][r * W + c], n
+            g.put('decor', c, r, 'ch2-objects', 0, 0)
+            g.objs.append(('orchid', 'prop', c * T + 12, r * T + 20, 8, 4, 32, 32))
+            g.plants.add(len(g.objs) - 1)
     for _ in range(400):
         ep = cp.empty_patches(lay())
         if not ep:
@@ -249,7 +255,10 @@ SPOTS = [  # (id, name, type, cell c, r)
     ('obj.pitch-1', 'trigger', 5, 17), ('obj.pitch-2', 'trigger', 23, 17), ('obj.pitch-3', 'trigger', 28, 17), ('obj.pitch-4', 'trigger', 22, 14),
     ('obj.sanitary-door', 'anchor', 24, 12),
     ('exit.trail.official', 'trigger', 33, 15), ('exit.trail.forgotten', 'trigger', 2, 15), ('exit.trail.other', 'trigger', 29, 8),
+    # GAME-287 · кадри дня 1 розділу 2 (src/content/photos.ts CH2_PHOTOS): суха погода — орхідея на краю лісу біля виходу на офіційну стежку, дощ — орхідея під навісом рецепції.
+    ('obj.photo-orchid', 'anchor', 33, 13), ('obj.photo-drops', 'anchor', 8, 13),
 ]
+PHOTO_SPOTS = ('obj.photo-orchid', 'obj.photo-drops')
 
 
 def tmj(g):
