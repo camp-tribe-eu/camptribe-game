@@ -45,6 +45,7 @@ import { ambient, ambientMix, isIntroOpen, music } from './audio';
 import { sfxPlayer } from './audio/sfx';
 import { nightSounds } from './audio/night-sounds';
 import { fireplaceDue, liveSpot, spotMove, storyMoves } from './content/director';
+import { isPlanSpot } from './content/ch2-plan';
 import { paintRoom } from './view/intro-room';
 import { paintColdOpen } from './view/cold-open';
 import { portraitFor } from './view/portraits';
@@ -248,7 +249,7 @@ let heartMin = -1;
 const actOnMap = (name: string): void => {
   if (switches.breakSpot.includes(name)) return;
   // GAME-175: об'єкти дня 1 удома (крок, річ, полиця, авто, багажник) — ті самі команди ядра, що були кнопками панелі (src/content/map-first.ts).
-  if (isMapFirstSpot(name)) {
+  if (isMapFirstSpot(name) && !isPlanSpot(name)) {   // GAME-289: вказівники стежок (табличка плану дня 2, вставки гілок) — сцени режисера (spotMove), а не кроки зрізу 1
     // GAME-178: E/тап на авто не їде, поки рюкзак не порожній і потрібне не в багажнику (те саме, що кільце); локація лишається, HUD каже чому.
     if (name === 'obj.vehicle' && !switches.panelActs && departBlock(bridge.state, GAME_DEFS, backpack)) {
       departNote = true;

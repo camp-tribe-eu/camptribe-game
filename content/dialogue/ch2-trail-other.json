@@ -1,0 +1,72 @@
+{
+  "id": "dlg.ch2-trail-other",
+  "scene": {
+    "titleKey": "dlg.ch2-trail-other.title",
+    "facts": [],
+    "atQuest": "CH2-D2-TRAIL-OTHER-001"
+  },
+  "start": "open",
+  "nodes": [
+    {
+      "id": "open",
+      "speaker": "player",
+      "textKey": "dlg.ch2-trail-other.open",
+      "next": "hint",
+      "branches": [
+        {
+          "when": {
+            "flag": "f.trail-official-closed"
+          },
+          "next": "open-sign"
+        }
+      ]
+    },
+    {
+      "id": "open-sign",
+      "speaker": "player",
+      "textKey": "dlg.ch2-trail-other.open-sign",
+      "next": "hint"
+    },
+    {
+      "id": "hint",
+      "speaker": "player",
+      "textKey": "dlg.ch2-trail-other.hint",
+      "next": "riddle"
+    },
+    {
+      "id": "riddle",
+      "speaker": "player",
+      "textKey": "dlg.ch2-trail-other.riddle",
+      "choices": [
+        {
+          "textKey": "dlg.ch2-trail-other.riddle.c1",
+          "next": "r1",
+          "effects": []
+        },
+        {
+          "textKey": "dlg.ch2-trail-other.riddle.c2",
+          "next": "r2",
+          "effects": []
+        }
+      ]
+    },
+    {
+      "id": "r1",
+      "speaker": "player",
+      "textKey": "dlg.ch2-trail-other.r1",
+      "next": "close"
+    },
+    {
+      "id": "r2",
+      "speaker": "player",
+      "textKey": "dlg.ch2-trail-other.r2",
+      "next": "close"
+    },
+    {
+      "id": "close",
+      "speaker": "player",
+      "textKey": "dlg.ch2-trail-other.close",
+      "end": true
+    }
+  ]
+}
