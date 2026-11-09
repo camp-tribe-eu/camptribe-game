@@ -118,7 +118,7 @@ export function liveSpot(sim: SimState, name: string, defs?: CoreDefs): boolean 
   }
   if (isRequestSpot(name)) return liveRequestSpot(sim.game, name, undefined, todayWeather(sim));   // GAME-180: ціль прохання — лише поки прохання взято й ціль не зроблена
   if (isTraceSpot(name)) return liveTraceSpot(sim.game, name);   // GAME-215: слід дідуся — поки не знайдено
-  if (isPhotoSpot(name)) return livePhotoSpot(sim.game, name);   // GAME-213: кадр, поки фото не зроблено
+  if (isPhotoSpot(name)) return livePhotoSpot(sim.game, name, todayWeather(sim));   // GAME-213: кадр, поки фото не зроблено
   if (name === REPAIR_SPOT) return sim.game.player?.locationId === MAP_LOCATION && sim.game.dialogue === null && !sim.game.flags.includes(REPAIR_FLAG);   // GAME-209: лавка, поки не полагоджена
   if (name === 'obj.litter') return !sim.game.flags.includes('f.litter-cleaned-ch1');
   return true;

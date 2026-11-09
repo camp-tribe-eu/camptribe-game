@@ -89,6 +89,20 @@ function PhotoRoll({ photos, t }: { photos: OfferAtlas['photos']; t: (k: Key) =>
   );
 }
 
+/**
+ * GAME-287: сторінка розділу 2 — засушена орхідея й підпис дідуся. З'являється лише після кадру (орхідея чи краплі на листі в дощ); до того в Атласі її немає зовсім.
+ */
+function OrchidPress({ orchid, t }: { orchid: NonNullable<OfferAtlas['orchid']>; t: (k: Key) => string }) {
+  if (!orchid.found) return null;
+  return (
+    <section class="ui-henry" data-ui="orchid" data-shot={orchid.shot ?? ''} aria-label={t('atlas.orchid')}>
+      <h4 class="ui-henry-title">{t('atlas.orchid')}</h4>
+      <p class="ui-henry-hint" data-ui="orchid-shot">{t(orchid.shot === 'drops' ? 'photo.drops' : 'photo.orchid')}</p>
+      <p class="ui-henry-postcard" data-ui="orchid-note">{t('atlas.orchid.note')}</p>
+    </section>
+  );
+}
+
 /** GAME-200: заповнення — загальне і по сторінках; нагорода за повну сторінку: що буде, а коли повна — що отримано (її видає ядро, тут лише напис). */
 function AtlasFill({ atlas, t }: { atlas: OfferAtlas; t: (k: Key) => string }) {
   return (
@@ -192,6 +206,7 @@ export function AtlasPage({ atlas, lang, t, fly = null }: { atlas: OfferAtlas; l
       <EuropeMap t={t} />
       <HenryTrail henry={atlas.henry} lang={lang} t={t} />
       <PhotoRoll photos={atlas.photos} t={t} />
+      {atlas.orchid && <OrchidPress orchid={atlas.orchid} t={t} />}
     </section>
   );
 }

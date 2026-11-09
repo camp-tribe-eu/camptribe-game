@@ -15,6 +15,13 @@
             "status": "active"
           },
           "next": "home"
+        },
+        {
+          "when": {
+            "quest": "CH2-D1-WALK-001",
+            "status": "active"
+          },
+          "next": "walk"
         }
       ]
     },
@@ -148,6 +155,53 @@
       "id": "bye",
       "speaker": "npc",
       "textKey": "dlg.victoria-chat.bye",
+      "end": true
+    },
+    {
+      "id": "walk",
+      "speaker": "npc",
+      "textKey": "dlg.victoria-chat.walk",
+      "choices": [
+        {
+          "textKey": "dlg.victoria-chat.walk.c1",
+          "next": "walk-go"
+        },
+        {
+          "textKey": "dlg.victoria-chat.walk.c2",
+          "next": "walk-later"
+        }
+      ]
+    },
+    {
+      "id": "walk-go",
+      "speaker": "npc",
+      "textKey": "dlg.victoria-chat.walk-go",
+      "next": "walk-tip",
+      "branches": [
+        {
+          "when": {
+            "flag": "f.photo-ch2-orchid"
+          },
+          "next": "walk-shown"
+        }
+      ]
+    },
+    {
+      "id": "walk-tip",
+      "speaker": "npc",
+      "textKey": "dlg.victoria-chat.walk-tip",
+      "end": true
+    },
+    {
+      "id": "walk-shown",
+      "speaker": "npc",
+      "textKey": "dlg.victoria-chat.walk-shown",
+      "end": true
+    },
+    {
+      "id": "walk-later",
+      "speaker": "npc",
+      "textKey": "dlg.victoria-chat.walk-later",
       "end": true
     }
   ]
