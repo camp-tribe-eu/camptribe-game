@@ -105,10 +105,11 @@ describe('локації розділу 2 не інертні (GAME-283 ↔ GAME
 });
 
 describe('замкнені локації — не ходи (GAME-285)', () => {
-  it('на старті гри Visit до локацій розділу 2 не пропонується; після завершення CH1-D3-HOME-001 мапа Мюллерталя відкрита', () => {
+  it('на старті гри Visit до локацій розділу 2 не пропонується; після CH1-D3-HOME-001 — лише з «Продовжити подорож» (GAME-295: chapterStart)', () => {
     const visits = (s: ReturnType<typeof initialState>) => moves(s, GAME_DEFS).filter((m) => m.type === 'Visit').map((m) => (m as { locationId: string }).locationId);
     expect(visits(initialState(0))).not.toContain('loc.camp.mullerthal');
     const done = { ...initialState(0), quests: { 'CH1-D3-HOME-001': { status: 'completed', done: [] } } } as never;
-    expect(visits(done)).toContain('loc.camp.mullerthal');
+    expect(visits(done)).not.toContain('loc.camp.mullerthal');
+    expect(visits({ ...(done as object), chapterStart: 0 } as never)).toContain('loc.camp.mullerthal');
   });
 });
