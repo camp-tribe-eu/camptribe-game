@@ -8,7 +8,7 @@ export type AmbientMix = Readonly<Partial<Record<AmbientLayer, number>>>;
 
 export interface AmbientState {
   /** Мапа, на якій герой; null — світ ще не завантажено. */
-  readonly map: 'camp' | 'home' | 'shop' | 'road' | null;
+  readonly map: 'camp' | 'home' | 'shop' | 'road' | 'mullerthal' | null;
   /** Вступ (лист і дощ за вікном). */
   readonly intro: boolean;
   /** Герой біля берега озера. */
@@ -42,6 +42,7 @@ export function ambientMix(s: AmbientState): AmbientMix {
   switch (s.map) {
     case 'home': return { rain: RAIN_LEVEL * 0.8 };
     case 'camp': if (s.swimming === true) return { camp: 0.3, lake: 0.6 }; return { camp: 1, ...(s.nearLake ? { lake: 0.8 } : {}), ...(s.fireLit && s.nearFire ? { fire: 0.9 } : {}) };
+    case 'mullerthal': return { camp: 1 };   // GAME-295: ліс і галявина (озера й вогнища на цій мапі немає)
     case 'shop': return { shop: 0.7 };   // GAME-204: тиха вентиляція й рідкий шурхіт крамниці
     case 'road': return { [s.transport === 'transport.bike' ? 'road-bike' : 'road-car']: 1 };
     default: return {};

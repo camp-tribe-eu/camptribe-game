@@ -89,7 +89,7 @@ describe('перебір меню на справжньому контенті (
     for (const r of RUNS) {
       // GAME-283: ходи у інертні локації (мапа без сюжету) не пропонуються — очікуваний набір обчислюється, не вписаний.
       const inert = inertLocations(DEFS.story as NonNullable<typeof DEFS.story>);
-      expect(r.locations, r.label).toEqual(new Set(Object.keys(DEFS.story?.locations ?? {}).filter((id) => !inert.has(id) && (!ch2Locations(DEFS.story as never).has(id) || DEFS.story?.locations[id]?.unlockedBy === 'CH1-D3-HOME-001'))));
+      expect(r.locations, r.label).toEqual(new Set(Object.keys(DEFS.story?.locations ?? {}).filter((id) => !inert.has(id) && !ch2Locations(DEFS.story as never).has(id))));   // GAME-295: Мюллерталь (unlockedBy кінця розділу) відчиняє лише «Продовжити подорож» — у переборі розділу 1 його немає
       expect(r.visits.length, r.label).toBeGreaterThan(10);
       expect(r.ended.length, r.label).toBeGreaterThan(0);
       expect(r.states, r.label).toBeGreaterThan(30);

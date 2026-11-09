@@ -151,9 +151,17 @@ export const canRestNow = (st: Pick<StoryDefs, 'quests'> | undefined, d: { reado
 
 const completed = (d: StoryDraft, questId: string | undefined): boolean => questId === undefined || own(d.quests, questId)?.status === 'completed';
 
+/**
+ * GAME-295: місце, яке відкриває КІНЕЦЬ розділу (квест з `end`, напр. Мюллерталь після CH1-D3-HOME-001), відкривається лише коли гравець почав наступний
+ * розділ («Продовжити подорож», `chapterStart`). Без цього між кінцем розділу 1 і стартом розділу 2 можна було приїхати в Мюллерталь і говорити з господинею —
+ * поза сюжетом (вибір місця ще до прибуття), а перебір розділу 1 ріс на 47 % (story-offer GAME-48: 104 тис. → 153 тис. станів).
+ */
+export const unlockOpen = (st: Pick<StoryDefs, 'quests'>, d: { readonly quests: StoryDraft['quests']; readonly chapterStart?: number }, questId: string | undefined): boolean =>
+  questId === undefined || (own(d.quests, questId)?.status === 'completed' && (!own(st.quests, questId)?.end || d.chapterStart !== undefined));
+
 export function locationOpen(st: StoryDefs, d: StoryDraft, p: PlayerState, id: string): boolean {
   const loc = own(st.locations, id);
-  return !!loc && matches(loc.when, p) && completed(d, loc.unlockedBy);
+  return !!loc && matches(loc.when, p) && unlockOpen(st, d, loc.unlockedBy);
 }
 
 export function npcOpen(st: StoryDefs, d: StoryDraft, p: PlayerState, id: string): boolean {

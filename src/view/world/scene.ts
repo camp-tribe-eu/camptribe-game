@@ -447,6 +447,7 @@ export class WorldScene extends Phaser.Scene {
     this.load.tilemapTiledJSON('home', 'maps/home.tmj');
     this.load.tilemapTiledJSON('shop', 'maps/shop.tmj');
     this.load.tilemapTiledJSON('road', 'maps/road.tmj');
+    this.load.tilemapTiledJSON('mullerthal', 'maps/mullerthal.tmj');
     // GAME-40: три UI-звуки (SND-001…003). Літерали тут, бо сторож check-scene-refs перевіряє існування файлів лише за літералами в
     // this.load.*; відповідність ключів/шляхів таблиці UI_SOUND_FILES доводить src/audio/ui-sounds.test.ts.
     this.load.audio('ui-click', 'audio/ui-click_001.ogg');

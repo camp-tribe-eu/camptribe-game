@@ -5,7 +5,7 @@ import type { Command } from '../core/commands';
 import type { CoreDefs, StoryDefs } from '../core/defs';
 import { canonical } from '../core/hash';
 import type { GameState } from '../core/state';
-import { eventSeenFlag, gateOpen, questSlept } from '../core/story';
+import { eventSeenFlag, gateOpen, questSlept, unlockOpen } from '../core/story';
 import { ERRAND_PREFIX } from './errands';
 
 /**
@@ -74,12 +74,12 @@ export function moves(s: GameState, defs: CoreDefs, withRequests = false): Move[
   const inertLoc = inertLocations(st);
   // GAME-285: замкнена локація (unlockedBy ще не завершено) — не хід: ядро відповіло б LOCKED. Сім локацій розділу 2 інакше додавали б до кожного стану
   // розділу 1 сім відмов (бот: 560–630 с → 915 с). Простір досяжних станів не міняється — відкидається лише те, що ядро й так відхиляло.
-  for (const [id, l] of Object.entries(st.locations)) if (!inertLoc.has(id) && (l.unlockedBy === undefined || s.quests[l.unlockedBy]?.status === 'completed')) out.push({ type: 'Visit', locationId: id });
+  for (const [id, l] of Object.entries(st.locations)) if (!inertLoc.has(id) && unlockOpen(st, s, l.unlockedBy)) out.push({ type: 'Visit', locationId: id });
   // GAME-256: сон — хід лише тоді, коли активний крок чекає наступного дня (ворота `gate.day`). Без годинника сон «абстрактний» (де є герой), а лічильник
   // обмежений стелею — простір станів перебору й бота росте лише там, де сюжет справді чекає на день; у решті станів ходу немає.
   if (!s.dialogue && s.player && Object.entries(s.quests).some(([id, q]) => q.status === 'active' && !gateOpen(st.quests[id]?.gate, questSlept(id, s)))) out.push({ type: 'Sleep' });
   // GAME-286: NPC у замкненій локації (господиня Мюллерталя в розділі 1) — не хід: ядро відмовило б, а бот розділу 1 отримав би зайву відмову в кожному стані.
-  const lockedLoc = (id: string): boolean => { const u = st.locations[st.npcs[id]?.locationId ?? '']?.unlockedBy; return u !== undefined && s.quests[u]?.status !== 'completed'; };
+  const lockedLoc = (id: string): boolean => !unlockOpen(st, s, st.locations[st.npcs[id]?.locationId ?? '']?.unlockedBy);   // GAME-295: та сама умова, що в ядрі
   for (const id of Object.keys(st.npcs)) if (!chat.has(id) && !lockedLoc(id)) out.push({ type: 'Talk', npcId: id });
   // Подія в дорозі — хід СЕРЕДОВИЩА (кидок симуляції), а не гравця: перебір бачить і «сталась», і «ні».
   for (const [id, d] of Object.entries(st.dialogues)) if (d.trigger) out.push({ type: 'RoadEvent', eventId: id });

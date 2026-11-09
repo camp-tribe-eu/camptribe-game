@@ -115,7 +115,7 @@ describe('панель ховає кнопку лише там, де мапа д
   /** Знахідки: схована дія, якої немає ні в живого об'єкта, ні фізично на мапі. */
   const orphans = (sim: SimState, onMap: Readonly<Record<'home' | 'shop' | 'road', readonly string[]>>): string[] => {
     const map = mapKeyFor(sim.game.player?.locationId);
-    if (map === 'camp' || map === 'road') return hidden(sim);
+    if (map === 'camp' || map === 'road' || map === 'mullerthal') return hidden(sim);
     return hidden(sim).filter((k) => !(MAP_SPOTS[map] as readonly string[]).some((n) => onMap[map].includes(n) && [...(resolveSpot(sim, DEFS, n)?.moves ?? []), ...(k === 'Checkout|' ? resolveSpot(sim, DEFS, n)?.options ?? [] : [])].some((m) => moveKey(m) === k) || (k.startsWith('Talk|') && onMap[map].includes(k.slice(5))) || (k.startsWith('Visit|') && onMap[map].includes('obj.vehicle') && resolveSpot(sim, DEFS, 'obj.vehicle') !== null)));   // GAME-183: живе авто покриває всі відкриті дороги звідси
   };
   const real = { home: placed('home'), shop: placed('shop'), road: placed('road') };

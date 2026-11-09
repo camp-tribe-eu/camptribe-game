@@ -20,7 +20,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(os.path.dirname(HERE))
 PXM = 28
 SIZE_TOL = 0.4
-ENABLED = {'overlap': True, 'order': True, 'water': True, 'size': True, 'empty': True, 'patches': True}
+ENABLED = {'overlap': True, 'order': True, 'water': True, 'size': True, 'empty': True, 'patches': True, 'plant': True}
 PATCH = 96   # 3x3 тайли
 
 
@@ -78,6 +78,10 @@ def check(layout, name='layout'):
         ep = empty_patches(layout)
         if len(ep) > layout.get('max_empty_patches', 0):
             out.append(('PLACE_PATCH', name, f'{len(ep)} порожніх вікон {PATCH}x{PATCH} px (перше {ep[0]}), дозволено {layout.get("max_empty_patches", 0)}'))
+    if ENABLED['plant']:   # GAME-295: квіти й травинки ростуть на траві, не на стежці/ґрунті/підлозі/містку (layout['bare'] — прямокутники [x0,y0,x1,y1] без рослинності)
+        for o in objs:
+            if o.get('plant') and any(r[0] <= o['x'] < r[2] and r[1] <= o['y'] - 1 < r[3] for r in layout.get('bare', [])):
+                out.append(('PLACE_PLANT', name, f"{o['id']} ({o['x']:.0f},{o['y']:.0f}): рослина на стежці/ґрунті, а не на траві"))
     if ENABLED['size']:
         for o in objs:
             if o.get('real_h_m'):
@@ -97,7 +101,12 @@ def maps_layouts():
                 if o.get('type') in ('solid', 'prop') and o.get('width', 0) > 0:
                     objs.append({'id': f"{o.get('name') or o['id']}", 'solid': True, 'x': o['x'] + o['width'] / 2, 'y': o['y'] + o['height'],
                                  'foot': [o['width'], o['height']], 'w': o['width'], 'h': o['height']})
-        res.append((os.path.basename(f), {'objects': objs}))
+        side = os.path.join(ROOT, 'art/placement', os.path.basename(f)[:-4] + '.json')   # GAME-295: сліди й вікно «без порожнечі» мапи, що збирається скриптом (у .tmj лише точки)
+        if os.path.exists(side):
+            lay = json.load(open(side, encoding='utf8'))
+        else:
+            lay = {'objects': objs}
+        res.append((os.path.basename(f), lay))
     return res
 
 
@@ -116,6 +125,7 @@ BAD = {
     'PLACE_ORDER': {'px_per_m': 28, 'objects': [ob('bush', 80, 120, 48, 45, [36, 10], z=0), ob('rock', 90, 100, 34, 28, [28, 8], z=1)]},   # камінь вище на екрані, але поверх куща
     'PLACE_WATER': {'px_per_m': 28, 'objects': [ob('rock', 100, 200, 34, 28, [28, 8], z=0), ob('pond', 100, 200, 128, 64, [128, 64], solid=False, water=True)]},
     'PLACE_SIZE': {'px_per_m': 28, 'objects': [ob('bush', 80, 100, 96, 90, [36, 10], z=0, real_h_m=1.0)]},
+    'PLACE_PLANT': {'px_per_m': 28, 'bare': [[0, 80, 300, 120]], 'objects': [ob('flower', 100, 100, 8, 12, [6, 3], solid=False, plant=True)]},   # квітка посеред стежки
     'PLACE_EMPTY': {'px_per_m': 28, 'objects': []},
     'PLACE_PATCH': {'px_per_m': 28, 'view': [0, 0, 300, 200], 'objects': [ob('bush', 40, 60, 48, 45, [36, 10], z=0)]},   # праворуч порожнеча
 }
