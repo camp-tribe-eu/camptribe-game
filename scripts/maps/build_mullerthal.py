@@ -57,6 +57,7 @@ class Grid:
         self.occ = set()        # клітинки, зайняті слідом твердого предмета
         self.ab = set()         # клітинки шару above (крони, дахи): стампи не накладаються — інакше вирізає шматки
         self.bare = set()       # клітинки без рослинності (стежки, майданчики, місток, вода): квіти там не ростуть
+        self.wet = set()        # з них вода (заводь, струмок): каміння в воді — природне (валуни біля водоспаду), на сухій стежці — ні (GAME-296)
         self.keep = set()       # клітинки, які мають лишатись вільними (стежки, цілі, підходи)
         self.plants = set()     # індекси objs-рослин
         self.objs = []          # сліди для check_placement: (name, type, x, y, w, h, sw, sh)
@@ -67,6 +68,13 @@ class Grid:
 
     def free(self, cells):
         return all(0 <= c < W and 0 <= r < H and (c, r) not in self.occ and (c, r) not in self.keep for c, r in cells)
+
+    def dry_bare(self):
+        return self.bare - self.wet
+
+    def rock(self, c, r):
+        """Камінь (GAME-296): лише на траві — не на стежці, майданчику, містку (dry_bare) і не під кроною дерева (ab); сторож PLACE_PATH у scripts/art/check_placement.py."""
+        return (c, r) not in self.dry_bare() and (c, r) not in self.ab and self.stamp('rock', 'ch2-muellerthal', 15, 0, 1, 1, c, r)
 
     def stamp(self, name, sheet, col, row, w, h, c, r, solid=True, force=False):
         """Шматок w×h тайлів (col,row) → (c,r); низ — у walls і слід, решта — above. Повертає False, якщо слід не вільний."""
@@ -123,6 +131,7 @@ def build():
     def water(c, r, col, row, wall=True):
         g.put('ground', c, r, 'ch2-muellerthal', col, row)
         g.bare.add((c, r))
+        g.wet.add((c, r))
         if wall:
             g.put('walls', c, r, 'ch2-muellerthal', col, row)
             g.occ.add((c, r))
@@ -140,6 +149,7 @@ def build():
         for c, (pc, pr) in zip((15, 16, 17, 18), [PLANK[0], PLANK[1], PLANK[1], PLANK[2]]):
             g.put('decor', c, r, 'lpc-terrain', pc, pr)
             g.bare.add((c, r))
+            g.wet.discard((c, r))                              # місток: під ним вода, але стоїмо на дошках
     for r in (15, 16):
         for c in (15, 18):
             g.keep.add((c, r))
@@ -164,6 +174,8 @@ def build():
         tent(4, 13),                                           # ділянка 4 (північний захід)
         tent(4, 19),                                           # ділянка 1 (захід)
         prop('table', 6, 20),
+        prop('bikes', 4, 17),                                  # велосипеди родини при ділянці 1 (GAME-296: каміння зі стежки замінено справжніми предметами)
+        prop('tap', 18, 17),                                   # кран біля містка — ближче до ділянок 2–3
         prop('caravan', 19, 19),                               # ділянка 2: караван
         prop('hookup', 25, 19),
         prop('motorhome', 27, 19),                             # ділянка 3: кемпер
@@ -187,8 +199,8 @@ def build():
         for dc in (-1, 0, 1):
             for dr in (0, 1):
                 g.keep.add((c + dc, r + dr))
-    for c, r in [(15, 10), (18, 12), (15, 13), (19, 14), (18, 18), (15, 20), (19, 22)]:
-        g.stamp('rock', 'ch2-muellerthal', 15, 0, 1, 1, c, r)
+    for c, r in [(15, 10), (18, 12), (15, 13), (19, 14), (15, 20), (19, 22), (28, 14), (21, 24)]:   # GAME-296: лише на траві (g.rock відмовляє на стежці й майданчику)
+        assert g.rock(c, r), (c, r)
 
     # --- ліс: сосни й підлісок (випадково, по лісових зонах, без накладання крон)
     def forest(c, r):
@@ -199,7 +211,7 @@ def build():
         return g.stamp('pine', 'lpc-terrain', 30, 0, 2, 5, c, rb - 4)
     def thicket(c, rb):
         return g.stamp('thicket', 'ch2-muellerthal', 0, 12, 3, 3, c, rb - 2)
-    cells = [(c, r) for r in range(5, H) for c in range(W) if forest(c, r) and (c, r) not in g.keep]
+    cells = [(c, r) for r in range(5, H) for c in range(W) if forest(c, r) and (c, r) not in g.keep and (c, r) not in g.bare]   # GAME-296: ні дерева, ні каміння на стежках і майданчиках
     for kind in range(3):
         rnd.shuffle(cells)
         for c, r in cells:
@@ -208,7 +220,7 @@ def build():
             elif kind == 1:
                 thicket(c, r)
             elif kind == 2 and rnd.random() < 0.08:
-                g.stamp('rock', 'ch2-muellerthal', 15, 0, 1, 1, c, r)
+                g.rock(c, r)
     return g
 
 
@@ -231,16 +243,15 @@ def finish(g):
             break
         px, py = ep[0]
         cells = [(px // T + i, py // T + j) for j in range(3) for i in range(3)]
-        cands = [c for c in cells if g.free([c]) and not g.L['walls'][c[1] * W + c[0]] and not g.L['decor'][c[1] * W + c[0]]]
+        cands = [c for c in cells if g.free([c]) and c not in g.dry_bare() and not g.L['walls'][c[1] * W + c[0]] and not g.L['decor'][c[1] * W + c[0]]]
         if not cands:
-            cands = [c for c in cells if (c not in g.occ) and not g.L['walls'][c[1] * W + c[0]]]
-        c, r = cands[len(cands) // 2] if cands else (px // T + 1, py // T + 1)
-        near_edge = min(c, W - 1 - c, H - 1 - r) <= 4
-        if near_edge and g.free([(c, r), (c + 1, r), (c + 2, r), (c + 1, r - 1)]) is False and False:
-            pass
+            cands = [c for c in cells if (c not in g.occ) and c not in g.dry_bare() and not g.L['walls'][c[1] * W + c[0]]]   # GAME-296: стежка й майданчик — не місце для каміння
+        wet = [c for c in cells if c in g.wet]                 # вікно лише з води й стежки: камінчик у воді (заводь), але не на стежці
+        assert cands or wet, f'порожнє вікно {px},{py} без трави й води: потрібен справжній предмет у build() (GAME-296)'
+        c, r = cands[len(cands) // 2] if cands else wet[len(wet) // 2]
         n, sh, col, row = rnd.choice(small)
         if (c, r) in g.bare:
-            n, sh, col, row = small[3]                         # на стежці — лише камінчик
+            n, sh, col, row = small[3]                         # у воді й на дошках — лише камінчик, не квітка
         g.put('decor', c, r, sh, col, row)
         g.objs.append((f'{n}', 'prop', c * T + 12, r * T + 20, 8, 4, 32, 32))
         if n == 'orchid':
@@ -252,7 +263,7 @@ SPOTS = [  # (id, name, type, cell c, r)
     ('s.start', 'spawn', 12, 17), ('s.car', 'spawn', 12, 22),
     ('npc.host-mullerthal', 'npc', 9, 14),
     ('obj.vehicle', 'trigger', 13, 22), ('obj.reception-desk', 'anchor', 10, 14),
-    ('obj.pitch-1', 'trigger', 5, 17), ('obj.pitch-2', 'trigger', 23, 17), ('obj.pitch-3', 'trigger', 28, 17), ('obj.pitch-4', 'trigger', 22, 14),
+    ('obj.pitch-1', 'trigger', 3, 17), ('obj.pitch-2', 'trigger', 23, 17), ('obj.pitch-3', 'trigger', 28, 17), ('obj.pitch-4', 'trigger', 22, 14),
     ('obj.sanitary-door', 'anchor', 24, 12),
     ('exit.trail.official', 'trigger', 33, 15), ('exit.trail.forgotten', 'trigger', 2, 15), ('exit.trail.other', 'trigger', 29, 8),
     # GAME-287 · кадри дня 1 розділу 2 (src/content/photos.ts CH2_PHOTOS): суха погода — орхідея на краю лісу біля виходу на офіційну стежку, дощ — орхідея під навісом рецепції.
@@ -282,9 +293,9 @@ def tmj(g):
 
 
 def placement(g):
-    objs = [{'id': o[0], 'solid': o[1] == 'solid', 'x': o[2] + o[4] / 2, 'y': o[3] + o[5], 'foot': [o[4], o[5]], 'w': o[6], 'h': o[7], **({'plant': True} if i in g.plants else {})} for i, o in enumerate(g.objs)]
-    bare = [[c * T, r * T, c * T + T, r * T + T] for c, r in sorted(g.bare, key=lambda k: (k[1], k[0]))]
-    return json.dumps({'view': [0, 5 * T, W * T, H * T], 'bare': bare, 'objects': objs}, ensure_ascii=False, indent=0) + '\n'
+    objs = [{'id': o[0], 'solid': o[1] == 'solid', 'x': o[2] + o[4] / 2, 'y': o[3] + o[5], 'foot': [o[4], o[5]], 'w': o[6], 'h': o[7], **({'plant': True} if i in g.plants else {}), **({'loose': True} if o[0] in ('rock', 'pebble') else {})} for i, o in enumerate(g.objs)]
+    box = lambda cells: [[c * T, r * T, c * T + T, r * T + T] for c, r in sorted(cells, key=lambda k: (k[1], k[0]))]
+    return json.dumps({'view': [0, 5 * T, W * T, H * T], 'bare': box(g.bare), 'wet': box(g.wet), 'objects': objs}, ensure_ascii=False, indent=0) + '\n'
 
 
 def preview(g, path):

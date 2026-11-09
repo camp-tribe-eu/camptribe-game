@@ -1,3 +1,4 @@
+/// <reference types="vite/client" />   // GAME-296: story.ts теж потрапляє в граф tsconfig.e2e.json (src/ui/story-types → agenda → map-first → ch2-live → story): import.meta.glob без типів Vite там не компілюється
 // Збирає сюжет для ядра (StoryDefs) з перевіреного content/ (GAME-29). Валідатор доводить
 // досяжність і відсутність тупиків; тут — лише переклад полів у форму ядра. Те, чого ядро ще не
 // вміє (`deliver`, продаж у NPC), не пропускається мовчки: збірка падає з назвою поля (закон 4).

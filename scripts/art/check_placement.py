@@ -7,7 +7,7 @@
 
 Коди: PLACE_OVERLAP (сліди двох твердих предметів перетинаються: камінь у кущі), PLACE_ORDER (предмет намальовано поверх іншого, але його
 база вище на екрані: порушено y-sort), PLACE_WATER (твердий предмет стоїть у воді), PLACE_SIZE (висота спрайта поза ±40 % від справжньої,
-28 px/м), PLACE_PATCH (у видимій сцені layout['view']=[x0,y0,x1,y1] є вікно 96x96 px, яке не перетинає жодного предмета: порожнеча), PLACE_EMPTY (не перевірено жодного предмета: тиша — не факт, закон 4).
+28 px/м), PLACE_PATH (камінь/уламок loose стоїть на клітинці стежки чи майданчика (layout['bare'] без layout['wet']), GAME-296), PLACE_PATCH (у видимій сцені layout['view']=[x0,y0,x1,y1] є вікно 96x96 px, яке не перетинає жодного предмета: порожнеча), PLACE_EMPTY (не перевірено жодного предмета: тиша — не факт, закон 4).
 Формат layout.json: {"px_per_m":28,"objects":[{id,kind,x,y(база),w,h(спрайт),foot:[w,h],solid,z,real_h_m?,water?}]}; слід — прямокутник foot, центр по x, низ у y.
 Мапи: об'єкти objectgroup із type 'solid'/'prop' і width>0 — це сліди (x,y — лівий верх, як у Tiled).
 """
@@ -20,8 +20,9 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(os.path.dirname(HERE))
 PXM = 28
 SIZE_TOL = 0.4
-ENABLED = {'overlap': True, 'order': True, 'water': True, 'size': True, 'empty': True, 'patches': True, 'plant': True}
+ENABLED = {'overlap': True, 'order': True, 'water': True, 'size': True, 'empty': True, 'patches': True, 'plant': True, 'path': True}
 PATCH = 96   # 3x3 тайли
+LOOSE = ('rock', 'pebble')   # GAME-296: каміння за іменем (і будь-що з loose=true) — на траві, не на стежці
 
 
 def foot(o):
@@ -82,6 +83,12 @@ def check(layout, name='layout'):
         for o in objs:
             if o.get('plant') and any(r[0] <= o['x'] < r[2] and r[1] <= o['y'] - 1 < r[3] for r in layout.get('bare', [])):
                 out.append(('PLACE_PLANT', name, f"{o['id']} ({o['x']:.0f},{o['y']:.0f}): рослина на стежці/ґрунті, а не на траві"))
+    if ENABLED['path']:   # GAME-296: каміння й уламки (loose) лежать на траві, а не на стежці/майданчику/містку: слід каменя не перетинає жодної клітинки layout['bare']
+        for o in objs:
+            if o.get('loose') or o['id'] in LOOSE:
+                hit = next((r for r in layout.get('bare', []) if r not in layout.get('wet', []) and inter(foot(o), tuple(r))), None)   # стежка = bare без води: камінчик у заводі природний
+                if hit is not None:
+                    out.append(('PLACE_PATH', name, f"{o['id']} ({o['x']:.0f},{o['y']:.0f}): камінь на стежці/майданчику (клітинка {hit[0] // 32},{hit[1] // 32}), а не на траві"))
     if ENABLED['size']:
         for o in objs:
             if o.get('real_h_m'):
@@ -126,6 +133,7 @@ BAD = {
     'PLACE_WATER': {'px_per_m': 28, 'objects': [ob('rock', 100, 200, 34, 28, [28, 8], z=0), ob('pond', 100, 200, 128, 64, [128, 64], solid=False, water=True)]},
     'PLACE_SIZE': {'px_per_m': 28, 'objects': [ob('bush', 80, 100, 96, 90, [36, 10], z=0, real_h_m=1.0)]},
     'PLACE_PLANT': {'px_per_m': 28, 'bare': [[0, 80, 300, 120]], 'objects': [ob('flower', 100, 100, 8, 12, [6, 3], solid=False, plant=True)]},   # квітка посеред стежки
+    'PLACE_PATH': {'px_per_m': 28, 'bare': [[64, 64, 160, 96]], 'objects': [ob('rock', 100, 90, 32, 28, [28, 20], z=0, loose=True)]},   # камінь посеред стежки (GAME-296)
     'PLACE_EMPTY': {'px_per_m': 28, 'objects': []},
     'PLACE_PATCH': {'px_per_m': 28, 'view': [0, 0, 300, 200], 'objects': [ob('bush', 40, 60, 48, 45, [36, 10], z=0)]},   # праворуч порожнеча
 }

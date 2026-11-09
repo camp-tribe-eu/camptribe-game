@@ -58,7 +58,7 @@ import { forageLeft, forageSpent } from './core/forage';
 import { agendaOf, minimapTargets, onboarding, type MiniFrame } from './content/agenda';
 import type { MapKey } from './content/map-first';
 import { taskGate } from './core/wave';
-import { MAP_SPOTS, departBlock, isBulky, isMapFirstSpot, mapKeyFor, moveKey, needsLeft, nextTarget, npcLive, resolveSpot, spotLook, unpackMoves } from './content/map-first';
+import { MAP_SPOTS, departBlock, isBulky, isMapFirstSpot, mapKeyFor, moveKey, needsLeft, nextTarget, npcLive, resolveSpot, sameMove, spotLook, unpackMoves } from './content/map-first';
 import { carriedOf, takeFlag } from './core/packing';
 import type { GameState } from './core/state';
 import { progressOf, titleOf } from './core/progress';
@@ -249,7 +249,7 @@ let heartMin = -1;
 const actOnMap = (name: string): void => {
   if (switches.breakSpot.includes(name)) return;
   // GAME-175: об'єкти дня 1 удома (крок, річ, полиця, авто, багажник) — ті самі команди ядра, що були кнопками панелі (src/content/map-first.ts).
-  if (isMapFirstSpot(name) && !isPlanSpot(name)) {   // GAME-289: вказівники стежок (табличка плану дня 2, вставки гілок) — сцени режисера (spotMove), а не кроки зрізу 1
+  if (isMapFirstSpot(name) && !(isPlanSpot(name) && spotMove(bridge.state, name) !== null)) {   // GAME-289: вказівники стежок (табличка плану дня 2, вставки гілок) — сцени режисера (spotMove), а не кроки зрізу 1
     // GAME-178: E/тап на авто не їде, поки рюкзак не порожній і потрібне не в багажнику (те саме, що кільце); локація лишається, HUD каже чому.
     if (name === 'obj.vehicle' && !switches.panelActs && departBlock(bridge.state, GAME_DEFS, backpack)) {
       departNote = true;
@@ -259,7 +259,7 @@ const actOnMap = (name: string): void => {
     const r = resolveSpot(bridge.state, GAME_DEFS, name);
     if (!r) return;
     // GAME-183: вибір із кількох дій (куди їхати, що сушити, як завершити крок) — рамка вибору, команда піде з її кнопки.
-    if (r.options || r.confirm) { choiceSpot = name; storyChanged(); for (const l of talkListeners) l(); return; }
+    if (r.options || r.confirm || r.trips) { choiceSpot = name; storyChanged(); for (const l of talkListeners) l(); return; }
     const first = r.moves[0];
     // GAME-245: узяти річ удома — одна команда TakeItem; річ зникає з місця, герой показує велику картку (назва + репліка) ~1,5 с.
     if (first?.type === 'TakeItem') {
@@ -564,7 +564,9 @@ render(h(Shell, {
       // Підтверджена поїздка авто — увесь ланцюг ходів (напр. завершити крок + виїхати), а не лише останній.
       const trip = choiceSpot !== null ? resolveSpot(bridge.state, GAME_DEFS, choiceSpot) : null;
       const last = trip?.moves.at(-1);
-      const seq = trip?.confirm && last !== undefined && moveKey(last) === moveKey(intent) ? trip.moves : [intent];
+      // GAME-296: поїздка-ланцюг (туди й назад) — відповідь названа за першим ходом, надсилається весь ланцюг.
+      const route = trip?.trips?.find((t) => t[0] !== undefined && sameMove(t[0], intent));
+      const seq = route ?? (trip?.confirm && last !== undefined && moveKey(last) === moveKey(intent) ? trip.moves : [intent]);
       choiceSpot = null;
       const before = bridge.state.game.friend?.gift;
       for (const m of seq) bridge.send(m);
