@@ -27,6 +27,7 @@ export const MUSIC_BY_MAP: Readonly<Record<MapKey, MusicTrack | 'silence' | 'by-
   road: 'main',
   shop: 'main',
   camp: 'by-daylight',
+  mullerthal: 'by-daylight',   // GAME-295: кемпінг Мюллерталь — як табір: день → main, вечір → night
 };
 
 /** Вечірня тема табору — від вечора (сутінки daylight.ts починаються о 17:50; музика вмикається о 19:00, коли вже видно синій) до світанку. */

@@ -23,16 +23,17 @@ import { FIREPLACE_SCENE } from './fireplace';
 import type { Move } from './moves';
 import { vehicleReady } from '../view/world/proximity';
 
-export type MapKey = 'home' | 'shop' | 'camp' | 'road';
+export type MapKey = 'home' | 'shop' | 'camp' | 'road' | 'mullerthal';
 /** Локація кожної мапи гри (властивість locationId у .tmj; звіряє map-content.test). */
-export const MAP_LOCATION: Readonly<Record<MapKey, string>> = { home: 'loc.home', shop: 'loc.shop', camp: 'loc.camp.lake', road: 'loc.road' };
+export const MAP_LOCATION: Readonly<Record<MapKey, string>> = { home: 'loc.home', shop: 'loc.shop', camp: 'loc.camp.lake', road: 'loc.road', mullerthal: 'loc.camp.mullerthal' };
 /** Мапи, де кроки сюжету робляться руками (зріз 1 — дім і крамниця; GAME-183 — табір і дорога). */
-export const MAP_FIRST: readonly MapKey[] = ['home', 'shop', 'camp', 'road'];
+export const MAP_FIRST: readonly MapKey[] = ['home', 'shop', 'camp', 'road', 'mullerthal'];
 
 /** Мапа для локації: дім, крамниця й дорога мають свої; решта — табір біля озера. Немає персонажа (вибір героя) — дім: звідти починається гра. */
 export function mapKeyFor(locationId: string | null | undefined): MapKey {
   if (locationId === undefined || locationId === null || locationId === MAP_LOCATION.home) return 'home';
   if (locationId === MAP_LOCATION.shop) return 'shop';
+  if (locationId === MAP_LOCATION.mullerthal) return 'mullerthal';   // GAME-295: кемпінг Мюллерталь має власну мапу (не табір біля озера)
   return locationId === MAP_LOCATION.road ? 'road' : 'camp';
 }
 
@@ -66,6 +67,8 @@ export const MAP_SPOTS = {
     'step.CH1-D3-001', 'step.CH1-D3-GEAR-001', 'step.CH1-D3-ELISE-001', 'step.CH1-D3-RETURN-001', 'step.CH1-D3-HOME-001',
     'take.item.firewood', 'obj.drying', 'obj.sell', 'obj.vehicle',
   ],
+  // GAME-295 · Мюллерталь (public/maps/mullerthal.tmj, scripts/maps/build_mullerthal.py): господиня, авто, ділянки (якорі) і виходи на стежки (вказівники).
+  mullerthal: ['npc.host-mullerthal', 'obj.vehicle', 'obj.pitch-1', 'obj.pitch-2', 'obj.pitch-3', 'obj.pitch-4', 'exit.trail.official', 'exit.trail.forgotten', 'exit.trail.other'],
 } as const satisfies Readonly<Record<MapKey, readonly string[]>>;
 
 /** Квести табору, чиє завершення робиться ногами (GAME-183): сторож «кожен крок табору має місце на мапі» (camp-first.test) звіряє їх із content/quests.json. */

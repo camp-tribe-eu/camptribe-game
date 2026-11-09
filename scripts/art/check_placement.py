@@ -97,7 +97,12 @@ def maps_layouts():
                 if o.get('type') in ('solid', 'prop') and o.get('width', 0) > 0:
                     objs.append({'id': f"{o.get('name') or o['id']}", 'solid': True, 'x': o['x'] + o['width'] / 2, 'y': o['y'] + o['height'],
                                  'foot': [o['width'], o['height']], 'w': o['width'], 'h': o['height']})
-        res.append((os.path.basename(f), {'objects': objs}))
+        side = os.path.join(ROOT, 'art/placement', os.path.basename(f)[:-4] + '.json')   # GAME-295: сліди й вікно «без порожнечі» мапи, що збирається скриптом (у .tmj лише точки)
+        if os.path.exists(side):
+            lay = json.load(open(side, encoding='utf8'))
+        else:
+            lay = {'objects': objs}
+        res.append((os.path.basename(f), lay))
     return res
 
 

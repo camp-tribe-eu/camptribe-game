@@ -19,7 +19,7 @@ export const OWL_WINDOW = 45;
 export const OWL_OFFSETS = [7, 29, 16, 38, 22] as const;
 
 export interface NightState {
-  readonly map: 'camp' | 'home' | 'shop' | 'road' | null;
+  readonly map: 'camp' | 'home' | 'shop' | 'road' | 'mullerthal' | null;
   readonly intro: boolean;
   readonly raining: boolean;
   /** Хвилина доби 0…1439 (daylight.timeOfDay), дробова. */
