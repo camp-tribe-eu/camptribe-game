@@ -12,7 +12,7 @@ import { loadContent } from '../../scripts/validator/load.mjs';
 import { validate } from '../../scripts/validator/checks.mjs';
 import { dispatch, type Command } from '../core/commands';
 import { advance } from '../core/clock';
-import { daysEnded } from '../core/day-summary';
+import { daysEnded, firstCh2Index } from '../core/day-summary';
 import { fromSave, serialize } from '../core/save';
 import { step, type SimState } from '../core/sim';
 import { stateHash } from '../core/hash';
@@ -303,10 +303,27 @@ describe('GAME-288 · сон = сейв, підсумок дня 1, час сц�
     expect(o?.tomorrowKey).toBe('sum.tomorrow.ch2.1');
     const quests = o?.sections.find((x) => x.kind === 'quests')?.keys ?? [];
     expect(quests).toEqual(['q.ch2-arrival-001', 'q.ch2-d1-walk-001', 'q.ch2-d1-summary-001']);
-    expect(o?.sections.find((x) => x.kind === 'night')?.keys).toEqual(['sum.night.tent']);
+    expect(o?.sections.map((x) => x.kind), 'лише факти дня розділу 2').toEqual(['quests']);
     for (const k of [...quests, 'q.ch2-d2-plan-001']) { expect((ukC as Record<string, string>)[k], `uk/${k}`).toBeTruthy(); expect((enC as Record<string, string>)[k], `en/${k}`).toBeTruthy(); }
     for (const l of [uk, en] as Record<string, string>[]) { expect(l['sum.tomorrow.ch2.1']?.length).toBeGreaterThan(10); expect((l['sum.tomorrow.ch2.1'] ?? '').length, 'коротко').toBeLessThanOrEqual(90); }
     expect(tomorrowKeyOf(3), 'тизери розділу 1 не зачеплено: кінець розділу — без тизера').toBeNull();
+  });
+
+  it('секції дня розділу 2 — лише з подій ЦЬОГО дня: без «Ночівлі» розділу 1 (намет біля сосон) і без подій розділу 1 (яблука біля дороги); подію розділу 2 показано', () => {
+    const { sim } = eveningWhole('sunny', ALL_PICKS[0] as Picks);
+    expect(sim.game.flags, 'прапорець ночівлі розділу 1 у стані є — саме його не можна показувати').toContain('f.night-tent');
+    const at = sim.journal.length - 1;
+    const withEvents: SimState = { ...sim, journal: [...sim.journal.slice(0, at), { at: 1, commandId: 'ev-ch1', type: 'RoadEvent', ref: 'dlg.road-apples', cents: 0 }, { at: 1, commandId: 'ev-ch2', type: 'RoadEvent', ref: 'dlg.ev.ch2.test', cents: 0 }, ...sim.journal.slice(at)] };
+    const kinds = (x: SimState): string[] => (summaryOffer(x, GAME_DEFS).summary?.sections ?? []).map((k) => k.kind);
+    expect(kinds(sim), 'день розділу 2 без своїх ночівель і подій — лише квести').toEqual(['quests']);
+    const ev = summaryOffer(withEvents, GAME_DEFS).summary?.sections.find((k) => k.kind === 'events')?.keys ?? [];
+    expect(ev, 'подія розділу 1 не показується, розділу 2 — так').toEqual(['dlg.ev.ch2.test']);
+  });
+  it('розділ 1 не зачеплено: день розділу 1 після кінця (журнал без записів розділу 2) — ночівля й події як були', () => {
+    const s = run({ ...base }, { type: 'Sleep' });
+    expect(firstCh2Index(s.journal)).toBe(-1);
+    const sections = (summaryOffer(s, GAME_DEFS).summary?.sections ?? []).map((k) => k.kind);
+    expect(sections).toContain('night');
   });
 
   it('зсув дня розділу 2: chapterDayBase = 3, день = 4 − 3 = 1 (мутація «зсув прибрано» — день 4 — червоніє в тесті вище, див. опис PR)', () => {
@@ -346,6 +363,7 @@ describe('GAME-288 · сон = сейв, підсумок дня 1, час сц�
 describe('GAME-288 · сейв для e2e (tests/e2e/fixtures/ch2-dinner.json)', () => {
   const file = new URL('../../tests/e2e/fixtures/ch2-dinner.json', import.meta.url);
   it('сейв = те, що ядро збирає зараз; G288_WRITE=1 переписує', () => {
+    n = 900_000;   // ідентифікатори команд у сейві не залежать від порядку інших тестів
     const json = `${serialize(toDinner('sunny', true).sim)}\n`;
     if (process.env.G288_WRITE === '1') { writeFileSync(file, json); return; }
     expect(existsSync(file), 'немає фікстури: G288_WRITE=1').toBe(true);

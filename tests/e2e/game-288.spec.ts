@@ -93,6 +93,7 @@ for (const v of VIEWS) {
     await expect(summary).toHaveAttribute('data-day', '1');
     await expect(summary.locator('h2')).toHaveText('Підсумок дня 1');
     await expect(summary.locator('[data-ui="summary-section"][data-kind="quests"]')).toContainText('Вечір у Мюллерталі');
+    await expect(summary.locator('[data-ui="summary-section"]'), 'лише квести дня: без ночівлі й подій розділу 1').toHaveCount(1);
     await expect(summary.locator('[data-ui="summary-tomorrow"]')).toContainText('стежка, закрита після зсуву');
     await expect(summary.locator('[data-ui="summary-next"]')).toContainText('Закрита стежка');
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), 'без горизонтальної прокрутки').toBe(true);

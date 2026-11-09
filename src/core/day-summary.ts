@@ -73,6 +73,15 @@ export const daysEnded = (sim: Pick<SimState, 'journal'>, defs: CoreDefs): numbe
 const uniq = (xs: readonly string[]): string[] => [...new Set(xs)];
 
 /**
+ * GAME-288 · індекс першого запису розділу 2 у журналі (квест CH2-* або приїзд у Мюллерталь); -1 — розділу 2 ще не було. День, що закінчується не раніше цього запису, — день розділу 2:
+ * його секції беруться лише з подій ЦЬОГО дня, а не з прапорців і подій розділу 1.
+ */
+export const firstCh2Index = (journal: readonly JournalEntry[]): number =>
+  journal.findIndex((e) => e.ref !== null && ((e.type === 'CompleteQuest' && e.ref.startsWith('CH2-')) || (e.type === 'Visit' && e.ref === 'loc.camp.mullerthal')));
+/** Подія в дорозі розділу 2 (id діалогу `dlg.ev.ch2.*`); події розділу 1 в підсумок дня розділу 2 не потрапляють. */
+export const isCh2Event = (id: string): boolean => id.startsWith('dlg.ev.ch2.');
+
+/**
  * Підсумок дня `day` (з 1). null — такого дня в журналі немає. Журнал обрізається з голови (JOURNAL_LIMIT): якщо перший
  * запис — уже не CreateCharacter, номери днів від нього не відлічити, і підсумку немає (чесне «не знаю», а не вигадка).
  * Ночівля й спаковане читаються з НИНІШНІХ прапорців (у прапорців немає часу), тож секції останнього дня правдиві лише
@@ -90,7 +99,10 @@ export function daySummary(sim: Pick<SimState, 'game' | 'journal'>, day: number,
   const ended = ranges.filter((x) => x.ended).length;
   const latest = ended > 0 ? day === ended : day === 1;
   const p = sim.game.player;
-  const night = latest ? sim.game.flags.filter((f) => f.startsWith(NIGHT_PREFIX)) : [];
+  const first = firstCh2Index(sim.journal);
+  const ch2Day = first >= 0 && r.to >= first;   // GAME-288: день розділу 2
+  // Прапорці ночівлі (f.night-*) не мають часу: після розділу 1 там лишається «намет біля сосон» — у дні розділу 2 ночівлі без власного факту нема (секція зникає).
+  const night = latest && !ch2Day ? sim.game.flags.filter((f) => f.startsWith(NIGHT_PREFIX)) : [];
   const packedToday = r.from === 0 || entries.some((e) => e.type === 'PackItem' || e.type === 'UnpackItem' || e.type === 'AutoPack' || e.type === 'TakeItem' || e.type === 'LoadCar' || e.type === 'LeaveItem');
   const packed = latest && packedToday && p && defs.packing ? packedOf(sim.game.flags, defs.packing, p) : [];
   // Нагорода предметами — факт лише тоді, коли квест завершено САМЕ цього дня й нагороду справді видано (grantId у стані).
@@ -111,7 +123,7 @@ export function daySummary(sim: Pick<SimState, 'game' | 'journal'>, day: number,
   const sections: Record<SummaryKind, string[]> = {
     night,
     packed,
-    events: refs('RoadEvent'),
+    events: ch2Day ? refs('RoadEvent').filter(isCh2Event) : refs('RoadEvent'),
     quests,
     // GAME-271: куплене на касі — «куплено», а не «знайдено»: Pickup речі з ціною полиці лише кладе її в кошик, власністю робить Checkout.
     bought: uniq([...refs('BuyItem'), ...paidAtTill]),

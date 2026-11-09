@@ -34,7 +34,7 @@ import { dayOf, tripMinutes, type Weather } from '../core/weather';
 import { CONTENT, memorableFacts } from '../content/story';
 import { moves, progressKey, type Move } from '../content/moves';
 import items from '../../content/items.json';
-import { dayCloseQuests, dayRanges, daySummary, daysEnded, NIGHT_PREFIX } from '../core/day-summary';
+import { dayCloseQuests, dayRanges, firstCh2Index, daySummary, daysEnded, NIGHT_PREFIX } from '../core/day-summary';
 import { type OfferAction, type OfferAtlas, type OfferGoal, type OfferCharacter, type OfferPacking, type OfferProgress, type OfferSummary, type OfferWave, type StoryOffer } from '../ui/story-types';
 import { backpackModel } from './backpack-model';
 import { RAW_WAVES } from '../content/waves';
@@ -301,7 +301,7 @@ export const tomorrowKeyOf = (day: number, ch2 = false): Key | null => {
  * Розділ 2 не почався (записів нема) чи підсумок стосується дня розділу 1 (`day` ≤ base) — 0. Журнал, обрізаний з голови, номерів днів не дає (daySummary тоді null).
  */
 export function chapterDayBase(sim: Pick<SimState, 'journal'>, defs: CoreDefs, day: number): number {
-  const first = sim.journal.findIndex((e) => e.ref !== null && ((e.type === 'CompleteQuest' && isCh2Quest(e.ref)) || (e.type === 'Visit' && e.ref === 'loc.camp.mullerthal')));
+  const first = firstCh2Index(sim.journal);
   if (first < 0) return 0;
   const base = dayRanges(sim.journal, dayCloseQuests(defs)).filter((r) => r.ended && r.to < first).length;
   return day > base ? base : 0;
