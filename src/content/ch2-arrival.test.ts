@@ -164,3 +164,25 @@ describe('GAME-286 · розділ 2: ядро ≡ валідатор (дося�
     expect([...opened].sort()).toEqual(expected);
   }, 240_000);
 });
+
+describe('GAME-295 · Мюллерталь відчиняє «Продовжити подорож», а не сам кінець розділу 1', () => {
+  const VISIT = { type: 'Visit', locationId: 'loc.camp.mullerthal' };
+  const TALK = { type: 'Talk', npcId: 'npc.host-mullerthal' };
+  const offered = (g: GameState, m: object): boolean => moves(g, GAME_DEFS).some((x) => JSON.stringify(x) === JSON.stringify(m));
+  it('кінець розділу 1 без старту розділу 2: ядро — LOCKED, moves() не пропонує', () => {
+    const g = ch1End().game;
+    expect(g.quests['CH1-D3-HOME-001']?.status).toBe('completed');   // справді кінець розділу 1 (інакше тест нічого не доводить)
+    for (const m of [VISIT, TALK]) {
+      const r = send(g, m);
+      expect(!r.ok && r.code, JSON.stringify(m)).toBe('LOCKED');
+      expect(offered(g, m), JSON.stringify(m)).toBe(false);
+    }
+  });
+  it('після «Продовжити подорож» — їдемо й говоримо з господинею', () => {
+    const g = started();
+    expect(offered(g, VISIT)).toBe(true);
+    const there = ok(g, VISIT);
+    expect(offered(there, TALK)).toBe(true);
+    ok(there, TALK);
+  });
+});
