@@ -1,0 +1,84 @@
+{
+  "id": "dlg.ch2-plan",
+  "scene": {
+    "titleKey": "dlg.ch2-plan.title",
+    "facts": [
+      "f.trail-official-closed"
+    ],
+    "atQuest": "CH2-D2-PLAN-001"
+  },
+  "start": "open",
+  "nodes": [
+    {
+      "id": "open",
+      "speaker": "player",
+      "textKey": "dlg.ch2-plan.open",
+      "next": "agenda"
+    },
+    {
+      "id": "agenda",
+      "speaker": "player",
+      "textKey": "dlg.ch2-plan.agenda",
+      "next": "sign"
+    },
+    {
+      "id": "sign",
+      "speaker": "player",
+      "textKey": "dlg.ch2-plan.sign",
+      "next": "fork"
+    },
+    {
+      "id": "fork",
+      "speaker": "player",
+      "textKey": "dlg.ch2-plan.fork",
+      "choices": [
+        {
+          "textKey": "dlg.ch2-plan.fork.c1",
+          "next": "go",
+          "effects": [
+            {
+              "setFlag": "f.trail-forgotten"
+            }
+          ]
+        },
+        {
+          "textKey": "dlg.ch2-plan.fork.c2",
+          "next": "go",
+          "effects": []
+        }
+      ]
+    },
+    {
+      "id": "go",
+      "speaker": "player",
+      "textKey": "dlg.ch2-plan.go",
+      "next": "b1",
+      "branches": [
+        {
+          "when": {
+            "flag": "f.trail-forgotten"
+          },
+          "next": "a1"
+        }
+      ]
+    },
+    {
+      "id": "a1",
+      "speaker": "player",
+      "textKey": "dlg.ch2-plan.a1",
+      "next": "close"
+    },
+    {
+      "id": "b1",
+      "speaker": "player",
+      "textKey": "dlg.ch2-plan.b1",
+      "next": "close"
+    },
+    {
+      "id": "close",
+      "speaker": "player",
+      "textKey": "dlg.ch2-plan.close",
+      "end": true
+    }
+  ]
+}

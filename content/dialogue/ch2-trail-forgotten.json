@@ -1,0 +1,72 @@
+{
+  "id": "dlg.ch2-trail-forgotten",
+  "scene": {
+    "titleKey": "dlg.ch2-trail-forgotten.title",
+    "facts": [],
+    "atQuest": "CH2-D2-TRAIL-FORGOTTEN-001"
+  },
+  "start": "open",
+  "nodes": [
+    {
+      "id": "open",
+      "speaker": "player",
+      "textKey": "dlg.ch2-trail-forgotten.open",
+      "next": "club",
+      "branches": [
+        {
+          "when": {
+            "flag": "f.trail-official-closed"
+          },
+          "next": "open-sign"
+        }
+      ]
+    },
+    {
+      "id": "open-sign",
+      "speaker": "player",
+      "textKey": "dlg.ch2-trail-forgotten.open-sign",
+      "next": "club"
+    },
+    {
+      "id": "club",
+      "speaker": "player",
+      "textKey": "dlg.ch2-trail-forgotten.club",
+      "next": "mark"
+    },
+    {
+      "id": "mark",
+      "speaker": "player",
+      "textKey": "dlg.ch2-trail-forgotten.mark",
+      "choices": [
+        {
+          "textKey": "dlg.ch2-trail-forgotten.mark.c1",
+          "next": "s1",
+          "effects": []
+        },
+        {
+          "textKey": "dlg.ch2-trail-forgotten.mark.c2",
+          "next": "s2",
+          "effects": []
+        }
+      ]
+    },
+    {
+      "id": "s1",
+      "speaker": "player",
+      "textKey": "dlg.ch2-trail-forgotten.s1",
+      "next": "close"
+    },
+    {
+      "id": "s2",
+      "speaker": "player",
+      "textKey": "dlg.ch2-trail-forgotten.s2",
+      "next": "close"
+    },
+    {
+      "id": "close",
+      "speaker": "player",
+      "textKey": "dlg.ch2-trail-forgotten.close",
+      "end": true
+    }
+  ]
+}

@@ -193,7 +193,7 @@
     "xp": 15,
     "locationId": "loc.trail.forgotten",
     "objectives": [
-      {"id": "o1-forgotten", "textKey": "q.ch2-d2-trail-forgotten-001.o1", "kind": "visit", "target": "loc.trail.forgotten", "required": true}
+      {"id": "o1-forgotten", "textKey": "q.ch2-d2-trail-forgotten-001.o1", "kind": "visit", "target": "loc.camp.mullerthal", "required": true}
     ],
     "transitions": [{"on": "complete", "to": "CH2-D2-ACTIVITY-001"}]
   },
@@ -204,7 +204,7 @@
     "xp": 15,
     "locationId": "loc.trail.other",
     "objectives": [
-      {"id": "o1-other", "textKey": "q.ch2-d2-trail-other-001.o1", "kind": "visit", "target": "loc.trail.other", "required": true}
+      {"id": "o1-other", "textKey": "q.ch2-d2-trail-other-001.o1", "kind": "visit", "target": "loc.camp.mullerthal", "required": true}
     ],
     "transitions": [{"on": "complete", "to": "CH2-D2-ACTIVITY-001"}]
   },
