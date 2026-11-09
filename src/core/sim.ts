@@ -7,7 +7,7 @@ import { EMPTY_DEFS, type CoreDefs } from './defs';
 import { canonical } from './hash';
 import { wearAfterTrip } from './gear';
 import { payroll } from './life';
-import { eventEligible, REST_TO, route, SLEEP_CAP } from './story';
+import { eventEligible, REST_TO, route, sleepCap } from './story';
 import { nextInt, seedRng, type RngState } from './rng';
 import { initialState, type GameState } from './state';
 import { minutesToOpen, sleepPlace, wakeMinute, type SleepPlace } from './rest';
@@ -195,7 +195,7 @@ export function fallAsleep(s: SimState, ref: SleepPlace | 'auto', commandId?: st
   const wake = wakeMinute(s.clock.minutes, ref === 'auto');
   const entry: JournalEntry = { at: s.clock.minutes, commandId: commandId ?? `sleep-${s.clock.minutes}`, type: 'Sleep', ref, cents: s.game.moneyCents };
   // GAME-256: автосон теж перегортає день сюжету (Sleep-команда лічить себе сама, у dispatch).
-  const game = ref === 'auto' ? { ...s.game, slept: Math.min((s.game.slept ?? 0) + 1, SLEEP_CAP) } : s.game;
+  const game = ref === 'auto' ? { ...s.game, slept: Math.min((s.game.slept ?? 0) + 1, sleepCap(s.game)) } : s.game;
   return { ...s, game, clock: advance(s.clock, wake - s.clock.minutes), journal: [...s.journal, entry].slice(-JOURNAL_LIMIT) };
 }
 

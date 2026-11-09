@@ -36,8 +36,8 @@ function mapNpcs(): { map: string; id: string }[] {
 }
 
 describe('GAME-179 · кожен співрозмовник має що сказати', () => {
-  it('сторож бачить, що стереже: співрозмовників рівно 11 (Еліза, Джордж, Вікторія, Метью, шестеро мешканців, продавчиня крамниці)', () => {
-    expect([...TALKERS].sort()).toEqual(['npc.amina', 'npc.cashier', 'npc.claire', 'npc.elise', 'npc.george', 'npc.ingrid', 'npc.luc', 'npc.matthew', 'npc.nora', 'npc.sarah', 'npc.victoria']);
+  it('сторож бачить, що стереже: співрозмовників рівно 12 (Еліза, Джордж, Вікторія, Метью, шестеро мешканців, продавчиня крамниці, господиня Мюллерталя)', () => {
+    expect([...TALKERS].sort()).toEqual(['npc.amina', 'npc.cashier', 'npc.claire', 'npc.elise', 'npc.george', 'npc.host-mullerthal', 'npc.ingrid', 'npc.luc', 'npc.matthew', 'npc.nora', 'npc.sarah', 'npc.victoria']);
     expect(RESIDENTS).toHaveLength(6);
     expect(mapNpcs().length, 'на мапах нема жодного NPC — сторож порожній').toBeGreaterThanOrEqual(2);
   });

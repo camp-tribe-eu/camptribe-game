@@ -12,7 +12,7 @@ import type { OfferAction, StoryOffer } from './story-types';
 
 const ACT: Readonly<Record<Exclude<OfferAction['kind'], 'choose' | 'continue' | 'cancel'>, Key>> = {
   visit: 'act.visit', talk: 'act.talk', pickup: 'act.pickup', buy: 'act.buy', checkout: 'act.checkout', sell: 'act.sell', dry: 'act.dry', complete: 'act.complete', decline: 'act.decline',
-  load: 'pack.load', leave: 'pack.leave', task: 'act.task', gift: 'act.gift', sleep: 'act.sleep', wait: 'act.waitShop', rest: 'act.rest',
+  load: 'pack.load', leave: 'pack.leave', task: 'act.task', gift: 'act.gift', sleep: 'act.sleep', wait: 'act.waitShop', rest: 'act.rest', chapter: 'act.chapter',
 };
 
 // Записи журналу: тип команди → підпис. Перелік той самий, що JOURNAL_TYPES ядра (звіряє src/view/story-offer.test.ts).
@@ -45,7 +45,7 @@ export function actionLabel(lang: AnyLang, t: (k: Key) => string, a: OfferAction
   if (a.kind === 'continue') return t('ui.continue');
   if (a.kind === 'cancel') return t('ui.notNow');
   if (a.kind === 'choose') return ct(lang, a.key);
-  if (a.kind === 'sleep' || a.kind === 'wait' || a.kind === 'rest') return t(ACT[a.kind]);
+  if (a.kind === 'sleep' || a.kind === 'wait' || a.kind === 'rest' || a.kind === 'chapter') return t(ACT[a.kind]);
   const extras = [
     ...(a.minutes !== undefined ? [`${a.minutes} ${t('ui.minutes')}`] : []),
     ...(a.priceCents !== undefined ? [money(lang, a.priceCents)] : []),
@@ -194,10 +194,10 @@ export function StoryPanel({ offer, lang, t, act, close, portrait, children, foo
       )}
       {offer.rest.shopClosed && !offer.dialogue && <p data-ui="shop-closed" role="status">{t('shop.closed')}</p>}
       {/* GAME-242: на мапі ☰ стиснуте й кнопок не має — але «Лягти спати» / «Почекати» мапа дати не може: лише вони лишаються. */}
-      {compact && !offer.dialogue && offer.actions.some((x) => x.kind === 'sleep' || x.kind === 'wait' || x.kind === 'rest') && (
+      {compact && !offer.dialogue && offer.actions.some((x) => x.kind === 'sleep' || x.kind === 'wait' || x.kind === 'rest' || x.kind === 'chapter') && (
         <fieldset data-ui="rest">
           <legend>{t('ui.actions')}</legend>
-          {offer.actions.filter((x) => x.kind === 'sleep' || x.kind === 'wait' || x.kind === 'rest').map(button)}
+          {offer.actions.filter((x) => x.kind === 'sleep' || x.kind === 'wait' || x.kind === 'rest' || x.kind === 'chapter').map(button)}
         </fieldset>
       )}
       {!compact && (offer.actions.length > 0 || offer.locked.length > 0) && (

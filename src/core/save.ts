@@ -7,7 +7,7 @@
 // * контрольна сума — над станом у ТІЙ версії, у якій його записано (до міграцій);
 // * кожна випущена версія лишається фікстурою в tests/saves/ назавжди.
 import type { StoryDefs } from './defs';
-import { chapterComplete, exitsFor, matches, SLEEP_CAP } from './story';
+import { CHAPTER2_START, chapterComplete, exitsFor, matches, SLEEP_CAP } from './story';
 import { stateHash } from './hash';
 import { isJournalType, type SimState } from './sim';
 import { CONDITION_MAX } from './gear';
@@ -20,8 +20,9 @@ import { paydaysThrough, type LifeDefs } from './life';
 import { DAY_MINUTES } from './weather';
 
 export const SAVE_FORMAT = 'camplife-save';
+/** v5 (GAME-286): маркер старту розділу 2 `game.chapterStart` (необов'язкове поле; `schemaVersion` гри лишається 3). Міграція 4→5 — тотожна: сейв до розділу 2 маркера не має, і це правильно. */
 /** v4 (GAME-256): лічильник сну `game.slept`. `game.schemaVersion` лишається 3 — форма GameState не ламається (поле необов'язкове); версіонується конверт. */
-export const SAVE_VERSION = 4;
+export const SAVE_VERSION = 5;
 
 export interface SaveFile {
   readonly format: typeof SAVE_FORMAT;
@@ -91,6 +92,8 @@ export const MIGRATIONS: Readonly<Record<number, (sim: unknown, ctx: MigrationCt
     const n = Math.min(SLEEP_CAP, Math.max(slept, need));
     return n > 0 ? { ...s, game: { ...s.game, slept: n } } : s;
   },
+  // v4 → v5 (GAME-286): з'явився маркер chapterStart. Старий сейв розділу 2 не починав — поле відсутнє, нічого губити й додавати.
+  4: (sim) => sim,
 };
 
 export function toSave(sim: SimState, contentRev: string | null = null): SaveFile {
@@ -148,7 +151,9 @@ function shapeError(sim: unknown): string | null {
   // Наклейки (GAME-182): поле необов'язкове; є — відсортовані рядки без повторів (так пише лише ядро).
   if (game.stickers !== undefined && !sortedUniq(game.stickers)) return 'game: stickers';
   // Сон (GAME-256): лічильник — ціле 0…SLEEP_CAP; поля немає — родина не спала (старі сейви).
-  if (game.slept !== undefined && (!isInt(game.slept) || (game.slept as number) > SLEEP_CAP)) return 'game: slept';
+  if (game.slept !== undefined && (!isInt(game.slept) || (game.slept as number) > SLEEP_CAP + (isInt(game.chapterStart) ? (game.chapterStart as number) : 0))) return 'game: slept';
+  // Маркер розділу 2 (GAME-286): необов'язкове ціле 0…slept (не більше за лічильник сну, від якого міряє).
+  if (game.chapterStart !== undefined && (!isInt(game.chapterStart) || (game.chapterStart as number) > ((game.slept as number | undefined) ?? 0))) return 'game: chapterStart';
   // Дружба (GAME-230): поле необов'язкове (сейви до GAME-230 його не мають); є — очки й дні цілі ≥ 0 (очки ≤ стелі), `seen` — відсортовані рядки без повторів (так пише лише ядро).
   const fr = game.friend;
   if (fr !== undefined && (!isObj(fr) || !isObj(fr.pts) || !isObj(fr.gift) || !sortedUniq(fr.seen)
@@ -220,7 +225,7 @@ export function reopenChapter(game: SimState['game'], st: StoryDefs): SimState['
     const s = status(from);
     return (s === 'completed' || s === 'declined') && q.transitions.some((t) => t.to === id);
   });
-  const orphans = Object.keys(game.quests).filter((id) => status(id) === 'active' && !entered(id)).sort();
+  const orphans = Object.keys(game.quests).filter((id) => id !== CHAPTER2_START && status(id) === 'active' && !entered(id)).sort();   // GAME-286: CH2-ARRIVAL-001 стартує командою, а не переходом
   if (!endedOld && orphans.length === 0) return game;
   let quests = Object.fromEntries(Object.entries(game.quests).filter(([id]) => !orphans.includes(id)));
   for (const id of Object.keys(game.quests).sort()) {

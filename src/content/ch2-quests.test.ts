@@ -93,6 +93,7 @@ describe('локації розділу 2 не інертні (GAME-283 ↔ GAME
     const st = {
       ...src,
       quests: Object.fromEntries(Object.entries(src.quests).filter(([id]) => !id.startsWith('CH2-'))),
+      npcs: Object.fromEntries(Object.entries(src.npcs).filter(([, n]) => !CH2_LOCS.includes(n.locationId))),   // GAME-286: господиня живе в Мюллерталі — без неї локація інертна
       locations: Object.fromEntries(Object.entries(src.locations).map(([id, l]) => [id, CH2_LOCS.includes(id) ? { items: l.items } : l])),
     } as unknown as StoryDefs;
     const inert = inertLocations(st);
