@@ -95,10 +95,17 @@ async function play(page: Page, stop: (c: Awaited<ReturnType<typeof core>>) => b
     if (target === null) {
       // вільний час / сон: день 1 до 18:00 — чекаємо вечора; далі (вечерю зіграно, день-квест завершено) — ☰ «Лягти спати»
       if (QUEST(c, 'CH2-D1-SUMMARY-001') === 'active') { await skipClockToEvening(page); log.push('wait-evening'); continue; }
-      await openPanel(page);
+      // Спати можна, коли вечір настав (стан ядра), розмови нема, ☰ показує «Лягти спати»: чекаємо СТАНУ, а не часу; ☰ відкриваємо, лише поки її нема на екрані.
+      const slept = (c.game as unknown as { slept?: number }).slept ?? 0;
+      await expect.poll(async () => { const x = await core(page); return x.game.dialogue === null && ((x.clock.minutes + 480) % 1440 >= 18 * 60 || (x.clock.minutes + 480) % 1440 < 7 * 60); }, { message: 'вечір настав, розмови нема' }).toBe(true);
+      await expect.poll(async () => {
+        if (!(await page.locator('[data-ui="story"]').isVisible().catch(() => false))) await page.locator('[data-touch="story"]').tap().catch(() => undefined);
+        return act(page, 'sleep').isVisible().catch(() => false);
+      }, { message: '☰ показує «Лягти спати»' }).toBe(true);
+      await page.waitForTimeout(600);   // «глухота» кнопок дій після відкриття ☰ (ACT_COOLDOWN_MS): панель ігнорує активацію ~350 мс — це стан UI, а не гра
       await act(page, 'sleep').click({ timeout: 5_000 });
       log.push('sleep');
-      await page.waitForTimeout(800);
+      await expect.poll(async () => (((await core(page)).game as unknown as { slept?: number }).slept ?? 0) > slept, { message: 'сон прийнято ядром' }).toBe(true);
       continue;
     }
     log.push(await goAndDo(page, true));
