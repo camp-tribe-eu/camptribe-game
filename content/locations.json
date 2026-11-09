@@ -9,5 +9,5 @@
   { "id": "loc.trail.other", "nameKey": "loc.trail.other", "unlockedBy": "CH2-ARRIVAL-001" },
   { "id": "loc.waterfall", "nameKey": "loc.waterfall", "unlockedBy": "CH2-ARRIVAL-001" },
   { "id": "loc.meadow.orchid", "nameKey": "loc.meadow.orchid", "unlockedBy": "CH2-ARRIVAL-001" },
-  { "id": "loc.schengen", "nameKey": "loc.schengen", "unlockedBy": "CH2-ARRIVAL-001" }
+  { "id": "loc.schengen", "nameKey": "loc.schengen", "unlockedBy": "CH2-ARRIVAL-001", "sheltered": true }
 ]

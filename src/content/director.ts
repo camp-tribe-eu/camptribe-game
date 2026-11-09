@@ -24,6 +24,7 @@ import { isPhotoSpot, livePhotoSpot } from './photos';
 import { DINNER_SPOT, dinnerDue, dinnerFinishMove, dinnerMove } from './ch2-dinner';
 import { ch2FinishMove } from './ch2-live';
 import { activityDue, activityFinishMoves, activityMove, eveningDue, eveningFinishMove, eveningMove } from './ch2-activity';
+import { joinMove, schengenDue, schengenFinishMoves, schengenMove } from './ch2-schengen';
 import { dispatch, nextCommandId, type Command } from '../core/commands';
 import { isPlanSpot, planFinishMove, planSpotLive, planSpotMove, trailFinishMove } from './ch2-plan';
 import { REPAIR_FLAG, REPAIR_SPOT } from './repair';
@@ -73,7 +74,13 @@ export function storyMoves(sim: SimState, defs: CoreDefs): Move[] {
   const scene: Move[] = act !== null && accepts(activityMove(act, weather)) ? [activityMove(act, weather)] : [];
   const fin = activityFinishMoves(sim, weather);
   const finish: Move[] = fin.length > 0 && accepts(fin[0] as Move) ? fin : [];
-  return [...(waveId ? [{ type: 'StartWave', waveId } as Move] : []), ...scene, ...finish, ...auto];
+  // GAME-291: Шенген — сцена на набережній, потім завершення квесту (нагорода — половинки й мікрокарта) і дорога назад; з'єднання половинок — лише після свідомого вибору гравця в сцені.
+  const sTale: Move[] = schengenDue(sim) && accepts(schengenMove(weather)) ? [schengenMove(weather)] : [];
+  const sFin = schengenFinishMoves(sim);
+  const schengenFinish: Move[] = sFin.length > 0 && accepts(sFin[0] as Move) ? sFin : [];
+  const jm = joinMove(sim);
+  const join: Move[] = jm !== null && accepts(jm) ? [jm] : [];
+  return [...(waveId ? [{ type: 'StartWave', waveId } as Move] : []), ...scene, ...finish, ...sTale, ...schengenFinish, ...join, ...auto];
 }
 
 /** Локація етапу живої хвилі (звідки й де її справи): квест етапу без локації — null. */

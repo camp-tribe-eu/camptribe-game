@@ -28,13 +28,13 @@ import { DINNER_SPOT, dinnerDue } from './ch2-dinner';
 import { EVENING_QUEST, eveningDue } from './ch2-activity';
 import { PLAN_SPOT, TRAIL_BRANCHES, planDue, trailDue } from './ch2-plan';
 
-export type MapKey = 'home' | 'shop' | 'camp' | 'road' | 'mullerthal';
+export type MapKey = 'home' | 'shop' | 'camp' | 'road' | 'mullerthal' | 'schengen';
 /** Локація кожної мапи гри (властивість locationId у .tmj; звіряє map-content.test). */
-export const MAP_LOCATION: Readonly<Record<MapKey, string>> = { home: 'loc.home', shop: 'loc.shop', camp: 'loc.camp.lake', road: 'loc.road', mullerthal: 'loc.camp.mullerthal' };
+export const MAP_LOCATION: Readonly<Record<MapKey, string>> = { home: 'loc.home', shop: 'loc.shop', camp: 'loc.camp.lake', road: 'loc.road', mullerthal: 'loc.camp.mullerthal', schengen: 'loc.schengen' };
 /** Гравець стоїть у локації цієї мапи: власній або (Мюллерталь) у локації розділу 2 без мапи, що показується на ній. */
 export const onMapLocation = (map: MapKey, locationId: string | null | undefined): boolean => locationId === MAP_LOCATION[map] || (map === 'mullerthal' && isExcursion(locationId));
 /** Мапи, де кроки сюжету робляться руками (зріз 1 — дім і крамниця; GAME-183 — табір і дорога). */
-export const MAP_FIRST: readonly MapKey[] = ['home', 'shop', 'camp', 'road', 'mullerthal'];
+export const MAP_FIRST: readonly MapKey[] = ['home', 'shop', 'camp', 'road', 'mullerthal', 'schengen'];
 
 /**
  * Мапа для локації: дім, крамниця, дорога й Мюллерталь мають свої; локації розділу 2 без мапи (стежки, водоспад, галявина, Шенген — ch2-live.ts) показуються на мапі Мюллерталя, а не табору
@@ -43,6 +43,7 @@ export const MAP_FIRST: readonly MapKey[] = ['home', 'shop', 'camp', 'road', 'mu
 export function mapKeyFor(locationId: string | null | undefined): MapKey {
   if (locationId === undefined || locationId === null || locationId === MAP_LOCATION.home) return 'home';
   if (locationId === MAP_LOCATION.shop) return 'shop';
+  if (locationId === MAP_LOCATION.schengen) return 'schengen';   // GAME-291: пам'ятник трьом країнам має власну мапу (набережна Мозеля)
   if (locationId === MAP_LOCATION.mullerthal || isExcursion(locationId)) return 'mullerthal';   // GAME-295: кемпінг Мюллерталь має власну мапу (не табір біля озера); GAME-296: локації без мапи — на ній же
   return locationId === MAP_LOCATION.road ? 'road' : 'camp';
 }
@@ -78,6 +79,8 @@ export const MAP_SPOTS = {
     'take.item.firewood', 'obj.drying', 'obj.sell', 'obj.vehicle',
   ],
   // GAME-295 · Мюллерталь (public/maps/mullerthal.tmj, scripts/maps/build_mullerthal.py): господиня, авто, ділянки (якорі) і виходи на стежки (вказівники).
+  // GAME-291 · Шенген (public/maps/schengen.tmj, scripts/maps/build_schengen.py): лише авто — назад у кемпінг; пам'ятник і пляшка — сцена, яку відкриває режисер (src/content/ch2-schengen.ts).
+  schengen: ['obj.vehicle'],
   mullerthal: ['npc.host-mullerthal', 'obj.vehicle', 'obj.pitch-1', 'obj.pitch-2', 'obj.pitch-3', 'obj.pitch-4', 'exit.trail.official', 'exit.trail.forgotten', 'exit.trail.other'],
 } as const satisfies Readonly<Record<MapKey, readonly string[]>>;
 
@@ -210,8 +213,8 @@ function vehicleMoves(g: GameState, defs: CoreDefs, weather?: Weather): { moves:
   const p = g.player;
   if (!p) return null;
   // GAME-296 · Мюллерталь і локації розділу 2 без мапи: поїздки на стежку, до водоспаду, Шенгену, додому — та вибір «як провести день»; з локації без мапи — назад у кемпінг.
-  if (p.locationId === MAP_LOCATION.mullerthal || isExcursion(p.locationId)) {
-    if (isExcursion(p.locationId)) return { moves: [{ type: 'Visit', locationId: MAP_LOCATION.mullerthal }] };
+  if (p.locationId === MAP_LOCATION.mullerthal || p.locationId === MAP_LOCATION.schengen || isExcursion(p.locationId)) {
+    if (p.locationId === MAP_LOCATION.schengen || isExcursion(p.locationId)) return { moves: [{ type: 'Visit', locationId: MAP_LOCATION.mullerthal }] };
     const trips = [...ch2CarTrips(g), ...ch2CarDecisions(g, weather)].filter((t) => chain(g, defs, t));
     return trips.length > 0 ? { moves: [], trips } : null;
   }
@@ -545,7 +548,7 @@ function ch2Next(sim: SimState, defs: CoreDefs, id: string): Next | null {
   const g = sim.game;
   const p = g.player;
   if (!p) return null;
-  if (isExcursion(p.locationId)) return { key: 'next.ch2.back', spot: 'obj.vehicle' };
+  if (p.locationId === MAP_LOCATION.schengen || isExcursion(p.locationId)) return { key: 'next.ch2.back', spot: 'obj.vehicle' };
   if (id === 'CH2-ARRIVAL-001') {
     if (p.locationId !== MAP_LOCATION.mullerthal) return { key: 'next.ch2.drive', spot: 'obj.vehicle' };
     return objDone(g, id, 'o2-host') ? null : { key: 'next.ch2.host', spot: 'npc.host-mullerthal' };

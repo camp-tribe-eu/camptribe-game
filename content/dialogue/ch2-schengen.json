@@ -1,0 +1,203 @@
+{
+  "id": "dlg.ch2-schengen",
+  "scene": {
+    "titleKey": "dlg.ch2-schengen.title",
+    "facts": [
+      "f.ch2-schengen-rain"
+    ],
+    "atQuest": "CH2-SCHENGEN-001"
+  },
+  "start": "open",
+  "nodes": [
+    {
+      "id": "open",
+      "speaker": "player",
+      "textKey": "dlg.ch2-schengen.open",
+      "next": "arrive",
+      "branches": [
+        {
+          "when": {
+            "flag": "f.ch2-schengen-rain"
+          },
+          "next": "open-rain"
+        }
+      ]
+    },
+    {
+      "id": "arrive",
+      "speaker": "player",
+      "textKey": "dlg.ch2-schengen.arrive",
+      "next": "three"
+    },
+    {
+      "id": "open-rain",
+      "speaker": "player",
+      "textKey": "dlg.ch2-schengen.open-rain",
+      "next": "three"
+    },
+    {
+      "id": "three",
+      "speaker": "player",
+      "textKey": "dlg.ch2-schengen.three",
+      "next": "wave"
+    },
+    {
+      "id": "wave",
+      "speaker": "player",
+      "textKey": "dlg.ch2-schengen.wave",
+      "choices": [
+        {
+          "textKey": "dlg.ch2-schengen.wave.c1",
+          "next": "w1"
+        },
+        {
+          "textKey": "dlg.ch2-schengen.wave.c2",
+          "next": "w2"
+        }
+      ]
+    },
+    {
+      "id": "w1",
+      "speaker": "player",
+      "textKey": "dlg.ch2-schengen.w1",
+      "next": "george"
+    },
+    {
+      "id": "w2",
+      "speaker": "player",
+      "textKey": "dlg.ch2-schengen.w2",
+      "next": "george"
+    },
+    {
+      "id": "george",
+      "speaker": "player",
+      "textKey": "dlg.ch2-schengen.george",
+      "next": "bottle"
+    },
+    {
+      "id": "bottle",
+      "speaker": "player",
+      "textKey": "dlg.ch2-schengen.bottle",
+      "next": "join"
+    },
+    {
+      "id": "join",
+      "speaker": "player",
+      "textKey": "dlg.ch2-schengen.join",
+      "choices": [
+        {
+          "textKey": "dlg.ch2-schengen.join.c1",
+          "next": "j1",
+          "effects": [
+            {
+              "setFlag": "f.ch2-medallion-join"
+            }
+          ]
+        },
+        {
+          "textKey": "dlg.ch2-schengen.join.c2",
+          "next": "j2",
+          "effects": [
+            {
+              "setFlag": "f.ch2-medallion-join"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "j1",
+      "speaker": "player",
+      "textKey": "dlg.ch2-schengen.j1",
+      "next": "joined"
+    },
+    {
+      "id": "j2",
+      "speaker": "player",
+      "textKey": "dlg.ch2-schengen.j2",
+      "next": "joined"
+    },
+    {
+      "id": "joined",
+      "speaker": "player",
+      "textKey": "dlg.ch2-schengen.joined",
+      "next": "micro"
+    },
+    {
+      "id": "micro",
+      "speaker": "player",
+      "textKey": "dlg.ch2-schengen.micro",
+      "next": "trail"
+    },
+    {
+      "id": "trail",
+      "speaker": "player",
+      "textKey": "dlg.ch2-schengen.trail",
+      "choices": [
+        {
+          "textKey": "dlg.ch2-schengen.trail.c1",
+          "next": "t1",
+          "effects": [
+            {
+              "setFlag": "f.ch2-george-trail"
+            }
+          ]
+        },
+        {
+          "textKey": "dlg.ch2-schengen.trail.c2",
+          "next": "t2",
+          "effects": [
+            {
+              "setFlag": "f.ch2-george-trail"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "t1",
+      "speaker": "player",
+      "textKey": "dlg.ch2-schengen.t1",
+      "next": "mark"
+    },
+    {
+      "id": "t2",
+      "speaker": "player",
+      "textKey": "dlg.ch2-schengen.t2",
+      "next": "mark"
+    },
+    {
+      "id": "mark",
+      "speaker": "player",
+      "textKey": "dlg.ch2-schengen.mark",
+      "next": "close",
+      "branches": [
+        {
+          "when": {
+            "all": [
+              {
+                "flag": "f.ch2-medallion-join"
+              },
+              {
+                "flag": "f.ch2-george-trail"
+              }
+            ]
+          },
+          "next": "close-m"
+        }
+      ]
+    },
+    {
+      "id": "close-m",
+      "speaker": "player",
+      "textKey": "dlg.ch2-schengen.close-m",
+      "end": true
+    },
+    {
+      "id": "close",
+      "speaker": "player",
+      "textKey": "dlg.ch2-schengen.close",
+      "end": true
+    }
+  ]
+}

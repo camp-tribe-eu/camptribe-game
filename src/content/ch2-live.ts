@@ -15,6 +15,7 @@ import { DINNER_QUEST } from './ch2-dinner';
 import { ACTIVITIES, EVENING_QUEST, MEADOW, WATERFALL, WATERFALL_QUEST, activityOfQuest, offeredActivities, type ActivityDef } from './ch2-activity';
 import type { Weather } from '../core/weather';
 import { PLAN_QUEST, PLAN_SPOT, TRAIL_BRANCHES } from './ch2-plan';
+import { SCHENGEN, SCHENGEN_QUEST } from './ch2-schengen';
 import type { Move } from './moves';
 import { STORY } from './story';
 
@@ -22,12 +23,12 @@ export const MULLERTHAL = 'loc.camp.mullerthal';
 export const WALK_QUEST = 'CH2-D1-WALK-001';
 export const ACTIVITY_QUEST = 'CH2-D2-ACTIVITY-001';
 export { WATERFALL_QUEST };
-export const SCHENGEN_QUEST = 'CH2-SCHENGEN-001';
+export { SCHENGEN_QUEST, SCHENGEN };
 /** Вказівник офіційної стежки: на дні 1 — вихід на прогулянку (поїздка), на дні 2 — табличка плану (сцена, ch2-plan.ts). */
 export const WALK_SPOT = PLAN_SPOT;
 
 /** Локації розділу 2 без власної мапи. Гравець у них показується на мапі Мюллерталя (mapKeyFor). */
-export const EXCURSION_LOCATIONS: readonly string[] = ['loc.trail.official', 'loc.trail.forgotten', 'loc.trail.other', 'loc.waterfall', 'loc.meadow.orchid', 'loc.schengen'];
+export const EXCURSION_LOCATIONS: readonly string[] = ['loc.trail.official', 'loc.trail.forgotten', 'loc.trail.other', 'loc.waterfall', 'loc.meadow.orchid'];
 export const isExcursion = (locationId: string | null | undefined): boolean => locationId !== null && locationId !== undefined && EXCURSION_LOCATIONS.includes(locationId);
 
 const own = <T>(o: Readonly<Record<string, T>>, k: string): T | undefined => (Object.hasOwn(o, k) ? o[k] : undefined);
@@ -75,13 +76,13 @@ export function ch2CarTrips(g: Pick<GameState, 'quests'>): Move[][] {
     if (!done(g, WATERFALL_QUEST, 'o1-waterfall')) out.push([visit(WATERFALL)]);   // GAME-290: лишаємось на водоспаді — там відкривається сцена
     if (!done(g, WATERFALL_QUEST, 'o2-orchid')) out.push([visit(MEADOW), home()]);
   }
-  if (active(g, SCHENGEN_QUEST)) out.push([visit('loc.schengen'), home()]);
+  if (active(g, SCHENGEN_QUEST)) out.push([visit(SCHENGEN)]);   // GAME-291: поїздка кінчається НА набережній Шенгену (власна мапа) — сцену відкриває режисер
   if (active(g, CHAPTER2_END)) out.push([visit('loc.home')]);   // кінець розділу: додому назавжди, назад не повертаємось
   return out;
 }
 
-/** Квести, які веде інший модуль: вечеря (сцена), план і вставки стежок (сцени), водоспад/майстер-клас/вечір дня 2 (GAME-290, ch2-activity.ts). Решту, що закривається самими візитами, завершує сюжет. */
-const OTHER_OWNER = new Set<string>([DINNER_QUEST, PLAN_QUEST, ...TRAIL_BRANCHES.map((b) => b.quest), ...ACTIVITIES.map((a) => a.quest), EVENING_QUEST]);
+/** Квести, які веде інший модуль: вечеря (сцена), план і вставки стежок (сцени), водоспад/майстер-клас/вечір дня 2 (GAME-290, ch2-activity.ts), Шенген (GAME-291, ch2-schengen.ts). Решту, що закривається самими візитами, завершує сюжет. */
+const OTHER_OWNER = new Set<string>([DINNER_QUEST, PLAN_QUEST, ...TRAIL_BRANCHES.map((b) => b.quest), ...ACTIVITIES.map((a) => a.quest), EVENING_QUEST, SCHENGEN_QUEST]);
 
 /**
  * Крок розділу 2, який нічого від гравця не чекає, завершується сам (той самий CompleteQuest, що й у ☰): квест без вибору виходу (або кінець розділу), усі обов'язкові цілі зроблені

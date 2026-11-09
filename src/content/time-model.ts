@@ -45,7 +45,7 @@ export function moveSeconds(m: Move): number {
     case 'StartScene': return SECONDS.line;                        // сцена сюжету (GAME-142) — так само
     case 'StartWave': return SECONDS.line;                         // хвиля напруги (GAME-170) відкривається рядком-зачіпкою
     case 'CompleteTask': return SECONDS.walkOnMap + SECONDS.menuTap; // підійти до справи й зробити її
-    case 'Pickup': case 'BuyItem': case 'SellItem': case 'Checkout': case 'DryGear':
+    case 'Pickup': case 'BuyItem': case 'SellItem': case 'Checkout': case 'DryGear': case 'JoinItems':
     case 'PackItem': case 'UnpackItem': case 'AutoPack': case 'TakeItem': case 'LoadCar': case 'LeaveItem':
     case 'BookLeave': case 'CancelLeave':
     case 'Sleep': case 'WaitForShop': case 'RestUntilEvening': case 'StartChapter2':   // GAME-242: кнопка «Лягти спати» / «Чекати до 08:00»; бот їх не обирає (не серед moves())

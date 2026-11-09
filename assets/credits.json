@@ -3686,7 +3686,7 @@
       "sources": [
         "https://opengameart.org/content/lpc-revised-base-object-kit"
       ],
-      "modified": "AI-derived work from a CC-BY-SA 3.0 reference sheet; magenta background keyed out, scaled to 70 px height with a box filter, bottom-aligned on a 96x80 canvas, quantized onto the base palette (scripts/assets/build_ch2_muellerthal.py)"
+      "modified": "AI-derived work from a CC-BY-SA 3.0 reference sheet; magenta background keyed out, scaled to 70 px height with a box filter, bottom-aligned on a 96x96 canvas, quantized onto the base palette (scripts/assets/build_ch2_muellerthal.py)"
     },
     {
       "file": "tiles/ch2_muellerthal.png",
