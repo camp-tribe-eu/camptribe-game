@@ -1,0 +1,152 @@
+{
+  "id": "dlg.ch2-dinner",
+  "scene": {
+    "titleKey": "dlg.ch2-dinner.title",
+    "facts": [],
+    "atQuest": "CH2-D1-SUMMARY-001"
+  },
+  "start": "open",
+  "nodes": [
+    {
+      "id": "open",
+      "speaker": "player",
+      "textKey": "dlg.ch2-dinner.open",
+      "next": "invite"
+    },
+    {
+      "id": "invite",
+      "speaker": "player",
+      "textKey": "dlg.ch2-dinner.invite",
+      "next": "dish"
+    },
+    {
+      "id": "dish",
+      "speaker": "player",
+      "textKey": "dlg.ch2-dinner.dish",
+      "choices": [
+        {
+          "textKey": "dlg.ch2-dinner.dish.c1",
+          "next": "d1"
+        },
+        {
+          "textKey": "dlg.ch2-dinner.dish.c2",
+          "next": "d2"
+        },
+        {
+          "textKey": "dlg.ch2-dinner.dish.c3",
+          "next": "d3"
+        }
+      ]
+    },
+    {
+      "id": "d1",
+      "speaker": "player",
+      "textKey": "dlg.ch2-dinner.d1",
+      "next": "g1"
+    },
+    {
+      "id": "d2",
+      "speaker": "player",
+      "textKey": "dlg.ch2-dinner.d2",
+      "next": "g1"
+    },
+    {
+      "id": "d3",
+      "speaker": "player",
+      "textKey": "dlg.ch2-dinner.d3",
+      "next": "g1"
+    },
+    {
+      "id": "g1",
+      "speaker": "player",
+      "textKey": "dlg.ch2-dinner.g1",
+      "next": "g2",
+      "branches": [
+        {
+          "when": {
+            "flag": "f.photo-ch2-orchid"
+          },
+          "next": "g2p"
+        }
+      ]
+    },
+    {
+      "id": "g2",
+      "speaker": "player",
+      "textKey": "dlg.ch2-dinner.g2",
+      "next": "g3"
+    },
+    {
+      "id": "g2p",
+      "speaker": "player",
+      "textKey": "dlg.ch2-dinner.g2p",
+      "next": "g3"
+    },
+    {
+      "id": "g3",
+      "speaker": "player",
+      "textKey": "dlg.ch2-dinner.g3",
+      "choices": [
+        {
+          "textKey": "dlg.ch2-dinner.g3.c1",
+          "next": "club1"
+        },
+        {
+          "textKey": "dlg.ch2-dinner.g3.c2",
+          "next": "club2"
+        }
+      ]
+    },
+    {
+      "id": "club1",
+      "speaker": "player",
+      "textKey": "dlg.ch2-dinner.club1",
+      "next": "club3"
+    },
+    {
+      "id": "club2",
+      "speaker": "player",
+      "textKey": "dlg.ch2-dinner.club2",
+      "next": "club3"
+    },
+    {
+      "id": "club3",
+      "speaker": "player",
+      "textKey": "dlg.ch2-dinner.club3",
+      "next": "ask"
+    },
+    {
+      "id": "ask",
+      "speaker": "player",
+      "textKey": "dlg.ch2-dinner.ask",
+      "choices": [
+        {
+          "textKey": "dlg.ch2-dinner.ask.c1",
+          "next": "fin1"
+        },
+        {
+          "textKey": "dlg.ch2-dinner.ask.c2",
+          "next": "fin2"
+        }
+      ]
+    },
+    {
+      "id": "fin1",
+      "speaker": "player",
+      "textKey": "dlg.ch2-dinner.fin1",
+      "next": "close"
+    },
+    {
+      "id": "fin2",
+      "speaker": "player",
+      "textKey": "dlg.ch2-dinner.fin2",
+      "next": "close"
+    },
+    {
+      "id": "close",
+      "speaker": "player",
+      "textKey": "dlg.ch2-dinner.close",
+      "end": true
+    }
+  ]
+}
