@@ -8,6 +8,7 @@ import type { SimState } from '../core/sim';
 import type { GameState } from '../core/state';
 import { dayOf } from '../core/weather';
 import type { Key } from '../i18n';
+import { ch2Active } from './ch2-live';
 import { MAP_LOCATION, mapKeyFor, nextTarget, TENT_SPOT as MAP_SPOT_TENT, type MapKey } from './map-first';
 
 /** Скільки перших пунктів агенди треба закрити, щоб підказка-стрілка зникла (вона лише для навчання в перший день). */
@@ -140,7 +141,7 @@ export function agendaOf(sim: SimState, defs: CoreDefs): Agenda | null {
   if (status(g, 'ST-003') === 'active') { phase = 'shop'; raw = shopItems(sim); }
   else if (defs.packing && status(g, 'CH1-HOME-001') === 'active' && packingOpen(defs.packing, g)) { phase = 'pack'; raw = packItems(sim, defs); }
   else if (status(g, 'ST-005') === 'active' && p.locationId === MAP_LOCATION.camp) { phase = 'camp'; raw = campItems(sim); }
-  else if (canRestNow(defs.story, g, sim.clock.minutes)) {
+  else if (ch2Active(g) === null && canRestNow(defs.story, g, sim.clock.minutes)) {   // GAME-296: у розділі 2 цього вікна нема — намет, берег і сусіди табору біля озера не в Мюллерталі (підказку дає nextTarget)
     // GAME-269: мертве вікно дня — «Відпочити до вечора» (намет) і дві необов'язкові справи, що вже є в грі (риболовля, сусіди).
     phase = 'other';
     raw = [

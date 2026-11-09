@@ -242,7 +242,7 @@ export function summaryOffer(sim: SimState, defs: CoreDefs): { daysEnded: number
   if (!sum) return { daysEnded: ended, summary: null };
   // GAME-288: день розділу 2 лічиться від ЙОГО старту (день 1 розділу 2, а не день 4 гри); розділ 1 — як було (base = 0).
   const base = chapterDayBase(sim, defs, sum.day);
-  const day = sum.day - base;
+  const day = chapterDay(sim, defs, sum.day);
   const ch2 = base > 0 && st !== undefined && sim.game.player !== null && !chapter2Complete(sim.game, st);
   return {
     daysEnded: ended,
@@ -263,7 +263,8 @@ export function summaryOffer(sim: SimState, defs: CoreDefs): { daysEnded: number
  */
 export function goalOf(s: GameState, st: StoryDefs, now?: number): { key: string } | null {
   const p = s.player;
-  if (!p || chapterComplete(s, st)) return null;
+  // GAME-296: після «Продовжити подорож» розділ 1 лишається завершеним, але мета є — головний квест розділу 2 (той самий механізм, що в розділі 1; кінець розділу 2 — мети нема).
+  if (!p || (chapterComplete(s, st) && s.chapterStart === undefined) || chapter2Complete(s, st)) return null;
   const id = Object.entries(s.quests).find(([qid, q]) => q.status === 'active' && st.quests[qid] && !st.quests[qid].optional && matches(st.quests[qid].when, p))?.[0];
   // GAME-256: крок чекає свій день чи вечір — ціль каже, що робити (вільний час / вечір / спати), а не називає крок, який ще не можна зробити.
   const gate = id === undefined ? undefined : st.quests[id]?.gate;
@@ -300,12 +301,19 @@ export const tomorrowKeyOf = (day: number, ch2 = false): Key | null => {
  * GAME-288 · скільки днів завершено ДО першого запису розділу 2 в журналі (квест CH2-* або приїзд у Мюллерталь): від цього числа лічаться дні розділу 2.
  * Розділ 2 не почався (записів нема) чи підсумок стосується дня розділу 1 (`day` ≤ base) — 0. Журнал, обрізаний з голови, номерів днів не дає (daySummary тоді null).
  */
-export function chapterDayBase(sim: Pick<SimState, 'journal'>, defs: CoreDefs, day: number): number {
+export function chapterDayBase(sim: Pick<SimState, 'journal'> & { readonly game?: Pick<GameState, 'chapterStart'> }, defs: CoreDefs, day: number): number {
   const first = firstCh2Index(sim.journal);
-  if (first < 0) return 0;
-  const base = dayRanges(sim.journal, dayCloseQuests(defs)).filter((r) => r.ended && r.to < first).length;
+  // GAME-296: розділ 2 почато командою (chapterStart), але записів CH2-* ще нема (їдемо з дому) — усі завершені дні вже позаду: «День 1» від першої ж миті.
+  if (first < 0 && sim.game?.chapterStart === undefined) return 0;
+  const base = dayRanges(sim.journal, dayCloseQuests(defs)).filter((r) => r.ended && (first < 0 || r.to < first)).length;
   return day > base ? base : 0;
 }
+
+/**
+ * GAME-296 · ОДИН день розділу для всього UI (HUD «День N» і «Підсумок дня N»): день гри мінус дні, що минули до старту розділу 2. Розділ 1 — без змін (база 0).
+ * Раніше підсумок рахував від старту розділу 2, а HUD брав сирий день гри: «День 4» над підсумком «день 1».
+ */
+export const chapterDay = (sim: Pick<SimState, 'journal'> & { readonly game?: Pick<GameState, 'chapterStart'> }, defs: CoreDefs, day: number): number => day - chapterDayBase(sim, defs, day);
 
 /** GAME-288 · «Наступного разу» для розділу 2: перший активний головний квест розділу (chapterComplete тут уже правдиве — від кінця розділу 1 — і ціль HUD не дає). */
 const ch2GoalKey = (g: GameState, st: StoryDefs): string | null => {
@@ -443,7 +451,7 @@ export function storyOffer(sim: SimState, defs: CoreDefs, view: StoryView = PANE
   const ag = s.player && view.mapFirst ? agendaOf(sim, defs) : null;
   const agenda = ag ? { ...ag, items: ag.items.map((i) => ({ ...i, label: 'item' in i.label ? { content: nameKey(i.label.item) ?? i.label.item } : i.label })) } : null;
   for (const [id, m] of bpSells) intents.set(id, m);
-  const base = { backpack, mapFirst: view.mapFirst, agenda, hint, requests: trackerRows(s, REQUESTS, weather), goal: goalOf(s, st, sim.clock.minutes), progress: progressOffer(s), atlas: atlasOffer(s), nearest: nearestReward(s), goals: s.player ? openGoals(s, st, weather, sim.clock.minutes) : [], moneyCents: s.moneyCents, inventory, journal, lastTrip, weather, forecast: todayForecast(sim), day: Math.max(dayOf(sim.clock) + 1, storyDay(s.slept)), timeMinutes: timeOfDay(sim.clock.minutes), rest: restOffer(sim), wave: waveOffer(sim), mia: miaState(s, defs), ...summaryOffer(sim, defs) };
+  const base = { backpack, mapFirst: view.mapFirst, agenda, hint, requests: trackerRows(s, REQUESTS, weather), goal: goalOf(s, st, sim.clock.minutes), progress: progressOffer(s), atlas: atlasOffer(s), nearest: nearestReward(s), goals: s.player ? openGoals(s, st, weather, sim.clock.minutes) : [], moneyCents: s.moneyCents, inventory, journal, lastTrip, weather, forecast: todayForecast(sim), day: chapterDay(sim, defs, Math.max(dayOf(sim.clock) + 1, storyDay(s.slept))), timeMinutes: timeOfDay(sim.clock.minutes), rest: restOffer(sim), wave: waveOffer(sim), mia: miaState(s, defs), ...summaryOffer(sim, defs) };
 
   if (!s.player) {
     const choices = characterChoices(defs);
@@ -551,13 +559,16 @@ export function storyOffer(sim: SimState, defs: CoreDefs, view: StoryView = PANE
   if (!dialogue && view.mapFirst && view.choice) {
     const spot = resolveSpot(sim, defs, view.choice);
     // Поїздка-підтвердження: ланцюг ходів — одна відповідь, її вигляд і намір — за останнім ходом (куди приїдемо); увесь ланцюг шле main.act.
-    const options = spot?.confirm ? spot.moves.slice(-1) : spot?.options;
+    const options = spot?.trips ? spot.trips.flatMap((t) => (t[0] ? [t[0]] : [])) : spot?.confirm ? spot.moves.slice(-1) : spot?.options;   // GAME-296: поїздка-ланцюг — відповідь за першим ходом
     if (options) {
-      const answers = options.map((m): OfferAction => { const a: OfferAction = { id: idOf(m, s), ...describe(m, defs, s, weather) }; intents.set(a.id, m); return a; });
+      // GAME-296: рішення дня розділу 2 («Піти до водоспаду», «Майстер-клас») — відповідь у рамці, а не «Завершити: …» (це вибір виходу квесту, а не закриття кроку).
+      const answers = options.map((m): OfferAction => { const a: OfferAction = { id: idOf(m, s), ...describe(m, defs, s, weather), ...(spot?.trips && m.type === 'CompleteQuest' ? { kind: 'choose' as const } : {}) }; intents.set(a.id, m); return a; });
       // GAME-185: «Що беремо?» — купівлі, на які бракує грошей, лишаються вимкненими рядками з причиною (без наміру: активувати їх нічим), а не зникають.
       if (view.choice === 'obj.buy') for (const { move, shortCents } of unaffordableBuys(s, defs)) answers.push({ id: `locked|${idOf(move, s)}`, ...describe(move, defs, s, weather), shortCents });
       answers.splice(answers.findIndex((a) => a.shortCents !== undefined) < 0 ? answers.length : answers.findIndex((a) => a.shortCents !== undefined), 0, { id: CHOICE_CANCEL_ID, kind: 'cancel', key: null });
-      dialogue = { speakerKey: null, speakerId: null, key: choicePrompt(view.choice), ui: true, answers };
+      // GAME-296: поїздки розділу 2 кажуть, що повернемось у кемпінг; вибір дня (CompleteQuest із переходом) — «Як проведемо день?»
+      const prompt = spot?.trips ? (options[0]?.type === 'CompleteQuest' ? 'choice.day' : 'choice.trip') : choicePrompt(view.choice);
+      dialogue = { speakerKey: null, speakerId: null, key: prompt, ui: true, answers };
     }
   }
 

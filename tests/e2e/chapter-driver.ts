@@ -16,7 +16,7 @@ export const core = (page: Page): Promise<Core> => page.evaluate(() => (window a
 export const probe = (page: Page): Promise<Probe> => page.evaluate(() => JSON.parse(JSON.stringify((window as unknown as { __game: { probe: Probe } }).__game.probe)) as Probe);
 export const loaded = (page: Page): Promise<unknown> => waitGameReady(page);
 
-export const MAP_OF: Readonly<Record<string, string>> = { 'loc.home': 'home', 'loc.shop': 'shop', 'loc.road': 'road', 'loc.camp.lake': 'camp-lake' };
+export const MAP_OF: Readonly<Record<string, string>> = { 'loc.home': 'home', 'loc.shop': 'shop', 'loc.road': 'road', 'loc.camp.lake': 'camp-lake', 'loc.camp.mullerthal': 'mullerthal' };   // GAME-296: Мюллерталь (локації розділу 2 без мапи показуються на ній же, але гравець у них не стоїть: поїздка — туди й назад)
 interface Tmj { width: number; height: number; layers: { name: string; data?: number[]; objects?: { name: string; x: number; y: number }[] }[] }
 const maps: Record<string, Tmj> = {};
 const tmj = (key: string): Tmj => (maps[key] ??= JSON.parse(readFileSync(`public/maps/${key}.tmj`, 'utf8')) as Tmj);

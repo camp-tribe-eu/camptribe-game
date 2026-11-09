@@ -22,6 +22,8 @@ import { isMapFirstSpot, liveMapSpot } from './map-first';
 import { isTraceSpot, liveTraceSpot } from './traces';
 import { isPhotoSpot, livePhotoSpot } from './photos';
 import { DINNER_SPOT, dinnerDue, dinnerFinishMove, dinnerMove } from './ch2-dinner';
+import { ch2FinishMove } from './ch2-live';
+import { dispatch, nextCommandId, type Command } from '../core/commands';
 import { isPlanSpot, planFinishMove, planSpotLive, planSpotMove, trailFinishMove } from './ch2-plan';
 import { REPAIR_FLAG, REPAIR_SPOT } from './repair';
 import type { Move } from './moves';
@@ -61,7 +63,9 @@ export function pendingWave(game: GameState, defs: CoreDefs, now?: number): stri
 export function storyMoves(sim: SimState, defs: CoreDefs): Move[] {
   const waveId = pendingWave(sim.game, defs, sim.clock.minutes);
   // GAME-288: після вечері розділу 2 день-квест завершується сам. GAME-289: після вибору стежки квест плану переходить у обрану гілку, а після вставки гілка завершується.
-  const auto = [dinnerFinishMove(sim), planFinishMove(sim), trailFinishMove(sim)].filter((m): m is Move => m !== null);
+  // GAME-296: решта кроків розділу 2, що закриваються самими візитами (приїзд, прогулянка, водоспад, Шенген, додому), — теж самі; шле лише те, що ядро прийме.
+  const accepts = (m: Move): boolean => dispatch(sim.game, { ...m, commandId: nextCommandId(sim.game) } as Command, defs, undefined, undefined, undefined, sim.clock.minutes).ok;
+  const auto = [dinnerFinishMove(sim), planFinishMove(sim), trailFinishMove(sim), ch2FinishMove(sim, accepts)].filter((m): m is Move => m !== null);
   return [...(waveId ? [{ type: 'StartWave', waveId } as Move] : []), ...auto];
 }
 
@@ -110,13 +114,13 @@ export function spotMove(sim: SimState, name: string): Move | null {
   if (name.startsWith(TASK_SPOT)) return liveSpot(sim, name) ? { type: 'CompleteTask', taskId: name.slice(TASK_SPOT.length) } : null;
   if (name === 'obj.campfire' && fireplaceDue(sim)) return fireplaceMove(sim.game);
   if (name === DINNER_SPOT) return dinnerDue(sim) ? dinnerMove() : null;   // GAME-288: стіл вечері розділу 2 — сцена, поки її не було; інакше німий
-  if (isPlanSpot(name)) return planSpotMove(sim, name);   // GAME-289: вказівники стежок у Мюллерталі — табличка плану й вставки гілок (сцени), інакше німі
+  if (isPlanSpot(name)) return planSpotMove(sim, name);   // GAME-289 (GAME-296: поїздку з вказівника веде main.ts через resolveSpot, коли сцени немає): вказівники стежок у Мюллерталі — табличка плану й вставки гілок (сцени), інакше німі
   return { type: 'Interact', targetId: name };
 }
 
 /** Чи об'єкт мапи зараз «живий» (видимий і діє): ціль справи — лише поки справа відкрита; пакети — доки не прибрані. */
 export function liveSpot(sim: SimState, name: string, defs?: CoreDefs): boolean {
-  if (isPlanSpot(name)) return planSpotLive(sim, name);   // GAME-289: вказівники стежок веде цей модуль, а не map-first.ts (там вони мертві)
+  if (isPlanSpot(name)) return planSpotLive(sim, name) || (defs !== undefined && liveMapSpot(sim, defs, name));   // GAME-289: вказівники стежок веде цей модуль; GAME-296: офіційний на дні 1 — ще й вихід на прогулянку (map-first.ts)
   // GAME-175: об'єкти дня 1 удома веде map-first.ts (потрібен каталог — звідки ядру відомі речі пакування й сюжет); без каталогу вони мертві.
   if (isMapFirstSpot(name)) return defs !== undefined && liveMapSpot(sim, defs, name);
   if (name.startsWith(TASK_SPOT)) {

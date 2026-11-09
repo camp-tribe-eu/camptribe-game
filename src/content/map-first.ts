@@ -22,18 +22,26 @@ import type { Key } from '../i18n';
 import { FIREPLACE_SCENE } from './fireplace';
 import type { Move } from './moves';
 import { vehicleReady } from '../view/world/proximity';
+import { WALK_SPOT, ch2Active, ch2CarDecisions, ch2CarTrips, ch2WalkTrip, isExcursion } from './ch2-live';
+import { DINNER_SPOT, dinnerDue } from './ch2-dinner';
+import { PLAN_SPOT, TRAIL_BRANCHES, planDue, trailDue } from './ch2-plan';
 
 export type MapKey = 'home' | 'shop' | 'camp' | 'road' | 'mullerthal';
 /** Локація кожної мапи гри (властивість locationId у .tmj; звіряє map-content.test). */
 export const MAP_LOCATION: Readonly<Record<MapKey, string>> = { home: 'loc.home', shop: 'loc.shop', camp: 'loc.camp.lake', road: 'loc.road', mullerthal: 'loc.camp.mullerthal' };
+/** Гравець стоїть у локації цієї мапи: власній або (Мюллерталь) у локації розділу 2 без мапи, що показується на ній. */
+export const onMapLocation = (map: MapKey, locationId: string | null | undefined): boolean => locationId === MAP_LOCATION[map] || (map === 'mullerthal' && isExcursion(locationId));
 /** Мапи, де кроки сюжету робляться руками (зріз 1 — дім і крамниця; GAME-183 — табір і дорога). */
 export const MAP_FIRST: readonly MapKey[] = ['home', 'shop', 'camp', 'road', 'mullerthal'];
 
-/** Мапа для локації: дім, крамниця й дорога мають свої; решта — табір біля озера. Немає персонажа (вибір героя) — дім: звідти починається гра. */
+/**
+ * Мапа для локації: дім, крамниця, дорога й Мюллерталь мають свої; локації розділу 2 без мапи (стежки, водоспад, галявина, Шенген — ch2-live.ts) показуються на мапі Мюллерталя, а не табору
+ * біля озера (GAME-296: інакше під написом «Тихий водоспад» стояв би чужий табір); решта — табір біля озера. Немає персонажа (вибір героя) — дім: звідти починається гра.
+ */
 export function mapKeyFor(locationId: string | null | undefined): MapKey {
   if (locationId === undefined || locationId === null || locationId === MAP_LOCATION.home) return 'home';
   if (locationId === MAP_LOCATION.shop) return 'shop';
-  if (locationId === MAP_LOCATION.mullerthal) return 'mullerthal';   // GAME-295: кемпінг Мюллерталь має власну мапу (не табір біля озера)
+  if (locationId === MAP_LOCATION.mullerthal || isExcursion(locationId)) return 'mullerthal';   // GAME-295: кемпінг Мюллерталь має власну мапу (не табір біля озера); GAME-296: локації без мапи — на ній же
   return locationId === MAP_LOCATION.road ? 'road' : 'camp';
 }
 
@@ -152,6 +160,9 @@ export function campStepProblems(quests: readonly { id: string; locationId?: str
   return out;
 }
 
+/** GAME-296: той самий хід (з усіма полями, зокрема `to` вибору виходу — moveKey його не бачить): так знаходиться поїздка-ланцюг за відповіддю рамки. */
+export const sameMove = (a: Move, b: Move): boolean => canonical(a) === canonical(b);
+
 /** Ключ дії для звірки «ця кнопка панелі = цей хід мапи»: тип і ціль (CompleteQuest без/з `to` — одна дія). */
 export function moveKey(m: Move): string {
   const r = m as unknown as Record<string, unknown>;
@@ -162,7 +173,8 @@ export function moveKey(m: Move): string {
  * Що робить об'єкт: ходи ядра (по порядку) і/або відкрити багажник. `options` (GAME-183) — об'єкт пропонує ВИБІР однієї з дій (куди їхати, що сушити,
  * як завершити крок): сцена показує маленьку рамку вибору в рамці розмови замість ☰, `moves` тоді порожній. Один варіант вибору не буває — це просто `moves`.
  */
-export interface Resolved { readonly moves: readonly Move[]; readonly ui?: 'trunk'; readonly options?: readonly Move[]; readonly confirm?: true }
+export interface Resolved { readonly moves: readonly Move[]; readonly ui?: 'trunk'; readonly options?: readonly Move[]; readonly confirm?: true; readonly trips?: readonly (readonly Move[])[] }
+// GAME-296: `trips` — вибір між поїздками-ланцюгами (туди й назад): відповідь у рамці називається за ПЕРШИМ ходом ланцюга («Піти: Тихий водоспад»), а надсилається весь ланцюг.
 // GAME-185: `confirm` — одна поїздка авто (можливо ланцюг ходів): мапа питає «Куди їдемо?» з єдиною відповіддю й «Не зараз», а не їде від дотику повз авто.
 
 const asCommand = (g: GameState, m: Move): Command => ({ ...m, commandId: nextCommandId(g) }) as Command;
@@ -182,6 +194,7 @@ const own = <T>(o: Readonly<Record<string, T>>, k: string): T | undefined => (Ob
 const active = (g: GameState, q: string): boolean => own(g.quests, q)?.status === 'active';
 
 const ROAD = 'loc.road';
+const CH2_ARRIVAL = 'CH2-ARRIVAL-001';
 /** Усі дороги, які ядро зараз приймає звідси (куди можна поїхати): порядок — дорога, дім, крамниця, табір. */
 /** Відкриті дороги звідси. `now` — лише з кошиком (GAME-246): вийти з неоплаченим кошиком ядро пускає за годинником крамниці (зачинена → речі на полицю). */
 const openVisits = (g: GameState, defs: CoreDefs, now?: number): Move[] =>
@@ -191,9 +204,20 @@ const openVisits = (g: GameState, defs: CoreDefs, now?: number): Move[] =>
  * Куди везе авто (велосипед) звідси зараз: ходи однієї ведучої дії (сюжет каже, куди) або вибір із відкритих напрямків (GAME-183 — «Куди їдемо?»); null — нікуди.
  * Ведуча дія не питає (як було в зрізі 1): авто просто їде туди, куди веде квест. Вільний вибір є там, де квест не веде: удома поза сюжетом і в таборі (там навіть «додому» — вибір: дорога, дім чи крамниця, стрілка вказує на авто).
  */
-function vehicleMoves(g: GameState, defs: CoreDefs): { moves: Move[]; options?: Move[] } | null {
+function vehicleMoves(g: GameState, defs: CoreDefs): { moves: Move[]; options?: Move[]; trips?: Move[][] } | null {
   const p = g.player;
   if (!p) return null;
+  // GAME-296 · Мюллерталь і локації розділу 2 без мапи: поїздки на стежку, до водоспаду, Шенгену, додому — та вибір «як провести день»; з локації без мапи — назад у кемпінг.
+  if (p.locationId === MAP_LOCATION.mullerthal || isExcursion(p.locationId)) {
+    if (isExcursion(p.locationId)) return { moves: [{ type: 'Visit', locationId: MAP_LOCATION.mullerthal }] };
+    const trips = [...ch2CarTrips(g), ...ch2CarDecisions(g)].filter((t) => chain(g, defs, t));
+    return trips.length > 0 ? { moves: [], trips } : null;
+  }
+  // Розділ 2 почато: з дому — на дорогу, з дороги — у Мюллерталь (раніше авто пропонувало лише дім, крамницю й табір біля озера).
+  if (active(g, CH2_ARRIVAL) && (p.locationId === MAP_LOCATION.home || p.locationId === MAP_LOCATION.road)) {
+    const next: Move = { type: 'Visit', locationId: p.locationId === MAP_LOCATION.home ? ROAD : MAP_LOCATION.mullerthal };
+    if (accepted(g, defs, next)) return { moves: [next] };
+  }
   if (p.locationId === MAP_LOCATION.shop) return { moves: [{ type: 'Visit', locationId: MAP_LOCATION.home }] };
   if (p.locationId === MAP_LOCATION.home) {
     // Дім: ST-003 (крамниця) → поїхали по спорядження; CH1-HOME-001 — завершити «Ми точно все взяли?» і виїхати; далі — на дорогу.
@@ -319,13 +343,20 @@ function compute(sim: SimState, defs: CoreDefs, name: string): Resolved | null {
       if (accepted(g, defs, pay, sim.clock.minutes)) return { moves: [], options: [pay] };
       const v = vehicleMoves(g, defs);
       if (!v) return null;
+      if (v.trips) return { moves: [], trips: v.trips };
       if (v.options) return { moves: [], options: v.options };
       return chain(g, defs, v.moves, sim.clock.minutes) ? { moves: v.moves, confirm: true } : null;
     }
     const v = vehicleMoves(g, defs);
     if (!v) return null;
+    if (v.trips) return { moves: [], trips: v.trips };
     if (v.options) return { moves: [], options: v.options };
     return chain(g, defs, v.moves) ? { moves: v.moves, confirm: true } : null;
+  }
+  // GAME-296: вказівник офіційної стежки на дні 1 — вихід на прогулянку (на дні 2 це табличка плану — сцена режисера, ch2-plan.ts).
+  if (name === WALK_SPOT) {
+    const trip = ch2WalkTrip(g);
+    return trip !== null && chain(g, defs, trip) ? { moves: [], trips: [trip] } : null;
   }
   return null;
 }
@@ -336,7 +367,7 @@ export function resolveSpot(sim: SimState, defs: CoreDefs, name: string): Resolv
   const p = g.player;
   if (!p || g.dialogue !== null || g.campaignEnded) return null;
   const map = mapKeyFor(p.locationId);
-  if (!(MAP_SPOTS[map] as readonly string[]).includes(name) || p.locationId !== MAP_LOCATION[map]) return null;
+  if (!(MAP_SPOTS[map] as readonly string[]).includes(name) || !onMapLocation(map, p.locationId)) return null;
   let byName = memo.get(g);
   if (!byName) { byName = new Map(); memo.set(g, byName); }
   // Справи хвилі, намет (сон/відпочинок) і авто з кошиком (каса за годинами крамниці, GAME-246) залежать від годинника, якого немає в GameState — без кешу.
@@ -380,14 +411,14 @@ export function coveredKeys(sim: SimState, defs: CoreDefs): ReadonlySet<string> 
   const p = g.player;
   const map = mapKeyFor(p?.locationId);
   // Дорога мапи не має (її малює табір), тож покриває лише гравець у локації своєї мапи.
-  if (p && p.locationId === MAP_LOCATION[map] && g.dialogue === null) {
+  if (p && onMapLocation(map, p.locationId) && g.dialogue === null) {
     // GAME-202: родина (follows) ходить із героєм — її розмова є на кожній мапі (слідувачі сцени), тож панелі вона не потрібна.
     for (const [id, n] of Object.entries(defs.story?.npcs ?? {})) if (n.follows === true && npcLive(g, defs, id)) out.add(`Talk|${id}`);
     for (const name of MAP_SPOTS[map] as readonly string[]) {
       if (name.startsWith('npc.')) { if (npcLive(g, defs, name)) out.add(`Talk|npc.${name.slice(4)}`); continue; }
       if (name.startsWith(SPOT_PREFIX.pack)) continue;   // пакування — не серед меню панелі (ходи PackItem/UnpackItem з сітки багажника)
       const r = resolveSpot(sim, defs, name);
-      for (const m of [...(r?.moves ?? []), ...(r?.options ?? [])]) out.add(moveKey(m));
+      for (const m of [...(r?.moves ?? []), ...(r?.options ?? []), ...(r?.trips ?? []).flat()]) out.add(moveKey(m));
       // Авто живе — усі відкриті дороги звідси покриті ним (веде квест — одна ціль, ні — вибір; решта «Піти:» не лишається кнопками ☰).
       if (name === 'obj.vehicle' && r) for (const m of openVisits(g, defs, hasBasket(g.flags) ? sim.clock.minutes : undefined)) out.add(moveKey(m));
     }
@@ -505,6 +536,35 @@ function campNext(sim: SimState, defs: CoreDefs): Next | null {
 }
 
 /**
+ * GAME-296 · розділ 2: стрілка й «Далі:» ведуть до живого об'єкта (авто, вказівник стежки, стіл вечері, господиня) або кажуть, що робити (вільний час, спати). Той самий порядок, що в ch2-live.ts і director.ts;
+ * null — квест не чекає нічого від гравця (завершується сам) чи гравець поза мапами розділу 2.
+ */
+function ch2Next(sim: SimState, defs: CoreDefs, id: string): Next | null {
+  const g = sim.game;
+  const p = g.player;
+  if (!p) return null;
+  if (isExcursion(p.locationId)) return { key: 'next.ch2.back', spot: 'obj.vehicle' };
+  if (id === 'CH2-ARRIVAL-001') {
+    if (p.locationId !== MAP_LOCATION.mullerthal) return { key: 'next.ch2.drive', spot: 'obj.vehicle' };
+    return objDone(g, id, 'o2-host') ? null : { key: 'next.ch2.host', spot: 'npc.host-mullerthal' };
+  }
+  if (p.locationId !== MAP_LOCATION.mullerthal) return null;
+  const held = heldGate(sim, defs);
+  if (held && !canSleepNow(defs.story, g, sim.clock.minutes) && canRestNow(defs.story, g, sim.clock.minutes)) return { key: 'next.ch2.rest', spot: null };   // мертве вікно до вечора: ☰ «Відпочити до вечора» (GAME-269)
+  if (held) return held.sleepNext ? (canSleepNow(defs.story, g, sim.clock.minutes) ? { key: 'next.ch2.sleep', spot: null } : { key: 'next.ch2.free', spot: null }) : { key: 'next.ch2.evening', spot: null };
+  if (id === 'CH2-D1-WALK-001') return { key: 'next.ch2.walk', spot: WALK_SPOT };
+  if (id === 'CH2-D1-SUMMARY-001') return dinnerDue(sim) ? { key: 'next.ch2.dinner', spot: DINNER_SPOT } : canSleepNow(defs.story, g, sim.clock.minutes) ? { key: 'next.ch2.sleep', spot: null } : { key: 'next.ch2.free', spot: null };
+  if (planDue(sim)) return { key: 'next.ch2.plan', spot: PLAN_SPOT };
+  const b = TRAIL_BRANCHES.find((x) => trailDue(sim, x));
+  if (b) return { key: 'next.ch2.trail', spot: b.spot };
+  if (id === 'CH2-D2-ACTIVITY-001') return { key: 'next.ch2.activity', spot: 'obj.vehicle' };
+  if (id === 'CH2-D2-WATERFALL-001') return { key: 'next.ch2.waterfall', spot: 'obj.vehicle' };
+  if (id === 'CH2-SCHENGEN-001') return { key: 'next.ch2.schengen', spot: 'obj.vehicle' };
+  if (id === 'CH2-D3-HOME-001') return { key: 'next.ch2.home', spot: 'obj.vehicle' };
+  return null;
+}
+
+/**
  * Що робити далі (рядок «Далі:» над мапою і підсвічений об'єкт). null — підказки немає (розмова, кінець розділу, мапа не зрізу 1).
  * Дорога (зріз 2): єдина підказка — відкрити ☰, бо там її кроки ще кнопками.
  */
@@ -513,6 +573,8 @@ export function nextTarget(sim: SimState, defs: CoreDefs, carried: readonly stri
   const p = g.player;
   if (!p || g.dialogue !== null || g.campaignEnded) return null;
   const car = p.transportId === 'transport.car';
+  const ch2 = ch2Active(g);
+  if (ch2 !== null) return ch2Next(sim, defs, ch2);   // GAME-296: розділ 2 має свою підказку; розділ 1 нижче — без змін
   if (p.locationId === MAP_LOCATION.road) return roadNext(sim, defs);
   if (p.locationId === MAP_LOCATION.camp) return campNext(sim, defs);
   if (p.locationId === MAP_LOCATION.shop) {
@@ -570,6 +632,7 @@ export function spotLabel(sim: SimState, defs: CoreDefs, name: string): SpotLabe
     return { label: 'pack.take', ref: itemId };
   }
   if (name === 'obj.trunk') return { label: car ? 'near.trunk' : 'near.trunk.bike', ref: null };
+  if (name === WALK_SPOT) return { label: 'near.trail', ref: null };
   if (name === 'obj.vehicle') return { label: car ? 'near.vehicle.car' : 'near.vehicle.bike', ref: null };
   if (name.startsWith('npc.')) return { label: 'act.talk', ref: name };
   return null;
