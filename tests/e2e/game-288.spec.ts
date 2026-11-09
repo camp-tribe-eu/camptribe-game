@@ -71,13 +71,15 @@ for (const v of VIEWS) {
     const frame = await page.locator('.ui-talk').boundingBox();
     expect(frame && frame.x >= 0 && frame.x + frame.width <= v.w + 1, 'рамка розмови в межах екрана').toBe(true);
     if (SHOTS) { mkdirSync(SHOTS, { recursive: true }); await page.waitForTimeout(500); await page.screenshot({ path: `${SHOTS}/dinner-${v.side}.png` }); }
-    let steps = 0;
-    for (; (await core(page)).game.dialogue !== null && steps < 30; steps++) {
+    // Рахуємо ВУЗЛИ, через які пройшла сцена, а не кліки: на CI дотик під час зміни рамки буває холостим (той самий вузол двічі) — це не інший шлях.
+    const nodes: string[] = [];
+    for (let clicks = 0; (await core(page)).game.dialogue !== null && clicks < 30; clicks++) {
       const node = ((await core(page)).game.dialogue as { node: string }).node;
+      if (nodes[nodes.length - 1] !== node) nodes.push(node);
       if (SHOTS && node === 'club3') await page.screenshot({ path: `${SHOTS}/ingrid-${v.side}.png` });
       await answerOne(page);
     }
-    expect(steps, 'шлях сцени — 12 відповідей: 9 «Далі» і 3 вибори').toBe(12);
+    expect(nodes.length, `шлях сцени — 12 вузлів: 9 «Далі» і 3 вибори (${nodes.join(' → ')})`).toBe(12);
     const after = await core(page);
     expect(after.game.dialogue).toBeNull();
     expect(after.game.flags, 'вечеря косметична: прапорців не додала').toEqual(before.game.flags);
