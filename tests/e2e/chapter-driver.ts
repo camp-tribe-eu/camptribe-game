@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs';
 import { expect, type Page } from '@playwright/test';
 import { waitGameReady } from './ready';
 
-export interface Core { game: { player: { locationId: string; transportId?: string } | null; flags: string[]; quests: Record<string, { status: string }>; inventory: Record<string, number>; dialogue: unknown; wave?: unknown; campaignEnded: boolean }; clock: { minutes: number }; journal: { type: string }[] }
+export interface Core { game: { player: { locationId: string; transportId?: string } | null; flags: string[]; quests: Record<string, { status: string }>; inventory: Record<string, number>; dialogue: unknown; wave?: unknown; campaignEnded: boolean }; clock: { minutes: number }; journal: { type: string; ref?: string | null }[] }
 /** GAME-193: зонд риболовлі (координати кнопок — у пікселях сторінки). */
 export interface FishP { phase: string; power: number; zone: number; fish: number; progress: number; inZone: boolean; casts: number; slipped: number; aways: number; kept: number; released: number; catches: number; species: string; spot: { x: number; y: number }; buttons: { release: { x: number; y: number }; keep: { x: number; y: number } }; ripples: number; flying: boolean }
 export interface Probe { map: string | null; heroBody: number; view: { x: number; y: number; w: number; h: number; zoom: number; mapW: number; mapH: number }; playerX: number; playerY: number; heroRect: { x: number; y: number; w: number; h: number }; nearObject: string | null; playerMoving: boolean; saveLoaded: boolean; reveal: boolean; commandsSent: number; cameraScrollX: number; cameraScrollY: number; tent: { phase: string; pegs: number; need: number; helpers: number; marker: number; inBand: boolean; placeOk: boolean; x: number; y: number };

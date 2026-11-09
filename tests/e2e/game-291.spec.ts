@@ -34,7 +34,7 @@ async function open(page: Page, fixture: string, extra = ''): Promise<void> {
 const QUEST = (c: Awaited<ReturnType<typeof core>>, q: string): string | undefined => c.game.quests[q]?.status;
 const hint = (page: Page): Promise<string> => page.locator('[data-ui="agenda-item"][data-current="yes"]').first().innerText();
 const noScroll = (page: Page): Promise<boolean> => page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth);
-const inFrame = async (page: Page, w: number): Promise<boolean> => { const b = await page.locator('.ui-talk').boundingBox(); return b !== null && b.x >= 0 && b.x + b.width <= w + 1; };
+const inFrame = async (page: Page, w: number): Promise<boolean> => { const b = await talk(page).boundingBox(); return b !== null && b.x >= 0 && b.x + b.width <= w + 1; };
 
 /** Пам'ятник (слід із art/placement/schengen.json) у координатах екрана: за вікном камери з зонда й рамкою полотна. */
 async function monumentOnScreen(page: Page): Promise<{ left: number; top: number; right: number; bottom: number; vw: number; vh: number }> {
@@ -44,8 +44,10 @@ async function monumentOnScreen(page: Page): Promise<{ left: number; top: number
   const cv = await page.locator('canvas').first().boundingBox();
   if (!cv) throw new Error('полотна немає');
   const k = cv.width / p.view.w;
-  const wx0 = m.x - m.w / 2, wy0 = m.y - m.h, wx1 = m.x + m.w / 2, wy1 = m.y;
-  return { left: cv.x + (wx0 - p.view.x) * k, top: cv.y + (wy0 - p.view.y) * k, right: cv.x + (wx1 - p.view.x) * k, bottom: cv.y + (wy1 - p.view.y) * k, vw: cv.x + cv.width, vh: cv.y + cv.height };
+  // видимі пікселі пам'ятника (не весь аркуш 96×96): висота 2,5 м × 28 px/м = 70 px, ширина — обрізка аркуша (75 px) по центру сліду
+  const wx0 = m.x - 37.5, wy0 = m.y - 70, wx1 = m.x + 37.5, wy1 = m.y;
+  // Вікно камери береться зі скролу камери (cameraScrollX/Y), а не з worldView: worldView оновлюється лише в кадрі відмальовки й на мить після зміни мапи ще показує стару мапу
+  return { left: cv.x + (wx0 - p.cameraScrollX) * k, top: cv.y + (wy0 - p.cameraScrollY) * k, right: cv.x + (wx1 - p.cameraScrollX) * k, bottom: cv.y + (wy1 - p.cameraScrollY) * k, vw: cv.x + cv.width, vh: cv.y + cv.height };
 }
 
 /** Читає сцену до кінця: кожен вузол рахується один раз; у вузлі вибору — перша відповідь. `onNode` — знімки. */
@@ -96,11 +98,13 @@ for (const v of VIEWS) {
       expect(await inFrame(page, v.w), 'рамка розмови в межах екрана').toBe(true);
       // розкладка: пам'ятник цілком у вікні камери й не під рамкою розмови
       const m = await monumentOnScreen(page);
-      const frame = await page.locator('.ui-talk').boundingBox();
-      expect(m.left, 'пам\'ятник не виходить ліворуч').toBeGreaterThanOrEqual(0);
-      expect(m.right, 'пам\'ятник не виходить праворуч').toBeLessThanOrEqual(m.vw);
-      expect(m.top, 'пам\'ятник не виходить угору').toBeGreaterThanOrEqual(0);
-      expect(m.bottom, 'пам\'ятник не виходить униз').toBeLessThanOrEqual(m.vh);
+      const pr = await probe(page);
+      const where = `герой ${Math.round(pr.playerX)},${Math.round(pr.playerY)} скрол ${Math.round(pr.cameraScrollX)},${Math.round(pr.cameraScrollY)} вікно ${pr.view.w}x${pr.view.h} пам'ятник ${JSON.stringify(m)}`;
+      const frame = await talk(page).boundingBox();
+      expect(m.left, `пам'ятник не виходить ліворуч (${where})`).toBeGreaterThanOrEqual(0);
+      expect(m.right, `пам'ятник не виходить праворуч (${where})`).toBeLessThanOrEqual(m.vw);
+      expect(m.top, `пам'ятник не виходить угору (${where})`).toBeGreaterThanOrEqual(0);
+      expect(m.bottom, `пам'ятник не виходить униз (${where})`).toBeLessThanOrEqual(m.vh);
       expect(m.bottom, `пам'ятник не під рамкою розмови (${v.side})`).toBeLessThanOrEqual((frame?.y ?? m.vh) + 1);
       const nodes = await readScene(page, async (node) => { if (['open', 'open-rain', 'wave', 'bottle', 'join', 'joined', 'trail', 'mark'].includes(node)) await shot(`scene-${node}`); });
       expect(nodes, `шлях сцени (${nodes.join(' → ')})`).toEqual(NODES[w]);
@@ -112,7 +116,7 @@ for (const v of VIEWS) {
       expect([after.game.inventory['item.medallion.half1'], after.game.inventory['item.medallion.half2'], after.game.inventory['item.microcard']], 'половинок не лишилось, мікрокарта є').toEqual([undefined, undefined, 1]);
       expect(after.game.flags.includes('f.ch2-george-trail'), 'мітка Джорджа на мапі').toBe(true);
       expect(after.game.flags.includes('f.ch2-schengen-rain'), 'прапорець дощу — лише в дощ').toBe(w === 'rain');
-      expect(after.journal.filter((e) => e.type === 'StartScene').length, 'одна сцена').toBe(1);
+      expect(after.journal.filter((e) => e.type === 'StartScene' && e.ref === SCENE).length, 'сцена Шенгену зіграна один раз').toBe(1);
       expect((await probe(page)).map).toBe('mullerthal');
       expect(await noScroll(page), 'без горизонтальної прокрутки').toBe(true);
       await shot('after');
@@ -153,6 +157,6 @@ test('негативний контроль: німе авто (?breakSpot=obj.v
   expect(c.game.dialogue, 'сцени нема').toBeNull();
   expect(QUEST(c, 'CH2-SCHENGEN-001'), 'Шенген лишився непройденим').toBe('active');
   expect(c.game.player?.locationId).toBe('loc.camp.mullerthal');
-  expect(c.journal.filter((e) => e.type === 'StartScene').length).toBe(0);
+  expect(c.journal.filter((e) => e.type === 'StartScene' && e.ref === SCENE).length, 'сцену Шенгену не зіграно').toBe(0);
   await ctx.close();
 });

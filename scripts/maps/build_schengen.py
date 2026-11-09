@@ -40,8 +40,10 @@ IMG = {n: Image.open(os.path.join(ROOT, 'assets/tiles', f)).convert('RGBA') for 
 COLS = {n: c for n, _, c, _, _ in SETS}
 
 RIVER = (25, 26, 27, 28)                                      # стовпці води: берег · дві глибини · берег
-PLAZA = (10, 8, 14, 12)                                        # вимощена площадка: c0, r0, c1, r1 (включно)
-MON = (11, 8)                                                 # пам'ятник 3×3: лівий верхній тайл; слід — нижній ряд (рядок 10)
+PLAZA = (9, 10, 15, 14)                                        # вимощена площадка: c0, r0, c1, r1 (включно)
+MON = (11, 10)                                                # пам'ятник 3×3: лівий верхній тайл; слід — нижній ряд (рядок 12)
+START = (13.625, 12)                                              # герой з'являється одразу праворуч від плінтуса (x = 452 px) на рівні його основи: камера 2× бачить усі три стовпи і в 9:16 (півширини 97 px), і в 16:9 (піввисоти 107 px); рамка розмови (низ екрана) їх не закриває
+PATH = [(c, r) for r in (14, 15) for c in range(16, 21)]      # стежка від площадки (її східний край) до авто
 
 
 def gid(sheet, col, row):
@@ -108,9 +110,9 @@ def build():
         g.keep.add((c, pr1))
     for r in range(MON[1] + 3, pr1 + 1):                          # підхід до пам'ятника й пляшки від стежки
         g.keep |= {(12, r), (13, r), (14, r), (15, r)}
-    for r in range(pr1 + 1, 24):
-        g.keep |= {(13, r), (14, r)}
-    dirt = {(13, r) for r in range(pr1 + 1, 24)} | {(14, r) for r in range(pr1 + 1, 24)}
+    g.keep |= {(c, r) for c in range(int(START[0]) - 1, int(START[0]) + 2) for r in range(START[1], START[1] + 2)}
+    g.keep |= set(PATH)
+    dirt = set(PATH)
     g.bare |= dirt
     for (c, r) in dirt:
         g.put('ground', c, r, 'lpc-terrain', *DIRT)
@@ -140,14 +142,13 @@ def build():
         col, row, w, h = PROP_POS[name]
         return g.stamp(name, 'camp-props', col, row, w, h, c, rb - h + 1, solid)
     ok = [
-        prop("reception", 19, 11),                             # павільйон: 20..23 × 8..11; поруч площадка (стежка до дверей — рядок 12)
-        prop("table", 7, 12), prop("table", 17, 12),           # пікнікові столи по краях площадки
-        prop("lamp", 10, 9), prop("lamp", 14, 9),
-        prop("bins", 6, 10),                                   # баки: скло, папір, решта (у сцені Метью несе пляшку в бак для скла)
-        prop("tap", 18, 13),
-        prop('bikes', 5, 14),
-        g.stamp('car', 'camp-car', 0, 0, 4, 2, 12, 24),        # авто родини на парковці внизу
-        prop('barrier', 17, 23),
+        prop("reception", 21, 13),                             # павільйон: 18..21 × 10..13 праворуч від площадки
+        prop("table", 7, 13), prop("table", 7, 16),            # пікнікові столи ліворуч від площадки
+        prop("lamp", 9, 12), prop("lamp", 15, 10),             # ліхтарі біля площадки (другий не на місці появи)
+        prop("bins", 6, 11),                                   # баки: скло, папір, решта (у сцені Метью несе пляшку в бак для скла)
+        prop("tap", 22, 14),
+        prop('bikes', 5, 16),
+        g.stamp('car', 'camp-car', 0, 0, 4, 2, 17, 16),        # авто родини на парковці під стежкою
     ]
     assert all(ok), ok
     for n, t, c, r in SPOTS:
@@ -159,7 +160,7 @@ def build():
 
     # --- ліс: сосни, підлісок, каміння по лісових зонах
     def forest(c, r):
-        return r <= 5 or c <= 3 or (c >= 21 and r >= 13) or c >= 24 or r >= 22
+        return r <= 7 or c <= 3 or (c >= 23 and r >= 8) or c >= 24 or r >= 19
     def pine(c, rb):
         return g.stamp('pine', 'lpc-terrain', 30, 0, 2, 5, c, rb - 4)
     def thicket(c, rb):
@@ -212,16 +213,16 @@ def finish(g):
 
 
 SPOTS = [  # (id, type, cell c, r)
-    ('s.start', 'spawn', 13, 15), ('s.car', 'spawn', 13, 22),
-    ('obj.vehicle', 'trigger', 14, 22),
-    ('obj.monument', 'anchor', 12, 12), ('obj.bottle', 'anchor', 13, 11),
+    ('s.start', 'spawn', START[0], START[1]), ('s.car', 'spawn', START[0], START[1]),
+    ('obj.vehicle', 'trigger', 18, 15),
+    ('obj.monument', 'anchor', 12, 13), ('obj.bottle', 'anchor', 13, 13),
 ]
 
 
 def tmj(g):
     ts = [{'firstgid': f, 'name': n, 'image': f'../../assets/tiles/{img}', 'imagewidth': IMG[n].width, 'imageheight': IMG[n].height, 'tilewidth': T, 'tileheight': T,
            'margin': 0, 'spacing': 0, 'columns': cols, 'tilecount': cols * rows} for n, img, cols, rows, f in SETS]
-    pts = [{'id': 1 + i, 'name': n, 'type': t, 'x': c * T + 16, 'y': r * T + 16, 'width': 0, 'height': 0, 'point': True, 'rotation': 0, 'visible': True} for i, (n, t, c, r) in enumerate(SPOTS)]
+    pts = [{'id': 1 + i, 'name': n, 'type': t, 'x': int(c * T + 16), 'y': r * T + 16, 'width': 0, 'height': 0, 'point': True, 'rotation': 0, 'visible': True} for i, (n, t, c, r) in enumerate(SPOTS)]
     k = len(pts) + 1
     def tl(i, name, data, props=None):
         d = {'id': i, 'name': name, 'type': 'tilelayer', 'width': W, 'height': H, 'x': 0, 'y': 0, 'opacity': 1, 'visible': True, 'data': data}
