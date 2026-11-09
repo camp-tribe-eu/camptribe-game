@@ -27,5 +27,6 @@
   { "id": "item.lantern-3", "nameKey": "item.lantern-3" },
   { "id": "item.pine-cone", "nameKey": "item.pine-cone", "resaleCents": 20 },
   { "id": "item.berries", "nameKey": "item.berries", "resaleCents": 50 },
-  { "id": "item.photo.orchid", "nameKey": "item.photo.orchid" }
+  { "id": "item.photo.orchid", "nameKey": "item.photo.orchid" },
+  { "id": "item.photo.perfect", "nameKey": "item.photo.perfect" }
 ]

@@ -229,7 +229,8 @@
       {"id": "o1-waterfall", "textKey": "q.ch2-d2-waterfall-001.o1", "kind": "visit", "target": "loc.waterfall", "required": true},
       {"id": "o2-orchid", "textKey": "q.ch2-d2-waterfall-001.o2", "kind": "visit", "target": "loc.meadow.orchid", "required": false}
     ],
-    "transitions": [{"on": "complete", "to": "CH2-D2-EVENING-001"}]
+    "transitions": [{"on": "complete", "to": "CH2-D2-EVENING-001"}],
+    "reward": {"grantId": "rw.ch2-d2-waterfall", "items": [{"item": "item.photo.perfect", "qty": 1}], "once": true}
   },
   {
     "id": "CH2-D2-WORKSHOP-001",
@@ -241,7 +242,8 @@
       {"id": "o1-mullerthal", "textKey": "q.ch2-d2-workshop-001.o1", "kind": "visit", "target": "loc.camp.mullerthal", "required": true},
       {"id": "o2-waterfall", "textKey": "q.ch2-d2-workshop-001.o2", "kind": "visit", "target": "loc.waterfall", "required": false}
     ],
-    "transitions": [{"on": "complete", "to": "CH2-D2-EVENING-001"}]
+    "transitions": [{"on": "complete", "to": "CH2-D2-EVENING-001"}],
+    "reward": {"grantId": "rw.ch2-d2-workshop", "items": [{"item": "item.photo.perfect", "qty": 1}], "once": true}
   },
   {
     "id": "CH2-D2-EVENING-001",

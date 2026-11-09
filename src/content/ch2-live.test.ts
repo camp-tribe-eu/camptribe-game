@@ -27,12 +27,12 @@ const run = (s: SimState, m: Move): SimState => {
   if (p?.ok !== true) throw new Error(`${JSON.stringify(m)} → ${p?.ok === false ? p.code : 'без відповіді'}`);
   return r;
 };
-/** Режисер, як main.ts direct(): усе, що сюжет шле сам, по одному, поки не замовкне. */
+/** Режисер, як main.ts direct(): усе, що сюжет шле сам, ЦІЛИМ пакетом (GAME-290: завершення водоспаду — ланцюг ходів), поки не замовкне. */
 function direct(s: SimState): SimState {
   for (let i = 0; i < 20; i++) {
-    const mv = storyMoves(s, DEFS)[0];
-    if (!mv) return s;
-    s = run(s, mv);
+    const batch = storyMoves(s, DEFS);
+    if (batch.length === 0) return s;
+    for (const mv of batch) s = run(s, mv);
   }
   throw new Error('режисер не замовкає');
 }
@@ -163,13 +163,16 @@ describe('GAME-296 · живий прохід розділу 2: від «Про�
     expect(after.game.player?.locationId).toBe(MAP_LOCATION.mullerthal);
   });
 
-  it('вибір дня — рамка «Як проведемо день?» з двома відповідями; водоспад — туди й назад, майстер-клас — без поїздки', () => {
+  it('вибір дня — рамка «Як проведемо день?» з двома відповідями; водоспад — поїздка на водоспад і сцена, майстер-клас — без поїздки', () => {
     const atActivity = follow(startChapter2(), (s) => s.game.quests['CH2-D2-ACTIVITY-001']?.status === 'active').sim;
     const o = storyOffer(atActivity, DEFS, view('obj.vehicle'));
     expect(o.offer.dialogue?.key).toBe('choice.day');
     expect(o.offer.dialogue?.answers.filter((a) => a.kind === 'choose').map((a) => a.key)).toEqual(['q.ch2-d2-activity-001.waterfall', 'q.ch2-d2-activity-001.workshop']);
     const visits = (s: SimState): number => s.journal.filter((e) => e.type === 'Visit').length;
-    expect(visits(touch(atActivity, 'obj.vehicle', 0)) - visits(atActivity), 'водоспад: два візити (туди й назад)').toBe(2);
+    const atFalls = touch(atActivity, 'obj.vehicle', 0);
+    expect(visits(atFalls) - visits(atActivity), 'водоспад (GAME-290): один візит — поїздка кінчається НА водоспаді, там режисер сам відкриває сцену').toBe(1);
+    expect(atFalls.game.player?.locationId).toBe('loc.waterfall');
+    expect(atFalls.game.dialogue?.id, 'сцена водоспаду відкрилась сама').toBe('dlg.ch2-waterfall');
     expect(visits(touch(atActivity, 'obj.vehicle', 1)) - visits(atActivity), 'майстер-клас: без поїздки').toBe(0);
   });
 

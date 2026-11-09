@@ -216,6 +216,11 @@ const storyChanged = (): void => {
   if (!talking) pendingFrame = false;
   hadDialogue = talking;
   direct();
+  // GAME-290: режисер сам відкрив сцену (водоспад, майстер-клас дня 2) — рамка розмови відкривається так само, як для розмови від дотику.
+  if (!talking && !mapTalk && bridge.state.game.dialogue !== null) {
+    hadDialogue = true;
+    if (openGate({ sceneMap: probe.map, wantMap: worldHooks.mapKey() }) === 'wait') pendingFrame = true; else openNow = true;
+  }
   for (const l of storyListeners) l();
   if (openNow) fireFrame();
 };

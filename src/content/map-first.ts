@@ -15,7 +15,8 @@ import { dispatch, nextCommandId, type Command } from '../core/commands';
 import type { CoreDefs } from '../core/defs';
 import { canonical } from '../core/hash';
 import { autoPack, packFlag, packItemsFor, packedOf, packingOpen, takeFlag } from '../core/packing';
-import type { SimState } from '../core/sim';
+import { todayWeather, type SimState } from '../core/sim';
+import type { Weather } from '../core/weather';
 import type { GameState } from '../core/state';
 import { canRestNow, canSleepNow, matches, questOpen, questSlept, storyDay } from '../core/story';
 import type { Key } from '../i18n';
@@ -24,6 +25,7 @@ import type { Move } from './moves';
 import { vehicleReady } from '../view/world/proximity';
 import { WALK_SPOT, ch2Active, ch2CarDecisions, ch2CarTrips, ch2WalkTrip, isExcursion } from './ch2-live';
 import { DINNER_SPOT, dinnerDue } from './ch2-dinner';
+import { EVENING_QUEST, eveningDue } from './ch2-activity';
 import { PLAN_SPOT, TRAIL_BRANCHES, planDue, trailDue } from './ch2-plan';
 
 export type MapKey = 'home' | 'shop' | 'camp' | 'road' | 'mullerthal';
@@ -204,13 +206,13 @@ const openVisits = (g: GameState, defs: CoreDefs, now?: number): Move[] =>
  * Куди везе авто (велосипед) звідси зараз: ходи однієї ведучої дії (сюжет каже, куди) або вибір із відкритих напрямків (GAME-183 — «Куди їдемо?»); null — нікуди.
  * Ведуча дія не питає (як було в зрізі 1): авто просто їде туди, куди веде квест. Вільний вибір є там, де квест не веде: удома поза сюжетом і в таборі (там навіть «додому» — вибір: дорога, дім чи крамниця, стрілка вказує на авто).
  */
-function vehicleMoves(g: GameState, defs: CoreDefs): { moves: Move[]; options?: Move[]; trips?: Move[][] } | null {
+function vehicleMoves(g: GameState, defs: CoreDefs, weather?: Weather): { moves: Move[]; options?: Move[]; trips?: Move[][] } | null {
   const p = g.player;
   if (!p) return null;
   // GAME-296 · Мюллерталь і локації розділу 2 без мапи: поїздки на стежку, до водоспаду, Шенгену, додому — та вибір «як провести день»; з локації без мапи — назад у кемпінг.
   if (p.locationId === MAP_LOCATION.mullerthal || isExcursion(p.locationId)) {
     if (isExcursion(p.locationId)) return { moves: [{ type: 'Visit', locationId: MAP_LOCATION.mullerthal }] };
-    const trips = [...ch2CarTrips(g), ...ch2CarDecisions(g)].filter((t) => chain(g, defs, t));
+    const trips = [...ch2CarTrips(g), ...ch2CarDecisions(g, weather)].filter((t) => chain(g, defs, t));
     return trips.length > 0 ? { moves: [], trips } : null;
   }
   // Розділ 2 почато: з дому — на дорогу, з дороги — у Мюллерталь (раніше авто пропонувало лише дім, крамницю й табір біля озера).
@@ -341,13 +343,13 @@ function compute(sim: SimState, defs: CoreDefs, name: string): Resolved | null {
     if (basketOf(g.flags, defs).length > 0) {
       const pay: Move = { type: 'Checkout' };
       if (accepted(g, defs, pay, sim.clock.minutes)) return { moves: [], options: [pay] };
-      const v = vehicleMoves(g, defs);
+      const v = vehicleMoves(g, defs, todayWeather(sim));
       if (!v) return null;
       if (v.trips) return { moves: [], trips: v.trips };
       if (v.options) return { moves: [], options: v.options };
       return chain(g, defs, v.moves, sim.clock.minutes) ? { moves: v.moves, confirm: true } : null;
     }
-    const v = vehicleMoves(g, defs);
+    const v = vehicleMoves(g, defs, todayWeather(sim));
     if (!v) return null;
     if (v.trips) return { moves: [], trips: v.trips };
     if (v.options) return { moves: [], options: v.options };
@@ -371,7 +373,7 @@ export function resolveSpot(sim: SimState, defs: CoreDefs, name: string): Resolv
   let byName = memo.get(g);
   if (!byName) { byName = new Map(); memo.set(g, byName); }
   // Справи хвилі, намет (сон/відпочинок) і авто з кошиком (каса за годинами крамниці, GAME-246) залежать від годинника, якого немає в GameState — без кешу.
-  const timed = name.startsWith('task.') || name === TENT_SPOT || ((name === 'obj.vehicle' || name === 'obj.buy') && hasBasket(g.flags));
+  const timed = name.startsWith('task.') || name === TENT_SPOT || ((name === 'obj.vehicle' || name === 'obj.buy') && hasBasket(g.flags)) || (name === 'obj.vehicle' && p.locationId === MAP_LOCATION.mullerthal);   // GAME-290: рішення дня 2 залежить від погоди (годинника в GameState немає)
   if (!timed && byName.has(name)) return byName.get(name) ?? null;
   const r = compute(sim, defs, name);
   byName.set(name, r);
@@ -553,6 +555,7 @@ function ch2Next(sim: SimState, defs: CoreDefs, id: string): Next | null {
   if (held && !canSleepNow(defs.story, g, sim.clock.minutes) && canRestNow(defs.story, g, sim.clock.minutes)) return { key: 'next.ch2.rest', spot: null };   // мертве вікно до вечора: ☰ «Відпочити до вечора» (GAME-269)
   if (held) return held.sleepNext ? (canSleepNow(defs.story, g, sim.clock.minutes) ? { key: 'next.ch2.sleep', spot: null } : { key: 'next.ch2.free', spot: null }) : { key: 'next.ch2.evening', spot: null };
   if (id === 'CH2-D1-WALK-001') return { key: 'next.ch2.walk', spot: WALK_SPOT };
+  if (id === EVENING_QUEST) return eveningDue(sim) ? { key: 'next.ch2.dinner', spot: DINNER_SPOT } : canSleepNow(defs.story, g, sim.clock.minutes) ? { key: 'next.ch2.sleep', spot: null } : { key: 'next.ch2.free', spot: null };   // GAME-290: вечеря дня 2 — той самий стіл
   if (id === 'CH2-D1-SUMMARY-001') return dinnerDue(sim) ? { key: 'next.ch2.dinner', spot: DINNER_SPOT } : canSleepNow(defs.story, g, sim.clock.minutes) ? { key: 'next.ch2.sleep', spot: null } : { key: 'next.ch2.free', spot: null };
   if (planDue(sim)) return { key: 'next.ch2.plan', spot: PLAN_SPOT };
   const b = TRAIL_BRANCHES.find((x) => trailDue(sim, x));

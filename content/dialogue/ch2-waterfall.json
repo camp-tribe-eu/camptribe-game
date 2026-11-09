@@ -1,0 +1,121 @@
+{
+  "id": "dlg.ch2-waterfall",
+  "scene": {
+    "titleKey": "dlg.ch2-waterfall.title",
+    "facts": [],
+    "atQuest": "CH2-D2-WATERFALL-001"
+  },
+  "start": "open",
+  "nodes": [
+    {
+      "id": "open",
+      "speaker": "player",
+      "textKey": "dlg.ch2-waterfall.open",
+      "next": "look"
+    },
+    {
+      "id": "look",
+      "speaker": "player",
+      "textKey": "dlg.ch2-waterfall.look",
+      "next": "hush"
+    },
+    {
+      "id": "hush",
+      "speaker": "player",
+      "textKey": "dlg.ch2-waterfall.hush",
+      "next": "quiet"
+    },
+    {
+      "id": "quiet",
+      "speaker": "player",
+      "textKey": "dlg.ch2-waterfall.quiet",
+      "choices": [
+        {
+          "textKey": "dlg.ch2-waterfall.quiet.c1",
+          "next": "s1"
+        },
+        {
+          "textKey": "dlg.ch2-waterfall.quiet.c2",
+          "next": "s2"
+        }
+      ]
+    },
+    {
+      "id": "s1",
+      "speaker": "player",
+      "textKey": "dlg.ch2-waterfall.s1",
+      "next": "meadow1"
+    },
+    {
+      "id": "s2",
+      "speaker": "player",
+      "textKey": "dlg.ch2-waterfall.s2",
+      "next": "meadow1"
+    },
+    {
+      "id": "meadow1",
+      "speaker": "player",
+      "textKey": "dlg.ch2-waterfall.meadow1",
+      "next": "meadow2"
+    },
+    {
+      "id": "meadow2",
+      "speaker": "player",
+      "textKey": "dlg.ch2-waterfall.meadow2",
+      "next": "angle"
+    },
+    {
+      "id": "angle",
+      "speaker": "player",
+      "textKey": "dlg.ch2-waterfall.angle",
+      "choices": [
+        {
+          "textKey": "dlg.ch2-waterfall.angle.c1",
+          "next": "a1"
+        },
+        {
+          "textKey": "dlg.ch2-waterfall.angle.c2",
+          "next": "a2"
+        }
+      ]
+    },
+    {
+      "id": "a1",
+      "speaker": "player",
+      "textKey": "dlg.ch2-waterfall.a1",
+      "next": "click"
+    },
+    {
+      "id": "a2",
+      "speaker": "player",
+      "textKey": "dlg.ch2-waterfall.a2",
+      "next": "click"
+    },
+    {
+      "id": "click",
+      "speaker": "player",
+      "textKey": "dlg.ch2-waterfall.click",
+      "next": "close",
+      "branches": [
+        {
+          "when": {
+            "flag": "f.photo-ch2-orchid"
+          },
+          "next": "click-p"
+        }
+      ]
+    },
+    {
+      "id": "click-p",
+      "speaker": "player",
+      "textKey": "dlg.ch2-waterfall.click-p",
+      "next": "close"
+    },
+    {
+      "id": "close",
+      "speaker": "player",
+      "textKey": "dlg.ch2-waterfall.close",
+      "end": true
+    }
+  ]
+}
