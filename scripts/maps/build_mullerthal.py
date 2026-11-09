@@ -56,7 +56,9 @@ class Grid:
         self.L = {n: [0] * (W * H) for n in ('ground', 'decor', 'walls', 'above')}
         self.occ = set()        # клітинки, зайняті слідом твердого предмета
         self.ab = set()         # клітинки шару above (крони, дахи): стампи не накладаються — інакше вирізає шматки
+        self.bare = set()       # клітинки без рослинності (стежки, майданчики, місток, вода): квіти там не ростуть
         self.keep = set()       # клітинки, які мають лишатись вільними (стежки, цілі, підходи)
+        self.plants = set()     # індекси objs-рослин
         self.objs = []          # сліди для check_placement: (name, type, x, y, w, h, sw, sh)
 
     def put(self, layer, c, r, sheet, col, row):
@@ -106,6 +108,7 @@ def build():
     for r in range(8, 15):                                    # стежка «інша» на північний схід
         g.keep |= {(29, r), (30, r)}
     dirt = set(g.keep)
+    g.bare |= dirt
     for (c, r) in dirt:
         g.put('ground', c, r, 'lpc-terrain', *DIRT)
 
@@ -119,6 +122,7 @@ def build():
     PB = (12, 9)                                              # блок ставка 3×3 у ch2: (12..14, 9..11)
     def water(c, r, col, row, wall=True):
         g.put('ground', c, r, 'ch2-muellerthal', col, row)
+        g.bare.add((c, r))
         if wall:
             g.put('walls', c, r, 'ch2-muellerthal', col, row)
             g.occ.add((c, r))
@@ -135,6 +139,7 @@ def build():
     for r in (15, 16):
         for c, (pc, pr) in zip((15, 16, 17, 18), [PLANK[0], PLANK[1], PLANK[1], PLANK[2]]):
             g.put('decor', c, r, 'lpc-terrain', pc, pr)
+            g.bare.add((c, r))
     for r in (15, 16):
         for c in (15, 18):
             g.keep.add((c, r))
@@ -147,6 +152,7 @@ def build():
         for r in range(r0, r1 + 1):
             for c in range(c0, c1 + 1):
                 g.put('ground', c, r, 'ch2-muellerthal', 7, 10)
+                g.bare.add((c, r))
     def tent(c, rb):
         return g.stamp('tent', 'camp-tent', 0, 0, 3, 2, c, rb - 1)
 
@@ -167,6 +173,13 @@ def build():
         g.stamp('closed-trail', 'ch2-muellerthal', 10, 4, 2, 3, 31, 12),   # огородження закритої офіційної стежки (V-бар'єр)
     ]
     assert all(ok), ok
+    blank_gid = gid('ch2-muellerthal', 20, 20)
+    assert blank('ch2-muellerthal', 20, 20)
+    for r in (11, 12):                                         # рецепція — будівля: прохід між стовпами закритий (прозорий тайл із колізією)
+        for c in range(7, 11):
+            if not g.L['walls'][r * W + c]:
+                g.L['walls'][r * W + c] = blank_gid
+            g.occ.add((c, r))
     for c in range(3, 14):
         for r in (22, 23, 24, 25):
             g.keep.add((c, r))
@@ -220,15 +233,19 @@ def finish(g):
         if near_edge and g.free([(c, r), (c + 1, r), (c + 2, r), (c + 1, r - 1)]) is False and False:
             pass
         n, sh, col, row = rnd.choice(small)
+        if (c, r) in g.bare:
+            n, sh, col, row = small[3]                         # на стежці — лише камінчик
         g.put('decor', c, r, sh, col, row)
         g.objs.append((f'{n}', 'prop', c * T + 12, r * T + 20, 8, 4, 32, 32))
+        if n == 'orchid':
+            g.plants.add(len(g.objs) - 1)
     return lay
 
 
 SPOTS = [  # (id, name, type, cell c, r)
     ('s.start', 'spawn', 12, 17), ('s.car', 'spawn', 12, 22),
-    ('npc.host-mullerthal', 'npc', 9, 13),
-    ('obj.vehicle', 'trigger', 13, 22), ('obj.reception-desk', 'anchor', 9, 14),
+    ('npc.host-mullerthal', 'npc', 9, 14),
+    ('obj.vehicle', 'trigger', 13, 22), ('obj.reception-desk', 'anchor', 10, 14),
     ('obj.pitch-1', 'trigger', 5, 17), ('obj.pitch-2', 'trigger', 23, 17), ('obj.pitch-3', 'trigger', 28, 17), ('obj.pitch-4', 'trigger', 22, 14),
     ('obj.sanitary-door', 'anchor', 24, 12),
     ('exit.trail.official', 'trigger', 33, 15), ('exit.trail.forgotten', 'trigger', 2, 15), ('exit.trail.other', 'trigger', 29, 8),
@@ -254,8 +271,9 @@ def tmj(g):
 
 
 def placement(g):
-    objs = [{'id': n, 'solid': t == 'solid', 'x': x + w / 2, 'y': y + h, 'foot': [w, h], 'w': sw, 'h': sh} for n, t, x, y, w, h, sw, sh in g.objs]
-    return json.dumps({'view': [0, 5 * T, W * T, H * T], 'objects': objs}, ensure_ascii=False, indent=0) + '\n'
+    objs = [{'id': o[0], 'solid': o[1] == 'solid', 'x': o[2] + o[4] / 2, 'y': o[3] + o[5], 'foot': [o[4], o[5]], 'w': o[6], 'h': o[7], **({'plant': True} if i in g.plants else {})} for i, o in enumerate(g.objs)]
+    bare = [[c * T, r * T, c * T + T, r * T + T] for c, r in sorted(g.bare, key=lambda k: (k[1], k[0]))]
+    return json.dumps({'view': [0, 5 * T, W * T, H * T], 'bare': bare, 'objects': objs}, ensure_ascii=False, indent=0) + '\n'
 
 
 def preview(g, path):
