@@ -59,7 +59,7 @@ import { dayOf, weatherOf } from '../../core/weather';
 import { swimGridOf, swimRegionOf, withWater } from './swim';
 import { REVEAL_BEATS, revealCenter, type RevealAnchors } from '../camp-reveal';
 import { calmMotion } from '../../platform/motion';
-import vehiclePlacement from '../../../art/placement/vehicle.json';
+import vehiclePlacement from './vehicle-placement.json';
 
 export const TILE = 32;
 const INTERACT_RANGE = TILE * 1.5;
@@ -185,7 +185,7 @@ export interface WorldHooks {
 /** Хто з NPC якого листа ходьби має (лист — в art.ts); решта — як Еліза. */
 const NPC_SHEET: Readonly<Record<string, string>> = { 'npc.george': 'res-georgeNpc', 'npc.cashier': 'res-lotte' };
 /** Де стоїть авто відносно точки посадки `obj.vehicle` (ноги авто = нижній центр спрайта): праворуч-вниз; його колізія — нижня смуга. */
-/** GAME-301: числа — з art/placement/vehicle.json (їх читає й сторож check_placement.py: авто не налазить на будівлю й двері). */
+/** GAME-301: числа — з src/view/world/vehicle-placement.json (його читає й сторож check_placement.py: авто не налазить на будівлю й двері). */
 const CAR_OFFSET = { x: vehiclePlacement.offset[0] ?? 16, y: vehiclePlacement.offset[1] ?? 80 };
 const CAR_BLOCK = { w: vehiclePlacement.block[0] ?? 104, h: vehiclePlacement.block[1] ?? 30 };
 /** Маркери: колір за родом об'єкта. */

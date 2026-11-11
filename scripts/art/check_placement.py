@@ -7,7 +7,7 @@
 
 Коди: PLACE_OVERLAP (сліди двох твердих предметів перетинаються: камінь у кущі), PLACE_ORDER (предмет намальовано поверх іншого, але його
 база вище на екрані: порушено y-sort), PLACE_WATER (твердий предмет стоїть у воді), PLACE_SIZE (висота спрайта поза ±40 % від справжньої,
-28 px/м), PLACE_PATH (камінь/уламок loose стоїть на клітинці стежки чи майданчика (layout['bare'] без layout['wet']), GAME-296), PLACE_PATCH (у видимій сцені layout['view']=[x0,y0,x1,y1] є вікно 96x96 px, яке не перетинає жодного предмета: порожнеча), PLACE_VEHICLE (GAME-301: авто на мапі налазить на будівлю, закриває спрайтом двері чи затуляє прохід перед ними; числа з art/placement/vehicle.json і obj.vehicle), PLACE_EMPTY (не перевірено жодного предмета: тиша — не факт, закон 4).
+28 px/м), PLACE_PATH (камінь/уламок loose стоїть на клітинці стежки чи майданчика (layout['bare'] без layout['wet']), GAME-296), PLACE_PATCH (у видимій сцені layout['view']=[x0,y0,x1,y1] є вікно 96x96 px, яке не перетинає жодного предмета: порожнеча), PLACE_VEHICLE (GAME-301: авто на мапі налазить на будівлю, закриває спрайтом двері чи затуляє прохід перед ними; числа з src/view/world/vehicle-placement.json і obj.vehicle), PLACE_EMPTY (не перевірено жодного предмета: тиша — не факт, закон 4).
 Формат layout.json: {"px_per_m":28,"objects":[{id,kind,x,y(база),w,h(спрайт),foot:[w,h],solid,z,real_h_m?,water?}]}; слід — прямокутник foot, центр по x, низ у y.
 Мапи: об'єкти objectgroup із type 'solid'/'prop' і width>0 — це сліди (x,y — лівий верх, як у Tiled).
 """
@@ -35,7 +35,7 @@ def inter(a, b):
     return min(a[2], b[2]) > max(a[0], b[0]) and min(a[3], b[3]) > max(a[1], b[1])
 
 
-VEHICLE_CFG = json.load(open(os.path.join(ROOT, 'art/placement/vehicle.json'), encoding='utf8'))
+VEHICLE_CFG = json.load(open(os.path.join(ROOT, 'src/view/world/vehicle-placement.json'), encoding='utf8'))
 
 
 def sprite_rect(o):
@@ -114,7 +114,7 @@ def check(layout, name='layout'):
 
 
 def vehicle_geometry(spot, cfg):
-    """GAME-301: спрайт і колізія авто від точки obj.vehicle (spot=(x,y)) за art/placement/vehicle.json — ті самі числа, що в scene.ts. Ноги авто = нижній центр."""
+    """GAME-301: спрайт і колізія авто від точки obj.vehicle (spot=(x,y)) за src/view/world/vehicle-placement.json — ті самі числа, що в scene.ts. Ноги авто = нижній центр."""
     fx, fy = spot[0] + cfg['offset'][0], spot[1] + cfg['offset'][1]
     sw, sh = cfg['sprite']
     bw, bh = cfg['block']

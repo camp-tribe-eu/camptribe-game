@@ -203,7 +203,7 @@ SHOP_SPOTS = [
     ('take.item.lantern', 'trigger', (11, 4)),        # у проході перед настінними полицями з ліхтарями
     ('step.ST-003', 'trigger', (12, 9)),              # збоку каси з боку покупця (не за прилавком)
     ('npc.cashier', 'npc', (10, 6)),                  # Lotte ЗА прилавком (прилавок у рядках 7–8), обличчям до входу. Говорити — з (11,6)
-    ('obj.vehicle', 'trigger', (9, 12)),              # GAME-301: на подвір'ї праворуч від дверей: авто (за vehicle.json +16,+80 від точки) стоїть на смузі стоянки, двері й прохід перед ними вільні
+    ('obj.vehicle', 'trigger', (9, 12)),              # GAME-301: на подвір'ї праворуч від дверей: авто (за src/view/world/vehicle-placement.json +16,+80 від точки) стоїть на смузі стоянки, двері й прохід перед ними вільні
     ('obj.buy', 'trigger', (10, 9)),                  # GAME-183: каса — купити чи продати; покупець стоїть перед нею
     ('obj.drying', 'trigger', (4, 9)),                # біля входу: мотузка для сушіння
 ]
@@ -374,7 +374,7 @@ def build_road():
 
 def placement_sidecars():
     """GAME-301 · art/placement/{home,shop}.json: будівля (слід) і двері (зона порога) — те, на що авто не має налазити (scripts/art/check_placement.py, PLACE_VEHICLE).
-    Прямокутники [x0, y0, x1, y1] у px; числа з тих самих констант, що й мапи. Авто сторож ставить сам від obj.vehicle за art/placement/vehicle.json."""
+    Прямокутники [x0, y0, x1, y1] у px; числа з тих самих констант, що й мапи. Авто сторож ставить сам від obj.vehicle за src/view/world/vehicle-placement.json."""
     return {
         'home': {'objects': [], 'buildings': [[0, 0, 27 * T, (HOME_TOP + 1) * T]], 'doors': [[HOME_GAP[0] * T, HOME_TOP * T, (HOME_GAP[1] + 1) * T, (HOME_TOP + 1) * T]]},
         'shop': {'objects': [], 'buildings': [[0, 0, SHOP_W * T, SHOP_FRONT_END * T]], 'doors': [[SHOP_DOOR[0] * T, SHOP_DOOR[2] * T, (SHOP_DOOR[1] + 1) * T, (SHOP_DOOR[3] + 1) * T]]},
