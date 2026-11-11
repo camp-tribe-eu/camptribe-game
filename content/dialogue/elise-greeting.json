@@ -96,10 +96,12 @@
       "id": "morning", "speaker": "npc", "textKey": "dlg.elise-greeting.morning",
       "choices": [
         { "textKey": "dlg.elise-greeting.morning.c1", "next": "advice", "when": { "all": [{ "flag": "f.night-tent" }, { "notRemembers": "m.advice-taken" }, { "notRemembers": "m.advice-declined" }] } },
-        { "textKey": "dlg.elise-greeting.morning.c2", "next": "morning-tip" }
+        { "textKey": "dlg.elise-greeting.morning.c2", "next": "morning-tip" },
+        { "textKey": "dlg.elise-greeting.morning.c3", "next": "morning-left" }
       ]
     },
     { "id": "morning-tip", "speaker": "npc", "textKey": "dlg.elise-greeting.morning-tip", "end": true },
+    { "id": "morning-left", "speaker": "npc", "textKey": "dlg.elise-greeting.morning-left", "end": true },
     {
       "id": "bikezone", "speaker": "npc", "textKey": "dlg.elise-greeting.bikezone",
       "choices": [

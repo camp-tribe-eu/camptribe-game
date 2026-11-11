@@ -40,6 +40,14 @@ const talk: Move = { type: 'Talk', npcId: ELISE };
 const choose = (choice: number): Move => ({ type: 'Choose', choice });
 const next: Move = { type: 'Continue' };
 const done = (questId: string): Move => ({ type: 'CompleteQuest', questId });
+/**
+ * GAME-307 · удар на обіді: Інгрід зупиняє біля столу зі старою картою клубу (gate → storm1), показує почерк Генрі
+ * (storm2 → storm2b) і дає вибір про відтяжки (storm3). Тут — шлях «лишаємо як є»: відтяжки ще не натягнуті, тож
+ * вибір «перев'язати» (за прапорцем наслідку хвилі) не видно, і безумовний лишається єдиним.
+ */
+const INGRID_NOON: readonly Move[] = [
+  { type: 'Talk', npcId: 'npc.ingrid' }, next, choose(0), next, next, choose(0), next,
+];
 
 /** День 1 до межі (ST-005 завершено) для трьох видів гравця: велосипед із наметом, авто з кішкою й наметом, авто без намету. */
 const DAY1_HEAD: readonly Move[] = [
@@ -178,7 +186,8 @@ describe('GAME-141 · межа дня й кінець розділу — різ�
     expect(daysEnded(sim, GAME_DEFS)).toBe(1);
     expect(daySummary(sim, 1, GAME_DEFS)?.sections.find((x) => x.kind === 'quests')?.ids.at(-1)).toBe('ST-005');
     expect(sim.game.campaignEnded).toBe(false);
-    sendAll([done('CH1-D2-001'), talk, choose(10), choose(1), next, done('CH1-D2-ELISE-001'), talk, choose(13), choose(0), next, next, done('CH1-D2-CAMP-001'), done('CH1-D2-FIRE-001'), SLEEP]);
+    // GAME-307: полудень дня 2 — дві розмови: Еліза (прогноз і чотири справи) і Інгрід (стара карта клубу, вибір на обіді).
+    sendAll([done('CH1-D2-001'), talk, choose(10), choose(1), next, ...INGRID_NOON, done('CH1-D2-ELISE-001'), talk, choose(13), choose(0), next, next, done('CH1-D2-CAMP-001'), done('CH1-D2-FIRE-001'), SLEEP]);
     expect(sim.game.campaignEnded).toBe(false);                 // GAME-144: межа дня 2, розділ триває
     expect(sim.game.quests['CH1-D3-001']?.status).toBe('active');
     expect(daysEnded(sim, GAME_DEFS)).toBe(2);

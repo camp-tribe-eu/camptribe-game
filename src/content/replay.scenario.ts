@@ -50,6 +50,8 @@ export const PROLOGUE_BIKE: readonly Input[] = [
   // День 2 (GAME-141): ранок → порада Елізи (прийнято) → велозона (погодились) → «дякую за велозону» → вечеря просто → кінець розділу.
   c({ type: 'CompleteQuest', questId: 'CH1-D2-001' }),                                  // ціль «ранок» виконано входом (гравець біля озера)
   c({ type: 'Talk', npcId: 'npc.elise' }), c({ type: 'Choose', choice: 10 }), c({ type: 'Choose', choice: 0 }), c({ type: 'Choose', choice: 0 }), c({ type: 'Continue' }), c({ type: 'Continue' }),
+  // GAME-307: удар на обіді — Інгрід зі старою картою клубу (почерк Генрі, вітер із озера після полудня); відтяжок ще нема, тож лишається безумовний вибір «дотягнемо решту справ».
+  c({ type: 'Talk', npcId: 'npc.ingrid' }), c({ type: 'Continue' }), c({ type: 'Choose', choice: 0 }), c({ type: 'Continue' }), c({ type: 'Continue' }), c({ type: 'Choose', choice: 0 }), c({ type: 'Continue' }),
   c({ type: 'CompleteQuest', questId: 'CH1-D2-ELISE-001', to: 'q.elise-bike-area' }), ...frames(4),
   c({ type: 'Talk', npcId: 'npc.elise' }), c({ type: 'Choose', choice: 11 }), c({ type: 'Choose', choice: 0 }), c({ type: 'Continue' }), c({ type: 'Continue' }),
   c({ type: 'CompleteQuest', questId: 'q.elise-bike-area' }),

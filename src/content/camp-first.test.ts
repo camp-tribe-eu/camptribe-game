@@ -38,7 +38,9 @@ function campMapMoves(sim: SimState, seen: Walk): Move[] {
   const out: Move[] = [];
   const map = mapKeyFor(g.player?.locationId);
   if (map === 'camp') {
-    if (npcLive(g, DEFS, 'npc.elise')) out.push({ type: 'Talk', npcId: 'npc.elise' });
+    // Розмови табору, від яких залежить сюжет: Еліза (рецепція) і — GAME-307 — Інгрід, мешканка табору (ambient.ts RESIDENTS),
+    // що на обіді дня 2 приносить стару карту клубу; без неї крок CH1-D2-ELISE-001 не закрити.
+    for (const who of ['npc.elise', 'npc.ingrid']) if (npcLive(g, DEFS, who)) out.push({ type: 'Talk', npcId: who });
     for (const name of [...WAVE_TASKS, 'obj.campfire', 'obj.litter']) {
       if (!liveSpot(sim, name, DEFS)) continue;
       const m = spotMove(sim, name);
