@@ -97,7 +97,9 @@ async function play(page: Page, stop: (c: Awaited<ReturnType<typeof core>>) => b
       if (QUEST(c, 'CH2-D1-SUMMARY-001') === 'active') { await skipClockToEvening(page); log.push('wait-evening'); continue; }
       // Спати можна, коли вечір настав (стан ядра), розмови нема, ☰ показує «Лягти спати»: чекаємо СТАНУ, а не часу; ☰ відкриваємо, лише поки її нема на екрані.
       const slept = (c.game as unknown as { slept?: number }).slept ?? 0;
-      await expect.poll(async () => { const x = await core(page); return x.game.dialogue === null && ((x.clock.minutes + 480) % 1440 >= 18 * 60 || (x.clock.minutes + 480) % 1440 < 7 * 60); }, { message: 'вечір настав, розмови нема' }).toBe(true);
+      // «Стрілки нема» буває миттєвістю (кадр після підсумку/розмови, поки нотатник перераховує ціль): тоді чекаємо СТАНУ — або стрілка повертається (йдемо за нею), або справді вечір без розмови (спимо). Нічого з цього — червоне.
+      const wake = await expect.poll(async () => { if ((await probe(page)).fx.target !== null) return 'target'; const x = await core(page); return x.game.dialogue === null && ((x.clock.minutes + 480) % 1440 >= 18 * 60 || (x.clock.minutes + 480) % 1440 < 7 * 60) ? 'evening' : 'wait'; }, { message: 'вечір настав, розмови нема (або стрілка «Далі» повернулась)' }).not.toBe('wait').then(async () => ((await probe(page)).fx.target !== null ? 'target' : 'evening'));
+      if (wake === 'target') continue;
       await expect.poll(async () => {
         if (!(await page.locator('[data-ui="story"]').isVisible().catch(() => false))) await page.locator('[data-touch="story"]').tap().catch(() => undefined);
         return act(page, 'sleep').isVisible().catch(() => false);
