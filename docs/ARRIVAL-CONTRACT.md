@@ -15,6 +15,11 @@
 | `ontime` | приїхали вчасно | `f.arrival-ontime` |
 | `late` | приїхали пізно й знервовані | `f.arrival-late` |
 
+**Міст до назв дороги.** У чернетці GAME-309 ті самі три результати названо `good` / `fine` / `scrappy`, а
+ділянки — повними id (`pitch.water`). Щоб картки злилися без правок одна в одній, міст лежить у коді:
+`ARRIVAL_BY_DRIVE` (`good → early`, `fine → ontime`, `scrappy → late`) і `pitchFullId` / `pitchFromFullId`
+(`src/content/arrival-pitch.ts`). Кількості збігаються: 4 / 3 / 2 вільні ділянки.
+
 Прапорець — значення enum-прапорця `f.arrival` (`content/flags.json`), як `f.pitch` і `f.night`. Дорога
 ставить рівно один; якщо дороги ще не грали, приїзд читає `ontime` (`arrivalOf`, `src/content/arrival-pitch.ts`).
 Жодного іншого каналу (ні часу годинника, ні пального) приїзд не читає: один прапорець — один договір.

@@ -8,7 +8,7 @@ import {
   ARRIVAL_DEFAULT, ARRIVAL_FLAG, ARRIVAL_TIMES, LEARN_SOURCES, NIGHT_EFFECTS, NIGHT_WEATHERS, PITCHES, PITCH_FLAG, PITCH_IDS, PREP_FLAGS,
   arrivalFlag, arrivalOf, checkArrivalChain, checkLearnable, checkNightSoft, checkNoDominantPitch, checkPitchesDiffer,
   choiceInformed, familyLineKey, freePitches, freePitchesOf, learnedPitches, nightAt, nightCost, nightPassable,
-  pitchAvailable, pitchDef, pitchFlag, pitchTaken, type NightEffect, type PitchDef,
+  ARRIVAL_BY_DRIVE, pitchAvailable, pitchDef, pitchFlag, pitchFromFullId, pitchFullId, pitchTaken, type NightEffect, type PitchDef,
 } from './arrival-pitch';
 import { DRIVE_FLAG, DRIVE_OUTCOMES } from './drive-in';
 
@@ -35,6 +35,22 @@ describe('GAME-310 · договір дороги: час приїзду', () =>
     expect(ids).toContain(DRIVE_FLAG);
     expect(values(DRIVE_FLAG)).toEqual([...DRIVE_OUTCOMES]);
     for (const f of Object.values(PREP_FLAGS)) expect(ids, `немає ${f}`).toContain(f);
+  });
+});
+
+describe('GAME-310 · міст до дороги (GAME-309)', () => {
+  it('три результати дороги лягають на три різні часи приїзду, і набори мають 4 / 3 / 2 ділянки', () => {
+    expect(Object.keys(ARRIVAL_BY_DRIVE)).toEqual(['good', 'fine', 'scrappy']);
+    expect(freePitches(ARRIVAL_BY_DRIVE.good).length).toBe(4);
+    expect(freePitches(ARRIVAL_BY_DRIVE.fine).length).toBe(3);
+    expect(freePitches(ARRIVAL_BY_DRIVE.scrappy).length).toBe(2);
+    expect(new Set(Object.values(ARRIVAL_BY_DRIVE)).size, 'два результати дороги на один приїзд — ланка втратила крок').toBe(3);
+  });
+
+  it('повні id ділянок дороги читаються туди й назад', () => {
+    for (const p of PITCH_IDS) expect(pitchFromFullId(pitchFullId(p))).toBe(p);
+    expect(pitchFullId('water')).toBe('pitch.water');
+    expect(pitchFromFullId('pitch.nowhere')).toBeNull();
   });
 });
 

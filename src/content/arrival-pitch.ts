@@ -267,3 +267,18 @@ export function checkLearnable(pitches: readonly PitchDef[] = PITCHES): string[]
   }
   return out;
 }
+
+// ───────── міст до дороги (GAME-309) ─────────
+
+/**
+ * Дорога називає свої три результати `good` / `fine` / `scrappy` і віддає ділянки повними id
+ * (`pitch.water`). Тут — міст, щоб обидві картки злились без правок одна в одній: назви різні,
+ * ланцюг той самий (docs/ARRIVAL-CONTRACT.md §1).
+ */
+export const ARRIVAL_BY_DRIVE: Readonly<Record<'good' | 'fine' | 'scrappy', ArrivalTime>> = { good: 'early', fine: 'ontime', scrappy: 'late' };
+
+/** Повний id ділянки, як його пише дорога: `pitch.water`. */
+export const pitchFullId = (p: PitchId): string => `pitch.${p}`;
+
+/** Ділянка з повного id дороги; null — такої ділянки немає. */
+export const pitchFromFullId = (id: string): PitchId | null => PITCH_IDS.find((p) => pitchFullId(p) === id) ?? null;
