@@ -1,5 +1,5 @@
 {
-  "_": "GAME-301: де стоїть спрайт авто відносно точки obj.vehicle (ноги авто = нижній центр) — читають сцена (scene.ts) і сторож scripts/art/check_placement.py. Не міняти в одному місці.",
+  "_": "GAME-301: where the car sprite stands relative to the obj.vehicle point (car feet = bottom centre). Read by scene.ts and by scripts/art/check_placement.py - change both together or neither.",
   "offset": [16, 80],
   "sprite": [128, 64],
   "block": [104, 30]
