@@ -106,7 +106,8 @@ export function Drive({ t, seed, moneyCents, scrappyStreak = 0, onDone, speedUp 
     apply(r.state, r.events);
   };
 
-  // Кадр: dt справжнього кадру × speedUp. Логіка не знає ні про rAF, ні про годинник — лише про dt.
+  // Кадр: крок логіки бере dt СПРАВЖНЬОГО кадру. `speedUp` не розтягує крок (інакше обріз MAX_DT_MS
+  // зробив би його безглуздим), а робить кілька однакових кроків за кадр — правила від цього ті самі.
   useEffect(() => {
     let raf = 0; let prev = 0;
     const frame = (now: number): void => {
@@ -115,9 +116,14 @@ export function Drive({ t, seed, moneyCents, scrappyStreak = 0, onDone, speedUp 
       prev = now;
       const cur = live.current;
       if (cur.paused || cur.result !== null || dt <= 0) return;
-      const r = stepDrive(cur.state, course, { kind: 'tick', dtMs: dt * speedUp });
-      apply(r.state, r.events);
-      onFrame?.(r.state, course, r.events);
+      let st = cur.state;
+      const events: DriveEvent[] = [];
+      for (let i = 0; i < Math.max(1, speedUp) && st.phase !== 'arrived'; i++) {
+        const r = stepDrive(st, course, { kind: 'tick', dtMs: dt });
+        st = r.state; events.push(...r.events);
+      }
+      apply(st, events);
+      onFrame?.(st, course, events);
     };
     raf = requestAnimationFrame(frame);
     return () => cancelAnimationFrame(raf);

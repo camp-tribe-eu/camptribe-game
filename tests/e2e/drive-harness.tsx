@@ -21,7 +21,7 @@ let course: Course | null = null;
 
 probe.mount = (s: Spec): void => {
   let host = document.getElementById('drive-harness');
-  if (!host) { host = document.createElement('div'); host.id = 'drive-harness'; document.body.append(host); }
+  if (!host) { host = document.createElement('div'); host.id = 'drive-harness'; host.style.cssText = 'position:fixed;inset:0;z-index:99'; document.body.append(host); }
   render(null, host);
   probe.state = null; probe.result = null; course = null;
   render(

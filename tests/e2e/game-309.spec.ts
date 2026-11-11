@@ -12,7 +12,7 @@ const SHOT_DIR = fileURLToPath(new URL('../../research/game-309/', import.meta.u
 const VIEWS = [{ name: 'portrait', w: 390, h: 844 }, { name: 'landscape', w: 932, h: 430 }];
 /** Найменший дотиковий розмір (OD-014). */
 const MIN_TAP = 48;
-/** Прискорення ігрового часу в стенді: поїздка на 5 хв проходить за ~20 с. */
+/** Стільки кроків логіки за кадр у стенді: поїздка на 5 хв проходить за ~20 с, правила ті самі. */
 const SPEED_UP = 16;
 
 test.use({ hasTouch: true });
@@ -51,7 +51,7 @@ async function swipe(page: Page, dx: number): Promise<void> {
 }
 
 /** Проїхати поїздку до кінця пальцем. Повертає, скільки разів перестроювались. */
-async function drive(page: Page, steps = 400): Promise<number> {
+async function drive(page: Page, steps = 600): Promise<number> {
   const root = page.locator('[data-ui="drive"]');
   let moves = 0;
   for (let i = 0; i < steps; i++) {
@@ -61,7 +61,7 @@ async function drive(page: Page, steps = 400): Promise<number> {
     if (advice !== null && advice !== lane) { await swipe(page, advice > lane ? 90 : -90); moves++; }
     const stop = page.locator('[data-ui="drive-stop"]');
     if (await stop.count() > 0 && Number(await root.getAttribute('data-fuel')) < 1.2) await stop.tap();
-    await page.waitForTimeout(120);
+    await page.waitForTimeout(80);
   }
   return moves;
 }
