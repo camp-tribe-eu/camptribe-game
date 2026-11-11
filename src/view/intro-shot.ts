@@ -4,12 +4,13 @@
 import { CAMPFIRE_SHEET, FAMILY_LOOKS, TILESET_IMAGES } from './world/art';
 import { DIR_ROW, FRAME, composeSheet, loadImage, type Dir } from './world/character';
 import type { RoomId, ShotSpec } from '../content/intro-scene';
+import { roomPlan, type PieceId } from './intro-plan';
 
 type Who = RoomId;
 interface Rect { readonly sx: number; readonly sy: number; readonly w: number; readonly h: number }
 // Вирізки з home_furniture.png (448×96): ліжко 2×3 тайли, диван, журнальний столик, торшер, картина, вазон, шафа.
 const BED: Rect = { sx: 96, sy: 0, w: 64, h: 96 };
-const WARDROBE: Rect = { sx: 160, sy: 5, w: 32, h: 70 };
+const DRESSER: Rect = { sx: 192, sy: 69, w: 32, h: 27 };
 const LAMP: Rect = { sx: 356, sy: 2, w: 24, h: 49 };
 const PAINTING: Rect = { sx: 397, sy: 1, w: 38, h: 30 };
 const PLANT: Rect = { sx: 0, sy: 7, w: 32, h: 73 };
@@ -88,9 +89,8 @@ async function paintRoomShot(target: HTMLCanvasElement, w: number, h: number, sp
   const morning = spec.phase === 'morning';
   const sleep = spec.pose === 'sleep';
   const pal: Pal = morning ? { sky: [150, 196, 232], tint: 'rgba(255,226,170,0.10)', glow: 0 } : sleep ? { sky: [22, 30, 58], tint: 'rgba(10,14,36,0.52)', glow: 0 } : { sky: [30, 42, 70], tint: 'rgba(18,22,48,0.34)', glow: 1 };
-  const floorY = Math.max(74, Math.min(Math.round(h * 0.58), h - 40));
-  const feet = Math.min(h - 8, floorY + 30);
-  const cx = Math.round(w / 2);
+  const plan = roomPlan(w, h, spec.room);
+  const { floorY, feet } = plan;
   for (let x = 0; x < w; x += 32) for (let y = floorY - 9 - 32; y > -32; y -= 32) c.drawImage(walls, 32, 16, 32, 32, x, y, 32, 32);
   for (let x = 0; x < w; x += 32) c.drawImage(walls, 32, 87, 32, 9, x, floorY - 9, 32, 9);
   for (let x = 0; x < w; x += 32) for (let y = floorY; y < h; y += 32) c.drawImage(floor, 0, 0, 32, 32, x, y, 32, 32);
@@ -101,43 +101,30 @@ async function paintRoomShot(target: HTMLCanvasElement, w: number, h: number, sp
   c.fillRect(0, floorY, w, h - floorY);
   dot(c, 'rgba(30,15,10,0.25)', 0, floorY, w, 3);
   const win = windowSprite(doors, pal.sky);
-  const bedY = floorY + 22 - BED.h;   // низ ліжка — трохи нижче лінії підлоги (воно «стоїть» на підлозі, а не висить на стіні)
-  if (spec.room === 'matthew') {
-    // Кімната підлітка: ліжко ліворуч, вікно над ним, торшер, людина праворуч.
-    if (win) c.drawImage(win, cx - 22, Math.max(2, floorY - 78));
-    const bx = cx - 52;
-    px(c, furn, BED, bx, bedY);
-    if (sleep) sleeper(c, sh, furn, bx, bedY);
-    px(c, furn, LAMP, cx + 30, floorY - LAMP.h + 8);
-    if (!sleep) person(c, sh, cx + 14, feet, 'down');
-  } else if (spec.room === 'george') {
-    // Вітальня: диван, журнальний столик, вазон, картина на стіні; тато стоїть біля дивана (читає інструкцію — дивиться вліво).
-    px(c, furn, PAINTING, cx - 19, Math.max(4, floorY - 64));
-    px(c, furn, PLANT, cx - 62, floorY - PLANT.h + 14);
-    px(c, furn, SOFA, cx - 28, floorY - SOFA.h + 20);
-    if (sleep) {
-      // Заснув на дивані: потилиця на спинці, зверху ковдра з ліжка.
-      c.drawImage(sh, 22, DIR_ROW.up * FRAME + 8, 20, 22, cx - 12, floorY - 24, 20, 22);
-      c.drawImage(furn, 100, 52, 56, 22, cx - 28, floorY - 8, 55, 22);
-    } else {
-      px(c, furn, COFFEE, cx + 14, floorY + 2);
-      person(c, sh, cx - 18, feet, 'right');
-    }
-  } else {
-    // Спальня батьків: двоспальне ліжко, шафа, торшер; Вікторія стоїть біля ліжка.
-    px(c, furn, WARDROBE, cx + 26, floorY - WARDROBE.h + 12);
-    px(c, furn, LAMP, cx - 64, floorY - LAMP.h + 8);
-    const bx = cx - 40;
-    px(c, furn, BED, bx, bedY);
-    if (sleep) sleeper(c, sh, furn, bx, bedY);
-    if (!sleep) person(c, sh, cx + 14, feet + 2, 'left');
-  }
+  const SRC: Readonly<Record<PieceId, Rect>> = { bed: BED, sofa: SOFA, coffee: COFFEE, lamp: LAMP, plant: PLANT, dresser: DRESSER, painting: PAINTING, window: BED };
+  // Речі й людина — в одному порядку за низом (що нижче на екрані, те попереду), тож людина, що стоїть перед ліжком чи тумбою, їх перекриває, а не навпаки.
+  type Item = { readonly base: number; readonly draw: () => void };
+  const items: Item[] = plan.pieces.map((pc): Item => ({
+    base: pc.wall ? -1 : pc.y + pc.h,
+    draw: () => {
+      if (pc.id === 'window') { if (win) c.drawImage(win, pc.x, pc.y); return; }
+      px(c, furn, SRC[pc.id], pc.x, pc.y);
+      if (sleep && pc.id === 'bed') sleeper(c, sh, furn, pc.x, pc.y);
+      if (sleep && pc.id === 'sofa') {
+        // Заснув на дивані: потилиця на спинці, зверху ковдра з ліжка.
+        c.drawImage(sh, 22, DIR_ROW.up * FRAME + 8, 20, 22, pc.x + 16, pc.y - 10, 20, 22);
+        c.drawImage(furn, 100, 52, 56, 22, pc.x, pc.y + 6, 55, 22);
+      }
+    },
+  }));
+  if (!sleep) items.push({ base: feet, draw: () => person(c, sh, plan.person.x, feet, plan.person.dir) });
+  items.sort((a, b) => a.base - b.base).forEach((it) => it.draw());
   // Присмерк / ранкове світло на всьому; тепла пляма торшера (лише вночі й не уві сні).
   c.fillStyle = pal.tint;
   c.fillRect(0, 0, w, h);
   if (pal.glow > 0) {
-    const gx = spec.room === 'victoria' ? cx - 52 : cx + 42;
-    const gy = floorY - 30;
+    const gx = plan.glow.x;
+    const gy = plan.glow.y - 24;
     const g = c.createRadialGradient(gx, gy, 2, gx, gy, 80);
     g.addColorStop(0, 'rgba(255,205,120,0.45)');
     g.addColorStop(0.5, 'rgba(255,170,80,0.14)');

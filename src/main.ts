@@ -608,7 +608,7 @@ render(h(Shell, {
     },
     introRoom: paintRoom,
     introSolo: () => switches.soloHero === true,
-    introStyle: () => switches.introStyle ?? 'classic',
+    introClassic: () => switches.introClassic === true,
     introShot: paintShot,
     coldOpenScene: paintColdOpen,
     // GAME-216: кіно перед вступом — раз на нову гру; при завантаженні лише коли жодного сейву не прочитано (існуючий сейв кіно не показує).

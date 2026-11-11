@@ -3,7 +3,7 @@
 import type { SkillUp } from './overlay-order';
 import type { StoryOffer } from './story-types';
 import type { MiniFrame } from '../content/agenda';
-import type { IntroStyle, ShotSpec } from '../content/intro-scene';
+import type { ShotSpec } from '../content/intro-scene';
 
 /** GAME-181: що щойно нараховано. `title` — індекс нового звання (0…9), якщо воно з'явилось саме зараз; інакше null. */
 export interface RewardEvent { readonly xp: number; readonly om: number; readonly title: number | null; /** GAME-247: гроші з нових нагород і XP навичок — для наклейки. */ readonly cents: number; readonly skills: Readonly<Record<string, number>> }
@@ -48,8 +48,8 @@ export interface UiPort {
   introRoom?: IntroRoomPainter;
   /** GAME-265 (лише збірка e2e, ?soloHero=1): вступ пропонує й «самостійного дослідника». Немає — лише родина. */
   introSolo?(): boolean;
-  /** GAME-303 (лише збірка e2e, ?introStyle=comic|cinema): проба подачі вступу. Немає або 'classic' — нинішній вступ без змін. */
-  introStyle?(): IntroStyle;
+  /** GAME-303 (лише збірка e2e, ?introClassic=1): старий вигляд вступу без гібрида (комікс + повні кадри). Немає — гібрид, як у грі. */
+  introClassic?(): boolean;
   /** GAME-303: малює кадр проби подачі (кімната з людиною чи сон) на полотні; без нього (тести без полотна) кадри порожні. */
   introShot?: IntroShotPainter;
   /** GAME-216: малює холодний початок (кіно ≤ 45 с перед вступом); повертає зупинку. Немає — сцени немає, одразу вступ. */
