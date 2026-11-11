@@ -73,6 +73,8 @@ export function rewardDelta(prev: CoreSnap, next: CoreSnap, grantCents: Readonly
   return { cents, xp: Math.max(0, next.xp - prev.xp), om: Math.max(0, next.om - prev.om), skills };
 }
 
+/** GAME-302: чи пояснити XP цією наклейкою — лише перша наклейка гри, у якій є XP («Збирати кружки для HP XP — не розумію»: XP — досвід, збирати його не треба, а HP у грі немає). */
+export const explainXp = (s: RewardSum, alreadyExplained: boolean): boolean => s.xp > 0 && !alreadyExplained;
 export const isEmptySum = (s: RewardSum): boolean => s.cents === 0 && s.xp === 0 && s.om === 0 && Object.keys(s.skills).length === 0;
 
 export function mergeSums(a: RewardSum, b: RewardSum): RewardSum {

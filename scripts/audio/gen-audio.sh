@@ -17,8 +17,8 @@ amb camp 14 "$(n pink 14 0.5),lowpass=f=700,tremolo=f=0.23:d=0.6,volume=0.5[w];a
 amb lake 14 "$(n brown 14 0.9),lowpass=f=900,tremolo=f=0.28:d=0.7,volume=1.2[a];$(n pink 14 0.2 3),bandpass=f=1800:w=1200,tremolo=f=0.28:d=0.9,volume=0.35[b];[a][b]amix=inputs=2:normalize=0"
 # Вогнище: низьке гуркотіння + тріск (гейт різко вирізає випадкові сплески).
 amb fire 12 "$(n white 12 0.9 5),highpass=f=1500,agate=threshold=0.35:attack=1:release=25,volume=0.9[c];$(n brown 12 0.7 9),lowpass=f=300,volume=0.7[r];[c][r]amix=inputs=2:normalize=0"
-# Дощ: широкосмуговий шум.
-amb rain 12 "$(n white 12 0.5 11),highpass=f=700,lowpass=f=9000,volume=0.8[a];$(n brown 12 0.5 2),lowpass=f=400,volume=0.5[b];[a][b]amix=inputs=2:normalize=0"
+# Дощ (GAME-302): м'який — рожевий+коричневий шум, зрізаний зверху (2,2 кГц). Був білий шум 0,7–9 кГц: власник чув «білий противний шум». Білого джерела в дощі більше немає (сторож no-white-noise.test.ts).
+amb rain 12 "$(n pink 12 0.6 11),highpass=f=180,lowpass=f=2200,volume=0.8[a];$(n brown 12 0.5 2),lowpass=f=300,volume=0.5[b];[a][b]amix=inputs=2:normalize=0"
 # Дорога (авто): гул двигуна 55/110 Гц + шум шин.
 amb road-car 10 "aevalsrc='0.35*sin(2*PI*55*t)+0.2*sin(2*PI*110*t+0.5)+0.1*sin(2*PI*165*t)':d=10:s=22050,tremolo=f=14:d=0.15[e];$(n brown 10 0.5 4),lowpass=f=500,volume=0.6[t];[e][t]amix=inputs=2:normalize=0"
 # Дорога (велосипед): тихий тік ланцюга ~7 Гц + вітер.

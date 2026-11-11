@@ -1,5 +1,5 @@
 // GAME-216 · холодний початок демо: ≤ 45 с кіно перед вступом (дощ у вікні → родина → атлас → листівка «H+E» → затемнення → вступ).
-// Пропуск працює з будь-якого біта (тап на 0,5 с, 10 с, 30 с → керування у вступі ≤ 1 с); з існуючим сейвом кіно не показується;
+// Пропуск (кнопка «Пропустити вступ») працює з будь-якого біта (на 0,5 с, 10 с, 30 с → керування у вступі ≤ 1 с); з існуючим сейвом кіно не показується;
 // обидві орієнтації. У збірці e2e кіно вмикає лише ?coldOpen=1 разом з ?intro=1 (test-switches.ts).
 // Негативні контролі (закон 1): без ?coldOpen=1 кіно немає (перевірка «кіно видно» червоніє); «Нова гра» → перезавантаження →
 // сейв є → вступ є, а кіно — ні (прибрати перевірку loadedSave у main.ts — червоніє).
@@ -18,10 +18,10 @@ async function begin(page: Page): Promise<number> {
   await expect(cold(page)).toHaveAttribute('data-state', 'play');
   return Date.now();
 }
-/** Один тап будь-де по сцені → кіно зникло, вступ готовий приймати дотик: «Далі» видно. Міряємо від тапу. */
+/** GAME-302: пропуск — кнопка «Пропустити вступ» (випадковий дотик по сцені кіно не обриває: game-302.spec) → кіно зникло, вступ готовий приймати дотик: «Далі» видно. Міряємо від тапу. */
 async function skipAndMeasure(page: Page): Promise<number> {
   const t0 = Date.now();
-  await page.mouse.click(200, 150);
+  await page.locator('[data-ui="cold-open-skip"]').click();
   await expect(cold(page)).toHaveCount(0);
   await expect(page.locator('[data-ui="intro-spots"]')).toBeVisible();
   return Date.now() - t0;
@@ -86,6 +86,8 @@ test('Escape під час кіно — теж пропуск', async ({ page })
   // Рецензія PR #144: модифікатор і гаряча клавіша браузера сцену не пропускають (мутація «будь-яка клавіша» → червоне).
   await page.keyboard.press('Shift');
   await page.keyboard.press('Control+KeyC');
+  await page.keyboard.press('Space');   // GAME-302: Enter/Space/стрілки теж не обривають кіно (мутація «будь-яка клавіша» → червоне)
+  await page.keyboard.press('Enter');
   await expect(cold(page)).toHaveCount(1);
   await page.keyboard.press('Escape');
   await expect(cold(page)).toHaveCount(0);

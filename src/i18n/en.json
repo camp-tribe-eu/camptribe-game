@@ -266,6 +266,7 @@
   "ui.skills.next": "The next rank unlocks",
   "ui.skills.mentor": "Next: a mentor’s lesson",
   "ui.skills.max": "Top rank",
+  "ui.xpExplain": "XP is experience for tasks: nothing to collect, and there is no health (HP) here.",
   "ui.rewardSticker": "Reward",
   "ui.titleUp": "New title",
   "sum.reward": "Today",

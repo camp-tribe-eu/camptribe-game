@@ -36,9 +36,9 @@ export const AMBIENT_FILES: Readonly<Record<AmbientLayer, { readonly key: string
 /** GAME-252: дощ був 1,0 / 0,8 — «занадто гучний» (власник 05.11); тепер 0,5 / 0,4 (−50 %). */
 export const RAIN_LEVEL = 0.5;
 
-/** Який фон звучить у цьому стані. Вступ і двір — дощ; крамниця — тиха кімнатна «тиша»; табір — пташки з вітром, біля озера + хвилі, біля розпаленого вогнища + тріск; дорога — за транспортом. */
+/** Який фон звучить у цьому стані. Вступ — без фону (лише музика); двір — м'який дощ; крамниця — тиха кімнатна «тиша»; табір — пташки з вітром, біля озера + хвилі, біля розпаленого вогнища + тріск; дорога — за транспортом. */
 export function ambientMix(s: AmbientState): AmbientMix {
-  if (s.intro) return { rain: RAIN_LEVEL };
+  if (s.intro) return {};   // GAME-302: у вступі фонового шуму немає — звучить лише музика (дощ видно у вікні); власник чув у дощовому фоні «білий шум»
   switch (s.map) {
     case 'home': return { rain: RAIN_LEVEL * 0.8 };
     case 'camp': if (s.swimming === true) return { camp: 0.3, lake: 0.6 }; return { camp: 1, ...(s.nearLake ? { lake: 0.8 } : {}), ...(s.fireLit && s.nearFire ? { fire: 0.9 } : {}) };
