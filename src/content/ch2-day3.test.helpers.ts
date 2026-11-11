@@ -28,7 +28,7 @@ export const run = (s: SimState, m: object): SimState => {
   const c = cmdOf(m);
   const r = step(s, { kind: 'command', command: c }, CTX);
   const p = r.game.processed[c.commandId];
-  if (p?.ok !== true) throw new Error(`${JSON.stringify(m)} → ${p?.ok === false ? p.code : 'без відповіді'}`);
+  if (p?.ok !== true) throw new Error(`${JSON.stringify(m)} → ${p?.ok === false ? p.code : 'no reply'}`);
   return r;
 };
 /** Подія в дорозі відкриває діалог — закрити, як гравець. */
@@ -52,12 +52,12 @@ export function direct(s: SimState, stopAt?: string): { sim: SimState; sent: Mov
       s = run(s, m);
     }
   }
-  throw new Error(`режисер не замовкає: ${JSON.stringify(sent)}`);
+  throw new Error(`director never goes quiet: ${JSON.stringify(sent)}`);
 }
 
 export const base = ch1End();
 /** Світ із потрібною погодою В МОМЕНТ дії: зерно, для якого weatherOf(зерно, день годинника sim) = w. */
-export const withWeather = (s: SimState, w: Weather): SimState => { for (let k = 1; k < 5000; k++) if (weatherOf(k, dayOf(s.clock)) === w) return { ...s, worldSeed: k }; throw new Error(`немає зерна з ${w}`); };
+export const withWeather = (s: SimState, w: Weather): SimState => { for (let k = 1; k < 5000; k++) if (weatherOf(k, dayOf(s.clock)) === w) return { ...s, worldSeed: k }; throw new Error(`no seed with ${w}`); };
 
 export type Combo = { profile: string | null; transport: string | null; animal: string };
 export const COMBOS = enumerateCombos(CONTENT) as Combo[];
@@ -85,7 +85,7 @@ export function schengenDay(w: Weather, combo?: Combo): SimState {
   s = at(s, 19);
   go({ type: 'Sleep' });
   s = direct(s).sim;
-  expect(s.game.quests[PLAN_QUEST]?.status, 'квест плану відкрито').toBe('active');
+  expect(s.game.quests[PLAN_QUEST]?.status, 'plan quest is open').toBe('active');
   go({ type: 'CompleteQuest', questId: PLAN_QUEST, to: TRAIL_BRANCHES[0]?.quest });
   go({ type: 'CompleteQuest', questId: TRAIL_BRANCHES[0]?.quest });
   s = withWeather(s, 'sunny');
@@ -100,7 +100,7 @@ export function schengenDay(w: Weather, combo?: Combo): SimState {
   s = direct(s).sim;   // «пора спати»: вечір без вечері завершується сам
   go({ type: 'Sleep' });
   s = direct(s).sim;
-  expect(s.game.quests[SCHENGEN_QUEST]?.status, 'ранок дня 3: Шенген активний').toBe('active');
+  expect(s.game.quests[SCHENGEN_QUEST]?.status, 'morning of day 3: Schengen is active').toBe('active');
   s = at(s, 8);   // команда Sleep годинник не рухає (сон у живій грі — кадри): ранок дня 3 — 08:00, тож день не перекидається посеред поїздки і погода дня стала
   s = withWeather(s, w);
   expect(todayWeather(s)).toBe(w);
@@ -115,7 +115,7 @@ export function readScene(from: SimState, sceneId: string, pick: (node: string) 
   const nodes: string[] = [];
   let seconds = 0;
   for (let i = 0; s.game.dialogue !== null; i++) {
-    if (i > 40) throw new Error('розмова не закривається');
+    if (i > 40) throw new Error('dialogue does not close');
     expect(s.game.dialogue.id).toBe(sceneId);
     const id = s.game.dialogue.node;
     nodes.push(id);
@@ -130,7 +130,7 @@ export interface Trip { readonly sim: SimState; readonly nodes: string[]; readon
 /** Поїздка до Шенгену авто → режисер сам відкриває сцену → гравець читає (picks: хвиля, з'єднання, мітка) → режисер завершує квест, веде назад і з'єднує; зупиняється ПЕРЕД сценою збору. */
 export function playSchengen(from: SimState, w: number, j: number, t: number): Trip {
   const trips = ch2CarTrips(from.game);
-  expect(trips.length, 'авто пропонує поїздку до Шенгену').toBe(1);
+  expect(trips.length, 'the car offers the Schengen trip').toBe(1);
   let s = from;
   let seconds = SECONDS.walkOnMap;   // дійти до авто
   for (const m of trips[0] as Move[]) { s = run(s, m); seconds += moveSeconds(m as never); }
