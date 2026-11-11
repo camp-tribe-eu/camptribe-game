@@ -34,9 +34,29 @@ const FIRE_QUEST = 'CH1-D2-FIRE-001';
 const atFireQuest = (s: GameState): GameState => sleepStateTo({ ...s, quests: { ...s.quests, [FIRE_QUEST]: { status: 'active', done: [] } } }, 2);   // GAME-256: вечір дня 2 — після справжнього сну
 const atFireSim = (sim: SimState): SimState => toDayMinute({ ...sim, game: { ...sim.game, quests: { ...sim.game.quests, [FIRE_QUEST]: { status: 'active', done: [] } } } }, 2, 19);
 
+// GAME-307 · ніч бурі: хвіст сцени читає прапорці дня (наслідки хвилі полудня й вибору Інгрід на обіді).
+// Це НЕ факти сцени (scene.facts): їх ставить хвиля й розмова задовго до вечора, тож у тесті вони лягають прямо в стан.
+interface Night { turned?: boolean; tight?: boolean; wood?: boolean; food?: boolean; water?: boolean; allFour?: boolean }
+const NIGHT_FLAGS: Readonly<Record<keyof Night, string>> = {
+  turned: 'f.storm-turned', tight: 'f.storm-tarp-tight', wood: 'f.storm-wood-dry',
+  food: 'f.storm-food-ready', water: 'f.storm-water-full', allFour: 'f.storm-all-four',
+};
+const nightFlags = (n: Night): string[] => (Object.keys(NIGHT_FLAGS) as (keyof Night)[]).filter((k) => n[k] === true).map((k) => NIGHT_FLAGS[k]);
+/** Оракул ночі: що мусить показати буря за цих наслідків дня. Вибір гравця (A/B) хвоста не міняє — міняє його лише зроблена робота. */
+function nightTail(n: Night): string[] {
+  const tarp = n.turned === true ? 'night-tarp-turned' : n.tight === true ? 'night-tarp-tight' : 'night-tarp-loose';
+  const wood = n.wood === true ? 'night-wood-dry' : 'night-wood-wet';
+  const table = n.food === true && n.water === true ? 'night-table-both'
+    : n.food === true ? 'night-table-food'
+      : n.water === true ? 'night-table-water' : 'night-table-none';
+  return ['night-open', 'night-tarp', tarp, 'night-check', 'night-wood', wood, 'night-eat', 'night-table', table,
+    'night-morning', 'night-wrap', n.allFour === true ? 'night-close-four' : 'night-close'];
+}
+
 /** Провести сцену ядром: «Далі», доки є next; на вузлі з вибором — A (0) чи B (1). Повертає вузли по черзі. */
-function play(defs: CoreDefs, setup: FireplaceSetup, pick: 0 | 1): string[] {
-  let s = atFireQuest(fresh(defs));
+function play(defs: CoreDefs, setup: FireplaceSetup, pick: 0 | 1, night: Night = {}): string[] {
+  const base = atFireQuest(fresh(defs));
+  let s: GameState = { ...base, flags: [...base.flags, ...nightFlags(night)] };
   const send = (cmd: Command) => {
     const r = dispatch(s, cmd, defs);
     if (!r.ok) throw new Error(`${cmd.type}: ${r.code}`);
@@ -55,19 +75,34 @@ function play(defs: CoreDefs, setup: FireplaceSetup, pick: 0 | 1): string[] {
 }
 
 /** Оракул картки — незалежно від графа: яку послідовність вузлів мусить показати гра за цих фактів і вибору. */
-function expected(setup: FireplaceSetup, pick: 0 | 1): string[] {
+function expected(setup: FireplaceSetup, pick: 0 | 1, night: Night = {}): string[] {
   const opening = setup.fireAllowed && setup.dinnerDone ? ['fire'] : ['lantern', 'lantern-george'];
   const six = setup.photoTaken ? 'l6-photo' : 'l6-plain';
   const head = ['open', ...opening, 'l1', 'l2', 'l3', 'l4', 'l5', six, 'l7'];
-  return pick === 0
+  const evening = pick === 0
     ? [...head, 'l8', 'l9', 'l10', 'l11', setup.photoTaken ? 'l12-photo' : 'l12-plain']
     : [...head, 'b1', 'b2', 'b3'];
+  return [...evening, ...nightTail(night)];
 }
 
 const bools = [false, true] as const;
 const COMBOS = bools.flatMap((fireAllowed) => bools.flatMap((dinnerDone) => bools.flatMap((photoTaken) =>
   ([0, 1] as const).map((pick) => ({ setup: { fireAllowed, dinnerDone, photoTaken }, pick })))));
 const label = (c: (typeof COMBOS)[number]) => `вогнище ${c.setup.fireAllowed ? 'так' : 'ні'} · вечеря ${c.setup.dinnerDone ? 'так' : 'ні'} · фото ${c.setup.photoTaken ? 'так' : 'ні'} · ${c.pick === 0 ? 'A' : 'B'}`;
+
+/** GAME-307 · набори наслідків дня, разом вони показують КОЖЕН вузол ночі. */
+const NIGHTS: readonly Night[] = [
+  {},
+  { tight: true },
+  { turned: true, tight: true },
+  { wood: true },
+  { food: true },
+  { water: true },
+  { food: true, water: true },
+  { turned: true, tight: true, wood: true, food: true, water: true, allFour: true },
+];
+const FULL_EVENING: FireplaceSetup = { fireAllowed: true, dinnerDone: true, photoTaken: false };
+const nightLabel = (n: Night): string => nightFlags(n).join(' + ') || 'нічого не встигли';
 
 /** Усі розбіжності гри з оракулом на 16 комбінаціях (порожньо — збіг). */
 function mismatches(defs: CoreDefs): string[] {
@@ -94,7 +129,7 @@ describe('GAME-142 · вогнище кінця дня 2: 16 проходжен�
   });
 
   it('п.1: обидві гілки досяжні, і без фото жодна репліка не згадує зроблене фото', () => {
-    const seen = new Set(COMBOS.flatMap((c) => play(GAME_DEFS, c.setup, c.pick)));
+    const seen = new Set([...COMBOS.flatMap((c) => play(GAME_DEFS, c.setup, c.pick)), ...NIGHTS.flatMap((n) => play(GAME_DEFS, FULL_EVENING, 0, n))]);
     for (const id of ['l8', 'l12-photo', 'l12-plain', 'b1', 'b3', 'l6-photo', 'l6-plain', 'fire', 'lantern']) expect(seen.has(id), id).toBe(true);
     // Кожен вузол сцени показано хоч в одній комбінації — мертвих реплік немає.
     // Вузли рибної розвилки (fk*, fr*, GAME-195) показує fish-fork.test.ts — тут рибки нема.
@@ -132,6 +167,44 @@ describe('GAME-142 · вогнище кінця дня 2: 16 проходжен�
 
   it('позитивний контроль: справжній контент — нуль розбіжностей', () => {
     expect(mismatches(GAME_DEFS)).toEqual([]);
+  });
+});
+
+// GAME-307 · «кожна дія дня впливає на ніч»: ніч бурі — наслідок чотирьох справ полудня й вибору на обіді, а не окрема сцена.
+describe('GAME-307 · ніч бурі розсуджує день', () => {
+  it.each(NIGHTS.map((n) => [nightLabel(n), n] as const))('%s — рівно той хвіст ночі, якого вимагає день', (_, n) => {
+    expect(play(GAME_DEFS, FULL_EVENING, 0, n)).toEqual(expected(FULL_EVENING, 0, n));
+  });
+
+  it('незроблена справа чути вночі: кожен прапорець дня міняє рівно свій вузол (мутація — прибрати гілку)', () => {
+    const base = play(GAME_DEFS, FULL_EVENING, 0, {});
+    const pairs: readonly (readonly [Night, string, string])[] = [
+      [{ tight: true }, 'night-tarp-loose', 'night-tarp-tight'],
+      [{ turned: true, tight: true }, 'night-tarp-loose', 'night-tarp-turned'],
+      [{ wood: true }, 'night-wood-wet', 'night-wood-dry'],
+      [{ food: true }, 'night-table-none', 'night-table-food'],
+      [{ water: true }, 'night-table-none', 'night-table-water'],
+      [{ food: true, water: true }, 'night-table-none', 'night-table-both'],
+      [{ allFour: true }, 'night-close', 'night-close-four'],
+    ];
+    for (const [night, without, withIt] of pairs) {
+      const got = play(GAME_DEFS, FULL_EVENING, 0, night);
+      expect(base, nightLabel(night)).toContain(without);
+      expect(got, nightLabel(night)).toContain(withIt);
+      expect(got, nightLabel(night)).not.toContain(without);
+    }
+    // Негативний контроль (закон 1): прибрали гілку сухих дров — ніч перестала відрізняти зроблене від незробленого.
+    const blind = mutated((nodes) => { delete nodeOf(nodes, 'night-wood').branches; });
+    expect(play(blind, FULL_EVENING, 0, { wood: true })).toEqual(play(blind, FULL_EVENING, 0, {}));
+    expect(play(GAME_DEFS, FULL_EVENING, 0, { wood: true })).not.toEqual(base);
+  });
+
+  it('ніч не карає: з будь-якими наслідками дня сцена доходить до кінця й нічого не блокує', () => {
+    for (const n of NIGHTS) {
+      const path = play(GAME_DEFS, FULL_EVENING, 0, n);
+      expect(path.at(-1), nightLabel(n)).toMatch(/^night-close/);
+      expect(new Set(path).size, nightLabel(n)).toBe(path.length);   // жодної петлі
+    }
   });
 });
 

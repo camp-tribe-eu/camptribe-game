@@ -288,13 +288,13 @@
       "id": "l12-photo",
       "speaker": "player",
       "textKey": "dlg.ch1-fire.l12-photo",
-      "end": true
+      "next": "night-open"
     },
     {
       "id": "l12-plain",
       "speaker": "player",
       "textKey": "dlg.ch1-fire.l12-plain",
-      "end": true
+      "next": "night-open"
     },
     {
       "id": "b1",
@@ -312,7 +312,93 @@
       "id": "b3",
       "speaker": "player",
       "textKey": "dlg.ch1-fire.b3",
-      "end": true
-    }
+      "next": "night-open"
+    },
+    {
+      "id": "night-open",
+      "speaker": "player",
+      "textKey": "dlg.ch1-fire.night-open",
+      "choices": [
+        { "textKey": "dlg.ch1-fire.night-open.c1", "next": "night-tarp" },
+        { "textKey": "dlg.ch1-fire.night-open.c2", "next": "night-tarp" }
+      ]
+    },
+    {
+      "id": "night-tarp",
+      "speaker": "player",
+      "textKey": "dlg.ch1-fire.night-tarp",
+      "next": "night-tarp-loose",
+      "branches": [
+        { "when": { "flag": "f.storm-turned" }, "next": "night-tarp-turned" },
+        { "when": { "flag": "f.storm-tarp-tight" }, "next": "night-tarp-tight" }
+      ]
+    },
+    { "id": "night-tarp-turned", "speaker": "player", "textKey": "dlg.ch1-fire.night-tarp-turned", "next": "night-check" },
+    { "id": "night-tarp-tight", "speaker": "player", "textKey": "dlg.ch1-fire.night-tarp-tight", "next": "night-check" },
+    { "id": "night-tarp-loose", "speaker": "player", "textKey": "dlg.ch1-fire.night-tarp-loose", "next": "night-check" },
+    {
+      "id": "night-check",
+      "speaker": "player",
+      "textKey": "dlg.ch1-fire.night-check",
+      "choices": [
+        { "textKey": "dlg.ch1-fire.night-check.c1", "next": "night-wood" },
+        { "textKey": "dlg.ch1-fire.night-check.c2", "next": "night-wood" }
+      ]
+    },
+    {
+      "id": "night-wood",
+      "speaker": "player",
+      "textKey": "dlg.ch1-fire.night-wood",
+      "next": "night-wood-wet",
+      "branches": [
+        { "when": { "flag": "f.storm-wood-dry" }, "next": "night-wood-dry" }
+      ]
+    },
+    { "id": "night-wood-dry", "speaker": "player", "textKey": "dlg.ch1-fire.night-wood-dry", "next": "night-eat" },
+    { "id": "night-wood-wet", "speaker": "player", "textKey": "dlg.ch1-fire.night-wood-wet", "next": "night-eat" },
+    {
+      "id": "night-eat",
+      "speaker": "player",
+      "textKey": "dlg.ch1-fire.night-eat",
+      "choices": [
+        { "textKey": "dlg.ch1-fire.night-eat.c1", "next": "night-table" },
+        { "textKey": "dlg.ch1-fire.night-eat.c2", "next": "night-table" }
+      ]
+    },
+    {
+      "id": "night-table",
+      "speaker": "player",
+      "textKey": "dlg.ch1-fire.night-table",
+      "next": "night-table-none",
+      "branches": [
+        { "when": { "all": [{ "flag": "f.storm-food-ready" }, { "flag": "f.storm-water-full" }] }, "next": "night-table-both" },
+        { "when": { "flag": "f.storm-food-ready" }, "next": "night-table-food" },
+        { "when": { "flag": "f.storm-water-full" }, "next": "night-table-water" }
+      ]
+    },
+    { "id": "night-table-both", "speaker": "player", "textKey": "dlg.ch1-fire.night-table-both", "next": "night-morning" },
+    { "id": "night-table-food", "speaker": "player", "textKey": "dlg.ch1-fire.night-table-food", "next": "night-morning" },
+    { "id": "night-table-water", "speaker": "player", "textKey": "dlg.ch1-fire.night-table-water", "next": "night-morning" },
+    { "id": "night-table-none", "speaker": "player", "textKey": "dlg.ch1-fire.night-table-none", "next": "night-morning" },
+    {
+      "id": "night-morning",
+      "speaker": "player",
+      "textKey": "dlg.ch1-fire.night-morning",
+      "choices": [
+        { "textKey": "dlg.ch1-fire.night-morning.c1", "next": "night-wrap" },
+        { "textKey": "dlg.ch1-fire.night-morning.c2", "next": "night-wrap" }
+      ]
+    },
+    {
+      "id": "night-wrap",
+      "speaker": "player",
+      "textKey": "dlg.ch1-fire.night-wrap",
+      "next": "night-close",
+      "branches": [
+        { "when": { "flag": "f.storm-all-four" }, "next": "night-close-four" }
+      ]
+    },
+    { "id": "night-close", "speaker": "player", "textKey": "dlg.ch1-fire.night-close", "end": true },
+    { "id": "night-close-four", "speaker": "player", "textKey": "dlg.ch1-fire.night-close-four", "end": true }
   ]
 }
