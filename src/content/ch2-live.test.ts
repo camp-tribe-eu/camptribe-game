@@ -84,8 +84,12 @@ function follow(from: SimState, stop: (s: SimState) => boolean, pick: Readonly<R
   let s = from;
   const steps: Step[] = [];
   const keysWait: string[] = [];
+  let answers = 0;   // GAME-291: відповіді в сценах (Шенген — 15 вузлів) — окремий ліміт: крок «Далі» рахується лише коли гравець іде за підказкою, а не коли читає
   for (let i = 0; i < 80 && !stop(s); i++) {
-    if (s.game.dialogue !== null) { s = answer(s); continue; }
+    if (s.game.dialogue !== null) {
+      if (++answers > 300) throw new Error('розмова не закривається за 300 відповідей');
+      s = answer(s); i--; continue;
+    }
     const t = nextTarget(s, DEFS);
     const o = storyOffer(s, DEFS, view());
     const loc = s.game.player?.locationId ?? null;

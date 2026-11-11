@@ -268,7 +268,8 @@
     "objectives": [
       {"id": "o1-schengen", "textKey": "q.ch2-schengen-001.o1", "kind": "visit", "target": "loc.schengen", "required": true}
     ],
-    "transitions": [{"on": "complete", "to": "CH2-D3-PACK-001"}]
+    "transitions": [{"on": "complete", "to": "CH2-D3-PACK-001"}],
+    "reward": {"grantId": "rw.ch2-schengen", "items": [{"item": "item.medallion.half1", "qty": 1}, {"item": "item.medallion.half2", "qty": 1}, {"item": "item.microcard", "qty": 1}], "once": true}
   },
   {
     "id": "CH2-D3-PACK-001",

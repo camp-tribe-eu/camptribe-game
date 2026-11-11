@@ -83,7 +83,7 @@ def build(wd):
 
 
 MONUMENT_PX = 70            # 2,5 м × 28 px/м (OD-026); за висотою — тонкий предмет
-MONUMENT_CANVAS = (96, 80)
+MONUMENT_CANVAS = (96, 96)   # GAME-291: висота кратна тайлу 32 (3 ряди) — пам'ятник стоїть на мапі Шенгену тайлами
 OUT3 = os.path.join(ROOT, 'assets/tiles/ch2_monument.png')
 
 

@@ -27,6 +27,7 @@ export const MUSIC_BY_MAP: Readonly<Record<MapKey, MusicTrack | 'silence' | 'by-
   road: 'main',
   shop: 'main',
   camp: 'by-daylight',
+  schengen: 'by-daylight',   // GAME-291: набережна Шенгену — день → main, вечір → night, як табір
   mullerthal: 'by-daylight',   // GAME-295: кемпінг Мюллерталь — як табір: день → main, вечір → night
 };
 

@@ -17,6 +17,7 @@ import { award, awardsFor } from './progress';
 import { atlasAwards } from './atlas-fill';
 import { grantStickers } from './stickers';
 import { tradeDoneToday, tradeIsFair, traded } from './friendship';
+import { joinRecipe, joined } from './join';
 import { forageKindOf, forageLeft, foraged, FORAGE_SOURCE_ITEM } from './forage';
 import { addPoints, canGiftToday, giveGift, heartEventDue, markHeartSeen, reactionOf, REQUEST_POINTS } from './friendship';
 
@@ -67,7 +68,8 @@ export type Command =
   /** Відпочити до вечора (GAME-269): у мертвому вікні дня в таборі; симуляція перемотує час до 17:30, ядро відкриває коротку родинну сцену. Без штрафів. */
   | { readonly type: 'RestUntilEvening'; readonly commandId: string }
   /** Почати розділ 2 (GAME-286): лише після завершення розділу 1; ставить маркер дня розділу й запускає CH2-ARRIVAL-001. Не хід бота (поза moves()). */
-  | { readonly type: 'StartChapter2'; readonly commandId: string };
+  | { readonly type: 'StartChapter2'; readonly commandId: string }
+  | { readonly type: 'JoinItems'; readonly commandId: string; readonly recipeId: string };
 
 /** Підтверджений факт (CR-031). Причина — commandId команди, що його спричинила. */
 export type GameEvent =
@@ -93,6 +95,8 @@ export interface Safeguards {
   readonly rollback: boolean;
   /** GAME-181: нагорода прогресії — раз за ключ. Немає поля — вмикнено; `false` лише в мутації тесту (повтор дав би XP знову). */
   readonly award?: boolean;
+  /** GAME-291: з'єднання предметів потребує КОЖНОЇ частини рецепта. Немає поля — вмикнено; `false` лише в мутації тесту (з однією половинкою вийшов би медальйон). */
+  readonly joinAll?: boolean;
 }
 
 const SAFE: Safeguards = { commandId: true, grantId: true, rollback: true };
@@ -213,6 +217,18 @@ function apply(cmd: Command, d: Draft, defs: CoreDefs, guard: Safeguards, today:
       d.campaignEnded = false;
       d.chapterStart = d.slept ?? 0;
       d.quests = { ...d.quests, [CHAPTER2_START]: { status: 'active', done: [] } };
+      return null;
+    }
+    case 'JoinItems': {
+      // GAME-291: явна дія «з'єднати» (рецепт 2 → 1). Нічого не відбувається без обох частин; готовий предмет вдруге не робиться.
+      if (!isContentId(cmd.recipeId)) return 'INVALID_COMMAND';
+      const recipe = joinRecipe(cmd.recipeId);
+      if (!recipe) return 'UNKNOWN_TARGET';
+      if (!d.player) return 'NO_CHARACTER';
+      if ((own(d.inventory, recipe.to) ?? 0) > 0) return 'GRANT_ALREADY_GIVEN';
+      const next = joined(d.inventory, recipe, guard.joinAll !== false);
+      if (next === null) return 'ITEM_NOT_OWNED';
+      d.inventory = next;
       return null;
     }
     case 'RestUntilEvening': {

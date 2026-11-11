@@ -28,5 +28,9 @@
   { "id": "item.pine-cone", "nameKey": "item.pine-cone", "resaleCents": 20 },
   { "id": "item.berries", "nameKey": "item.berries", "resaleCents": 50 },
   { "id": "item.photo.orchid", "nameKey": "item.photo.orchid" },
-  { "id": "item.photo.perfect", "nameKey": "item.photo.perfect" }
+  { "id": "item.photo.perfect", "nameKey": "item.photo.perfect" },
+  { "id": "item.medallion.half1", "nameKey": "item.medallion.half1" },
+  { "id": "item.medallion.half2", "nameKey": "item.medallion.half2" },
+  { "id": "item.medallion", "nameKey": "item.medallion" },
+  { "id": "item.microcard", "nameKey": "item.microcard" }
 ]
