@@ -403,7 +403,7 @@ export function Shell({ port, langOverride, credits, build, holdToast = false, h
           {/* GAME-92: підказка — окремий рядок знизу; місце й «день · гроші» над нею не рухаються (див. .ui-hint в index.html). */}
           {toastLive && <span class="ui-toast" data-ui="hint" role="status">{t('ui.hint')}</span>}
           {/* GAME-89 №6: кампанія завершена — мапа лишається живою (можна ходити), але про кінець видно й поза ☰. */}
-          {offer.stage === 'ended' && <span class="ui-hint" data-ui="ended-hint" role="status">{t('ui.endedHint')}</span>}
+          {offer.stage === 'ended' && <span class="ui-hint" data-ui="ended-hint" role="status">{t(offer.chapterEnd === 2 ? 'ui.endedHint.ch2' : 'ui.endedHint')}</span>}
         </div>
         <button type="button" class="ui-pause-btn" data-touch="pause" aria-label={t('ui.pause')} onClick={() => toggle(true)}>{'‖'}</button>
         {/* GAME-170 зріз 2: картка поточної мети — жива хвиля напруги: «назва · зроблено/усього» і хвилини ІГРОВОГО часу на кожну справу
@@ -424,7 +424,7 @@ export function Shell({ port, langOverride, credits, build, holdToast = false, h
             дві підказки одна на одній не стоять (картка мети — у потоці шапки вище). Не ловить дотик. */}
         {(goalShown || nextShown || trackerShown || nearestShown) && (
           <div class="ui-strip" data-agenda={agendaOn ? 'yes' : undefined}>
-            {goalShown && <div class="ui-goal" data-ui="goal" data-ended={offer.stage === 'ended' ? 'yes' : undefined}><ObjectiveIcon spot={offer.stage === 'ended' ? null : offer.hint.nextSpot} />{`${t('ui.goal')}: ${offer.goal ? ct(lang, offer.goal.key) : t('ui.goal.ended')}`}</div>}
+            {goalShown && <div class="ui-goal" data-ui="goal" data-ended={offer.stage === 'ended' ? 'yes' : undefined}><ObjectiveIcon spot={offer.stage === 'ended' ? null : offer.hint.nextSpot} />{`${t('ui.goal')}: ${offer.goal ? ct(lang, offer.goal.key) : t(offer.chapterEnd === 2 ? 'ui.goal.ended.ch2' : 'ui.goal.ended')}`}</div>}
             {/* GAME-180: трекер прийнятих прохань — «Сміття 2/3» (окремий рядок смуги: ціль · трекер · «Далі»); стрілка на мапі веде до наступної цілі, а коли все зроблено — до просильника. */}
             {nearestShown && offer.nearest && (
               <div class="ui-near-reward" data-ui="nearest" data-kind={offer.nearest.kind} data-left={offer.nearest.left} role="status">
@@ -482,7 +482,7 @@ export function Shell({ port, langOverride, credits, build, holdToast = false, h
       {backpackOpen && <BackpackPanel backpack={offer.backpack} lang={lang} t={t} sell={storyAct} close={closeBackpack} />}
       {atlasOpen && <AtlasPanel atlas={offer.atlas} lang={lang} t={t} close={closeAtlas} />}
       {intro && cold && <ColdOpen paint={port.coldOpenScene} t={t} onDone={() => setCold(false)} />}
-      {episode && !intro && port.episodeFlags && <EpisodeCard flags={port.episodeFlags()} t={t} onDone={() => { setEpisode(false); focusStage(); if (teaserSleep.current) { teaserSleep.current = false; summaryEnd(); } /* GAME-264: після тизера — збережена гра й меню паузи, а не мертва мапа */ }} />}
+      {episode && !intro && port.episodeFlags && <EpisodeCard flags={port.episodeFlags()} chapter={offer.chapterEnd ?? 1} t={t} onDone={() => { setEpisode(false); focusStage(); if (teaserSleep.current) { teaserSleep.current = false; summaryEnd(); } /* GAME-264: після тизера — збережена гра й меню паузи, а не мертва мапа */ }} />}
       {intro && !cold && <Intro soloHero={port.introSolo?.() === true} offer={offer} lang={lang} t={t} act={storyAct} portrait={portrait} room={port.introRoom} beat={port.introBeat} onDone={endIntro} />}
       {talk && !paused && !storyOpen && !summary && offer.dialogue && <DialogueBox dialogue={offer.dialogue} lang={lang} t={t} act={storyAct} portrait={portrait} />}
       {summary && !paused && top === 'levelup' && <LevelUp ups={shownUps} lang={lang} t={t} onContinue={() => setUps([])} />}

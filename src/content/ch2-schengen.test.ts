@@ -174,7 +174,7 @@ describe('GAME-291 · сцена Шенгену завершувана за КО
           const g = r.sim.game;
           expect(played(r.sim), 'запис StartScene в журналі').toBe(true);
           expect(g.quests[SCHENGEN_QUEST]?.status, `${w}: квест завершено`).toBe('completed');
-          expect(g.quests['CH2-D3-PACK-001']?.status, 'далі — збір (його візитом у кемпінг завершує режисер GAME-296; сцени збору — GAME-292)').toBeDefined();
+          expect(g.quests['CH2-D3-PACK-001']?.status, 'далі — збір і прощання (сцена GAME-292, ch2-pack.test.ts)').toBeDefined();
           expect(g.grants, 'нагорода видана раз').toContain(SCHENGEN_GRANT);
           expect(g.grants.filter((x) => x === SCHENGEN_GRANT).length).toBe(1);
           expect([has(r.sim, MEDALLION), has(r.sim, MEDALLION_HALF1), has(r.sim, MEDALLION_HALF2)], 'половинки з’єднано в один медальйон').toEqual([1, 0, 0]);
@@ -184,7 +184,8 @@ describe('GAME-291 · сцена Шенгену завершувана за КО
           expect(g.flags.includes(SCHENGEN_RAIN_FLAG), 'прапорець дощу — лише в дощ').toBe(w === 'rain');
           expect(g.player?.locationId, 'після сцени родина в кемпінгу').toBe(MULLERTHAL);
           expect(storyMoves(r.sim, GAME_DEFS), 'сюжет мовчить після завершення').toEqual([]);
-          expect(r.sent.filter((m) => !isPack(m)).map((m) => m.type), 'ходи режисера: завершення, дорога назад, з’єднання (крок збору, що завершується візитом, — окремо)').toEqual(['CompleteQuest', 'Visit', 'JoinItems']);
+          expect(r.sent.map((m) => m.type), 'ходи режисера: завершення, дорога назад, з’єднання, а далі — сцена збору (GAME-292; її відкриває режисер, крок збору ще активний)').toEqual(['CompleteQuest', 'Visit', 'JoinItems', 'StartScene']);
+          expect(r.sent.filter(isPack), 'крок збору завершується лише після сцени збору (ch2-pack.test.ts), не тут').toEqual([]);
           paths.add(r.nodes.join('>'));
           if (w === 'rain') expect(r.nodes, 'дощ: вступ під павільйоном').toContain('open-rain');
           else expect(r.nodes).not.toContain('open-rain');
@@ -292,7 +293,7 @@ describe('GAME-291 · розділ ніколи не блокується', () =
     expect(schengenDue(s)).toBe(false);
     const d = direct(s);
     expect(d.sent.slice(0, 2).map((m) => m.type), 'без сцени: завершення + назад').toEqual(['CompleteQuest', 'Visit']);
-    expect(d.sent.slice(2).every((m) => m.type === 'CompleteQuest' && (m as { questId: string }).questId === 'CH2-D3-PACK-001'), 'решта — лише крок збору, що завершується візитом').toBe(true);
+    expect(d.sent.slice(2).map((m) => m.type), 'решта — лише сцена збору, що відкривається сама (GAME-292)').toEqual(['StartScene']);
     expect(d.sim.game.quests[SCHENGEN_QUEST]?.status).toBe('completed');
     expect(has(d.sim, MEDALLION_HALF1) + has(d.sim, MEDALLION_HALF2), 'обидві половинки видано, але не з’єднано саме').toBe(2);
     expect(has(d.sim, MEDALLION)).toBe(0);

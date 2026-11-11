@@ -137,7 +137,7 @@ export function StoryPanel({ offer, lang, t, act, close, portrait, children, foo
           ))}</ul>
         </section>
       )}
-      {offer.stage === 'ended' && <p class="ui-status" data-ui="ended" role="status">{t('ui.ended')}</p>}
+      {offer.stage === 'ended' && <p class="ui-status" data-ui="ended" role="status">{t(offer.chapterEnd === 2 ? 'ui.ended.ch2' : 'ui.ended')}</p>}
       {showRest && offer.quests.map((q) => (
         <section class="ui-quest" data-ui="quest" key={q.key}>
           {/* GAME-179: від кого завдання — портрет і ім'я; без giverId — оповідач (нейтральна іконка). */}

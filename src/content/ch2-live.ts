@@ -16,6 +16,7 @@ import { ACTIVITIES, EVENING_QUEST, MEADOW, WATERFALL, WATERFALL_QUEST, activity
 import type { Weather } from '../core/weather';
 import { PLAN_QUEST, PLAN_SPOT, TRAIL_BRANCHES } from './ch2-plan';
 import { SCHENGEN, SCHENGEN_QUEST } from './ch2-schengen';
+import { PACK_QUEST } from './ch2-pack';
 import type { Move } from './moves';
 import { STORY } from './story';
 
@@ -81,8 +82,8 @@ export function ch2CarTrips(g: Pick<GameState, 'quests'>): Move[][] {
   return out;
 }
 
-/** Квести, які веде інший модуль: вечеря (сцена), план і вставки стежок (сцени), водоспад/майстер-клас/вечір дня 2 (GAME-290, ch2-activity.ts), Шенген (GAME-291, ch2-schengen.ts). Решту, що закривається самими візитами, завершує сюжет. */
-const OTHER_OWNER = new Set<string>([DINNER_QUEST, PLAN_QUEST, ...TRAIL_BRANCHES.map((b) => b.quest), ...ACTIVITIES.map((a) => a.quest), EVENING_QUEST, SCHENGEN_QUEST]);
+/** Квести, які веде інший модуль: вечеря (сцена), план і вставки стежок (сцени), водоспад/майстер-клас/вечір дня 2 (GAME-290, ch2-activity.ts), Шенген (GAME-291, ch2-schengen.ts), збір і прощання (GAME-292, ch2-pack.ts). Решту, що закривається самими візитами, завершує сюжет. */
+const OTHER_OWNER = new Set<string>([DINNER_QUEST, PLAN_QUEST, ...TRAIL_BRANCHES.map((b) => b.quest), ...ACTIVITIES.map((a) => a.quest), EVENING_QUEST, SCHENGEN_QUEST, PACK_QUEST]);
 
 /**
  * Крок розділу 2, який нічого від гравця не чекає, завершується сам (той самий CompleteQuest, що й у ☰): квест без вибору виходу (або кінець розділу), усі обов'язкові цілі зроблені

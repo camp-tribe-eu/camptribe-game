@@ -7,8 +7,8 @@ import type { Key } from '../i18n';
 import { calmMotion } from '../platform/motion';
 import { type EpisodeLine, episodeLines } from './episode-beats';
 
-export function EpisodeCard({ flags, t, onDone }: { flags: readonly string[]; t: (k: Key) => string; onDone: () => void }) {
-  const lines = useRef<EpisodeLine[]>(episodeLines(flags));
+export function EpisodeCard({ flags, chapter = 1, t, onDone }: { flags: readonly string[]; chapter?: 1 | 2; t: (k: Key) => string; onDone: () => void }) {
+  const lines = useRef<EpisodeLine[]>(episodeLines(flags, chapter));
   const [all, setAll] = useState(() => calmMotion());
   const ended = useRef(false);
   const finish = (): void => { if (ended.current) return; ended.current = true; onDone(); };
@@ -26,7 +26,7 @@ export function EpisodeCard({ flags, t, onDone }: { flags: readonly string[]; t:
     return () => window.removeEventListener('keydown', onKey, true);
   }, [all]);
   return (
-    <div class="ui-intro ui-cold ui-episode" data-ui="episode" data-state={all ? 'all' : 'typing'} role="dialog" aria-modal="true" aria-label={t('ep.title')} onClick={tap}>
+    <div class="ui-intro ui-cold ui-episode" data-ui="episode" data-state={all ? 'all' : 'typing'} role="dialog" aria-modal="true" aria-label={t(chapter === 2 ? 'ep2.title' : 'ep.title')} onClick={tap}>
       <div class="ui-episode-body">
         {lines.current.map((l) => (
           <p key={l.text} class="ui-episode-line" data-kind={l.kind} data-voice={l.voice} data-ui="episode-line" style={all ? undefined : { '--ep-delay': l.delayMs }}>
