@@ -10,7 +10,9 @@ import type { AnyLang, Key } from '../i18n';
 import { AtlasMapPage } from './Atlas';
 import { iconRects } from './atlas-icons';
 import { Portrait, type PortraitLookup } from './Portrait';
-import type { IntroRoomPainter } from './port';
+import type { IntroRoomPainter, IntroShotPainter } from './port';
+import { IntroScene } from './IntroScene';
+import { sceneViews, type IntroStyle } from '../content/intro-scene';
 import type { StoryOffer } from './story-types';
 import { calmMotion } from '../platform/motion';
 import { sfx } from '../audio/sfx';
@@ -54,7 +56,7 @@ function Room({ paint, morning, family, speaker }: { paint: IntroRoomPainter | u
 const SPOTS = ['lamp', 'window', 'shelf'] as const;
 type Spot = (typeof SPOTS)[number];
 
-export function Intro({ soloHero, offer, lang, t, act, portrait, room, beat, onDone }: { soloHero?: boolean | undefined; beat?: ((b: IntroBeat) => void) | undefined; room?: IntroRoomPainter | undefined; offer: StoryOffer; lang: AnyLang; t: (k: Key) => string; act: (id: string) => void; portrait: PortraitLookup; onDone: () => void }) {
+export function Intro({ style = 'classic', shot, soloHero, offer, lang, t, act, portrait, room, beat, onDone }: { style?: IntroStyle | undefined; shot?: IntroShotPainter | undefined; soloHero?: boolean | undefined; beat?: ((b: IntroBeat) => void) | undefined; room?: IntroRoomPainter | undefined; offer: StoryOffer; lang: AnyLang; t: (k: Key) => string; act: (id: string) => void; portrait: PortraitLookup; onDone: () => void }) {
   const [i, setI] = useState(0);
   const [seen, setSeen] = useState<Spot | null>(null);
   const [vp, setVp] = useState(() => `${window.innerWidth}x${window.innerHeight}`);
@@ -68,6 +70,9 @@ export function Intro({ soloHero, offer, lang, t, act, portrait, room, beat, onD
   const steps = INTRO_STEPS;
   const step = steps[Math.min(i, steps.length - 1)] as Step;
   const created = offer.stage !== 'create';
+  // GAME-303: проба подачі (?introStyle=comic|cinema): кроки родинної розмови, ночі й ранку малює IntroScene; решта кроків і весь потік (дотики, пропуск, біти) — ті самі. Без перемикача views = null.
+  const sceneViews303 = style === 'classic' ? null : sceneViews(step);
+  const sceneOn = sceneViews303 !== null;
   const morning = step.phase === 'morning';
   // Герой обраний (вибір зроблено тут чи гра вже мала персонажа) — крок вибору проминуто; якщо вступ пропущено — одразу на ранок.
   useEffect(() => { if (step.kind === 'pick' && created) setI(afterPick(skipped.current)); }, [step.kind, created]);
@@ -111,7 +116,8 @@ export function Intro({ soloHero, offer, lang, t, act, portrait, room, beat, onD
   const talkLine = step.kind === 'search' ? (seen ? t(`intro.spot.${seen}.line` as Key) : t(step.text as Key)) : step.text ? t(step.text) : '';
   return (
     <div ref={root} class="ui-intro" data-ui="intro" data-step={i} data-kind={step.kind} data-phase={step.phase} role="dialog" aria-modal="true" aria-label={t('ui.story')}>
-      <Room paint={room} morning={morning} family={step.kind === 'line' || step.kind === 'morning' || step.kind === 'goal'} speaker={step.kind === 'line' ? step.who : null} />
+      {!sceneOn && <Room paint={room} morning={morning} family={step.kind === 'line' || step.kind === 'morning' || step.kind === 'goal'} speaker={step.kind === 'line' ? step.who : null} />}
+      {sceneViews303 && style !== 'classic' && <IntroScene style={style} views={sceneViews303} paint={shot} lang={lang} t={t} portrait={portrait} onNext={next} />}
       {step.kind !== 'pick' && <button type="button" class="ui-btn ui-intro-skip" data-ui="intro-skip" onClick={skip}>{t('intro.skip')}</button>}
       {step.kind === 'letter' && (
         <div class="ui-intro-stage">
@@ -130,14 +136,14 @@ export function Intro({ soloHero, offer, lang, t, act, portrait, room, beat, onD
           </div>
         </div>
       )}
-      {step.kind === 'night' && (
+      {step.kind === 'night' && !sceneOn && (
         <div class="ui-intro-black ui-intro-dusk" data-ui="intro-night">
           <p class="ui-intro-cap" data-ui="intro-caption">{t('intro.night')}</p>
           <p class="ui-intro-zzz" aria-hidden="true">{t('intro.zzz')}</p>
           {nextBtn}
         </div>
       )}
-      {step.kind === 'morning' && (
+      {step.kind === 'morning' && !sceneOn && (
         <div class="ui-intro-stage ui-intro-wake">
           <div class="ui-intro-black ui-intro-dawn" data-ui="intro-morning">
             <p class="ui-intro-cap" data-ui="intro-caption">{t('intro.morning')}</p>
@@ -167,7 +173,7 @@ export function Intro({ soloHero, offer, lang, t, act, portrait, room, beat, onD
           })}
         </div>
       )}
-      {(step.kind === 'line' || step.kind === 'pick' || step.kind === 'search') && (
+      {(step.kind === 'line' || step.kind === 'pick' || step.kind === 'search') && !sceneOn && (
         <>
           {step.kind === 'line' && !morning && <div class="ui-intro-stage"><Book /></div>}
           <div class="ui-talk">

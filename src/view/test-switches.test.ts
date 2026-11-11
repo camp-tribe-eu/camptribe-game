@@ -19,6 +19,13 @@ describe('перемикачі e2e (рецензія GAME-36)', () => {
     for (const bad of ['?seed=x', '?seed=-1', '?seed=1.5', '']) expect(testSwitches(bad, 'e2e').seed).toBeUndefined();
   });
 
+  it('introStyle: лише в e2e і лише comic|cinema (GAME-303); у звичайній збірці — ніколи', () => {
+    expect(testSwitches('?introStyle=comic', 'e2e').introStyle).toBe('comic');
+    expect(testSwitches('?introStyle=cinema', 'e2e').introStyle).toBe('cinema');
+    for (const bad of ['?introStyle=classic', '?introStyle=x', '?introStyle=', '']) expect(testSwitches(bad, 'e2e').introStyle).toBeUndefined();
+    for (const mode of ['production', 'development']) expect(testSwitches('?introStyle=comic', mode).introStyle).toBeUndefined();
+  });
+
   it('noAutosave: лише в e2e і лише =1 (GAME-86)', () => {
     expect(testSwitches('?noAutosave=1', 'e2e').noAutosave).toBe(true);
     expect(testSwitches('?noAutosave=0', 'e2e').noAutosave).toBeUndefined();
