@@ -158,7 +158,7 @@ def build_home():
     layers = blank_layers(W, H)
     for n in layers:
         layers[n][:27 * 10] = by[n]['data']
-    yard(layers, W, H, 10, (6, 7), 11)
+    yard(layers, W, H, HOME_TOP, HOME_GAP, 11)
     # Ground у верхніх рядках проби порожній (там стіна) — лишаємо як є. Тайли terrain у walls/ground — gid із firstgid 1025.
     objs = [point(i + 1, n, t, c) for i, (n, t, c) in enumerate(HOME_SPOTS)]
     layout = next(l for l in base['layers'] if l['name'] == 'layout')
@@ -192,6 +192,9 @@ SHOP_TS = [
 GEAR0, GEAR_COLS = 24, _LAY['cols']                    # firstgid і ширина аркуша shop_gear
 GEAR = {n: tuple(v) for n, v in _LAY['cells'].items()}  # предмет → (колонка, рядок, ширина, висота) у аркуші, у тайлах
 SHOP_W, SHOP_H = 14, 12
+SHOP_FRONT_END = 12                                    # рядок, де закінчується будівля крамниці (передня стіна — рядки 10–11)
+SHOP_DOOR = (6, 7, 10, 11)                             # двері крамниці: колонки 6–7, рядки 10–11
+HOME_TOP, HOME_GAP = 10, (6, 7)                        # низ будинку (рядок) і прохід у дворі (колонки)
 SHOP_SPOTS = [
     ('s.start', 'spawn', (6, 8)),
     ('s.car', 'spawn', (7, 8)),
@@ -356,9 +359,28 @@ def build_road():
     }
 
 
+def placement_sidecars():
+    """GAME-301 · art/placement/{home,shop}.json: будівля (слід) і двері (зона порога) — те, на що авто не має налазити (scripts/art/check_placement.py, PLACE_VEHICLE).
+    Прямокутники [x0, y0, x1, y1] у px; числа з тих самих констант, що й мапи. Авто сторож ставить сам від obj.vehicle за art/placement/vehicle.json."""
+    return {
+        'home': {'objects': [], 'buildings': [[0, 0, 27 * T, (HOME_TOP + 1) * T]], 'doors': [[HOME_GAP[0] * T, HOME_TOP * T, (HOME_GAP[1] + 1) * T, (HOME_TOP + 1) * T]]},
+        'shop': {'objects': [], 'buildings': [[0, 0, SHOP_W * T, SHOP_FRONT_END * T]], 'doors': [[SHOP_DOOR[0] * T, SHOP_DOOR[2] * T, (SHOP_DOOR[1] + 1) * T, (SHOP_DOOR[3] + 1) * T]]},
+    }
+
+
 def main(argv):
     maps = {'home': build_home(), 'shop': build_shop(), 'road': build_road()}
     bad = False
+    for name, side in placement_sidecars().items():
+        path = os.path.join(ROOT, 'art/placement', f'{name}.json')
+        text = json.dumps(side) + '\n'
+        if '--check' in argv:
+            same = os.path.exists(path) and open(path, encoding='utf8').read() == text
+            print(f'placement/{name}.json: ' + ('збігається' if same else 'ВІДРІЗНЯЄТЬСЯ від генератора'))
+            bad = bad or not same
+        else:
+            with open(path, 'w', encoding='utf8') as f:
+                f.write(text)
     for name, m in maps.items():
         text = json.dumps(m, indent=1, ensure_ascii=False) + '\n'
         if '--check' in argv:

@@ -7,7 +7,7 @@
 
 Коди: PLACE_OVERLAP (сліди двох твердих предметів перетинаються: камінь у кущі), PLACE_ORDER (предмет намальовано поверх іншого, але його
 база вище на екрані: порушено y-sort), PLACE_WATER (твердий предмет стоїть у воді), PLACE_SIZE (висота спрайта поза ±40 % від справжньої,
-28 px/м), PLACE_PATH (камінь/уламок loose стоїть на клітинці стежки чи майданчика (layout['bare'] без layout['wet']), GAME-296), PLACE_PATCH (у видимій сцені layout['view']=[x0,y0,x1,y1] є вікно 96x96 px, яке не перетинає жодного предмета: порожнеча), PLACE_EMPTY (не перевірено жодного предмета: тиша — не факт, закон 4).
+28 px/м), PLACE_PATH (камінь/уламок loose стоїть на клітинці стежки чи майданчика (layout['bare'] без layout['wet']), GAME-296), PLACE_PATCH (у видимій сцені layout['view']=[x0,y0,x1,y1] є вікно 96x96 px, яке не перетинає жодного предмета: порожнеча), PLACE_VEHICLE (GAME-301: авто на мапі налазить на будівлю, закриває спрайтом двері чи затуляє прохід перед ними; числа з art/placement/vehicle.json і obj.vehicle), PLACE_EMPTY (не перевірено жодного предмета: тиша — не факт, закон 4).
 Формат layout.json: {"px_per_m":28,"objects":[{id,kind,x,y(база),w,h(спрайт),foot:[w,h],solid,z,real_h_m?,water?}]}; слід — прямокутник foot, центр по x, низ у y.
 Мапи: об'єкти objectgroup із type 'solid'/'prop' і width>0 — це сліди (x,y — лівий верх, як у Tiled).
 """
@@ -20,8 +20,9 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(os.path.dirname(HERE))
 PXM = 28
 SIZE_TOL = 0.4
-ENABLED = {'overlap': True, 'order': True, 'water': True, 'size': True, 'empty': True, 'patches': True, 'plant': True, 'path': True}
+ENABLED = {'overlap': True, 'order': True, 'water': True, 'size': True, 'empty': True, 'patches': True, 'plant': True, 'path': True, 'vehicle': True}
 PATCH = 96   # 3x3 тайли
+APRON = 32   # GAME-301: прохід перед дверима — один тайл униз від порога (усі двері мап дивляться на південь)
 LOOSE = ('rock', 'pebble')   # GAME-296: каміння за іменем (і будь-що з loose=true) — на траві, не на стежці
 
 
@@ -32,6 +33,9 @@ def foot(o):
 
 def inter(a, b):
     return min(a[2], b[2]) > max(a[0], b[0]) and min(a[3], b[3]) > max(a[1], b[1])
+
+
+VEHICLE_CFG = json.load(open(os.path.join(ROOT, 'art/placement/vehicle.json'), encoding='utf8'))
 
 
 def sprite_rect(o):
@@ -89,6 +93,17 @@ def check(layout, name='layout'):
                 hit = next((r for r in layout.get('bare', []) if r not in layout.get('wet', []) and inter(foot(o), tuple(r))), None)   # стежка = bare без води: камінчик у заводі природний
                 if hit is not None:
                     out.append(('PLACE_PATH', name, f"{o['id']} ({o['x']:.0f},{o['y']:.0f}): камінь на стежці/майданчику (клітинка {hit[0] // 32},{hit[1] // 32}), а не на траві"))
+    if ENABLED['vehicle'] and layout.get('vehicle'):   # GAME-301: авто не налазить на будівлю, не закриває спрайтом двері й не затуляє прохід перед ними
+        v = layout['vehicle']
+        rnd = lambda r: tuple(round(c) for c in r)
+        for b in layout.get('buildings', []):
+            if inter(v['sprite'], tuple(b)):
+                out.append(('PLACE_VEHICLE', name, f"авто (спрайт {rnd(v['sprite'])}) налазить на будівлю {tuple(b)}"))
+        for dr in layout.get('doors', []):
+            if inter(v['sprite'], tuple(dr)):
+                out.append(('PLACE_VEHICLE', name, f"авто (спрайт {rnd(v['sprite'])}) закриває двері {tuple(dr)}"))
+            elif inter(v['block'], (dr[0], dr[3], dr[2], dr[3] + APRON)):
+                out.append(('PLACE_VEHICLE', name, f"авто (слід {rnd(v['block'])}) затуляє прохід перед дверима {tuple(dr)}"))
     if ENABLED['size']:
         for o in objs:
             if o.get('real_h_m'):
@@ -96,6 +111,22 @@ def check(layout, name='layout'):
                 if abs(o['h'] - exp) > SIZE_TOL * exp:
                     out.append(('PLACE_SIZE', name, f"{o['id']}: {o['h']} px проти {exp:.0f} px для {o['real_h_m']} м"))
     return out
+
+
+def vehicle_geometry(spot, cfg):
+    """GAME-301: спрайт і колізія авто від точки obj.vehicle (spot=(x,y)) за art/placement/vehicle.json — ті самі числа, що в scene.ts. Ноги авто = нижній центр."""
+    fx, fy = spot[0] + cfg['offset'][0], spot[1] + cfg['offset'][1]
+    sw, sh = cfg['sprite']
+    bw, bh = cfg['block']
+    return {'x': fx, 'y': fy, 'sprite': (fx - sw / 2, fy - sh, fx + sw / 2, fy), 'block': (fx - bw / 2, fy - bh, fx + bw / 2, fy)}
+
+
+def vehicle_spot(d):
+    for l in d['layers']:
+        for o in l.get('objects', []) if l.get('type') == 'objectgroup' else []:
+            if o.get('name') == 'obj.vehicle':
+                return (o['x'], o['y'])
+    return None
 
 
 def maps_layouts():
@@ -113,6 +144,9 @@ def maps_layouts():
             lay = json.load(open(side, encoding='utf8'))
         else:
             lay = {'objects': objs}
+        spot = vehicle_spot(d)
+        if spot and (lay.get('buildings') or lay.get('doors')):   # GAME-301: авто ставить сцена від obj.vehicle; є будівля чи двері — звіряємо
+            lay['vehicle'] = vehicle_geometry(spot, VEHICLE_CFG)
         res.append((os.path.basename(f), lay))
     return res
 
@@ -126,7 +160,9 @@ def ob(i, x, y, w, h, foot_, solid=True, z=None, **kw):
 
 
 GOOD = {'px_per_m': 28, 'objects': [ob('bush', 80, 100, 48, 45, [36, 10], z=0, real_h_m=1.6), ob('rock', 140, 110, 34, 28, [28, 8], z=1, real_h_m=1.0),
-                                     ob('pond', 100, 200, 128, 64, [128, 64], solid=False, water=True)]}
+                                     ob('pond', 100, 200, 128, 64, [128, 64], solid=False, water=True)],
+        'buildings': [[0, 0, 448, 384]], 'doors': [[192, 320, 256, 384]],
+        'vehicle': vehicle_geometry((304, 400), {'offset': [16, 80], 'sprite': [128, 64], 'block': [104, 30]})}   # авто праворуч від дверей, на подвір'ї: чисто
 BAD = {
     'PLACE_OVERLAP': {'px_per_m': 28, 'objects': [ob('bush', 80, 100, 48, 45, [36, 10], z=0), ob('rock', 82, 100, 34, 28, [28, 8], z=1)]},
     'PLACE_ORDER': {'px_per_m': 28, 'objects': [ob('bush', 80, 120, 48, 45, [36, 10], z=0), ob('rock', 90, 100, 34, 28, [28, 8], z=1)]},   # камінь вище на екрані, але поверх куща
@@ -134,6 +170,8 @@ BAD = {
     'PLACE_SIZE': {'px_per_m': 28, 'objects': [ob('bush', 80, 100, 96, 90, [36, 10], z=0, real_h_m=1.0)]},
     'PLACE_PLANT': {'px_per_m': 28, 'bare': [[0, 80, 300, 120]], 'objects': [ob('flower', 100, 100, 8, 12, [6, 3], solid=False, plant=True)]},   # квітка посеред стежки
     'PLACE_PATH': {'px_per_m': 28, 'bare': [[64, 64, 160, 96]], 'objects': [ob('rock', 100, 90, 32, 28, [28, 20], z=0, loose=True)]},   # камінь посеред стежки (GAME-296)
+    'PLACE_VEHICLE': {'px_per_m': 28, 'objects': [ob('rock', 10, 10, 8, 8, [6, 3], z=0)], 'buildings': [[0, 0, 448, 384]], 'doors': [[192, 320, 256, 384]],
+                      'vehicle': vehicle_geometry((240, 336), {'offset': [16, 80], 'sprite': [128, 64], 'block': [104, 30]})},   # GAME-301: авто на дверях крамниці (як було)
     'PLACE_EMPTY': {'px_per_m': 28, 'objects': []},
     'PLACE_PATCH': {'px_per_m': 28, 'view': [0, 0, 300, 200], 'objects': [ob('bush', 40, 60, 48, 45, [36, 10], z=0)]},   # праворуч порожнеча
 }
@@ -161,7 +199,27 @@ def mutate():
             miss.append(k)
         ENABLED[k] = True
     print('mutate:', 'FAIL — перевірка без наслідку: ' + ', '.join(miss) if miss else f'OK (вимкнення будь-якої з {len(ENABLED)} перевірок валить self-test)')
-    return 1 if miss else 0
+    mm = mutate_maps()
+    return 1 if miss or mm else 0
+
+
+def mutate_maps():
+    """GAME-301: на СПРАВЖНІХ даних мап: ставимо авто назад на двері (як було до виправлення) — сторож МУСИТЬ почервоніти; без мутації мапа чиста. 0 мап — теж збій (закон 4)."""
+    tested, bad = 0, []
+    for name, lay in maps_layouts():
+        if not (lay.get('vehicle') and lay.get('doors')):
+            continue
+        tested += 1
+        if any(c == 'PLACE_VEHICLE' for c, *_ in check(lay, name)):
+            bad.append(f'{name}: дані вже червоні до мутації')
+        d = lay['doors'][0]
+        spot = ((d[0] + d[2]) / 2 - VEHICLE_CFG['offset'][0], d[3] + 32 - VEHICLE_CFG['offset'][1])   # ноги авто на 32 px нижче порога: спрайт накриває двері
+        if not any(c == 'PLACE_VEHICLE' for c, *_ in check(dict(lay, vehicle=vehicle_geometry(spot, VEHICLE_CFG)), name)):
+            bad.append(f'{name}: авто на дверях не спіймано')
+    if tested == 0:
+        bad.append('жодної мапи з авто й дверима: нічого мутувати')
+    print('mutate-maps:', 'FAIL — ' + '; '.join(bad) if bad else f'OK ({tested} мап: авто на дверях червоніє, чисті дані зелені)')
+    return bool(bad)
 
 
 def self_test_quiet():
@@ -185,6 +243,7 @@ def main(argv):
     for name, lay in srcs:
         n += len(lay['objects'])
         if name.endswith('.tmj') and not lay['objects']:
+            errs += [e for e in check(lay, name) if e[0] == 'PLACE_VEHICLE'] if lay.get('vehicle') else []   # GAME-301: мапа без слідів-предметів, але з авто й будівлею — міряємо авто
             continue   # мапа без твердих предметів-слідів — нічого міряти; загальна порожнеча ловиться нижче
         errs += check(lay, name)
     if n == 0:
