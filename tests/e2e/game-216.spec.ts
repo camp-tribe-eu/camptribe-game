@@ -20,8 +20,10 @@ async function begin(page: Page): Promise<number> {
 }
 /** GAME-302: пропуск — кнопка «Пропустити вступ» (випадковий дотик по сцені кіно не обриває: game-302.spec) → кіно зникло, вступ готовий приймати дотик: «Далі» видно. Міряємо від тапу. */
 async function skipAndMeasure(page: Page): Promise<number> {
+  const box = await page.locator('[data-ui="cold-open-skip"]').boundingBox();   // координати — до мітки часу: очікування готовності елемента в Playwright не входить у «керування за»
+  if (!box) throw new Error('кнопка «Пропустити вступ» не видна під час кіно');
   const t0 = Date.now();
-  await page.locator('[data-ui="cold-open-skip"]').click();
+  await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
   await expect(cold(page)).toHaveCount(0);
   await expect(page.locator('[data-ui="intro-spots"]')).toBeVisible();
   return Date.now() - t0;
