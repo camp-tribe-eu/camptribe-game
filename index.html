@@ -556,6 +556,7 @@
       .ui-cine-shot { position: relative; flex: 1 1 0; min-height: 0; overflow: hidden; border-bottom: 4px solid #1b1f23; }
       /* Шари шотів проявляються по черзі (затримка = номер шару × 1,7 с), останній — сон; дотик у будь-яку мить іде далі. Без анімації (менше руху) усі шари видно, зверху — останній. */
       .ui-cine-layer { position: absolute; inset: 0; animation: ui-cine-in 0.9s ease-out both; animation-delay: calc(var(--n, 0) * 1.7s); }
+      .ui-cine-layer[data-layer="0"] { animation: none; }   /* перший шот видно одразу (без виходу з темряви): кадр читний від першої миті, далі проявляються наступні */
       .ui-cine-shot .ui-scene-canvas { transform-origin: 55% 75%; animation: ui-cine-push 10s ease-out both; }
       .ui-cine-dream::after { content: ''; position: absolute; inset: 0; pointer-events: none; box-shadow: inset 0 0 48px 20px #05070d; }
       .ui-cine-title { flex: none; display: grid; gap: 8px; justify-items: center; text-align: center; padding: 12px var(--edge-right) var(--edge-bottom) var(--edge-left); background: #1b1f23; border-top: 4px solid #4a3418; }

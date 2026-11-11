@@ -96,7 +96,7 @@ export function IntroScene({ view, paint, lang, t, onNext }: { view: SceneView; 
         )}
         {sfx && sleepers && <p class="ui-cine-zzz" aria-hidden="true">{sfx}</p>}
       </div>
-      <div class="ui-cine-title">
+      <div class="ui-cine-title" data-ui={view.phase === 'morning' ? 'intro-morning' : 'intro-night'}>
         {caption && <p class="ui-cine-cap" data-ui="intro-caption">{caption}</p>}
         {view.dream && <p class="ui-cine-dreamcap" data-ui="intro-dream-caption" style={{ '--n': String(layers.length) }}>{t('intro.dream')}</p>}
         {sfx && view.phase === 'morning' && <p class="ui-cine-alarm" data-ui="intro-alarm">{sfx}</p>}
