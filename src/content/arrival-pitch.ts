@@ -7,7 +7,7 @@
 // приїзд від неї не читає нічого. Ділянки не «кращі» й не «гірші»: у кожної є перевага, за яку вночі платиться,
 // і ділянка-залишок (біля рецепції) безпечна, та спиться на ній погано щоночі. Тому тут немає очевидного вибору.
 //
-// Чому ділянки стоять саме на цих об'єктах мапи: `public/maps/camp-lake.tmj` уже має якорі (ANCHORS у
+// Чому ділянки стоять саме на цих об'єктах мапи: public/maps/camp-lake.tmj уже має якорі (ANCHORS у
 // `scripts/maps/build_camp_lake.py`) — берег озера, південна галявина, двір рецепції й лісова галявина з буками.
 // Нових об'єктів мапа не отримує: розстановка (`scripts/art/check_placement.py`) лишається такою, як була.
 import type { GameState } from '../core/state';
@@ -79,7 +79,7 @@ export type LearnSource = (typeof LEARN_SOURCES)[number];
 
 export interface PitchDef {
   readonly id: PitchId;
-  /** Якір на мапі табору (`public/maps/camp-lake.tmj`), біля якого стоїть ця ділянка. */
+  /** Якір на мапі табору (public/maps/camp-lake.tmj), біля якого стоїть ця ділянка. */
   readonly spot: string;
   /** Черга попиту: 1 — розбирають першою. Ділянка з найбільшим числом лишається завжди. */
   readonly demand: number;
