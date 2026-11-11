@@ -90,6 +90,9 @@ export function Drive({ t, seed, moneyCents, scrappyStreak = 0, onDone, speedUp 
   const [result, setResult] = useState<DriveResult | null>(null);
   const live = useRef({ state, said, paused, result });
   live.current = { state, said, paused, result };
+  // Кадровий цикл не має перезапускатись на кожен перемальований кадр (інакше він щоразу губив би
+  // попередній час і йшов удвічі повільніше), тож свіжі зворотні виклики живуть у посиланні.
+  const hooks = useRef<{ apply: (s: DriveState, e: readonly DriveEvent[]) => void; onFrame: DriveProps['onFrame'] }>({ apply: () => undefined, onFrame });
 
   const apply = (next: DriveState, events: readonly DriveEvent[]): void => {
     const cur = live.current;
@@ -98,6 +101,8 @@ export function Drive({ t, seed, moneyCents, scrappyStreak = 0, onDone, speedUp 
     setState(next);
     if (next.phase === 'arrived' && cur.result === null) setResult(driveResult(next, course));
   };
+
+  hooks.current = { apply, onFrame };
 
   const act = (input: DriveInput): void => {
     const cur = live.current;
@@ -122,12 +127,12 @@ export function Drive({ t, seed, moneyCents, scrappyStreak = 0, onDone, speedUp 
         const r = stepDrive(st, course, { kind: 'tick', dtMs: dt });
         st = r.state; events.push(...r.events);
       }
-      apply(st, events);
-      onFrame?.(st, course, events);
+      hooks.current.apply(st, events);
+      hooks.current.onFrame?.(st, course, events);
     };
     raf = requestAnimationFrame(frame);
     return () => cancelAnimationFrame(raf);
-  }, [course, speedUp, onFrame, apply]);
+  }, [course, speedUp]);
 
   // Свайп по дорозі: горизонтальний зсув понад SWIPE_PX — сусідня смуга. Вертикальний рух смугу не міняє.
   const down = useRef<{ x: number; y: number } | null>(null);
