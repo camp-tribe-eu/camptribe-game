@@ -134,6 +134,30 @@
       .ui-levelup { place-content: center; background: #0b0d14ee; gap: 8px; padding: 10px 16px; }
       .ui-levelup h2 { margin: 0; font-size: 1.1rem; }
       .ui-levelup .ui-summary-actions { position: sticky; bottom: 0; padding: 4px 0; }   /* «Далі» завжди в кадрі, навіть коли карток багато */
+      /* GAME-308: каркас міні-ігор. Лише дотик: кожна ціль ≥ 48 px (.mg-btn), пауза в шапці завжди; обидві орієнтації — flex без фіксованих висот, поле прокручується, а не обрізається. */
+      .mg { position: fixed; inset: 0; z-index: 35; display: flex; flex-direction: column; gap: 8px; box-sizing: border-box; padding: var(--edge-top) var(--edge-right) var(--edge-bottom) var(--edge-left); background: #101418f2; color: #f4f1e8; font-family: 'CampPixel', system-ui, sans-serif; }
+      .mg-bar { display: flex; align-items: center; gap: 10px; min-height: 48px; }
+      .mg-title { margin: 0; font-size: 1rem; line-height: 1.2; flex: 0 1 auto; overflow-wrap: anywhere; }
+      .mg-time { flex: 1 1 40px; height: 10px; border-radius: 6px; background: #2a2f36; overflow: hidden; }
+      .mg-time > i { display: block; height: 100%; background: #8fb04a; }
+      .mg-btn { min-width: 48px; min-height: 48px; padding: 6px 14px; font-size: 0.9rem; }
+      .mg-pause { margin-left: auto; flex: 0 0 auto; }
+      .mg-help { margin: 0; font-size: 0.8rem; color: #ffd54a; }
+      .mg-stage { flex: 1 1 0; min-height: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; overflow-y: auto; text-align: center; }
+      .mg-text { margin: 0; max-width: 34em; font-size: 0.95rem; line-height: 1.4; }
+      .mg-hint { color: #ffd54a; }
+      .mg-paused { position: absolute; inset: 0; z-index: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; padding: 12px; background: #101418f7; }
+      .mg-ref { width: min(92%, 520px); display: grid; gap: 12px; }
+      .mg-ref-track { position: relative; height: 48px; box-sizing: border-box; border: 2px solid #e8e6e3aa; border-radius: 10px; background: #2a2f36; }
+      .mg-ref-band { position: absolute; top: 0; bottom: 0; background: #4a7a4a99; }
+      .mg-ref-core { position: absolute; top: 0; bottom: 0; background: #ffd54a33; }
+      .mg-ref-core[data-hint="yes"] { background: #ffd54acc; }
+      .mg-ref-marker { position: absolute; top: -4px; bottom: -4px; width: 6px; margin-left: -3px; border-radius: 3px; background: #f4f1e8; }
+      .mg-ref-pips { display: flex; gap: 8px; justify-content: center; }
+      .mg-ref-pip { width: 16px; height: 16px; border-radius: 50%; background: #2a2f36; border: 2px solid #e8e6e3aa; box-sizing: border-box; }
+      .mg-ref-pip[data-score="1"] { background: #4a7a4a; }
+      .mg-ref-pip[data-score="2"] { background: #ffd54a; }
+      .mg-ref-stop { min-height: 72px; width: 100%; font-size: 1.25rem; }
       .ui-btn-locked { border-style: dashed; color: #cfcbc7; background: #22262b; cursor: not-allowed; }
       #stage canvas { image-rendering: pixelated; }
       /* GAME-91: підпис збірки — у меню паузи (див. Shell.tsx), у діалозі він на своєму тлі. */

@@ -18,11 +18,13 @@ import { backfillStickers, type StickerDefs } from './stickers';
 import { REJECT_CODES } from './state';
 import { paydaysThrough, type LifeDefs } from './life';
 import { DAY_MINUTES } from './weather';
+import { COUNT_CAP, isOutcome } from './minigame';
 
 export const SAVE_FORMAT = 'camplife-save';
+/** v6 (GAME-308): результати міні-ігор `game.minigames` (необов'язкове поле; `schemaVersion` гри лишається 3). Міграція 5→6 — тотожна: сейв до міні-ігор їх не мав, і це правильно (відсутність ≡ «нічого не грали»); вигадувати результати заднім числом було б брехнею. */
 /** v5 (GAME-286): маркер старту розділу 2 `game.chapterStart` (необов'язкове поле; `schemaVersion` гри лишається 3). Міграція 4→5 — тотожна: сейв до розділу 2 маркера не має, і це правильно. */
 /** v4 (GAME-256): лічильник сну `game.slept`. `game.schemaVersion` лишається 3 — форма GameState не ламається (поле необов'язкове); версіонується конверт. */
-export const SAVE_VERSION = 5;
+export const SAVE_VERSION = 6;
 
 export interface SaveFile {
   readonly format: typeof SAVE_FORMAT;
@@ -94,6 +96,8 @@ export const MIGRATIONS: Readonly<Record<number, (sim: unknown, ctx: MigrationCt
   },
   // v4 → v5 (GAME-286): з'явився маркер chapterStart. Старий сейв розділу 2 не починав — поле відсутнє, нічого губити й додавати.
   4: (sim) => sim,
+  // v5 → v6 (GAME-308): з'явились результати міні-ігор `game.minigames`. Старий сейв їх не мав — поле відсутнє, нічого губити й додавати.
+  5: (sim) => sim,
 };
 
 export function toSave(sim: SimState, contentRev: string | null = null): SaveFile {
@@ -154,6 +158,11 @@ function shapeError(sim: unknown): string | null {
   if (game.slept !== undefined && (!isInt(game.slept) || (game.slept as number) > SLEEP_CAP + (isInt(game.chapterStart) ? (game.chapterStart as number) : 0))) return 'game: slept';
   // Маркер розділу 2 (GAME-286): необов'язкове ціле 0…slept (не більше за лічильник сну, від якого міряє).
   if (game.chapterStart !== undefined && (!isInt(game.chapterStart) || (game.chapterStart as number) > ((game.slept as number | undefined) ?? 0))) return 'game: chapterStart';
+  // Міні-ігри (GAME-308): поле необов'язкове; є — id `mg.…`, результат із трьох, тег наслідку — непорожній рядок, зіграно ≥ 1, «сяк-так поспіль» ≤ зіграно і 0 тоді й лише тоді, коли останній результат не scrappy (так пише лише ядро).
+  const mg = game.minigames;
+  if (mg !== undefined && (!isObj(mg) || Object.entries(mg).some(([id, r]) => !/^mg\.[a-z0-9]+(?:[.-][a-z0-9]+)*$/.test(id) || !isObj(r) || !isOutcome(r.last)
+    || typeof r.consequence !== 'string' || r.consequence === '' || r.consequence.length > 64 || !isInt(r.plays, 1) || (r.plays as number) > COUNT_CAP
+    || !isInt(r.scrappyStreak) || (r.scrappyStreak as number) > (r.plays as number) || ((r.last === 'scrappy') !== ((r.scrappyStreak as number) > 0))))) return 'game: minigames';
   // Дружба (GAME-230): поле необов'язкове (сейви до GAME-230 його не мають); є — очки й дні цілі ≥ 0 (очки ≤ стелі), `seen` — відсортовані рядки без повторів (так пише лише ядро).
   const fr = game.friend;
   if (fr !== undefined && (!isObj(fr) || !isObj(fr.pts) || !isObj(fr.gift) || !sortedUniq(fr.seen)
