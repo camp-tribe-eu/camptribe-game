@@ -12,6 +12,7 @@ import { t as tr, type AnyLang, type Key } from '../i18n';
 import { ct } from '../i18n/content';
 import { Notebook, Radar } from './Agenda';
 import { StoryPanel, money } from './StoryPanel';
+import { receiptItems } from './receipt';
 import { DaySummary } from './DaySummary';
 import { LevelUp } from './LevelUp';
 import { queueUps, topOverlay, type SkillUp } from './overlay-order';
@@ -469,6 +470,13 @@ export function Shell({ port, langOverride, credits, build, holdToast = false, h
           <strong data-ui="item-card-name">{ct(lang, offer.hint.card.nameKey)}</strong>
           <span data-ui="item-card-line">{ct(lang, offer.hint.card.reactKey)}</span>
           {offer.hint.card.xp > 0 && <em data-ui="item-card-xp">{`+${offer.hint.card.xp} ${t('pack.card.xp')}`}</em>}
+        </div>
+      )}
+      {offer.hint.receipt && (
+        <div class="ui-itemcard" data-ui="purchase-receipt" role="status">
+          <strong data-ui="purchase-receipt-title">{t('shop.receipt.title')}</strong>
+          <span data-ui="purchase-receipt-items">{receiptItems(lang, offer.hint.receipt.nameKeys, offer.hint.receipt.spentCents)}</span>
+          <em data-ui="purchase-receipt-left">{`${t('shop.receipt.left')} ${money(lang, offer.hint.receipt.leftCents)}`}</em>
         </div>
       )}
       {barkShown && <div class="ui-titleup" data-ui="bedtime-bark" role="status"><strong>{t('bark.bedtime')}</strong></div>}
