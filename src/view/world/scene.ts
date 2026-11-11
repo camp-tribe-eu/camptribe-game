@@ -223,6 +223,8 @@ export interface WorldProbe {
   heroBreath: number;
   /** OD-029: спрайт героя на екрані, CSS px (для наклейки нагороди над головою; e2e звіряє, що вона не на ньому). */
   heroRect: { x: number; y: number; w: number; h: number };
+  /** GAME-301 (лише для e2e): де зараз стоїть авто на мапі — спрайт і колізія, світові px [x0, y0, x1, y1]; null — авто не стоїть (велосипед, табір, мапа без точки посадки). */
+  car: { sprite: [number, number, number, number]; block: [number, number, number, number] } | null;
   /** GAME-254 (лише для e2e): висота НЕпрозорої частини кадру героя (його справжній зріст), px гри — з текстури, а не з сталої. */
   heroBody: number;
   /** GAME-254 (лише для e2e): що видно зараз — вікно камери у світі (px гри), розмір мапи й zoom полотна. */
@@ -1863,6 +1865,7 @@ export class WorldScene extends Phaser.Scene {
       playerY: this.player.y - (this.heroBob ? this.heroBreath : 0),   // свіжіше значення перепише слухач POST_UPDATE (див. create)
       heroBreath: this.heroBob ? this.heroBreath : 0,
       heroRect: this.heroRect(),
+      car: this.carImg ? { sprite: [this.carImg.x - this.carImg.img.width / 2, this.carImg.y - this.carImg.img.height, this.carImg.x + this.carImg.img.width / 2, this.carImg.y], block: [this.carImg.x - CAR_BLOCK.w / 2, this.carImg.y - CAR_BLOCK.h, this.carImg.x + CAR_BLOCK.w / 2, this.carImg.y] } : null,
       heroBody: this.heroBodyPx(),
       view: { x: this.cameras.main.worldView.x, y: this.cameras.main.worldView.y, w: this.cameras.main.worldView.width, h: this.cameras.main.worldView.height, zoom: this.game.scale.zoom, mapW: this.tilemap?.widthInPixels ?? 0, mapH: this.tilemap?.heightInPixels ?? 0 },
       nearObject: near,

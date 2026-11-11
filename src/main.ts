@@ -36,6 +36,7 @@ import { CAMP_PROBE_IDLE } from './view/world/camp-alive-rig';
 import { mountTouchControls, setActionTarget } from './view/world/touch';
 import { frameSize, zoomSteps } from './view/world/frame';
 import { CHOICE_CANCEL_ID, storyOffer, type StoryView } from './view/story-offer';
+import { basketOf, basketTotal, hasBasket } from './core/basket';
 import { testSwitches } from './view/test-switches';
 import { addFrameLag, bootDelay, onFirstFrame } from './view/frame-lag';
 import { installRenderGate } from './view/render-gate';
@@ -73,7 +74,7 @@ const app = document.querySelector<HTMLElement>('#app');
 if (!app) throw new Error('#app is missing');
 
 const probe: WorldProbe = { ready: false, map: null, reveal: false, gift: { count: 0, npc: null, reaction: null, emote: null, poseAge: -1, poseColumn: null, poseFrames: 0, sounds: [] }, playerX: 0, playerY: 0, heroBody: 0, view: { x: 0, y: 0, w: 0, h: 0, zoom: 1, mapW: 0, mapH: 0 }, nearObject: null, nearKind: null, commandsSent: 0, cameraScrollX: 0, cameraScrollY: 0, clockMinutes: 0, saveLoaded: false, cameraLerp: [0, 0], followers: [], markerIcons: {}, leisure: [], jobs: [],
-  playerFrame: 0, playerDir: 'down', playerMoving: false, heroBreath: 0, heroRect: { x: 0, y: 0, w: 0, h: 0 }, playerDepth: 0, coveredTiles: 0, behindTiles: 0, canopy: { bands: 0, over: 0, minAlpha: 1, fadeBands: 0 }, light: { patches: 0, depth: 0, alpha: 0 }, lamps: { count: 0, on: false, alpha: 0, radius: 0 }, fps: 0, fpsWindows: 0, firstFrameMs: 0,
+  playerFrame: 0, playerDir: 'down', playerMoving: false, heroBreath: 0, heroRect: { x: 0, y: 0, w: 0, h: 0 }, car: null, playerDepth: 0, coveredTiles: 0, behindTiles: 0, canopy: { bands: 0, over: 0, minAlpha: 1, fadeBands: 0 }, light: { patches: 0, depth: 0, alpha: 0 }, lamps: { count: 0, on: false, alpha: 0, radius: 0 }, fps: 0, fpsWindows: 0, firstFrameMs: 0,
   residents: [], neighbours: [], visitors: [], bark: null, barkCount: 0, barkBy: null, npcMarks: {}, miaAt: [], tent: TENT_PROBE_IDLE, wood: WOOD_PROBE_IDLE, crate: CRATE_PROBE_IDLE, fire: FIRE_PROBE_IDLE, grill: GRILL_PROBE_IDLE, fish: FISH_PROBE_IDLE, live: LIVE_PROBE_IDLE, swim: SWIM_PROBE_IDLE, camp: CAMP_PROBE_IDLE,
   daylight: { on: false, visible: false, minuteOfDay: 0, darkness: 0, color: 0xffffff, glow: 0, heroLight: { radius: 0, alpha: 0 } },
   fx: { target: null, ring: 0, ringName: null, backpack: 0, guide: 'none', pops: 0, auto: 0, rewards: 0, rewardLast: '', headLabels: [], headIcons: [] } };
@@ -122,11 +123,15 @@ let overflowShown = false;
 let cardItem: string | null = null;
 let cardLeftMs = 0;
 const CARD_MS = 1500;
+// GAME-301: чек після каси — що куплено, скільки заплачено й скільки лишилось (картка як у GAME-245, але довше: прочитати). Стан ПОКАЗУ, у збереження не йде.
+let receipt: { itemIds: string[]; spentCents: number; leftCents: number } | null = null;
+let receiptLeftMs = 0;
+const RECEIPT_MS = 4500;
 // GAME-183: об'єкт, що питає «що саме?» (авто — куди їхати, сушарка, приймальня, крок з вибором) — його варіанти показує рамка вибору. Стан ПОКАЗУ.
 let choiceSpot: string | null = null;
 // GAME-178: спроба рушити, коли авто не готове (бракує речей / рюкзак повний): HUD пояснює причину, поки гравець не відійде від об'єкта. Стан ПОКАЗУ (без таймера).
 let departNote = false;
-const viewOf = (): StoryView => ({ mapFirst: !switches.panelActs, trunk: trunkOpen, near: nearSpot, backpack, choice: choiceSpot, departNote, overflow: overflowShown, card: cardItem });
+const viewOf = (): StoryView => ({ mapFirst: !switches.panelActs, trunk: trunkOpen, near: nearSpot, backpack, choice: choiceSpot, departNote, overflow: overflowShown, card: cardItem, receipt });
 /** Об'єкти табору (GAME-183) живуть лише в мапі-першій грі: збірка e2e без ?mapFirst=1 (старі e2e) бачить табір, як до них — кнопки ☰, а не об'єкти. */
 const campOnly = (name: string): boolean => switches.panelActs === true && (MAP_SPOTS.camp as readonly string[]).includes(name);
 // GAME-170 зріз 2 · режисер: перед кожним оновленням екрана — ходи СЮЖЕТУ (StartWave на етапі хвилі). Ядро — сторож законності;
@@ -273,7 +278,15 @@ const actOnMap = (name: string): void => {
       storyChanged();
       return;
     }
+    // GAME-301: каса — до оплати запам'ятати кошик і гроші; після неї показати чек (раніше лише значок кошика над героєм: «чи я купив чи ні?»).
+    const paying = r.moves.some((m) => m.type === 'Checkout');
+    const basketBefore = paying ? basketOf(bridge.state.game.flags, GAME_DEFS) : [];
+    const totalBefore = paying ? basketTotal(bridge.state.game.flags, GAME_DEFS) : 0;
     for (const move of r.moves) bridge.send(move);
+    if (paying && basketBefore.length > 0 && !hasBasket(bridge.state.game.flags)) {
+      receipt = { itemIds: basketBefore, spentCents: totalBefore, leftCents: bridge.state.game.moneyCents };
+      receiptLeftMs = RECEIPT_MS;
+    }
     if (r.ui === 'trunk') trunkOpen = true;
     storyChanged();
     if (r.ui === 'trunk') for (const l of openListeners) l();
@@ -411,7 +424,10 @@ const worldHooks: WorldHooks = {
   onGrilled: (charred) => { grilledCharred = charred; },
   onFish,
   isLive: (name) => !campOnly(name) && liveSpot(bridge.state, name, GAME_DEFS),
-  frame: (dtMs) => { if (cardItem !== null && (cardLeftMs -= dtMs) <= 0) { cardItem = null; storyChanged(); } },
+  frame: (dtMs) => {
+    if (cardItem !== null && (cardLeftMs -= dtMs) <= 0) { cardItem = null; storyChanged(); }
+    if (receipt !== null && (receiptLeftMs -= dtMs) <= 0) { receipt = null; storyChanged(); }
+  },
   backpack: () => backpack.length,
   unload: unloadOne,
   needs: () => {

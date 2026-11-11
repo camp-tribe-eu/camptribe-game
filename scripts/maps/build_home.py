@@ -191,7 +191,7 @@ SHOP_TS = [
 ]
 GEAR0, GEAR_COLS = 24, _LAY['cols']                    # firstgid і ширина аркуша shop_gear
 GEAR = {n: tuple(v) for n, v in _LAY['cells'].items()}  # предмет → (колонка, рядок, ширина, висота) у аркуші, у тайлах
-SHOP_W, SHOP_H = 14, 12
+SHOP_W, SHOP_H = 14, 16     # GAME-301: рядки 12–15 — подвір'я перед крамницею (раніше мапа закінчувалась на дверях, а авто стояло за її краєм і накривало їх)
 SHOP_FRONT_END = 12                                    # рядок, де закінчується будівля крамниці (передня стіна — рядки 10–11)
 SHOP_DOOR = (6, 7, 10, 11)                             # двері крамниці: колонки 6–7, рядки 10–11
 HOME_TOP, HOME_GAP = 10, (6, 7)                        # низ будинку (рядок) і прохід у дворі (колонки)
@@ -203,7 +203,7 @@ SHOP_SPOTS = [
     ('take.item.lantern', 'trigger', (11, 4)),        # у проході перед настінними полицями з ліхтарями
     ('step.ST-003', 'trigger', (12, 9)),              # збоку каси з боку покупця (не за прилавком)
     ('npc.cashier', 'npc', (10, 6)),                  # Lotte ЗА прилавком (прилавок у рядках 7–8), обличчям до входу. Говорити — з (11,6)
-    ('obj.vehicle', 'trigger', (7, 10)),              # у дверях: вийти до авто (велосипеда) і їхати далі
+    ('obj.vehicle', 'trigger', (9, 12)),              # GAME-301: на подвір'ї праворуч від дверей: авто (за vehicle.json +16,+80 від точки) стоїть на смузі стоянки, двері й прохід перед ними вільні
     ('obj.buy', 'trigger', (10, 9)),                  # GAME-183: каса — купити чи продати; покупець стоїть перед нею
     ('obj.drying', 'trigger', (4, 9)),                # біля входу: мотузка для сушіння
 ]
@@ -245,6 +245,19 @@ def build_shop():
             put(layers, W, H, 'walls', c, r, 0)
             put(layers, W, H, 'ground', c, r, 6 if r == 10 else 10)   # стіна за дверима, щоб поруч із полотном не просвічувала темрява
     gear(layers, W, H, 'shop-door', 6, 10, solid=False)
+    # GAME-301: подвір'я перед крамницею (рядки 12–15): трава, стежка від дверей униз і смуга стоянки вздовж живоплоту — як двір дому (yard()).
+    rnd = random.Random(23)
+    for r in range(SHOP_FRONT_END, H):
+        for c in range(W):
+            put(layers, W, H, 'ground', c, r, terrain(rnd.choice(GRASS)))
+    for r in range(SHOP_FRONT_END, H - 1):
+        for c in SHOP_DOOR[:2]:
+            put(layers, W, H, 'ground', c, r, terrain(DIRT))
+    for r in (H - 3, H - 2):
+        for c in range(SHOP_DOOR[0] - 1, W):
+            put(layers, W, H, 'ground', c, r, terrain(DIRT))
+    for c in range(W):
+        put(layers, W, H, 'walls', c, H - 1, terrain(BUSH[(c + 1) % 3]))
     for c0 in (2, 10):                                    # два вітринні вікна у передній стіні (без верхнього карниза: він лише на підлозі)
         for dr, row in ((0, (18, 19)), (1, (21, 22))):
             for dc, g in enumerate(row):

@@ -162,6 +162,8 @@ export interface OfferHint {
   readonly blocked: { readonly carry: boolean; readonly itemKeys: readonly string[] } | null;
   /** GAME-245: велика картка речі, щойно взятої вдома (~1,5 с, покадрово): назва й репліка — ключі контенту, spot — для піктограми. null — картки нема. */
   readonly card: { readonly nameKey: string; readonly reactKey: string; readonly spot: string; readonly xp: number } | null;
+  /** GAME-301: чек щойно оплаченого кошика (що куплено, скільки заплачено, скільки лишилось); null — не показувати. */
+  readonly receipt: { readonly nameKeys: readonly string[]; readonly spentCents: number; readonly leftCents: number } | null;
 }
 
 /** Картка прохання (GAME-180): що зробити одним рядком, цілі-картинки (іконка + підпис) і нагорода (дані для GAME-181). */
