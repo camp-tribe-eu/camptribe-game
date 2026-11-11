@@ -6,7 +6,8 @@
 import { describe, expect, it } from 'vitest';
 import { nextCommandId, type Command } from '../core/commands';
 import type { CoreDefs } from '../core/defs';
-import { carriedOf, takeFlag } from '../core/packing';
+import { carriedOf, packItemsFor, takeFlag } from '../core/packing';
+import { boxIdOf, boxItemsFor, containerById, isBoxSpot, spotOfItem } from './containers';
 import { newSim, step, type SimState } from '../core/sim';
 import { characterChoices, PANEL_VIEW, storyOffer, type StoryView } from '../view/story-offer';
 import { GAME_DEFS } from './slice-defs';
@@ -33,7 +34,7 @@ function progressSpots(sim: SimState): { name: string; moves: readonly Move[] }[
   const map = mapKeyFor(sim.game.player?.locationId);
   if (map === 'camp' || map === 'road') return [];
   // GAME-183: справи хвилі, сушарка, приймальня й прилавок — не рухають сюжет дня 1 (множили б простір станів): їх доводить camp-first.test повним шляхом усього розділу.
-  return (MAP_SPOTS[map] as readonly string[]).filter((n) => !n.startsWith('pack.') && !n.startsWith('task.') && !['obj.trunk', 'obj.drying', 'obj.sell', 'step.ST-004', 'step.CH1-D3-HOME-001'].includes(n) && !n.startsWith('npc.'))
+  return (MAP_SPOTS[map] as readonly string[]).filter((n) => !isBoxSpot(n) && !n.startsWith('task.') && !['obj.trunk', 'obj.drying', 'obj.sell', 'step.ST-004', 'step.CH1-D3-HOME-001'].includes(n) && !n.startsWith('npc.'))
     .flatMap((name) => {
       const r = resolveSpot(sim, DEFS, name);
       // GAME-246 (рішення): з кошиком каса — пряма дія (оплата + завершення ST-003 одним заходом), тож вона рухає сюжет дня 1 як звичайний
@@ -173,37 +174,43 @@ describe('пакування руками і багажник (GAME-109 на м�
     }
     return s;
   }
-  it('об\'єкти речей (GAME-245): взяти раз і назавжди — річ зникає з місця (об\'єкт мовчить), назад — лише «лишити»; усе живе, коли речі вдома', () => {
+  it('контейнери (GAME-304): дотик відкриває вікно «всередину», річ береться командою TakeItem раз і назавжди; порожній контейнер мовчить; усе живе, коли речі вдома', () => {
     for (const c of CHOICES) {
       let s0 = packingOpenFor(c.intent);
       expect(s0.game.player?.locationId).toBe('loc.home');
       s0 = applyAll(s0, unpackMoves(s0, DEFS));   // удома розкладено «за порадою»: усе на своїх місцях
-      const items = (MAP_SPOTS.home as readonly string[]).filter((n) => n.startsWith('pack.'));
-      let live = 0;
-      for (const name of items) {
+      const boxes = (MAP_SPOTS.home as readonly string[]).filter((n) => isBoxSpot(n));
+      expect(boxes.length, 'п\'ять контейнерів: холодильник, комора, шафа, тумба, скринька Мії').toBe(5);
+      const pk = DEFS.packing as NonNullable<typeof DEFS.packing>;
+      const p = s0.game.player as NonNullable<typeof s0.game.player>;
+      let taken = 0;
+      for (const name of boxes) {
+        const cont = containerById(boxIdOf(name)) as NonNullable<ReturnType<typeof containerById>>;
+        const items = boxItemsFor(pk, p, cont);
         const r = resolveSpot(s0, DEFS, name);
-        if (!r) continue;          // переноска, миска й плед Мії — лише з кішкою
-        live++;
-        const id = name.slice(5);
-        expect(r.moves.map((m) => m.type), `${name}: одна команда «узяти»`).toEqual(['TakeItem']);
-        const once = applyAll(s0, r.moves);
-        expect(once.game.flags.includes(takeFlag(id)), `${name} → прапорець «у сумці»`).toBe(true);
-        expect(resolveSpot(once, DEFS, name), `${name} після «взяти» зникла з місця (маркер не живий)`).toBeNull();
-        expect(liveMapSpot(once, DEFS, name)).toBe(false);
-        expect(spotLabel(s0, DEFS, name)?.label).toBe('pack.take');
+        if (items.length === 0) { expect(r, `${name}: порожній для цього гравця (Мії немає) — мовчить`).toBeNull(); continue; }
+        expect(r?.ui, `${name}: дотик відкриває вікно`).toBe('box');
+        expect(r?.moves, `${name}: саме відкриття нічого не змінює в ядрі`).toEqual([]);
+        expect(spotLabel(s0, DEFS, name)?.label).toBe(`near.box.${cont.id}`);
+        let s = s0;
+        for (const id of items) {
+          const m: Move = { type: 'TakeItem', itemId: id };
+          const once = applyAll(s, [m]);
+          expect(once.game.flags.includes(takeFlag(id)), `${id} → прапорець «у сумці»`).toBe(true);
+          expect(applyAll(once, [m]).game.flags, `${id}: удруге взяти нічого`).toEqual(once.game.flags);
+          s = once; taken++;
+        }
+        expect(resolveSpot(s, DEFS, name), `${name} після останньої речі мовчить (маркер не живий)`).toBeNull();
+        expect(liveMapSpot(s, DEFS, name)).toBe(false);
       }
-      expect(live, 'у кожного гравця є що брати: 14 речей, з кішкою — 17').toBe(c.offer.animalKey ? 17 : 14);
-      expect(items.length).toBe(17);
+      expect(taken, 'у кожного гравця є що брати: 14 речей, з кішкою — 17').toBe(c.offer.animalKey ? 17 : 14);
     }
   });
   it('GAME-245: узято все → багажник веде до «Завантажити» (LoadCar), не влізло — решта лишається в сумці; авто не рушає, доки сумка не порожня, і рушає, коли порожня', () => {
     const c = CHOICES.find((x) => x.offer.transportKey === 'transport.bike' || /велосипед/i.test(x.offer.transportKey)) ?? (CHOICES[0] as (typeof CHOICES)[number]);
     let s = packingOpenFor(c.intent);
     s = applyAll(s, unpackMoves(s, DEFS));
-    for (const name of (MAP_SPOTS.home as readonly string[]).filter((n) => n.startsWith('pack.'))) {   // усе взято
-      const r = resolveSpot(s, DEFS, name);
-      if (r) s = applyAll(s, r.moves);
-    }
+    for (const it of packItemsFor(DEFS.packing as NonNullable<typeof DEFS.packing>, s.game.player as NonNullable<typeof s.game.player>)) s = applyAll(s, [{ type: 'TakeItem', itemId: it.itemId }]);   // усе взято
     const pk = DEFS.packing as NonNullable<typeof DEFS.packing>;
     const bag = (): string[] => carriedOf(s.game.flags, pk, s.game.player as NonNullable<typeof s.game.player>);
     expect(bag().length, 'узято все, ще нічого не завантажено').toBe(14);
@@ -220,7 +227,7 @@ describe('пакування руками і багажник (GAME-109 на м�
   });
   it('пакування закрите до кінця крамниці: об\'єктів речей і багажника немає (нічого брати з порожніх кімнат)', () => {
     const s = create((CHOICES[0] as { intent: Move }).intent);
-    for (const name of (MAP_SPOTS.home as readonly string[]).filter((n) => n.startsWith('pack.') || n === 'obj.trunk')) expect(liveMapSpot(s, DEFS, name), name).toBe(false);
+    for (const name of (MAP_SPOTS.home as readonly string[]).filter((n) => isBoxSpot(n) || n === 'obj.trunk')) expect(liveMapSpot(s, DEFS, name), name).toBe(false);
   });
   it('НЕГАТИВНИЙ КОНТРОЛЬ: з відхиленим ядром ходом об\'єкт мертвий — спробувати завершити квест, якого немає, нічого не дає', () => {
     const s = create((CHOICES[0] as { intent: Move }).intent);
@@ -318,7 +325,7 @@ describe('пакування ходьбою: удома спакований «�
       const left = needsLeft(s, DEFS);
       expect(left.length, 'після розкладання бракує потрібного').toBeGreaterThan(0);
       expect(unpackMoves(s, DEFS), 'повторно не розкладається').toEqual([]);
-      for (const i of left) { const r = resolveSpot(s, DEFS, `pack.${i}`); expect(r, `pack.${i} живий`).not.toBeNull(); s = applyAll(s, (r as { moves: readonly Move[] }).moves); }
+      for (const i of left) { const at = spotOfItem(i) as string; expect(resolveSpot(s, DEFS, at)?.ui, `${at} живий (там лежить ${i})`).toBe('box'); s = applyAll(s, [{ type: 'TakeItem', itemId: i }]); }
       const pk = DEFS.packing as NonNullable<typeof DEFS.packing>;
       const bag = carriedOf(s.game.flags, pk, s.game.player as NonNullable<typeof s.game.player>);
       expect(bag.sort(), 'узяте — у сумці').toEqual([...left].sort());

@@ -15,6 +15,7 @@ import homeWindowsDoors from '../../../assets/tiles/home_windows_doors.png';
 import homeFurniture from '../../../assets/tiles/home_furniture.png';
 import homeOffice from '../../../assets/tiles/home_office.png';
 import homeShelf from '../../../assets/tiles/home_shelf.png';
+import homeStorage from '../../../assets/tiles/home_storage.png';
 import shopGear from '../../../assets/tiles/shop_gear.png';
 import shopDecor from '../../../assets/tiles/shop_decor.png';
 import campfire from '../../../assets/sprites/campfire.png';
@@ -76,10 +77,12 @@ import { ACTIONS, ACTION_COLS, composeSheet, loadImage, type Action, type LayerS
  */
 export const TILESET_IMAGES: Readonly<Record<string, string>> = {
   'lpc-terrain': terrain, 'camp-tent': tent, 'camp-car': car, 'camp-props': campProps, 'ch2-muellerthal': ch2Muellerthal, 'ch2-objects': ch2Objects, 'ch2-monument': ch2Monument,
-  'home-walls': homeWalls, 'home-floor': homeFloor, 'home-windows-doors': homeWindowsDoors, 'home-furniture': homeFurniture, 'home-office': homeOffice, 'home-shelf': homeShelf,
+  'home-walls': homeWalls, 'home-floor': homeFloor, 'home-windows-doors': homeWindowsDoors, 'home-furniture': homeFurniture, 'home-office': homeOffice, 'home-shelf': homeShelf, 'home-storage': homeStorage,
   'shop-gear': shopGear, 'shop-decor': shopDecor,
 };
 const HOME_SETS = ['home-walls', 'home-floor', 'home-windows-doors', 'home-furniture', 'home-office', 'home-shelf', 'lpc-terrain', 'camp-car'] as const;
+/** GAME-304: дім — ті ж набори плюс контейнери (комора, холодильник, скринька Мії); дорога бере HOME_SETS без них. */
+const HOUSE_SETS = ['home-walls', 'home-floor', 'home-windows-doors', 'home-furniture', 'home-office', 'home-shelf', 'home-storage', 'lpc-terrain', 'camp-car'] as const;
 /** GAME-204: крамниця спорядження — власний аркуш shop-gear (каса, намет, гондоли, двері), без домашніх меблів і книжкової полиці. */
 const SHOP_SETS = ['home-walls', 'home-floor', 'home-windows-doors', 'shop-gear', 'shop-decor', 'lpc-terrain', 'camp-car'] as const;
 /** Які тайлсети має кожна мапа гри (ключ — як у scene.ts і map-first.ts). */
@@ -87,7 +90,7 @@ export const MAP_TILESETS: Readonly<Record<'camp' | 'home' | 'shop' | 'road' | '
   mullerthal: ['lpc-terrain', 'camp-tent', 'camp-car', 'camp-props', 'ch2-muellerthal', 'ch2-objects'],   // GAME-295
   schengen: ['lpc-terrain', 'camp-car', 'camp-props', 'ch2-muellerthal', 'ch2-objects', 'ch2-monument'],   // GAME-291
   camp: ['lpc-terrain', 'camp-tent', 'camp-car', 'camp-props'],
-  home: HOME_SETS,
+  home: HOUSE_SETS,
   shop: SHOP_SETS,
   road: HOME_SETS,   // GAME-183: смуга дороги — трава/стежка terrain і авто, як двір дому
 };

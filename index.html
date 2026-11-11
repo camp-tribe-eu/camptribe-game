@@ -426,6 +426,39 @@
       .ui-bp-name { flex: 1 1 140px; display: grid; min-width: 0; overflow-wrap: anywhere; } .ui-bp-name small { opacity: 0.8; }
       .ui-bp-price { font-variant-numeric: tabular-nums; } .ui-bp-sell { min-height: 44px; }
       .ui-bp-hint { width: min(100%, 560px); margin: 0; opacity: 0.8; }
+      /* GAME-304 · вікно «всередині контейнера» (холодильник, комора, шафа, тумба, скринька Мії): той самий ідіом, що в рюкзака — накладка на все поле, ✕ угорі, піктограми 64 px.
+         Речі стоять на дошках: портрет — по 2 на полицю й завжди ≥ 2 полиці, ландшафт — до 6 на одній; колір нутра й дошки — за контейнером (--inside, --board). */
+      .ui-box { place-content: safe center; background: var(--box-bg, #1b1f23); --board: #8a6a45; --inside: #2d2219; }
+      .ui-box[data-box="fridge"] { --box-bg: #1b2227; --board: #9fb4bd; --inside: #2a3b44; }
+      .ui-box[data-box="storeroom"] { --box-bg: #1f1914; --board: #8a6a45; --inside: #2d2219; }
+      .ui-box[data-box="wardrobe"] { --box-bg: #211916; --board: #84604a; --inside: #33241f; }
+      .ui-box[data-box="nightstand"] { --box-bg: #231b15; --board: #8a6a45; --inside: #34261b; }
+      .ui-box[data-box="mia"] { --box-bg: #1d1a21; --board: #86739a; --inside: #2e2836; }
+      .ui-box-hint { text-align: center; }
+      .ui-box-inside { width: min(100%, 560px); padding: 0 10px; background: var(--inside); border: 4px solid var(--board); border-radius: 10px; box-shadow: inset 0 0 0 3px #00000055; }
+      .ui-box-shelf { --row: 152px; list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); grid-auto-rows: var(--row); min-height: calc(var(--row) * 2);
+        background: repeating-linear-gradient(to bottom, transparent 0, transparent calc(var(--row) - 8px), var(--board) calc(var(--row) - 8px), var(--board) var(--row)); }
+      .ui-box-slot { min-width: 0; height: calc(var(--row) - 8px); }
+      .ui-box-item { width: 100%; max-width: 100%; height: 100%; min-height: 0; display: grid; justify-items: center; align-content: start; gap: 2px; padding: 8px 4px 0; background: transparent; border: 2px solid transparent; border-radius: 8px; text-align: center; line-height: 1.25; }
+      .ui-box-item b { font-size: 0.8rem; font-weight: normal; hyphens: manual; overflow-wrap: normal; }   /* слова не рвемо навпіл: ширина полиці вміщує «декоративна» */
+      .ui-box-slot[data-group="needed"] small { color: #ffd54a; opacity: 1; }   /* «Потрібне» видно одразу */
+      .ui-box-item small, .ui-box-gone small { font-size: 0.68rem; opacity: 0.75; }
+      .ui-box-item:hover, .ui-box-item:focus-visible { border-color: #ffd54a; background: #ffffff14; }
+      .ui-box-item .ui-bp-icon { margin: 0; }
+      .ui-box-gone { height: 100%; display: grid; justify-items: center; align-content: start; gap: 2px; padding: 10px 4px 0; opacity: 0.5; }
+      .ui-box-ghost { filter: grayscale(1) brightness(0.6); } .ui-box-ghost .ui-bp-icon { margin: 0; }
+      .ui-box-card { width: min(100%, 560px); min-height: 4.6em; display: grid; align-content: start; gap: 2px; font-size: 0.75rem; line-height: 1.4; text-align: left; }
+      .ui-box-card strong { color: #ffd54a; } .ui-box-card em { color: #9be28f; font-style: normal; }
+      .ui-box-done { min-width: 160px; }
+      @media (max-height: 500px) {   /* горизонтально (телефон 932×430): без підказки, до 6 речей на одній полиці, картка в 3 рядки — усе в одному екрані */
+        .ui-box { gap: 6px; padding: 8px 16px; }
+        .ui-box h2 { font-size: 1.1rem; margin: 0; } .ui-box-hint { display: none; }
+        .ui-box-inside, .ui-box-card, .ui-box .ui-backpack-head { width: min(100%, 880px); }
+        .ui-box-item b { font-size: 0.65rem; } .ui-box-item small, .ui-box-gone small { font-size: 0.62rem; }
+        .ui-box-shelf { grid-template-columns: repeat(6, minmax(0, 1fr)); min-height: var(--row); }
+        .ui-box-card { min-height: 3.4em; font-size: 0.7rem; }
+        .ui-box-done, .ui-box .ui-backpack-x { min-height: 44px; }
+      }
 
       .ui-atlas-page { --sticker: clamp(40px, min(17vw, 10.5vh), 72px); display: flex; flex-wrap: wrap; gap: 8px 18px; justify-content: center; align-items: center; padding: 10px 12px; border: 3px solid #6b5430; border-radius: 8px;
         background: #f1e6c8; color: #2b2f36; box-shadow: 0 5px 0 #0007; max-width: 100%; }

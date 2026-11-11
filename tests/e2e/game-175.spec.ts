@@ -232,7 +232,7 @@ for (const v of VIEWS) {
       expect(p.fx.pops, 'сплив «+1»/«OK» на кожну дію').toBeGreaterThanOrEqual(6);
       expect(coexist, 'картка мети й рядок «Далі» справді були разом (інакше перевірка нічого не міряє)').toBeGreaterThan(0);
       expect(bpShot, 'дрібна річ пройшла через рюкзак (герой ніс її до авто)').toBe(true);
-      expect(done.filter((d) => d.startsWith('pack.')).length, 'речі пакувалися ногами: ' + done.join(' → ')).toBeGreaterThanOrEqual(3);
+      expect(done.filter((d) => d.startsWith('box.')).length, 'речі брались ногами з контейнерів (GAME-304): ' + done.join(' → ')).toBeGreaterThanOrEqual(3);
       expect(done).toContain('obj.vehicle');
       expect(errors).toEqual([]);
       await ctx.close();

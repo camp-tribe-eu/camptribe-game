@@ -1145,6 +1145,7 @@ export class WorldScene extends Phaser.Scene {
 
   /** Сплив і звук на дію: підібрав/поклав — «+1» і клацання, крок/авто — «OK» і підтвердження. */
   private feedback(name: string): void {
+    if (name.startsWith('box.')) { playUi('press'); return; }   // GAME-304: контейнер лише відкривається — без «+» над героєм (річ беруть у вікні)
     const pick = name.startsWith('take.') || name.startsWith('pack.');
     if (pick) this.fx?.pop(this.player.x, this.player.y, '+');   // GAME-229: без цифр над героєм («+», не «+1»)
     else this.fx?.popIcon(this.player.x, this.player.y, 'check');   // GAME-261: галочка-значок, не текст «OK»

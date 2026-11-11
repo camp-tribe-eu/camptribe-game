@@ -62,6 +62,7 @@ export const LAYOUT_KINDS = {
   table:        { rooms: ['kitchen', 'living', 'study'] },
   chair:        { rooms: ROOMS },
   lamp:         { rooms: ROOMS },
+  chest:        { rooms: ROOMS },   // GAME-304: скринька Мії — окремий вид, без прив'язки до стіни
   plant:        { rooms: ROOMS },
   rug:          { rooms: ROOMS, place: 'gap' },
   painting:     { rooms: ROOMS, place: 'wall' },

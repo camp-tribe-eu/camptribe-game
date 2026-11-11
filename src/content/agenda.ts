@@ -9,6 +9,7 @@ import type { GameState } from '../core/state';
 import { dayOf } from '../core/weather';
 import type { Key } from '../i18n';
 import { ch2Active } from './ch2-live';
+import { spotOfItem } from './containers';
 import { MAP_LOCATION, mapKeyFor, nextTarget, TENT_SPOT as MAP_SPOT_TENT, type MapKey } from './map-first';
 
 /** Скільки перших пунктів агенди треба закрити, щоб підказка-стрілка зникла (вона лише для навчання в перший день). */
@@ -46,9 +47,10 @@ type Raw = Omit<AgendaItem, 'current'>;
 
 /** Місце, де річ лежить удома (ключі UI): підказка «де шукати» поруч із назвою. Мапа home.tmj: вітальня ліворуч, кухня посередині, спальня праворуч. */
 const PLACE: Readonly<Record<string, Key>> = {
-  'item.documents': 'agenda.place.documents', 'item.wallet': 'agenda.place.wallet', 'item.phones': 'agenda.place.phones', 'item.lantern': 'agenda.place.lantern',
-  'item.first-aid': 'agenda.place.first-aid', 'item.clothes': 'agenda.place.wardrobe', 'item.sleeping-bag': 'agenda.place.wardrobe', 'item.tent': 'agenda.place.store',
-  'item.water': 'agenda.place.kitchen', 'item.snacks': 'agenda.place.kitchen', 'item.simple-dinner': 'agenda.place.kitchen',
+  'item.water': 'agenda.place.fridge', 'item.snacks': 'agenda.place.fridge', 'item.simple-dinner': 'agenda.place.fridge',
+  'item.tent': 'agenda.place.storeroom', 'item.sleeping-bag': 'agenda.place.storeroom', 'item.lantern': 'agenda.place.storeroom',
+  'item.documents': 'agenda.place.wardrobe', 'item.clothes': 'agenda.place.wardrobe', 'item.first-aid': 'agenda.place.wardrobe',
+  'item.wallet': 'agenda.place.nightstand', 'item.phones': 'agenda.place.nightstand',
   'item.mia-carrier': 'agenda.place.mia', 'item.mia-bowl-food': 'agenda.place.mia', 'item.mia-blanket': 'agenda.place.mia',
 };
 
@@ -76,7 +78,7 @@ function packItems(sim: SimState, defs: CoreDefs): Raw[] {
   if (!p || !pk) return [];
   const needed = packItemsFor(pk, p).filter((i) => i.group === 'needed');
   const taken = (id: string): boolean => g.flags.includes(takeFlag(id)) || g.flags.includes(packFlag(id));
-  const list: Raw[] = needed.map((i) => ({ id: i.itemId, label: { item: itemKey(i.itemId) }, placeKey: PLACE[i.itemId] ?? null, done: taken(i.itemId), map: 'home', spot: `pack.${i.itemId}` }));
+  const list: Raw[] = needed.map((i) => ({ id: i.itemId, label: { item: itemKey(i.itemId) }, placeKey: PLACE[i.itemId] ?? null, done: taken(i.itemId), map: 'home', spot: spotOfItem(i.itemId) }));   // GAME-304: крапка на мінімапі — контейнер, де вона лежить
   const loaded = needed.every((i) => g.flags.includes(packFlag(i.itemId))) && carriedOf(g.flags, pk, p).length === 0;
   list.push({ id: 'load', label: { ui: 'agenda.load' }, placeKey: 'agenda.place.yard', done: loaded, map: 'home', spot: 'obj.vehicle' });
   // GAME-174: усе спаковано й завантажено — список не закінчується: останній пункт «у дорогу» лишається відкритим (раніше всі пункти були закреслені і нотатник не казав, що далі).

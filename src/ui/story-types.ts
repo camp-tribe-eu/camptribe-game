@@ -176,6 +176,11 @@ export interface OfferRequestCard {
 /** Рядок трекера прохання в HUD (GAME-180): «Сміття 2/3»; `ready` — усе зроблено, лишилось повернутись до просильника. */
 export interface OfferTracker { readonly id: string; readonly trackKey: string; readonly done: number; readonly total: number; readonly ready: boolean }
 
+/** GAME-304: річ на полиці контейнера. `key` — назва з контенту, `spot` — для піктограми, `action` — id відповіді «Взяти» (null — вже взято чи зараз не можна). */
+export interface OfferBoxSlot { readonly id: string; readonly key: string; readonly spot: string; readonly group: 'needed' | 'useful' | 'leave'; readonly state: 'here' | 'taken'; readonly action: string | null }
+/** GAME-304: відкритий контейнер дому («всередині»: холодильник, комора, шафа, тумба, скринька Мії). `nameKey` — ключ UI; `left` — скільки речей ще лежить. */
+export interface OfferBox { readonly id: string; readonly nameKey: Key; readonly slots: readonly OfferBoxSlot[]; readonly left: number; /** id відповіді «Закрити» (команди не має — гра лише закриває вікно). */ readonly close: string }
+
 /** GAME-243: пункт нотатника для екрана: назва — ключ UI чи ключ контенту речі. */
 export interface OfferAgendaItem extends Omit<AgendaItem, 'label'> { readonly label: { readonly ui: Key } | { readonly content: string } }
 export interface OfferAgenda { readonly phase: string; readonly items: readonly OfferAgendaItem[]; readonly total: number; readonly doneCount: number }
@@ -211,6 +216,8 @@ export interface StoryOffer {
   /** Речі в руках; для спорядження (GAME-73) — ще стан 0…100 і чи мокре. */
   /** GAME-244: екран рюкзака — що є, звідки, ціна; «Продати» лише біля приймальні. */
   readonly backpack: OfferBackpack;
+  /** GAME-304: відкритий контейнер дому (вікно «всередині»); null — жоден не відкрито. */
+  readonly box: OfferBox | null;
   readonly inventory: readonly { readonly key: string; readonly qty: number; readonly gear?: { readonly condition: number; readonly wet: boolean } }[];
   /** Ритм дня (GAME-242): похідне від ядра. `bedtime` — номер ночі, поки триває вікно «пора спати» [22:00, 00:30), інакше null;
    *  `shopClosed` — стоїмо в крамниці, а вона зачинена (08:00–20:00); `autoSlept` — щойно прокинулись після того, як герой заснув сам. */

@@ -37,6 +37,7 @@ import items from '../../content/items.json';
 import { dayCloseQuests, dayRanges, firstCh2Index, daySummary, daysEnded, NIGHT_PREFIX } from '../core/day-summary';
 import { type OfferAction, type OfferAtlas, type OfferGoal, type OfferCharacter, type OfferPacking, type OfferProgress, type OfferSummary, type OfferWave, type StoryOffer } from '../ui/story-types';
 import { backpackModel } from './backpack-model';
+import { boxOffer } from './box-offer';
 import { RAW_WAVES } from '../content/waves';
 import { menuTasks } from '../content/director';
 import { agendaOf } from '../content/agenda';
@@ -397,6 +398,8 @@ export interface StoryView {
   readonly overflow?: boolean;
   /** GAME-245: річ, щойно взята вдома (картка ~1,5 с). Стан ПОКАЗУ. */
   readonly card?: string | null;
+  /** GAME-304: об'єкт мапи `box.<id>`, чиє вікно «всередині» відкрито (холодильник, комора, шафа…). Стан ПОКАЗУ. */
+  readonly box?: string | null;
 }
 /** Питання рамки вибору за об'єктом (ключі UI). */
 /** id відповіді «Не зараз» у рамці вибору дії на мапі (GAME-183): команди не має — гра лише закриває рамку. */
@@ -459,7 +462,8 @@ export function storyOffer(sim: SimState, defs: CoreDefs, view: StoryView = PANE
   const ag = s.player && view.mapFirst ? agendaOf(sim, defs) : null;
   const agenda = ag ? { ...ag, items: ag.items.map((i) => ({ ...i, label: 'item' in i.label ? { content: nameKey(i.label.item) ?? i.label.item } : i.label })) } : null;
   for (const [id, m] of bpSells) intents.set(id, m);
-  const base = { backpack, mapFirst: view.mapFirst, agenda, hint, requests: trackerRows(s, REQUESTS, weather), goal: goalOf(s, st, sim.clock.minutes), progress: progressOffer(s), atlas: atlasOffer(s), nearest: nearestReward(s), goals: s.player ? openGoals(s, st, weather, sim.clock.minutes) : [], moneyCents: s.moneyCents, inventory, journal, lastTrip, weather, forecast: todayForecast(sim), day: chapterDay(sim, defs, Math.max(dayOf(sim.clock) + 1, storyDay(s.slept))), timeMinutes: timeOfDay(sim.clock.minutes), rest: restOffer(sim), wave: waveOffer(sim), mia: miaState(s, defs), ...summaryOffer(sim, defs) };
+  const box = view.mapFirst && view.box ? boxOffer(s, defs, view.box, intents, nameKey, sim.clock.minutes) : null;   // GAME-304
+  const base = { backpack, box, mapFirst: view.mapFirst, agenda, hint, requests: trackerRows(s, REQUESTS, weather), goal: goalOf(s, st, sim.clock.minutes), progress: progressOffer(s), atlas: atlasOffer(s), nearest: nearestReward(s), goals: s.player ? openGoals(s, st, weather, sim.clock.minutes) : [], moneyCents: s.moneyCents, inventory, journal, lastTrip, weather, forecast: todayForecast(sim), day: chapterDay(sim, defs, Math.max(dayOf(sim.clock) + 1, storyDay(s.slept))), timeMinutes: timeOfDay(sim.clock.minutes), rest: restOffer(sim), wave: waveOffer(sim), mia: miaState(s, defs), ...summaryOffer(sim, defs) };
 
   if (!s.player) {
     const choices = characterChoices(defs);

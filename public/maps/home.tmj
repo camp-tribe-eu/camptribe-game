@@ -996,7 +996,7 @@
     11,
     25,
     26,
-    49,
+    88,
     0,
     0,
     0,
@@ -1008,10 +1008,10 @@
     46,
     47,
     48,
-    0,
-    0,
-    0,
     52,
+    0,
+    0,
+    89,
     8,
     57,
     58,
@@ -1102,7 +1102,7 @@
     0,
     0,
     0,
-    0,
+    90,
     0,
     0,
     0,
@@ -1394,7 +1394,7 @@
     0,
     36,
     37,
-    0,
+    80,
     18,
     19,
     18,
@@ -1406,10 +1406,10 @@
     59,
     59,
     0,
-    0,
+    24,
     18,
     19,
-    24,
+    81,
     0,
     29,
     0,
@@ -1421,7 +1421,7 @@
     0,
     0,
     0,
-    35,
+    84,
     21,
     22,
     21,
@@ -1433,10 +1433,10 @@
     60,
     61,
     73,
-    0,
+    38,
     21,
     22,
-    38,
+    85,
     0,
     43,
     0,
@@ -1838,7 +1838,7 @@
      "name": "step.PROLOGUE-HOME-001",
      "type": "trigger",
      "x": 528,
-     "y": 176,
+     "y": 208,
      "width": 0,
      "height": 0,
      "point": true,
@@ -1861,7 +1861,7 @@
      "id": 5,
      "name": "step.ST-002",
      "type": "trigger",
-     "x": 784,
+     "x": 848,
      "y": 144,
      "width": 0,
      "height": 0,
@@ -1871,105 +1871,9 @@
     },
     {
      "id": 6,
-     "name": "pack.item.big-cushion",
+     "name": "box.storeroom",
      "type": "trigger",
-     "x": 48,
-     "y": 208,
-     "width": 0,
-     "height": 0,
-     "point": true,
-     "rotation": 0,
-     "visible": true
-    },
-    {
-     "id": 7,
-     "name": "pack.item.tent",
-     "type": "trigger",
-     "x": 48,
-     "y": 272,
-     "width": 0,
-     "height": 0,
-     "point": true,
-     "rotation": 0,
-     "visible": true
-    },
-    {
-     "id": 8,
-     "name": "pack.item.mia-carrier",
-     "type": "trigger",
-     "x": 16,
-     "y": 240,
-     "width": 0,
-     "height": 0,
-     "point": true,
-     "rotation": 0,
-     "visible": true
-    },
-    {
-     "id": 9,
-     "name": "pack.item.mia-blanket",
-     "type": "trigger",
-     "x": 16,
-     "y": 304,
-     "width": 0,
-     "height": 0,
-     "point": true,
-     "rotation": 0,
-     "visible": true
-    },
-    {
-     "id": 10,
-     "name": "pack.item.mia-bowl-food",
-     "type": "trigger",
-     "x": 304,
-     "y": 272,
-     "width": 0,
-     "height": 0,
-     "point": true,
-     "rotation": 0,
-     "visible": true
-    },
-    {
-     "id": 11,
-     "name": "pack.item.lantern",
-     "type": "trigger",
-     "x": 304,
-     "y": 176,
-     "width": 0,
-     "height": 0,
-     "point": true,
-     "rotation": 0,
-     "visible": true
-    },
-    {
-     "id": 12,
-     "name": "pack.item.documents",
-     "type": "trigger",
-     "x": 272,
-     "y": 304,
-     "width": 0,
-     "height": 0,
-     "point": true,
-     "rotation": 0,
-     "visible": true
-    },
-    {
-     "id": 13,
-     "name": "pack.item.water",
-     "type": "trigger",
-     "x": 432,
-     "y": 208,
-     "width": 0,
-     "height": 0,
-     "point": true,
-     "rotation": 0,
-     "visible": true
-    },
-    {
-     "id": 14,
-     "name": "pack.item.snacks",
-     "type": "trigger",
-     "x": 432,
+     "x": 80,
      "y": 144,
      "width": 0,
      "height": 0,
@@ -1978,10 +1882,10 @@
      "visible": true
     },
     {
-     "id": 15,
-     "name": "pack.item.simple-dinner",
+     "id": 7,
+     "name": "box.mia",
      "type": "trigger",
-     "x": 560,
+     "x": 48,
      "y": 240,
      "width": 0,
      "height": 0,
@@ -1990,35 +1894,11 @@
      "visible": true
     },
     {
-     "id": 16,
-     "name": "pack.item.lantern-2",
-     "type": "trigger",
-     "x": 400,
-     "y": 304,
-     "width": 0,
-     "height": 0,
-     "point": true,
-     "rotation": 0,
-     "visible": true
-    },
-    {
-     "id": 17,
-     "name": "pack.item.lantern-3",
-     "type": "trigger",
-     "x": 496,
-     "y": 304,
-     "width": 0,
-     "height": 0,
-     "point": true,
-     "rotation": 0,
-     "visible": true
-    },
-    {
-     "id": 18,
-     "name": "pack.item.first-aid",
+     "id": 8,
+     "name": "box.fridge",
      "type": "trigger",
      "x": 560,
-     "y": 304,
+     "y": 144,
      "width": 0,
      "height": 0,
      "point": true,
@@ -2026,8 +1906,8 @@
      "visible": true
     },
     {
-     "id": 19,
-     "name": "pack.item.wallet",
+     "id": 9,
+     "name": "box.wardrobe",
      "type": "trigger",
      "x": 624,
      "y": 144,
@@ -2038,11 +1918,11 @@
      "visible": true
     },
     {
-     "id": 20,
-     "name": "pack.item.phones",
+     "id": 10,
+     "name": "box.nightstand",
      "type": "trigger",
-     "x": 720,
-     "y": 208,
+     "x": 752,
+     "y": 144,
      "width": 0,
      "height": 0,
      "point": true,
@@ -2050,31 +1930,7 @@
      "visible": true
     },
     {
-     "id": 21,
-     "name": "pack.item.sleeping-bag",
-     "type": "trigger",
-     "x": 656,
-     "y": 176,
-     "width": 0,
-     "height": 0,
-     "point": true,
-     "rotation": 0,
-     "visible": true
-    },
-    {
-     "id": 22,
-     "name": "pack.item.clothes",
-     "type": "trigger",
-     "x": 848,
-     "y": 176,
-     "width": 0,
-     "height": 0,
-     "point": true,
-     "rotation": 0,
-     "visible": true
-    },
-    {
-     "id": 23,
+     "id": 11,
      "name": "npc.george",
      "type": "npc",
      "x": 112,
@@ -2086,7 +1942,7 @@
      "visible": true
     },
     {
-     "id": 24,
+     "id": 12,
      "name": "obj.vehicle",
      "type": "trigger",
      "x": 432,
@@ -2098,7 +1954,7 @@
      "visible": true
     },
     {
-     "id": 25,
+     "id": 13,
      "name": "obj.trunk",
      "type": "trigger",
      "x": 528,
@@ -2110,7 +1966,7 @@
      "visible": true
     },
     {
-     "id": 26,
+     "id": 14,
      "name": "task.mia-carrier",
      "type": "trigger",
      "x": 112,
@@ -2122,7 +1978,7 @@
      "visible": true
     },
     {
-     "id": 27,
+     "id": 15,
      "name": "task.map-to-luggage",
      "type": "trigger",
      "x": 464,
@@ -2134,7 +1990,7 @@
      "visible": true
     },
     {
-     "id": 28,
+     "id": 16,
      "name": "task.lights-window",
      "type": "trigger",
      "x": 240,
@@ -2146,7 +2002,7 @@
      "visible": true
     },
     {
-     "id": 29,
+     "id": 17,
      "name": "task.anna-goodbye",
      "type": "trigger",
      "x": 144,
@@ -2158,7 +2014,7 @@
      "visible": true
     },
     {
-     "id": 30,
+     "id": 18,
      "name": "task.iron-clothes",
      "type": "trigger",
      "x": 688,
@@ -2170,7 +2026,7 @@
      "visible": true
     },
     {
-     "id": 31,
+     "id": 19,
      "name": "step.ST-004",
      "type": "trigger",
      "x": 208,
@@ -2182,7 +2038,7 @@
      "visible": true
     },
     {
-     "id": 32,
+     "id": 20,
      "name": "step.CH1-D3-HOME-001",
      "type": "trigger",
      "x": 208,
@@ -2194,7 +2050,7 @@
      "visible": true
     },
     {
-     "id": 33,
+     "id": 21,
      "name": "obj.drying",
      "type": "trigger",
      "x": 272,
@@ -2206,7 +2062,7 @@
      "visible": true
     },
     {
-     "id": 34,
+     "id": 22,
      "name": "obj.sell",
      "type": "trigger",
      "x": 336,
@@ -2218,7 +2074,7 @@
      "visible": true
     },
     {
-     "id": 35,
+     "id": 23,
      "name": "trace.home-wardrobe",
      "type": "trigger",
      "x": 816,
@@ -2230,7 +2086,7 @@
      "visible": true
     },
     {
-     "id": 36,
+     "id": 24,
      "name": "trace.home-bench",
      "type": "trigger",
      "x": 112,
@@ -2242,7 +2098,7 @@
      "visible": true
     },
     {
-     "id": 37,
+     "id": 25,
      "name": "trace.home-mailbox",
      "type": "trigger",
      "x": 720,
@@ -2364,17 +2220,6 @@
      "visible": true
     },
     {
-     "id": 17,
-     "name": "lamp.floor",
-     "type": "lamp",
-     "x": 64,
-     "y": 96,
-     "width": 32,
-     "height": 32,
-     "rotation": 0,
-     "visible": true
-    },
-    {
      "id": 18,
      "name": "window.living",
      "type": "window",
@@ -2455,7 +2300,7 @@
      "id": 25,
      "name": "plant.kitchen",
      "type": "plant",
-     "x": 544,
+     "x": 448,
      "y": 96,
      "width": 32,
      "height": 32,
@@ -2593,6 +2438,39 @@
      "height": 32,
      "rotation": 0,
      "visible": true
+    },
+    {
+     "id": 101,
+     "name": "storeroom",
+     "type": "shelf",
+     "x": 64,
+     "y": 96,
+     "width": 32,
+     "height": 32,
+     "rotation": 0,
+     "visible": true
+    },
+    {
+     "id": 102,
+     "name": "fridge",
+     "type": "fridge",
+     "x": 544,
+     "y": 96,
+     "width": 32,
+     "height": 32,
+     "rotation": 0,
+     "visible": true
+    },
+    {
+     "id": 103,
+     "name": "chest.mia",
+     "type": "chest",
+     "x": 0,
+     "y": 224,
+     "width": 32,
+     "height": 32,
+     "rotation": 0,
+     "visible": true
     }
    ]
   }
@@ -2675,6 +2553,19 @@
    "spacing": 0,
    "columns": 2,
    "tilecount": 6
+  },
+  {
+   "firstgid": 80,
+   "name": "home-storage",
+   "image": "../../assets/tiles/home_storage.png",
+   "imagewidth": 128,
+   "imageheight": 96,
+   "tilewidth": 32,
+   "tileheight": 32,
+   "margin": 0,
+   "spacing": 0,
+   "columns": 4,
+   "tilecount": 12
   },
   {
    "firstgid": 1025,

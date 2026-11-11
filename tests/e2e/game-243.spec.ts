@@ -3,7 +3,7 @@
 // Знімки 390×844, 932×430, 1280×800 — research/agenda/. Негативні контролі (закон 1) — мутації в src/content/agenda.test.ts; тут — червоніє, якщо стрілка живе далі.
 import { expect, test, type Page } from '@playwright/test';
 import { walkIntro } from './intro-walk';
-import { core, installMenuObserver, loaded, menuSeen, playUntil, probe, route, walk } from './chapter-driver';
+import { core, installMenuObserver, loaded, menuSeen, playUntil, probe, takeItemAt } from './chapter-driver';
 
 const SETTINGS_KEY = 'camplife.settings.v1';
 const SHOTS = 'research/agenda';
@@ -35,15 +35,9 @@ async function noOverlaps(page: Page): Promise<void> {
   }
 }
 
+/** GAME-304: річ лежить у контейнері — підійти, торкнутись, узяти її й закрити вікно (`pack.item.documents` → `item.documents`). */
 async function takeSpot(page: Page, touch: boolean, spot: string): Promise<void> {
-  const at = await probe(page);
-  await walk(page, route('home', [at.playerX, at.playerY], spot));
-  await expect.poll(async () => (await probe(page)).nearObject, { timeout: 5_000, message: `біля ${spot}` }).toBe(spot);
-  const flag = `f.take-${spot.replace('pack.item.', '')}`;
-  if ((await core(page)).game.flags.includes(flag)) return;
-  if (touch) await page.locator('[data-touch="interact"]').tap();
-  else { await page.keyboard.down('KeyE'); await page.waitForTimeout(200); await page.keyboard.up('KeyE'); }
-  await expect.poll(async () => (await core(page)).game.flags.includes(flag), { timeout: 5_000 }).toBe(true);
+  await takeItemAt(page, touch, spot.replace('pack.', ''));
 }
 
 const packing = (c: Awaited<ReturnType<typeof core>>): boolean => c.game.quests['CH1-HOME-001']?.status === 'active' && c.game.player?.locationId === 'loc.home';

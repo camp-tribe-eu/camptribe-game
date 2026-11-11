@@ -7,7 +7,7 @@
 тайли трави/стежки/кущів з terrain_atlas (як у camp-lake), авто — camp_car.png (малюється сценою спрайтом, лише для гравця на авто).
 Нових картинок немає. Цілі дій — об'єкти типу trigger у шарі `objects`; їхні імена — єдина мова між мапою й сюжетом:
   step.<квест>        — завершити крок сюжету руками (CompleteQuest)
-  pack.<річ>          — покласти в багажник / дістати з нього (PackItem / UnpackItem)
+  box.<контейнер>     — відкрити контейнер (холодильник, комору, шафу, тумбу, скриньку Мії) і взяти з нього річ (TakeItem, GAME-304)
   take.<річ>          — взяти з полиці (Pickup)
   obj.vehicle         — сісти в авто / на велосипед і їхати далі (Visit)
   obj.trunk           — відкрити багажник (сітка пакування GAME-109)
@@ -31,6 +31,9 @@ HOME_TS = [
     ('home-furniture', '../../assets/tiles/home_furniture.png', 14, 42, 24, 448, 96),
     ('home-office', '../../assets/tiles/home_office.png', 4, 8, 66, 128, 64),
     ('home-shelf', '../../assets/tiles/home_shelf.png', 2, 6, 74, 64, 96),
+]
+HOME_STORAGE_TS = [   # GAME-304: лише в домі (дорога бере HOME_TS без нього): комора, холодильник, скринька Мії (scripts/assets/build_home_storage.py)
+    ('home-storage', '../../assets/tiles/home_storage.png', 4, 12, 80, 128, 96),
 ]
 YARD_TS = [
     ('lpc-terrain', '../../assets/tiles/terrain_atlas.png', 32, 1024, 1025, 1024, 1024),
@@ -107,30 +110,16 @@ def point(i, name, typ, cell):
 HOME_SPOTS = [
     ('s.start', 'spawn', (7, 4)),
     ('s.car', 'spawn', (11, 12)),
-    ('step.PROLOGUE-HOME-001', 'trigger', (16, 5)),   # стіл на кухні: карта, телефон із прогнозом, аркуш «Одна вільна ніч»
+    ('step.PROLOGUE-HOME-001', 'trigger', (16, 6)),   # стіл на кухні (GAME-304: далі від холодильника): карта, телефон із прогнозом, аркуш «Одна вільна ніч»
     ('step.ST-001', 'trigger', (5, 4)),               # вітальня, під вікном: «озирнись удома»
-    ('step.ST-002', 'trigger', (24, 4)),              # спальня, письмовий стіл із ноутбуком: «обери кемпінг»
-    # GAME-245 · кожна річ живе там, де вона живе: лише біля меблів чи стін (лицьова сторона), не посеред підлоги. Клітинки прохідні (≥ 1,4 від інших цілей).
-    # Вітальня: диван (подушка), комора біля входу (намет), куточок Мії (переноска, плед, миска), книжкова шафа (ліхтар), передпокій (документи).
-    ('pack.item.big-cushion', 'trigger', (1, 6)),     # біля дивана зліва
-    ('pack.item.tent', 'trigger', (1, 8)),            # комора: куток біля лівої стіни
-    ('pack.item.mia-carrier', 'trigger', (0, 7)),     # куточок Мії
-    ('pack.item.mia-blanket', 'trigger', (0, 9)),     # куточок Мії
-    ('pack.item.mia-bowl-food', 'trigger', (9, 8)),   # куточок Мії
-    ('pack.item.lantern', 'trigger', (9, 5)),         # полиця біля книжкової шафи
-    ('pack.item.documents', 'trigger', (8, 9)),       # передпокій: шухляда біля порога
-    # Кухня: стільниця вздовж стіни, нижня стіна — полиці.
-    ('pack.item.water', 'trigger', (13, 6)),
-    ('pack.item.snacks', 'trigger', (13, 4)),
-    ('pack.item.simple-dinner', 'trigger', (17, 7)),
-    ('pack.item.lantern-2', 'trigger', (12, 9)),      # зайві ліхтарі — на полиці біля нижньої стіни
-    ('pack.item.lantern-3', 'trigger', (15, 9)),
-    ('pack.item.first-aid', 'trigger', (17, 9)),      # шафка з ліками (ванної в мапі немає — смак, див. PR)
-    # Спальня: тумба (гаманець), розетка біля столу (телефони й зарядки), шафа (спальники й одяг).
-    ('pack.item.wallet', 'trigger', (19, 4)),
-    ('pack.item.phones', 'trigger', (22, 6)),
-    ('pack.item.sleeping-bag', 'trigger', (20, 5)),
-    ('pack.item.clothes', 'trigger', (26, 5)),
+    ('step.ST-002', 'trigger', (26, 4)),              # спальня, письмовий стіл із ноутбуком: «обери кемпінг»
+    # GAME-304 · кожна річ лежить у СВОЄМУ контейнері, а не на підлозі: дотик до контейнера відкриває «всередину» (крупний план полиць), де річ беруть (src/content/containers.ts).
+    # Спот — клітинка перед лицьовою стороною меблів. Мапа ≥ 1,5 клітинки від інших цілей (радіус дотику 1,5), щоб дотик не відкривав сусіда.
+    ('box.storeroom', 'trigger', (2, 4)),             # вітальня: комора біля вікна — намет, спальник, ліхтарі, подушка
+    ('box.mia', 'trigger', (1, 7)),                   # вітальня, куточок Мії: скринька з переноскою, мискою й пледом
+    ('box.fridge', 'trigger', (17, 4)),               # кухня: холодильник — вода, вечеря, снеки
+    ('box.wardrobe', 'trigger', (19, 4)),             # спальня: шафа — документи, одяг, аптечка
+    ('box.nightstand', 'trigger', (23, 4)),           # спальня: тумба — гаманець і телефони
     ('npc.george', 'npc', (3, 9)),
     ('obj.vehicle', 'trigger', (13, 12)),
     ('obj.trunk', 'trigger', (16, 14)),
@@ -151,6 +140,35 @@ HOME_SPOTS = [
 ]
 
 
+# ---------------------------------------------------------------- контейнери (GAME-304)
+STORAGE0 = 80   # firstgid тайлсету home-storage: колонка 0 — комора, 1 — холодильник, (2, рядок 2) — скринька Мії; аркуш 4×3 тайли
+
+
+def storage(layers, W, H):
+    """Комора (замість торшера), холодильник (замість рослини; рослина — на вільне місце біля кухонної стільниці) і скринька Мії.
+    Високі меблі — три тайли: два верхні в `above` (поверх стіни й героя), нижній у `walls` (колізія), як шафа в спальні."""
+    def tall(c, col):
+        put(layers, W, H, 'above', c, 1, STORAGE0 + col)
+        put(layers, W, H, 'above', c, 2, STORAGE0 + 4 + col)
+        put(layers, W, H, 'walls', c, 3, STORAGE0 + 8 + col)
+    put(layers, W, H, 'above', 2, 2, 0); put(layers, W, H, 'walls', 2, 3, 0)                       # торшер прибрано
+    tall(2, 0)                                                                                     # комора біля вікна, лицем до вітальні
+    for r, layer, g in ((1, 'above', 24), (2, 'above', 38), (3, 'walls', 52)):                       # рослина: стара клітинка → c14
+        put(layers, W, H, layer, 17, r, 0)
+        put(layers, W, H, layer, 14, r, g)
+    tall(17, 1)                                                                                    # холодильник біля вікна кухні
+    put(layers, W, H, 'walls', 0, 7, STORAGE0 + 8 + 2)                                             # скринька Мії біля лівого краю вітальні
+
+
+def storage_layout(objs):
+    """Шар layout (правила розкладки): торшера нема, рослина — на c14, нові меблі — комора (полиця), холодильник, скринька."""
+    out = [dict(o, x=14 * T) if o['name'] == 'plant.kitchen' else o for o in objs if o['name'] != 'lamp.floor']
+    for i, (name, typ, c, r) in enumerate([('storeroom', 'shelf', 2, 3), ('fridge', 'fridge', 17, 3), ('chest.mia', 'chest', 0, 7)]):
+        out.append({'id': 101 + i, 'name': name, 'type': typ, 'x': c * T, 'y': r * T, 'width': T, 'height': T, 'rotation': 0, 'visible': True})
+    return out
+
+
+
 def build_home():
     base = json.load(open(TRIAL, encoding='utf8'))
     W, H = 27, 16
@@ -159,17 +177,18 @@ def build_home():
     for n in layers:
         layers[n][:27 * 10] = by[n]['data']
     yard(layers, W, H, 10, (6, 7), 11)
+    storage(layers, W, H)
     # Ground у верхніх рядках проби порожній (там стіна) — лишаємо як є. Тайли terrain у walls/ground — gid із firstgid 1025.
     objs = [point(i + 1, n, t, c) for i, (n, t, c) in enumerate(HOME_SPOTS)]
     layout = next(l for l in base['layers'] if l['name'] == 'layout')
-    layout = dict(layout, id=6)
+    layout = dict(layout, id=6, objects=storage_layout(layout['objects']))
     return {
         'type': 'map', 'version': '1.10', 'tiledversion': '1.11.0', 'orientation': 'orthogonal', 'renderorder': 'right-down',
         'width': W, 'height': H, 'tilewidth': T, 'tileheight': T, 'infinite': False, 'nextlayerid': 8, 'nextobjectid': 40,
         'layers': [tile_layer(1, 'ground', W, H, layers['ground']), tile_layer(2, 'decor', W, H, layers['decor']),
                    tile_layer(3, 'walls', W, H, layers['walls'], True), tile_layer(4, 'above', W, H, layers['above']),
                    {'id': 5, 'name': 'objects', 'type': 'objectgroup', 'draworder': 'topdown', 'opacity': 1, 'visible': True, 'x': 0, 'y': 0, 'objects': objs}, layout],
-        'tilesets': tmj_tilesets(HOME_TS + YARD_TS),
+        'tilesets': tmj_tilesets(HOME_TS + HOME_STORAGE_TS + YARD_TS),
         'properties': [{'name': 'locationId', 'type': 'string', 'value': 'loc.home'}],
     }
 
