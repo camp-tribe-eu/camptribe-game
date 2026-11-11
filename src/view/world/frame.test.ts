@@ -34,16 +34,17 @@ describe('frameSize (GAME-84 №13, GAME-96)', () => {
     expect(old.width * fit).toBeLessThan(844 * 0.99);
   });
 
-  it('вузьке поле (телефон сторч, GAME-91, без змін): цілий масштаб, кадр = поле / k, висота не вища за мапу', () => {
-    // 390×788 → k=2: кадр 195×384 (мапа на всю висоту, по ширині камера їде за персонажем).
-    expect(frameSize(390, 788)).toEqual({ width: 195, height: MAP_HEIGHT, zoom: 2 });
-    expect(frameSize(375, 611)).toEqual({ width: 187, height: 305, zoom: 2 });         // k=2, 611/2 < мапи
+  it('вузьке поле (телефон сторч, GAME-91): цілий масштаб; GAME-300 — кадр = ⌈поле / k⌉ по обох осях: полотно покриває поле, порожньої смуги під ним немає', () => {
+    // 390×788 → k=2: кадр 195×394 (GAME-300: було 195×384 — під полотном лишалась порожня смуга 20 px; по ширині камера їде за персонажем).
+    expect(frameSize(390, 788)).toEqual({ width: 195, height: 394, zoom: 2 });
+    expect(frameSize(375, 611)).toEqual({ width: 187, height: 306, zoom: 2 });         // k=2, ⌈611/2⌉ (GAME-300: було 305)
     expect(frameSize(360, 744)).toEqual({ width: 180, height: 372, zoom: 2 });         // k=2, 744/2 < мапи
     for (const [w, h] of [[390, 788], [375, 611], [360, 744], [820, 1100], [600, 700]] as [number, number][]) {
       const f = frameSize(w, h);
       const k = Math.max(1, Math.round(h / MAP_HEIGHT));
       expect(f.zoom, `${w}×${h}`).toBe(k);
-      expect(f.height, `${w}×${h}`).toBeLessThanOrEqual(MAP_HEIGHT);
+      expect(f.height * k, `${w}×${h}: полотно покриває поле по висоті (GAME-300)`).toBeGreaterThanOrEqual(h);
+      expect(f.height * k - h, `${w}×${h}: зайве по висоті < k`).toBeLessThan(k);
       expect(f.width * k, `${w}×${h}`).toBeLessThanOrEqual(w);
       expect(f.width * k, `${w}×${h}: кадр заповнює поле по ширині`).toBeGreaterThan(w - k);
     }
@@ -55,7 +56,38 @@ describe('frameSize (GAME-84 №13, GAME-96)', () => {
 
   it('межа 1,2: поле 1,2 — ще широке (покриття), трохи вужче — уже вузьке (на всю висоту)', () => {
     expect(frameSize(1200, 1000)).toEqual({ width: 600, height: 500, zoom: 2 });
-    expect(frameSize(1190, 1000)).toEqual({ width: 396, height: 333, zoom: 3 });   // k=3: уже вузька гілка (GAME-91, без змін)
+    expect(frameSize(1190, 1000)).toEqual({ width: 396, height: 334, zoom: 3 });   // k=3: уже вузька гілка (GAME-91, без змін)
+  });
+});
+
+describe('GAME-300 · мала мапа покриває поле на ПК (власник: крамниця 896 px зліва у вікні 2000×1086, решта — фіолет)', () => {
+  const SHOP = { w: 448, h: 384 };
+  it('ПК: масштаб «Авто» піднімається, доки мапа не покриє поле (не менше 97 %), зріст героя ≤ 30 % висоти', () => {
+    for (const [w, h] of [[2000, 1086], [1600, 900], [1920, 1080], [1280, 800]] as [number, number][]) {
+      const f = frameSize(w, h, false, 0, SHOP);
+      expect(SHOP.w * f.zoom, `${w}×${h}: ×${f.zoom} — ширина мапи на екрані`).toBeGreaterThanOrEqual(w * 0.97);
+      expect(SHOP.h * f.zoom, `${w}×${h}: ×${f.zoom} — висота мапи на екрані`).toBeGreaterThanOrEqual(h * 0.97);
+      expect((HERO_BODY_PX * f.zoom) / h, `${w}×${h}: герой`).toBeLessThanOrEqual(0.3);
+      expect(f.width * f.zoom, `${w}×${h}: полотно покриває поле`).toBeGreaterThanOrEqual(w);
+    }
+    expect(frameSize(2000, 1086, false, 0, SHOP).zoom).toBe(5);
+    expect(frameSize(1600, 900, false, 0, SHOP).zoom).toBe(4);
+  });
+  it('без мапи, з великою мапою (табір 1280×768) чи явним кроком — масштаб як за OD-030 (налаштування «Масштаб» не чіпаємо)', () => {
+    expect(frameSize(2000, 1086)).toEqual({ width: 1000, height: 543, zoom: 2 });
+    expect(frameSize(2000, 1086, false, 0, { w: 1280, h: 768 }).zoom).toBe(2);
+    expect(frameSize(2000, 1086, false, 2, SHOP).zoom).toBe(2);
+    expect(frameSize(1600, 900, false, 3, SHOP).zoom).toBe(3);
+  });
+  it('телефон: герой не стає завеликим — вбік лишається ×2 (OD-030), сторч не стрибає через 2–3 % смуги', () => {
+    expect(frameSize(932, 430, true, 0, SHOP).zoom).toBe(2);
+    expect(frameSize(844, 390, true, 0, SHOP).zoom).toBe(2);
+    expect(frameSize(390, 772, true, 0, SHOP).zoom).toBe(2);   // 384·2 = 768 ≥ 97 % від 772
+  });
+  it('мапа вужча й нижча за поле у сторч (дорога 960×320): піднімаємо масштаб, смуги по висоті немає', () => {
+    const road = { w: 960, h: 320 };
+    const f = frameSize(390, 772, true, 0, road);
+    expect(road.h * f.zoom).toBeGreaterThanOrEqual(772 * 0.97);
   });
 });
 
