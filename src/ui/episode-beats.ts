@@ -48,14 +48,27 @@ export function recapKeys(flags: readonly string[]): Key[] {
   return out;
 }
 
-/** Таблиця рядків картки для цих прапорців: заголовок, три рядки, слід дідуся, кліфхенгер. */
-export function episodeLines(flags: readonly string[]): EpisodeLine[] {
-  const recap = recapKeys(flags);
+/**
+ * GAME-292 · три рядки підсумку розділу 2: стежка (забута з Інгрід чи своя), медальйон (з'єднано свідомим вибором чи ще половинки), намет (мокрий чи сухий). Кожен рядок — за прапорцем ядра
+ * (`f.trail-forgotten`, `f.ch2-medallion-join`, `f.ch2-pack-wet`), без прапорця — запасний. Рядків завжди рівно RECAP_LINES і порядок сталий (день 2 → Шенген → день 3).
+ */
+export function recapKeysCh2(flags: readonly string[]): Key[] {
   return [
-    { kind: 'title', text: 'ep.title', voice: 'narrator', delayMs: 0 },
+    flags.includes('f.trail-forgotten') ? 'ep2.recap.forgotten' : 'ep2.recap.other',
+    flags.includes('f.ch2-medallion-join') ? 'ep2.recap.medallion' : 'ep2.recap.halves',
+    flags.includes('f.ch2-pack-wet') ? 'ep2.recap.wet' : 'ep2.recap.dry',
+  ];
+}
+
+/** Таблиця рядків картки для цих прапорців: заголовок, три рядки, слід дідуся, кліфхенгер. `chapter` 2 — кінець розділу 2 (тизер Ельзасу: тарт фламбе й пекар у Кольмарі). */
+export function episodeLines(flags: readonly string[], chapter: 1 | 2 = 1): EpisodeLine[] {
+  const recap = chapter === 2 ? recapKeysCh2(flags) : recapKeys(flags);
+  const k = (c1: Key, c2: Key): Key => (chapter === 2 ? c2 : c1);
+  return [
+    { kind: 'title', text: k('ep.title', 'ep2.title'), voice: 'narrator', delayMs: 0 },
     ...recap.map((text, i): EpisodeLine => ({ kind: 'recap', text, voice: 'narrator', delayMs: STEP_MS * (i + 1) })),
-    { kind: 'trace', text: 'ep.trace', voice: 'henry', delayMs: STEP_MS * (recap.length + 1) + 400 },
-    { kind: 'next', text: 'ep.next', voice: 'narrator', delayMs: STEP_MS * (recap.length + 2) + 800 },
+    { kind: 'trace', text: k('ep.trace', 'ep2.trace'), voice: 'henry', delayMs: STEP_MS * (recap.length + 1) + 400 },
+    { kind: 'next', text: k('ep.next', 'ep2.next'), voice: 'narrator', delayMs: STEP_MS * (recap.length + 2) + 800 },
   ];
 }
 

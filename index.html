@@ -369,6 +369,8 @@
       .ui-episode-line[data-kind="next"] { color: #c9c4b4; }
       @keyframes ui-episode-in { to { opacity: 1; } }
       @media (prefers-reduced-motion: reduce) { .ui-episode-line { opacity: 1; animation: none; } }
+      /* GAME-292: телефон вбік (висота ≤ 500): картка-«серія» розділу 2 має довші рядки (тизер Ельзасу) — стискаємо відступи й кегль, щоб кліфхенгер лишався на екрані без прокрутки. */
+      @media (max-height: 500px) { .ui-episode-body { max-width: 780px; gap: 5px; padding-top: 44px; padding-bottom: 8px; } .ui-episode-line { padding: 4px 10px; font-size: 0.72rem; line-height: 1.35; } }
       .ui-cold-start { position: relative; z-index: 1; flex: 1 1 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; padding: 24px var(--edge-right) 24px var(--edge-left); text-align: center; }
       .ui-cold-title { margin: 0; font-size: 1.6rem; letter-spacing: 0.08em; color: #ffd54a; text-shadow: 0 3px 0 #0009; }
       .ui-cold-sub { margin: 0 0 10px; font-size: 0.8rem; color: #c9c4b4; }
@@ -444,6 +446,13 @@
       /* GAME-215: сторінка «Шлях Генрі» — сліди дідуся за регіонами під сторінкою наклейок; позначка олівцем, як на мапі. */
       .ui-henry { flex: 1 1 100%; margin: 0; padding: 8px 10px 6px; border-top: 2px dashed #6b543066; text-align: left; font-size: 0.7rem; }
       .ui-henry-title { margin: 0; font-size: 0.85rem; color: #6b3d1d; text-align: center; }
+      /* GAME-292: сторінка Люксембургу — печатка (гумовий штамп) і те, що родина привезла; нотатка дідуся — під ними. */
+      .ui-lux { flex: 1 1 100%; margin: 0; padding: 8px 10px 6px; border-top: 2px dashed #6b543066; text-align: left; font-size: 0.7rem; }
+      .ui-lux-row { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 10px 16px; margin: 6px 0; }
+      .ui-lux-stamp { flex: none; display: flex; align-items: center; justify-content: center; min-width: 120px; padding: 10px 12px; box-sizing: border-box; text-align: center; border: 3px double #a8452a; border-radius: 8px; color: #a8452a; background: #a8452a14; font-size: 0.55rem; font-weight: 700; line-height: 1.3; transform: rotate(-5deg); hyphens: none; overflow-wrap: normal; }
+      .ui-lux-items { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; min-width: 0; }
+      .ui-lux-items li { display: flex; align-items: center; gap: 6px; overflow-wrap: anywhere; }
+      .ui-lux-items .ui-sticker-icon { flex: none; width: 1.3rem; height: 1.3rem; }
       .ui-henry-hint { margin: 0 0 4px; font-size: 0.6rem; color: #5b4a33; text-align: center; }
       .ui-henry-region { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 10px; padding: 2px 0; }
       .ui-henry-region-name { flex: 0 0 auto; min-width: 5.5em; font-weight: bold; color: #3b3a44; }
@@ -460,8 +469,8 @@
       .ui-henry-postcard .ui-sticker-icon { width: 1.2rem; height: 1.2rem; }
       /* Телефон вбік (844×390): сітка ліворуч, назва, лічильник і мапа — праворуч; під сторінкою рядок вступу й кнопка. */
       @media (max-height: 500px) {
-        .ui-atlas-page { display: grid; grid-template-columns: auto minmax(0, 1fr); grid-template-areas: "grid title" "grid count" "grid fill" "grid map" "henry henry"; align-items: center; gap: 4px 16px; }
-        .ui-atlas-grid { grid-area: grid; } .ui-atlas-title { grid-area: title; } .ui-atlas-count { grid-area: count; } .ui-atlas-map { grid-area: map; justify-self: center; width: clamp(100px, 22vw, 160px); } .ui-henry { grid-area: henry; } .ui-atlas-fill { grid-area: fill; }
+        .ui-atlas-page { display: grid; grid-template-columns: auto minmax(0, 1fr); grid-template-areas: "grid title" "grid count" "grid fill" "grid map"; align-items: center; gap: 4px 16px; }
+        .ui-atlas-grid { grid-area: grid; } .ui-atlas-title { grid-area: title; } .ui-atlas-count { grid-area: count; } .ui-atlas-map { grid-area: map; justify-self: center; width: clamp(100px, 22vw, 160px); } .ui-henry, .ui-lux { grid-column: 1 / -1; } .ui-atlas-fill { grid-area: fill; }   /* GAME-292: розділи «Шлях Генрі», «Фото», «Орхідея» й «Люксембург» — кожен у своєму рядку на всю ширину (раніше всі `.ui-henry` ділили одну клітинку `henry` і лягали один на одного) */
         .ui-intro-stage:has(> .ui-letter) { align-items: center; justify-content: flex-end; padding-bottom: 8px; } .ui-intro-stage > .ui-letter { max-width: min(46%, 380px); }
         .ui-intro-stage { padding-top: 44px; } .ui-intro-atlas { flex-direction: column; flex-wrap: nowrap; gap: 6px; } .ui-intro-final { flex: none; }
         .ui-atlas { padding-top: 8px; gap: 6px; } .ui-atlas h2 { font-size: 1.1rem; margin: 0; }
@@ -478,7 +487,8 @@
       .ui-amap-place { position: absolute; display: flex; flex-direction: column; align-items: center; transform: translate(-50%, -50%); gap: 1px; width: 24%; font-size: 0.6rem; line-height: 1.2; }
       .ui-amap-place[data-place="home"] { left: 18%; top: 72%; } .ui-amap-place[data-place="lake"] { left: 52%; top: 36%; width: 38%; }
       .ui-amap-place[data-place="mountains"] { left: 86%; top: 22%; } .ui-amap-place[data-place="sea"] { left: 86%; top: 74%; }
-      .ui-amap-place[data-place="castle"] { left: 18%; top: 20%; } .ui-amap-place[data-place="forest"] { left: 62%; top: 90%; }
+      .ui-amap-place[data-place="castle"] { left: 18%; top: 20%; } .ui-amap-place[data-place="luxembourg"] { left: 17%; top: 20%; width: 30%; }
+      .ui-amap-place[data-place="luxembourg"] .ui-amap-name { font-size: 0.52rem; hyphens: none; overflow-wrap: normal; word-break: normal; } .ui-amap-place[data-place="luxembourg"] .ui-amap-tag { font-size: 0.55rem; hyphens: none; overflow-wrap: normal; } .ui-amap-place[data-place="forest"] { left: 62%; top: 90%; }
       .ui-amap-dot { display: grid; place-items: center; width: 40px; height: 40px; border-radius: 50%; border: 2px solid #6b5430; background: #fffaf0; }
       .ui-amap-dot .ui-sticker-icon { width: 26px; height: 26px; }
       .ui-amap-sil { width: 26px; height: 26px; color: #8a8f94; } .ui-amap-sil path { fill: currentColor; stroke: currentColor; stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; } .ui-amap-sil path[data-shape="sea"] { fill: none; }

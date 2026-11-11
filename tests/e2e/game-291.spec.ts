@@ -56,6 +56,7 @@ async function readScene(page: Page, onNode?: (node: string) => Promise<void>): 
   for (let clicks = 0; clicks < 80; clicks++) {
     const d = (await core(page)).game.dialogue as { id: string; node: string } | null;
     if (d === null) break;
+    if (d.id === 'dlg.ch2-pack') break;   // GAME-292: після Шенгену режисер відкриває сцену збору (її веде game-292.spec.ts) — сцена Шенгену на цьому кінчилась
     expect(d.id).toBe(SCENE);
     if (nodes[nodes.length - 1] !== d.node) { nodes.push(d.node); if (onNode) await onNode(d.node); }
     const acts = talk(page).locator('[data-act]');

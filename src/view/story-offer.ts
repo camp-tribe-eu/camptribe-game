@@ -24,14 +24,14 @@ import { pageFill } from '../core/atlas-fill';
 import { nearestReward } from '../content/nearest-reward';
 import { LOCALES } from '../i18n';
 import { dayPartOf, resolveGreeting, trackTalk } from './greeting';
-import { canRestNow, canSleepNow, chapter2Complete, chapter2Startable, chapterComplete, isCh2Quest, matches, questOpen, questSlept, route, storyDay } from '../core/story';
+import { canRestNow, canSleepNow, chapter2Complete, chapter2Startable, chapterComplete, isCh2Quest, luxembourgStamp, matches, questOpen, questSlept, route, storyDay } from '../core/story';
 import { awardsFor } from '../core/progress';
 import { capacityOf, carriedOf, overflowCandidates, packedOf, packFlag, packingOpen, packItemsFor, usedUnits } from '../core/packing';
 import { timeOfDay } from './world/daylight';
 import { bedtimeNight, EVENING, minuteOfDay } from '../core/clock';
 import { shopClosedHere, wakeMinute } from '../core/rest';
 import { dayOf, tripMinutes, type Weather } from '../core/weather';
-import { CONTENT, memorableFacts } from '../content/story';
+import { CONTENT, STORY, memorableFacts } from '../content/story';
 import { moves, progressKey, type Move } from '../content/moves';
 import items from '../../content/items.json';
 import { dayCloseQuests, dayRanges, firstCh2Index, daySummary, daysEnded, NIGHT_PREFIX } from '../core/day-summary';
@@ -339,6 +339,14 @@ export function openGoals(s: GameState, st: StoryDefs, weather?: Weather, now?: 
   return [...(main ? [{ kind: 'main' as const, key: main.key, ui: false }] : []), ...sides, ...(n ? [{ kind: 'reward' as const, key: n.labelKey, ui: n.ui, left: n.left }] : [])];
 }
 
+/** GAME-292 · сторінка Люксембургу в Атласі: лише з печаткою (ядро: luxembourgStamp); медальйон і мікрокарта — з рюкзака, фінал — лише завершений квест-кінець розділу 2 (chapter2Complete), не прапорець. */
+export function luxembourgPage(s: GameState): Pick<OfferAtlas, 'luxembourg'> {
+  if (!luxembourgStamp(s)) return {};
+  const inv = (id: string): number => (Object.hasOwn(s.inventory, id) ? (s.inventory[id] as number) : 0);
+  const medallion = inv('item.medallion') > 0 ? 'whole' as const : inv('item.medallion.half1') > 0 || inv('item.medallion.half2') > 0 ? 'halves' as const : null;
+  return { luxembourg: { medallion, microcard: inv('item.microcard') > 0, finale: chapter2Complete(s, STORY) } };
+}
+
 /** GAME-182 · сторінка Атласу: слоти — наклейки з content/stickers.json у порядку контенту, отримані (ядро: state.stickers) — кольорові, решта — силуети. */
 export function atlasOffer(s: GameState): OfferAtlas {
   const have = stickersOf(s);
@@ -350,7 +358,7 @@ export function atlasOffer(s: GameState): OfferAtlas {
     { id: 'henry', titleKey: 'atlas.henry', have: henry.found, total: henry.total, pct: henry.total === 0 ? 0 : Math.floor((henry.found * 100) / henry.total), done: henry.postcard, reward: null },
   ];
   const sum = pages.reduce((a, x) => ({ have: a.have + x.have, total: a.total + x.total }), { have: 0, total: 0 });
-  return { slots, total: STICKER_SLOTS, count: slots.filter((x) => x.owned).length, henry, photos: photoPage(s.flags), orchid: orchidPage(s.flags, s.grants), pages, fillPct: sum.total === 0 ? 0 : Math.floor((sum.have * 100) / sum.total) };
+  return { slots, total: STICKER_SLOTS, count: slots.filter((x) => x.owned).length, henry, photos: photoPage(s.flags), orchid: orchidPage(s.flags, s.grants), ...luxembourgPage(s), pages, fillPct: sum.total === 0 ? 0 : Math.floor((sum.have * 100) / sum.total) };
 }
 
 /** Картка мети (GAME-170, зріз 2): жива хвиля з ядра (waveView — хвилини за годинником симуляції) і тексти з content/waves.json. */
@@ -567,7 +575,8 @@ export function storyOffer(sim: SimState, defs: CoreDefs, view: StoryView = PANE
       if (view.choice === 'obj.buy') for (const { move, shortCents } of unaffordableBuys(s, defs)) answers.push({ id: `locked|${idOf(move, s)}`, ...describe(move, defs, s, weather), shortCents });
       answers.splice(answers.findIndex((a) => a.shortCents !== undefined) < 0 ? answers.length : answers.findIndex((a) => a.shortCents !== undefined), 0, { id: CHOICE_CANCEL_ID, kind: 'cancel', key: null });
       // GAME-296: поїздки розділу 2 кажуть, що повернемось у кемпінг; вибір дня (CompleteQuest із переходом) — «Як проведемо день?»
-      const prompt = spot?.trips ? (options[0]?.type === 'CompleteQuest' ? 'choice.day' : 'choice.trip') : choicePrompt(view.choice);
+      const goesHome = options[0]?.type === 'Visit' && (options[0] as { locationId?: string }).locationId === 'loc.home';   // GAME-292: дорога додому наприкінці розділу 2 — в один бік, «потім назад у кемпінг» там неправда
+      const prompt = spot?.trips ? (options[0]?.type === 'CompleteQuest' ? 'choice.day' : goesHome ? 'choice.home' : 'choice.trip') : choicePrompt(view.choice);
       dialogue = { speakerKey: null, speakerId: null, key: prompt, ui: true, answers };
     }
   }
@@ -576,7 +585,8 @@ export function storyOffer(sim: SimState, defs: CoreDefs, view: StoryView = PANE
     intents,
     offer: {
       ...base,
-      stage: chapterComplete(s, st) && s.chapterStart === undefined ? 'ended' : 'play',   // GAME-286: після старту розділу 2 розділ 1 більше не «кінець»
+      stage: chapter2Complete(s, st) || (chapterComplete(s, st) && s.chapterStart === undefined) ? 'ended' : 'play',   // GAME-286: після старту розділу 2 розділ 1 більше не «кінець»; GAME-292: кінець розділу 2 — завершений квест CH2-D3-HOME-001 (ніколи не прапорець)
+      ...(chapter2Complete(s, st) ? { chapterEnd: 2 as const } : {}),
         // GAME-144: кінець розділу — завершений квест-кінець, не прапорець
       characters: [],
       locationKey: nameKey(p.locationId),

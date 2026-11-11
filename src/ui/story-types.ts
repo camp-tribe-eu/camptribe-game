@@ -134,6 +134,8 @@ export interface OfferAtlas {
   readonly photos: { readonly photos: readonly { readonly id: string; readonly nameKey: string; readonly taken: boolean }[]; readonly taken: number; readonly total: number };
   /** GAME-287: сторінка розділу 2 «засушена орхідея + підпис дідуся» — є лише після кадру (`found`); `shot` — сухий чи дощовий. */
   readonly orchid?: { readonly found: boolean; readonly shot: 'orchid' | 'drops' | null };
+  /** GAME-292: сторінка Люксембургу — є лише з печаткою (родина справді приїхала в Мюллерталь, luxembourgStamp). `medallion`: цілий чи дві половинки; `finale` — розділ 2 завершено (квест CH2-D3-HOME-001): тоді видно нотатку дідуся-тизер. */
+  readonly luxembourg?: { readonly medallion: 'whole' | 'halves' | null; readonly microcard: boolean; readonly finale: boolean };
   readonly henry: { readonly traces: readonly { readonly id: string; readonly kind: string; readonly location: string; readonly nameKey: string; readonly textKey: string; readonly year: number | null; readonly found: boolean }[]; readonly found: number; readonly total: number; readonly postcard: boolean };
 }
 export interface OfferProgress { readonly xp: number; readonly om: number; readonly title: OfferTitle; readonly skills: readonly OfferSkill[] }
@@ -185,6 +187,8 @@ export interface StoryOffer {
   readonly mapFirst: boolean;
   /** create — персонажа ще немає; play — гра йде; ended — кінець розділу. */
   readonly stage: 'create' | 'play' | 'ended';
+  /** GAME-292: якого розділу кінець (лише 2 — завершено квест CH2-D3-HOME-001); немає — кінець розділу 1. Від нього тексти кінця й картка-«серія». */
+  readonly chapterEnd?: 2;
   readonly characters: readonly OfferCharacter[];
   readonly locationKey: string | null;
   readonly moneyCents: number;

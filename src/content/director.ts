@@ -25,6 +25,7 @@ import { DINNER_SPOT, dinnerDue, dinnerFinishMove, dinnerMove } from './ch2-dinn
 import { ch2FinishMove } from './ch2-live';
 import { activityDue, activityFinishMoves, activityMove, eveningDue, eveningFinishMove, eveningMove } from './ch2-activity';
 import { joinMove, schengenDue, schengenFinishMoves, schengenMove } from './ch2-schengen';
+import { packDue, packFinishMove, packMove } from './ch2-pack';
 import { dispatch, nextCommandId, type Command } from '../core/commands';
 import { isPlanSpot, planFinishMove, planSpotLive, planSpotMove, trailFinishMove } from './ch2-plan';
 import { REPAIR_FLAG, REPAIR_SPOT } from './repair';
@@ -67,7 +68,7 @@ export function storyMoves(sim: SimState, defs: CoreDefs): Move[] {
   // GAME-288: після вечері розділу 2 день-квест завершується сам. GAME-289: після вибору стежки квест плану переходить у обрану гілку, а після вставки гілка завершується.
   // GAME-296: решта кроків розділу 2, що закриваються самими візитами (приїзд, прогулянка, водоспад, Шенген, додому), — теж самі; шле лише те, що ядро прийме.
   const accepts = (m: Move): boolean => dispatch(sim.game, { ...m, commandId: nextCommandId(sim.game) } as Command, defs, undefined, undefined, undefined, sim.clock.minutes).ok;
-  const auto = [dinnerFinishMove(sim), planFinishMove(sim), trailFinishMove(sim), eveningFinishMove(sim), ch2FinishMove(sim, accepts)].filter((m): m is Move => m !== null);
+  const auto = [dinnerFinishMove(sim), planFinishMove(sim), trailFinishMove(sim), eveningFinishMove(sim), packFinishMove(sim), ch2FinishMove(sim, accepts)].filter((m): m is Move => m !== null);
   // GAME-290: водоспад і майстер-клас дня 2 відкриваються самі, щойно гравець на місці (сцена за погодою дня); після сцени квест завершується ланцюгом (галявина → завершення → назад). Шле лише те, що ядро прийме.
   const weather = todayWeather(sim);
   const act = activityDue(sim, weather);
@@ -78,9 +79,11 @@ export function storyMoves(sim: SimState, defs: CoreDefs): Move[] {
   const sTale: Move[] = schengenDue(sim) && accepts(schengenMove(weather)) ? [schengenMove(weather)] : [];
   const sFin = schengenFinishMoves(sim);
   const schengenFinish: Move[] = sFin.length > 0 && accepts(sFin[0] as Move) ? sFin : [];
+  // GAME-292: збір дня 3 — сцена (мокрий чи сухий намет, прощання з Інгрід) відкривається сама, щойно родина в кемпінгу на етапі збору; після неї крок завершується сам, і авто везе додому. Нез'єднані половинки (виїхали з Шенгену до сцени) з'єднуються тут же — свідомим вибором.
   const jm = joinMove(sim);
   const join: Move[] = jm !== null && accepts(jm) ? [jm] : [];
-  return [...(waveId ? [{ type: 'StartWave', waveId } as Move] : []), ...scene, ...finish, ...sTale, ...schengenFinish, ...join, ...auto];
+  const pTale: Move[] = join.length === 0 && packDue(sim) && accepts(packMove(weather, sim.game)) ? [packMove(weather, sim.game)] : [];   // з'єднання (свідомий вибір) — до сцени: факти сцени рахуються після нього
+  return [...(waveId ? [{ type: 'StartWave', waveId } as Move] : []), ...scene, ...finish, ...sTale, ...schengenFinish, ...join, ...pTale, ...auto];
 }
 
 /** Локація етапу живої хвилі (звідки й де її справи): квест етапу без локації — null. */

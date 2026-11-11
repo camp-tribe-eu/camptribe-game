@@ -1,0 +1,187 @@
+{
+  "id": "dlg.ch2-pack",
+  "scene": {
+    "titleKey": "dlg.ch2-pack.title",
+    "facts": [
+      "f.ch2-pack-wet",
+      "f.ch2-pack-late-join"
+    ],
+    "atQuest": "CH2-D3-PACK-001"
+  },
+  "start": "open",
+  "nodes": [
+    {
+      "id": "open",
+      "speaker": "player",
+      "textKey": "dlg.ch2-pack.open",
+      "next": "pack",
+      "branches": [
+        {
+          "when": {
+            "flag": "f.ch2-pack-wet"
+          },
+          "next": "open-wet"
+        }
+      ]
+    },
+    {
+      "id": "open-wet",
+      "speaker": "player",
+      "textKey": "dlg.ch2-pack.open-wet",
+      "next": "pack"
+    },
+    {
+      "id": "pack",
+      "speaker": "player",
+      "textKey": "dlg.ch2-pack.pack",
+      "choices": [
+        {
+          "textKey": "dlg.ch2-pack.pack.c1",
+          "next": "p1"
+        },
+        {
+          "textKey": "dlg.ch2-pack.pack.c2",
+          "next": "p2"
+        }
+      ]
+    },
+    {
+      "id": "p1",
+      "speaker": "player",
+      "textKey": "dlg.ch2-pack.p1",
+      "next": "tent-dry",
+      "branches": [
+        {
+          "when": {
+            "flag": "f.ch2-pack-wet"
+          },
+          "next": "tent-wet"
+        }
+      ]
+    },
+    {
+      "id": "p2",
+      "speaker": "player",
+      "textKey": "dlg.ch2-pack.p2",
+      "next": "tent-dry",
+      "branches": [
+        {
+          "when": {
+            "flag": "f.ch2-pack-wet"
+          },
+          "next": "tent-wet"
+        }
+      ]
+    },
+    {
+      "id": "tent-dry",
+      "speaker": "player",
+      "textKey": "dlg.ch2-pack.tent-dry",
+      "next": "farewell",
+      "branches": [
+        {
+          "when": {
+            "flag": "f.ch2-pack-late-join"
+          },
+          "next": "late"
+        }
+      ]
+    },
+    {
+      "id": "tent-wet",
+      "speaker": "player",
+      "textKey": "dlg.ch2-pack.tent-wet",
+      "next": "farewell",
+      "branches": [
+        {
+          "when": {
+            "flag": "f.ch2-pack-late-join"
+          },
+          "next": "late"
+        }
+      ]
+    },
+    {
+      "id": "late",
+      "speaker": "player",
+      "textKey": "dlg.ch2-pack.late",
+      "choices": [
+        {
+          "textKey": "dlg.ch2-pack.late.c1",
+          "next": "jl1",
+          "effects": [
+            {
+              "setFlag": "f.ch2-medallion-join"
+            }
+          ]
+        },
+        {
+          "textKey": "dlg.ch2-pack.late.c2",
+          "next": "jl2",
+          "effects": [
+            {
+              "setFlag": "f.ch2-medallion-join"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "jl1",
+      "speaker": "player",
+      "textKey": "dlg.ch2-pack.jl1",
+      "next": "joined-late"
+    },
+    {
+      "id": "jl2",
+      "speaker": "player",
+      "textKey": "dlg.ch2-pack.jl2",
+      "next": "joined-late"
+    },
+    {
+      "id": "joined-late",
+      "speaker": "player",
+      "textKey": "dlg.ch2-pack.joined-late",
+      "next": "farewell"
+    },
+    {
+      "id": "farewell",
+      "speaker": "player",
+      "textKey": "dlg.ch2-pack.farewell",
+      "choices": [
+        {
+          "textKey": "dlg.ch2-pack.farewell.c1",
+          "next": "g1"
+        },
+        {
+          "textKey": "dlg.ch2-pack.farewell.c2",
+          "next": "g2"
+        }
+      ]
+    },
+    {
+      "id": "g1",
+      "speaker": "player",
+      "textKey": "dlg.ch2-pack.g1",
+      "next": "final"
+    },
+    {
+      "id": "g2",
+      "speaker": "player",
+      "textKey": "dlg.ch2-pack.g2",
+      "next": "final"
+    },
+    {
+      "id": "final",
+      "speaker": "player",
+      "textKey": "dlg.ch2-pack.final",
+      "next": "road"
+    },
+    {
+      "id": "road",
+      "speaker": "player",
+      "textKey": "dlg.ch2-pack.road",
+      "end": true
+    }
+  ]
+}

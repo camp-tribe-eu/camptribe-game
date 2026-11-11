@@ -103,6 +103,26 @@ function OrchidPress({ orchid, t }: { orchid: NonNullable<OfferAtlas['orchid']>;
   );
 }
 
+/**
+ * GAME-292: сторінка Люксембургу — печатка (родина справді приїхала в Мюллерталь), медальйон (цілий чи дві половинки) і мікрокарта з рюкзака; нотатка дідуся про тарт фламбе в Кольмарі
+ * (тизер розділу 3) з'являється лише коли розділ 2 завершено. Усе з `offer.atlas.luxembourg`, власного стану немає.
+ */
+function LuxembourgPage({ lux, t }: { lux: NonNullable<OfferAtlas['luxembourg']>; t: (k: Key) => string }) {
+  return (
+    <section class="ui-lux" data-ui="luxembourg" data-medallion={lux.medallion ?? ''} data-finale={lux.finale ? 'yes' : 'no'} aria-label={t('atlas.lux.title')}>
+      <h4 class="ui-henry-title">{t('atlas.lux.title')}</h4>
+      <div class="ui-lux-row">
+        <span class="ui-lux-stamp" data-ui="lux-stamp" role="img" aria-label={t('atlas.lux.stamp')}><span>{t('atlas.lux.stamp')}</span></span>
+        <ul class="ui-lux-items">
+          {lux.medallion && <li data-ui="lux-medallion" data-state={lux.medallion}><Icon icon="star" />{t(lux.medallion === 'whole' ? 'atlas.lux.medallion' : 'atlas.lux.halves')}</li>}
+          {lux.microcard && <li data-ui="lux-microcard"><Icon icon="atlas" />{t('atlas.lux.microcard')}</li>}
+        </ul>
+      </div>
+      {lux.finale && <p class="ui-henry-postcard" data-ui="lux-note"><Icon icon="postcard" />{t('atlas.lux.note')}</p>}
+    </section>
+  );
+}
+
 /** GAME-200: заповнення — загальне і по сторінках; нагорода за повну сторінку: що буде, а коли повна — що отримано (її видає ядро, тут лише напис). */
 function AtlasFill({ atlas, t }: { atlas: OfferAtlas; t: (k: Key) => string }) {
   return (
@@ -135,7 +155,7 @@ function Place({ p, t, stickerFly }: { p: AtlasPlace; t: (k: Key) => string; sti
   return (
     <li class="ui-amap-place" data-ui="atlas-place" data-place={p.id} data-state={p.state} aria-label={`${name} — ${tag}`}>
       <span class="ui-amap-dot" aria-hidden="true">
-        {p.state === 'ahead' ? <Silhouette id={p.id} /> : <Icon icon={p.id === 'home' ? 'home' : 'lake'} />}
+        {p.state === 'ahead' ? <Silhouette id={p.id} /> : <Icon icon={p.id === 'home' ? 'home' : p.id === 'luxembourg' ? 'star' : 'lake'} />}
       </span>
       {p.state === 'ahead' ? <span class="ui-amap-tag">{tag}</span> : (
         <>
@@ -207,6 +227,7 @@ export function AtlasPage({ atlas, lang, t, fly = null }: { atlas: OfferAtlas; l
       <HenryTrail henry={atlas.henry} lang={lang} t={t} />
       <PhotoRoll photos={atlas.photos} t={t} />
       {atlas.orchid && <OrchidPress orchid={atlas.orchid} t={t} />}
+      {atlas.luxembourg && <LuxembourgPage lux={atlas.luxembourg} t={t} />}
     </section>
   );
 }

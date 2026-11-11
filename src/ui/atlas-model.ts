@@ -37,11 +37,13 @@ export function atlasMapModel(atlas: OfferAtlas, mode: 'intro' | 'menu'): AtlasM
   const lakeDone = atlas.pages[0]?.done === true;
   const here: AtlasPlace = { id: 'home', nameKey: 'atlas.place.home', state: 'here', noteKey: null };
   const first: AtlasPlace = { id: 'lake', nameKey: 'atlas.place.lake', state: lakeDone ? 'stamped' : 'first', noteKey: 'atlas.note.lake' };
-  const ahead = AHEAD.slice(0, MAX_AHEAD).map((p): AtlasPlace => ({ ...p, state: 'ahead', noteKey: null }));
+  // GAME-292: Люксембург з'являється на мапі лише з печаткою (родина справді приїхала) — на місці першого силуету («замок»); силуетів попереду стає на один менше.
+  const lux: AtlasPlace | null = atlas.luxembourg ? { id: 'luxembourg', nameKey: 'atlas.place.luxembourg', state: 'stamped', noteKey: null } : null;
+  const ahead = AHEAD.filter((p) => !(lux && p.id === 'castle')).slice(0, MAX_AHEAD).map((p): AtlasPlace => ({ ...p, state: 'ahead', noteKey: null }));
   return {
-    places: [here, first, ...ahead], here, first, ahead,
+    places: [here, first, ...(lux ? [lux] : []), ...ahead], here, first, ahead,
     sentenceKey: 'atlas.sentence', legendKey: 'atlas.legend', gains: GAINS,
     ctaKey: mode === 'intro' ? 'atlas.cta.plan' : 'atlas.cta.close',
-    stamps: lakeDone ? 1 : 0,
+    stamps: (lakeDone ? 1 : 0) + (lux ? 1 : 0),
   };
 }
