@@ -65,6 +65,9 @@ for (const c of CASES.slice(0, 2)) {
     test.setTimeout(120_000);
     const ctx = await browser.newContext({ viewport: { width: c.w, height: c.h }, hasTouch: c.touch, isMobile: c.touch });
     const page = await ctx.newPage();
+    // GAME-300: на ПК в «Авто» крамниця тепер сама покриває вікно (масштаб підіймається, смуг немає), тож смуги за мапою на ПК дає лише явний крок ×2 з налаштувань;
+    // телефон вбік лишається ×2 і смуги має, як і було.
+    if (!c.touch) await page.addInitScript(([k, z]) => { try { localStorage.setItem(k as string, JSON.stringify({ textScale: 100, language: 'uk', hintSeen: true, zoom: z })); } catch { /* сховища немає */ } }, ['camplife.settings.v1', c.zoom] as const);
     await open(page, '?mapFirst=1&seed=1&map=shop');
     await expect.poll(async () => (await probe(page)).map, { timeout: 15_000 }).toBe('shop');
     await page.addStyleTag({ content: '#ui{display:none !important}' });

@@ -169,6 +169,8 @@ export interface WorldHooks {
   perfectHits?(): boolean;
   /** GAME-216: чи зіграти заставку першого приїзду в табір (камера: герой → озеро → табір → герой, ≤ 10 с, будь-який дотик виходить). Немає — ніколи. */
   campReveal?(): boolean;
+  /** GAME-300: розмір щойно завантаженої мапи в px гри — кадр ПК підлаштовує масштаб, щоб мала мапа (крамниця) не лишала порожніх смуг (frame.ts: coverMap). */
+  mapSize?(w: number, h: number): void;
   /** GAME-230: подарунок щойно вручено — хто (id мешканця) і як відреагував; забирає його (наступний виклик — null). Реакція — лише вигляд і звук, очки веде ядро. */
   takeGift?(): { readonly npc: string; readonly reaction: GiftReaction } | null;
   /** GAME-230: щокадру в таборі — чи час для сцени серця; main її відкриває (HeartEvent), сцена нічого не вирішує. */
@@ -909,6 +911,7 @@ export class WorldScene extends Phaser.Scene {
       if (this.props.body) this.crateCollider = this.physics.add.collider(this.player, this.props.body);
     }
     if (key === 'camp') this.life.begin(this.bands.map((b) => b.layer));
+    this.hooks.mapSize?.(map.widthInPixels, map.heightInPixels);   // GAME-300: масштаб кадру під розмір мапи — до меж і центрування камери
     this.cameras.main.setBounds(0, 0, map.widthInPixels, map.heightInPixels);
     this.paintLetterbox(bakeKey);   // GAME-254: кадр ширший за малу мапу — смуги кольору землі, не чорна діра
     this.cameras.main.centerOn(this.player.x, this.player.y);

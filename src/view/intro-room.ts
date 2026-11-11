@@ -5,7 +5,7 @@
 import { FAMILY_LOOKS, FAMILY_THRUST_LOOK, TILESET_IMAGES } from './world/art';
 import { ACTION_COLS, DIR_ROW, FRAME, composeSheet, loadImage, type Dir } from './world/character';
 import { idlePose } from './world/idle-poses';
-import { CAST_X, OBJ, roomGeometry, roomLayout, type Who } from '../ui/intro-geometry';
+import { BASE_DROP, CAST_X, OBJ, roomGeometry, roomLayout, type Who } from '../ui/intro-geometry';
 
 export { roomLayout };
 export type { Layout } from '../ui/intro-geometry';
@@ -72,8 +72,8 @@ export async function paintRoom(target: HTMLCanvasElement, cssW: number, cssH: n
   const winY = y0 + OBJ.window.dy;
   const lampX = ox + 2;
   const shelfX = ox + 104;
-  px(c, furn, LAMP, lampX, floorY - LAMP.h + 4);
-  px(c, shelf, SHELF, shelfX, floorY - SHELF.h + 4);
+  px(c, furn, LAMP, lampX, floorY - LAMP.h + BASE_DROP);
+  px(c, shelf, SHELF, shelfX, floorY - SHELF.h + BASE_DROP);
   // Вечірній присмерк на всьому, що намальоване вище (вікно, Метью й світло лампи — поверх нього).
   c.fillStyle = morning ? 'rgba(255,226,170,0.12)' : 'rgba(18,22,48,0.34)';
   c.fillRect(0, 0, w, h);
@@ -112,7 +112,7 @@ export async function paintRoom(target: HTMLCanvasElement, cssW: number, cssH: n
       const src = tr ?? sheets[id];
       const col = tr ? pose?.col ?? 0 : pose?.sheet === 'walk' ? pose.col : 0;
       const bounce = !reduced && id === speaker && Math.floor(t / 320) % 2 === 1 ? 1 : 0;   // підскок за кадрами (мітка rAF), без таймерів
-      const x = ox + CAST_X[id] + (id === 'matthew' && !opts.family ? 18 : 0);
+      const x = ox + CAST_X[id];   // GAME-300: соло Метью без +18 px — стояв на полиці (та сама позиція, що в roomGeometry)
       c.drawImage(src, col * FRAME, DIR_ROW[dir] * FRAME, FRAME, FRAME, x, castY - bounce, FRAME, FRAME);
       if (id === speaker) { c.fillStyle = '#ffd54a'; c.fillRect(x + 29, castY + 2 - bounce, 6, 2); c.fillRect(x + 30, castY + 4 - bounce, 4, 2); c.fillRect(x + 31, castY + 6 - bounce, 2, 2); }   // жовта стрілка «говорить»
     });

@@ -34,7 +34,7 @@ import { LIVE_PROBE_IDLE } from './view/world/fx-live-layer';
 import { SWIM_PROBE_IDLE } from './view/world/swim-rig';
 import { CAMP_PROBE_IDLE } from './view/world/camp-alive-rig';
 import { mountTouchControls, setActionTarget } from './view/world/touch';
-import { frameSize, zoomSteps } from './view/world/frame';
+import { frameSize, zoomSteps, type MapPx } from './view/world/frame';
 import { CHOICE_CANCEL_ID, storyOffer, type StoryView } from './view/story-offer';
 import { testSwitches } from './view/test-switches';
 import { addFrameLag, bootDelay, onFirstFrame } from './view/frame-lag';
@@ -458,13 +458,17 @@ const worldHooks: WorldHooks = {
   taskGate: (name) => { const g = name.startsWith('task.') ? taskGate(bridge.state.game, GAME_DEFS.waves, name.slice(5)) : null; return g === 'objective' ? 'tent.needElise' : g === 'task' ? 'tent.needSpot' : null; },
   perfectHits: () => switches.perfectHits === true,
   // GAME-216: заставка — лише на першому приїзді в табір (ST-005 живий, з Елізою ще не говорили); ?noReveal=1 — негативний контроль e2e.
+  mapSize: (w, h) => { if (currentMapPx?.w === w && currentMapPx.h === h) return; currentMapPx = { w, h }; frameApply.fn?.(); },
   campReveal: () => switches.noReveal !== true && bridge.state.game.quests['ST-005']?.status === 'active' && !(bridge.state.game.quests['ST-005']?.done ?? []).includes('meet-elise'),
 };
 /** GAME-179: запасні портрети — обрізки спрайтів, зроблені раз на лист. */
 const spriteCrops = new Map<string, string>();
 /** GAME-278: дотиковий пристрій (pointer: coarse) — планшет до 820 px заввишки теж «телефон». */
 const coarse = (): boolean => { try { return matchMedia('(pointer: coarse)').matches; } catch { return false; } };
-const fieldFrame = (): ReturnType<typeof frameSize> => frameSize(stage.clientWidth, stage.clientHeight, coarse(), currentSettings().zoom);
+/** GAME-300: розмір поточної мапи (з сцени) — мала мапа підіймає масштаб «Авто», щоб покрити поле. */
+let currentMapPx: MapPx | null = null;
+const frameApply: { fn: (() => void) | null } = { fn: null };   // applyFrame оголошено нижче, а сцена може попросити кадр раніше
+const fieldFrame = (): ReturnType<typeof frameSize> => frameSize(stage.clientWidth, stage.clientHeight, coarse(), currentSettings().zoom, currentMapPx);
 const frame0 = fieldFrame();
 
 const game = new Phaser.Game({
@@ -511,6 +515,8 @@ const applyFrame = (): void => {
   game.scale.refresh();   // межі полотна й displayScale для вводу — з нового style
   for (const fn of fieldListeners) fn();   // GAME-279: меню з кроками масштабу перемальовується під нове поле
 };
+frameApply.fn = applyFrame;
+if (currentMapPx) applyFrame();   // GAME-300: мапа могла повідомити розмір до того, як applyFrame існував
 new ResizeObserver(applyFrame).observe(stage);
 onSettingsSaved(() => applyFrame());   // GAME-278: «Масштаб» у налаштуваннях — застосовується одразу
 
