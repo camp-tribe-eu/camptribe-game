@@ -54,12 +54,26 @@ test.describe('LPC на сцені (десктоп 1280×800)', () => {
       await open(page);
       if (dir === 'up') await hold(page, 'ArrowDown', (p) => p.playerY >= 260, 10_000);   // вгору є куди йти: далеко від наметів
       const a = await probe(page);
-      // Тримаємо, доки не побачимо три різні кадри ходьби (а не фіксований час): під навантаженням кадри йдуть повільно.
-      const frames = new Set<number>();
-      const { seen } = await hold(page, key, (p) => {
-        if (p.playerMoving) frames.add(p.playerFrame);
-        return frames.size >= 3 && (axis === 'y' ? p.playerY - a.playerY : p.playerX - a.playerX) * sign > 40;
-      }, 10_000);
+      // GAME-298: раніше кадри збирались опитуванням probe із Node (кожен виклик — окремий обмін із браузером, під навантаженням 100+ мс), тож за ті самі «три кадри ходьби»
+      // набиралось 3 зрізи, а не кадрів гри: «анімація грала» червоніла (14 з 20 при --repeat-each 20 --workers 4). Тепер зрізи — події кадру (rAF) всередині сторінки:
+      // кожен показаний кадр сцени — рівно один зріз, скільки б часу це не забрало; межа 10 с — страховка від вічного циклу, не очікування.
+      await page.keyboard.down(key);
+      const seen = await page.evaluate(({ axis, sign, startAt }) => new Promise<Probe[]>((resolve) => {
+        const g = (window as unknown as { __game: { probe: Probe } }).__game.probe;
+        const out: Probe[] = [];
+        const frames = new Set<number>();
+        const deadline = performance.now() + 10_000;
+        const tick = (): void => {
+          const p = { ...g };
+          out.push(p);
+          if (p.playerMoving) frames.add(p.playerFrame);
+          const moved = ((axis === 'y' ? p.playerY : p.playerX) - startAt) * sign;
+          if ((frames.size >= 3 && moved > 40 && out.filter((q) => q.playerMoving).length > 3) || performance.now() > deadline) return resolve(out);
+          requestAnimationFrame(tick);
+        };
+        requestAnimationFrame(tick);
+      }), { axis, sign, startAt: axis === 'y' ? a.playerY : a.playerX });
+      await page.keyboard.up(key);
       const walking = seen.filter((p) => p.playerMoving);
       expect(walking.length, `${dir}: анімація грала`).toBeGreaterThan(3);
       for (const p of walking) {
