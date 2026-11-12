@@ -16,7 +16,7 @@ import { loadContent } from '../../scripts/validator/load.mjs';
 import { validate } from '../../scripts/validator/checks.mjs';
 import flags from '../../content/flags.json';
 import { endReachable, type EndMemo } from './bot';
-import { moves, progressKey, type Move } from './moves';
+import { STORM_PREFIX, moves, progressKey, type Move } from './moves';
 import { GAME_DEFS } from './slice-defs';
 import { CONTENT, STORY, compileStory, type RawContent } from './story';
 import { SLEEP, simSend } from './test-days';
@@ -24,16 +24,6 @@ import { isCh1Quest } from './ch2-scope.test.helpers';
 
 const ZONE = 'q.elise-bike-area';
 const ELISE = 'npc.elise';
-/**
- * GAME-307 · обсяг цього перебору: він доводить ОДНЕ — що відмова від велозони ніколи не веде в тупик, і що Еліза
- * згадує лише підтверджене. Удар на обіді (Інгрід) до цього питання не має стосунку: ціль `talk-ingrid`
- * НЕОБОВ'ЯЗКОВА (нижче це доводиться), а її вибір ставить лише косметичний `f.storm-turned`, який читає сцена
- * вогнища, а не жоден квест. Але в ключі перебору він — ще один вимір: з ним станів 51 545 замість 18 625, і
- * сторож перестає встигати. Тому розмову з Інгрід перебір не відкриває, а її арку доводять інші сторожі:
- * camp-first.test (прохід табору ногами відкриває її), fireplace.test (наслідок у ночі бурі) і валідатор
- * (граф розмови, досяжність, WAVE_FLAG_GATES_QUEST). Мутації нижче червоніють так само.
- */
-const INGRID = 'npc.ingrid';
 const DAY2 = ['CH1-D2-001', 'CH1-D2-ELISE-001', 'CH1-D2-CAMP-001', 'CH1-D2-FIRE-001'] as const;
 
 let n = 0;
@@ -110,9 +100,6 @@ function explore(start: GameState, defs: CoreDefs = GAME_DEFS, cap = 200_000): E
     if (s.campaignEnded || s.quests['CH1-D2-FIRE-001']?.status === 'completed') { out.ended++; continue; }
     for (const m of moves(s, defs)) {
       if (!DAY_MOVES.has(m.type)) continue;
-      // Поза обсягом цього сторожа — лише удар на обіді (ворота Інгрід ведуть у нього саме на етапі CH1-D2-ELISE-001).
-      // Решту її розмови — прохання сусідки — перебір відкриває, як і до GAME-307.
-      if (m.type === 'Talk' && m.npcId === INGRID && s.quests['CH1-D2-ELISE-001']?.status === 'active') continue;
       const r = dispatch(s, { ...m, commandId: `x${n++}` } as Command, defs);
       if (!r.ok) continue;
       const t = r.state;
@@ -174,16 +161,43 @@ describe('GAME-141 · межа дня й кінець розділу — різ�
     expect(CONTENT.animals.find((a) => a.id === 'animal.cat')?.transports).toEqual(['transport.car']);
   });
 
-  it('GAME-307: підстава звузити перебір — ціль «поговорити з Інгрід» необов\'язкова, і її вибір не рухає жодного квесту', () => {
-    const o = STORY.quests['CH1-D2-ELISE-001']?.objectives.find((x) => x.id === 'talk-ingrid');
-    expect(o, 'цілі talk-ingrid немає — звуження перебору втратило підставу').toBeDefined();
-    expect(o?.required, 'ціль стала обов\'язковою: пропустивши Інгрід, перебір більше не доходив би до кінця дня').toBe(false);
-    expect(o?.target).toBe(INGRID);
-    // Розмова Інгрід ставить лише прапорці; жоден її вибір не стартує й не закриває квесту (інакше пропуск розмови міняв би сюжет).
-    const ingrid = CONTENT.dialogues.find((d) => d.id === 'dlg.ingrid-chat');
-    const effects = (ingrid?.nodes ?? []).flatMap((nd) => ((nd as { choices?: { effects?: Record<string, unknown>[] }[] }).choices ?? []).flatMap((ch) => ch.effects ?? []));
-    expect(effects.length).toBeGreaterThan(0);
-    expect(effects.filter((e) => 'startQuest' in e || 'completeObjective' in e)).toEqual([]);
+  it('GAME-307: f.storm-* косметичні — за умовою на них не стоїть жодного зсуву квесту (тож перебір і бот їх не розрізняють); мутація червоніє', () => {
+    type Cond = Record<string, unknown> & { all?: Cond[]; any?: Cond[] };
+    type Ch = { when?: Cond; next?: string; effects?: Record<string, unknown>[] };
+    type Nd = { id: string; next?: string; choices?: Ch[]; branches?: { when: Cond; next: string }[] };
+    const reads = (c: Cond | undefined): boolean => c !== undefined && (
+      [c.flag, c.notFlag].some((f) => typeof f === 'string' && f.startsWith(STORM_PREFIX)) || (c.all ?? []).some(reads) || (c.any ?? []).some(reads));
+    const shifts = (e: Record<string, unknown>): boolean => 'startQuest' in e || 'completeObjective' in e;
+    /** Усі місця, де за умовою на f.storm-* досяжний зсув квесту (вибір чи гілка, далі — усе піддерево розмови). */
+    const leaks = (c: RawContent): string[] => c.dialogues.flatMap((d) => {
+      const nodes = new Map((d.nodes as unknown as Nd[]).map((x) => [x.id, x]));
+      const reach = (from: string | undefined): boolean => {
+        const seen = new Set<string>(); const stack = from ? [from] : [];
+        while (stack.length) {
+          const nd = nodes.get(stack.pop() as string);
+          if (!nd || seen.has(nd.id)) continue;
+          seen.add(nd.id);
+          for (const ch of nd.choices ?? []) { if ((ch.effects ?? []).some(shifts)) return true; if (ch.next) stack.push(ch.next); }
+          if (nd.next) stack.push(nd.next);
+          for (const b of nd.branches ?? []) stack.push(b.next);
+        }
+        return false;
+      };
+      return (d.nodes as unknown as Nd[]).flatMap((nd) => [
+        ...(nd.choices ?? []).filter((ch) => reads(ch.when) && ((ch.effects ?? []).some(shifts) || reach(ch.next))).map(() => `${d.id}/${nd.id} (вибір)`),
+        ...(nd.branches ?? []).filter((b) => reads(b.when) && reach(b.next)).map(() => `${d.id}/${nd.id} (гілка)`),
+      ]);
+    });
+    // Сторож бачить, що перевіряти: умов на f.storm-* у контенті щонайменше в ночі бурі й у воротах Інгрід.
+    const readers = CONTENT.dialogues.filter((d) => (d.nodes as unknown as Nd[]).some((nd) => (nd.choices ?? []).some((ch) => reads(ch.when)) || (nd.branches ?? []).some((b) => reads(b.when))));
+    expect(readers.map((d) => d.id).sort()).toEqual(['dlg.ch1-fire', 'dlg.ingrid-chat']);
+    expect(leaks(CONTENT)).toEqual([]);
+    // Мутація (закон 1): за вибором «перев'яжемо» (умова f.storm-tarp-tight) закрити ціль квесту — сторож мусить почервоніти.
+    const bad = structuredClone(CONTENT);
+    const s3 = (bad.dialogues.find((d) => d.id === 'dlg.ingrid-chat')?.nodes as unknown as Nd[]).find((x) => x.id === 'storm3');
+    s3?.choices?.[0]?.effects?.push({ completeObjective: { quest: 'CH1-D2-ELISE-001', objective: 'talk-elise' } });
+    // Червоніє двічі: сам вибір (умова f.storm-tarp-tight) і гілка воріт (умова notFlag f.storm-turned), з якої цей вибір досяжний.
+    expect(leaks(bad)).toEqual(['dlg.ingrid-chat/gate (гілка)', 'dlg.ingrid-chat/storm3 (вибір)']);
   });
 
   it('гачок вогнища (GAME-142) — один етап CH1-D2-FIRE-001: після вечері, останній перед підсумком дня 2, і поки без сцени', () => {
@@ -206,7 +220,6 @@ describe('GAME-141 · межа дня й кінець розділу — різ�
     expect(daysEnded(sim, GAME_DEFS)).toBe(1);
     expect(daySummary(sim, 1, GAME_DEFS)?.sections.find((x) => x.kind === 'quests')?.ids.at(-1)).toBe('ST-005');
     expect(sim.game.campaignEnded).toBe(false);
-    // GAME-307: полудень дня 2 — дві розмови: Еліза (прогноз і чотири справи) і Інгрід (стара карта клубу, вибір на обіді).
     sendAll([done('CH1-D2-001'), talk, choose(10), choose(1), next, done('CH1-D2-ELISE-001'), talk, choose(13), choose(0), next, next, done('CH1-D2-CAMP-001'), done('CH1-D2-FIRE-001'), SLEEP]);
     expect(sim.game.campaignEnded).toBe(false);                 // GAME-144: межа дня 2, розділ триває
     expect(sim.game.quests['CH1-D3-001']?.status).toBe('active');

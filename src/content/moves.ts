@@ -9,10 +9,15 @@ import { eventSeenFlag, gateOpen, questSlept, unlockOpen } from '../core/story';
 import { ERRAND_PREFIX } from './errands';
 
 /**
+ * GAME-307 · приготування до бурі (f.storm-*): наслідки хвилі полудня й вибір Інгрід на обіді. Їх читає лише сцена вогнища (ніч бурі) і ворота
+ * розмови Інгрід — жоден квест. Що за умовою на f.storm-* не стоїть жодного зсуву квесту, доводить day2.test («f.storm-* косметичні», з мутацією).
+ */
+export const STORM_PREFIX = 'f.storm-';
+/**
  * Прапорець, косметичний для сюжету: прохання (f.req-*, GAME-180) і доручення родині (f.errand-*, GAME-202). Жоден квест їх не читає (валідатор REQUEST_GATES_QUEST;
  * доручення лише веде виконавця сцени до справи хвилі — ядро закриває її тією ж CompleteTask), тож перебір і бот не множать на них простір станів.
  */
-export const cosmeticFlag = (f: string): boolean => f.startsWith('f.req-') || f.startsWith(ERRAND_PREFIX);
+export const cosmeticFlag = (f: string): boolean => f.startsWith('f.req-') || f.startsWith(ERRAND_PREFIX) || f.startsWith(STORM_PREFIX);
 
 export type Move = Command extends infer C ? (C extends Command ? Omit<C, 'commandId'> : never) : never;
 
