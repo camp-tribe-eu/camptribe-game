@@ -190,7 +190,7 @@ describe('GAME-141 · межа дня й кінець розділу — різ�
     });
     // Сторож бачить, що перевіряти: умов на f.storm-* у контенті щонайменше в ночі бурі й у воротах Інгрід.
     const readers = CONTENT.dialogues.filter((d) => (d.nodes as unknown as Nd[]).some((nd) => (nd.choices ?? []).some((ch) => reads(ch.when)) || (nd.branches ?? []).some((b) => reads(b.when))));
-    expect(readers.map((d) => d.id).sort()).toEqual(['dlg.ch1-fire', 'dlg.ingrid-chat']);
+    expect(readers.map((d) => d.id).sort()).toEqual(['dlg.ch1-fire', 'dlg.ingrid-chat', 'dlg.storm-night']);
     expect(leaks(CONTENT)).toEqual([]);
     // Мутація (закон 1): за вибором «перев'яжемо» (умова f.storm-tarp-tight) закрити ціль квесту — сторож мусить почервоніти.
     const bad = structuredClone(CONTENT);
