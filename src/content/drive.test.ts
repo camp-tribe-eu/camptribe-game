@@ -1,0 +1,255 @@
+// GAME-309 · сторожі дороги. Кожен має мутацію, від якої він ЧЕРВОНІЄ (закон 1) — вона названа в заголовку тесту.
+// Мутації, перевірені руками перед комітом:
+//   1. `VIEW_M = 200` → «часу на реакцію ... < 8 с» (телеграф).
+//   2. у `tick` прибрати `moneyCents -= FINE_CENTS` → «штраф не забрав грошей».
+//   3. `freePitchesFor` повертає завжди `PITCHES` → «час приїзду не змінює набору ділянок».
+//   4. прибрати гілку сухого бака → «drive did not finish in 120000 frames» (глухий кут).
+//   5. `HAZARD_MPS.roadworks = 0` → та сама зупинка назавжди на впертій стратегії.
+import { describe, expect, it } from 'vitest';
+import {
+  ADVENTURE_KINDS, ARRIVAL_BY_DRIVE, CLOSE_PASS_COST, COMFORT_MAX, FINE_CENTS, FRAZZLED_COMFORT, HAZARD_KINDS, HAZARD_MPS,
+  MIN_TELEGRAPH_SEC, PACE_MPS, REST_COMFORT, ROAD_SPEEDUP, SHARP_CHANGES, SHARP_COST, SHARP_WINDOW_MS, TANK_MAX_L,
+  arrivalConsequence, blocker, buildCourse, cameraTelegraphSec, driveResult, helpFor, minTelegraphSec, speedOf, startDrive, stepDrive, telegraphSec,
+  type Course, type DriveState, type Lane, type Outcome,
+} from './drive';
+import { BRISK, CALM_FAST, FRAME_MS, SCRAPPY, START_MONEY, STEADY, play } from './drive.fixture';
+
+const SEEDS = [1, 2, 3, 7, 11, 19, 23, 42];
+const tick = (s: DriveState, c: Course, ms = FRAME_MS): DriveState => stepDrive(s, c, { kind: 'tick', dtMs: ms }).state;
+
+describe('телеграф: рефлексів гра не вимагає', () => {
+  it(`найменший час на реакцію (у секундах ГРИ) ≥ ${MIN_TELEGRAPH_SEC} с (мутація: звузити VIEW_M)`, () => {
+    const min = minTelegraphSec();
+    expect(min, `часу на реакцію ${min.toFixed(2)} с < ${MIN_TELEGRAPH_SEC}`).toBeGreaterThanOrEqual(MIN_TELEGRAPH_SEC);
+    // Найтісніший випадок — найповільніша перешкода на жвавому ході.
+    const slowest = HAZARD_KINDS.reduce((a, b) => (HAZARD_MPS[a] <= HAZARD_MPS[b] ? a : b));
+    expect(min).toBeCloseTo(telegraphSec(slowest, 'brisk'), 6);
+  });
+  it('вимога не порожня: з удвічі коротшим оглядом ТОЙ САМИЙ рахунок падає нижче межі', () => {
+    expect(minTelegraphSec(400, 500)).toBeLessThan(MIN_TELEGRAPH_SEC);
+  });
+  it('кожна перешкода й кожна камера дають час на реакцію на обох швидкостях', () => {
+    for (const k of HAZARD_KINDS) for (const pace of ['steady', 'brisk'] as const) {
+      expect(telegraphSec(k, pace), `${k} @ ${pace}`).toBeGreaterThanOrEqual(MIN_TELEGRAPH_SEC);
+    }
+    for (const pace of ['steady', 'brisk'] as const) expect(cameraTelegraphSec(pace), `камера @ ${pace}`).toBeGreaterThanOrEqual(MIN_TELEGRAPH_SEC);
+  });
+  it('жодна перешкода не стоїть мертво — інакше смуга стає глухим кутом', () => {
+    for (const k of HAZARD_KINDS) expect(HAZARD_MPS[k], k).toBeGreaterThan(0);
+  });
+});
+
+describe('кадри, а не годинник', () => {
+  it('той самий набір кадрів дає той самий стан — двічі поспіль', () => {
+    const c = buildCourse(7);
+    const run = (): DriveState => { let s = startDrive(c, START_MONEY); for (let i = 0; i < 2000; i++) s = tick(s, c); return s; };
+    expect(run()).toEqual(run());
+  });
+  it('довгий кадр обрізається: лаг не телепортує авто крізь перешкоду', () => {
+    const c = buildCourse(3);
+    const s = startDrive(c, START_MONEY);
+    const long = tick(s, c, 5000);
+    expect(long.metres).toBeLessThanOrEqual(PACE_MPS.steady * 0.1 + 0.001);
+  });
+  it('швидкість ніколи не від’ємна і ніколи не більша за бажану', () => {
+    const c = buildCourse(11);
+    let s = startDrive(c, START_MONEY);
+    for (let i = 0; i < 20_000 && s.phase !== 'arrived'; i++) {
+      const v = speedOf(s, c);
+      expect(v).toBeGreaterThanOrEqual(0);
+      expect(v).toBeLessThanOrEqual(PACE_MPS[s.pace]);
+      s = tick(s, c);
+    }
+  });
+});
+
+describe('пригоди, а не аварії', () => {
+  it('за перешкодою просто їдеш її швидкістю — зіткнення в правилах немає', () => {
+    const c = buildCourse(5);
+    let s = startDrive(c, START_MONEY);
+    let met = 0;
+    for (let i = 0; i < 40_000 && s.phase !== 'arrived'; i++) {
+      const b = blocker(s, c);
+      if (b && s.phase === 'drive') { met++; expect(speedOf(s, c)).toBe(Math.min(PACE_MPS[s.pace], HAZARD_MPS[b.kind])); }
+      s = tick(s, c);
+    }
+    expect(met, 'жодної перешкоди не зустріли — перевірка нічого не довела').toBeGreaterThan(0);
+  });
+  it('на трасі є всі чотири види перешкод і всі три пригоди (за зернами)', () => {
+    const kinds = new Set(buildCourse(1).hazards.map((h) => h.kind));
+    expect([...kinds].sort()).toEqual([...HAZARD_KINDS].sort());
+    const advs = new Set(SEEDS.concat([4, 5, 6, 8, 9, 13, 17]).map((x) => buildCourse(x).adventures[0]?.kind));
+    expect([...advs].sort()).toEqual([...ADVENTURE_KINDS].sort());
+  });
+});
+
+describe('три результати', () => {
+  const runs = SEEDS.map((seed) => {
+    const c = buildCourse(seed);
+    return { seed, good: play(c, CALM_FAST), fine: play(c, STEADY), bad: play(c, SCRAPPY) };
+  });
+
+  it('усі три досяжні, і «сяк-так» НЕ блокує приїзд', () => {
+    const seen = new Set<Outcome>();
+    for (const r of runs) for (const run of [r.good, r.fine, r.bad]) {
+      expect(run.state.phase).toBe('arrived');
+      expect(run.result.arrival).toBe(ARRIVAL_BY_DRIVE[run.result.outcome]);
+      seen.add(run.result.outcome);
+    }
+    expect([...seen].sort()).toEqual(['fine', 'good', 'scrappy']);
+    for (const r of runs) {
+      expect(r.good.result.outcome, `зерно ${r.seed}: спокійно-жваво`).toBe('good');
+      expect(r.fine.result.outcome, `зерно ${r.seed}: рівно спокійно`).toBe('fine');
+      expect(r.bad.result.outcome, `зерно ${r.seed}: уперто й із кожною зупинкою`).toBe('scrappy');
+    }
+  });
+
+  it('подорож, а не спринт: рано й вчасно — 2–3 хв ЖИВОЇ гри (рішення власника; мутація ROAD_SPEEDUP 5 → червоне)', () => {
+    const play = (sec: number): number => sec / ROAD_SPEEDUP;
+    for (const r of runs) for (const run of [r.good, r.fine]) {
+      const s = play(run.result.arrivalSec);
+      expect(s, `зерно ${r.seed}: ${s.toFixed(0)} с гри — коротше за 2 хв`).toBeGreaterThanOrEqual(120);
+      expect(s, `зерно ${r.seed}: ${s.toFixed(0)} с гри — довше за 3 хв`).toBeLessThanOrEqual(180);
+    }
+    // «пізно» може тягнутись довше — тоді його обриває межа подорожі (DRIVE_LIMIT_FRAMES = 3 хв), і це теж «сяк-так».
+    for (const r of runs) expect(play(r.bad.result.arrivalSec)).toBeGreaterThan(play(r.fine.result.arrivalSec));
+  });
+
+  it('«пізно» — це справді пізно, «рано» — справді рано', () => {
+    for (const r of runs) {
+      expect(r.bad.result.lateSec).toBeGreaterThan(0);
+      expect(r.good.result.lateSec).toBe(0);
+      expect(r.good.result.comfort).toBeGreaterThanOrEqual(FRAZZLED_COMFORT);
+    }
+  });
+});
+
+describe('камери й гроші', () => {
+  it('штраф справді забирає гроші родини (мутація: не віднімати — тест червоніє)', () => {
+    const c = buildCourse(2);
+    const fast = play(c, BRISK);
+    expect(fast.result.finesCents).toBe(FINE_CENTS * c.cameras.length);
+    expect(fast.result.moneyCents).toBe(START_MONEY - FINE_CENTS * c.cameras.length);
+    expect(fast.events.filter((e) => e.kind === 'fined')).toHaveLength(c.cameras.length);
+  });
+  it('знак попереджає ЗАЗДАЛЕГІДЬ, і хто скинув швидкість — не платить', () => {
+    const c = buildCourse(2);
+    const calm = play(c, STEADY);
+    expect(calm.result.finesCents).toBe(0);
+    expect(calm.result.moneyCents).toBe(START_MONEY);
+    const sign = calm.events.find((e) => e.kind === 'camera-sign');
+    const shot = calm.events.find((e) => e.kind === 'camera-ok');
+    expect(sign).toBeDefined();
+    expect(shot).toBeDefined();
+    expect((shot?.at ?? 0) - (sign?.at ?? 0)).toBeGreaterThanOrEqual(MIN_TELEGRAPH_SEC);
+  });
+});
+
+describe('пальне без глухого кута', () => {
+  it('сухий бак: дотягли до колонки, поїздка доїжджає (мутація: прибрати гілку — бак не висихає, перевірка червоніє)', () => {
+    const c: Course = { ...buildCourse(9), startFuelL: 0.9 };
+    const run = play(c, { pace: () => 'brisk' });
+    expect(run.events.some((e) => e.kind === 'dry-tank'), 'бак так і не висох — перевірка нічого не довела').toBe(true);
+    expect(run.state.phase).toBe('arrived');
+    expect(run.result.fuelL).toBeGreaterThan(0);
+    expect(['early', 'ontime', 'late']).toContain(run.result.arrival);
+  });
+  it('жвава їзда їсть більше за спокійну', () => {
+    const c = buildCourse(1);
+    expect(play(c, BRISK).state.fuelL).toBeLessThan(play(c, STEADY).state.fuelL);
+  });
+  it('заправка коштує час і гроші, а бак стає повним', () => {
+    const c = buildCourse(1);
+    let s = startDrive(c, START_MONEY);
+    while (s.offer === null) s = tick(s, c);
+    const paid = stepDrive(s, c, { kind: 'stop' }).state;
+    expect(paid.phase).toBe('stopped');
+    expect(paid.fuelL).toBe(TANK_MAX_L);
+    expect(paid.moneyCents).toBeLessThan(s.moneyCents);
+  });
+});
+
+describe('комфорт родини', () => {
+  it('кілька різких перестроювань підряд коштують комфорту; одиничне — ні', () => {
+    const c = buildCourse(4);
+    let s = startDrive(c, START_MONEY);
+    s = stepDrive(s, c, { kind: 'lane', to: 0 }).state;
+    expect(s.comfort).toBe(COMFORT_MAX);
+    for (let i = 0; i < SHARP_CHANGES; i++) {
+      while (s.changing > 0) s = tick(s, c);
+      s = stepDrive(s, c, { kind: 'lane', to: (s.lane === 0 ? 1 : 0) as Lane }).state;
+    }
+    expect(s.comfort).toBeLessThanOrEqual(COMFORT_MAX - SHARP_COST);
+    expect(s.sec * 1000).toBeLessThan(SHARP_WINDOW_MS);
+  });
+  it('перепочинок справді піднімає комфорт і коштує час', () => {
+    const c = buildCourse(1);
+    let s = startDrive(c, START_MONEY);
+    s = { ...s, comfort: 40 };
+    while (s.offer === null || s.offer.kind !== 'rest') s = tick(s, c);
+    const rested = stepDrive(s, c, { kind: 'stop' }).state;
+    expect(rested.comfort).toBe(40 + REST_COMFORT);
+    expect(rested.stoppedFor).toBeGreaterThan(0);
+  });
+  it('обгін велосипедиста впритул на жвавому ході коштує комфорту, спокійний — ні', () => {
+    const c = buildCourse(1);
+    const fast = play(c, BRISK);
+    expect(fast.events.filter((e) => e.kind === 'close-pass').length).toBeGreaterThan(0);
+    expect(play(c, STEADY).events.some((e) => e.kind === 'close-pass')).toBe(false);
+    expect(CLOSE_PASS_COST).toBeGreaterThan(0);
+  });
+  it('знервована родина — це «сяк-так», навіть коли приїхали вчасно', () => {
+    const c = buildCourse(1);
+    const s = startDrive(c, START_MONEY);
+    const arrived: DriveState = { ...s, phase: 'arrived', sec: 100, metres: c.routeM, comfort: FRAZZLED_COMFORT - 1 };
+    expect(driveResult(arrived, c).outcome).toBe('scrappy');
+    expect(driveResult({ ...arrived, comfort: COMFORT_MAX }, c).outcome).toBe('good');
+  });
+});
+
+describe('ланцюг наслідків: час приїзду → прапорець приїзду (docs/ARRIVAL-CONTRACT.md)', () => {
+  it('три результати дають ТРИ різні значення f.arrival (мутація: віддавати завжди одне — червоніє)', () => {
+    const vals = (['good', 'fine', 'scrappy'] as const).map((o) => ARRIVAL_BY_DRIVE[o]);
+    expect(new Set(vals).size, `значення збіглися: ${vals.join(' | ')}`).toBe(3);
+    expect(vals).toEqual(['early', 'ontime', 'late']);
+  });
+  it('тег наслідку для каркаса міні-ігор — те саме значення, без другого договору', () => {
+    for (const o of ['good', 'fine', 'scrappy'] as const) expect(arrivalConsequence(o)).toBe(`arrival.${ARRIVAL_BY_DRIVE[o]}`);
+    expect(new Set((['good', 'fine', 'scrappy'] as const).map(arrivalConsequence)).size).toBe(3);
+  });
+  it('підсумок справжньої поїздки несе прапорець, що відповідає її результату', () => {
+    for (const seed of SEEDS) {
+      const c = buildCourse(seed);
+      for (const p of [CALM_FAST, STEADY, SCRAPPY]) {
+        const r = play(c, p).result;
+        expect(r.arrival, `зерно ${seed} → ${r.outcome}`).toBe(ARRIVAL_BY_DRIVE[r.outcome]);
+      }
+    }
+  });
+  it('«пізно» не блокує приїзд: результат є, і він один із трьох', () => {
+    for (const seed of SEEDS.slice(0, 3)) {
+      const r = play(buildCourse(seed), SCRAPPY);
+      expect(r.state.phase).toBe('arrived');
+      expect(r.result.arrival).toBe('late');
+    }
+  });
+});
+
+describe('допомога після двох «сяк-так» (договір каркаса міні-ігор)', () => {
+  it('до двох — жодної допомоги; від двох — більше пального й довша рецепція', () => {
+    expect(helpFor(0)).toEqual(helpFor(1));
+    expect(helpFor(0).extraFuelL).toBe(0);
+    expect(helpFor(2).extraFuelL).toBeGreaterThan(0);
+    expect(helpFor(2).extraSec).toBeGreaterThan(0);
+  });
+  it('допомога не блокує й не докоряє: та сама поїздка з нею не гірша', () => {
+    const plain = buildCourse(3);
+    const helped = buildCourse(3, helpFor(2));
+    expect(helped.startFuelL).toBeGreaterThan(plain.startFuelL);
+    expect(helped.receptionSec).toBeGreaterThan(plain.receptionSec);
+    const a = play(plain, SCRAPPY).result;
+    const b = play(helped, SCRAPPY).result;
+    expect(b.lateSec).toBeLessThan(a.lateSec);
+    expect(b.comfort).toBeGreaterThanOrEqual(a.comfort);
+  });
+});
