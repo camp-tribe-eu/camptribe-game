@@ -1338,9 +1338,7 @@
   "dlg.elise-greeting.morning.c3": "And if we don't get it all done?",
   "dlg.elise-greeting.morning-left": "Then choose what to leave. Thirty years here and I still choose wrong.",
   "dlg.ingrid-chat.storm1": "Sit a minute. There's another hand on the old club map — and a familiar name.",
-  "dlg.ingrid-chat.storm1.c1": "Whose hand?",
-  "dlg.ingrid-chat.storm1.c2": "Not now: we've four jobs on.",
-  "dlg.ingrid-chat.storm2": "Henry. Seventy-eight. He camped right where your tent stands now.",
+  "dlg.ingrid-chat.storm2": "Henry, seventy-eight. Below, in his hand: the wind here turns off the lake.",
   "dlg.ingrid-chat.storm3": "Your guy-ropes face the wrong way. Decide while you can still see.",
   "dlg.ingrid-chat.storm3.c1": "We'll re-tie them now, while we can see.",
   "dlg.ingrid-chat.storm3.c2": "We'll finish the other jobs; the tarp will hold.",
@@ -1392,8 +1390,14 @@
   "dlg.ch1-fire.night-wrap": "Ingrid left the old club map under the tarp. A pine is circled on it.",
   "dlg.ch1-fire.night-close": "Victoria: “Tomorrow we'll look at that pine. Dry socks first, though.”",
   "dlg.ch1-fire.night-close-four": "Victoria: “Four out of four. The pine tomorrow; dry socks right now.”",
-  "dlg.ingrid-chat.storm2b": "Below, in his hand: the wind here turns off the lake after noon.",
   "dlg.ch1-fire.night-eat": "Someone asks whether we eat now or wait for it to ease.",
   "dlg.ch1-fire.night-eat.c1": "Eat now, while the lantern is on",
-  "dlg.ch1-fire.night-eat.c2": "Wait. It isn't going anywhere"
+  "dlg.ch1-fire.night-eat.c2": "Wait. It isn't going anywhere",
+  "dlg.ch1-fire.night-pitch": "Someone shines the lantern at the tent wall. It is breathing.",
+  "dlg.ch1-fire.night-pitch-lake": "George: “By the water the wind hits straight on. This will be loud.”",
+  "dlg.ch1-fire.night-pitch-pines": "George: “The pines break the wind. Elise knew her advice.”",
+  "dlg.ch1-fire.night-pitch-roof": "George: “We have a metal roof. The rain on it sounds like applause.”",
+  "dlg.ch1-fire.night-wind": "The gust dies away, then a second one comes, longer.",
+  "dlg.ch1-fire.night-wind.c1": "Check what's holding the gear",
+  "dlg.ch1-fire.night-wind.c2": "Let everyone sleep a little longer"
 }

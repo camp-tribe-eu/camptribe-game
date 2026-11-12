@@ -36,21 +36,24 @@ const atFireSim = (sim: SimState): SimState => toDayMinute({ ...sim, game: { ...
 
 // GAME-307 · ніч бурі: хвіст сцени читає прапорці дня (наслідки хвилі полудня й вибору Інгрід на обіді).
 // Це НЕ факти сцени (scene.facts): їх ставить хвиля й розмова задовго до вечора, тож у тесті вони лягають прямо в стан.
-interface Night { turned?: boolean; tight?: boolean; wood?: boolean; food?: boolean; water?: boolean; allFour?: boolean }
+interface Night { lake?: boolean; pines?: boolean; turned?: boolean; tight?: boolean; wood?: boolean; food?: boolean; water?: boolean; allFour?: boolean }
 const NIGHT_FLAGS: Readonly<Record<keyof Night, string>> = {
+  lake: 'f.pitch-lake-view', pines: 'f.pitch-pines',
   turned: 'f.storm-turned', tight: 'f.storm-tarp-tight', wood: 'f.storm-wood-dry',
   food: 'f.storm-food-ready', water: 'f.storm-water-full', allFour: 'f.storm-all-four',
 };
 const nightFlags = (n: Night): string[] => (Object.keys(NIGHT_FLAGS) as (keyof Night)[]).filter((k) => n[k] === true).map((k) => NIGHT_FLAGS[k]);
 /** Оракул ночі: що мусить показати буря за цих наслідків дня. Вибір гравця (A/B) хвоста не міняє — міняє його лише зроблена робота. */
 function nightTail(n: Night): string[] {
+  // GAME-307: ніч читає ділянку дня 1 (f.pitch, GAME-110) — біля води, біля сосон, чи ночівля не в наметі.
+  const pitch = n.lake === true ? 'night-pitch-lake' : n.pines === true ? 'night-pitch-pines' : 'night-pitch-roof';
   const tarp = n.turned === true ? 'night-tarp-turned' : n.tight === true ? 'night-tarp-tight' : 'night-tarp-loose';
   const wood = n.wood === true ? 'night-wood-dry' : 'night-wood-wet';
   const table = n.food === true && n.water === true ? 'night-table-both'
     : n.food === true ? 'night-table-food'
       : n.water === true ? 'night-table-water' : 'night-table-none';
-  return ['night-open', 'night-tarp', tarp, 'night-check', 'night-wood', wood, 'night-eat', 'night-table', table,
-    'night-morning', 'night-wrap', n.allFour === true ? 'night-close-four' : 'night-close'];
+  return ['night-open', 'night-pitch', pitch, 'night-wind', 'night-tarp', tarp, 'night-check', 'night-wood', wood,
+    'night-eat', 'night-table', table, 'night-morning', 'night-wrap', n.allFour === true ? 'night-close-four' : 'night-close'];
 }
 
 /** Провести сцену ядром: «Далі», доки є next; на вузлі з вибором — A (0) чи B (1). Повертає вузли по черзі. */
@@ -93,6 +96,8 @@ const label = (c: (typeof COMBOS)[number]) => `вогнище ${c.setup.fireAllo
 /** GAME-307 · набори наслідків дня, разом вони показують КОЖЕН вузол ночі. */
 const NIGHTS: readonly Night[] = [
   {},
+  { lake: true },
+  { pines: true },
   { tight: true },
   { turned: true, tight: true },
   { wood: true },
@@ -179,6 +184,8 @@ describe('GAME-307 · ніч бурі розсуджує день', () => {
   it('незроблена справа чути вночі: кожен прапорець дня міняє рівно свій вузол (мутація — прибрати гілку)', () => {
     const base = play(GAME_DEFS, FULL_EVENING, 0, {});
     const pairs: readonly (readonly [Night, string, string])[] = [
+      [{ lake: true }, 'night-pitch-roof', 'night-pitch-lake'],
+      [{ pines: true }, 'night-pitch-roof', 'night-pitch-pines'],
       [{ tight: true }, 'night-tarp-loose', 'night-tarp-tight'],
       [{ turned: true, tight: true }, 'night-tarp-loose', 'night-tarp-turned'],
       [{ wood: true }, 'night-wood-wet', 'night-wood-dry'],

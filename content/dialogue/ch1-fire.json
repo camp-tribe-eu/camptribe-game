@@ -319,8 +319,30 @@
       "speaker": "player",
       "textKey": "dlg.ch1-fire.night-open",
       "choices": [
-        { "textKey": "dlg.ch1-fire.night-open.c1", "next": "night-tarp" },
-        { "textKey": "dlg.ch1-fire.night-open.c2", "next": "night-tarp" }
+        { "textKey": "dlg.ch1-fire.night-open.c1", "next": "night-pitch" },
+        { "textKey": "dlg.ch1-fire.night-open.c2", "next": "night-pitch" }
+      ]
+    },
+    {
+      "id": "night-pitch",
+      "speaker": "player",
+      "textKey": "dlg.ch1-fire.night-pitch",
+      "next": "night-pitch-roof",
+      "branches": [
+        { "when": { "flag": "f.pitch-lake-view" }, "next": "night-pitch-lake" },
+        { "when": { "flag": "f.pitch-pines" }, "next": "night-pitch-pines" }
+      ]
+    },
+    { "id": "night-pitch-lake", "speaker": "player", "textKey": "dlg.ch1-fire.night-pitch-lake", "next": "night-wind" },
+    { "id": "night-pitch-pines", "speaker": "player", "textKey": "dlg.ch1-fire.night-pitch-pines", "next": "night-wind" },
+    { "id": "night-pitch-roof", "speaker": "player", "textKey": "dlg.ch1-fire.night-pitch-roof", "next": "night-wind" },
+    {
+      "id": "night-wind",
+      "speaker": "player",
+      "textKey": "dlg.ch1-fire.night-wind",
+      "choices": [
+        { "textKey": "dlg.ch1-fire.night-wind.c1", "next": "night-tarp" },
+        { "textKey": "dlg.ch1-fire.night-wind.c2", "next": "night-tarp" }
       ]
     },
     {
