@@ -2,7 +2,7 @@
 import { describe, expect, it } from 'vitest';
 import { dispatch, type Command, type Safeguards } from './commands';
 import {
-  COUNT_CAP, FPS, HELP_AFTER, MAX_PLAY_FRAMES, MIN_PLAY_FRAMES, NORMAL, NO_INPUT, OUTCOMES, RELAXED,
+  COUNT_CAP, FPS, HELP_AFTER, MAX_JOURNEY_FRAMES, MAX_PLAY_FRAMES, MIN_JOURNEY_FRAMES, MIN_PLAY_FRAMES, NORMAL, NO_INPUT, OUTCOMES, RELAXED,
   canContinue, checkMinigame, closeRun, defineMinigame, difficultyFor, giveUp, openRun, recordResult, resultOf, resultOfRun, setPaused, startRun, stepRun,
   type AnyMinigame, type MinigameGuards, type MinigameResults, type Outcome,
 } from './minigame';
@@ -53,6 +53,17 @@ describe('реєстр: кожна гра оголошує всі три рез�
   it('межі: рівно 30 і рівно 90 с — дозволено', () => {
     expect(checkMinigame({ ...REFERENCE, limitFrames: 30 * FPS })).toEqual([]);
     expect(checkMinigame({ ...REFERENCE, limitFrames: 90 * FPS })).toEqual([]);
+  });
+  it('GAME-309 · подорож: 90–180 с дозволено ЛИШЕ з kind journey; звичайна гра понад 90 с і подорож понад 180 с — червоні', () => {
+    // звичайна міні-гра довша за 90 с — LIMIT (довгу межу не можна взяти «тихцем», без оголошення виду)
+    expect(checkMinigame({ ...REFERENCE, limitFrames: 150 * FPS }).map((f) => f.code)).toContain('LIMIT');
+    expect(checkMinigame({ ...REFERENCE, kind: 'game', limitFrames: MAX_PLAY_FRAMES + 1 }).map((f) => f.code)).toContain('LIMIT');
+    // подорож — у своїх межах зелена, поза ними червона
+    expect(checkMinigame({ ...REFERENCE, kind: 'journey', limitFrames: MIN_JOURNEY_FRAMES })).toEqual([]);
+    expect(checkMinigame({ ...REFERENCE, kind: 'journey', limitFrames: MAX_JOURNEY_FRAMES })).toEqual([]);
+    expect(checkMinigame({ ...REFERENCE, kind: 'journey', limitFrames: MAX_JOURNEY_FRAMES + 1 }).map((f) => f.code)).toContain('LIMIT');
+    expect(checkMinigame({ ...REFERENCE, kind: 'journey', limitFrames: MIN_JOURNEY_FRAMES - 1 }).map((f) => f.code)).toContain('LIMIT');
+    expect(checkMinigame({ ...REFERENCE, kind: 'sprint' as never }).map((f) => f.code)).toContain('LIMIT');
   });
 });
 
