@@ -397,6 +397,8 @@ export interface StoryView {
   readonly overflow?: boolean;
   /** GAME-245: річ, щойно взята вдома (картка ~1,5 с). Стан ПОКАЗУ. */
   readonly card?: string | null;
+  /** GAME-301: чек щойно оплаченого кошика (що куплено, скільки заплачено, скільки лишилось). Стан ПОКАЗУ. */
+  readonly receipt?: { readonly itemIds: readonly string[]; readonly spentCents: number; readonly leftCents: number } | null;
 }
 /** Питання рамки вибору за об'єктом (ключі UI). */
 /** id відповіді «Не зараз» у рамці вибору дії на мапі (GAME-183): команди не має — гра лише закриває рамку. */
@@ -446,13 +448,18 @@ export function storyOffer(sim: SimState, defs: CoreDefs, view: StoryView = PANE
   const reqT = requestTarget(s);
   const reqNear = view.near !== null && view.mapFirst && isRequestSpot(view.near) && liveSpotFor(s, view.near, undefined, weather)
     ? REQUESTS.flatMap((r) => r.targets).find((t) => t.spot === view.near) : undefined;
+  // GAME-301: авто не рушить, бо бракує речей, — причина видна ОДРАЗУ біля авто (а не лише після тапу), а підпис дії не каже «Сісти в авто», коли сісти не можна:
+  // два рядки поруч («Ще бракує: …» і «● Сісти в авто») виглядали як мертва кнопка. Повний рюкзак — не «бракує»: авто саме розвантажує його, тож підпис лишається.
+  const carBlock = s.player && view.mapFirst && (view.departNote || view.near === 'obj.vehicle') ? departBlock(sim, defs, view.backpack ?? []) : null;
+  const blockedAtCar = carBlock && (view.departNote || carBlock.kind === 'missing') ? carBlock : null;
   const hint = {
     backpack: view.backpack?.length ?? 0,
     next: reqT ? (reqT.startsWith('npc.') ? 'next.req.giver' : 'next.req.target') as Key : nextT?.key ?? null,
     nextSpot: reqT ?? nextT?.spot ?? null,
-    blocked: view.mapFirst && view.departNote ? ((b) => (b ? { carry: b.kind === 'carry', itemKeys: b.kind === 'missing' ? b.items.map((i) => nameKey(i) ?? i) : [] } : null))(departBlock(sim, defs, view.backpack ?? [])) : null,
+    blocked: blockedAtCar ? { carry: blockedAtCar.kind === 'carry', itemKeys: blockedAtCar.kind === 'missing' ? blockedAtCar.items.map((i) => nameKey(i) ?? i) : [] } : null,
+    receipt: view.receipt ? { nameKeys: view.receipt.itemIds.map((i) => nameKey(i) ?? i), spentCents: view.receipt.spentCents, leftCents: view.receipt.leftCents } : null,
     card: view.card ? { nameKey: nameKey(view.card) ?? view.card, reactKey: `pack.react.${view.card.replace(/^item\./, '')}`, spot: `pack.${view.card}`, xp: awardsFor('TakeItem', view.card, defs).reduce((a, x) => a + x.xp, 0) } : null,
-    near: nearL ? { label: nearL.label, itemKey: nearL.ref ? nameKey(nearL.ref) : null } : reqNear ? { label: 'near.req' as Key, itemKey: reqNear.labelKey }
+    near: nearL ? { label: blockedAtCar && view.near === 'obj.vehicle' ? 'near.vehicle.wait' as Key : nearL.label, itemKey: blockedAtCar && view.near === 'obj.vehicle' ? null : nearL.ref ? nameKey(nearL.ref) : null } : reqNear ? { label: 'near.req' as Key, itemKey: reqNear.labelKey }
       : view.near !== null && view.mapFirst && isTraceSpot(view.near) && liveTraceSpot(s, view.near) ? { label: 'near.trace' as Key, itemKey: null } : null,   // GAME-215: біля позначки олівцем
   };
   // GAME-256: «День N» у HUD — після сну одразу новий день (07:00), а не лише з 08:00 (dayOf).

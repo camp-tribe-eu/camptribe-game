@@ -24,6 +24,23 @@ export const TOUCH_TARGET_PX = 44;
 export const MIN_FRAME_W = 120;
 export const MIN_FRAME_H = 90;
 
+/** GAME-300: розмір поточної мапи в пікселях гри (мала мапа — крамниця 448×384 — не покриває кадр ПК). */
+export interface MapPx { readonly w: number; readonly h: number }
+/** GAME-300: мапа вважається такою, що покриває поле, коли її зображення на екрані ≥ цієї частки поля (2–3 % не варті стрибка масштабу). */
+export const MAP_COVER_MIN = 0.97;
+
+/**
+ * GAME-300 (власник побачив у вікні 2000×1086 мапу крамниці 896 px зліва, решту — порожній фіолет): у режимі «Авто» мала мапа підіймає цілий масштаб до
+ * найменшого k, за якого вона покриває поле (камера їде за героєм по решті). Стеля — зріст героя ≤ HERO_MAX_FRACTION висоти поля (як і в кроках повзунка),
+ * тож на телефоні, де це зробило б героя завеликим, лишається масштаб за правилом OD-030 (смуги кольору землі, як і було). Без мапи чи з явним кроком — k0.
+ */
+function coverMap(k0: number, w: number, h: number, map: MapPx | null): number {
+  if (!map || !(map.w > 0 && map.h > 0)) return k0;
+  const need = Math.max(Math.ceil((w * MAP_COVER_MIN) / map.w), Math.ceil((h * MAP_COVER_MIN) / map.h));
+  const cap = Math.max(k0, Math.floor((HERO_MAX_FRACTION * h) / HERO_BODY_PX));
+  return Math.max(k0, Math.min(need, cap));
+}
+
 /**
  * Широке поле (телефон вбік, десктоп; GAME-96, смак власника 25.10): мапа на ВСЮ ширину екрана, без чорних смуг з боків. Масштаб k —
  * ЦІЛИЙ (чіткі пікселі) і найменший, за якого кадр не ширший за мапу і не вищий за неї: k = max(⌈w / 640⌉, ⌈h / 384⌉); кадр = ⌈поле / k⌉,
@@ -33,7 +50,7 @@ export const MIN_FRAME_H = 90;
  * кадр = ⌊поле / k⌋, але не вище за мапу; що не влізло по ширині — везе камера.
  * Поле без розміру (ще не розкладене) — кадр 640×352 ×1 за замовчуванням (як було).
  */
-export function frameSize(w: number, h: number, coarse = false, zoom = 0): Frame {
+export function frameSize(w: number, h: number, coarse = false, zoom = 0, map: MapPx | null = null): Frame {
   if (!(w > 0 && h > 0)) return { width: 640, height: 352, zoom: 1 };
   const aspect = w / h;
   const explicit = zoom > 0 && zoomSteps(w, h, coarse).includes(zoom) ? zoom : 0;   // непридатний для цього поля крок → Авто (налаштування не чіпаємо)
@@ -43,11 +60,12 @@ export function frameSize(w: number, h: number, coarse = false, zoom = 0): Frame
     // OD-030 (власник 07.11, «як у Долині»): телефон вбік (поле ≤ PHONE_LANDSCAPE_MAX_H заввишки) лишає попередній крупніший масштаб — на малому екрані
     // герой і цілі мусять бути великі; дрібніше — лише ПК (і далі — повзунок «Масштаб» у налаштуваннях, окрема картка).
     const phone = h <= PHONE_LANDSCAPE_MAX_H || (coarse && h <= TOUCH_PHONE_MAX_H);
-    const k = explicit || (phone ? Math.max(1, Math.ceil(w / MAP_WIDTH), Math.ceil(h / MAP_HEIGHT)) : Math.max(1, Math.round(h / (HERO_FRACTION * HERO_BODY_PX))));
+    const k = explicit || coverMap(phone ? Math.max(1, Math.ceil(w / MAP_WIDTH), Math.ceil(h / MAP_HEIGHT)) : Math.max(1, Math.round(h / (HERO_FRACTION * HERO_BODY_PX))), w, h, map);
     return { width: Math.ceil(w / k), height: Math.ceil(h / k), zoom: k };
   }
-  const k = explicit || Math.max(1, Math.round(h / MAP_HEIGHT));
-  return { width: Math.max(1, Math.floor(w / k)), height: Math.min(MAP_HEIGHT, Math.max(1, Math.floor(h / k))), zoom: k };
+  const k = explicit || coverMap(Math.max(1, Math.round(h / MAP_HEIGHT)), w, h, map);
+  // GAME-300: висота = ⌈поле / k⌉ (було ⌊⌋ і не вище за MAP_HEIGHT): полотно покриває поле, під ним не лишається порожньої смуги (зайве < k px ховає overflow поля).
+  return { width: Math.max(1, Math.floor(w / k)), height: Math.max(1, Math.ceil(h / k)), zoom: k };
 }
 
 /**

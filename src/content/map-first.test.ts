@@ -248,8 +248,8 @@ describe('підказка «Далі: …»', () => {
   it('у знімку для UI: рядок «Далі» й підпис дії біля об\'єкта; без персонажа — нічого', () => {
     const s = create((CHOICES[0] as { intent: Move }).intent);
     const o = storyOffer(s, DEFS, { ...MAP_VIEW, near: 'step.PROLOGUE-HOME-001' }).offer;
-    expect(o.hint).toEqual({ backpack: 0, blocked: null, card: null, next: 'next.prologue-home-001', nextSpot: 'step.PROLOGUE-HOME-001', near: { label: 'near.step.prologue-home-001', itemKey: null } });
-    expect(storyOffer(newSim(1, 5_000), DEFS, MAP_VIEW).offer.hint).toEqual({ backpack: 0, blocked: null, card: null, next: null, nextSpot: null, near: null });
+    expect(o.hint).toEqual({ backpack: 0, blocked: null, card: null, receipt: null, next: 'next.prologue-home-001', nextSpot: 'step.PROLOGUE-HOME-001', near: { label: 'near.step.prologue-home-001', itemKey: null } });
+    expect(storyOffer(newSim(1, 5_000), DEFS, MAP_VIEW).offer.hint).toEqual({ backpack: 0, blocked: null, card: null, receipt: null, next: null, nextSpot: null, near: null });
   });
 });
 
@@ -290,6 +290,22 @@ describe('рюкзак і потреби (GAME-175: дрібне — в рюкз
     expect(departBlock(s, DEFS, ['item.lantern'])).toEqual({ kind: 'carry' });
     expect(departBlock(packingState(), DEFS, [])).toBeNull();   // старт: усе потрібне вже в багажнику
     expect(departBlock(newSim(1, 5_000), DEFS, [])).toBeNull();   // поза пакуванням гейта немає
+  });
+  it('GAME-301: біля авто, коли бракує речей, підпис — «Авто ще не готове», а причина видна одразу; коли все є — «Сісти в авто» без причини', () => {
+    const lacking = send(send(packingState(), { type: 'UnpackItem', itemId: 'item.simple-dinner' }), { type: 'UnpackItem', itemId: 'item.tent' });
+    const at = { ...MAP_VIEW, near: 'obj.vehicle', backpack: [] as string[] };
+    const wait = storyOffer(lacking, DEFS, at).offer.hint;
+    expect(wait.near?.label, 'не «Сісти в авто» поруч із «Ще бракує»').toBe('near.vehicle.wait');
+    expect(wait.blocked, 'причина без тапу').toMatchObject({ carry: false });
+    expect(wait.blocked?.itemKeys.length).toBeGreaterThan(0);
+    const ready = storyOffer(packingState(), DEFS, at).offer.hint;
+    expect(ready.near?.label).toBe('near.vehicle.car');
+    expect(ready.blocked).toBeNull();
+    expect(storyOffer(lacking, DEFS, { ...MAP_VIEW, near: 'npc.george', backpack: [] }).offer.hint.blocked, 'не біля авто — причини немає').toBeNull();
+  });
+  it('GAME-301: чек каси доходить до підказки: назви речей, сума, залишок', () => {
+    const h = storyOffer(newSim(1, 5_000), DEFS, { ...MAP_VIEW, receipt: { itemIds: ['item.tent', 'item.sleeping-bag'], spentCents: 3498, leftCents: 1502 } }).offer.hint;
+    expect(h.receipt).toEqual({ nameKeys: ['item.tent', 'item.sleeping-bag'], spentCents: 3498, leftCents: 1502 });
   });
   it('НЕГАТИВНИЙ КОНТРОЛЬ: поза пакуванням (до крамниці) потреб немає, а рюкзак підказку не міняє', () => {
     const s = create((CHOICES[0] as { intent: Move }).intent);
