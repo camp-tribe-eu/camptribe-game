@@ -703,5 +703,10 @@
   "night.tidy.quiet": "Усе на місці — ніч тиха, тільки дощ",
   "night.camp.crows": "Табір стояв порожній — зі столу дещо зникло ще завидна",
   "night.storm.wet": "Злива б'є по тенту всю ніч",
-  "night.storm.wind": "Вітер ходить над галявиною"
+  "night.storm.wind": "Вітер ходить над галявиною",
+  "camp.min": "хв",
+  "camp.water.step": "Крок",
+  "camp.water.tilt": "Нахил відра",
+  "camp.tidy.out": "надворі",
+  "camp.tidy.hint": "Обери річ, тоді місце"
 }

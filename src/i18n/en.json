@@ -703,5 +703,10 @@
   "night.tidy.quiet": "Everything in its place — a quiet night, only rain",
   "night.camp.crows": "The camp stood empty — something went from the table before dusk",
   "night.storm.wet": "The downpour drums on the tarp all night",
-  "night.storm.wind": "The wind walks over the clearing"
+  "night.storm.wind": "The wind walks over the clearing",
+  "camp.min": "min",
+  "camp.water.step": "Step",
+  "camp.water.tilt": "Bucket tilt",
+  "camp.tidy.out": "left outside",
+  "camp.tidy.hint": "Pick a thing, then a place"
 }

@@ -7,7 +7,7 @@ import type { Weather } from '../core/weather';
 import { ROUNDS, ROUTINES, ROUTINE_IDS, addPick, awayIn, campBusy, emptyRounds, isDone, minutesLeft, recordResult, startCampDay, whyNot, type CampDay, type Round, type RoutineId } from '../content/camp-day';
 import { nightOf, type NightBeat, type NightFacts } from '../content/camp-night';
 import { NO_HELP, afterTry, type HelpState, type Outcome } from '../content/minigame';
-import { needSide, startWater, stepWater, waterOutcome, waterScore, type Side, type WaterState } from '../content/water-carry';
+import { STEPS, needSide, startWater, stepWater, waterOutcome, waterScore, type Side, type WaterState } from '../content/water-carry';
 import { LANTERNS, SPOTS, lanternOutcome, litCount, startLanterns, stepLanterns, type LanternState } from '../content/lantern-charge';
 import { DISHES, emberOutcome, startEmbers, stepEmbers, type EmberAct, type EmberState } from '../content/embers';
 import { BASKET, berryOutcome, bitterCount, enoughBerries, hinted, patchOf, pickBerry, startBerries, type BerryState } from '../content/berries-patch';
@@ -111,12 +111,15 @@ export function CampRoutines({ t, weather, seed, onFrame }: CampRoutinesProps) {
         {active === 'water' && (
           <section class="ui-camp-work">
             <p data-ui="water-level" data-level={Math.round(water.level * 100)}>{`${t('camp.water.level')}: ${Math.round(water.level * 100)} %`}</p>
+            <div class="ui-camp-bar" aria-hidden="true"><i style={{ width: `${Math.round(water.level * 100)}%` }} /></div>
             {water.phase === 'fill' ? (
               <button type="button" class="ui-btn ui-camp-big" data-ui="water-tap" aria-pressed={tap}
                 onPointerDown={() => setTap(true)} onPointerUp={() => setTap(false)} onPointerLeave={() => setTap(false)}>{t('camp.water.tap')}</button>
             ) : (
               <>
+                <p data-ui="water-steps">{`${t('camp.water.step')} ${water.step + 1} / ${STEPS}`}</p>
                 <p data-ui="water-cue" data-side={needSide(water)}>{`${t('camp.water.cue')}: ${t(needSide(water) === 'left' ? 'camp.water.left' : 'camp.water.right')}`}</p>
+                <div class="ui-camp-tilt" aria-label={t('camp.water.tilt')} data-tilt={Math.round(water.tilt * 100)}><i style={{ left: `${Math.round(50 + water.tilt * 45)}%` }} /></div>
                 <div class="ui-camp-row">
                   {(['left', 'right'] as const).map((side: Side) => (
                     <button key={side} type="button" class="ui-btn ui-camp-big" data-ui="water-step" data-side={side}
@@ -231,12 +234,17 @@ export function CampRoutines({ t, weather, seed, onFrame }: CampRoutinesProps) {
         )}
         {active === 'tidy' && (
           <section class="ui-camp-work">
+            <p class="ui-camp-note" data-ui="tidy-hint">{t('camp.tidy.hint')}</p>
             <ul class="ui-camp-list">
-              {THINGS.map((x) => (
-                <li key={x.id} data-ui="tidy-thing" data-id={x.id} data-place={tidy.put[x.id] ?? 'out'}>
-                  <button type="button" class="ui-btn" data-ui="tidy-pick" data-id={x.id} aria-pressed={thing === x.id} onClick={() => setThing(x.id)}>{t(`camp.thing.${x.id}` as Key)}</button>
-                </li>
-              ))}
+              {THINGS.map((x) => {
+                const where = tidy.put[x.id];
+                return (
+                  <li key={x.id} data-ui="tidy-thing" data-id={x.id} data-place={where ?? 'out'}>
+                    <button type="button" class="ui-btn" data-ui="tidy-pick" data-id={x.id} aria-pressed={thing === x.id} onClick={() => setThing(x.id)}>{t(`camp.thing.${x.id}` as Key)}</button>
+                    <span>{where === undefined ? t('camp.tidy.out') : t(`camp.tidy.${where}` as Key)}</span>
+                  </li>
+                );
+              })}
             </ul>
             <div class="ui-camp-row">
               {PLACES.map((p) => (
@@ -264,12 +272,15 @@ export function CampRoutines({ t, weather, seed, onFrame }: CampRoutinesProps) {
         {ROUTINE_IDS.map((id) => {
           const no = whyNot(day, id, round);
           const def = ROUTINES[id];
+          const out = day.results[id];
           return (
             <li key={id}>
-              <button type="button" class="ui-btn ui-camp-routine" data-ui="camp-routine" data-id={id} data-owner={def.owner} data-done={isDone(day, id) ? 'yes' : 'no'} data-blocked={no ?? ''}
+              <button type="button" class="ui-btn ui-camp-routine" data-ui="camp-routine" data-id={id} data-owner={def.owner} data-done={isDone(day, id) ? 'yes' : 'no'} data-outcome={out ?? ''} data-blocked={no ?? ''}
                 disabled={no !== null} onClick={() => open(id)}>
-                <b>{`${t(`camp.routine.${id}` as Key)} · ${t(`camp.owner.${def.owner}` as Key)} · ${def.minutes[0]}`}</b>
-                <small>{no === null ? t(`camp.why.${id}` as Key) : t(`camp.no.${no}` as Key)}</small>
+                <b>{`${t(`camp.routine.${id}` as Key)} · ${t(`camp.owner.${def.owner}` as Key)}`}</b>
+                <small>{out !== undefined
+                  ? `${t('camp.done')} · ${t(`camp.out.${out}` as Key)}`
+                  : `${no === null ? t(`camp.why.${id}` as Key) : t(`camp.no.${no}` as Key)} · ${def.minutes[0]} ${t('camp.min')}`}</small>
               </button>
             </li>
           );
