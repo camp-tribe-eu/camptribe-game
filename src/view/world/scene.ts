@@ -59,6 +59,7 @@ import { dayOf, weatherOf } from '../../core/weather';
 import { swimGridOf, swimRegionOf, withWater } from './swim';
 import { REVEAL_BEATS, revealCenter, type RevealAnchors } from '../camp-reveal';
 import { calmMotion } from '../../platform/motion';
+import vehiclePlacement from './vehicle-placement.json';
 
 export const TILE = 32;
 const INTERACT_RANGE = TILE * 1.5;
@@ -169,6 +170,8 @@ export interface WorldHooks {
   perfectHits?(): boolean;
   /** GAME-216: чи зіграти заставку першого приїзду в табір (камера: герой → озеро → табір → герой, ≤ 10 с, будь-який дотик виходить). Немає — ніколи. */
   campReveal?(): boolean;
+  /** GAME-300: розмір щойно завантаженої мапи в px гри — кадр ПК підлаштовує масштаб, щоб мала мапа (крамниця) не лишала порожніх смуг (frame.ts: coverMap). */
+  mapSize?(w: number, h: number): void;
   /** GAME-230: подарунок щойно вручено — хто (id мешканця) і як відреагував; забирає його (наступний виклик — null). Реакція — лише вигляд і звук, очки веде ядро. */
   takeGift?(): { readonly npc: string; readonly reaction: GiftReaction } | null;
   /** GAME-230: щокадру в таборі — чи час для сцени серця; main її відкриває (HeartEvent), сцена нічого не вирішує. */
@@ -184,8 +187,9 @@ export interface WorldHooks {
 /** Хто з NPC якого листа ходьби має (лист — в art.ts); решта — як Еліза. */
 const NPC_SHEET: Readonly<Record<string, string>> = { 'npc.george': 'res-georgeNpc', 'npc.cashier': 'res-lotte' };
 /** Де стоїть авто відносно точки посадки `obj.vehicle` (ноги авто = нижній центр спрайта): праворуч-вниз; його колізія — нижня смуга. */
-const CAR_OFFSET = { x: 16, y: 80 };
-const CAR_BLOCK = { w: 104, h: 30 };
+/** GAME-301: числа — з src/view/world/vehicle-placement.json (його читає й сторож check_placement.py: авто не налазить на будівлю й двері). */
+const CAR_OFFSET = { x: vehiclePlacement.offset[0] ?? 16, y: vehiclePlacement.offset[1] ?? 80 };
+const CAR_BLOCK = { w: vehiclePlacement.block[0] ?? 104, h: vehiclePlacement.block[1] ?? 30 };
 /** Маркери: колір за родом об'єкта. */
 const ICON_Y = -4;   // GAME-201: низ піктограми цілі над точкою об'єкта (ноги), світові px
 
@@ -221,6 +225,8 @@ export interface WorldProbe {
   heroBreath: number;
   /** OD-029: спрайт героя на екрані, CSS px (для наклейки нагороди над головою; e2e звіряє, що вона не на ньому). */
   heroRect: { x: number; y: number; w: number; h: number };
+  /** GAME-301 (лише для e2e): де зараз стоїть авто на мапі — спрайт і колізія, світові px [x0, y0, x1, y1]; null — авто не стоїть (велосипед, табір, мапа без точки посадки). */
+  car: { sprite: [number, number, number, number]; block: [number, number, number, number] } | null;
   /** GAME-254 (лише для e2e): висота НЕпрозорої частини кадру героя (його справжній зріст), px гри — з текстури, а не з сталої. */
   heroBody: number;
   /** GAME-254 (лише для e2e): що видно зараз — вікно камери у світі (px гри), розмір мапи й zoom полотна. */
@@ -909,6 +915,7 @@ export class WorldScene extends Phaser.Scene {
       if (this.props.body) this.crateCollider = this.physics.add.collider(this.player, this.props.body);
     }
     if (key === 'camp') this.life.begin(this.bands.map((b) => b.layer));
+    this.hooks.mapSize?.(map.widthInPixels, map.heightInPixels);   // GAME-300: масштаб кадру під розмір мапи — до меж і центрування камери
     this.cameras.main.setBounds(0, 0, map.widthInPixels, map.heightInPixels);
     this.paintLetterbox(bakeKey);   // GAME-254: кадр ширший за малу мапу — смуги кольору землі, не чорна діра
     this.cameras.main.centerOn(this.player.x, this.player.y);
@@ -1861,6 +1868,7 @@ export class WorldScene extends Phaser.Scene {
       playerY: this.player.y - (this.heroBob ? this.heroBreath : 0),   // свіжіше значення перепише слухач POST_UPDATE (див. create)
       heroBreath: this.heroBob ? this.heroBreath : 0,
       heroRect: this.heroRect(),
+      car: this.carImg ? { sprite: [this.carImg.x - this.carImg.img.width / 2, this.carImg.y - this.carImg.img.height, this.carImg.x + this.carImg.img.width / 2, this.carImg.y], block: [this.carImg.x - CAR_BLOCK.w / 2, this.carImg.y - CAR_BLOCK.h, this.carImg.x + CAR_BLOCK.w / 2, this.carImg.y] } : null,
       heroBody: this.heroBodyPx(),
       view: { x: this.cameras.main.worldView.x, y: this.cameras.main.worldView.y, w: this.cameras.main.worldView.width, h: this.cameras.main.worldView.height, zoom: this.game.scale.zoom, mapW: this.tilemap?.widthInPixels ?? 0, mapH: this.tilemap?.heightInPixels ?? 0 },
       nearObject: near,

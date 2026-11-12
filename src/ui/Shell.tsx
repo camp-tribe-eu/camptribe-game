@@ -4,7 +4,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'preact/hooks';
 import { mixer, setMusicScreen } from '../audio';
 import { playUi, soundForButton } from '../audio/ui-sounds';
 import { sfx } from '../audio/sfx';
-import { isEmptySum, mergeSums, NO_REWARD, stickerAt, stickerLive, stickerParts, type RewardSum } from './reward-sticker';
+import { explainXp, isEmptySum, mergeSums, NO_REWARD, stickerAt, stickerLive, stickerParts, type RewardSum } from './reward-sticker';
 import { DEFAULT_SETTINGS, TEXT_SCALES, loadSettings, saveSettings, type Settings } from '../platform/settings';
 import type { Credits, UiPort } from './port';
 import { BigItemIcon, ObjectiveIcon } from './ObjectiveIcon';
@@ -12,6 +12,7 @@ import { t as tr, type AnyLang, type Key } from '../i18n';
 import { ct } from '../i18n/content';
 import { Notebook, Radar } from './Agenda';
 import { StoryPanel, money } from './StoryPanel';
+import { receiptItems } from './receipt';
 import { DaySummary } from './DaySummary';
 import { LevelUp } from './LevelUp';
 import { queueUps, topOverlay, type SkillUp } from './overlay-order';
@@ -108,6 +109,8 @@ export function Shell({ port, langOverride, credits, build, holdToast = false, h
   // Життя — за ігровим годинником від останньої нагороди; дзвіночок (src/audio) — раз на наклейку, коли вона справді з'явилась.
   const [sticker, setSticker] = useState<{ id: number; sum: RewardSum; at: number; seen: boolean } | null>(null);
   const stickerId = useRef(0);
+  // GAME-302: одна коротка підказка про XP при першій наклейці з XP (потім — ніколи: done). id — наклейка, під якою підказка показана.
+  const [xpExplain, setXpExplain] = useState<{ id: number | null; done: boolean }>({ id: null, done: false });
   useEffect(() => port.onReward((r) => {
     const sum: RewardSum = { cents: r.cents, xp: r.xp, om: r.om, skills: r.skills };
     if (isEmptySum(sum)) return;
@@ -376,6 +379,10 @@ export function Shell({ port, langOverride, credits, build, holdToast = false, h
     setSticker((s) => (s && s.id === id && !s.seen ? { ...s, at: Math.max(s.at, stickerFrom), seen: true } : s));
   }, [stickerShown, sticker?.id, stickerFrom]);
   useEffect(() => { if (stickerShown) sfx('chime'); }, [stickerShown, sticker?.id]);
+  useEffect(() => {
+    if (!stickerShown || !sticker) return;
+    setXpExplain((x) => (x.id === null && explainXp(sticker.sum, x.done) ? { id: sticker.id, done: false } : x.id !== null && x.id !== sticker.id ? { id: null, done: true } : x));
+  }, [stickerShown, sticker?.id, sticker?.sum.xp]);
   const titleUpShown = titleUp !== null && sinceUp >= 0 && sinceUp < TITLE_UP_MIN && bannerSlot;
   // GAME-243: мапа-перша гра має нотатник Вікторії й мінімапу — три нижні підказки (ціль, найближча нагорода, «Далі: …») зникають; лишається ОДИН короткий рядок біля дії.
   const agendaOn = offer.agenda !== null;
@@ -465,6 +472,13 @@ export function Shell({ port, langOverride, credits, build, holdToast = false, h
           {offer.hint.card.xp > 0 && <em data-ui="item-card-xp">{`+${offer.hint.card.xp} ${t('pack.card.xp')}`}</em>}
         </div>
       )}
+      {offer.hint.receipt && (
+        <div class="ui-itemcard" data-ui="purchase-receipt" role="status">
+          <strong data-ui="purchase-receipt-title">{t('shop.receipt.title')}</strong>
+          <span data-ui="purchase-receipt-items">{receiptItems(lang, offer.hint.receipt.nameKeys, offer.hint.receipt.spentCents)}</span>
+          <em data-ui="purchase-receipt-left">{`${t('shop.receipt.left')} ${money(lang, offer.hint.receipt.leftCents)}`}</em>
+        </div>
+      )}
       {barkShown && <div class="ui-titleup" data-ui="bedtime-bark" role="status"><strong>{t('bark.bedtime')}</strong></div>}
       {offer.rest.autoSlept && bannerSlot && <div class="ui-titleup" data-ui="sleep-auto" role="status"><strong>{t('bark.sleepAuto')}</strong></div>}
       {stickerShown && sticker && (
@@ -472,6 +486,7 @@ export function Shell({ port, langOverride, credits, build, holdToast = false, h
           {stickerParts(sticker.sum, { xp: t('ui.xp'), om: t('ui.om'), skill: (id) => ct(lang, id) }).map((p) => <span key={p.kind + (p.skill ?? '')} class="ui-reward-part" data-kind={p.kind}>{p.text}</span>)}
         </div>
       )}
+      {stickerShown && sticker && xpExplain.id === sticker.id && !xpExplain.done && <p class="ui-xp-explain" data-ui="xp-explain" role="status">{t('ui.xpExplain')}</p>}
       {titleUpShown && titleUp && (
         <div class="ui-titleup" data-ui="title-up" data-title={titleUp.index + 1} role="status">
           <strong>{`${t('ui.titleUp')}: ${ct(lang, `title.${titleUp.index + 1}`)}`}</strong>

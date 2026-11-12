@@ -55,7 +55,7 @@ describe('musicFor — тема за станом', () => {
     expect(musicFor({ map: null, intro: false, minuteOfDay: 0 })).toBe('silence');
   });
   it('рівні мікса GAME-252: дощ ≤ 0,5 (було 1,0 / 0,8), музика під ефектами', () => {
-    expect(ambientMix({ map: null, intro: true, nearLake: false, fireLit: false, nearFire: false, transport: null }).rain).toBeLessThanOrEqual(0.5);
+    expect(ambientMix({ map: null, intro: true, nearLake: false, fireLit: false, nearFire: false, transport: null }).rain ?? 0).toBe(0);   // GAME-302: у вступі фону дощу нема
     expect(ambientMix({ map: 'home', intro: false, nearLake: false, fireLit: false, nearFire: false, transport: null }).rain).toBeLessThanOrEqual(0.4);
     expect(MUSIC_LEVEL * DEFAULT_AUDIO.master * DEFAULT_AUDIO.music).toBeLessThan(DEFAULT_AUDIO.sfx * DEFAULT_AUDIO.master * 0.3);
   });

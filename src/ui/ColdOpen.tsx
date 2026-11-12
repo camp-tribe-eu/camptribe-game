@@ -1,6 +1,7 @@
 // GAME-216 · холодний початок демо (OD-025): перед вступом — ≤ 45 с кіно (src/view/cold-open.ts): дощ у вікні, родина вдома, атлас, листівка дідуся Генрі з
 // ескізом «H+E», затемнення → вступ (Intro). Показується раз на нову гру (Shell: при завантаженні — лише коли сейву не було; з меню «Нова гра» — завжди),
-// пропускається будь-якої миті одним дотиком чи клавішею. Починається з дотику «Почати»: він же розблоковує звук (політика браузерів) — без нього
+// пропускається будь-якої миті — ЛИШЕ явною кнопкою «Пропустити вступ» або Escape (GAME-302: раніше пропускав будь-який дотик по сцені чи клавіша — гравець, що не хотів
+// пропускати, випадково обривав кіно першим же дотиком, і історія дідуся не доходила до листівки). Починається з дотику «Почати»: він же розблоковує звук (політика браузерів) — без нього
 // музика вступу (mus-intro) не зазвучала б. Світ на паузі (Shell), таймерів реального часу немає: час сцени — від міток кадру всередині painter.
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { setIntroOpen } from '../audio';
@@ -39,18 +40,17 @@ export function ColdOpen({ paint, t, onDone }: { paint?: ColdOpenPainter | undef
       .then((s) => { if (dead) s(); else stop = s; }, () => { if (!dead) finishRef.current(); });
     return () => { dead = true; stop(); };
   }, [playing, size]);
-  // Будь-яка клавіша під час сцени — пропуск (Escape, Enter, Space, стрілки…), крім Tab (навігація фокусом).
+  // GAME-302: пропуск клавішею — лише Escape (без модифікаторів: Ctrl+Escape і подібні браузерні комбінації не ковтаються). Enter, Space, стрілки сцену не обривають.
   useEffect(() => {
     if (!playing) return undefined;
-    const onKey = (e: KeyboardEvent): void => { if (e.code === 'Tab' || e.ctrlKey || e.metaKey || e.altKey || /^(Shift|Control|Alt|Meta)$/.test(e.key)) return; e.preventDefault();   // рецензія PR #144: модифікатори й гарячі клавіші браузера (Ctrl+R, F5 із Ctrl) не пропускають сцену й не ковтаються
+    const onKey = (e: KeyboardEvent): void => { if (e.code !== 'Escape' || e.ctrlKey || e.metaKey || e.altKey) return; e.preventDefault();
       e.stopPropagation(); finishRef.current(); };
     window.addEventListener('keydown', onKey, true);
     return () => window.removeEventListener('keydown', onKey, true);
   }, [playing]);
 
   return (
-    <div class="ui-intro ui-cold" data-ui="cold-open" data-state={playing ? 'play' : 'start'} role="dialog" aria-modal="true" aria-label={t('cold.title')}
-      onPointerDown={playing ? () => finishRef.current() : undefined}>
+    <div class="ui-intro ui-cold" data-ui="cold-open" data-state={playing ? 'play' : 'start'} role="dialog" aria-modal="true" aria-label={t('cold.title')}>
       {playing && <canvas ref={canvas} class="ui-intro-room" data-ui="cold-canvas" aria-hidden="true" />}
       {playing && <p ref={caption} class="ui-cold-caption" data-ui="cold-caption" aria-live="off" />}
       {playing && <button type="button" class="ui-btn ui-intro-skip" data-ui="cold-open-skip" onClick={() => finishRef.current()}>{t('intro.skip')}</button>}

@@ -1,0 +1,6 @@
+{
+  "_": "GAME-301: where the car sprite stands relative to the obj.vehicle point (car feet = bottom centre). Read by scene.ts and by scripts/art/check_placement.py - change both together or neither.",
+  "offset": [16, 80],
+  "sprite": [128, 64],
+  "block": [104, 30]
+}

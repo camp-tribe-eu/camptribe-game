@@ -1,0 +1,21 @@
+# Мутації GAME-301 (закон 1: кожен сторож показано червоним)
+
+## 1. Стара мапа крамниці (авто на дверях, подвір'я немає) -> e2e game-301, обидві орієнтації
+    Error: спрайт авто [192,352,320,416] налазить на будівлю [0,0,448,384]
+    (портрет і ландшафт; знімки before-* зроблено на цих же даних)
+
+## 2. Без чека (у main.ts умова `if (false && paying && ...)`) -> e2e game-301, портрет
+    Error: після оплати має бути чек «Куплено / Залишилось»
+    expect(locator).toBeVisible() failed ... element(s) not found: locator('[data-ui="purchase-receipt"]')
+
+## 3. Без ключа shop.receipt.left в uk.json -> vitest src/ui/receipt.test.ts: 2 із 3 червоні
+    AssertionError: expected 'undefined 15,02 EUR' to match /^Залишилось 15,02\s?(€|EUR)$/
+    AssertionError: shop.receipt.left: expected undefined to be truthy
+
+## 4. Сторож розстановки: python3 scripts/art/check_placement.py --mutate
+    mutate: вимкнення будь-якої з 9 перевірок валить self-test (включно з PLACE_VEHICLE)
+    mutate-maps: авто на дверях на СПРАВЖНІХ даних мап (home, shop) червоніє; чисті дані зелені
+
+## 5. Сторож на даних ДО виправлення: placement-before.txt
+    PLACE_VEHICLE shop.tmj: авто (спрайт (192, 352, 320, 416)) налазить на будівлю (0, 0, 448, 384)
+    PLACE_VEHICLE shop.tmj: авто (спрайт (192, 352, 320, 416)) закриває двері (192, 320, 256, 384)

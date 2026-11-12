@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { GAME_DEFS } from '../content/slice-defs';
 import events from '../../content/events.json';
 import quests from '../../content/quests.json';
-import { euros, grantCentsMap, isEmptySum, mergeSums, NO_REWARD, POP_FRAMES, rewardDelta, STICKER_MIN, stickerAt, stickerLive, stickerParts, stickerPlace, type CoreSnap, type RawRewardRow } from './reward-sticker';
+import { explainXp, euros, grantCentsMap, isEmptySum, mergeSums, NO_REWARD, POP_FRAMES, rewardDelta, STICKER_MIN, stickerAt, stickerLive, stickerParts, stickerPlace, type CoreSnap, type RawRewardRow } from './reward-sticker';
 
 const snap = (o: Partial<CoreSnap> = {}): CoreSnap => ({ xp: 0, om: 0, skills: {}, grants: [], ...o });
 const L = { xp: 'XP', om: 'ОМ', skill: (id: string) => id.replace('skill.', '') };
@@ -85,5 +85,13 @@ describe('OD-029 · наклейка над героєм', () => {
     expect(stickerPlace({ ...base, heroX: 5 }).left).toBeGreaterThanOrEqual(4);
     const r = stickerPlace({ ...base, heroX: 389 });
     expect(r.left + base.w).toBeLessThanOrEqual(base.vw - 4);
+  });
+});
+
+describe('GAME-302 · підказка про XP', () => {
+  it("пояснюємо лише першу наклейку, де є XP (мутація: завжди true / ігнорувати XP — червоніє)", () => {
+    expect(explainXp({ cents: 0, xp: 15, om: 0, skills: {} }, false)).toBe(true);
+    expect(explainXp({ cents: 500, xp: 0, om: 3, skills: {} }, false)).toBe(false);   // без XP — нема що пояснювати
+    expect(explainXp({ cents: 0, xp: 15, om: 0, skills: {} }, true)).toBe(false);     // уже пояснювали — вдруге не лізе
   });
 });
