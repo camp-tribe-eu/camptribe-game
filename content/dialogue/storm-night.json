@@ -1,0 +1,255 @@
+{
+  "id": "dlg.storm-night",
+  "scene": {
+    "titleKey": "dlg.storm-night.title",
+    "facts": [
+      "f.storm-warned",
+      "f.storm-radio-weak",
+      "f.storm-fish-supper",
+      "f.storm-late-start",
+      "f.storm-dry-wood",
+      "f.storm-boy-light"
+    ]
+  },
+  "start": "open",
+  "nodes": [
+    {
+      "id": "open",
+      "speaker": "player",
+      "textKey": "dlg.storm-night.open",
+      "next": "dark",
+      "branches": [
+        {
+          "when": {
+            "flag": "f.storm-warned"
+          },
+          "next": "warned"
+        }
+      ]
+    },
+    {
+      "id": "warned",
+      "speaker": "player",
+      "textKey": "dlg.storm-night.warned",
+      "next": "ready"
+    },
+    {
+      "id": "ready",
+      "speaker": "player",
+      "textKey": "dlg.storm-night.ready",
+      "next": "q1"
+    },
+    {
+      "id": "dark",
+      "speaker": "player",
+      "textKey": "dlg.storm-night.dark",
+      "next": "q1"
+    },
+    {
+      "id": "q1",
+      "speaker": "player",
+      "textKey": "dlg.storm-night.q1",
+      "choices": [
+        {
+          "textKey": "dlg.storm-night.q1.c1",
+          "next": "q1a"
+        },
+        {
+          "textKey": "dlg.storm-night.q1.c2",
+          "next": "q1b"
+        }
+      ]
+    },
+    {
+      "id": "q1a",
+      "speaker": "player",
+      "textKey": "dlg.storm-night.q1a",
+      "next": "fire"
+    },
+    {
+      "id": "q1b",
+      "speaker": "player",
+      "textKey": "dlg.storm-night.q1b",
+      "next": "fire"
+    },
+    {
+      "id": "fire",
+      "speaker": "player",
+      "textKey": "dlg.storm-night.fire",
+      "next": "fire-wet",
+      "branches": [
+        {
+          "when": {
+            "flag": "f.storm-dry-wood"
+          },
+          "next": "fire-dry"
+        }
+      ]
+    },
+    {
+      "id": "fire-dry",
+      "speaker": "player",
+      "textKey": "dlg.storm-night.fire-dry",
+      "next": "q2"
+    },
+    {
+      "id": "fire-wet",
+      "speaker": "player",
+      "textKey": "dlg.storm-night.fire-wet",
+      "next": "q2"
+    },
+    {
+      "id": "q2",
+      "speaker": "player",
+      "textKey": "dlg.storm-night.q2",
+      "choices": [
+        {
+          "textKey": "dlg.storm-night.q2.c1",
+          "next": "supper"
+        },
+        {
+          "textKey": "dlg.storm-night.q2.c2",
+          "next": "supper"
+        }
+      ]
+    },
+    {
+      "id": "supper",
+      "speaker": "player",
+      "textKey": "dlg.storm-night.supper",
+      "next": "supper-plain",
+      "branches": [
+        {
+          "when": {
+            "flag": "f.storm-fish-supper"
+          },
+          "next": "supper-fish"
+        }
+      ]
+    },
+    {
+      "id": "supper-fish",
+      "speaker": "player",
+      "textKey": "dlg.storm-night.supper-fish",
+      "next": "q3"
+    },
+    {
+      "id": "supper-plain",
+      "speaker": "player",
+      "textKey": "dlg.storm-night.supper-plain",
+      "next": "q3"
+    },
+    {
+      "id": "q3",
+      "speaker": "player",
+      "textKey": "dlg.storm-night.q3",
+      "choices": [
+        {
+          "textKey": "dlg.storm-night.q3.c1",
+          "next": "light"
+        },
+        {
+          "textKey": "dlg.storm-night.q3.c2",
+          "next": "stay"
+        }
+      ]
+    },
+    {
+      "id": "stay",
+      "speaker": "player",
+      "textKey": "dlg.storm-night.stay",
+      "next": "light"
+    },
+    {
+      "id": "light",
+      "speaker": "player",
+      "textKey": "dlg.storm-night.light",
+      "next": "light-none",
+      "branches": [
+        {
+          "when": {
+            "flag": "f.storm-boy-light"
+          },
+          "next": "light-boy"
+        }
+      ]
+    },
+    {
+      "id": "light-boy",
+      "speaker": "player",
+      "textKey": "dlg.storm-night.light-boy",
+      "next": "q4"
+    },
+    {
+      "id": "light-none",
+      "speaker": "player",
+      "textKey": "dlg.storm-night.light-none",
+      "next": "q4"
+    },
+    {
+      "id": "q4",
+      "speaker": "player",
+      "textKey": "dlg.storm-night.q4",
+      "choices": [
+        {
+          "textKey": "dlg.storm-night.q4.c1",
+          "next": "end-check"
+        },
+        {
+          "textKey": "dlg.storm-night.q4.c2",
+          "next": "end-sit"
+        }
+      ]
+    },
+    {
+      "id": "end-check",
+      "speaker": "player",
+      "textKey": "dlg.storm-night.end-check",
+      "next": "close"
+    },
+    {
+      "id": "end-sit",
+      "speaker": "player",
+      "textKey": "dlg.storm-night.end-sit",
+      "next": "close"
+    },
+    {
+      "id": "close",
+      "speaker": "player",
+      "textKey": "dlg.storm-night.close",
+      "next": "close-end",
+      "branches": [
+        {
+          "when": {
+            "flag": "f.storm-late-start"
+          },
+          "next": "close-late"
+        },
+        {
+          "when": {
+            "flag": "f.storm-radio-weak"
+          },
+          "next": "close-radio"
+        }
+      ]
+    },
+    {
+      "id": "close-late",
+      "speaker": "player",
+      "textKey": "dlg.storm-night.close-late",
+      "next": "close-end"
+    },
+    {
+      "id": "close-radio",
+      "speaker": "player",
+      "textKey": "dlg.storm-night.close-radio",
+      "next": "close-end"
+    },
+    {
+      "id": "close-end",
+      "speaker": "player",
+      "textKey": "dlg.storm-night.close-end",
+      "end": true
+    }
+  ]
+}

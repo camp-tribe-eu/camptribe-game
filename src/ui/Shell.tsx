@@ -24,6 +24,8 @@ import { bannersOpen } from './banner-queue';
 import { Intro } from './Intro';
 import { ColdOpen } from './ColdOpen';
 import { EpisodeCard } from './EpisodeCard';
+import { MinigameHost } from './MinigameHost';
+import { missionSurface } from './MissionSurfaces';
 import { episodeStep } from './episode-beats';
 import { trapTab } from './focus-trap';
 import { remindArmed, remindDue } from './remind';
@@ -176,6 +178,10 @@ export function Shell({ port, langOverride, credits, build, holdToast = false, h
   }, [toastLive]);
   const lang: AnyLang = langOverride ?? settings.language;
   const t = (key: Key): string => tr(lang, key);
+  // GAME-312: міні-гра місії сусіда на місці — оболонка каркаса GAME-308 поверх світу (світ іде далі: рутини цокають, поки ти в пригоді).
+  const [mission, setMission] = useState(() => port.mission?.session() ?? null);
+  useEffect(() => port.mission?.subscribe(() => setMission(port.mission?.session() ?? null)), [port]);
+  const MissionSurface = mission ? missionSurface(mission.view().id) : null;
 
   // Перша дія (GAME-83): відкрито ☰ чи паузу — підказка «Відкрий ☰» більше не потрібна, і не повернеться після
   // перезавантаження. Зберігаємо в налаштуваннях (не в сейві): схема сейву не змінюється.
@@ -496,6 +502,7 @@ export function Shell({ port, langOverride, credits, build, holdToast = false, h
       {storyOpen && <StoryPanel offer={offer} lang={lang} t={t} act={storyAct} close={() => story(false)} portrait={portrait} settings={() => { setStoryOpen(false); toggle(true); }} footer={offer.stage !== 'create' && <><button type="button" class="ui-btn" data-ui="backpack-open-story" onClick={() => openBackpack(true)}>{t('ui.backpack')}</button><button type="button" class="ui-btn" data-ui="atlas-open" onClick={openAtlas}>{`${t('ui.atlas')}: ${offer.atlas.count}/${offer.atlas.total}`}</button></>}>{staleNotice}</StoryPanel>}
       {backpackOpen && <BackpackPanel backpack={offer.backpack} lang={lang} t={t} sell={storyAct} close={closeBackpack} />}
       {atlasOpen && <AtlasPanel atlas={offer.atlas} lang={lang} t={t} close={closeAtlas} />}
+      {mission && MissionSurface && <MinigameHost session={mission} t={t} Surface={MissionSurface} />}
       {intro && cold && <ColdOpen paint={port.coldOpenScene} t={t} onDone={() => setCold(false)} />}
       {episode && !intro && port.episodeFlags && <EpisodeCard flags={port.episodeFlags()} chapter={offer.chapterEnd ?? 1} t={t} onDone={() => { setEpisode(false); focusStage(); if (teaserSleep.current) { teaserSleep.current = false; summaryEnd(); } /* GAME-264: після тизера — збережена гра й меню паузи, а не мертва мапа */ }} />}
       {intro && !cold && <Intro soloHero={port.introSolo?.() === true} classic={port.introClassic?.() === true} shot={port.introShot} offer={offer} lang={lang} t={t} act={storyAct} portrait={portrait} room={port.introRoom} beat={port.introBeat} onDone={endIntro} />}

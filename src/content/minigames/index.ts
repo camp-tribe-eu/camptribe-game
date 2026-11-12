@@ -3,7 +3,8 @@
 import { minigameDefsOf, type AnyMinigame } from '../../core/minigame';
 import { DRIVE } from './drive';
 import { REFERENCE } from './reference';
+import { MISSION_MINIGAMES } from './missions';
 
-export const MINIGAMES: readonly AnyMinigame[] = [REFERENCE, DRIVE];
+export const MINIGAMES: readonly AnyMinigame[] = [REFERENCE, DRIVE, ...MISSION_MINIGAMES];
 export const MINIGAME_DEFS = minigameDefsOf(MINIGAMES);
 export const minigameById = (id: string): AnyMinigame | undefined => MINIGAMES.find((m) => m.id === id);

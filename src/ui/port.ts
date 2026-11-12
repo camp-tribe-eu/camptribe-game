@@ -3,6 +3,7 @@
 import type { SkillUp } from './overlay-order';
 import type { StoryOffer } from './story-types';
 import type { MiniFrame } from '../content/agenda';
+import type { MinigameSessionPort } from './minigame-types';
 import type { ShotSpec } from '../content/intro-scene';
 
 /** GAME-181: що щойно нараховано. `title` — індекс нового звання (0…9), якщо воно з'явилось саме зараз; інакше null. */
@@ -68,6 +69,8 @@ export interface UiPort {
   hintShown(): boolean;
   /** GAME-243: мінімапа — останній знімок і підписка на кадри сцени (щокадру; без таймерів). */
   minimap: { frame(): MiniFrame | null; subscribe(listener: (f: MiniFrame) => void): () => void };
+  /** GAME-312: міні-гра місії сусіда на місці (null — зараз немає); підписка — коли вона відкрилась чи закрилась. Немає — місій без міні-ігор. */
+  mission?: { session(): MinigameSessionPort | null; subscribe(listener: () => void): () => void };
   /** GAME-192: режим підказок з налаштувань. */
   setHintMode(mode: 'stuck' | 'always'): void;
   /** GAME-278: явні цілі масштаби, дозволені для поля зараз (без «Авто»), і масштаб, що діє. */

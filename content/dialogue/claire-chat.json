@@ -1,18 +1,558 @@
 {
   "id": "dlg.claire-chat",
   "npcId": "npc.claire",
-  "start": "hello",
+  "start": "gate",
   "nodes": [
     {
-      "id": "hello", "speaker": "npc", "textKey": "dlg.claire-chat.hello",
-      "choices": [
-        { "textKey": "dlg.claire-chat.hello.c1", "next": "a" },
-        { "textKey": "dlg.claire-chat.hello.c2", "next": "b" },
-        { "textKey": "dlg.claire-chat.hello.c3", "next": "bye" }
+      "id": "gate",
+      "speaker": "npc",
+      "textKey": "dlg.claire-chat.gate",
+      "next": "hello",
+      "branches": [
+        {
+          "when": {
+            "all": [
+              {
+                "flag": "f.mis-lantern-go2"
+              },
+              {
+                "minigame": "mg.tarp-tie"
+              },
+              {
+                "notFlag": "f.mis-lantern-done"
+              }
+            ]
+          },
+          "next": "l-wood1"
+        },
+        {
+          "when": {
+            "all": [
+              {
+                "flag": "f.mis-lantern-go2"
+              },
+              {
+                "notFlag": "f.mis-lantern-done"
+              }
+            ]
+          },
+          "next": "l-wait2"
+        },
+        {
+          "when": {
+            "all": [
+              {
+                "flag": "f.mis-lantern-go"
+              },
+              {
+                "minigame": "mg.lantern-crank"
+              },
+              {
+                "notFlag": "f.mis-lantern-done"
+              }
+            ]
+          },
+          "next": "l-story1"
+        },
+        {
+          "when": {
+            "all": [
+              {
+                "flag": "f.mis-lantern-go"
+              },
+              {
+                "notFlag": "f.mis-lantern-done"
+              }
+            ]
+          },
+          "next": "l-wait"
+        },
+        {
+          "when": {
+            "all": [
+              {
+                "flag": "f.mis-lantern-taken"
+              },
+              {
+                "notFlag": "f.mis-lantern-done"
+              }
+            ]
+          },
+          "next": "l-hub"
+        }
       ]
     },
-    { "id": "a", "speaker": "npc", "textKey": "dlg.claire-chat.a", "end": true },
-    { "id": "b", "speaker": "npc", "textKey": "dlg.claire-chat.b", "end": true },
-    { "id": "bye", "speaker": "npc", "textKey": "dlg.claire-chat.bye", "end": true }
+    {
+      "id": "hello",
+      "speaker": "npc",
+      "textKey": "dlg.claire-chat.hello",
+      "choices": [
+        {
+          "textKey": "dlg.claire-chat.hello.c1",
+          "next": "a"
+        },
+        {
+          "textKey": "dlg.claire-chat.hello.c2",
+          "next": "b"
+        },
+        {
+          "textKey": "dlg.claire-chat.hello.c3",
+          "next": "bye"
+        },
+        {
+          "textKey": "dlg.claire-chat.hello.c4",
+          "next": "l-offer",
+          "when": {
+            "all": [
+              {
+                "notFlag": "f.mis-lantern-taken"
+              },
+              {
+                "notFlag": "f.mis-lantern-done"
+              },
+              {
+                "any": [
+                  {
+                    "flag": "f.mis-ring-done"
+                  },
+                  {
+                    "notFlag": "f.mis-ring-taken"
+                  }
+                ]
+              },
+              {
+                "any": [
+                  {
+                    "flag": "f.mis-aerial-done"
+                  },
+                  {
+                    "notFlag": "f.mis-aerial-taken"
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "textKey": "dlg.claire-chat.hello.c5",
+          "next": "l-device",
+          "when": {
+            "flag": "f.camp-rope"
+          }
+        }
+      ]
+    },
+    {
+      "id": "a",
+      "speaker": "npc",
+      "textKey": "dlg.claire-chat.a",
+      "end": true
+    },
+    {
+      "id": "b",
+      "speaker": "npc",
+      "textKey": "dlg.claire-chat.b",
+      "end": true
+    },
+    {
+      "id": "bye",
+      "speaker": "npc",
+      "textKey": "dlg.claire-chat.bye",
+      "end": true
+    },
+    {
+      "id": "l-offer",
+      "speaker": "npc",
+      "textKey": "dlg.claire-chat.l-offer",
+      "choices": [
+        {
+          "textKey": "dlg.claire-chat.l-offer.c1",
+          "next": "l-taken",
+          "effects": [
+            {
+              "setFlag": "f.mis-lantern-taken"
+            }
+          ]
+        },
+        {
+          "textKey": "dlg.claire-chat.l-offer.c2",
+          "next": "l-later"
+        }
+      ]
+    },
+    {
+      "id": "l-taken",
+      "speaker": "npc",
+      "textKey": "dlg.claire-chat.l-taken",
+      "next": "l-hub"
+    },
+    {
+      "id": "l-hub",
+      "speaker": "npc",
+      "textKey": "dlg.claire-chat.l-hub",
+      "choices": [
+        {
+          "textKey": "dlg.claire-chat.l-hub.c1",
+          "next": "l-crank",
+          "when": {
+            "notFlag": "f.mis-lantern-crank"
+          },
+          "effects": [
+            {
+              "setFlag": "f.mis-lantern-crank"
+            }
+          ]
+        },
+        {
+          "textKey": "dlg.claire-chat.l-hub.c2",
+          "next": "l-watch",
+          "when": {
+            "notFlag": "f.mis-lantern-watch"
+          },
+          "effects": [
+            {
+              "setFlag": "f.mis-lantern-watch"
+            }
+          ]
+        },
+        {
+          "textKey": "dlg.claire-chat.l-hub.c3",
+          "next": "l-sun",
+          "when": {
+            "notFlag": "f.mis-lantern-sun"
+          },
+          "effects": [
+            {
+              "setFlag": "f.mis-lantern-sun"
+            }
+          ]
+        },
+        {
+          "textKey": "dlg.claire-chat.l-hub.c4",
+          "next": "l-check",
+          "when": {
+            "flag": "f.mis-lantern-sun"
+          }
+        },
+        {
+          "textKey": "dlg.claire-chat.l-hub.c5",
+          "next": "l-choice",
+          "when": {
+            "all": [
+              {
+                "flag": "f.mis-lantern-crank"
+              },
+              {
+                "flag": "f.mis-lantern-watch"
+              }
+            ]
+          }
+        },
+        {
+          "textKey": "dlg.claire-chat.l-hub.c6",
+          "next": "l-pause"
+        }
+      ]
+    },
+    {
+      "id": "l-crank",
+      "speaker": "npc",
+      "textKey": "dlg.claire-chat.l-crank",
+      "next": "l-hub"
+    },
+    {
+      "id": "l-watch",
+      "speaker": "npc",
+      "textKey": "dlg.claire-chat.l-watch",
+      "next": "l-hub"
+    },
+    {
+      "id": "l-sun",
+      "speaker": "npc",
+      "textKey": "dlg.claire-chat.l-sun",
+      "next": "l-hub"
+    },
+    {
+      "id": "l-check",
+      "speaker": "npc",
+      "textKey": "dlg.claire-chat.l-check",
+      "next": "l-hub"
+    },
+    {
+      "id": "l-choice",
+      "speaker": "npc",
+      "textKey": "dlg.claire-chat.l-choice",
+      "choices": [
+        {
+          "textKey": "dlg.claire-chat.l-choice.c1",
+          "next": "l-fast"
+        },
+        {
+          "textKey": "dlg.claire-chat.l-choice.c2",
+          "next": "l-teach",
+          "effects": [
+            {
+              "setFlag": "f.mis-lantern-taught"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "l-fast",
+      "speaker": "npc",
+      "textKey": "dlg.claire-chat.l-fast",
+      "next": "l-go"
+    },
+    {
+      "id": "l-teach",
+      "speaker": "npc",
+      "textKey": "dlg.claire-chat.l-teach",
+      "next": "l-teach2"
+    },
+    {
+      "id": "l-teach2",
+      "speaker": "npc",
+      "textKey": "dlg.claire-chat.l-teach2",
+      "next": "l-go"
+    },
+    {
+      "id": "l-mode",
+      "speaker": "npc",
+      "textKey": "dlg.claire-chat.l-mode",
+      "choices": [
+        {
+          "textKey": "dlg.claire-chat.l-mode.c1",
+          "next": "l-set",
+          "effects": [
+            {
+              "setFlag": "f.mis-lantern-bright"
+            }
+          ]
+        },
+        {
+          "textKey": "dlg.claire-chat.l-mode.c2",
+          "next": "l-set"
+        }
+      ]
+    },
+    {
+      "id": "l-set",
+      "speaker": "npc",
+      "textKey": "dlg.claire-chat.l-set",
+      "next": "l-dim",
+      "branches": [
+        {
+          "when": {
+            "flag": "f.mis-lantern-bright"
+          },
+          "next": "l-bright"
+        }
+      ]
+    },
+    {
+      "id": "l-dim",
+      "speaker": "npc",
+      "textKey": "dlg.claire-chat.l-dim",
+      "next": "l-done"
+    },
+    {
+      "id": "l-bright",
+      "speaker": "npc",
+      "textKey": "dlg.claire-chat.l-bright",
+      "next": "l-done"
+    },
+    {
+      "id": "l-done",
+      "speaker": "npc",
+      "textKey": "dlg.claire-chat.l-done",
+      "choices": [
+        {
+          "textKey": "dlg.claire-chat.l-done.c1",
+          "next": "l-payoff",
+          "effects": [
+            {
+              "setFlag": "f.camp-rope"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "l-payoff",
+      "speaker": "npc",
+      "textKey": "dlg.claire-chat.l-payoff",
+      "next": "l-payoff-wood",
+      "branches": [
+        {
+          "when": {
+            "flag": "f.mis-lantern-taught"
+          },
+          "next": "l-payoff-taught"
+        }
+      ]
+    },
+    {
+      "id": "l-payoff-taught",
+      "speaker": "npc",
+      "textKey": "dlg.claire-chat.l-payoff-taught",
+      "next": "l-payoff-wood"
+    },
+    {
+      "id": "l-payoff-wood",
+      "speaker": "npc",
+      "textKey": "dlg.claire-chat.l-payoff-wood",
+      "next": "l-payoff-end"
+    },
+    {
+      "id": "l-payoff-end",
+      "speaker": "npc",
+      "textKey": "dlg.claire-chat.l-payoff-end",
+      "choices": [
+        {
+          "textKey": "dlg.claire-chat.l-payoff-end.c1",
+          "next": "l-go2-end",
+          "effects": [
+            {
+              "setFlag": "f.mis-lantern-go2"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "l-later",
+      "speaker": "npc",
+      "textKey": "dlg.claire-chat.l-later",
+      "end": true
+    },
+    {
+      "id": "l-pause",
+      "speaker": "npc",
+      "textKey": "dlg.claire-chat.l-pause",
+      "end": true
+    },
+    {
+      "id": "l-wait",
+      "speaker": "npc",
+      "textKey": "dlg.claire-chat.l-wait",
+      "end": true
+    },
+    {
+      "id": "l-go",
+      "speaker": "npc",
+      "textKey": "dlg.claire-chat.l-go",
+      "choices": [
+        {
+          "textKey": "dlg.claire-chat.l-go.c1",
+          "next": "l-go-end",
+          "effects": [
+            {
+              "setFlag": "f.mis-lantern-go"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "l-go-end",
+      "speaker": "npc",
+      "textKey": "dlg.claire-chat.l-go-end",
+      "end": true
+    },
+    {
+      "id": "l-device",
+      "speaker": "npc",
+      "textKey": "dlg.claire-chat.l-device",
+      "end": true
+    },
+    {
+      "id": "l-go2-end",
+      "speaker": "npc",
+      "textKey": "dlg.claire-chat.l-go2-end",
+      "end": true
+    },
+    {
+      "id": "l-wait2",
+      "speaker": "npc",
+      "textKey": "dlg.claire-chat.l-wait2",
+      "end": true
+    },
+    {
+      "id": "l-setup",
+      "speaker": "npc",
+      "textKey": "dlg.claire-chat.l-setup",
+      "choices": [
+        {
+          "textKey": "dlg.claire-chat.l-setup.c1",
+          "next": "l-final",
+          "effects": [
+            {
+              "setFlag": "f.mis-lantern-done"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "l-final",
+      "speaker": "npc",
+      "textKey": "dlg.claire-chat.l-final",
+      "end": true
+    },
+    {
+      "id": "l-story1",
+      "speaker": "npc",
+      "textKey": "dlg.claire-chat.l-story1",
+      "next": "l-story2"
+    },
+    {
+      "id": "l-story2",
+      "speaker": "npc",
+      "textKey": "dlg.claire-chat.l-story2",
+      "choices": [
+        {
+          "textKey": "dlg.claire-chat.l-story2.c1",
+          "next": "l-story3"
+        },
+        {
+          "textKey": "dlg.claire-chat.l-story2.c2",
+          "next": "l-mode"
+        }
+      ]
+    },
+    {
+      "id": "l-story3",
+      "speaker": "npc",
+      "textKey": "dlg.claire-chat.l-story3",
+      "next": "l-mode"
+    },
+    {
+      "id": "l-wood1",
+      "speaker": "npc",
+      "textKey": "dlg.claire-chat.l-wood1",
+      "next": "l-wood2"
+    },
+    {
+      "id": "l-wood2",
+      "speaker": "npc",
+      "textKey": "dlg.claire-chat.l-wood2",
+      "choices": [
+        {
+          "textKey": "dlg.claire-chat.l-wood2.c1",
+          "next": "l-wood3"
+        },
+        {
+          "textKey": "dlg.claire-chat.l-wood2.c2",
+          "next": "l-setup"
+        }
+      ]
+    },
+    {
+      "id": "l-wood3",
+      "speaker": "npc",
+      "textKey": "dlg.claire-chat.l-wood3",
+      "next": "l-setup"
+    }
   ]
 }
