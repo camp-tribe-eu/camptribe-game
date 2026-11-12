@@ -7,6 +7,7 @@
 import type { Outcome } from './minigame';
 import { ROUTINE_IDS, type RoutineId } from './camp-day';
 import type { Weather } from '../core/weather';
+import { nightAt, type NightWeather, type PitchId } from './arrival-pitch';
 
 export type Severity = 'good' | 'plain' | 'rough';
 export interface NightBeat {
@@ -32,6 +33,10 @@ export interface NightFacts {
   /** Скільки раундів табір стояв порожній (camp-day.emptyRounds). */
   readonly emptyRounds: number;
   readonly weather: Weather;
+  /** GAME-310: ділянка, яку взяли, погода ночі й прапорці підготовки. Без `pitch` ніч читає лише рутини (як було). */
+  readonly pitch?: PitchId;
+  readonly nightWeather?: NightWeather;
+  readonly prep?: readonly string[];
 }
 
 export const NIGHT_FACTS: NightFacts = {
@@ -102,6 +107,13 @@ export function nightOf(f: NightFacts): { readonly beats: readonly NightBeat[]; 
   if (f.emptyRounds > 0) beats.push({ routine: 'camp', id: 'night.camp.crows', severity: 'plain' });
   // Буря сама: у дощ вітер б'є дужче, і це тло для всього вище.
   beats.push({ routine: 'camp', id: f.weather === 'rain' ? 'night.storm.wet' : 'night.storm.wind', severity: 'plain' });
+
+  // GAME-310: ту саму ніч далі веде модель ділянки (arrival-pitch.nightAt) — вона не дублюється, а доповнює рутини.
+  if (f.pitch !== undefined) {
+    for (const e of nightAt(f.pitch, f.nightWeather ?? 'storm', f.prep ?? [])) {
+      beats.push({ routine: 'camp', id: e.textKey, severity: e.bite === 'bite' ? 'rough' : 'plain' });
+    }
+  }
 
   return { beats, blocked: false, morning: true };
 }

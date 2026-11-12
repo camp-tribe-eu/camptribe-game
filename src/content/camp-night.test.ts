@@ -101,3 +101,17 @@ describe('ніч ніколи не блокує', () => {
     expect(nightKeys(scrappy)).not.toEqual(nightKeys(ALL_DONE));
   });
 });
+
+// GAME-310 + GAME-311: ніч ділянки доповнює ніч рутин тією самою моделлю (nightAt), а не дублює її.
+describe('нічні наслідки ділянки (GAME-310)', () => {
+  it('ділянка без підготовки додає слід, підготовка його знімає, а без ділянки ніч як була', async () => {
+    const { nightOf: n, NIGHT_FACTS: base } = await import('./camp-night');
+    const plain = n(base).beats.map((b) => b.id);
+    const water = n({ ...base, pitch: 'water', nightWeather: 'storm' }).beats.map((b) => b.id);
+    expect(water).toContain('night.water.flood');
+    expect(water.filter((i) => !plain.includes(i)).length).toBeGreaterThan(0);
+    const prepared = n({ ...base, pitch: 'water', nightWeather: 'storm', prep: ['f.prep-high-ground'] }).beats.map((b) => b.id);
+    expect(prepared).not.toContain('night.water.flood');
+    expect(n({ ...base, pitch: 'water', nightWeather: 'storm' }).blocked).toBe(false);
+  });
+});
