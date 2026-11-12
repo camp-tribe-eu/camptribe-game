@@ -49,7 +49,9 @@ function play(defs: CoreDefs, o: Setup): { path: string[]; state: GameState } {
   return { path, state: s };
 }
 
-const common = (pick: 0 | 1) => ['l1', 'l2', 'l3', 'l4', 'l5', 'l6-plain', 'l7', ...(pick === 0 ? ['l8', 'l9', 'l10', 'l11', 'l12-plain'] : ['b1', 'b2', 'b3'])];
+/** GAME-307: однакова для всіх гілок ніч бурі після вогнища; без прапорців бурі йдуть «порожні» варіанти (цей тест їх не міняє). */
+const NIGHT_TAIL = ['night-open', 'night-pitch', 'night-pitch-roof', 'night-wind', 'night-tarp', 'night-tarp-loose', 'night-check', 'night-wood', 'night-wood-wet', 'night-eat', 'night-table', 'night-table-none', 'night-morning', 'night-wrap', 'night-close'];
+const common = (pick: 0 | 1) => ['l1', 'l2', 'l3', 'l4', 'l5', 'l6-plain', 'l7', ...(pick === 0 ? ['l8', 'l9', 'l10', 'l11', 'l12-plain'] : ['b1', 'b2', 'b3']), ...NIGHT_TAIL];
 /** Оракул картки, незалежний від графа. */
 function expected(o: Setup): string[] {
   const open = o.fire ? ['open', 'fire'] : ['open', 'lantern', 'lantern-george'];
@@ -83,7 +85,8 @@ describe('GAME-195 · розвилка рибки: два вечори, обид
     const { path, state } = play(GAME_DEFS, o);
     expect(path).toEqual(expected(o));
     expect(state.dialogue).toBeNull();                        // нормальний кінець вечора
-    expect(path.at(-1)).toBe(o.pick === 0 ? 'l12-plain' : 'b3');
+    expect(path.at(-1)).toBe('night-close');                      // GAME-307: обидві гілки сходяться в ніч бурі
+    expect(path.at(-1 - NIGHT_TAIL.length)).toBe(o.pick === 0 ? 'l12-plain' : 'b3');
   });
 
   it('вибір пишеться фактом ядра й лишається в журналі (Memory + StartScene); «взяв» сильніший за «відпустив»', () => {
@@ -111,7 +114,7 @@ describe('GAME-195 · розвилка рибки: два вечори, обид
   it('обидві гілки мають репліки uk і en, а кожен вузол сцени показано хоч раз', () => {
     const raw = CONTENT.dialogues.find((d) => d.id === FIREPLACE_SCENE) as RawContent['dialogues'][number];
     const seen = new Set(COMBOS.flatMap((o) => play(GAME_DEFS, o).path));
-    expect([...seen].sort()).toEqual(raw.nodes.map((n) => n.id).filter((id) => !id.endsWith('-photo')).sort());   // фото-вузли — fireplace.test
+    expect([...seen].sort()).toEqual(raw.nodes.map((n) => n.id).filter((id) => !id.endsWith('-photo') && (!id.startsWith('night-') || NIGHT_TAIL.includes(id))).sort());   // фото-вузли — fireplace.test; прапорцеві варіанти ночі бурі — у тестах GAME-307
     for (const k of ['fk1', 'fk1c', 'fkl', 'fk2', 'fk3', 'fr1', 'fr2', 'fr3', 'fr3.c1', 'fr3.c2', 'fr4', 'fr5']) { expect(UK[`${FIREPLACE_SCENE}.${k}`], k).toBeTruthy(); expect(EN[`${FIREPLACE_SCENE}.${k}`], k).toBeTruthy(); }
     for (const sc of [FISH_KEEP_SCENE, FISH_RELEASE_SCENE]) { expect(UK[`${sc}.n`]).toBeTruthy(); expect(EN[`${sc}.n`]).toBeTruthy(); }
     for (const f of Object.values(FISH_FACTS)) expect((flagsJson as { id: string; type: string }[]).find((r) => r.id === f)?.type, f).toBe('bool');
