@@ -17,6 +17,16 @@ export const isOutcome = (o: unknown): o is Outcome => typeof o === 'string' && 
 export const FPS = 60;
 export const MIN_PLAY_FRAMES = 30 * FPS;
 export const MAX_PLAY_FRAMES = 90 * FPS;
+/**
+ * GAME-309 · «подорож» — окремий вид міні-гри з довшою межею: дорога має відчуватись мандрівкою, а не
+ * спринтом (рішення власника: 2–3 хв живої гри). Звичайні міні-ігри лишаються в 30–90 с; подорож — 90–180 с.
+ */
+export type MinigameKind = 'game' | 'journey';
+export const MIN_JOURNEY_FRAMES = 90 * FPS;
+export const MAX_JOURNEY_FRAMES = 180 * FPS;
+/** Дозволені межі кадрів за видом гри. */
+export const limitBounds = (kind: MinigameKind | undefined): { readonly min: number; readonly max: number } =>
+  kind === 'journey' ? { min: MIN_JOURNEY_FRAMES, max: MAX_JOURNEY_FRAMES } : { min: MIN_PLAY_FRAMES, max: MAX_PLAY_FRAMES };
 /** Скільки `scrappy` поспіль — і з'являється допомога. */
 export const HELP_AFTER = 2;
 /** Стеля лічильників у сейві: стан і сейв не ростуть без меж. */
@@ -52,8 +62,10 @@ export interface MinigameDef<S = unknown, V = unknown> {
   readonly titleKey: string;
   readonly introKey: string;
   readonly hintKey: string;
-  /** Межа гри в кадрах при звичайній складності: 30–90 с (1800…5400 кадрів). Допомога розтягує її ×timeScale. */
+  /** Межа гри в кадрах при звичайній складності: 30–90 с (1800…5400 кадрів), для `journey` — 90–180 с (5400…10800). Допомога розтягує її ×timeScale. */
   readonly limitFrames: number;
+  /** Вид гри: звичайна (за замовчуванням) чи подорож із довшою межею. */
+  readonly kind?: MinigameKind;
   /** Усі три результати — обов'язково (перевіряє checkMinigame). */
   readonly outcomes: Readonly<Record<Outcome, OutcomeDecl>>;
   readonly init: (d: Difficulty, seed: number) => S;
@@ -137,7 +149,9 @@ export function checkMinigame(def: AnyMinigame): Finding[] {
     if (seen.has(c)) out.push({ code: 'CONSEQUENCE', detail: `${def.id}: consequence ${c} is used twice` });
     seen.add(c);
   }
-  if (!Number.isInteger(def.limitFrames) || def.limitFrames < MIN_PLAY_FRAMES || def.limitFrames > MAX_PLAY_FRAMES) out.push({ code: 'LIMIT', detail: `${def.id}: ${def.limitFrames} frames outside ${MIN_PLAY_FRAMES}..${MAX_PLAY_FRAMES}` });
+  const b = limitBounds(def.kind);
+  if (def.kind !== undefined && def.kind !== 'game' && def.kind !== 'journey') out.push({ code: 'LIMIT', detail: `${def.id}: unknown kind ${String(def.kind)}` });
+  if (!Number.isInteger(def.limitFrames) || def.limitFrames < b.min || def.limitFrames > b.max) out.push({ code: 'LIMIT', detail: `${def.id}: ${def.limitFrames} frames outside ${b.min}..${b.max} (${def.kind ?? 'game'})` });
   for (const k of ['titleKey', 'introKey', 'hintKey'] as const) if (typeof def[k] !== 'string' || def[k] === '') out.push({ code: 'TEXT', detail: `${def.id}.${k}` });
   return out;
 }

@@ -158,6 +158,35 @@
       .mg-ref-pip[data-score="1"] { background: #4a7a4a; }
       .mg-ref-pip[data-score="2"] { background: #ffd54a; }
       .mg-ref-stop { min-height: 72px; width: 100%; font-size: 1.25rem; }
+      /* GAME-309 · дорога: три смуги згори, смуга прогресу з рецепцією, керування одним пальцем. Власний вигляд (свої кольори, смуги й знаки). */
+      .mg-drive { flex: 1 1 0; min-height: 0; width: 100%; max-width: 760px; display: flex; flex-direction: column; gap: 6px; text-align: left; }
+      .mg-drive-strip { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; font-size: 0.75rem; }
+      .mg-drive-eta { font-weight: bold; }
+      .mg-drive-eta[data-ok="no"] { color: #e3a06a; }
+      .mg-drive-eta[data-ok="yes"] { color: #9ad29a; }
+      .mg-drive-gauges { display: flex; gap: 10px; }
+      .mg-drive-gauge { flex: 1 1 0; height: 10px; border-radius: 5px; background: #2a2f36; overflow: hidden; }
+      .mg-drive-gauge > i { display: block; height: 100%; }
+      .mg-drive-fuel > i { background: #d9b44a; }
+      .mg-drive-comfort > i { background: #6fb2a8; }
+      .mg-drive-comfort[data-low="yes"] > i { background: #d96a4a; }
+      .mg-drive-road { position: relative; flex: 1 1 0; min-height: 120px; border-radius: 8px; background: #4b4f45; overflow: hidden; touch-action: none; }
+      .mg-drive-lane { position: absolute; top: 0; bottom: 0; width: 33.34%; background: #4b4f45; }
+      .mg-drive-lane[data-mid="yes"] { background: #50554a; }
+      .mg-drive-lane[data-free="yes"] { background: #5c6b4a; }
+      .mg-drive-divider { position: absolute; top: 0; bottom: 0; width: 3px; background: #d9d4c5; opacity: 0.55; }
+      .mg-drive-hazard { position: absolute; width: 23%; min-height: 10px; border: 2px solid #2b2f26; border-radius: 4px; box-sizing: border-box; }
+      .mg-drive-hazard[data-kind="lorry"] { background: #8d7a4a; }
+      .mg-drive-hazard[data-kind="tractor"] { background: #5a7a3a; }
+      .mg-drive-hazard[data-kind="roadworks"] { background: #c98a1e; }
+      .mg-drive-hazard[data-kind="cyclist"] { background: #3a6a8d; }
+      .mg-drive-car { position: absolute; width: 22%; top: 80%; height: 13%; border: 2px solid #f2e3c8; border-radius: 6px; background: #d94f30; }
+      .mg-drive-sign { position: absolute; left: 8px; top: 8px; padding: 4px 6px; border: 2px solid #b03a28; border-radius: 4px; background: #f2e3c8; color: #1b1f23; font-size: 0.7rem; }
+      .mg-drive-wait { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; background: #101418e6; font-size: 0.95rem; }
+      .mg-drive-beat { min-height: 2.6em; margin: 0; padding: 6px 8px; border-radius: 6px; background: #101418; font-size: 0.8rem; line-height: 1.35; }
+      .mg-drive-pad { display: flex; align-items: center; gap: 8px; }
+      .mg-drive-pad .mg-btn { flex: 0 0 auto; }
+      .mg-drive-pad .mg-drive-wide { flex: 1 1 0; }
       .ui-btn-locked { border-style: dashed; color: #cfcbc7; background: #22262b; cursor: not-allowed; }
       #stage canvas { image-rendering: pixelated; }
       /* GAME-91: підпис збірки — у меню паузи (див. Shell.tsx), у діалозі він на своєму тлі. */
