@@ -85,7 +85,7 @@ export function DriveSurface({ view, t, tap, drag }: SurfaceProps) {
       </p>
 
       <div class="mg-drive-pad">
-        <button type="button" class="ui-btn mg-btn" data-ui="mg-drive-left" aria-label={t('ui.drive.laneLeft')} onClick={() => toLane(-1)}>{'◀'}</button>
+        <button type="button" class="ui-btn mg-btn" data-ui="mg-drive-lane-left" aria-label={t('ui.drive.laneLeft')} onClick={() => toLane(-1)}>{'◀'}</button>
         <button type="button" class="ui-btn mg-btn mg-drive-wide" data-ui="mg-drive-pace" data-pace={s.pace} onClick={() => tap(PACE_TAP)}>
           {t(s.pace === 'steady' ? 'ui.drive.paceSteady' : 'ui.drive.paceBrisk')}
         </button>
@@ -94,7 +94,7 @@ export function DriveSurface({ view, t, tap, drag }: SurfaceProps) {
             {t(STOP_KEY[s.stopOffer] ?? 'ui.drive.stopRest')}
           </button>
         )}
-        <button type="button" class="ui-btn mg-btn" data-ui="mg-drive-right" aria-label={t('ui.drive.laneRight')} onClick={() => toLane(1)}>{'▶'}</button>
+        <button type="button" class="ui-btn mg-btn" data-ui="mg-drive-lane-right" aria-label={t('ui.drive.laneRight')} onClick={() => toLane(1)}>{'▶'}</button>
       </div>
     </div>
   );
