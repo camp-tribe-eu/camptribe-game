@@ -1,0 +1,183 @@
+{
+  "id": "dlg.camp-arrival",
+  "scene": {
+    "titleKey": "dlg.camp-arrival.title",
+    "facts": [
+      "f.arrival-early",
+      "f.arrival-ontime",
+      "f.arrival-late"
+    ],
+    "atQuest": "ST-005"
+  },
+  "start": "open",
+  "nodes": [
+    {
+      "id": "open",
+      "speaker": "player",
+      "textKey": "dlg.camp-arrival.open",
+      "next": "greet"
+    },
+    {
+      "id": "greet",
+      "speaker": "player",
+      "textKey": "dlg.camp-arrival.greet",
+      "choices": [
+        {
+          "textKey": "dlg.camp-arrival.greet.c1",
+          "next": "host-catch"
+        },
+        {
+          "textKey": "dlg.camp-arrival.greet.c2",
+          "next": "look"
+        }
+      ]
+    },
+    {
+      "id": "host-catch",
+      "speaker": "player",
+      "textKey": "dlg.camp-arrival.host-catch",
+      "next": "free-any",
+      "branches": [
+        {
+          "when": {
+            "flag": "f.arrival-early"
+          },
+          "next": "free-early"
+        },
+        {
+          "when": {
+            "flag": "f.arrival-ontime"
+          },
+          "next": "free-ontime"
+        },
+        {
+          "when": {
+            "flag": "f.arrival-late"
+          },
+          "next": "free-late"
+        }
+      ]
+    },
+    {
+      "id": "free-any",
+      "speaker": "player",
+      "textKey": "dlg.camp-arrival.free-any",
+      "next": "spot"
+    },
+    {
+      "id": "free-early",
+      "speaker": "player",
+      "textKey": "dlg.camp-arrival.free-early",
+      "next": "spot"
+    },
+    {
+      "id": "free-ontime",
+      "speaker": "player",
+      "textKey": "dlg.camp-arrival.free-ontime",
+      "next": "spot"
+    },
+    {
+      "id": "free-late",
+      "speaker": "player",
+      "textKey": "dlg.camp-arrival.free-late",
+      "next": "spot"
+    },
+    {
+      "id": "look",
+      "speaker": "player",
+      "textKey": "dlg.camp-arrival.look",
+      "next": "look2"
+    },
+    {
+      "id": "look2",
+      "speaker": "player",
+      "textKey": "dlg.camp-arrival.look2",
+      "next": "neighbour"
+    },
+    {
+      "id": "neighbour",
+      "speaker": "player",
+      "textKey": "dlg.camp-arrival.neighbour",
+      "next": "spot"
+    },
+    {
+      "id": "spot",
+      "speaker": "player",
+      "textKey": "dlg.camp-arrival.spot",
+      "choices": [
+        {
+          "textKey": "dlg.camp-arrival.spot.water",
+          "when": {
+            "flag": "f.arrival-early"
+          },
+          "next": "took-water",
+          "effects": [
+            {
+              "setFlag": "f.spot-water"
+            }
+          ]
+        },
+        {
+          "textKey": "dlg.camp-arrival.spot.beeches",
+          "when": {
+            "notFlag": "f.arrival-late"
+          },
+          "next": "took-beeches",
+          "effects": [
+            {
+              "setFlag": "f.spot-beeches"
+            }
+          ]
+        },
+        {
+          "textKey": "dlg.camp-arrival.spot.meadow",
+          "next": "took-meadow",
+          "effects": [
+            {
+              "setFlag": "f.spot-meadow"
+            }
+          ]
+        },
+        {
+          "textKey": "dlg.camp-arrival.spot.reception",
+          "next": "took-reception",
+          "effects": [
+            {
+              "setFlag": "f.spot-reception"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "took-water",
+      "speaker": "player",
+      "textKey": "dlg.camp-arrival.took-water",
+      "next": "took"
+    },
+    {
+      "id": "took-beeches",
+      "speaker": "player",
+      "textKey": "dlg.camp-arrival.took-beeches",
+      "next": "took"
+    },
+    {
+      "id": "took-meadow",
+      "speaker": "player",
+      "textKey": "dlg.camp-arrival.took-meadow",
+      "next": "took"
+    },
+    {
+      "id": "took-reception",
+      "speaker": "player",
+      "textKey": "dlg.camp-arrival.took-reception",
+      "next": "took"
+    },
+    {
+      "id": "took",
+      "speaker": "player",
+      "textKey": "dlg.camp-arrival.took",
+      "end": true
+    }
+  ]
+}

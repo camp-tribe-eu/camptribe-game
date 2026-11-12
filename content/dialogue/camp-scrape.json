@@ -1,0 +1,109 @@
+{
+  "id": "dlg.camp-scrape",
+  "scene": {
+    "titleKey": "dlg.camp-scrape.title",
+    "facts": [
+      "f.drive-in-good",
+      "f.drive-in-ok",
+      "f.drive-in-rough"
+    ],
+    "atQuest": "ST-005"
+  },
+  "start": "open",
+  "nodes": [
+    {
+      "id": "open",
+      "speaker": "player",
+      "textKey": "dlg.camp-scrape.open",
+      "next": "ok",
+      "branches": [
+        {
+          "when": {
+            "flag": "f.drive-in-good"
+          },
+          "next": "good"
+        },
+        {
+          "when": {
+            "flag": "f.drive-in-rough"
+          },
+          "next": "rough"
+        }
+      ]
+    },
+    {
+      "id": "good",
+      "speaker": "player",
+      "textKey": "dlg.camp-scrape.good",
+      "next": "close"
+    },
+    {
+      "id": "ok",
+      "speaker": "player",
+      "textKey": "dlg.camp-scrape.ok",
+      "choices": [
+        {
+          "textKey": "dlg.camp-scrape.ok.c1",
+          "next": "close"
+        },
+        {
+          "textKey": "dlg.camp-scrape.ok.c2",
+          "next": "close"
+        }
+      ]
+    },
+    {
+      "id": "rough",
+      "speaker": "player",
+      "textKey": "dlg.camp-scrape.rough",
+      "choices": [
+        {
+          "textKey": "dlg.camp-scrape.rough.c1",
+          "next": "close"
+        },
+        {
+          "textKey": "dlg.camp-scrape.rough.c2",
+          "next": "close"
+        }
+      ]
+    },
+    {
+      "id": "close",
+      "speaker": "player",
+      "textKey": "dlg.camp-scrape.close",
+      "next": "settle",
+      "branches": [
+        {
+          "when": {
+            "flag": "f.spot-water"
+          },
+          "next": "settle-water"
+        },
+        {
+          "when": {
+            "flag": "f.spot-reception"
+          },
+          "next": "settle-reception"
+        }
+      ]
+    },
+    {
+      "id": "settle",
+      "speaker": "player",
+      "textKey": "dlg.camp-scrape.settle",
+      "end": true
+    },
+    {
+      "id": "settle-water",
+      "speaker": "player",
+      "textKey": "dlg.camp-scrape.settle-water",
+      "end": true
+    },
+    {
+      "id": "settle-reception",
+      "speaker": "player",
+      "textKey": "dlg.camp-scrape.settle-reception",
+      "end": true
+    }
+  ]
+}
