@@ -24,6 +24,16 @@ import { isCh1Quest } from './ch2-scope.test.helpers';
 
 const ZONE = 'q.elise-bike-area';
 const ELISE = 'npc.elise';
+/**
+ * GAME-307 · обсяг цього перебору: він доводить ОДНЕ — що відмова від велозони ніколи не веде в тупик, і що Еліза
+ * згадує лише підтверджене. Удар на обіді (Інгрід) до цього питання не має стосунку: ціль `talk-ingrid`
+ * НЕОБОВ'ЯЗКОВА (нижче це доводиться), а її вибір ставить лише косметичний `f.storm-turned`, який читає сцена
+ * вогнища, а не жоден квест. Але в ключі перебору він — ще один вимір: з ним станів 51 545 замість 18 625, і
+ * сторож перестає встигати. Тому розмову з Інгрід перебір не відкриває, а її арку доводять інші сторожі:
+ * camp-first.test (прохід табору ногами відкриває її), fireplace.test (наслідок у ночі бурі) і валідатор
+ * (граф розмови, досяжність, WAVE_FLAG_GATES_QUEST). Мутації нижче червоніють так само.
+ */
+const INGRID = 'npc.ingrid';
 const DAY2 = ['CH1-D2-001', 'CH1-D2-ELISE-001', 'CH1-D2-CAMP-001', 'CH1-D2-FIRE-001'] as const;
 
 let n = 0;
@@ -100,6 +110,9 @@ function explore(start: GameState, defs: CoreDefs = GAME_DEFS, cap = 200_000): E
     if (s.campaignEnded || s.quests['CH1-D2-FIRE-001']?.status === 'completed') { out.ended++; continue; }
     for (const m of moves(s, defs)) {
       if (!DAY_MOVES.has(m.type)) continue;
+      // Поза обсягом цього сторожа — лише удар на обіді (ворота Інгрід ведуть у нього саме на етапі CH1-D2-ELISE-001).
+      // Решту її розмови — прохання сусідки — перебір відкриває, як і до GAME-307.
+      if (m.type === 'Talk' && m.npcId === INGRID && s.quests['CH1-D2-ELISE-001']?.status === 'active') continue;
       const r = dispatch(s, { ...m, commandId: `x${n++}` } as Command, defs);
       if (!r.ok) continue;
       const t = r.state;
@@ -161,6 +174,18 @@ describe('GAME-141 · межа дня й кінець розділу — різ�
     expect(CONTENT.animals.find((a) => a.id === 'animal.cat')?.transports).toEqual(['transport.car']);
   });
 
+  it('GAME-307: підстава звузити перебір — ціль «поговорити з Інгрід» необов\'язкова, і її вибір не рухає жодного квесту', () => {
+    const o = STORY.quests['CH1-D2-ELISE-001']?.objectives.find((x) => x.id === 'talk-ingrid');
+    expect(o, 'цілі talk-ingrid немає — звуження перебору втратило підставу').toBeDefined();
+    expect(o?.required, 'ціль стала обов\'язковою: пропустивши Інгрід, перебір більше не доходив би до кінця дня').toBe(false);
+    expect(o?.target).toBe(INGRID);
+    // Розмова Інгрід ставить лише прапорці; жоден її вибір не стартує й не закриває квесту (інакше пропуск розмови міняв би сюжет).
+    const ingrid = CONTENT.dialogues.find((d) => d.id === 'dlg.ingrid-chat');
+    const effects = (ingrid?.nodes ?? []).flatMap((nd) => ((nd as { choices?: { effects?: Record<string, unknown>[] }[] }).choices ?? []).flatMap((ch) => ch.effects ?? []));
+    expect(effects.length).toBeGreaterThan(0);
+    expect(effects.filter((e) => 'startQuest' in e || 'completeObjective' in e)).toEqual([]);
+  });
+
   it('гачок вогнища (GAME-142) — один етап CH1-D2-FIRE-001: після вечері, останній перед підсумком дня 2, і поки без сцени', () => {
     expect(STORY.quests['CH1-D2-CAMP-001']?.transitions).toEqual([{ on: 'complete', to: 'CH1-D2-FIRE-001', choice: false }]);
     expect(STORY.quests['CH1-D2-FIRE-001']?.transitions).toEqual([{ on: 'complete', to: 'CH1-D3-001', choice: false }]);   // GAME-144: далі ранок дня 3
@@ -214,9 +239,12 @@ describe('GAME-141 · Спосіб перевірки 1: відмова від �
     const defs = mutate(dead);
     const m = explore(startOf('bike', defs), defs);
     expect(m.declined.length).toBeGreaterThan(0);
-    const stuck = m.declined.filter((s) => endReachable(s, defs, new Map(), 50_000) === false);
+    // Пам'ять пошуку — одна на всі стани відмови (як у сусідньому тесті вище): інакше кожен стан повторює той самий
+    // перебір до 50 000 станів заново. Доводиться те саме, лише без повторної роботи.
+    const memoDead: EndMemo = new Map();
+    const stuck = m.declined.filter((s) => endReachable(s, defs, memoDead, 50_000) === false);
     expect(stuck.length).toBe(m.declined.length);
-    console.info(`GAME-141 Спосіб 1 · МУТАЦІЯ: відмов ${m.declined.length}, тупиків після відмови ${stuck.length}`);
+    console.info(`GAME-141 Спосіб 1 · МУТАЦІЯ: станів ${m.states}, відмов ${m.declined.length}, тупиків після відмови ${stuck.length}`);
     // Той самий тупик статично: валідатор на контенті з цією мутацією.
     const loaded = loadContent('content');
     const c = structuredClone(loaded.content) as unknown as { quests: { id: string; titleKey?: string; optional: boolean; objectives: unknown[]; transitions: { on: string; to: string }[] }[] };
@@ -227,8 +255,7 @@ describe('GAME-141 · Спосіб перевірки 1: відмова від �
     const codes = validate(c, { today: '2026-10-24' }).map((x) => x.code);
     expect(codes).toContain('NO_PATH_TO_END');
     expect(validate(loaded.content, { today: '2026-10-24' }).filter((x) => x.code === 'NO_PATH_TO_END')).toEqual([]);
-    // GAME-307: день 2 виріс (удар на обіді в Інгрід + прапорець вибору), тож мутований перебір довший — строк, не вимога, піднято.
-  }, 300_000);
+  }, 120_000);
 });
 
 describe('GAME-141 · Спосіб перевірки 2: Еліза згадує лише підтверджене (EL-REVISIT)', () => {

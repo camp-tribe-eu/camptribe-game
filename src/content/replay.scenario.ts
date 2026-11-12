@@ -51,7 +51,9 @@ export const PROLOGUE_BIKE: readonly Input[] = [
   c({ type: 'CompleteQuest', questId: 'CH1-D2-001' }),                                  // ціль «ранок» виконано входом (гравець біля озера)
   c({ type: 'Talk', npcId: 'npc.elise' }), c({ type: 'Choose', choice: 10 }), c({ type: 'Choose', choice: 0 }), c({ type: 'Choose', choice: 0 }), c({ type: 'Continue' }), c({ type: 'Continue' }),
   // GAME-307: удар на обіді — Інгрід зі старою картою клубу (почерк Генрі, вітер із озера після полудня); відтяжок ще нема, тож лишається безумовний вибір «дотягнемо решту справ».
-  c({ type: 'Talk', npcId: 'npc.ingrid' }), c({ type: 'Continue' }), c({ type: 'Choose', choice: 0 }), c({ type: 'Continue' }), c({ type: 'Continue' }), c({ type: 'Choose', choice: 0 }), c({ type: 'Continue' }),
+  // Удар на обіді: ворота → storm1 → storm2 → storm3 (вибір). Вибір 0 «перев'яжемо зараз» стоїть за наслідком хвилі
+  // (f.storm-tarp-tight): відтяжок ще нема, тож ядро його не прийме — еталон іде безумовним вибором 1 «дотягнемо решту справ».
+  c({ type: 'Talk', npcId: 'npc.ingrid' }), c({ type: 'Continue' }), c({ type: 'Continue' }), c({ type: 'Continue' }), c({ type: 'Choose', choice: 1 }), c({ type: 'Continue' }),
   c({ type: 'CompleteQuest', questId: 'CH1-D2-ELISE-001', to: 'q.elise-bike-area' }), ...frames(4),
   c({ type: 'Talk', npcId: 'npc.elise' }), c({ type: 'Choose', choice: 11 }), c({ type: 'Choose', choice: 0 }), c({ type: 'Continue' }), c({ type: 'Continue' }),
   c({ type: 'CompleteQuest', questId: 'q.elise-bike-area' }),
