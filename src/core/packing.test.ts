@@ -97,7 +97,7 @@ describe('пакування: журнал, детермінізм, сейв', (
   });
 
   it('сейв: формат — поточна версія, прапорці пакування переживають збереження й завантаження', () => {
-    expect(SAVE_VERSION).toBe(5);   // GAME-286: v5 — маркер розділу 2; пакування формат не ламає
+    expect(SAVE_VERSION).toBe(6);   // GAME-308: v6 — результати міні-ігор; пакування формат не ламає
     const s = step(sim(), cmd('j7', { type: 'UnpackItem', itemId: 'item.bag' }), { defs: PACK_DEFS });
     const back = fromSave(serialize(s));
     expect(back.ok && JSON.stringify(back.sim)).toBe(JSON.stringify(s));

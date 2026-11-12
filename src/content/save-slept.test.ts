@@ -21,7 +21,7 @@ const load = (text: string, story: StoryDefs | null = STORY) => fromSave(text, {
 describe('сейв v3 (до лічильника сну) → v4', () => {
   const text = JSON.stringify(v3unslept);
   it('версія збірки 4, фікстура — справжній v3 без `slept`, а CH1-D2-001 активний', () => {
-    expect(SAVE_VERSION).toBe(5);   // GAME-286: v5 — маркер chapterStart; v3 мігрує ланцюжком 3→4→5
+    expect(SAVE_VERSION).toBe(6);   // GAME-308: v6 — результати міні-ігор; v3 мігрує ланцюжком 3→4→5→6
     expect(v3unslept.schemaVersion).toBe(3);
     expect((v3unslept.sim.game as { slept?: number }).slept).toBeUndefined();
     expect(v3unslept.sim.game.quests['CH1-D2-001']?.status).toBe('active');

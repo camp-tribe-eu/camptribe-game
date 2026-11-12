@@ -20,6 +20,7 @@ import { startSkills } from './skills';
 import type { GameState, PlayerState, QuestProgress, RejectCode } from './state';
 import type { WaveState } from './wave';
 import type { ProgressState } from './progress';
+import type { MinigameResults } from './minigame';
 
 export const NO_ANIMAL = 'animal.none';
 
@@ -78,6 +79,8 @@ export interface StoryDraft {
   slept?: number;
   /** GAME-286: див. GameState.chapterStart. */
   chapterStart?: number;
+  /** GAME-308: див. GameState.minigames. */
+  minigames?: MinigameResults;
 }
 
 const own = <T>(o: Readonly<Record<string, T>>, k: string): T | undefined => (Object.hasOwn(o, k) ? o[k] : undefined);
