@@ -35,6 +35,8 @@ Object.assign(cond.variants, {
   notRemembers: obj({ notRemembers: req(str) }),
   // GAME-202: справа живої хвилі ще відкрита — доручення в розмові зникає, щойно справу зроблено чи вона спізнилась.
   taskOpen: obj({ taskOpen: req(str) }),
+  // GAME-312: міні-гру зіграно (реєстр міні-ігор — у src/content/minigames; наявність id звіряє missions.test).
+  minigame: obj({ minigame: req(str) }),
   all: obj({ all: req(conds) }),
   any: obj({ any: req(conds) }),
 });

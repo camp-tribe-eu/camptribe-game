@@ -1,18 +1,568 @@
 {
   "id": "dlg.amina-chat",
   "npcId": "npc.amina",
-  "start": "hello",
+  "start": "gate",
   "nodes": [
     {
-      "id": "hello", "speaker": "npc", "textKey": "dlg.amina-chat.hello",
-      "choices": [
-        { "textKey": "dlg.amina-chat.hello.c1", "next": "a" },
-        { "textKey": "dlg.amina-chat.hello.c2", "next": "b" },
-        { "textKey": "dlg.amina-chat.hello.c3", "next": "bye" }
+      "id": "gate",
+      "speaker": "npc",
+      "textKey": "dlg.amina-chat.gate",
+      "next": "hello",
+      "branches": [
+        {
+          "when": {
+            "all": [
+              {
+                "flag": "f.mis-ring-go2"
+              },
+              {
+                "minigame": "mg.trap-weave"
+              },
+              {
+                "notFlag": "f.mis-ring-done"
+              }
+            ]
+          },
+          "next": "r-trap1"
+        },
+        {
+          "when": {
+            "all": [
+              {
+                "flag": "f.mis-ring-go2"
+              },
+              {
+                "notFlag": "f.mis-ring-done"
+              }
+            ]
+          },
+          "next": "r-wait2"
+        },
+        {
+          "when": {
+            "all": [
+              {
+                "flag": "f.mis-ring-go"
+              },
+              {
+                "minigame": "mg.ring-sift"
+              },
+              {
+                "flag": "f.mis-ring-slow"
+              },
+              {
+                "notFlag": "f.mis-ring-done"
+              }
+            ]
+          },
+          "next": "r-found-late"
+        },
+        {
+          "when": {
+            "all": [
+              {
+                "flag": "f.mis-ring-go"
+              },
+              {
+                "minigame": "mg.ring-sift"
+              },
+              {
+                "notFlag": "f.mis-ring-done"
+              }
+            ]
+          },
+          "next": "r-found"
+        },
+        {
+          "when": {
+            "all": [
+              {
+                "flag": "f.mis-ring-go"
+              },
+              {
+                "notFlag": "f.mis-ring-done"
+              }
+            ]
+          },
+          "next": "r-wait"
+        },
+        {
+          "when": {
+            "all": [
+              {
+                "flag": "f.mis-ring-taken"
+              },
+              {
+                "notFlag": "f.mis-ring-done"
+              }
+            ]
+          },
+          "next": "r-hub"
+        }
       ]
     },
-    { "id": "a", "speaker": "npc", "textKey": "dlg.amina-chat.a", "end": true },
-    { "id": "b", "speaker": "npc", "textKey": "dlg.amina-chat.b", "end": true },
-    { "id": "bye", "speaker": "npc", "textKey": "dlg.amina-chat.bye", "end": true }
+    {
+      "id": "hello",
+      "speaker": "npc",
+      "textKey": "dlg.amina-chat.hello",
+      "choices": [
+        {
+          "textKey": "dlg.amina-chat.hello.c1",
+          "next": "a"
+        },
+        {
+          "textKey": "dlg.amina-chat.hello.c2",
+          "next": "b"
+        },
+        {
+          "textKey": "dlg.amina-chat.hello.c3",
+          "next": "bye"
+        },
+        {
+          "textKey": "dlg.amina-chat.hello.c4",
+          "next": "r-offer",
+          "when": {
+            "all": [
+              {
+                "notFlag": "f.mis-ring-taken"
+              },
+              {
+                "notFlag": "f.mis-ring-done"
+              },
+              {
+                "any": [
+                  {
+                    "flag": "f.mis-aerial-done"
+                  },
+                  {
+                    "notFlag": "f.mis-aerial-taken"
+                  }
+                ]
+              },
+              {
+                "any": [
+                  {
+                    "flag": "f.mis-lantern-done"
+                  },
+                  {
+                    "notFlag": "f.mis-lantern-taken"
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "textKey": "dlg.amina-chat.hello.c5",
+          "next": "r-device",
+          "when": {
+            "flag": "f.camp-fishtrap"
+          }
+        }
+      ]
+    },
+    {
+      "id": "a",
+      "speaker": "npc",
+      "textKey": "dlg.amina-chat.a",
+      "end": true
+    },
+    {
+      "id": "b",
+      "speaker": "npc",
+      "textKey": "dlg.amina-chat.b",
+      "end": true
+    },
+    {
+      "id": "bye",
+      "speaker": "npc",
+      "textKey": "dlg.amina-chat.bye",
+      "end": true
+    },
+    {
+      "id": "r-offer",
+      "speaker": "npc",
+      "textKey": "dlg.amina-chat.r-offer",
+      "choices": [
+        {
+          "textKey": "dlg.amina-chat.r-offer.c1",
+          "next": "r-taken",
+          "effects": [
+            {
+              "setFlag": "f.mis-ring-taken"
+            }
+          ]
+        },
+        {
+          "textKey": "dlg.amina-chat.r-offer.c2",
+          "next": "r-later"
+        }
+      ]
+    },
+    {
+      "id": "r-taken",
+      "speaker": "npc",
+      "textKey": "dlg.amina-chat.r-taken",
+      "next": "r-hub"
+    },
+    {
+      "id": "r-hub",
+      "speaker": "npc",
+      "textKey": "dlg.amina-chat.r-hub",
+      "choices": [
+        {
+          "textKey": "dlg.amina-chat.r-hub.c1",
+          "next": "r-water",
+          "when": {
+            "notFlag": "f.mis-ring-water"
+          },
+          "effects": [
+            {
+              "setFlag": "f.mis-ring-water"
+            }
+          ]
+        },
+        {
+          "textKey": "dlg.amina-chat.r-hub.c2",
+          "next": "r-clink",
+          "when": {
+            "notFlag": "f.mis-ring-clink"
+          },
+          "effects": [
+            {
+              "setFlag": "f.mis-ring-clink"
+            }
+          ]
+        },
+        {
+          "textKey": "dlg.amina-chat.r-hub.c3",
+          "next": "r-shoes",
+          "when": {
+            "notFlag": "f.mis-ring-shoes"
+          },
+          "effects": [
+            {
+              "setFlag": "f.mis-ring-shoes"
+            }
+          ]
+        },
+        {
+          "textKey": "dlg.amina-chat.r-hub.c4",
+          "next": "r-where"
+        },
+        {
+          "textKey": "dlg.amina-chat.r-hub.c5",
+          "next": "r-pause"
+        }
+      ]
+    },
+    {
+      "id": "r-water",
+      "speaker": "npc",
+      "textKey": "dlg.amina-chat.r-water",
+      "next": "r-hub"
+    },
+    {
+      "id": "r-clink",
+      "speaker": "npc",
+      "textKey": "dlg.amina-chat.r-clink",
+      "next": "r-hub"
+    },
+    {
+      "id": "r-shoes",
+      "speaker": "npc",
+      "textKey": "dlg.amina-chat.r-shoes",
+      "next": "r-hub"
+    },
+    {
+      "id": "r-where",
+      "speaker": "npc",
+      "textKey": "dlg.amina-chat.r-where",
+      "choices": [
+        {
+          "textKey": "dlg.amina-chat.r-where.c1",
+          "next": "r-miss",
+          "when": {
+            "notFlag": "f.mis-ring-clink"
+          },
+          "effects": [
+            {
+              "setFlag": "f.mis-ring-slow"
+            }
+          ]
+        },
+        {
+          "textKey": "dlg.amina-chat.r-where.c2",
+          "next": "r-miss",
+          "when": {
+            "notFlag": "f.mis-ring-shoes"
+          },
+          "effects": [
+            {
+              "setFlag": "f.mis-ring-slow"
+            }
+          ]
+        },
+        {
+          "textKey": "dlg.amina-chat.r-where.c3",
+          "next": "r-miss",
+          "when": {
+            "notFlag": "f.mis-ring-water"
+          },
+          "effects": [
+            {
+              "setFlag": "f.mis-ring-slow"
+            }
+          ]
+        },
+        {
+          "textKey": "dlg.amina-chat.r-where.c4",
+          "next": "r-slab"
+        }
+      ]
+    },
+    {
+      "id": "r-miss",
+      "speaker": "npc",
+      "textKey": "dlg.amina-chat.r-miss",
+      "next": "r-hub"
+    },
+    {
+      "id": "r-slab",
+      "speaker": "npc",
+      "textKey": "dlg.amina-chat.r-slab",
+      "choices": [
+        {
+          "textKey": "dlg.amina-chat.r-slab.c1",
+          "next": "r-sieve1"
+        },
+        {
+          "textKey": "dlg.amina-chat.r-slab.c2",
+          "next": "r-grass",
+          "effects": [
+            {
+              "setFlag": "f.mis-ring-slow"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "r-grass",
+      "speaker": "npc",
+      "textKey": "dlg.amina-chat.r-grass",
+      "next": "r-slab"
+    },
+    {
+      "id": "r-found",
+      "speaker": "npc",
+      "textKey": "dlg.amina-chat.r-found",
+      "next": "r-story1"
+    },
+    {
+      "id": "r-found-late",
+      "speaker": "npc",
+      "textKey": "dlg.amina-chat.r-found-late",
+      "next": "r-story1"
+    },
+    {
+      "id": "r-thanks",
+      "speaker": "npc",
+      "textKey": "dlg.amina-chat.r-thanks",
+      "choices": [
+        {
+          "textKey": "dlg.amina-chat.r-thanks.c1",
+          "next": "r-payoff",
+          "effects": [
+            {
+              "setFlag": "f.camp-fishtrap"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "r-payoff",
+      "speaker": "npc",
+      "textKey": "dlg.amina-chat.r-payoff",
+      "next": "r-payoff2"
+    },
+    {
+      "id": "r-payoff2",
+      "speaker": "npc",
+      "textKey": "dlg.amina-chat.r-payoff2",
+      "choices": [
+        {
+          "textKey": "dlg.amina-chat.r-payoff2.c1",
+          "next": "r-go2-end",
+          "effects": [
+            {
+              "setFlag": "f.mis-ring-go2"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "r-later",
+      "speaker": "npc",
+      "textKey": "dlg.amina-chat.r-later",
+      "end": true
+    },
+    {
+      "id": "r-pause",
+      "speaker": "npc",
+      "textKey": "dlg.amina-chat.r-pause",
+      "end": true
+    },
+    {
+      "id": "r-wait",
+      "speaker": "npc",
+      "textKey": "dlg.amina-chat.r-wait",
+      "end": true
+    },
+    {
+      "id": "r-go",
+      "speaker": "npc",
+      "textKey": "dlg.amina-chat.r-go",
+      "choices": [
+        {
+          "textKey": "dlg.amina-chat.r-go.c1",
+          "next": "r-go-end",
+          "effects": [
+            {
+              "setFlag": "f.mis-ring-go"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "r-go-end",
+      "speaker": "npc",
+      "textKey": "dlg.amina-chat.r-go-end",
+      "end": true
+    },
+    {
+      "id": "r-device",
+      "speaker": "npc",
+      "textKey": "dlg.amina-chat.r-device",
+      "end": true
+    },
+    {
+      "id": "r-go2-end",
+      "speaker": "npc",
+      "textKey": "dlg.amina-chat.r-go2-end",
+      "end": true
+    },
+    {
+      "id": "r-wait2",
+      "speaker": "npc",
+      "textKey": "dlg.amina-chat.r-wait2",
+      "end": true
+    },
+    {
+      "id": "r-set",
+      "speaker": "npc",
+      "textKey": "dlg.amina-chat.r-set",
+      "choices": [
+        {
+          "textKey": "dlg.amina-chat.r-set.c1",
+          "next": "r-final",
+          "effects": [
+            {
+              "setFlag": "f.mis-ring-done"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "r-final",
+      "speaker": "npc",
+      "textKey": "dlg.amina-chat.r-final",
+      "end": true
+    },
+    {
+      "id": "r-story1",
+      "speaker": "npc",
+      "textKey": "dlg.amina-chat.r-story1",
+      "next": "r-story2"
+    },
+    {
+      "id": "r-story2",
+      "speaker": "npc",
+      "textKey": "dlg.amina-chat.r-story2",
+      "choices": [
+        {
+          "textKey": "dlg.amina-chat.r-story2.c1",
+          "next": "r-story3"
+        },
+        {
+          "textKey": "dlg.amina-chat.r-story2.c2",
+          "next": "r-thanks"
+        }
+      ]
+    },
+    {
+      "id": "r-story3",
+      "speaker": "npc",
+      "textKey": "dlg.amina-chat.r-story3",
+      "next": "r-thanks"
+    },
+    {
+      "id": "r-trap1",
+      "speaker": "npc",
+      "textKey": "dlg.amina-chat.r-trap1",
+      "next": "r-trap2"
+    },
+    {
+      "id": "r-trap2",
+      "speaker": "npc",
+      "textKey": "dlg.amina-chat.r-trap2",
+      "choices": [
+        {
+          "textKey": "dlg.amina-chat.r-trap2.c1",
+          "next": "r-trap3"
+        },
+        {
+          "textKey": "dlg.amina-chat.r-trap2.c2",
+          "next": "r-set"
+        }
+      ]
+    },
+    {
+      "id": "r-trap3",
+      "speaker": "npc",
+      "textKey": "dlg.amina-chat.r-trap3",
+      "next": "r-set"
+    },
+    {
+      "id": "r-sieve1",
+      "speaker": "npc",
+      "textKey": "dlg.amina-chat.r-sieve1",
+      "next": "r-sieve2"
+    },
+    {
+      "id": "r-sieve2",
+      "speaker": "npc",
+      "textKey": "dlg.amina-chat.r-sieve2",
+      "choices": [
+        {
+          "textKey": "dlg.amina-chat.r-sieve2.c1",
+          "next": "r-sieve3"
+        },
+        {
+          "textKey": "dlg.amina-chat.r-sieve2.c2",
+          "next": "r-go"
+        }
+      ]
+    },
+    {
+      "id": "r-sieve3",
+      "speaker": "npc",
+      "textKey": "dlg.amina-chat.r-sieve3",
+      "next": "r-go"
+    }
   ]
 }

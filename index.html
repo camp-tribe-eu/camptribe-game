@@ -155,6 +155,22 @@
       .mg-ref-marker { position: absolute; top: -4px; bottom: -4px; width: 6px; margin-left: -3px; border-radius: 3px; background: #f4f1e8; }
       .mg-ref-pips { display: flex; gap: 8px; justify-content: center; }
       .mg-ref-pip { width: 16px; height: 16px; border-radius: 50%; background: #2a2f36; border: 2px solid #e8e6e3aa; box-sizing: border-box; }
+      /* GAME-312: поверхні міні-ігор місій сусідів (пісок під плитою, шкала приймача, ритм динамо). Клітинки й кнопки ≥ 48 px. */
+      .mg-sift { width: min(92%, 520px); display: grid; gap: 6px; grid-template-columns: repeat(7, 1fr); }
+      .mg-sift-cell { min-height: 48px; border: 2px solid #e8e6e344; border-radius: 8px; background: #8a7350; cursor: pointer; }
+      .mg-sift-cell[data-hint="yes"][data-state="sand"] { outline: 3px solid #ffd54a88; }
+      .mg-sift-cell[data-state="empty"] { background: #3a3326; }
+      .mg-sift-cell[data-state="glint"] { background: #3a3326; box-shadow: inset 0 0 14px #ffd54acc; }
+      .mg-sift-cell[data-state="ring"] { background: #ffd54a; }
+      .mg-tune, .mg-crank { width: min(92%, 520px); display: grid; gap: 14px; justify-items: center; }
+      .mg-tune-dial { position: relative; width: 100%; height: 64px; box-sizing: border-box; border: 2px solid #e8e6e3aa; border-radius: 10px; background: #2a2f36; touch-action: none; }
+      .mg-tune-station { position: absolute; top: 0; bottom: 0; width: 10px; margin-left: -5px; background: #ffd54a99; }
+      .mg-tune-needle { position: absolute; top: -4px; bottom: -4px; width: 6px; margin-left: -3px; border-radius: 3px; background: #f4f1e8; }
+      .mg-meter { width: 100%; height: 14px; border-radius: 7px; background: #2a2f36; overflow: hidden; }
+      .mg-meter i { display: block; height: 100%; background: #6fbf73; }
+      .mg-crank-ring { width: 72px; height: 72px; display: grid; place-items: center; }
+      .mg-crank-pulse { border-radius: 50%; background: #ffd54a66; }
+      .mg-crank-pulse[data-hint="yes"] { background: #ffd54acc; }
       .mg-ref-pip[data-score="1"] { background: #4a7a4a; }
       .mg-ref-pip[data-score="2"] { background: #ffd54a; }
       .mg-ref-stop { min-height: 72px; width: 100%; font-size: 1.25rem; }

@@ -405,6 +405,8 @@ export function holds(c: CondDef, d: StoryDraft, p: PlayerState, npcId?: string,
   // GAME-202: справа відкрита лише в живій хвилі й зі статусом open; зроблена, спізнена чи хвиля минула — ні. Строк за годинником
   // уже розсудив settleWave перед командою (sim.afterClock), тож тут статусу досить.
   if ('taskOpen' in c) return own(d.wave?.active?.tasks ?? {}, c.taskOpen)?.outcome === 'open';
+  // GAME-312: робота місії — міні-гра на місці; розмова просильника читає лише «зіграно», результат читає ніч (src/content/storm-night.ts).
+  if ('minigame' in c) return own(d.minigames ?? {}, c.minigame) !== undefined;
   if ('transport' in c) return p.transportId === c.transport;
   if ('animal' in c) return p.animalId === c.animal;
   if ('all' in c) return c.all.every((x) => holds(x, d, p, npcId, gate));
