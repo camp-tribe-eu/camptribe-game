@@ -28,5 +28,6 @@ interface Spec { lang: 'uk' | 'en'; weather: Weather; seed: number }
     requestAnimationFrame(loop);
     return () => { live = false; };
   };
-  render(<CampRoutines t={(k: Key) => t(s.lang, k)} weather={s.weather} seed={s.seed} onFrame={onFrame} />, host);
+  // Табір, де вже стоїть верша, але її давно не переносили: дошка має показати «ось-ось закінчиться» і «Доглянути».
+  render(<CampRoutines t={(k: Key) => t(s.lang, k)} weather={s.weather} seed={s.seed} onFrame={onFrame} devices={{ 'fish-trap': { care: 0.3 } }} />, host);
 };

@@ -6,6 +6,7 @@ import type { Key } from '../i18n';
 import type { Weather } from '../core/weather';
 import { ROUNDS, ROUTINES, ROUTINE_IDS, addPick, awayIn, campBusy, emptyRounds, isDone, minutesLeft, recordResult, startCampDay, whyNot, type CampDay, type Round, type RoutineId } from '../content/camp-day';
 import { nightOf, type NightBeat, type NightFacts } from '../content/camp-night';
+import { deviceFacts, deviceFor, statusOf, tend, withDevices, type Devices } from '../content/camp-devices';
 import { HELP_AFTER, NORMAL, RELAXED, type Difficulty, type Outcome } from '../content/minigame';
 import { STEPS, needSide, startWater, stepWater, waterOutcome, waterScore, type Side, type WaterState } from '../content/water-carry';
 import { LANTERNS, SPOTS, lanternOutcome, litCount, startLanterns, stepLanterns, type LanternState } from '../content/lantern-charge';
@@ -25,10 +26,14 @@ export interface CampRoutinesProps {
   readonly seed: number;
   /** Крок кадру ззовні (сцена або стенд): повертає відписку. */
   readonly onFrame: (cb: (dtMs: number) => void) => () => void;
+  /** Що в таборі вже налагоджено (§9а): пристрої, збудовані з матеріалів пригод, і їхня доглянутість. */
+  readonly devices?: Devices;
 }
 
-export function CampRoutines({ t, weather, seed, onFrame }: CampRoutinesProps) {
+export function CampRoutines({ t, weather, seed, onFrame, devices: devices0 = {} }: CampRoutinesProps) {
+  const [devices, setDevices] = useState<Devices>(devices0);
   const [day, setDay] = useState<CampDay>(startCampDay);
+  const dayNow = withDevices(day, devices);
   const [round, setRound] = useState<Round>('morning');
   const [phase, setPhase] = useState<Phase>('board');
   const [active, setActive] = useState<RoutineId | null>(null);
@@ -74,7 +79,7 @@ export function CampRoutines({ t, weather, seed, onFrame }: CampRoutinesProps) {
   });
 
   const open = (id: RoutineId) => {
-    if (whyNot(day, id, round) !== null) return;
+    if (whyNot(dayNow, id, round) !== null) return;
     setDay((d) => addPick(d, id, round));
     setActive(id);
     setPhase('work');
@@ -87,7 +92,8 @@ export function CampRoutines({ t, weather, seed, onFrame }: CampRoutinesProps) {
     if (id === 'fish') { setFish(FISH_IDLE); setRod(false); }
   };
 
-  const nightFacts: NightFacts = { results: day.results, litLanterns: facts.lit, dryLogs: facts.dryLogs, water: facts.water, fish: facts.fish, bitterBerries: facts.bitter, foodOutside: facts.foodOut, emptyRounds: emptyRounds(day).length, weather };
+  // Ніч читає і ручне, і налагоджене — та сама модель фактів (camp-night), пристрої лише додають свої.
+  const nightFacts: NightFacts = deviceFacts(devices, { results: dayNow.results, litLanterns: facts.lit, dryLogs: facts.dryLogs, water: facts.water, fish: facts.fish, bitterBerries: facts.bitter, foodOutside: facts.foodOut, emptyRounds: emptyRounds(day).length, weather });
 
   if (phase === 'night') {
     const night = nightOf(nightFacts);
@@ -271,18 +277,23 @@ export function CampRoutines({ t, weather, seed, onFrame }: CampRoutinesProps) {
       <p class="ui-camp-note" data-ui="camp-skip">{t('camp.skip')}</p>
       <ul class="ui-camp-list">
         {ROUTINE_IDS.map((id) => {
-          const no = whyNot(day, id, round);
+          const no = whyNot(dayNow, id, round);
           const def = ROUTINES[id];
-          const out = day.results[id];
+          const out = dayNow.results[id];
+          const status = statusOf(devices, id);
+          const dev = deviceFor(id);
           return (
             <li key={id}>
-              <button type="button" class="ui-btn ui-camp-routine" data-ui="camp-routine" data-id={id} data-owner={def.owner} data-done={isDone(day, id) ? 'yes' : 'no'} data-outcome={out ?? ''} data-blocked={no ?? ''}
+              <button type="button" class="ui-btn ui-camp-routine" data-ui="camp-routine" data-id={id} data-owner={def.owner} data-status={status} data-done={isDone(dayNow, id) ? 'yes' : 'no'} data-outcome={out ?? ''} data-blocked={no ?? ''}
                 disabled={no !== null} onClick={() => open(id)}>
-                <b>{`${t(`camp.routine.${id}` as Key)} · ${t(`camp.owner.${def.owner}` as Key)}`}</b>
+                <b>{`${t(`camp.routine.${id}` as Key)} · ${status === 'hands' ? t(`camp.owner.${def.owner}` as Key) : t(`camp.status.${status}` as Key)}`}</b>
                 <small>{out !== undefined
                   ? `${t('camp.done')} · ${t(`camp.out.${out}` as Key)}`
                   : `${no === null ? t(`camp.why.${id}` as Key) : t(`camp.no.${no}` as Key)} · ${def.minutes[0]} ${t('camp.min')}`}</small>
               </button>
+              {status === 'low' && dev !== null && (
+                <button type="button" class="ui-btn" data-ui="camp-tend" data-id={id} onClick={() => setDevices((d) => tend(d, dev))}>{t('camp.tend')}</button>
+              )}
             </li>
           );
         })}

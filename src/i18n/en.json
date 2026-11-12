@@ -720,5 +720,9 @@
   "mg.night.hint": "The car holds only so much — hang the rest of the food up.",
   "mg.night.result.good": "Everything in its place — a quiet night, only rain.",
   "mg.night.result.fine": "Half tidied: a little work in the morning.",
-  "mg.night.result.scrappy": "Some things stayed out — something visited the table at night."
+  "mg.night.result.scrappy": "Some things stayed out — something visited the table at night.",
+  "camp.status.auto": "runs by itself",
+  "camp.status.low": "about to run out",
+  "camp.status.hands": "needs hands",
+  "camp.tend": "Tend it"
 }

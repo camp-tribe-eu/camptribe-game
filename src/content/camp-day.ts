@@ -73,7 +73,8 @@ export const inRound = (d: CampDay, r: Round): readonly Pick[] => d.picks.filter
 export type AddFail = 'done' | 'busy' | 'noTime' | 'full' | 'when';
 /** Чому цю рутину зараз не взяти (або null — можна). Вечірній раунд тримає лише «порядок», і лише вечірній. */
 export function whyNot(d: CampDay, id: RoutineId, round: Round, full = false): AddFail | null {
-  if (planned(d, id)) return 'done';
+  // Уже є результат (зокрема від пристрою, camp-devices.withDevices) — рукам тут робити нічого.
+  if (planned(d, id) || d.results[id] !== undefined) return 'done';
   if ((round === 'evening') !== (id === 'tidy')) return 'when';
   const def = ROUTINES[id];
   const here = inRound(d, round);

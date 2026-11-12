@@ -82,6 +82,16 @@ for (const vp of VIEWPORTS) {
     expect(await problems(page), 'дошка').toEqual([]);
     if (SHOTS) await page.screenshot({ path: `${SHOTS}/${vp.name}-board.png` });
 
+    // Дошка табору (§9а): верша стоїть, але занедбана — «ось-ось закінчиться»; догляд — і вона знову «працює саме».
+    // Вогнище й ягоди — лише руками; вода поки без бочки — теж чекає рук.
+    await expect(page.locator('[data-ui="camp-routine"][data-id="fish"]')).toHaveAttribute('data-status', 'low');
+    await expect(page.locator('[data-ui="camp-routine"][data-id="fish"]')).toHaveAttribute('data-done', 'yes');
+    await expect(page.locator('[data-ui="camp-routine"][data-id="fire"]')).toHaveAttribute('data-status', 'hands');
+    await expect(page.locator('[data-ui="camp-routine"][data-id="water"]')).toHaveAttribute('data-status', 'hands');
+    await tapIt(page.locator('[data-ui="camp-tend"][data-id="fish"]'));
+    await expect(page.locator('[data-ui="camp-routine"][data-id="fish"]')).toHaveAttribute('data-status', 'auto');
+    await expect(page.locator('[data-ui="camp-routine"][data-id="fish"]')).toHaveAttribute('data-outcome', 'good');
+
     // ВОДА: одним дотиком не закрити — спершу тримати кран, потім десять кроків тією ногою, яку просить земля.
     await tapIt(page.locator('[data-ui="camp-routine"][data-id="water"]'));
     await expect(page.locator('[data-ui="camp-work"][data-kind="water"]')).toBeVisible();
@@ -130,6 +140,8 @@ for (const vp of VIEWPORTS) {
     await expect(page.locator('[data-ui="night-beat"][data-id="night.tidy.quiet"]')).toBeVisible();
     await expect(page.locator('[data-ui="night-beat"][data-id="night.light.dark"]')).toBeVisible();
     await expect(page.locator('[data-ui="night-beat"][data-id="night.wood.none"]')).toBeVisible();
+    // Рибу дала доглянута верша — без вудки й без хвилин дня.
+    await expect(page.locator('[data-ui="night-beat"][data-id="night.fish.supper"]')).toBeVisible();
     await expect(page.locator('[data-ui="night-morning"]')).toBeVisible();
     const over = await page.evaluate(() => {
       const root = document.querySelector<HTMLElement>('.ui-camp');
