@@ -3,6 +3,7 @@
 import type { SkillUp } from './overlay-order';
 import type { StoryOffer } from './story-types';
 import type { MiniFrame } from '../content/agenda';
+import type { ShotSpec } from '../content/intro-scene';
 
 /** GAME-181: що щойно нараховано. `title` — індекс нового звання (0…9), якщо воно з'явилось саме зараз; інакше null. */
 export interface RewardEvent { readonly xp: number; readonly om: number; readonly title: number | null; /** GAME-247: гроші з нових нагород і XP навичок — для наклейки. */ readonly cents: number; readonly skills: Readonly<Record<string, number>> }
@@ -47,6 +48,10 @@ export interface UiPort {
   introRoom?: IntroRoomPainter;
   /** GAME-265 (лише збірка e2e, ?soloHero=1): вступ пропонує й «самостійного дослідника». Немає — лише родина. */
   introSolo?(): boolean;
+  /** GAME-303 (лише збірка e2e, ?introClassic=1): старий вигляд вступу без гібрида (комікс + повні кадри). Немає — гібрид, як у грі. */
+  introClassic?(): boolean;
+  /** GAME-303: малює кадр проби подачі (кімната з людиною чи сон) на полотні; без нього (тести без полотна) кадри порожні. */
+  introShot?: IntroShotPainter;
   /** GAME-216: малює холодний початок (кіно ≤ 45 с перед вступом); повертає зупинку. Немає — сцени немає, одразу вступ. */
   coldOpenScene?: ColdOpenPainter;
   /** GAME-216: чи показувати холодний початок: 'load' — вступ при завантаженні (лише коли сейву не було), 'new' — «Нова гра» з меню. Немає — ніколи. */
@@ -79,6 +84,9 @@ export interface Credits {
   readonly licences: Readonly<Record<string, { readonly url: string }>>;
   readonly files: readonly { readonly file: string; readonly authors: readonly string[]; readonly licence: string; readonly sources: readonly string[]; readonly modified: string }[];
 }
+
+/** GAME-303: малювання кадру проби подачі вступу: полотно, розмір у CSS-пікселях, що малювати. */
+export type IntroShotPainter = (target: HTMLCanvasElement, cssW: number, cssH: number, spec: ShotSpec) => Promise<void>;
 
 /** GAME-191: малювання кімнати вступу: полотно, розмір екрана в CSS-пікселях, «менше руху», чи вже знято. */
 export type IntroRoomPainter = (target: HTMLCanvasElement, cssW: number, cssH: number, reduced: boolean, isDead: () => boolean, opts?: { readonly morning?: boolean; readonly family?: boolean; readonly speaker?: string | null }) => Promise<() => void>;

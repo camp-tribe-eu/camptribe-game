@@ -556,6 +556,49 @@
           transition-duration: 0s !important; transition-delay: 0s !important; scroll-behavior: auto !important;
         }
       }
+      /* GAME-303: проба подачі вступу (?introStyle=comic|cinema, лише збірка e2e): комікс-панелі й кінокадри. Рамка, жовта табличка імені, кремове світло — з рамки розмови гри (.ui-talk-*). Рух — лише CSS. */
+      .ui-scene { position: absolute; inset: 0; z-index: 2; display: flex; flex-direction: column; gap: 8px; box-sizing: border-box; background: #0b0d14; padding: calc(var(--edge-top) + 52px) var(--edge-right) var(--edge-bottom) var(--edge-left); }
+      .ui-comic { flex: 1 1 0; min-height: 0; display: grid; gap: 10px; grid-template-columns: minmax(0, 1fr); grid-template-rows: repeat(3, minmax(0, 1fr)); }
+      .ui-comic[data-panels="1"] { grid-template-rows: minmax(0, 1fr); }
+      .ui-panel { position: relative; min-height: 0; overflow: hidden; border: 4px solid #1b1f23; border-radius: 2px; box-shadow: 0 0 0 2px #f1d9a0; background: #05070d; }
+      .ui-panel[data-state="pending"] { background: #0b0d14; border-color: #1b1f23; box-shadow: 0 0 0 2px #2a2f3a; }
+      .ui-panel[data-state="pending"] > * { visibility: hidden; }
+      .ui-panel[data-state="shown"] { animation: ui-panel-pop 0.32s ease-out both; }
+      .ui-scene-canvas { position: absolute; inset: 0; width: 100%; height: 100%; image-rendering: pixelated; pointer-events: none; }
+      .ui-bubble { position: absolute; z-index: 1; left: 8px; max-width: calc(100% - 16px); top: 8px; box-sizing: border-box; padding: 16px 10px 8px; border: 3px solid #1b1f23; border-radius: 10px; background: #f4f1e8; color: #1b1f23; box-shadow: 0 3px 0 #0008; }
+      .ui-bubble[data-now="no"] { background: #d9d4c4; }
+      .ui-bubble-name { position: absolute; left: 8px; bottom: calc(100% - 9px); margin: 0; padding: 2px 8px; border: 3px solid #1b1f23; border-radius: 6px; background: #ffd54a; color: #1b1f23; font-size: 0.6rem; line-height: 1.3; }
+      .ui-bubble[data-now="no"] .ui-bubble-name { background: #c9b46a; }
+      .ui-bubble-line { margin: 0; font-size: 0.65rem; line-height: 1.6; overflow-wrap: anywhere; }
+      .ui-panel-cap { position: absolute; z-index: 1; left: 8px; top: 8px; margin: 0; padding: 4px 10px; border: 3px solid #1b1f23; background: #ffd54a; color: #1b1f23; font-size: 0.8rem; line-height: 1.4; }
+      .ui-panel-zzz, .ui-cine-zzz { position: absolute; z-index: 1; right: 8%; top: 6%; margin: 0; font-size: 1.1rem; letter-spacing: 0.3em; color: #cfe0ff; text-shadow: 0 2px 0 #0b0d14; animation: ui-zzz-float 2.6s ease-in-out infinite alternate; }
+      .ui-panel-alarm { position: absolute; z-index: 1; right: 8px; top: 8px; margin: 0; padding: 5px 10px; border: 3px solid #1b1f23; border-radius: 4px; background: #ff6a3d; color: #fff; font-size: 0.7rem; line-height: 1.4; transform: rotate(-3deg); }
+      .ui-scene-next { align-self: flex-end; flex: none; }
+      @keyframes ui-panel-pop { from { opacity: 0; transform: scale(0.94); } to { opacity: 1; transform: none; } }
+      @keyframes ui-zzz-float { from { transform: translateY(0); opacity: 0.55; } to { transform: translateY(-10px); opacity: 1; } }
+      /* Б: кадр на весь екран, рамка розмови внизу — та сама, що в грі; вхід кадру — з темряви, далі повільний наїзд. */
+      .ui-scene.ui-cine { padding: calc(var(--edge-top) + 50px) 0 0; gap: 0; background: #05070d; }   /* смуга зверху — «кіношна»: кнопка «Пропустити вступ» стоїть на ній, а не на картинці */
+      .ui-cine-shot { position: relative; flex: 1 1 0; min-height: 0; overflow: hidden; border-bottom: 4px solid #1b1f23; }
+      /* Шари шотів проявляються по черзі (затримка = номер шару × 1,7 с), останній — сон; дотик у будь-яку мить іде далі. Без анімації (менше руху) усі шари видно, зверху — останній. */
+      .ui-cine-layer { position: absolute; inset: 0; animation: ui-cine-in 0.9s ease-out both; animation-delay: calc(var(--n, 0) * 1.7s); }
+      .ui-cine-layer[data-layer="0"] { animation: none; }   /* перший шот видно одразу (без виходу з темряви): кадр читний від першої миті, далі проявляються наступні */
+      .ui-cine-shot .ui-scene-canvas { transform-origin: 55% 75%; animation: ui-cine-push 10s ease-out both; }
+      .ui-cine-dream::after { content: ''; position: absolute; inset: 0; pointer-events: none; box-shadow: inset 0 0 48px 20px #05070d; }
+      .ui-cine-title { flex: none; display: grid; gap: 8px; justify-items: center; text-align: center; padding: 12px var(--edge-right) var(--edge-bottom) var(--edge-left); background: #1b1f23; border-top: 4px solid #4a3418; }
+      .ui-cine-cap { margin: 0; font-size: 1.1rem; line-height: 1.4; color: #ffd54a; }
+      .ui-cine-dreamcap { margin: 0; font-size: 0.8rem; line-height: 1.4; color: #cfe0ff; animation: ui-cine-in 0.9s ease-out both; animation-delay: calc(var(--n, 0) * 1.7s); }
+      .ui-cine-alarm { margin: 0; font-size: 0.8rem; line-height: 1.5; }
+      .ui-cine-title .ui-btn { justify-self: end; }
+      @keyframes ui-cine-in { from { opacity: 0; filter: brightness(0.25); } to { opacity: 1; filter: none; } }
+      @keyframes ui-cine-push { from { transform: scale(1); } to { transform: scale(1.035); } }
+      @media (orientation: landscape) and (max-height: 600px) {
+        .ui-scene { padding-top: calc(var(--edge-top) + 50px); padding-bottom: max(var(--edge-bottom), 8px); }
+        .ui-comic { grid-template-columns: repeat(3, minmax(0, 1fr)); grid-template-rows: minmax(0, 1fr); }
+        .ui-comic[data-panels="1"] { grid-template-columns: minmax(0, 1fr); }
+        .ui-bubble-line { font-size: 0.6rem; }
+        .ui-cine-title { grid-auto-flow: column; justify-content: space-between; align-items: center; padding-top: 8px; }
+      }
+      @media (prefers-reduced-motion: reduce) { .ui-panel[data-state="shown"], .ui-panel-zzz, .ui-cine-zzz, .ui-cine-layer, .ui-cine-dreamcap, .ui-cine-shot .ui-scene-canvas { animation: none; } }
     </style>
   </head>
   <body>

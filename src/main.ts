@@ -48,6 +48,7 @@ import { nightSounds } from './audio/night-sounds';
 import { fireplaceDue, liveSpot, spotMove, storyMoves } from './content/director';
 import { isPlanSpot } from './content/ch2-plan';
 import { paintRoom } from './view/intro-room';
+import { paintShot } from './view/intro-shot';
 import { paintColdOpen } from './view/cold-open';
 import { portraitFor } from './view/portraits';
 import { headCrop, sheetOf } from './view/world/portrait-art';
@@ -629,6 +630,8 @@ render(h(Shell, {
     },
     introRoom: paintRoom,
     introSolo: () => switches.soloHero === true,
+    introClassic: () => switches.introClassic === true,
+    introShot: paintShot,
     coldOpenScene: paintColdOpen,
     // GAME-216: кіно перед вступом — раз на нову гру; при завантаженні лише коли жодного сейву не прочитано (існуючий сейв кіно не показує).
     coldOpen: (reason) => switches.coldOpen && (reason === 'new' || !saves.loadedSave),
