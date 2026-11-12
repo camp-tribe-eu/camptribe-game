@@ -5,6 +5,7 @@ import type { LifeState } from './life';
 import type { WaveState } from './wave';
 import type { ProgressState } from './progress';
 import type { FriendState } from './friendship';
+import type { MinigameResults } from './minigame';
 import { zeroSkills } from './skills';
 
 export interface CommandRecord {
@@ -108,6 +109,11 @@ export interface GameState {
    * всі квести розділу 2 пройшлися б за один день. Поля немає — розділ 2 ще не починався (усі сейви до GAME-286).
    */
   readonly chapterStart?: number;
+  /**
+   * GAME-308: результати міні-ігор (id → останній результат good/fine/scrappy, тег наслідку, лічильник «сяк-так» поспіль). Сценарій читає їх пізніше (вогке ліжко, худіша вечеря).
+   * Поля немає — жодної міні-гри ще не грали (сейви до v6 читаються міграцією 5→6, тотожною: відсутність ≡ «нічого не було»). Пише лише команда FinishMinigame.
+   */
+  readonly minigames?: MinigameResults;
 }
 
 export const REJECT_CODES = [

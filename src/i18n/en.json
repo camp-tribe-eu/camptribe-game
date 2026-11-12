@@ -569,5 +569,21 @@
   "backpack.trade": "Swap",
   "backpack.giftTo": "Neighbour nearby",
   "backpack.sell": "Sell",
-  "backpack.sellHint": "You can sell at the camp reception."
+  "backpack.sellHint": "You can sell at the camp reception.",
+  "mg.pause": "Pause",
+  "mg.resume": "Resume",
+  "mg.moveOn": "Carry on without it",
+  "mg.start": "Start",
+  "mg.close": "Continue",
+  "mg.paused": "Paused. No rush.",
+  "mg.help": "A little easier: more time, a wider band, a hint.",
+  "mg.timeLeft": "Time left",
+  "mg.ref.title": "Three stops",
+  "mg.ref.intro": "Tap Stop when the marker is in the light band in the middle. Three tries.",
+  "mg.ref.hint": "The light band in the middle: tap there.",
+  "mg.ref.stop": "Stop",
+  "mg.ref.track": "Gauge with a marker",
+  "mg.ref.result.good": "Tidy: everything is in place.",
+  "mg.ref.result.fine": "Fine: almost everything is in place.",
+  "mg.ref.result.scrappy": "Scrappy: it came out as it came out, on we go."
 }

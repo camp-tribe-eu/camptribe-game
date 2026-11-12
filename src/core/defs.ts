@@ -6,6 +6,7 @@ import type { LifeDefs } from './life';
 import type { AtlasPageRule } from './atlas-fill';
 import type { StickerDefs } from './stickers';
 import type { FriendDefs } from './friendship';
+import type { MinigameDefs } from './minigame';
 
 export interface ItemDef {
   /** Ціна купівлі, центи; немає — предмет не продається. */
@@ -337,6 +338,8 @@ export interface CoreDefs {
   readonly friendship?: FriendDefs;
   /** GAME-200: сторінки Атласу з нагородою за повне заповнення (src/content/stickers.ts). Немає — нагород немає. */
   readonly atlasPages?: readonly AtlasPageRule[];
+  /** GAME-308: зареєстровані міні-ігри (id → наслідок кожного з трьох результатів, src/content/minigames). Немає — FinishMinigame відмовляє (UNKNOWN_TARGET). */
+  readonly minigames?: MinigameDefs;
 }
 
 export const EMPTY_DEFS: CoreDefs = { items: {}, interactions: {} };

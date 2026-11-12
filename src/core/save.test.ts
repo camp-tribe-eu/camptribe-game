@@ -5,6 +5,7 @@ import v2 from '../../tests/saves/v2.json';
 import v3 from '../../tests/saves/v3.json';
 import v4 from '../../tests/saves/v4.json';
 import v5 from '../../tests/saves/v5.json';
+import v6 from '../../tests/saves/v6.json';
 import { V2_STORY, V3_LIFE } from './save-v2.fixture';
 import { LIFE_DEFS, STORY_DEFS } from './story.fixture';
 import { DEFS, LOG, SEED } from './determinism.fixture';
@@ -16,7 +17,7 @@ import { paydayDay, paydaysThrough } from './life';
 import { zeroSkills } from './skills';
 
 /** Кожна випущена версія сейву — фікстура назавжди (TD-007). Нову версію додати сюди. */
-const FIXTURES: Record<number, unknown> = { 1: v1, 2: v2, 3: v3, 4: v4, 5: v5 };
+const FIXTURES: Record<number, unknown> = { 1: v1, 2: v2, 3: v3, 4: v4, 5: v5, 6: v6 };
 /** Фікстури v2/v3 записано до GAME-106: у записах журналу ще немає балансу (`cents`, необов'язкове поле). Решта — та сама. */
 const preBalance = (j: readonly JournalEntry[]): object[] => j.map((e) => ({ at: e.at, commandId: e.commandId, type: e.type, ref: e.ref }));
 

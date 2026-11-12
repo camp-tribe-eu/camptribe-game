@@ -18,6 +18,7 @@ import { atlasAwards } from './atlas-fill';
 import { grantStickers } from './stickers';
 import { tradeDoneToday, tradeIsFair, traded } from './friendship';
 import { joinRecipe, joined } from './join';
+import { isOutcome, recordResult, type MinigameGuards } from './minigame';
 import { forageKindOf, forageLeft, foraged, FORAGE_SOURCE_ITEM } from './forage';
 import { addPoints, canGiftToday, giveGift, heartEventDue, markHeartSeen, reactionOf, REQUEST_POINTS } from './friendship';
 
@@ -69,7 +70,12 @@ export type Command =
   | { readonly type: 'RestUntilEvening'; readonly commandId: string }
   /** Почати розділ 2 (GAME-286): лише після завершення розділу 1; ставить маркер дня розділу й запускає CH2-ARRIVAL-001. Не хід бота (поза moves()). */
   | { readonly type: 'StartChapter2'; readonly commandId: string }
-  | { readonly type: 'JoinItems'; readonly commandId: string; readonly recipeId: string };
+  | { readonly type: 'JoinItems'; readonly commandId: string; readonly recipeId: string }
+  /**
+   * Результат міні-гри (GAME-308): good / fine / scrappy. Наслідок бере ядро з каталогу `minigames`, не з команди. `scrappy` ПРИЙМАЄТЬСЯ завжди (м'який провал: гірший наслідок, але далі пускає);
+   * повтор тієї ж гри перезаписує останній результат і веде лічильник «сяк-так» поспіль (допомога після двох).
+   */
+  | { readonly type: 'FinishMinigame'; readonly commandId: string; readonly minigameId: string; readonly outcome: string };
 
 /** Підтверджений факт (CR-031). Причина — commandId команди, що його спричинила. */
 export type GameEvent =
@@ -97,6 +103,8 @@ export interface Safeguards {
   readonly award?: boolean;
   /** GAME-291: з'єднання предметів потребує КОЖНОЇ частини рецепта. Немає поля — вмикнено; `false` лише в мутації тесту (з однією половинкою вийшов би медальйон). */
   readonly joinAll?: boolean;
+  /** GAME-308: запобіжники каркаса міні-ігор. Немає поля — усе вмикнено; лише мутації тестів вимикають (scrappy блокує, лічильник рахує не підряд). */
+  readonly minigame?: MinigameGuards;
 }
 
 const SAFE: Safeguards = { commandId: true, grantId: true, rollback: true };
@@ -229,6 +237,16 @@ function apply(cmd: Command, d: Draft, defs: CoreDefs, guard: Safeguards, today:
       const next = joined(d.inventory, recipe, guard.joinAll !== false);
       if (next === null) return 'ITEM_NOT_OWNED';
       d.inventory = next;
+      return null;
+    }
+    case 'FinishMinigame': {
+      if (!isContentId(cmd.minigameId) || !isOutcome(cmd.outcome)) return 'INVALID_COMMAND';
+      const mg = defs.minigames ? own(defs.minigames, cmd.minigameId) : undefined;
+      if (!mg) return 'UNKNOWN_TARGET';
+      if (!d.player) return 'NO_CHARACTER';
+      const next = recordResult(d.minigames, cmd.minigameId, cmd.outcome, mg[cmd.outcome], guard.minigame);
+      if (next === null) return 'CONDITION_FAILED';   // лише мутація тесту (scrappyContinues=false): у грі scrappy приймається завжди
+      d.minigames = next;
       return null;
     }
     case 'RestUntilEvening': {
@@ -606,6 +624,7 @@ export function dispatch(state: GameState, cmd: Command, defs: CoreDefs, guard: 
     ...(state.friend !== undefined ? { friend: state.friend } : {}),
     ...(state.slept !== undefined ? { slept: state.slept } : {}),
     ...(state.chapterStart !== undefined ? { chapterStart: state.chapterStart } : {}),
+    ...(state.minigames !== undefined ? { minigames: state.minigames } : {}),
   };
   const code = apply(cmd, draft, defs, guard, today, weather, now);
   // Стан спорядження — лише для того, що в руках (продали останній — запис зникає), і лише відхилення від нового.
