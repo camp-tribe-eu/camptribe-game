@@ -1330,14 +1330,8 @@
   "dlg.camp-scrape.rough.c1": "Help gratefully accepted.",
   "dlg.camp-scrape.rough.c2": "I will finish it myself, thank you.",
   "dlg.camp-scrape.close": "Victoria opens the door: «That is that. Where is the kettle?»",
-  "journal.f.arrival-early": "Arrived early, picked a pitch at leisure",
-  "journal.f.arrival-ontime": "Arrived on time, the shore was already gone",
-  "journal.f.arrival-late": "Arrived late, took what was left",
-  "journal.f.spot-water": "Camped by the water",
-  "journal.f.spot-beeches": "Camped under the beeches",
-  "journal.f.spot-meadow": "Camped on the open meadow",
-  "journal.f.spot-reception": "Camped by reception",
   "dlg.camp-scrape.settle": "The doors are finally open on every side, and the camp begins.",
   "dlg.camp-scrape.settle-water": "The lake breathes cool air. Matthew is already down on the shore.",
-  "dlg.camp-scrape.settle-reception": "The barrier clicks behind you. Victoria laughs: «We will get used to it»."
+  "dlg.camp-scrape.settle-reception": "The barrier clicks behind you. Victoria laughs: «We will get used to it».",
+  "dlg.camp-arrival.free-any": "Elise runs a finger down her notebook: «Let us see what is left»."
 }

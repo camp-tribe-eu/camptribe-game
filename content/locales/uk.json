@@ -1330,14 +1330,8 @@
   "dlg.camp-scrape.rough.c1": "Приймаю допомогу.",
   "dlg.camp-scrape.rough.c2": "Сам доведу, дякую.",
   "dlg.camp-scrape.close": "Вікторія відчиняє двері: «Все, приїхали. Чайник де?»",
-  "journal.f.arrival-early": "Приїхали рано — вибирали ділянку спокійно",
-  "journal.f.arrival-ontime": "Приїхали вчасно — берег уже зайняли",
-  "journal.f.arrival-late": "Приїхали пізно — лишилось те, що лишилось",
-  "journal.f.spot-water": "Стали біля води",
-  "journal.f.spot-beeches": "Стали під буками",
-  "journal.f.spot-meadow": "Стали на відкритій галявині",
-  "journal.f.spot-reception": "Стали біля рецепції",
   "dlg.camp-scrape.settle": "Двері нарешті відчинені на всі боки, і табір починається.",
   "dlg.camp-scrape.settle-water": "Від озера тягне прохолодою. Метью вже стоїть на березі.",
-  "dlg.camp-scrape.settle-reception": "Шлагбаум клацає за спиною. Вікторія сміється: «Звикнемо»."
+  "dlg.camp-scrape.settle-reception": "Шлагбаум клацає за спиною. Вікторія сміється: «Звикнемо».",
+  "dlg.camp-arrival.free-any": "Еліза веде пальцем по зошиту: «Зараз подивимось, що лишилось»."
 }

@@ -36,7 +36,7 @@
       "id": "host-catch",
       "speaker": "player",
       "textKey": "dlg.camp-arrival.host-catch",
-      "next": "free-ontime",
+      "next": "free-any",
       "branches": [
         {
           "when": {
@@ -46,11 +46,23 @@
         },
         {
           "when": {
+            "flag": "f.arrival-ontime"
+          },
+          "next": "free-ontime"
+        },
+        {
+          "when": {
             "flag": "f.arrival-late"
           },
           "next": "free-late"
         }
       ]
+    },
+    {
+      "id": "free-any",
+      "speaker": "player",
+      "textKey": "dlg.camp-arrival.free-any",
+      "next": "spot"
     },
     {
       "id": "free-early",
