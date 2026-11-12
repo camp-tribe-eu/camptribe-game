@@ -81,7 +81,7 @@
     "id": "CH1-D2-ELISE-001", "titleKey": "q.ch1-d2-elise-001", "optional": false, "xp": 15, "giverId": "npc.elise", "locationId": "loc.camp.lake",
     "objectives": [
       { "id": "talk-elise", "textKey": "q.ch1-d2-elise-001.o1", "kind": "talk", "target": "npc.elise", "required": true, "byDialogue": true },
-      { "id": "talk-ingrid", "textKey": "q.ch1-d2-elise-001.o2", "kind": "talk", "target": "npc.ingrid", "required": true, "byDialogue": true }
+      { "id": "talk-ingrid", "textKey": "q.ch1-d2-elise-001.o2", "kind": "talk", "target": "npc.ingrid", "required": false }
     ],
     "transitions": [
       { "on": "complete", "to": "CH1-D2-CAMP-001" },

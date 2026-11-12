@@ -39,6 +39,8 @@ export const RAW_WAVES: readonly RawWave[] = waves as RawWave[];
 export const WAVES: WaveDefs = compileWaves(RAW_WAVES);
 /** Хвиля W4 «Вечір на трьох фронтах» (день 2, вечір). Стартує її сюжет (зріз 2); тут — id для стартера й тестів. */
 export const WAVE_CH1_EVENING = 'wave.ch1-day2-evening';
+/** GAME-307: хвиля полудня дня 2 «Чотири справи до вечора» — чотири приготування до бурі, встигнути можна дві-три. */
+export const WAVE_CH1_NOON = 'wave.ch1-day2-noon';
 /** Зріз 3: W1 «Виїзд о шостій» (пролог, дім), W2 «Небо темнішає» (день 1, зупинка; авто / вело — дві хвилі одного етапу), W3 «Встигнути до зливи» (день 1, табір). */
 export const WAVE_CH1_DEPARTURE = 'wave.ch1-home-departure';
 export const WAVE_CH1_ROAD = 'wave.ch1-day1-road';
