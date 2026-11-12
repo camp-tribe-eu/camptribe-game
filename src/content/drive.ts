@@ -9,12 +9,16 @@
 //    не перестроїшся. Прокол, об'їзд, затор коштують ЧАС. Ніхто не б'ється, здоров'я в грі немає.
 //  * М'ЯКИЙ ПРОВАЛ. Пальне скінчилось — не глухий кут: тебе дотягнуть до колонки (коштує час), і їдеш далі.
 //    Спізнився — приїжджаєш однаково, лише вільних ділянок менше.
-//  * ЧАС ПРИЇЗДУ ВИРІШУЄ, ЯКІ ДІЛЯНКИ ВІЛЬНІ (ланцюг наслідків, §1) — `freePitchesFor`.
+//  * ЧАС ПРИЇЗДУ ВИРІШУЄ, ЯКІ ДІЛЯНКИ ВІЛЬНІ (ланцюг наслідків, §1). Дорога ставить ОДИН прапорець
+//    `f.arrival` (early/ontime/late) за docs/ARRIVAL-CONTRACT.md; набір ділянок рахує приїзд (GAME-310).
 
 /** Смуга: 0 — права (повільна), 1 — середня, 2 — ліва. */
 export type Lane = 0 | 1 | 2;
 export const LANES: readonly Lane[] = [0, 1, 2];
+/** Смуга, з якої починає авто. */
+export const START_LANE: Lane = 1;
 export type Pace = 'steady' | 'brisk';
+/** Три результати — спільні для всіх міні-ігор (каркас GAME-308). */
 export type Outcome = 'good' | 'fine' | 'scrappy';
 
 // ── Довжини й швидкості ────────────────────────────────────────────────────────────────────────
@@ -26,9 +30,17 @@ export const KM_PER_M = ROUTE_KM / ROUTE_M;
 
 export const PACE_MPS: Readonly<Record<Pace, number>> = { steady: 26, brisk: 34 };
 /** Скільки метрів попереду видно: з цієї відстані перешкода вже на екрані й уже зрозуміла. */
-export const VIEW_M = 420;
+export const VIEW_M = 1300;
 /** Знак «контроль швидкості» стоїть за стільки метрів до камери. */
-export const CAMERA_SIGN_M = 600;
+export const CAMERA_SIGN_M = 1500;
+/**
+ * Скільки секунд ДОРОГИ минає за секунду ГРИ. Каркас міні-ігор (GAME-308) дає грі 30–90 с, а дорога до
+ * озера триває ~5 хв дорожнього часу: поїздка — її стиснутий переказ, як і 42 км на смузі прогресу.
+ * Усі числа нижче — у секундах ДОРОГИ; усе, що бачить гравець (час на реакцію, межа кадрів), ділиться на це.
+ */
+export const ROAD_SPEEDUP = 5;
+/** Скільки мс дороги додає один кадр гри (60 кадрів на секунду гри). */
+export const FRAME_ROAD_MS = (1000 / 60) * ROAD_SPEEDUP;
 /** Перестроювання триває стільки — рух пальцем, а не влучання. */
 export const LANE_CHANGE_MS = 420;
 /** Крок кадру обрізається: лаг не має телепортувати авто крізь перешкоду. */
@@ -96,7 +108,7 @@ export const ADVENTURE_KINDS: readonly AdventureKind[] = ['puncture', 'diversion
 export interface Adventure { readonly id: string; readonly kind: AdventureKind; readonly at: number }
 export type StopKind = 'fuel' | 'rest';
 /** Скільки метрів видно з'їзд: доки їдеш уздовж нього, зупинка доступна. */
-export const STOP_WINDOW_M = 340;
+export const STOP_WINDOW_M = 900;
 export interface StopPoint { readonly id: string; readonly kind: StopKind; readonly at: number }
 
 export interface Course {
@@ -145,8 +157,11 @@ export function buildCourse(seed: number, help: DriveHelp = NO_HELP): Course {
   for (let i = 0; i < HAZARD_SLOTS; i++) {
     const kind = HAZARD_KINDS[i % HAZARD_KINDS.length] as HazardKind;
     const at = Math.round(first + cell * i + roll(seed, i, Math.floor(cell * 0.5)));
-    // Смуга перешкоди — не та сама дві комірки поспіль: інакше можна було б просто стати в одну смугу й їхати.
-    const lane = ((roll(seed, 100 + i, 3) + i) % 3) as Lane;
+    // Ремонт дороги ЗАВЖДИ в середній смузі — тій, із якої починає авто. Нічого не робити — це теж
+    // рішення, і воно має коштувати: не об'їхав ремонт жодного разу — приїхав після закриття рецепції
+    // (каркас GAME-308 цього й вимагає: порожній захід мусить дати «сяк-так»). Решта перешкод — по черзі
+    // в різних смугах, щоб не можна було просто стати в одну й їхати.
+    const lane = (kind === 'roadworks' ? START_LANE : ((roll(seed, 100 + i, 3) + i) % 3)) as Lane;
     hazards.push({ id: `hz-${i}`, kind, at, lane });
   }
   const cameras: CameraPost[] = [
@@ -208,7 +223,7 @@ export type DriveInput =
 
 export function startDrive(course: Course, moneyCents: number, help: DriveHelp = NO_HELP): DriveState {
   return {
-    phase: 'drive', sec: 0, metres: 0, lane: 1, toLane: 1, changing: 0, pace: 'steady',
+    phase: 'drive', sec: 0, metres: 0, lane: START_LANE, toLane: START_LANE, changing: 0, pace: 'steady',
     fuelL: course.startFuelL, comfort: COMFORT_MAX, moneyCents, finesCents: 0,
     stoppedFor: 0, stoppedWhy: null, offer: null, cameraAhead: false, recent: [], done: [], help,
   };
@@ -238,15 +253,16 @@ export function speedOf(s: DriveState, c: Course): number {
 }
 
 /**
- * Скільки секунд гравець має на реакцію, щоб `kind` не загальмував його: перешкода з'являється за `VIEW_M`,
- * і зближення — різниця швидкостей. Камера рахується окремо (`cameraTelegraphSec`): їй потрібен не маневр,
- * а скидання швидкості. Це число — головна обіцянка картки: рефлексів гра не вимагає.
+ * Скільки секунд ГРИ (тих, що відчуває гравець) є на реакцію, щоб `kind` не загальмував: перешкода
+ * з'являється за `VIEW_M`, зближення — різниця швидкостей, і все ділиться на `ROAD_SPEEDUP`. Камера
+ * рахується окремо (`cameraTelegraphSec`): їй потрібен не маневр, а скидання швидкості.
+ * Це число — головна обіцянка картки: рефлексів гра не вимагає.
  */
 export function telegraphSec(kind: HazardKind, pace: Pace, viewM: number = VIEW_M): number {
   const closing = PACE_MPS[pace] - HAZARD_MPS[kind];
-  return closing <= 0 ? Infinity : viewM / closing;
+  return closing <= 0 ? Infinity : viewM / closing / ROAD_SPEEDUP;
 }
-export const cameraTelegraphSec = (pace: Pace, signM: number = CAMERA_SIGN_M): number => signM / PACE_MPS[pace];
+export const cameraTelegraphSec = (pace: Pace, signM: number = CAMERA_SIGN_M): number => signM / PACE_MPS[pace] / ROAD_SPEEDUP;
 
 /** Найменший час на реакцію з усіх перешкод, камер і обох швидкостей — те, що стереже тест. */
 export function minTelegraphSec(viewM: number = VIEW_M, signM: number = CAMERA_SIGN_M): number {
@@ -373,20 +389,16 @@ function tick(s: DriveState, c: Course, dtMsRaw: number): StepResult {
   return { state: mood(next, events, at), events };
 }
 
-// ── Ділянки табору: ланцюг наслідків (EPISODE-DESIGN §1) ───────────────────────────────────────
-/** Ділянки в порядку бажаності: кращі розбирають ті, хто приїхав раніше. */
-export const PITCHES = ['pitch.water', 'pitch.beeches', 'pitch.meadow', 'pitch.reception'] as const;
-export type PitchId = (typeof PITCHES)[number];
-/** Скільки ділянок лишається вільними за кожного результату. Жоден результат не лишає нуль — приїзд не блокується. */
-export const FREE_PITCH_COUNT: Readonly<Record<Outcome, number>> = { good: 4, fine: 3, scrappy: 2 };
-
+// ── Що дорога віддає приїздові (docs/ARRIVAL-CONTRACT.md, GAME-310) ───────────────────────────
 /**
- * Договір для GAME-310: час приїзду вирішує набір вільних ділянок. Приїхав рано — вільні всі чотири;
- * вчасно — найкращу вже зайняли; пізно — лишились галявина й місце біля рецепції. Порожнім набір не буває.
+ * Значення прапорця `f.arrival` — ЄДИНЕ, що дорога передає далі. Набір вільних ділянок рахує приїзд
+ * (`freePitches`, GAME-310): другого договору тут немає й бути не повинно.
  */
-export function freePitchesFor(outcome: Outcome): readonly PitchId[] {
-  return PITCHES.slice(PITCHES.length - FREE_PITCH_COUNT[outcome]);
-}
+export type Arrival = 'early' | 'ontime' | 'late';
+/** Міст назв із docs/ARRIVAL-CONTRACT.md §1: результат міні-гри → значення прапорця. */
+export const ARRIVAL_BY_DRIVE: Readonly<Record<Outcome, Arrival>> = { good: 'early', fine: 'ontime', scrappy: 'late' };
+/** Тег наслідку для каркаса міні-ігор (MinigameDef.outcomes[*].consequence): його читає сценарій приїзду. */
+export const arrivalConsequence = (o: Outcome): string => `arrival.${ARRIVAL_BY_DRIVE[o]}`;
 
 export interface DriveResult {
   readonly outcome: Outcome;
@@ -399,25 +411,31 @@ export interface DriveResult {
   readonly fuelL: number;
   /** Скільки настрою родина втратить увечері через дорогу (0 — нічого). */
   readonly moodPenalty: number;
-  readonly freePitches: readonly PitchId[];
+  /** Значення прапорця `f.arrival` для приїзду (GAME-310). */
+  readonly arrival: Arrival;
 }
 
 /**
  * Підсумок поїздки. «Сяк-так» — це спізнення або знервована родина; він НЕ блокує приїзд, лише звужує
  * вибір ділянки. Рахується з доїханого стану: поки `phase !== 'arrived'`, підсумку ще немає.
  */
+export function driveOutcome(s: DriveState, c: Course): Outcome {
+  const lateSec = Math.max(0, s.sec - c.receptionSec);
+  const comfort = Math.round(s.comfort);
+  if (s.phase !== 'arrived') return 'scrappy';   // кадри скінчились раніше за дорогу — це «пізно», не глухий кут
+  if (lateSec > 0 || comfort < FRAZZLED_COMFORT) return 'scrappy';
+  return s.sec <= EARLY_SEC && comfort >= CALM_COMFORT && s.finesCents === 0 ? 'good' : 'fine';
+}
+
 export function driveResult(s: DriveState, c: Course): DriveResult {
   const lateSec = Math.max(0, s.sec - c.receptionSec);
   const comfort = Math.round(s.comfort);
-  const outcome: Outcome =
-    lateSec > 0 || comfort < FRAZZLED_COMFORT ? 'scrappy'
-      : s.sec <= EARLY_SEC && comfort >= CALM_COMFORT && s.finesCents === 0 ? 'good'
-        : 'fine';
+  const outcome = driveOutcome(s, c);
   return {
     outcome, arrivalSec: Math.round(s.sec * 10) / 10, lateSec: Math.round(lateSec * 10) / 10, comfort,
     finesCents: s.finesCents, moneyCents: s.moneyCents, fuelL: Math.round(s.fuelL * 100) / 100,
     moodPenalty: Math.max(0, Math.round((COMFORT_MAX - comfort) / 10)),
-    freePitches: freePitchesFor(outcome),
+    arrival: ARRIVAL_BY_DRIVE[outcome],
   };
 }
 

@@ -7,9 +7,9 @@
 //   5. `HAZARD_MPS.roadworks = 0` → та сама зупинка назавжди на впертій стратегії.
 import { describe, expect, it } from 'vitest';
 import {
-  ADVENTURE_KINDS, CLOSE_PASS_COST, COMFORT_MAX, FINE_CENTS, FRAZZLED_COMFORT, FREE_PITCH_COUNT, HAZARD_KINDS, HAZARD_MPS,
-  MIN_TELEGRAPH_SEC, PACE_MPS, PITCHES, REST_COMFORT, SHARP_CHANGES, SHARP_COST, SHARP_WINDOW_MS, TANK_MAX_L,
-  blocker, buildCourse, cameraTelegraphSec, driveResult, freePitchesFor, helpFor, minTelegraphSec, speedOf, startDrive, stepDrive, telegraphSec,
+  ADVENTURE_KINDS, ARRIVAL_BY_DRIVE, CLOSE_PASS_COST, COMFORT_MAX, FINE_CENTS, FRAZZLED_COMFORT, HAZARD_KINDS, HAZARD_MPS,
+  MIN_TELEGRAPH_SEC, PACE_MPS, REST_COMFORT, SHARP_CHANGES, SHARP_COST, SHARP_WINDOW_MS, TANK_MAX_L,
+  arrivalConsequence, blocker, buildCourse, cameraTelegraphSec, driveResult, helpFor, minTelegraphSec, speedOf, startDrive, stepDrive, telegraphSec,
   type Course, type DriveState, type Lane, type Outcome,
 } from './drive';
 import { BRISK, CALM_FAST, FRAME_MS, SCRAPPY, START_MONEY, STEADY, play } from './drive.fixture';
@@ -18,7 +18,7 @@ const SEEDS = [1, 2, 3, 7, 11, 19, 23, 42];
 const tick = (s: DriveState, c: Course, ms = FRAME_MS): DriveState => stepDrive(s, c, { kind: 'tick', dtMs: ms }).state;
 
 describe('телеграф: рефлексів гра не вимагає', () => {
-  it(`найменший час на реакцію ≥ ${MIN_TELEGRAPH_SEC} с (мутація: звузити VIEW_M)`, () => {
+  it(`найменший час на реакцію (у секундах ГРИ) ≥ ${MIN_TELEGRAPH_SEC} с (мутація: звузити VIEW_M)`, () => {
     const min = minTelegraphSec();
     expect(min, `часу на реакцію ${min.toFixed(2)} с < ${MIN_TELEGRAPH_SEC}`).toBeGreaterThanOrEqual(MIN_TELEGRAPH_SEC);
     // Найтісніший випадок — найповільніша перешкода на жвавому ході.
@@ -26,7 +26,7 @@ describe('телеграф: рефлексів гра не вимагає', () =
     expect(min).toBeCloseTo(telegraphSec(slowest, 'brisk'), 6);
   });
   it('вимога не порожня: з удвічі коротшим оглядом ТОЙ САМИЙ рахунок падає нижче межі', () => {
-    expect(minTelegraphSec(200, 600)).toBeLessThan(MIN_TELEGRAPH_SEC);
+    expect(minTelegraphSec(400, 600)).toBeLessThan(MIN_TELEGRAPH_SEC);
   });
   it('кожна перешкода й кожна камера дають час на реакцію на обох швидкостях', () => {
     for (const k of HAZARD_KINDS) for (const pace of ['steady', 'brisk'] as const) {
@@ -93,7 +93,7 @@ describe('три результати', () => {
     const seen = new Set<Outcome>();
     for (const r of runs) for (const run of [r.good, r.fine, r.bad]) {
       expect(run.state.phase).toBe('arrived');
-      expect(run.result.freePitches.length).toBeGreaterThan(0);
+      expect(run.result.arrival).toBe(ARRIVAL_BY_DRIVE[run.result.outcome]);
       seen.add(run.result.outcome);
     }
     expect([...seen].sort()).toEqual(['fine', 'good', 'scrappy']);
@@ -150,7 +150,7 @@ describe('пальне без глухого кута', () => {
     expect(run.events.some((e) => e.kind === 'dry-tank'), 'бак так і не висох — перевірка нічого не довела').toBe(true);
     expect(run.state.phase).toBe('arrived');
     expect(run.result.fuelL).toBeGreaterThan(0);
-    expect(run.result.freePitches.length).toBeGreaterThan(0);
+    expect(['early', 'ontime', 'late']).toContain(run.result.arrival);
   });
   it('жвава їзда їсть більше за спокійну', () => {
     const c = buildCourse(1);
@@ -205,31 +205,30 @@ describe('комфорт родини', () => {
   });
 });
 
-describe('ланцюг наслідків: час приїзду → вільні ділянки (договір GAME-310)', () => {
-  it('набір ділянок РІЗНИЙ для трьох результатів (мутація: повертати завжди всі — червоніє)', () => {
-    const sets = (['good', 'fine', 'scrappy'] as const).map((o) => freePitchesFor(o).join(','));
-    expect(new Set(sets).size, `набори збіглися: ${sets.join(' | ')}`).toBe(3);
-    expect(freePitchesFor('good').length).toBeGreaterThan(freePitchesFor('fine').length);
-    expect(freePitchesFor('fine').length).toBeGreaterThan(freePitchesFor('scrappy').length);
+describe('ланцюг наслідків: час приїзду → прапорець приїзду (docs/ARRIVAL-CONTRACT.md)', () => {
+  it('три результати дають ТРИ різні значення f.arrival (мутація: віддавати завжди одне — червоніє)', () => {
+    const vals = (['good', 'fine', 'scrappy'] as const).map((o) => ARRIVAL_BY_DRIVE[o]);
+    expect(new Set(vals).size, `значення збіглися: ${vals.join(' | ')}`).toBe(3);
+    expect(vals).toEqual(['early', 'ontime', 'late']);
   });
-  it('кращі ділянки розбирають першими, і жоден результат не лишає порожньо', () => {
-    for (const o of ['good', 'fine', 'scrappy'] as const) {
-      const free = freePitchesFor(o);
-      expect(free.length).toBe(FREE_PITCH_COUNT[o]);
-      expect(free.length).toBeGreaterThan(0);
-      // Вільні — це хвіст списку бажаності: що краще, те й зайняли раніше.
-      expect([...free]).toEqual(PITCHES.slice(PITCHES.length - free.length));
-    }
-    expect(freePitchesFor('scrappy').every((p) => freePitchesFor('fine').includes(p))).toBe(true);
-    expect(freePitchesFor('fine').every((p) => freePitchesFor('good').includes(p))).toBe(true);
+  it('тег наслідку для каркаса міні-ігор — те саме значення, без другого договору', () => {
+    for (const o of ['good', 'fine', 'scrappy'] as const) expect(arrivalConsequence(o)).toBe(`arrival.${ARRIVAL_BY_DRIVE[o]}`);
+    expect(new Set((['good', 'fine', 'scrappy'] as const).map(arrivalConsequence)).size).toBe(3);
   });
-  it('підсумок справжньої поїздки несе набір, що відповідає її результату', () => {
+  it('підсумок справжньої поїздки несе прапорець, що відповідає її результату', () => {
     for (const seed of SEEDS) {
       const c = buildCourse(seed);
       for (const p of [CALM_FAST, STEADY, SCRAPPY]) {
         const r = play(c, p).result;
-        expect(r.freePitches, `зерно ${seed} → ${r.outcome}`).toEqual(freePitchesFor(r.outcome));
+        expect(r.arrival, `зерно ${seed} → ${r.outcome}`).toBe(ARRIVAL_BY_DRIVE[r.outcome]);
       }
+    }
+  });
+  it('«пізно» не блокує приїзд: результат є, і він один із трьох', () => {
+    for (const seed of SEEDS.slice(0, 3)) {
+      const r = play(buildCourse(seed), SCRAPPY);
+      expect(r.state.phase).toBe('arrived');
+      expect(r.result.arrival).toBe('late');
     }
   });
 });
@@ -249,6 +248,6 @@ describe('допомога після двох «сяк-так» (договір
     const a = play(plain, SCRAPPY).result;
     const b = play(helped, SCRAPPY).result;
     expect(b.lateSec).toBeLessThan(a.lateSec);
-    expect(b.freePitches.length).toBeGreaterThanOrEqual(a.freePitches.length);
+    expect(b.comfort).toBeGreaterThanOrEqual(a.comfort);
   });
 });

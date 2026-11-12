@@ -2,7 +2,7 @@
 // Жодного реального часу — лише кроки по 16 мс, як кадри. Тут немає жодного правила гри: усі рішення
 // приймає `stepDrive`, цей файл лише натискає кнопки.
 import {
-  HAZARD_LEN_M, LANES, VIEW_M, driveResult, startDrive, stepDrive, type Course, type DriveEvent, type DriveResult, type DriveState, type Lane, type Pace,
+  HAZARD_LEN_M, LANES, driveResult, startDrive, stepDrive, type Course, type DriveEvent, type DriveResult, type DriveState, type Lane, type Pace,
 } from './drive';
 
 export const FRAME_MS = 16;
@@ -25,7 +25,7 @@ function busy(c: Course, lane: Lane, metres: number, look: number): boolean {
 }
 
 /** Куди перестроїтись, щоб не впертись: null — у своїй смузі чисто або вільної немає. */
-export function dodgeTo(s: DriveState, c: Course, look = VIEW_M * 0.6): Lane | null {
+export function dodgeTo(s: DriveState, c: Course, look = 500): Lane | null {
   if (!busy(c, s.lane, s.metres, look)) return null;
   const free = LANES.filter((l) => l !== s.lane && !busy(c, l, s.metres, look));
   if (free.length === 0) return null;
