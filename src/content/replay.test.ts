@@ -42,7 +42,9 @@ describe('реплеї журналу (GAME-34)', () => {
     }
     expect(rejected).toEqual(['Visit:UNPAID_BASKET', 'Pickup:ITEM_ALREADY_HELD', 'TakeItem:PACK_ALREADY', 'PackItem:PACK_ALREADY', 'LoadCar:PACK_NOT_PACKED']);     // лише навмисна відмова (GAME-81: дрова в таборі тепер підбираються — їх не купили наперед)
     expect(s.game.campaignEnded).toBe(true);
-    expect(s.game.grants).toEqual(['rw.campfire-warmth', 'rw.q-elise-bike-area', 'rw.st-005']);
+    // GAME-307: у вечора дня 2 з'явилася своя маленька винагорода (сухі дрова на завтра, rw.ch1-d2-fire-001) — ще один
+    // виданий раз грант на тому самому проході; решта не змінилася.
+    expect(s.game.grants).toEqual(['rw.campfire-warmth', 'rw.ch1-d2-fire-001', 'rw.q-elise-bike-area', 'rw.st-005']);
     expect(s.finds).toBeGreaterThan(0);                                                      // RNG справді працював
     expect(PROLOGUE_BIKE.map((i) => i.kind)).toEqual(expect.arrayContaining(['frame', 'command', 'pause', 'resume', 'advance']));
   });
