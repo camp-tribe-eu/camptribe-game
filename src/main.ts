@@ -69,6 +69,9 @@ import contentEvents from '../content/events.json';
 import { rankUps, SKILL_IDS, type HandAction } from './core/skills';
 import type { SkillUp } from './ui/overlay-order';
 import { openGate } from './view/open-gate';
+import { missionWorkDue } from './view/mission-work';
+import { createMinigameSession, type MinigameSession } from './view/minigame-session';
+import { minigameById } from './content/minigames';
 import type { RewardEvent } from './ui/port';
 
 const app = document.querySelector<HTMLElement>('#app');
@@ -235,6 +238,7 @@ const chatted = new Set<string>();
 /** Розмова з NPC на мапі: команда в ядро (ядро саме відмовить, якщо гравець не тут), і екран подорожі —
  *  там видно розмову або те, чого бракує (немає персонажа, не та локація). */
 const talkOnMap = (npcId: string): void => {
+  if (missionSession) return;   // GAME-312: під міні-грою місії розмова не відкривається поверх неї
   mapTalk = true;
   try {
     bridge.send({ type: 'Talk', npcId });
@@ -379,6 +383,27 @@ let spotsMap: MapKey | '' = '';
 let spotsMemo: readonly string[] = [];
 let miniFrame: MiniFrame | null = null;
 const miniListeners = new Set<(f: MiniFrame) => void>();
+// GAME-312: міні-гра місії сусіда на місці. Відкривається, коли герой дійшов у зону походу; кадри — від сцени (frame), світ НЕ на паузі:
+// поки гравець у пригоді, рутини табору цокають до ночі (EPISODE-DESIGN §9а). Результат — команда ядра FinishMinigame, раз за сесію.
+let missionSession: MinigameSession | null = null;
+const missionListeners = new Set<() => void>();
+const missionChanged = (): void => { for (const l of [...missionListeners]) l(); };
+function missionTick(): void {
+  if (missionSession) {
+    if (missionSession.run.phase === 'closed') { missionSession = null; missionChanged(); return; }
+    missionSession.frame(1);
+    input.held.clear();   // під міні-грою герой стоїть: стрілки не водять його з місця роботи
+    return;
+  }
+  const due = missionWorkDue(bridge.state.game, miniFrame, worldHooks.mapKey());
+  const def = due ? minigameById(due.minigame) : undefined;
+  if (!def) return;
+  missionSession = createMinigameSession(def, {
+    results: bridge.state.game.minigames, seed: bridge.state.worldSeed,
+    report: (r) => { bridge.send({ type: 'FinishMinigame', minigameId: def.id, outcome: r.outcome }); storyChanged(); },
+  });
+  missionChanged();
+}
 const worldHooks: WorldHooks = {
   hintTick: (dt) => {
     if (bridge.state.game.dialogue !== null) hintIdle.poke();
@@ -426,6 +451,7 @@ const worldHooks: WorldHooks = {
   onFish,
   isLive: (name) => !campOnly(name) && liveSpot(bridge.state, name, GAME_DEFS),
   frame: (dtMs) => {
+    missionTick();
     if (cardItem !== null && (cardLeftMs -= dtMs) <= 0) { cardItem = null; storyChanged(); }
     if (receipt !== null && (receiptLeftMs -= dtMs) <= 0) { receipt = null; storyChanged(); }
   },
@@ -566,6 +592,7 @@ render(h(Shell, {
     },
     hintShown: () => hintIdle.visible(),
     minimap: { frame: () => miniFrame, subscribe: (l) => { miniListeners.add(l); return () => { miniListeners.delete(l); }; } },
+    mission: { session: () => missionSession, subscribe: (l) => { missionListeners.add(l); return () => { missionListeners.delete(l); }; } },
     setHintMode: (m) => { hintMode = m; applyHintMode(); },
     zoomSteps: () => zoomSteps(stage.clientWidth, stage.clientHeight, coarse()),
     zoomActive: () => game.scale.zoom,

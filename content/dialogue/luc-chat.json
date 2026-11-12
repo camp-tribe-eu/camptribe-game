@@ -3,51 +3,786 @@
   "npcId": "npc.luc",
   "start": "gate",
   "nodes": [
-    { "id": "gate", "speaker": "npc", "textKey": "dlg.luc-chat.gate", "next": "hello", "branches": [{ "when": { "all": [{ "flag": "f.req-luc-radio-t1" }, { "notFlag": "f.req-luc-radio-done" }] }, "next": "turnin2" }, { "when": { "all": [{ "flag": "f.req-luc-radio-taken" }, { "notFlag": "f.req-luc-radio-done" }] }, "next": "reminder2" }, { "when": { "all": [{ "flag": "f.req-luc-chain-done" }, { "notFlag": "f.req-luc-radio-taken" }, { "notFlag": "f.req-luc-radio-done" }] }, "next": "offer2" }, { "when": { "all": [{ "flag": "f.req-luc-chain-t1" }, { "notFlag": "f.req-luc-chain-done" }] }, "next": "turnin" }, { "when": { "all": [{ "flag": "f.req-luc-chain-taken" }, { "notFlag": "f.req-luc-chain-done" }] }, "next": "reminder" }, { "when": { "all": [{ "notFlag": "f.req-luc-chain-taken" }, { "notFlag": "f.req-luc-chain-done" }] }, "next": "offer" }] },
     {
-      "id": "hello", "speaker": "npc", "textKey": "dlg.luc-chat.hello",
-      "choices": [
-        { "textKey": "dlg.luc-chat.hello.c1", "next": "a" },
-        { "textKey": "dlg.luc-chat.hello.c2", "next": "b" },
-        { "textKey": "dlg.luc-chat.hello.c3", "next": "bye" }
+      "id": "gate",
+      "speaker": "npc",
+      "textKey": "dlg.luc-chat.gate",
+      "next": "hello",
+      "branches": [
+        {
+          "when": {
+            "all": [
+              {
+                "flag": "f.mis-aerial-go2"
+              },
+              {
+                "minigame": "mg.panel-aim"
+              },
+              {
+                "notFlag": "f.mis-aerial-done"
+              }
+            ]
+          },
+          "next": "a-sun1"
+        },
+        {
+          "when": {
+            "all": [
+              {
+                "flag": "f.mis-aerial-go2"
+              },
+              {
+                "notFlag": "f.mis-aerial-done"
+              }
+            ]
+          },
+          "next": "a-wait2"
+        },
+        {
+          "when": {
+            "all": [
+              {
+                "flag": "f.mis-aerial-go"
+              },
+              {
+                "minigame": "mg.aerial-tune"
+              },
+              {
+                "notFlag": "f.mis-aerial-done"
+              }
+            ]
+          },
+          "next": "a-test"
+        },
+        {
+          "when": {
+            "all": [
+              {
+                "flag": "f.mis-aerial-go"
+              },
+              {
+                "notFlag": "f.mis-aerial-done"
+              }
+            ]
+          },
+          "next": "a-wait"
+        },
+        {
+          "when": {
+            "all": [
+              {
+                "flag": "f.mis-aerial-taken"
+              },
+              {
+                "notFlag": "f.mis-aerial-done"
+              }
+            ]
+          },
+          "next": "a-hub"
+        },
+        {
+          "when": {
+            "all": [
+              {
+                "flag": "f.req-luc-radio-t1"
+              },
+              {
+                "notFlag": "f.req-luc-radio-done"
+              }
+            ]
+          },
+          "next": "turnin2"
+        },
+        {
+          "when": {
+            "all": [
+              {
+                "flag": "f.req-luc-radio-taken"
+              },
+              {
+                "notFlag": "f.req-luc-radio-done"
+              }
+            ]
+          },
+          "next": "reminder2"
+        },
+        {
+          "when": {
+            "all": [
+              {
+                "flag": "f.req-luc-chain-done"
+              },
+              {
+                "notFlag": "f.req-luc-radio-taken"
+              },
+              {
+                "notFlag": "f.req-luc-radio-done"
+              }
+            ]
+          },
+          "next": "offer2"
+        },
+        {
+          "when": {
+            "all": [
+              {
+                "flag": "f.req-luc-chain-t1"
+              },
+              {
+                "notFlag": "f.req-luc-chain-done"
+              }
+            ]
+          },
+          "next": "turnin"
+        },
+        {
+          "when": {
+            "all": [
+              {
+                "flag": "f.req-luc-chain-taken"
+              },
+              {
+                "notFlag": "f.req-luc-chain-done"
+              }
+            ]
+          },
+          "next": "reminder"
+        },
+        {
+          "when": {
+            "all": [
+              {
+                "notFlag": "f.req-luc-chain-taken"
+              },
+              {
+                "notFlag": "f.req-luc-chain-done"
+              }
+            ]
+          },
+          "next": "offer"
+        }
       ]
     },
-    { "id": "a", "speaker": "npc", "textKey": "dlg.luc-chat.a", "end": true },
-    { "id": "b", "speaker": "npc", "textKey": "dlg.luc-chat.b", "end": true },
-    { "id": "bye", "speaker": "npc", "textKey": "dlg.luc-chat.bye", "end": true },
     {
-      "id": "offer", "speaker": "npc", "textKey": "dlg.luc-chat.offer",
+      "id": "hello",
+      "speaker": "npc",
+      "textKey": "dlg.luc-chat.hello",
       "choices": [
-        { "textKey": "dlg.luc-chat.offer.c1", "next": "accepted", "effects": [{ "setFlag": "f.req-luc-chain-taken" }] },
-        { "textKey": "dlg.luc-chat.offer.c2", "next": "later" }
+        {
+          "textKey": "dlg.luc-chat.hello.c1",
+          "next": "a"
+        },
+        {
+          "textKey": "dlg.luc-chat.hello.c2",
+          "next": "b"
+        },
+        {
+          "textKey": "dlg.luc-chat.hello.c3",
+          "next": "bye"
+        },
+        {
+          "textKey": "dlg.luc-chat.hello.c4",
+          "next": "a-offer",
+          "when": {
+            "all": [
+              {
+                "notFlag": "f.mis-aerial-taken"
+              },
+              {
+                "notFlag": "f.mis-aerial-done"
+              },
+              {
+                "any": [
+                  {
+                    "flag": "f.mis-ring-done"
+                  },
+                  {
+                    "notFlag": "f.mis-ring-taken"
+                  }
+                ]
+              },
+              {
+                "any": [
+                  {
+                    "flag": "f.mis-lantern-done"
+                  },
+                  {
+                    "notFlag": "f.mis-lantern-taken"
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "textKey": "dlg.luc-chat.hello.c5",
+          "next": "a-device",
+          "when": {
+            "flag": "f.camp-solar-panel"
+          }
+        }
       ]
     },
-    { "id": "accepted", "speaker": "npc", "textKey": "dlg.luc-chat.accepted", "end": true },
-    { "id": "later", "speaker": "npc", "textKey": "dlg.luc-chat.later", "end": true },
-    { "id": "reminder", "speaker": "npc", "textKey": "dlg.luc-chat.reminder", "end": true },
     {
-      "id": "turnin", "speaker": "npc", "textKey": "dlg.luc-chat.turnin",
+      "id": "a",
+      "speaker": "npc",
+      "textKey": "dlg.luc-chat.a",
+      "end": true
+    },
+    {
+      "id": "b",
+      "speaker": "npc",
+      "textKey": "dlg.luc-chat.b",
+      "end": true
+    },
+    {
+      "id": "bye",
+      "speaker": "npc",
+      "textKey": "dlg.luc-chat.bye",
+      "end": true
+    },
+    {
+      "id": "offer",
+      "speaker": "npc",
+      "textKey": "dlg.luc-chat.offer",
       "choices": [
-        { "textKey": "dlg.luc-chat.turnin.c1", "next": "closing", "effects": [{ "setFlag": "f.req-luc-chain-done" }] }
+        {
+          "textKey": "dlg.luc-chat.offer.c1",
+          "next": "accepted",
+          "effects": [
+            {
+              "setFlag": "f.req-luc-chain-taken"
+            }
+          ]
+        },
+        {
+          "textKey": "dlg.luc-chat.offer.c2",
+          "next": "later"
+        }
       ]
     },
-    { "id": "closing", "speaker": "npc", "textKey": "dlg.luc-chat.closing", "end": true },
     {
-      "id": "offer2", "speaker": "npc", "textKey": "dlg.luc-chat.offer2",
+      "id": "accepted",
+      "speaker": "npc",
+      "textKey": "dlg.luc-chat.accepted",
+      "end": true
+    },
+    {
+      "id": "later",
+      "speaker": "npc",
+      "textKey": "dlg.luc-chat.later",
+      "end": true
+    },
+    {
+      "id": "reminder",
+      "speaker": "npc",
+      "textKey": "dlg.luc-chat.reminder",
+      "end": true
+    },
+    {
+      "id": "turnin",
+      "speaker": "npc",
+      "textKey": "dlg.luc-chat.turnin",
       "choices": [
-        { "textKey": "dlg.luc-chat.offer2.c1", "next": "accepted2", "effects": [{ "setFlag": "f.req-luc-radio-taken" }] },
-        { "textKey": "dlg.luc-chat.offer2.c2", "next": "later2" }
+        {
+          "textKey": "dlg.luc-chat.turnin.c1",
+          "next": "closing",
+          "effects": [
+            {
+              "setFlag": "f.req-luc-chain-done"
+            }
+          ]
+        }
       ]
     },
-    { "id": "accepted2", "speaker": "npc", "textKey": "dlg.luc-chat.accepted2", "end": true },
-    { "id": "later2", "speaker": "npc", "textKey": "dlg.luc-chat.later2", "end": true },
-    { "id": "reminder2", "speaker": "npc", "textKey": "dlg.luc-chat.reminder2", "end": true },
     {
-      "id": "turnin2", "speaker": "npc", "textKey": "dlg.luc-chat.turnin2",
+      "id": "closing",
+      "speaker": "npc",
+      "textKey": "dlg.luc-chat.closing",
+      "end": true
+    },
+    {
+      "id": "offer2",
+      "speaker": "npc",
+      "textKey": "dlg.luc-chat.offer2",
       "choices": [
-        { "textKey": "dlg.luc-chat.turnin2.c1", "next": "closing2", "effects": [{ "setFlag": "f.req-luc-radio-done" }] }
+        {
+          "textKey": "dlg.luc-chat.offer2.c1",
+          "next": "accepted2",
+          "effects": [
+            {
+              "setFlag": "f.req-luc-radio-taken"
+            }
+          ]
+        },
+        {
+          "textKey": "dlg.luc-chat.offer2.c2",
+          "next": "later2"
+        }
       ]
     },
-    { "id": "closing2", "speaker": "npc", "textKey": "dlg.luc-chat.closing2", "end": true }
+    {
+      "id": "accepted2",
+      "speaker": "npc",
+      "textKey": "dlg.luc-chat.accepted2",
+      "end": true
+    },
+    {
+      "id": "later2",
+      "speaker": "npc",
+      "textKey": "dlg.luc-chat.later2",
+      "end": true
+    },
+    {
+      "id": "reminder2",
+      "speaker": "npc",
+      "textKey": "dlg.luc-chat.reminder2",
+      "end": true
+    },
+    {
+      "id": "turnin2",
+      "speaker": "npc",
+      "textKey": "dlg.luc-chat.turnin2",
+      "choices": [
+        {
+          "textKey": "dlg.luc-chat.turnin2.c1",
+          "next": "closing2",
+          "effects": [
+            {
+              "setFlag": "f.req-luc-radio-done"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "closing2",
+      "speaker": "npc",
+      "textKey": "dlg.luc-chat.closing2",
+      "end": true
+    },
+    {
+      "id": "a-offer",
+      "speaker": "npc",
+      "textKey": "dlg.luc-chat.a-offer",
+      "choices": [
+        {
+          "textKey": "dlg.luc-chat.a-offer.c1",
+          "next": "a-taken",
+          "effects": [
+            {
+              "setFlag": "f.mis-aerial-taken"
+            }
+          ]
+        },
+        {
+          "textKey": "dlg.luc-chat.a-offer.c2",
+          "next": "a-later"
+        }
+      ]
+    },
+    {
+      "id": "a-taken",
+      "speaker": "npc",
+      "textKey": "dlg.luc-chat.a-taken",
+      "next": "a-hub"
+    },
+    {
+      "id": "a-hub",
+      "speaker": "npc",
+      "textKey": "dlg.luc-chat.a-hub",
+      "choices": [
+        {
+          "textKey": "dlg.luc-chat.a-hub.c1",
+          "next": "a-hiss",
+          "when": {
+            "notFlag": "f.mis-aerial-hiss"
+          },
+          "effects": [
+            {
+              "setFlag": "f.mis-aerial-hiss"
+            }
+          ]
+        },
+        {
+          "textKey": "dlg.luc-chat.a-hub.c2",
+          "next": "a-rod",
+          "when": {
+            "notFlag": "f.mis-aerial-rod"
+          },
+          "effects": [
+            {
+              "setFlag": "f.mis-aerial-rod"
+            }
+          ]
+        },
+        {
+          "textKey": "dlg.luc-chat.a-hub.c3",
+          "next": "a-base",
+          "when": {
+            "notFlag": "f.mis-aerial-base"
+          },
+          "effects": [
+            {
+              "setFlag": "f.mis-aerial-base"
+            }
+          ]
+        },
+        {
+          "textKey": "dlg.luc-chat.a-hub.c4",
+          "next": "a-wrong",
+          "when": {
+            "notFlag": "f.mis-aerial-hiss"
+          }
+        },
+        {
+          "textKey": "dlg.luc-chat.a-hub.c5",
+          "next": "a-wrong"
+        },
+        {
+          "textKey": "dlg.luc-chat.a-hub.c6",
+          "next": "a-right",
+          "when": {
+            "all": [
+              {
+                "flag": "f.mis-aerial-rod"
+              },
+              {
+                "flag": "f.mis-aerial-base"
+              }
+            ]
+          }
+        },
+        {
+          "textKey": "dlg.luc-chat.a-hub.c7",
+          "next": "a-pause"
+        }
+      ]
+    },
+    {
+      "id": "a-hiss",
+      "speaker": "npc",
+      "textKey": "dlg.luc-chat.a-hiss",
+      "next": "a-hub"
+    },
+    {
+      "id": "a-rod",
+      "speaker": "npc",
+      "textKey": "dlg.luc-chat.a-rod",
+      "next": "a-hub"
+    },
+    {
+      "id": "a-base",
+      "speaker": "npc",
+      "textKey": "dlg.luc-chat.a-base",
+      "next": "a-hub"
+    },
+    {
+      "id": "a-wrong",
+      "speaker": "npc",
+      "textKey": "dlg.luc-chat.a-wrong",
+      "next": "a-hub"
+    },
+    {
+      "id": "a-pause",
+      "speaker": "npc",
+      "textKey": "dlg.luc-chat.a-pause",
+      "end": true
+    },
+    {
+      "id": "a-later",
+      "speaker": "npc",
+      "textKey": "dlg.luc-chat.a-later",
+      "end": true
+    },
+    {
+      "id": "a-right",
+      "speaker": "npc",
+      "textKey": "dlg.luc-chat.a-right",
+      "next": "a-fix"
+    },
+    {
+      "id": "a-fix",
+      "speaker": "npc",
+      "textKey": "dlg.luc-chat.a-fix",
+      "choices": [
+        {
+          "textKey": "dlg.luc-chat.a-fix.c1",
+          "next": "a-quick",
+          "effects": [
+            {
+              "setFlag": "f.mis-aerial-quick"
+            }
+          ]
+        },
+        {
+          "textKey": "dlg.luc-chat.a-fix.c2",
+          "next": "a-solid",
+          "effects": [
+            {
+              "setFlag": "f.mis-aerial-solid"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "a-quick",
+      "speaker": "npc",
+      "textKey": "dlg.luc-chat.a-quick",
+      "next": "a-tip1"
+    },
+    {
+      "id": "a-solid",
+      "speaker": "npc",
+      "textKey": "dlg.luc-chat.a-solid",
+      "next": "a-tip1"
+    },
+    {
+      "id": "a-test",
+      "speaker": "npc",
+      "textKey": "dlg.luc-chat.a-test",
+      "next": "a-test-solid",
+      "branches": [
+        {
+          "when": {
+            "flag": "f.mis-aerial-quick"
+          },
+          "next": "a-test-quick"
+        },
+        {
+          "when": {
+            "flag": "f.mis-aerial-solid"
+          },
+          "next": "a-test-solid"
+        }
+      ]
+    },
+    {
+      "id": "a-test-quick",
+      "speaker": "npc",
+      "textKey": "dlg.luc-chat.a-test-quick",
+      "next": "a-listen"
+    },
+    {
+      "id": "a-test-solid",
+      "speaker": "npc",
+      "textKey": "dlg.luc-chat.a-test-solid",
+      "next": "a-listen"
+    },
+    {
+      "id": "a-listen",
+      "speaker": "npc",
+      "textKey": "dlg.luc-chat.a-listen",
+      "choices": [
+        {
+          "textKey": "dlg.luc-chat.a-listen.c1",
+          "next": "a-note1",
+          "effects": [
+            {
+              "setFlag": "f.camp-solar-panel"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "a-forecast",
+      "speaker": "npc",
+      "textKey": "dlg.luc-chat.a-forecast",
+      "next": "a-story1"
+    },
+    {
+      "id": "a-payoff",
+      "speaker": "npc",
+      "textKey": "dlg.luc-chat.a-payoff",
+      "choices": [
+        {
+          "textKey": "dlg.luc-chat.a-payoff.c1",
+          "next": "a-go2-end",
+          "effects": [
+            {
+              "setFlag": "f.mis-aerial-go2"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "a-wait",
+      "speaker": "npc",
+      "textKey": "dlg.luc-chat.a-wait",
+      "end": true
+    },
+    {
+      "id": "a-go",
+      "speaker": "npc",
+      "textKey": "dlg.luc-chat.a-go",
+      "choices": [
+        {
+          "textKey": "dlg.luc-chat.a-go.c1",
+          "next": "a-go-end",
+          "effects": [
+            {
+              "setFlag": "f.mis-aerial-go"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "a-go-end",
+      "speaker": "npc",
+      "textKey": "dlg.luc-chat.a-go-end",
+      "end": true
+    },
+    {
+      "id": "a-device",
+      "speaker": "npc",
+      "textKey": "dlg.luc-chat.a-device",
+      "end": true
+    },
+    {
+      "id": "a-go2-end",
+      "speaker": "npc",
+      "textKey": "dlg.luc-chat.a-go2-end",
+      "end": true
+    },
+    {
+      "id": "a-wait2",
+      "speaker": "npc",
+      "textKey": "dlg.luc-chat.a-wait2",
+      "end": true
+    },
+    {
+      "id": "a-set",
+      "speaker": "npc",
+      "textKey": "dlg.luc-chat.a-set",
+      "choices": [
+        {
+          "textKey": "dlg.luc-chat.a-set.c1",
+          "next": "a-final",
+          "effects": [
+            {
+              "setFlag": "f.mis-aerial-done"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "a-final",
+      "speaker": "npc",
+      "textKey": "dlg.luc-chat.a-final",
+      "end": true
+    },
+    {
+      "id": "a-story1",
+      "speaker": "npc",
+      "textKey": "dlg.luc-chat.a-story1",
+      "next": "a-story2"
+    },
+    {
+      "id": "a-story2",
+      "speaker": "npc",
+      "textKey": "dlg.luc-chat.a-story2",
+      "choices": [
+        {
+          "textKey": "dlg.luc-chat.a-story2.c1",
+          "next": "a-story3"
+        },
+        {
+          "textKey": "dlg.luc-chat.a-story2.c2",
+          "next": "a-payoff"
+        }
+      ]
+    },
+    {
+      "id": "a-story3",
+      "speaker": "npc",
+      "textKey": "dlg.luc-chat.a-story3",
+      "next": "a-payoff"
+    },
+    {
+      "id": "a-sun1",
+      "speaker": "npc",
+      "textKey": "dlg.luc-chat.a-sun1",
+      "next": "a-sun2"
+    },
+    {
+      "id": "a-sun2",
+      "speaker": "npc",
+      "textKey": "dlg.luc-chat.a-sun2",
+      "choices": [
+        {
+          "textKey": "dlg.luc-chat.a-sun2.c1",
+          "next": "a-sun3"
+        },
+        {
+          "textKey": "dlg.luc-chat.a-sun2.c2",
+          "next": "a-set"
+        }
+      ]
+    },
+    {
+      "id": "a-sun3",
+      "speaker": "npc",
+      "textKey": "dlg.luc-chat.a-sun3",
+      "next": "a-set"
+    },
+    {
+      "id": "a-tip1",
+      "speaker": "npc",
+      "textKey": "dlg.luc-chat.a-tip1",
+      "next": "a-tip2"
+    },
+    {
+      "id": "a-tip2",
+      "speaker": "npc",
+      "textKey": "dlg.luc-chat.a-tip2",
+      "choices": [
+        {
+          "textKey": "dlg.luc-chat.a-tip2.c1",
+          "next": "a-tip3"
+        },
+        {
+          "textKey": "dlg.luc-chat.a-tip2.c2",
+          "next": "a-go"
+        }
+      ]
+    },
+    {
+      "id": "a-tip3",
+      "speaker": "npc",
+      "textKey": "dlg.luc-chat.a-tip3",
+      "next": "a-go"
+    },
+    {
+      "id": "a-note1",
+      "speaker": "npc",
+      "textKey": "dlg.luc-chat.a-note1",
+      "next": "a-note2"
+    },
+    {
+      "id": "a-note2",
+      "speaker": "npc",
+      "textKey": "dlg.luc-chat.a-note2",
+      "choices": [
+        {
+          "textKey": "dlg.luc-chat.a-note2.c1",
+          "next": "a-note3"
+        },
+        {
+          "textKey": "dlg.luc-chat.a-note2.c2",
+          "next": "a-forecast"
+        }
+      ]
+    },
+    {
+      "id": "a-note3",
+      "speaker": "npc",
+      "textKey": "dlg.luc-chat.a-note3",
+      "next": "a-forecast"
+    }
   ]
 }
