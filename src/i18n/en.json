@@ -708,5 +708,17 @@
   "camp.water.step": "Step",
   "camp.water.tilt": "Bucket tilt",
   "camp.tidy.out": "left outside",
-  "camp.tidy.hint": "Pick a thing, then a place"
+  "camp.tidy.hint": "Pick a thing, then a place",
+  "mg.embers.title": "Embers in the band",
+  "mg.embers.intro": "Keep the heat in the light band: add wood, blow, or rake. Different dishes, different bands.",
+  "mg.embers.hint": "Wood gives smoke first and heat after — add it early.",
+  "mg.embers.result.good": "An even fire: hot supper, and you sit long.",
+  "mg.embers.result.fine": "Some of it cooked, some did not — an uneven supper, but supper.",
+  "mg.embers.result.scrappy": "The heat wandered: you ate what there was. Tomorrow goes better.",
+  "mg.night.title": "Night camp",
+  "mg.night.intro": "Before sleep: pick a thing on the left, then a place on the right. Food goes in the car or hangs up.",
+  "mg.night.hint": "The car holds only so much — hang the rest of the food up.",
+  "mg.night.result.good": "Everything in its place — a quiet night, only rain.",
+  "mg.night.result.fine": "Half tidied: a little work in the morning.",
+  "mg.night.result.scrappy": "Some things stayed out — something visited the table at night."
 }

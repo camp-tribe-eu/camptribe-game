@@ -5,7 +5,7 @@
 // далі КОЖЕН крок стежки треба ступити тією ногою, у який бік хилить земля (підказку видно заздалегідь).
 // Повне відро хилиться охочіше: більше води — важче нести. Розхлюпав — просто менше води, ніякого блоку.
 
-import { grade, timeScale, type HelpState, type Outcome } from './minigame';
+import { NORMAL, grade, type Difficulty, type Outcome } from './minigame';
 
 /** Мс повного набору відра (від порожнього до вінець). */
 export const FILL_MS = 2600;
@@ -54,11 +54,11 @@ export const needSide = (s: WaterState): Side => (drift(s.seed, s.step) === 'lef
 /** Межа нахилу для поточної повноти відра. */
 export const tiltLimit = (level: number): number => (level > BRIM ? TILT_MAX_FULL : TILT_MAX);
 
-export function stepWater(s: WaterState, i: WaterInput, help: HelpState = { scrappyRun: 0, help: false }): { state: WaterState; event: WaterEvent } {
+export function stepWater(s: WaterState, i: WaterInput, d: Difficulty = NORMAL): { state: WaterState; event: WaterEvent } {
   if (i.kind === 'tick') {
     if (s.phase !== 'fill' || !(i.dtMs > 0)) return { state: s, event: 'none' };
     if (!i.down) return s.level > 0 ? { state: { ...s, phase: 'carry', tilt: 0 }, event: 'carry' } : { state: s, event: 'none' };
-    const level = Math.min(1, s.level + i.dtMs / (FILL_MS * timeScale(help)));
+    const level = Math.min(1, s.level + i.dtMs / (FILL_MS * d.timeScale));
     const over = level >= 1 ? s.overMs + i.dtMs : s.overMs;
     return { state: { ...s, level, fillMs: s.fillMs + i.dtMs, overMs: over }, event: level >= 1 ? 'over' : 'filling' };
   }
@@ -68,7 +68,7 @@ export function stepWater(s: WaterState, i: WaterInput, help: HelpState = { scra
   // Правильна нога (протилежна до нахилу землі) гасить нахил рівно в нуль; хибна — додає стільки ж іще.
   const tilt = s.tilt + (ground + foot * CORRECT) * STEP_TILT;
   const step = s.step + 1;
-  const limit = tiltLimit(s.level) * (help.help ? 1.3 : 1);
+  const limit = tiltLimit(s.level) * (d.hint ? 1.3 : 1);
   if (Math.abs(tilt) > limit) {
     const level = Math.max(0, s.level - SPILL);
     const next: WaterState = { ...s, step, tilt: 0, level, spills: s.spills + 1 };

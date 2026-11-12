@@ -4,7 +4,7 @@
 // · «двійник невідрізненний» (looksBitter → false) · «кошик безмежний» (BASKET = 999) · «їжа надворі не рахується»
 // (foodOutside → false) · «під тент влазить усе» (COVER = 99) · «риба однакова завжди» (speciesAt без part/weather).
 import { describe, expect, it } from 'vitest';
-import { grade, NO_HELP, type Outcome } from './minigame';
+import { NORMAL, RELAXED, grade, type Outcome } from './minigame';
 import { BRIM, FILL_MS, STEPS, drift, needSide, startWater, stepWater, tiltLimit, waterOutcome, waterScore, type Side, type WaterState } from './water-carry';
 import { CRANK_BAND, CRANK_GAIN, CRANK_MS, LANTERNS, SPOTS, SUN_SHIFT_MS, lanternOutcome, lanternScore, litCount, startLanterns, stepLanterns, sunRate, type LanternState } from './lantern-charge';
 import { COOL_PER_S, DISHES, emberOutcome, emberScore, inBand, startEmbers, stepEmbers, type EmberState } from './embers';
@@ -110,7 +110,7 @@ describe('ліхтарі: сонце або динамо', () => {
 const cook = (dry: boolean, keep: boolean): EmberState => {
   let s = startEmbers(dry);
   for (let k = 0; k < 2000 && !s.done; k++) {
-    if (keep && !inBand(s, NO_HELP)) {
+    if (keep && !inBand(s, NORMAL)) {
       const d = DISHES[s.dish];
       const act = d && s.heat < d.band.from ? 'blow' : 'rake';
       s = stepEmbers(s, { kind: 'act', act }).state;
@@ -173,8 +173,8 @@ describe('ягоди: стиглі проти гіркого двійника', 
   });
   it('допомога підсвічує сумнівні кущі, але не збирає за гравця', () => {
     const s = startBerries(5);
-    expect(hinted(s, NO_HELP)).toEqual([]);
-    const marks = hinted(s, { scrappyRun: 2, help: true });
+    expect(hinted(s, NORMAL)).toEqual([]);
+    const marks = hinted(s, RELAXED);
     expect(marks.length).toBe(patch.filter((b) => b.kind === 'bitter').length);
     expect(s.basket).toHaveLength(0);
   });

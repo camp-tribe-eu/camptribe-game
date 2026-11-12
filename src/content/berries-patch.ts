@@ -5,7 +5,7 @@
 // і листок гладенький. Це справжня ознака, а не випадковість: її видно на картинці й у тексті.
 // Кошик скінченний, тож брати все підряд не вийде: зірвав двійника — місце в кошику витрачено.
 
-import { grade, type HelpState, type Outcome } from './minigame';
+import { NORMAL, grade, type Difficulty, type Outcome } from './minigame';
 
 export type BerryKind = 'ripe' | 'unripe' | 'bitter';
 export interface Berry {
@@ -60,8 +60,8 @@ export function pickBerry(s: BerryState, i: number): { state: BerryState; event:
 export const enoughBerries = (s: BerryState): BerryState => ({ ...s, done: true });
 
 /** З допомогою (два «сяк-так» поспіль) сумнівні кущі підсвічено: це підказка, а не автозбір. */
-export const hinted = (s: BerryState, help: HelpState): readonly number[] =>
-  help.help ? patchOf(s.seed).map((b, i) => (looksBitter(b) ? i : -1)).filter((i) => i >= 0 && !s.picked.includes(i)) : [];
+export const hinted = (s: BerryState, d: Difficulty = NORMAL): readonly number[] =>
+  d.hint ? patchOf(s.seed).map((b, i) => (looksBitter(b) ? i : -1)).filter((i) => i >= 0 && !s.picked.includes(i)) : [];
 
 export const ripeCount = (s: BerryState): number => s.basket.filter((k) => k === 'ripe').length;
 export const bitterCount = (s: BerryState): number => s.basket.filter((k) => k === 'bitter').length;

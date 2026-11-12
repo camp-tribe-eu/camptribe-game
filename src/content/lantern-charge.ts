@@ -6,7 +6,7 @@
 //  * динамо: ритмічні оберти ручки — тап у смузі оберту дає заряд, невлучний майже нічого.
 // Одним дотиком це закрити не можна: один тап заряджає щонайбільше CRANK_GAIN (три ліхтарі — ніколи не 'good').
 
-import { grade, widen, type HelpState, type Outcome } from './minigame';
+import { NORMAL, grade, widen, type Difficulty, type Outcome } from './minigame';
 import type { Weather } from '../core/weather';
 
 export const LANTERNS = 3;
@@ -50,14 +50,14 @@ export const crankAt = (s: LanternState): number => ((s.crankT % CRANK_MS) + CRA
 
 const put = (xs: readonly number[], i: number, v: number): number[] => xs.map((x, k) => (k === i ? v : x));
 
-export function stepLanterns(s: LanternState, i: LanternInput, help: HelpState = { scrappyRun: 0, help: false }): { state: LanternState; event: LanternEvent } {
+export function stepLanterns(s: LanternState, i: LanternInput, d: Difficulty = NORMAL): { state: LanternState; event: LanternEvent } {
   if (i.kind === 'put') {
     if (i.lantern < 0 || i.lantern >= LANTERNS || i.spot < -1 || i.spot >= SPOTS) return { state: s, event: 'none' };
     return { state: { ...s, at: put(s.at, i.lantern, i.spot) }, event: 'moved' };
   }
   if (i.kind === 'crank') {
     if (i.lantern < 0 || i.lantern >= LANTERNS) return { state: s, event: 'none' };
-    const band = widen(CRANK_BAND, help);
+    const band = widen(CRANK_BAND, d);
     const pos = crankAt(s);
     const ok = pos >= band.from && pos <= band.to;
     const gain = ok ? CRANK_GAIN : CRANK_WEAK;

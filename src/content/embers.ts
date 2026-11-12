@@ -5,7 +5,7 @@
 // своя смуга: те, що добре юшці, спалить рибу. Перегрів — підгоріло, недогрів — сире; і те, і те лише
 // гірша вечеря, ніколи не блок.
 
-import { grade, timeScale, widen, type HelpState, type Outcome } from './minigame';
+import { NORMAL, grade, widen, type Difficulty, type Outcome } from './minigame';
 
 export interface Dish { readonly id: 'soup' | 'fish' | 'tea'; readonly band: { readonly from: number; readonly to: number }; readonly ms: number }
 /** Страви вечері за порядком. Смуги різні навмисно: одним рівнем жару всі три не зробиш. */
@@ -48,14 +48,14 @@ export type EmberInput = { readonly kind: 'tick'; readonly dtMs: number } | { re
 export const startEmbers = (dry = true): EmberState => ({ heat: 0.35, smokeMs: 0, dish: 0, dishMs: 0, goodMs: 0, quality: [], done: false, dry });
 
 export const dishOf = (s: EmberState): Dish | null => DISHES[s.dish] ?? null;
-export function inBand(s: EmberState, help: HelpState = { scrappyRun: 0, help: false }): boolean {
-  const d = dishOf(s);
-  if (!d) return false;
-  const b = widen(d.band, help);
+export function inBand(s: EmberState, d: Difficulty = NORMAL): boolean {
+  const dish = dishOf(s);
+  if (!dish) return false;
+  const b = widen(dish.band, d);
   return s.heat >= b.from && s.heat <= b.to;
 }
 
-export function stepEmbers(s: EmberState, i: EmberInput, help: HelpState = { scrappyRun: 0, help: false }): { state: EmberState; event: EmberEvent } {
+export function stepEmbers(s: EmberState, i: EmberInput, d: Difficulty = NORMAL): { state: EmberState; event: EmberEvent } {
   if (s.done) return { state: s, event: 'none' };
   if (i.kind === 'act') {
     const gain = s.dry ? 1 : WET_WOOD;
@@ -70,13 +70,13 @@ export function stepEmbers(s: EmberState, i: EmberInput, help: HelpState = { scr
   const burst = s.smokeMs > 0 && smokeMs === 0 ? WOOD_GAIN * (s.dry ? 1 : WET_WOOD) : 0;
   const heat = Math.min(1, Math.max(0, s.heat - COOL_PER_S * dt + burst));
   const moved: EmberState = { ...s, heat, smokeMs };
-  const good = inBand(moved, help) ? i.dtMs : 0;
-  const d = dishOf(s);
-  if (!d) return { state: { ...moved, done: true }, event: 'done' };
+  const good = inBand(moved, d) ? i.dtMs : 0;
+  const dish0 = dishOf(s);
+  if (!dish0) return { state: { ...moved, done: true }, event: 'done' };
   const dishMs = s.dishMs + i.dtMs;
   const goodMs = s.goodMs + good;
-  if (dishMs < d.ms * timeScale(help)) return { state: { ...moved, dishMs, goodMs }, event: 'none' };
-  const quality = [...s.quality, Math.min(1, goodMs / d.ms)];
+  if (dishMs < dish0.ms * d.timeScale) return { state: { ...moved, dishMs, goodMs }, event: 'none' };
+  const quality = [...s.quality, Math.min(1, goodMs / dish0.ms)];
   const dish = s.dish + 1;
   const next: EmberState = { ...moved, dish, dishMs: 0, goodMs: 0, quality };
   return dish >= DISHES.length ? { state: { ...next, done: true }, event: 'done' } : { state: next, event: 'dishDone' };

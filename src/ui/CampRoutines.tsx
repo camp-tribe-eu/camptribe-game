@@ -6,7 +6,7 @@ import type { Key } from '../i18n';
 import type { Weather } from '../core/weather';
 import { ROUNDS, ROUTINES, ROUTINE_IDS, addPick, awayIn, campBusy, emptyRounds, isDone, minutesLeft, recordResult, startCampDay, whyNot, type CampDay, type Round, type RoutineId } from '../content/camp-day';
 import { nightOf, type NightBeat, type NightFacts } from '../content/camp-night';
-import { NO_HELP, afterTry, type HelpState, type Outcome } from '../content/minigame';
+import { HELP_AFTER, NORMAL, RELAXED, type Difficulty, type Outcome } from '../content/minigame';
 import { STEPS, needSide, startWater, stepWater, waterOutcome, waterScore, type Side, type WaterState } from '../content/water-carry';
 import { LANTERNS, SPOTS, lanternOutcome, litCount, startLanterns, stepLanterns, type LanternState } from '../content/lantern-charge';
 import { DISHES, emberOutcome, startEmbers, stepEmbers, type EmberAct, type EmberState } from '../content/embers';
@@ -32,7 +32,8 @@ export function CampRoutines({ t, weather, seed, onFrame }: CampRoutinesProps) {
   const [round, setRound] = useState<Round>('morning');
   const [phase, setPhase] = useState<Phase>('board');
   const [active, setActive] = useState<RoutineId | null>(null);
-  const [help, setHelp] = useState<Readonly<Partial<Record<RoutineId, HelpState>>>>({});
+  // Лічильник «сяк-так» поспіль на кожну справу — рівно той, за яким каркас (GAME-308) вмикає допомогу.
+  const [streak, setStreak] = useState<Readonly<Partial<Record<RoutineId, number>>>>({});
   const [water, setWater] = useState<WaterState>(() => startWater(seed));
   const [tap, setTap] = useState(false);
   const [lanterns, setLanterns] = useState<LanternState>(startLanterns);
@@ -46,10 +47,10 @@ export function CampRoutines({ t, weather, seed, onFrame }: CampRoutinesProps) {
   const [facts, setFacts] = useState({ water: 0, dryLogs: 0, lit: 0, fish: 0, bitter: 0, foodOut: true });
   const rng = useRef(makeRng(seed));
 
-  const helpOf = (id: RoutineId): HelpState => help[id] ?? NO_HELP;
+  const helpOf = (id: RoutineId): Difficulty => ((streak[id] ?? 0) >= HELP_AFTER ? RELAXED : NORMAL);
   const finish = (id: RoutineId, outcome: Outcome, more: Partial<typeof facts> = {}) => {
     setDay((d) => recordResult(d, id, outcome));
-    setHelp((h) => ({ ...h, [id]: afterTry(h[id] ?? NO_HELP, outcome) }));
+    setStreak((h) => ({ ...h, [id]: outcome === 'scrappy' ? (h[id] ?? 0) + 1 : 0 }));
     setFacts((f) => ({ ...f, ...more }));
     setActive(null);
     setPhase('board');
@@ -105,9 +106,9 @@ export function CampRoutines({ t, weather, seed, onFrame }: CampRoutinesProps) {
 
   if (phase === 'work' && active !== null) {
     return (
-      <div class="ui-overlay ui-camp" data-ui="camp-work" data-kind={active} data-help={helpOf(active).help ? 'yes' : 'no'}>
+      <div class="ui-overlay ui-camp" data-ui="camp-work" data-kind={active} data-help={helpOf(active).hint ? 'yes' : 'no'}>
         <h2>{t(`camp.routine.${active}` as Key)}</h2>
-        {helpOf(active).help && <p class="ui-camp-note" data-ui="camp-help">{t('camp.help')}</p>}
+        {helpOf(active).hint && <p class="ui-camp-note" data-ui="camp-help">{t('camp.help')}</p>}
         {active === 'water' && (
           <section class="ui-camp-work">
             <p data-ui="water-level" data-level={Math.round(water.level * 100)}>{`${t('camp.water.level')}: ${Math.round(water.level * 100)} %`}</p>
