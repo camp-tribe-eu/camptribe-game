@@ -10,6 +10,7 @@ import { CampRoutines } from './CampRoutines';
 import { DRIVE_STEPS, canUndo, driveOutcome, driveLog, laneOf, logStep, undo, type DriveLog, type DriveStep } from '../content/drive-in';
 import { devicesFromFlags, missionsDone, sampleExtra } from '../content/sample-day';
 import { arrivalOf, pitchTaken } from '../content/arrival-pitch';
+import type { CampBoardSave } from '../core/camp-board';
 import { roughCount, type NightFacts } from '../content/camp-night';
 
 export type SampleStage = 'off' | 'drivein' | 'day';
@@ -24,6 +25,11 @@ export interface SamplePort {
   onFrame(cb: (dtMs: number) => void): () => void;
   /** Заїзд закінчено: скільки разів зачепили чуже. */
   driveInDone(scrapes: number): void;
+  /** Збережена дошка рутин (game.campBoard) і запис змін у сейв. */
+  board(): CampBoardSave | undefined;
+  saveBoard(b: CampBoardSave): void;
+  /** Ніч із бурею: сцена dlg.storm-night з наслідками дня; раз за день. */
+  stormNight(): void;
   subscribe(l: () => void): () => void;
 }
 
@@ -105,7 +111,7 @@ export function SampleDay({ port, t, lang }: { port: SamplePort; t: (k: Key) => 
       {mounted && !summary && (
         <div class="sd-board-wrap" data-ui="sd-board-wrap" hidden={!boardOpen}>
           <CampRoutines t={t} weather={port.weather()} seed={port.seed()} onFrame={port.onFrame} devices={devicesFromFlags(flags)} extra={sampleExtra(flags)} text={text}
-            onNight={setNight} onSummary={() => { setSummary(true); setBoardOpen(false); }} />
+            onNight={setNight} saved={port.board()} onSave={port.saveBoard} onSummary={() => { setSummary(true); setBoardOpen(false); port.stormNight(); }} />
           <button type="button" class="ui-btn sd-board-close" data-ui="sd-board-close" onClick={() => setBoardOpen(false)}>{t('sd.back')}</button>
         </div>
       )}

@@ -28,13 +28,27 @@ export function devicesFromFlags(flags: readonly string[]): Devices {
   return out as Devices;
 }
 
+/**
+ * Підготовка до ночі — ВИВОДИТЬСЯ з того, що родина справді зробила за день (прапорці f.prep-* — імена для nightAt, у стані їх ніхто не пише):
+ *   «Антена» (Люк) зроблена → прогноз почуто заздалегідь: намет відтягнуто від води, авто поставлене проти вітру (highGround + windbreak);
+ *   тент над дровами (пристрій Клер woodshed-tarp) → відтяжки зав'язані як слід (tarp + knots).
+ */
+export function prepOf(flags: readonly string[]): readonly string[] {
+  const aerial = MISSIONS.find((m) => m.id === 'mis.aerial');
+  const tarp = MISSIONS.find((m) => m.device.kind === 'woodshed-tarp');
+  const out: string[] = [];
+  if (aerial && flags.includes(aerial.doneFlag)) out.push(PREP_FLAGS.highGround, PREP_FLAGS.windbreak);
+  if (tarp && flags.includes(tarp.device.flag)) out.push(PREP_FLAGS.tarp, PREP_FLAGS.knots);
+  return out;
+}
+
 /** Додаткові факти ночі з прапорців гри: ділянка, погода ночі, підготовка й місії. Решту (рутини) додає дошка табору. */
 export function sampleExtra(flags: readonly string[]): Pick<NightFacts, 'pitch' | 'nightWeather' | 'prep' | 'missions'> {
   const pitch = pitchTaken(flags);
   return {
     ...(pitch !== null ? { pitch } : {}),
     nightWeather: STORM,
-    prep: Object.values(PREP_FLAGS).filter((f) => flags.includes(f)),
+    prep: prepOf(flags),
     missions: flags,
   };
 }

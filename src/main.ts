@@ -78,6 +78,7 @@ import { ARRIVAL_SCENE, SCRAPE_SCENE, arrivalFacts } from './content/arrival-sce
 import { pitchTaken } from './content/arrival-pitch';
 import { DRIVE_FLAG, driveFlag, driveOutcome as driveInOutcome } from './content/drive-in';
 import { laneIdFor } from './content/sample-day';
+import { STORM_SCENE, stormNightMove } from './content/storm-night';
 import type { SamplePort, SampleStage } from './ui/SampleDay';
 import type { RewardEvent } from './ui/port';
 
@@ -443,6 +444,9 @@ const samplePort: SamplePort = {
     const facts = [driveFlag(driveInOutcome({ at: { c: 0, r: 0 }, facing: 'up', steps: 0, done: true, scrapes }))];
     bridge.send({ type: 'StartScene', sceneId: SCRAPE_SCENE, facts }); storyChanged();
   },
+  board: () => bridge.state.game.campBoard,
+  saveBoard: (b) => { bridge.send({ type: 'SaveCampBoard', board: b }); },
+  stormNight: () => { if (!playedScene(STORM_SCENE)) { bridge.send(stormNightMove(bridge.state.game.flags)); storyChanged(); } },
   subscribe: (l) => { sampleListeners.add(l); return () => { sampleListeners.delete(l); }; },
 };
 function missionTick(): void {

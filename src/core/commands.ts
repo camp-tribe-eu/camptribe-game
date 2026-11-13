@@ -19,6 +19,7 @@ import { grantStickers } from './stickers';
 import { tradeDoneToday, tradeIsFair, traded } from './friendship';
 import { joinRecipe, joined } from './join';
 import { isOutcome, recordResult, type MinigameGuards } from './minigame';
+import { boardError, type CampBoardSave } from './camp-board';
 import { forageKindOf, forageLeft, foraged, FORAGE_SOURCE_ITEM } from './forage';
 import { addPoints, canGiftToday, giveGift, heartEventDue, markHeartSeen, reactionOf, REQUEST_POINTS } from './friendship';
 
@@ -75,7 +76,9 @@ export type Command =
    * Результат міні-гри (GAME-308): good / fine / scrappy. Наслідок бере ядро з каталогу `minigames`, не з команди. `scrappy` ПРИЙМАЄТЬСЯ завжди (м'який провал: гірший наслідок, але далі пускає);
    * повтор тієї ж гри перезаписує останній результат і веде лічильник «сяк-так» поспіль (допомога після двох).
    */
-  | { readonly type: 'FinishMinigame'; readonly commandId: string; readonly minigameId: string; readonly outcome: string; /** GAME-314: штраф, який гра взяла в родини (дорога: камера), у центах. Іде з гаманця. */ readonly fineCents?: number };
+  | { readonly type: 'FinishMinigame'; readonly commandId: string; readonly minigameId: string; readonly outcome: string; /** GAME-314: штраф, який гра взяла в родини (дорога: камера), у центах. Іде з гаманця. */ readonly fineCents?: number }
+  /** GAME-314: стан дошки рутин табору (src/core/camp-board.ts) у сейв — дошка не губиться, коли панель закрито. Не хід бота. */
+  | { readonly type: 'SaveCampBoard'; readonly commandId: string; readonly board: CampBoardSave };
 
 /** Підтверджений факт (CR-031). Причина — commandId команди, що його спричинила. */
 export type GameEvent =
@@ -255,6 +258,12 @@ function apply(cmd: Command, d: Draft, defs: CoreDefs, guard: Safeguards, today:
       // GAME-314 (docs/ARRIVAL-CONTRACT.md §1): наслідок `arrival.<час>` ставить рівно один прапорець f.arrival-<час>; решту знімає.
       const arrival = /^arrival\.(early|ontime|late)$/.exec(mg[cmd.outcome]);
       if (arrival) d.flags = [...d.flags.filter((f) => !f.startsWith('f.arrival-')), `f.arrival-${arrival[1]}`];
+      return null;
+    }
+    case 'SaveCampBoard': {
+      if (boardError(cmd.board) !== null) return 'INVALID_COMMAND';
+      if (!d.player) return 'NO_CHARACTER';
+      d.campBoard = cmd.board;
       return null;
     }
     case 'RestUntilEvening': {
@@ -633,6 +642,7 @@ export function dispatch(state: GameState, cmd: Command, defs: CoreDefs, guard: 
     ...(state.slept !== undefined ? { slept: state.slept } : {}),
     ...(state.chapterStart !== undefined ? { chapterStart: state.chapterStart } : {}),
     ...(state.minigames !== undefined ? { minigames: state.minigames } : {}),
+    ...(state.campBoard !== undefined ? { campBoard: state.campBoard } : {}),
   };
   const code = apply(cmd, draft, defs, guard, today, weather, now);
   // Стан спорядження — лише для того, що в руках (продали останній — запис зникає), і лише відхилення від нового.

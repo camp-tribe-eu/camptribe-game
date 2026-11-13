@@ -12,7 +12,7 @@ interface Probe { playerX: number; playerY: number; nearObject: string | null; r
 const probe = (page: Page): Promise<Probe> => page.evaluate(() => JSON.parse(JSON.stringify((window as unknown as { __game: { probe: Probe } }).__game.probe)) as Probe);
 const SHOTS = process.env.G314_SHOTS === '1';
 if (SHOTS) mkdirSync('research/game-314', { recursive: true });
-const shot = async (page: Page, name: string): Promise<void> => { if (SHOTS) await page.screenshot({ path: `research/game-314/${name}.png` }); };
+const shot = async (page: Page, name: string): Promise<void> => { if (SHOTS) await page.screenshot({ path: `research/game-314/${name.replace(/-(portrait|landscape)$/, '')}-${(page.viewportSize()?.width ?? 0) < (page.viewportSize()?.height ?? 0) ? 'portrait' : 'landscape'}.png` }); };
 const TILE = 32;
 interface TiledMap { width: number; height: number; layers: { name: string; data?: number[]; objects?: { name: string; x: number; y: number }[] }[] }
 const MAP = JSON.parse(readFileSync(new URL('../../public/maps/camp-lake.tmj', import.meta.url), 'utf8')) as TiledMap;
@@ -174,6 +174,63 @@ async function playRhythm(page: Page, beat: number): Promise<void> {
     requestAnimationFrame(tick);
   }), beat);
 }
+/** Пошук під плитою: після кожної пригорщі — дочекатись, поки сито стихне; спершу сусіди блиску, інакше «через клітинку». */
+async function playSift(page: Page): Promise<void> {
+  await page.evaluate(() => new Promise<void>((resolve) => {
+    const tick = (): void => {
+      const root = document.querySelector('[data-ui="mg-sift"]');
+      if (!root) { resolve(); return; }
+      if (root.getAttribute('data-sifting') !== 'yes') {
+        const cells = [...root.querySelectorAll<HTMLButtonElement>('[data-ui="mg-sift-cell"]')];
+        const cols = 7;
+        const st = (i: number): string => cells[i]?.dataset.state ?? '';
+        const glints = cells.map((_, i) => i).filter((i) => st(i) === 'glint');
+        const near = glints.flatMap((g) => [g - 1, g + 1, g - cols, g + cols].filter((i) => i >= 0 && i < cells.length && (Math.abs((i % cols) - (g % cols)) + Math.abs(Math.floor(i / cols) - Math.floor(g / cols)) === 1) && st(i) === 'sand'));
+        const next = near[0] ?? cells.map((_, i) => i).find((i) => ((i % cols) + Math.floor(i / cols)) % 2 === 0 && st(i) === 'sand') ?? cells.map((_, i) => i).find((i) => st(i) === 'sand');
+        if (next !== undefined) cells[next]?.click();
+      }
+      requestAnimationFrame(tick);
+    };
+    requestAnimationFrame(tick);
+  }));
+}
+/** Вечеря на вогні (рутина «вогонь», страви йдуть самі за часом кадрів): тримаємо жар посередині смуги поточної страви. */
+async function cookDinner(page: Page): Promise<void> {
+  const TARGET: Record<string, number> = { soup: 0.6, fish: 0.72, tea: 0.45 };
+  await page.evaluate((target) => new Promise<void>((resolve) => {
+    const t0 = performance.now();
+    let last = 0;
+    const tick = (): void => {
+      const heat = document.querySelector<HTMLElement>('[data-ui="fire-heat"]');
+      const dish = document.querySelector<HTMLElement>('[data-ui="fire-dish"]')?.dataset.dish ?? '';
+      if (!heat || performance.now() - t0 > 90_000) { resolve(); return; }
+      const h = Number(heat.dataset.heat ?? '0') / 100;
+      const goal = target[dish] ?? 0.55;
+      const now = performance.now();
+      if (now - last > 70) {
+        if (h < goal - 0.04) { document.querySelector<HTMLButtonElement>('[data-ui="fire-act"][data-act="blow"]')?.click(); last = now; }
+        else if (h > goal + 0.12) { document.querySelector<HTMLButtonElement>('[data-ui="fire-act"][data-act="rake"]')?.click(); last = now; }
+      }
+      requestAnimationFrame(tick);
+    };
+    requestAnimationFrame(tick);
+  }), TARGET);
+}
+/** Ніч бурі (сцена dlg.storm-night): читаємо крізь репліки, на вибір — перша відповідь. */
+async function playStormScene(page: Page): Promise<string[]> {
+  const seen: string[] = [];
+  for (let i = 0; i < 40; i++) {
+    await expect(box(page)).toBeVisible({ timeout: 8_000 });
+    seen.push((await box(page).innerText()).replace(/\s+/g, ' '));
+    if (i === 0) { await box(page).scrollIntoViewIfNeeded(); await shot(page, 'storm-scene'); }
+    const choice = panel(page).locator('[data-act="choose"]').first();
+    if (await choice.isVisible().catch(() => false)) await choice.click();
+    else await panel(page).locator('[data-act="continue"]').click({ timeout: 5_000 });
+    await page.waitForTimeout(380);
+    if (!(await box(page).isVisible().catch(() => false))) break;
+  }
+  return seen;
+}
 /** Похід: дійти ногами в зону — міні-гра відкривається сама. */
 async function trip(page: Page, zone: string): Promise<void> {
   const r = await walkTo(page, '', { at: ZONE[zone] as Pt }, { spot: ZONE[zone] as Pt, untilMinigame: true });
@@ -184,7 +241,7 @@ async function trip(page: Page, zone: string): Promise<void> {
 
 // ───── зразковий день ─────
 const UK = JSON.parse(readFileSync(new URL('../../content/locales/uk.json', import.meta.url), 'utf8')) as Record<string, string>;
-interface Core2 { game: { flags: string[]; moneyCents: number; dialogue: unknown; minigames?: Record<string, { last: string }> } }
+interface Core2 { game: { flags: string[]; moneyCents: number; dialogue: unknown; minigames?: Record<string, { last: string }>; campBoard?: { results?: Record<string, string> } } }
 const core2 = (page: Page): Promise<Core2> => page.evaluate(() => (window as unknown as { __game: { read: () => Core2 } }).__game.read());
 
 async function act(page: Page, kind: string, key = '', clickDialogue = false): Promise<void> {
@@ -347,9 +404,54 @@ for (const o of ORIENTATIONS) {
       await expect.poll(async () => (await core2(page)).game.flags.includes('f.mis-lantern-done'), { timeout: 5_000 }).toBe(true);
       await closeTalk(page);
 
+      // 4б. Друга місія: «Обручка» Аміни — спогади звужують коло, пісок під плитою, верша на причалі (пристрій табору → риба сама)
+      await talkTo(page, 'npc.amina', 'Аміна');
+      await pick(page, 'У тебе щось сталося?', m);
+      await pick(page, 'Пройдімо його втретє', m);
+      await pick(page, 'Що ти робила біля води?', m);
+      await pick(page, 'Ти щось чула, коли вона впала?', m);
+      await pick(page, 'У чому ти була взута?', m);
+      await pick(page, 'Я йду шукати', m);
+      await pick(page, 'Кам’яна плита під колонкою', m);
+      await pick(page, 'Підняти плиту', m);
+      await pick(page, 'Зрозумів, іду', m);
+      await pick(page, 'Іду до колонки з ситом', m);
+      await closeTalk(page);
+      await trip(page, 'sanitary');
+      await startMg(page);
+      await playSift(page);
+      await finishMg(page, `ring-sift-result-${o.name}`);
+      await talkTo(page, 'npc.amina', 'Аміна');
+      await pick(page, 'Як ви познайомились?', m);
+      await pick(page, 'Тримай', m);
+      await pick(page, 'Плести вершу під кладкою', m);
+      await closeTalk(page);
+      await trip(page, 'pier');
+      await startMg(page);
+      await playRhythm(page, 50);
+      await finishMg(page, `ring-trap-result-${o.name}`);
+      await talkTo(page, 'npc.amina', 'Аміна');
+      await pick(page, 'Навчи, де ставити', m);
+      await pick(page, 'Дякую за обручку', m);
+      await expect.poll(async () => (await core2(page)).game.flags.includes('f.mis-ring-done'), { timeout: 5_000 }).toBe(true);
+      await closeTalk(page);
+      const dayFlags = (await core2(page)).game;
+      expect(dayFlags.flags, 'дві місії зроблено').toEqual(expect.arrayContaining(['f.mis-lantern-done', 'f.mis-ring-done']));
+      expect(dayFlags.campBoard?.results?.berries, 'ягоди зранку ЗБЕРЕЖЕНО в стані гри попри розмови (дошка не губиться)').toBeDefined();
+
+      // 4в. ВЕЧЕРЯ: дошка відновлюється зі збереженого, а не з нуля
+      await tapIt(page, '[data-ui="sd-board"]');
+      await expect(page.locator('[data-ui="camp-routine"][data-id="berries"]')).toHaveAttribute('data-done', 'yes');
+      await tapIt(page, '[data-ui="camp-next"]');
+      await tapIt(page, '[data-ui="camp-routine"][data-id="fire"]');
+      await shot(page, 'dinner');
+      await cookDinner(page);
+      await expect(page.locator('[data-ui="camp-routine"][data-id="fire"]')).toHaveAttribute('data-done', 'yes', { timeout: 10_000 });
+      await tapIt(page, '[data-ui="sd-board-close"]');
+
       // 5. ВЕЧІР: порядок у таборі, і ніч — з усього разом
       await tapIt(page, '[data-ui="sd-board"]');
-      await tapIt(page, '[data-ui="camp-next"]'); await tapIt(page, '[data-ui="camp-next"]'); await tapIt(page, '[data-ui="camp-next"]');
+      await tapIt(page, '[data-ui="camp-next"]'); await tapIt(page, '[data-ui="camp-next"]');
       await expect(page.locator('[data-ui="camp-board"]')).toHaveAttribute('data-round', 'evening');
       await tapIt(page, '[data-ui="camp-routine"][data-id="tidy"]');
       for (const [id, place] of [['pot', 'car'], ['bread', 'hung'], ['berries', 'hung'], ['tins', 'bin'], ['wrap', 'bin'], ['chairs', 'tarp'], ['rods', 'tarp'], ['boots', 'tarp']] as const) {
@@ -364,16 +466,24 @@ for (const o of ORIENTATIONS) {
       expect(ids, 'ягоди дня в ночі').toContain('night.berries.sweet');
       expect(ids, 'порядок дня в ночі').toContain('night.tidy.quiet');
       expect(ids, 'місія Клер у ТІЙ САМІЙ ночі').toContain('night.mission.f.storm-dry-wood');
-      expect(ids, 'місії, яких не зроблено, теж лишають слід').toContain('night.mission.mis.ring.none');
+      expect(ids, 'друга місія (Аміна) у ТІЙ САМІЙ ночі').toContain('night.mission.f.storm-fish-supper');
+      expect(ids, 'місія, якої не зроблено (Люк), теж лишає слід').toContain('night.mission.mis.aerial.none');
+      expect(ids, 'вечеря на вогні в ночі').toContain(ids.find((i) => i.startsWith('night.fire.')) as string);
+      expect(ids, 'верша місії Аміни → риба в ночі сама').not.toContain('night.fish.none');
       expect(ids.filter((i) => i.startsWith(`night.${pitch}.`)).length, `слід обраної ділянки (${pitch}) у ночі`).toBeGreaterThan(0);
 
-      // 6. ПІДСУМОК
+      // 6. ГРОЗА (сцена ночі з наслідками ТИХ САМИХ прапорців) і ПІДСУМОК
       await tapIt(page, '[data-ui="camp-summary"]');
+      const storm = await playStormScene(page);
+      expect(storm[0], 'година бурі 20:30 — так само, як у сцені вогню').toContain('пів на дев’яту');
+      expect(storm.join(' | '), 'сцена бурі знає про сухі дрова Клер').toContain('Дрова Рема сухі');
+      expect(storm.join(' | '), 'сцена бурі знає про окуня Аміни').toContain('Окунь');
+      await shot(page, 'storm-after');
       const sum = page.locator('[data-ui="sd-summary"]');
       await expect(sum).toBeVisible();
       await expect(sum).toHaveAttribute('data-arrival', arrival);
       await expect(sum).toHaveAttribute('data-pitch', pitch);
-      await expect(sum).toHaveAttribute('data-missions', '1');
+      await expect(sum).toHaveAttribute('data-missions', '2');
       await expect(sum).toHaveAttribute('data-money', String((await core2(page)).game.moneyCents));
       await shot(page, 'summary');
       await tapIt(page, '[data-ui="sd-finish"]');

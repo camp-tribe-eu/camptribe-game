@@ -19,7 +19,10 @@ import { ARRIVAL_BY_DRIVE, PITCH_IDS, arrivalFlag, freePitches, nightAt, pitchFl
 import { NIGHT_FACTS, nightKeys, nightOf, roughCount, type NightFacts } from './camp-night';
 import { deviceFacts, withDevices } from './camp-devices';
 import { MISSIONS } from './missions';
-import { devicesFromFlags, laneIdFor, missionsDone, pitchChoices, sampleExtra } from './sample-day';
+import { devicesFromFlags, laneIdFor, missionsDone, pitchChoices, prepOf, sampleExtra } from './sample-day';
+import { PREP_FLAGS } from './arrival-pitch';
+import { boardError, BOARD_MAX_BYTES, type CampBoardSave } from '../core/camp-board';
+import { stormNightMove } from './storm-night';
 import { laneOf, solve } from './drive-in';
 import { DRIVE_OUTCOMES } from './drive-in';
 
@@ -193,5 +196,48 @@ describe('рецензія tech-lead: зшивка без розбіжносте
     const d = JSON.parse(read('content/dialogue/ingrid-chat.json')) as { nodes: { id: string; branches?: { next: string }[] }[] };
     const gate = d.nodes.find((n) => n.id === 'gate');
     expect(gate?.branches?.[0]?.next).toBe('turnin');
+  });
+
+  // GAME-314 · дошка в сейві (M7: SaveCampBoard не пише поле → «дошка переживає розмову» червоніє) і підготовка з доданих справ (M8: prepOf → [] → «справа дня → ніч» червоніє).
+  const BOARD: CampBoardSave = { round: 'evening', picks: [{ id: 'berries', round: 'morning', full: false }], results: { berries: 'good' }, facts: { water: 0, dryLogs: 0, lit: 0, fish: 0, bitter: 0, foodOut: true }, devices: { woodpile: { care: 1 } } };
+  it('дошка рутин: команда пише поле, сейв його несе, розмір далеко під стелею', () => {
+    const r = dispatch(start(), { type: 'SaveCampBoard', commandId: `c${n++}`, board: BOARD } as Command, DEFS);
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(r.state.campBoard).toEqual(BOARD);
+    const text = serialize({ ...newSim(7, 0), game: r.state });
+    const back = fromSave(text);
+    expect(back.ok && back.sim.game.campBoard).toEqual(BOARD);
+    expect(text.length).toBeLessThan(500 * 1024);
+    expect(JSON.stringify(BOARD).length).toBeLessThan(BOARD_MAX_BYTES);
+  });
+  it('дошка рутин: чуже в полі не пускається ні командою, ні сейвом', () => {
+    for (const bad of [{ ...BOARD, round: 'midnight' }, { ...BOARD, results: { berries: 'perfect' } }, { ...BOARD, facts: { ...BOARD.facts, water: 9 } }, { ...BOARD, devices: { x: { care: 1 } } }, { ...BOARD, extra: 'x'.repeat(5000) }, null]) {
+      if (bad !== null && !('extra' in bad)) expect(boardError(bad), JSON.stringify(bad)).not.toBeNull();
+      const r = dispatch(start(), { type: 'SaveCampBoard', commandId: `c${n++}`, board: bad } as unknown as Command, DEFS);
+      expect(r.ok, JSON.stringify(bad).slice(0, 60)).toBe(false);
+    }
+    expect(boardError({ ...BOARD, pad: 'x'.repeat(BOARD_MAX_BYTES) })).toBe('size');
+    const bad = fromSave(serialize({ ...newSim(7, 0), game: { ...start(), campBoard: { ...BOARD, round: 'x' } as unknown as CampBoardSave } }));
+    expect(bad.ok).toBe(false);
+  });
+  it('підготовка до ночі: з антени — висока ділянка й вітроза, з тенту Клер — тент і вузли; без справ — нічого', () => {
+    const aerial = MISSIONS.find((m) => m.id === 'mis.aerial')?.doneFlag as string;
+    const tarp = MISSIONS.find((m) => m.device.kind === 'woodshed-tarp')?.device.flag as string;
+    expect(prepOf([])).toEqual([]);
+    expect(prepOf([aerial])).toEqual([PREP_FLAGS.highGround, PREP_FLAGS.windbreak]);
+    expect(prepOf([tarp])).toEqual([PREP_FLAGS.tarp, PREP_FLAGS.knots]);
+    // і це справді міняє ніч: на галявині вітер кусає без вітрозахисту й відпускає з ним
+    const wind = (flags: string[]): boolean => nightKeys({ ...NIGHT_FACTS, ...sampleExtra([pitchFlag('meadow'), ...flags]) }).includes('night.meadow.wind');
+    expect(wind([])).toBe(true);
+    expect(wind([aerial])).toBe(false);
+  });
+  it('одна гроза: сцена ночі стартує з місій тих самих прапорців, а година бурі — 20:30 в обох сценах', () => {
+    const aerial = MISSIONS.find((m) => m.id === 'mis.aerial')?.doneFlag as string;
+    expect(stormNightMove([aerial]).facts).toContain('f.storm-warned');
+    const uk = JSON.parse(read('content/locales/uk.json')) as Record<string, string>;
+    expect(uk['dlg.storm-night.open']).toContain('пів на дев’яту');
+    expect(uk['dlg.ch1-fire.night-open']).toContain('пів на дев’яту');
+    expect(Object.values(uk).filter((v) => /^Опівночі щось ляскає/.test(v))).toEqual([]);
   });
 });
