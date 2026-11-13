@@ -10,7 +10,7 @@
  "tileheight": 32,
  "infinite": false,
  "nextlayerid": 7,
- "nextobjectid": 79,
+ "nextobjectid": 83,
  "layers": [
   {
    "id": 1,
@@ -4931,6 +4931,54 @@
        "value": 3
       }
      ]
+    },
+    {
+     "id": 79,
+     "name": "task.tarp-ropes",
+     "type": "trigger",
+     "x": 528,
+     "y": 496,
+     "width": 0,
+     "height": 0,
+     "point": true,
+     "rotation": 0,
+     "visible": true
+    },
+    {
+     "id": 80,
+     "name": "task.storm-food",
+     "type": "trigger",
+     "x": 336,
+     "y": 272,
+     "width": 0,
+     "height": 0,
+     "point": true,
+     "rotation": 0,
+     "visible": true
+    },
+    {
+     "id": 81,
+     "name": "task.water-cans",
+     "type": "trigger",
+     "x": 880,
+     "y": 144,
+     "width": 0,
+     "height": 0,
+     "point": true,
+     "rotation": 0,
+     "visible": true
+    },
+    {
+     "id": 82,
+     "name": "task.dry-wood",
+     "type": "trigger",
+     "x": 976,
+     "y": 432,
+     "width": 0,
+     "height": 0,
+     "point": true,
+     "rotation": 0,
+     "visible": true
     }
    ]
   }

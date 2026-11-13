@@ -11,11 +11,17 @@ import { newSim, step, type SimState } from '../core/sim';
 import { exploreView, inertLocations, moves } from './moves';
 import { canonical } from '../core/hash';
 import { ch2Locations } from './ch2-scope.test.helpers';
+import { CONTENT } from './story';
 
 const MONEY = 10_000;              // достатньо для найдешевшого тир 2 (8 900): купівлі в переборі справді бувають
 const STORY = GAME_DEFS.story as NonNullable<typeof GAME_DEFS.story>;
 // GAME-110: пам'ятні факти в ключі перебору не множать стани (exploreView, чесність — memory-flags.test).
 const progressKey = (s: GameState): string => canonical(exploreView(s, STORY));
+/** Скільки предмета гравець отримав нагородами квестів (за виданими grantId) — окремо від «Узяти». */
+const REWARDED = (s: { grants: readonly string[] }, id: string): number =>
+  (CONTENT.quests as { reward?: { grantId: string; items?: { item: string; qty: number }[] } }[])
+    .filter((q) => q.reward && s.grants.includes(q.reward.grantId))
+    .reduce((n, q) => n + (q.reward?.items ?? []).filter((i) => i.item === id).reduce((m, i) => m + i.qty, 0), 0);
 const LYING = new Set(Object.values(STORY.locations).flatMap((l) => l.items));
 const here = (s: GameState): string | null => s.player?.locationId ?? null;
 
@@ -90,7 +96,8 @@ describe('купівля в справжньому каталозі гри (GAME
         // Наслідок: підняти безкоштовне завжди можна — жоден досяжний стан не тримає предмет сюжету без «Узяти»,
         // тобто ITEM_ALREADY_HELD на Pickup можливий лише після самого Pickup.
         for (const s of r.states) {
-          for (const id of LYING) if (s.inventory[id]) expect(s.inventory[id]).toBe(1);
+          // Предмет сюжету підняли раз (1) + те, що квест видав нагородою (GAME-307: вечірня нагорода дня 2 — дрова): нагорода безкоштовна, платити за неї нічим.
+          for (const id of LYING) if (s.inventory[id]) expect(s.inventory[id]).toBe(1 + REWARDED(s, id));
         }
       });
     });

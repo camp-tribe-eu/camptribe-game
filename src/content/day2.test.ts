@@ -16,7 +16,7 @@ import { loadContent } from '../../scripts/validator/load.mjs';
 import { validate } from '../../scripts/validator/checks.mjs';
 import flags from '../../content/flags.json';
 import { endReachable, type EndMemo } from './bot';
-import { moves, progressKey, type Move } from './moves';
+import { STORM_PREFIX, moves, progressKey, type Move } from './moves';
 import { GAME_DEFS } from './slice-defs';
 import { CONTENT, STORY, compileStory, type RawContent } from './story';
 import { SLEEP, simSend } from './test-days';
@@ -40,6 +40,9 @@ const talk: Move = { type: 'Talk', npcId: ELISE };
 const choose = (choice: number): Move => ({ type: 'Choose', choice });
 const next: Move = { type: 'Continue' };
 const done = (questId: string): Move => ({ type: 'CompleteQuest', questId });
+// GAME-307 · удар на обіді (Інгрід, стара карта клубу → вибір про відтяжки) — НЕ в цьому проході: розмова з'їдає ігровий
+// час, а цей тест міряє саме межі дня й сон. Арку обходять перебором camp-first.test і сторожі валідатора; наслідок
+// вибору в ночі бурі доводить fireplace.test (GAME-307 · ніч бурі розсуджує день).
 
 /** День 1 до межі (ST-005 завершено) для трьох видів гравця: велосипед із наметом, авто з кішкою й наметом, авто без намету. */
 const DAY1_HEAD: readonly Move[] = [
@@ -158,6 +161,45 @@ describe('GAME-141 · межа дня й кінець розділу — різ�
     expect(CONTENT.animals.find((a) => a.id === 'animal.cat')?.transports).toEqual(['transport.car']);
   });
 
+  it('GAME-307: f.storm-* косметичні — за умовою на них не стоїть жодного зсуву квесту (тож перебір і бот їх не розрізняють); мутація червоніє', () => {
+    type Cond = Record<string, unknown> & { all?: Cond[]; any?: Cond[] };
+    type Ch = { when?: Cond; next?: string; effects?: Record<string, unknown>[] };
+    type Nd = { id: string; next?: string; choices?: Ch[]; branches?: { when: Cond; next: string }[] };
+    const reads = (c: Cond | undefined): boolean => c !== undefined && (
+      [c.flag, c.notFlag].some((f) => typeof f === 'string' && f.startsWith(STORM_PREFIX)) || (c.all ?? []).some(reads) || (c.any ?? []).some(reads));
+    const shifts = (e: Record<string, unknown>): boolean => 'startQuest' in e || 'completeObjective' in e;
+    /** Усі місця, де за умовою на f.storm-* досяжний зсув квесту (вибір чи гілка, далі — усе піддерево розмови). */
+    const leaks = (c: RawContent): string[] => c.dialogues.flatMap((d) => {
+      const nodes = new Map((d.nodes as unknown as Nd[]).map((x) => [x.id, x]));
+      const reach = (from: string | undefined): boolean => {
+        const seen = new Set<string>(); const stack = from ? [from] : [];
+        while (stack.length) {
+          const nd = nodes.get(stack.pop() as string);
+          if (!nd || seen.has(nd.id)) continue;
+          seen.add(nd.id);
+          for (const ch of nd.choices ?? []) { if ((ch.effects ?? []).some(shifts)) return true; if (ch.next) stack.push(ch.next); }
+          if (nd.next) stack.push(nd.next);
+          for (const b of nd.branches ?? []) stack.push(b.next);
+        }
+        return false;
+      };
+      return (d.nodes as unknown as Nd[]).flatMap((nd) => [
+        ...(nd.choices ?? []).filter((ch) => reads(ch.when) && ((ch.effects ?? []).some(shifts) || reach(ch.next))).map(() => `${d.id}/${nd.id} (вибір)`),
+        ...(nd.branches ?? []).filter((b) => reads(b.when) && reach(b.next)).map(() => `${d.id}/${nd.id} (гілка)`),
+      ]);
+    });
+    // Сторож бачить, що перевіряти: умов на f.storm-* у контенті щонайменше в ночі бурі й у воротах Інгрід.
+    const readers = CONTENT.dialogues.filter((d) => (d.nodes as unknown as Nd[]).some((nd) => (nd.choices ?? []).some((ch) => reads(ch.when)) || (nd.branches ?? []).some((b) => reads(b.when))));
+    expect(readers.map((d) => d.id).sort()).toEqual(['dlg.ch1-fire', 'dlg.ingrid-chat', 'dlg.storm-night']);
+    expect(leaks(CONTENT)).toEqual([]);
+    // Мутація (закон 1): за вибором «перев'яжемо» (умова f.storm-tarp-tight) закрити ціль квесту — сторож мусить почервоніти.
+    const bad = structuredClone(CONTENT);
+    const s3 = (bad.dialogues.find((d) => d.id === 'dlg.ingrid-chat')?.nodes as unknown as Nd[]).find((x) => x.id === 'storm3');
+    s3?.choices?.[0]?.effects?.push({ completeObjective: { quest: 'CH1-D2-ELISE-001', objective: 'talk-elise' } });
+    // Червоніє двічі: сам вибір (умова f.storm-tarp-tight) і гілка воріт (умова notFlag f.storm-turned), з якої цей вибір досяжний.
+    expect(leaks(bad)).toEqual(['dlg.ingrid-chat/gate (гілка)', 'dlg.ingrid-chat/storm3 (вибір)']);
+  });
+
   it('гачок вогнища (GAME-142) — один етап CH1-D2-FIRE-001: після вечері, останній перед підсумком дня 2, і поки без сцени', () => {
     expect(STORY.quests['CH1-D2-CAMP-001']?.transitions).toEqual([{ on: 'complete', to: 'CH1-D2-FIRE-001', choice: false }]);
     expect(STORY.quests['CH1-D2-FIRE-001']?.transitions).toEqual([{ on: 'complete', to: 'CH1-D3-001', choice: false }]);   // GAME-144: далі ранок дня 3
@@ -210,9 +252,12 @@ describe('GAME-141 · Спосіб перевірки 1: відмова від �
     const defs = mutate(dead);
     const m = explore(startOf('bike', defs), defs);
     expect(m.declined.length).toBeGreaterThan(0);
-    const stuck = m.declined.filter((s) => endReachable(s, defs, new Map(), 50_000) === false);
+    // Пам'ять пошуку — одна на всі стани відмови (як у сусідньому тесті вище): інакше кожен стан повторює той самий
+    // перебір до 50 000 станів заново. Доводиться те саме, лише без повторної роботи.
+    const memoDead: EndMemo = new Map();
+    const stuck = m.declined.filter((s) => endReachable(s, defs, memoDead, 50_000) === false);
     expect(stuck.length).toBe(m.declined.length);
-    console.info(`GAME-141 Спосіб 1 · МУТАЦІЯ: відмов ${m.declined.length}, тупиків після відмови ${stuck.length}`);
+    console.info(`GAME-141 Спосіб 1 · МУТАЦІЯ: станів ${m.states}, відмов ${m.declined.length}, тупиків після відмови ${stuck.length}`);
     // Той самий тупик статично: валідатор на контенті з цією мутацією.
     const loaded = loadContent('content');
     const c = structuredClone(loaded.content) as unknown as { quests: { id: string; titleKey?: string; optional: boolean; objectives: unknown[]; transitions: { on: string; to: string }[] }[] };

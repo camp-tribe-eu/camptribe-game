@@ -122,6 +122,44 @@
           ]
         },
         {
+          "textKey": "dlg.victoria-chat.hello.c6",
+          "next": "errand-tarp",
+          "when": {
+            "all": [
+              {
+                "taskOpen": "tarp-ropes"
+              },
+              {
+                "notFlag": "f.errand-tarp-ropes-victoria"
+              }
+            ]
+          },
+          "effects": [
+            {
+              "setFlag": "f.errand-tarp-ropes-victoria"
+            }
+          ]
+        },
+        {
+          "textKey": "dlg.victoria-chat.hello.c7",
+          "next": "errand-food",
+          "when": {
+            "all": [
+              {
+                "taskOpen": "storm-food"
+              },
+              {
+                "notFlag": "f.errand-storm-food-victoria"
+              }
+            ]
+          },
+          "effects": [
+            {
+              "setFlag": "f.errand-storm-food-victoria"
+            }
+          ]
+        },
+        {
           "textKey": "dlg.victoria-chat.hello.c3",
           "next": "bye"
         }
@@ -137,6 +175,18 @@
       "id": "errand-dinner",
       "speaker": "npc",
       "textKey": "dlg.victoria-chat.errand-dinner",
+      "end": true
+    },
+    {
+      "id": "errand-tarp",
+      "speaker": "npc",
+      "textKey": "dlg.victoria-chat.errand-tarp",
+      "end": true
+    },
+    {
+      "id": "errand-food",
+      "speaker": "npc",
+      "textKey": "dlg.victoria-chat.errand-food",
       "end": true
     },
     {

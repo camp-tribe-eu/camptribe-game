@@ -13,6 +13,20 @@
           "when": {
             "all": [
               {
+                "quest": "CH1-D2-ELISE-001",
+                "status": "active"
+              },
+              {
+                "notFlag": "f.storm-turned"
+              }
+            ]
+          },
+          "next": "storm1"
+        },
+        {
+          "when": {
+            "all": [
+              {
                 "flag": "f.req-ingrid-starmap-t1"
               },
               {
@@ -347,6 +361,53 @@
       "id": "tr-laugh",
       "speaker": "npc",
       "textKey": "dlg.ingrid-chat.tr-laugh",
+      "end": true
+    },
+    {
+      "id": "storm1",
+      "speaker": "npc",
+      "textKey": "dlg.ingrid-chat.storm1",
+      "next": "storm2"
+    },
+    {
+      "id": "storm2",
+      "speaker": "npc",
+      "textKey": "dlg.ingrid-chat.storm2",
+      "next": "storm3"
+    },
+    {
+      "id": "storm3",
+      "speaker": "npc",
+      "textKey": "dlg.ingrid-chat.storm3",
+      "choices": [
+        {
+          "textKey": "dlg.ingrid-chat.storm3.c1",
+          "next": "storm-turn",
+          "when": {
+            "flag": "f.storm-tarp-tight"
+          },
+          "effects": [
+            {
+              "setFlag": "f.storm-turned"
+            }
+          ]
+        },
+        {
+          "textKey": "dlg.ingrid-chat.storm3.c2",
+          "next": "storm-keep"
+        }
+      ]
+    },
+    {
+      "id": "storm-turn",
+      "speaker": "npc",
+      "textKey": "dlg.ingrid-chat.storm-turn",
+      "end": true
+    },
+    {
+      "id": "storm-keep",
+      "speaker": "npc",
+      "textKey": "dlg.ingrid-chat.storm-keep",
       "end": true
     }
   ]

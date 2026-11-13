@@ -435,8 +435,13 @@ export function coveredKeys(sim: SimState, defs: CoreDefs): ReadonlySet<string> 
       if (there && (MAP_SPOTS[there] as readonly string[]).includes(`step.${qid}`)) { out.add(`CompleteQuest|${qid}`); out.add(`DeclineQuest|${qid}`); }
     }
     if (map === 'camp') {
-      // Розмова з Елізою — NPC табору на мапі (рамка розмови): та сама дія, що кнопка «Поговорити».
-      if (npcLive(g, defs, 'npc.elise')) out.add('Talk|npc.elise');
+      // Розмови табору — мешканці на мапі (рамка розмови): та сама дія, що кнопка «Поговорити». Еліза стоїть на рецепції,
+      // решта ходить своїми маршрутами (src/view/world/ambient.ts RESIDENTS) — до кожного можна підійти ногами, тож
+      // панелі вони не потрібні. GAME-307: доти покривалася лише Еліза, і щойно сюжет дав слово ще комусь (Інгрід на
+      // обіді дня 2), панель показувала кнопку, яку мапа насправді покриває.
+      for (const [id, n] of Object.entries(defs.story?.npcs ?? {})) {
+        if (n.locationId === MAP_LOCATION.camp && npcLive(g, defs, id)) out.add(`Talk|${id}`);
+      }
       // Вогнище дня 2: сцена, потім завершення вечора — обидва в одного вогнища (director.spotMove), тож кнопка завершення мапою покрита й до сцени.
       if (active(g, 'CH1-D2-FIRE-001')) out.add('CompleteQuest|CH1-D2-FIRE-001');
     }

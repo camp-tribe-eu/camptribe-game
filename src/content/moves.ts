@@ -9,14 +9,19 @@ import { eventSeenFlag, gateOpen, questSlept, unlockOpen } from '../core/story';
 import { ERRAND_PREFIX } from './errands';
 
 /**
- * Прапорець, косметичний для сюжету: прохання (f.req-*, GAME-180), доручення родині (f.errand-*, GAME-202) і місії сусідів (f.mis-*, GAME-312). Жоден квест їх не читає
- * (валідатор REQUEST_GATES_QUEST; доручення лише веде виконавця сцени до справи хвилі — ядро закриває її тією ж CompleteTask; місія міняє лише вечір і ніч із бурею),
- * тож перебір і бот не множать на них простір станів.
+ * GAME-307 · приготування до бурі (f.storm-*): наслідки хвилі полудня й вибір Інгрід на обіді. Їх читає лише сцена вогнища (ніч бурі) і ворота
+ * розмови Інгрід — жоден квест. Що за умовою на f.storm-* не стоїть жодного зсуву квесту, доводить day2.test («f.storm-* косметичні», з мутацією).
+ */
+export const STORM_PREFIX = 'f.storm-';
+/**
+ * Прапорець, косметичний для сюжету: прохання (f.req-*, GAME-180), доручення родині (f.errand-*, GAME-202), місії сусідів (f.mis-*, GAME-312)
+ * і наслідки бурі (f.storm-*, GAME-307). Жоден квест їх не читає (валідатор REQUEST_GATES_QUEST; доручення лише веде виконавця сцени до справи
+ * хвилі — ядро закриває її тією ж CompleteTask; місія міняє лише вечір і ніч із бурею), тож перебір і бот не множать на них простір станів.
  */
 export const MISSION_FLAG_PREFIX = 'f.mis-';
 /** GAME-312: матеріали й уміння для пристроїв табору (верша, панель, мотузка) — віддача місій, сюжету теж не читають. */
 export const CAMP_DEVICE_PREFIX = 'f.camp-';
-export const cosmeticFlag = (f: string): boolean => f.startsWith('f.req-') || f.startsWith(ERRAND_PREFIX) || f.startsWith(MISSION_FLAG_PREFIX) || f.startsWith(CAMP_DEVICE_PREFIX);
+export const cosmeticFlag = (f: string): boolean => f.startsWith('f.req-') || f.startsWith(ERRAND_PREFIX) || f.startsWith(MISSION_FLAG_PREFIX) || f.startsWith(CAMP_DEVICE_PREFIX) || f.startsWith(STORM_PREFIX);
 
 export type Move = Command extends infer C ? (C extends Command ? Omit<C, 'commandId'> : never) : never;
 

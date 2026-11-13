@@ -78,7 +78,8 @@ async function playFireplace(page: Page, branchText: string): Promise<void> {
   await expect(dlg).toBeVisible();
   await act(page, 'continue');
   await expect(dlg).toContainText(branchText);
-  for (let i = 0; i < 20 && await dlg.isVisible({ timeout: 300 }).catch(() => false); i++) {
+  // GAME-307: сцена вогнища тепер ще й ніч бурі (≈40 вузлів) — межа обходу ширша; цикл і так кінчається, коли діалог закрито.
+  for (let i = 0; i < 80 && await dlg.isVisible({ timeout: 300 }).catch(() => false); i++) {
     const choices = dlg.locator('[data-act="choose"]');
     if (await choices.count()) await choices.last().click(); else await dlg.locator('[data-act="continue"]').click();
     await page.waitForTimeout(400);
@@ -156,7 +157,7 @@ test.describe('(a) сторч 390×844, клавіатура: усе встиг�
     const t0 = Date.now();
     await expect(card(page)).toHaveAttribute('data-done', '0');
     await expect(card(page)).toHaveAttribute('data-total', '3');
-    await expect(card(page).locator('[data-ui="wave-title"]')).toHaveText('Вечір на трьох фронтах · 0/3');
+    await expect(card(page).locator('[data-ui="wave-title"]')).toHaveText('Остання година перед дощем · 0/3');
     const tasks = card(page).locator('[data-ui="wave-task"]');
     await expect(tasks).toHaveCount(3);
     for (const [id, min] of [['dinner', 45], ['firewood', 40], ['cover-bikes', 50]] as const) {

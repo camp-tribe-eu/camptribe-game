@@ -14,7 +14,7 @@ import { describe, expect, it } from 'vitest';
 import { newSim, step, type SimState } from '../core/sim';
 import { progressKey, moves, type Move } from './moves';
 import { GAME_DEFS } from './slice-defs';
-import { RAW_WAVES, WAVE_CH1_ARRIVAL, WAVE_CH1_CHECKOUT, WAVE_CH1_DEPARTURE, WAVE_CH1_EVENING, WAVE_CH1_ROAD, WAVE_CH1_ROAD_BIKE } from './waves';
+import { RAW_WAVES, WAVE_CH1_ARRIVAL, WAVE_CH1_CHECKOUT, WAVE_CH1_DEPARTURE, WAVE_CH1_EVENING, WAVE_CH1_NOON, WAVE_CH1_ROAD, WAVE_CH1_ROAD_BIKE } from './waves';
 import { FIRE_STAGE, MAP_LOCATION, TASK_SPOT, fireplaceDue, fireplacePlayed, liveSpot, menuTasks, pendingWave, spotMove, storyMoves, waveLocation } from './director';
 import { leaveMove } from './road-events.test.helpers';
 import { CONTENT, STORY } from './story';
@@ -98,8 +98,10 @@ const spot = (id: string): string => `${TASK_SPOT}${id}`;
 
 describe('режисер W4: стартер хвилі (GAME-170, зріз 2)', () => {
   it('на CH1-D2-ELISE-001 сюжету нічого слати; на CH1-D2-CAMP-001 — рівно один StartWave, який ядро приймає; вдруге — нічого', () => {
+    // GAME-307: на ELISE-001 стартує обідня хвиля бурі (чотири справи); вечірня чекає CAMP-001.
     const before = toStage('bike', 'CH1-D2-ELISE-001');
-    expect(storyMoves(before, GAME_DEFS)).toEqual([]);
+    expect(storyMoves(before, GAME_DEFS)).toEqual([{ type: 'StartWave', waveId: WAVE_CH1_NOON }]);
+    expect(RAW_WAVES.find((w) => w.id === WAVE_CH1_NOON)?.tasks.map((t) => t.id).sort()).toEqual(['dry-wood', 'storm-food', 'tarp-ropes', 'water-cans']);
     const at = toStage('bike', CAMP);
     expect(at.game.quests[CAMP]?.status).toBe('active');
     expect(storyMoves(at, GAME_DEFS)).toEqual([{ type: 'StartWave', waveId: WAVE_CH1_EVENING }]);
@@ -164,9 +166,9 @@ describe('режисер W4: цілі на мапі', () => {
   it('кожна справа кожної хвилі ТАБОРУ має ціль task.<id> на мапі, і кожна ціль task.* — справа хвилі табору (хвилі дому й дороги — з екрана подорожі)', () => {
     const stageAt = (stage: string): string | undefined => CONTENT.quests.find((q) => q.id === stage)?.locationId;
     const camp = RAW_WAVES.filter((w) => stageAt(w.stage) === MAP_LOCATION);
-    expect(camp.map((w) => w.id).sort()).toEqual([WAVE_CH1_ARRIVAL, WAVE_CH1_CHECKOUT, WAVE_CH1_EVENING].sort());
+    expect(camp.map((w) => w.id).sort()).toEqual([WAVE_CH1_ARRIVAL, WAVE_CH1_CHECKOUT, WAVE_CH1_EVENING, WAVE_CH1_NOON].sort());
     const tasks = camp.flatMap((w) => w.tasks.map((t) => spot(t.id))).sort();
-    expect(tasks.length).toBeGreaterThanOrEqual(7);
+    expect(tasks.length).toBeGreaterThanOrEqual(11);
     expect(triggers.filter((t) => t.startsWith(TASK_SPOT)).sort()).toEqual(tasks);
     expect(triggers).toContain('obj.litter');
   });
@@ -212,7 +214,7 @@ describe('режисер W4: цілі на мапі', () => {
     expect(fireplacePlayed(s)).toBe(true);
     // GAME-221: на l1 і l3 — вибір без наслідків (розбиває довгий ланцюжок реплік); на l7 вибір 1 — гілка b.
     // Сцену грали — вогнище знову лише гріє (навіть коли розмову закрито).
-    while (s.game.dialogue) s = must(s, ['l1', 'l3', 'l7'].includes(s.game.dialogue.node) ? { type: 'Choose', choice: 1 } : { type: 'Continue' });
+    while (s.game.dialogue) s = must(s, ['l1', 'l3', 'l7', 'night-open', 'night-wind', 'night-check', 'night-eat', 'night-morning'].includes(s.game.dialogue.node) ? { type: 'Choose', choice: 1 } : { type: 'Continue' });
     expect(fireplaceDue(s)).toBe(false);
     expect(spotMove(s, 'obj.campfire')).toEqual({ type: 'Interact', targetId: 'obj.campfire' });
     s = must(s, done(FIRE_STAGE));

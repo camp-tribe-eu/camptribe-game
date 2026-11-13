@@ -66,6 +66,25 @@
     ]
   },
   {
+    "id": "wave.ch1-day2-noon", "titleKey": "wave.ch1-day2-noon", "hookKey": "wave.ch1-day2-noon.hook", "stage": "CH1-D2-ELISE-001",
+    "fallback": { "textKey": "wave.ch1-day2-noon.fallback" },
+    "allDone": { "textKey": "wave.ch1-day2-noon.all-done", "effects": [{ "setFlag": "f.storm-all-four" }] },
+    "tasks": [
+      { "id": "tarp-ropes", "textKey": "wave.ch1-day2-noon.tarp-ropes", "limitMin": 40,
+        "done": { "textKey": "wave.ch1-day2-noon.tarp-ropes.done", "effects": [{ "setFlag": "f.storm-tarp-tight" }] },
+        "late": { "textKey": "wave.ch1-day2-noon.tarp-ropes.late", "effects": [{ "wetGear": true }] } },
+      { "id": "storm-food", "textKey": "wave.ch1-day2-noon.storm-food", "limitMin": 45,
+        "done": { "textKey": "wave.ch1-day2-noon.storm-food.done", "effects": [{ "setFlag": "f.storm-food-ready" }] },
+        "late": { "textKey": "wave.ch1-day2-noon.storm-food.late" } },
+      { "id": "water-cans", "textKey": "wave.ch1-day2-noon.water-cans", "limitMin": 50,
+        "done": { "textKey": "wave.ch1-day2-noon.water-cans.done", "effects": [{ "setFlag": "f.storm-water-full" }] },
+        "late": { "textKey": "wave.ch1-day2-noon.water-cans.late" } },
+      { "id": "dry-wood", "textKey": "wave.ch1-day2-noon.dry-wood", "limitMin": 55, "leaderOnly": true,
+        "done": { "textKey": "wave.ch1-day2-noon.dry-wood.done", "effects": [{ "setFlag": "f.storm-wood-dry" }] },
+        "late": { "textKey": "wave.ch1-day2-noon.dry-wood.late" } }
+    ]
+  },
+  {
     "id": "wave.ch1-day2-evening", "titleKey": "wave.ch1-day2-evening", "hookKey": "wave.ch1-day2-evening.hook", "stage": "CH1-D2-CAMP-001",
     "fallback": { "textKey": "wave.ch1-day2-evening.fallback" },
     "allDone": { "textKey": "wave.ch1-day2-evening.all-done" },

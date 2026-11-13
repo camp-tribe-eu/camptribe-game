@@ -96,6 +96,25 @@
           ]
         },
         {
+          "textKey": "dlg.matthew-chat.hello.c5",
+          "next": "errand-water",
+          "when": {
+            "all": [
+              {
+                "taskOpen": "water-cans"
+              },
+              {
+                "notFlag": "f.errand-water-cans-matthew"
+              }
+            ]
+          },
+          "effects": [
+            {
+              "setFlag": "f.errand-water-cans-matthew"
+            }
+          ]
+        },
+        {
           "textKey": "dlg.matthew-chat.hello.c3",
           "next": "bye"
         }
@@ -105,6 +124,12 @@
       "id": "errand-shelter",
       "speaker": "npc",
       "textKey": "dlg.matthew-chat.errand-shelter",
+      "end": true
+    },
+    {
+      "id": "errand-water",
+      "speaker": "npc",
+      "textKey": "dlg.matthew-chat.errand-water",
       "end": true
     },
     {

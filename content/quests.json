@@ -100,7 +100,8 @@
     "objectives": [
       { "id": "evening", "textKey": "q.ch1-d2-fire-001.o1", "kind": "visit", "target": "loc.camp.lake", "required": true }
     ],
-    "transitions": [{ "on": "complete", "to": "CH1-D3-001" }]
+    "transitions": [{ "on": "complete", "to": "CH1-D3-001" }],
+    "reward": { "grantId": "rw.ch1-d2-fire-001", "items": [{ "item": "item.firewood", "qty": 2 }], "once": true }
   },
   {
     "id": "CH1-D3-001", "gate": { "day": 3 }, "titleKey": "q.ch1-d3-001", "optional": false, "xp": 10, "locationId": "loc.camp.lake",

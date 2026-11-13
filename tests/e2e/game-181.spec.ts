@@ -305,7 +305,7 @@ for (const v of VIEWS) {
     // Число картки = те, що ядро справді нарахувало за день 1 (усе XP гри зараз — дня 1; ОМ — лише видані).
     expect(Number(await reward.getAttribute('data-xp'))).toBe(c.game.progress?.xp);
     expect(Number(await reward.getAttribute('data-om'))).toBe(c.game.progress?.om);
-    await expect(summary.locator('[data-ui="summary-next"]')).toHaveText('Наступного разу: Ранок біля озера');
+    await expect(summary.locator('[data-ui="summary-next"]')).toHaveText('Наступного разу: Вітер з-за озера');   // GAME-307: назву етапу q.ch1-d2-001 змінено у локалі (день біля озера)
     await expect(summary.locator('[data-ui="summary-safe"]')).toContainText('Прогрес збережено');
     // Картка вміщає кнопки на екран (прокрутка допустима, але кнопки існують і ≥ 44 px).
     for (const b of ['summary-continue', 'summary-end']) {
