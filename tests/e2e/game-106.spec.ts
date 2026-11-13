@@ -238,9 +238,11 @@ test('«Продовжити» — назад на мапу; день 2 до «�
   await page.locator('[data-touch="story"]').click();
   await click('[data-act="complete"][data-key="q.ch1-d3-001"]');
   expect((await core(page)).game.wave?.past['wave.ch1-day1-arrival']?.['pitch-tent'], 'контроль: намет поставлено вчасно').toBe('done');
-  // ?seed=2: день 0 сонячний, а справи хвиль зроблено вчасно — спорядження сухе й ціле: нейтральна сцена, «висушити» немає (R1-04).
-  await expect(panel(page).locator('[data-ui="quest"]', { hasText: 'Збираємо речі' })).toContainText('усе сухе й ціле');
-  await expect(panel(page).locator('[data-act="dry"]')).toHaveCount(0);
+  // GAME-307: у полудень дня 2 ця проходка не затягує тент (wave.ch1-day2-noon, tarp-ropes → late → wetGear), тож на дні 3 намет вологий: сцена
+  // «вологий», є дія «висушити» (раніше, до хвилі бурі, тут була нейтральна сцена «усе сухе й ціле»; вона лишається в day3.test).
+  expect((await core(page)).game.wave?.past['wave.ch1-day2-noon']?.['tarp-ropes'], 'контроль: тент не затягнуто — справа late').toBe('late');
+  await expect(panel(page).locator('[data-ui="quest"]', { hasText: 'Збираємо речі' })).toContainText('Намет вологий');
+  await expect(panel(page).locator('[data-act="dry"]')).toHaveCount(2);   // намет і те, що лежало в ньому
   for (const [k, key] of [['complete', 'q.ch1-d3-gear-001'], ['talk', 'npc.elise'], ['choose', 'dlg.elise-greeting.hello.c15'], ['continue', ''],
     ['choose', 'dlg.elise-greeting.goodbye.c1'], ['continue', ''], ['continue', ''], ['complete', 'q.ch1-d3-elise-001'], ['visit', 'loc.road']] as const) await click(`[data-act="${k}"][data-key="${key}"]`);
   for (let i = 0; i < 6 && await panel(page).locator('[data-ui="dialogue"]').isVisible({ timeout: 400 }).catch(() => false); i++) await click('[data-ui="dialogue"] [data-act] >> nth=-1');

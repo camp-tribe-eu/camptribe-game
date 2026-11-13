@@ -20,9 +20,22 @@ const gameName: Plugin = {
   transformIndexHtml: { order: 'pre', handler: (html) => html.replaceAll('%GAME_NAME%', GAME_NAME) },
 };
 
+// Бюджет стартового JS: реєстр прапорців content/flags.json несе довгі `owner`/`note` — документація для людей і валідатора (вони читають файл
+// напряму). У збірці гри їх ніхто не читає (compileStory бере id/type/journal/values), тож зі збірки вони йдуть; у тестах і dev файл лишається повним.
+const stripFlagDocs: Plugin = {
+  name: 'strip-flag-docs',
+  apply: 'build',
+  enforce: 'pre',
+  transform(code, id) {
+    if (!id.endsWith('/content/flags.json')) return null;
+    const rows = JSON.parse(code) as Record<string, unknown>[];
+    return { code: JSON.stringify(rows.map(({ owner: _o, note: _n, ...rest }) => rest)), map: null };
+  },
+};
+
 export default defineConfig({
   base: './',
-  plugins: [gameName],
+  plugins: [gameName, stripFlagDocs],
   // Друга сторінка — спайк Phaser 4 (GAME-14); у грі не з'являється.
   build: { rollupOptions: { input: { main: 'index.html', spike: 'spike.html' } } },
   define: {
