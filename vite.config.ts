@@ -29,7 +29,7 @@ const stripFlagDocs: Plugin = {
   transform(code, id) {
     if (!id.endsWith('/content/flags.json')) return null;
     const rows = JSON.parse(code) as Record<string, unknown>[];
-    return { code: JSON.stringify(rows.map(({ owner: _o, note: _n, ...rest }) => rest)), map: null };
+    return { code: JSON.stringify(rows.map((row) => Object.fromEntries(Object.entries(row).filter(([k]) => k !== 'owner' && k !== 'note')))), map: null };
   },
 };
 

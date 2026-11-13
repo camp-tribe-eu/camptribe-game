@@ -4,6 +4,17 @@ import { expect, test, type Page } from '@playwright/test';
 import { readFileSync } from 'node:fs';
 /** Розмір мапи кемпінгу, px (GAME-172: 40×24 клітинки по 32 — було 640×384); з файлу мапи, а не числом у тесті. */
 const CAMP = JSON.parse(readFileSync(new URL('../../public/maps/camp-lake.tmj', import.meta.url), 'utf8')) as { width: number; height: number; tilewidth: number; tileheight: number };
+const CAMP_WALLS = (JSON.parse(readFileSync(new URL('../../public/maps/camp-lake.tmj', import.meta.url), 'utf8')) as { layers: { name: string; data?: number[] }[] }).layers.find((l) => l.name === 'walls')?.data ?? [];
+/** Скільки пікселів герой пройде з (x, y) у бік dir до першої стіни — рахується з шару walls самої мапи (по осі центра героя). */
+function freeRun(dir: 'up' | 'down', x: number, y: number): number {
+  const T = CAMP.tilewidth;
+  const c = Math.floor(x / T);
+  let r = Math.floor(y / T);
+  const step = dir === 'down' ? 1 : -1;
+  let tiles = 0;
+  while (r + step >= 0 && r + step < CAMP.height && CAMP_WALLS[(r + step) * CAMP.width + c] === 0) { r += step; tiles++; }
+  return tiles * T + (dir === 'down' ? T - (y % T) : y % T);
+}
 const MAP_W = CAMP.width * CAMP.tilewidth;
 const MAP_H = CAMP.height * CAMP.tileheight;
 
@@ -52,8 +63,26 @@ test.describe('LPC на сцені (десктоп 1280×800)', () => {
   for (const [key, dir, axis, sign] of [['ArrowDown', 'down', 'y', 1], ['ArrowUp', 'up', 'y', -1], ['ArrowLeft', 'left', 'x', -1], ['ArrowRight', 'right', 'x', 1]] as const) {
     test(`ходьба ${dir}: кадр змінюється в рядку свого напрямку, відпустив — кадр спокою`, async ({ page }) => {
       await open(page);
-      if (dir === 'up') await hold(page, 'ArrowDown', (p) => p.playerY >= 260, 10_000);   // вгору є куди йти: далеко від наметів
-      const a = await probe(page);
+      let a = await probe(page);
+      // GAME-313: вертикальна ходьба — з вільного місця з довгим ходом (довжину міряємо з шару walls мапи). Раніше `down` ішов від спавну (≈170 px до стіни) і на
+      // завантаженому CI анімація не встигала зіграти 3 кадри до упору в стіну («2 кадри»), а `up` починав де закінчив `down`.
+      // Тепер: стаємо в коридор стовпців 8–9 (x 275–305 з 256–320, рядки 1–10, 10 клітинок завширшки 2 — інерція зупинки ≈40 px його не псує), йдемо в його кінець
+      // і лише потім — у бік, що перевіряється: ≥ 250 px ходу до стіни.
+      if (axis === 'y') {
+        const need = 250;
+        const to = dir as 'up' | 'down';
+        const inLane = (p: Probe): boolean => p.playerX >= 275 && p.playerX <= 305;
+        // Умова, а не час: повторюємо, доки герой не стане де треба (завантажена машина може не дійти за одну спробу).
+        for (let i = 0; i < 6; i++) {
+          a = await probe(page);
+          if (inLane(a) && freeRun(to, a.playerX, a.playerY) >= need + 20) break;
+          if (!inLane(a)) await hold(page, a.playerX < 275 ? 'ArrowRight' : 'ArrowLeft', (p) => (a.playerX < 275 ? p.playerX >= 275 : p.playerX <= 305), 5_000);
+          else await hold(page, to === 'down' ? 'ArrowUp' : 'ArrowDown', (p) => freeRun(to, p.playerX, p.playerY) >= need + 20, 5_000);
+        }
+        a = await probe(page);
+        expect(inLane(a), `${dir}: герой у коридорі ${a.playerX},${a.playerY}`).toBe(true);
+        expect(freeRun(to, a.playerX, a.playerY), `${dir}: є куди йти (з мапи) ${a.playerX},${a.playerY}`).toBeGreaterThanOrEqual(need);
+      }
       // GAME-298: раніше кадри збирались опитуванням probe із Node (кожен виклик — окремий обмін із браузером, під навантаженням 100+ мс), тож за ті самі «три кадри ходьби»
       // набиралось 3 зрізи, а не кадрів гри: «анімація грала» червоніла (14 з 20 при --repeat-each 20 --workers 4). Тепер зрізи — події кадру (rAF) всередині сторінки:
       // кожен показаний кадр сцени — рівно один зріз, скільки б часу це не забрало; межа 10 с — страховка від вічного циклу, не очікування.
@@ -134,7 +163,7 @@ test.describe('LPC на сцені (десктоп 1280×800)', () => {
     expect(front.behindTiles, 'дах намету лежить позаду персонажа, що стоїть перед наметом').toBeGreaterThan(0);
     expect(front.coveredTiles, 'перед наметом дах не перекриває').toBe(0);
 
-    await hold(page, 'ArrowLeft', (p) => p.playerX <= 150, 10_000);                       // у прохід між наметами
+    await hold(page, 'ArrowLeft', (p) => p.playerX <= 140, 10_000);                       // у прохід між наметами
     const back = (await hold(page, 'ArrowUp', (p) => p.playerY <= 100, 10_000)).end;      // і позад намету (його низ — рядок 3, y 96–128)
     expect(back.playerY).toBeLessThan(128);
     expect(back.playerDepth).toBeLessThan(128);                                          // глибина лінії основи намету — 128

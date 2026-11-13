@@ -102,7 +102,8 @@ for (const v of VIEWS) {
       // 4) вечірня сцена: пройти до кінця й звірити гілку вечора.
       await expect.poll(async () => (await nodeOf(page))?.id, { timeout: 15_000, message: 'вечір почався' }).toBe('dlg.ch1-fire');
       const seen: string[] = [];
-      for (let i = 0; i < 40; i++) {
+      // GAME-307: сцена вогнища тепер кінчається ніччю бурі (≈30 вузлів, 5 виборів): межа обходу — за справжньою довжиною; цикл і так кінчається, коли діалог закрито.
+      for (let i = 0; i < 100; i++) {
         const d = await nodeOf(page);
         if (!d) break;
         seen.push(d.node);
@@ -112,7 +113,8 @@ for (const v of VIEWS) {
       expect(await nodeOf(page), 'вечір дійшов до кінця (діалог закрито)').toBeNull();
       if (choice === 'keep') { expect(seen.some((n) => n === 'fk1' || n === 'fkl'), 'гілка улову').toBe(true); expect(seen).not.toContain('fr1'); }
       else { expect(seen).toContain('fr3'); expect(seen).not.toContain('fk1'); expect((await core(page)).game.flags).toContain('f.trust-nora-fish'); }
-      expect(seen[seen.length - 1]).toMatch(/^(l12-plain|b3)$/);
+      expect(seen[seen.length - 1]).toMatch(/^night-close(-four)?$/);   // GAME-307: обидві гілки сходяться в ніч бурі
+      expect(seen.some((n) => n === 'l12-plain' || n === 'b3'), 'кінець гілки вогнища, далі — ніч').toBe(true);
       // 5) факт вибору лишається в збереженні: перезавантаження не губить його.
       await page.waitForTimeout(800);
       await page.reload();
