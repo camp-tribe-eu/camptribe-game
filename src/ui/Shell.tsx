@@ -26,6 +26,7 @@ import { ColdOpen } from './ColdOpen';
 import { EpisodeCard } from './EpisodeCard';
 import { MinigameHost } from './MinigameHost';
 import { missionSurface } from './MissionSurfaces';
+import { SampleDay } from './SampleDay';
 import { episodeStep } from './episode-beats';
 import { trapTab } from './focus-trap';
 import { remindArmed, remindDue } from './remind';
@@ -503,6 +504,7 @@ export function Shell({ port, langOverride, credits, build, holdToast = false, h
       {backpackOpen && <BackpackPanel backpack={offer.backpack} lang={lang} t={t} sell={storyAct} close={closeBackpack} />}
       {atlasOpen && <AtlasPanel atlas={offer.atlas} lang={lang} t={t} close={closeAtlas} />}
       {mission && MissionSurface && <MinigameHost session={mission} t={t} Surface={MissionSurface} />}
+      {port.sample && !intro && <SampleDay port={port.sample} t={t} lang={lang} />}
       {intro && cold && <ColdOpen paint={port.coldOpenScene} t={t} onDone={() => setCold(false)} />}
       {episode && !intro && port.episodeFlags && <EpisodeCard flags={port.episodeFlags()} chapter={offer.chapterEnd ?? 1} t={t} onDone={() => { setEpisode(false); focusStage(); if (teaserSleep.current) { teaserSleep.current = false; summaryEnd(); } /* GAME-264: після тизера — збережена гра й меню паузи, а не мертва мапа */ }} />}
       {intro && !cold && <Intro soloHero={port.introSolo?.() === true} classic={port.introClassic?.() === true} shot={port.introShot} offer={offer} lang={lang} t={t} act={storyAct} portrait={portrait} room={port.introRoom} beat={port.introBeat} onDone={endIntro} />}

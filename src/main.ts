@@ -10,6 +10,7 @@ import { buildLabel } from './core/build-info';
 import { newInput } from './view/world/actions';
 import { GAME_DEFS } from './content/slice-defs';
 import { dayOf } from './core/weather';
+import { todayWeather } from './core/sim';
 import { STORY, STORY_REV } from './content/story';
 import { saveViable } from './content/viability';
 import { decodeRestoreCode, encodeRestoreCode } from './platform/save-code';
@@ -60,7 +61,7 @@ import { forageLeft, forageSpent } from './core/forage';
 import { agendaOf, minimapTargets, onboarding, type MiniFrame } from './content/agenda';
 import type { MapKey } from './content/map-first';
 import { taskGate } from './core/wave';
-import { MAP_SPOTS, departBlock, isBulky, isMapFirstSpot, mapKeyFor, moveKey, needsLeft, nextTarget, npcLive, resolveSpot, sameMove, spotLook, unpackMoves } from './content/map-first';
+import { MAP_LOCATION, MAP_SPOTS, departBlock, isBulky, isMapFirstSpot, mapKeyFor, moveKey, needsLeft, nextTarget, npcLive, resolveSpot, sameMove, spotLook, unpackMoves } from './content/map-first';
 import { carriedOf, takeFlag } from './core/packing';
 import type { GameState } from './core/state';
 import { progressOf, titleOf } from './core/progress';
@@ -72,6 +73,12 @@ import { openGate } from './view/open-gate';
 import { missionWorkDue } from './view/mission-work';
 import { createMinigameSession, type MinigameSession } from './view/minigame-session';
 import { minigameById } from './content/minigames';
+import { driveSummary, type DriveMgState } from './content/minigames/drive';
+import { ARRIVAL_SCENE, SCRAPE_SCENE, arrivalFacts } from './content/arrival-scene';
+import { pitchTaken } from './content/arrival-pitch';
+import { DRIVE_FLAG, driveFlag, driveOutcome as driveInOutcome } from './content/drive-in';
+import { laneIdFor } from './content/sample-day';
+import type { SamplePort, SampleStage } from './ui/SampleDay';
 import type { RewardEvent } from './ui/port';
 
 const app = document.querySelector<HTMLElement>('#app');
@@ -203,7 +210,16 @@ const takeReward = (): string | null => {
 };
 let pendingFrame = false;
 const fireFrame = (): void => { for (const l of switches.panelActs ? openListeners : talkListeners) l(); };
+const sampleListeners = new Set<() => void>();
+const sampleOn = switches.sampleDay === true;
+let sampleBusy = false;
+const sampleChanged = (): void => {
+  // Кроки дня виводяться зі стану ядра на КОЖНУ зміну історії (не лише на кадр сцени): сцена, поки відкрита панель, стоїть на паузі.
+  if (sampleOn && !sampleBusy) { sampleBusy = true; try { sampleScenes(); if (!missionSession) sampleOpenDrive(); } finally { sampleBusy = false; } }
+  for (const l of [...sampleListeners]) l();
+};
 const storyChanged = (): void => {
+  sampleChanged();
   syncBackpack();
   syncRewards();
   syncRanks();
@@ -388,7 +404,49 @@ const miniListeners = new Set<(f: MiniFrame) => void>();
 let missionSession: MinigameSession | null = null;
 const missionListeners = new Set<() => void>();
 const missionChanged = (): void => { for (const l of [...missionListeners]) l(); };
+// GAME-314: зразковий день (?sampleDay=1). Крок дня виводиться зі СТАНУ ядра (а не з пам'яті сторінки): дорога грається на мапі дороги, поки її не зіграно;
+// сцена приїзду відкривається, коли дорога вже записала f.arrival-*; заїзд — коли ділянку обрано; далі день, дошка табору й ніч (ui/SampleDay).
+const sampleFrames = new Set<(dtMs: number) => void>();
+const playedScene = (id: string): boolean => bridge.state.journal.some((e) => e.type === 'StartScene' && e.ref === id);
+const sampleStage = (): SampleStage => {
+  if (!sampleOn) return 'off';
+  const g = bridge.state.game;
+  if (pitchTaken(g.flags) === null || g.dialogue !== null) return 'off';
+  if (!g.flags.some((f) => f.startsWith(`${DRIVE_FLAG}-`))) return 'drivein';
+  return 'day';
+};
+function sampleOpenDrive(): void {
+  const g = bridge.state.game;
+  const def = minigameById('mg.drive');
+  if (!sampleOn || !def || g.dialogue !== null || g.player?.locationId !== 'loc.road' || g.minigames?.['mg.drive'] !== undefined) return;
+  missionSession = createMinigameSession(def, {
+    results: g.minigames, seed: bridge.state.worldSeed,
+    // Штраф дороги (камера) виходить із ТОГО САМОГО підсумку міні-гри й іде з гаманця тією ж командою, що записує результат.
+    report: (r) => { const fine = driveSummary((missionSession as MinigameSession).run.state as DriveMgState).finesCents; bridge.send({ type: 'FinishMinigame', minigameId: def.id, outcome: r.outcome, ...(fine > 0 ? { fineCents: fine } : {}) }); storyChanged(); },
+  });
+  missionChanged();
+}
+function sampleScenes(): void {
+  const g = bridge.state.game;
+  if (!sampleOn || g.dialogue !== null || g.player?.locationId !== MAP_LOCATION.camp || g.minigames?.['mg.drive'] === undefined) return;
+  if (pitchTaken(g.flags) === null && !playedScene(ARRIVAL_SCENE)) { bridge.send({ type: 'StartScene', sceneId: ARRIVAL_SCENE, facts: arrivalFacts(g.flags) }); storyChanged(); }
+}
+const samplePort: SamplePort = {
+  stage: sampleStage,
+  lane: () => laneIdFor(bridge.state.game.flags),
+  flags: () => bridge.state.game.flags,
+  moneyCents: () => bridge.state.game.moneyCents,
+  seed: () => bridge.state.worldSeed,
+  weather: () => todayWeather(bridge.state),
+  onFrame: (cb) => { sampleFrames.add(cb); return () => { sampleFrames.delete(cb); }; },
+  driveInDone: (scrapes) => {
+    const facts = [driveFlag(driveInOutcome({ at: { c: 0, r: 0 }, facing: 'up', steps: 0, done: true, scrapes }))];
+    bridge.send({ type: 'StartScene', sceneId: SCRAPE_SCENE, facts }); storyChanged();
+  },
+  subscribe: (l) => { sampleListeners.add(l); return () => { sampleListeners.delete(l); }; },
+};
 function missionTick(): void {
+  if (sampleOn) { sampleScenes(); if (!missionSession) sampleOpenDrive(); }
   if (missionSession) {
     if (missionSession.run.phase === 'closed') { missionSession = null; missionChanged(); return; }
     missionSession.frame(1);
@@ -452,6 +510,7 @@ const worldHooks: WorldHooks = {
   isLive: (name) => !campOnly(name) && liveSpot(bridge.state, name, GAME_DEFS),
   frame: (dtMs) => {
     missionTick();
+    if (sampleOn) for (const cb of [...sampleFrames]) cb(dtMs);
     if (cardItem !== null && (cardLeftMs -= dtMs) <= 0) { cardItem = null; storyChanged(); }
     if (receipt !== null && (receiptLeftMs -= dtMs) <= 0) { receipt = null; storyChanged(); }
   },
@@ -592,6 +651,7 @@ render(h(Shell, {
     },
     hintShown: () => hintIdle.visible(),
     minimap: { frame: () => miniFrame, subscribe: (l) => { miniListeners.add(l); return () => { miniListeners.delete(l); }; } },
+    ...(sampleOn ? { sample: samplePort } : {}),
     mission: { session: () => missionSession, subscribe: (l) => { missionListeners.add(l); return () => { missionListeners.delete(l); }; } },
     setHintMode: (m) => { hintMode = m; applyHintMode(); },
     zoomSteps: () => zoomSteps(stage.clientWidth, stage.clientHeight, coarse()),

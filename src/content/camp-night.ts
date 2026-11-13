@@ -8,6 +8,7 @@ import type { Outcome } from './minigame';
 import { ROUTINE_IDS, type RoutineId } from './camp-day';
 import type { Weather } from '../core/weather';
 import { nightAt, type NightWeather, type PitchId } from './arrival-pitch';
+import { MISSIONS } from './missions';
 
 export type Severity = 'good' | 'plain' | 'rough';
 export interface NightBeat {
@@ -37,6 +38,8 @@ export interface NightFacts {
   readonly pitch?: PitchId;
   readonly nightWeather?: NightWeather;
   readonly prep?: readonly string[];
+  /** GAME-314: прапорці гри (місії сусідів). Ніч читає їх тією самою моделлю, що й рутини: зроблена місія — слід, незроблена — інший слід. */
+  readonly missions?: readonly string[];
 }
 
 export const NIGHT_FACTS: NightFacts = {
@@ -112,6 +115,15 @@ export function nightOf(f: NightFacts): { readonly beats: readonly NightBeat[]; 
   if (f.pitch !== undefined) {
     for (const e of nightAt(f.pitch, f.nightWeather ?? 'storm', f.prep ?? [])) {
       beats.push({ routine: 'camp', id: e.textKey, severity: e.bite === 'bite' ? 'rough' : 'plain' });
+    }
+  }
+
+  // GAME-314: місії сусідів входять у ТУ САМУ ніч. Кожна зроблена дає свої сліди (MissionDef.night), незроблена — один слід «лишилось, як було».
+  if (f.missions !== undefined) {
+    for (const m of MISSIONS) {
+      const earned = m.night.filter((l) => f.missions?.includes(l.flag));
+      if (earned.length === 0) beats.push({ routine: 'camp', id: `night.mission.${m.id}.none`, severity: 'plain' });
+      for (const l of earned) beats.push({ routine: 'camp', id: `night.mission.${l.fact}`, severity: 'good' });
     }
   }
 

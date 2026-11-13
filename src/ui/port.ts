@@ -69,6 +69,8 @@ export interface UiPort {
   hintShown(): boolean;
   /** GAME-243: мінімапа — останній знімок і підписка на кадри сцени (щокадру; без таймерів). */
   minimap: { frame(): MiniFrame | null; subscribe(listener: (f: MiniFrame) => void): () => void };
+  /** GAME-314: зразковий день (?sampleDay=1): заїзд, дошка табору, ніч і підсумок на ОДНІЙ моделі. Немає — нічого не показується. */
+  sample?: import('./SampleDay').SamplePort;
   /** GAME-312: міні-гра місії сусіда на місці (null — зараз немає); підписка — коли вона відкрилась чи закрилась. Немає — місій без міні-ігор. */
   mission?: { session(): MinigameSessionPort | null; subscribe(listener: () => void): () => void };
   /** GAME-192: режим підказок з налаштувань. */

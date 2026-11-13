@@ -13,6 +13,19 @@
           "when": {
             "all": [
               {
+                "flag": "f.req-ingrid-birds-t1"
+              },
+              {
+                "notFlag": "f.req-ingrid-birds-done"
+              }
+            ]
+          },
+          "next": "turnin"
+        },
+        {
+          "when": {
+            "all": [
+              {
                 "quest": "CH1-D2-ELISE-001",
                 "status": "active"
               },
@@ -73,19 +86,6 @@
             ]
           },
           "next": "offer2"
-        },
-        {
-          "when": {
-            "all": [
-              {
-                "flag": "f.req-ingrid-birds-t1"
-              },
-              {
-                "notFlag": "f.req-ingrid-birds-done"
-              }
-            ]
-          },
-          "next": "turnin"
         },
         {
           "when": {

@@ -80,7 +80,7 @@
         "done": { "textKey": "wave.ch1-day2-noon.water-cans.done", "effects": [{ "setFlag": "f.storm-water-full" }] },
         "late": { "textKey": "wave.ch1-day2-noon.water-cans.late" } },
       { "id": "dry-wood", "textKey": "wave.ch1-day2-noon.dry-wood", "limitMin": 55, "leaderOnly": true,
-        "done": { "textKey": "wave.ch1-day2-noon.dry-wood.done", "effects": [{ "setFlag": "f.storm-wood-dry" }] },
+        "done": { "textKey": "wave.ch1-day2-noon.dry-wood.done", "effects": [{ "setFlag": "f.storm-dry-wood" }] },
         "late": { "textKey": "wave.ch1-day2-noon.dry-wood.late" } }
     ]
   },

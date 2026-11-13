@@ -28,10 +28,21 @@ export interface CampRoutinesProps {
   readonly onFrame: (cb: (dtMs: number) => void) => () => void;
   /** Що в таборі вже налагоджено (§9а): пристрої, збудовані з матеріалів пригод, і їхня доглянутість. */
   readonly devices?: Devices;
+  /** GAME-314: решта фактів ночі з гри (ділянка, місії, підготовка) — ніч лишається ОДНІЄЮ моделлю (camp-night). */
+  readonly extra?: Partial<NightFacts>;
+  /** GAME-314: ніч настала — ті самі факти, за якими її показано (підсумок дня читає їх). */
+  readonly onNight?: (facts: NightFacts) => void;
+  /** GAME-314: кнопка «до підсумку» після ночі. */
+  readonly onSummary?: () => void;
+  /** GAME-314: текст слідів ночі, коли ключ живе в каталозі змісту (ділянки), а не в інтерфейсі. */
+  readonly text?: (id: string) => string;
 }
 
-export function CampRoutines({ t, weather, seed, onFrame, devices: devices0 = {} }: CampRoutinesProps) {
+export function CampRoutines({ t, weather, seed, onFrame, devices: devices0 = {}, extra, onNight, onSummary, text }: CampRoutinesProps) {
   const [devices, setDevices] = useState<Devices>(devices0);
+  // GAME-314: пристрій, що з'явився вже по ходу дня (місія віддала матеріал), додається, не стираючи догляд за наявними.
+  const dev0Key = Object.keys(devices0).sort().join(',');
+  useEffect(() => setDevices((d) => ({ ...devices0, ...d })), [dev0Key]);
   const [day, setDay] = useState<CampDay>(startCampDay);
   const dayNow = withDevices(day, devices);
   const [round, setRound] = useState<Round>('morning');
@@ -93,8 +104,10 @@ export function CampRoutines({ t, weather, seed, onFrame, devices: devices0 = {}
   };
 
   // Ніч читає і ручне, і налагоджене — та сама модель фактів (camp-night), пристрої лише додають свої.
-  const nightFacts: NightFacts = deviceFacts(devices, { results: dayNow.results, litLanterns: facts.lit, dryLogs: facts.dryLogs, water: facts.water, fish: facts.fish, bitterBerries: facts.bitter, foodOutside: facts.foodOut, emptyRounds: emptyRounds(day).length, weather });
+  const nightFacts: NightFacts = deviceFacts(devices, { results: dayNow.results, litLanterns: facts.lit, dryLogs: facts.dryLogs, water: facts.water, fish: facts.fish, bitterBerries: facts.bitter, foodOutside: facts.foodOut, emptyRounds: emptyRounds(day).length, weather, ...extra });
 
+  const nightNow = phase === 'night';
+  useEffect(() => { if (nightNow) onNight?.(nightFacts); }, [nightNow]);
   if (phase === 'night') {
     const night = nightOf(nightFacts);
     return (
@@ -102,10 +115,11 @@ export function CampRoutines({ t, weather, seed, onFrame, devices: devices0 = {}
         <h2>{t('night.title')}</h2>
         <ul class="ui-camp-night">
           {night.beats.map((b: NightBeat) => (
-            <li key={b.id} data-ui="night-beat" data-id={b.id} data-routine={b.routine} data-severity={b.severity}>{t(b.id as Key)}</li>
+            <li key={b.id} data-ui="night-beat" data-id={b.id} data-routine={b.routine} data-severity={b.severity}>{text ? text(b.id) : t(b.id as Key)}</li>
           ))}
         </ul>
         <p class="ui-camp-note" data-ui="night-morning">{t('night.morning')}</p>
+        {onSummary && <button type="button" class="ui-btn ui-camp-big" data-ui="camp-summary" onClick={onSummary}>{t('sd.toSummary')}</button>}
       </div>
     );
   }
