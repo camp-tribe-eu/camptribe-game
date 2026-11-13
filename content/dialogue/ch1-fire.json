@@ -330,7 +330,9 @@
       "next": "night-pitch-roof",
       "branches": [
         { "when": { "flag": "f.pitch-lake-view" }, "next": "night-pitch-lake" },
-        { "when": { "flag": "f.pitch-pines" }, "next": "night-pitch-pines" }
+        { "when": { "flag": "f.pitch-pines" }, "next": "night-pitch-pines" },
+        { "when": { "flag": "f.spot-water" }, "next": "night-pitch-lake" },
+        { "when": { "flag": "f.spot-beeches" }, "next": "night-pitch-pines" }
       ]
     },
     { "id": "night-pitch-lake", "speaker": "player", "textKey": "dlg.ch1-fire.night-pitch-lake", "next": "night-wind" },
@@ -373,7 +375,7 @@
       "textKey": "dlg.ch1-fire.night-wood",
       "next": "night-wood-wet",
       "branches": [
-        { "when": { "flag": "f.storm-wood-dry" }, "next": "night-wood-dry" }
+        { "when": { "flag": "f.storm-dry-wood" }, "next": "night-wood-dry" }
       ]
     },
     { "id": "night-wood-dry", "speaker": "player", "textKey": "dlg.ch1-fire.night-wood-dry", "next": "night-eat" },

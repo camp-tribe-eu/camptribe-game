@@ -21,6 +21,7 @@ import type { GameState, PlayerState, QuestProgress, RejectCode } from './state'
 import type { WaveState } from './wave';
 import type { ProgressState } from './progress';
 import type { MinigameResults } from './minigame';
+import type { CampBoardSave } from './camp-board';
 
 export const NO_ANIMAL = 'animal.none';
 
@@ -81,6 +82,8 @@ export interface StoryDraft {
   chapterStart?: number;
   /** GAME-308: див. GameState.minigames. */
   minigames?: MinigameResults;
+  /** GAME-314: див. GameState.campBoard. */
+  campBoard?: CampBoardSave;
 }
 
 const own = <T>(o: Readonly<Record<string, T>>, k: string): T | undefined => (Object.hasOwn(o, k) ? o[k] : undefined);

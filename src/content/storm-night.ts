@@ -33,7 +33,12 @@ export function stormFacts(flags: readonly string[], ms: readonly MissionDef[] =
   return Object.values(STORM_FACTS).filter((f) => earned.has(f));
 }
 
+/** Хід (без commandId), що відкриває ніч із бурею з наслідками дня — його шле зразковий день (GAME-314): сцена читає ТІ САМІ прапорці, що й camp-night. */
+export function stormNightMove(flags: readonly string[], ms: readonly MissionDef[] = MISSIONS): Omit<Extract<Command, { type: 'StartScene' }>, 'commandId'> {
+  return { type: 'StartScene', sceneId: STORM_SCENE, facts: stormFacts(flags, ms) };
+}
+
 /** Команда ядра, що відкриває ніч із бурею з наслідками дня. */
 export function startStormNight(commandId: string, flags: readonly string[], ms: readonly MissionDef[] = MISSIONS): Command {
-  return { type: 'StartScene', commandId, sceneId: STORM_SCENE, facts: stormFacts(flags, ms) };
+  return { commandId, ...stormNightMove(flags, ms) };
 }

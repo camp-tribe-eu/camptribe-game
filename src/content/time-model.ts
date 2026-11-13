@@ -53,6 +53,7 @@ export function moveSeconds(m: Move): number {
     case 'CompleteQuest': case 'DeclineQuest': return SECONDS.questDone;
     case 'Repair': return SECONDS.repair;
     case 'GiveGift': case 'TradeItem': case 'Forage': case 'HeartEvent': return 0;   // GAME-230: подарунки, збір дарів і сцена серця — побічне поза ходами бота (розмова сцени береться Continue)
+    case 'SaveCampBoard': return 0;                                // GAME-314: службовий запис дошки, людина його не відчуває
     case 'FinishMinigame': return 0;                               // GAME-308: результат міні-гри — наслідок дії руками, окремого ходу бота немає
     case 'Practise': return 0;                                    // GAME-229: практика руками — побічний наслідок дії на мапі, окремого ходу бота немає
     case 'CreateCharacter': return SECONDS.createCharacter;

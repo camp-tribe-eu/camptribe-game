@@ -8,6 +8,7 @@ import { ROUNDS, ROUTINES, ROUTINE_IDS, addPick, awayIn, campBusy, emptyRounds, 
 import { nightOf, type NightBeat, type NightFacts } from '../content/camp-night';
 import { deviceFacts, deviceFor, statusOf, tend, withDevices, type Devices } from '../content/camp-devices';
 import { HELP_AFTER, NORMAL, RELAXED, type Difficulty, type Outcome } from '../content/minigame';
+import type { CampBoardSave } from '../core/camp-board';
 import { STEPS, needSide, startWater, stepWater, waterOutcome, waterScore, type Side, type WaterState } from '../content/water-carry';
 import { LANTERNS, SPOTS, lanternOutcome, litCount, startLanterns, stepLanterns, type LanternState } from '../content/lantern-charge';
 import { DISHES, emberOutcome, startEmbers, stepEmbers, type EmberAct, type EmberState } from '../content/embers';
@@ -28,13 +29,28 @@ export interface CampRoutinesProps {
   readonly onFrame: (cb: (dtMs: number) => void) => () => void;
   /** Що в таборі вже налагоджено (§9а): пристрої, збудовані з матеріалів пригод, і їхня доглянутість. */
   readonly devices?: Devices;
+  /** GAME-314: решта фактів ночі з гри (ділянка, місії, підготовка) — ніч лишається ОДНІЄЮ моделлю (camp-night). */
+  readonly extra?: Partial<NightFacts>;
+  /** GAME-314: ніч настала — ті самі факти, за якими її показано (підсумок дня читає їх). */
+  readonly onNight?: (facts: NightFacts) => void;
+  /** GAME-314: кнопка «до підсумку» після ночі. */
+  readonly onSummary?: () => void;
+  /** GAME-314: текст слідів ночі, коли ключ живе в каталозі змісту (ділянки), а не в інтерфейсі. */
+  readonly text?: (id: string) => string;
+  /** GAME-314: збережена дошка (game.campBoard) — розмова з сусідом закриває панель, але не губить день. */
+  readonly saved?: CampBoardSave | undefined;
+  /** GAME-314: дошка змінилась — у сейв (команда SaveCampBoard). */
+  readonly onSave?: (b: CampBoardSave) => void;
 }
 
-export function CampRoutines({ t, weather, seed, onFrame, devices: devices0 = {} }: CampRoutinesProps) {
-  const [devices, setDevices] = useState<Devices>(devices0);
-  const [day, setDay] = useState<CampDay>(startCampDay);
+export function CampRoutines({ t, weather, seed, onFrame, devices: devices0 = {}, extra, onNight, onSummary, text, saved, onSave }: CampRoutinesProps) {
+  const [devices, setDevices] = useState<Devices>(() => ({ ...devices0, ...((saved?.devices ?? {}) as Devices) }));
+  // GAME-314: пристрій, що з'явився вже по ходу дня (місія віддала матеріал), додається, не стираючи догляд за наявними.
+  const dev0Key = Object.keys(devices0).sort().join(',');
+  useEffect(() => setDevices((d) => ({ ...devices0, ...d })), [dev0Key]);
+  const [day, setDay] = useState<CampDay>(() => (saved ? { picks: saved.picks as CampDay['picks'], results: saved.results as CampDay['results'] } : startCampDay()));
   const dayNow = withDevices(day, devices);
-  const [round, setRound] = useState<Round>('morning');
+  const [round, setRound] = useState<Round>(saved?.round ?? 'morning');
   const [phase, setPhase] = useState<Phase>('board');
   const [active, setActive] = useState<RoutineId | null>(null);
   // Лічильник «сяк-так» поспіль на кожну справу — рівно той, за яким каркас (GAME-308) вмикає допомогу.
@@ -49,7 +65,7 @@ export function CampRoutines({ t, weather, seed, onFrame, devices: devices0 = {}
   const [stack, setStack] = useState<StackState | null>(null);
   const [fish, setFish] = useState<FishState>(FISH_IDLE);
   const [rod, setRod] = useState(false);
-  const [facts, setFacts] = useState({ water: 0, dryLogs: 0, lit: 0, fish: 0, bitter: 0, foodOut: true });
+  const [facts, setFacts] = useState(() => saved?.facts ?? { water: 0, dryLogs: 0, lit: 0, fish: 0, bitter: 0, foodOut: true });
   const rng = useRef(makeRng(seed));
 
   const helpOf = (id: RoutineId): Difficulty => ((streak[id] ?? 0) >= HELP_AFTER ? RELAXED : NORMAL);
@@ -93,8 +109,14 @@ export function CampRoutines({ t, weather, seed, onFrame, devices: devices0 = {}
   };
 
   // Ніч читає і ручне, і налагоджене — та сама модель фактів (camp-night), пристрої лише додають свої.
-  const nightFacts: NightFacts = deviceFacts(devices, { results: dayNow.results, litLanterns: facts.lit, dryLogs: facts.dryLogs, water: facts.water, fish: facts.fish, bitterBerries: facts.bitter, foodOutside: facts.foodOut, emptyRounds: emptyRounds(day).length, weather });
+  const nightFacts: NightFacts = deviceFacts(devices, { results: dayNow.results, litLanterns: facts.lit, dryLogs: facts.dryLogs, water: facts.water, fish: facts.fish, bitterBerries: facts.bitter, foodOutside: facts.foodOut, emptyRounds: emptyRounds(day).length, weather, ...extra });
 
+  // GAME-314: на дошці (не посеред роботи) і в ніч — у сейв; так результати переживають закриту панель і перезавантаження.
+  const boardJson = JSON.stringify({ round, picks: day.picks, results: day.results, facts, devices });
+  useEffect(() => { if (phase !== 'work') onSave?.(JSON.parse(boardJson) as CampBoardSave); }, [boardJson, phase]);
+
+  const nightNow = phase === 'night';
+  useEffect(() => { if (nightNow) onNight?.(nightFacts); }, [nightNow]);
   if (phase === 'night') {
     const night = nightOf(nightFacts);
     return (
@@ -102,10 +124,11 @@ export function CampRoutines({ t, weather, seed, onFrame, devices: devices0 = {}
         <h2>{t('night.title')}</h2>
         <ul class="ui-camp-night">
           {night.beats.map((b: NightBeat) => (
-            <li key={b.id} data-ui="night-beat" data-id={b.id} data-routine={b.routine} data-severity={b.severity}>{t(b.id as Key)}</li>
+            <li key={b.id} data-ui="night-beat" data-id={b.id} data-routine={b.routine} data-severity={b.severity}>{text ? text(b.id) : t(b.id as Key)}</li>
           ))}
         </ul>
         <p class="ui-camp-note" data-ui="night-morning">{t('night.morning')}</p>
+        {onSummary && <button type="button" class="ui-btn ui-camp-big" data-ui="camp-summary" onClick={onSummary}>{t('sd.toSummary')}</button>}
       </div>
     );
   }

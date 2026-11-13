@@ -6,6 +6,7 @@ import type { WaveState } from './wave';
 import type { ProgressState } from './progress';
 import type { FriendState } from './friendship';
 import type { MinigameResults } from './minigame';
+import type { CampBoardSave } from './camp-board';
 import { zeroSkills } from './skills';
 
 export interface CommandRecord {
@@ -114,6 +115,8 @@ export interface GameState {
    * Поля немає — жодної міні-гри ще не грали (сейви до v6 читаються міграцією 5→6, тотожною: відсутність ≡ «нічого не було»). Пише лише команда FinishMinigame.
    */
   readonly minigames?: MinigameResults;
+  /** GAME-314: стан дошки рутин табору (раунд, вибір, результати, лічильники, пристрої). Поля немає — дошку ще не відкривали (тотожно, міграції не треба). Пише лише команда SaveCampBoard. */
+  readonly campBoard?: CampBoardSave;
 }
 
 export const REJECT_CODES = [

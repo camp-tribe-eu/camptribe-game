@@ -39,7 +39,7 @@ const atFireSim = (sim: SimState): SimState => toDayMinute({ ...sim, game: { ...
 interface Night { lake?: boolean; pines?: boolean; turned?: boolean; tight?: boolean; wood?: boolean; food?: boolean; water?: boolean; allFour?: boolean }
 const NIGHT_FLAGS: Readonly<Record<keyof Night, string>> = {
   lake: 'f.pitch-lake-view', pines: 'f.pitch-pines',
-  turned: 'f.storm-turned', tight: 'f.storm-tarp-tight', wood: 'f.storm-wood-dry',
+  turned: 'f.storm-turned', tight: 'f.storm-tarp-tight', wood: 'f.storm-dry-wood',
   food: 'f.storm-food-ready', water: 'f.storm-water-full', allFour: 'f.storm-all-four',
 };
 const nightFlags = (n: Night): string[] => (Object.keys(NIGHT_FLAGS) as (keyof Night)[]).filter((k) => n[k] === true).map((k) => NIGHT_FLAGS[k]);
