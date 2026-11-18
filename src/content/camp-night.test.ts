@@ -160,16 +160,15 @@ describe('ніч не суперечить дню (GAME-319)', () => {
     expect(k).not.toContain('night.wood.dry');
     expect(k).not.toContain('night.wood.damp');
   });
-  // GAME-323 · «Вогню не було» не стоїть поруч із «вогонь із першого сірника» (сухі дрова від Тімо). Мутація (перевірено): прибрати `.cold` у nightOf → червоніє.
-  it('сухі дрова від Тімо без вогню — слід «на завтра», а не «вогонь із першого сірника»', () => {
+  // GAME-323 · «Вогню не було» не стоїть поруч із «вогонь із першого сірника» (сухі дрова від Тімо). Мутація (перевірено): прибрати умову `fire !== undefined` у nightOf → червоніє.
+  it('сухі дрова від Тімо без вогню — без вогню слід «вогонь із першого сірника» не показується', () => {
     const noFire = Object.fromEntries(Object.entries(ALL_DONE.results).filter(([k]) => k !== 'fire'));
     const cold = ids({ ...ALL_DONE, results: noFire, missions: ['f.mis-lantern-done'] });
     expect(cold).toContain('night.fire.none');
-    expect(cold).toContain('night.mission.f.storm-dry-wood.cold');
     expect(cold).not.toContain('night.mission.f.storm-dry-wood');
+    expect(cold).not.toContain('night.mission.mis.lantern.none');   // місію зроблено — інші її сліди на місці
     const lit = ids({ ...ALL_DONE, missions: ['f.mis-lantern-done'] });
     expect(lit).toContain('night.mission.f.storm-dry-wood');
-    expect(lit).not.toContain('night.mission.f.storm-dry-wood.cold');
     expect(lit).not.toContain('night.fire.none');
   });
 });

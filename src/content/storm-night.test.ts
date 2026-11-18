@@ -114,11 +114,9 @@ describe('GAME-323 · ніч без вогню', () => {
     for (const flags of [[], ['f.mis-lantern-done'], ['f.mis-ring-done'], ['f.mis-lantern-done', 'f.mis-ring-done']]) {
       const path = playNight(flags, false);
       expect(path, flags.join()).toContain('fire-cold');
-      for (const bad of ['fire-dry', 'fire-wet', 'supper-plain']) expect(path, `${flags.join()}: ${bad}`).not.toContain(bad);
-      expect(say(path)).not.toMatch(/першого сірника|гарячий|гаряче|шкварчить/);
+      for (const bad of ['fire-dry', 'fire-wet']) expect(path, `${flags.join()}: ${bad}`).not.toContain(bad);
+      expect(say(path)).not.toMatch(/першого сірника|гарячий|гаряче|шкварчить|на сковороді/);
     }
-    expect(playNight(['f.mis-ring-done'], false)).toContain('supper-cold-fish');
-    expect(playNight([], false)).toContain('supper-cold');
   });
   it('гаряче не пропонується: перший вибір q2 — «щось швидке й холодне»', () => {
     const q2 = (RAW.nodes as unknown as { id: string; choices?: { textKey: string; when?: { notFlag?: string } }[] }[]).find((n) => n.id === 'q2');

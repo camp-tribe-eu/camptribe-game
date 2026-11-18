@@ -137,25 +137,6 @@
       "branches": [
         {
           "when": {
-            "all": [
-              {
-                "flag": "f.storm-cold"
-              },
-              {
-                "flag": "f.storm-fish-supper"
-              }
-            ]
-          },
-          "next": "supper-cold-fish"
-        },
-        {
-          "when": {
-            "flag": "f.storm-cold"
-          },
-          "next": "supper-cold"
-        },
-        {
-          "when": {
             "flag": "f.storm-fish-supper"
           },
           "next": "supper-fish"
@@ -172,18 +153,6 @@
       "id": "supper-plain",
       "speaker": "player",
       "textKey": "dlg.storm-night.supper-plain",
-      "next": "q3"
-    },
-    {
-      "id": "supper-cold",
-      "speaker": "player",
-      "textKey": "dlg.storm-night.supper-cold",
-      "next": "q3"
-    },
-    {
-      "id": "supper-cold-fish",
-      "speaker": "player",
-      "textKey": "dlg.storm-night.supper-cold-fish",
       "next": "q3"
     },
     {

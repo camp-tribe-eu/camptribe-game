@@ -57,7 +57,7 @@ export function FishSlot({ fish, t }: { readonly fish: FishState; readonly t: (k
     <div class="ui-fish-slot" data-ui="fish-slot" data-phase={fish.phase}>
       {biteCue(fish) && <FishBiteCue fish={fish} t={t} />}
       {fish.phase === 'reel' && (
-        <div data-ui="fish-reel" data-progress={Math.round(fish.progress * 100)}>
+        <div data-ui="fish-reel">
           <p class="ui-camp-note">{t('camp.fish.reel')}</p>
           <div class="ui-camp-bar" aria-hidden="true"><i style={{ width: pct(fish.progress) }} /></div>
           <div class="ui-camp-tilt" aria-hidden="true"><b class="ui-fish-zone" style={{ left: pct(fish.zone - ZONE / 2), width: pct(ZONE) }} /><i style={{ left: pct(fishAt(fish)) }} /></div>

@@ -528,7 +528,7 @@ for (const o of ORIENTATIONS) {
       expect(storm[0], 'година бурі 20:30 — так само, як у сцені вогню').toContain('пів на дев’яту');
       // GAME-323: вечерю на вогні зварено (cookDinner) — сцена бурі не каже «вогню не палили» (без вогню була б гілка fire-cold: див. storm-night.test).
       expect(storm.join(' | '), 'сцена бурі знає про сухі дрова Клер').toContain('Дрова Рема сухі');
-      expect(storm.join(' | '), 'вогонь був — «не палили» немає').not.toContain('Вогнище сьогодні не палили');
+      expect(storm.join(' | '), 'вогонь був — «не палили» немає').not.toContain('Вогню сьогодні не палили');
       expect(storm.join(' | '), 'сцена бурі знає про окуня Аміни').toContain('Окунь');
       await shot(page, 'storm-after');
       const sum = page.locator('[data-ui="sd-summary"]');

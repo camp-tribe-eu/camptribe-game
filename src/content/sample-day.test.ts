@@ -121,14 +121,14 @@ describe('ланка 3: місія зроблена / не зроблена → 
       expect(without).toContain(`night.mission.${m.id}.none`);
       expect(done).not.toContain(`night.mission.${m.id}.none`);
       expect(done).not.toEqual(without);
-      const noFire = done.includes('night.fire.none');   // GAME-323: без вогню «вогонь із першого сірника» стає «дрова лишились на завтра»
-      for (const l of m.night.filter((x) => x.flag === m.doneFlag)) expect(done).toContain(`night.mission.${l.fact}${l.fact === 'f.storm-dry-wood' && noFire ? '.cold' : ''}`);
+      const noFire = done.includes('night.fire.none');   // GAME-323: без вогню «вогонь із першого сірника» не показується
+      for (const l of m.night.filter((x) => x.flag === m.doneFlag)) if (l.fact !== 'f.storm-dry-wood' || !noFire) expect(done).toContain(`night.mission.${l.fact}`);
     });
   }
   it('усі три разом — і сім рутин, і ділянка, і місії в одній ночі; лічильник «зроблено» чесний', () => {
     const g = withFlags(mustFinish(start(), 'good'), pitchFlag('water'), ...MISSIONS.map((m) => m.doneFlag));
     expect(missionsDone(g.flags)).toBe(3);
-    const f = nightFor(g, { results: { water: 'good', tidy: 'good' }, water: 1, foodOutside: false });
+    const f = nightFor(g, { results: { water: 'good', fire: 'good', tidy: 'good' }, water: 1, foodOutside: false });   // GAME-323: без вогню слід сухих дров не показується
     const keys = nightKeys(f);
     expect(keys).toContain('night.water.full');
     expect(keys).toContain('night.tidy.quiet');
