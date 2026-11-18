@@ -53,6 +53,41 @@ async function hold(page: Page, key: string, until: (p: Probe) => boolean, maxMs
   return { end: await probe(page), seen };
 }
 
+/** GAME-313: хід до координати ВСЕРЕДИНІ сторінки (rAF): клавіша тримається, поки герой по осі не в межах tol від мети, і відпускається в тому самому кадрі; якщо інерція
+ *  занесла далі — тиснемо назад. Кінець — коли герой завмер (x, y не змінюються 10 кадрів поспіль, анімації нема) і стоїть у межах tol; повертає той самий кадр. Межа 10 с — страховка. */
+async function steer(page: Page, axis: 'x' | 'y', target: number, tol = 6): Promise<Probe> {
+  const r = await page.evaluate(({ axis, target, tol }) => new Promise<Probe | null>((resolve) => {
+    const g = (window as unknown as { __game: { probe: Probe } }).__game.probe;
+    const codes: Record<string, number> = { ArrowLeft: 37, ArrowUp: 38, ArrowRight: 39, ArrowDown: 40 };
+    let held: string | null = null;
+    const fire = (type: string, k: string): void => {
+      const e = new KeyboardEvent(type, { key: k, code: k, bubbles: true, cancelable: true });
+      Object.defineProperty(e, 'keyCode', { get: () => codes[k] });
+      window.dispatchEvent(e);
+    };
+    const set = (want: string | null): void => {
+      if (held === want) return;
+      if (held) fire('keyup', held);
+      held = want;
+      if (want) fire('keydown', want);
+    };
+    const deadline = performance.now() + 10_000;
+    let lastX = Number.NaN; let lastY = Number.NaN; let same = 0;
+    const tick = (): void => {
+      const err = target - (axis === 'x' ? g.playerX : g.playerY);
+      set(Math.abs(err) <= tol ? null : axis === 'x' ? (err < 0 ? 'ArrowLeft' : 'ArrowRight') : (err < 0 ? 'ArrowUp' : 'ArrowDown'));
+      same = held === null && g.playerX === lastX && g.playerY === lastY && !g.playerMoving ? same + 1 : 0;
+      lastX = g.playerX; lastY = g.playerY;
+      if (same >= 10) return resolve({ ...g });
+      if (performance.now() > deadline) { set(null); return resolve(null); }
+      requestAnimationFrame(tick);
+    };
+    requestAnimationFrame(tick);
+  }), { axis, target, tol });
+  if (!r) throw new Error(`герой не дійшов до ${axis}=${target} за 10 с: ${JSON.stringify(await probe(page))}`);
+  return r;
+}
+
 test.describe('LPC на сцені (десктоп 1280×800)', () => {
   test.use({ viewport: { width: 1280, height: 800 } });
 
@@ -184,8 +219,14 @@ test.describe('LPC на сцені (десктоп 1280×800)', () => {
     expect(front.behindTiles, 'дах намету лежить позаду персонажа, що стоїть перед наметом').toBeGreaterThan(0);
     expect(front.coveredTiles, 'перед наметом дах не перекриває').toBe(0);
 
-    await hold(page, 'ArrowLeft', (p) => p.playerX <= 140, 10_000);                       // у прохід між наметами
-    const back = (await hold(page, 'ArrowUp', (p) => p.playerY <= 100, 10_000)).end;      // і позад намету (його низ — рядок 3, y 96–128)
+    // GAME-313: раніше «позаду» — вліво до x ≤ 140, вгору до y ≤ 100 і зріз через 250 мс, а умову перевіряв Node опитуванням. Під навантаженням опитування запізнюється на 100+ мс,
+    // тож герой вилітав за поріг: у 4 із 8 прогонів вгору аж до y ≈ 37 (над дахом — рядок 2, y 64–96 — coveredTiles = 0), а в одному зупинявся в проході без даху.
+    // Тепер три ходи до точок (як було: прохід між наметами, потім позад) ведуться в сторінці по кадрах з відпусканням у тому самому кадрі, і зріз — коли герой завмер:
+    // (130, 133) — прохід x 96–160; (130, 84) — рядок 2, позад намету; (196, 84) — над дахом намету B (стовпці 5–7 = x 160–256).
+    await steer(page, 'x', 130);
+    await steer(page, 'y', 84);
+    const back = await steer(page, 'x', 196);
+    expect(back.playerX, 'герой стоїть над дахом намету B (стовпці 5–7)').toBeGreaterThan(160);
     expect(back.playerY).toBeLessThan(128);
     expect(back.playerDepth).toBeLessThan(128);                                          // глибина лінії основи намету — 128
     expect(back.coveredTiles, 'позаду намету дах закриває кадр персонажа').toBeGreaterThan(0);
