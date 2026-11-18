@@ -271,6 +271,8 @@ async function depart(page: Page): Promise<string[]> {
   await page.locator('[data-touch="story"]').click();
   await panel(page).locator('[data-act="create"]', { hasText: 'Велосипед' }).first().click();
   await page.waitForTimeout(400);
+  // GAME-324: зразок пише лише у свій слот — звичайна база сейву (власника) не створюється й не зачіпається.
+  expect((await page.evaluate(() => indexedDB.databases())).map((d) => d.name).sort()).toEqual(['camplife-sample']);
   for (const [k, key] of [['complete', 'q.prologue-home-001'], ['complete', 'q.st-001'], ['complete', 'q.st-002'], ['visit', 'loc.shop'], ['pickup', 'item.tent'], ['pickup', 'item.sleeping-bag'], ['checkout', 'basket.all'],
     ['complete', 'q.st-003'], ['visit', 'loc.home'], ['complete', 'q.ch1-home-001']] as const) await act(page, k, key);
   await act(page, 'visit', 'loc.road', true);

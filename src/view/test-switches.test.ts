@@ -85,6 +85,11 @@ describe('перемикачі у звичайній збірці (GAME-324)', (
     expect(testSwitches('?sampleDay=0', 'production')).toMatchObject({ intro: true, coldOpen: true });
     expect(testSwitches('?sampleDay=0', 'production').sampleDay).toBeUndefined();
   });
+  it('зразок у звичайній збірці = та сама конфігурація, що в e2e-приймання (крім сіда)', () => {
+    const e2e = { ...testSwitches('?sampleDay=1', 'e2e') };
+    delete (e2e as { seed?: number }).seed;
+    expect(testSwitches('?sampleDay=1', 'production')).toEqual(e2e);
+  });
   it('решта перемикачів лишаються e2e-лише', () => {
     const s = testSwitches('?atMinute=600&perfectHits=1&noAutosave=1&map=camp&seed=5', 'production');
     expect(s.atMinute).toBeUndefined();
