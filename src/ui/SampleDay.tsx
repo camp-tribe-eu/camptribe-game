@@ -18,6 +18,8 @@ export interface SamplePort {
   stage(): SampleStage;
   /** Смуга заїзду обраної ділянки. */
   lane(): string | null;
+  /** GAME-317: ОДНА ціль дня після дороги (шапка показує її замість цілей старої гри розділу 1); null — дорогу ще не проїхано. */
+  goal(): 'pitch' | 'day' | 'evening' | 'done' | null;
   flags(): readonly string[];
   moneyCents(): number;
   seed(): number;

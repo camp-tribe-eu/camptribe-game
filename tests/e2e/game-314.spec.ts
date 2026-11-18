@@ -127,8 +127,10 @@ async function pick(page: Page, text: string | RegExp, c: { n: number }): Promis
 // ───── міні-ігри: дотиками у сторінці ─────
 async function startMg(page: Page): Promise<void> {
   await expect(mg(page)).toHaveAttribute('data-phase', 'open', { timeout: 10_000 });
-  await page.locator('[data-ui="mg-start"]').click();
+  await page.locator('[data-ui="mg-start"]').click();   // справжній дотик (Playwright чекає, що кнопку не перекрито)
   await expect(mg(page)).toHaveAttribute('data-phase', 'play');
+  // Дорога справді їде: прогрес росте без жодного втручання (сцена не на паузі).
+  await expect.poll(async () => Number(await page.locator('[data-ui="mg-drive"]').getAttribute('data-progress')), { timeout: 5_000, message: 'дорога їде' }).toBeGreaterThan(0.005);
 }
 async function finishMg(page: Page, name: string): Promise<string> {
   await expect(mg(page)).toHaveAttribute('data-phase', 'result', { timeout: 120_000 });
@@ -217,12 +219,22 @@ async function cookDinner(page: Page): Promise<void> {
   }), TARGET);
 }
 /** Ніч бурі (сцена dlg.storm-night): читаємо крізь репліки, на вибір — перша відповідь. */
+/** GAME-317: сцена відкривається НА ЕКРАНІ без прокрутки: репліка (рядок) ціла в межах вікна. Раніше її верх лежав на y≈960–990 з 844 під панеллю звання й навичок. */
+async function expectInView(page: Page, what: string): Promise<void> {
+  const vh = page.viewportSize()?.height ?? 0;
+  const r = await page.locator('[data-ui="story"] [data-ui="line"]').first().boundingBox();
+  expect(r, `${what}: репліки немає в DOM`).not.toBeNull();
+  const b = r as { y: number; height: number };
+  expect(b.y, `${what}: репліка вище верху екрана`).toBeGreaterThanOrEqual(0);
+  expect(b.y + b.height, `${what}: репліка під згином (y=${Math.round(b.y)}+${Math.round(b.height)} з ${vh})`).toBeLessThanOrEqual(vh);
+}
 async function playStormScene(page: Page): Promise<string[]> {
   const seen: string[] = [];
   for (let i = 0; i < 40; i++) {
     await expect(box(page)).toBeVisible({ timeout: 8_000 });
     seen.push((await box(page).innerText()).replace(/\s+/g, ' '));
-    if (i === 0) { await box(page).scrollIntoViewIfNeeded(); await shot(page, 'storm-scene'); }
+    await expectInView(page, `гроза, репліка ${i + 1}`);
+    if (i === 0) await shot(page, 'storm-scene');
     const choice = panel(page).locator('[data-act="choose"]').first();
     if (await choice.isVisible().catch(() => false)) await choice.click();
     else await panel(page).locator('[data-act="continue"]').click({ timeout: 5_000 });
@@ -253,6 +265,7 @@ async function act(page: Page, kind: string, key = '', clickDialogue = false): P
 /** Дорога: кроки дня 1 кнопками (як game-312) до виїзду на дорогу; далі — справжня міні-гра. */
 async function depart(page: Page): Promise<string[]> {
   const errors: string[] = [];
+  page.on('console', (m) => { if (m.text().startsWith('PROBE')) console.log(m.text()); });
   page.on('pageerror', (e) => errors.push(e.message));
   page.on('console', (m) => { if (m.type() === 'error') errors.push(m.text()); });
   await page.goto('/?seed=7&sampleDay=1');
@@ -269,7 +282,9 @@ async function depart(page: Page): Promise<string[]> {
 /** Дорога пальцем у сторінці (rAF): вільна смуга — з DOM (data-free), перестроювання кнопками ◀ ▶; `brisk` — тиснути «жвавіше» навіть повз камеру. */
 async function driveRoad(page: Page, brisk: boolean): Promise<string> {
   await expect(mg(page)).toHaveAttribute('data-phase', 'open', { timeout: 15_000 });
-  await page.locator('[data-ui="story-close"]').dispatchEvent('click');   // міні-гра перекриває кнопку: дотик у DOM; панель відкрита — сцена на паузі, кадри дороги стояли б
+  // GAME-317: гравець НЕ закриває панель «Подорож» — вона мусить зникнути сама, коли відкрилась міні-гра. Раніше тут стояв `dispatchEvent('click')` по кнопці панелі,
+  // який ховав цей дефект (панель лишалась над грою, сцена на паузі, прогрес 0, а справжній дотик потрапляв у панель).
+  await expect(panel(page), 'панель «Подорож» не лежить над дорогою').toBeHidden();
   await shot(page, `road-intro`);
   await page.locator('[data-ui="mg-start"]').click();
   await expect(mg(page)).toHaveAttribute('data-phase', 'play');
@@ -280,6 +295,7 @@ async function driveRoad(page: Page, brisk: boolean): Promise<string> {
       const root = document.querySelector('[data-ui="minigame"]');
       if (!root || root.getAttribute('data-phase') === 'result' || performance.now() - t0 > 420_000) { resolve(); return; }
       const d = document.querySelector<HTMLElement>('[data-ui="mg-drive"]');
+      if (d && Math.floor((performance.now() - t0) / 10000) > ((window as unknown as { __lg?: number }).__lg ?? -1)) { (window as unknown as { __lg?: number }).__lg = Math.floor((performance.now() - t0) / 10000); const tl = document.querySelector('.mg-time')?.getAttribute('aria-valuenow'); console.log(`PROBE t=${Math.round(performance.now() - t0)} prog=${d.dataset.progress} left=${tl} comfort=${d.dataset.comfort} fuel=${d.dataset.fuel} pace=${d.dataset.pace} lane=${d.dataset.lane} eta=${document.querySelector('[data-ui="mg-drive-eta"]')?.getAttribute('data-ok')} wait=${document.querySelector('[data-ui="mg-drive-wait"]')?.getAttribute('data-why')}`); }
       if (d && root.getAttribute('data-phase') === 'play' && n++ % 4 === 0) {
         const lane = Number(d.dataset.lane);
         const free = [...document.querySelectorAll('.mg-drive-lane')].findIndex((l) => l.getAttribute('data-free') === 'yes');
@@ -332,6 +348,8 @@ for (const o of ORIENTATIONS) {
 
       // 2. ПРИЇЗД: ділянки — рівно ті, що лишила дорога
       await expect(box(page)).toBeVisible({ timeout: 10_000 });
+      await expectInView(page, 'діалог приїзду');
+      await shot(page, 'arrival-dialogue');
       const free = { early: ['water', 'beeches', 'meadow', 'reception'], ontime: ['beeches', 'meadow', 'reception'], late: ['meadow', 'reception'] }[arrival] as string[];
       const spotText = (p: string): string => UK[`dlg.camp-arrival.spot.${p}`] as string;
       const c = { n: 0 };
@@ -359,12 +377,20 @@ for (const o of ORIENTATIONS) {
       await expect(page.locator('[data-ui="drive-in"]')).toHaveAttribute('data-done', 'yes');
       await tapIt(page, '[data-ui="di-done"]');
       await expect(box(page)).toBeVisible({ timeout: 8_000 });
+      await expectInView(page, 'сцена «Заїхали»');
+      await shot(page, 'zaihaly');
       await closeTalk(page);
       await page.locator('[data-ui="story-close"]').click({ timeout: 3_000 }).catch(() => undefined);
       expect((await core2(page)).game.flags.some((f) => f.startsWith('f.drive-in-')), 'сусід записав результат заїзду').toBe(true);
 
       // 4. ДЕНЬ: дошка табору (ягоди зранку), місія Клер ногами по мапі
       await expect(page.locator('[data-ui="sd-board"]')).toBeVisible({ timeout: 8_000 });
+      // GAME-317: стара гра розділу 1 мовчить — одна ціль дня (не «Прибуття»), жодної хвилі, трекера прохань і «найближчої нагороди».
+      await expect(page.locator('[data-ui="goal"]'), 'одна ціль дня').toHaveCount(1);
+      await expect(page.locator('[data-ui="goal"]')).not.toContainText('Прибуття');
+      await expect(page.locator('[data-ui="goal"]')).toContainText('Допомогти сусідам');
+      for (const old of ['wave', 'req-tracker', 'nearest']) await expect(page.locator(`[data-ui="${old}"]`), `стара ${old} у зразковому дні`).toHaveCount(0);
+      await shot(page, 'one-goal');
       await tapIt(page, '[data-ui="sd-board"]');
       await tapIt(page, '[data-ui="camp-routine"][data-id="berries"]');
       for (let i = 0; i < 4; i++) await tapIt(page, `[data-ui="berry"][data-i="${i}"]`);
@@ -493,3 +519,15 @@ for (const o of ORIENTATIONS) {
     });
   });
 }
+
+// GAME-317 · блокер 1: дорога їде від справжнього дотику, і ВСІ три часи приїзду досяжні (раніше завжди «пізно»).
+test.describe('GAME-317 дорога: їде і приїжджає вчасно', () => {
+  test.use({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: false });
+  test.setTimeout(600_000);
+  test.only('спокійна їзда без зупинок приїздає не «пізно»', async ({ page }) => {
+    await depart(page);
+    const outcome = await driveRoad(page, false);
+    console.log('G317 probe outcome', outcome);
+    expect(outcome, 'спокійно й без зупинок — це вчасно, а не «сяк-так»').not.toBe('scrappy');
+  });
+});
