@@ -11,8 +11,9 @@ interface Pt { x: number; y: number }
 interface Probe { playerX: number; playerY: number; nearObject: string | null; residents: { id: string; x: number; y: number }[]; npcMarks: Record<string, string> }
 const probe = (page: Page): Promise<Probe> => page.evaluate(() => JSON.parse(JSON.stringify((window as unknown as { __game: { probe: Probe } }).__game.probe)) as Probe);
 const SHOTS = process.env.G314_SHOTS === '1';
-if (SHOTS) mkdirSync('research/game-314', { recursive: true });
-const shot = async (page: Page, name: string): Promise<void> => { if (SHOTS) await page.screenshot({ path: `research/game-314/${name.replace(/-(portrait|landscape)$/, '')}-${(page.viewportSize()?.width ?? 0) < (page.viewportSize()?.height ?? 0) ? 'portrait' : 'landscape'}.png` }); };
+const SHOT_DIR = process.env.G314_SHOTS_DIR ?? 'research/game-314';   // GAME-317: знімки приймання — research/game-317
+if (SHOTS) mkdirSync(SHOT_DIR, { recursive: true });
+const shot = async (page: Page, name: string): Promise<void> => { if (SHOTS) await page.screenshot({ path: `${SHOT_DIR}/${name.replace(/-(portrait|landscape)$/, '')}-${(page.viewportSize()?.width ?? 0) < (page.viewportSize()?.height ?? 0) ? 'portrait' : 'landscape'}.png` }); };
 const TILE = 32;
 interface TiledMap { width: number; height: number; layers: { name: string; data?: number[]; objects?: { name: string; x: number; y: number }[] }[] }
 const MAP = JSON.parse(readFileSync(new URL('../../public/maps/camp-lake.tmj', import.meta.url), 'utf8')) as TiledMap;
