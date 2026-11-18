@@ -56,8 +56,8 @@ async function problems(page: Page): Promise<string[]> {
   }, TARGET);
 }
 
-const mount = async (page: Page, weather: 'sunny' | 'cloudy' | 'rain' = 'rain'): Promise<void> => {
-  await page.evaluate((s) => (window as unknown as { __mount: (x: unknown) => void }).__mount(s), { lang: 'uk', weather, seed: 7 });
+const mount = async (page: Page, weather: 'sunny' | 'cloudy' | 'rain' = 'rain', bare = false): Promise<void> => {
+  await page.evaluate((s) => (window as unknown as { __mount: (x: unknown) => void }).__mount(s), { lang: 'uk', weather, seed: 7, bare });
   await page.locator('[data-ui="camp-board"]').waitFor();
 };
 const tapIt = async (l: Locator): Promise<void> => { await l.scrollIntoViewIfNeeded(); await l.tap(); };
@@ -70,6 +70,7 @@ async function holdTap(page: Page, selector: string, untilPercent: number): Prom
 
 for (const vp of VIEWPORTS) {
   test(`GAME-311 · рутини табору дотиком — ${vp.name} ${vp.w}×${vp.h}`, async ({ page }) => {
+    test.setTimeout(150_000);   // GAME-321: ягоди й порядок мають мінімум часу в роботі (20 с кадрів кожна) — це задум картки, а не повільність
     await page.setViewportSize({ width: vp.w, height: vp.h });
     await page.goto('/');
     await page.addScriptTag({ content: bundle });
@@ -114,6 +115,9 @@ for (const vp of VIEWPORTS) {
     expect(await problems(page), 'ягоди').toEqual([]);
     if (SHOTS) await page.screenshot({ path: `${SHOTS}/${vp.name}-berries.png` });
     for (let i = 0; i < 4; i++) await tapIt(page.locator(`[data-ui="berry"][data-i="${i}"]`));
+    // GAME-321: чотири ягоди зібрано, але «Досить» відкривається лише після мінімуму часу в роботі (кадри) — ждемо СТАН кнопки, не годинник.
+    await expect(page.locator('[data-ui="berry-enough"]')).toBeDisabled();
+    await expect(page.locator('[data-ui="berry-enough"]')).toBeEnabled({ timeout: 40_000 });
     await tapIt(page.locator('[data-ui="berry-enough"]'));
     await expect(page.locator('[data-ui="camp-routine"][data-id="berries"]')).toHaveAttribute('data-done', 'yes');
 
@@ -130,6 +134,7 @@ for (const vp of VIEWPORTS) {
       await tapIt(page.locator(`[data-ui="tidy-place"][data-place="${place}"]`));
       await expect(page.locator(`[data-ui="tidy-thing"][data-id="${id}"]`)).toHaveAttribute('data-place', place);
     }
+    await expect(page.locator('[data-ui="tidy-sleep"]')).toBeEnabled({ timeout: 40_000 });
     await tapIt(page.locator('[data-ui="tidy-sleep"]'));
     await expect(page.locator('[data-ui="camp-routine"][data-id="tidy"]')).toHaveAttribute('data-done', 'yes');
 
@@ -149,5 +154,33 @@ for (const vp of VIEWPORTS) {
     });
     expect(over, 'ніч ширша за екран').toBeLessThanOrEqual(1);
     if (SHOTS) await page.screenshot({ path: `${SHOTS}/${vp.name}-night.png` });
+  });
+}
+
+// GAME-321 · ОДИН табличний сторож на всі ручні рутини: кнопка виходу недоступна на старті й після одного дотику.
+// Мутація (перевірено): прибрати `disabled={!ok('…')}` з будь-якої кнопки виходу в CampRoutines → цей тест червоніє саме на тій рутині.
+const EXITS: readonly { id: string; exit: string; round: number; one: readonly string[] }[] = [
+  { id: 'firewood', exit: 'wood-done', round: 0, one: ['[data-ui="wood-place-choice"][data-place="near"]'] },
+  { id: 'lanterns', exit: 'lantern-done', round: 0, one: ['[data-ui="lantern-crank"][data-l="0"]'] },
+  { id: 'fish', exit: 'fish-done', round: 0, one: ['[data-ui="fish-rod"]'] },
+  { id: 'berries', exit: 'berry-enough', round: 0, one: ['[data-ui="berry"][data-i="0"]'] },
+  { id: 'tidy', exit: 'tidy-sleep', round: 3, one: ['[data-ui="tidy-pick"][data-id="pot"]', '[data-ui="tidy-place"][data-place="car"]'] },
+];
+for (const vp of VIEWPORTS) {
+  test(`GAME-321 · вихід із рутини закритий без роботи — ${vp.name}`, async ({ page }) => {
+    await page.setViewportSize({ width: vp.w, height: vp.h });
+    await page.goto('/');
+    await page.addScriptTag({ content: bundle });
+    for (const r of EXITS) {
+      await mount(page, 'rain', true);
+      for (let k = 0; k < r.round; k++) await tapIt(page.locator('[data-ui="camp-next"]'));
+      await tapIt(page.locator(`[data-ui="camp-routine"][data-id="${r.id}"]`));
+      await expect(page.locator(`[data-ui="camp-work"][data-kind="${r.id}"]`)).toBeVisible();
+      const open = (): Promise<boolean> => page.evaluate((sel) => { const b = document.querySelector<HTMLButtonElement>(sel); return b !== null && !b.disabled; }, `[data-ui="${r.exit}"]`);
+      expect(await open(), `${r.id}: вихід доступний на старті`).toBe(false);
+      for (const sel of r.one) await tapIt(page.locator(sel));
+      expect(await open(), `${r.id}: вихід доступний після одного дотику`).toBe(false);
+      await expect(page.locator(`[data-ui="camp-work"][data-kind="${r.id}"]`), `${r.id}: панель роботи лишилась`).toBeVisible();
+    }
   });
 }

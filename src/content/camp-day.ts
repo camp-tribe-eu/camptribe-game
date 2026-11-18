@@ -46,6 +46,10 @@ export const ROUTINES: Readonly<Record<RoutineId, RoutineDef>> = {
   tidy: { id: 'tidy', owner: 'victoria', away: false, minutes: [40, 40], seconds: 80 },
 };
 
+/** GAME-321: мінімум справжньої роботи, без якого рутину не закрити: [дій, мс кадрів у роботі]. Вода (кран + десять кроків) закривається сама лише повним шляхом. */
+export const MIN_WORK = { firewood: [6, 20000], lanterns: [6, 30000], fish: [2, 30000], berries: [4, 20000], tidy: [5, 20000], fire: [6, 0] } as const;
+export const canFinish = (id: keyof typeof MIN_WORK, acts: number, ms: number): boolean => acts >= MIN_WORK[id][0] && ms >= MIN_WORK[id][1];
+
 /** Скільки ігрових хвилин має частина дня в таборі. */
 export const DAY_MINUTES = 300;
 /** Найдешевший спосіб зробити геть усе. Більший за день — тому вибір справжній (сторож у camp-day.test). */

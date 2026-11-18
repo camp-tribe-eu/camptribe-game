@@ -6,7 +6,7 @@ import { t } from '../../src/i18n';
 import type { Key } from '../../src/i18n';
 import type { Weather } from '../../src/core/weather';
 
-interface Spec { lang: 'uk' | 'en'; weather: Weather; seed: number }
+interface Spec { lang: 'uk' | 'en'; weather: Weather; seed: number; bare?: boolean }
 (window as unknown as { __mount: (s: Spec) => void }).__mount = (s) => {
   let host = document.getElementById('harness');
   if (!host) {
@@ -29,5 +29,5 @@ interface Spec { lang: 'uk' | 'en'; weather: Weather; seed: number }
     return () => { live = false; };
   };
   // Табір, де вже стоїть верша, але її давно не переносили: дошка має показати «ось-ось закінчиться» і «Доглянути».
-  render(<CampRoutines t={(k: Key) => t(s.lang, k)} weather={s.weather} seed={s.seed} onFrame={onFrame} devices={{ 'fish-trap': { care: 0.3 } }} />, host);
+  render(<CampRoutines t={(k: Key) => t(s.lang, k)} weather={s.weather} seed={s.seed} onFrame={onFrame} devices={s.bare ? {} : { 'fish-trap': { care: 0.3 } }} />, host);
 };

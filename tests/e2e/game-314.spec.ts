@@ -401,6 +401,9 @@ for (const o of ORIENTATIONS) {
       expect(await page.locator('[data-ui="camp-board"]').evaluate((e) => e.scrollHeight - e.clientHeight), 'дошка табору не прокручується').toBeLessThanOrEqual(0);
       await tapIt(page, '[data-ui="camp-routine"][data-id="berries"]');
       for (let i = 0; i < 4; i++) await tapIt(page, `[data-ui="berry"][data-i="${i}"]`);
+      // GAME-321: «Досить» відкривається після мінімуму роботи (дії + кадри в роботі), а не одним дотиком.
+      await expect(page.locator('[data-ui="berry-enough"]'), 'GAME-321: одразу після чотирьох ягід «Досить» зачинене').toBeDisabled();
+      await expect(page.locator('[data-ui="berry-enough"]')).toBeEnabled({ timeout: 40_000 });
       await tapIt(page, '[data-ui="berry-enough"]');
       await expect(page.locator('[data-ui="camp-routine"][data-id="berries"]')).toHaveAttribute('data-done', 'yes');
       await shot(page, 'board-day');
@@ -488,6 +491,7 @@ for (const o of ORIENTATIONS) {
       await shot(page, 'dinner');
       await cookDinner(page);
       await expect(page.locator('[data-ui="camp-routine"][data-id="fire"]')).toHaveAttribute('data-done', 'yes', { timeout: 10_000 });
+      await expect(page.locator('[data-ui="camp-routine"][data-id="fire"]'), 'GAME-321: вечерю зварено руками, не «сяк-так»').not.toHaveAttribute('data-outcome', 'scrappy');
       await tapIt(page, '[data-ui="sd-board-close"]');
 
       // 5. ВЕЧІР: порядок у таборі, і ніч — з усього разом
@@ -500,6 +504,7 @@ for (const o of ORIENTATIONS) {
         await tapIt(page, `[data-ui="tidy-pick"][data-id="${id}"]`);
         await tapIt(page, `[data-ui="tidy-place"][data-place="${place}"]`);
       }
+      await expect(page.locator('[data-ui="tidy-sleep"]')).toBeEnabled({ timeout: 40_000 });
       await tapIt(page, '[data-ui="tidy-sleep"]');
       await tapIt(page, '[data-ui="camp-to-night"]');
       await expect(page.locator('[data-ui="camp-night"]')).toBeVisible();

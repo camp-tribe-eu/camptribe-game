@@ -5,14 +5,15 @@
 // своя смуга: те, що добре юшці, спалить рибу. Перегрів — підгоріло, недогрів — сире; і те, і те лише
 // гірша вечеря, ніколи не блок.
 
+import { canFinish } from './camp-day';
 import { NORMAL, grade, widen, type Difficulty, type Outcome } from './minigame';
 
 export interface Dish { readonly id: 'soup' | 'fish' | 'tea'; readonly band: { readonly from: number; readonly to: number }; readonly ms: number }
 /** Страви вечері за порядком. Смуги різні навмисно: одним рівнем жару всі три не зробиш. */
 export const DISHES: readonly Dish[] = [
-  { id: 'soup', band: { from: 0.45, to: 0.75 }, ms: 9000 },
-  { id: 'fish', band: { from: 0.6, to: 0.85 }, ms: 8000 },
-  { id: 'tea', band: { from: 0.3, to: 0.6 }, ms: 6000 },
+  { id: 'soup', band: { from: 0.45, to: 0.75 }, ms: 20000 },
+  { id: 'fish', band: { from: 0.6, to: 0.85 }, ms: 18000 },
+  { id: 'tea', band: { from: 0.3, to: 0.6 }, ms: 14000 },
 ];
 
 /** Падіння жару за секунду і що дає кожна дія. */
@@ -41,11 +42,16 @@ export interface EmberState {
   readonly done: boolean;
   /** Чи дрова сухі (наслідок рутини «дрова»). */
   readonly dry: boolean;
+  /** GAME-321: скільки дій зробив гравець і скільки мс вогонь стоїть без жодної (без дій страви не готуються). */
+  readonly acts: number;
+  readonly idle: number;
 }
+/** GAME-321: вогонь без жодної дії догорає сам лише за стільки мс — і це завжди «сяк-так». */
+export const IDLE_MS = 90000;
 export type EmberEvent = 'none' | 'wood' | 'blow' | 'rake' | 'dishDone' | 'done';
 export type EmberInput = { readonly kind: 'tick'; readonly dtMs: number } | { readonly kind: 'act'; readonly act: EmberAct };
 
-export const startEmbers = (dry = true): EmberState => ({ heat: 0.35, smokeMs: 0, dish: 0, dishMs: 0, goodMs: 0, quality: [], done: false, dry });
+export const startEmbers = (dry = true): EmberState => ({ heat: 0.35, smokeMs: 0, dish: 0, dishMs: 0, goodMs: 0, quality: [], done: false, dry, acts: 0, idle: 0 });
 
 export const dishOf = (s: EmberState): Dish | null => DISHES[s.dish] ?? null;
 export function inBand(s: EmberState, d: Difficulty = NORMAL): boolean {
@@ -55,8 +61,9 @@ export function inBand(s: EmberState, d: Difficulty = NORMAL): boolean {
   return s.heat >= b.from && s.heat <= b.to;
 }
 
-export function stepEmbers(s: EmberState, i: EmberInput, d: Difficulty = NORMAL): { state: EmberState; event: EmberEvent } {
-  if (s.done) return { state: s, event: 'none' };
+export function stepEmbers(s0: EmberState, i: EmberInput, d: Difficulty = NORMAL): { state: EmberState; event: EmberEvent } {
+  if (s0.done) return { state: s0, event: 'none' };
+  const s = i.kind === 'act' ? { ...s0, acts: s0.acts + 1 } : s0;
   if (i.kind === 'act') {
     const gain = s.dry ? 1 : WET_WOOD;
     if (i.act === 'wood') return { state: { ...s, heat: Math.min(1, Math.max(0, s.heat - SMOKE_DROP)), smokeMs: SMOKE_MS * (s.dry ? 1 : 2), }, event: 'wood' };
@@ -65,6 +72,10 @@ export function stepEmbers(s: EmberState, i: EmberInput, d: Difficulty = NORMAL)
   }
   if (!(i.dtMs > 0)) return { state: s, event: 'none' };
   const dt = i.dtMs / 1000;
+  if (s.acts === 0) {
+    const idle = s.idle + i.dtMs;
+    return { state: { ...s, idle, heat: Math.max(0, s.heat - COOL_PER_S * dt), done: idle >= IDLE_MS }, event: idle >= IDLE_MS ? 'done' : 'none' };
+  }
   // Дим догорів — дрова віддають жар.
   const smokeMs = Math.max(0, s.smokeMs - i.dtMs);
   const burst = s.smokeMs > 0 && smokeMs === 0 ? WOOD_GAIN * (s.dry ? 1 : WET_WOOD) : 0;
@@ -84,4 +95,4 @@ export function stepEmbers(s: EmberState, i: EmberInput, d: Difficulty = NORMAL)
 
 /** Оцінка вечері: середня готовність страв. Нічого не приготовано — 0, і це теж не блок. */
 export const emberScore = (s: EmberState): number => (s.quality.length === 0 ? 0 : s.quality.reduce((a, b) => a + b, 0) / DISHES.length);
-export const emberOutcome = (s: EmberState): Outcome => grade(emberScore(s));
+export const emberOutcome = (s: EmberState): Outcome => (canFinish('fire', s.acts, 0) ? grade(emberScore(s)) : 'scrappy');
