@@ -19,7 +19,7 @@ export const EMBERS_GAME = defineMinigame<EmberState, EmberView>({
   titleKey: 'mg.embers.title',
   introKey: 'mg.embers.intro',
   hintKey: 'mg.embers.hint',
-  limitFrames: 45 * FPS,
+  limitFrames: 90 * FPS,
   outcomes: {
     good: { consequence: 'supper.hot', resultKey: 'mg.embers.result.good' },
     fine: { consequence: 'supper.uneven', resultKey: 'mg.embers.result.fine' },

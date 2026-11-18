@@ -46,6 +46,15 @@ export const ROUTINES: Readonly<Record<RoutineId, RoutineDef>> = {
   tidy: { id: 'tidy', owner: 'victoria', away: false, minutes: [40, 40], seconds: 80 },
 };
 
+/** GAME-321: мінімум справжньої роботи, без якого рутину не закрити: [дій, мс кадрів у роботі]. Вода (кран + десять кроків) закривається сама лише повним шляхом. */
+export const MIN_WORK: Readonly<Record<'firewood' | 'lanterns' | 'fish' | 'berries' | 'tidy' | 'fire', readonly [acts: number, ms: number, giveUpMs?: number]>> = { firewood: [6, 20000], lanterns: [6, 30000], fish: [2, 30000, 60000], berries: [4, 20000], tidy: [5, 20000], fire: [6, 0] };
+/** Третє число — «здаюсь»: риба може не клювати чи зриватись, тож після нього вихід є й без уловів (м'який провал, ніколи не пастка). */
+export const canFinish = (id: keyof typeof MIN_WORK, acts: number, ms: number): boolean => { const [a, m, g = Infinity] = MIN_WORK[id]; return (acts >= a && ms >= m) || ms >= g; };
+/** Скільки ще роботи: дій і секунд (для підказки на дошці). */
+export const workLeft = (id: keyof typeof MIN_WORK, acts: number, ms: number): { acts: number; s: number } => ({ acts: Math.max(0, MIN_WORK[id][0] - acts), s: Math.ceil(Math.max(0, MIN_WORK[id][1] - ms) / 1000) });
+/** Час у роботі лише кадрами, і один кадр не важить більше 100 мс (довга пауза вкладки не рахується за роботу). */
+export const addWork = (ms: number, dtMs: number): number => ms + Math.min(dtMs, 100);
+
 /** Скільки ігрових хвилин має частина дня в таборі. */
 export const DAY_MINUTES = 300;
 /** Найдешевший спосіб зробити геть усе. Більший за день — тому вибір справжній (сторож у camp-day.test). */

@@ -4,7 +4,7 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
 import type { Key } from '../i18n';
 import type { Weather } from '../core/weather';
-import { ROUNDS, ROUTINES, ROUTINE_IDS, addPick, awayIn, campBusy, emptyRounds, isDone, minutesLeft, nightOpen, recordResult, startCampDay, whyNot, type CampDay, type Round, type RoutineId } from '../content/camp-day';
+import { ROUNDS, ROUTINES, ROUTINE_IDS, MIN_WORK, addPick, awayIn, campBusy, canFinish, addWork, workLeft, emptyRounds, isDone, minutesLeft, nightOpen, recordResult, startCampDay, whyNot, type CampDay, type Round, type RoutineId } from '../content/camp-day';
 import { nightOf, type NightBeat, type NightFacts } from '../content/camp-night';
 import { deviceFacts, deviceFor, statusOf, tend, withDevices, type Devices } from '../content/camp-devices';
 import { HELP_AFTER, NORMAL, RELAXED, type Difficulty, type Outcome } from '../content/minigame';
@@ -15,7 +15,7 @@ import { DISHES, emberOutcome, startEmbers, stepEmbers, type EmberAct, type Embe
 import { BASKET, berryOutcome, berryFacts, enoughBerries, hinted, patchOf, pickBerry, startBerries, type BerryState } from '../content/berries-patch';
 import { COVER, ENOUGH_DRY, LOGS, dryLogs, finishStack, placeLog, startStack, type StackState, type WoodPlace } from '../content/firewood-stack';
 import { THINGS, foodOutside, putThing, sleepNow, startTidy, tidyOutcome, type Place, type TidyState } from '../content/night-camp';
-import { FISH_IDLE, makeRng, stepFish, type FishState } from '../content/fishing';
+import { FISH_IDLE, catches, makeRng, stepFish, type FishState } from '../content/fishing';
 import { biteCue, floatCss, speciesAt, supperFish } from '../content/fish-table';
 
 type Phase = 'board' | 'work' | 'night';
@@ -41,6 +41,8 @@ export interface CampRoutinesProps {
   readonly saved?: CampBoardSave | undefined;
   /** GAME-314: дошка змінилась — у сейв (команда SaveCampBoard). */
   readonly onSave?: (b: CampBoardSave) => void;
+  /** GAME-321: панель видима. Прихована дошка стоїть: ні час роботи, ні вогонь, ні ліхтарі не ідуть. */
+  readonly live?: boolean;
 }
 
 /** GAME-319: мітка поклівки на дошці (окремий компонент — щоб тест бачив розмітку без DOM). */
@@ -48,7 +50,7 @@ export function FishBiteCue({ fish, t }: { readonly fish: FishState; readonly t:
   return <p class="ui-fish-bite" data-ui="fish-bite" role="status"><span class="ui-fish-float" aria-hidden="true" style={{ transform: floatCss(fish) }}>●</span> {t('camp.fish.bite')}</p>;
 }
 
-export function CampRoutines({ t, weather, seed, onFrame, devices: devices0 = {}, extra, onNight, onSummary, text, saved, onSave }: CampRoutinesProps) {
+export function CampRoutines({ t, weather, seed, onFrame, devices: devices0 = {}, extra, onNight, onSummary, text, saved, onSave, live = true }: CampRoutinesProps) {
   const [devices, setDevices] = useState<Devices>(() => ({ ...devices0, ...((saved?.devices ?? {}) as Devices) }));
   // GAME-314: пристрій, що з'явився вже по ходу дня (місія віддала матеріал), додається, не стираючи догляд за наявними.
   const dev0Key = Object.keys(devices0).sort().join(',');
@@ -70,6 +72,14 @@ export function CampRoutines({ t, weather, seed, onFrame, devices: devices0 = {}
   const [stack, setStack] = useState<StackState | null>(null);
   const [fish, setFish] = useState<FishState>(FISH_IDLE);
   const [rod, setRod] = useState(false);
+  // GAME-321: справжня робота в поточній рутині — дії й мс кадрів; вихід («Досить», «Далі», «Назад», «Спати») відкриває canFinish.
+  const [acts, setActs] = useState(0);
+  const [sec, setSec] = useState(0);
+  const ms = useRef(0);
+  const go = () => setActs((n) => n + 1);
+  const A = (id: Parameters<typeof canFinish>[0]) => (id === 'fish' ? catches(fish) + fish.slipped + fish.aways : id === 'fire' ? embers.acts : acts);   // риба: чесні спроби (улов, зрив, втеча)
+  const ok = (id: Parameters<typeof canFinish>[0]) => canFinish(id, A(id), sec * 1000);
+  const more = (id: Parameters<typeof canFinish>[0]) => { const w = workLeft(id, A(id), sec * 1000); return `${t('camp.more')}: ${w.acts > 0 ? `×${w.acts}` : `${w.s} ${t('camp.sec')}`}`; };
   const [facts, setFacts] = useState(() => saved?.facts ?? { water: 0, dryLogs: 0, lit: 0, fish: 0, bitter: 0, berries: undefined as number | undefined, foodOut: true });
   const rng = useRef(makeRng(seed));
 
@@ -85,7 +95,9 @@ export function CampRoutines({ t, weather, seed, onFrame, devices: devices0 = {}
   // Крок кадру: тільки активна робота, і лише та, що справді йде від часу.
   const tick = useRef<(dtMs: number) => void>(() => undefined);
   tick.current = (dtMs: number) => {
-    if (phase !== 'work' || active === null) return;
+    if (phase !== 'work' || active === null || !live) return;
+    ms.current = addWork(ms.current, dtMs);
+    setSec(Math.floor(ms.current / 1000));
     if (active === 'water' && water.phase === 'fill') setWater((s) => stepWater(s, { kind: 'tick', dtMs, down: tap }, helpOf('water')).state);
     if (active === 'lanterns') setLanterns((s) => stepLanterns(s, { kind: 'tick', dtMs, weather }, helpOf('lanterns')).state);
     if (active === 'fire') setEmbers((s) => stepEmbers(s, { kind: 'tick', dtMs }, helpOf('fire')).state);
@@ -104,6 +116,7 @@ export function CampRoutines({ t, weather, seed, onFrame, devices: devices0 = {}
     setDay((d) => addPick(d, id, round));
     setActive(id);
     setPhase('work');
+    setActs(0); setSec(0); ms.current = 0;
     if (id === 'water') { setWater(startWater(seed)); setTap(false); }
     if (id === 'lanterns') setLanterns(startLanterns());
     if (id === 'fire') setEmbers(startEmbers(facts.dryLogs >= ENOUGH_DRY));   // сухі дрова з рутини «дрова» — інший вогонь
@@ -143,6 +156,7 @@ export function CampRoutines({ t, weather, seed, onFrame, devices: devices0 = {}
       <div class="ui-overlay ui-camp" data-ui="camp-work" data-kind={active} data-help={helpOf(active).hint ? 'yes' : 'no'}>
         <h2>{t(`camp.routine.${active}` as Key)}</h2>
         {helpOf(active).hint && <p class="ui-camp-note" data-ui="camp-help">{t('camp.help')}</p>}
+        {active in MIN_WORK && !ok(active as keyof typeof MIN_WORK) && <p class="ui-camp-note" data-ui="camp-more">{more(active as keyof typeof MIN_WORK)}</p>}
         {active === 'water' && (
           <section class="ui-camp-work">
             <p data-ui="water-level" data-level={Math.round(water.level * 100)}>{`${t('camp.water.level')}: ${Math.round(water.level * 100)} %`}</p>
@@ -183,13 +197,13 @@ export function CampRoutines({ t, weather, seed, onFrame, devices: devices0 = {}
                     return (
                       <li key={i} data-ui="wood-log" data-i={i} data-size={size} data-placed={placed ? 'yes' : 'no'}>
                         <span>{t(`camp.wood.${size}` as Key)}</span>
-                        <button type="button" class="ui-btn" data-ui="wood-under" data-i={i} disabled={placed} onClick={() => setStack((s) => (s ? placeLog(s, i, true).state : s))}>{t('camp.wood.under')}</button>
-                        <button type="button" class="ui-btn" data-ui="wood-outside" data-i={i} disabled={placed} onClick={() => setStack((s) => (s ? placeLog(s, i, false).state : s))}>{t('camp.wood.outside')}</button>
+                        <button type="button" class="ui-btn" data-ui="wood-under" data-i={i} disabled={placed} onClick={() => { go(); setStack((s) => (s ? placeLog(s, i, true).state : s)); }}>{t('camp.wood.under')}</button>
+                        <button type="button" class="ui-btn" data-ui="wood-outside" data-i={i} disabled={placed} onClick={() => { go(); setStack((s) => (s ? placeLog(s, i, false).state : s)); }}>{t('camp.wood.outside')}</button>
                       </li>
                     );
                   })}
                 </ul>
-                <button type="button" class="ui-btn ui-camp-big" data-ui="wood-done" onClick={() => {
+                <button type="button" class="ui-btn ui-camp-big" data-ui="wood-done" disabled={!ok('firewood')} onClick={() => {
                   const s = finishStack(stack);
                   const dry = dryLogs(s);
                   finish('firewood', dry >= ENOUGH_DRY ? 'good' : dry >= ENOUGH_DRY / 2 ? 'fine' : 'scrappy', { dryLogs: dry });
@@ -218,14 +232,14 @@ export function CampRoutines({ t, weather, seed, onFrame, devices: devices0 = {}
                   <span>{`${t('camp.lantern.charge')} ${Math.round((lanterns.charge[l] ?? 0) * 100)} %`}</span>
                   {Array.from({ length: SPOTS }, (_, s) => (
                     <button key={s} type="button" class="ui-btn" data-ui="lantern-spot" data-l={l} data-s={s} aria-pressed={lanterns.at[l] === s}
-                      onClick={() => setLanterns((x) => stepLanterns(x, { kind: 'put', lantern: l, spot: s }, helpOf('lanterns')).state)}>{`${t('camp.lantern.spot')} ${s + 1}`}</button>
+                      onClick={() => { if (lanterns.at[l] !== s) go(); setLanterns((x) => stepLanterns(x, { kind: 'put', lantern: l, spot: s }, helpOf('lanterns')).state); }}>{`${t('camp.lantern.spot')} ${s + 1}`}</button>
                   ))}
                   <button type="button" class="ui-btn" data-ui="lantern-crank" data-l={l}
-                    onClick={() => setLanterns((x) => stepLanterns(x, { kind: 'crank', lantern: l }, helpOf('lanterns')).state)}>{t('camp.lantern.crank')}</button>
+                    onClick={() => { if ((lanterns.charge[l] ?? 0) < 1) go(); setLanterns((x) => stepLanterns(x, { kind: 'crank', lantern: l }, helpOf('lanterns')).state); }}>{t('camp.lantern.crank')}</button>
                 </li>
               ))}
             </ul>
-            <button type="button" class="ui-btn ui-camp-big" data-ui="lantern-done" onClick={() => finish('lanterns', lanternOutcome(lanterns), { lit: litCount(lanterns) })}>{t('camp.next')}</button>
+            <button type="button" class="ui-btn ui-camp-big" data-ui="lantern-done" disabled={!ok('lanterns')} onClick={() => finish('lanterns', lanternOutcome(lanterns), { lit: litCount(lanterns) })}>{t('camp.next')}</button>
           </section>
         )}
         {active === 'fish' && (
@@ -242,7 +256,7 @@ export function CampRoutines({ t, weather, seed, onFrame, devices: devices0 = {}
               <button type="button" class="ui-btn ui-camp-big" data-ui="fish-rod" aria-pressed={rod}
                 onPointerDown={() => setRod(true)} onPointerUp={() => setRod(false)} onPointerLeave={() => setRod(false)}>{t('camp.fish.rod')}</button>
             )}
-            <button type="button" class="ui-btn" data-ui="fish-done" onClick={() => finish('fish', supperFish(fish.kept) ? 'good' : fish.kept > 0 ? 'fine' : 'scrappy', { fish: fish.kept })}>{t('camp.back')}</button>
+            <button type="button" class="ui-btn" data-ui="fish-done" disabled={!ok('fish')} onClick={() => finish('fish', supperFish(fish.kept) ? 'good' : fish.kept > 0 ? 'fine' : 'scrappy', { fish: fish.kept })}>{t('camp.back')}</button>
           </section>
         )}
         {active === 'berries' && (
@@ -255,14 +269,14 @@ export function CampRoutines({ t, weather, seed, onFrame, devices: devices0 = {}
                 return (
                   <li key={i}>
                     <button type="button" class="ui-btn ui-camp-bush" data-ui="berry" data-i={i} data-taken={taken ? 'yes' : 'no'} data-doubt={doubt ? 'yes' : 'no'} disabled={taken}
-                      onClick={() => setBerries((s) => pickBerry(s, i).state)}>
+                      onClick={() => { go(); setBerries((s) => pickBerry(s, i).state); }}>
                       {`${t(b.shiny ? 'camp.berry.shiny' : 'camp.berry.matte')} · ${t(b.leaf === 'toothed' ? 'camp.berry.toothed' : 'camp.berry.smooth')}${doubt ? ` · ${t('camp.berry.doubt')}` : ''}`}
                     </button>
                   </li>
                 );
               })}
             </ul>
-            <button type="button" class="ui-btn ui-camp-big" data-ui="berry-enough" onClick={() => {
+            <button type="button" class="ui-btn ui-camp-big" data-ui="berry-enough" disabled={!ok('berries')} onClick={() => {
               const s = enoughBerries(berries);
               finish('berries', berryOutcome(s), berryFacts(s));
             }}>{t('camp.berry.enough')}</button>
@@ -285,10 +299,10 @@ export function CampRoutines({ t, weather, seed, onFrame, devices: devices0 = {}
             <div class="ui-camp-row">
               {PLACES.map((p) => (
                 <button key={p} type="button" class="ui-btn ui-camp-big" data-ui="tidy-place" data-place={p} disabled={thing === null}
-                  onClick={() => { if (thing !== null) { setTidy((s) => putThing(s, thing, p).state); setThing(null); } }}>{t(`camp.tidy.${p}` as Key)}</button>
+                  onClick={() => { if (thing !== null) { const r = putThing(tidy, thing, p).state; if (r.put[thing] !== tidy.put[thing]) go(); setTidy(r); setThing(null); } }}>{t(`camp.tidy.${p}` as Key)}</button>
               ))}
             </div>
-            <button type="button" class="ui-btn ui-camp-big" data-ui="tidy-sleep" onClick={() => {
+            <button type="button" class="ui-btn ui-camp-big" data-ui="tidy-sleep" disabled={!ok('tidy')} onClick={() => {
               const s = sleepNow(tidy);
               finish('tidy', tidyOutcome(s), { foodOut: foodOutside(s) });
             }}>{t('camp.tidy.sleep')}</button>

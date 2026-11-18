@@ -112,7 +112,7 @@ export function SampleDay({ port, t, lang }: { port: SamplePort; t: (k: Key) => 
       )}
       {mounted && !summary && (
         <div class="sd-board-wrap" data-ui="sd-board-wrap" hidden={!boardOpen}>
-          <CampRoutines t={t} weather={port.weather()} seed={port.seed()} onFrame={port.onFrame} devices={devicesFromFlags(flags)} extra={sampleExtra(flags)} text={text}
+          <CampRoutines live={boardOpen} t={t} weather={port.weather()} seed={port.seed()} onFrame={port.onFrame} devices={devicesFromFlags(flags)} extra={sampleExtra(flags)} text={text}
             onNight={setNight} saved={port.board()} onSave={port.saveBoard} onSummary={() => { setSummary(true); setBoardOpen(false); port.stormNight(); }} />
           <button type="button" class="ui-btn sd-board-close" data-ui="sd-board-close" onClick={() => setBoardOpen(false)}>{t('sd.back')}</button>
         </div>
