@@ -6,7 +6,7 @@ import { RESIDENTS, TILES_PER_MIN, buildTimeline, residentGrid, walkableAt, type
 import { findPath, gridFromWalls, tileOf, type Pt } from './follow';
 import {
   BLOCK_FRAMES, BLOCK_R, EMOTE_FRAMES, EMOTE_HOLD, EMOTE_IN, HOMES, MIND0, OFF_SPEED, RAIN_SPEED, WAVE_FRAMES, WAVE_R, ZZZ_EVERY,
-  EMOTE_DY, FIRE_HALF, emoteShiftX, heldBy, emoteScale, flipping, lookDir, neighbourAt, pagesTurned, planHome, routeAt, sinceEvening, stepMind, waveFrame, workFrame, EMOTES,
+  EMOTE_DY, FIRE_HALF, staysOut, emoteShiftX, heldBy, emoteScale, flipping, lookDir, neighbourAt, pagesTurned, planHome, routeAt, sinceEvening, stepMind, waveFrame, workFrame, EMOTES,
   type Frame, type Mind, type NState,
 } from './neighbours';
 
@@ -122,6 +122,31 @@ describe('вечір 18–20: додому', () => {
     const noraAt = (rain: boolean): string => routeAt(walk, TL[i] as Timeline, home, rain ? wet : dry, m + 18).phase;
     expect(noraAt(true)).toBe('home');
     expect(noraAt(false)).toBe('going');
+  });
+});
+
+describe('GAME-320: відкриту місію можна здати до ночі', () => {
+  // Б1 приймання GAME-318: о ≈19:58 Аміна вже сиділа в наметі, після 20:00 спала — «Обручку» не здати. Мутація: staysOut → завжди false ⇒ ці рядки червоні.
+  const whereAt = (id: string, h: number, flags: readonly string[]): { state: NState; phase: string } => {
+    const i = idx(id);
+    const m = clock(h);
+    const plan = planHome(walk, TL[i] as Timeline, HOMES[id] as { c: number; r: number }, m - sinceEvening(m), false);
+    const r = neighbourAt(walk, TL[i] as Timeline, i, plan, m, { dist: 500, raining: false, waved: true }, staysOut(flags, id));
+    return { state: r.state, phase: r.route.phase };
+  };
+  const TAKEN = ['f.mis-ring-taken'];
+  it.each([19.5, 19 + 58 / 60, 21.4, 23.5])('місія Аміни взята: о %s год вона не вдома й не спить', (h) => {
+    const w = whereAt('npc.amina', h, TAKEN);
+    expect(w.phase).toBe('out');
+    expect(w.state).not.toBe('sleep');
+    expect(w.state).not.toBe('sit');
+  });
+  it('без відкритої місії (нема / здана) — як раніше: вдома, після 20:00 спить; чужа місія не тримає Аміну', () => {
+    expect(whereAt('npc.amina', 19.5, []).phase).toBe('home');
+    expect(whereAt('npc.amina', 21.4, []).state).toBe('sleep');
+    expect(whereAt('npc.amina', 21.4, [...TAKEN, 'f.mis-ring-done']).state).toBe('sleep');
+    expect(whereAt('npc.amina', 21.4, ['f.mis-aerial-taken']).state).toBe('sleep');
+    expect(whereAt('npc.luc', 21.4, TAKEN).state).toBe('sleep');
   });
 });
 

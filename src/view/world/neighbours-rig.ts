@@ -37,6 +37,8 @@ export class Neighbours {
   private holds: number[] = [];
   /** GAME-231: з ким зараз триває розмова (id мешканця) — тримає його стоячим УСЮ розмову, а не лише HOLD_FRAMES. */
   private talking: string | null = null;
+  /** GAME-320: мешканці з відкритою місією — лишаються на розкладі, не йдуть додому (staysOut). */
+  private stay: ReadonlySet<string> = new Set();
   private fire: Pt | null = null;
   private mats: Phaser.GameObjects.Graphics[] = [];
   private plans = new Map<string, HomePlan | null>();
@@ -100,6 +102,7 @@ export class Neighbours {
     this.minds[i] = { ...m, emote: e, emoteAge: 0 };
     return true;
   }
+  setStay(ids: ReadonlySet<string>): void { this.stay = ids; }
   /** Вогнище табору (для зсуву значків над головою); null — нема. */
   setFire(p: Pt | null): void { this.fire = p; }
   state(i: number): NState { return this.minds[i]?.state ?? 'stand'; }
@@ -119,7 +122,7 @@ export class Neighbours {
       if (this.plans.size > 48) this.plans.clear();
       this.plans.set(key, plan);
     }
-    const route = routeAt(grid, tl, home ?? { c: 0, r: 0 }, home ? plan ?? null : null, minutes);
+    const route = routeAt(grid, tl, home ?? { c: 0, r: 0 }, home ? plan ?? null : null, minutes, this.stay.has(res.id));
     const prev = this.minds[i] ?? MIND0;
     const dist = hero ? Math.hypot(hero.x - route.x, hero.y - route.y) : Infinity;
     const stopIdx = route.phase === 'out' && !route.moving ? stopIndexAt(res, grid, route) : -1;
