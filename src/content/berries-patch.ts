@@ -68,3 +68,6 @@ export const bitterCount = (s: BerryState): number => s.basket.filter((k) => k =
 /** Оцінка: стиглі з повного кошика, мінус по пів місця за кожного двійника (гірка ягода псує миску). */
 export const berryScore = (s: BerryState): number => Math.max(0, Math.min(1, (ripeCount(s) - bitterCount(s) * 0.5) / BASKET));
 export const berryOutcome = (s: BerryState): Outcome => grade(berryScore(s));
+
+/** GAME-319: що рутина «ягоди» записує в факти дошки (і в сейв): гіркі й скільки всього в мисці. */
+export const berryFacts = (s: BerryState): { bitter: number; berries: number } => ({ bitter: bitterCount(s), berries: s.basket.length });

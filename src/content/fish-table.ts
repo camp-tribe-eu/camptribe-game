@@ -5,7 +5,7 @@
 // Це дає причину йти по рибу САМЕ ЗАРАЗ, а не «колись».
 
 import type { Weather } from '../core/weather';
-import type { Species } from './fishing';
+import type { FishState, Species } from './fishing';
 import { SPECIES } from './fishing';
 
 export type DayPart = 'morning' | 'noon' | 'afternoon' | 'evening';
@@ -32,3 +32,8 @@ export function waitFactor(part: DayPart, weather: Weather): number {
 /** Скільки риб треба на вечерю всій родині. Менше — вечеря пісніша, але вечеря буде завжди. */
 export const SUPPER_FISH = 2;
 export const supperFish = (kept: number): boolean => kept >= SUPPER_FISH;
+
+/** GAME-319: на що гравець дивиться, коли клює. Поплавок кадр за кадром пірнає на 5 px (кроком 150 мс), і є мітка «Клює!»; поза поклівкою — нуль. */
+export const floatDip = (s: Pick<FishState, 'phase' | 't'>): number => (s.phase === 'bite' ? (Math.floor(s.t / 150) % 2) * 5 : 0);
+export const biteCue = (s: Pick<FishState, 'phase'>): boolean => s.phase === 'bite';
+export const floatCss = (s: Pick<FishState, 'phase' | 't'>): string => `translateY(${floatDip(s)}px)`;
