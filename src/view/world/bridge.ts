@@ -46,7 +46,7 @@ export function createBridge(seed: number, catalog: CoreDefs, afterSend?: () => 
     send(intent) {
       if (intent.type !== 'Practise' && intent.type !== 'Forage') sent++;   // GAME-230: збір дарів — побічний наслідок дії на мапі, як практика
       const command = { ...intent, commandId: nextCommandId(state.game) } as Command;
-      state = step(state, { kind: 'command', command }, { defs });
+      state = step(state, { kind: 'command', command }, holdMinute === undefined ? { defs } : { defs, holdMinute });
       afterSend?.();   // GAME-86: стан змінила команда — автозбереження (не кожен кадр)
     },
     frame(realMs) {

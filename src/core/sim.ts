@@ -1,7 +1,7 @@
 // Крок симуляції: стан гри + годинник + RNG. Вхід — лише журнал (кадри, команди, перемотування),
 // тож той самий seed і той самий журнал дають той самий стан (GAME-13).
 
-import { advance, autoSleepDue, minuteOfDay, newClock, nextAt, pause, resume, tick, type GameClock } from './clock';
+import { GAME_START_MINUTE, advance, autoSleepDue, minuteOfDay, newClock, nextAt, pause, resume, tick, type GameClock } from './clock';
 import { dispatch, type Command } from './commands';
 import { EMPTY_DEFS, type CoreDefs } from './defs';
 import { canonical } from './hash';
@@ -201,7 +201,19 @@ export function fallAsleep(s: SimState, ref: SleepPlace | 'auto', commandId?: st
   return { ...s, game, clock: advance(s.clock, wake - s.clock.minutes), journal: [...s.journal, entry].slice(-JOURNAL_LIMIT) };
 }
 
+/** Доба за календарем (змінюється опівночі; dayOf змінюється о 08:00 — початок ігрової доби). */
+const calendarDay = (minutes: number): number => Math.floor((minutes + GAME_START_MINUTE) / 1440);
+
+/**
+ * GAME-320: у зразковому дні (`holdMinute`) жоден стрибок часу — Visit, Sleep, WaitForShop, RestUntilEvening, advance — не веде на наступну добу:
+ * такий вхід відхилено, стан лишається як був. Годинник о 23:30 стоїть сам (кадри), але стрибок оминав цю стопку й відкривав «День 2» до ночі.
+ */
 export function step(s: SimState, input: Input, ctx: StepCtx = {}): SimState {
+  const r = stepRaw(s, input, ctx);
+  return ctx.holdMinute !== undefined && input.kind !== 'frame' && calendarDay(r.clock.minutes) > calendarDay(s.clock.minutes) ? s : r;
+}
+
+function stepRaw(s: SimState, input: Input, ctx: StepCtx): SimState {
   const systems = ctx.systems ?? [findsSystem];
   switch (input.kind) {
     case 'frame': {
