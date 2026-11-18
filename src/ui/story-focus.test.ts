@@ -1,7 +1,7 @@
 // GAME-280 · offerFocusKey: той самий вміст у новому об'єкті — той самий ключ (фокус не стрибає); змінилось, що натискати, — інший (GAME-80 лишається).
 // Закон 1: мутація «ключ = випадкове/ідентичність об'єкта» червонить перший рядок; «ключ без actions / без репліки» — відповідні рядки нижче.
 import { describe, expect, it } from 'vitest';
-import { offerFocusKey, type FocusOffer } from './story-focus';
+import { inSampleCamp, offerFocusKey, sampleMenuActions, type FocusOffer } from './story-focus';
 
 const base = (): FocusOffer => ({
   stage: 'play', locationKey: 'loc.home',
@@ -29,5 +29,20 @@ describe('offerFocusKey (GAME-280)', () => {
   it('пакування відкрилось — інший ключ', () => {
     const p: NonNullable<FocusOffer['packing']> = { used: 0, capacity: 10, groups: [], taken: 0, leftKeys: [], load: null, overflow: [] } as unknown as NonNullable<FocusOffer['packing']>;
     expect(offerFocusKey({ ...base(), packing: p })).not.toBe(offerFocusKey(base()));
+  });
+});
+
+// GAME-320 · ☰ у таборі зразкового дня: без стрибків часу. Мутація: sampleMenuActions повертає всі дії / inSampleCamp ігнорує табір → рядки червоні.
+describe('GAME-320: ☰ у таборі зразкового дня', () => {
+  const acts = [{ id: 'a1', kind: 'visit', key: 'loc.home', minutes: 203 }, { id: 'a2', kind: 'sleep', key: null }, { id: 'a3', kind: 'wait', key: null }, { id: 'a4', kind: 'rest', key: null }, { id: 'a5', kind: 'talk', key: 'npc.amina' }] as const;
+  it('у таборі зразкового дня лишається лише те, що не крутить час', () => {
+    expect(sampleMenuActions(acts, true).map((a) => a.kind)).toEqual(['talk']);
+  });
+  it('поза зразковим табором — усі дії як були', () => {
+    expect(sampleMenuActions(acts, false)).toHaveLength(5);
+    expect(inSampleCamp(true, 'loc.camp.lake')).toBe(true);
+    expect(inSampleCamp(false, 'loc.camp.lake')).toBe(false);
+    expect(inSampleCamp(true, 'loc.road')).toBe(false);   // до табору (збори, дорога) ☰ працює як раніше
+    expect(inSampleCamp(true, null)).toBe(false);
   });
 });

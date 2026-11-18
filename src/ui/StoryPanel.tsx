@@ -7,7 +7,7 @@ import type { AnyLang, Key } from '../i18n';
 import { trapTab } from './focus-trap';
 import { EntriesBook, JournalBook, SkillsBook, TravelerCard } from './JournalBook';
 import { Portrait, type PortraitLookup } from './Portrait';
-import { offerFocusKey } from './story-focus';
+import { inSampleCamp, offerFocusKey, sampleMenuActions } from './story-focus';
 import type { OfferAction, StoryOffer } from './story-types';
 
 const ACT: Readonly<Record<Exclude<OfferAction['kind'], 'choose' | 'continue' | 'cancel'>, Key>> = {
@@ -61,6 +61,9 @@ export function StoryPanel({ offer, lang, t, act, close, portrait, children, foo
   // GAME-317: зразковий день — сцена (приїзд, заїзд, гроза) на екрані ОДНА: без звання, навичок, журналу й списків під нею. Раніше репліка лежала під згином
   // панелі на 2 900–3 500 px, і гравець бачив звання замість розмови. Звичайна гра цього прапорця не ставить.
   const sceneOnly = sceneFocus === true && !!offer.dialogue && !compact;
+  // GAME-320: у таборі зразкового дня ☰ без стрибків часу й без цілей/квестів старої гри (story-focus.ts).
+  const sampleCamp = inSampleCamp(sceneFocus === true, offer.locationKey);
+  const menuActions = sampleMenuActions(offer.actions, sampleCamp);
   const showRest = (!compact || page === 'journal') && !sceneOnly;   // квести, прогрес, навички, речі, журнал
 
   // GAME-80: після дії кнопки перебудовуються, і друге натискання (дотик чи Enter) через ~150 мс влучало б
@@ -129,7 +132,7 @@ export function StoryPanel({ offer, lang, t, act, close, portrait, children, foo
       {offer.stage !== 'create' && showRest && (compact
         ? <JournalBook offer={offer} lang={lang} t={t} labels={JR} />   // GAME-253: щоденник — мандрівник, навички, записи по днях
         : <TravelerCard offer={offer} lang={lang} t={t} />)}
-      {offer.stage !== 'create' && showRest && offer.goals.length > 0 && (
+      {offer.stage !== 'create' && showRest && !sampleCamp && offer.goals.length > 0 && (
         // GAME-200: 2–4 паралельні цілі — головна, побічні й «нагорода близько» (ще N). Без таймерів і покарань (OD-022).
         <section class="ui-goals" data-ui="goals" data-count={offer.goals.length} aria-label={t('ui.goals')}>
           <h3>{t('ui.goals')}</h3>
@@ -141,7 +144,7 @@ export function StoryPanel({ offer, lang, t, act, close, portrait, children, foo
         </section>
       )}
       {offer.stage === 'ended' && <p class="ui-status" data-ui="ended" role="status">{t(offer.chapterEnd === 2 ? 'ui.ended.ch2' : 'ui.ended')}</p>}
-      {showRest && offer.quests.map((q) => (
+      {showRest && !sampleCamp && offer.quests.map((q) => (
         <section class="ui-quest" data-ui="quest" key={q.key}>
           {/* GAME-179: від кого завдання — портрет і ім'я; без giverId — оповідач (нейтральна іконка). */}
           <div class="ui-giver" data-ui="giver" data-npc={q.giver?.id ?? 'narrator'}>
@@ -197,16 +200,16 @@ export function StoryPanel({ offer, lang, t, act, close, portrait, children, foo
       )}
       {offer.rest.shopClosed && !offer.dialogue && <p data-ui="shop-closed" role="status">{t('shop.closed')}</p>}
       {/* GAME-242: на мапі ☰ стиснуте й кнопок не має — але «Лягти спати» / «Почекати» мапа дати не може: лише вони лишаються. */}
-      {compact && !offer.dialogue && offer.actions.some((x) => x.kind === 'sleep' || x.kind === 'wait' || x.kind === 'rest' || x.kind === 'chapter') && (
+      {compact && !offer.dialogue && menuActions.some((x) => x.kind === 'sleep' || x.kind === 'wait' || x.kind === 'rest' || x.kind === 'chapter') && (
         <fieldset data-ui="rest">
           <legend>{t('ui.actions')}</legend>
-          {offer.actions.filter((x) => x.kind === 'sleep' || x.kind === 'wait' || x.kind === 'rest' || x.kind === 'chapter').map(button)}
+          {menuActions.filter((x) => x.kind === 'sleep' || x.kind === 'wait' || x.kind === 'rest' || x.kind === 'chapter').map(button)}
         </fieldset>
       )}
-      {!compact && !sceneOnly && (offer.actions.length > 0 || offer.locked.length > 0) && (
+      {!compact && !sceneOnly && (menuActions.length > 0 || offer.locked.length > 0) && (
         <fieldset data-ui="actions">
           <legend>{t('ui.actions')}</legend>
-          {offer.actions.map(button)}
+          {menuActions.map(button)}
           {!offer.dialogue && offer.locked.map(lockedButton)}
         </fieldset>
       )}

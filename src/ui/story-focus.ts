@@ -21,3 +21,12 @@ export function offerFocusKey(o: FocusOffer): string {
     p ? `${p.load?.id ?? ''}/${p.overflow.map((x) => x.key).join(',')}/${p.groups.map((g) => g.items.map((i) => `${i.key}${i.state}`).join(',')).join(';')}` : '-',
   ].join('|');
 }
+
+/**
+ * GAME-320 · зразковий день, табір: ☰ не пропонує стрибків часу (дорога, сон, очікування — вони перегортали день до ночі) і не показує цілей та квестів старої гри розділу 1.
+ * Пауза, налаштування, збереження й розмови лишаються.
+ */
+export const SAMPLE_CAMP_LOCATION = 'loc.camp.lake';
+const SAMPLE_CAMP_HIDDEN: readonly OfferAction['kind'][] = ['visit', 'sleep', 'wait', 'rest'];
+export const inSampleCamp = (sample: boolean, locationKey: string | null): boolean => sample && locationKey === SAMPLE_CAMP_LOCATION;
+export const sampleMenuActions = (actions: readonly OfferAction[], sampleCamp: boolean): readonly OfferAction[] => (sampleCamp ? actions.filter((a) => !SAMPLE_CAMP_HIDDEN.includes(a.kind)) : actions);
