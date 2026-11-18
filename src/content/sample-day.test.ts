@@ -19,7 +19,7 @@ import { ARRIVAL_BY_DRIVE, PITCH_IDS, arrivalFlag, freePitches, nightAt, pitchFl
 import { NIGHT_FACTS, nightKeys, nightOf, roughCount, type NightFacts } from './camp-night';
 import { deviceFacts, withDevices } from './camp-devices';
 import { MISSIONS } from './missions';
-import { devicesFromFlags, laneIdFor, missionsDone, pitchChoices, prepOf, sampleExtra } from './sample-day';
+import { devicesFromFlags, laneIdFor, missionsDone, pitchChoices, prepOf, sampleExtra, sampleGoal } from './sample-day';
 import { PREP_FLAGS } from './arrival-pitch';
 import { boardError, BOARD_MAX_BYTES, type CampBoardSave } from '../core/camp-board';
 import { stormNightMove } from './storm-night';
@@ -239,5 +239,16 @@ describe('рецензія tech-lead: зшивка без розбіжносте
     expect(uk['dlg.storm-night.open']).toContain('пів на дев’яту');
     expect(uk['dlg.ch1-fire.night-open']).toContain('пів на дев’яту');
     expect(Object.values(uk).filter((v) => /^Опівночі щось ляскає/.test(v))).toEqual([]);
+  });
+});
+
+// GAME-317 · ОДНА ціль дня. Мутація: у `sampleGoal` повернути завжди null (стара «Ціль: Прибуття» лишається) → «після дороги ціль дня» червоніє.
+describe('GAME-317 · одна ціль зразкового дня', () => {
+  it('до дороги — null (ціль стара: збори й виїзд), після дороги вона міняється з ходом дня', () => {
+    expect(sampleGoal([], false)).toBeNull();
+    expect(sampleGoal(['f.arrival-late'], false)).toBe('pitch');
+    expect(sampleGoal(['f.arrival-late', 'f.spot-meadow'], false)).toBe('day');
+    expect(sampleGoal(['f.arrival-early', 'f.spot-beeches', 'f.mis-aerial-done', 'f.mis-ring-done'], false)).toBe('evening');
+    expect(sampleGoal(['f.arrival-early', 'f.spot-beeches', 'f.mis-aerial-done', 'f.mis-ring-done'], true)).toBe('done');
   });
 });

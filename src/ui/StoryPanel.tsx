@@ -53,12 +53,15 @@ export function actionLabel(lang: AnyLang, t: (k: Key) => string, a: OfferAction
   return `${t(ACT[a.kind])} ${ct(lang, a.key)}${extras.length ? ` (${extras.join(', ')})` : ''}`;
 }
 
-export function StoryPanel({ offer, lang, t, act, close, portrait, children, footer, settings }: { offer: StoryOffer; lang: AnyLang; t: (k: Key) => string; act: (id: string) => void; close: () => void; portrait: PortraitLookup; children?: ComponentChildren; settings?: () => void; footer?: ComponentChildren }) {
+export function StoryPanel({ offer, lang, t, act, close, portrait, children, footer, settings, sceneFocus }: { offer: StoryOffer; lang: AnyLang; t: (k: Key) => string; act: (id: string) => void; close: () => void; portrait: PortraitLookup; children?: ComponentChildren; settings?: () => void; footer?: ComponentChildren; sceneFocus?: boolean }) {
   const root = useRef<HTMLDivElement>(null);
   // GAME-185: у мапі-першій грі ☰ — лише меню; квести, навички, речі й журнал — на екрані «Журнал» (page === 'journal').
   const [page, setPage] = useState<'menu' | 'journal'>('menu');
   const compact = offer.mapFirst && offer.stage !== 'create';
-  const showRest = !compact || page === 'journal';   // квести, прогрес, навички, речі, журнал
+  // GAME-317: зразковий день — сцена (приїзд, заїзд, гроза) на екрані ОДНА: без звання, навичок, журналу й списків під нею. Раніше репліка лежала під згином
+  // панелі на 2 900–3 500 px, і гравець бачив звання замість розмови. Звичайна гра цього прапорця не ставить.
+  const sceneOnly = sceneFocus === true && !!offer.dialogue && !compact;
+  const showRest = (!compact || page === 'journal') && !sceneOnly;   // квести, прогрес, навички, речі, журнал
 
   // GAME-80: після дії кнопки перебудовуються, і друге натискання (дотик чи Enter) через ~150 мс влучало б
   // в нову першу кнопку — дорогу покупку чи дорогу додому. Тому: (а) фокус після зміни йде на СТАБІЛЬНИЙ
@@ -200,7 +203,7 @@ export function StoryPanel({ offer, lang, t, act, close, portrait, children, foo
           {offer.actions.filter((x) => x.kind === 'sleep' || x.kind === 'wait' || x.kind === 'rest' || x.kind === 'chapter').map(button)}
         </fieldset>
       )}
-      {!compact && (offer.actions.length > 0 || offer.locked.length > 0) && (
+      {!compact && !sceneOnly && (offer.actions.length > 0 || offer.locked.length > 0) && (
         <fieldset data-ui="actions">
           <legend>{t('ui.actions')}</legend>
           {offer.actions.map(button)}
@@ -219,7 +222,7 @@ export function StoryPanel({ offer, lang, t, act, close, portrait, children, foo
         </p>
       )}
       {offer.stage !== 'create' && showRest && !compact && <SkillsBook offer={offer} lang={lang} t={t} />}
-      {!compact && <details class="ui-journal-fold" data-ui="journal">
+      {!compact && !sceneOnly && <details class="ui-journal-fold" data-ui="journal">
         <summary class="ui-btn">{t('ui.journal')}</summary>
         <EntriesBook offer={offer} lang={lang} t={t} labels={JR} />
       </details>}
@@ -228,7 +231,7 @@ export function StoryPanel({ offer, lang, t, act, close, portrait, children, foo
         <button type="button" class="ui-btn" data-ui="journal" onClick={() => setPage('journal')}>{t('ui.journal')}</button>
         {settings && <button type="button" class="ui-btn" data-ui="settings-open" onClick={settings}>{t('ui.settingsOpen')}</button>}
       </>}
-      {!compact && footer}
+      {!compact && !sceneOnly && footer}
       {compact && page === 'journal' && <button type="button" class="ui-btn" data-ui="journal-back" onClick={() => setPage('menu')}>{t('ui.journalBack')}</button>}
       <button type="button" class="ui-btn" data-ui="story-close" onClick={close}>{t('ui.storyClose')}</button>
     </div>

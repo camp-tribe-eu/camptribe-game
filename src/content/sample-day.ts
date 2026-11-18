@@ -55,3 +55,16 @@ export function sampleExtra(flags: readonly string[]): Pick<NightFacts, 'pitch' 
 
 /** Скільки місій дня зроблено (для підсумку). */
 export const missionsDone = (flags: readonly string[]): number => MISSIONS.filter((m) => flags.includes(m.doneFlag)).length;
+
+/** GAME-317 · ОДНА ціль зразкового дня на ключ i18n. Раніше після дороги в шапці лишалась «Ціль: Прибуття» зі старої гри розділу 1 і не змінювалась до кінця.
+ *  null — дорогу ще не проїхано: ціль тоді стара (збори й виїзд — це й є мета дня до дороги). */
+export type SampleGoal = 'pitch' | 'day' | 'evening' | 'done';
+export function sampleGoal(flags: readonly string[], stormPlayed: boolean): SampleGoal | null {
+  if (!flags.some((f) => f.startsWith('f.arrival-'))) return null;
+  if (stormPlayed) return 'done';
+  if (pitchTaken(flags) === null) return 'pitch';
+  return missionsDone(flags) >= 2 ? 'evening' : 'day';
+}
+
+/** Година, на якій світ зразкового дня стоїть: опівночі гра розділу 1 засинала сама, перегортала день і відкривала свій «Підсумок дня 1» посеред місії. Ніч тут — кнопка дошки, не годинник. */
+export const SAMPLE_HOLD_MINUTE = 23 * 60 + 30;

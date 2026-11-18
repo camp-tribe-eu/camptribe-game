@@ -5,15 +5,19 @@ import { readFileSync } from 'node:fs';
 /** Розмір мапи кемпінгу, px (GAME-172: 40×24 клітинки по 32 — було 640×384); з файлу мапи, а не числом у тесті. */
 const CAMP = JSON.parse(readFileSync(new URL('../../public/maps/camp-lake.tmj', import.meta.url), 'utf8')) as { width: number; height: number; tilewidth: number; tileheight: number };
 const CAMP_WALLS = (JSON.parse(readFileSync(new URL('../../public/maps/camp-lake.tmj', import.meta.url), 'utf8')) as { layers: { name: string; data?: number[] }[] }).layers.find((l) => l.name === 'walls')?.data ?? [];
-/** Скільки пікселів герой пройде з (x, y) у бік dir до першої стіни — рахується з шару walls самої мапи (по осі центра героя). */
-function freeRun(dir: 'up' | 'down', x: number, y: number): number {
+/** Скільки пікселів герой пройде з (x, y) у бік dir до першої стіни — рахується з шару walls самої мапи (по осі центра героя: вгору/вниз — стовпцем, вліво/вправо — рядком). */
+function freeRun(dir: 'up' | 'left' | 'down' | 'right', x: number, y: number): number {
   const T = CAMP.tilewidth;
-  const c = Math.floor(x / T);
+  const horizontal = dir === 'left' || dir === 'right';
+  const step = dir === 'down' || dir === 'right' ? 1 : -1;
+  let c = Math.floor(x / T);
   let r = Math.floor(y / T);
-  const step = dir === 'down' ? 1 : -1;
+  const wall = (cc: number, rr: number): boolean => CAMP_WALLS[rr * CAMP.width + cc] !== 0;
   let tiles = 0;
-  while (r + step >= 0 && r + step < CAMP.height && CAMP_WALLS[(r + step) * CAMP.width + c] === 0) { r += step; tiles++; }
-  return tiles * T + (dir === 'down' ? T - (y % T) : y % T);
+  if (horizontal) while (c + step >= 0 && c + step < CAMP.width && !wall(c + step, r)) { c += step; tiles++; }
+  else while (r + step >= 0 && r + step < CAMP.height && !wall(c, r + step)) { r += step; tiles++; }
+  const off = (horizontal ? x : y) % T;
+  return tiles * T + (step === 1 ? T - off : off);
 }
 const MAP_W = CAMP.width * CAMP.tilewidth;
 const MAP_H = CAMP.height * CAMP.tileheight;
@@ -81,6 +85,23 @@ test.describe('LPC на сцені (десктоп 1280×800)', () => {
         }
         a = await probe(page);
         expect(inLane(a), `${dir}: герой у коридорі ${a.playerX},${a.playerY}`).toBe(true);
+        expect(freeRun(to, a.playerX, a.playerY), `${dir}: є куди йти (з мапи) ${a.playerX},${a.playerY}`).toBeGreaterThanOrEqual(need);
+      }
+      // Так само для горизонталі: ряд 7 і сусідні 6–8 (x 0–350, y 200–280) вільні без стін; стаємо туди зі спавну (вниз — у смугу рядків 6–8), потім зсуваємося в бік, ПРОТИЛЕЖНИЙ
+      // до перевіреного, доки з карти не буде ≥ 250 px ходу (+20 на інерцію) — інакше герой міг упертись у стіну раніше, ніж зіграє 3 кадри.
+      if (axis === 'x') {
+        const need = 250;
+        const to = dir as 'left' | 'right';
+        const inBand = (p: Probe): boolean => p.playerY >= 200 && p.playerY <= 280;
+        // Умова, а не час: повторюємо, доки герой не стане де треба.
+        for (let i = 0; i < 8; i++) {
+          a = await probe(page);
+          if (inBand(a) && freeRun(to, a.playerX, a.playerY) >= need + 20) break;
+          if (!inBand(a)) await hold(page, a.playerY < 200 ? 'ArrowDown' : 'ArrowUp', (p) => (a.playerY < 200 ? p.playerY >= 215 : p.playerY <= 265), 5_000);
+          else await hold(page, to === 'left' ? 'ArrowRight' : 'ArrowLeft', (p) => freeRun(to, p.playerX, p.playerY) >= need + 20, 5_000);
+        }
+        a = await probe(page);
+        expect(inBand(a), `${dir}: герой у смузі вільних рядків ${a.playerX},${a.playerY}`).toBe(true);
         expect(freeRun(to, a.playerX, a.playerY), `${dir}: є куди йти (з мапи) ${a.playerX},${a.playerY}`).toBeGreaterThanOrEqual(need);
       }
       // GAME-298: раніше кадри збирались опитуванням probe із Node (кожен виклик — окремий обмін із браузером, під навантаженням 100+ мс), тож за ті самі «три кадри ходьби»

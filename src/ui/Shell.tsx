@@ -95,7 +95,7 @@ export function Shell({ port, langOverride, credits, build, holdToast = false, h
   const endedSeen = useRef<number | null>(null);
   useEffect(() => { checkIntro(); return port.onStory(() => {
     const o = port.story(); setOffer(o); const chapterEnd = watchEnded(o); checkIntro();
-    if (endedSeen.current !== null && o.daysEnded > endedSeen.current && (o.rest.autoSlept || chapterEnd) && o.summary) { setStoryOpen(false); setTalk(false); setSummary(o.summary); }
+    if (endedSeen.current !== null && o.daysEnded > endedSeen.current && (o.rest.autoSlept || chapterEnd) && o.summary && !port.sample) { setStoryOpen(false); setTalk(false); setSummary(o.summary); }
     endedSeen.current = o.daysEnded;
     // Сон після кінця розділу (з підсумку чи з ☰) → тизер розділу 2; завантаження вже завершеного сейву тизера не показує (sleptSeen стартує після читання).
     if (port.loaded()) { if (sleptSeen.current !== null && o.stage === 'ended' && o.rest.sleepMark !== sleptSeen.current) { teaserSleep.current = true; setEpisode(true); } sleptSeen.current = o.rest.sleepMark; }
@@ -139,7 +139,7 @@ export function Shell({ port, langOverride, credits, build, holdToast = false, h
     watchEnded(after);
     // GAME-269: дія з ☰ відкрила розмову (родинна сцена «Відпочити до вечора»): у мапі-першій панель її не показує — віддаємо рамці розмови.
     if (!before_dialogue && after.dialogue && after.mapFirst && storyOpen) { setStoryOpen(false); setOffer(after); setTalk(true); }
-    if (after.daysEnded > before && after.summary) {
+    if (after.daysEnded > before && after.summary && !port.sample) {
       setStoryOpen(false);   // екран подорожі ховається без відпускання паузи: підсумок тримає її далі
       setTalk(false);        // так само рамка розмови: розмова привела до кінця дня
       setSummary(after.summary);
@@ -183,6 +183,16 @@ export function Shell({ port, langOverride, credits, build, holdToast = false, h
   const [mission, setMission] = useState(() => port.mission?.session() ?? null);
   useEffect(() => port.mission?.subscribe(() => setMission(port.mission?.session() ?? null)), [port]);
   const MissionSurface = mission ? missionSurface(mission.view().id) : null;
+  // GAME-317: міні-гра (дорога) відкрилась, поки екран подорожі ще відкритий, — панель лежала б над нею, а сцена стояла б на паузі
+  // (кнопка «Почати» під панеллю, прогрес 0). Міні-гра — це і є «зараз»: панель закривається, світ іде, кадри міні-гри течуть.
+  // Сцена, що почалась ПІД ЧАС міні-гри (приїзд після дороги), панель не відкриває (див. onOpenStory); щойно міні-гру закрито — відкриваємо її тут.
+  const hadMission = useRef(false);
+  useEffect(() => {
+    if (mission) { if (storyOpen) story(false); hadMission.current = true; return; }
+    if (!hadMission.current) return;
+    hadMission.current = false;
+    if (!paused && !storyOpen && !talkRef.current && port.story().dialogue) story(true);
+  }, [mission]);
 
   // Перша дія (GAME-83): відкрито ☰ чи паузу — підказка «Відкрий ☰» більше не потрібна, і не повернеться після
   // перезавантаження. Зберігаємо в налаштуваннях (не в сейві): схема сейву не змінюється.
@@ -248,7 +258,7 @@ export function Shell({ port, langOverride, credits, build, holdToast = false, h
   }, [talk, offer]);
 
   // Розмова з NPC на мапі відкриває екран подорожі (якщо не відкрите меню паузи).
-  useEffect(() => port.onOpenStory(() => { if (!paused && !storyOpen) story(true); }), [paused, storyOpen]);
+  useEffect(() => port.onOpenStory(() => { if (!paused && !storyOpen && !mission) story(true); }), [paused, storyOpen, mission]);
 
   // GAME-40: звук натискання кнопки UI — один делегований слухач (капча), а не виклик у кожному обробнику; вибір звуку — soundForButton.
   useEffect(() => {
@@ -393,10 +403,14 @@ export function Shell({ port, langOverride, credits, build, holdToast = false, h
   const titleUpShown = titleUp !== null && sinceUp >= 0 && sinceUp < TITLE_UP_MIN && bannerSlot;
   // GAME-243: мапа-перша гра має нотатник Вікторії й мінімапу — три нижні підказки (ціль, найближча нагорода, «Далі: …») зникають; лишається ОДИН короткий рядок біля дії.
   const agendaOn = offer.agenda !== null;
-  const goalShown = !agendaOn && offer.stage !== 'create' && (offer.goal !== null || offer.stage === 'ended') && !hideUi.includes('goal');
-  const trackerShown = offer.stage !== 'create' && offer.requests.length > 0 && !hideUi.includes('requests');
+  // GAME-317: зразковий день — стара гра розділу 1 (хвиля «Встигнути до зливи», трекер прохань, «найближча нагорода», «Ціль: Прибуття») мовчить, а шапка
+  // показує ОДНУ ціль дня (sampleGoal). До дороги (збори й виїзд) стара ціль — і є ціль дня, тож лишається.
+  const sampleGoalKey = port.sample ? port.sample.goal() : null;
+  const sampleDay = port.sample !== undefined;
+  const goalShown = sampleGoalKey !== null || (!agendaOn && offer.stage !== 'create' && (offer.goal !== null || offer.stage === 'ended') && !hideUi.includes('goal'));
+  const trackerShown = !sampleDay && offer.stage !== 'create' && offer.requests.length > 0 && !hideUi.includes('requests');
   // GAME-192: «Далі: …» — лише коли застряг; позначка біля об'єкта й рюкзак лишаються завжди.
-  const nearestShown = !agendaOn && offer.stage === 'play' && offer.nearest !== null && !hideUi.includes('nearest');
+  const nearestShown = !sampleDay && !agendaOn && offer.stage === 'play' && offer.nearest !== null && !hideUi.includes('nearest');
   const nextText = !agendaOn && !offer.hint.near && !!offer.hint.next && port.hintShown();
   const nextShown = offer.stage !== 'create' && (offer.hint.near || nextText || offer.hint.backpack > 0) && !hideUi.includes('next');
   const portrait = (id: string | null, sprite?: boolean) => port.portrait(id, sprite);
@@ -422,7 +436,7 @@ export function Shell({ port, langOverride, credits, build, holdToast = false, h
         <button type="button" class="ui-pause-btn" data-touch="pause" aria-label={t('ui.pause')} onClick={() => toggle(true)}>{'‖'}</button>
         {/* GAME-170 зріз 2: картка поточної мети — жива хвиля напруги: «назва · зроблено/усього» і хвилини ІГРОВОГО часу на кожну справу
             (з годинника ядра: пауза й панелі його зупиняють — і числа стоять). Окремий ряд сітки під ☰ · HUD · ‖, тож кнопок не торкається. */}
-        {offer.wave && !hideUi.includes('wave') && <div class="ui-wave" data-ui="wave" data-done={offer.wave.done} data-total={offer.wave.total} role="group" aria-label={t('ui.wave')}>
+        {offer.wave && !sampleDay && !hideUi.includes('wave') && <div class="ui-wave" data-ui="wave" data-done={offer.wave.done} data-total={offer.wave.total} role="group" aria-label={t('ui.wave')}>
           <span class="ui-wave-title" data-ui="wave-title">{`${ct(lang, offer.wave.titleKey)} · ${offer.wave.done}/${offer.wave.total}`}</span>
           <span class="ui-wave-tasks">
             {offer.wave.tasks.map((tk) => (
@@ -438,7 +452,7 @@ export function Shell({ port, langOverride, credits, build, holdToast = false, h
             дві підказки одна на одній не стоять (картка мети — у потоці шапки вище). Не ловить дотик. */}
         {(goalShown || nextShown || trackerShown || nearestShown) && (
           <div class="ui-strip" data-agenda={agendaOn ? 'yes' : undefined}>
-            {goalShown && <div class="ui-goal" data-ui="goal" data-ended={offer.stage === 'ended' ? 'yes' : undefined}><ObjectiveIcon spot={offer.stage === 'ended' ? null : offer.hint.nextSpot} />{`${t('ui.goal')}: ${offer.goal ? ct(lang, offer.goal.key) : t(offer.chapterEnd === 2 ? 'ui.goal.ended.ch2' : 'ui.goal.ended')}`}</div>}
+            {goalShown && <div class="ui-goal" data-ui="goal" data-ended={offer.stage === 'ended' ? 'yes' : undefined}><ObjectiveIcon spot={sampleGoalKey !== null || offer.stage === 'ended' ? null : offer.hint.nextSpot} />{`${t('ui.goal')}: ${sampleGoalKey !== null ? t(`sd.goal.${sampleGoalKey}` as Key) : offer.goal ? ct(lang, offer.goal.key) : t(offer.chapterEnd === 2 ? 'ui.goal.ended.ch2' : 'ui.goal.ended')}`}</div>}
             {/* GAME-180: трекер прийнятих прохань — «Сміття 2/3» (окремий рядок смуги: ціль · трекер · «Далі»); стрілка на мапі веде до наступної цілі, а коли все зроблено — до просильника. */}
             {nearestShown && offer.nearest && (
               <div class="ui-near-reward" data-ui="nearest" data-kind={offer.nearest.kind} data-left={offer.nearest.left} role="status">
@@ -500,7 +514,7 @@ export function Shell({ port, langOverride, credits, build, holdToast = false, h
           <span>{ct(lang, `title.${titleUp.index + 1}.family`)}</span>
         </div>
       )}
-      {storyOpen && <StoryPanel offer={offer} lang={lang} t={t} act={storyAct} close={() => story(false)} portrait={portrait} settings={() => { setStoryOpen(false); toggle(true); }} footer={offer.stage !== 'create' && <><button type="button" class="ui-btn" data-ui="backpack-open-story" onClick={() => openBackpack(true)}>{t('ui.backpack')}</button><button type="button" class="ui-btn" data-ui="atlas-open" onClick={openAtlas}>{`${t('ui.atlas')}: ${offer.atlas.count}/${offer.atlas.total}`}</button></>}>{staleNotice}</StoryPanel>}
+      {storyOpen && <StoryPanel sceneFocus={port.sample !== undefined} offer={offer} lang={lang} t={t} act={storyAct} close={() => story(false)} portrait={portrait} settings={() => { setStoryOpen(false); toggle(true); }} footer={offer.stage !== 'create' && <><button type="button" class="ui-btn" data-ui="backpack-open-story" onClick={() => openBackpack(true)}>{t('ui.backpack')}</button><button type="button" class="ui-btn" data-ui="atlas-open" onClick={openAtlas}>{`${t('ui.atlas')}: ${offer.atlas.count}/${offer.atlas.total}`}</button></>}>{staleNotice}</StoryPanel>}
       {backpackOpen && <BackpackPanel backpack={offer.backpack} lang={lang} t={t} sell={storyAct} close={closeBackpack} />}
       {atlasOpen && <AtlasPanel atlas={offer.atlas} lang={lang} t={t} close={closeAtlas} />}
       {mission && MissionSurface && <MinigameHost session={mission} t={t} Surface={MissionSurface} />}

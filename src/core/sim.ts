@@ -1,7 +1,7 @@
 // Крок симуляції: стан гри + годинник + RNG. Вхід — лише журнал (кадри, команди, перемотування),
 // тож той самий seed і той самий журнал дають той самий стан (GAME-13).
 
-import { advance, autoSleepDue, newClock, nextAt, pause, resume, tick, type GameClock } from './clock';
+import { advance, autoSleepDue, minuteOfDay, newClock, nextAt, pause, resume, tick, type GameClock } from './clock';
 import { dispatch, type Command } from './commands';
 import { EMPTY_DEFS, type CoreDefs } from './defs';
 import { canonical } from './hash';
@@ -155,6 +155,8 @@ export function newSim(seed: number, moneyCents = 0): SimState {
 /** Контекст кроку: незмінний каталог визначень і системи. У сейв не потрапляє. */
 export interface StepCtx {
   readonly defs?: CoreDefs;
+  /** GAME-317: хвилина доби (0..1439), на якій годинник кадрів СТОЇТЬ (зразковий день: опівночі гра сама лягала спати й перегортала день). Гра без цього поля йде як раніше. */
+  readonly holdMinute?: number;
   readonly systems?: readonly System[];
   /**
    * ЛИШЕ ДЛЯ ТЕСТІВ (GAME-46): підміна погоди дня й/або її впливу на дорогу — «найгірша погода щодня»
@@ -203,6 +205,7 @@ export function step(s: SimState, input: Input, ctx: StepCtx = {}): SimState {
   const systems = ctx.systems ?? [findsSystem];
   switch (input.kind) {
     case 'frame': {
+      if (ctx.holdMinute !== undefined && minuteOfDay(s.clock.minutes) >= ctx.holdMinute) return s;
       const t = tick(s.clock, input.realMs);
       const ticked = systems.reduce((acc, sys) => sys(acc, t.steps), { ...s, clock: t.clock });
       // GAME-242: о 00:30 герой засинає сам де стоїть (без штрафу) і прокидається о 07:30. Лише в живому русі кадрів:

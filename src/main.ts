@@ -77,7 +77,7 @@ import { driveSummary, type DriveMgState } from './content/minigames/drive';
 import { ARRIVAL_SCENE, SCRAPE_SCENE, arrivalFacts } from './content/arrival-scene';
 import { pitchTaken } from './content/arrival-pitch';
 import { DRIVE_FLAG, driveFlag, driveOutcome as driveInOutcome } from './content/drive-in';
-import { laneIdFor } from './content/sample-day';
+import { SAMPLE_HOLD_MINUTE, laneIdFor, sampleGoal } from './content/sample-day';
 import { STORM_SCENE, stormNightMove } from './content/storm-night';
 import type { SamplePort, SampleStage } from './ui/SampleDay';
 import type { RewardEvent } from './ui/port';
@@ -99,7 +99,7 @@ const DEFAULT_SEED = 20261022;
 const randomSeed = (): number => crypto.getRandomValues(new Uint32Array(1))[0] ?? DEFAULT_SEED;
 const pinnedSeed = seedSwitches.seed ?? (import.meta.env.MODE === 'e2e' && !seedSwitches.freshSeed ? DEFAULT_SEED : undefined);
 const newSeed = (): number => pinnedSeed ?? randomSeed();
-const bridge = createBridge(newSeed(), GAME_DEFS, () => { if (!switches.noAutosave) saves.autosave(); }, newSeed);
+const bridge = createBridge(newSeed(), GAME_DEFS, () => { if (!switches.noAutosave) saves.autosave(); }, newSeed, seedSwitches.sampleDay === true ? SAMPLE_HOLD_MINUTE : undefined);
 // GAME-99: ?atMinute=N (лише збірка e2e) — старт о N-й хвилині доби, щоб e2e бачив і день, і ніч без очікування.
 if (seedSwitches.atMinute) bridge.load(step(bridge.state, { kind: 'advance', minutes: seedSwitches.atMinute }));
 const input = newInput();
@@ -435,6 +435,7 @@ function sampleScenes(): void {
 const samplePort: SamplePort = {
   stage: sampleStage,
   lane: () => laneIdFor(bridge.state.game.flags),
+  goal: () => sampleGoal(bridge.state.game.flags, playedScene(STORM_SCENE)),
   flags: () => bridge.state.game.flags,
   moneyCents: () => bridge.state.game.moneyCents,
   seed: () => bridge.state.worldSeed,

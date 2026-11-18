@@ -105,3 +105,22 @@ describe('GAME-242 · крамниця 08:00–20:00', () => {
     expect(cmd(simAt('loc.shop', 60), { type: 'WaitForShop' }).clock.minutes).toBe(60);
   });
 });
+
+// GAME-317 · зразковий день: світ стоїть на SAMPLE_HOLD_MINUTE, і опівночі гра розділу 1 не засинає й не перегортає день.
+// Мутація: прибрати в `step` (case 'frame') рядок з `ctx.holdMinute` → «стоїть о 23:30» червоніє (клок іде далі, герой засинає).
+describe('GAME-317 · годинник зразкового дня стоїть', () => {
+  const hold = 23 * 60 + 30;
+  const at2330 = (): SimState => simAt('loc.camp.lake', hold - 8 * 60 - 1);   // хв 0 = 08:00 → 23:29
+  it('без утримання кадр через 00:30 засинає (контроль: сторож уміє червоніти)', () => {
+    const r = step(simAt('loc.road', 989), { kind: 'frame', realMs: 1000 });
+    expect(r.journal.at(-1)).toMatchObject({ type: 'Sleep', ref: 'auto' });
+  });
+  it('з утриманням о 23:30 годинник стоїть, сну немає, дня не закрито', () => {
+    let s = at2330();
+    for (let i = 0; i < 400; i++) s = step(s, { kind: 'frame', realMs: 1000 }, { defs: DEFS, holdMinute: hold });
+    expect(minuteOfDay(s.clock.minutes), 'стоїть о 23:30').toBeGreaterThanOrEqual(hold);
+    expect(minuteOfDay(s.clock.minutes)).toBeLessThan(hold + 5);
+    expect(s.journal.some((e) => e.type === 'Sleep')).toBe(false);
+    expect(daysEnded(s, DEFS)).toBe(0);
+  });
+});

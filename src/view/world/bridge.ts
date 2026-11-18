@@ -34,7 +34,7 @@ export const START_MONEY_CENTS = 5_000;
  * `worldSeed` стану, а значить у сейв (схема не змінена), і та сама гра відтворюється з журналу. Випадковість —
  * тут, на межі (main.ts дає crypto), а не в ядрі. Без `freshSeed` нова гра, як і раніше, бере початковий сід (тести).
  */
-export function createBridge(seed: number, catalog: CoreDefs, afterSend?: () => void, freshSeed?: () => number): Bridge {
+export function createBridge(seed: number, catalog: CoreDefs, afterSend?: () => void, freshSeed?: () => number, holdMinute?: number): Bridge {
   const problems = checkDefs(catalog);
   if (problems.length) throw new Error(`catalog is invalid: ${JSON.stringify(problems)}`);
   const defs = freezeDefs(catalog);
@@ -50,7 +50,7 @@ export function createBridge(seed: number, catalog: CoreDefs, afterSend?: () => 
       afterSend?.();   // GAME-86: стан змінила команда — автозбереження (не кожен кадр)
     },
     frame(realMs) {
-      state = step(state, { kind: 'frame', realMs: clampFrame(realMs) }, { defs });
+      state = step(state, { kind: 'frame', realMs: clampFrame(realMs) }, holdMinute === undefined ? { defs } : { defs, holdMinute });
     },
     setPaused(paused) {
       state = step(state, { kind: paused ? 'pause' : 'resume' }, { defs });
