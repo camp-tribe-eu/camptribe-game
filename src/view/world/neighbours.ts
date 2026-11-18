@@ -79,7 +79,8 @@ export function routeAt(grid: Grid, tl: Timeline, home: Tile, plan: HomePlan | n
 }
 
 /** GAME-320: сусід, у якого ВІДКРИТА місія (взята, не здана), не йде спати й лишається на розкладі — здати можна до самої ночі (раніше о 19:58 він сидів у наметі, а після 20:00 спав). */
-export const staysOut = (flags: readonly string[], id: string): boolean => activeMissions(flags).some((m) => m.giver === id);
+/** Лише у зразковому дні (`sample`): у звичайній грі незавершена місія сусіда не заважає йому спати. */
+export const staysOut = (flags: readonly string[], id: string, sample: boolean): boolean => sample && activeMissions(flags).some((m) => m.giver === id);
 
 // ---------- Що робить, коли стоїть ----------
 

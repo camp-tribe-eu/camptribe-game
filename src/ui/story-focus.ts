@@ -28,5 +28,8 @@ export function offerFocusKey(o: FocusOffer): string {
  */
 export const SAMPLE_CAMP_LOCATION = 'loc.camp.lake';
 const SAMPLE_CAMP_HIDDEN: readonly OfferAction['kind'][] = ['visit', 'sleep', 'wait', 'rest'];
+/** Стрибки часу, які ядро в зразковому дні відхиляє за північ, — не показуємо в жодній локації (дорога лишається: вона доводить до 23:30 і не блокує). */
+const SAMPLE_SKIPS: readonly OfferAction['kind'][] = ['sleep', 'wait', 'rest'];
+export const sampleActions = (actions: readonly OfferAction[], sample: boolean): readonly OfferAction[] => (sample ? actions.filter((a) => !SAMPLE_SKIPS.includes(a.kind)) : actions);
 export const inSampleCamp = (sample: boolean, locationKey: string | null): boolean => sample && locationKey === SAMPLE_CAMP_LOCATION;
 export const sampleMenuActions = (actions: readonly OfferAction[], sampleCamp: boolean): readonly OfferAction[] => (sampleCamp ? actions.filter((a) => !SAMPLE_CAMP_HIDDEN.includes(a.kind)) : actions);

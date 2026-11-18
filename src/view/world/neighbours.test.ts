@@ -131,7 +131,7 @@ describe('GAME-320: відкриту місію можна здати до но�
     const i = idx(id);
     const m = clock(h);
     const plan = planHome(walk, TL[i] as Timeline, HOMES[id] as { c: number; r: number }, m - sinceEvening(m), false);
-    const r = neighbourAt(walk, TL[i] as Timeline, i, plan, m, { dist: 500, raining: false, waved: true }, staysOut(flags, id));
+    const r = neighbourAt(walk, TL[i] as Timeline, i, plan, m, { dist: 500, raining: false, waved: true }, staysOut(flags, id, true));
     return { state: r.state, phase: r.route.phase };
   };
   const TAKEN = ['f.mis-ring-taken'];
@@ -140,6 +140,10 @@ describe('GAME-320: відкриту місію можна здати до но�
     expect(w.phase).toBe('out');
     expect(w.state).not.toBe('sleep');
     expect(w.state).not.toBe('sit');
+  });
+  it('не зразковий день: відкрита місія сусіда не тримає', () => {
+    expect(staysOut(TAKEN, 'npc.amina', false)).toBe(false);
+    expect(staysOut(TAKEN, 'npc.amina', true)).toBe(true);
   });
   it('без відкритої місії (нема / здана) — як раніше: вдома, після 20:00 спить; чужа місія не тримає Аміну', () => {
     expect(whereAt('npc.amina', 19.5, []).phase).toBe('home');

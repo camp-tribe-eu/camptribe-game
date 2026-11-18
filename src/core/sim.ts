@@ -205,12 +205,17 @@ export function fallAsleep(s: SimState, ref: SleepPlace | 'auto', commandId?: st
 const calendarDay = (minutes: number): number => Math.floor((minutes + GAME_START_MINUTE) / 1440);
 
 /**
- * GAME-320: у зразковому дні (`holdMinute`) жоден стрибок часу — Visit, Sleep, WaitForShop, RestUntilEvening, advance — не веде на наступну добу:
- * такий вхід відхилено, стан лишається як був. Годинник о 23:30 стоїть сам (кадри), але стрибок оминав цю стопку й відкривав «День 2» до ночі.
+ * GAME-320: у зразковому дні (`holdMinute`) жоден вхід не веде на наступну добу. Дорога (Visit) НЕ відхиляється — інакше з траси о 23:20 в табір не доїхати (softlock):
+ * годинник обмежується стопкою holdMinute тієї ж доби (приїзд о 23:30 найпізніше). Чисті стрибки часу (Sleep, WaitForShop, RestUntilEvening, advance) за північ — відхилено, стан лишається.
  */
 export function step(s: SimState, input: Input, ctx: StepCtx = {}): SimState {
   const r = stepRaw(s, input, ctx);
-  return ctx.holdMinute !== undefined && input.kind !== 'frame' && calendarDay(r.clock.minutes) > calendarDay(s.clock.minutes) ? s : r;
+  if (ctx.holdMinute === undefined || input.kind === 'frame' || calendarDay(r.clock.minutes) <= calendarDay(s.clock.minutes)) return r;
+  if (input.kind === 'command' && input.command.type === 'Visit') {
+    const at = Math.max(s.clock.minutes, s.clock.minutes - minuteOfDay(s.clock.minutes) + ctx.holdMinute);
+    return { ...r, clock: advance(s.clock, at - s.clock.minutes) };
+  }
+  return s;
 }
 
 function stepRaw(s: SimState, input: Input, ctx: StepCtx): SimState {

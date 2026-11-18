@@ -7,7 +7,7 @@ import type { AnyLang, Key } from '../i18n';
 import { trapTab } from './focus-trap';
 import { EntriesBook, JournalBook, SkillsBook, TravelerCard } from './JournalBook';
 import { Portrait, type PortraitLookup } from './Portrait';
-import { inSampleCamp, offerFocusKey, sampleMenuActions } from './story-focus';
+import { inSampleCamp, offerFocusKey, sampleActions, sampleMenuActions } from './story-focus';
 import type { OfferAction, StoryOffer } from './story-types';
 
 const ACT: Readonly<Record<Exclude<OfferAction['kind'], 'choose' | 'continue' | 'cancel'>, Key>> = {
@@ -63,7 +63,7 @@ export function StoryPanel({ offer, lang, t, act, close, portrait, children, foo
   const sceneOnly = sceneFocus === true && !!offer.dialogue && !compact;
   // GAME-320: у таборі зразкового дня ☰ без стрибків часу й без цілей/квестів старої гри (story-focus.ts).
   const sampleCamp = inSampleCamp(sceneFocus === true, offer.locationKey);
-  const menuActions = sampleMenuActions(offer.actions, sampleCamp);
+  const menuActions = sampleMenuActions(sampleActions(offer.actions, sceneFocus === true), sampleCamp);
   const showRest = (!compact || page === 'journal') && !sceneOnly;   // квести, прогрес, навички, речі, журнал
 
   // GAME-80: після дії кнопки перебудовуються, і друге натискання (дотик чи Enter) через ~150 мс влучало б

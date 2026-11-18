@@ -16,6 +16,8 @@ export interface Bridge {
   /** Скільки команд гравця надіслано. GAME-229: «Practise» — побічний наслідок дії руками, не окрема команда гравця, тому не рахується. */
   readonly sent: number;
   readonly state: SimState;
+  /** Зразковий день: хвилина доби, на якій стоїть годинник (інакше undefined). */
+  readonly holdMinute?: number | undefined;
   send(intent: Intent): void;
   /** Реальний час кадру → ігровий годинник ядра (фіксований крок, GAME-13). */
   frame(realMs: number): void;
@@ -43,6 +45,7 @@ export function createBridge(seed: number, catalog: CoreDefs, afterSend?: () => 
   return {
     get sent() { return sent; },
     get state() { return state; },
+    holdMinute,
     send(intent) {
       if (intent.type !== 'Practise' && intent.type !== 'Forage') sent++;   // GAME-230: збір дарів — побічний наслідок дії на мапі, як практика
       const command = { ...intent, commandId: nextCommandId(state.game) } as Command;

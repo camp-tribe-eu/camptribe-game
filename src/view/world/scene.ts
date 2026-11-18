@@ -1291,7 +1291,7 @@ export class WorldScene extends Phaser.Scene {
     const minutes = clock.minutes + clock.accMs / STEP_MS;
     if (this.talkingTo !== null && this.bridge.state.game.dialogue === null) this.talkingTo = null;
     this.neigh.setTalking(this.talkingTo);
-    this.neigh.setStay(new Set(RESIDENTS.map((r) => r.id).filter((id) => staysOut(this.bridge.state.game.flags, id))));
+    this.neigh.setStay(new Set(RESIDENTS.map((r) => r.id).filter((id) => staysOut(this.bridge.state.game.flags, id, this.bridge.holdMinute !== undefined))));
     this.residentLines.forEach((tl, i) => {
       const s = this.residentSprites[i];
       if (!s || !tl) return;
