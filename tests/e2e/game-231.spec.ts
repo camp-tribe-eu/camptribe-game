@@ -115,9 +115,6 @@ test('♥ над Сарою біля вогнища — збоку від пол
 
 // ---- Розмова вночі: сусід стоїть усю розмову (потрібна історія дня 1, як у game-179) ----
 const TILE = 32;
-interface Pt { x: number; y: number }
-interface Probe { playerX: number; playerY: number; nearObject: string | null; npcMarks: Record<string, string> }
-const probe = (page: Page): Promise<Probe> => g<Probe>(page, 'g.probe');
 const panel = (page: Page) => page.locator('[data-ui="story"]');
 async function act(page: Page, kind: string, key = ''): Promise<void> {
   await panel(page).locator(`[data-act="${kind}"][data-key="${key}"]`).click({ timeout: 8_000 });
