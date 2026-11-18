@@ -422,7 +422,7 @@ export function Shell({ port, langOverride, credits, build, holdToast = false, h
           в самому діалозі, а схована смуга під ним збивала вимірювання контрасту (axe). */}
       {!paused && !storyOpen && !talk && !summary && !intro && !atlasOpen && !backpackOpen && <header class="ui-header">
         <div class="ui-header-left">
-        <button type="button" class="ui-story-btn" data-hint={showHint || offer.stage === 'ended' ? 'yes' : undefined} data-touch="story" aria-label={t('ui.story')} onClick={() => story(true)}>{'☰'}</button>
+        {sampleGoalKey !== 'done' && <button type="button" class="ui-story-btn" data-hint={showHint || offer.stage === 'ended' ? 'yes' : undefined} data-touch="story" aria-label={t('ui.story')} onClick={() => story(true)}>{'☰'}</button>}
         <button type="button" class="ui-bag-btn" data-touch="backpack" data-ui="backpack-open" aria-label={t('backpack.open')} onClick={() => openBackpack(false)}><ObjectiveIcon spot="obj.trunk" /></button>
         </div>
         <div class="ui-hud" data-ui="hud" role="group" aria-label={t('ui.hud')}>

@@ -5,6 +5,7 @@ import { CampRoutines } from '../../src/ui/CampRoutines';
 import { t } from '../../src/i18n';
 import type { Key } from '../../src/i18n';
 import type { Weather } from '../../src/core/weather';
+import { DriveInCard, SampleDay, type SamplePort } from '../../src/ui/SampleDay';
 
 interface Spec { lang: 'uk' | 'en'; weather: Weather; seed: number; bare?: boolean }
 (window as unknown as { __mount: (s: Spec) => void }).__mount = (s) => {
@@ -30,4 +31,37 @@ interface Spec { lang: 'uk' | 'en'; weather: Weather; seed: number; bare?: boole
   };
   // Табір, де вже стоїть верша, але її давно не переносили: дошка має показати «ось-ось закінчиться» і «Доглянути».
   render(<CampRoutines t={(k: Key) => t(s.lang, k)} weather={s.weather} seed={s.seed} onFrame={onFrame} devices={s.bare ? {} : { 'fish-trap': { care: 0.3 } }} />, host);
+};
+
+/** GAME-323: заїзд на ділянку (картка зразкового дня) на тому самому стенді — щоб перевірити, що в альбомі вона стоїть на екрані без прокрутки. */
+(window as unknown as { __mountDrive: (lane: string) => void }).__mountDrive = (lane) => {
+  let host = document.getElementById('harness');
+  if (!host) {
+    host = document.createElement('div');
+    host.id = 'harness';
+    host.style.cssText = 'position:fixed;inset:0;z-index:99;background:#1b1f23;--edge-left:0px;--edge-right:0px;--edge-bottom:0px;--edge-top:0px';
+    document.body.append(host);
+  }
+  render(null, host);
+  render(<DriveInCard laneId={lane} t={(k: Key) => t('uk', k)} done={() => undefined} />, host);
+};
+
+/** GAME-323: кінець зразкового дня — справжній SampleDay із портом-пустушкою: goal 'done' → підсумок з єдиною дією «Почати знову» (її виклики лічить window.__restarts). */
+(window as unknown as { __mountSample: (goal: 'day' | 'done') => void }).__mountSample = (goal) => {
+  let host = document.getElementById('harness');
+  if (!host) {
+    host = document.createElement('div');
+    host.id = 'harness';
+    host.style.cssText = 'position:fixed;inset:0;z-index:99;background:#1b1f23;--edge-left:0px;--edge-right:0px;--edge-bottom:0px;--edge-top:0px';
+    document.body.append(host);
+  }
+  render(null, host);
+  const w = window as unknown as { __restarts?: number };
+  w.__restarts = 0;
+  const port: SamplePort = {
+    stage: () => 'day', lane: () => null, goal: () => goal, flags: () => [], moneyCents: () => 0, seed: () => 7, weather: () => 'rain',
+    onFrame: () => () => undefined, driveInDone: () => undefined, board: () => undefined, saveBoard: () => undefined, stormNight: () => undefined,
+    restart: () => { w.__restarts = (w.__restarts ?? 0) + 1; return Promise.resolve(); }, subscribe: () => () => undefined,
+  };
+  render(<SampleDay port={port} t={(k: Key) => t('uk', k)} lang="uk" />, host);
 };

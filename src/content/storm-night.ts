@@ -24,21 +24,24 @@ export const STORM_FACTS = {
   lateStart: 'f.storm-late-start',
   dryWood: 'f.storm-dry-wood',
   boyLight: 'f.storm-boy-light',
+  cold: 'f.storm-cold',
 } as const;
 
-/** Факти ночі, які випливають із прапорців місій. Порядок — як у STORM_FACTS, щоб порівняння в тестах було стабільним. */
-export function stormFacts(flags: readonly string[], ms: readonly MissionDef[] = MISSIONS): string[] {
+/** Факти ночі, які випливають із прапорців місій. Порядок — як у STORM_FACTS, щоб порівняння в тестах було стабільним.
+ * GAME-323: `fireLit` — чи палили вогонь удень (рутина «вогонь»). Ні — додається `cold`, і сцена не каже «вогонь із першого сірника» та «готуємо гаряче». */
+export function stormFacts(flags: readonly string[], ms: readonly MissionDef[] = MISSIONS, fireLit = true): string[] {
   const links = ms.flatMap((m) => m.night);
   const earned = new Set(links.filter((l) => flags.includes(l.flag)).map((l) => l.fact));
+  if (!fireLit) earned.add(STORM_FACTS.cold);
   return Object.values(STORM_FACTS).filter((f) => earned.has(f));
 }
 
 /** Хід (без commandId), що відкриває ніч із бурею з наслідками дня — його шле зразковий день (GAME-314): сцена читає ТІ САМІ прапорці, що й camp-night. */
-export function stormNightMove(flags: readonly string[], ms: readonly MissionDef[] = MISSIONS): Omit<Extract<Command, { type: 'StartScene' }>, 'commandId'> {
-  return { type: 'StartScene', sceneId: STORM_SCENE, facts: stormFacts(flags, ms) };
+export function stormNightMove(flags: readonly string[], ms: readonly MissionDef[] = MISSIONS, fireLit = true): Omit<Extract<Command, { type: 'StartScene' }>, 'commandId'> {
+  return { type: 'StartScene', sceneId: STORM_SCENE, facts: stormFacts(flags, ms, fireLit) };
 }
 
 /** Команда ядра, що відкриває ніч із бурею з наслідками дня. */
-export function startStormNight(commandId: string, flags: readonly string[], ms: readonly MissionDef[] = MISSIONS): Command {
-  return { commandId, ...stormNightMove(flags, ms) };
+export function startStormNight(commandId: string, flags: readonly string[], ms: readonly MissionDef[] = MISSIONS, fireLit = true): Command {
+  return { commandId, ...stormNightMove(flags, ms, fireLit) };
 }

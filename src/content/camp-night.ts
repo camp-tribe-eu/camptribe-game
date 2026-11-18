@@ -128,7 +128,8 @@ export function nightOf(f: NightFacts): { readonly beats: readonly NightBeat[]; 
     for (const m of MISSIONS) {
       const earned = m.night.filter((l) => f.missions?.includes(l.flag));
       if (earned.length === 0) beats.push({ routine: 'camp', id: `night.mission.${m.id}.none`, severity: 'plain' });
-      for (const l of earned) beats.push({ routine: 'camp', id: `night.mission.${l.fact}`, severity: 'good' });
+      // GAME-323: «вогонь із першого сірника» не стоїть поруч із «вогню не було».
+      for (const l of earned) if (l.fact !== 'f.storm-dry-wood' || fire !== undefined) beats.push({ routine: 'camp', id: `night.mission.${l.fact}`, severity: 'good' });
     }
   }
 
