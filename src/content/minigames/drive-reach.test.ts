@@ -8,7 +8,7 @@ import { DRIVE, type DriveMgState } from './drive';
 
 const SEEDS = [7, 1, 2, 3, 11, 19, 23, 42];
 const laneX = (l: number): number => (l * 2 + 1) / 6;
-type Plan = { readonly pace: (s: DriveMgState) => 'steady' | 'brisk'; readonly stop: (s: DriveMgState) => boolean };
+type Plan = { readonly pace: (s: DriveMgState) => 'steady' | 'brisk'; readonly stop: (s: DriveMgState) => boolean; readonly look?: number };
 
 function playMg(seed: number, plan: Plan): { outcome: Outcome; frames: number; run: MinigameRun } {
   let run = startRun(openRun(DRIVE, undefined, seed));
@@ -17,13 +17,15 @@ function playMg(seed: number, plan: Plan): { outcome: Outcome; frames: number; r
     const taps: { x: number; y: number }[] = [];
     if (plan.pace(s) !== s.drive.pace) taps.push({ x: 0.5, y: 0.1 });
     if (s.drive.offer !== null && plan.stop(s)) taps.push({ x: 0.5, y: 0.9 });
-    const to = dodgeTo(s.drive, s.course);
+    const to = dodgeTo(s.drive, s.course, plan.look);
     const input: FrameInput = taps.length > 0 || to !== null ? { taps, drag: to !== null && s.drive.changing === 0 ? { x: laneX(to), y: 0.5 } : null } : NO_INPUT;
     run = stepRun(DRIVE, run, input);
   }
   return { outcome: run.outcome as Outcome, frames: run.frame, run };
 }
 const STEADY: Plan = { pace: () => 'steady', stop: () => false };
+/** Людина, а не робот: помічає перешкоду лише за ~230 м (а не за 500) і не їде зі швидкістю, яку підказує допомога. */
+const HUMAN_STEADY: Plan = { pace: () => 'steady', stop: () => false, look: 230 };
 const CALM_FAST: Plan = {
   pace: (s) => (s.drive.cameraAhead || nearCyclist(s.drive, s.course) || s.drive.fuelL < 0.5 ? 'steady' : 'brisk'),
   stop: (s) => s.drive.offer?.kind === 'fuel' && s.drive.fuelL < 0.6,
@@ -35,6 +37,15 @@ describe('GAME-317 · дорога в справжньому циклі міні
     for (const seed of SEEDS) {
       expect(playMg(seed, STEADY).outcome, `зерно ${seed}: рівна спокійна їзда`).toBe('fine');
       expect(playMg(seed, CALM_FAST).outcome, `зерно ${seed}: жваво, але обережно`).toBe('good');
+    }
+  });
+  it('людина з пізнім об\'їздом (за ~230 м), без зупинок, рівно — теж не «пізно» (мутація: DRIVE_LIMIT_FRAMES = 90 * FPS → червоніє)', () => {
+    for (const seed of SEEDS) expect(playMg(seed, HUMAN_STEADY).outcome, `зерно ${seed}`).not.toBe('scrappy');
+  });
+  it('запас: ідеальна рівна їзда приїздить ≥ 25 с дороги до закриття рецепції — людині є куди помилитись (мутація: RECEPTION_SEC = 310 → зерно 7 має 5 с і червоніє)', () => {
+    for (const seed of SEEDS) {
+      const st = playMg(seed, STEADY).run.state as DriveMgState;
+      expect(st.course.receptionSec - st.drive.sec, `зерно ${seed}: запас, с`).toBeGreaterThanOrEqual(25);
     }
   });
   it('їзда з кожною зупинкою — пізно (scrappy), і все ще доїжджає (не глухий кут)', () => {

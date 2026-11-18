@@ -129,8 +129,6 @@ async function startMg(page: Page): Promise<void> {
   await expect(mg(page)).toHaveAttribute('data-phase', 'open', { timeout: 10_000 });
   await page.locator('[data-ui="mg-start"]').click();   // справжній дотик (Playwright чекає, що кнопку не перекрито)
   await expect(mg(page)).toHaveAttribute('data-phase', 'play');
-  // Дорога справді їде: прогрес росте без жодного втручання (сцена не на паузі).
-  await expect.poll(async () => Number(await page.locator('[data-ui="mg-drive"]').getAttribute('data-progress')), { timeout: 5_000, message: 'дорога їде' }).toBeGreaterThan(0.005);
 }
 async function finishMg(page: Page, name: string): Promise<string> {
   await expect(mg(page)).toHaveAttribute('data-phase', 'result', { timeout: 120_000 });
@@ -287,6 +285,8 @@ async function driveRoad(page: Page, mode: 'steady' | 'brisk' | 'calm'): Promise
   await shot(page, `road-intro`);
   await page.locator('[data-ui="mg-start"]').click();
   await expect(mg(page)).toHaveAttribute('data-phase', 'play');
+  // Дорога справді їде: прогрес росте без жодного втручання (сцена не на паузі).
+  await expect.poll(async () => Number(await page.locator('[data-ui="mg-drive"]').getAttribute('data-progress')), { timeout: 5_000, message: 'дорога їде' }).toBeGreaterThan(0.005);
   await page.evaluate((how) => new Promise<void>((resolve) => {
     let n = 0;
     const t0 = performance.now();
@@ -500,7 +500,10 @@ for (const o of ORIENTATIONS) {
       expect(ids, 'місія, якої не зроблено (Люк), теж лишає слід').toContain('night.mission.mis.aerial.none');
       expect(ids, 'вечеря на вогні в ночі').toContain(ids.find((i) => i.startsWith('night.fire.')) as string);
       expect(ids, 'верша місії Аміни → риба в ночі сама').not.toContain('night.fish.none');
-      expect(ids.filter((i) => i.startsWith(`night.${pitch}.`)).length, `слід обраної ділянки (${pitch}) у ночі`).toBeGreaterThan(0);
+      // Буки в бурю мають одну біду — гілка (bite), і її знімає «тент і вузли» місії Клер (prep knots): ця проба місію Клер робить, тож на букових слід порожній за задумом моделі (nightAt).
+      const traces = ids.filter((i) => i.startsWith(`night.${pitch}.`)).length;
+      if (pitch === 'beeches') expect(traces, 'буки: тент Клер зняв єдину біду бурі — сліду ділянки немає').toBe(0);
+      else expect(traces, `слід обраної ділянки (${pitch}) у ночі`).toBeGreaterThan(0);
 
       // 6. ГРОЗА (сцена ночі з наслідками ТИХ САМИХ прапорців) і ПІДСУМОК
       await tapIt(page, '[data-ui="camp-summary"]');
@@ -525,7 +528,7 @@ for (const o of ORIENTATIONS) {
 }
 
 // GAME-317 · блокер 1: дорога їде від справжнього дотику, і приїзд «рано» та «вчасно» ДОСЯЖНІ (раніше 7 з 7 заїздів — «пізно»: гравець без підказки не об'їжджав перешкод,
-// а рецепція зачинялась за 5–20 с до ідеального рівного проїзду). Мутація: RECEPTION_SEC = 310 → «рівна їзда з об'їздами» червоніє (приїзд пізно); прибрати закриття панелі в Shell → тест червоніє на «панель не лежить над дорогою».
+// а рецепція зачинялась за 5–20 с до ідеального рівного проїзду). Мутація (перевірена): прибрати закриття панелі в Shell → тест червоніє на «панель не лежить над дорогою».
 test.describe('GAME-317 дорога: їде і приїжджає не пізно', () => {
   test.use({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: false });
   test.setTimeout(600_000);
