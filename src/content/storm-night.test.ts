@@ -4,6 +4,7 @@ import { dispatch, nextCommandId, type Command } from '../core/commands';
 import type { CoreDefs } from '../core/defs';
 import { initialState, type GameState } from '../core/state';
 import flagsJson from '../../content/flags.json';
+import ukLoc from '../../content/locales/uk.json';
 import { GAME_DEFS } from './slice-defs';
 import { CONTENT } from './story';
 import { MISSIONS, type MissionDef } from './missions';
@@ -21,20 +22,23 @@ function fresh(defs: CoreDefs = GAME_DEFS): GameState {
 }
 
 /** Провести ніч ядром: «Далі», доки є next; на вузлі з вибором — перший варіант. Повертає пройдені вузли. */
-function playNight(flags: readonly string[]): string[] {
+function playNight(flags: readonly string[], fireLit = true): string[] {
   let s = fresh();
   const send = (cmd: Command): void => {
     const r = dispatch(s, cmd, GAME_DEFS);
     if (!r.ok) throw new Error(`${cmd.type}: ${r.code}`);
     s = r.state;
   };
-  send(startStormNight(nextCommandId(s), flags));
+  send(startStormNight(nextCommandId(s), flags, undefined, fireLit));
   const path: string[] = [];
   for (let guard = 0; s.dialogue; guard++) {
     if (guard > 60) throw new Error('ніч не закінчується');
     path.push(s.dialogue.node);
     const node = GAME_DEFS.story?.dialogues[STORM_SCENE]?.nodes[s.dialogue.node];
-    send(node?.choices ? { type: 'Choose', commandId: nextCommandId(s), choice: 0 } : { type: 'Continue', commandId: nextCommandId(s) });
+    if (node?.choices) {   // перший вибір, що ВІДКРИТИЙ (умовний, який не виконується, гравець не бачить)
+      const open = node.choices.findIndex((_, i) => dispatch(s, { type: 'Choose', commandId: nextCommandId(s), choice: i }, GAME_DEFS).ok);
+      send({ type: 'Choose', commandId: nextCommandId(s), choice: open });
+    } else send({ type: 'Continue', commandId: nextCommandId(s) });
   }
   return path;
 }
@@ -92,5 +96,38 @@ describe('GAME-312 · ніч із бурею бачить, що зроблено
     const nodes = RAW.nodes.map((n) => ({ ...n, branches: (n.branches ?? []).filter((b) => b.when.flag !== STORM_FACTS.warned) }));
     const read = new Set(nodes.flatMap((n) => n.branches.map((b) => b.when.flag)));
     expect(read.has(STORM_FACTS.warned)).toBe(false);
+  });
+});
+
+// GAME-323 · без вогню вдень ніч не каже «вогонь із першого сірника» й не кличе готувати гаряче.
+// Мутації (перевірено): у stormFacts прибрати `if (!fireLit) …` → «додає факт cold» червоніє; з вузла fire прибрати гілку cold → «шлях без вогню» червоніє;
+// зняти `when` з q2.c1 → «гаряче не пропонується» червоніє.
+describe('GAME-323 · ніч без вогню', () => {
+  const L = ukLoc as Record<string, string>;
+  const say = (path: string[]): string => path.map((n) => L[`dlg.storm-night.${n}`] ?? '').join(' | ');
+  it('факт «вогню не палили» додається лише коли вогню не було', () => {
+    expect(stormFacts([], undefined, true)).toEqual([]);
+    expect(stormFacts([], undefined, false)).toEqual([STORM_FACTS.cold]);
+    expect(stormFacts(['f.mis-lantern-done'], undefined, false)).toEqual([STORM_FACTS.dryWood, STORM_FACTS.cold]);
+  });
+  it('шлях без вогню: ні «вогонь із першого сірника», ні «вогонь береться», ні «гаряче»', () => {
+    for (const flags of [[], ['f.mis-lantern-done'], ['f.mis-ring-done'], ['f.mis-lantern-done', 'f.mis-ring-done']]) {
+      const path = playNight(flags, false);
+      expect(path, flags.join()).toContain('fire-cold');
+      for (const bad of ['fire-dry', 'fire-wet', 'supper-plain']) expect(path, `${flags.join()}: ${bad}`).not.toContain(bad);
+      expect(say(path)).not.toMatch(/першого сірника|гарячий|гаряче|шкварчить/);
+    }
+    expect(playNight(['f.mis-ring-done'], false)).toContain('supper-cold-fish');
+    expect(playNight([], false)).toContain('supper-cold');
+  });
+  it('гаряче не пропонується: перший вибір q2 — «щось швидке й холодне»', () => {
+    const q2 = (RAW.nodes as unknown as { id: string; choices?: { textKey: string; when?: { notFlag?: string } }[] }[]).find((n) => n.id === 'q2');
+    expect(q2?.choices?.[0]?.when?.notFlag).toBe(STORM_FACTS.cold);
+    expect(q2?.choices?.[1]?.when).toBeUndefined();   // безумовна пара лишається
+  });
+  it('з вогнем усе як було', () => {
+    const path = playNight(['f.mis-lantern-done']);
+    expect(path).toContain('fire-dry');
+    expect(path).not.toContain('fire-cold');
   });
 });

@@ -8,7 +8,8 @@
       "f.storm-fish-supper",
       "f.storm-late-start",
       "f.storm-dry-wood",
-      "f.storm-boy-light"
+      "f.storm-boy-light",
+      "f.storm-cold"
     ]
   },
   "start": "open",
@@ -80,6 +81,12 @@
       "branches": [
         {
           "when": {
+            "flag": "f.storm-cold"
+          },
+          "next": "fire-cold"
+        },
+        {
+          "when": {
             "flag": "f.storm-dry-wood"
           },
           "next": "fire-dry"
@@ -99,13 +106,22 @@
       "next": "q2"
     },
     {
+      "id": "fire-cold",
+      "speaker": "player",
+      "textKey": "dlg.storm-night.fire-cold",
+      "next": "q2"
+    },
+    {
       "id": "q2",
       "speaker": "player",
       "textKey": "dlg.storm-night.q2",
       "choices": [
         {
           "textKey": "dlg.storm-night.q2.c1",
-          "next": "supper"
+          "next": "supper",
+          "when": {
+            "notFlag": "f.storm-cold"
+          }
         },
         {
           "textKey": "dlg.storm-night.q2.c2",
@@ -119,6 +135,25 @@
       "textKey": "dlg.storm-night.supper",
       "next": "supper-plain",
       "branches": [
+        {
+          "when": {
+            "all": [
+              {
+                "flag": "f.storm-cold"
+              },
+              {
+                "flag": "f.storm-fish-supper"
+              }
+            ]
+          },
+          "next": "supper-cold-fish"
+        },
+        {
+          "when": {
+            "flag": "f.storm-cold"
+          },
+          "next": "supper-cold"
+        },
         {
           "when": {
             "flag": "f.storm-fish-supper"
@@ -137,6 +172,18 @@
       "id": "supper-plain",
       "speaker": "player",
       "textKey": "dlg.storm-night.supper-plain",
+      "next": "q3"
+    },
+    {
+      "id": "supper-cold",
+      "speaker": "player",
+      "textKey": "dlg.storm-night.supper-cold",
+      "next": "q3"
+    },
+    {
+      "id": "supper-cold-fish",
+      "speaker": "player",
+      "textKey": "dlg.storm-night.supper-cold-fish",
       "next": "q3"
     },
     {

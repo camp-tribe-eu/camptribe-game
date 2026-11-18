@@ -15,7 +15,7 @@ import { DISHES, emberOutcome, startEmbers, stepEmbers, type EmberAct, type Embe
 import { BASKET, berryOutcome, berryFacts, enoughBerries, hinted, patchOf, pickBerry, startBerries, type BerryState } from '../content/berries-patch';
 import { COVER, ENOUGH_DRY, LOGS, dryLogs, finishStack, placeLog, startStack, type StackState, type WoodPlace } from '../content/firewood-stack';
 import { THINGS, foodOutside, putThing, sleepNow, startTidy, tidyOutcome, type Place, type TidyState } from '../content/night-camp';
-import { FISH_IDLE, catches, makeRng, stepFish, type FishState } from '../content/fishing';
+import { FISH_IDLE, SPECIES, ZONE, catches, fishAt, makeRng, stepFish, type FishState } from '../content/fishing';
 import { biteCue, floatCss, speciesAt, supperFish } from '../content/fish-table';
 
 type Phase = 'board' | 'work' | 'night';
@@ -48,6 +48,24 @@ export interface CampRoutinesProps {
 /** GAME-319: мітка поклівки на дошці (окремий компонент — щоб тест бачив розмітку без DOM). */
 export function FishBiteCue({ fish, t }: { readonly fish: FishState; readonly t: (k: Key) => string }) {
   return <p class="ui-fish-bite" data-ui="fish-bite" role="status"><span class="ui-fish-float" aria-hidden="true" style={{ transform: floatCss(fish) }}>●</span> {t('camp.fish.bite')}</p>;
+}
+
+/** GAME-323: місце під мітку клювання, шкалу підсікання й «піймав» — ОДНЕ на всі фази й завжди тієї ж висоти (css .ui-fish-slot), тож кнопка вудки не стрибає з-під пальця. */
+export function FishSlot({ fish, t }: { readonly fish: FishState; readonly t: (k: Key) => string }) {
+  const pct = (x: number) => `${Math.round(x * 100)}%`;
+  return (
+    <div class="ui-fish-slot" data-ui="fish-slot" data-phase={fish.phase}>
+      {biteCue(fish) && <FishBiteCue fish={fish} t={t} />}
+      {fish.phase === 'reel' && (
+        <div data-ui="fish-reel" data-progress={Math.round(fish.progress * 100)}>
+          <p class="ui-camp-note">{t('camp.fish.reel')}</p>
+          <div class="ui-camp-bar" aria-hidden="true"><i style={{ width: pct(fish.progress) }} /></div>
+          <div class="ui-camp-tilt" aria-hidden="true"><b class="ui-fish-zone" style={{ left: pct(fish.zone - ZONE / 2), width: pct(ZONE) }} /><i style={{ left: pct(fishAt(fish)) }} /></div>
+        </div>
+      )}
+      {fish.phase === 'choice' && <p class="ui-fish-bite" data-ui="fish-landed" role="status">{`${t('camp.fish.landed')}: ${t(`fish.sp.${SPECIES[fish.species]?.id}` as Key)}`}</p>}
+    </div>
+  );
 }
 
 export function CampRoutines({ t, weather, seed, onFrame, devices: devices0 = {}, extra, onNight, onSummary, text, saved, onSave, live = true }: CampRoutinesProps) {
@@ -245,7 +263,7 @@ export function CampRoutines({ t, weather, seed, onFrame, devices: devices0 = {}
         {active === 'fish' && (
           <section class="ui-camp-work">
             <p data-ui="fish-biting">{`${t('camp.fish.biting')}: ${speciesAt('afternoon', weather).map((id) => t(`fish.sp.${id}` as Key)).join(', ')}`}</p>
-            {biteCue(fish) && <FishBiteCue fish={fish} t={t} />}
+            <FishSlot fish={fish} t={t} />
             <p data-ui="fish-kept" data-kept={fish.kept}>{`${t('camp.fish.kept')}: ${fish.kept}`}</p>
             {fish.phase === 'choice' ? (
               <div class="ui-camp-row">

@@ -32,12 +32,14 @@ export interface SamplePort {
   saveBoard(b: CampBoardSave): void;
   /** Ніч із бурею: сцена dlg.storm-night з наслідками дня; раз за день. */
   stormNight(): void;
+  /** GAME-323: «Почати знову» — нова гра й перезавантаження ?sampleDay=1 (день не продовжується в старому меню). */
+  restart(): Promise<void>;
   subscribe(l: () => void): () => void;
 }
 
 const ARROWS: Readonly<Record<DriveStep, string>> = { forward: '▲', back: '▼', left: '◀', right: '▶' };
 
-function DriveInCard({ laneId, t, done }: { laneId: string; t: (k: Key) => string; done: (scrapes: number) => void }) {
+export function DriveInCard({ laneId, t, done }: { laneId: string; t: (k: Key) => string; done: (scrapes: number) => void }) {
   const lane = laneOf(laneId);
   const [log, setLog] = useState<DriveLog>(() => driveLog(lane));
   const [note, setNote] = useState('');
@@ -51,7 +53,7 @@ function DriveInCard({ laneId, t, done }: { laneId: string; t: (k: Key) => strin
     <div class="ui-overlay ui-camp" data-ui="drive-in" data-done={st.done ? 'yes' : 'no'} data-scrapes={st.scrapes} data-lane={laneId}>
       <h2>{t('sd.drivein.title')}</h2>
       <p class="ui-camp-note">{t('sd.drivein.hint')}</p>
-      <div class="sd-lane" style={{ '--cols': lane.cols } as Record<string, number>} role="img" aria-label={t('sd.drivein.title')}>
+      <div class="sd-lane" style={{ '--cols': lane.cols, '--rows': lane.rows } as Record<string, number>} role="img" aria-label={t('sd.drivein.title')}>
         {lane.cells.map((c, i) => {
           const col = i % lane.cols; const row = Math.floor(i / lane.cols);
           const car = st.at.c === col && st.at.r === row;
@@ -74,20 +76,21 @@ function DriveInCard({ laneId, t, done }: { laneId: string; t: (k: Key) => strin
   );
 }
 
-function Summary({ facts, flags, money, t, lang, close }: { facts: NightFacts; flags: readonly string[]; money: number; t: (k: Key) => string; lang: AnyLang; close: () => void }) {
+/** GAME-323: кінець зразкового дня — підсумок і ЄДИНА дія «Почати знову». Після перезавантаження сторінки фактів ночі нема — тоді лише картка кінця. */
+function Summary({ facts, flags, money, t, lang, again }: { facts: NightFacts | null; flags: readonly string[]; money: number; t: (k: Key) => string; lang: AnyLang; again: () => void }) {
   const pitch = pitchTaken(flags);
   return (
-    <div class="ui-overlay ui-camp" data-ui="sd-summary" data-money={money} data-missions={missionsDone(flags)} data-arrival={arrivalOf(flags)} data-pitch={pitch ?? ''} data-rough={roughCount(facts)}>
+    <div class="ui-overlay ui-camp" data-ui="sd-summary" data-money={money} data-missions={missionsDone(flags)} data-arrival={arrivalOf(flags)} data-pitch={pitch ?? ''} data-rough={facts ? roughCount(facts) : ''}>
       <h2>{t('sd.summary.title')}</h2>
       <ul class="ui-camp-list">
         <li data-ui="sd-sum-arrival">{`${t('sd.sum.arrival')}: ${t(`sd.arrival.${arrivalOf(flags)}` as Key)}`}</li>
         <li data-ui="sd-sum-pitch">{`${t('sd.sum.pitch')}: ${pitch === null ? '-' : ct(lang, `pitch.${pitch}.name`)}`}</li>
         <li data-ui="sd-sum-missions">{`${t('sd.sum.missions')}: ${missionsDone(flags)}`}</li>
         <li data-ui="sd-sum-wallet">{`${t('sd.sum.wallet')}: ${(money / 100).toFixed(2)} €`}</li>
-        <li data-ui="sd-sum-night">{`${t('sd.sum.rough')}: ${roughCount(facts)}`}</li>
+        {facts && <li data-ui="sd-sum-night">{`${t('sd.sum.rough')}: ${roughCount(facts)}`}</li>}
       </ul>
       <p class="ui-camp-note">{t('sd.summary.end')}</p>
-      <button type="button" class="ui-btn ui-camp-big" data-ui="sd-finish" onClick={close}>{t('sd.finish')}</button>
+      <button type="button" class="ui-btn ui-camp-big" data-ui="sd-restart" onClick={again}>{t('sd.restart')}</button>
     </div>
   );
 }
@@ -98,26 +101,26 @@ export function SampleDay({ port, t, lang }: { port: SamplePort; t: (k: Key) => 
   const [boardOpen, setBoardOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [night, setNight] = useState<NightFacts | null>(null);
-  const [summary, setSummary] = useState(false);
   const stage = port.stage();
   if (stage === 'off') return null;
   const text = (id: string): string => { const v = ct(lang, id); return v.startsWith(MISSING_MARK) ? t(id as Key) : v; };
   const lane = port.lane();
   if (stage === 'drivein' && lane !== null) return <DriveInCard laneId={lane} t={t} done={port.driveInDone} />;
   const flags = port.flags();
+  const ended = port.goal() === 'done';   // GAME-323: сцену бурі зіграно — день скінчено; ☰ і дошка вже не відкриваються
   return (
     <>
-      {!boardOpen && !summary && (
+      {!boardOpen && !ended && (
         <button type="button" class="ui-btn sd-board-btn" data-ui="sd-board" onClick={() => { setMounted(true); setBoardOpen(true); }}>{t('sd.board')}</button>
       )}
-      {mounted && !summary && (
+      {mounted && !ended && (
         <div class="sd-board-wrap" data-ui="sd-board-wrap" hidden={!boardOpen}>
           <CampRoutines live={boardOpen} t={t} weather={port.weather()} seed={port.seed()} onFrame={port.onFrame} devices={devicesFromFlags(flags)} extra={sampleExtra(flags)} text={text}
-            onNight={setNight} saved={port.board()} onSave={port.saveBoard} onSummary={() => { setSummary(true); setBoardOpen(false); port.stormNight(); }} />
+            onNight={setNight} saved={port.board()} onSave={port.saveBoard} onSummary={() => { setBoardOpen(false); port.stormNight(); }} />
           <button type="button" class="ui-btn sd-board-close" data-ui="sd-board-close" onClick={() => setBoardOpen(false)}>{t('sd.back')}</button>
         </div>
       )}
-      {summary && night && <Summary facts={night} flags={flags} money={port.moneyCents()} t={t} lang={lang} close={() => setSummary(false)} />}
+      {ended && <Summary facts={night} flags={flags} money={port.moneyCents()} t={t} lang={lang} again={() => void port.restart()} />}
     </>
   );
 }

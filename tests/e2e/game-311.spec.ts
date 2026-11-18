@@ -180,7 +180,120 @@ for (const vp of VIEWPORTS) {
       expect(await open(), `${r.id}: вихід доступний на старті`).toBe(false);
       for (const sel of r.one) await tapIt(page.locator(sel));
       expect(await open(), `${r.id}: вихід доступний після одного дотику`).toBe(false);
+      // GAME-323: вимкнену кнопку ВИДНО вимкненою (раніше вона виглядала як увімкнена). Мутація (перевірено): прибрати css-правило `button:disabled` → червоніє.
+      expect(Number(await page.locator(`[data-ui="${r.exit}"]`).evaluate((b) => getComputedStyle(b).opacity)), `${r.id}: вимкнений вихід видно тьмяним`).toBeLessThan(0.7);
       await expect(page.locator(`[data-ui="camp-work"][data-kind="${r.id}"]`), `${r.id}: панель роботи лишилась`).toBeVisible();
     }
+  });
+}
+
+// GAME-323 · риба. Кнопка вудки не рухається, коли клює (раніше мітка «Клює!» зсувала її на 65 px — палець промахувався 3 з 3, мишею 0 риб із 28),
+// а поклівку реально зловити так, як це робить людина: клює → ~400 мс на реакцію → підсікання → шкала видна → «піймав» → «лишити».
+// Мутації (перевірено): прибрати `height` з `.ui-fish-slot` → «вудка не зсунулась» червоніє; BITE_MS = 300 → «зловлено» червоніє (див. й fishing.test).
+for (const vp of VIEWPORTS) {
+  test(`GAME-323 · риба: вудка стоїть на місці й улов досяжний — ${vp.name}`, async ({ page }) => {
+    test.setTimeout(120_000);
+    await page.setViewportSize({ width: vp.w, height: vp.h });
+    await page.goto('/');
+    await page.addScriptTag({ content: bundle });
+    await mount(page, 'rain', true);
+    await tapIt(page.locator('[data-ui="camp-routine"][data-id="fish"]'));
+    await expect(page.locator('[data-ui="camp-work"][data-kind="fish"]')).toBeVisible();
+    const r = await page.evaluate(() => new Promise<{ tops: Record<string, number[]>; sawBite: boolean; sawReel: boolean; landed: string; missed: number; frames: number }>((resolve) => {
+      const q = (s: string): HTMLElement | null => document.querySelector<HTMLElement>(s);
+      const rod = (): HTMLElement | null => q('[data-ui="fish-rod"]');
+      const phase = (): string => q('[data-ui="fish-slot"]')?.getAttribute('data-phase') ?? '';
+      let held = false;
+      const press = (down: boolean): void => { held = down; rod()?.dispatchEvent(new PointerEvent(down ? 'pointerdown' : 'pointerup', { bubbles: true })); };
+      const tops: Record<string, number[]> = {};
+      const out = { sawBite: false, sawReel: false, missed: 0 };
+      let frame = 0; let n = 0; let prev = ''; let hookAt = 0;
+      const pct = (e: HTMLElement | null): number => parseFloat(e?.style.left ?? '0');
+      const done = (landed: string): void => resolve({ tops, ...out, landed, frames: frame });
+      const loop = (): void => {
+        frame++;
+        const ph = phase();
+        const b = rod()?.getBoundingClientRect();
+        if (b) (tops[ph] ??= []).push(Math.round(b.top * 10) / 10);
+        if (prev === 'bite' && ph === 'idle') out.missed++;
+        if (ph !== prev) n = 0;
+        n++; prev = ph;
+        if (ph === 'idle' && !held) press(true);
+        else if (ph === 'charge' && held && n > 20) press(false);
+        else if (ph === 'bite') { out.sawBite = true; if (!held && n > 24) { press(true); hookAt = frame; } }   // ≈ 400 мс реакції
+        else if (ph === 'reel') {
+          out.sawReel = true;
+          const z = q('.ui-fish-zone'); const fish = q('[data-ui="fish-reel"] .ui-camp-tilt i');
+          const centre = pct(z) + parseFloat(z?.style.width ?? '0') / 2;
+          const want = pct(fish) > centre;
+          if (want !== held) press(want);
+        } else if (ph === 'choice') { done(q('[data-ui="fish-landed"]')?.textContent ?? ''); return; }
+        else if (ph === 'wait' && held) press(false);
+        if (frame > 2400 || (hookAt > 0 && frame - hookAt > 2000)) { done('TIMEOUT'); return; }
+        requestAnimationFrame(loop);
+      };
+      requestAnimationFrame(loop);
+    }));
+    expect(r.sawBite, 'поклівка була').toBe(true);
+    expect(r.sawReel, 'після підсікання видно шкалу').toBe(true);
+    expect(r.missed, 'людина з реакцією ~400 мс не пропускає клювання').toBe(0);
+    expect(r.landed, 'зловлено: видно «Піймав: …»').toMatch(/Піймав: (Окунь|Короп|Форель|Щука)/);
+    const all = Object.entries(r.tops).filter(([ph]) => ['idle', 'charge', 'wait', 'bite', 'reel'].includes(ph));
+    expect(all.length, 'виміряно кілька фаз').toBeGreaterThanOrEqual(4);
+    const flat = all.flatMap(([, v]) => v);
+    expect(Math.max(...flat) - Math.min(...flat), `вудка не зсунулась між фазами: ${JSON.stringify(Object.fromEntries(all.map(([k, v]) => [k, [Math.min(...v), Math.max(...v)]])))}`).toBeLessThanOrEqual(0.5);
+  });
+}
+
+// GAME-323 · альбом 932×430: робота й заїзд стоять на екрані без прокрутки (було: дрова 593, ліхтарі 603, порядок 444, заїзд 597 px).
+// Мутація (перевірено): прибрати з index.html правило `.ui-camp-work { width: min(100%, 900px); }` й блок `.ui-camp[data-ui="drive-in"]` → червоніє на дровах/ліхтарях/порядку/заїзді.
+test('GAME-323 · альбом: дрова, ліхтарі, порядок, вода, ягоди, риба й заїзд — без прокрутки', async ({ page }) => {
+  await page.setViewportSize({ width: 932, height: 430 });
+  await page.goto('/');
+  await page.addScriptTag({ content: bundle });
+  const over = (): Promise<number> => page.evaluate(() => { const e = document.querySelector<HTMLElement>('.ui-camp'); return e ? e.scrollHeight - e.clientHeight : -1; });
+  const seen: string[] = [];
+  const check = async (what: string): Promise<void> => { const o = await over(); seen.push(`${what} ${o}`); expect(o, `${what}: панель прокручується на ${o} px`).toBeLessThanOrEqual(0); };
+  const open = async (id: string, round = 0): Promise<void> => {
+    await mount(page, 'rain', true);
+    for (let k = 0; k < round; k++) await tapIt(page.locator('[data-ui="camp-next"]'));
+    await tapIt(page.locator(`[data-ui="camp-routine"][data-id="${id}"]`));
+    await expect(page.locator(`[data-ui="camp-work"][data-kind="${id}"]`)).toBeVisible();
+  };
+  await open('firewood'); await tapIt(page.locator('[data-ui="wood-place-choice"][data-place="near"]')); await check('дрова');
+  await open('lanterns'); await check('ліхтарі');
+  await open('tidy', 3); await check('порядок');
+  await open('water'); await check('вода');
+  await open('berries'); await check('ягоди');
+  await open('fish'); await check('риба');
+  for (const lane of ['lane.water', 'lane.beeches', 'lane.meadow', 'lane.reception']) {
+    await page.evaluate((l) => (window as unknown as { __mountDrive: (x: string) => void }).__mountDrive(l), lane);
+    await expect(page.locator('[data-ui="drive-in"]')).toBeVisible();
+    await check(`заїзд ${lane}`);
+    const low = await page.evaluate(() => Math.max(...[...document.querySelectorAll<HTMLElement>('[data-ui="drive-in"] .ui-btn')].map((b) => b.getBoundingClientRect().bottom)));
+    expect(low, `${lane}: кнопки заїзду в межах екрана`).toBeLessThanOrEqual(430);
+  }
+});
+
+// GAME-323 · кінець зразкового дня: підсумок і ЄДИНА дія «Почати знову» (нова гра й перезавантаження), без дошки й старого меню.
+// Мутація (перевірено): у SampleDay `ended` завжди false → червоніє; кнопку «Почати знову» — на закриття підсумку → червоніє.
+for (const vp of VIEWPORTS) {
+  test(`GAME-323 · після дня — підсумок з одним «Почати знову» — ${vp.name}`, async ({ page }) => {
+    await page.setViewportSize({ width: vp.w, height: vp.h });
+    await page.goto('/');
+    await page.addScriptTag({ content: bundle });
+    const mountSample = (g: 'day' | 'done'): Promise<void> => page.evaluate((x) => (window as unknown as { __mountSample: (y: string) => void }).__mountSample(x), g);
+    await mountSample('day');
+    await expect(page.locator('[data-ui="sd-board"]'), 'протягом дня дошка є').toBeVisible();
+    await expect(page.locator('[data-ui="sd-summary"]')).toHaveCount(0);
+    await mountSample('done');
+    await expect(page.locator('[data-ui="sd-summary"]')).toBeVisible();
+    await expect(page.locator('[data-ui="sd-board"]'), 'після дня дошка не відкривається').toHaveCount(0);
+    await expect(page.locator('[data-ui="sd-summary"] button'), 'єдина дія').toHaveCount(1);
+    await expect(page.locator('[data-ui="sd-restart"]')).toHaveText('Почати знову');
+    expect(await page.evaluate(() => (window as unknown as { __restarts: number }).__restarts)).toBe(0);
+    await tapIt(page.locator('[data-ui="sd-restart"]'));
+    expect(await page.evaluate(() => (window as unknown as { __restarts: number }).__restarts), '«Почати знову» просить нову гру').toBe(1);
+    await expect(page.locator('[data-ui="sd-summary"]'), 'підсумок лишається, поки не перезавантажать').toBeVisible();
   });
 }

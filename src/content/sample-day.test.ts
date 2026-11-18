@@ -121,7 +121,8 @@ describe('ланка 3: місія зроблена / не зроблена → 
       expect(without).toContain(`night.mission.${m.id}.none`);
       expect(done).not.toContain(`night.mission.${m.id}.none`);
       expect(done).not.toEqual(without);
-      for (const l of m.night.filter((x) => x.flag === m.doneFlag)) expect(done).toContain(`night.mission.${l.fact}`);
+      const noFire = done.includes('night.fire.none');   // GAME-323: без вогню «вогонь із першого сірника» стає «дрова лишились на завтра»
+      for (const l of m.night.filter((x) => x.flag === m.doneFlag)) expect(done).toContain(`night.mission.${l.fact}${l.fact === 'f.storm-dry-wood' && noFire ? '.cold' : ''}`);
     });
   }
   it('усі три разом — і сім рутин, і ділянка, і місії в одній ночі; лічильник «зроблено» чесний', () => {

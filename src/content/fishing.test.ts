@@ -41,7 +41,7 @@ describe('клювання', () => {
     expect(run({ ...w, t: 0 }, w.waitMs + 100, false).state.phase).toBe('bite');
     expect(tick(w, 16, true).state.phase).toBe('wait');   // тап зарано нічого не підсікає
   });
-  it('тап у вікні 600 мс підсікає; проґавив — «зірвалась», назад у спокій без штрафу', () => {
+  it('тап у вікні BITE_MS підсікає; проґавив — «зірвалась», назад у спокій без штрафу', () => {
     const b = biting();
     expect(tick(pressed(b), 16, true).state.phase).toBe('reel');
     const late = run(b, BITE_MS + 100, false);
@@ -133,5 +133,31 @@ describe('GAME-270 · patient (лише e2e)', () => {
     expect(stepFish(bite, { kind: 'tick', dtMs: BITE_MS + 50, down: false }, rng).event).toBe('slipped');
     expect(stepFish(bite, { kind: 'tick', dtMs: BITE_MS + 50, down: false, patient: true }, rng).event).toBe('none');
     expect(stepFish(bite, { kind: 'tick', dtMs: 16, down: true, patient: true }, rng).event).toBe('hook');
+  });
+});
+
+// GAME-323 · улов «від початку до кінця» так, як його веде людина: закид → клює → реакція 800 мс (палець + кадр телефона) → підсікання → веде зону за рибкою → «піймав» → «лишити».
+// Мутація (перевірено): BITE_MS = 600 → «зірвалась» до тапу, тест червоніє; прибрати гілку hook у bite → теж.
+describe('GAME-323 · улов досяжний людині', () => {
+  const HUMAN_MS = 800;
+  it('тап через 800 мс після «Клює!» ще підсікає, і далі рибу можна довести до «лишити»', () => {
+    const r = makeRng(323);
+    let s = tick(tick(FISH_IDLE, 16, false, r).state, 16, true, r).state;   // натиснув: шкала сили
+    s = run(s, 300, true, r).state; s = tick(s, 16, false, r).state;           // відпустив: закид
+    expect(s.phase).toBe('wait');
+    while (s.phase === 'wait') s = tick(s, 16, false, r).state;
+    expect(s.phase).toBe('bite');
+    s = run(s, HUMAN_MS, false, r).state;
+    expect(s.phase, `через ${HUMAN_MS} мс вікно ще відкрите`).toBe('bite');
+    const hook = tick(s, 16, true, r); expect(hook.event).toBe('hook');
+    s = hook.state; let ms = 0;
+    while (s.phase === 'reel' && ms < REEL_MAX_MS) { s = tick(s, 16, fishAt(s) > s.zone, r).state; ms += 16; }
+    expect(s.phase).toBe('choice');
+    const kept = stepFish(s, { kind: 'choose', keep: true }, r).state;
+    expect(kept.kept).toBe(1); expect(catches(kept)).toBe(1);
+  });
+  it('вікно не вічне: після BITE_MS «зірвалась» (без штрафу)', () => {
+    const b: FishState = { ...FISH_IDLE, phase: 'bite', t: 0 };
+    expect(run(b, BITE_MS + 32, false).events).toContain('slipped');
   });
 });
