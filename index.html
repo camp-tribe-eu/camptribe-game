@@ -522,6 +522,15 @@
       .ui-camp-night li[data-severity="good"] { border-color: #6ea84f; }
       .ui-camp-night li[data-severity="rough"] { border-color: #c96a4a; }
       @media (min-aspect-ratio: 1/1) { .ui-camp-list { grid-template-columns: 1fr 1fr; } .ui-camp-night { grid-template-columns: 1fr 1fr; } }
+      /* GAME-320: телефон горизонтально (932×430): дошка табору — три колонки й тісніші відступи, щоб ціла стояла на екрані без прокрутки (була 625 px при 430). Портрет не змінюється. */
+      @media (orientation: landscape) and (max-height: 500px) {
+        .ui-camp { padding: 6px 12px 8px; gap: 4px; }
+        .ui-camp-note { max-width: 900px; line-height: 1.3; }
+        .ui-camp-list { grid-template-columns: repeat(4, 1fr); width: min(100%, 900px); gap: 6px; }
+        .ui-camp-routine { min-height: 48px; padding: 4px 6px; font-size: 0.7rem; line-height: 1.3; }
+        .ui-camp-routine small { font-size: 0.6rem; line-height: 1.3; }
+        .ui-camp-big { min-height: 44px; flex: 0 1 200px; }
+      }
       /* GAME-244 · рюкзак: накладка на все поле, ✕ праворуч угорі; рядок — іконка · назва з «звідки» · ціна · «Продати». */
       .ui-backpack { place-content: start center; align-content: start; background: #1b1f23; }
       .ui-bp-name { text-align: left; }
