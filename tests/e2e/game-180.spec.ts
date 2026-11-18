@@ -5,6 +5,7 @@
 // Знімки для research/visual-audit (SHOTS=1): картка прохання і трекер зі стрілкою у двох орієнтаціях. У звичайному прогоні — пропуск.
 import { readFileSync } from 'node:fs';
 import { expect, test, type Page } from '@playwright/test';
+import { walkInPage } from './walk.helpers';
 import { waitGameReady } from './ready';
 
 interface Pt { x: number; y: number }
@@ -14,64 +15,9 @@ const probe = (page: Page): Promise<Probe> => page.evaluate(() => JSON.parse(JSO
 const core = (page: Page): Promise<Core> => page.evaluate(() => (window as unknown as { __game: { read: () => Core } }).__game.read());
 const SHOTS = process.env.SHOTS === '1';
 
-const TILE = 32;
 interface TiledMap { width: number; height: number; layers: { name: string; data?: number[]; objects?: { name: string; x: number; y: number }[] }[] }
 const MAP = JSON.parse(readFileSync(new URL('../../public/maps/camp-lake.tmj', import.meta.url), 'utf8')) as TiledMap;
-const WALLS = MAP.layers.find((l) => l.name === 'walls')?.data ?? [];
 const OBJ = new Map((MAP.layers.find((l) => l.name === 'objects')?.objects ?? []).map((o) => [o.name, { x: o.x, y: o.y }] as const));
-const solid = (c: number, r: number): boolean => c < 0 || r < 0 || c >= MAP.width || r >= MAP.height || (WALLS[r * MAP.width + c] ?? 0) > 0;
-const tile = (p: Pt): { c: number; r: number } => ({ c: Math.floor(p.x / TILE), r: Math.floor(p.y / TILE) });
-
-function nextStep(from: { c: number; r: number }, to: { c: number; r: number }): { c: number; r: number } | null {
-  const key = (c: number, r: number): number => r * MAP.width + c;
-  const prev = new Map<number, number>([[key(from.c, from.r), -1]]);
-  const q = [from];
-  for (let i = 0; i < q.length; i++) {
-    const t = q[i] as { c: number; r: number };
-    if (t.c === to.c && t.r === to.r) {
-      const path: number[] = [];
-      for (let k = key(t.c, t.r); k >= 0; k = prev.get(k) ?? -1) path.unshift(k);
-      const n = path[1];
-      return n === undefined ? null : { c: n % MAP.width, r: Math.floor(n / MAP.width) };
-    }
-    for (const [dc, dr] of [[0, -1], [-1, 0], [0, 1], [1, 0]] as const) {
-      const c = t.c + dc; const r = t.r + dr;
-      if (solid(c, r) || prev.has(key(c, r))) continue;
-      prev.set(key(c, r), key(t.c, t.r)); q.push({ c, r });
-    }
-  }
-  return null;
-}
-
-/** Ногами (клавіші) до точки, яку перечитуємо щокроку; `done` — коли стоп. Жодних кліків по мапі й жодної кнопки ☰. */
-async function walk(page: Page, where: (p: Probe) => Pt, done: (p: Probe) => boolean, label: string, maxMs = 70_000): Promise<Probe> {
-  const keys = { ArrowLeft: false, ArrowRight: false, ArrowUp: false, ArrowDown: false };
-  const set = async (want: Partial<typeof keys>): Promise<void> => {
-    for (const k of Object.keys(keys) as (keyof typeof keys)[]) {
-      const on = want[k] === true;
-      if (on !== keys[k]) { keys[k] = on; await (on ? page.keyboard.down(k) : page.keyboard.up(k)); }
-    }
-  };
-  const start = Date.now();
-  try {
-    while (Date.now() - start < maxMs) {
-      const p = await probe(page);
-      if (done(p)) return p;
-      const here = tile({ x: p.playerX, y: p.playerY });
-      const to = tile(where(p));
-      const next = nextStep(here, to) ?? to;
-      const dx = (next.c + 0.5) * TILE - p.playerX; const dy = (next.r + 0.5) * TILE - p.playerY;
-      const vertical = next.c === here.c;
-      const across = vertical ? dx : dy;
-      const along = vertical ? dy : dx;
-      const axis = Math.abs(across) > 3 ? across : along;
-      const horizontal = Math.abs(across) > 3 ? vertical : !vertical;
-      await set(horizontal ? { ArrowLeft: axis < 0, ArrowRight: axis > 0 } : { ArrowUp: axis < 0, ArrowDown: axis > 0 });
-      await page.waitForTimeout(20);
-    }
-  } finally { await set({}); }
-  throw new Error(`${label}: не дійшов: ${JSON.stringify(await probe(page))}`);
-}
 
 const panel = (page: Page) => page.locator('[data-ui="story"]');
 async function act(page: Page, kind: string, key = ''): Promise<void> {
@@ -112,7 +58,8 @@ const REQS: Record<string, Req> = {
   elise: { pics: 1, id: 'req.elise-lantern', giver: 'npc.elise', name: 'Еліза', targets: ['req.elise-lantern.t1'], track: 'Ліхтар', goal: 'Знайди запасний ліхтар Елізи між наметами.', hubChoice: 'Є щось, із чим допомогти?' },
 };
 const flag = (id: string, part: string): string => `f.${id.replace(/\./g, '-')}-${part}`;
-const giverAt = (r: Req) => (p: Probe): Pt => (r.giver === 'npc.elise' ? (OBJ.get('npc.elise') as Pt) : (p.residents.find((x) => x.id === r.giver) as Pt));
+/** Ціль ходьби до просильника: Еліза стоїть у таборі (точка з мапи), решта ходять — за id щокадру (walk.helpers.ts). */
+const giverAt = (r: Req): { to: Pt } | { toId: string } => (r.giver === 'npc.elise' ? { to: OBJ.get('npc.elise') as Pt } : { toId: r.giver });
 
 const box = (page: Page) => panel(page).locator('[data-ui="dialogue"]');
 async function closeTalk(page: Page): Promise<void> {
@@ -124,10 +71,10 @@ async function closeTalk(page: Page): Promise<void> {
 async function openTalk(page: Page, r: Req, marker = 'request'): Promise<void> {
   // Слідувачі (родина) тупцюють коло героя, а мешканець ходить: «найближчий» міг змінитись між кроком і дією — тоді розмова не з тим; закриваємо її й пробуємо ще.
   for (let attempt = 0; ; attempt++) {
-    const near = await walk(page, giverAt(r), (p) => p.nearObject === r.giver, r.giver);
+    // GAME-313: підхід і Space — одним rAF-циклом у сторінці: Space іде в тому самому кадрі, де nearObject === просильник і над ним потрібна позначка, тож «найближчий» не встигає змінитись.
+    const near = (await walkInPage<Probe>(page, { label: r.giver, ...giverAt(r), act: { id: r.giver, key: 'Space', marks: [marker] } })).at;
     expect(near.nearObject).toBe(r.giver);
-    await expect.poll(async () => (await probe(page)).npcMarks[r.giver], { message: `${r.giver}: над головою нема «!»`, timeout: 5_000 }).toBe(marker);
-    if ((await probe(page)).nearObject === r.giver) await page.keyboard.press('Space');
+    expect(near.npcMarks[r.giver], `${r.giver}: над головою нема «!»`).toBe(marker);
     await expect(box(page), `${r.giver}: рамка розмови не відкрилась`).toBeVisible({ timeout: 8_000 }).catch(() => undefined);
     const who = (await box(page).isVisible()) ? await panel(page).locator('[data-ui="speaker"]').getAttribute('data-npc') : null;
     if (who === r.giver) break;
@@ -174,29 +121,6 @@ async function checkCard(page: Page, r: Req): Promise<void> {
   await expect(panel(page).locator('[data-act="choose"]', { hasText: 'Пізніше' })).toBeVisible();
 }
 
-/** Підступ до точки всередині сторінки: клавішу тримаємо й відпускаємо в rAF сцени (без CDP-затримки), зупинка за < 12 px або через 5 с. */
-async function approach(page: Page, to: Pt): Promise<void> {
-  await page.evaluate((to) => new Promise<void>((resolve) => {
-    const g = (window as unknown as { __game: { probe: { playerX: number; playerY: number } } }).__game;
-    const codes: Record<string, number> = { ArrowLeft: 37, ArrowUp: 38, ArrowRight: 39, ArrowDown: 40 };
-    let held: string | null = null;
-    const fire = (type: string, key: string): void => {
-      const e = new KeyboardEvent(type, { key, code: key, bubbles: true, cancelable: true });
-      Object.defineProperty(e, 'keyCode', { get: () => codes[key] });
-      window.dispatchEvent(e);
-    };
-    const set = (want: string | null): void => { if (held && held !== want) fire('keyup', held); if (want && held !== want) fire('keydown', want); held = want; };
-    const t0 = performance.now();
-    const tick = (): void => {
-      const dx = to.x - g.probe.playerX; const dy = to.y - g.probe.playerY;
-      if (Math.hypot(dx, dy) < 12 || performance.now() - t0 > 5_000) { set(null); resolve(); return; }
-      set(Math.abs(dx) >= Math.abs(dy) ? (dx < 0 ? 'ArrowLeft' : 'ArrowRight') : (dy < 0 ? 'ArrowUp' : 'ArrowDown'));
-      requestAnimationFrame(tick);
-    };
-    requestAnimationFrame(tick);
-  }), to);
-}
-
 /** Ціль ногами: ідемо до об'єкта, кільце наближення саме ставить прапорець; стрілка вказує на неї. */
 async function doTarget(page: Page, r: Req, spot: string, i: number): Promise<void> {
   const target = OBJ.get(spot) as Pt;
@@ -206,9 +130,7 @@ async function doTarget(page: Page, r: Req, spot: string, i: number): Promise<vo
   // Тому до цілі — грубо (шлях по тайлах), а ПІДСТУП і зупинка — всередині сторінки (rAF, без CDP), як у chapter-driver.walk; далі перевіряємо, що герой стоїть упритул.
   // Саму перевірку прапорця (6 с) не ослаблено.
   for (let attempt = 0; attempt < 4; attempt++) {
-    await walk(page, () => target, (p) => Math.hypot(p.playerX - target.x, p.playerY - target.y) < 48 || p.nearObject === spot, spot);
-    await approach(page, target);
-    await page.waitForTimeout(250);
+    await walkInPage(page, { label: spot, to: target, until: [{ within: 20 }] });   // підступ і зупинка — у сторінці по кадрах, завмерли
     const p = await probe(page);
     if (!p.playerMoving && Math.hypot(p.playerX - target.x, p.playerY - target.y) < 28) break;
   }
@@ -326,7 +248,7 @@ test.describe('GAME-180 негативні контролі', () => {
   test('«!» видно й поки над просильником репліка (GAME-236)', async ({ page }) => {
     await toCamp(page);
     const r = REQS.sarah as Req;
-    const p = await walk(page, giverAt(r), (q) => q.barkBy === r.giver, `${r.giver}: репліки не діждались`);
+    const p = (await walkInPage<Probe>(page, { label: `${r.giver}: репліки не діждались`, ...giverAt(r), until: [{ barkBy: r.giver }], settle: false })).at;
     expect(p.bark, 'репліка справді звучить').not.toBeNull();
     await expect.poll(async () => { const q = await probe(page); return q.barkBy === r.giver ? q.npcMarks[r.giver] : 'request'; }, { message: `${r.giver}: «!» зник під час репліки`, timeout: 2_000 }).toBe('request');
     expect(p.npcMarks[r.giver], `${r.giver}: «!» у кадрі першої репліки`).toBe('request');

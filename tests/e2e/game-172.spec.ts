@@ -4,6 +4,7 @@
 // BARK_RANGE = 0 → (3) червоний.
 import { readFileSync } from 'node:fs';
 import { expect, test, type Page } from '@playwright/test';
+import { tileCenter, walkInPage } from './walk.helpers';
 
 interface Pt { x: number; y: number }
 interface Resident { id: string; x: number; y: number; moving: boolean }
@@ -25,64 +26,12 @@ const ZONE_ANCHORS: Record<string, { c: number; r: number }> = {
   pier: { c: 35, r: 7 }, 'tents-south': { c: 4, r: 16 }, 'forest-path': { c: 19, r: 13 }, clearing: { c: 21, r: 18 },
 };
 
-function nextStep(from: { c: number; r: number }, to: { c: number; r: number }): { next: { c: number; r: number } | null; len: number } {
-  const key = (c: number, r: number): number => r * MAP.width + c;
-  const prev = new Map<number, number>([[key(from.c, from.r), -1]]);
-  const q = [from];
-  for (let i = 0; i < q.length; i++) {
-    const t = q[i] as { c: number; r: number };
-    if (t.c === to.c && t.r === to.r) {
-      const path: number[] = [];
-      for (let k = key(t.c, t.r); k >= 0; k = prev.get(k) ?? -1) path.unshift(k);
-      const n = path[1];
-      return { next: n === undefined ? null : { c: n % MAP.width, r: Math.floor(n / MAP.width) }, len: path.length - 1 };
-    }
-    for (const [dc, dr] of [[0, -1], [-1, 0], [0, 1], [1, 0]] as const) {
-      const c = t.c + dc; const r = t.r + dr;
-      if (solid(c, r) || prev.has(key(c, r))) continue;
-      prev.set(key(c, r), key(t.c, t.r)); q.push({ c, r });
-    }
-  }
-  return { next: null, len: -1 };
-}
-
 async function open(page: Page): Promise<void> {
   const errors: string[] = [];
   page.on('pageerror', (e) => errors.push(e.message));
   await page.goto('/?seed=2');
   await page.waitForFunction(() => (window as unknown as { __game?: { probe: { ready: boolean } } }).__game?.probe.ready === true, null, { timeout: 30_000 });
   expect(errors).toEqual([]);
-}
-
-/** Повести героя клавішами до центру тайла `to`; `stop` — зупинитись раніше (напр. почув репліку). true — дійшов (або stop). */
-async function walkTo(page: Page, to: { c: number; r: number }, maxMs: number, stop?: (p: Probe) => boolean): Promise<boolean> {
-  const keys = { ArrowLeft: false, ArrowRight: false, ArrowUp: false, ArrowDown: false };
-  const set = async (want: Partial<typeof keys>): Promise<void> => {
-    for (const k of Object.keys(keys) as (keyof typeof keys)[]) {
-      const on = want[k] === true;
-      if (on !== keys[k]) { keys[k] = on; await (on ? page.keyboard.down(k) : page.keyboard.up(k)); }
-    }
-  };
-  const start = Date.now();
-  try {
-    while (Date.now() - start < maxMs) {
-      const p = await probe(page);
-      if (stop?.(p)) return true;
-      const { next } = nextStep(tile({ x: p.playerX, y: p.playerY }), to);
-      const goal = next ?? to;
-      const gx = (goal.c + 0.5) * TILE; const gy = (goal.r + 0.5) * TILE;
-      const dx = gx - p.playerX; const dy = gy - p.playerY;
-      if (!next && Math.abs(dx) < 4 && Math.abs(dy) < 4) return true;
-      const vertical = next !== null && next.c === tile({ x: p.playerX, y: p.playerY }).c;
-      const across = vertical ? dx : dy;
-      const along = vertical ? dy : dx;
-      const axis = Math.abs(across) > 3 ? across : along;
-      const horizontalAxis = Math.abs(across) > 3 ? vertical : !vertical;
-      await set(horizontalAxis ? { ArrowLeft: axis < 0, ArrowRight: axis > 0 } : { ArrowUp: axis < 0, ArrowDown: axis > 0 });
-      await page.waitForTimeout(20);
-    }
-    return false;
-  } finally { await set({}); }
 }
 
 test.describe('GAME-172 живий кемпінг', () => {
@@ -93,7 +42,8 @@ test.describe('GAME-172 живий кемпінг', () => {
     await open(page);
     expect(MAP.width * MAP.height, 'мапа не в 2× більша за 20×12').toBeGreaterThanOrEqual(2 * 20 * 12);
     for (const [zone, anchor] of Object.entries(ZONE_ANCHORS)) {
-      expect(await walkTo(page, anchor, 45_000), `зона ${zone}: герой не дійшов до (${anchor.c},${anchor.r})`).toBe(true);
+      // GAME-313: ходьба — у сторінці по кадрах (walk.helpers.ts); при спливі страховки 45 с кидає помилку з назвою зони.
+      await walkInPage(page, { label: `зона ${zone}: герой не дійшов до (${anchor.c},${anchor.r})`, to: tileCenter(anchor), until: [{ within: 5 }], maxMs: 45_000 });
     }
   });
 
@@ -133,21 +83,10 @@ test.describe('GAME-172 живий кемпінг', () => {
     test.setTimeout(90_000);
     await open(page);
     expect((await probe(page)).barkCount).toBe(0);
-    // Іде до найближчого мешканця, перепрокладаючи шлях, поки той не озветься.
-    const deadline = Date.now() + 60_000;
-    let heard: Probe | null = null;
-    while (Date.now() < deadline && !heard) {
-      const p = await probe(page);
-      const near = [...p.residents].sort((a, b) => Math.hypot(a.x - p.playerX, a.y - p.playerY) - Math.hypot(b.x - p.playerX, b.y - p.playerY))[0];
-      if (!near) throw new Error('немає мешканців');
-      const to = tile(near);
-      if (!(await walkTo(page, solid(to.c, to.r) ? { c: 15, r: 6 } : to, 6_000, (q) => q.bark !== null))) continue;
-      const q = await probe(page);
-      if (q.bark !== null) heard = q;
-    }
-    expect(heard, 'за 60 с жоден мешканець не озвався').not.toBeNull();
-    expect(heard?.bark).toMatch(/^amb\.[a-z]+\.\d$/);
-    expect(heard?.barkCount).toBeGreaterThanOrEqual(1);
+    // GAME-313: іде до найближчого мешканця (ціль перераховується щокадру в сторінці), поки той не озветься; страховка 60 с — помилка, а не очікування.
+    const heard = (await walkInPage<Probe>(page, { label: 'за 60 с жоден мешканець не озвався', toNearest: 'residents', until: [{ bark: true }], settle: false, maxMs: 60_000 })).at;
+    expect(heard.bark).toMatch(/^amb\.[a-z]+\.\d$/);
+    expect(heard.barkCount).toBeGreaterThanOrEqual(1);
   });
 });
 
@@ -161,7 +100,7 @@ for (const [orient, viewport] of [['portrait', { width: 390, height: 844 }], ['l
       test.setTimeout(240_000);
       await open(page);
       for (const [name, to] of SHOT_SPOTS) {
-        await walkTo(page, to, 40_000);
+        await walkInPage(page, { label: `знімок ${name}`, to: tileCenter(to), until: [{ within: 5 }], maxMs: 40_000 });
         await page.waitForTimeout(600);
         await page.screenshot({ path: `research/visual-audit/camp-${name}-${orient}.png` });
       }
