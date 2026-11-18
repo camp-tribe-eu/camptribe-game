@@ -6,6 +6,7 @@
 // названий виняток у сторожі: вони не частина сейву.
 // Коли з'явиться справжній SDK, додається ще одна реалізація SaveBackend тут же — main.ts і гра не змінюються.
 // Ліміти YouTube (перше джерело): сейв МУСИТЬ бути < 3 МіБ, БАЖАНО < 500 КіБ — перевіряє save-size.test.ts.
+export { useSampleSlot } from './save-store';
 import { dismissStale, readSaves, readStale, writeSave, writeStale } from './save-store';
 import type { SessionStore } from './save-session';
 

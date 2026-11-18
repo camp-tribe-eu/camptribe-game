@@ -2,7 +2,9 @@
 // Одна транзакція пише `main` і переносить попередній `main` у `prev`: обрив посеред запису
 // не лишає ні половинного файлу, ні нуля сейвів. Читання: main → якщо зіпсований, prev.
 
-const DB = 'camplife';
+let DB = 'camplife';
+/** GAME-324: зразковий день (?sampleDay=1) пише в ОКРЕМУ базу — «Почати знову» там не чіпає звичайний сейв. */
+export const useSampleSlot = (): void => { DB = 'camplife-sample'; };
 const STORE = 'saves';
 
 function open(): Promise<IDBDatabase> {

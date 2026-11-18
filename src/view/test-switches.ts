@@ -62,8 +62,9 @@ export interface TestSwitches {
 }
 
 export function testSwitches(search: string, mode: string): TestSwitches {
-  if (mode !== 'e2e') return { hideTouch: [], hideAct: [], hideUi: [], breakSpot: [], intro: true, coldOpen: true, levelUps: true, music: true };
   const q = new URLSearchParams(search);
+  // GAME-324: у звичайній збірці працює лише ?sampleDay=1 (посилання на демо з GitHub Pages); решта перемикачів — лише e2e.
+  if (mode !== 'e2e') return { hideTouch: [], hideAct: [], hideUi: [], breakSpot: [], levelUps: true, music: true, ...(q.get('sampleDay') === '1' ? { sampleDay: true, intro: false, coldOpen: false } : { intro: true, coldOpen: true }) };
   const list = (k: string): string[] => (q.get(k) ?? '').split(',').filter(Boolean);
   const seed = Number(q.get('seed'));
   const lag = Number(q.get('frameLagMs'));

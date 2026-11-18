@@ -76,3 +76,22 @@ describe('перемикачі e2e (рецензія GAME-36)', () => {
     expect(testSwitches('?skipMinutes=600', 'production').skipMinutes).toBeUndefined();
   });
 });
+
+// GAME-324: у звичайній збірці працює лише ?sampleDay=1 (посилання на демо з GitHub Pages).
+describe('перемикачі у звичайній збірці (GAME-324)', () => {
+  it('?sampleDay=1 вмикає зразковий день', () => {
+    expect(testSwitches('?sampleDay=1', 'production').sampleDay).toBe(true);
+    expect(testSwitches('?sampleDay=1', 'production')).toMatchObject({ intro: false, coldOpen: false });   // зразок стартує одразу з дня 1, як у e2e
+    expect(testSwitches('?sampleDay=0', 'production')).toMatchObject({ intro: true, coldOpen: true });
+    expect(testSwitches('?sampleDay=0', 'production').sampleDay).toBeUndefined();
+  });
+  it('решта перемикачів лишаються e2e-лише', () => {
+    const s = testSwitches('?atMinute=600&perfectHits=1&noAutosave=1&map=camp&seed=5', 'production');
+    expect(s.atMinute).toBeUndefined();
+    expect(s.perfectHits).toBeUndefined();
+    expect(s.noAutosave).toBeUndefined();
+    expect(s.map).toBeUndefined();
+    expect(s.seed).toBeUndefined();
+    expect(s.sampleDay).toBeUndefined();
+  });
+});
