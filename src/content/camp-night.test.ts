@@ -153,4 +153,11 @@ describe('ніч не суперечить дню (GAME-319)', () => {
     expect(E['dlg.storm-night.dark']).not.toMatch(/outside/);
     expect(ids(ALL_DONE)).toContain('night.tidy.quiet');
   });
+  it('сухі дрова без вогню — «вогонь тримається» не стоїть поруч із «вогню не було»', () => {
+    const results = Object.fromEntries(Object.entries(ALL_DONE.results).filter(([k]) => k !== 'fire'));
+    const k = ids({ ...ALL_DONE, results, dryLogs: 6 });
+    expect(k).toContain('night.fire.none');
+    expect(k).not.toContain('night.wood.dry');
+    expect(k).not.toContain('night.wood.damp');
+  });
 });

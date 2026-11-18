@@ -9,8 +9,9 @@ import { NIGHT_FACTS, nightOf } from './camp-night';
 
 const ALL: Pack = { materials: DEVICE_IDS.flatMap((d) => DEVICES[d].materials), knowhow: DEVICE_IDS.map((d) => DEVICES[d].knowhow) };
 const built = (id: DeviceId): Devices => build({}, ALL, id);
+// GAME-319: слід дров стоїть лише поруч зі слідом вогню, тож вогонь у фікстурі є.
 const nightKey = (devs: Devices, routine: string): string | undefined =>
-  nightOf(deviceFacts(devs, { ...NIGHT_FACTS, results: withDevices(startCampDay(), devs).results })).beats.find((b) => b.routine === routine)?.id;
+  nightOf(deviceFacts(devs, { ...NIGHT_FACTS, results: { fire: 'good', ...withDevices(startCampDay(), devs).results } })).beats.find((b) => b.routine === routine)?.id;
 
 describe('налагодив раз — працює саме', () => {
   for (const id of DEVICE_IDS) {

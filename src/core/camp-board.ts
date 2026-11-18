@@ -28,7 +28,7 @@ export function boardError(b: unknown): string | null {
   if (b.picks.some((p) => !isObj(p) || !inList(BOARD_ROUTINES, p.id) || !inList(BOARD_ROUNDS, p.round) || typeof p.full !== 'boolean')) return 'pick';
   if (!isObj(b.results) || Object.entries(b.results).some(([k, v]) => !inList(BOARD_ROUTINES, k) || !inList(OUTCOMES, v))) return 'results';
   const f = b.facts;
-  if (!isObj(f) || !isNum(f.water, 1) || !isNum(f.dryLogs, 64) || !isNum(f.lit, 16) || !isNum(f.fish, 64) || !isNum(f.bitter, 64) || (f.berries !== undefined && !isNum(f.berries, 64)) || typeof f.foodOut !== 'boolean') return 'facts';
+  if (!isObj(f) || !isNum(f.water, 1) || !isNum(f.dryLogs, 64) || !isNum(f.lit, 16) || !isNum(f.fish, 64) || !isNum(f.bitter, 64) || (f.berries !== undefined && !(isNum(f.berries, 64) && Number.isInteger(f.berries))) || typeof f.foodOut !== 'boolean') return 'facts';
   if (!isObj(b.devices) || Object.entries(b.devices).some(([k, v]) => !inList(BOARD_DEVICES, k) || !isObj(v) || !isNum(v.care, 1))) return 'devices';
   return JSON.stringify(b).length > BOARD_MAX_BYTES ? 'size' : null;
 }

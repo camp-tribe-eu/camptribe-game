@@ -63,10 +63,10 @@ export function nightOf(f: NightFacts): { readonly beats: readonly NightBeat[]; 
       : { routine: 'water', id: 'night.water.short', severity: 'plain' });
 
   // ДРОВА: сухі під тентом — вогонь переживе зливу; вогкі або жодних — холодна вечеря.
-  // GAME-319: «Дров немає — вечеря холодна» суперечить вогню, що горів (хай і димів): дрова, не заготовлені окремо, мовчать, коли вогонь був.
+  // GAME-319: «Дров немає — вечеря холодна» суперечить вогню, що горів (хай і димів): дрова й вогонь не суперечать: слід дров стоїть лише поруч зі слідом вогню того ж роду (обидва були або обидва ні).
   const fire = did(f, 'fire');
   const wood = did(f, 'firewood');
-  if (wood !== undefined || fire === undefined) {
+  if ((wood === undefined) === (fire === undefined)) {
     beats.push(wood === undefined
       ? { routine: 'firewood', id: 'night.wood.none', severity: 'rough' }
       : f.dryLogs >= 4
