@@ -32,6 +32,7 @@ interface Allow { readonly file: string; readonly literal: string; readonly why:
 export const ALLOW: readonly Allow[] = [
   { file: 'src/core/save.ts', literal: "'camplife-save'", why: 'SAVE_FORMAT — поле format у кожному сейві й коді відновлення; зміна → наявні сейви «чужі»' },
   { file: 'src/platform/save-store.ts', literal: "'camplife'", why: 'назва БД IndexedDB; зміна → гра не бачить наявного сейву' },
+  { file: 'src/platform/save-store.ts', literal: "'camplife-sample'", why: 'GAME-324: окрема БД IndexedDB зразкового дня; зміна → демо-сейв губиться, а без окремої БД «Почати знову» зачепить звичайний сейв' },
   { file: 'src/platform/settings.ts', literal: "'camplife.settings.v1'", why: 'ключ localStorage налаштувань; зміна → гравець втрачає масштаб тексту й мову' },
 ];
 
