@@ -11,6 +11,8 @@ type Data = Map<string, unknown>;
 
 export interface Fake {
   data: Data;
+  /** GAME-324: окремі бази за іменем (open(name)); `data` — база 'camplife'. */
+  dbs: Record<string, Data>;
   /** Ключ, на записі якого транзакція обривається (імітація падіння/вигнання вкладки посеред запису). */
   failPutKey: string | null;
   /** Скільки транзакцій відкрито за весь час — щоб «окремі транзакції» були видимі в тесті. */
@@ -18,8 +20,10 @@ export interface Fake {
 }
 
 export function installFakeIdb(): Fake {
-  const fake: Fake = { data: new Map(), failPutKey: null, txCount: 0 };
+  const fake: Fake = { data: new Map(), dbs: {}, failPutKey: null, txCount: 0 };
 
+  fake.dbs['camplife'] = fake.data;
+  let cur = 'camplife';
   /** Черга транзакцій: наступна починається, коли попередня завершилась (complete чи abort). */
   let queue: Promise<void> = Promise.resolve();
 
@@ -48,7 +52,7 @@ export function installFakeIdb(): Fake {
       setTimeout(() => {
         if (pending > 0 || aborted || settled) return;
         settled = true;
-        if (mode === 'readwrite') fake.data = work;
+        if (mode === 'readwrite') fake.data = fake.dbs[cur] = work;
         done();
         tx.oncomplete?.();
       }, 0);
@@ -95,7 +99,9 @@ export function installFakeIdb(): Fake {
   }
 
   (globalThis as { indexedDB?: unknown }).indexedDB = {
-    open: () => {
+    open: (name = 'camplife') => {
+      cur = name;
+      fake.data = (fake.dbs[name] ??= new Map());
       const db = { createObjectStore: () => ({}), transaction: (_s: string, mode = 'readonly') => makeTx(db, mode), close: () => {} };
       const req: { result: typeof db; error: null; onupgradeneeded: (() => void) | null; onsuccess: (() => void) | null; onerror: (() => void) | null } =
         { result: db, error: null, onupgradeneeded: null, onsuccess: null, onerror: null };
