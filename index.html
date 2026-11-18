@@ -541,6 +541,7 @@
         /* GAME-323: робота (дрова, ліхтарі, порядок) і заїзд — теж на одному екрані 932×430 без прокрутки: ширша робоча зона, список у два стовпчики (дрова), рядок на ліхтар, 4 у ряд (порядок). */
         .ui-camp-work { width: min(100%, 900px); }
         .ui-camp-work .ui-camp-list { width: 100%; grid-template-columns: 1fr 1fr; }
+        .ui-camp-work .ui-camp-grid { width: 100%; grid-template-columns: repeat(4, 1fr); }
         .ui-camp-work .ui-camp-list:has(> [data-ui="lantern"]) { grid-template-columns: 1fr; }
         .ui-camp-work .ui-camp-list:has(> [data-ui="tidy-thing"]) { grid-template-columns: repeat(4, 1fr); }
         .ui-camp-work .ui-camp-list li { flex-wrap: nowrap; gap: 6px; }

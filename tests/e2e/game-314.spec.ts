@@ -526,7 +526,9 @@ for (const o of ORIENTATIONS) {
       await tapIt(page, '[data-ui="camp-summary"]');
       const storm = await playStormScene(page);
       expect(storm[0], 'година бурі 20:30 — так само, як у сцені вогню').toContain('пів на дев’яту');
+      // GAME-323: вечерю на вогні зварено (cookDinner) — сцена бурі не каже «вогню не палили» (без вогню була б гілка fire-cold: див. storm-night.test).
       expect(storm.join(' | '), 'сцена бурі знає про сухі дрова Клер').toContain('Дрова Рема сухі');
+      expect(storm.join(' | '), 'вогонь був — «не палили» немає').not.toContain('Вогнище сьогодні не палили');
       expect(storm.join(' | '), 'сцена бурі знає про окуня Аміни').toContain('Окунь');
       await shot(page, 'storm-after');
       const sum = page.locator('[data-ui="sd-summary"]');
@@ -536,10 +538,15 @@ for (const o of ORIENTATIONS) {
       await expect(sum).toHaveAttribute('data-missions', '2');
       await expect(sum).toHaveAttribute('data-money', String((await core2(page)).game.moneyCents));
       await shot(page, 'summary');
-      await tapIt(page, '[data-ui="sd-finish"]');
+      // GAME-323: день скінчено — старої ☰ і дошки немає, єдина дія «Почати знову» дає свіжу гру (раніше «Готово» відкривало ☰ і день тривав).
+      // Мутації (перевірено): `ended` у SampleDay завжди false → «дошки немає» червоніє (було: «Готово» повертало дошку й ☰); «Почати знову» без newGame → стан лишається → червоніє.
+      await expect(page.locator('[data-ui="sd-board"]'), 'після дня дошки немає').toHaveCount(0);
       const secs = Math.round((Date.now() - t0) / 1000);
       console.log(`G314 E2E ${o.name}: прохід ${secs} с · дорога ${outcome} (приїзд ${arrival}) · ділянка ${pitch} · штраф ${moneyBefore - afterRoad.moneyCents} ц`);
       expect(errors, 'без помилок у консолі').toEqual([]);
+      await tapIt(page, '[data-ui="sd-restart"]');
+      await expect.poll(async () => { try { const g = (await core2(page)).game; return g.flags.some((f) => f.startsWith('f.arrival-')) || g.campBoard !== undefined; } catch { return 'loading'; } }, { message: '«Почати знову»: після перезавантаження гра свіжа', timeout: 30_000 }).toBe(false);
+      await expect(page.locator('[data-ui="sd-summary"]')).toHaveCount(0);
     });
   });
 }
