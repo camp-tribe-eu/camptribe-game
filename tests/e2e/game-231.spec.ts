@@ -115,9 +115,6 @@ test('♥ над Сарою біля вогнища — збоку від пол
 
 // ---- Розмова вночі: сусід стоїть усю розмову (потрібна історія дня 1, як у game-179) ----
 const TILE = 32;
-interface Pt { x: number; y: number }
-interface Probe { playerX: number; playerY: number; nearObject: string | null; npcMarks: Record<string, string> }
-const probe = (page: Page): Promise<Probe> => g<Probe>(page, 'g.probe');
 const panel = (page: Page) => page.locator('[data-ui="story"]');
 async function act(page: Page, kind: string, key = ''): Promise<void> {
   await panel(page).locator(`[data-act="${kind}"][data-key="${key}"]`).click({ timeout: 8_000 });
@@ -143,26 +140,46 @@ async function toCamp(page: Page, query: string): Promise<string[]> {
   await page.waitForTimeout(300);
   return errors;
 }
-async function walkTo(page: Page, id: string, maxMs = 60_000): Promise<void> {
-  const keys = { ArrowLeft: false, ArrowRight: false, ArrowUp: false, ArrowDown: false };
-  const set = async (want: Partial<typeof keys>): Promise<void> => {
-    for (const k of Object.keys(keys) as (keyof typeof keys)[]) { const on = want[k] === true; if (on !== keys[k]) { keys[k] = on; await (on ? page.keyboard.down(k) : page.keyboard.up(k)); } }
-  };
-  const t0 = Date.now();
-  try {
-    while (Date.now() - t0 < maxMs) {
-      const p = await probe(page);
-      if (p.nearObject === id) return;
-      const n = (await nbs(page)).find((x) => x.id === id) as N;
-      // Сусід біля намету: підходимо знизу (клітинка нижче), там завжди вільно (рядок 4 мапи прохідний).
-      const goal: Pt = { x: n.x, y: n.y + TILE };
-      const dx = goal.x - p.playerX; const dy = goal.y - p.playerY;
-      if (Math.abs(dx) > 6) await set(dx < 0 ? { ArrowLeft: true } : { ArrowRight: true });
-      else await set(dy < 0 ? { ArrowUp: true } : { ArrowDown: true });
-      await page.waitForTimeout(20);
-    }
-  } finally { await set({}); }
-  throw new Error(`не дійшов до ${id}: ${JSON.stringify(await probe(page))}`);
+/** GAME-313: підхід і дія — одним rAF-циклом у сторінці. Раніше крок («дійшов») і Space ішли окремими викликами з Node, між ними «найближчий» об'єкт міг змінитись
+ *  (сусід ворушиться) — Space відкривав іншого або нічого (як у game-179). Тепер Space — у тому самому кадрі, де nearObject === id і над головою «…»/«!». */
+async function walkAndTalk(page: Page, id: string, maxMs = 60_000): Promise<void> {
+  const err = await page.evaluate(({ id, maxMs, tile }) => new Promise<string | null>((resolve) => {
+    interface Pr { playerX: number; playerY: number; nearObject: string | null; npcMarks: Record<string, string>; neighbours: { id: string; x: number; y: number }[] }
+    const gp = (window as unknown as { __game: { probe: Pr } }).__game.probe;
+    const codes: Record<string, number> = { ArrowLeft: 37, ArrowUp: 38, ArrowRight: 39, ArrowDown: 40, Space: 32 };
+    const down = new Set<string>();
+    const fire = (type: string, k: string): void => {
+      const e = new KeyboardEvent(type, { key: k === 'Space' ? ' ' : k, code: k, bubbles: true, cancelable: true });
+      Object.defineProperty(e, 'keyCode', { get: () => codes[k] });
+      window.dispatchEvent(e);
+    };
+    const set = (want: string | null): void => {
+      for (const k of [...down]) if (k !== want) { fire('keyup', k); down.delete(k); }
+      if (want && !down.has(want)) { fire('keydown', want); down.add(want); }
+    };
+    const t0 = performance.now();
+    const tick = (): void => {
+      const p = gp;
+      if (p.nearObject === id && /^(chat|request)$/.test(p.npcMarks[id] ?? '')) {
+        set(null);
+        fire('keydown', 'Space');   // той самий кадр, у якому щойно переконались, що найближчий — саме він
+        requestAnimationFrame(() => { fire('keyup', 'Space'); resolve(null); });
+        return;
+      }
+      if (performance.now() - t0 > maxMs) { set(null); resolve(JSON.stringify({ x: p.playerX, y: p.playerY, near: p.nearObject, mark: p.npcMarks[id] ?? null })); return; }
+      if (p.nearObject === id) set(null);   // стоїмо й чекаємо на «…»
+      else {
+        const n = p.neighbours.find((x) => x.id === id);
+        // Сусід біля намету: підходимо знизу впритул (півклітинки нижче; на цілу клітинку ближчим міг бути інший об'єкт — багаття), рядок 4 мапи прохідний.
+        const dx = (n ? n.x : p.playerX) - p.playerX; const dy = (n ? n.y + tile / 2 : p.playerY) - p.playerY;
+        if (Math.abs(dx) > 6) set(dx < 0 ? 'ArrowLeft' : 'ArrowRight');
+        else set(dy < 0 ? 'ArrowUp' : 'ArrowDown');
+      }
+      requestAnimationFrame(tick);
+    };
+    requestAnimationFrame(tick);
+  }), { id, maxMs, tile: TILE });
+  if (err !== null) throw new Error(`не дійшов до ${id}: ${err}`);
 }
 
 test.describe('розмова вночі', () => {
@@ -173,13 +190,8 @@ test.describe('розмова вночі', () => {
     const id = 'npc.nora';
     await expect.poll(async () => (await nbs(page)).find((n) => n.id === id)?.state, { timeout: 10_000, message: 'о цій порі Нора спить' }).toBe('sleep');
     const box = page.locator('[data-ui="story"] [data-ui="dialogue"]');
-    // Сусід ворушиться, «найближчий» міг змінитись між кроком і дією (як у game-179): ще раз підходимо й тиснемо дію, до трьох спроб.
-    for (let attempt = 0; attempt < 3 && !(await box.isVisible()); attempt++) {
-      await walkTo(page, id);
-      await expect.poll(async () => (await probe(page)).npcMarks[id], { timeout: 6_000, message: 'над головою «…»' }).toMatch(/^(chat|request)$/);
-      if ((await probe(page)).nearObject === id) await page.keyboard.press('Space');
-      await box.waitFor({ state: 'visible', timeout: 4_000 }).catch(() => undefined);
-    }
+    await walkAndTalk(page, id);
+    await box.waitFor({ state: 'visible', timeout: 4_000 });
     await expect(box, 'рамка розмови відкрилась').toBeVisible();
     await page.mouse.move(5, 5);
     // Розмова відкрита (діалог ядра) — це і є сигнал, яким рига тримає сусіда. Світ на паузі: сцена не йде, тож сусід заморожений у стійці «стоїть».
