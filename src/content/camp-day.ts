@@ -21,6 +21,8 @@ export type RoutineId = (typeof ROUTINE_IDS)[number];
 /** Раунди дня (docs/DAY-DESIGN.md §7). Вечір — окремо: «порядок у таборі» грається перед сном. */
 export const ROUNDS = ['morning', 'noon', 'afternoon', 'evening'] as const;
 export type Round = (typeof ROUNDS)[number];
+/** GAME-320: «Ніч» — після вечора (DAY-DESIGN §7: ранок → полудень → пополудні → вечір → ніч); зранку кнопка зачинена, інакше день з однією справою закривався за мить. */
+export const nightOpen = (r: Round): boolean => r === 'evening';
 
 export interface RoutineDef {
   readonly id: RoutineId;

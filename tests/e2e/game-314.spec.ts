@@ -473,6 +473,7 @@ for (const o of ORIENTATIONS) {
       // 4в. ВЕЧЕРЯ: дошка відновлюється зі збереженого, а не з нуля
       await tapIt(page, '[data-ui="sd-board"]');
       await expect(page.locator('[data-ui="camp-routine"][data-id="berries"]')).toHaveAttribute('data-done', 'yes');
+      await expect(page.locator('[data-ui="camp-to-night"]'), 'GAME-320: зранку «Ніч» зачинена').toBeDisabled();
       await tapIt(page, '[data-ui="camp-next"]');
       await tapIt(page, '[data-ui="camp-routine"][data-id="fire"]');
       await shot(page, 'dinner');
@@ -484,6 +485,7 @@ for (const o of ORIENTATIONS) {
       await tapIt(page, '[data-ui="sd-board"]');
       await tapIt(page, '[data-ui="camp-next"]'); await tapIt(page, '[data-ui="camp-next"]');
       await expect(page.locator('[data-ui="camp-board"]')).toHaveAttribute('data-round', 'evening');
+      await expect(page.locator('[data-ui="camp-to-night"]'), 'ввечері «Ніч» відкрита').toBeEnabled();
       await tapIt(page, '[data-ui="camp-routine"][data-id="tidy"]');
       for (const [id, place] of [['pot', 'car'], ['bread', 'hung'], ['berries', 'hung'], ['tins', 'bin'], ['wrap', 'bin'], ['chairs', 'tarp'], ['rods', 'tarp'], ['boots', 'tarp']] as const) {
         await tapIt(page, `[data-ui="tidy-pick"][data-id="${id}"]`);

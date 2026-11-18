@@ -3,7 +3,7 @@
 //   · «порядок будь-коли» (whyNot без перевірки раунду) · «порожній табір безкоштовний» (emptyRounds → [])
 //   · «рутини миттєві» (ROUTINES[*].seconds = 0 — вимір часу падає нижче 10 хв).
 import { describe, expect, it } from 'vitest';
-import { CHEAPEST_ALL, DAY_MINUTES, MEMBERS, ROUNDS, ROUTINES, ROUTINE_IDS, addPick, awayIn, campBusy, campMinutes, canAdd, emptyRounds, idleJobOf, minutesLeft, minutesUsed, recordResult, skipped, startCampDay, whyNot, type RoutineId } from './camp-day';
+import { CHEAPEST_ALL, DAY_MINUTES, MEMBERS, ROUNDS, ROUTINES, ROUTINE_IDS, addPick, awayIn, campBusy, campMinutes, canAdd, emptyRounds, idleJobOf, minutesLeft, minutesUsed, nightOpen, recordResult, skipped, startCampDay, whyNot, type RoutineId } from './camp-day';
 
 const subsets = <T>(xs: readonly T[]): T[][] => xs.reduce<T[][]>((acc, x) => [...acc, ...acc.map((s) => [...s, x])], [[]]);
 
@@ -124,5 +124,12 @@ describe('вимір часу: табірна частина дня — 10–12 
     const min = campMinutes(typical);
     expect(min).toBeGreaterThanOrEqual(10);
     expect(min).toBeLessThanOrEqual(12);
+  });
+});
+
+// GAME-320: «Ніч» лише ввечері. Мутація: nightOpen → завжди true ⇒ тест червоніє.
+describe('GAME-320: коли відкрита «Ніч»', () => {
+  it('зачинена вранці, в обід і пополудні; відкрита ввечері', () => {
+    expect(ROUNDS.map((r) => [r, nightOpen(r)])).toEqual([['morning', false], ['noon', false], ['afternoon', false], ['evening', true]]);
   });
 });

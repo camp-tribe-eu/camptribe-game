@@ -4,7 +4,7 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
 import type { Key } from '../i18n';
 import type { Weather } from '../core/weather';
-import { ROUNDS, ROUTINES, ROUTINE_IDS, addPick, awayIn, campBusy, emptyRounds, isDone, minutesLeft, recordResult, startCampDay, whyNot, type CampDay, type Round, type RoutineId } from '../content/camp-day';
+import { ROUNDS, ROUTINES, ROUTINE_IDS, addPick, awayIn, campBusy, emptyRounds, isDone, minutesLeft, nightOpen, recordResult, startCampDay, whyNot, type CampDay, type Round, type RoutineId } from '../content/camp-day';
 import { nightOf, type NightBeat, type NightFacts } from '../content/camp-night';
 import { deviceFacts, deviceFor, statusOf, tend, withDevices, type Devices } from '../content/camp-devices';
 import { HELP_AFTER, NORMAL, RELAXED, type Difficulty, type Outcome } from '../content/minigame';
@@ -327,7 +327,7 @@ export function CampRoutines({ t, weather, seed, onFrame, devices: devices0 = {}
       <div class="ui-camp-row">
         <button type="button" class="ui-btn ui-camp-big" data-ui="camp-next" disabled={round === 'evening'}
           onClick={() => setRound((r) => ROUNDS[Math.min(ROUNDS.length - 1, ROUNDS.indexOf(r) + 1)] as Round)}>{t('camp.next')}</button>
-        <button type="button" class="ui-btn ui-camp-big" data-ui="camp-to-night" onClick={() => setPhase('night')}>{t('camp.night')}</button>
+        <button type="button" class="ui-btn ui-camp-big" data-ui="camp-to-night" disabled={!nightOpen(round)} onClick={() => setPhase('night')}>{t('camp.night')}</button>
       </div>
     </div>
   );
