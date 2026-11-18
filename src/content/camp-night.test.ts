@@ -58,7 +58,8 @@ describe('названі наслідки з картки', () => {
     expect(nightKeys(ALL_DONE)).toContain('night.tidy.quiet');
   });
   it('нема сухих дров — холодна вечеря', () => {
-    expect(nightKeys(without('firewood'))).toContain('night.wood.none');
+    const cold = { ...without('firewood'), results: Object.fromEntries(Object.entries(without('firewood').results).filter(([k]) => k !== 'fire')) };   // GAME-319: «вечеря холодна» лише коли й вогню не було
+    expect(nightKeys(cold)).toContain('night.wood.none');
     expect(nightKeys({ ...ALL_DONE, dryLogs: 2 })).toContain('night.wood.damp');
     expect(nightKeys(ALL_DONE)).toContain('night.wood.dry');
   });
@@ -113,5 +114,43 @@ describe('нічні наслідки ділянки (GAME-310)', () => {
     const prepared = n({ ...base, pitch: 'water', nightWeather: 'storm', prep: ['f.prep-high-ground'] }).beats.map((b) => b.id);
     expect(prepared).not.toContain('night.water.flood');
     expect(n({ ...base, pitch: 'water', nightWeather: 'storm' }).blocked).toBe(false);
+  });
+});
+
+// GAME-319 · ніч не суперечить дню: рядок залежить від справжньої кількості, а несумісні рядки не стоять разом.
+// Мутації (перевірено): прибрати `f.berries === 0` → «ягід 0»; `f.fish >= 1` → `fish !== undefined` → «риби 0»;
+// умову `wood !== undefined || fire === undefined` → завжди true → «дрова й вогонь»; (тінь бурі — див. fish-names/sample-day тести контенту).
+describe('ніч не суперечить дню (GAME-319)', () => {
+  const ids = (f: NightFacts): readonly string[] => nightKeys(f);
+  it('0 ягід — «стіл без ягід», не «миска стиглих»', () => {
+    const none = ids({ ...ALL_DONE, berries: 0 });
+    expect(none).toContain('night.berries.none');
+    expect(none).not.toContain('night.berries.sweet');
+    expect(ids({ ...ALL_DONE, berries: 5 })).toContain('night.berries.sweet');
+    expect(ids(ALL_DONE)).toContain('night.berries.sweet');   // старий сейв без поля — як раніше
+  });
+  it('0 риби — «риби не було», не «одна рибина»', () => {
+    const none = ids({ ...ALL_DONE, fish: 0 });
+    expect(none).toContain('night.fish.none');
+    expect(none).not.toContain('night.fish.one');
+    expect(ids({ ...ALL_DONE, fish: 1 })).toContain('night.fish.one');
+  });
+  it('вогонь горів — «дров немає, вечеря холодна» не показується разом із ним', () => {
+    const results = { ...ALL_DONE.results, fire: 'scrappy' as Outcome };
+    delete (results as Record<string, Outcome>).firewood;
+    const k = ids({ ...ALL_DONE, results, dryLogs: 0 });
+    expect(k).toContain('night.fire.smoky');
+    expect(k).not.toContain('night.wood.none');
+    // без вогню й без дров холодна вечеря лишається
+    const cold = { ...results } as Record<string, Outcome>; delete cold.fire;
+    expect(ids({ ...ALL_DONE, results: cold, dryLogs: 0 })).toContain('night.wood.none');
+  });
+  it('усе прибрано — у сцені бурі немає «половина речей надворі»', async () => {
+    const { default: ukLoc } = await import('../../content/locales/uk.json');
+    const { default: enLoc } = await import('../../content/locales/en.json');
+    const L = ukLoc as Record<string, string>; const E = enLoc as Record<string, string>;
+    expect(L['dlg.storm-night.dark']).not.toMatch(/надворі/);
+    expect(E['dlg.storm-night.dark']).not.toMatch(/outside/);
+    expect(ids(ALL_DONE)).toContain('night.tidy.quiet');
   });
 });
