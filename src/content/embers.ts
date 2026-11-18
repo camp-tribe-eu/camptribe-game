@@ -47,7 +47,7 @@ export interface EmberState {
   readonly idle: number;
 }
 /** GAME-321: вогонь без жодної дії догорає сам лише за стільки мс — і це завжди «сяк-так». */
-export const IDLE_MS = 90000;
+export const IDLE_MS = 80000;
 export type EmberEvent = 'none' | 'wood' | 'blow' | 'rake' | 'dishDone' | 'done';
 export type EmberInput = { readonly kind: 'tick'; readonly dtMs: number } | { readonly kind: 'act'; readonly act: EmberAct };
 
