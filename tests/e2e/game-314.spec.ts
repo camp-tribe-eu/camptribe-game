@@ -265,7 +265,6 @@ async function act(page: Page, kind: string, key = '', clickDialogue = false): P
 /** Дорога: кроки дня 1 кнопками (як game-312) до виїзду на дорогу; далі — справжня міні-гра. */
 async function depart(page: Page): Promise<string[]> {
   const errors: string[] = [];
-  page.on('console', (m) => { if (m.text().startsWith('PROBE')) console.log(m.text()); });
   page.on('pageerror', (e) => errors.push(e.message));
   page.on('console', (m) => { if (m.type() === 'error') errors.push(m.text()); });
   await page.goto('/?seed=7&sampleDay=1');
@@ -279,8 +278,8 @@ async function depart(page: Page): Promise<string[]> {
   return errors;
 }
 
-/** Дорога пальцем у сторінці (rAF): вільна смуга — з DOM (data-free), перестроювання кнопками ◀ ▶; `brisk` — тиснути «жвавіше» навіть повз камеру. */
-async function driveRoad(page: Page, brisk: boolean): Promise<string> {
+/** Дорога пальцем у сторінці (rAF): перешкоди — з DOM (data-lane/data-depth), перестроювання кнопками ◀ ▶; режими: steady (рівно), brisk (жвавіше навіть повз камеру), calm (жваво, але спокійно перед камерою). */
+async function driveRoad(page: Page, mode: 'steady' | 'brisk' | 'calm'): Promise<string> {
   await expect(mg(page)).toHaveAttribute('data-phase', 'open', { timeout: 15_000 });
   // GAME-317: гравець НЕ закриває панель «Подорож» — вона мусить зникнути сама, коли відкрилась міні-гра. Раніше тут стояв `dispatchEvent('click')` по кнопці панелі,
   // який ховав цей дефект (панель лишалась над грою, сцена на паузі, прогрес 0, а справжній дотик потрапляв у панель).
@@ -288,19 +287,24 @@ async function driveRoad(page: Page, brisk: boolean): Promise<string> {
   await shot(page, `road-intro`);
   await page.locator('[data-ui="mg-start"]').click();
   await expect(mg(page)).toHaveAttribute('data-phase', 'play');
-  await page.evaluate((hurry) => new Promise<void>((resolve) => {
+  await page.evaluate((how) => new Promise<void>((resolve) => {
     let n = 0;
     const t0 = performance.now();
     const tick = (): void => {
       const root = document.querySelector('[data-ui="minigame"]');
       if (!root || root.getAttribute('data-phase') === 'result' || performance.now() - t0 > 420_000) { resolve(); return; }
       const d = document.querySelector<HTMLElement>('[data-ui="mg-drive"]');
-      if (d && Math.floor((performance.now() - t0) / 10000) > ((window as unknown as { __lg?: number }).__lg ?? -1)) { (window as unknown as { __lg?: number }).__lg = Math.floor((performance.now() - t0) / 10000); const tl = document.querySelector('.mg-time')?.getAttribute('aria-valuenow'); console.log(`PROBE t=${Math.round(performance.now() - t0)} prog=${d.dataset.progress} left=${tl} comfort=${d.dataset.comfort} fuel=${d.dataset.fuel} pace=${d.dataset.pace} lane=${d.dataset.lane} eta=${document.querySelector('[data-ui="mg-drive-eta"]')?.getAttribute('data-ok')} wait=${document.querySelector('[data-ui="mg-drive-wait"]')?.getAttribute('data-why')}`); }
       if (d && root.getAttribute('data-phase') === 'play' && n++ % 4 === 0) {
         const lane = Number(d.dataset.lane);
-        const free = [...document.querySelectorAll('.mg-drive-lane')].findIndex((l) => l.getAttribute('data-free') === 'yes');
-        if (free >= 0 && free !== lane) document.querySelector<HTMLButtonElement>(`[data-ui="mg-drive-lane-${free < lane ? 'left' : 'right'}"]`)?.click();
-        const want = hurry ? 'brisk' : 'steady';
+        // Перешкоди видно на смузі (data-lane/data-depth — те, що бачить око): об'їжджаємо ту, що попереду в нашій смузі ближче ~45 % огляду.
+        const hz = [...document.querySelectorAll<HTMLElement>('[data-ui="mg-drive-hazard"]')].map((h) => ({ lane: Number(h.dataset.lane), depth: Number(h.dataset.depth) }));
+        const busy = (l: number): boolean => hz.some((h) => h.lane === l && h.depth > 0 && h.depth < 0.45);
+        const free = busy(lane) ? [0, 1, 2].filter((l) => !busy(l)).sort((a, b) => Math.abs(a - lane) - Math.abs(b - lane))[0] ?? -1 : -1;
+        if (free >= 0 && free !== lane && Math.abs(free - lane) >= 1) document.querySelector<HTMLButtonElement>(`[data-ui="mg-drive-lane-${free < lane ? 'left' : 'right'}"]`)?.click();
+        // «calm»: жвава їзда, але спокійно перед камерою (штраф) і біля велосипедиста; «brisk» — завжди жваво; «steady» — завжди рівно.
+        const cam = document.querySelector('[data-ui="mg-drive-camera"]') !== null;
+        const near = hz.some((h) => Math.abs(h.lane - lane) <= 1 && h.depth < 0.35 && document.querySelector('[data-kind="cyclist"]') !== null);
+        const want = how === 'steady' ? 'steady' : how === 'brisk' ? 'brisk' : cam || near ? 'steady' : 'brisk';
         if (d.dataset.pace !== want) document.querySelector<HTMLButtonElement>('[data-ui="mg-drive-pace"]')?.click();
         const stop = document.querySelector<HTMLButtonElement>('[data-ui="mg-drive-stop"]');
         if (stop && (stop.dataset.kind === 'fuel' ? Number(d.dataset.fuel) < 0.25 : Number(d.dataset.comfort) < 0.45)) stop.click();
@@ -308,7 +312,7 @@ async function driveRoad(page: Page, brisk: boolean): Promise<string> {
       requestAnimationFrame(tick);
     };
     requestAnimationFrame(tick);
-  }), brisk);
+  }), mode);
   await expect(mg(page)).toHaveAttribute('data-phase', 'result', { timeout: 5_000 });
   const outcome = (await mg(page).getAttribute('data-outcome')) ?? '';
   await shot(page, `road-result-${outcome}`);
@@ -320,8 +324,8 @@ async function driveRoad(page: Page, brisk: boolean): Promise<string> {
 const tapIt = async (page: Page, sel: string): Promise<void> => { await page.locator(sel).tap(); await page.waitForTimeout(120); };
 
 const ORIENTATIONS = [
-  { name: 'portrait', viewport: { width: 390, height: 844 }, brisk: true },
-  { name: 'landscape', viewport: { width: 932, height: 430 }, brisk: false },
+  { name: 'portrait', viewport: { width: 390, height: 844 }, brisk: true, mode: 'brisk' as const },
+  { name: 'landscape', viewport: { width: 932, height: 430 }, brisk: false, mode: 'calm' as const },
 ] as const;
 
 for (const o of ORIENTATIONS) {
@@ -335,7 +339,7 @@ for (const o of ORIENTATIONS) {
       const moneyBefore = (await core2(page)).game.moneyCents;
 
       // 1. ДОРОГА → штраф у гаманці, час приїзду в стані
-      const outcome = await driveRoad(page, o.brisk);
+      const outcome = await driveRoad(page, o.mode);
       const afterRoad = (await core2(page)).game;
       const arrival = { good: 'early', fine: 'ontime', scrappy: 'late' }[outcome] as string;
       expect(afterRoad.flags.filter((f) => f.startsWith('f.arrival-')), 'дорога поставила рівно один f.arrival-*').toEqual([`f.arrival-${arrival}`]);
@@ -520,14 +524,20 @@ for (const o of ORIENTATIONS) {
   });
 }
 
-// GAME-317 · блокер 1: дорога їде від справжнього дотику, і ВСІ три часи приїзду досяжні (раніше завжди «пізно»).
-test.describe('GAME-317 дорога: їде і приїжджає вчасно', () => {
+// GAME-317 · блокер 1: дорога їде від справжнього дотику, і приїзд «рано» та «вчасно» ДОСЯЖНІ (раніше 7 з 7 заїздів — «пізно»: гравець без підказки не об'їжджав перешкод,
+// а рецепція зачинялась за 5–20 с до ідеального рівного проїзду). Мутація: RECEPTION_SEC = 310 → «рівна їзда з об'їздами» червоніє (приїзд пізно); прибрати закриття панелі в Shell → тест червоніє на «панель не лежить над дорогою».
+test.describe('GAME-317 дорога: їде і приїжджає не пізно', () => {
   test.use({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: false });
   test.setTimeout(600_000);
-  test.only('спокійна їзда без зупинок приїздає не «пізно»', async ({ page }) => {
+  test('рівна їзда з об\'їздами, без зупинок — вчасно (не «пізно»)', async ({ page }) => {
     await depart(page);
-    const outcome = await driveRoad(page, false);
-    console.log('G317 probe outcome', outcome);
-    expect(outcome, 'спокійно й без зупинок — це вчасно, а не «сяк-так»').not.toBe('scrappy');
+    const outcome = await driveRoad(page, 'steady');
+    expect(['fine', 'good'], 'рівна спокійна їзда — це вчасно, а не «пізно й знервовані»').toContain(outcome);
+  });
+  test('жвава, але обережна їзда (спокійно перед камерою) — рано: берег відкритий', async ({ page }) => {
+    await depart(page);
+    const outcome = await driveRoad(page, 'calm');
+    expect(outcome, 'жвава обережна їзда — «рано»').toBe('good');
+    expect((await core2(page)).game.flags.filter((f) => f.startsWith('f.arrival-')), 'дорога поставила f.arrival-early').toEqual(['f.arrival-early']);
   });
 });

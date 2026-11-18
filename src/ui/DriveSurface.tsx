@@ -72,7 +72,7 @@ export function DriveSurface({ view, t, tap, drag }: SurfaceProps) {
         {LANES.map((l) => <div key={l} class="mg-drive-lane" data-mid={l === 1 ? 'yes' : 'no'} data-free={s.freeLane === l ? 'yes' : 'no'} style={{ left: pct(l / 3) }} />)}
         {[1, 2].map((i) => <div key={i} class="mg-drive-divider" style={{ left: pct(i / 3) }} />)}
         {s.hazards.map((h) => (
-          <div key={h.id} class="mg-drive-hazard" data-ui="mg-drive-hazard" data-kind={h.kind}
+          <div key={h.id} class="mg-drive-hazard" data-ui="mg-drive-hazard" data-kind={h.kind} data-lane={h.lane} data-depth={h.depth.toFixed(3)}
             style={{ left: pct(h.lane / 3 + 0.05), top: topOf(h.depth), height: pct(Math.max(0.03, h.len)) }} />
         ))}
         {s.cameraAhead && <div class="mg-drive-sign" data-ui="mg-drive-camera">{t('ui.drive.cameraAhead')}</div>}
