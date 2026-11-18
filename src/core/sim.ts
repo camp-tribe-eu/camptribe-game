@@ -1,7 +1,7 @@
 // Крок симуляції: стан гри + годинник + RNG. Вхід — лише журнал (кадри, команди, перемотування),
 // тож той самий seed і той самий журнал дають той самий стан (GAME-13).
 
-import { advance, autoSleepDue, minuteOfDay, newClock, nextAt, pause, resume, tick, type GameClock } from './clock';
+import { GAME_START_MINUTE, advance, autoSleepDue, minuteOfDay, newClock, nextAt, pause, resume, tick, type GameClock } from './clock';
 import { dispatch, type Command } from './commands';
 import { EMPTY_DEFS, type CoreDefs } from './defs';
 import { canonical } from './hash';
@@ -201,7 +201,24 @@ export function fallAsleep(s: SimState, ref: SleepPlace | 'auto', commandId?: st
   return { ...s, game, clock: advance(s.clock, wake - s.clock.minutes), journal: [...s.journal, entry].slice(-JOURNAL_LIMIT) };
 }
 
+/** Доба за календарем (змінюється опівночі; dayOf змінюється о 08:00 — початок ігрової доби). */
+const calendarDay = (minutes: number): number => Math.floor((minutes + GAME_START_MINUTE) / 1440);
+
+/**
+ * GAME-320: у зразковому дні (`holdMinute`) жоден вхід не веде на наступну добу. Дорога (Visit) НЕ відхиляється — інакше з траси о 23:20 в табір не доїхати (softlock):
+ * годинник обмежується стопкою holdMinute тієї ж доби (приїзд о 23:30 найпізніше). Чисті стрибки часу (Sleep, WaitForShop, RestUntilEvening, advance) за північ — відхилено, стан лишається.
+ */
 export function step(s: SimState, input: Input, ctx: StepCtx = {}): SimState {
+  const r = stepRaw(s, input, ctx);
+  if (ctx.holdMinute === undefined || input.kind === 'frame' || calendarDay(r.clock.minutes) <= calendarDay(s.clock.minutes)) return r;
+  if (input.kind === 'command' && input.command.type === 'Visit') {
+    const at = Math.max(s.clock.minutes, s.clock.minutes - minuteOfDay(s.clock.minutes) + ctx.holdMinute);
+    return { ...r, clock: advance(s.clock, at - s.clock.minutes) };
+  }
+  return s;
+}
+
+function stepRaw(s: SimState, input: Input, ctx: StepCtx): SimState {
   const systems = ctx.systems ?? [findsSystem];
   switch (input.kind) {
     case 'frame': {

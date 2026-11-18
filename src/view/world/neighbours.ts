@@ -6,6 +6,7 @@ import { centerOf, findPath, tileOf, type Grid, type Pt, type Tile } from './fol
 import { TILES_PER_MIN, placeAt, type Placed, type Resident, type Timeline } from './ambient';
 import { SEATS } from './camp-alive';
 import type { Dir } from './character';
+import { activeMissions } from '../../content/missions';
 
 /** Ігрова хвилина доби 0 о 8:00 → зсув годинника (як timeOfDay у daylight.ts). Тут лише для обчислення «ночі» від сирої хвилини годинника. */
 const CLOCK_OFFSET = 8 * 60;
@@ -68,14 +69,18 @@ function along(grid: Grid, path: readonly Tile[], u: number): Placed {
 export interface Route extends Placed { readonly phase: RoutePhase }
 
 /** Де сусід о `clockMinutes`: за розкладом удень, дорогою додому, біля намету, дорогою назад. Чиста функція (план — з planHome для цієї ночі). */
-export function routeAt(grid: Grid, tl: Timeline, home: Tile, plan: HomePlan | null, clockMinutes: number): Route {
+export function routeAt(grid: Grid, tl: Timeline, home: Tile, plan: HomePlan | null, clockMinutes: number, stays = false): Route {
   const u = sinceEvening(clockMinutes);
-  if (!plan || u >= OUT_AT) return { ...placeAt(grid, tl, clockMinutes), phase: 'out' };
+  if (stays || !plan || u >= OUT_AT) return { ...placeAt(grid, tl, clockMinutes), phase: 'out' };
   if (u < plan.goMin) return { ...along(grid, plan.go, u / plan.goMin), phase: 'going' };
   const leaveAt = OUT_AT - plan.leaveMin;
   if (u < leaveAt) return { ...centerOf(grid, home), moving: false, dir: 'down', phase: 'home' };
   return { ...along(grid, plan.leave, (u - leaveAt) / plan.leaveMin), phase: 'leaving' };
 }
+
+/** GAME-320: сусід, у якого ВІДКРИТА місія (взята, не здана), не йде спати й лишається на розкладі — здати можна до самої ночі (раніше о 19:58 він сидів у наметі, а після 20:00 спав). */
+/** Лише у зразковому дні (`sample`): у звичайній грі незавершена місія сусіда не заважає йому спати. */
+export const staysOut = (flags: readonly string[], id: string, sample: boolean): boolean => sample && activeMissions(flags).some((m) => m.giver === id);
 
 // ---------- Що робить, коли стоїть ----------
 
@@ -268,9 +273,9 @@ export const EMOTE_COLORS: Readonly<Record<Emote, number>> = { heart: 0xe0446a, 
 
 export interface Around { readonly dist: number; readonly raining: boolean; readonly waved: boolean; readonly blocked?: boolean }
 /** Де сусід і в якому стані о `clockMinutes` без пам'яті кадрів (перший кадр): дорога + заняття на стоянці + привітання. Те саме, що рахує rig кадр за кадром. */
-export function neighbourAt(grid: Grid, tl: Timeline, resIndex: number, plan: HomePlan | null, clockMinutes: number, o: Around): { route: Route; state: NState } {
+export function neighbourAt(grid: Grid, tl: Timeline, resIndex: number, plan: HomePlan | null, clockMinutes: number, o: Around, stays = false): { route: Route; state: NState } {
   const home = HOMES[tl.resident.id] ?? { c: 0, r: 0 };
-  const route = routeAt(grid, tl, home, HOMES[tl.resident.id] ? plan : null, clockMinutes);
+  const route = routeAt(grid, tl, home, HOMES[tl.resident.id] ? plan : null, clockMinutes, stays);
   const stop = route.phase === 'out' && !route.moving ? stopIndexAt(tl.resident, grid, route) : -1;
   const seat = stop >= 0 ? seatNear(route) : -1;
   const state = neighbourState({ tod: mod(clockMinutes + CLOCK_OFFSET, DAY), phase: route.phase, moving: route.moving, dist: o.dist, raining: o.raining, activity: activityFor(resIndex, stop, seat), waved: o.waved, blocked: o.blocked === true });

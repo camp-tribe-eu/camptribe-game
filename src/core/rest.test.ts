@@ -124,3 +124,27 @@ describe('GAME-317 · годинник зразкового дня стоїть'
     expect(daysEnded(s, DEFS)).toBe(0);
   });
 });
+
+// GAME-320 · у зразковому дні жоден стрибок часу не веде за північ: Sleep / WaitForShop / advance відхилено (стан той самий), дрібні кроки до півночі — проходять.
+// Мутація: у `step` (sim.ts) прибрати перевірку `calendarDay(...) > calendarDay(...)` → тести «відхилено» червоніють (контрольні рядки без утримання лишаються зеленими).
+describe('GAME-320 · стрибки часу в зразковому дні', () => {
+  const hold = 23 * 60 + 30;
+  const go = (s: SimState, command: { type: 'Sleep' | 'WaitForShop' }, hold_?: number): SimState =>
+    step(s, { kind: 'command', command: { ...command, commandId: 'j1' } as never }, hold_ === undefined ? { defs: DEFS } : { defs: DEFS, holdMinute: hold_ });
+  it('Sleep: без утримання — ранок (контроль), з утриманням — відмова, годинник і журнал ті самі', () => {
+    const s = simAt('loc.home', 870);   // 22:30
+    expect(go(s, { type: 'Sleep' }).clock.minutes).toBe(1380);
+    const r = go(s, { type: 'Sleep' }, hold);
+    expect(r).toBe(s);
+    expect(r.journal.some((e) => e.type === 'Sleep')).toBe(false);
+  });
+  it('WaitForShop і advance через північ: відмова; крок, що лишається в добі, проходить', () => {
+    const shop = simAt('loc.shop', 780);   // 21:00, зачинено
+    expect(go(shop, { type: 'WaitForShop' }).clock.minutes).toBe(1440);
+    expect(go(shop, { type: 'WaitForShop' }, hold)).toBe(shop);
+    const late = simAt('loc.camp.lake', 900);   // 23:00
+    expect(step(late, { kind: 'advance', minutes: 120 }).clock.minutes).toBe(1020);
+    expect(step(late, { kind: 'advance', minutes: 120 }, { defs: DEFS, holdMinute: hold })).toBe(late);
+    expect(step(late, { kind: 'advance', minutes: 20 }, { defs: DEFS, holdMinute: hold }).clock.minutes).toBe(920);
+  });
+});

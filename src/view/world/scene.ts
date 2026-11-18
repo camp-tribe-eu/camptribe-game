@@ -35,7 +35,7 @@ import { heroBusy } from './hero-busy';
 import { FEEDBACK_S, RING_IDLE, isAutoSpot, markHandled, pickNearest, ringMayTake, stepRing, vehicleReady, type Insets, type Ring } from './proximity';
 import { IDLE_AFTER_S, LEISURE_BY_MAP, assignLeisure, leisureFromObjects, type LeisureSpot } from './leisure';
 import { Neighbours, type NeighbourProbe } from './neighbours-rig';
-import { EMOTE_FRAMES } from './neighbours';
+import { EMOTE_FRAMES, staysOut } from './neighbours';
 import { BARK_RANGE, CAST, CAST_BY_MAP, RESIDENTS, buildTimeline, placeAt, residentGrid, type Timeline } from './ambient';
 import type { Key } from '../../i18n';
 import { idlePose } from './idle-poses';
@@ -1291,6 +1291,7 @@ export class WorldScene extends Phaser.Scene {
     const minutes = clock.minutes + clock.accMs / STEP_MS;
     if (this.talkingTo !== null && this.bridge.state.game.dialogue === null) this.talkingTo = null;
     this.neigh.setTalking(this.talkingTo);
+    this.neigh.setStay(new Set(RESIDENTS.map((r) => r.id).filter((id) => staysOut(this.bridge.state.game.flags, id, this.bridge.holdMinute !== undefined))));
     this.residentLines.forEach((tl, i) => {
       const s = this.residentSprites[i];
       if (!s || !tl) return;
