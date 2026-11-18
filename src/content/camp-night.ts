@@ -29,6 +29,8 @@ export interface NightFacts {
   /** Скільки риби лишили на вечерю і скільки гірких ягід потрапило в миску. */
   readonly fish: number;
   readonly bitterBerries: number;
+  /** GAME-319: скільки ягід реально в мисці. Без поля (старий сейв) — ніч читає як раніше. */
+  readonly berries?: number | undefined;
   /** Чи лишилась їжа надворі (night-camp.foodOutside). */
   readonly foodOutside: boolean;
   /** Скільки раундів табір стояв порожній (camp-day.emptyRounds). */
@@ -61,15 +63,18 @@ export function nightOf(f: NightFacts): { readonly beats: readonly NightBeat[]; 
       : { routine: 'water', id: 'night.water.short', severity: 'plain' });
 
   // ДРОВА: сухі під тентом — вогонь переживе зливу; вогкі або жодних — холодна вечеря.
+  // GAME-319: «Дров немає — вечеря холодна» суперечить вогню, що горів (хай і димів): дрова й вогонь не суперечать: слід дров стоїть лише поруч зі слідом вогню того ж роду (обидва були або обидва ні).
+  const fire = did(f, 'fire');
   const wood = did(f, 'firewood');
-  beats.push(wood === undefined
-    ? { routine: 'firewood', id: 'night.wood.none', severity: 'rough' }
-    : f.dryLogs >= 4
-      ? { routine: 'firewood', id: 'night.wood.dry', severity: 'good' }
-      : { routine: 'firewood', id: 'night.wood.damp', severity: 'plain' });
+  if ((wood === undefined) === (fire === undefined)) {
+    beats.push(wood === undefined
+      ? { routine: 'firewood', id: 'night.wood.none', severity: 'rough' }
+      : f.dryLogs >= 4
+        ? { routine: 'firewood', id: 'night.wood.dry', severity: 'good' }
+        : { routine: 'firewood', id: 'night.wood.damp', severity: 'plain' });
+  }
 
   // ВОГОНЬ: вечеря й вечір біля вогню. Без вогню — холодна вечеря з банки, і це не покарання, а просто інший вечір.
-  const fire = did(f, 'fire');
   beats.push(fire === undefined
     ? { routine: 'fire', id: 'night.fire.none', severity: 'rough' }
     : fire === 'good'
@@ -80,13 +85,13 @@ export function nightOf(f: NightFacts): { readonly beats: readonly NightBeat[]; 
   const fish = did(f, 'fish');
   beats.push(fish !== undefined && f.fish >= 2
     ? { routine: 'fish', id: 'night.fish.supper', severity: 'good' }
-    : fish !== undefined
+    : fish !== undefined && f.fish >= 1
       ? { routine: 'fish', id: 'night.fish.one', severity: 'plain' }
       : { routine: 'fish', id: 'night.fish.none', severity: 'plain' });
 
   // ЯГОДИ: доповнити стіл. Гіркий двійник у мисці — вечеря з гримасою (і жодної шкоди).
   const berries = did(f, 'berries');
-  beats.push(berries === undefined
+  beats.push(berries === undefined || f.berries === 0
     ? { routine: 'berries', id: 'night.berries.none', severity: 'plain' }
     : f.bitterBerries > 0
       ? { routine: 'berries', id: 'night.berries.bitter', severity: 'plain' }

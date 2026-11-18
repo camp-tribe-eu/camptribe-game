@@ -12,11 +12,11 @@ import type { CampBoardSave } from '../core/camp-board';
 import { STEPS, needSide, startWater, stepWater, waterOutcome, waterScore, type Side, type WaterState } from '../content/water-carry';
 import { LANTERNS, SPOTS, lanternOutcome, litCount, startLanterns, stepLanterns, type LanternState } from '../content/lantern-charge';
 import { DISHES, emberOutcome, startEmbers, stepEmbers, type EmberAct, type EmberState } from '../content/embers';
-import { BASKET, berryOutcome, bitterCount, enoughBerries, hinted, patchOf, pickBerry, startBerries, type BerryState } from '../content/berries-patch';
+import { BASKET, berryOutcome, berryFacts, enoughBerries, hinted, patchOf, pickBerry, startBerries, type BerryState } from '../content/berries-patch';
 import { COVER, ENOUGH_DRY, LOGS, dryLogs, finishStack, placeLog, startStack, type StackState, type WoodPlace } from '../content/firewood-stack';
 import { THINGS, foodOutside, putThing, sleepNow, startTidy, tidyOutcome, type Place, type TidyState } from '../content/night-camp';
 import { FISH_IDLE, makeRng, stepFish, type FishState } from '../content/fishing';
-import { speciesAt, supperFish } from '../content/fish-table';
+import { biteCue, floatCss, speciesAt, supperFish } from '../content/fish-table';
 
 type Phase = 'board' | 'work' | 'night';
 const PLACES: readonly Place[] = ['car', 'hung', 'bin', 'tarp'];
@@ -43,6 +43,11 @@ export interface CampRoutinesProps {
   readonly onSave?: (b: CampBoardSave) => void;
 }
 
+/** GAME-319: мітка поклівки на дошці (окремий компонент — щоб тест бачив розмітку без DOM). */
+export function FishBiteCue({ fish, t }: { readonly fish: FishState; readonly t: (k: Key) => string }) {
+  return <p class="ui-fish-bite" data-ui="fish-bite" role="status"><span class="ui-fish-float" aria-hidden="true" style={{ transform: floatCss(fish) }}>●</span> {t('camp.fish.bite')}</p>;
+}
+
 export function CampRoutines({ t, weather, seed, onFrame, devices: devices0 = {}, extra, onNight, onSummary, text, saved, onSave }: CampRoutinesProps) {
   const [devices, setDevices] = useState<Devices>(() => ({ ...devices0, ...((saved?.devices ?? {}) as Devices) }));
   // GAME-314: пристрій, що з'явився вже по ходу дня (місія віддала матеріал), додається, не стираючи догляд за наявними.
@@ -65,7 +70,7 @@ export function CampRoutines({ t, weather, seed, onFrame, devices: devices0 = {}
   const [stack, setStack] = useState<StackState | null>(null);
   const [fish, setFish] = useState<FishState>(FISH_IDLE);
   const [rod, setRod] = useState(false);
-  const [facts, setFacts] = useState(() => saved?.facts ?? { water: 0, dryLogs: 0, lit: 0, fish: 0, bitter: 0, foodOut: true });
+  const [facts, setFacts] = useState(() => saved?.facts ?? { water: 0, dryLogs: 0, lit: 0, fish: 0, bitter: 0, berries: undefined as number | undefined, foodOut: true });
   const rng = useRef(makeRng(seed));
 
   const helpOf = (id: RoutineId): Difficulty => ((streak[id] ?? 0) >= HELP_AFTER ? RELAXED : NORMAL);
@@ -109,7 +114,7 @@ export function CampRoutines({ t, weather, seed, onFrame, devices: devices0 = {}
   };
 
   // Ніч читає і ручне, і налагоджене — та сама модель фактів (camp-night), пристрої лише додають свої.
-  const nightFacts: NightFacts = deviceFacts(devices, { results: dayNow.results, litLanterns: facts.lit, dryLogs: facts.dryLogs, water: facts.water, fish: facts.fish, bitterBerries: facts.bitter, foodOutside: facts.foodOut, emptyRounds: emptyRounds(day).length, weather, ...extra });
+  const nightFacts: NightFacts = deviceFacts(devices, { results: dayNow.results, litLanterns: facts.lit, dryLogs: facts.dryLogs, water: facts.water, fish: facts.fish, bitterBerries: facts.bitter, berries: facts.berries, foodOutside: facts.foodOut, emptyRounds: emptyRounds(day).length, weather, ...extra });
 
   // GAME-314: на дошці (не посеред роботи) і в ніч — у сейв; так результати переживають закриту панель і перезавантаження.
   const boardJson = JSON.stringify({ round, picks: day.picks, results: day.results, facts, devices });
@@ -225,7 +230,8 @@ export function CampRoutines({ t, weather, seed, onFrame, devices: devices0 = {}
         )}
         {active === 'fish' && (
           <section class="ui-camp-work">
-            <p data-ui="fish-biting">{`${t('camp.fish.biting')}: ${speciesAt('afternoon', weather).join(', ')}`}</p>
+            <p data-ui="fish-biting">{`${t('camp.fish.biting')}: ${speciesAt('afternoon', weather).map((id) => t(`fish.sp.${id}` as Key)).join(', ')}`}</p>
+            {biteCue(fish) && <FishBiteCue fish={fish} t={t} />}
             <p data-ui="fish-kept" data-kept={fish.kept}>{`${t('camp.fish.kept')}: ${fish.kept}`}</p>
             {fish.phase === 'choice' ? (
               <div class="ui-camp-row">
@@ -258,7 +264,7 @@ export function CampRoutines({ t, weather, seed, onFrame, devices: devices0 = {}
             </ul>
             <button type="button" class="ui-btn ui-camp-big" data-ui="berry-enough" onClick={() => {
               const s = enoughBerries(berries);
-              finish('berries', berryOutcome(s), { bitter: bitterCount(s) });
+              finish('berries', berryOutcome(s), berryFacts(s));
             }}>{t('camp.berry.enough')}</button>
           </section>
         )}
