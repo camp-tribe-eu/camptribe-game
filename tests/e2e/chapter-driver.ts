@@ -304,6 +304,21 @@ export async function takeItemAt(page: Page, touch: boolean, itemId: string, aft
 
 const AUTO = (name: string): boolean => name.startsWith('step.') || name.startsWith('take.') || name === 'obj.vehicle' || name.startsWith('req.') || name.startsWith('pack.');
 /** Один «заход»: куди каже стрілка → дійти → дія від наближення (кільце) або кнопка дії (E / тап по кнопці). Повертає назву цілі. */
+/**
+ * GAME-332 · «Багажник»: з сумкою біля авто відкривається міні-гра. Загальні проходи розділів не грають її — вибирають «Їдемо як є» (пауза → далі без цього → закрити): нічого не лишається вдома,
+ * завантаження йде як раніше. Справжню гру руками перевіряє game-332-trunk.spec. Чекає до `wait` мс, поки гра з'явиться; не з'явилась — нічого не робить.
+ */
+export async function passTrunk(page: Page, wait = 1_500): Promise<boolean> {
+  const mg = page.locator('[data-ui="minigame"]');
+  if (!(await mg.waitFor({ timeout: wait }).then(() => true, () => false))) return false;
+  await page.locator('[data-ui="mg-start"]').click();
+  await page.locator('[data-ui="mg-pause"]').click();
+  await page.locator('[data-ui="mg-move-on"]').click();
+  await page.locator('[data-ui="mg-close"]').click();
+  await expect(mg).toHaveCount(0);
+  return true;
+}
+
 export async function goAndDo(page: Page, touch: boolean, car = false): Promise<string> {
   await expect.poll(async () => (await probe(page)).fx.target, { timeout: 20_000, message: 'стрілка «Далі» мусить вказувати ціль' }).not.toBeNull();
   const p = await probe(page);
@@ -332,6 +347,7 @@ export async function goAndDo(page: Page, touch: boolean, car = false): Promise<
     }
     if (target === 'task.pitch-tent' && !AUTO(target)) await playTent(page, touch);
     if (target === 'obj.campfire' && (await probe(page)).fire.phase === 'stack') await playFire(page, touch);   // GAME-190: вогнище руками
+    if (target === 'obj.vehicle') await passTrunk(page);
     try { await expect.poll(() => signature(page), { timeout: 5_000 }).not.toBe(before); break; } catch { /* ще раз із поточної точки */ }
   }
   const q = await probe(page);

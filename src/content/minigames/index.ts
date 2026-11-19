@@ -4,6 +4,7 @@ import { minigameDefsOf, type AnyMinigame } from '../../core/minigame';
 import { DRIVE } from './drive';
 import { REFERENCE } from './reference';
 import { MISSION_MINIGAMES } from './missions';
+import { TRUNK_GAME } from './trunk';
 import { EMBERS_GAME, NIGHT_CAMP_GAME } from './camp';
 
 export const MINIGAMES: readonly AnyMinigame[] = [
@@ -11,6 +12,7 @@ export const MINIGAMES: readonly AnyMinigame[] = [
   DRIVE,
   EMBERS_GAME,
   NIGHT_CAMP_GAME,
+  TRUNK_GAME,
   ...MISSION_MINIGAMES,
 ];
 export const MINIGAME_DEFS = minigameDefsOf(MINIGAMES);

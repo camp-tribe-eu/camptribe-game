@@ -48,6 +48,11 @@ export const NIGHT_FACTS: NightFacts = {
   results: {}, litLanterns: 0, dryLogs: 0, water: 0, fish: 0, bitterBerries: 0, foodOutside: true, emptyRounds: 0, weather: 'rain',
 };
 
+/** GAME-332: ліхтар лишили вдома (f.left-lantern, «Багажник») і жодного іншого не взяли — світити нічим. Прапорців немає (старий сейв) — false, ніч як була. */
+export const NO_LAMP = 'f.left-lantern';
+const LAMPS = ['f.pack-lantern', 'f.pack-lantern-2', 'f.pack-lantern-3'] as const;
+export const noLamp = (f: Pick<NightFacts, 'missions'>): boolean => f.missions !== undefined && f.missions.includes(NO_LAMP) && !LAMPS.some((x) => (f.missions as readonly string[]).includes(x));
+
 const did = (f: NightFacts, id: RoutineId): Outcome | undefined => f.results[id];
 
 /** Ніч за фактами дня. Порядок слідів — як вони стаються: вечеря, світло, табір, буря, ранок. */
@@ -99,7 +104,7 @@ export function nightOf(f: NightFacts): { readonly beats: readonly NightBeat[]; 
 
   // ЛІХТАРІ: світло вночі. Буря без світла — темно й страшно; один ліхтар — тьмяно, але видно.
   const lanterns = did(f, 'lanterns');
-  beats.push(lanterns === undefined || f.litLanterns === 0
+  beats.push(lanterns === undefined || f.litLanterns === 0 || noLamp(f)
     ? { routine: 'lanterns', id: 'night.light.dark', severity: 'rough' }
     : f.litLanterns >= 3
       ? { routine: 'lanterns', id: 'night.light.bright', severity: 'good' }

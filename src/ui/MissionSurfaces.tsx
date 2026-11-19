@@ -3,6 +3,7 @@ import type { ComponentType } from 'preact';
 import type { SurfaceProps } from './MinigameHost';
 import type { Key } from '../i18n';
 import { DriveSurface } from './DriveSurface';
+import { TrunkSurface } from './TrunkSurface';
 
 interface SiftSurface { readonly cols: number; readonly rows: number; readonly cells: readonly string[]; readonly hintRow: number | null; readonly scoops: number; readonly sifting: boolean }
 interface TuneSurface { readonly dial: number; readonly station: number | null; readonly signal: number; readonly lock: number; readonly need: number }
@@ -61,4 +62,4 @@ export function CrankSurface({ view, t, tap }: SurfaceProps) {
 
 /** Поверхня за id міні-гри місії; null — не місійна гра. */
 export const missionSurface = (id: string): ComponentType<SurfaceProps> | null =>
-  id === 'mg.drive' ? DriveSurface : id === 'mg.ring-sift' ? SiftSurface : ['mg.aerial-tune', 'mg.panel-aim', 'mg.tarp-tie'].includes(id) ? TuneSurface : ['mg.lantern-crank', 'mg.trap-weave'].includes(id) ? CrankSurface : null;
+  id === 'mg.drive' ? DriveSurface : id === 'mg.trunk' ? TrunkSurface : id === 'mg.ring-sift' ? SiftSurface : ['mg.aerial-tune', 'mg.panel-aim', 'mg.tarp-tie'].includes(id) ? TuneSurface : ['mg.lantern-crank', 'mg.trap-weave'].includes(id) ? CrankSurface : null;

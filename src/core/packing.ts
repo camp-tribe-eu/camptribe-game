@@ -41,7 +41,7 @@ export function autoPack(pk: PackingDefs, p: PlayerState): string[] {
 
 /** Прапорці з уже наявних: усі пакувальні прибрано, спаковане — додано. Відсортовано, як решта `flags`. */
 export function withPacked(flags: readonly string[], pk: PackingDefs, packed: readonly string[]): string[] {
-  const all = new Set(pk.items.map((i) => packFlag(i.itemId)));
+  const all = new Set(pk.items.flatMap((i) => [packFlag(i.itemId), leftFlag(i.itemId)]));
   return [...flags.filter((f) => !all.has(f)), ...packed.map(packFlag)].sort();
 }
 
@@ -54,6 +54,9 @@ export function packingOpen(pk: PackingDefs, d: Pick<GameState, 'player' | 'ques
 
 /** Прапорець «річ у сумці героя» (GAME-245): взяв удома, ще не завантажив у авто. `item.lantern` → `f.take-lantern`. */
 export const takeFlag = (itemId: string): string => `f.take-${itemId.replace(/^item\./, '')}`;
+
+/** Прапорець «річ лишили вдома» (GAME-332): ставить LeaveItem, знімає TakeItem. `item.lantern` → `f.left-lantern`. */
+export const leftFlag = (itemId: string): string => `f.left-${itemId.replace(/^item\./, '')}`;
 
 /** Речі в сумці (взяті, ще не в авто), у порядку контенту. */
 export function carriedOf(flags: readonly string[], pk: PackingDefs, p: PlayerState): string[] {
@@ -89,5 +92,7 @@ export function overflowCandidates(pk: PackingDefs, p: PlayerState, flags: reado
 /** Прапорці після завантаження: pack-/take- переписано за результатом loadCarSet. */
 export function withLoaded(flags: readonly string[], pk: PackingDefs, r: { packed: readonly string[]; overflow: readonly string[] }): string[] {
   const all = new Set(pk.items.flatMap((i) => [packFlag(i.itemId), takeFlag(i.itemId)]));
-  return [...flags.filter((f) => !all.has(f)), ...r.packed.map(packFlag), ...r.overflow.map(takeFlag)].sort();
+  // Вантаж щойно перекладено: річ, що знову в багажнику чи сумці, вже не «лишена».
+  const gone = new Set([...r.packed, ...r.overflow].map(leftFlag));
+  return [...flags.filter((f) => !all.has(f) && !gone.has(f)), ...r.packed.map(packFlag), ...r.overflow.map(takeFlag)].sort();
 }
