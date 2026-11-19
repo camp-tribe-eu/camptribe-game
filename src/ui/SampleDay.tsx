@@ -1,12 +1,13 @@
 // GAME-314 · зразковий день: те, чого в живій грі бракувало між уже готовими шматками. Тут лише показ і дотики:
 //   заїзд на ділянку (drive-in, GAME-310) → дошка табору (рутини й пристрої, GAME-311) → ніч (ОДНА модель camp-night) → підсумок.
 // Дорога (mg.drive) і місії йдуть через каркас міні-ігор (MinigameHost у Shell), ділянку обирає сцена приїзду — тут їх немає.
-import { useEffect, useState } from 'preact/hooks';
+import { useEffect, useRef, useState } from 'preact/hooks';
 import type { Key } from '../i18n';
 import { ct, MISSING_MARK } from '../i18n/content';
 import type { AnyLang } from '../i18n';
 import type { Weather } from '../core/weather';
 import { CampRoutines } from './CampRoutines';
+import type { RoutineId } from '../content/camp-day';
 import { DRIVE_STEPS, canUndo, driveOutcome, driveLog, laneOf, logStep, undo, type DriveLog, type DriveStep } from '../content/drive-in';
 import { devicesFromFlags, missionsDone, sampleExtra } from '../content/sample-day';
 import { arrivalOf, pitchTaken } from '../content/arrival-pitch';
@@ -34,6 +35,10 @@ export interface SamplePort {
   stormNight(): void;
   /** GAME-323: «Почати знову» — нова гра й перезавантаження ?sampleDay=1 (день не продовжується в старому меню). */
   restart(): Promise<void>;
+  /** GAME-335: місце справи на мапі табору просить відкрити рутину (нове `n` — новий запит). */
+  request(): { id: RoutineId | null; n: number };
+  /** GAME-335: яка рутина зараз у роботі — виконавець стоїть на її місці на мапі. */
+  working(id: RoutineId | null): void;
   subscribe(l: () => void): () => void;
 }
 
@@ -102,6 +107,14 @@ export function SampleDay({ port, t, lang, onBoard }: { port: SamplePort; t: (k:
   const [mounted, setMounted] = useState(false);
   const [night, setNight] = useState<NightFacts | null>(null);
   const stage = port.stage();
+  // GAME-335: запит із мапи (місце справи) відкриває дошку з потрібною рутиною — той самий вхід, що й кнопка «Дошка табору».
+  const req = port.request();
+  const seenReq = useRef(req.n);
+  useEffect(() => {
+    if (req.n === seenReq.current) return;
+    seenReq.current = req.n;
+    onBoard(); setMounted(true); setBoardOpen(true);
+  }, [req.n]);
   if (stage === 'off') return null;
   const text = (id: string): string => { const v = ct(lang, id); return v.startsWith(MISSING_MARK) ? t(id as Key) : v; };
   const lane = port.lane();
@@ -110,12 +123,13 @@ export function SampleDay({ port, t, lang, onBoard }: { port: SamplePort; t: (k:
   const ended = port.goal() === 'done';   // GAME-323: сцену бурі зіграно — день скінчено; ☰ і дошка вже не відкриваються
   return (
     <>
+      {!mounted && !ended && <p class="sd-hint" data-ui="sd-station-hint" role="status">{t('sd.stationHint')}</p>}
       {!boardOpen && !ended && (
         <button type="button" class="ui-btn sd-board-btn" data-ui="sd-board" onClick={() => { onBoard(); setMounted(true); setBoardOpen(true); }}>{t('sd.board')}</button>
       )}
       {mounted && !ended && (
         <div class="sd-board-wrap" data-ui="sd-board-wrap" hidden={!boardOpen}>
-          <CampRoutines live={boardOpen} t={t} weather={port.weather()} seed={port.seed()} onFrame={port.onFrame} devices={devicesFromFlags(flags)} extra={sampleExtra(flags)} text={text}
+          <CampRoutines live={boardOpen} t={t} weather={port.weather()} seed={port.seed()} onFrame={port.onFrame} devices={devicesFromFlags(flags)} extra={sampleExtra(flags)} text={text} focus={req} onWork={port.working}
             onNight={setNight} saved={port.board()} onSave={port.saveBoard} onSummary={() => { setBoardOpen(false); port.stormNight(); }} />
           <button type="button" class="ui-btn sd-board-close" data-ui="sd-board-close" onClick={() => setBoardOpen(false)}>{t('sd.back')}</button>
         </div>

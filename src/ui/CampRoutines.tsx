@@ -45,6 +45,10 @@ export interface CampRoutinesProps {
   readonly onSave?: (b: CampBoardSave) => void;
   /** GAME-321: панель видима. Прихована дошка стоїть: ні час роботи, ні вогонь, ні ліхтарі не ідуть. */
   readonly live?: boolean;
+  /** GAME-335: місце справи на мапі табору просить відкрити рутину — ТА САМА точка входу, що й кнопка дошки (open). Нове `n` — новий запит. */
+  readonly focus?: { readonly id: RoutineId | null; readonly n: number };
+  /** GAME-335: яка рутина зараз у роботі (null — жодної): виконавець стоїть на її місці на мапі. */
+  readonly onWork?: (id: RoutineId | null) => void;
 }
 
 /** GAME-319: мітка поклівки на дошці (окремий компонент — щоб тест бачив розмітку без DOM). */
@@ -70,7 +74,7 @@ export function FishSlot({ fish, t }: { readonly fish: FishState; readonly t: (k
   );
 }
 
-export function CampRoutines({ t, weather, seed, onFrame, devices: devices0 = {}, extra, onNight, onSummary, text, saved, onSave, live = true }: CampRoutinesProps) {
+export function CampRoutines({ t, weather, seed, onFrame, devices: devices0 = {}, extra, onNight, onSummary, text, saved, onSave, live = true, focus, onWork }: CampRoutinesProps) {
   const [devices, setDevices] = useState<Devices>(() => ({ ...devices0, ...((saved?.devices ?? {}) as Devices) }));
   // GAME-314: пристрій, що з'явився вже по ходу дня (місія віддала матеріал), додається, не стираючи догляд за наявними.
   const dev0Key = Object.keys(devices0).sort().join(',');
@@ -147,6 +151,16 @@ export function CampRoutines({ t, weather, seed, onFrame, devices: devices0 = {}
     if (id === 'fish') { setFish(FISH_IDLE); setRod(false); }
     if (id === 'knots') setKnots(startKnots(seed));
   };
+
+  // GAME-335: запит з мапи — лише з дошки (посеред роботи чи вночі панель не перемикаємо); не можна взяти — дошка просто лишається видимою.
+  const seenFocus = useRef(0);
+  useEffect(() => {
+    if (!focus || focus.id === null || focus.n === seenFocus.current) return;
+    seenFocus.current = focus.n;
+    if (phase === 'board') open(focus.id);
+  }, [focus?.n]);
+  const working = phase === 'work' ? active : null;
+  useEffect(() => { onWork?.(working); }, [working]);
 
   // Ніч читає і ручне, і налагоджене — та сама модель фактів (camp-night), пристрої лише додають свої.
   const nightFacts: NightFacts = deviceFacts(devices, { results: dayNow.results, litLanterns: facts.lit, dryLogs: facts.dryLogs, water: facts.water, fish: facts.fish, bitterBerries: facts.bitter, berries: facts.berries, foodOutside: facts.foodOut, emptyRounds: emptyRounds(day).length, weather, ...extra });
