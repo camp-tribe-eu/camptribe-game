@@ -472,6 +472,7 @@ for (const o of ORIENTATIONS) {
       await tapIt(page, '[data-ui="sd-board"]');
       // GAME-325: дошка відкрилась з-під «Заїхали» БЕЗ закриття ☰ вручну — світ не на паузі: кран наливає (кадри течуть), а не стоїть на 0 %.
       await expect(page.locator('[data-ui="camp-board"]')).toBeVisible();
+      await expectBoardClear(page, 'свіжа дошка (Ніч, Далі)');   // найвища: усі сім справ ще з описами в два рядки
       await tapIt(page, '[data-ui="camp-routine"][data-id="water"]');
       await page.locator('[data-ui="water-tap"]').dispatchEvent('pointerdown');
       await expect.poll(async () => Number(await page.locator('[data-ui="water-level"]').getAttribute('data-level')), { timeout: 6_000, message: 'GAME-325: «Тримай кран» наливає' }).toBeGreaterThan(0);
