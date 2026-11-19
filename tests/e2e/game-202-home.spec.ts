@@ -60,7 +60,7 @@ async function approach(page: Page, i: number, id: string): Promise<void> {
     const set = (want: string | null): void => { if (held === want) return; if (held) fire('keyup', held); held = want; if (want) fire('keydown', want); };
     const t0 = performance.now();
     const tick = (): void => {
-      if (performance.now() - t0 > 40_000) { set(null); resolve({ ok: false, at: JSON.parse(JSON.stringify(g)) }); return; }
+      if (performance.now() - t0 > 15_000) { set(null); resolve({ ok: false, at: JSON.parse(JSON.stringify(g)) }); return; }
       const f = g.followers[i];
       if (f && g.nearObject === id) { set(null); fire('keydown', 'KeyE'); requestAnimationFrame(() => { fire('keyup', 'KeyE'); resolve({ ok: true, at: null }); }); return; }
       if (!f) { set(null); requestAnimationFrame(tick); return; }

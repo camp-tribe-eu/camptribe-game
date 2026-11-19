@@ -8,6 +8,7 @@
 import { mkdirSync } from 'node:fs';
 import { expect, test, type Page } from '@playwright/test';
 import { answerOne, core, probe, route, talk, walk } from './chapter-driver';
+import { stateHash } from '../../src/core/hash';
 import { seedDay1 } from './day1-fixture';
 
 test.use({ hasTouch: true, isMobile: true });
@@ -98,6 +99,17 @@ async function closeTalk(page: Page): Promise<void> {
     await answerOne(page);
   }
 }
+/**
+ * Подія в дорозі — кидок RNG стану, а `findsSystem` тягне RNG щохвилини живого часу, тож кидок залежить від прожитих кадрів (під навантаженням — інший).
+ * Фікстура вже має `f.seen-road-apples` (шанс 40) — без нього на приїзд лишалось ~42 %, і нуль подій за ~8 приїздів траплявся (≈1 %). Знімаємо цей прапорець
+ * (з перерахунком контрольної суми): ~82 % на приїзд, нуль за 8 приїздів ≈ 1e-6. Сама подія й мапа дороги — справжні, як у грі.
+ */
+const withApples = (save: string): string => {
+  const f = JSON.parse(save) as { checksum: string; sim: { game: { flags: string[] } } };
+  f.sim.game.flags = f.sim.game.flags.filter((x) => x !== 'f.seen-road-apples');
+  f.checksum = stateHash(f.sim);
+  return JSON.stringify(f);
+};
 /** Їздимо з рамки вибору (сцена на паузі — шлях QA 05.11), поки ядро не кине подію в дорозі: Visit → loc.road і dialogue !== null у тому ж кроці.
  *  Кожен приїзд на дорогу — один кидок RNG зі збереження, тож за кілька поїздок подія трапляється детерміновано. */
 async function driveUntilRoadEvent(page: Page, trace: string[] = []): Promise<number> {
@@ -121,7 +133,7 @@ for (const v of VIEWS) {
     await installWatch(page);
     const errors: string[] = [];
     page.on('pageerror', (e) => errors.push(e.message));
-    await seedDay1(page, '?mapFirst=1&seed=1');
+    await seedDay1(page, '?mapFirst=1&seed=1', withApples);
     const trace: string[] = [];
     const trips = await driveUntilRoadEvent(page, trace);
     expect(trips, `за 16 приїздів на дорогу ядро не кинуло жодної події (dialogue на loc.road):\n${trace.join('\n')}`).toBeGreaterThan(0);
