@@ -509,6 +509,48 @@
    "view": "front",
    "note": "GAME-284: скляна пляшка (LPC Base Object Kit) із дорисованою половинкою медальйона ≈0,46 м",
    "measure": "height"
+  },
+  {
+   "id": "home-storeroom",
+   "file": "assets/tiles/home_storage.png",
+   "crop": [
+    0,
+    0,
+    32,
+    96
+   ],
+   "real_width_m": 1.1,
+   "real_height_m": 2.4,
+   "view": "front",
+   "note": "GAME-304: комора — висока шафа LPC (Cabinets.png), 1,1×2,4 м"
+  },
+  {
+   "id": "home-fridge",
+   "file": "assets/tiles/home_storage.png",
+   "crop": [
+    32,
+    0,
+    32,
+    96
+   ],
+   "real_width_m": 0.8,
+   "real_height_m": 1.85,
+   "view": "front",
+   "note": "GAME-304: домашній холодильник із морозилкою, 0,8×1,85 м (програмний малюнок PIL)"
+  },
+  {
+   "id": "home-mia-chest",
+   "file": "assets/tiles/home_storage.png",
+   "crop": [
+    64,
+    64,
+    32,
+    32
+   ],
+   "real_width_m": 1.0,
+   "real_height_m": 0.95,
+   "view": "front",
+   "note": "GAME-304: скринька Мії — мала замкнена скриня LPC (Chests.png), 1,0×0,95 м"
   }
  ]
 }

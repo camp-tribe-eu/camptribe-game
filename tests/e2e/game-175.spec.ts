@@ -4,10 +4,11 @@
 import { readFileSync } from 'node:fs';
 import { expect, test, type Page } from '@playwright/test';
 import { waitGameReady } from './ready';
+import { expectBoxOpen, pressInteract, takeFromOpenBox } from './chapter-driver';
 
 interface Core { game: { player: { locationId: string; transportId: string } | null; flags: string[]; quests: Record<string, { status: string }>; inventory: Record<string, number> }; journal: { type: string }[] }
 interface Fx { target: string | null; ring: number; ringName: string | null; backpack: number; guide: string; pops: number; auto: number }
-interface Probe { playerX: number; playerY: number; fx: Fx; saveLoaded: boolean; visitors: { id: string; x: number; y: number }[] }
+interface Probe { playerX: number; playerY: number; fx: Fx; saveLoaded: boolean; nearObject: string | null; visitors: { id: string; x: number; y: number }[] }
 const core = (page: Page): Promise<Core> => page.evaluate(() => (window as unknown as { __game: { read: () => Core } }).__game.read());
 const probe = (page: Page): Promise<Probe> => page.evaluate(() => JSON.parse(JSON.stringify((window as unknown as { __game: { probe: Probe } }).__game.probe)) as Probe);
 const MAPS = { 'loc.home': 'home', 'loc.shop': 'shop' } as const;
@@ -123,6 +124,13 @@ async function goAndDo(page: Page, car: boolean, shot?: string): Promise<string>
     await page.screenshot({ path: shot });
   }
   await walking;
+  // GAME-304: контейнер дому не спрацьовує від наближення — це дія E: торкнутись, узяти «потрібне» у вікні й закрити (як гравець за стрілкою «Далі»).
+  if (target.startsWith('box.')) {
+    await expect.poll(async () => (await probe(page)).nearObject, { timeout: 5_000, message: `біля ${target}` }).toBe(target);
+    await pressInteract(page, false);
+    await expectBoxOpen(page, target);
+    await takeFromOpenBox(page, false);
+  }
   try {
     await expect.poll(() => signature(page), { timeout: 5_000, message: `біля ${target} дія не спрацювала від наближення` }).not.toBe(before);
   } catch (e) {
@@ -232,7 +240,7 @@ for (const v of VIEWS) {
       expect(p.fx.pops, 'сплив «+1»/«OK» на кожну дію').toBeGreaterThanOrEqual(6);
       expect(coexist, 'картка мети й рядок «Далі» справді були разом (інакше перевірка нічого не міряє)').toBeGreaterThan(0);
       expect(bpShot, 'дрібна річ пройшла через рюкзак (герой ніс її до авто)').toBe(true);
-      expect(done.filter((d) => d.startsWith('pack.')).length, 'речі пакувалися ногами: ' + done.join(' → ')).toBeGreaterThanOrEqual(3);
+      expect(done.filter((d) => d.startsWith('box.')).length, 'речі брались ногами з контейнерів (GAME-304): ' + done.join(' → ')).toBeGreaterThanOrEqual(3);
       expect(done).toContain('obj.vehicle');
       expect(errors).toEqual([]);
       await ctx.close();

@@ -3,7 +3,7 @@
 // Знімки 390×844, 932×430, 1280×800 — research/agenda/. Негативні контролі (закон 1) — мутації в src/content/agenda.test.ts; тут — червоніє, якщо стрілка живе далі.
 import { expect, test, type Page } from '@playwright/test';
 import { walkIntro } from './intro-walk';
-import { core, installMenuObserver, loaded, menuSeen, playUntil, probe, route, walk } from './chapter-driver';
+import { core, installMenuObserver, loaded, menuSeen, playUntil, probe, takeItemAt } from './chapter-driver';
 
 const SETTINGS_KEY = 'camplife.settings.v1';
 const SHOTS = 'research/agenda';
@@ -35,15 +35,9 @@ async function noOverlaps(page: Page): Promise<void> {
   }
 }
 
-async function takeSpot(page: Page, touch: boolean, spot: string): Promise<void> {
-  const at = await probe(page);
-  await walk(page, route('home', [at.playerX, at.playerY], spot));
-  await expect.poll(async () => (await probe(page)).nearObject, { timeout: 5_000, message: `біля ${spot}` }).toBe(spot);
-  const flag = `f.take-${spot.replace('pack.item.', '')}`;
-  if ((await core(page)).game.flags.includes(flag)) return;
-  if (touch) await page.locator('[data-touch="interact"]').tap();
-  else { await page.keyboard.down('KeyE'); await page.waitForTimeout(200); await page.keyboard.up('KeyE'); }
-  await expect.poll(async () => (await core(page)).game.flags.includes(flag), { timeout: 5_000 }).toBe(true);
+/** GAME-304: річ лежить у контейнері — підійти, торкнутись, узяти її й закрити вікно (`pack.item.documents` → `item.documents`). */
+async function takeSpot(page: Page, touch: boolean, spot: string, afterWalk?: () => Promise<void>): Promise<void> {
+  await takeItemAt(page, touch, spot.replace('pack.', ''), afterWalk);
 }
 
 const packing = (c: Awaited<ReturnType<typeof core>>): boolean => c.game.quests['CH1-HOME-001']?.status === 'active' && c.game.player?.locationId === 'loc.home';
@@ -70,7 +64,7 @@ test('удома: нотатник з речами й місцями, пункт
   const rows = page.locator('[data-ui="agenda-item"]');
   expect(await rows.count()).toBeGreaterThanOrEqual(3);
   expect(await rows.count()).toBeLessThanOrEqual(6);
-  await expect(page.locator('[data-ui="agenda-item"][data-item="item.documents"]')).toContainText('шухляда в передпокої');   // назва речі й місце
+  await expect(page.locator('[data-ui="agenda-item"][data-item="item.documents"]')).toContainText('шафа в спальні');   // назва речі й місце (GAME-304: документи лежать у шафі, а не в шухляді на підлозі)
   await expect(page.locator('[data-ui="agenda-item"][data-item="item.documents"]')).toContainText('Документи');
   await expect(page.locator('[data-ui="agenda-item"][data-done="yes"]')).toHaveCount(0);
   // Мінімапа: видима, з точкою героя й ≥ 1 крапкою цілі.
@@ -95,8 +89,8 @@ test('удома: нотатник з речами й місцями, пункт
   await noOverlaps(page);
   await page.screenshot({ path: `${SHOTS}/home-390x844.png` });
   // Узяти річ — пункт закреслився сам, крапка її зникла.
-  await takeSpot(page, true, 'pack.item.documents');
-  expect(await draws(), 'герой пішов → мінімапа перемалювалась').toBeGreaterThan(d0);
+  // GAME-304: вікно контейнера ховає HUD (радар перемонтується, лічильник малювань починається знову), тож «перемалювалась» міряємо ДО відкриття вікна — коли герой щойно дійшов.
+  await takeSpot(page, true, 'pack.item.documents', async () => { expect(await draws(), 'герой пішов → мінімапа перемалювалась').toBeGreaterThan(d0); });
   await expect(page.locator('[data-ui="agenda-item"][data-item="item.documents"]')).toHaveAttribute('data-done', 'yes');
   await expect(page.locator('[data-ui="agenda-item"][data-done="no"]').first()).toHaveAttribute('data-current', 'yes');
   await expect.poll(async () => Number(await mini.getAttribute('data-dots')), { timeout: 5_000 }).toBeLessThan(dotsBefore);

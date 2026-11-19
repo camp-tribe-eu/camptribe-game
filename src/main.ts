@@ -38,6 +38,7 @@ import { mountTouchControls, setActionTarget } from './view/world/touch';
 import { frameSize, zoomSteps, type MapPx } from './view/world/frame';
 import { CHOICE_CANCEL_ID, storyOffer, type StoryView } from './view/story-offer';
 import { basketOf, basketTotal, hasBasket } from './core/basket';
+import { BOX_CLOSE_ID } from './view/box-offer';
 import { testSwitches } from './view/test-switches';
 import { addFrameLag, bootDelay, onFirstFrame } from './view/frame-lag';
 import { installRenderGate } from './view/render-gate';
@@ -141,9 +142,11 @@ let receiptLeftMs = 0;
 const RECEIPT_MS = 4500;
 // GAME-183: об'єкт, що питає «що саме?» (авто — куди їхати, сушарка, приймальня, крок з вибором) — його варіанти показує рамка вибору. Стан ПОКАЗУ.
 let choiceSpot: string | null = null;
+// GAME-304: контейнер дому (`box.<id>`), чиє вікно «всередині» відкрито: холодильник, комора, шафа, тумба, скринька Мії. Стан ПОКАЗУ (ядро й сейв його не знають); поки відкрито — світ на паузі (Shell).
+let boxOpen: string | null = null;
 // GAME-178: спроба рушити, коли авто не готове (бракує речей / рюкзак повний): HUD пояснює причину, поки гравець не відійде від об'єкта. Стан ПОКАЗУ (без таймера).
 let departNote = false;
-const viewOf = (): StoryView => ({ mapFirst: !switches.panelActs, trunk: trunkOpen, near: nearSpot, backpack, choice: choiceSpot, departNote, overflow: overflowShown, card: cardItem, receipt });
+const viewOf = (): StoryView => ({ mapFirst: !switches.panelActs, trunk: trunkOpen, near: nearSpot, backpack, choice: choiceSpot, departNote, overflow: overflowShown, card: cardItem, receipt, box: boxOpen });
 /** Об'єкти табору (GAME-183) живуть лише в мапі-першій грі: збірка e2e без ?mapFirst=1 (старі e2e) бачить табір, як до них — кнопки ☰, а не об'єкти. */
 const campOnly = (name: string): boolean => switches.panelActs === true && (MAP_SPOTS.camp as readonly string[]).includes(name);
 // GAME-170 зріз 2 · режисер: перед кожним оновленням екрана — ходи СЮЖЕТУ (StartWave на етапі хвилі). Ядро — сторож законності;
@@ -290,16 +293,10 @@ const actOnMap = (name: string): void => {
     }
     const r = resolveSpot(bridge.state, GAME_DEFS, name);
     if (!r) return;
+    // GAME-304: дотик до контейнера відкриває вікно «всередині»; річ береться там (act → TakeItem), закривається — «Закрити» чи Escape.
+    if (r.ui === 'box') { boxOpen = name; storyChanged(); return; }
     // GAME-183: вибір із кількох дій (куди їхати, що сушити, як завершити крок) — рамка вибору, команда піде з її кнопки.
     if (r.options || r.confirm || r.trips) { choiceSpot = name; storyChanged(); for (const l of talkListeners) l(); return; }
-    const first = r.moves[0];
-    // GAME-245: узяти річ удома — одна команда TakeItem; річ зникає з місця, герой показує велику картку (назва + репліка) ~1,5 с.
-    if (first?.type === 'TakeItem') {
-      bridge.send(first);
-      if (bridge.state.game.flags.includes(takeFlag(first.itemId))) { cardItem = first.itemId; cardLeftMs = CARD_MS; overflowShown = false; }
-      storyChanged();
-      return;
-    }
     // GAME-301: каса — до оплати запам'ятати кошик і гроші; після неї показати чек (раніше лише значок кошика над героєм: «чи я купив чи ні?»).
     const paying = r.moves.some((m) => m.type === 'Checkout');
     const basketBefore = paying ? basketOf(bridge.state.game.flags, GAME_DEFS) : [];
@@ -648,6 +645,7 @@ render(h(Shell, {
     save: () => saves.save(),
     newGame: async () => {
       backpack.length = 0;
+      boxOpen = null;
       pendingFrame = false;   // GAME-275: розмова, схована до mapEntered, не переживає нову гру (рецензія #204)
       chatted.clear();   // GAME-261: «…» нової гри не гасне від розмов попередньої (рецензія #197)
       unpackedOnce = false;
@@ -669,6 +667,7 @@ render(h(Shell, {
     staleCode: () => (saves.stale ? encodeRestoreCode(saves.stale) : Promise.resolve(null)),
     dismissStale: () => saves.dismissStale(),
     importCode: async (code: string) => {
+      boxOpen = null;
       pendingFrame = false;   // GAME-275: після завантаження сцена може вже стояти на потрібній мапі — mapEntered не прийде (рецензія #204)
       backpack.length = 0;
       unpackedOnce = false;
@@ -682,6 +681,7 @@ render(h(Shell, {
     story: () => { const o = shown(storyOffer(bridge.state, GAME_DEFS, viewOf()).offer); return pendingFrame ? { ...o, dialogue: null } : o; },   // GAME-275: розмова схована до mapEntered
     act(id: string) {
       if (id === CHOICE_CANCEL_ID) { choiceSpot = null; storyChanged(); return; }
+      if (id === BOX_CLOSE_ID) { boxOpen = null; cardItem = null; storyChanged(); return; }
       const intent = storyOffer(bridge.state, GAME_DEFS, viewOf()).intents.get(id);
       if (!intent) return;
       // Підтверджена поїздка авто — увесь ланцюг ходів (напр. завершити крок + виїхати), а не лише останній.
@@ -691,8 +691,11 @@ render(h(Shell, {
       const route = trip?.trips?.find((t) => t[0] !== undefined && sameMove(t[0], intent));
       const seq = route ?? (trip?.confirm && last !== undefined && moveKey(last) === moveKey(intent) ? trip.moves : [intent]);
       choiceSpot = null;
+      // GAME-304 (раніше GAME-245: дотик до речі): узяти річ — одна команда TakeItem з вікна контейнера; вікно показує велику картку щойно взятої речі (назва + репліка), «Завантажити» знову може показати «не влізло».
       const before = bridge.state.game.friend?.gift;
       for (const m of seq) bridge.send(m);
+      // GAME-304: картка — лише коли ядро справді прийняло TakeItem (прапорець взято), а не від самого наміру.
+      if (intent.type === 'TakeItem' && bridge.state.game.flags.includes(takeFlag(intent.itemId))) { overflowShown = false; cardItem = intent.itemId; cardLeftMs = CARD_MS; }
       // GAME-230: подарунок прийнято ядром (день подарунка змінився) — показати реакцію; відмова нічого не показує.
       if (intent.type === 'GiveGift' && bridge.state.game.friend?.gift !== before && bridge.state.game.friend?.gift[intent.npcId] !== undefined) giftFx = { npc: intent.npcId, reaction: reactionFor(intent.npcId, intent.itemId) };
       storyChanged();
@@ -755,7 +758,7 @@ render(h(Shell, {
       // інакше клавіша «залипає» і персонаж іде сам (рецензія PR #13).
       input.held.clear();
       input.tapped.clear();
-      if (!paused) { trunkOpen = false; choiceSpot = null; }   // екран подорожі (і багажник) закрито — наступного разу ☰ без багажника; рамка вибору (GAME-183) закрита
+      if (!paused) { trunkOpen = false; choiceSpot = null; boxOpen = null; }   // екран подорожі (і багажник) закрито — наступного разу ☰ без багажника; рамка вибору (GAME-183) закрита
       (game.scene.getScene('world') as WorldScene | null)?.haltPlayer();
       bridge.setPaused(paused);
       if (paused) saves.autosave(); // автозбереження на паузі
@@ -774,6 +777,8 @@ let lastMinute = bridge.state.clock.minutes;
 // «Вимкнути звук» у паузі доходить до петель одразу, а вступ після «Нової гри» вмикає дощ. Коли сцена йде — тікає вона сама (без подвійного кроку).
 game.events.on(Phaser.Core.Events.STEP, (_t: number, delta: number) => {
   if (!game.scene.isPaused('world')) return;
+  // GAME-304: вікно контейнера ставить світ на паузу, а підтвердження «взято» живе ті самі ~1,5 с, що жила картка на мапі (покадрово, без таймера): сцена спить — рахуємо тут.
+  if (boxOpen !== null && cardItem !== null && (cardLeftMs -= delta) <= 0) { cardItem = null; storyChanged(); }
   if (isIntroOpen()) ambient.setAmbient(ambientMix({ map: null, intro: true, nearLake: false, fireLit: false, nearFire: false, transport: null }));
   ambient.tick(delta);
   if (isIntroOpen()) music.setTrack('story');   // GAME-207: музика вступу під дощ; інакше лишається тема, яку задала сцена
