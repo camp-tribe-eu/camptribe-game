@@ -44,8 +44,8 @@
       "speaker": "player",
       "textKey": "dlg.ch1-fire.lantern-dark",
       "choices": [
-        { "textKey": "dlg.ch1-fire.lantern.c1", "next": "lantern-george" },
-        { "textKey": "dlg.ch1-fire.lantern.c2", "next": "lantern-george" }
+        { "textKey": "dlg.ch1-fire.lantern-dark.c1", "next": "lantern-george" },
+        { "textKey": "dlg.ch1-fire.lantern-dark.c2", "next": "lantern-george" }
       ]
     },
     {

@@ -57,9 +57,10 @@ function nightTail(n: Night): string[] {
 }
 
 /** Провести сцену ядром: «Далі», доки є next; на вузлі з вибором — A (0) чи B (1). Повертає вузли по черзі. */
-function play(defs: CoreDefs, setup: FireplaceSetup, pick: 0 | 1, night: Night = {}): string[] {
+function play(defs: CoreDefs, setup: FireplaceSetup, pick: 0 | 1, night: Night = {}, noLantern = false): string[] {
   const base = atFireQuest(fresh(defs));
-  let s: GameState = { ...base, flags: [...base.flags, ...nightFlags(night)] };
+  // GAME-332: ліхтар у багажнику (f.pack-lantern) за замовчуванням є; noLantern — його лишили вдома чи не брали.
+  let s: GameState = { ...base, flags: [...base.flags.filter((f) => !(noLantern && f === 'f.pack-lantern')), ...nightFlags(night)] };
   const send = (cmd: Command) => {
     const r = dispatch(s, cmd, defs);
     if (!r.ok) throw new Error(`${cmd.type}: ${r.code}`);
@@ -78,8 +79,8 @@ function play(defs: CoreDefs, setup: FireplaceSetup, pick: 0 | 1, night: Night =
 }
 
 /** Оракул картки — незалежно від графа: яку послідовність вузлів мусить показати гра за цих фактів і вибору. */
-function expected(setup: FireplaceSetup, pick: 0 | 1, night: Night = {}): string[] {
-  const opening = setup.fireAllowed && setup.dinnerDone ? ['fire'] : ['lantern', 'lantern-george'];
+function expected(setup: FireplaceSetup, pick: 0 | 1, night: Night = {}, noLantern = false): string[] {
+  const opening = setup.fireAllowed && setup.dinnerDone ? ['fire'] : [noLantern ? 'lantern-dark' : 'lantern', 'lantern-george'];
   const six = setup.photoTaken ? 'l6-photo' : 'l6-plain';
   const head = ['open', ...opening, 'l1', 'l2', 'l3', 'l4', 'l5', six, 'l7'];
   const evening = pick === 0
@@ -134,8 +135,8 @@ describe('GAME-142 · вогнище кінця дня 2: 16 проходжен�
   });
 
   it('п.1: обидві гілки досяжні, і без фото жодна репліка не згадує зроблене фото', () => {
-    const seen = new Set([...COMBOS.flatMap((c) => play(GAME_DEFS, c.setup, c.pick)), ...NIGHTS.flatMap((n) => play(GAME_DEFS, FULL_EVENING, 0, n))]);
-    for (const id of ['l8', 'l12-photo', 'l12-plain', 'b1', 'b3', 'l6-photo', 'l6-plain', 'fire', 'lantern']) expect(seen.has(id), id).toBe(true);
+    const seen = new Set([...COMBOS.flatMap((c) => play(GAME_DEFS, c.setup, c.pick)), ...NIGHTS.flatMap((n) => play(GAME_DEFS, FULL_EVENING, 0, n)), ...play(GAME_DEFS, { fireAllowed: false, dinnerDone: false, photoTaken: false }, 0, {}, true)]);
+    for (const id of ['l8', 'l12-photo', 'l12-plain', 'b1', 'b3', 'l6-photo', 'l6-plain', 'fire', 'lantern', 'lantern-dark']) expect(seen.has(id), id).toBe(true);
     // Кожен вузол сцени показано хоч в одній комбінації — мертвих реплік немає.
     // Вузли рибної розвилки (fk*, fr*, GAME-195) показує fish-fork.test.ts — тут рибки нема.
     expect([...seen].sort()).toEqual(RAW.nodes.map((n) => n.id).filter((id) => !/^f[kr]/.test(id)).sort());
@@ -151,6 +152,15 @@ describe('GAME-142 · вогнище кінця дня 2: 16 проходжен�
       const fire = c.setup.fireAllowed && c.setup.dinnerDone;
       expect(path.includes('fire'), label(c)).toBe(fire);
       expect(path.includes('lantern'), label(c)).toBe(!fire);
+    }
+  });
+
+  it('GAME-332: без ліхтаря (лишили вдома чи не брали) вечір без вогнища — темний вузол, з ліхтарем — звичайний', () => {
+    for (const pick of [0, 1] as const) {
+      const off = { fireAllowed: false, dinnerDone: false, photoTaken: false };
+      expect(play(GAME_DEFS, off, pick, {}, true)).toEqual(expected(off, pick, {}, true));
+      expect(play(GAME_DEFS, off, pick)).toEqual(expected(off, pick));
+      expect(play(GAME_DEFS, FULL_EVENING, pick, {}, true)).toEqual(expected(FULL_EVENING, pick));   // вогнище сильніше за темряву
     }
   });
 
