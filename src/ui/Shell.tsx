@@ -258,6 +258,10 @@ export function Shell({ port, langOverride, credits, build, holdToast = false, h
     if (!now.dialogue) { story(true); return; }
     acted();
     setOffer(now);
+    // GAME-332: «рамка відкрита» — одразу, а не з наступного рендера: відкладені ефекти (нижче — «міні-гру закрито») Preact виконує НА ПОЧАТКУ цього ж рендера,
+    // ще до рядка `talkRef.current = talk`. Після «Багажника» авто завантажується наступним кадром гри й питає «Куди їдемо?»; коли кадр випереджав ефект
+    // (повільна машина, CI), ефект бачив розмову без рамки й відкривав ☰ поверх неї — світ на паузі, рамки не видно, авто «не діє».
+    talkRef.current = true;
     setTalk(true);
     port.setPaused(true);
   }), [paused, storyOpen, talk]);
@@ -270,7 +274,9 @@ export function Shell({ port, langOverride, credits, build, holdToast = false, h
   }, [talk, offer]);
 
   // Розмова з NPC на мапі відкриває екран подорожі (якщо не відкрите меню паузи).
-  useEffect(() => port.onOpenStory(() => { if (!paused && !storyOpen && !mission) story(true); }), [paused, storyOpen, mission]);
+  // GAME-332: «міні-гри немає» — за живим значенням порту, а не за станом рендера: «Не влазить» після «Багажника» приходить наступним кадром гри, коли ця підписка
+  // могла ще бути старою (ефект відкладено) — і екран вибору губився б.
+  useEffect(() => port.onOpenStory(() => { if (!paused && !storyOpen && !port.mission?.session()) story(true); }), [paused, storyOpen, mission]);
 
   // GAME-40: звук натискання кнопки UI — один делегований слухач (капча), а не виклик у кожному обробнику; вибір звуку — soundForButton.
   useEffect(() => {

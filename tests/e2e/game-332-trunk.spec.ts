@@ -5,7 +5,7 @@
 // Знімки — лише за GAME332_SHOTS=1 (research/game-332/).
 import { expect, test, type Page } from '@playwright/test';
 import { walkIntro } from './intro-walk';
-import { core, installMenuObserver, loaded, menuSeen, playUntil, pressInteract, probe, route, takeFromOpenBox, walk } from './chapter-driver';
+import { core, goAndDo, installMenuObserver, loaded, menuSeen, playUntil, pressInteract, probe, route, takeFromOpenBox, walk } from './chapter-driver';
 
 const SETTINGS_KEY = 'camplife.settings.v1';
 const SHOTS = 'research/game-332';
@@ -42,6 +42,20 @@ async function toTrunk(page: Page): Promise<void> {
   const at = await probe(page);
   await walk(page, route('home', [at.playerX, at.playerY], 'obj.vehicle'));
   await expect(page.locator('[data-ui="minigame"] [data-ui="mg-start"]'), 'біля авто з сумкою відкрилась міні-гра').toBeVisible({ timeout: 10_000 });
+}
+
+/**
+ * Повільна машина (CI): відкладені ефекти оболонки (Preact виконує їх «після кадру» через setTimeout) запізнюються, і наступний кадр гри встигає раніше за них.
+ * Саме так після «Багажника» замість «Куди їдемо?» відкривалась ☰ (а «Не влазить» губилось). Тут це запізнення — навмисне й однакове щоразу; повертає «як було».
+ */
+async function slowEffects(page: Page, ms: number): Promise<() => Promise<void>> {
+  await page.evaluate((ms) => {
+    const w = window as unknown as { __st?: typeof setTimeout; setTimeout: unknown };
+    const st = window.setTimeout.bind(window);
+    w.__st = st as typeof setTimeout;
+    w.setTimeout = (fn: TimerHandler, d = 0, ...a: unknown[]): number => st(fn, d + ms, ...a);
+  }, ms);
+  return () => page.evaluate(() => { const w = window as unknown as { __st?: typeof setTimeout; setTimeout: unknown }; if (w.__st) w.setTimeout = w.__st; });
 }
 
 async function lays(page: Page, steps: readonly Step[]): Promise<void> {
@@ -128,15 +142,48 @@ test('«Їдемо як є»: пауза → далі без цього — scra
   await page.locator('[data-ui="mg-pause"]').tap();
   await page.locator('[data-ui="mg-move-on"]').tap();
   await expect(page.locator('[data-ui="mg-result"]')).toHaveAttribute('data-outcome', 'scrappy');
+  const restore = await slowEffects(page, 400);   // кадр гри з LoadCar випереджає ефекти оболонки: «Не влазить» мусить відкритись і так
   await page.locator('[data-ui="mg-close"]').tap();
   const c = await core(page);
   expect(c.game.minigames?.['mg.trunk']?.last).toBe('scrappy');
   // Як раніше: 14 речей на велосипед (12 од.) — старий екран «Не влазить: що лишимо вдома?»; обираємо «можна лишити», доки він є.
   await expect(page.locator('[data-ui="pack-overflow"]'), 'старий екран «Не влазить»').toBeVisible({ timeout: 10_000 });
+  await restore();
   const buttons = page.locator('[data-ui="pack-overflow"] [data-act="leave"]');
   for (let i = 0; i < 20 && (await buttons.count()) > 0; i++) { await buttons.first().click(); await page.waitForTimeout(450); }
   expect((await core(page)).game.flags.filter((f) => f.startsWith('f.take-')), 'сумка порожня: старий екран довів до кінця').toEqual([]);
   await page.keyboard.press('Escape');
   await playUntil(page, true, [], (k) => k.game.player?.locationId === 'loc.road', () => menuSeen(page), 30);
+  await ctx.close();
+});
+
+// GAME-332 (нестабільність CI): усе взяте влазить → після закритого результату авто завантажується наступним кадром гри й питає «Куди їдемо?» РАМКОЮ на мапі.
+// На повільній машині кадр випереджав відкладені ефекти оболонки, і замість рамки відкривалась ☰ (світ на паузі, рамки не видно — «біля obj.vehicle дія не спрацювала»).
+// Закон 1: без рядка `talkRef.current = true` у Shell.onTalk цей тест червоний щоразу (а не раз на чотири прогони під навантаженням).
+test('усе влізло: після «Багажника» — рамка «Куди їдемо?», а не ☰, навіть коли ефекти оболонки запізнюються — 390×844', async ({ browser }) => {
+  test.setTimeout(900_000);
+  const errors: string[] = [];
+  const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true });
+  const page = await ctx.newPage();
+  page.on('pageerror', (e) => errors.push(e.message));
+  await startHome(page, true, true);
+  // Лише «потрібне», куди веде стрілка «Далі»: воно влазить на велосипед.
+  for (let i = 0; i < 12 && (await probe(page)).fx.target !== 'obj.vehicle'; i++) await goAndDo(page, true);
+  expect((await probe(page)).fx.target, 'потрібне зібрано: стрілка веде до авто').toBe('obj.vehicle');
+  await toTrunk(page);
+  await page.locator('[data-ui="mg-start"]').tap();
+  await page.locator('[data-ui="mg-pause"]').tap();
+  await page.locator('[data-ui="mg-move-on"]').tap();
+  await expect(page.locator('[data-ui="mg-result"]')).toBeVisible();
+  const restore = await slowEffects(page, 400);
+  await page.locator('[data-ui="mg-close"]').tap();
+  await expect.poll(async () => (await core(page)).game.flags.filter((f) => f.startsWith('f.take-')), { timeout: 10_000, message: 'сумка порожня: усе лягло в авто' }).toEqual([]);
+  await expect(page.locator('.ui-talk [data-ui="dialogue"] [data-act="visit"]').first(), 'рамка «Куди їдемо?» на мапі').toBeVisible({ timeout: 10_000 });
+  await expect(page.locator('.ui-story'), '☰ не відкрилась поверх рамки').toHaveCount(0);
+  expect(await menuSeen(page), '☰ ні разу не відкривалась').toEqual([]);
+  await restore();
+  await playUntil(page, true, [], (k) => k.game.player?.locationId === 'loc.road', () => menuSeen(page), 30);
+  expect(await menuSeen(page), 'до дороги — без ☰').toEqual([]);
+  expect(errors).toEqual([]);
   await ctx.close();
 });
