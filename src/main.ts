@@ -63,7 +63,7 @@ import { agendaOf, minimapTargets, onboarding, type MiniFrame } from './content/
 import type { MapKey } from './content/map-first';
 import { taskGate } from './core/wave';
 import { MAP_LOCATION, MAP_SPOTS, departBlock, isBulky, isMapFirstSpot, mapKeyFor, moveKey, needsLeft, nextTarget, npcLive, resolveSpot, sameMove, spotLook, unpackMoves } from './content/map-first';
-import { carriedOf } from './core/packing';
+import { carriedOf, takeFlag } from './core/packing';
 import type { GameState } from './core/state';
 import { progressOf, titleOf } from './core/progress';
 import { grantCentsMap, isEmptySum, rewardDelta, type CoreSnap, type RawRewardRow } from './ui/reward-sticker';
@@ -692,9 +692,10 @@ render(h(Shell, {
       const seq = route ?? (trip?.confirm && last !== undefined && moveKey(last) === moveKey(intent) ? trip.moves : [intent]);
       choiceSpot = null;
       // GAME-304 (раніше GAME-245: дотик до речі): узяти річ — одна команда TakeItem з вікна контейнера; вікно показує велику картку щойно взятої речі (назва + репліка), «Завантажити» знову може показати «не влізло».
-      if (intent.type === 'TakeItem') { overflowShown = false; cardItem = intent.itemId; cardLeftMs = CARD_MS; }
       const before = bridge.state.game.friend?.gift;
       for (const m of seq) bridge.send(m);
+      // GAME-304: картка — лише коли ядро справді прийняло TakeItem (прапорець взято), а не від самого наміру.
+      if (intent.type === 'TakeItem' && bridge.state.game.flags.includes(takeFlag(intent.itemId))) { overflowShown = false; cardItem = intent.itemId; cardLeftMs = CARD_MS; }
       // GAME-230: подарунок прийнято ядром (день подарунка змінився) — показати реакцію; відмова нічого не показує.
       if (intent.type === 'GiveGift' && bridge.state.game.friend?.gift !== before && bridge.state.game.friend?.gift[intent.npcId] !== undefined) giftFx = { npc: intent.npcId, reaction: reactionFor(intent.npcId, intent.itemId) };
       storyChanged();
@@ -776,6 +777,8 @@ let lastMinute = bridge.state.clock.minutes;
 // «Вимкнути звук» у паузі доходить до петель одразу, а вступ після «Нової гри» вмикає дощ. Коли сцена йде — тікає вона сама (без подвійного кроку).
 game.events.on(Phaser.Core.Events.STEP, (_t: number, delta: number) => {
   if (!game.scene.isPaused('world')) return;
+  // GAME-304: вікно контейнера ставить світ на паузу, а підтвердження «взято» живе ті самі ~1,5 с, що жила картка на мапі (покадрово, без таймера): сцена спить — рахуємо тут.
+  if (boxOpen !== null && cardItem !== null && (cardLeftMs -= delta) <= 0) { cardItem = null; storyChanged(); }
   if (isIntroOpen()) ambient.setAmbient(ambientMix({ map: null, intro: true, nearLake: false, fireLit: false, nearFire: false, transport: null }));
   ambient.tick(delta);
   if (isIntroOpen()) music.setTrack('story');   // GAME-207: музика вступу під дощ; інакше лишається тема, яку задала сцена

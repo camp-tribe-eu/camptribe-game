@@ -3815,7 +3815,7 @@
       "sources": [
         "https://opengameart.org/content/lpc-revised-base-object-kit"
       ],
-      "modified": "cabinet (32x69) and small chest (28x27) cropped unchanged from the kit and placed bottom-aligned on a 128x96 sheet, plus a fridge (22x52) drawn in code, quantized to the LPC palette (scripts/assets/build_home_storage.py)"
+      "modified": "cabinet (32x69) and small chest (28x27) cropped from the kit and placed bottom-aligned on a 128x96 sheet (pixels only snapped to the LPC palette, no redraw), plus a fridge (22x52) drawn in code in the LPC palette (scripts/assets/build_home_storage.py)"
     },
     {
       "file": "tiles/home_walls.png",

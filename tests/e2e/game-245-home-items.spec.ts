@@ -3,7 +3,7 @@
 // Негативний контроль (закон 1): без TakeItem-гілки в actOnMap (старий PackItem у сумку) f.take-* не з'являється й тест червоніє; без LeaveItem (кнопки «Лишити вдома») рамка «Куди їдемо?» не з'являється.
 import { expect, test, type Page } from '@playwright/test';
 import { walkIntro } from './intro-walk';
-import { closeBox, core, installMenuObserver, loaded, menuSeen, playUntil, pressInteract, probe, route, takeFromOpenBox, walk } from './chapter-driver';
+import { closeBox, core, expectBoxOpen, installMenuObserver, loaded, menuSeen, playUntil, pressInteract, probe, route, takeFromOpenBox, walk } from './chapter-driver';
 
 const SETTINGS_KEY = 'camplife.settings.v1';
 const SHOTS = 'research/home-items';
@@ -29,6 +29,26 @@ async function openBox(page: Page, landscape: boolean, spot: string): Promise<vo
   await expect.poll(async () => (await probe(page)).nearObject, { timeout: 5_000, message: `біля ${spot}` }).toBe(spot);
   await pressInteract(page, !landscape);
   await expect(page.locator('[data-ui="box-panel"]'), `${spot}: вікно відкрилось`).toBeVisible({ timeout: 5_000 });
+  await expectBoxOpen(page, spot);
+}
+
+/** Картка щойно взятої речі (вікно контейнера) не налазить на HUD / ціль / підказку, вміщається в екран, а підтвердження зникає за ~4 с (GAME-245 візуальні ворота, GAME-304). */
+async function cardClear(page: Page, label: string): Promise<void> {
+  const panel = page.locator('[data-ui="box-panel"]');
+  const card = panel.locator('[data-ui="box-card"]');
+  await expect(card.locator('[data-ui="box-card-name"]'), `${label}: картка речі`).not.toHaveText('');
+  const vp = page.viewportSize() as { width: number; height: number };
+  const cb = await card.boundingBox();
+  expect(cb, `${label}: картка має розмір`).not.toBeNull();
+  const c = cb as { x: number; y: number; width: number; height: number };
+  expect(c.x >= -1 && c.y >= -1 && c.x + c.width <= vp.width + 1 && c.y + c.height <= vp.height + 1, `${label}: картка вміщається в екран ${vp.width}×${vp.height}`).toBe(true);
+  for (const sel of ['[data-ui="hud"]', '[data-ui="recovery-close"]', '[data-ui="goal"]', '[data-ui="next-hint"]']) {
+    const o = page.locator(sel).first();
+    if ((await o.count()) === 0 || !(await o.isVisible())) continue;
+    const ob = await o.boundingBox();
+    if (ob) expect(c.y >= ob.y + ob.height - 1 || c.y + c.height <= ob.y + 1 || c.x >= ob.x + ob.width - 1 || c.x + c.width <= ob.x + 1, `${label}: картка не налазить на ${sel}`).toBe(true);
+  }
+  await expect(card.locator('[data-ui="box-card-name"]'), `${label}: підтвердження зникає за ~4 с`).toHaveCount(0, { timeout: 4_000 });
 }
 
 test('взяти три речі: з місць зникли, картка речі, прогрес у ☰ без тумблерів — портрет 390×844', async ({ browser }) => {
@@ -52,6 +72,7 @@ test('взяти три речі: з місць зникли, картка ре�
     expect(icon?.width ?? 0, 'піктограма ≥ 64 px').toBeGreaterThanOrEqual(64);
     if (n === 0 && SHOT_CARD) await card.screenshot({ path: `${SHOTS}/item-card-closeup.png` });
     if (SHOT_CARD) await page.screenshot({ path: `${SHOTS}/after-take-${n + 1}-390x844.png` });
+    await cardClear(page, `${spot}/${item}`);
     expect((await core(page)).game.flags, `${item}: ядро прийняло TakeItem (світ у вікні на паузі, лічильник проби стоїть)`).toContain(`f.take-${item.replace('item.', '')}`);
     await closeBox(page, true);
     await expect.poll(async () => (await probe(page)).commandsSent, { timeout: 5_000, message: 'команда пішла (лічильник проби оновився після закриття вікна)' }).toBeGreaterThan(commands);
@@ -78,7 +99,14 @@ test('усе взяте вдома → авто: не влізло → «що л
   await page.screenshot({ path: `${SHOTS}/after-home-932x430.png` });
   // Усе, що живе вдома для велосипедиста без кішки (14 речей, 21 од. на 12).
   // Усе, що вдома для велосипедиста без кішки: чотири контейнери (14 речей, 21 од. на 12) — торкнутись, узяти все, закрити.
-  for (const spot of ['box.nightstand', 'box.wardrobe', 'box.fridge', 'box.storeroom']) { await openBox(page, true, spot); await takeFromOpenBox(page, false, 'all'); }
+  for (const spot of ['box.nightstand', 'box.wardrobe', 'box.fridge', 'box.storeroom']) {
+    await openBox(page, true, spot);
+    await page.locator('[data-ui="box-take"]').first().click();
+    await cardClear(page, spot);   // 932×430: картка вміщається й не налазить на HUD
+    await takeFromOpenBox(page, false, 'all');
+    // Порожній контейнер мовчить: біля нього нічого не стоїть («● Відкрити» немає).
+    await expect.poll(async () => (await probe(page)).nearObject, { timeout: 5_000, message: `${spot} порожній — не «поруч»` }).not.toBe(spot);
+  }
   const taken = (await core(page)).game.flags.filter((f) => f.startsWith('f.take-'));
   expect(taken.length, 'узято все').toBe(14);
   // До авто: «Завантажити» (само) і, бо не влізло, — екран вибору.

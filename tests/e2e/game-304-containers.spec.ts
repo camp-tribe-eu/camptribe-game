@@ -8,7 +8,7 @@
 // Знімки вікон усіх контейнерів у обох орієнтаціях — лише за GAME304_SHOTS=1 (research/game-304/): не на критичному шляху тесту.
 import { expect, test, type Page } from '@playwright/test';
 import { walkIntro } from './intro-walk';
-import { closeBox, core, installMenuObserver, loaded, menuSeen, playUntil, pressInteract, probe, route, walk } from './chapter-driver';
+import { closeBox, core, expectBoxOpen, installMenuObserver, loaded, menuSeen, playUntil, pressInteract, probe, route, walk } from './chapter-driver';
 
 const SETTINGS_KEY = 'camplife.settings.v1';
 const SHOTS = 'research/game-304';
@@ -40,6 +40,7 @@ async function openBox(page: Page, spot: string, touch = true, tag = ''): Promis
   if (SHOOT && tag !== '') await page.screenshot({ path: `${SHOTS}/world-${spot.slice(4)}-${tag}.png` });   // герой перед контейнером на мапі
   await pressInteract(page, touch);
   await expect(page.locator('[data-ui="box-panel"]'), `${spot}: вікно «всередині» відкрилось`).toBeVisible({ timeout: 5_000 });
+  await expectBoxOpen(page, spot);
 }
 
 type Box = { x: number; y: number; width: number; height: number };

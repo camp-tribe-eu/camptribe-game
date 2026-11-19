@@ -258,6 +258,11 @@ export async function pressInteract(page: Page, touch: boolean): Promise<void> {
   else { await page.keyboard.down('KeyE'); await page.waitForTimeout(200); await page.keyboard.up('KeyE'); }
 }
 
+/** GAME-304: відкрилось саме те вікно, до якого йшли (box.fridge і box.wardrobe стоять за два тайли — не плутати). */
+export async function expectBoxOpen(page: Page, spot: string): Promise<void> {
+  await expect(page.locator('[data-ui="box-panel"]'), `відкрито саме ${spot}`).toHaveAttribute('data-box', spot.replace(/^box\./, ''), { timeout: 5_000 });
+}
+
 /** GAME-304: закрити вікно контейнера кнопкою «Закрити» (тап чи клік) і дочекатись, що світ знову іде. */
 export async function closeBox(page: Page, touch: boolean): Promise<void> {
   const done = page.locator('[data-ui="box-done"]');
@@ -292,6 +297,7 @@ export async function takeItemAt(page: Page, touch: boolean, itemId: string, aft
   await expect.poll(async () => (await probe(page)).nearObject, { timeout: 5_000, message: `біля ${spot}` }).toBe(spot);
   if (afterWalk) await afterWalk();   // перевірки на мапі, поки вікно ще не відкрито (воно ховає HUD)
   await pressInteract(page, touch);
+  await expectBoxOpen(page, spot);
   await takeFromOpenBox(page, touch, [itemId]);
   expect((await core(page)).game.flags, `${itemId}: прапорець «взято»`).toContain(`f.take-${itemId.replace('item.', '')}`);
 }
@@ -322,7 +328,7 @@ export async function goAndDo(page: Page, touch: boolean, car = false): Promise<
       if (gone) { expect(await signature(page), `ціль ${target} зникла без зміни стану`).not.toBe(before); await page.waitForTimeout(150); return target; }
       await expect.poll(async () => (await probe(page)).nearObject, { timeout: 5_000, message: `біля ${target} кнопка дії мусить знати, що поруч` }).toBe(target);
       await pressInteract(page, touch);
-      if (target.startsWith('box.')) await takeFromOpenBox(page, touch);   // GAME-304: контейнер відкрився — узяти «потрібне» й закрити (так само, як веде стрілка «Далі»)
+      if (target.startsWith('box.')) { await expectBoxOpen(page, target); await takeFromOpenBox(page, touch); }   // GAME-304: контейнер відкрився — узяти «потрібне» й закрити (так само, як веде стрілка «Далі»)
     }
     if (target === 'task.pitch-tent' && !AUTO(target)) await playTent(page, touch);
     if (target === 'obj.campfire' && (await probe(page)).fire.phase === 'stack') await playFire(page, touch);   // GAME-190: вогнище руками
