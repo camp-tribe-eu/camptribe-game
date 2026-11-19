@@ -73,7 +73,7 @@ import { openGate } from './view/open-gate';
 import { missionWorkDue } from './view/mission-work';
 import { createMinigameSession, type MinigameSession } from './view/minigame-session';
 import { minigameById } from './content/minigames';
-import { driveSummary, type DriveMgState } from './content/minigames/drive';
+import { driveSummary, setDriveWallet, type DriveMgState } from './content/minigames/drive';
 import { ARRIVAL_SCENE, SCRAPE_SCENE, arrivalFacts } from './content/arrival-scene';
 import { pitchTaken } from './content/arrival-pitch';
 import { DRIVE_FLAG, driveFlag, driveOutcome as driveInOutcome } from './content/drive-in';
@@ -421,6 +421,7 @@ function sampleOpenDrive(): void {
   const g = bridge.state.game;
   const def = minigameById('mg.drive');
   if (!sampleOn || !def || g.dialogue !== null || g.player?.locationId !== 'loc.road' || g.minigames?.['mg.drive'] !== undefined) return;
+  setDriveWallet(g.moneyCents);
   missionSession = createMinigameSession(def, {
     results: g.minigames, seed: bridge.state.worldSeed,
     // Штраф дороги (камера) виходить із ТОГО САМОГО підсумку міні-гри й іде з гаманця тією ж командою, що записує результат.
@@ -448,7 +449,7 @@ const samplePort: SamplePort = {
   },
   board: () => bridge.state.game.campBoard,
   saveBoard: (b) => { bridge.send({ type: 'SaveCampBoard', board: b }); },
-  stormNight: () => { if (!playedScene(STORM_SCENE)) { bridge.send(stormNightMove(bridge.state.game.flags, undefined, bridge.state.game.campBoard?.results.fire !== undefined)); storyChanged(); } },
+  stormNight: () => { if (!playedScene(STORM_SCENE)) { bridge.send(stormNightMove(bridge.state.game.flags, undefined, bridge.state.game.campBoard?.results.fire !== undefined, bridge.state.game.campBoard?.facts.dryLogs)); storyChanged(); } },
   restart: async () => { await saves.newGame(); location.reload(); },
   subscribe: (l) => { sampleListeners.add(l); return () => { sampleListeners.delete(l); }; },
 };

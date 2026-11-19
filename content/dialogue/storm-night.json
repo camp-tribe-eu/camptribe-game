@@ -118,7 +118,7 @@
       "choices": [
         {
           "textKey": "dlg.storm-night.q2.c1",
-          "next": "supper",
+          "next": "supper-hot",
           "when": {
             "notFlag": "f.storm-cold"
           }
@@ -134,6 +134,20 @@
       "speaker": "player",
       "textKey": "dlg.storm-night.supper",
       "next": "supper-plain",
+      "branches": [
+        {
+          "when": {
+            "flag": "f.storm-fish-supper"
+          },
+          "next": "supper-fish"
+        }
+      ]
+    },
+    {
+      "id": "supper-hot",
+      "speaker": "player",
+      "textKey": "dlg.storm-night.supper",
+      "next": "q3",
       "branches": [
         {
           "when": {

@@ -11,7 +11,7 @@ import { HELP_AFTER, NORMAL, RELAXED, type Difficulty, type Outcome } from '../c
 import type { CampBoardSave } from '../core/camp-board';
 import { STEPS, needSide, startWater, stepWater, waterOutcome, waterScore, type Side, type WaterState } from '../content/water-carry';
 import { LANTERNS, SPOTS, lanternOutcome, litCount, startLanterns, stepLanterns, type LanternState } from '../content/lantern-charge';
-import { DISHES, emberOutcome, startEmbers, stepEmbers, type EmberAct, type EmberState } from '../content/embers';
+import { DISHES, emberOutcome, smoking, startEmbers, stepEmbers, type EmberAct, type EmberState } from '../content/embers';
 import { BASKET, berryOutcome, berryFacts, enoughBerries, hinted, patchOf, pickBerry, startBerries, type BerryState } from '../content/berries-patch';
 import { COVER, ENOUGH_DRY, LOGS, dryLogs, finishStack, placeLog, startStack, type StackState, type WoodPlace } from '../content/firewood-stack';
 import { THINGS, foodOutside, putThing, sleepNow, startTidy, tidyOutcome, type Place, type TidyState } from '../content/night-camp';
@@ -234,7 +234,7 @@ export function CampRoutines({ t, weather, seed, onFrame, devices: devices0 = {}
         {active === 'fire' && (
           <section class="ui-camp-work">
             <p class="ui-camp-note" data-ui="fire-rule">{t('camp.fire.rule')}</p>
-            <p data-ui="fire-heat" data-heat={Math.round(embers.heat * 100)}>{`${t('camp.fire.heat')}: ${Math.round(embers.heat * 100)} %`}</p>
+            <p data-ui="fire-heat" data-heat={Math.round(embers.heat * 100)}>{`${t('camp.fire.heat')}: ${Math.round(embers.heat * 100)} %${smoking(embers) ? ` · ${t('camp.fire.smoke')}` : ''}`}</p>
             <p data-ui="fire-dish" data-dish={dish?.id ?? ''}>{dish ? `${t(`camp.fire.dish.${dish.id}` as Key)} · ${dish.band.from * 100}-${dish.band.to * 100} %` : ''}</p>
             <div class="ui-camp-row">
               {(['wood', 'blow', 'rake'] as const).map((a: EmberAct) => (
@@ -245,6 +245,7 @@ export function CampRoutines({ t, weather, seed, onFrame, devices: devices0 = {}
         )}
         {active === 'lanterns' && (
           <section class="ui-camp-work">
+            <p class="ui-camp-note" data-ui="lantern-rule">{t('camp.lantern.rule')}</p>
             <p data-ui="lantern-sun" data-spot={lanterns.sun}>{`${t('camp.lantern.sun')}: ${t('camp.lantern.spot')} ${lanterns.sun + 1}`}</p>
             <ul class="ui-camp-list">
               {Array.from({ length: LANTERNS }, (_, l) => (

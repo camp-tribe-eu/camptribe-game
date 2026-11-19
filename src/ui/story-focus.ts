@@ -47,7 +47,10 @@ const MUST = ['item.tent', 'item.sleeping-bag'];
 const FWD = ['loc.road', 'loc.camp.lake'];
 const NO = 9;
 const rank = (a: OfferAction, goal: string | null): number =>
-  a.kind === 'complete' ? (a.key === goal ? 0 : 1) : a.kind === 'pickup' ? (MUST.includes(a.key ?? '') ? 2 : NO) : a.kind === 'checkout' ? 3 : a.kind === 'visit' ? (FWD.includes(a.key ?? '') ? 4 : 5) : NO;
+  a.kind === 'task' ? -1 : a.kind === 'complete' ? (a.key === goal ? 0 : 1) : a.kind === 'pickup' ? (MUST.includes(a.key ?? '') ? 2 : NO) : a.kind === 'checkout' ? 3 : a.kind === 'visit' ? (FWD.includes(a.key ?? '') ? 4 : 5) : NO;
+/** GAME-327 · «Зробити» (дрібні справи квесту) — першими, поки лишаються: «Завершити» мовчки закриває їх усі разом. */
+/** GAME-327 · у таборі зразка рекомендація — «Дошка табору», коли жодна дія списку нічого кращого не веде. */
+export const boardRec = (sampleCamp: boolean, rec: OfferAction | undefined): boolean => sampleCamp && rec === undefined;
 export const nextAction = (acts: readonly OfferAction[], goal: string | null): OfferAction | undefined => {
   const best = [...acts].sort((x, y) => rank(x, goal) - rank(y, goal))[0];
   return best && rank(best, goal) < NO ? best : undefined;

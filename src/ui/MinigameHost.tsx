@@ -13,6 +13,9 @@ export interface SurfaceProps {
   readonly drag: (p: MinigamePoint | null) => void;
 }
 
+/** GAME-327: штраф, який гаманець справді сплатив за дорогу (камера, не більше, ніж було), у центах — із даних поверхні; інші ігри його не мають. */
+export const finesOf = (surface: unknown): number => { const f = (surface as { paidCents?: unknown } | null)?.paidCents; return typeof f === 'number' ? f : 0; };
+
 export function MinigameHost({ session, t, Surface }: { session: MinigameSessionPort; t: (key: Key) => string; Surface: ComponentType<SurfaceProps> }) {
   const [view, setView] = useState<MinigameView>(() => session.view());
   useEffect(() => { setView(session.view()); return session.subscribe(() => setView(session.view())); }, [session]);
@@ -42,6 +45,7 @@ export function MinigameHost({ session, t, Surface }: { session: MinigameSession
         {view.phase === 'result' && (
           <>
             <p class="mg-text mg-result" data-ui="mg-result" data-outcome={view.outcome ?? ''}>{view.resultKey ? k(view.resultKey) : ''}</p>
+            {finesOf(view.surface) > 0 && <p class="mg-text" data-ui="mg-fine">{`${t('mg.drive.fine')}: ${(finesOf(view.surface) / 100).toFixed(2)} €`}</p>}
             <button type="button" class="ui-btn mg-btn" data-ui="mg-close" onClick={() => session.close()}>{t('mg.close')}</button>
           </>
         )}

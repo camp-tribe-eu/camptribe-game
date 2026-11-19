@@ -7,7 +7,7 @@ import { describe, expect, it } from 'vitest';
 import { NORMAL, RELAXED, grade, type Outcome } from './minigame';
 import { BRIM, FILL_MS, STEPS, drift, needSide, startWater, stepWater, tiltLimit, waterOutcome, waterScore, type Side, type WaterState } from './water-carry';
 import { CRANK_BAND, CRANK_GAIN, CRANK_MS, LANTERNS, SPOTS, SUN_SHIFT_MS, lanternOutcome, lanternScore, litCount, startLanterns, stepLanterns, sunRate, type LanternState } from './lantern-charge';
-import { COOL_PER_S, DISHES, emberOutcome, emberScore, inBand, startEmbers, stepEmbers, type EmberState } from './embers';
+import { COOL_PER_S, DISHES, SMOKE_MS, WOOD_GAIN, emberOutcome, emberScore, inBand, smoking, startEmbers, stepEmbers, type EmberState } from './embers';
 import { BASKET, BUSHES, berryOutcome, berryScore, bitterCount, enoughBerries, hinted, looksBitter, patchOf, pickBerry, ripeCount, startBerries } from './berries-patch';
 import { CAR_ROOM, THINGS, foodOutside, putThing, rightPlace, sleepNow, startTidy, tidyOutcome, tidyScore } from './night-camp';
 import { COVER, ENOUGH_DRY, LOGS, dryLogs, enoughDry, finishStack, placeLog, stackOutcome, startStack } from './firewood-stack';
@@ -140,6 +140,19 @@ describe('вогонь: жар у смузі', () => {
     const s = stepEmbers(startEmbers(true), { kind: 'act', act: 'wood' });
     expect(s.state.heat).toBeLessThan(startEmbers(true).heat);
     expect(s.state.smokeMs).toBeGreaterThan(0);
+  });
+  // GAME-327 · жар 0 %, «Підкинути дров» нібито нічого не робить: насправді дрова працюють (дим, потім жар), але нуль не рухався — тепер це видно (smoking).
+  // Мутації (перевірено): у stepEmbers для wood обнулити smokeMs → «дим видно» червоніє; прибрати `burst` → «жар росте після диму» червоніє.
+  it('GAME-327: на нульовому жарі дрова не губляться: видно дим, а за ним жар росте', () => {
+    const dead: EmberState = { ...startEmbers(true), heat: 0, acts: 1 };
+    const a = stepEmbers(dead, { kind: 'act', act: 'wood' }).state;
+    expect(a.heat).toBe(0);
+    expect(smoking(a)).toBe(true);
+    expect(smoking(dead)).toBe(false);
+    const b = stepEmbers(a, { kind: 'tick', dtMs: SMOKE_MS }).state;
+    expect(smoking(b)).toBe(false);
+    expect(b.heat).toBeGreaterThan(WOOD_GAIN - COOL_PER_S * (SMOKE_MS / 1000) - 1e-9);
+    expect(b.heat).toBeGreaterThan(0.2);
   });
 });
 

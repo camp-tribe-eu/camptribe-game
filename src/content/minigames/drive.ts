@@ -19,7 +19,12 @@ import { nextBeats, type DriveBeat } from '../drive-script';
 /** Скільки грошей у родини на старті поїздки, поки сцена приїзду не передала гаманець (GAME-310). */
 export const DEFAULT_WALLET_CENTS = 50_000;
 
+/** GAME-327: справжній гаманець родини на початку поїздки (ставить сцена перед відкриттям гри); штраф не забирає більше, ніж тут є. */
+let walletCents = DEFAULT_WALLET_CENTS;
+export const setDriveWallet = (cents: number): void => { walletCents = cents; };
+
 export interface DriveMgState {
+  readonly wallet: number;
   readonly course: Course;
   readonly drive: DriveState;
   /** Які репліки вже прозвучали (кожна рівно раз). */
@@ -43,6 +48,8 @@ export interface DriveView {
   readonly comfort: number;
   readonly moneyCents: number;
   readonly finesCents: number;
+  /** GAME-327: скільки штрафу гаманець справді віддав (не більше, ніж було). */
+  readonly paidCents: number;
   readonly cameraAhead: boolean;
   readonly stopOffer: 'fuel' | 'rest' | null;
   readonly waiting: string | null;
@@ -88,7 +95,7 @@ export function stepDriveMg(s: DriveMgState, input: FrameInput, d: Difficulty): 
   const soften = d.bandScale > 1 && events.some((e) => e.kind === 'sharp');
   const drive = soften ? { ...st, comfort: Math.min(COMFORT_MAX, st.comfort + SHARP_COST / 2) } : st;
   return {
-    course: c, drive, events,
+    wallet: s.wallet, course: c, drive, events,
     said: fresh.length > 0 ? [...s.said, ...fresh.map((b) => b.id)] : s.said,
     line: fresh[fresh.length - 1] ?? s.line,
   };
@@ -113,7 +120,7 @@ export const DRIVE = defineMinigame<DriveMgState, DriveView>({
     // Допомога каркаса: ширша смуга огляду (видно далі) і довший запас часу до рецепції.
     const help = { extraFuelL: d.bandScale > 1 ? 1.6 : 0, extraSec: d.timeScale > 1 ? 30 : 0, comfortShield: d.hint };
     const course = buildCourse(seed, help);
-    return { course, drive: startDrive(course, DEFAULT_WALLET_CENTS, help), said: [], line: null, events: [] };
+    return { wallet: walletCents, course, drive: startDrive(course, DEFAULT_WALLET_CENTS, help), said: [], line: null, events: [] };
   },
   step: stepDriveMg,
   done: (s: DriveMgState) => s.drive.phase === 'arrived',
@@ -124,7 +131,7 @@ export const DRIVE = defineMinigame<DriveMgState, DriveView>({
     return {
       lane: v.lane, laneAt: v.changing > 0 ? v.lane + (v.toLane - v.lane) * (1 - v.changing / 420) : v.lane,
       pace: v.pace, progress: progressOf(v, c), kmDone: kmDone(v), kmLeft: kmLeft(v, c), inTime: willMakeReception(v, c),
-      fuel: Math.min(1, v.fuelL / TANK_MAX_L), comfort: v.comfort / COMFORT_MAX, moneyCents: v.moneyCents, finesCents: v.finesCents,
+      fuel: Math.min(1, v.fuelL / TANK_MAX_L), comfort: v.comfort / COMFORT_MAX, moneyCents: v.moneyCents, finesCents: v.finesCents, paidCents: Math.min(v.finesCents, s.wallet),
       cameraAhead: v.cameraAhead, stopOffer: v.offer?.kind ?? null, waiting: v.stoppedWhy,
       hazards: c.hazards.filter((h) => h.at - v.metres > -HAZARD_LEN_M[h.kind] - 30 && h.at - v.metres < look)
         .map((h) => ({ id: h.id, kind: h.kind, lane: h.lane, depth: Math.max(0, Math.min(1, (h.at - v.metres) / look)), len: HAZARD_LEN_M[h.kind] / look })),

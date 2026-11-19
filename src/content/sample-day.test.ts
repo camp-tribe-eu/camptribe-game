@@ -54,6 +54,11 @@ describe('штраф дороги справді лягає на гаманец�
     expect(mustFinish(start(50_000), 'good').moneyCents).toBe(50_000);
     expect(mustFinish(start(5_000), 'fine', 9000).moneyCents).toBe(0);
   });
+  it('GAME-327: 15,02 € і штраф камери 90 € → рівно 0, не від’ємне і без другого списання', () => {
+    const s = mustFinish(start(1_502), 'fine', 9000);
+    expect(s.moneyCents).toBe(0);
+    expect(mustFinish(s, 'fine').moneyCents).toBe(0);
+  });
   it('безглуздий штраф (від’ємний, дробовий, понад межу) відхиляється, гаманець цілий', () => {
     for (const bad of [-1, 1.5, 50_001]) {
       const r = finish(start(), 'fine', bad);

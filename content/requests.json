@@ -10,19 +10,19 @@
         "id": "t1",
         "spot": "req.nora-shore.t1",
         "icon": "litter",
-        "labelKey": "req.nora-shore.t1"
+        "labelKey": "req.nora-shore.track"
       },
       {
         "id": "t2",
         "spot": "req.nora-shore.t2",
         "icon": "litter",
-        "labelKey": "req.nora-shore.t2"
+        "labelKey": "req.nora-shore.track"
       },
       {
         "id": "t3",
         "spot": "req.nora-shore.t3",
         "icon": "litter",
-        "labelKey": "req.nora-shore.t3"
+        "labelKey": "req.nora-shore.track"
       }
     ],
     "reward": {
@@ -45,7 +45,7 @@
         "id": "t1",
         "spot": "req.ingrid-birds.t1",
         "icon": "bird",
-        "labelKey": "req.ingrid-birds.t1"
+        "labelKey": "req.ingrid-birds.track"
       }
     ],
     "reward": {
@@ -68,7 +68,7 @@
         "id": "t1",
         "spot": "req.luc-chain.t1",
         "icon": "chain",
-        "labelKey": "req.luc-chain.t1"
+        "labelKey": "req.luc-chain.track"
       }
     ],
     "reward": {
@@ -90,7 +90,7 @@
         "id": "t1",
         "spot": "req.elise-lantern.t1",
         "icon": "lantern",
-        "labelKey": "req.elise-lantern.t1"
+        "labelKey": "req.elise-lantern.track"
       }
     ],
     "reward": {
@@ -143,7 +143,7 @@
         "id": "t1",
         "spot": "req.nora-camera.t1",
         "icon": "camera",
-        "labelKey": "req.nora-camera.t1",
+        "labelKey": "req.nora-camera.track",
         "mia": true
       }
     ],
@@ -174,19 +174,19 @@
         "id": "t2",
         "spot": "req.ingrid-starmap.t2",
         "icon": "star",
-        "labelKey": "req.ingrid-starmap.t2"
+        "labelKey": "req.ingrid-starmap.t1"
       },
       {
         "id": "t3",
         "spot": "req.ingrid-starmap.t3",
         "icon": "star",
-        "labelKey": "req.ingrid-starmap.t3"
+        "labelKey": "req.ingrid-starmap.t1"
       },
       {
         "id": "t4",
         "spot": "req.ingrid-starmap.t4",
         "icon": "star",
-        "labelKey": "req.ingrid-starmap.t4",
+        "labelKey": "req.ingrid-starmap.t1",
         "mia": true
       }
     ],
@@ -326,7 +326,7 @@
         "id": "t1",
         "spot": "req.wx-sunny-bottles.t1",
         "icon": "apple",
-        "labelKey": "req.wx-sunny-bottles.t1"
+        "labelKey": "req.wx-sunny-bottles"
       }
     ],
     "reward": {
@@ -372,7 +372,7 @@
         "id": "t1",
         "spot": "req.wx-cloudy-lantern.t1",
         "icon": "lantern",
-        "labelKey": "req.wx-cloudy-lantern.t1"
+        "labelKey": "req.wx-cloudy-lantern"
       }
     ],
     "reward": {

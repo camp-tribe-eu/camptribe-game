@@ -107,7 +107,7 @@
       "textKey": "dlg.ch2-pack.late",
       "choices": [
         {
-          "textKey": "dlg.ch2-pack.late.c1",
+          "textKey": "dlg.ch2-schengen.join.c1",
           "next": "jl1",
           "effects": [
             {
