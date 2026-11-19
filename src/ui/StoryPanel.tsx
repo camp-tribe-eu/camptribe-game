@@ -7,6 +7,7 @@ import type { AnyLang, Key } from '../i18n';
 import { trapTab } from './focus-trap';
 import { EntriesBook, JournalBook, SkillsBook, TravelerCard } from './JournalBook';
 import { Portrait, type PortraitLookup } from './Portrait';
+import { sampleHeroes } from '../content/sample-day';
 import { boardRec, inSampleCamp, nextAction, offerFocusKey, sampleActions, sampleActionsFirst, sampleMenuActions } from './story-focus';
 import type { OfferAction, StoryOffer } from './story-types';
 
@@ -121,7 +122,7 @@ export function StoryPanel({ offer, lang, t, act, close, portrait, children, foo
       {offer.stage === 'create' && (
         <fieldset data-ui="create">
           <legend>{t('ui.createTitle')}</legend>
-          {offer.characters.map((c) => (
+          {(sceneFocus ? sampleHeroes(offer.characters) : offer.characters).map((c) => (
             <button type="button" class="ui-btn" key={c.id} data-act="create" onClick={guarded(c.id)}>
               {`${ct(lang, c.profileKey)} · ${ct(lang, c.transportKey)} · ${c.animalKey ? ct(lang, c.animalKey) : t('ui.noAnimal')}`}
             </button>

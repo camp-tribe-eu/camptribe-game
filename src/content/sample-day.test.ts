@@ -19,7 +19,9 @@ import { ARRIVAL_BY_DRIVE, PITCH_IDS, arrivalFlag, freePitches, nightAt, pitchFl
 import { NIGHT_FACTS, nightKeys, nightOf, roughCount, type NightFacts } from './camp-night';
 import { deviceFacts, withDevices } from './camp-devices';
 import { MISSIONS } from './missions';
-import { devicesFromFlags, laneIdFor, missionsDone, pitchChoices, prepOf, sampleExtra, sampleGoal } from './sample-day';
+import { characterChoices } from '../view/story-offer';
+import { GAME_DEFS } from './slice-defs';
+import { SAMPLE_PROFILE, SAMPLE_TRANSPORT, devicesFromFlags, sampleHeroes, laneIdFor, missionsDone, pitchChoices, prepOf, sampleExtra, sampleGoal } from './sample-day';
 import { PREP_FLAGS } from './arrival-pitch';
 import { boardError, BOARD_MAX_BYTES, type CampBoardSave } from '../core/camp-board';
 import { stormNightMove } from './storm-night';
@@ -256,5 +258,15 @@ describe('GAME-317 · одна ціль зразкового дня', () => {
     expect(sampleGoal(['f.arrival-late', 'f.spot-meadow'], false)).toBe('day');
     expect(sampleGoal(['f.arrival-early', 'f.spot-beeches', 'f.mis-aerial-done', 'f.mis-ring-done'], false)).toBe('evening');
     expect(sampleGoal(['f.arrival-early', 'f.spot-beeches', 'f.mis-aerial-done', 'f.mis-ring-done'], true)).toBe('done');
+  });
+});
+
+describe('GAME-329 · вибір героя зразка не суперечить дню', () => {
+  const all = characterChoices(GAME_DEFS).map((c) => c.offer);
+  const shown = sampleHeroes(all);
+  it('усі профілі гри в повному виборі є (перевірка не порожня), у зразку лишається рівно один — родина, авто, без тварини', () => {
+    expect(all.some((c) => c.transportKey !== SAMPLE_TRANSPORT) && all.some((c) => c.animalKey !== null) && all.some((c) => c.profileKey !== SAMPLE_PROFILE)).toBe(true);
+    expect(shown).toHaveLength(1);
+    for (const c of shown) expect([c.profileKey, c.transportKey, c.animalKey]).toEqual([SAMPLE_PROFILE, SAMPLE_TRANSPORT, null]);
   });
 });

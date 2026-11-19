@@ -261,11 +261,32 @@ async function act(page: Page, kind: string, key = '', clickDialogue = false): P
   if (clickDialogue) for (let i = 0; i < 6 && await box(page).isVisible({ timeout: 400 }).catch(() => false); i++) { await box(page).locator('[data-act]').last().click(); await page.waitForTimeout(400); }
 }
 
+/** GAME-329: кожен кадр міряє тост нагороди («✨ досвід») і пояснення досвіду проти цілі дня, ☰/‖ і кнопки дошки; перетини й кількість побачених тостів — у window (читає тест). */
+const WATCH_TOAST = (): void => {
+  const w = window as unknown as { __toastSeen: number; __toastHits: string[]; __toastLog: Set<string> };
+  w.__toastLog = new Set(); w.__toastSeen = 0; w.__toastHits = [];
+  const vis = (e: Element): DOMRect | null => { const r = e.getBoundingClientRect(); return r.width > 0 && r.height > 0 && getComputedStyle(e).visibility !== 'hidden' ? r : null; };
+  const tick = (): void => {
+    for (const t of document.querySelectorAll('.ui-reward, .ui-xp-explain, .ui-titleup')) {
+      if (Number(getComputedStyle(t).opacity) < 0.05) continue;
+      const a = vis(t); if (!a) continue;
+      w.__toastSeen++; w.__toastLog.add(`${t.className}`);
+      for (const sel of ['[data-ui="goal"]', '[data-touch="story"]', '[data-touch="pause"]', '.sd-board-btn']) for (const o of document.querySelectorAll(sel)) {
+        const b = vis(o);
+        if (b && a.left < b.right && b.left < a.right && a.top < b.bottom && b.top < a.bottom && w.__toastHits.length < 20) w.__toastHits.push(`${t.className} × ${sel} ${[a.left, a.top, a.right, a.bottom].map(Math.round)}|${[b.left, b.top, b.right, b.bottom].map(Math.round)}`);
+      }
+    }
+    requestAnimationFrame(tick);
+  };
+  requestAnimationFrame(tick);
+};
+
 /** Дорога: кроки дня 1 кнопками (як game-312) до виїзду на дорогу; далі — справжня міні-гра. */
 async function depart(page: Page): Promise<string[]> {
   const errors: string[] = [];
   page.on('pageerror', (e) => errors.push(e.message));
   page.on('console', (m) => { if (m.type() === 'error') errors.push(m.text()); });
+  await page.addInitScript(WATCH_TOAST);
   await page.goto('/?seed=7&sampleDay=1');
   await waitGameReady(page);
   // GAME-325: «Відкрий ☰, щоб почати» — і після того, як ☰ уже відкривали (прапор hintSeen), і після перезавантаження: день ще не почався.
@@ -275,7 +296,10 @@ async function depart(page: Page): Promise<string[]> {
   await waitGameReady(page);
   await expect(page.locator('[data-ui="hint"]'), 'підказка після перезавантаження').toBeVisible();
   await page.locator('[data-touch="story"]').click();
-  await panel(page).locator('[data-act="create"]', { hasText: 'Велосипед' }).first().click();
+  // GAME-329: вибір героя зразка не суперечить дню — лише авто й без тварини (дорога тут — авто, кота день не показує).
+  const offered = await panel(page).locator('[data-act="create"]').allTextContents();
+  expect(offered, 'у зразку один герой: родина · авто · без тварини').toEqual(["Сім'я з підлітком · Авто · без тварини"]);
+  await panel(page).locator('[data-act="create"]').first().click();
   await page.waitForTimeout(400);
   // GAME-324: зразок пише лише у свій слот — звичайна база сейву (власника) не створюється й не зачіпається.
   expect((await page.evaluate(() => indexedDB.databases())).map((d) => d.name).sort()).toEqual(['camplife-sample']);
@@ -651,6 +675,11 @@ for (const o of ORIENTATIONS) {
       await expect(page.locator('[data-ui="sd-board"]'), 'після дня дошки немає').toHaveCount(0);
       const secs = Math.round((Date.now() - t0) / 1000);
       console.log(`G314 E2E ${o.name}: прохід ${secs} с · дорога ${outcome} (приїзд ${arrival}) · ділянка ${pitch} · штраф ${moneyBefore - afterRoad.moneyCents} ц`);
+      if (o.viewport.width > o.viewport.height) {
+        const toast = await page.evaluate(() => ({ seen: (window as unknown as { __toastSeen: number }).__toastSeen, hits: (window as unknown as { __toastHits: string[] }).__toastHits, kinds: [...(window as unknown as { __toastLog: Set<string> }).__toastLog] }));
+        expect(toast.seen, 'GAME-329: за день тост нагороди справді з\'являвся (перевірка не порожня)').toBeGreaterThan(0);
+        expect(toast.hits, 'GAME-329: в альбомі тост нагороди не лягає на ціль, ☰/‖ і кнопку дошки').toEqual([]);
+      }
       expect(errors, 'без помилок у консолі').toEqual([]);
       await tapIt(page, '[data-ui="sd-restart"]');
       await expect.poll(async () => { try { const g = (await core2(page)).game; return g.flags.some((f) => f.startsWith('f.arrival-')) || g.campBoard !== undefined; } catch { return 'loading'; } }, { message: '«Почати знову»: після перезавантаження гра свіжа', timeout: 30_000 }).toBe(false);

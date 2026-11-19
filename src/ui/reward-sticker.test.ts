@@ -88,6 +88,16 @@ describe('OD-029 · наклейка над героєм', () => {
   });
 });
 
+describe('GAME-329 · в альбомі підпис нагороди не накриває кнопки й ціль', () => {
+  const land = { heroX: 20, heroTop: 380, w: 150, h: 28, vw: 932, age: 100, topInset: 68, side: 72, floor: 386 };
+  it('герой біля лівого краю: підпис правіше за колонку кнопок; герой низько: підпис вище за ціль', () => {
+    expect(stickerPlace(land).left, 'правіше колонки ☰/дошки (до 64 px)').toBeGreaterThanOrEqual(72);
+    expect(stickerPlace({ ...land, heroX: 930 }).left + land.w, 'лівіше колонки ‖').toBeLessThanOrEqual(land.vw - 72);
+    expect(stickerPlace({ ...land, heroTop: 480 }).top + land.h, 'вище за верх цілі').toBeLessThanOrEqual(land.floor);
+    expect(stickerPlace({ ...land, heroTop: 480, floor: 40 }).top, 'але не під шапку').toBeGreaterThanOrEqual(land.topInset);
+  });
+});
+
 describe('GAME-302 · підказка про XP', () => {
   it("пояснюємо лише першу наклейку, де є XP (мутація: завжди true / ігнорувати XP — червоніє)", () => {
     expect(explainXp({ cents: 0, xp: 15, om: 0, skills: {} }, false)).toBe(true);
