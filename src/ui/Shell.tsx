@@ -537,7 +537,7 @@ export function Shell({ port, langOverride, credits, build, holdToast = false, h
           <h2>{t(sampleDay ? 'ui.newDay' : 'ui.newGame')}</h2>
           <p data-ui="confirm-new-text">{t(sampleDay ? 'ui.newDayAsk' : 'ui.newGameAsk')}</p>
           <button type="button" class="ui-btn" data-ui="confirm-new-no" ref={noRef} onClick={() => setConfirmNew(false)}>{t('ui.newGameNo')}</button>
-          <button type="button" class="ui-btn" data-ui="confirm-new-yes" onClick={startNew}>{t('ui.newGameYes')}</button>
+          <button type="button" class="ui-btn" data-ui="confirm-new-yes" onClick={startNew}>{t(sampleDay ? 'ui.newDayYes' : 'ui.newGameYes')}</button>
         </div>
       )}
       {paused && !confirmNew && (
@@ -595,6 +595,7 @@ export function Shell({ port, langOverride, credits, build, holdToast = false, h
             <legend>{t('ui.saveGroup')}</legend>
             <button type="button" class="ui-btn" data-ui="save"
               onClick={() => { void port.save().then((ok) => { setStatus(ok ? 'ui.saved' : 'ui.saveFailed'); if (ok) playUi('confirm'); }); }}>{t('ui.save')}</button>
+            {!sampleDay && <>
             <button type="button" class="ui-btn" data-ui="code-export"
               onClick={() => { void port.exportCode().then(setCodeOut); }}>{t('ui.exportCode')}</button>
             {codeOut && <textarea class="ui-code" data-ui="code-out" readOnly rows={3} aria-label={t('ui.exportCode')} value={codeOut}
@@ -603,6 +604,7 @@ export function Shell({ port, langOverride, credits, build, holdToast = false, h
               value={codeIn} onInput={(e) => setCodeIn((e.currentTarget as HTMLTextAreaElement).value)} />
             <button type="button" class="ui-btn" data-ui="code-apply"
               onClick={() => { void port.importCode(codeIn).then((r) => { if (r === 'ok' || r === 'unsaved') setUps([]); setStatus(({ ok: 'ui.importOk', bad: 'ui.importBad', outdated: 'ui.importOutdated', newer: 'ui.importNewer', unsaved: 'ui.importUnsaved' } as const)[r]); }); }}>{t('ui.apply')}</button>
+            </>}
             {status && <p class="ui-status" data-ui="status" role="status">{t(status)}</p>}
           </fieldset>
           <fieldset>
