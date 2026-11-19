@@ -3,6 +3,7 @@
 import { readFileSync } from 'node:fs';
 import { expect, type Page } from '@playwright/test';
 import { waitGameReady } from './ready';
+import { spotOfItem } from '../../src/content/containers';
 
 export interface Core { game: { player: { locationId: string; transportId?: string } | null; flags: string[]; quests: Record<string, { status: string }>; inventory: Record<string, number>; dialogue: unknown; wave?: unknown; campaignEnded: boolean }; clock: { minutes: number }; journal: { type: string; ref?: string | null }[] }
 /** GAME-193: зонд риболовлі (координати кнопок — у пікселях сторінки). */
@@ -251,6 +252,49 @@ export async function playFire(page: Page, touch: boolean, midShot?: () => Promi
   throw new Error('сірник не запалився за 3 спроби');
 }
 
+/** E / тап по кнопці дії (● на дотику). */
+export async function pressInteract(page: Page, touch: boolean): Promise<void> {
+  if (touch) await page.locator('[data-touch="interact"]').tap();
+  else { await page.keyboard.down('KeyE'); await page.waitForTimeout(200); await page.keyboard.up('KeyE'); }
+}
+
+/** GAME-304: закрити вікно контейнера кнопкою «Закрити» (тап чи клік) і дочекатись, що світ знову іде. */
+export async function closeBox(page: Page, touch: boolean): Promise<void> {
+  const done = page.locator('[data-ui="box-done"]');
+  if (touch) await done.tap(); else await done.click();
+  await expect(page.locator('[data-ui="box-panel"]'), 'вікно контейнера закрилось').toHaveCount(0, { timeout: 5_000 });
+}
+
+/**
+ * GAME-304: вікно контейнера вже відкрито — узяти речі (дотиком чи кліком по кнопці речі) і закрити. `which`: 'needed' — лише «потрібне» (те, що веде стрілка «Далі»),
+ * 'all' — усе, що лежить, або список id. Повертає id узятих речей.
+ */
+export async function takeFromOpenBox(page: Page, touch: boolean, which: 'needed' | 'all' | readonly string[] = 'needed'): Promise<string[]> {
+  const panel = page.locator('[data-ui="box-panel"]');
+  await expect(panel, 'вікно контейнера відкрилось').toBeVisible({ timeout: 5_000 });
+  const here = await panel.locator('[data-ui="box-slot"][data-state="here"]').evaluateAll((els) => els.map((e) => ({ id: (e as HTMLElement).dataset.id as string, group: (e as HTMLElement).dataset.group as string })));
+  const want = here.filter((x) => which === 'all' || (which === 'needed' ? x.group === 'needed' : which.includes(x.id))).map((x) => x.id);
+  for (const id of want) {
+    const btn = panel.locator(`[data-ui="box-take"][data-id="${id}"]`);
+    if (touch) await btn.tap(); else await btn.click();
+    await expect(panel.locator(`[data-ui="box-slot"][data-id="${id}"]`), `${id} узято`).toHaveAttribute('data-state', 'taken', { timeout: 5_000 });
+  }
+  await closeBox(page, touch);
+  return want;
+}
+
+/** GAME-304: підійти до контейнера, де лежить річ, торкнутись, взяти її (лише її) і закрити вікно. */
+export async function takeItemAt(page: Page, touch: boolean, itemId: string): Promise<void> {
+  const spot = spotOfItem(itemId);
+  if (spot === null) throw new Error(`${itemId}: контейнера немає`);
+  const at = await probe(page);
+  await walk(page, route('home', [at.playerX, at.playerY], spot));
+  await expect.poll(async () => (await probe(page)).nearObject, { timeout: 5_000, message: `біля ${spot}` }).toBe(spot);
+  await pressInteract(page, touch);
+  await takeFromOpenBox(page, touch, [itemId]);
+  expect((await core(page)).game.flags, `${itemId}: прапорець «взято»`).toContain(`f.take-${itemId.replace('item.', '')}`);
+}
+
 const AUTO = (name: string): boolean => name.startsWith('step.') || name.startsWith('take.') || name === 'obj.vehicle' || name.startsWith('req.') || name.startsWith('pack.');
 /** Один «заход»: куди каже стрілка → дійти → дія від наближення (кільце) або кнопка дії (E / тап по кнопці). Повертає назву цілі. */
 export async function goAndDo(page: Page, touch: boolean, car = false): Promise<string> {
@@ -276,8 +320,8 @@ export async function goAndDo(page: Page, touch: boolean, car = false): Promise<
       const gone = await expect.poll(async () => { const z = await probe(page); return z.nearObject === target ? 'near' : z.fx.target !== target ? 'gone' : 'wait'; }, { timeout: 5_000, message: `біля ${target} кнопка дії мусить знати, що поруч` }).not.toBe('wait').then(async () => (await probe(page)).fx.target !== target && (await probe(page)).nearObject !== target);
       if (gone) { expect(await signature(page), `ціль ${target} зникла без зміни стану`).not.toBe(before); await page.waitForTimeout(150); return target; }
       await expect.poll(async () => (await probe(page)).nearObject, { timeout: 5_000, message: `біля ${target} кнопка дії мусить знати, що поруч` }).toBe(target);
-      if (touch) await page.locator('[data-touch="interact"]').tap();
-      else { await page.keyboard.down('KeyE'); await page.waitForTimeout(200); await page.keyboard.up('KeyE'); }
+      await pressInteract(page, touch);
+      if (target.startsWith('box.')) await takeFromOpenBox(page, touch);   // GAME-304: контейнер відкрився — узяти «потрібне» й закрити (так само, як веде стрілка «Далі»)
     }
     if (target === 'task.pitch-tent' && !AUTO(target)) await playTent(page, touch);
     if (target === 'obj.campfire' && (await probe(page)).fire.phase === 'stack') await playFire(page, touch);   // GAME-190: вогнище руками

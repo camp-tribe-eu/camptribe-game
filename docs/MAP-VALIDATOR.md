@@ -82,7 +82,7 @@ Tiled JSON (`.tmj`) у `maps/` (підтеки теж читаються). Пр�
 нього — як раніше). У шарі — прямокутники по сітці тайлів: `type: room` із властивістю `room`
 (`living | kitchen | bedroom | bathroom | hall | study`) і меблі з `type` = kind зі словника
 `LAYOUT_KINDS` у `checks.mjs` (`bed, nightstand, wardrobe, desk, sofa, coffee_table, tv, shelf, counter,
-fridge, stove, sink, table, chair, lamp, plant, rug, painting, wall_shelf, window, door, doorway`).
+fridge, stove, sink, table, chair, lamp, chest (GAME-304), plant, rug, painting, wall_shelf, window, door, doorway`).
 Прямокутник меблів — **опора на підлозі** (клітинки з колізією), а не весь спрайт; у настінного
 (`window, painting, wall_shelf, door`) — клітинки стіни; у `doorway`/`rug` — прохідні клітинки.
 

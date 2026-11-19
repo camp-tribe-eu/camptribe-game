@@ -24,6 +24,11 @@ describe('звуки UI', () => {
     expect(['story-close', 'confirm-new-no', 'recovery-close', 'summary-end', 'stale-dismiss'].map(soundForButton)).toEqual(['back', 'back', 'back', 'back', 'back']);
     expect(['save', 'mute', 'new-game', undefined, 'text-100'].map(soundForButton)).toEqual(['press', 'press', 'press', 'press', 'press']);
   });
+  it('GAME-304: вікно контейнера — «Взяти» → confirm, «Закрити» (✕ і внизу) → back; сусідні кнопки не зачеплено', () => {
+    expect(['box-take'].map(soundForButton)).toEqual(['confirm']);
+    expect(['box-close', 'box-done'].map(soundForButton)).toEqual(['back', 'back']);
+    expect(['box-slot', 'backpack-close'].map(soundForButton)).toEqual(['press', 'press']);
+  });
   it('mute, master 0, sfx 0 → нічого не грає; без виходу — теж', () => {
     for (const a of [{ ...DEFAULT_AUDIO, muted: true }, { ...DEFAULT_AUDIO, master: 0 }, { ...DEFAULT_AUDIO, sfx: 0 }]) {
       const { calls, ui } = rig(a);

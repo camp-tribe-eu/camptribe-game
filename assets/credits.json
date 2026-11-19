@@ -599,6 +599,7 @@
         "tiles/ch2_objects.png",
         "tiles/home_furniture.png",
         "tiles/home_office.png",
+        "tiles/home_storage.png",
         "tiles/shop_decor.png",
         "tiles/shop_gear.png"
       ],
@@ -1097,6 +1098,7 @@
         "tiles/home_furniture.png",
         "tiles/home_office.png",
         "tiles/home_shelf.png",
+        "tiles/home_storage.png",
         "tiles/home_walls.png",
         "tiles/home_windows_doors.png",
         "tiles/shop_decor.png",
@@ -3802,6 +3804,18 @@
         "https://opengameart.org/content/lpc-shelves-rework"
       ],
       "modified": "left bookshelf 2x3 cropped from bookshelf-brown_0.png, recoloured onto the base palette (scripts/palette/quantize.py)"
+    },
+    {
+      "file": "tiles/home_storage.png",
+      "authors": [
+        "Lanea Zimmerman (Sharm)",
+        "Eliza Wyatt (ElizaWy)"
+      ],
+      "licence": "CC-BY-SA 3.0",
+      "sources": [
+        "https://opengameart.org/content/lpc-revised-base-object-kit"
+      ],
+      "modified": "cabinet (32x69) and small chest (28x27) cropped unchanged from the kit and placed bottom-aligned on a 128x96 sheet, plus a fridge (22x52) drawn in code, quantized to the LPC palette (scripts/assets/build_home_storage.py)"
     },
     {
       "file": "tiles/home_walls.png",
