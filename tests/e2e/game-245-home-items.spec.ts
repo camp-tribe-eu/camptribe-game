@@ -52,8 +52,9 @@ test('взяти три речі: з місць зникли, картка ре�
     expect(icon?.width ?? 0, 'піктограма ≥ 64 px').toBeGreaterThanOrEqual(64);
     if (n === 0 && SHOT_CARD) await card.screenshot({ path: `${SHOTS}/item-card-closeup.png` });
     if (SHOT_CARD) await page.screenshot({ path: `${SHOTS}/after-take-${n + 1}-390x844.png` });
-    expect((await probe(page)).commandsSent).toBeGreaterThan(commands);
+    expect((await core(page)).game.flags, `${item}: ядро прийняло TakeItem (світ у вікні на паузі, лічильник проби стоїть)`).toContain(`f.take-${item.replace('item.', '')}`);
     await closeBox(page, true);
+    await expect.poll(async () => (await probe(page)).commandsSent, { timeout: 5_000, message: 'команда пішла (лічильник проби оновився після закриття вікна)' }).toBeGreaterThan(commands);
   }
   const flags = (await core(page)).game.flags;
   for (const f of ['f.take-documents', 'f.take-wallet', 'f.take-lantern']) expect(flags).toContain(f);

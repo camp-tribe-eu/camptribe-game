@@ -36,8 +36,8 @@ async function noOverlaps(page: Page): Promise<void> {
 }
 
 /** GAME-304: річ лежить у контейнері — підійти, торкнутись, узяти її й закрити вікно (`pack.item.documents` → `item.documents`). */
-async function takeSpot(page: Page, touch: boolean, spot: string): Promise<void> {
-  await takeItemAt(page, touch, spot.replace('pack.', ''));
+async function takeSpot(page: Page, touch: boolean, spot: string, afterWalk?: () => Promise<void>): Promise<void> {
+  await takeItemAt(page, touch, spot.replace('pack.', ''), afterWalk);
 }
 
 const packing = (c: Awaited<ReturnType<typeof core>>): boolean => c.game.quests['CH1-HOME-001']?.status === 'active' && c.game.player?.locationId === 'loc.home';
@@ -64,7 +64,7 @@ test('удома: нотатник з речами й місцями, пункт
   const rows = page.locator('[data-ui="agenda-item"]');
   expect(await rows.count()).toBeGreaterThanOrEqual(3);
   expect(await rows.count()).toBeLessThanOrEqual(6);
-  await expect(page.locator('[data-ui="agenda-item"][data-item="item.documents"]')).toContainText('шухляда в передпокої');   // назва речі й місце
+  await expect(page.locator('[data-ui="agenda-item"][data-item="item.documents"]')).toContainText('шафа в спальні');   // назва речі й місце (GAME-304: документи лежать у шафі, а не в шухляді на підлозі)
   await expect(page.locator('[data-ui="agenda-item"][data-item="item.documents"]')).toContainText('Документи');
   await expect(page.locator('[data-ui="agenda-item"][data-done="yes"]')).toHaveCount(0);
   // Мінімапа: видима, з точкою героя й ≥ 1 крапкою цілі.
@@ -89,8 +89,8 @@ test('удома: нотатник з речами й місцями, пункт
   await noOverlaps(page);
   await page.screenshot({ path: `${SHOTS}/home-390x844.png` });
   // Узяти річ — пункт закреслився сам, крапка її зникла.
-  await takeSpot(page, true, 'pack.item.documents');
-  expect(await draws(), 'герой пішов → мінімапа перемалювалась').toBeGreaterThan(d0);
+  // GAME-304: вікно контейнера ховає HUD (радар перемонтується, лічильник малювань починається знову), тож «перемалювалась» міряємо ДО відкриття вікна — коли герой щойно дійшов.
+  await takeSpot(page, true, 'pack.item.documents', async () => { expect(await draws(), 'герой пішов → мінімапа перемалювалась').toBeGreaterThan(d0); });
   await expect(page.locator('[data-ui="agenda-item"][data-item="item.documents"]')).toHaveAttribute('data-done', 'yes');
   await expect(page.locator('[data-ui="agenda-item"][data-done="no"]').first()).toHaveAttribute('data-current', 'yes');
   await expect.poll(async () => Number(await mini.getAttribute('data-dots')), { timeout: 5_000 }).toBeLessThan(dotsBefore);

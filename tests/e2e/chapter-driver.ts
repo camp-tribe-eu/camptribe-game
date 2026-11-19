@@ -284,12 +284,13 @@ export async function takeFromOpenBox(page: Page, touch: boolean, which: 'needed
 }
 
 /** GAME-304: підійти до контейнера, де лежить річ, торкнутись, взяти її (лише її) і закрити вікно. */
-export async function takeItemAt(page: Page, touch: boolean, itemId: string): Promise<void> {
+export async function takeItemAt(page: Page, touch: boolean, itemId: string, afterWalk?: () => Promise<void>): Promise<void> {
   const spot = spotOfItem(itemId);
   if (spot === null) throw new Error(`${itemId}: контейнера немає`);
   const at = await probe(page);
   await walk(page, route('home', [at.playerX, at.playerY], spot));
   await expect.poll(async () => (await probe(page)).nearObject, { timeout: 5_000, message: `біля ${spot}` }).toBe(spot);
+  if (afterWalk) await afterWalk();   // перевірки на мапі, поки вікно ще не відкрито (воно ховає HUD)
   await pressInteract(page, touch);
   await takeFromOpenBox(page, touch, [itemId]);
   expect((await core(page)).game.flags, `${itemId}: прапорець «взято»`).toContain(`f.take-${itemId.replace('item.', '')}`);
