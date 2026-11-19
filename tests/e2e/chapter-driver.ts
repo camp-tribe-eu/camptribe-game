@@ -306,12 +306,17 @@ const AUTO = (name: string): boolean => name.startsWith('step.') || name.startsW
 /** Один «заход»: куди каже стрілка → дійти → дія від наближення (кільце) або кнопка дії (E / тап по кнопці). Повертає назву цілі. */
 /**
  * GAME-332 · «Багажник»: з сумкою біля авто відкривається міні-гра. Загальні проходи розділів не грають її — вибирають «Їдемо як є» (пауза → далі без цього → закрити): нічого не лишається вдома,
- * завантаження йде як раніше. Справжню гру руками перевіряє game-332-trunk.spec. Чекає до `wait` мс, поки гра з'явиться; не з'явилась — нічого не робить.
+ * завантаження йде як раніше. Справжню гру руками перевіряє game-332-trunk.spec. Чекає до `wait` мс, поки гра з'явиться (лише поки в сумці є речі); не з'явилась — нічого не робить.
  */
-export async function passTrunk(page: Page, wait = 1_500): Promise<boolean> {
+export async function passTrunk(page: Page, wait = 8_000): Promise<boolean> {
   const mg = page.locator('[data-ui="minigame"]');
-  if ((await mg.count()) === 0 && (await probe(page)).fx.backpack === 0) return false;   // сумка порожня — гри не буде, не чекаємо
-  if (!(await mg.waitFor({ timeout: wait }).then(() => true, () => false))) return false;
+  // Гра відкривається, коли кільце біля авто заповнилось (повільна збірка — кілька секунд): чекаємо її, поки в сумці є речі; порожня сумка — гри не буде.
+  const bag = async (): Promise<boolean> => (await core(page)).game.flags.some((f) => f.startsWith('f.take-'));
+  const t0 = Date.now();
+  while ((await mg.count()) === 0) {
+    if (!(await bag()) || Date.now() - t0 > wait) return false;
+    await page.waitForTimeout(150);
+  }
   await page.locator('[data-ui="mg-start"]').click();
   await page.locator('[data-ui="mg-pause"]').click();
   await page.locator('[data-ui="mg-move-on"]').click();
@@ -364,6 +369,7 @@ export async function playUntil(page: Page, touch: boolean, log: string[], stop:
     const c = await core(page);
     if (stop(c)) return before;
     before = await menuSeen();
+    if ((await page.locator('[data-ui="minigame"]').count()) > 0 && c.game.flags.some((f) => f.startsWith('f.take-'))) { await passTrunk(page, 0); log.push('trunk'); continue; }   // GAME-332: «Багажник» відкрився дорогою повз авто з сумкою
     if (await page.locator('[data-ui="summary-continue"]').count()) { await page.locator('[data-ui="summary-continue"]').click(); log.push('summary'); await page.waitForTimeout(500); continue; }
     if (await talk(page).count()) { log.push(await answerOne(page)); continue; }
     // GAME-256: крок чекає свій день/вечір (стрілка каже «вільний час» / «вечір ще попереду»): гравець у грі просто чекає — тут це перемотування годинника до вечора
