@@ -109,9 +109,8 @@ async function closeTalk(page: Page): Promise<void> {
 async function openTalk(page: Page, r: Req): Promise<void> {
   for (let attempt = 0; ; attempt++) {
     // GAME-313: підхід і Space — одним rAF-циклом у сторінці (Space у тому самому кадрі, де nearObject === просильник і над ним «!»).
-    const near = (await walkInPage<Probe>(page, { label: r.giver, ...giverAt(r), act: { id: r.giver, key: 'Space', marks: ['request'] } })).at;
+    const near = (await walkInPage<Probe>(page, { label: r.giver, ...giverAt(r), act: { id: r.giver, key: 'Space', marks: ['request'], markWaitMs: 5_000, markMessage: `${r.giver}: над головою нема «!»` } })).at;
     expect(near.nearObject).toBe(r.giver);
-    expect(near.npcMarks[r.giver], `${r.giver}: над головою нема «!»`).toBe('request');
     await expect(box(page), `${r.giver}: рамка розмови не відкрилась`).toBeVisible({ timeout: 8_000 }).catch(() => undefined);
     const who = (await box(page).isVisible()) ? await panel(page).locator('[data-ui="speaker"]').getAttribute('data-npc') : null;
     if (who === r.giver) break;

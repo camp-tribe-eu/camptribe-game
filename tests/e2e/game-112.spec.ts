@@ -1,5 +1,5 @@
 // GAME-112 · родина йде за героєм ланцюжком (Victoria, потім Matthew), гравець керує одним героєм (George).
-// Герой ходить СПРАВЖНІМИ натисканнями клавіш (як гравець); маршрут — по тайлах мапи (BFS по шару walls), кермо — в сторінці по кадрах (walk.helpers.ts, GAME-313).
+// Герой ходить клавішами, але синтетичними KeyboardEvent у сторінці (не справжні натискання з Node; GAME-313); маршрут — по тайлах мапи (BFS по шару walls), кермо — в сторінці по кадрах (walk.helpers.ts, GAME-313).
 // Мутації (кожна — червоний тест, перевірено; див. PR): findPath без стін; restTile без `avoid`; слідувачі не рухаються.
 import { readFileSync } from 'node:fs';
 import { expect, test, type Page } from '@playwright/test';

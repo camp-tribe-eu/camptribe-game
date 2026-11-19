@@ -72,9 +72,8 @@ async function openTalk(page: Page, r: Req, marker = 'request'): Promise<void> {
   // Слідувачі (родина) тупцюють коло героя, а мешканець ходить: «найближчий» міг змінитись між кроком і дією — тоді розмова не з тим; закриваємо її й пробуємо ще.
   for (let attempt = 0; ; attempt++) {
     // GAME-313: підхід і Space — одним rAF-циклом у сторінці: Space іде в тому самому кадрі, де nearObject === просильник і над ним потрібна позначка, тож «найближчий» не встигає змінитись.
-    const near = (await walkInPage<Probe>(page, { label: r.giver, ...giverAt(r), act: { id: r.giver, key: 'Space', marks: [marker] } })).at;
+    const near = (await walkInPage<Probe>(page, { label: r.giver, ...giverAt(r), act: { id: r.giver, key: 'Space', marks: [marker], markWaitMs: 5_000, markMessage: `${r.giver}: над головою нема «!»` } })).at;
     expect(near.nearObject).toBe(r.giver);
-    expect(near.npcMarks[r.giver], `${r.giver}: над головою нема «!»`).toBe(marker);
     await expect(box(page), `${r.giver}: рамка розмови не відкрилась`).toBeVisible({ timeout: 8_000 }).catch(() => undefined);
     const who = (await box(page).isVisible()) ? await panel(page).locator('[data-ui="speaker"]').getAttribute('data-npc') : null;
     if (who === r.giver) break;
@@ -130,7 +129,7 @@ async function doTarget(page: Page, r: Req, spot: string, i: number): Promise<vo
   // Тому до цілі — грубо (шлях по тайлах), а ПІДСТУП і зупинка — всередині сторінки (rAF, без CDP), як у chapter-driver.walk; далі перевіряємо, що герой стоїть упритул.
   // Саму перевірку прапорця (6 с) не ослаблено.
   for (let attempt = 0; attempt < 4; attempt++) {
-    await walkInPage(page, { label: spot, to: target, until: [{ within: 20 }] });   // підступ і зупинка — у сторінці по кадрах, завмерли
+    await walkInPage(page, { label: spot, to: target, until: [{ within: 12 }] });   // підступ і зупинка — у сторінці по кадрах, завмерли
     const p = await probe(page);
     if (!p.playerMoving && Math.hypot(p.playerX - target.x, p.playerY - target.y) < 28) break;
   }
