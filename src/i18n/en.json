@@ -14,6 +14,8 @@
   "ui.gameMenu": "Game",
   "ui.newGame": "New game",
   "ui.newGameAsk": "Start a new game? All progress in this game (journey, money, journal) will be erased.",
+  "ui.newDay": "Restart the day",
+  "ui.newDayAsk": "Restart the sample day from the start? This day's progress will be erased. The full game (address without ?sampleDay=1) is not affected.",
   "ui.newGameYes": "Yes, erase and start new",
   "ui.newGameNo": "No, keep my game",
   "ui.newGameFailed": "The new game started, but it could not be saved to storage.",

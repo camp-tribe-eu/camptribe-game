@@ -216,6 +216,7 @@ export function Shell({ port, langOverride, credits, build, holdToast = false, h
   };
   // Підтверджено: порт чистить гру; далі — екран подорожі, а там вибір персонажа (гри без гравця на мапі немає).
   const startNew = (): void => {
+    if (port.sample) { void port.sample.restart(); return; }   // GAME-331: у зразку «нова гра» = той самий день спочатку, а не повна гра в чужій адресі
     setConfirmNew(false);
     setUps([]);   // ранги покинутої гри не мають показатись у новій (GAME-229)
     setStatus(null);
@@ -532,9 +533,9 @@ export function Shell({ port, langOverride, credits, build, holdToast = false, h
       {summary && !paused && top === 'levelup' && <LevelUp ups={shownUps} lang={lang} t={t} onContinue={() => setUps([])} />}
       {summary && !paused && top === 'summary' && <DaySummary summary={summary} lang={lang} t={t} onContinue={summaryContinue} onEnd={summaryEnd} sleep={sleepAction !== undefined} />}
       {paused && confirmNew && (
-        <div class="ui-overlay" role="dialog" aria-modal="true" aria-label={t('ui.newGame')} data-ui="confirm-new" onKeyDown={(e) => trapTab(e, e.currentTarget)}>
-          <h2>{t('ui.newGame')}</h2>
-          <p data-ui="confirm-new-text">{t('ui.newGameAsk')}</p>
+        <div class="ui-overlay" role="dialog" aria-modal="true" aria-label={t(sampleDay ? 'ui.newDay' : 'ui.newGame')} data-ui="confirm-new" onKeyDown={(e) => trapTab(e, e.currentTarget)}>
+          <h2>{t(sampleDay ? 'ui.newDay' : 'ui.newGame')}</h2>
+          <p data-ui="confirm-new-text">{t(sampleDay ? 'ui.newDayAsk' : 'ui.newGameAsk')}</p>
           <button type="button" class="ui-btn" data-ui="confirm-new-no" ref={noRef} onClick={() => setConfirmNew(false)}>{t('ui.newGameNo')}</button>
           <button type="button" class="ui-btn" data-ui="confirm-new-yes" onClick={startNew}>{t('ui.newGameYes')}</button>
         </div>
@@ -606,7 +607,7 @@ export function Shell({ port, langOverride, credits, build, holdToast = false, h
           </fieldset>
           <fieldset>
             <legend>{t('ui.gameMenu')}</legend>
-            <button type="button" class="ui-btn" data-ui="new-game" onClick={() => setConfirmNew(true)}>{t('ui.newGame')}</button>
+            <button type="button" class="ui-btn" data-ui="new-game" onClick={() => setConfirmNew(true)}>{t(sampleDay ? 'ui.newDay' : 'ui.newGame')}</button>
             <button type="button" class="ui-btn" data-ui="reset" onClick={() => update({ ...DEFAULT_SETTINGS, hintSeen: settings.hintSeen, remindedTrip: settings.remindedTrip, remindShown: settings.remindShown })}>{t('ui.reset')}</button>
           </fieldset>
           {/* GAME-91: підпис збірки (версія + повний SHA) — тут, а не на екрані гри; для баг-репортів. */}
