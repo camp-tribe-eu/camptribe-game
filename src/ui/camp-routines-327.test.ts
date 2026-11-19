@@ -27,4 +27,12 @@ describe('GAME-327 дошка табору', () => {
       for (const m of MISSIONS) expect((goal as Record<string, string>)['sd.goal.day'], m.giver).toContain((loc as Record<string, string>)[m.giver] as string);
     }
   });
+  // GAME-328. Мутації (перевірено): `helpFor(day)` → `helpFor(startCampDay())`; прибрати `bite: help.timeScale`; прибрати `active !== 'firewood'` → червоніють.
+  it('GAME-328: допомога береться з дня, йде в рибу й не обіцяє легшого там, де його нема', () => {
+    expect(src).toMatch(/const help: Difficulty = helpFor\(day\);/);
+    expect(src).toMatch(/stepFish\(s, \{ kind: 'tick', dtMs, down: rod, bite: help\.timeScale \}/);
+    expect(src).toMatch(/const eased = help\.hint && active !== 'firewood' && active !== 'tidy'/);
+    expect(src).toMatch(/data-help=\{eased \? 'yes' : 'no'\}/);
+    expect(src).toMatch(/\{eased && <p[^>]*data-ui="camp-help"/);
+  });
 });

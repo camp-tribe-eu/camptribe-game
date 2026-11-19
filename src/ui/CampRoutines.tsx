@@ -102,6 +102,7 @@ export function CampRoutines({ t, weather, seed, onFrame, devices: devices0 = {}
 
   // GAME-328: допомога одна на всі рутини — за останніми двома результатами дня (helpFor), а не за кожною справою окремо.
   const help: Difficulty = helpFor(day);
+  const eased = help.hint && active !== 'firewood' && active !== 'tidy';   // у дров і порядку смуги немає — рядок «легше» там був би неправдою
   const finish = (id: RoutineId, outcome: Outcome, more: Partial<typeof facts> = {}) => {
     setDay((d) => recordResult(d, id, outcome));
     setFacts((f) => ({ ...f, ...more }));
@@ -170,9 +171,9 @@ export function CampRoutines({ t, weather, seed, onFrame, devices: devices0 = {}
 
   if (phase === 'work' && active !== null) {
     return (
-      <div class="ui-overlay ui-camp" data-ui="camp-work" data-kind={active} data-help={help.hint ? 'yes' : 'no'}>
+      <div class="ui-overlay ui-camp" data-ui="camp-work" data-kind={active} data-help={eased ? 'yes' : 'no'}>
         <h2>{t(`camp.routine.${active}` as Key)}</h2>
-        {help.hint && <p class="ui-camp-note" data-ui="camp-help">{t('camp.help')}</p>}
+        {eased && <p class="ui-camp-note" data-ui="camp-help">{t('camp.help')}</p>}
         {active in MIN_WORK && !ok(active as keyof typeof MIN_WORK) && <p class="ui-camp-note" data-ui="camp-more">{more(active as keyof typeof MIN_WORK)}</p>}
         {active === 'water' && (
           <section class="ui-camp-work">

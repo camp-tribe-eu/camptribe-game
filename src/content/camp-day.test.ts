@@ -137,12 +137,18 @@ describe('GAME-320: коли відкрита «Ніч»', () => {
 
 // GAME-328 · §5а: два «сяк-так» поспіль → допомога; після доброго — знову звичайно. Мутація (перевірено): helpFor завжди NORMAL → червоніє.
 describe('GAME-328: допомога після двох «сяк-так»', () => {
-  const play = (...outs: Outcome[]) => {
-    const ids = [['water', 'morning'], ['lanterns', 'noon'], ['fish', 'afternoon']] as const;
+  const play = (...outs: Outcome[]) => playIn(['water', 'lanterns', 'fish'], ...outs);
+  const playIn = (ids: readonly RoutineId[], ...outs: Outcome[]) => {
+    const rs = ['morning', 'noon', 'afternoon'] as const;
     let d = startCampDay();
-    ids.slice(0, outs.length).forEach(([id, r], i) => { d = recordResult(addPick(d, id, r), id, outs[i] as Outcome); });
+    ids.slice(0, outs.length).forEach((id, i) => { d = recordResult(addPick(d, id, rs[i] as (typeof rs)[number]), id, outs[i] as Outcome); });
     return d;
   };
+  it('порядок — той, у якому рутини ВЗЯТО, а не канонічний', () => {
+    expect(helpFor(playIn(['fish', 'water', 'lanterns'], 'scrappy', 'good', 'scrappy'))).toBe(NORMAL);
+    expect(helpFor(playIn(['lanterns', 'fish'], 'scrappy', 'scrappy'))).toBe(RELAXED);
+    expect(helpFor(playIn(['fish', 'lanterns', 'water'], 'scrappy', 'scrappy', 'good'))).toBe(NORMAL);
+  });
   it('порожній день і один «сяк-так» — звичайно', () => {
     expect(helpFor(startCampDay())).toBe(NORMAL);
     expect(helpFor(play('scrappy'))).toBe(NORMAL);
