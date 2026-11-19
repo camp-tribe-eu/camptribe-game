@@ -1,7 +1,7 @@
 // GAME-280 · offerFocusKey: той самий вміст у новому об'єкті — той самий ключ (фокус не стрибає); змінилось, що натискати, — інший (GAME-80 лишається).
 // Закон 1: мутація «ключ = випадкове/ідентичність об'єкта» червонить перший рядок; «ключ без actions / без репліки» — відповідні рядки нижче.
 import { describe, expect, it } from 'vitest';
-import { inSampleCamp, offerFocusKey, sampleActionsFirst, sampleMenuActions, startHintOn, type FocusOffer } from './story-focus';
+import { inSampleCamp, nextAction, offerFocusKey, sampleActionsFirst, sampleMenuActions, startHintOn, type FocusOffer } from './story-focus';
 
 const base = (): FocusOffer => ({
   stage: 'play', locationKey: 'loc.home',
@@ -55,5 +55,30 @@ describe('startHintOn / sampleActionsFirst (GAME-325)', () => {
     expect(sampleActionsFirst(true, false)).toBe(true);
     expect(sampleActionsFirst(true, true)).toBe(false);
     expect(sampleActionsFirst(false, false)).toBe(false);
+  });
+});
+
+// GAME-326 · закон 1: мутація «complete за ціллю» → перший complete / порядок рангів переставлено / dry чи talk рекомендуються → відповідний рядок червоніє.
+describe('nextAction (GAME-326)', () => {
+  const A = (id: string, kind: string, key: string | null = null) => ({ id, kind, key }) as unknown as Parameters<typeof nextAction>[0][number];
+  it('завершення квесту-цілі — першим, хоч інші «Завершити» стоять раніше', () => {
+    const acts = [A('1', 'complete', 'q.a'), A('2', 'complete', 'q.b'), A('3', 'complete', 'q.c')];
+    expect(nextAction(acts, 'q.c')?.id).toBe('3');
+    expect(nextAction(acts, null)?.id).toBe('1');
+  });
+  it('«Піти» й «Висушити» не випереджають «Завершити»', () => {
+    const acts = [A('v', 'visit', 'loc.home'), A('d', 'dry', 'item.tent'), A('c', 'complete', 'q.x')];
+    expect(nextAction(acts, null)?.id).toBe('c');
+  });
+  it('порядок без завершень: узяти → розрахуватись → піти', () => {
+    expect(nextAction([A('v', 'visit'), A('k', 'checkout'), A('p', 'pickup', 'item.tent')], null)?.id).toBe('p');
+    expect(nextAction([A('l', 'pickup', 'item.lantern'), A('k', 'checkout')], null)?.id).toBe('k');   // ліхтар — не обов'язковий: рекомендація не затримує розрахунок
+    expect(nextAction([A('v', 'visit'), A('k', 'checkout')], null)?.id).toBe('k');
+    expect(nextAction([A('d', 'dry'), A('v', 'visit', 'loc.home')], null)?.id).toBe('v');
+    expect(nextAction([A('s', 'visit', 'loc.shop'), A('r', 'visit', 'loc.road')], null)?.id).toBe('r');   // у дорогу, а не знову до крамниці
+  });
+  it('нічого рекомендувати — undefined (розмова, сон, сушіння)', () => {
+    expect(nextAction([A('t', 'talk'), A('d', 'dry')], null)).toBeUndefined();
+    expect(nextAction([], 'q.x')).toBeUndefined();
   });
 });

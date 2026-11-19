@@ -38,7 +38,7 @@
     "id": "wave.ch1-day1-road-bike", "titleKey": "wave.ch1-day1-road-bike", "hookKey": "wave.ch1-day1-road-bike.hook", "stage": "ST-004",
     "when": { "transports": ["transport.bike"] },
     "fallback": { "textKey": "wave.ch1-day1-road-bike.fallback" },
-    "allDone": { "textKey": "wave.ch1-day1-road-bike.all-done" },
+    "allDone": { "textKey": "wave.ch1-day1-road.all-done" },
     "tasks": [
       { "id": "patch-tyre", "textKey": "wave.ch1-day1-road-bike.patch-tyre", "limitMin": 45,
         "done": { "textKey": "wave.ch1-day1-road-bike.patch-tyre.done" }, "late": { "textKey": "wave.ch1-day1-road-bike.patch-tyre.late" } },

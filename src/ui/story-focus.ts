@@ -38,3 +38,17 @@ export const sampleMenuActions = (actions: readonly OfferAction[], sampleCamp: b
 export const startHintOn = (sample: boolean, hintSeen: boolean): boolean => sample || !hintSeen;
 /** GAME-325 · зразковий день: ☰ без списку-довідки (звання, навички, речі) — «Що робити» лежить угорі, а не на 900–2600 px під згином. Компактна панель (мапа-перша) і так коротка. */
 export const sampleActionsFirst = (sample: boolean, compact: boolean): boolean => sample && !compact;
+
+/**
+ * GAME-326 · зразковий день: ОДНА рекомендована дія. Порядок «що веде день»: завершити квест-ціль (offer.goal) → завершити будь-який →
+ * взяти НЕОБХІДНЕ (намет, спальник; ліхтар — за бажанням) → розрахуватись → піти в дорогу чи табір → піти будь-куди. «Висушити» й «Поговорити» — ніколи.
+ */
+const MUST = ['item.tent', 'item.sleeping-bag'];
+const FWD = ['loc.road', 'loc.camp.lake'];
+const NO = 9;
+const rank = (a: OfferAction, goal: string | null): number =>
+  a.kind === 'complete' ? (a.key === goal ? 0 : 1) : a.kind === 'pickup' ? (MUST.includes(a.key ?? '') ? 2 : NO) : a.kind === 'checkout' ? 3 : a.kind === 'visit' ? (FWD.includes(a.key ?? '') ? 4 : 5) : NO;
+export const nextAction = (acts: readonly OfferAction[], goal: string | null): OfferAction | undefined => {
+  const best = [...acts].sort((x, y) => rank(x, goal) - rank(y, goal))[0];
+  return best && rank(best, goal) < NO ? best : undefined;
+};

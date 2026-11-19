@@ -116,7 +116,7 @@
           ]
         },
         {
-          "textKey": "dlg.ch2-pack.late.c2",
+          "textKey": "dlg.ch2-schengen.join.c2",
           "next": "jl2",
           "effects": [
             {
@@ -135,13 +135,13 @@
     {
       "id": "jl2",
       "speaker": "player",
-      "textKey": "dlg.ch2-pack.jl2",
+      "textKey": "dlg.ch2-schengen.j2",
       "next": "joined-late"
     },
     {
       "id": "joined-late",
       "speaker": "player",
-      "textKey": "dlg.ch2-pack.joined-late",
+      "textKey": "dlg.ch2-schengen.joined",
       "next": "farewell"
     },
     {

@@ -95,6 +95,7 @@ export function CampRoutines({ t, weather, seed, onFrame, devices: devices0 = {}
   const [sec, setSec] = useState(0);
   const ms = useRef(0);
   const go = () => setActs((n) => n + 1);
+  const dish = DISHES[embers.dish];
   const A = (id: Parameters<typeof canFinish>[0]) => (id === 'fish' ? catches(fish) + fish.slipped + fish.aways : id === 'fire' ? embers.acts : acts);   // риба: чесні спроби (улов, зрив, втеча)
   const ok = (id: Parameters<typeof canFinish>[0]) => canFinish(id, A(id), sec * 1000);
   const more = (id: Parameters<typeof canFinish>[0]) => { const w = workLeft(id, A(id), sec * 1000); return `${t('camp.more')}: ${w.acts > 0 ? `×${w.acts}` : `${w.s} ${t('camp.sec')}`}`; };
@@ -232,8 +233,9 @@ export function CampRoutines({ t, weather, seed, onFrame, devices: devices0 = {}
         )}
         {active === 'fire' && (
           <section class="ui-camp-work">
+            <p class="ui-camp-note" data-ui="fire-rule">{t('camp.fire.rule')}</p>
             <p data-ui="fire-heat" data-heat={Math.round(embers.heat * 100)}>{`${t('camp.fire.heat')}: ${Math.round(embers.heat * 100)} %`}</p>
-            <p data-ui="fire-dish" data-dish={DISHES[embers.dish]?.id ?? ''}>{DISHES[embers.dish] ? t(`camp.fire.dish.${DISHES[embers.dish]?.id}` as Key) : ''}</p>
+            <p data-ui="fire-dish" data-dish={dish?.id ?? ''}>{dish ? `${t(`camp.fire.dish.${dish.id}` as Key)} · ${dish.band.from * 100}-${dish.band.to * 100} %` : ''}</p>
             <div class="ui-camp-row">
               {(['wood', 'blow', 'rake'] as const).map((a: EmberAct) => (
                 <button key={a} type="button" class="ui-btn ui-camp-big" data-ui="fire-act" data-act={a} onClick={() => setEmbers((s) => stepEmbers(s, { kind: 'act', act: a }, helpOf('fire')).state)}>{t(`camp.fire.${a}` as Key)}</button>
@@ -279,6 +281,7 @@ export function CampRoutines({ t, weather, seed, onFrame, devices: devices0 = {}
         )}
         {active === 'berries' && (
           <section class="ui-camp-work">
+            <p class="ui-camp-note" data-ui="berry-rule">{t('camp.berry.rule')}</p>
             <p data-ui="berry-basket">{`${t('camp.berry.basket')}: ${berries.basket.length} / ${BASKET}`}</p>
             <ul class="ui-camp-grid">
               {patchOf(berries.seed).map((b, i) => {

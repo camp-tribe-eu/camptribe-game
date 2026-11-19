@@ -7,7 +7,7 @@ import type { AnyLang, Key } from '../i18n';
 import { trapTab } from './focus-trap';
 import { EntriesBook, JournalBook, SkillsBook, TravelerCard } from './JournalBook';
 import { Portrait, type PortraitLookup } from './Portrait';
-import { inSampleCamp, offerFocusKey, sampleActions, sampleActionsFirst, sampleMenuActions } from './story-focus';
+import { inSampleCamp, nextAction, offerFocusKey, sampleActions, sampleActionsFirst, sampleMenuActions } from './story-focus';
 import type { OfferAction, StoryOffer } from './story-types';
 
 const ACT: Readonly<Record<Exclude<OfferAction['kind'], 'choose' | 'continue' | 'cancel'>, Key>> = {
@@ -64,7 +64,10 @@ export function StoryPanel({ offer, lang, t, act, close, portrait, children, foo
   const sceneOnly = focus && !!offer.dialogue;
   // GAME-320: у таборі зразкового дня ☰ без стрибків часу й без цілей/квестів старої гри (story-focus.ts).
   const sampleCamp = inSampleCamp(sceneFocus === true, offer.locationKey);
-  const menuActions = sampleMenuActions(sampleActions(offer.actions, sceneFocus === true), sampleCamp);
+  const shown = sampleMenuActions(sampleActions(offer.actions, sceneFocus === true), sampleCamp);
+  // GAME-326: у зразку ОДНА рекомендована дія (та, що веде день далі) — перша в списку й підсвічена.
+  const rec = focus ? nextAction(shown, offer.goal?.key ?? null) : undefined;
+  const menuActions = rec ? [rec, ...shown.filter((a) => a !== rec)] : shown;
   const showRest = (!compact || page === 'journal') && !focus;   // квести, прогрес, навички, речі, журнал
 
   // GAME-80: після дії кнопки перебудовуються, і друге натискання (дотик чи Enter) через ~150 мс влучало б
@@ -96,7 +99,16 @@ export function StoryPanel({ offer, lang, t, act, close, portrait, children, foo
       onClick={(e) => e.preventDefault()}>{`${label(a)} — ${t('ui.short')} ${money(lang, a.shortCents ?? 0)}`}</button>
   );
   const button = (a: OfferAction) => (
-    <button type="button" class="ui-btn" key={a.id} data-act={a.kind} data-key={a.key ?? ''} onClick={guarded(a.id)}>{label(a)}</button>
+    <button type="button" class="ui-btn" key={a.id} data-act={a.kind} data-key={a.key ?? ''} data-rec={a === rec ? 'yes' : undefined} onClick={guarded(a.id)}>{label(a)}</button>
+  );
+
+  // GAME-326: у зразку «Що робити» — одразу під рядком стану (не під списком пакування чи квестів, на 900+ px).
+  const actionsBox = !compact && !sceneOnly && (menuActions.length > 0 || offer.locked.length > 0) && (
+    <fieldset data-ui="actions">
+      <legend>{t('ui.actions')}</legend>
+      {menuActions.map(button)}
+      {!offer.dialogue && offer.locked.map(lockedButton)}
+    </fieldset>
   );
 
   return (
@@ -118,6 +130,7 @@ export function StoryPanel({ offer, lang, t, act, close, portrait, children, foo
       {offer.stage !== 'create' && (
         <p class="ui-status" data-ui="where" tabIndex={-1} role="status" data-weather={offer.weather}>{`${t('ui.here')}: ${ct(lang, offer.locationKey)} · ${t('ui.money')}: ${money(lang, offer.moneyCents)} · ${t('ui.weather')}: ${t(WX[offer.weather])}`}</p>
       )}
+      {focus && actionsBox}
       {offer.stage !== 'create' && showRest && (
         // GAME-169: прогноз на сьогодні (GAME-131) — окремим рядком від факту й зі словом «прогноз»: він може не збутись,
         // і гравець має бачити обидва. Та сама лексика підписів, що й у погоди (WX). Не кнопка — без цілі 44 px.
@@ -207,13 +220,7 @@ export function StoryPanel({ offer, lang, t, act, close, portrait, children, foo
           {menuActions.filter((x) => x.kind === 'sleep' || x.kind === 'wait' || x.kind === 'rest' || x.kind === 'chapter').map(button)}
         </fieldset>
       )}
-      {!compact && !sceneOnly && (menuActions.length > 0 || offer.locked.length > 0) && (
-        <fieldset data-ui="actions">
-          <legend>{t('ui.actions')}</legend>
-          {menuActions.map(button)}
-          {!offer.dialogue && offer.locked.map(lockedButton)}
-        </fieldset>
-      )}
+      {!focus && actionsBox}
       {showRest && offer.inventory.length > 0 && (
         <p class="ui-status" data-ui="inventory">{`${t('ui.inventory')}: `}
           {offer.inventory.map((i, n) => (
