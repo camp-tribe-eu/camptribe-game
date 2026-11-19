@@ -4,12 +4,12 @@
 import { readFileSync } from 'node:fs';
 import { expect, test, type Locator, type Page } from '@playwright/test';
 import { waitGameReady } from './ready';
-import { sleepTheDay } from './chapter-driver';
+import { expectBoxOpen, pressInteract, sleepTheDay, takeFromOpenBox } from './chapter-driver';
 
 interface Progress { xp: number; om: number; keys: string[] }
 interface Core { clock: { minutes: number }; game: { player: { locationId: string } | null; flags: string[]; quests: Record<string, { status: string }>; inventory: Record<string, number>; progress?: Progress } }
 interface Fx { target: string | null; ring: number; backpack: number; pops: number; auto: number; rewards: number; rewardLast: string; headLabels: string[] }
-interface Probe { playerX: number; playerY: number; clockMinutes: number; fx: Fx; saveLoaded: boolean }
+interface Probe { playerX: number; playerY: number; clockMinutes: number; fx: Fx; saveLoaded: boolean; nearObject: string | null }
 const core = (page: Page): Promise<Core> => page.evaluate(() => (window as unknown as { __game: { read: () => Core } }).__game.read());
 const probe = (page: Page): Promise<Probe> => page.evaluate(() => JSON.parse(JSON.stringify((window as unknown as { __game: { probe: Probe } }).__game.probe)) as Probe);
 const sounds = (page: Page): Promise<string[]> => page.evaluate(() => (window as unknown as { __game: { sounds: () => string[] } }).__game.sounds());
@@ -101,6 +101,13 @@ async function goAndDo(page: Page): Promise<string> {
     const q = t === 0 ? p : await probe(page);
     await walk(page, route(key, [q.playerX, q.playerY], target));
     if ((await signature(page)) !== before) break;
+  }
+  // GAME-304: контейнер дому не спрацьовує від наближення — це дія E: торкнутись, узяти «потрібне» у вікні й закрити (як гравець за стрілкою «Далі»).
+  if (target.startsWith('box.')) {
+    await expect.poll(async () => (await probe(page)).nearObject, { timeout: 5_000, message: `біля ${target}` }).toBe(target);
+    await pressInteract(page, false);
+    await expectBoxOpen(page, target);
+    await takeFromOpenBox(page, false);
   }
   await expect.poll(() => signature(page), { timeout: 5_000, message: `біля ${target} дія не спрацювала від наближення` }).not.toBe(before);
   // GAME-185: авто питає «Куди їдемо?» — гравець погоджується (єдина відповідь-напрямок); «Не зараз» не обираємо, інакше прохід не рухається.

@@ -43,7 +43,7 @@ const outcome = async (page: Page, task: string): Promise<string> => {
 /** Підійти до слідувача `i`, відкрити розмову; повертає рамку. */
 async function approach(page: Page, i: number, id: string): Promise<void> {
   const q0 = await probe(page);
-  await walk(page, routeXY('home', [q0.playerX, q0.playerY], { x: 48, y: 144 }, true));   // вітальня (1,4): найближча ціль (Мія в переноску, 3,5) за 2,2 тайла — поза зоною дії 1,5
+  await walk(page, routeXY('home', [q0.playerX, q0.playerY], { x: 176, y: 240 }, true));   // вітальня (5,7): усі цілі (Мія в переноску 3,5; комора 2,4; скринька Мії 1,7; Джордж 3,9; світло 7,5) за 2,8+ тайла — поза зоною дії 1,5 (GAME-304: біля (1,4) тепер комора)
   for (let attempt = 0; ; attempt++) {
     await page.waitForTimeout(1_200);
     const p = await probe(page);
