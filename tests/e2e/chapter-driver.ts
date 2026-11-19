@@ -310,6 +310,7 @@ const AUTO = (name: string): boolean => name.startsWith('step.') || name.startsW
  */
 export async function passTrunk(page: Page, wait = 1_500): Promise<boolean> {
   const mg = page.locator('[data-ui="minigame"]');
+  if ((await mg.count()) === 0 && (await probe(page)).fx.backpack === 0) return false;   // сумка порожня — гри не буде, не чекаємо
   if (!(await mg.waitFor({ timeout: wait }).then(() => true, () => false))) return false;
   await page.locator('[data-ui="mg-start"]').click();
   await page.locator('[data-ui="mg-pause"]').click();

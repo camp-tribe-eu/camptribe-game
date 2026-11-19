@@ -4,7 +4,7 @@
 import { readFileSync } from 'node:fs';
 import { expect, test, type Page } from '@playwright/test';
 import { waitGameReady } from './ready';
-import { expectBoxOpen, pressInteract, takeFromOpenBox } from './chapter-driver';
+import { expectBoxOpen, pressInteract, takeFromOpenBox, passTrunk } from './chapter-driver';
 
 interface Core { game: { player: { locationId: string; transportId: string } | null; flags: string[]; quests: Record<string, { status: string }>; inventory: Record<string, number> }; journal: { type: string }[] }
 interface Fx { target: string | null; ring: number; ringName: string | null; backpack: number; guide: string; pops: number; auto: number }
@@ -131,6 +131,7 @@ async function goAndDo(page: Page, car: boolean, shot?: string): Promise<string>
     await expectBoxOpen(page, target);
     await takeFromOpenBox(page, false);
   }
+  if (target === 'obj.vehicle') await passTrunk(page);   // GAME-332: з сумкою біля авто відкривається «Багажник»; загальний прохід бере «Їдемо як є»
   try {
     await expect.poll(() => signature(page), { timeout: 5_000, message: `біля ${target} дія не спрацювала від наближення` }).not.toBe(before);
   } catch (e) {
