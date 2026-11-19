@@ -14,8 +14,8 @@ const SOLO = ['box.nightstand', 'box.wardrobe', 'box.fridge', 'box.storeroom'];
 const FAMILY = [...SOLO, 'box.mia'];
 type Step = readonly [id: string, r: number, c: number];
 /** Ідеальні розкладки потрібного в порядку «глибоке першим» (знайдено пошуком у trunk.test.ts, там же доведено, що вони good). */
-const SOLO_BIKE: readonly Step[] = [['simple-dinner', 1, 0], ['tent', 1, 1], ['water', 2, 3], ['documents', 1, 3], ['wallet', 1, 4], ['sleeping-bag', 0, 0]];
-const FAMILY_CAR: readonly Step[] = [['simple-dinner', 2, 1], ['mia-bowl-food', 1, 0], ['documents', 1, 1], ['tent', 1, 2], ['water', 2, 4], ['mia-carrier', 1, 4], ['wallet', 0, 0], ['sleeping-bag', 0, 1]];
+const SOLO_BIKE: readonly Step[] = [['simple-dinner', 1, 0], ['tent', 1, 1], ['water', 2, 3], ['documents', 1, 3], ['wallet', 1, 4], ['sleeping-bag', 0, 0], ['lantern', 0, 2]];
+const FAMILY_CAR: readonly Step[] = [['simple-dinner', 2, 1], ['mia-bowl-food', 1, 0], ['documents', 1, 1], ['tent', 1, 2], ['water', 2, 4], ['mia-carrier', 1, 4], ['wallet', 0, 0], ['sleeping-bag', 0, 1], ['lantern', 0, 3]];
 
 async function startHome(page: Page, solo: boolean, touch: boolean): Promise<void> {
   await page.addInitScript(([k]) => { try { localStorage.setItem(k as string, JSON.stringify({ textScale: 100, language: 'uk', hintSeen: true })); } catch { /* сховища немає */ } }, [SETTINGS_KEY] as const);
@@ -93,12 +93,12 @@ for (const [name, vp, solo, boxes, steps] of [
     await lays(page, steps);
     const ms = Date.now() - t0;
     if (SHOOT) await page.screenshot({ path: `${SHOTS}/${name}-packed.png` });
-    // Двері: спроба покласти глибоке ПІСЛЯ того, що стоїть ближче до дверей, не лягає (власний поворот правил) — лампа в ряд 1 ліворуч від намету.
+    // Двері: спроба покласти глибоке ПІСЛЯ того, що стоїть ближче до дверей, не лягає (власний поворот правил) — телефони в ряд 1 ліворуч від намету.
     await expect(page.locator('[data-ui="mg-trunk"]')).toHaveAttribute('data-missing', '0');
-    await page.locator('[data-ui="trunk-item"][data-id="item.lantern"]').tap();
+    await page.locator('[data-ui="trunk-item"][data-id="item.phones"]').tap();
     await page.locator('[data-ui="trunk-cell"][data-r="1"][data-c="1"]').tap();
     await expect(page.locator('[data-ui="mg-trunk"]'), 'клітинка зайнята або шлях до дверей закритий — не лягло').toHaveAttribute('data-note', /busy|door/);
-    await expect(page.locator('[data-ui="trunk-item"][data-id="item.lantern"]')).toHaveAttribute('data-placed', 'no');
+    await expect(page.locator('[data-ui="trunk-item"][data-id="item.phones"]')).toHaveAttribute('data-placed', 'no');
     await page.locator('[data-ui="trunk-done"]').tap();
     await expect(page.locator('[data-ui="mg-result"]')).toHaveAttribute('data-outcome', 'good');
     console.log(`GAME-332 ${name}: ${steps.length} речей розкладено ${steps.length * 2} дотиками за ${ms} мс (з очікуваннями Playwright)`);
@@ -108,7 +108,8 @@ for (const [name, vp, solo, boxes, steps] of [
     await expect.poll(async () => (await core(page)).game.flags.filter((f) => f.startsWith('f.take-')), { timeout: 10_000, message: 'сумка порожніє: усе спаковане лягло в авто' }).toEqual([]);
     const c = await core(page);
     expect(c.game.minigames?.['mg.trunk']?.last, 'результат у стані гри').toBe('good');
-    expect(c.game.flags, 'лишене вдома — прапорець').toContain('f.left-lantern');
+    expect(c.game.flags, 'лишене вдома — прапорець').toContain('f.left-snacks');
+    expect(c.game.flags, 'ліхтар узято — не лишено').toContain('f.pack-lantern');
     expect(c.game.flags, 'потрібне спаковано').toContain('f.pack-tent');
     await playUntil(page, true, [], (k) => k.game.player?.locationId === 'loc.road', () => menuSeen(page), 30);
     expect(errors).toEqual([]);

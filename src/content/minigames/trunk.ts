@@ -53,23 +53,28 @@ export function shapeOf(id: string, rot: number): Cell[] {
 }
 const sizeOf = (cells: readonly Cell[]): Dim => ({ h: Math.max(...cells.map((x) => x[0])) + 1, w: Math.max(...cells.map((x) => x[1])) + 1 });
 
+/** Речі, відсутність яких міняє ніч табору (ліхтар → вночі темно): залишити таку — завжди хоч дрібне порушення, тож «добре» без неї не буває. */
+export const KEEP: readonly string[] = ['item.lantern'];
+
 export interface TrunkLoad {
   readonly transport: string;
+  /** ЄДИНЕ джерело місця: одиниці ядра (content/packing.json). Клітинки лише розкладають; понад це річ не кладеться, тож LoadCar приймає рівно те, що покладено (без екрана «Не влазить»). */
+  readonly capacity: number;
   readonly cat: boolean;
   /** Речі для розкладання (взяті вдома), у порядку контенту; `needed` — з групи «потрібне». */
-  readonly items: readonly { readonly id: string; readonly needed: boolean }[];
+  readonly items: readonly { readonly id: string; readonly needed: boolean; readonly units: number }[];
 }
 /** Типове завантаження: авто, кішка, увесь список контенту (тести й каркас без гри). */
 const FALLBACK: TrunkLoad = {
-  transport: 'transport.car', cat: true,
+  transport: 'transport.car', cat: true, capacity: 16,
   items: ['item.tent', 'item.documents', 'item.wallet', 'item.sleeping-bag', 'item.water', 'item.simple-dinner', 'item.mia-carrier', 'item.mia-bowl-food', 'item.lantern', 'item.snacks', 'item.phones', 'item.first-aid', 'item.clothes', 'item.big-cushion']
-    .map((id) => ({ id, needed: !['item.lantern', 'item.snacks', 'item.phones', 'item.first-aid', 'item.clothes', 'item.big-cushion'].includes(id) })),
+    .map((id) => ({ id, needed: !['item.lantern', 'item.snacks', 'item.phones', 'item.first-aid', 'item.clothes', 'item.big-cushion'].includes(id), units: specOf(id).cells.length })),
 };
 let LOAD: TrunkLoad = FALLBACK;
 /** Головний цикл гри називає, що саме пакуємо (як setDriveWallet для дороги). */
 export const setTrunkLoad = (l: TrunkLoad): void => { LOAD = l; };
 
-export type Note = 'none' | 'ok' | 'out' | 'busy' | 'door' | 'pick';
+export type Note = 'none' | 'ok' | 'out' | 'busy' | 'door' | 'full' | 'pick';
 export interface TrunkState {
   readonly load: TrunkLoad;
   readonly dim: Dim;
@@ -94,13 +99,18 @@ function occupancy(s: Pick<TrunkState, 'placed' | 'dim'>, skip?: string): Map<st
 }
 
 /** Чи можна поставити річ так: у межах, на вільне і з вільним шляхом до дверей (праворуч) у кожному ряду речі. */
-export function canPlace(s: Pick<TrunkState, 'placed' | 'dim'>, id: string, p: Placed): Note {
+export function canPlace(s: Pick<TrunkState, 'placed' | 'dim'> & { readonly load?: TrunkLoad }, id: string, p: Placed): Note {
   const cells = absCells(id, p);
   if (cells.some(([r, c]) => r < 0 || c < 0 || r >= s.dim.h || c >= s.dim.w)) return 'out';
   const occ = occupancy(s, id);
   if (cells.some(([r, c]) => occ.has(key(r, c)))) return 'busy';
   const own = new Set(cells.map(([r, c]) => key(r, c)));
   for (const [r, c] of cells) for (let x = c + 1; x < s.dim.w; x++) if (!own.has(key(r, x)) && occ.has(key(r, x))) return 'door';
+  if (s.load) {
+    const used = s.load.items.reduce((a, i) => a + (i.id !== id && i.id in s.placed ? i.units : 0), 0);
+    const mine = s.load.items.find((i) => i.id === id)?.units ?? 0;
+    if (used + mine > s.load.capacity) return 'full';
+  }
   return 'ok';
 }
 
@@ -111,6 +121,8 @@ export interface Verdict {
   readonly crushed: readonly string[];
   readonly warm: readonly string[];
   readonly tilt: boolean;
+  /** Речі з KEEP, яких не взято (лише коли гру закінчено): ніч це відчує. */
+  readonly lost: readonly string[];
   /** Перекіс важкого: (праворуч − ліворуч) / усе важке, −1..1. */
   readonly balance: number;
   readonly major: number;
@@ -134,9 +146,10 @@ export function verdictOf(s: TrunkState, d: Difficulty = { timeScale: 1, bandSca
   let left = 0; let right = 0;
   for (const id of ids) if (specOf(id).heavy === true) for (const [, c] of absCells(id, placed[id] as Placed)) { if (c * 2 < dim.w - 1) left++; else if (c * 2 > dim.w - 1) right++; }
   const tilt = Math.abs(right - left) > Math.floor(TILT_OK * d.bandScale);
+  const lost = s.finished ? load.items.filter((i) => KEEP.includes(i.id) && !(i.id in placed)).map((i) => i.id) : [];
   const major = missing.length + (carrierAway ? 1 : 0);
-  const minor = heavyUp.length + crushed.length + warm.length + (tilt ? 1 : 0);
-  return { missing, carrierAway, heavyUp, crushed, warm, tilt, balance: left + right === 0 ? 0 : (right - left) / (left + right), major, minor };
+  const minor = heavyUp.length + crushed.length + warm.length + (tilt ? 1 : 0) + lost.length;
+  return { missing, carrierAway, heavyUp, crushed, warm, tilt, lost, balance: left + right === 0 ? 0 : (right - left) / (left + right), major, minor };
 }
 
 /** Дрібних порушень, з яких ще «нормально». */
@@ -183,7 +196,7 @@ export function tapTrunk(s: TrunkState, x: number, y: number): TrunkState {
     const size = sizeOf(shapeOf(cur.id, rot));
     // Дотик у праву чи нижню клітинку не «вилітає»: річ зсувається так, щоб вмоститись у межі.
     const p: Placed = { r: Math.min(r, s.dim.h - size.h), c: Math.min(c, s.dim.w - size.w), rot };
-    const note = canPlace(s, cur.id, p);
+    const note = canPlace(s, cur.id, p);   // s.load → ліміт одиниць ядра
     if (note !== 'ok') return { ...s, note };
     const placed = { ...s.placed, [cur.id]: p };
     const next = { ...s, placed, note: 'ok' as const };
@@ -228,7 +241,7 @@ export interface TrunkView {
   readonly note: Note;
   readonly balance: number;
   readonly tilt: boolean;
-  readonly flags: readonly ('heavy' | 'fragile' | 'cold' | 'carrier')[];
+  readonly flags: readonly ('heavy' | 'fragile' | 'cold' | 'carrier' | 'lamp')[];
   readonly missing: number;
   readonly hintCell: { readonly r: number; readonly c: number } | null;
   readonly cat: boolean;
@@ -256,7 +269,8 @@ export const TRUNK_GAME = defineMinigame<TrunkState, TrunkView>({
   view: (s: TrunkState, d: Difficulty): TrunkView => {
     const v = verdictOf(s, d);
     const bad = new Set<string>([...v.heavyUp, ...v.crushed, ...v.warm, ...(v.carrierAway ? s.load.items.filter((i) => specOf(i.id).carrier === true).map((i) => i.id) : [])]);
-    const flags = (['heavy', 'fragile', 'cold', 'carrier'] as const).filter((k) => (k === 'carrier' ? v.carrierAway : k === 'heavy' ? v.heavyUp.length > 0 : k === 'fragile' ? v.crushed.length > 0 : v.warm.length > 0));
+    const lamp = s.load.items.some((i) => KEEP.includes(i.id) && !(i.id in s.placed));
+    const flags = (['heavy', 'fragile', 'cold', 'carrier', 'lamp'] as const).filter((k) => (k === 'carrier' ? v.carrierAway : k === 'heavy' ? v.heavyUp.length > 0 : k === 'fragile' ? v.crushed.length > 0 : k === 'lamp' ? lamp : v.warm.length > 0));
     return {
       w: s.dim.w, h: s.dim.h, cool: coolOf(s.dim),
       items: s.load.items.map((i) => {

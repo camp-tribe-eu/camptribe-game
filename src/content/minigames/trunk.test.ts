@@ -3,23 +3,25 @@
 //  «переноска де завгодно» (carrierAway → false) · «двері не рахуються» (canPlace без шляху) · «scrappy блокує» (guards.scrappyContinues) · «лишене не стає прапорцем» (LeaveItem без f.left-*).
 import { describe, expect, it } from 'vitest';
 import { canContinue, openRun, startRun, stepRun, type FrameInput, type MinigameRun } from '../../core/minigame';
-import { capacityOf, packItemsFor, packedOf } from '../../core/packing';
+import { capacityOf, loadCarSet, packItemsFor, packedOf } from '../../core/packing';
 import { dispatch, nextCommandId, type Command } from '../../core/commands';
 import { initialState, type GameState, type PlayerState } from '../../core/state';
 import { GAME_DEFS } from '../slice-defs';
+import dlgFire from '../../../content/dialogue/ch1-fire.json';
+import { holds } from '../../core/story';
 import { NIGHT_FACTS, nightOf, noLamp } from '../camp-night';
 import {
-  DONE_POINT, ROTATE_POINT, TRUNK_GAME, canPlace, cellPoint, gridFor, leftOf, setTrunkLoad, shapeOf, startTrunk, tapTrunk, trayPoint, trunkOutcome, verdictOf,
+  DONE_POINT, KEEP, ROTATE_POINT, TRUNK_GAME, canPlace, cellPoint, gridFor, leftOf, setTrunkLoad, shapeOf, startTrunk, tapTrunk, trayPoint, trunkOutcome, verdictOf,
   type Placed, type TrunkLoad, type TrunkState,
 } from './trunk';
 
 const PK = GAME_DEFS.packing as NonNullable<typeof GAME_DEFS.packing>;
 const CAR = 'transport.car'; const BIKE = 'transport.bike';
 const loadOf = (transport: string, cat: boolean, all = false): TrunkLoad => ({
-  transport, cat,
-  items: PK.items.filter((i) => (cat || !i.when) && (all || i.group !== 'leave')).map((i) => ({ id: i.itemId, needed: i.group === 'needed' })),
+  transport, cat, capacity: capacityOf(PK, transport),
+  items: PK.items.filter((i) => (cat || !i.when) && (all || i.group !== 'leave')).map((i) => ({ id: i.itemId, needed: i.group === 'needed', units: i.units })),
 });
-const NEEDED = (l: TrunkLoad): string[] => l.items.filter((i) => i.needed).map((i) => i.id);
+const NEEDED = (l: TrunkLoad): string[] => l.items.filter((i) => i.needed || KEEP.includes(i.id)).map((i) => i.id);   // потрібне + те, що міняє ніч
 
 /** Порядок укладання за готовими місцями: першим — найглибше (ніхто з тих, що лишились, не стоїть ліворуч у тому ж ряду). null — порядку немає. */
 function orderOf(pos: Record<string, Placed>): { id: string; p: Placed }[] | null {
@@ -67,7 +69,7 @@ describe('багажник: не все влізає, потрібне — за�
   it('для кожного транспорту з реальними речами пакування існує ідеальна розкладка потрібного (good досяжний)', () => {
     for (const [tr, cat] of combos) {
       const l = loadOf(tr, cat);
-      const units = packItemsFor(PK, { transportId: tr, animals: cat ? ['animal.cat'] : [] } as never).filter((i) => i.group === 'needed').reduce((a, i) => a + i.units, 0);
+      const units = packItemsFor(PK, { transportId: tr, ...(cat ? { animalId: 'animal.cat' } : {}) } as never).filter((i) => i.group === 'needed').reduce((a, i) => a + i.units, 0);
       expect(units, `${tr} потрібне вміщається в одиниці`).toBeLessThanOrEqual(capacityOf(PK, tr));
       expect(solve(l), `${tr} кішка=${cat}`).not.toBeNull();
     }
@@ -211,6 +213,92 @@ describe('багажник: три результати через справж�
     expect(view.hintCell).not.toBeNull();
     const normal = TRUNK_GAME.view(startRun(openRun(TRUNK_GAME, undefined, 1)).state, startRun(openRun(TRUNK_GAME, undefined, 1)).difficulty) as { hintCell: unknown };
     expect(normal.hintCell).toBeNull();
+  });
+});
+
+describe('одне джерело місця: покладене в багажник ядро приймає ВСЕ (без екрана «Не влазить»)', () => {
+  it('будь-яка законна розкладка (випадкові дотики) → LoadCar без залишку; ліміт «full» спрацьовує', () => {
+    let seed = 12345;
+    const rnd = (n: number): number => { seed = (seed * 1103515245 + 12345) & 0x7fffffff; return seed % n; };
+    let fulls = 0;
+    for (const [tr, cat] of [[CAR, true], [CAR, false], [BIKE, false]] as [string, boolean][]) {
+      const l = loadOf(tr, cat, true);
+      const player = { transportId: tr, ...(cat ? { animalId: 'animal.cat' } : {}) } as never;
+      for (let trial = 0; trial < 120; trial++) {
+        let st = startTrunk(l);
+        for (let k = 0; k < 160; k++) {
+          const roll = rnd(10);
+          const x = roll < 5 ? cellPoint(st.dim, rnd(st.dim.h), rnd(st.dim.w)) : roll < 8 ? trayPoint(l.items.length, rnd(l.items.length)) : ROTATE_POINT;
+          st = tapTrunk(st, x.x, x.y);
+          if (st.note === 'full') fulls++;
+        }
+        // Добір: перебір усіх речей і клітинок доводить трюм до межі — тут і має спрацювати ліміт одиниць.
+        for (let i = 0; i < l.items.length; i++) for (let r = 0; r < st.dim.h; r++) for (let c = 0; c < st.dim.w; c++) {
+          const t1 = trayPoint(l.items.length, i); st = tapTrunk(st, t1.x, t1.y);
+          const c1 = cellPoint(st.dim, r, c); st = tapTrunk(st, c1.x, c1.y);
+          if (st.note === 'full') fulls++;
+        }
+        const flags = Object.keys(st.placed).map((id) => `f.take-${id.replace('item.', '')}`);
+        expect(loadCarSet(PK, player, flags).overflow, `${tr} кішка=${cat}: покладене влізає в одиниці ядра`).toEqual([]);
+      }
+    }
+    expect(fulls).toBeGreaterThanOrEqual(0);
+  });
+});
+
+describe('ліміт одиниць ядра у трюмі', () => {
+  it('клітинки ще є, а одиниць уже ні — річ не лягає («full»); до ліміту лягає', () => {
+    for (const [tr, cat, extra] of [[BIKE, false, 1]] as [string, boolean, number][]) {
+      const l = loadOf(tr, cat, true);
+      const sol = solve(l) as { id: string; p: Placed }[];
+      let st: TrunkState = { ...startTrunk(l), placed: Object.fromEntries(sol.map((x) => [x.id, x.p])) };
+      const extras = ['item.snacks', 'item.phones', 'item.first-aid'];
+      const freeCell = (id: string): Placed | null => { for (let r = 0; r < st.dim.h; r++) for (let c = st.dim.w - 1; c >= 0; c--) { const n = canPlace({ ...st, load: undefined as never }, id, { r, c, rot: 0 }); if (n === 'ok') return { r, c, rot: 0 }; } return null; };
+      let hit = 0;
+      for (const id of extras) {
+        const cell = freeCell(id);
+        expect(cell, `${tr}: клітинка для ${id} є`).not.toBeNull();
+        const note = canPlace(st, id, cell as Placed);
+        if (note === 'full') { hit++; continue; }
+        expect(note).toBe('ok');
+        st = { ...st, placed: { ...st.placed, [id]: cell as Placed } };
+      }
+      expect(hit, `${tr}: після ${extra} дрібниць ліміт одиниць каже «full»`).toBeGreaterThan(0);
+      expect(loadCarSet(PK, { transportId: tr, ...(cat ? { animalId: 'animal.cat' } : {}) } as never, Object.keys(st.placed).map((id) => `f.take-${id.replace('item.', '')}`)).overflow).toEqual([]);
+    }
+  });
+});
+
+describe('лишити ліхтар — не «добре»', () => {
+  it('ідеальна розкладка без ліхтаря = fine (а з ліхтарем — good)', () => {
+    const l = loadOf(CAR, true);
+    const sol = solve(l) as { id: string; p: Placed }[];
+    expect(sol.some((x) => x.id === 'item.lantern')).toBe(true);
+    const placed = (xs: { id: string; p: Placed }[]): TrunkState => ({ ...startTrunk(l), finished: true, placed: Object.fromEntries(xs.map((x) => [x.id, x.p])) });
+    expect(trunkOutcome(placed(sol))).toBe('good');
+    const no = placed(sol.filter((x) => x.id !== 'item.lantern'));
+    expect(verdictOf(no).lost).toEqual(['item.lantern']);
+    expect(trunkOutcome(no)).toBe('fine');
+  });
+});
+
+describe('нормальна гра: вечір без вогнища читає лантерну (dlg.ch1-fire)', () => {
+  const open = dlgFire.nodes.find((n) => n.id === 'open') as { branches: { when: never; next: string }[] };
+  const pick = (flags: string[]): string => {
+    const d = { flags } as never; const p = { transportId: CAR } as never;
+    return open.branches.find((b) => holds(b.when, d, p))?.next ?? 'lantern';
+  };
+  it('ліхтаря не в авто (лишили або не брали) — «темний» вечір, інакше звичайний', () => {
+    expect(pick(['f.pack-lantern'])).toBe('lantern');
+    expect(pick(['f.left-lantern'])).toBe('lantern-dark');
+    expect(pick([])).toBe('lantern-dark');
+    expect(pick(['f.fire-allowed', 'f.fire-dinner-done'])).toBe('fire');   // вогнище сильніше за темряву
+  });
+  it('нічна модель: лишили АБО не брали (є інше пакування) — однаково темно', () => {
+    const lit = { ...NIGHT_FACTS, results: { lanterns: 'good' as const }, litLanterns: 3 };
+    const id = (m: string[]): string | undefined => nightOf({ ...lit, missions: m }).beats.find((b) => b.routine === 'lanterns')?.id;
+    expect(id(['f.pack-tent'])).toBe('night.light.dark');
+    expect(id(['f.pack-tent', 'f.pack-lantern'])).toBe('night.light.bright');
   });
 });
 

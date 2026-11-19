@@ -48,10 +48,14 @@ export const NIGHT_FACTS: NightFacts = {
   results: {}, litLanterns: 0, dryLogs: 0, water: 0, fish: 0, bitterBerries: 0, foodOutside: true, emptyRounds: 0, weather: 'rain',
 };
 
-/** GAME-332: ліхтар лишили вдома (f.left-lantern, «Багажник») і жодного іншого не взяли — світити нічим. Прапорців немає (старий сейв) — false, ніч як була. */
+/** GAME-332: ліхтаря немає в авто — лишили вдома (f.left-lantern, «Багажник») чи не брали, і жодного іншого не взяли: світити нічим. Прапорців пакування немає (старий сейв, фікстури) — false, ніч як була. */
 export const NO_LAMP = 'f.left-lantern';
 const LAMPS = ['f.pack-lantern', 'f.pack-lantern-2', 'f.pack-lantern-3'] as const;
-export const noLamp = (f: Pick<NightFacts, 'missions'>): boolean => f.missions !== undefined && f.missions.includes(NO_LAMP) && !LAMPS.some((x) => (f.missions as readonly string[]).includes(x));
+export const noLamp = (f: Pick<NightFacts, 'missions'>): boolean => {
+  const m = f.missions;
+  if (m === undefined || LAMPS.some((x) => m.includes(x))) return false;
+  return m.includes(NO_LAMP) || m.some((x) => x.startsWith('f.pack-'));   // лишили або не брали, коли пакування було: однаково темно
+};
 
 const did = (f: NightFacts, id: RoutineId): Outcome | undefined => f.results[id];
 

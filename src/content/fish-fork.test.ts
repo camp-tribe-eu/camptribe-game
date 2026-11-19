@@ -25,7 +25,7 @@ function fresh(defs: CoreDefs): GameState {
 }
 
 type Fish = 'none' | 'kept' | 'released' | 'both';
-interface Setup { fish: Fish; charred: boolean; fire: boolean; pick: 0 | 1 }
+interface Setup { fish: Fish; charred: boolean; fire: boolean; pick: 0 | 1; /** GAME-332: ліхтар у багажнику (за замовчуванням так). false — вечір без вогнища темний. */ lamp?: boolean }
 
 /** Вечір: вибір на озері (одна чи дві сцени-однорядники) → вечірня сцена. Повертає вузли вечора, стан і прапорці. */
 function play(defs: CoreDefs, o: Setup): { path: string[]; state: GameState } {
@@ -38,6 +38,7 @@ function play(defs: CoreDefs, o: Setup): { path: string[]; state: GameState } {
   if (o.fish === 'kept') lake(true);
   if (o.fish === 'released') lake(false);
   if (o.fish === 'both') { lake(false); lake(true); }
+  if (o.lamp === false) s = { ...s, flags: s.flags.filter((f) => f !== 'f.pack-lantern') };
   send(startFireplace(nextCommandId(s), { fireAllowed: o.fire, dinnerDone: o.fire, photoTaken: false, fishCharred: o.charred }));
   const path: string[] = [];
   for (let guard = 0; s.dialogue; guard++) {
@@ -54,7 +55,7 @@ const NIGHT_TAIL = ['night-open', 'night-pitch', 'night-pitch-roof', 'night-wind
 const common = (pick: 0 | 1) => ['l1', 'l2', 'l3', 'l4', 'l5', 'l6-plain', 'l7', ...(pick === 0 ? ['l8', 'l9', 'l10', 'l11', 'l12-plain'] : ['b1', 'b2', 'b3']), ...NIGHT_TAIL];
 /** Оракул картки, незалежний від графа. */
 function expected(o: Setup): string[] {
-  const open = o.fire ? ['open', 'fire'] : ['open', 'lantern', 'lantern-george'];
+  const open = o.fire ? ['open', 'fire'] : ['open', o.lamp === false ? 'lantern-dark' : 'lantern', 'lantern-george'];
   const kept = o.fish === 'kept' || o.fish === 'both';
   const mid = kept ? [o.fire ? 'fk1' : 'fkl', ...(o.fire && o.charred ? ['fk1c'] : []), 'fk2', 'fk3'] : o.fish === 'released' ? ['fr1', 'fr2', 'fr3', 'fr4', 'fr5'] : [];
   // fk1 і fk1c — альтернативи, а не підряд: з підгорілою рибою замість fk1 іде fk1c після fk1 (fk1 → fk1c → fk2).
@@ -62,8 +63,11 @@ function expected(o: Setup): string[] {
 }
 
 const FISHES: Fish[] = ['none', 'kept', 'released', 'both'];
-const COMBOS: Setup[] = FISHES.flatMap((fish) => [false, true].flatMap((charred) => [false, true].flatMap((fire) => ([0, 1] as const).map((pick) => ({ fish, charred, fire, pick })))));
-const label = (o: Setup) => `${o.fish} · підгоріла ${o.charred} · вогнище ${o.fire} · вибір ${o.pick}`;
+const COMBOS: Setup[] = [
+  ...FISHES.flatMap((fish) => [false, true].flatMap((charred) => [false, true].flatMap((fire) => ([0, 1] as const).map((pick) => ({ fish, charred, fire, pick }))))),
+  ...FISHES.flatMap((fish) => ([0, 1] as const).map((pick) => ({ fish, charred: false, fire: false, pick, lamp: false }))),   // GAME-332: без ліхтаря й без вогнища
+];
+const label = (o: Setup) => `${o.lamp === false ? 'без ліхтаря · ' : ''}${o.fish} · підгоріла ${o.charred} · вогнище ${o.fire} · вибір ${o.pick}`;
 function mismatches(defs: CoreDefs): string[] {
   return COMBOS.flatMap((o) => {
     let got: string[];

@@ -63,7 +63,7 @@ import { agendaOf, minimapTargets, onboarding, type MiniFrame } from './content/
 import type { MapKey } from './content/map-first';
 import { taskGate } from './core/wave';
 import { MAP_LOCATION, MAP_SPOTS, departBlock, isBulky, isMapFirstSpot, mapKeyFor, moveKey, needsLeft, nextTarget, npcLive, resolveSpot, sameMove, spotLook, unpackMoves } from './content/map-first';
-import { carriedOf, packItemsFor, takenOf, takeFlag } from './core/packing';
+import { capacityOf, carriedOf, packItemsFor, takenOf, takeFlag } from './core/packing';
 import type { GameState } from './core/state';
 import { progressOf, titleOf } from './core/progress';
 import { grantCentsMap, isEmptySum, rewardDelta, type CoreSnap, type RawRewardRow } from './ui/reward-sticker';
@@ -339,7 +339,7 @@ function openTrunk(): boolean {
   if (switches.panelActs || missionSession || !pk || !p) return false;
   const all = packItemsFor(pk, p);
   const taken = new Set(takenOf(g.flags, pk, p));
-  setTrunkLoad({ transport: p.transportId, cat: all.some((i) => i.itemId === 'item.mia-carrier'), items: all.filter((i) => taken.has(i.itemId)).map((i) => ({ id: i.itemId, needed: i.group === 'needed' })) });
+  setTrunkLoad({ transport: p.transportId, cat: all.some((i) => i.itemId === 'item.mia-carrier'), capacity: capacityOf(pk, p.transportId), items: all.filter((i) => taken.has(i.itemId)).map((i) => ({ id: i.itemId, needed: i.group === 'needed', units: i.units })) });
   missionSession = createMinigameSession(TRUNK_GAME, {
     results: g.minigames, seed: bridge.state.worldSeed,
     report: (r) => {

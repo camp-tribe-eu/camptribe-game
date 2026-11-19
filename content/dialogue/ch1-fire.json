@@ -30,7 +30,22 @@
             ]
           },
           "next": "fire"
+        },
+        {
+          "when": {
+            "notFlag": "f.pack-lantern"
+          },
+          "next": "lantern-dark"
         }
+      ]
+    },
+    {
+      "id": "lantern-dark",
+      "speaker": "player",
+      "textKey": "dlg.ch1-fire.lantern-dark",
+      "choices": [
+        { "textKey": "dlg.ch1-fire.lantern.c1", "next": "lantern-george" },
+        { "textKey": "dlg.ch1-fire.lantern.c2", "next": "lantern-george" }
       ]
     },
     {

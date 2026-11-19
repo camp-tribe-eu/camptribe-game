@@ -916,5 +916,7 @@
   "mg.trunk.rule.carrier": "Mia's carrier goes by the door.",
   "mg.trunk.rule.tilt": "The heavy things pull to one side.",
   "mg.trunk.missing": "Still missing essentials",
-  "mg.trunk.left": "Leaving at home"
+  "mg.trunk.left": "Leaving at home",
+  "mg.trunk.note.full": "The vehicle can't take more.",
+  "mg.trunk.rule.lamp": "Without a lantern the night will be dark."
 }

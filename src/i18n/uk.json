@@ -916,5 +916,7 @@
   "mg.trunk.rule.carrier": "Переноску Мії — до дверей.",
   "mg.trunk.rule.tilt": "Важке тягне на один бік.",
   "mg.trunk.missing": "Потрібного ще не вистачає",
-  "mg.trunk.left": "Лишаємо вдома"
+  "mg.trunk.left": "Лишаємо вдома",
+  "mg.trunk.note.full": "Авто більше не візьме.",
+  "mg.trunk.rule.lamp": "Без ліхтаря вночі буде темно."
 }
