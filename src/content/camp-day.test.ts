@@ -2,8 +2,9 @@
 //   «нескінченний день» (DAY_MINUTES = 9999) · «одна людина робить усе» (whyNot без перевірки owner)
 //   · «порядок будь-коли» (whyNot без перевірки раунду) · «порожній табір безкоштовний» (emptyRounds → [])
 //   · «рутини миттєві» (ROUTINES[*].seconds = 0 — вимір часу падає нижче 10 хв).
+import { NORMAL, RELAXED, type Outcome } from './minigame';
 import { describe, expect, it } from 'vitest';
-import { CHEAPEST_ALL, DAY_MINUTES, MEMBERS, ROUNDS, ROUTINES, ROUTINE_IDS, addPick, awayIn, campBusy, campMinutes, canAdd, emptyRounds, idleJobOf, minutesLeft, minutesUsed, nightOpen, recordResult, skipped, startCampDay, whyNot, type RoutineId } from './camp-day';
+import { CHEAPEST_ALL, DAY_MINUTES, MEMBERS, ROUNDS, ROUTINES, ROUTINE_IDS, addPick, awayIn, campBusy, campMinutes, canAdd, emptyRounds, helpFor, idleJobOf, minutesLeft, minutesUsed, nightOpen, recordResult, skipped, startCampDay, whyNot, type RoutineId } from './camp-day';
 
 const subsets = <T>(xs: readonly T[]): T[][] => xs.reduce<T[][]>((acc, x) => [...acc, ...acc.map((s) => [...s, x])], [[]]);
 
@@ -131,5 +132,36 @@ describe('вимір часу: табірна частина дня — 10–12 
 describe('GAME-320: коли відкрита «Ніч»', () => {
   it('зачинена вранці, в обід і пополудні; відкрита ввечері', () => {
     expect(ROUNDS.map((r) => [r, nightOpen(r)])).toEqual([['morning', false], ['noon', false], ['afternoon', false], ['evening', true]]);
+  });
+});
+
+// GAME-328 · §5а: два «сяк-так» поспіль → допомога; після доброго — знову звичайно. Мутація (перевірено): helpFor завжди NORMAL → червоніє.
+describe('GAME-328: допомога після двох «сяк-так»', () => {
+  const play = (...outs: Outcome[]) => playIn(['water', 'lanterns', 'fish'], ...outs);
+  const playIn = (ids: readonly RoutineId[], ...outs: Outcome[]) => {
+    const rs = ['morning', 'noon', 'afternoon'] as const;
+    let d = startCampDay();
+    ids.slice(0, outs.length).forEach((id, i) => { d = recordResult(addPick(d, id, rs[i] as (typeof rs)[number]), id, outs[i] as Outcome); });
+    return d;
+  };
+  it('порядок — той, у якому рутини ВЗЯТО, а не канонічний', () => {
+    expect(helpFor(playIn(['fish', 'water', 'lanterns'], 'scrappy', 'good', 'scrappy'))).toBe(NORMAL);
+    expect(helpFor(playIn(['lanterns', 'fish'], 'scrappy', 'scrappy'))).toBe(RELAXED);
+    expect(helpFor(playIn(['fish', 'lanterns', 'water'], 'scrappy', 'scrappy', 'good'))).toBe(NORMAL);
+  });
+  it('порожній день і один «сяк-так» — звичайно', () => {
+    expect(helpFor(startCampDay())).toBe(NORMAL);
+    expect(helpFor(play('scrappy'))).toBe(NORMAL);
+  });
+  it('два «сяк-так» поспіль — послаблено (ширше вікно, більше часу, підказка)', () => {
+    const h = helpFor(play('good', 'scrappy', 'scrappy'));
+    expect(h).toBe(RELAXED);
+    expect(h.timeScale).toBeGreaterThan(1);
+    expect(h.hint).toBe(true);
+  });
+  it('«сяк-так» і добре — звичайно; добре після допомоги її знімає', () => {
+    expect(helpFor(play('scrappy', 'good'))).toBe(NORMAL);
+    expect(helpFor(play('scrappy', 'fine'))).toBe(NORMAL);
+    expect(helpFor(play('scrappy', 'scrappy', 'good'))).toBe(NORMAL);
   });
 });
