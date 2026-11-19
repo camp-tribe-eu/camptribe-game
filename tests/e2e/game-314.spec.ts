@@ -367,6 +367,11 @@ for (const o of ORIENTATIONS) {
       // GAME-325: після дороги ☰ відкривається САМА, а наступний крок — у першому вікні (гравець не шукає його під згином).
       await expect(panel(page), 'після дороги наступний крок показано без ☰').toBeVisible({ timeout: 8_000 });
       await expectFirstViewport(page, '[data-ui="story"] [data-act="complete"][data-key="q.st-004"]', 'після дороги «Завершити: У дорогу»');
+      // Гравець може закрити ☰: ціль дня на мапі не перекрита банером «Збереження живе лише в цьому браузері» (у зразку його немає).
+      await page.locator('[data-ui="story-close"]').click();
+      await expect(page.locator('[data-ui="goal"]')).toBeVisible();
+      await expect(page.locator('[data-ui="recovery-reminder"]'), 'GAME-325: банер збереження не перекриває ціль дня').toHaveCount(0);
+      await page.locator('[data-touch="story"]').click();
       await panel(page).locator('[data-act="complete"][data-key="q.st-004"]').click({ timeout: 8_000 });
       await page.waitForTimeout(400);
       await panel(page).locator('[data-act="visit"][data-key="loc.camp.lake"]').click({ timeout: 8_000 });
@@ -411,7 +416,6 @@ for (const o of ORIENTATIONS) {
       await expect(page.locator('[data-ui="sd-board"]')).toBeVisible({ timeout: 8_000 });
       // GAME-317: стара гра розділу 1 мовчить — одна ціль дня (не «Прибуття»), жодної хвилі, трекера прохань і «найближчої нагороди».
       await expect(page.locator('[data-ui="goal"]'), 'одна ціль дня').toHaveCount(1);
-      await expect(page.locator('[data-ui="recovery-reminder"]'), 'GAME-325: банер збереження не перекриває ціль дня').toHaveCount(0);
       await expect(page.locator('[data-ui="goal"]')).not.toContainText('Прибуття');
       await expect(page.locator('[data-ui="goal"]')).toContainText('Допомогти сусідам');
       for (const old of ['wave', 'req-tracker', 'nearest']) await expect(page.locator(`[data-ui="${old}"]`), `стара ${old} у зразковому дні`).toHaveCount(0);
