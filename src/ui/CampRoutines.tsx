@@ -16,6 +16,8 @@ import { BASKET, berryOutcome, berryFacts, enoughBerries, hinted, patchOf, pickB
 import { COVER, ENOUGH_DRY, LOGS, dryLogs, finishStack, placeLog, startStack, type StackState, type WoodPlace } from '../content/firewood-stack';
 import { THINGS, foodOutside, putThing, sleepNow, startTidy, tidyOutcome, type Place, type TidyState } from '../content/night-camp';
 import { FISH_IDLE, SPECIES, ZONE, catches, fishAt, makeRng, stepFish, type FishState } from '../content/fishing';
+import { KnotsField, bandText } from './KnotsField';
+import { crossingPairs, knotsOutcome, levelOf, startKnots, tapPeg, tapRing, type KnotState } from '../content/guy-lines';
 import { biteCue, floatCss, speciesAt, supperFish } from '../content/fish-table';
 
 type Phase = 'board' | 'work' | 'night';
@@ -88,6 +90,7 @@ export function CampRoutines({ t, weather, seed, onFrame, devices: devices0 = {}
   const [stack, setStack] = useState<StackState | null>(null);
   const [fish, setFish] = useState<FishState>(FISH_IDLE);
   const [rod, setRod] = useState(false);
+  const [knots, setKnots] = useState<KnotState>(() => startKnots(seed));
   // GAME-321: справжня робота в поточній рутині — дії й мс кадрів; вихід («Досить», «Далі», «Назад», «Спати») відкриває canFinish.
   const [acts, setActs] = useState(0);
   const [sec, setSec] = useState(0);
@@ -142,6 +145,7 @@ export function CampRoutines({ t, weather, seed, onFrame, devices: devices0 = {}
     if (id === 'tidy') { setTidy(startTidy()); setThing(null); }
     if (id === 'firewood') setStack(null);
     if (id === 'fish') { setFish(FISH_IDLE); setRod(false); }
+    if (id === 'knots') setKnots(startKnots(seed));
   };
 
   // Ніч читає і ручне, і налагоджене — та сама модель фактів (camp-night), пристрої лише додають свої.
@@ -301,6 +305,17 @@ export function CampRoutines({ t, weather, seed, onFrame, devices: devices0 = {}
               const s = enoughBerries(berries);
               finish('berries', berryOutcome(s), berryFacts(s));
             }}>{t('camp.berry.enough')}</button>
+          </section>
+        )}
+        {active === 'knots' && (
+          <section class="ui-camp-work ui-knots-work">
+            <p class="ui-camp-note" data-ui="knots-rule">{t('camp.knots.rule')}</p>
+            <KnotsField s={knots} t={t} help={help} onRing={(i) => { const r = tapRing(knots, i); if (r.event === 'undo') go(); setKnots(r.state); }}
+              onPeg={(j) => { const r = tapPeg(knots, j); if (r.event === 'link') go(); setKnots(r.state); }} />
+            <p class="ui-camp-note" data-ui="knots-hint" data-cross={help.hint ? crossingPairs(levelOf(knots.seed), knots.links).length : ''}>
+              {help.hint ? `${bandText(t, help)}${crossingPairs(levelOf(knots.seed), knots.links).length > 0 ? ` · ${t('camp.knots.cross')}` : ''}` : t('camp.knots.hint')}
+            </p>
+            <button type="button" class="ui-btn ui-camp-big" data-ui="knots-done" disabled={!ok('knots')} onClick={() => finish('knots', knotsOutcome(knots, help))}>{t('camp.knots.done')}</button>
           </section>
         )}
         {active === 'tidy' && (

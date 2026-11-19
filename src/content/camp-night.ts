@@ -1,4 +1,4 @@
-// GAME-311 · ніч із бурею: що з рутин дня відгукнулось. Головне правило картки — КОЖНА з семи рутин
+// GAME-311 · ніч із бурею: що з рутин дня відгукнулось. Головне правило картки — КОЖНА з рутин
 // міняє ніч, і це доводиться мутацією: прибери будь-яку ланку з nightOf — camp-night.test червоніє.
 //
 // Ніч НІКОЛИ не блокує й ніколи не закінчує гру: blocked завжди false, ранок настає завжди (`morning`).
@@ -119,6 +119,14 @@ export function nightOf(f: NightFacts): { readonly beats: readonly NightBeat[]; 
   beats.push(tidy === undefined || f.foodOutside
     ? { routine: 'tidy', id: 'night.tidy.fox', severity: 'rough' }
     : { routine: 'tidy', id: 'night.tidy.quiet', severity: 'good' });
+
+  // ВУЗЛИ (GAME-333): відтяжки тенту в бурю. Добре — тримає; нормально — провис, але тримає; сяк-так — мотузка лусне, і речі під тентом мокрі; не ходили — тент не натягнуто.
+  const knots = did(f, 'knots');
+  beats.push(knots === 'good'
+    ? { routine: 'knots', id: 'night.knots.held', severity: 'good' }
+    : knots === 'fine'
+      ? { routine: 'knots', id: 'night.knots.sag', severity: 'plain' }
+      : { routine: 'knots', id: knots === 'scrappy' ? 'night.knots.snap' : 'night.knots.none', severity: 'rough' });
 
   // Порожній табір: нікого не лишили стерегти — ворони на столі ще завидна.
   if (f.emptyRounds > 0) beats.push({ routine: 'camp', id: 'night.camp.crows', severity: 'plain' });

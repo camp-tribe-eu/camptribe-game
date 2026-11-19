@@ -15,7 +15,7 @@ import { HELP_AFTER, NORMAL, RELAXED, type Difficulty, type Outcome } from './mi
 export const MEMBERS = ['george', 'victoria', 'matthew'] as const;
 export type Member = (typeof MEMBERS)[number];
 
-export const ROUTINE_IDS = ['water', 'firewood', 'fire', 'lanterns', 'fish', 'berries', 'tidy'] as const;
+export const ROUTINE_IDS = ['water', 'firewood', 'fire', 'lanterns', 'fish', 'berries', 'tidy', 'knots'] as const;
 export type RoutineId = (typeof ROUTINE_IDS)[number];
 
 /** Раунди дня (docs/DAY-DESIGN.md §7). Вечір — окремо: «порядок у таборі» грається перед сном. */
@@ -44,10 +44,12 @@ export const ROUTINES: Readonly<Record<RoutineId, RoutineDef>> = {
   fish: { id: 'fish', owner: 'george', away: true, minutes: [80, 80], seconds: 100 },
   berries: { id: 'berries', owner: 'victoria', away: true, minutes: [60, 60], seconds: 85 },
   tidy: { id: 'tidy', owner: 'victoria', away: false, minutes: [40, 40], seconds: 80 },
+  // GAME-333: відтяжки тенту перед бурею — справа тата (тент і дрова під ним), і вона веде до тенту, а не з табору.
+  knots: { id: 'knots', owner: 'george', away: false, minutes: [35, 35], seconds: 60 },
 };
 
-/** GAME-321: мінімум справжньої роботи, без якого рутину не закрити: [дій, мс кадрів у роботі]. Вода (кран + десять кроків) закривається сама лише повним шляхом. */
-export const MIN_WORK: Readonly<Record<'firewood' | 'lanterns' | 'fish' | 'berries' | 'tidy' | 'fire', readonly [acts: number, ms: number, giveUpMs?: number]>> = { firewood: [6, 20000], lanterns: [6, 30000], fish: [2, 30000, 60000], berries: [4, 20000], tidy: [5, 20000], fire: [6, 0] };
+/** GAME-321: мінімум справжньої роботи, без якого рутину не закрити: [дій, мс кадрів у роботі]. Вода (кран + десять кроків) закривається сама лише повним шляхом. Вузли: четверо кілець, мінімум 4 мотузки (дотики по кільцю й кілку), і «здаюсь» через 40 с — м'який провал ніколи не пастка. */
+export const MIN_WORK: Readonly<Record<'firewood' | 'lanterns' | 'fish' | 'berries' | 'tidy' | 'fire' | 'knots', readonly [acts: number, ms: number, giveUpMs?: number]>> = { firewood: [6, 20000], lanterns: [6, 30000], fish: [2, 30000, 60000], berries: [4, 20000], tidy: [5, 20000], fire: [6, 0], knots: [4, 8000, 40000] };
 /** Третє число — «здаюсь»: риба може не клювати чи зриватись, тож після нього вихід є й без уловів (м'який провал, ніколи не пастка). */
 export const canFinish = (id: keyof typeof MIN_WORK, acts: number, ms: number): boolean => { const [a, m, g = Infinity] = MIN_WORK[id]; return (acts >= a && ms >= m) || ms >= g; };
 /** Скільки ще роботи: дій і секунд (для підказки на дошці). */
