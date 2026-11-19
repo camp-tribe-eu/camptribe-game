@@ -135,6 +135,7 @@ const syncBackpack = (): void => {
 // GAME-332: «Багажник» зіграно для цієї партії речей (до наступного порожнього рюкзака); після закриття результату — звичайне завантаження й питання «Куди їдемо?».
 let trunkPlayed = false;
 let afterMission: (() => void) | null = null;
+let afterGo = false;
 // GAME-245: «Не влазить» уже показано (екран вибору відкрито; доки нічого не змінилось, авто не завантажує вдруге) і велика картка щойно взятої речі (мс, покадрово).
 let overflowShown = false;
 let cardItem: string | null = null;
@@ -477,9 +478,11 @@ const samplePort: SamplePort = {
   subscribe: (l) => { sampleListeners.add(l); return () => { sampleListeners.delete(l); }; },
 };
 function missionTick(): void {
+  // GAME-332: після закритого результату оболонка вже знята (Shell побачив missionChanged) — лише тепер завантажуємо авто: інакше екран «Не влазить» не відкрився б.
+  if (afterGo && !missionSession) { const after = afterMission; afterMission = null; afterGo = false; after?.(); }
   if (sampleOn) { sampleScenes(); if (!missionSession) sampleOpenDrive(); }
   if (missionSession) {
-    if (missionSession.run.phase === 'closed') { missionSession = null; missionChanged(); const after = afterMission; afterMission = null; after?.(); return; }
+    if (missionSession.run.phase === 'closed') { missionSession = null; missionChanged(); afterGo = afterMission !== null; return; }
     missionSession.frame(1);
     input.held.clear();   // під міні-грою герой стоїть: стрілки не водять його з місця роботи
     return;

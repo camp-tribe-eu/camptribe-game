@@ -194,7 +194,7 @@ export function tapTrunk(s: TrunkState, x: number, y: number): TrunkState {
     const i = clampIdx(x, n);
     const id = (s.load.items[i] as { id: string }).id;
     if (id in s.placed) return lift(s, id);
-    return { ...s, sel: s.sel === i ? -1 : i, note: 'none' };
+    return { ...s, sel: i, note: 'none' };
   }
   if (x < 0.5) {
     const cur = s.sel >= 0 ? (s.load.items[s.sel] as { id: string } | undefined) : undefined;

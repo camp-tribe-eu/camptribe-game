@@ -62,6 +62,7 @@ export function TrunkSurface({ view, t, tap }: SurfaceProps) {
           ))}
         </div>
         <p class="mg-text mg-trunk-note" role="status" data-ui="trunk-note">{s.missing > 0 && s.note === 'none' ? t('mg.trunk.missing') : t(`mg.trunk.note.${s.note === 'none' ? 'pick' : s.note}` as Key)}</p>
+        {left > 0 && <p class="mg-text mg-trunk-rules" data-ui="trunk-left" data-left={left}>{`${t('mg.trunk.left')}: ${left}`}</p>}
         {rules.length > 0 && <p class="mg-text mg-trunk-rules" data-ui="trunk-rules">{rules[0]}</p>}
         <div class="mg-trunk-btns">
           {cur && !cur.placed && (
@@ -70,7 +71,7 @@ export function TrunkSurface({ view, t, tap }: SurfaceProps) {
             </span>
           )}
           <button type="button" class="ui-btn mg-btn" data-ui="trunk-rotate" disabled={!cur || cur.placed} onClick={() => tap({ x: 0.25, y: BTN_Y })}>{t('mg.trunk.rotate')}</button>
-          <button type="button" class="ui-btn mg-btn" data-ui="trunk-done" onClick={() => tap({ x: 0.75, y: BTN_Y })}>{left > 0 ? `${t('mg.trunk.done')} · ${left}` : t('mg.trunk.done')}</button>
+          <button type="button" class="ui-btn mg-btn" data-ui="trunk-done" onClick={() => tap({ x: 0.75, y: BTN_Y })}>{t('mg.trunk.done')}</button>
         </div>
       </div>
     </div>

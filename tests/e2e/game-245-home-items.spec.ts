@@ -3,7 +3,7 @@
 // Негативний контроль (закон 1): без TakeItem-гілки в actOnMap (старий PackItem у сумку) f.take-* не з'являється й тест червоніє; без LeaveItem (кнопки «Лишити вдома») рамка «Куди їдемо?» не з'являється.
 import { expect, test, type Page } from '@playwright/test';
 import { walkIntro } from './intro-walk';
-import { closeBox, core, expectBoxOpen, installMenuObserver, loaded, menuSeen, playUntil, pressInteract, probe, route, takeFromOpenBox, walk } from './chapter-driver';
+import { closeBox, core, expectBoxOpen, installMenuObserver, loaded, menuSeen, passTrunk, playUntil, pressInteract, probe, route, takeFromOpenBox, walk } from './chapter-driver';
 
 const SETTINGS_KEY = 'camplife.settings.v1';
 const SHOTS = 'research/home-items';
@@ -112,6 +112,7 @@ test('усе взяте вдома → авто: не влізло → «що л
   // До авто: «Завантажити» (само) і, бо не влізло, — екран вибору.
   const at = await probe(page);
   await walk(page, route('home', [at.playerX, at.playerY], 'obj.vehicle'));
+  expect(await passTrunk(page, 10_000), 'GAME-332: біля авто з сумкою відкривається «Багажник»; тут — «Їдемо як є», далі старий екран «Не влазить»').toBe(true);
   const overflow = page.locator('[data-ui="pack-overflow"]');
   await expect(overflow).toBeVisible({ timeout: 10_000 });
   await expect(overflow.locator('h4')).toHaveText('Не влазить: що лишимо вдома?');
