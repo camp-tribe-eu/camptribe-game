@@ -4,7 +4,7 @@
 import { readFileSync } from 'node:fs';
 import { expect, test, type Locator, type Page } from '@playwright/test';
 import { waitGameReady } from './ready';
-import { expectBoxOpen, pressInteract, sleepTheDay, takeFromOpenBox } from './chapter-driver';
+import { expectBoxOpen, passTrunk, pressInteract, sleepTheDay, takeFromOpenBox } from './chapter-driver';
 
 interface Progress { xp: number; om: number; keys: string[] }
 interface Core { clock: { minutes: number }; game: { player: { locationId: string } | null; flags: string[]; quests: Record<string, { status: string }>; inventory: Record<string, number>; progress?: Progress } }
@@ -109,6 +109,7 @@ async function goAndDo(page: Page): Promise<string> {
     await expectBoxOpen(page, target);
     await takeFromOpenBox(page, false);
   }
+  if (target === 'obj.vehicle') await passTrunk(page);   // GAME-332: з сумкою біля авто відкривається «Багажник»; прохід бере «Їдемо як є», далі авто завантажується
   await expect.poll(() => signature(page), { timeout: 5_000, message: `біля ${target} дія не спрацювала від наближення` }).not.toBe(before);
   // GAME-185: авто питає «Куди їдемо?» — гравець погоджується (єдина відповідь-напрямок); «Не зараз» не обираємо, інакше прохід не рухається.
   const go = page.locator('.ui-talk [data-ui="dialogue"] [data-act="visit"]');
