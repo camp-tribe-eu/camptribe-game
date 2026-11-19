@@ -95,7 +95,7 @@ function Summary({ facts, flags, money, t, lang, again }: { facts: NightFacts | 
   );
 }
 
-export function SampleDay({ port, t, lang }: { port: SamplePort; t: (k: Key) => string; lang: AnyLang }) {
+export function SampleDay({ port, t, lang, onBoard }: { port: SamplePort; t: (k: Key) => string; lang: AnyLang; onBoard: () => void }) {
   const [, force] = useState(0);
   useEffect(() => port.subscribe(() => force((n) => n + 1)), [port]);
   const [boardOpen, setBoardOpen] = useState(false);
@@ -111,7 +111,7 @@ export function SampleDay({ port, t, lang }: { port: SamplePort; t: (k: Key) => 
   return (
     <>
       {!boardOpen && !ended && (
-        <button type="button" class="ui-btn sd-board-btn" data-ui="sd-board" onClick={() => { setMounted(true); setBoardOpen(true); }}>{t('sd.board')}</button>
+        <button type="button" class="ui-btn sd-board-btn" data-ui="sd-board" onClick={() => { onBoard(); setMounted(true); setBoardOpen(true); }}>{t('sd.board')}</button>
       )}
       {mounted && !ended && (
         <div class="sd-board-wrap" data-ui="sd-board-wrap" hidden={!boardOpen}>

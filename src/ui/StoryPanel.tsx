@@ -7,7 +7,7 @@ import type { AnyLang, Key } from '../i18n';
 import { trapTab } from './focus-trap';
 import { EntriesBook, JournalBook, SkillsBook, TravelerCard } from './JournalBook';
 import { Portrait, type PortraitLookup } from './Portrait';
-import { inSampleCamp, offerFocusKey, sampleActions, sampleMenuActions } from './story-focus';
+import { inSampleCamp, offerFocusKey, sampleActions, sampleActionsFirst, sampleMenuActions } from './story-focus';
 import type { OfferAction, StoryOffer } from './story-types';
 
 const ACT: Readonly<Record<Exclude<OfferAction['kind'], 'choose' | 'continue' | 'cancel'>, Key>> = {
@@ -60,11 +60,12 @@ export function StoryPanel({ offer, lang, t, act, close, portrait, children, foo
   const compact = offer.mapFirst && offer.stage !== 'create';
   // GAME-317: зразковий день — сцена (приїзд, заїзд, гроза) на екрані ОДНА: без звання, навичок, журналу й списків під нею. Раніше репліка лежала під згином
   // панелі на 2 900–3 500 px, і гравець бачив звання замість розмови. Звичайна гра цього прапорця не ставить.
-  const sceneOnly = sceneFocus === true && !!offer.dialogue && !compact;
+  const focus = sampleActionsFirst(sceneFocus === true, compact);
+  const sceneOnly = focus && !!offer.dialogue;
   // GAME-320: у таборі зразкового дня ☰ без стрибків часу й без цілей/квестів старої гри (story-focus.ts).
   const sampleCamp = inSampleCamp(sceneFocus === true, offer.locationKey);
   const menuActions = sampleMenuActions(sampleActions(offer.actions, sceneFocus === true), sampleCamp);
-  const showRest = (!compact || page === 'journal') && !sceneOnly;   // квести, прогрес, навички, речі, журнал
+  const showRest = (!compact || page === 'journal') && !focus;   // квести, прогрес, навички, речі, журнал
 
   // GAME-80: після дії кнопки перебудовуються, і друге натискання (дотик чи Enter) через ~150 мс влучало б
   // в нову першу кнопку — дорогу покупку чи дорогу додому. Тому: (а) фокус після зміни йде на СТАБІЛЬНИЙ

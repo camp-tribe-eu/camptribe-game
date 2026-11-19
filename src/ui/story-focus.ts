@@ -33,3 +33,8 @@ const SAMPLE_SKIPS: readonly OfferAction['kind'][] = ['sleep', 'wait', 'rest'];
 export const sampleActions = (actions: readonly OfferAction[], sample: boolean): readonly OfferAction[] => (sample ? actions.filter((a) => !SAMPLE_SKIPS.includes(a.kind)) : actions);
 export const inSampleCamp = (sample: boolean, locationKey: string | null): boolean => sample && locationKey === SAMPLE_CAMP_LOCATION;
 export const sampleMenuActions = (actions: readonly OfferAction[], sampleCamp: boolean): readonly OfferAction[] => (sampleCamp ? actions.filter((a) => !SAMPLE_CAMP_HIDDEN.includes(a.kind)) : actions);
+
+/** GAME-325 · зразковий день: підказка «Відкрий ☰, щоб почати» — поки день не почався (етап create), а не лише поки не вперше відкрито ☰ (прапор hintSeen переживає перезавантаження й «Почати знову»). */
+export const startHintOn = (sample: boolean, hintSeen: boolean): boolean => sample || !hintSeen;
+/** GAME-325 · зразковий день: ☰ без списку-довідки (звання, навички, речі) — «Що робити» лежить угорі, а не на 900–2600 px під згином. Компактна панель (мапа-перша) і так коротка. */
+export const sampleActionsFirst = (sample: boolean, compact: boolean): boolean => sample && !compact;
