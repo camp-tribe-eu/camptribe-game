@@ -44,21 +44,34 @@ const outcome = async (page: Page, task: string): Promise<string> => {
 async function approach(page: Page, i: number, id: string): Promise<void> {
   const q0 = await probe(page);
   await walk(page, routeXY('home', [q0.playerX, q0.playerY], { x: 176, y: 240 }, true));   // вітальня (5,7): усі цілі (Мія в переноску 3,5; комора 2,4; скринька Мії 1,7; Джордж 3,9; світло 7,5) за 2,8+ тайла — поза зоною дії 1,5 (GAME-304: біля (1,4) тепер комора)
-  for (let attempt = 0; ; attempt++) {
-    await page.waitForTimeout(1_200);
-    const p = await probe(page);
-    const f = p.followers[i];
-    if (!f) throw new Error('слідувача нема');
-    const dx = f.x - p.playerX; const dy = f.y - p.playerY;
-    const key = Math.abs(dx) >= Math.abs(dy) ? (dx < 0 ? 'ArrowLeft' : 'ArrowRight') : (dy < 0 ? 'ArrowUp' : 'ArrowDown');
-    await page.keyboard.down(key);
-    await page.waitForTimeout(Math.hypot(dx, dy) > 40 ? 160 : 40);
-    await page.keyboard.up(key);
-    await page.waitForTimeout(500);
-    if ((await probe(page)).nearObject === id) break;
-    expect(attempt, `${id} так і не став співрозмовником у зоні дії`).toBeLessThan(8);
-  }
-  await page.keyboard.press('KeyE');
+  // GAME-334: слідувачі тулляться до героя й міняються слотами щокроку (кадр гри 60–120 мс, обмін Node→браузер під навантаженням — до 2 с), тож «крок по застарілих
+  // координатах з Node» то проскакував Вікторію, то зупинявся біля Метью/цілі підказки. Тут кермо й дія — в ОДНОМУ кадрі сторінки: ідемо до Вікторії за її
+  // поточною позицією, і в кадрі, де nearObject === id, відпускаємо клавішу й тиснемо E (як walkInPage у walk.helpers.ts, але мапа дому, тож без BFS: вітальня відкрита).
+  const res = await page.evaluate(({ i, id }) => new Promise<{ ok: boolean; at: unknown }>((resolve) => {
+    interface Pr { playerX: number; playerY: number; nearObject: string | null; followers: { x: number; y: number }[] }
+    const g = (window as unknown as { __game: { probe: Pr } }).__game.probe;
+    const codes: Record<string, number> = { ArrowLeft: 37, ArrowUp: 38, ArrowRight: 39, ArrowDown: 40, KeyE: 69 };
+    const fire = (type: string, k: string): void => {
+      const e = new KeyboardEvent(type, { key: k, code: k, bubbles: true, cancelable: true });
+      Object.defineProperty(e, 'keyCode', { get: () => codes[k] });
+      window.dispatchEvent(e);
+    };
+    let held: string | null = null;
+    const set = (want: string | null): void => { if (held === want) return; if (held) fire('keyup', held); held = want; if (want) fire('keydown', want); };
+    const t0 = performance.now();
+    const tick = (): void => {
+      if (performance.now() - t0 > 40_000) { set(null); resolve({ ok: false, at: JSON.parse(JSON.stringify(g)) }); return; }
+      const f = g.followers[i];
+      if (f && g.nearObject === id) { set(null); fire('keydown', 'KeyE'); requestAnimationFrame(() => { fire('keyup', 'KeyE'); resolve({ ok: true, at: null }); }); return; }
+      if (!f) { set(null); requestAnimationFrame(tick); return; }
+      const dx = f.x - g.playerX; const dy = f.y - g.playerY;
+      if (Math.hypot(dx, dy) < 20) { set(null); requestAnimationFrame(tick); return; }   // впритул: стоїмо, слот сам зрушиться в зону дії
+      set(Math.abs(dx) >= Math.abs(dy) ? (dx < 0 ? 'ArrowLeft' : 'ArrowRight') : (dy < 0 ? 'ArrowUp' : 'ArrowDown'));
+      requestAnimationFrame(tick);
+    };
+    requestAnimationFrame(tick);
+  }), { i, id });
+  expect(res.ok, `${id} так і не став співрозмовником у зоні дії: ${JSON.stringify(res.at)}`).toBe(true);
   await expect(talk(page)).toBeVisible({ timeout: 5_000 });
   await page.waitForTimeout(600);
   // Перша репліка («М-м? Я слухаю») → «Далі» → гілка дому.

@@ -60,8 +60,25 @@ async function toVehicle(page: Page): Promise<void> {
   const p = await probe(page);
   const loc = (await core(page)).game.player?.locationId ?? 'loc.home';
   await walk(page, route(KEY[loc] as string, [p.playerX, p.playerY], 'obj.vehicle'));
-  await expect.poll(async () => (await probe(page)).nearObject, { timeout: 5_000 }).toBe('obj.vehicle');
-  await page.locator('[data-touch="interact"]').tap();
+  // GAME-334: дія — у ТОМУ САМОМУ кадрі сторінки, де nearObject === авто (клавіша E, як walkInPage.act). Раніше: poll з Node + locator.tap() — під навантаженням
+  // tap вічно чекав «visible, enabled and stable» (до таймауту тесту 300 с; повтор 4 процесорів-«спалювачів» --workers 4: 7 з 12 червоних), а між poll і tap
+  // «найближчий» міг змінитись.
+  const ok = await page.evaluate(() => new Promise<boolean>((resolve) => {
+    const g = (window as unknown as { __game: { probe: { nearObject: string | null } } }).__game.probe;
+    const fire = (type: string): void => {
+      const e = new KeyboardEvent(type, { key: 'e', code: 'KeyE', bubbles: true, cancelable: true });
+      Object.defineProperty(e, 'keyCode', { get: () => 69 });
+      window.dispatchEvent(e);
+    };
+    const t0 = performance.now();
+    const tick = (): void => {
+      if (g.nearObject === 'obj.vehicle') { fire('keydown'); requestAnimationFrame(() => { fire('keyup'); resolve(true); }); return; }
+      if (performance.now() - t0 > 5_000) { resolve(false); return; }
+      requestAnimationFrame(tick);
+    };
+    requestAnimationFrame(tick);
+  }));
+  expect(ok, `герой біля авто (nearObject): ${JSON.stringify((await probe(page)).nearObject)}`).toBe(true);
   await expect(talk(page)).toBeVisible({ timeout: 5_000 });
 }
 /** Обрати в рамці вибору напрям (data-key). */
@@ -83,13 +100,14 @@ async function closeTalk(page: Page): Promise<void> {
 }
 /** Їздимо з рамки вибору (сцена на паузі — шлях QA 05.11), поки ядро не кине подію в дорозі: Visit → loc.road і dialogue !== null у тому ж кроці.
  *  Кожен приїзд на дорогу — один кидок RNG зі збереження, тож за кілька поїздок подія трапляється детерміновано. */
-async function driveUntilRoadEvent(page: Page): Promise<number> {
+async function driveUntilRoadEvent(page: Page, trace: string[] = []): Promise<number> {
   for (let trip = 0; trip < 16; trip++) {
     await closeTalk(page);
     const loc = (await core(page)).game.player?.locationId;
     await toVehicle(page);
     await chooseDest(page, loc === 'loc.road' ? 'loc.home' : 'loc.road');
     const c = (await core(page)).game;
+    trace.push(`${trip}: ${loc ?? '?'} → ${c.player?.locationId ?? '?'}, dialogue=${JSON.stringify(c.dialogue)}, seen=${c.flags.filter((f) => f.startsWith('f.seen-')).length}`);
     if (c.player?.locationId === 'loc.road' && c.dialogue !== null) return trip + 1;
   }
   return 0;
@@ -104,8 +122,9 @@ for (const v of VIEWS) {
     const errors: string[] = [];
     page.on('pageerror', (e) => errors.push(e.message));
     await seedDay1(page, '?mapFirst=1&seed=1');
-    const trips = await driveUntilRoadEvent(page);
-    expect(trips, 'за 16 приїздів на дорогу ядро не кинуло жодної події (dialogue на loc.road)').toBeGreaterThan(0);
+    const trace: string[] = [];
+    const trips = await driveUntilRoadEvent(page, trace);
+    expect(trips, `за 16 приїздів на дорогу ядро не кинуло жодної події (dialogue на loc.road):\n${trace.join('\n')}`).toBeGreaterThan(0);
     await expect(talk(page), 'рамка події відкрилась').toBeVisible({ timeout: 5_000 });
     await shot(page, `event-${v.side}`);
     const seen = await page.evaluate(() => window.__g260 as Seen);
