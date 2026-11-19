@@ -8,7 +8,7 @@ import { pressInteract, takeFromOpenBox } from './chapter-driver';
 
 interface Core { game: { player: { locationId: string; transportId: string } | null; flags: string[]; quests: Record<string, { status: string }>; inventory: Record<string, number> }; journal: { type: string }[] }
 interface Fx { target: string | null; ring: number; ringName: string | null; backpack: number; guide: string; pops: number; auto: number }
-interface Probe { playerX: number; playerY: number; fx: Fx; saveLoaded: boolean; visitors: { id: string; x: number; y: number }[] }
+interface Probe { playerX: number; playerY: number; fx: Fx; saveLoaded: boolean; nearObject: string | null; visitors: { id: string; x: number; y: number }[] }
 const core = (page: Page): Promise<Core> => page.evaluate(() => (window as unknown as { __game: { read: () => Core } }).__game.read());
 const probe = (page: Page): Promise<Probe> => page.evaluate(() => JSON.parse(JSON.stringify((window as unknown as { __game: { probe: Probe } }).__game.probe)) as Probe);
 const MAPS = { 'loc.home': 'home', 'loc.shop': 'shop' } as const;
