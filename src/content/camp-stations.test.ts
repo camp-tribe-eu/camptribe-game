@@ -38,7 +38,8 @@ describe('GAME-335 · місця справ табору', () => {
     expect(Object.keys(STATIONS).sort()).toEqual([...ROUTINE_IDS].sort());
   });
   it('мутація: прибране одне місце → сторож червоніє', () => {
-    const { fire: _dropped, ...rest } = STATIONS;
+    const rest: Partial<Record<RoutineId, Station>> = { ...STATIONS };
+    delete rest.fire;
     expect(missingStations(rest)).toEqual(['fire']);
   });
 

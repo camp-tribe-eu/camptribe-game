@@ -530,7 +530,7 @@
       .sd-cell[data-car]::after { display: grid; place-items: center; height: 100%; color: #1b1f23; font-size: 0.7rem; }
       .sd-cell[data-car='up']::after { content: '▲'; } .sd-cell[data-car='down']::after { content: '▼'; }
       .sd-cell[data-car='left']::after { content: '◀'; } .sd-cell[data-car='right']::after { content: '▶'; }
-      .sd-hint { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(var(--edge-bottom) + 8px); z-index: 29; max-width: calc(100vw - 2 * (var(--edge-left) + 72px)); margin: 0; padding: 6px 12px; border-radius: 8px; background: rgba(27, 31, 35, 0.82); color: #f4ecd2; font-size: 0.85rem; text-align: center; pointer-events: none; }   /* GAME-335: підказка про місця справ — внизу посередині, між джойстиком і кнопкою дії */
+      .sd-hint { position: fixed; left: 50%; transform: translateX(-50%); top: calc(var(--edge-top, 0px) + 108px); z-index: 29; max-width: calc(100vw - 32px); margin: 0; padding: 6px 12px; border-radius: 8px; background: rgba(27, 31, 35, 0.82); color: #f4ecd2; font-size: 0.85rem; text-align: center; pointer-events: none; }   /* GAME-335: підказка про місця справ — угорі під рядом кнопок, не на джойстику й не на кнопці дії */
       #app:has([data-ui="story"]) .sd-hint { display: none; }
       .sd-board-wrap { position: fixed; inset: 0; z-index: 40; }
       .sd-board-wrap[hidden] { display: none; }

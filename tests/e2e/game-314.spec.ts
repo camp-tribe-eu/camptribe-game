@@ -3,7 +3,7 @@
 // день: дошка табору (рутини, пристрої) і місія сусіда ногами по мапі → ніч із бурею на ОДНІЙ моделі (camp-night) → підсумок.
 // Геро ходить лише всередині сторінки (requestAnimationFrame), як game-93/179/312; дорогу веде той самий rAF-бот із DOM (вільна смуга — data-free).
 // Знімки в research/game-314/ — за G314_SHOTS=1. Вимірений час проходу пишеться в консоль (G314 E2E ...).
-import { mkdirSync, readFileSync } from 'node:fs';
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { expect, test, type Page } from '@playwright/test';
 import { waitGameReady } from './ready';
 import { laneOf, solve } from '../../src/content/drive-in';
@@ -487,6 +487,17 @@ for (const o of ORIENTATIONS) {
 
       // 4. ДЕНЬ: дошка табору (ягоди зранку), місія Клер ногами по мапі
       await expect(page.locator('[data-ui="sd-board"]')).toBeVisible({ timeout: 8_000 });
+      // GAME-335: G335_WRITE=1 — записати справжній сейв «табір, день ще не почався» для game-335 (його ГРА записала сама) і на цьому закінчити прохід.
+      if (process.env.G335_WRITE === '1') {
+        await page.waitForTimeout(600);
+        const save = await page.evaluate(() => new Promise<string>((resolve, reject) => {
+          const req = indexedDB.open('camplife-sample', 1);
+          req.onerror = () => reject(req.error);
+          req.onsuccess = () => { const r = req.result.transaction('saves').objectStore('saves').get('main'); r.onsuccess = () => { req.result.close(); resolve(String(r.result)); }; };
+        }));
+        writeFileSync(new URL('./fixtures/sample-camp.json', import.meta.url), `${JSON.stringify({ save })}\n`);
+        return;
+      }
       // GAME-317: стара гра розділу 1 мовчить — одна ціль дня (не «Прибуття»), жодної хвилі, трекера прохань і «найближчої нагороди».
       await expect(page.locator('[data-ui="goal"]'), 'одна ціль дня').toHaveCount(1);
       await expect(page.locator('[data-ui="goal"]')).not.toContainText('Прибуття');

@@ -853,8 +853,6 @@ export class WorldScene extends Phaser.Scene {
     // GAME-213: кадри камери — наявні «якорі» мапи (obj.pier-end, obj.water, obj.pitch-1); інтерактивні лише як кадр (живі, поки фото не зроблено).
     this.spots = objects.filter((o) => typeOf(o) === 'trigger' || typeOf(o) === 'npc' || (typeOf(o) === 'anchor' && (isPhotoSpot(o.name) || o.name === DINNER_SPOT)))
       .map((o) => ({ name: o.name, kind: (typeOf(o) === 'anchor' ? 'trigger' : typeOf(o)) as Spot['kind'], x: o.x ?? 0, y: o.y ?? 0 }));
-    // GAME-335: місця справ — наявні речі табору (camp-stations); лише зразковий день, лише мапа табору.
-    if (key === 'camp' && this.hooks.stations?.()) for (const st of Object.values(STATIONS)) this.spots.push({ name: st.spot, kind: 'trigger', x: st.at.x, y: st.at.y });
 
     for (const s of this.spots) {
       // Точка об'єкта — ноги/основа: спрайт стоїть на ній, а глибина сортування — її y.
@@ -901,6 +899,8 @@ export class WorldScene extends Phaser.Scene {
     this.probe.visitors = key === 'shop' ? onMap.map((res) => ({ id: res.id, x: 0, y: 0, moving: false })) : [];
     this.residentSprites.forEach((sp, i) => sp.setVisible(this.residentLines[i] != null));
     this.neigh.begin(key === 'camp' ? RESIDENTS.map((r) => r.id) : []);
+    // GAME-335: місця справ — наявні речі табору (camp-stations); лише зразковий день, лише мапа табору. ПІСЛЯ шляхів мешканців: їхні маршрути місця не обходять (мапа й ритм табору ті самі).
+    if (key === 'camp' && this.hooks.stations?.()) for (const st of Object.values(STATIONS)) { const sp: Spot = { name: st.spot, kind: 'trigger', x: st.at.x, y: st.at.y }; this.spots.push(sp); this.markers.set(sp.name, this.marker(sp)); }
     this.neigh.setFire(key === 'camp' ? spawnFire(this.spots) : null);
     this.lastRes = CAST.map(() => ({ x: 0, y: 0 }));
     this.probe.neighbours = this.neigh.probe;
