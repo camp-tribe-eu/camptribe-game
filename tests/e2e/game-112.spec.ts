@@ -1,8 +1,9 @@
 // GAME-112 · родина йде за героєм ланцюжком (Victoria, потім Matthew), гравець керує одним героєм (George).
-// Герой ходить СПРАВЖНІМИ натисканнями клавіш (як гравець); маршрут — по тайлах мапи (BFS по шару walls з public/maps/camp-lake.tmj).
+// Герой ходить клавішами, але синтетичними KeyboardEvent у сторінці (не справжні натискання з Node; GAME-313); маршрут — по тайлах мапи (BFS по шару walls), кермо — в сторінці по кадрах (walk.helpers.ts, GAME-313).
 // Мутації (кожна — червоний тест, перевірено; див. PR): findPath без стін; restTile без `avoid`; слідувачі не рухаються.
 import { readFileSync } from 'node:fs';
 import { expect, test, type Page } from '@playwright/test';
+import { tileCenter, walkInPage } from './walk.helpers';
 
 interface Pt { x: number; y: number }
 interface Probe { ready: boolean; playerX: number; playerY: number; nearObject: string | null; commandsSent: number; cameraScrollX: number; cameraScrollY: number; followers: Pt[] }
@@ -18,66 +19,12 @@ const SPOTS = MAP.layers.find((l) => l.name === 'objects')?.objects ?? [];
 const solid = (c: number, r: number): boolean => c < 0 || r < 0 || c >= MAP.width || r >= MAP.height || (WALLS[r * MAP.width + c] ?? 0) > 0;
 const tile = (p: Pt): { c: number; r: number } => ({ c: Math.floor(p.x / TILE), r: Math.floor(p.y / TILE) });
 
-/** BFS по вільних тайлах: наступний тайл на шляху від `from` до `to` (null — вже там чи шляху немає); `len` — довжина шляху. */
-function nextStep(from: { c: number; r: number }, to: { c: number; r: number }): { next: { c: number; r: number } | null; len: number } {
-  const key = (c: number, r: number): number => r * MAP.width + c;
-  const prev = new Map<number, number>([[key(from.c, from.r), -1]]);
-  const q = [from];
-  for (let i = 0; i < q.length; i++) {
-    const t = q[i] as { c: number; r: number };
-    if (t.c === to.c && t.r === to.r) {
-      const path: number[] = [];
-      for (let k = key(t.c, t.r); k >= 0; k = prev.get(k) ?? -1) path.unshift(k);
-      const n = path[1];
-      return { next: n === undefined ? null : { c: n % MAP.width, r: Math.floor(n / MAP.width) }, len: path.length - 1 };
-    }
-    for (const [dc, dr] of [[0, -1], [-1, 0], [0, 1], [1, 0]] as const) {
-      const c = t.c + dc; const r = t.r + dr;
-      if (solid(c, r) || prev.has(key(c, r))) continue;
-      prev.set(key(c, r), key(t.c, t.r)); q.push({ c, r });
-    }
-  }
-  return { next: null, len: -1 };
-}
-
 async function open(page: Page): Promise<void> {
   const errors: string[] = [];
   page.on('pageerror', (e) => errors.push(e.message));
   await page.goto('/?seed=2');
   await page.waitForFunction(() => (window as unknown as { __game?: { probe: { ready: boolean } } }).__game?.probe.ready === true, null, { timeout: 30_000 });
   expect(errors).toEqual([]);
-}
-
-/** Повести героя клавішами до центру тайла `to` (по одній осі за раз — по центрах тайлів шляху). true — дійшов у межах `maxMs`. */
-async function walkTo(page: Page, to: { c: number; r: number }, maxMs: number, onTick?: (p: Probe) => void): Promise<boolean> {
-  const keys = { ArrowLeft: false, ArrowRight: false, ArrowUp: false, ArrowDown: false };
-  const set = async (want: Partial<typeof keys>): Promise<void> => {
-    for (const k of Object.keys(keys) as (keyof typeof keys)[]) {
-      const on = want[k] === true;
-      if (on !== keys[k]) { keys[k] = on; await (on ? page.keyboard.down(k) : page.keyboard.up(k)); }
-    }
-  };
-  const start = Date.now();
-  try {
-    while (Date.now() - start < maxMs) {
-      const p = await probe(page);
-      onTick?.(p);
-      const { next } = nextStep(tile({ x: p.playerX, y: p.playerY }), to);
-      const goal = next ?? to;
-      const gx = (goal.c + 0.5) * TILE; const gy = (goal.r + 0.5) * TILE;
-      const dx = gx - p.playerX; const dy = gy - p.playerY;
-      if (!next && Math.abs(dx) < 4 && Math.abs(dy) < 4) return true;
-      // Крок у сусідній тайл: спершу вирівнюємо вісь ПОПЕРЕК руху по центру коридору (тіло 16 px не чіпляє кутів стін), потім ідемо вздовж.
-      const vertical = next !== null && next.c === tile({ x: p.playerX, y: p.playerY }).c;
-      const across = vertical ? dx : dy;
-      const along = vertical ? dy : dx;
-      const axis = Math.abs(across) > 3 ? across : along;
-      const horizontalAxis = Math.abs(across) > 3 ? vertical : !vertical;
-      await set(horizontalAxis ? { ArrowLeft: axis < 0, ArrowRight: axis > 0 } : { ArrowUp: axis < 0, ArrowDown: axis > 0 });
-      await page.waitForTimeout(20);
-    }
-    return false;
-  } finally { await set({}); }
 }
 
 test.describe('GAME-112 родина йде за героєм', () => {
@@ -89,7 +36,8 @@ test.describe('GAME-112 родина йде за героєм', () => {
     const p0 = await probe(page);
     expect(p0.followers.length, 'слідувачів нема — тест нічого не доводить').toBe(2);
     // Маршрут: кути й далекі місця мапи, щоб ланцюжок обходив стіни (стіна x=10–11 між лівою й правою частинами, коридор рядка 5…).
-    const legs = [{ c: 1, r: 1 }, { c: 8, r: 9 }, { c: 18, r: 1 }, { c: 18, r: 5 }, { c: 12, r: 5 }, { c: 1, r: 3 }, { c: 4, r: 8 }, { c: 17, r: 4 }];
+    // GAME-313: (18,5) і (1,3) — клітинки-СТІНИ (шар walls): стара ходьба тихо впиралась у них до кінця 60 с (повертала false, якого цикл не перевіряв). Тепер кожен відрізок мусить дійти (інакше помилка), тож точки — прохідні сусідні клітинки (18,4) і (1,2).
+    const legs = [{ c: 1, r: 1 }, { c: 8, r: 9 }, { c: 18, r: 1 }, { c: 18, r: 4 }, { c: 12, r: 5 }, { c: 1, r: 2 }, { c: 4, r: 8 }, { c: 17, r: 4 }];
     let inWall = 0;
     let maxGap = 0;
     let prev: Probe | null = null;
@@ -97,7 +45,10 @@ test.describe('GAME-112 родина йде за героєм', () => {
     const t0 = Date.now();
     for (let i = 0; Date.now() - t0 < 60_000; i++) {
       const to = legs[i % legs.length] as { c: number; r: number };
-      await walkTo(page, to, 60_000 - (Date.now() - t0), (p) => {
+      // GAME-313: виміри — зрізи КОЖНОГО кадру з самої сторінки (а не опитування з Node, що запізнюється на сотні мс).
+      const { samples } = await walkInPage<Probe>(page, { label: `ланцюжок: герой не дійшов до (${to.c},${to.r})`, to: tileCenter(to), until: [{ within: 5 }], sample: ['playerX', 'playerY', 'followers'], maxMs: 30_000 });
+      for (const s of samples) {
+        const p = s as Probe;
         for (const f of p.followers) if (solid(tile(f).c, tile(f).r)) inWall++;
         if (prev) {
           walked.hero += Math.hypot(p.playerX - prev.playerX, p.playerY - prev.playerY) / TILE;
@@ -105,7 +56,7 @@ test.describe('GAME-112 родина йде за героєм', () => {
         }
         prev = p;
         maxGap = Math.max(maxGap, ...p.followers.map((f) => Math.hypot(f.x - p.playerX, f.y - p.playerY) / TILE));
-      });
+      }
     }
     await page.waitForTimeout(3000);   // герой став: ланцюжок наздоганяє
     const end = await probe(page);
@@ -126,11 +77,11 @@ test.describe('GAME-112 родина йде за героєм', () => {
     const spotTile = tile(fire);
     // Герой проходить ЧЕРЕЗ вогнище й стає за ним на 2 тайли (відстань, на якій слідувач зупиняється, — GAME-112 GAP): слідувач, що йде тим самим
     // шляхом, зупинився б саме на вогнищі — і не має цього робити. Потім герой вертається на тайл перед вогнищем (у зоні дії, 1,5 тайла).
-    expect(await walkTo(page, { c: spotTile.c, r: spotTile.r - 1 }, 30_000), 'герой не дійшов над вогнище').toBe(true);
-    expect(await walkTo(page, { c: spotTile.c, r: spotTile.r + 2 }, 30_000), 'герой не пройшов вогнище').toBe(true);
+    await walkInPage(page, { label: 'герой не дійшов над вогнище', to: tileCenter({ c: spotTile.c, r: spotTile.r - 1 }), until: [{ within: 5 }], maxMs: 30_000 });
+    await walkInPage(page, { label: 'герой не пройшов вогнище', to: tileCenter({ c: spotTile.c, r: spotTile.r + 2 }), until: [{ within: 5 }], maxMs: 30_000 });
     await page.waitForTimeout(2500);
     for (const f of (await probe(page)).followers) expect(tile(f), 'слідувач став на ціль взаємодії').not.toEqual(spotTile);
-    expect(await walkTo(page, { c: spotTile.c, r: spotTile.r + 1 }, 30_000), 'герой не дійшов до вогнища').toBe(true);
+    await walkInPage(page, { label: 'герой не дійшов до вогнища', to: tileCenter({ c: spotTile.c, r: spotTile.r + 1 }), until: [{ within: 5 }], maxMs: 30_000 });
     await page.waitForTimeout(2500);   // слідувачі збираються навколо
     const p = await probe(page);
     expect(p.nearObject).toBe('obj.campfire');
