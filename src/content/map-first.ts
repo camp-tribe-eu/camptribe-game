@@ -475,7 +475,7 @@ function roadNext(sim: SimState, defs: CoreDefs): Next | null {
   void defs;
   const g = sim.game;
   const task = waveTask(sim, 'road');
-  if (task) return { key: 'next.road.task', spot: task };
+  if (task) return { key: 'next.camp.task', spot: task };
   if (quest(g, 'ST-004')) return { key: 'next.road.step', spot: 'step.ST-004' };
   if (quest(g, 'CH1-D3-RETURN-001')) return { key: 'next.road.step', spot: 'step.CH1-D3-RETURN-001' };
   return { key: 'next.road.go', spot: 'obj.vehicle' };

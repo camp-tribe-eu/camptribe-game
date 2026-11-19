@@ -318,10 +318,10 @@ describe('GAME-292 · час дня 3 за моделлю (time-model.ts) і р�
 });
 
 describe('GAME-292 · тексти: пара uk/en, довжина, зміст', () => {
-  const RAW = JSON.parse(readFileSync(new URL('../../content/dialogue/ch2-pack.json', import.meta.url), 'utf8')) as { nodes: { id: string; choices?: unknown[] }[] };
+  const RAW = JSON.parse(readFileSync(new URL('../../content/dialogue/ch2-pack.json', import.meta.url), 'utf8')) as { nodes: { id: string; textKey: string; choices?: { textKey: string }[] }[] };
   it('кожен ключ сцени — у uk і en, репліка ≤ 110 знаків', () => {
     for (const x of RAW.nodes) {
-      for (const k of [`dlg.ch2-pack.${x.id}`, ...(x.choices ?? []).map((_, i) => `dlg.ch2-pack.${x.id}.c${i + 1}`)]) for (const [lang, l] of [['uk', ukC], ['en', enC]] as const) {
+      for (const k of [x.textKey, ...(x.choices ?? []).map((c) => c.textKey)]) for (const [lang, l] of [['uk', ukC], ['en', enC]] as const) {
         const t = (l as Record<string, string>)[k];
         expect(t, `${lang}/${k}`).toBeTruthy();
         expect(Array.from(t as string).length, `${lang}/${k}`).toBeLessThanOrEqual(110);

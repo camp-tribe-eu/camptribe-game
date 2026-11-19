@@ -242,7 +242,7 @@ describe('підказка «Далі: …»', () => {
         s = applyAll(s, (progressSpots(s).find((p) => p.name === n?.spot) as { moves: readonly Move[] }).moves);
       }
       // Подія в дорозі (шанс) відкриває розмову — тоді підказка мовчить, її веде екран подорожі; без неї — одна підказка про ☰.
-      expect(['next.road.task', 'next.road.step']).toContain(nextTarget({ ...s, game: { ...s.game, dialogue: null } }, DEFS)?.key);   // GAME-183: на дорозі стрілка — на справу зупинки
+      expect(['next.camp.task', 'next.road.step']).toContain(nextTarget({ ...s, game: { ...s.game, dialogue: null } }, DEFS)?.key);   // GAME-183: на дорозі стрілка — на справу зупинки
     }
   });
   it('у знімку для UI: рядок «Далі» й підпис дії біля об\'єкта; без персонажа — нічого', () => {

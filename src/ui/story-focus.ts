@@ -38,3 +38,11 @@ export const sampleMenuActions = (actions: readonly OfferAction[], sampleCamp: b
 export const startHintOn = (sample: boolean, hintSeen: boolean): boolean => sample || !hintSeen;
 /** GAME-325 · зразковий день: ☰ без списку-довідки (звання, навички, речі) — «Що робити» лежить угорі, а не на 900–2600 px під згином. Компактна панель (мапа-перша) і так коротка. */
 export const sampleActionsFirst = (sample: boolean, compact: boolean): boolean => sample && !compact;
+
+/**
+ * GAME-326 · зразковий день: ОДНА рекомендована дія. Завершення квесту, що є ціллю (offer.goal), — першим; далі за порядком «що веде день»:
+ * завершити будь-що → взяти → розрахуватись → піти. «Висушити» й «Поговорити» не рекомендуються ніколи.
+ */
+const NEXT_KINDS: readonly OfferAction['kind'][] = ['complete', 'pickup', 'checkout', 'visit'];
+export const nextAction = (acts: readonly OfferAction[], goal: string | null): OfferAction | undefined =>
+  acts.find((a) => a.kind === 'complete' && a.key === goal) ?? NEXT_KINDS.map((k) => acts.find((a) => a.kind === k)).find(Boolean);

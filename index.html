@@ -54,7 +54,7 @@
          ні місце, ні годинник, ні кнопки, ні поле гри не зсуваються. Ліва й права межі — межі колонки HUD (GAME-92). */
       .ui-toast { position: absolute; left: 0; right: 0; top: 100%; z-index: 3; box-sizing: border-box; padding: 2px 6px 2px 0; font-size: 0.75rem; color: #ffd54a;
         background: #1b1f23d9; pointer-events: none; }
-      .ui-story-btn[data-hint="yes"] { outline: 3px solid #ffd54a; outline-offset: 2px; }
+      .ui-story-btn[data-hint="yes"], .ui-story [data-rec] { outline: 3px solid #ffd54a; outline-offset: 2px; }   /* GAME-326: одна рекомендована дія зразка */
       /* GAME-170 зріз 2: картка мети — другий ряд шапки на всю ширину (сторч). Числа однакової ширини: хвилини міняються щосекунди. */
       .ui-wave { grid-column: 1 / -1; display: flex; flex-wrap: wrap; column-gap: 10px; row-gap: 2px; align-items: baseline; margin-top: 4px; padding: 4px 8px; box-sizing: border-box;
         border-radius: 8px; background: #2a2f36; color: #e8e6e3; font-size: 0.8125rem; line-height: var(--hud-lh); font-variant-numeric: tabular-nums; min-width: 0; overflow-wrap: anywhere; }
@@ -494,7 +494,11 @@
       .sd-cell[data-car] { }
       .sd-cell[data-car='up'], .sd-cell[data-car='down'], .sd-cell[data-car='left'], .sd-cell[data-car='right'] { background: #d9d2c5; }
       .sd-pad { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
-      .sd-board-btn { position: fixed; left: 8px; bottom: 8px; z-index: 30; min-width: 48px; min-height: 48px; }
+      .sd-board-btn { position: fixed; left: var(--edge-left); bottom: calc(var(--edge-bottom) + var(--stick-size) + 8px); z-index: 30; min-width: 48px; min-height: 48px; }   /* GAME-326: над джойстиком, не на ньому */
+      #app:has([data-ui="drive-in"]) .ui-goal, #app:has([data-ui="drive-in"]) .ui-hud { visibility: hidden; }   /* GAME-326: ціль і годинник не лягають на розмову заїзду */
+      .sd-cell[data-car]::after { display: grid; place-items: center; height: 100%; color: #1b1f23; font-size: 0.7rem; }
+      .sd-cell[data-car='up']::after { content: '▲'; } .sd-cell[data-car='down']::after { content: '▼'; }
+      .sd-cell[data-car='left']::after { content: '◀'; } .sd-cell[data-car='right']::after { content: '▶'; }
       .sd-board-wrap { position: fixed; inset: 0; z-index: 40; }
       .sd-board-wrap[hidden] { display: none; }
       .sd-board-close { position: fixed; right: 8px; bottom: 8px; z-index: 41; min-width: 48px; min-height: 48px; }
