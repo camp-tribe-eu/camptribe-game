@@ -1551,7 +1551,7 @@ export class WorldScene extends Phaser.Scene {
     el.dataset.age = String(age + 1);
     const r = this.heroRect();
     const hd = document.querySelector('.ui-header')?.getBoundingClientRect();
-    const wide = innerWidth > innerHeight;   // GAME-329: в альбомі — поза колонками кнопок і вище за ціль дня
+    const wide = innerWidth >= innerHeight;   // GAME-329: в альбомі і 1:1 (як CSS orientation: landscape) — поза колонками кнопок і вище за ціль дня
     const p = stickerPlace({ heroX: r.x + r.w / 2, heroTop: r.y, w: el.offsetWidth, h: el.offsetHeight, vw: innerWidth, age, topInset: hd ? hd.bottom + 4 : 4, side: wide ? 72 : 4, floor: wide ? document.querySelector('[data-ui="goal"]')?.getBoundingClientRect().top : undefined });
     el.style.transform = `translate(${p.left.toFixed(1)}px, ${p.top.toFixed(1)}px)`;
     el.style.opacity = String(p.opacity);
