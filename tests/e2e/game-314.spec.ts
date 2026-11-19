@@ -280,7 +280,7 @@ async function depart(page: Page): Promise<string[]> {
   // GAME-324: зразок пише лише у свій слот — звичайна база сейву (власника) не створюється й не зачіпається.
   expect((await page.evaluate(() => indexedDB.databases())).map((d) => d.name).sort()).toEqual(['camplife-sample']);
   for (const [k, key] of [['complete', 'q.prologue-home-001'], ['complete', 'q.st-001'], ['complete', 'q.st-002'], ['visit', 'loc.shop'], ['pickup', 'item.tent'], ['pickup', 'item.sleeping-bag'], ['checkout', 'basket.all'],
-    ['complete', 'q.st-003'], ['visit', 'loc.home'], ['complete', 'q.ch1-home-001']] as const) { await expectRec(page, k, key, `до дороги: «${k} ${key}»`); await act(page, k, key); }
+    ['complete', 'q.st-003'], ['visit', 'loc.home'], ['complete', 'q.ch1-home-001']] as const) { await doTasks(page); await expectRec(page, k, key, `до дороги: «${k} ${key}»`); await act(page, k, key); }
   await expectRec(page, 'visit', 'loc.road', 'перед дорогою');
   await act(page, 'visit', 'loc.road', true);
   return errors;
@@ -357,6 +357,29 @@ async function expectApart(page: Page, a: string, b: string, what: string): Prom
   const A = x as { x: number; y: number; width: number; height: number }; const B = y as typeof A;
   const hit = A.x < B.x + B.width && B.x < A.x + A.width && A.y < B.y + B.height && B.y < A.y + A.height;
   expect(hit, `${what}: ${a} ${JSON.stringify(A)} перетинає ${b} ${JSON.stringify(B)}`).toBe(false);
+}
+
+/** GAME-327: кнопка «До мапи» не лягає ні на що в дошці/роботі: прокручуємо до кінця й звіряємо рамки (раніше: «Ніч» і «Під тент» під нею). */
+async function expectBoardClear(page: Page, what: string): Promise<void> {
+  const hit = await page.evaluate(() => {
+    const box = document.querySelector('.sd-board-wrap .ui-camp') as HTMLElement | null;
+    if (box) box.scrollTop = box.scrollHeight;
+    const c = (document.querySelector('[data-ui="sd-board-close"]') as HTMLElement).getBoundingClientRect();
+    return [...document.querySelectorAll('.sd-board-wrap .ui-camp button')].filter((e) => {
+      const r = e.getBoundingClientRect();
+      return r.width > 0 && r.left < c.right && c.left < r.right && r.top < c.bottom && c.top < r.bottom;
+    }).map((e) => (e as HTMLElement).dataset.ui ?? e.textContent ?? '?');
+  });
+  expect(hit, `GAME-327 ${what}: «До мапи» перекриває ${hit.join(', ')}`).toEqual([]);
+}
+
+/** GAME-327: поки в ☰ лишаються «Зробити», рекомендовано їх; кожне виконуємо (раніше підсвічувалось «Завершити», а три «Зробити» мовчки зникали). */
+async function doTasks(page: Page): Promise<void> {
+  for (let i = 0; i < 8 && await panel(page).locator('[data-act="task"]').count() > 0; i++) {
+    await expect(panel(page).locator('[data-rec="yes"]'), 'GAME-327: поки є «Зробити», рекомендовано його').toHaveAttribute('data-act', 'task');
+    await panel(page).locator('[data-act="task"]').first().click();
+    await page.waitForTimeout(400);
+  }
 }
 
 const tapIt = async (page: Page, sel: string): Promise<void> => { await page.locator(sel).tap(); await page.waitForTimeout(120); };
@@ -460,6 +483,15 @@ for (const o of ORIENTATIONS) {
         await tapIt(page, `[data-ui="water-step"][data-side="${side}"]`);
       }
       await expect(page.locator('[data-ui="camp-routine"][data-id="water"]')).toHaveAttribute('data-done', 'yes');
+      await expectBoardClear(page, 'дошка (Ніч, Далі)');
+      // GAME-327: «Дрова» — довгий список «Під тент» унизу: кнопка «До мапи» не лягає на нього (обидві орієнтації).
+      await tapIt(page, '[data-ui="camp-routine"][data-id="firewood"]');
+      await tapIt(page, '[data-ui="wood-place-choice"][data-place="near"]');
+      await expectBoardClear(page, 'дрова (список)');
+      for (const i of await page.locator('[data-ui="wood-log"]').evaluateAll((els) => els.map((e) => (e as HTMLElement).dataset.i ?? ''))) await tapIt(page, `[data-ui="wood-under"][data-i="${i}"]`);
+      await expect(page.locator('[data-ui="wood-done"]')).toBeEnabled({ timeout: 40_000 });
+      await tapIt(page, '[data-ui="wood-done"]');
+      await expect(page.locator('[data-ui="camp-routine"][data-id="firewood"]')).toHaveAttribute('data-done', 'yes');
       // GAME-320: дошка стоїть на екрані цілою (в альбомі 932×430 була 625 px і прокручувалась).
       expect(await page.locator('[data-ui="camp-board"]').evaluate((e) => e.scrollHeight - e.clientHeight), 'дошка табору не прокручується').toBeLessThanOrEqual(0);
       await tapIt(page, '[data-ui="camp-routine"][data-id="berries"]');
@@ -543,8 +575,12 @@ for (const o of ORIENTATIONS) {
       await expect(panel(page).locator('[data-ui="where"]')).toBeVisible({ timeout: 5_000 });
       for (const act of ['visit', 'sleep', 'wait', 'rest']) await expect(panel(page).locator(`[data-act="${act}"]`), `☰ у таборі: «${act}»`).toHaveCount(0);
       await expect(panel(page).locator('[data-ui="goals"]'), '☰ у таборі: старі цілі').toHaveCount(0);
-      // GAME-325: «Дошка табору» — з-під відкритої ☰, як її бачить гравець (панель не закриваємо вручну): панель мусить зникнути, інакше світ на паузі.
-      await tapIt(page, '[data-ui="sd-board"]');
+      // GAME-325/327: «Дошка табору» — рекомендована дія ☰ (обведена, перша), а плаваюча кнопка над меню прихована; дотик відкриває дошку, і ☰ закривається (інакше світ на паузі).
+      await expect(page.locator('[data-ui="sd-board"]'), 'GAME-327: поки ☰ відкрита, друга «Дошка табору» над нею не висить').toBeHidden();
+      await expect(panel(page).locator('[data-ui="actions"] button').first(), 'GAME-327: у таборі перша дія ☰ — «Дошка табору»').toHaveAttribute('data-ui', 'sd-board-menu');
+      await expect(panel(page).locator('[data-rec="yes"]'), 'GAME-327: у ☰ табору рекомендована рівно одна дія').toHaveCount(1);
+      await expect(panel(page).locator('[data-ui="sd-board-menu"]')).toHaveAttribute('data-rec', 'yes');
+      await tapIt(page, '[data-ui="sd-board-menu"]');
       await expect(panel(page), 'GAME-325: дошка відкрилась — ☰ закрилась').toBeHidden();
       await expect(page.locator('[data-ui="camp-board"]')).toBeVisible();
       await tapIt(page, '[data-ui="sd-board-close"]');
@@ -558,6 +594,7 @@ for (const o of ORIENTATIONS) {
       await tapIt(page, '[data-ui="camp-routine"][data-id="fire"]');
       await shot(page, 'dinner');
       await expect(page.locator('[data-ui="fire-rule"]'), 'GAME-326: правило вогню угорі').toContainText('смузі');
+      await expectBoardClear(page, 'вогонь');
       await expect(page.locator('[data-ui="fire-dish"]'), 'GAME-326: смуга страви видна числами').toContainText('45-75 %');
       await cookDinner(page);
       await expect(page.locator('[data-ui="camp-routine"][data-id="fire"]')).toHaveAttribute('data-done', 'yes', { timeout: 10_000 });

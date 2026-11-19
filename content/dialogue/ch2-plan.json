@@ -42,7 +42,7 @@
           ]
         },
         {
-          "textKey": "q.ch2-d2-plan-001.other",
+          "textKey": "dlg.ch2-plan.fork.c2",
           "next": "go",
           "effects": []
         }

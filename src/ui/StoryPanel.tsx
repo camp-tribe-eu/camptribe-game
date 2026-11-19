@@ -7,7 +7,7 @@ import type { AnyLang, Key } from '../i18n';
 import { trapTab } from './focus-trap';
 import { EntriesBook, JournalBook, SkillsBook, TravelerCard } from './JournalBook';
 import { Portrait, type PortraitLookup } from './Portrait';
-import { inSampleCamp, nextAction, offerFocusKey, sampleActions, sampleActionsFirst, sampleMenuActions } from './story-focus';
+import { boardRec, inSampleCamp, nextAction, offerFocusKey, sampleActions, sampleActionsFirst, sampleMenuActions } from './story-focus';
 import type { OfferAction, StoryOffer } from './story-types';
 
 const ACT: Readonly<Record<Exclude<OfferAction['kind'], 'choose' | 'continue' | 'cancel'>, Key>> = {
@@ -53,7 +53,7 @@ export function actionLabel(lang: AnyLang, t: (k: Key) => string, a: OfferAction
   return `${t(ACT[a.kind])} ${ct(lang, a.key)}${extras.length ? ` (${extras.join(', ')})` : ''}`;
 }
 
-export function StoryPanel({ offer, lang, t, act, close, portrait, children, footer, settings, sceneFocus }: { offer: StoryOffer; lang: AnyLang; t: (k: Key) => string; act: (id: string) => void; close: () => void; portrait: PortraitLookup; children?: ComponentChildren; settings?: () => void; footer?: ComponentChildren; sceneFocus?: boolean }) {
+export function StoryPanel({ offer, lang, t, act, close, portrait, children, footer, settings, sceneFocus, board }: { offer: StoryOffer; lang: AnyLang; t: (k: Key) => string; act: (id: string) => void; close: () => void; portrait: PortraitLookup; children?: ComponentChildren; settings?: () => void; footer?: ComponentChildren; sceneFocus?: boolean; board?: (() => void) | undefined }) {
   const root = useRef<HTMLDivElement>(null);
   // GAME-185: у мапі-першій грі ☰ — лише меню; квести, навички, речі й журнал — на екрані «Журнал» (page === 'journal').
   const [page, setPage] = useState<'menu' | 'journal'>('menu');
@@ -106,6 +106,7 @@ export function StoryPanel({ offer, lang, t, act, close, portrait, children, foo
   const actionsBox = !compact && !sceneOnly && (menuActions.length > 0 || offer.locked.length > 0) && (
     <fieldset data-ui="actions">
       <legend>{t('ui.actions')}</legend>
+      {sampleCamp && board && <button type="button" class="ui-btn" data-ui="sd-board-menu" data-rec={boardRec(sampleCamp, rec) ? 'yes' : undefined} onClick={board}>{t('sd.board')}</button>}
       {menuActions.map(button)}
       {!offer.dialogue && offer.locked.map(lockedButton)}
     </fieldset>

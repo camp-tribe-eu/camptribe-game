@@ -520,7 +520,7 @@ export function Shell({ port, langOverride, credits, build, holdToast = false, h
           <span>{ct(lang, `title.${titleUp.index + 1}.family`)}</span>
         </div>
       )}
-      {storyOpen && <StoryPanel sceneFocus={port.sample !== undefined} offer={offer} lang={lang} t={t} act={storyAct} close={() => story(false)} portrait={portrait} settings={() => { setStoryOpen(false); toggle(true); }} footer={offer.stage !== 'create' && <><button type="button" class="ui-btn" data-ui="backpack-open-story" onClick={() => openBackpack(true)}>{t('ui.backpack')}</button><button type="button" class="ui-btn" data-ui="atlas-open" onClick={openAtlas}>{`${t('ui.atlas')}: ${offer.atlas.count}/${offer.atlas.total}`}</button></>}>{staleNotice}</StoryPanel>}
+      {storyOpen && <StoryPanel sceneFocus={port.sample !== undefined} board={port.sample ? () => document.querySelector<HTMLElement>('[data-ui="sd-board"]')?.click() : undefined} offer={offer} lang={lang} t={t} act={storyAct} close={() => story(false)} portrait={portrait} settings={() => { setStoryOpen(false); toggle(true); }} footer={offer.stage !== 'create' && <><button type="button" class="ui-btn" data-ui="backpack-open-story" onClick={() => openBackpack(true)}>{t('ui.backpack')}</button><button type="button" class="ui-btn" data-ui="atlas-open" onClick={openAtlas}>{`${t('ui.atlas')}: ${offer.atlas.count}/${offer.atlas.total}`}</button></>}>{staleNotice}</StoryPanel>}
       {backpackOpen && <BackpackPanel backpack={offer.backpack} lang={lang} t={t} sell={storyAct} close={closeBackpack} />}
       {atlasOpen && <AtlasPanel atlas={offer.atlas} lang={lang} t={t} close={closeAtlas} />}
       {mission && MissionSurface && <MinigameHost session={mission} t={t} Surface={MissionSurface} />}

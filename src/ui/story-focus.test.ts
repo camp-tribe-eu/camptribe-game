@@ -1,7 +1,7 @@
 // GAME-280 · offerFocusKey: той самий вміст у новому об'єкті — той самий ключ (фокус не стрибає); змінилось, що натискати, — інший (GAME-80 лишається).
 // Закон 1: мутація «ключ = випадкове/ідентичність об'єкта» червонить перший рядок; «ключ без actions / без репліки» — відповідні рядки нижче.
 import { describe, expect, it } from 'vitest';
-import { inSampleCamp, nextAction, offerFocusKey, sampleActionsFirst, sampleMenuActions, startHintOn, type FocusOffer } from './story-focus';
+import { boardRec, inSampleCamp, nextAction, offerFocusKey, sampleActionsFirst, sampleMenuActions, startHintOn, type FocusOffer } from './story-focus';
 
 const base = (): FocusOffer => ({
   stage: 'play', locationKey: 'loc.home',
@@ -80,5 +80,21 @@ describe('nextAction (GAME-326)', () => {
   it('нічого рекомендувати — undefined (розмова, сон, сушіння)', () => {
     expect(nextAction([A('t', 'talk'), A('d', 'dry')], null)).toBeUndefined();
     expect(nextAction([], 'q.x')).toBeUndefined();
+  });
+});
+
+// GAME-327 · «Зробити» першими, поки лишаються; у таборі рекомендована «Дошка табору», якщо дії списку нічого не ведуть.
+// Мутації (перевірено): прибрати `a.kind === 'task' ? -1` → «Зробити» червоніє; boardRec завжди false → «дошка рекомендована» червоніє; завжди true → «не затуляє дію» червоніє.
+describe('GAME-327 рекомендація', () => {
+  const A = (id: string, kind: string, key: string | null = null) => ({ id, kind, key }) as unknown as Parameters<typeof nextAction>[0][number];
+  it('поки є «Зробити», вони попереду «Завершити» (навіть цілі)', () => {
+    const acts = [A('c', 'complete', 'q.goal'), A('t1', 'task', 'a'), A('t2', 'task', 'b')];
+    expect(nextAction(acts, 'q.goal')?.id).toBe('t1');
+    expect(nextAction([A('c', 'complete', 'q.goal')], 'q.goal')?.id).toBe('c');
+  });
+  it('у таборі дошка рекомендована лише коли жодна дія не рекомендована; поза табором — ні', () => {
+    expect(boardRec(true, undefined)).toBe(true);
+    expect(boardRec(true, A('c', 'complete'))).toBe(false);
+    expect(boardRec(false, undefined)).toBe(false);
   });
 });

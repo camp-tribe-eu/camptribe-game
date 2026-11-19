@@ -494,6 +494,7 @@
       .sd-cell[data-car] { }
       .sd-cell[data-car='up'], .sd-cell[data-car='down'], .sd-cell[data-car='left'], .sd-cell[data-car='right'] { background: #d9d2c5; }
       .sd-pad { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
+      #app:has([data-ui="story"]) .sd-board-btn { display: none; }   /* GAME-327: при відкритій ☰ дошка — кнопка в самому меню, а не друга над ним */
       .sd-board-btn { position: fixed; left: var(--edge-left); bottom: calc(var(--edge-bottom) + var(--stick-size) + 8px); z-index: 30; min-width: 48px; min-height: 48px; }   /* GAME-326: над джойстиком, не на ньому */
       #app:has([data-ui="drive-in"]) .ui-goal, #app:has([data-ui="drive-in"]) .ui-hud { visibility: hidden; }   /* GAME-326: ціль і годинник не лягають на розмову заїзду */
       .sd-cell[data-car]::after { display: grid; place-items: center; height: 100%; color: #1b1f23; font-size: 0.7rem; }
@@ -502,6 +503,7 @@
       .sd-board-wrap { position: fixed; inset: 0; z-index: 40; }
       .sd-board-wrap[hidden] { display: none; }
       .sd-board-close { position: fixed; right: 8px; bottom: 8px; z-index: 41; min-width: 48px; min-height: 48px; }
+      .sd-board-wrap .ui-camp { padding-bottom: 64px; }   /* GAME-327: «До мапи» (fixed, внизу праворуч) не лягає на «Ніч» і «Під тент» — кінець дошки вище за кнопку */
       .ui-camp h2 { margin: 0; font-size: 0.9rem; }
       .ui-camp-note { margin: 0; font-size: 0.7rem; line-height: 1.5; color: #cfcbc7; max-width: 560px; text-align: center; }
       .ui-camp-list, .ui-camp-grid { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; width: min(100%, 560px); }
@@ -537,6 +539,8 @@
       /* GAME-320: телефон горизонтально (932×430): дошка табору — чотири колонки й тісніші відступи, щоб ціла стояла на екрані без прокрутки (була 625 px при 430). Портрет не змінюється. */
       @media (orientation: landscape) and (max-height: 500px) {
         .ui-camp { padding: 6px 12px 8px; gap: 4px; }
+        .sd-board-wrap .ui-camp { padding-bottom: 8px; }
+        .sd-board-close { top: 6px; bottom: auto; }   /* GAME-327: низькому екрану не віддаємо 64 px — кнопка угорі праворуч, де назва, а не картки */
         .ui-camp-note { max-width: 900px; line-height: 1.3; }
         .ui-camp-list { grid-template-columns: repeat(4, 1fr); width: min(100%, 900px); gap: 6px; }
         .ui-camp-routine { min-height: 48px; padding: 4px 6px; font-size: 0.7rem; line-height: 1.3; }
