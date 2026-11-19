@@ -45,13 +45,14 @@ export const POP_GAP_PX = 40;
 export interface PopPlace { readonly left: number; readonly top: number; readonly opacity: number }
 /**
  * Де стоїть підпис (CSS px): по центру над головою героя, низ — на POP_GAP_PX вище верху спрайта й піднімається з віком; у межах екрана.
- * `topInset` — низ шапки: підпис не лізе під неї (герой на камері посередині, тож вище голови місця досить).
+ * `side`/`floor` (GAME-329, альбом) — поля по боках і межа знизу; `topInset` — низ шапки: підпис не лізе під неї (герой на камері посередині, тож вище голови місця досить).
  */
-export function stickerPlace(o: { heroX: number; heroTop: number; w: number; h: number; vw: number; age: number; topInset: number }): PopPlace {
+export function stickerPlace(o: { heroX: number; heroTop: number; w: number; h: number; vw: number; age: number; topInset: number; side?: number; floor?: number | undefined }): PopPlace {
   const k = Math.min(1, Math.max(0, o.age / POP_FRAMES));
   const rise = RISE_PX * Math.min(1, o.age / 60);
-  const left = Math.min(Math.max(4, o.heroX - o.w / 2), Math.max(4, o.vw - o.w - 4));
-  const top = Math.max(o.topInset, o.heroTop - POP_GAP_PX - rise - o.h);
+  const sd = o.side ?? 4;   // GAME-329: в альбомі колонки кнопок (☰, дошка, ‖) — по краях: підпис їх не накриває
+  const left = Math.min(Math.max(sd, o.heroX - o.w / 2), Math.max(sd, o.vw - o.w - sd));
+  const top = Math.max(o.topInset, Math.min(o.heroTop - POP_GAP_PX - rise - o.h, (o.floor ?? 1e9) - 4 - o.h));   // і не нижче за floor (верх смуги з ціллю)
   const opacity = o.age <= POP_FADE_FROM ? 1 : Math.max(0, 1 - (o.age - POP_FADE_FROM) / (POP_FRAMES - POP_FADE_FROM));
   return { left, top, opacity: k >= 1 ? 0 : opacity };
 }

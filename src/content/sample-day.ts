@@ -68,3 +68,9 @@ export function sampleGoal(flags: readonly string[], stormPlayed: boolean): Samp
 
 /** Година, на якій світ зразкового дня стоїть: опівночі гра розділу 1 засинала сама, перегортала день і відкривала свій «Підсумок дня 1» посеред місії. Ніч тут — кнопка дошки, не годинник. */
 export const SAMPLE_HOLD_MINUTE = 23 * 60 + 30;
+
+/** GAME-329 · у виборі героя зразка — лише той, кого день справді грає: родина, авто (дорога — міні-гра авто) і без тварини (її день не показує). Решта суперечила б дню. */
+export const SAMPLE_PROFILE = 'profile.family-teen';
+export const SAMPLE_TRANSPORT = 'transport.car';
+export const sampleHeroes = <T extends { readonly profileKey: string; readonly transportKey: string; readonly animalKey: string | null }>(all: readonly T[]): readonly T[] =>
+  all.filter((c) => c.profileKey === SAMPLE_PROFILE && c.transportKey === SAMPLE_TRANSPORT && c.animalKey === null);
