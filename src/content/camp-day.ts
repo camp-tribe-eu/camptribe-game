@@ -10,7 +10,7 @@
 //
 // Жодного годинника й Math.random: усе — чисті функції над планом дня.
 
-import type { Outcome } from './minigame';
+import { HELP_AFTER, NORMAL, RELAXED, type Difficulty, type Outcome } from './minigame';
 
 export const MEMBERS = ['george', 'victoria', 'matthew'] as const;
 export type Member = (typeof MEMBERS)[number];
@@ -98,6 +98,11 @@ export const canAdd = (d: CampDay, id: RoutineId, round: Round, full = false): b
 
 export function addPick(d: CampDay, id: RoutineId, round: Round, full = false): CampDay {
   return canAdd(d, id, round, full) ? { ...d, picks: [...d.picks, { id, round, full }] } : d;
+}
+/** GAME-328 (§5а): два «сяк-так» поспіль серед ОСТАННІХ зіграних рутин дня (за порядком, у якому їх узято) → наступна йде послаблена; після доброго/нормального — звичайна. */
+export function helpFor(d: CampDay): Difficulty {
+  const last = d.picks.filter((p) => d.results[p.id] !== undefined).slice(-HELP_AFTER);
+  return last.length === HELP_AFTER && last.every((p) => d.results[p.id] === 'scrappy') ? RELAXED : NORMAL;
 }
 /** Рутину зіграно: результат міні-гри лягає в день. Записати результат того, чого не планували, не можна. */
 export function recordResult(d: CampDay, id: RoutineId, outcome: Outcome): CampDay {

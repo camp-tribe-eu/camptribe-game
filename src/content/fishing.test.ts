@@ -161,3 +161,20 @@ describe('GAME-323 · улов досяжний людині', () => {
     expect(run(b, BITE_MS + 32, false).events).toContain('slipped');
   });
 });
+
+// GAME-328 · допомога: вікно «клює» ширшає на множник (RELAXED.timeScale = 1.5).
+describe('GAME-328 · bite-множник', () => {
+  const bite: FishState = { ...FISH_IDLE, phase: 'bite', t: 0 };
+  const late = BITE_MS + 300;   // 1200 мс: поза звичайним вікном, у розширеному (1350)
+  it('звичайне вікно: за 1200 мс «зірвалась», тап після цього вже нічого не піймає', () => {
+    const r = stepFish(bite, { kind: 'tick', dtMs: late, down: false }, makeRng(1));
+    expect(r.event).toBe('slipped');
+    expect(stepFish(r.state, { kind: 'tick', dtMs: 16, down: true }, makeRng(1)).event).not.toBe('hook');
+  });
+  it('розширене вікно (bite 1.5): ті ж 1200 мс ще «клює» і тап підсікає; за 1350+ — зрив', () => {
+    const r = stepFish(bite, { kind: 'tick', dtMs: late, down: false, bite: 1.5 }, makeRng(1));
+    expect(r.event).toBe('none');
+    expect(stepFish(r.state, { kind: 'tick', dtMs: 16, down: true, bite: 1.5 }, makeRng(1)).event).toBe('hook');
+    expect(stepFish(bite, { kind: 'tick', dtMs: BITE_MS * 1.5 + 10, down: false, bite: 1.5 }, makeRng(1)).event).toBe('slipped');
+  });
+});
