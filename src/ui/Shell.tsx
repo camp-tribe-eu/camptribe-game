@@ -335,7 +335,7 @@ export function Shell({ port, langOverride, credits, build, holdToast = false, h
   const nowAbsRemind = offer.day * 1440 + offer.timeMinutes;
   useEffect(() => {
     const trip = offer.lastTrip;
-    const busy = Boolean(paused || storyOpen || talk || summary) || offer.stage === 'create' || remind !== null;
+    const busy = Boolean(paused || storyOpen || talk || summary || sampleDay) || offer.stage === 'create' || remind !== null;
     if (!remindArmed({ shownEver: settings.remindShown, trip, remindedTrip: settings.remindedTrip, busy }) || trip === null) return;
     // GAME-261: не на кадрі прибуття (там шапка HUD): відлік стартує з ігрового часу прибуття, а нагадування виринає за ігровий годинник (без realtime-таймерів).
     if (armedAt.current?.trip !== trip) armedAt.current = { trip, at: nowAbsRemind };
@@ -353,7 +353,7 @@ export function Shell({ port, langOverride, credits, build, holdToast = false, h
       }
     }).catch(() => setRemind((r) => r && { ...r, state: 'manual', code: '' }));   // код не зібрано — хоч не мовчимо
   };
-  const reminder = remind && !sampleDay && remind.trip === offer.lastTrip && !paused && !storyOpen && !talk && !summary && (
+  const reminder = remind && remind.trip === offer.lastTrip && !paused && !storyOpen && !talk && !summary && (
     <div class="ui-reminder" data-ui="recovery-reminder" role="status">
       <span data-ui="recovery-text">{t(remind.state === 'done' ? 'ui.remind.done' : remind.state === 'manual' ? 'ui.remind.manual' : 'ui.remind.text')}</span>
       {remind.state === 'manual' && <textarea class="ui-code" data-ui="recovery-code" readOnly rows={2} aria-label={t('ui.exportCode')} value={remind.code}

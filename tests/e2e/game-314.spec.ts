@@ -371,6 +371,7 @@ for (const o of ORIENTATIONS) {
       await page.locator('[data-ui="story-close"]').click();
       await expect(page.locator('[data-ui="goal"]')).toBeVisible();
       await expect(page.locator('[data-ui="recovery-reminder"]'), 'GAME-325: банер збереження не перекриває ціль дня').toHaveCount(0);
+      expect(await page.evaluate(() => localStorage.getItem('camplife.settings.v1') ?? ''), 'GAME-325: зразок не записує remindShown у спільні налаштування').not.toContain('"remindShown":true');
       await page.locator('[data-touch="story"]').click();
       await panel(page).locator('[data-act="complete"][data-key="q.st-004"]').click({ timeout: 8_000 });
       await page.waitForTimeout(400);
@@ -516,7 +517,11 @@ for (const o of ORIENTATIONS) {
       await expect(panel(page).locator('[data-ui="where"]')).toBeVisible({ timeout: 5_000 });
       for (const act of ['visit', 'sleep', 'wait', 'rest']) await expect(panel(page).locator(`[data-act="${act}"]`), `☰ у таборі: «${act}»`).toHaveCount(0);
       await expect(panel(page).locator('[data-ui="goals"]'), '☰ у таборі: старі цілі').toHaveCount(0);
-      await page.locator('[data-ui="story-close"]').click();
+      // GAME-325: «Дошка табору» — з-під відкритої ☰, як її бачить гравець (панель не закриваємо вручну): панель мусить зникнути, інакше світ на паузі.
+      await tapIt(page, '[data-ui="sd-board"]');
+      await expect(panel(page), 'GAME-325: дошка відкрилась — ☰ закрилась').toBeHidden();
+      await expect(page.locator('[data-ui="camp-board"]')).toBeVisible();
+      await tapIt(page, '[data-ui="sd-board-close"]');
       expect(dayFlags.campBoard?.results?.berries, 'ягоди зранку ЗБЕРЕЖЕНО в стані гри попри розмови (дошка не губиться)').toBeDefined();
 
       // 4в. ВЕЧЕРЯ: дошка відновлюється зі збереженого, а не з нуля
