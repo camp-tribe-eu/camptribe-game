@@ -268,6 +268,12 @@ async function depart(page: Page): Promise<string[]> {
   page.on('console', (m) => { if (m.type() === 'error') errors.push(m.text()); });
   await page.goto('/?seed=7&sampleDay=1');
   await waitGameReady(page);
+  // GAME-325: «Відкрий ☰, щоб почати» — і після того, як ☰ уже відкривали (прапор hintSeen), і після перезавантаження: день ще не почався.
+  await expect(page.locator('[data-ui="hint"]'), 'підказка на першому екрані').toBeVisible();
+  await page.locator('[data-touch="story"]').click();
+  await page.reload();
+  await waitGameReady(page);
+  await expect(page.locator('[data-ui="hint"]'), 'підказка після перезавантаження').toBeVisible();
   await page.locator('[data-touch="story"]').click();
   await panel(page).locator('[data-act="create"]', { hasText: 'Велосипед' }).first().click();
   await page.waitForTimeout(400);
@@ -324,6 +330,16 @@ async function driveRoad(page: Page, mode: 'steady' | 'brisk' | 'calm'): Promise
   return outcome;
 }
 
+/** GAME-325: кнопка ЦІЛА в першому вікні (без прокрутки) — так її бачить гравець. Раніше «Що робити» лежало на 900–2600 px, а тест закривав панель сам. */
+async function expectFirstViewport(page: Page, sel: string, what: string): Promise<void> {
+  const vh = page.viewportSize()?.height ?? 0;
+  const b = await page.locator(sel).first().boundingBox();
+  expect(b, `${what}: кнопки немає в DOM`).not.toBeNull();
+  const r = b as { y: number; height: number };
+  expect(r.y, `${what}: вище верху`).toBeGreaterThanOrEqual(0);
+  expect(r.y + r.height, `${what}: під згином (y=${Math.round(r.y)}+${Math.round(r.height)} з ${vh})`).toBeLessThanOrEqual(vh);
+}
+
 const tapIt = async (page: Page, sel: string): Promise<void> => { await page.locator(sel).tap(); await page.waitForTimeout(120); };
 
 const ORIENTATIONS = [
@@ -348,7 +364,9 @@ for (const o of ORIENTATIONS) {
       expect(afterRoad.flags.filter((f) => f.startsWith('f.arrival-')), 'дорога поставила рівно один f.arrival-*').toEqual([`f.arrival-${arrival}`]);
       if (o.brisk) expect(afterRoad.moneyCents, 'штраф камери зменшив гаманець').toBeLessThan(moneyBefore);
       else expect(afterRoad.moneyCents, 'без штрафу гаманець не змінився').toBe(moneyBefore);
-      await page.locator('[data-touch="story"]').click();
+      // GAME-325: після дороги ☰ відкривається САМА, а наступний крок — у першому вікні (гравець не шукає його під згином).
+      await expect(panel(page), 'після дороги наступний крок показано без ☰').toBeVisible({ timeout: 8_000 });
+      await expectFirstViewport(page, '[data-ui="story"] [data-act="complete"][data-key="q.st-004"]', 'після дороги «Завершити: У дорогу»');
       await panel(page).locator('[data-act="complete"][data-key="q.st-004"]').click({ timeout: 8_000 });
       await page.waitForTimeout(400);
       await panel(page).locator('[data-act="visit"][data-key="loc.camp.lake"]').click({ timeout: 8_000 });
@@ -373,8 +391,7 @@ for (const o of ORIENTATIONS) {
       c.n++;
       await expect.poll(async () => (await core2(page)).game.flags.includes(`f.spot-${pitch}`), { timeout: 5_000 }).toBe(true);
       await closeTalk(page);
-      await panel(page).locator('[data-act]').first().waitFor({ state: 'attached' }).catch(() => undefined);
-      await page.locator('[data-ui="story-close"]').click({ timeout: 3_000 }).catch(() => undefined);
+      await expect(panel(page), 'GAME-325: після вибору ділянки ☰ закрилась сама').toBeHidden({ timeout: 5_000 });
 
       // 3. ЗАЇЗД на обрану ділянку (drive-in): розвʼязок за смугою, кожен крок — дотик
       await expect(page.locator('[data-ui="drive-in"]')).toBeVisible({ timeout: 8_000 });
@@ -387,18 +404,32 @@ for (const o of ORIENTATIONS) {
       await expectInView(page, 'сцена «Заїхали»');
       await shot(page, 'zaihaly');
       await closeTalk(page);
-      await page.locator('[data-ui="story-close"]').click({ timeout: 3_000 }).catch(() => undefined);
+      await expect(panel(page), 'GAME-325: після «Заїхали» ☰ закрилась сама (світ не на паузі)').toBeHidden({ timeout: 5_000 });
       expect((await core2(page)).game.flags.some((f) => f.startsWith('f.drive-in-')), 'сусід записав результат заїзду').toBe(true);
 
       // 4. ДЕНЬ: дошка табору (ягоди зранку), місія Клер ногами по мапі
       await expect(page.locator('[data-ui="sd-board"]')).toBeVisible({ timeout: 8_000 });
       // GAME-317: стара гра розділу 1 мовчить — одна ціль дня (не «Прибуття»), жодної хвилі, трекера прохань і «найближчої нагороди».
       await expect(page.locator('[data-ui="goal"]'), 'одна ціль дня').toHaveCount(1);
+      await expect(page.locator('[data-ui="recovery-reminder"]'), 'GAME-325: банер збереження не перекриває ціль дня').toHaveCount(0);
       await expect(page.locator('[data-ui="goal"]')).not.toContainText('Прибуття');
       await expect(page.locator('[data-ui="goal"]')).toContainText('Допомогти сусідам');
       for (const old of ['wave', 'req-tracker', 'nearest']) await expect(page.locator(`[data-ui="${old}"]`), `стара ${old} у зразковому дні`).toHaveCount(0);
       await shot(page, 'one-goal');
       await tapIt(page, '[data-ui="sd-board"]');
+      // GAME-325: дошка відкрилась з-під «Заїхали» БЕЗ закриття ☰ вручну — світ не на паузі: кран наливає (кадри течуть), а не стоїть на 0 %.
+      await expect(page.locator('[data-ui="camp-board"]')).toBeVisible();
+      await tapIt(page, '[data-ui="camp-routine"][data-id="water"]');
+      await page.locator('[data-ui="water-tap"]').dispatchEvent('pointerdown');
+      await expect.poll(async () => Number(await page.locator('[data-ui="water-level"]').getAttribute('data-level')), { timeout: 6_000, message: 'GAME-325: «Тримай кран» наливає' }).toBeGreaterThan(0);
+      await page.waitForFunction(() => Number(document.querySelector('[data-ui="water-level"]')?.getAttribute('data-level') ?? '0') >= 70);
+      await page.locator('[data-ui="water-tap"]').dispatchEvent('pointerup');
+      for (let k = 0; k < 10; k++) {
+        const side = await page.locator('[data-ui="water-cue"]').getAttribute('data-side', { timeout: 2_000 }).catch(() => null);
+        if (side === null) break;
+        await tapIt(page, `[data-ui="water-step"][data-side="${side}"]`);
+      }
+      await expect(page.locator('[data-ui="camp-routine"][data-id="water"]')).toHaveAttribute('data-done', 'yes');
       // GAME-320: дошка стоїть на екрані цілою (в альбомі 932×430 була 625 px і прокручувалась).
       expect(await page.locator('[data-ui="camp-board"]').evaluate((e) => e.scrollHeight - e.clientHeight), 'дошка табору не прокручується').toBeLessThanOrEqual(0);
       await tapIt(page, '[data-ui="camp-routine"][data-id="berries"]');

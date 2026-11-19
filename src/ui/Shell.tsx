@@ -24,6 +24,7 @@ import { bannersOpen } from './banner-queue';
 import { Intro } from './Intro';
 import { ColdOpen } from './ColdOpen';
 import { EpisodeCard } from './EpisodeCard';
+import { startHintOn } from './story-focus';
 import { MinigameHost } from './MinigameHost';
 import { missionSurface } from './MissionSurfaces';
 import { SampleDay } from './SampleDay';
@@ -168,7 +169,7 @@ export function Shell({ port, langOverride, credits, build, holdToast = false, h
   // GAME-95: підказка — тост. Зникає через TOAST_MS або на першу дію гравця (дотик чи клавіша), але лише з екрана:
   // hintSeen лишається, поки гравець не відкрив ☰ чи паузу, тож після перезавантаження підказка повертається.
   const [toastGone, setToastGone] = useState(false);
-  const toastLive = !settings.hintSeen && offer.stage === 'create' && !toastGone && !introOn;
+  const toastLive = startHintOn(port.sample !== undefined, settings.hintSeen) && offer.stage === 'create' && !toastGone && !introOn;
   useEffect(() => {
     if (!toastLive) return;
     const done = (): void => setToastGone(true);
@@ -191,8 +192,14 @@ export function Shell({ port, langOverride, credits, build, holdToast = false, h
     if (mission) { if (storyOpen) story(false); hadMission.current = true; return; }
     if (!hadMission.current) return;
     hadMission.current = false;
-    if (!paused && !storyOpen && !talkRef.current && port.story().dialogue) story(true);
+    if (!paused && !storyOpen && !talkRef.current && (port.story().dialogue || port.sample?.goal() === 'pitch')) story(true);   // GAME-325: після дороги ☰ відкривається сам — наступний крок угорі
   }, [mission]);
+  // GAME-325: сцена зразка (приїзд, ділянка, «Заїхали») скінчилась — ☰ закривається сама, світ іде (інакше дошка табору відкривалась би над паузою, і рутини стояли б).
+  const sceneSeen = useRef(false);
+  useEffect(() => {
+    if (!port.sample || !storyOpen) { sceneSeen.current = false; return; }
+    if (offer.dialogue) sceneSeen.current = true; else if (sceneSeen.current) { sceneSeen.current = false; story(false); }
+  }, [storyOpen, offer]);
 
   // Перша дія (GAME-83): відкрито ☰ чи паузу — підказка «Відкрий ☰» більше не потрібна, і не повернеться після
   // перезавантаження. Зберігаємо в налаштуваннях (не в сейві): схема сейву не змінюється.
@@ -346,7 +353,7 @@ export function Shell({ port, langOverride, credits, build, holdToast = false, h
       }
     }).catch(() => setRemind((r) => r && { ...r, state: 'manual', code: '' }));   // код не зібрано — хоч не мовчимо
   };
-  const reminder = remind && remind.trip === offer.lastTrip && !paused && !storyOpen && !talk && !summary && (
+  const reminder = remind && !port.sample && remind.trip === offer.lastTrip && !paused && !storyOpen && !talk && !summary && (
     <div class="ui-reminder" data-ui="recovery-reminder" role="status">
       <span data-ui="recovery-text">{t(remind.state === 'done' ? 'ui.remind.done' : remind.state === 'manual' ? 'ui.remind.manual' : 'ui.remind.text')}</span>
       {remind.state === 'manual' && <textarea class="ui-code" data-ui="recovery-code" readOnly rows={2} aria-label={t('ui.exportCode')} value={remind.code}
@@ -375,7 +382,7 @@ export function Shell({ port, langOverride, credits, build, holdToast = false, h
   const covered = worldCovered({ paused, storyOpen, summary: summary !== null, atlasOpen, backpackOpen });
   useEffect(() => { port.setWorldCovered(covered); }, [covered]);
   const top = topOverlay({ episode, ups: shownUps.length, summary: summary !== null });
-  const showHint = !settings.hintSeen && offer.stage === 'create';
+  const showHint = startHintOn(port.sample !== undefined, settings.hintSeen) && offer.stage === 'create';
   // Банер — лише на мапі (не поверх екрана подорожі, паузи чи підсумку дня) і лише поки не минуло TITLE_UP_MIN ігрових хвилин.
   const sinceUp = titleUp ? offer.day * 1440 + offer.timeMinutes - titleUp.at : -1;
   // GAME-242: «Пора спати» — раз за ніч, гасне за ІГРОВИМ годинником (як банер звання): таймерів реального часу немає.
@@ -518,7 +525,7 @@ export function Shell({ port, langOverride, credits, build, holdToast = false, h
       {backpackOpen && <BackpackPanel backpack={offer.backpack} lang={lang} t={t} sell={storyAct} close={closeBackpack} />}
       {atlasOpen && <AtlasPanel atlas={offer.atlas} lang={lang} t={t} close={closeAtlas} />}
       {mission && MissionSurface && <MinigameHost session={mission} t={t} Surface={MissionSurface} />}
-      {port.sample && !intro && <SampleDay port={port.sample} t={t} lang={lang} />}
+      {port.sample && !intro && <SampleDay port={port.sample} t={t} lang={lang} onBoard={() => { if (storyOpen) story(false); }} />}
       {intro && cold && <ColdOpen paint={port.coldOpenScene} t={t} onDone={() => setCold(false)} />}
       {episode && !intro && port.episodeFlags && <EpisodeCard flags={port.episodeFlags()} chapter={offer.chapterEnd ?? 1} t={t} onDone={() => { setEpisode(false); focusStage(); if (teaserSleep.current) { teaserSleep.current = false; summaryEnd(); } /* GAME-264: після тизера — збережена гра й меню паузи, а не мертва мапа */ }} />}
       {intro && !cold && <Intro soloHero={port.introSolo?.() === true} classic={port.introClassic?.() === true} shot={port.introShot} offer={offer} lang={lang} t={t} act={storyAct} portrait={portrait} room={port.introRoom} beat={port.introBeat} onDone={endIntro} />}

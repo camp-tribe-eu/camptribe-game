@@ -1,7 +1,7 @@
 // GAME-280 · offerFocusKey: той самий вміст у новому об'єкті — той самий ключ (фокус не стрибає); змінилось, що натискати, — інший (GAME-80 лишається).
 // Закон 1: мутація «ключ = випадкове/ідентичність об'єкта» червонить перший рядок; «ключ без actions / без репліки» — відповідні рядки нижче.
 import { describe, expect, it } from 'vitest';
-import { inSampleCamp, offerFocusKey, sampleMenuActions, type FocusOffer } from './story-focus';
+import { inSampleCamp, offerFocusKey, sampleActionsFirst, sampleMenuActions, startHintOn, type FocusOffer } from './story-focus';
 
 const base = (): FocusOffer => ({
   stage: 'play', locationKey: 'loc.home',
@@ -44,5 +44,16 @@ describe('GAME-320: ☰ у таборі зразкового дня', () => {
     expect(inSampleCamp(false, 'loc.camp.lake')).toBe(false);
     expect(inSampleCamp(true, 'loc.road')).toBe(false);   // до табору (збори, дорога) ☰ працює як раніше
     expect(inSampleCamp(true, null)).toBe(false);
+  });
+});
+
+// GAME-325 · закон 1: мутація «startHintOn = !hintSeen» червонить перший рядок; «sampleActionsFirst = false» — другий.
+describe('startHintOn / sampleActionsFirst (GAME-325)', () => {
+  it('зразок показує підказку «Відкрий ☰» і коли hintSeen уже записано (перезавантаження, «Почати знову»)', () => { expect(startHintOn(true, true)).toBe(true); });
+  it('звичайна гра: підказка лише поки ☰ не відкривали', () => { expect(startHintOn(false, false)).toBe(true); expect(startHintOn(false, true)).toBe(false); });
+  it('зразок: панель без довідкового списку лише в не-компактному вигляді; звичайна гра — ніколи', () => {
+    expect(sampleActionsFirst(true, false)).toBe(true);
+    expect(sampleActionsFirst(true, true)).toBe(false);
+    expect(sampleActionsFirst(false, false)).toBe(false);
   });
 });
