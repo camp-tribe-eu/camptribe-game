@@ -53,6 +53,8 @@ export type EmberInput = { readonly kind: 'tick'; readonly dtMs: number } | { re
 
 export const startEmbers = (dry = true): EmberState => ({ heat: 0.35, smokeMs: 0, dish: 0, dishMs: 0, goodMs: 0, quality: [], done: false, dry, acts: 0, idle: 0 });
 
+/** GAME-327: дрова щойно підкинуто — жар ще не росте (дим); гравець бачить це словом, а не нулем, що «не рухається». */
+export const smoking = (s: EmberState): boolean => s.smokeMs > 0;
 export const dishOf = (s: EmberState): Dish | null => DISHES[s.dish] ?? null;
 export function inBand(s: EmberState, d: Difficulty = NORMAL): boolean {
   const dish = dishOf(s);

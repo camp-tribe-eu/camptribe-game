@@ -448,7 +448,7 @@ const samplePort: SamplePort = {
   },
   board: () => bridge.state.game.campBoard,
   saveBoard: (b) => { bridge.send({ type: 'SaveCampBoard', board: b }); },
-  stormNight: () => { if (!playedScene(STORM_SCENE)) { bridge.send(stormNightMove(bridge.state.game.flags, undefined, bridge.state.game.campBoard?.results.fire !== undefined)); storyChanged(); } },
+  stormNight: () => { if (!playedScene(STORM_SCENE)) { bridge.send(stormNightMove(bridge.state.game.flags, undefined, bridge.state.game.campBoard?.results.fire !== undefined, bridge.state.game.campBoard?.facts.dryLogs)); storyChanged(); } },
   restart: async () => { await saves.newGame(); location.reload(); },
   subscribe: (l) => { sampleListeners.add(l); return () => { sampleListeners.delete(l); }; },
 };

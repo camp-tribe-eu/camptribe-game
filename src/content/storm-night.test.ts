@@ -22,14 +22,14 @@ function fresh(defs: CoreDefs = GAME_DEFS): GameState {
 }
 
 /** Провести ніч ядром: «Далі», доки є next; на вузлі з вибором — перший варіант. Повертає пройдені вузли. */
-function playNight(flags: readonly string[], fireLit = true): string[] {
+function playNight(flags: readonly string[], fireLit = true, dryLogs = 0, cold = false): string[] {
   let s = fresh();
   const send = (cmd: Command): void => {
     const r = dispatch(s, cmd, GAME_DEFS);
     if (!r.ok) throw new Error(`${cmd.type}: ${r.code}`);
     s = r.state;
   };
-  send(startStormNight(nextCommandId(s), flags, undefined, fireLit));
+  send(startStormNight(nextCommandId(s), flags, undefined, fireLit, dryLogs));
   const path: string[] = [];
   for (let guard = 0; s.dialogue; guard++) {
     if (guard > 60) throw new Error('ніч не закінчується');
@@ -37,7 +37,7 @@ function playNight(flags: readonly string[], fireLit = true): string[] {
     const node = GAME_DEFS.story?.dialogues[STORM_SCENE]?.nodes[s.dialogue.node];
     if (node?.choices) {   // перший вибір, що ВІДКРИТИЙ (умовний, який не виконується, гравець не бачить)
       const open = node.choices.findIndex((_, i) => dispatch(s, { type: 'Choose', commandId: nextCommandId(s), choice: i }, GAME_DEFS).ok);
-      send({ type: 'Choose', commandId: nextCommandId(s), choice: open });
+      send({ type: 'Choose', commandId: nextCommandId(s), choice: cold && s.dialogue.node === 'q2' ? 1 : open });
     } else send({ type: 'Continue', commandId: nextCommandId(s) });
   }
   return path;
@@ -49,7 +49,7 @@ describe('GAME-312 · ніч із бурею бачить, що зроблено
     const path = playNight([]);
     expect(path).toContain('dark');
     expect(path).toContain('fire-wet');
-    expect(path).toContain('supper-plain');
+    expect(path).toContain('supper-hot');
     expect(path).toContain('light-none');
     expect(path[path.length - 1]).toBe('close-end');
   });
@@ -127,5 +127,25 @@ describe('GAME-323 · ніч без вогню', () => {
     const path = playNight(['f.mis-lantern-done']);
     expect(path).toContain('fire-dry');
     expect(path).not.toContain('fire-cold');
+  });
+});
+
+// GAME-327 · ніч не суперечить собі: «Сухі дрова під тентом» (дошка) не стоїть поруч із «Вогке дерево шипить» (сцена), а «Готуємо гаряче» не веде до «Хліб і сир».
+// Мутації (перевірено): у stormFacts прибрати `if (dryLogs >= 4)` → «сухі з дошки» червоніє; у q2.c1 повернути next: supper → «гаряче не веде до хліба» червоніє.
+describe('GAME-327 · умови взаємовиключні', () => {
+  it('сухі дрова з рутини «дрова» дають факт сухих, вогкі (3) — ні', () => {
+    expect(stormFacts([], undefined, true, 4)).toEqual([STORM_FACTS.dryWood]);
+    expect(stormFacts([], undefined, true, 3)).toEqual([]);
+    const path = playNight([], true, 4);
+    expect(path).toContain('fire-dry');
+    expect(path).not.toContain('fire-wet');
+    expect(playNight([], true, 3)).toContain('fire-wet');
+  });
+  it('«Готуємо гаряче» не веде до «Хліб і сир»; холодний вибір — веде', () => {
+    for (const flags of [[], ['f.mis-ring-done']]) {
+      expect(playNight(flags), flags.join()).not.toContain('supper-plain');
+    }
+    expect(playNight([], true, 0, true)).toContain('supper-plain');
+    expect(playNight(['f.mis-ring-done'])).toContain('supper-fish');
   });
 });

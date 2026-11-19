@@ -115,7 +115,7 @@
           ]
         },
         {
-          "textKey": "dlg.matthew-chat.hello.c3",
+          "textKey": "dlg.ingrid-chat.hello.c3",
           "next": "bye"
         }
       ]

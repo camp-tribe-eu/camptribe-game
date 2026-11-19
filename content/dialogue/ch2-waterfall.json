@@ -1,7 +1,7 @@
 {
   "id": "dlg.ch2-waterfall",
   "scene": {
-    "titleKey": "dlg.ch2-waterfall.title",
+    "titleKey": "q.ch2-d2-waterfall-001",
     "facts": [],
     "atQuest": "CH2-D2-WATERFALL-001"
   },

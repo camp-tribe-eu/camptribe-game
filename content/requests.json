@@ -326,7 +326,7 @@
         "id": "t1",
         "spot": "req.wx-sunny-bottles.t1",
         "icon": "apple",
-        "labelKey": "req.wx-sunny-bottles.t1"
+        "labelKey": "req.wx-sunny-bottles"
       }
     ],
     "reward": {
@@ -372,7 +372,7 @@
         "id": "t1",
         "spot": "req.wx-cloudy-lantern.t1",
         "icon": "lantern",
-        "labelKey": "req.wx-cloudy-lantern.t1"
+        "labelKey": "req.wx-cloudy-lantern"
       }
     ],
     "reward": {

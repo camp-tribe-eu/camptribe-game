@@ -1,7 +1,7 @@
 {
   "id": "dlg.ch2-evening",
   "scene": {
-    "titleKey": "dlg.ch2-evening.title",
+    "titleKey": "q.ch2-d1-summary-001",
     "facts": [],
     "atQuest": "CH2-D2-EVENING-001"
   },
