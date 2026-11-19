@@ -5,6 +5,8 @@ import type { CoreDefs } from '../core/defs';
 import { initialState, type GameState } from '../core/state';
 import flagsJson from '../../content/flags.json';
 import ukLoc from '../../content/locales/uk.json';
+import enLoc from '../../content/locales/en.json';
+const enFire = (enLoc as Record<string, string>)['dlg.storm-night.fire-dry'];
 import { GAME_DEFS } from './slice-defs';
 import { CONTENT } from './story';
 import { MISSIONS, type MissionDef } from './missions';
@@ -147,5 +149,18 @@ describe('GAME-327 · умови взаємовиключні', () => {
     }
     expect(playNight([], true, 0, true)).toContain('supper-plain');
     expect(playNight(['f.mis-ring-done'])).toContain('supper-fish');
+  });
+});
+
+// GAME-327 · рядок «сухі дрова» не приписує дрова комусь: і місія Клер, і дошка дають один нейтральний текст.
+// Мутація (перевірено): повернути в uk «Дрова Рема сухі» → «без імені» червоніє.
+describe('GAME-327 · текст сухих дров', () => {
+  it('обидва шляхи (місія / дрова з дошки) ведуть у fire-dry з нейтральним текстом', () => {
+    for (const path of [playNight(['f.mis-lantern-done']), playNight([], true, 4)]) expect(path).toContain('fire-dry');
+    for (const [loc, name] of [[ukLoc, 'Рем'], [{ 'dlg.storm-night.fire-dry': enFire }, 'Remy']] as const) {
+      const v = (loc as Record<string, string>)['dlg.storm-night.fire-dry'] as string;
+      expect(v).toBeTruthy();
+      expect(v, name).not.toContain(name);
+    }
   });
 });

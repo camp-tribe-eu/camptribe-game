@@ -13,8 +13,8 @@ export interface SurfaceProps {
   readonly drag: (p: MinigamePoint | null) => void;
 }
 
-/** GAME-327: штраф, що гра взяла за дорогу (камера), у центах — із даних поверхні; інші ігри його не мають. */
-export const finesOf = (surface: unknown): number => { const f = (surface as { finesCents?: unknown } | null)?.finesCents; return typeof f === 'number' ? f : 0; };
+/** GAME-327: штраф, який гаманець справді сплатив за дорогу (камера, не більше, ніж було), у центах — із даних поверхні; інші ігри його не мають. */
+export const finesOf = (surface: unknown): number => { const f = (surface as { paidCents?: unknown } | null)?.paidCents; return typeof f === 'number' ? f : 0; };
 
 export function MinigameHost({ session, t, Surface }: { session: MinigameSessionPort; t: (key: Key) => string; Surface: ComponentType<SurfaceProps> }) {
   const [view, setView] = useState<MinigameView>(() => session.view());
