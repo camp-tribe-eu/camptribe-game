@@ -97,7 +97,7 @@ export function CampRoutines({ t, weather, seed, onFrame, devices: devices0 = {}
   const ms = useRef(0);
   const go = () => setActs((n) => n + 1);
   const dish = DISHES[embers.dish];
-  const A = (id: Parameters<typeof canFinish>[0]) => (id === 'fish' ? catches(fish) + fish.slipped + fish.aways : id === 'fire' ? embers.acts : acts);   // риба: чесні спроби (улов, зрив, втеча)
+  const A = (id: Parameters<typeof canFinish>[0]) => (id === 'fish' ? catches(fish) + fish.slipped + fish.aways : id === 'fire' ? embers.acts : id === 'knots' ? knots.links.filter((p) => p >= 0).length : acts);   // риба: чесні спроби (улов, зрив, втеча)
   const ok = (id: Parameters<typeof canFinish>[0]) => canFinish(id, A(id), sec * 1000);
   const more = (id: Parameters<typeof canFinish>[0]) => { const w = workLeft(id, A(id), sec * 1000); return `${t('camp.more')}: ${w.acts > 0 ? `×${w.acts}` : `${w.s} ${t('camp.sec')}`}`; };
   const [facts, setFacts] = useState(() => saved?.facts ?? { water: 0, dryLogs: 0, lit: 0, fish: 0, bitter: 0, berries: undefined as number | undefined, foodOut: true });
@@ -310,8 +310,8 @@ export function CampRoutines({ t, weather, seed, onFrame, devices: devices0 = {}
         {active === 'knots' && (
           <section class="ui-camp-work ui-knots-work">
             <p class="ui-camp-note" data-ui="knots-rule">{t('camp.knots.rule')}</p>
-            <KnotsField s={knots} t={t} help={help} onRing={(i) => { const r = tapRing(knots, i); if (r.event === 'undo') go(); setKnots(r.state); }}
-              onPeg={(j) => { const r = tapPeg(knots, j); if (r.event === 'link') go(); setKnots(r.state); }} />
+            <KnotsField s={knots} t={t} help={help} onRing={(i) => setKnots(tapRing(knots, i).state)}
+              onPeg={(j) => setKnots(tapPeg(knots, j).state)} />
             <p class="ui-camp-note" data-ui="knots-hint" data-cross={help.hint ? crossingPairs(levelOf(knots.seed), knots.links).length : ''}>
               {help.hint ? `${bandText(t, help)}${crossingPairs(levelOf(knots.seed), knots.links).length > 0 ? ` · ${t('camp.knots.cross')}` : ''}` : t('camp.knots.hint')}
             </p>

@@ -1,4 +1,4 @@
-// GAME-311 · ланцюг наслідків: КОЖНА з семи рутин міняє ніч. Мутації, кожна з яких робить цей файл червоним
+// GAME-311 · ланцюг наслідків: КОЖНА з восьми рутин міняє ніч. Мутації, кожна з яких робить цей файл червоним
 // (перевірено вручну, повідомлення — у PR):
 //   «ліхтарі не впливають» (гілку lanterns у nightOf замінити на сталий night.light.bright)
 //   «порядок не впливає» (гілку tidy — на сталий night.tidy.quiet) — і так само для води, дрів, вогню, риби, ягід;
@@ -38,7 +38,7 @@ describe('кожна рутина міняє ніч', () => {
       expect(mine(ALL_DONE)).toBeDefined();
     });
   }
-  it('сім слідів — по одному на рутину, плюс буря', () => {
+  it('вісім слідів — по одному на рутину, плюс буря', () => {
     const beats = nightOf(ALL_DONE).beats;
     expect(new Set(beats.filter((b) => b.routine !== 'camp').map((b) => b.routine))).toEqual(new Set(ROUTINE_IDS));
     expect(beats.filter((b) => b.routine !== 'camp')).toHaveLength(ROUTINE_IDS.length);

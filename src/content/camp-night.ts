@@ -1,4 +1,4 @@
-// GAME-311 · ніч із бурею: що з рутин дня відгукнулось. Головне правило картки — КОЖНА з рутин
+// GAME-311 · ніч із бурею: що з рутин дня відгукнулось. Головне правило картки — КОЖНА з восьми рутин
 // міняє ніч, і це доводиться мутацією: прибери будь-яку ланку з nightOf — camp-night.test червоніє.
 //
 // Ніч НІКОЛИ не блокує й ніколи не закінчує гру: blocked завжди false, ранок настає завжди (`morning`).
@@ -71,6 +71,11 @@ export function nightOf(f: NightFacts): { readonly beats: readonly NightBeat[]; 
       ? { routine: 'water', id: 'night.water.full', severity: 'good' }
       : { routine: 'water', id: 'night.water.short', severity: 'plain' });
 
+  // GAME-333: тент не втримався (лусне чи не натягнуто) — речі під ним не сухі; дощ чи вітер міняє лише слова.
+  const knots = did(f, 'knots');
+  const rain = f.weather === 'rain';
+  const tarpFailed = knots !== 'good' && knots !== 'fine';
+
   // ДРОВА: сухі під тентом — вогонь переживе зливу; вогкі або жодних — холодна вечеря.
   // GAME-319: «Дров немає — вечеря холодна» суперечить вогню, що горів (хай і димів): дрова й вогонь не суперечать: слід дров стоїть лише поруч зі слідом вогню того ж роду (обидва були або обидва ні).
   const fire = did(f, 'fire');
@@ -79,7 +84,9 @@ export function nightOf(f: NightFacts): { readonly beats: readonly NightBeat[]; 
     beats.push(wood === undefined
       ? { routine: 'firewood', id: 'night.wood.none', severity: 'rough' }
       : f.dryLogs >= 4
-        ? { routine: 'firewood', id: 'night.wood.dry', severity: 'good' }
+        ? tarpFailed
+          ? { routine: 'firewood', id: rain ? 'night.wood.soaked' : 'night.wood.scattered', severity: 'plain' }
+          : { routine: 'firewood', id: 'night.wood.dry', severity: 'good' }
         : { routine: 'firewood', id: 'night.wood.damp', severity: 'plain' });
   }
 
@@ -121,12 +128,12 @@ export function nightOf(f: NightFacts): { readonly beats: readonly NightBeat[]; 
     : { routine: 'tidy', id: 'night.tidy.quiet', severity: 'good' });
 
   // ВУЗЛИ (GAME-333): відтяжки тенту в бурю. Добре — тримає; нормально — провис, але тримає; сяк-так — мотузка лусне, і речі під тентом мокрі; не ходили — тент не натягнуто.
-  const knots = did(f, 'knots');
+  const w = (id: string): string => (rain ? id : `${id}.wind`);
   beats.push(knots === 'good'
-    ? { routine: 'knots', id: 'night.knots.held', severity: 'good' }
+    ? { routine: 'knots', id: w('night.knots.held'), severity: 'good' }
     : knots === 'fine'
-      ? { routine: 'knots', id: 'night.knots.sag', severity: 'plain' }
-      : { routine: 'knots', id: knots === 'scrappy' ? 'night.knots.snap' : 'night.knots.none', severity: 'rough' });
+      ? { routine: 'knots', id: w('night.knots.sag'), severity: 'plain' }
+      : { routine: 'knots', id: w(knots === 'scrappy' ? 'night.knots.snap' : 'night.knots.none'), severity: 'rough' });
 
   // Порожній табір: нікого не лишили стерегти — ворони на столі ще завидна.
   if (f.emptyRounds > 0) beats.push({ routine: 'camp', id: 'night.camp.crows', severity: 'plain' });

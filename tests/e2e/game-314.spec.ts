@@ -666,10 +666,11 @@ for (const o of ORIENTATIONS) {
       const ids = await page.locator('[data-ui="night-beat"]').evaluateAll((els) => els.map((e) => (e as HTMLElement).dataset.id ?? ''));
       expect(ids, 'ягоди дня в ночі').toContain('night.berries.sweet');
       expect(ids, 'порядок дня в ночі').toContain('night.tidy.quiet');
+      expect(ids.filter((i) => /^night\.knots\.held/.test(i)), 'вузли дня (добре) в ночі: тент тримає').toHaveLength(1);
       expect(ids, 'місія Клер у ТІЙ САМІЙ ночі').toContain('night.mission.f.storm-dry-wood');
       expect(ids, 'друга місія (Аміна) у ТІЙ САМІЙ ночі').toContain('night.mission.f.storm-fish-supper');
       expect(ids, 'місія, якої не зроблено (Люк), теж лишає слід').toContain('night.mission.mis.aerial.none');
-      expect(ids, 'вузли дня (добре) в ночі: тент тримає').toContain('night.knots.held');
+      expect(ids.filter((i) => /^night\.knots\.held/.test(i)), 'вузли дня (добре) в ночі: тент тримає').toHaveLength(1);
       expect(ids, 'вечеря на вогні в ночі').toContain(ids.find((i) => i.startsWith('night.fire.')) as string);
       expect(ids, 'верша місії Аміни → риба в ночі сама').not.toContain('night.fish.none');
       // Буки в бурю мають одну біду — гілка (bite), і її знімає «тент і вузли» місії Клер (prep knots): ця проба місію Клер робить, тож на букових слід порожній за задумом моделі (nightAt).

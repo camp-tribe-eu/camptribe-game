@@ -38,8 +38,17 @@ export const levelOf = (seed: number): KnotLevel => {
 
 const dist = (a: Pt, b: Pt): number => Math.hypot(a.x - b.x, a.y - b.y);
 const turn = (a: Pt, b: Pt, c: Pt): number => Math.sign((b.x - a.x) * (c.y - a.y) - (b.y - a.y) * (c.x - a.x));
-/** Чи перетинаються відрізки ab і cd (власне перетин, дотик кінцями не рахується). */
-export const crosses = (a: Pt, b: Pt, c: Pt, d: Pt): boolean => turn(a, b, c) * turn(a, b, d) < 0 && turn(c, d, a) * turn(c, d, b) < 0;
+/** Відстань від точки до відрізка. */
+const nearSeg = (p: Pt, a: Pt, b: Pt): number => {
+  const len2 = (b.x - a.x) ** 2 + (b.y - a.y) ** 2;
+  const k = len2 === 0 ? 0 : Math.min(1, Math.max(0, ((p.x - a.x) * (b.x - a.x) + (p.y - a.y) * (b.y - a.y)) / len2));
+  return dist(p, { x: a.x + k * (b.x - a.x), y: a.y + k * (b.y - a.y) });
+};
+/** Просвіт: мотузка ближче за стільки до кінця чужої (кільця чи кілка) — це вже дотик, тертя. Кружок кільця на екрані більший за цей просвіт, тож око бачить те саме. */
+export const CLEAR = 1.5;
+/** Чи перетинаються відрізки ab і cd: власний перетин, а також дотик, Т-стик, збіг уздовж і прохід упритул (ближче за CLEAR). */
+export const crosses = (a: Pt, b: Pt, c: Pt, d: Pt): boolean =>
+  (turn(a, b, c) * turn(a, b, d) < 0 && turn(c, d, a) * turn(c, d, b) < 0) || nearSeg(c, a, b) < CLEAR || nearSeg(d, a, b) < CLEAR || nearSeg(a, c, d) < CLEAR || nearSeg(b, c, d) < CLEAR;
 
 /** Смуга, послаблена каркасом: ширшає навколо середини. */
 export function bandFor(d: Difficulty = NORMAL): { min: number; max: number } {
@@ -119,10 +128,10 @@ export function faults(s: KnotState, d: Difficulty = NORMAL): Faults {
   };
 }
 const total = (f: Faults): number => f.open + f.crossings + f.tension + (f.wind ? 0 : 1);
-/** Добре: усе за правилами. Нормально: нічого не перетинається, не більше двох огріхів натягу чи вітру (тент провис, але тримає). Сяк-так: є перетин або вільні кільця — мотузка лусне. */
+/** Добре: усе за правилами. Нормально: усі кільця прив'язано, нічого не перетинається, не більше двох огріхів натягу чи вітру (тент провис, але тримає). Сяк-так: є перетин або вільні кільця — мотузка лусне. */
 export function knotsOutcome(s: KnotState, d: Difficulty = NORMAL): Outcome {
   const f = faults(s, d);
-  return total(f) === 0 ? 'good' : f.crossings === 0 && total(f) <= 2 ? 'fine' : 'scrappy';
+  return total(f) === 0 ? 'good' : f.open === 0 && f.crossings === 0 && total(f) <= 2 ? 'fine' : 'scrappy';
 }
 
 /** Повний розв'язок за правилами (перебір із відсіканням): кілок кожного кільця або null. */

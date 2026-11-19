@@ -6,7 +6,7 @@
 //  · knotsOutcome без перевірки перетинів у 'fine' → «сяк-так при перетині» червоніє.
 import src from '../ui/CampRoutines.tsx?raw';
 import { describe, expect, it } from 'vitest';
-import { BAND, LEVELS, crossingPairs, crosses, faults, knotsOutcome, levelOf, lineLen, solve, startKnots, tapPeg, tapRing, tensionOf, windOk, windward, type KnotState } from './guy-lines';
+import { BAND, CLEAR, LEVELS, crossingPairs, crosses, faults, knotsOutcome, levelOf, lineLen, solve, startKnots, tapPeg, tapRing, tensionOf, windOk, windward, type KnotState } from './guy-lines';
 import { MIN_WORK, canFinish } from './camp-day';
 import { NIGHT_FACTS, nightKeys, nightOf, type NightFacts } from './camp-night';
 import { RELAXED } from './minigame';
@@ -52,8 +52,20 @@ describe('перетин', () => {
   it('відрізки, що перехрещуються, — перетин; розведені й дотик кінцем — ні', () => {
     expect(crosses({ x: 0, y: 0 }, { x: 10, y: 10 }, { x: 0, y: 10 }, { x: 10, y: 0 })).toBe(true);
     expect(crosses({ x: 0, y: 0 }, { x: 10, y: 0 }, { x: 0, y: 5 }, { x: 10, y: 5 })).toBe(false);
-    expect(crosses({ x: 0, y: 0 }, { x: 10, y: 0 }, { x: 10, y: 0 }, { x: 10, y: 9 })).toBe(false);
+    expect(crosses({ x: 0, y: 0 }, { x: 10, y: 0 }, { x: 0, y: 5 }, { x: 10, y: 9 })).toBe(false);
   });
+  it('дотик кінцем, Т-стик, збіг уздовж і прохід упритул — теж перетин (тертя)', () => {
+    expect(crosses({ x: 0, y: 0 }, { x: 10, y: 0 }, { x: 10, y: 0 }, { x: 10, y: 9 })).toBe(true);   // кінець на кінці
+    expect(crosses({ x: 0, y: 0 }, { x: 10, y: 0 }, { x: 5, y: 0 }, { x: 5, y: 9 })).toBe(true);   // Т-стик
+    expect(crosses({ x: 0, y: 0 }, { x: 10, y: 0 }, { x: 3, y: 0 }, { x: 14, y: 0 })).toBe(true);   // збіг уздовж
+    expect(crosses({ x: 0, y: 0 }, { x: 10, y: 0 }, { x: 5, y: CLEAR - 0.1 }, { x: 5, y: 9 })).toBe(true);   // упритул
+    expect(crosses({ x: 0, y: 0 }, { x: 10, y: 0 }, { x: 5, y: CLEAR + 0.5 }, { x: 5, y: 9 })).toBe(false);   // просвіт є
+  });
+  it('жодна мотузка розв\'язку не проходить упритул до чужого кільця чи кілка', () => {
+    for (let seed = 0; seed < 24; seed++) {
+      const l = levelOf(seed); const sol = solve(l) as readonly number[];
+      expect(crossingPairs(l, sol), `насіння ${seed}`).toEqual([]);
+    }  });
   it('розв\'язок не перетинає, а скрещена пара кілків — так', () => {
     const l = levelOf(1); const sol = solve(l) as readonly number[];
     expect(crossingPairs(l, sol)).toEqual([]);
@@ -151,9 +163,19 @@ describe('дотики', () => {
     expect(knotsOutcome(startKnots(1))).toBe('scrappy');
     expect(faults(startKnots(1)).open).toBe(levelOf(1).rings.length);
   });
-  it('розв\'язок із однією вільною мотузкою — «нормально»', () => {
-    const s = solved(1);
-    expect(knotsOutcome({ ...s, links: s.links.map((p, k) => (k === 0 ? -1 : p)) })).toBe('fine');
+  it('вільне (не прив\'язане) кільце — завжди «сяк-так», навіть коли решта ідеальна', () => {
+    for (const seed of [0, 1, 2]) {
+      const s = solved(seed);
+      expect(knotsOutcome({ ...s, links: s.links.map((p, k) => (k === 0 ? -1 : p)) }), `насіння ${seed}`).toBe('scrappy');
+      expect(knotsOutcome({ ...s, links: s.links.map((p, k) => (k < 2 ? -1 : p)) }), `насіння ${seed}`).toBe('scrappy');
+    }
+  });
+  it('«Закріпити» рахує лише мотузки, що є зараз: прив\'язав-зняв ×2 не відкриває вихід', () => {
+    expect(src).toContain("id === 'knots' ? knots.links.filter((p) => p >= 0).length : acts");
+    let s = startKnots(1);
+    for (let k = 0; k < 4; k++) { s = tapPeg(tapRing(s, 0).state, 0).state; s = tapRing(s, 0).state; }
+    expect(s.links.filter((p) => p >= 0).length).toBe(0);
+    expect(canFinish('knots', s.links.filter((p) => p >= 0).length, 20_000)).toBe(false);
   });
 });
 
@@ -169,11 +191,26 @@ describe('вихід і ніч', () => {
   const knotBeat = (o?: 'good' | 'fine' | 'scrappy'): string | undefined => nightOf(o ? { ...base, results: { knots: o } } : { ...base, results: {} }).beats.find((b) => b.routine === 'knots')?.id;
   it('результат доходить до ночі: добре — тримає, нормально — провис, сяк-так — лусне, не ходили — не натягнуто', () => {
     expect(knotBeat('good')).toBe('night.knots.held');
+    expect(nightOf({ ...base, weather: 'sunny' }).beats.find((b) => b.routine === 'knots')?.id).toBe('night.knots.held.wind');
     expect(knotBeat('fine')).toBe('night.knots.sag');
     expect(knotBeat('scrappy')).toBe('night.knots.snap');
     expect(knotBeat()).toBe('night.knots.none');
     expect(new Set(['good', 'fine', 'scrappy', undefined].map((o) => knotBeat(o as 'good')))).toHaveProperty('size', 4);
     expect(nightKeys({ ...base, results: { knots: 'scrappy' } })).not.toEqual(nightKeys(base));
+  });
+  it('ніч не суперечить сама собі: тент не втримався — «сухі дрова під тентом» немає; дощ і вітер — свої слова', () => {
+    const wood: NightFacts = { ...base, dryLogs: 6, results: { knots: 'good', firewood: 'good', fire: 'good' } };
+    const ids = (o: string | undefined, weather: 'rain' | 'sunny'): readonly string[] => nightKeys({ ...wood, weather, results: { ...wood.results, ...(o ? { knots: o as 'good' } : { knots: undefined }) } as NightFacts['results'] });
+    expect(ids('good', 'rain')).toContain('night.wood.dry');
+    for (const o of ['scrappy', undefined]) {
+      expect(ids(o, 'rain')).not.toContain('night.wood.dry');
+      expect(ids(o, 'rain')).toContain('night.wood.soaked');
+      expect(ids(o, 'sunny')).not.toContain('night.wood.dry');
+      expect(ids(o, 'sunny')).toContain('night.wood.scattered');
+    }
+    // без дощу жодного сліду тента не каже «мокрі»/«сухо під тентом»
+    for (const o of ['good', 'fine', 'scrappy', undefined]) for (const id of ids(o, 'sunny')) if (id.startsWith('night.knots.')) expect(id.endsWith('.wind'), id).toBe(true);
+    for (const o of ['good', 'fine', 'scrappy', undefined]) for (const id of ids(o, 'rain')) if (id.startsWith('night.knots.')) expect(id.endsWith('.wind'), id).toBe(false);
   });
   it('сяк-так не блокує ніч і не завершує гру', () => {
     const n = nightOf({ ...base, results: { knots: 'scrappy' } });
