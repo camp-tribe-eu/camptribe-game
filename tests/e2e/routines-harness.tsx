@@ -63,5 +63,5 @@ interface Spec { lang: 'uk' | 'en'; weather: Weather; seed: number; bare?: boole
     onFrame: () => () => undefined, driveInDone: () => undefined, board: () => undefined, saveBoard: () => undefined, stormNight: () => undefined,
     restart: () => { w.__restarts = (w.__restarts ?? 0) + 1; return Promise.resolve(); }, subscribe: () => () => undefined,
   };
-  render(<SampleDay port={port} t={(k: Key) => t('uk', k)} lang="uk" />, host);
+  render(<SampleDay port={port} t={(k: Key) => t('uk', k)} lang="uk" onBoard={() => undefined} />, host);
 };
