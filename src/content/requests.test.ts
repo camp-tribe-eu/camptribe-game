@@ -482,10 +482,10 @@ describe('GAME-338 · markedNeighbours', () => {
     expect(all.length).toBeGreaterThan(0);
     expect(all).toEqual([...new Set(all)]);
     for (const id of all) expect(requestMarker(s, id)).toBe(true);
-    for (const id of new Set(ALL_REQUESTS.map((r) => r.giver))) expect(all.includes(id), id).toBe(requestMarker(s, id));
+    for (const id of new Set(ALL_REQUESTS.map((r) => r.giver as string))) expect(all.includes(id), id).toBe(requestMarker(s, id));
     const taken = FIRSTS[0] as RequestDef;
     const s2 = { ...s, flags: [...s.flags, taken.takenFlag] };
-    expect(markedNeighbours(s2, () => true).includes(taken.giver)).toBe(requestMarker(s2, taken.giver));
+    expect(markedNeighbours(s2, () => true).includes(taken.giver as string)).toBe(requestMarker(s2, taken.giver as string));
     expect(markedNeighbours(s, (id) => id !== all[0])).toEqual(all.slice(1));
     expect(markedNeighbours({ ...s, player: null } as GameState, () => true)).toEqual([]);   // не в таборі — «!» нема
   });

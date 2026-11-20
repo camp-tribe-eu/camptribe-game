@@ -86,7 +86,7 @@ export function requestMarker(g: GameState, npcId: string, rs: readonly RequestD
 /** GAME-338 · сусіди, над якими зараз «!» (те саме джерело, що й позначка: `requestMarker` + «NPC тут і відкритий» від `live`). Ціль дня називає саме їх. Порядок — за файлом прохань, без повторів. */
 export function markedNeighbours(g: GameState, live: (npcId: string) => boolean, rs: readonly RequestDef[] = REQUESTS): string[] {
   const out: string[] = [];
-  for (const r of rs) if (!out.includes(r.giver) && live(r.giver) && requestMarker(g, r.giver, rs)) out.push(r.giver);
+  for (const r of rs) { const id = r.giver; if (id !== undefined && !out.includes(id) && live(id) && requestMarker(g, id, rs)) out.push(id); }
   return out;
 }
 
