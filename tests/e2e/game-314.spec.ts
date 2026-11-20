@@ -256,12 +256,6 @@ const UK = JSON.parse(readFileSync(new URL('../../content/locales/uk.json', impo
 interface Core2 { game: { flags: string[]; moneyCents: number; dialogue: unknown; minigames?: Record<string, { last: string }>; campBoard?: { results?: Record<string, string> } } }
 const core2 = (page: Page): Promise<Core2> => page.evaluate(() => (window as unknown as { __game: { read: () => Core2 } }).__game.read());
 
-async function act(page: Page, kind: string, key = '', clickDialogue = false): Promise<void> {
-  await panel(page).locator(`[data-act="${kind}"][data-key="${key}"]`).click({ timeout: 8_000 });
-  await page.waitForTimeout(400);
-  if (clickDialogue) for (let i = 0; i < 6 && await box(page).isVisible({ timeout: 400 }).catch(() => false); i++) { await box(page).locator('[data-act]').last().click(); await page.waitForTimeout(400); }
-}
-
 /** GAME-329: кожен кадр міряє тост нагороди («✨ досвід») і пояснення досвіду проти цілі дня, ☰/‖ і кнопки дошки; перетини й кількість побачених тостів — у window (читає тест). */
 const WATCH_TOAST = (): void => {
   const w = window as unknown as { __toastSeen: number; __toastHits: string[]; __toastLog: Set<string> };
@@ -290,24 +284,10 @@ async function depart(page: Page): Promise<string[]> {
   await page.addInitScript(WATCH_TOAST);
   await page.goto('/?seed=7&sampleDay=1');
   await waitGameReady(page);
-  // GAME-325: «Відкрий ☰, щоб почати» — і після того, як ☰ уже відкривали (прапор hintSeen), і після перезавантаження: день ще не почався.
-  await expect(page.locator('[data-ui="hint"]'), 'підказка на першому екрані').toBeVisible();
-  await page.locator('[data-touch="story"]').click();
-  await page.reload();
-  await waitGameReady(page);
-  await expect(page.locator('[data-ui="hint"]'), 'підказка після перезавантаження').toBeVisible();
-  await page.locator('[data-touch="story"]').click();
-  // GAME-329: вибір героя зразка не суперечить дню — лише авто й без тварини (дорога тут — авто, кота день не показує).
-  const offered = await panel(page).locator('[data-act="create"]').allTextContents();
-  expect(offered, 'у зразку один герой: родина · авто · без тварини').toEqual(["Сім'я з підлітком · Авто · без тварини"]);
-  await panel(page).locator('[data-act="create"]').first().click();
-  await page.waitForTimeout(400);
+  // GAME-342: ☰, вибір героя, пролог, крамниця й збори свіжий день проходить сам (sampleQuickStart) — одразу вступ дороги; дотики рахує game-342.spec.
+  await expect(page.locator('[data-ui="minigame"]'), 'GAME-342: після відкриття — вступ дороги, без ☰').toHaveAttribute('data-phase', 'open', { timeout: 15_000 });
   // GAME-324: зразок пише лише у свій слот — звичайна база сейву (власника) не створюється й не зачіпається.
   expect((await page.evaluate(() => indexedDB.databases())).map((d) => d.name).sort()).toEqual(['camplife-sample']);
-  for (const [k, key] of [['complete', 'q.prologue-home-001'], ['complete', 'q.st-001'], ['complete', 'q.st-002'], ['visit', 'loc.shop'], ['pickup', 'item.tent'], ['pickup', 'item.sleeping-bag'], ['checkout', 'basket.all'],
-    ['complete', 'q.st-003'], ['visit', 'loc.home'], ['complete', 'q.ch1-home-001']] as const) { await doTasks(page); await expectRec(page, k, key, `до дороги: «${k} ${key}»`); await act(page, k, key); }
-  await expectRec(page, 'visit', 'loc.road', 'перед дорогою');
-  await act(page, 'visit', 'loc.road', true);
   return errors;
 }
 
@@ -424,15 +404,6 @@ async function expectBoardClear(page: Page, what: string, night = false): Promis
   if (night) expect(res.first.night, `GAME-338 ${what}: на дошці немає «Ніч»`).toBe(true);
   expect(res.first.hit, `GAME-338 ${what}: на початку «До мапи» перекриває ${res.first.hit.join(', ')}`).toEqual([]);
   expect(res.last.hit, `GAME-327 ${what}: в кінці «До мапи» перекриває ${res.last.hit.join(', ')}`).toEqual([]);
-}
-
-/** GAME-327: поки в ☰ лишаються «Зробити», рекомендовано їх; кожне виконуємо (раніше підсвічувалось «Завершити», а три «Зробити» мовчки зникали). */
-async function doTasks(page: Page): Promise<void> {
-  for (let i = 0; i < 8 && await panel(page).locator('[data-act="task"]').count() > 0; i++) {
-    await expect(panel(page).locator('[data-rec="yes"]'), 'GAME-327: поки є «Зробити», рекомендовано його').toHaveAttribute('data-act', 'task');
-    await panel(page).locator('[data-act="task"]').first().click();
-    await page.waitForTimeout(400);
-  }
 }
 
 const tapIt = async (page: Page, sel: string): Promise<void> => { await page.locator(sel).tap(); await page.waitForTimeout(120); };

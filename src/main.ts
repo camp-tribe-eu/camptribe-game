@@ -36,6 +36,7 @@ import { SWIM_PROBE_IDLE } from './view/world/swim-rig';
 import { CAMP_PROBE_IDLE } from './view/world/camp-alive-rig';
 import { mountTouchControls, setActionTarget } from './view/world/touch';
 import { frameSize, zoomSteps, type MapPx } from './view/world/frame';
+import { nextAction, sampleActions } from './ui/story-focus';
 import { CHOICE_CANCEL_ID, storyOffer, type StoryView } from './view/story-offer';
 import { basketOf, basketTotal, hasBasket } from './core/basket';
 import { BOX_CLOSE_ID } from './view/box-offer';
@@ -80,7 +81,7 @@ import { driveSummary, setDriveWallet, type DriveMgState } from './content/minig
 import { ARRIVAL_SCENE, SCRAPE_SCENE, arrivalFacts } from './content/arrival-scene';
 import { pitchTaken } from './content/arrival-pitch';
 import { DRIVE_FLAG, driveFlag, driveOutcome as driveInOutcome } from './content/drive-in';
-import { SAMPLE_HOLD_MINUTE, laneIdFor, openMissionGivers, sampleGoal } from './content/sample-day';
+import { SAMPLE_QUICK_STEPS, sampleHeroes, SAMPLE_HOLD_MINUTE, laneIdFor, openMissionGivers, sampleGoal } from './content/sample-day';
 import { postsOf, stationRoutine } from './content/camp-stations';
 import type { RoutineId } from './content/camp-day';
 import { STORM_SCENE, stormNightMove } from './content/storm-night';
@@ -447,6 +448,29 @@ const sampleStage = (): SampleStage => {
   if (!g.flags.some((f) => f.startsWith(`${DRIVE_FLAG}-`))) return 'drivein';
   return 'day';
 };
+/** GAME-342: зразковий день не веде гравця через ☰ крок за кроком (герой, пролог, крамниця, збори: ~17 дотиків) — свіжий день сам проходить ті самі кроки до виїзду.
+ *  Це ТІ САМІ наміри ☰ (storyOffer → intents), у тому ж порядку «що далі» (nextAction); стан виходить такий самий, як після ручного проходу. Не свіжий день (сейв, «Почати знову» вже за дорогою) не чіпається. */
+function sampleQuickStart(): void {
+  const view = { ...viewOf(), mapFirst: false };
+  const pick = (): string | undefined => {
+    const o = storyOffer(bridge.state, GAME_DEFS, view).offer;
+    if (o.dialogue !== null || bridge.state.game.player?.locationId === 'loc.road') return undefined;
+    if (o.stage === 'create') return sampleHeroes(o.characters)[0]?.id;
+    return nextAction(sampleActions(o.actions, true), o.goal?.key ?? null)?.id;
+  };
+  if (storyOffer(bridge.state, GAME_DEFS, view).offer.stage !== 'create') { probe.sampleQuickStart = 'skipped'; return; }
+  for (let i = 0; i < SAMPLE_QUICK_STEPS; i++) {
+    const id = pick();
+    if (id === undefined) break;
+    const intent = storyOffer(bridge.state, GAME_DEFS, view).intents.get(id);
+    if (!intent) break;
+    bridge.send(intent);
+  }
+  // GAME-342 (закон 4): швидкий старт, що став не на дорозі, не мовчить — тест читає probe.sampleQuickStart, консоль каже де застряг.
+  const at = bridge.state.game.player?.locationId ?? null;
+  probe.sampleQuickStart = at === 'loc.road' ? 'ok' : 'stuck';
+  if (at !== 'loc.road') console.warn(`sampleQuickStart: stuck at ${String(at)} (dialogue: ${String(bridge.state.game.dialogue?.node ?? null)})`);
+}
 function sampleOpenDrive(): void {
   const g = bridge.state.game;
   const def = minigameById('mg.drive');
@@ -864,4 +888,4 @@ window.addEventListener('pagehide', () => saves.autosave());
 
 // Старт: підхопити останній цілий сейв. Позиція в пікселях не зберігається (DC-042):
 // після завантаження персонаж з'являється в точці появи. Правила гонок — у save-session.ts.
-void saves.start().then(() => { if (seedSwitches.skipMinutes) bridge.load(step(bridge.state, { kind: 'advance', minutes: seedSwitches.skipMinutes })); probe.saveLoaded = true; rebaseRewards(); rebaseRanks(); storyChanged(); });
+void saves.start().then(() => { if (seedSwitches.skipMinutes) bridge.load(step(bridge.state, { kind: 'advance', minutes: seedSwitches.skipMinutes })); if (sampleOn) sampleQuickStart(); probe.saveLoaded = true; rebaseRewards(); rebaseRanks(); storyChanged(); });
