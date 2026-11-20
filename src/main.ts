@@ -538,12 +538,11 @@ function missionTick(dtMs: number): void {
   if (afterGo && !missionSession) { const after = afterMission; afterMission = null; afterGo = false; after?.(); }
   if (sampleOn) { sampleScenes(); if (!missionSession) sampleOpenDrive(); }
   if (missionSession) {
-    if (missionSession.run.phase === 'closed') { missionSession = null; missionChanged(); afterGo = afterMission !== null; return; }
+    if (missionSession.run.phase === 'closed') { missionSession = null; missionStep.reset(); missionChanged(); afterGo = afterMission !== null; return; }
     missionSession.frame(missionStep.advance(dtMs));
     input.held.clear();   // під міні-грою герой стоїть: стрілки не водять його з місця роботи
     return;
   }
-  missionStep.reset();   // без сесії акумулятор порожній: нова гра не успадкує залишок
   const due = missionWorkDue(bridge.state.game, miniFrame, worldHooks.mapKey());
   const def = due ? minigameById(due.minigame) : undefined;
   if (!def) return;

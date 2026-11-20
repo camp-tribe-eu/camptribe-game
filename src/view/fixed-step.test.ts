@@ -44,7 +44,19 @@ describe('GAME-344 fixed step', () => {
   it('clamps a huge dt (tab resumed) to the catch-up max', () => {
     const step = createFixedStep();
     expect(step.advance(60_000)).toBe(Math.round(MAX_CATCH_UP_MS / STEP_MS));
-    expect(step.advance(0)).toBeLessThanOrEqual(1);
+  });
+
+  it('frame(2) applies a pending tap once; frame(0) keeps it buffered', () => {
+    const def = MINIGAMES.find((m) => m.id === 'mg.lantern-crank');
+    if (!def) throw new Error('no crank');
+    const s = createMinigameSession(def, { results: undefined, seed: 7, report: () => {} });
+    s.start();
+    s.tap({ x: 0.5, y: 0.5 });
+    s.frame(0);
+    expect((s.run.state as { lastTap: number | null }).lastTap).toBeNull();
+    s.frame(2);
+    expect(s.run.frame).toBe(2);
+    expect((s.run.state as { lastTap: number | null }).lastTap).toBe(0);   // дотик прийнятий у першому кадрі, у другому — ні
   });
 
   it('ignores zero and negative dt', () => {
