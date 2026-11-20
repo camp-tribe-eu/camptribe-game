@@ -212,11 +212,13 @@ async function playHold(page: Page): Promise<void> {
 /** Ритм: торкатися кожні `beat` кадрів (рівно, як радить Клер). */
 async function playRhythm(page: Page, beat: number): Promise<void> {
   await page.evaluate((b) => new Promise<void>((resolve) => {
-    let k = 0;
+    let since = b;   // GAME-343: посеред гри пульс міняє такт — читаємо поточний із поверхні
     const tick = (): void => {
       const btn = document.querySelector<HTMLButtonElement>('[data-ui="mg-crank-tap"]');
       if (!btn) { resolve(); return; }
-      if (k++ % b === 0) btn.click();
+      const beat = Number(document.querySelector<HTMLElement>('[data-ui="mg-crank"]')?.dataset.beat ?? b);
+      if (since >= beat) { btn.click(); since = 0; }
+      since++;
       requestAnimationFrame(tick);
     };
     requestAnimationFrame(tick);
