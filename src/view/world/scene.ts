@@ -18,6 +18,7 @@ import { FIRE_CORE, FIRE_GLOW, MAX_DARKNESS, ambientAt, glowAlpha, timeOfDay } f
 import { FOLLOW_SPEED_FACTOR, HERO_STEP_S, SPEED, centerOf, findPath, gridFromWalls, isSolid, restPoints, stepFollowers, stepTo, tileOf, type Grid, type Pt, type Tile } from './follow';
 import { MAX_HELPERS } from '../../content/tent-pitch';
 import { STATIONS } from '../../content/camp-stations';
+import { MISSIONS } from '../../content/missions';
 import type { MapKey } from '../../content/map-first';
 import type { MiniFrame } from '../../content/agenda';
 import { ICON_SIZE, iconIndex, objectiveIcon } from '../../content/objective-icons';
@@ -37,7 +38,7 @@ import { FEEDBACK_S, RING_IDLE, isAutoSpot, markHandled, pickNearest, ringMayTak
 import { IDLE_AFTER_S, LEISURE_BY_MAP, assignLeisure, leisureFromObjects, type LeisureSpot } from './leisure';
 import { Neighbours, type NeighbourProbe } from './neighbours-rig';
 import { EMOTE_FRAMES, staysOut } from './neighbours';
-import { BARK_RANGE, CAST, CAST_BY_MAP, RESIDENTS, buildTimeline, placeAt, residentGrid, type Timeline } from './ambient';
+import { BARK_RANGE, CAST, CAST_BY_MAP, RESIDENTS, ZONES, buildTimeline, placeAt, residentGrid, type Timeline } from './ambient';
 import type { Key } from '../../i18n';
 import { idlePose } from './idle-poses';
 import { GLYPHS, LOOK_S, idleBob, isEvening, lookAt, type Glyph } from './idle';
@@ -901,6 +902,8 @@ export class WorldScene extends Phaser.Scene {
     this.neigh.begin(key === 'camp' ? RESIDENTS.map((r) => r.id) : []);
     // GAME-335: місця справ — наявні речі табору (camp-stations); лише зразковий день, лише мапа табору. ПІСЛЯ шляхів мешканців: їхні маршрути місця не обходять (мапа й ритм табору ті самі).
     if (key === 'camp' && this.hooks.stations?.()) for (const st of Object.values(STATIONS)) { if (this.spots.some((x) => x.name === st.spot)) continue; const sp: Spot = { name: st.spot, kind: 'trigger', x: st.at.x, y: st.at.y }; this.spots.push(sp); this.markers.set(sp.name, this.marker(sp)); }
+    // GAME-337: зона походу місії («Іду до колонки з ситом») — позначка в якорі зони; це лише ціль, не об'єкт дії (у spots її нема), міні-гра стартує, коли герой у зоні.
+    if (key === 'camp' && this.hooks.stations?.()) for (const z of ZONES) { if (!MISSIONS.some((m) => m.trips.some((t) => t.zone === z.id))) continue; const sp: Spot = { name: `trip.${z.id}`, kind: 'trigger', x: (z.anchor.c + 0.5) * TILE, y: (z.anchor.r + 0.5) * TILE }; this.markers.set(sp.name, this.marker(sp)); }
     this.neigh.setFire(key === 'camp' ? spawnFire(this.spots) : null);
     this.lastRes = CAST.map(() => ({ x: 0, y: 0 }));
     this.probe.neighbours = this.neigh.probe;
@@ -1840,7 +1843,8 @@ export class WorldScene extends Phaser.Scene {
     const ts = tn ? this.spots.find((x) => x.name === tn) ?? (branchPt ? { name: tn, x: branchPt.x, y: branchPt.y } : undefined) : undefined;
     // GAME-180: ціль підказки — просильник (id NPC): стрілка вказує на нього, де б він зараз стояв (мешканці ходять за розкладом).
     const tnpc = tn?.startsWith('npc.') && this.hooks.talk(tn) !== null ? this.sprite(tn)?.s : undefined;
-    const tpos = ts && (branchPt !== null || this.hooks.isLive(ts.name)) ? { x: ts.x, y: ts.y } : tnpc?.visible ? { x: tnpc.x, y: tnpc.y } : null;
+    const tripM = tn?.startsWith('trip.') ? this.markers.get(tn)?.g : undefined;
+    const tpos = tripM?.visible ? { x: tripM.x, y: tripM.y } : ts && (branchPt !== null || this.hooks.isLive(ts.name)) ? { x: ts.x, y: ts.y } : tnpc?.visible ? { x: tnpc.x, y: tnpc.y } : null;
     const insets = this.safeInsets(time);
     this.hintOn = (this.hooks.hintTick?.(delta) ?? true) && (this.hooks.guide?.() ?? true);   // GAME-243: поза навчанням стрілки й пульсу цілі немає
     if (held.has('interact')) this.hooks.hintPoke?.();
