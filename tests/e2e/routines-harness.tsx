@@ -10,6 +10,8 @@ import { MinigameHost } from '../../src/ui/MinigameHost';
 import { missionSurface } from '../../src/ui/MissionSurfaces';
 import { createMinigameSession } from '../../src/view/minigame-session';
 import { TARP_TIE } from '../../src/content/minigames/missions';
+import { minigameById } from '../../src/content/minigames';
+import { NORMAL, type AnyMinigame } from '../../src/core/minigame';
 
 interface Spec { lang: 'uk' | 'en'; weather: Weather; seed: number; bare?: boolean }
 (window as unknown as { __mount: (s: Spec) => void }).__mount = (s) => {
@@ -105,4 +107,36 @@ interface Spec { lang: 'uk' | 'en'; weather: Weather; seed: number; bare?: boole
   const session = createMinigameSession(TARP_TIE, { results: undefined, seed: 1, report: () => undefined });
   session.start();
   render(<MinigameHost session={session} t={(k: Key) => t('uk', k)} Surface={missionSurface('mg.tarp-tie') as never} />, host);
+};
+
+/** GAME-343: справжня міні-гра місії за id у фазі гри + ручний ведучий кадрів: ідеальний гравець грає до зміни темпу й далі. */
+interface MgHandle { session: ReturnType<typeof createMinigameSession>; def: AnyMinigame; since: number }
+let mgHandle: MgHandle | null = null;
+(window as unknown as { __mountMission: (id: string) => void }).__mountMission = (id) => {
+  let host = document.getElementById('harness');
+  if (!host) {
+    host = document.createElement('div');
+    host.id = 'harness';
+    host.style.cssText = 'position:fixed;inset:0;z-index:99;background:#1b1f23;--edge-left:0px;--edge-right:0px;--edge-bottom:0px;--edge-top:0px';
+    document.body.append(host);
+  }
+  render(null, host);
+  const def = minigameById(id) as AnyMinigame;
+  const session = createMinigameSession(def, { results: undefined, seed: 1, report: () => undefined });
+  session.start();
+  mgHandle = { session, def, since: 1000 };
+  render(<MinigameHost session={session} t={(k: Key) => t('uk', k)} Surface={missionSurface(id) as never} />, host);
+};
+/** Грає `frames` кадрів (або до початку підпису зміни темпу, якщо `untilCue`); повертає, чи підпис зараз увімкнений. */
+(window as unknown as { __mgPlay: (frames: number, untilCue: boolean) => boolean }).__mgPlay = (frames, untilCue) => {
+  const h = mgHandle as MgHandle;
+  const cue = (): boolean => Boolean((h.session.view().surface as { twist?: boolean }).twist);
+  for (let i = 0; i < frames && h.session.run.phase === 'play'; i++) {
+    const surf = h.session.view().surface as { beat?: number; dial?: number };
+    if (surf.beat !== undefined) { if (++h.since >= surf.beat) { h.session.tap({ x: 0.5, y: 0.5 }); h.since = 0; } }
+    else { const st = (h.def.view(h.session.run.state, { ...NORMAL, hint: true }) as { station: number }).station; h.session.drag({ x: st, y: 0.5 }); }
+    h.session.frame();
+    if (untilCue && cue()) break;
+  }
+  return cue();
 };

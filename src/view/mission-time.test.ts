@@ -6,7 +6,7 @@
 // Межа: кожна місія 5–10 хв. Мутація «прибрати другий вихід (пристрій)» опускає місію нижче 5 хв — тест червоніє (останній it).
 import { describe, expect, it } from 'vitest';
 import { dispatch, type Command } from '../core/commands';
-import { FPS, NORMAL, type AnyMinigame, type FrameInput } from '../core/minigame';
+import { FPS, NORMAL, type AnyMinigame, type Difficulty, type FrameInput } from '../core/minigame';
 import { initialState, type GameState } from '../core/state';
 import uk from '../../content/locales/uk.json';
 import type { Move } from '../content/moves';
@@ -78,10 +78,10 @@ const SCRIPT: Record<string, { pre: readonly string[]; talks: readonly (readonly
 // ───── типовий гравець у міні-грі (кадри до кінця) ─────
 /** Зерна, на яких міряємо: середнє, а не щасливий випадок одного зерна. */
 const SEEDS = [11, 20261112, 7, 4242, 31337];
-function runFrames(def: AnyMinigame, input: (t: number, view: unknown) => FrameInput, seed: number): number {
+function runFrames(def: AnyMinigame, input: (t: number, view: unknown) => FrameInput, seed: number, seen: Difficulty = NORMAL): number {
   let s = def.init(NORMAL, seed);
   for (let t = 0; t < def.limitFrames; t++) {
-    s = def.step(s, input(t, def.view(s, NORMAL)), NORMAL);
+    s = def.step(s, input(t, def.view(s, seen)), NORMAL);
     if (def.done(s)) return t + 1;
   }
   return def.limitFrames;
@@ -107,23 +107,22 @@ function siftOnce(def: AnyMinigame, seed: number): number {
 }
 /** Шкала: спершу шукає (0,2 шкали/с), далі тримає ціль із запізненням реакції 0,4 с і промахом ±0,03. */
 function holdPlayer(def: AnyMinigame, p: HoldParams): number { return mean((seed) => holdOnce(def, p, seed)); }
-function holdOnce(def: AnyMinigame, p: HoldParams, seed: number): number {
+function holdOnce(def: AnyMinigame, _p: HoldParams, seed: number): number {
   let dial = 0.05; let found = false; const lag = Math.round(0.4 * FPS);
   const history: number[] = [];
   return runFrames(def, (t, v) => {
     const sig = (v as { signal: number }).signal;
-    const base = 0.3 + (((seed * 7919) % 400 + 400) % 400) / 1000;
-    history.push(Math.max(0, Math.min(1, base + p.sway * Math.sin(t / (p.periodS * FPS)))));
+    history.push((v as { station: number }).station);   // GAME-343: ціль читаємо з гри (вона міняє темп посеред шляху)
     if (!found) { dial = Math.min(1, dial + 0.2 / FPS); if (sig > 0.5) found = true; }
     else dial = (history[Math.max(0, t - lag)] as number) + 0.03 * Math.sin(t / 37);
     return { taps: [], drag: { x: dial, y: 0.5 } };
-  }, seed);
+  }, seed, { ...NORMAL, hint: true });
 }
 /** Ритм: проміжки чергуються ±, кожен п'ятий — ривок. */
 function rhythmPlayer(def: AnyMinigame, p: RhythmParams): number {
   const gaps = [p.beat - 4, p.beat + 5, p.beat - 2, p.beat + 3, p.beat + p.tol + 6];
   let next = 30; let k = 0;
-  return runFrames(def, (t) => { if (t !== next) return { taps: [], drag: null }; next = t + (gaps[k++ % gaps.length] as number); return { taps: [{ x: 0.5, y: 0.5 }], drag: null }; }, 1);
+  return runFrames(def, (t, v) => { if (t !== next) return { taps: [], drag: null }; const beat = (v as { beat: number }).beat; next = t + beat + ((gaps[k++ % gaps.length] as number) - p.beat); return { taps: [{ x: 0.5, y: 0.5 }], drag: null }; }, 1);
 }
 const MG_TIME: Record<string, () => number> = {
   'mg.ring-sift': () => siftPlayer(minigameById('mg.ring-sift') as AnyMinigame),
