@@ -513,6 +513,11 @@ for (const o of ORIENTATIONS) {
       await expect(page.locator('[data-ui="goal"]'), 'одна ціль дня').toHaveCount(1);
       await expect(page.locator('[data-ui="goal"]')).not.toContainText('Прибуття');
       await expect(page.locator('[data-ui="goal"]')).toContainText('Допомогти сусідам');
+      // GAME-338: ціль називає видавців місій, що чекають (Аміна, Люк, Клер), і лишається одним рядком (GAME-336: п'ять імен давали два). Мутація (перевірено): `neighbours` із видавців дрібних прохань → текст і рядок червоніють.
+      await expect(page.locator('[data-ui="goal"]')).toHaveText('Ціль: Допомогти сусідам: Аміна, Люк, Клер');
+      const chip = await page.locator('[data-ui="goal"]').evaluate((e) => ({ h: e.getBoundingClientRect().height, lh: parseFloat(getComputedStyle(e).lineHeight) || parseFloat(getComputedStyle(e).fontSize) * 1.5, r: e.getBoundingClientRect().right, vw: innerWidth }));
+      expect(chip.h, `ціль дня в один рядок (h=${Math.round(chip.h)}, рядок ${Math.round(chip.lh)})`).toBeLessThan(chip.lh * 1.6 + 16);
+      expect(chip.r, 'ціль дня в межах екрана').toBeLessThanOrEqual(chip.vw);
       for (const old of ['wave', 'req-tracker', 'nearest']) await expect(page.locator(`[data-ui="${old}"]`), `стара ${old} у зразковому дні`).toHaveCount(0);
       await shot(page, 'one-goal');
       await expectApart(page, '[data-ui="sd-board"]', '.touch-stick', 'GAME-326: «Дошка табору» і джойстик');

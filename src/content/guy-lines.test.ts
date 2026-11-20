@@ -226,7 +226,7 @@ describe('GAME-338 · причина сяк-так у «Вузлах»', () => {
     for (const seed of [0, 1, 2]) expect(knotsWhy(solved(seed)), `насіння ${seed}`).toBeNull();
     expect(knotsWhy(startKnots(1))).toBe('open');
   });
-  it('перетин → cross; поза смугою без перетину → tension; лише вітер → wind', () => {
+  it('перетин → cross; поза смугою без перетину → tension; лише вітер (нормально) → без причини', () => {
     const l = levelOf(1); const sol = solve(l) as readonly number[];
     let cross = false;
     for (let a = 0; a < sol.length && !cross; a++) for (let b = a + 1; b < sol.length && !cross; b++) {
@@ -234,13 +234,12 @@ describe('GAME-338 · причина сяк-так у «Вузлах»', () => {
       if (crossingPairs(l, sw).length > 0) { cross = true; expect(knotsWhy(linked(1, sw))).toBe('cross'); }
     }
     expect(cross).toBe(true);
-    // перебір розкладок: перша без перетинів із порушенням натягу й перша лише з вітром
     const links = l.rings.map(() => -1); const seen: Record<string, boolean> = {};
     const go = (i: number): void => {
       if (i === l.rings.length) {
         const f = faults(linked(1, links)); const w = knotsWhy(linked(1, links));
-        if (f.crossings === 0 && f.tension > 0 && !seen.tension) { seen.tension = true; expect(w).toBe('tension'); }
-        if (f.crossings === 0 && f.tension === 0 && !f.wind && !seen.wind) { seen.wind = true; expect(w).toBe('wind'); }
+        if (f.crossings === 0 && f.tension > 0 && knotsOutcome(linked(1, links)) === 'scrappy' && !seen.tension) { seen.tension = true; expect(w).toBe('tension'); }
+        if (f.crossings === 0 && f.tension === 0 && !f.wind && !seen.wind) { seen.wind = true; expect(w).toBeNull(); }
         return;
       }
       for (let j = 0; j < l.pegs.length; j++) { if (links.includes(j)) continue; links[i] = j; go(i + 1); links[i] = -1; }

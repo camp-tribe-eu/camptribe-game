@@ -187,6 +187,25 @@ for (const vp of VIEWPORTS) {
   });
 }
 
+// GAME-338 · «сяк-так» у «Вузлах» показує причину на дошці. Мутація (перевірено): прибрати `reasons[id]` з рядка результату в CampRoutines → «Чому» червоніє.
+test('GAME-338 · вузли «сяк-так» — на дошці рядок «Чому: …»', async ({ page }) => {
+  test.setTimeout(120_000);
+  const vp0 = VIEWPORTS[0] as (typeof VIEWPORTS)[number];
+  await page.setViewportSize({ width: vp0.w, height: vp0.h });
+  await page.goto('/');
+  await page.addScriptTag({ content: bundle });
+  await mount(page, 'rain', true);
+  await tapIt(page.locator('[data-ui="camp-routine"][data-id="knots"]'));
+  const n = await page.locator('[data-ui="knot-ring"]').count();
+  for (let i = 0; i < n; i++) { await tapIt(page.locator(`[data-ui="knot-ring"][data-i="${i}"]`)); await tapIt(page.locator(`[data-ui="knot-peg"][data-j="${n - 1 - i}"]`)); }
+  await expect(page.locator('[data-ui="knots-done"]')).toBeEnabled({ timeout: 60_000 });
+  await tapIt(page.locator('[data-ui="knots-done"]'));
+  const row = page.locator('[data-ui="camp-routine"][data-id="knots"]');
+  await expect(row).toHaveAttribute('data-outcome', 'scrappy');
+  await expect(row, 'причину видно на дошці').toContainText('Чому:');
+  await expect(row).not.toHaveAttribute('data-why', '');
+});
+
 // GAME-323 · риба. Кнопка вудки не рухається, коли клює (раніше мітка «Клює!» зсувала її на 65 px — палець промахувався 3 з 3, мишею 0 риб із 28),
 // а поклівку реально зловити так, як це робить людина: клює → ~400 мс на реакцію → підсікання → шкала видна → «піймав» → «лишити».
 // Мутації (перевірено): прибрати `height` з `.ui-fish-slot` → «вудка не зсунулась» червоніє; BITE_MS = 300 → «зловлено» червоніє (див. й fishing.test).

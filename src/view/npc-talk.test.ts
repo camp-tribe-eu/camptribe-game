@@ -206,3 +206,13 @@ describe('GAME-196 · біля берега: розмова, коли дивиш
     expect(talkBeatsFishing(hero, 'down', { x: 98, y: 70 })).toBe(false);
   });
 });
+
+// GAME-338 · мутація (перевірено): прибрати `if (hasMission) return 'mission'` → червоніє.
+describe('GAME-338 · «★» місії', () => {
+  it('місія — окремий маркер, відмінний від «!» і «…»; без розмови маркера нема', () => {
+    expect(markerFor(true, true, 10, true, true)).toBe('mission');
+    expect(markerFor(true, false, 10_000, false, true)).toBe('mission');
+    expect(markerFor(false, false, 0, false, true)).toBeNull();
+    expect(markerFor(true, true, 10, true)).toBe('request');
+  });
+});

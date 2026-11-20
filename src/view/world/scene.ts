@@ -110,7 +110,7 @@ export interface WorldHooks {
   /** Гравець заговорив із NPC на мапі (розмову веде рамка розмови, GAME-179). */
   onNpc(npcId: string): void;
   /** GAME-179: чи NPC зараз можна заговорити (ядро прийме розмову) і чи є в нього прохання («!»); null — мовчить, маркера нема. */
-  talk(npcId: string): { readonly request: boolean; /** GAME-261: є нова репліка (сьогодні ще не говорили) — без неї «…» не малюємо. */ readonly line: boolean } | null;
+  talk(npcId: string): { readonly request: boolean; /** GAME-338: місія цього сусіда ще не зроблена (зразковий день) — над ним «★». */ readonly mission?: boolean; /** GAME-261: є нова репліка (сьогодні ще не говорили) — без неї «…» не малюємо. */ readonly line: boolean } | null;
   /** Дотик до тригера: режисер вирішує, що це зараз. */
   onObject(name: string): void;
   /** Чи об'єкт зараз діє й видимий. */
@@ -317,12 +317,13 @@ const FPS_WINDOW_MS = 3000;
 /** Бульба над головою NPC (GAME-179): біла з трьома крапками — «є про що побалакати»; жовта зі знаком оклику — «є прохання». Малюється пікселями, без шрифту. */
 function drawMarker(g: Phaser.GameObjects.Graphics, kind: NpcMarker): void {
   const ink = 0x1b1f23;
-  const fill = kind === 'request' ? 0xffd54a : 0xf4f1e8;
+  const fill = kind === 'request' ? 0xffd54a : kind === 'mission' ? 0x9ad0ff : 0xf4f1e8;
   g.clear();
   g.fillStyle(ink, 1).fillRoundedRect(-10, -9, 20, 15, 3).fillTriangle(-4, 5, 4, 5, 0, 10);
   g.fillStyle(fill, 1).fillRoundedRect(-9, -8, 18, 13, 2).fillTriangle(-3, 4, 3, 4, 0, 8);
   g.fillStyle(ink, 1);
   if (kind === 'chat') g.fillRect(-6, -3, 3, 3).fillRect(-1, -3, 3, 3).fillRect(4, -3, 3, 3);
+  else if (kind === 'mission') g.fillRect(-1, -7, 3, 11).fillRect(-5, -3, 11, 3).fillRect(-3, -5, 7, 7);   // GAME-338: «★» — місія
   else g.fillRect(-1, -6, 3, 6).fillRect(-1, 2, 3, 2);
 }
 
@@ -1458,7 +1459,7 @@ export class WorldScene extends Phaser.Scene {
     const consider = (id: string, s: Phaser.GameObjects.Sprite | undefined, barking: boolean): void => {
       if (!s || !s.visible) return;
       const t = this.hooks.talk(id);
-      const kind = markerFor(t !== null, t?.request === true, Math.hypot(hero.x - s.x, hero.y - s.y), t?.line === true);
+      const kind = markerFor(t !== null, t?.request === true, Math.hypot(hero.x - s.x, hero.y - s.y), t?.line === true, t?.mission === true);
       // GAME-236: репліка заступає «…», але не «!»: прохання не можна пропустити через чотири секунди бурчання — «!» піднімається над репліку.
       if (!kind || (barking && kind !== 'request')) return;
       const lift = barking && this.residentBark ? this.residentBark.text.height + 4 : 0;

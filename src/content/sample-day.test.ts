@@ -21,7 +21,7 @@ import { deviceFacts, withDevices } from './camp-devices';
 import { MISSIONS } from './missions';
 import { characterChoices } from '../view/story-offer';
 import { GAME_DEFS } from './slice-defs';
-import { SAMPLE_PROFILE, SAMPLE_TRANSPORT, devicesFromFlags, sampleHeroes, laneIdFor, missionsDone, pitchChoices, prepOf, sampleExtra, sampleGoal } from './sample-day';
+import { SAMPLE_PROFILE, SAMPLE_TRANSPORT, devicesFromFlags, sampleHeroes, laneIdFor, missionsDone, openMissionGivers, pitchChoices, prepOf, sampleExtra, sampleGoal } from './sample-day';
 import { PREP_FLAGS } from './arrival-pitch';
 import { boardError, BOARD_MAX_BYTES, type CampBoardSave } from '../core/camp-board';
 import { stormNightMove } from './storm-night';
@@ -268,5 +268,17 @@ describe('GAME-329 · вибір героя зразка не суперечит
     expect(all.some((c) => c.transportKey !== SAMPLE_TRANSPORT) && all.some((c) => c.animalKey !== null) && all.some((c) => c.profileKey !== SAMPLE_PROFILE)).toBe(true);
     expect(shown).toHaveLength(1);
     for (const c of shown) expect([c.profileKey, c.transportKey, c.animalKey]).toEqual([SAMPLE_PROFILE, SAMPLE_TRANSPORT, null]);
+  });
+});
+
+// GAME-338 · ціль дня називає видавців місій, що ще чекають (не видавців дрібних прохань). Мутація (перевірено): openMissionGivers із REQUESTS замість MISSIONS → червоніє.
+describe('GAME-338 · openMissionGivers', () => {
+  it('без місій — усі три видавці; зроблена місія знімає ім\'я; усі зроблені — порожньо', () => {
+    expect(openMissionGivers([])).toEqual(MISSIONS.map((m) => m.giver));
+    expect(openMissionGivers([])).toEqual(['npc.amina', 'npc.luc', 'npc.claire']);
+    const first = MISSIONS[0] as (typeof MISSIONS)[number];
+    expect(openMissionGivers([first.doneFlag])).toEqual(MISSIONS.slice(1).map((m) => m.giver));
+    expect(openMissionGivers(MISSIONS.map((m) => m.doneFlag))).toEqual([]);
+    expect(missionsDone([first.doneFlag])).toBe(1);   // те саме джерело, що веде ціль дня
   });
 });

@@ -134,13 +134,13 @@ export function knotsOutcome(s: KnotState, d: Difficulty = NORMAL): Outcome {
   return total(f) === 0 ? 'good' : f.open === 0 && f.crossings === 0 && total(f) <= 2 ? 'fine' : 'scrappy';
 }
 
-/** GAME-338 · одна причина «сяк-так» для рядка «чому»: спершу те, що виправити найпростіше й найважливіше — не всі кільця, перетин, натяг, вітер. null — причин нема (усе за правилами). */
-export type KnotsWhy = 'open' | 'cross' | 'tension' | 'wind';
-export const KNOTS_WHY_KEY: Readonly<Record<KnotsWhy, string>> = { open: 'camp.reason.knots.open', cross: 'camp.reason.knots.cross', tension: 'camp.reason.knots.tension', wind: 'camp.reason.knots.wind' };
+/** GAME-338 · одна причина «сяк-так» для рядка «чому»: спершу те, що виправити найпростіше й найважливіше — не всі кільця, перетин, натяг, вітер. null — не «сяк-так». */
+export type KnotsWhy = 'open' | 'cross' | 'tension';
+export const KNOTS_WHY_KEY: Readonly<Record<KnotsWhy, string>> = { open: 'camp.reason.knots.open', cross: 'camp.reason.knots.cross', tension: 'camp.reason.knots.tension' };
 export function knotsWhy(s: KnotState, d: Difficulty = NORMAL): KnotsWhy | null {
+  if (knotsOutcome(s, d) !== 'scrappy') return null;
   const f = faults(s, d);
-  if (total(f) === 0) return null;
-  return f.open > 0 ? 'open' : f.crossings > 0 ? 'cross' : f.tension > 0 ? 'tension' : 'wind';
+  return f.open > 0 ? 'open' : f.crossings > 0 ? 'cross' : 'tension';
 }
 
 /** Повний розв'язок за правилами (перебір із відсіканням): кілок кожного кільця або null. */
