@@ -83,6 +83,13 @@ export function requestMarker(g: GameState, npcId: string, rs: readonly RequestD
   return s === 'available' || s === 'ready';
 }
 
+/** GAME-338 · сусіди, над якими зараз «!» (те саме джерело, що й позначка: `requestMarker` + «NPC тут і відкритий» від `live`). Ціль дня називає саме їх. Порядок — за файлом прохань, без повторів. */
+export function markedNeighbours(g: GameState, live: (npcId: string) => boolean, rs: readonly RequestDef[] = REQUESTS): string[] {
+  const out: string[] = [];
+  for (const r of rs) if (!out.includes(r.giver) && live(r.giver) && requestMarker(g, r.giver, rs)) out.push(r.giver);
+  return out;
+}
+
 /** Позначка цілі на мапі живе, лише коли прохання взято, ціль ще не зроблена і розмови немає (під час розмови світ мовчить, як усі об'єкти). */
 export function liveRequestSpot(g: GameState, name: string, rs: readonly RequestDef[] = REQUESTS, weather?: Weather): boolean {
   if (g.player?.locationId !== REQUEST_LOCATION || g.dialogue !== null) return false;

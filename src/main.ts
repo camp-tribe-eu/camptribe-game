@@ -54,7 +54,7 @@ import { paintShot } from './view/intro-shot';
 import { paintColdOpen } from './view/cold-open';
 import { portraitFor } from './view/portraits';
 import { headCrop, sheetOf } from './view/world/portrait-art';
-import { miaSpots, requestMarker, requestTarget, requestsDone } from './content/requests';
+import { markedNeighbours, miaSpots, requestMarker, requestTarget, requestsDone } from './content/requests';
 import { errandMove, plannedErrands } from './content/errands';
 import { FORAGE_ITEMS, canForage, heartDue, reactionFor } from './content/friendship';
 import type { GiftReaction } from './core/friendship';
@@ -485,6 +485,7 @@ const samplePort: SamplePort = {
   working: (id) => { stationWork = id; },
   lane: () => laneIdFor(bridge.state.game.flags),
   goal: () => sampleGoal(bridge.state.game.flags, playedScene(STORM_SCENE)),
+  neighbours: () => markedNeighbours(bridge.state.game, (id) => npcLive(bridge.state.game, GAME_DEFS, id)),   // GAME-338: ті самі, над ким «!»
   flags: () => bridge.state.game.flags,
   moneyCents: () => bridge.state.game.moneyCents,
   seed: () => bridge.state.worldSeed,

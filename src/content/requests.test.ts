@@ -17,7 +17,7 @@ import { GAME_DEFS } from './slice-defs';
 import { CONTENT, STORY } from './story';
 import { TRACE_FLAG_PREFIX } from './traces';
 import mapRaw from '../../public/maps/camp-lake.tmj?raw';
-import { REQUESTS as ALL_REQUESTS, REQUEST_FLAG_PREFIX, miaSpots, compileRequests, liveRequestSpot, requestFlag, requestMarker, requestOf, requestReward, requestStatus, requestTarget, requestsDone, trackerRows, type RequestDef } from './requests';
+import { REQUESTS as ALL_REQUESTS, REQUEST_FLAG_PREFIX, markedNeighbours, miaSpots, compileRequests, liveRequestSpot, requestFlag, requestMarker, requestOf, requestReward, requestStatus, requestTarget, requestsDone, trackerRows, type RequestDef } from './requests';
 import { liveSpot } from './director';
 import { storyOffer } from '../view/story-offer';
 import { STICKER_DEFS } from './stickers';
@@ -471,5 +471,22 @@ describe('GAME-211 · пам’ять сусідів: рядок після до
     const said = play([{ type: 'Choose', choice: 4 }], atHello(base));
     expect(said.dialogue?.node).toBe('shore-memory');
     expect(lineOf(said)).toBe(LOC['dlg.nora-chat.shore-memory']);
+  });
+});
+
+// GAME-338 · ціль дня називає тих, над ким «!». Мутації (перевірено): `markedNeighbours` без `requestMarker` (усі видавці) → червоніє; без `live` → червоніє.
+describe('GAME-338 · markedNeighbours', () => {
+  it('рівно ті видавці, над якими «!», без повторів; взяте прохання знімає ім\'я; не-живий NPC не названий', () => {
+    const s = atCamp();
+    const all = markedNeighbours(s, () => true);
+    expect(all.length).toBeGreaterThan(0);
+    expect(all).toEqual([...new Set(all)]);
+    for (const id of all) expect(requestMarker(s, id)).toBe(true);
+    for (const id of new Set(ALL_REQUESTS.map((r) => r.giver))) expect(all.includes(id), id).toBe(requestMarker(s, id));
+    const taken = FIRSTS[0] as RequestDef;
+    const s2 = { ...s, flags: [...s.flags, taken.takenFlag] };
+    expect(markedNeighbours(s2, () => true).includes(taken.giver)).toBe(requestMarker(s2, taken.giver));
+    expect(markedNeighbours(s, (id) => id !== all[0])).toEqual(all.slice(1));
+    expect(markedNeighbours({ ...s, player: null } as GameState, () => true)).toEqual([]);   // не в таборі — «!» нема
   });
 });
