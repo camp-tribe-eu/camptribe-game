@@ -75,6 +75,7 @@ import { openGate } from './view/open-gate';
 import { boardError } from './core/camp-board';
 import { missionWorkDue, pendingTrip, guideLive } from './view/mission-work';
 import { createMinigameSession, type MinigameSession } from './view/minigame-session';
+import { createFixedStep } from './view/fixed-step';
 import { minigameById } from './content/minigames';
 import { TRUNK_GAME, leftOf, setTrunkLoad, type TrunkState } from './content/minigames/trunk';
 import { driveSummary, setDriveWallet, type DriveMgState } from './content/minigames/drive';
@@ -530,16 +531,19 @@ const samplePort: SamplePort = {
   restart: async () => { await saves.newGame(); location.reload(); },
   subscribe: (l) => { sampleListeners.add(l); return () => { sampleListeners.delete(l); }; },
 };
-function missionTick(): void {
+// GAME-344: міні-ігри лічать кадри гри (1/60 с), а не показу — реальна дельта проходить через фіксований крок.
+const missionStep = createFixedStep();
+function missionTick(dtMs: number): void {
   // GAME-332: після закритого результату оболонка вже знята (Shell побачив missionChanged) — лише тепер завантажуємо авто: інакше екран «Не влазить» не відкрився б.
   if (afterGo && !missionSession) { const after = afterMission; afterMission = null; afterGo = false; after?.(); }
   if (sampleOn) { sampleScenes(); if (!missionSession) sampleOpenDrive(); }
   if (missionSession) {
     if (missionSession.run.phase === 'closed') { missionSession = null; missionChanged(); afterGo = afterMission !== null; return; }
-    missionSession.frame(1);
+    missionSession.frame(missionStep.advance(dtMs));
     input.held.clear();   // під міні-грою герой стоїть: стрілки не водять його з місця роботи
     return;
   }
+  missionStep.reset();   // без сесії акумулятор порожній: нова гра не успадкує залишок
   const due = missionWorkDue(bridge.state.game, miniFrame, worldHooks.mapKey());
   const def = due ? minigameById(due.minigame) : undefined;
   if (!def) return;
@@ -598,7 +602,7 @@ const worldHooks: WorldHooks = {
   stations: () => sampleOn,
   posts: stationPosts,
   frame: (dtMs) => {
-    missionTick();
+    missionTick(dtMs);
     if (sampleOn) for (const cb of [...sampleFrames]) cb(dtMs);
     if (cardItem !== null && (cardLeftMs -= dtMs) <= 0) { cardItem = null; storyChanged(); }
     if (receipt !== null && (receiptLeftMs -= dtMs) <= 0) { receipt = null; storyChanged(); }
