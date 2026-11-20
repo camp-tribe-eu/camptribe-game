@@ -402,8 +402,24 @@ async function expectBoardClear(page: Page, what: string, night = false): Promis
       };
     };
     const first = at(0); const last = at('end'); at(0);
-    return { first, last };
+    // GAME-340: «Далі» й «Ніч» ЦІЛІ в екрані БЕЗ прокрутки (scrollTop 0) і не прикриті нічим (elementFromPoint — сама кнопка).
+    // Список разом із «Чому:» і зробленими справами вищий за екран (приймання 5: 860 при 790): роздуваємо його на 400 px і дивимось, що кнопки лишаються на місці, не лише на сьогоднішній висоті.
+    const list = document.querySelector('.sd-board-wrap .ui-camp-list') as HTMLElement | null;
+    const pad = list?.style.paddingBottom ?? '';
+    if (list) list.style.paddingBottom = '400px';
+    if (box) box.scrollTop = 0;
+    const whole = ['camp-next', 'camp-to-night'].map((id) => {
+      const el = document.querySelector(`.sd-board-wrap [data-ui="${id}"]`) as HTMLElement | null;
+      if (!el) return `${id}: немає`;
+      const q = el.getBoundingClientRect();
+      const top = document.elementFromPoint(q.left + q.width / 2, q.top + q.height / 2);
+      const inside = q.top >= 0 && q.bottom <= innerHeight && q.left >= 0 && q.right <= innerWidth;
+      return inside && top !== null && el.contains(top) ? '' : `${id}: ${Math.round(q.top)}…${Math.round(q.bottom)} з ${innerHeight}`;
+    }).filter((x) => x !== '');
+    if (list) list.style.paddingBottom = pad;
+    return { first, last, whole };
   });
+  if (night) expect(res.whole, `GAME-340 ${what}: «Далі» й «Ніч» цілі в екрані без гортання`).toEqual([]);
   if (night) expect(res.first.night, `GAME-338 ${what}: на дошці немає «Ніч»`).toBe(true);
   expect(res.first.hit, `GAME-338 ${what}: на початку «До мапи» перекриває ${res.first.hit.join(', ')}`).toEqual([]);
   expect(res.last.hit, `GAME-327 ${what}: в кінці «До мапи» перекриває ${res.last.hit.join(', ')}`).toEqual([]);
@@ -684,6 +700,7 @@ for (const o of ORIENTATIONS) {
       await tapIt(page, '[data-ui="camp-next"]'); await tapIt(page, '[data-ui="camp-next"]');
       await expect(page.locator('[data-ui="camp-board"]')).toHaveAttribute('data-round', 'evening');
       await expect(page.locator('[data-ui="camp-to-night"]'), 'ввечері «Ніч» відкрита').toBeEnabled();
+      await expectBoardClear(page, 'вечір (Ніч)', true);
       await tapIt(page, '[data-ui="camp-routine"][data-id="tidy"]');
       for (const [id, place] of [['pot', 'car'], ['bread', 'hung'], ['berries', 'hung'], ['tins', 'bin'], ['wrap', 'bin'], ['chairs', 'tarp'], ['rods', 'tarp'], ['boots', 'tarp']] as const) {
         await tapIt(page, `[data-ui="tidy-pick"][data-id="${id}"]`);
