@@ -34,7 +34,7 @@ import { findWindows, patchAlpha, patchQuads } from './light-patches';
 import { HERO_LIGHT_RADIUS, heroLightAlpha } from './hero-light';
 import { LAMP_RADIUS, findLamps, lampAlpha, lampsOn } from './lamps';
 import { heroBusy } from './hero-busy';
-import { FEEDBACK_S, RING_IDLE, isAutoSpot, markHandled, pickNearest, ringMayTake, stepRing, vehicleReady, type Insets, type Ring } from './proximity';
+import { FEEDBACK_S, RING_IDLE, isAutoSpot, lifeMayAct, markHandled, pickNearest, ringMayTake, stepRing, vehicleReady, type Insets, type Ring } from './proximity';
 import { IDLE_AFTER_S, LEISURE_BY_MAP, assignLeisure, leisureFromObjects, type LeisureSpot } from './leisure';
 import { Neighbours, type NeighbourProbe } from './neighbours-rig';
 import { EMOTE_FRAMES, staysOut } from './neighbours';
@@ -1733,7 +1733,7 @@ export class WorldScene extends Phaser.Scene {
     const pressed = this.gate(held.has('interact') || (this.tent.active || this.wood.chopping ? tapped !== null : tapSpot !== null), time);
     const woodBranch = this.wood.active ? this.wood.nearBranch({ x: this.player.x, y: this.player.y }, INTERACT_RANGE) : null;
     // GAME-225: жива річ табору (сосна, кущ, колонка, смітник, дошка) — лише коли поруч нема сюжетної цілі (як ящик).
-    const lifeHit = pressed && inCamp && (act === null || isAutoSpot(act.name) || isFollower(act.name)) ? this.life.pick({ x: this.player.x, y: this.player.y }, this.petPoints()) : null;
+    const lifeHit = pressed && inCamp && lifeMayAct(act?.name ?? null, act !== null && isFollower(act.name)) ? this.life.pick({ x: this.player.x, y: this.player.y }, this.petPoints()) : null;
     const woodBlock = this.wood.active && this.wood.atBlock({ x: this.player.x, y: this.player.y }, INTERACT_RANGE);
     if (this.grill.active) {
       // GAME-195: рибка на вогнищі забирає дію (нанизати, підняти): інша справа чи розмова чекає.

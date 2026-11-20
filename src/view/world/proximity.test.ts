@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { RING_IDLE, RING_S, edgeArrow, inSafeZone, isAutoSpot, markHandled, pickNearest, ringMayTake, stepRing, vehicleReady } from './proximity';
+import { RING_IDLE, RING_S, edgeArrow, inSafeZone, isAutoSpot, lifeMayAct, markHandled, pickNearest, ringMayTake, stepRing, vehicleReady } from './proximity';
 
 function run(near: string | null, armed: boolean, hold: boolean, seconds: number, dt = 1 / 60): string | null {
   let r = RING_IDLE;
@@ -127,5 +127,16 @@ describe('GAME-281: ручна дія на авто-об\'єкті гасить 
     const ring = { name: 'obj.vehicle', t: 0.5 };
     expect(markHandled(fired, ring, 'npc.sara')).toBe(ring);
     expect(fired.size).toBe(0);
+  });
+});
+
+// GAME-338 · мутація (перевірено): прибрати `&& !nearName.startsWith('req.')` у lifeMayAct → «ціль прохання» червоніє.
+describe('GAME-338 · сосна не перехоплює дію над ціллю прохання', () => {
+  it('ціль прохання (req.*) блокує дію на живу річ; нічия, слідувач і решта автоспрацьовувачів — ні', () => {
+    expect(lifeMayAct('req.luc-chain.t1', false), 'ціль прохання').toBe(false);
+    expect(lifeMayAct(null, false)).toBe(true);
+    expect(lifeMayAct('npc.family', true)).toBe(true);
+    expect(lifeMayAct('take.item.cone', false)).toBe(true);
+    expect(lifeMayAct('npc.luc', false), 'розмова з мешканцем — його ціль, не сосна').toBe(false);
   });
 });
