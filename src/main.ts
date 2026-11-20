@@ -2,7 +2,7 @@
 import Phaser from 'phaser';
 import { render, h } from 'preact';
 import { Shell } from './ui/Shell';
-import { t, touchWording } from './i18n';
+import { barkTextFor, t } from './i18n';
 import { currentSettings, loadSettings, onSettingsSaved } from './platform/settings';
 import { INTRO_BEAT_QUESTS } from './content/intro-story';
 import { HINT_FLASH_MS, HintIdle, type HintMode } from './content/hint-idle';
@@ -632,7 +632,8 @@ const worldHooks: WorldHooks = {
 /** GAME-179: запасні портрети — обрізки спрайтів, зроблені раз на лист. */
 const spriteCrops = new Map<string, string>();
 /** GAME-278: дотиковий пристрій (pointer: coarse) — планшет до 820 px заввишки теж «телефон». */
-const coarse = (): boolean => { try { return matchMedia('(pointer: coarse)').matches; } catch { return false; } };
+const coarseQuery = ((): MediaQueryList | null => { try { return matchMedia('(pointer: coarse)'); } catch { return null; } })();
+const coarse = (): boolean => coarseQuery?.matches ?? false;
 /** GAME-300: розмір поточної мапи (з сцени) — мала мапа підіймає масштаб «Авто», щоб покрити поле. */
 let currentMapPx: MapPx | null = null;
 const frameApply: { fn: (() => void) | null } = { fn: null };   // applyFrame оголошено нижче, а сцена може попросити кадр раніше
@@ -660,7 +661,7 @@ const game = new Phaser.Game({
   // поле по ширині: вбік і на десктопі смуг з боків немає; зайве (< zoom px) ховає overflow поля. FIT із кадром 640×352 давав смуги.
   scale: { mode: Phaser.Scale.NONE, autoCenter: Phaser.Scale.NO_CENTER, zoom: frame0.zoom },
   physics: { default: 'arcade', arcade: { debug: false } },
-  scene: [new WorldScene(bridge, input, probe, worldArt, worldHooks, !switches.noDaylight, (key) => touchWording(t(langOverride ?? loadSettings().language, key), coarse()))],
+  scene: [new WorldScene(bridge, input, probe, worldArt, worldHooks, !switches.noDaylight, barkTextFor(() => langOverride ?? loadSettings().language, coarse))],
 });
 // GAME-268: шлюз малювання — світ під повним екраном не малюється.
 const renderGate = installRenderGate(game);

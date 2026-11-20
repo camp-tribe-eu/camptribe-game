@@ -997,6 +997,9 @@ export const FIXTURES = [
   } },
   { base: 'combo', name: '[діалог] умова на неіснуючий транспорт', expect: ['DIALOGUE_REF_MISSING'], patch(c) { withTransportFact(c); node(c, 'help').choices[0].when = { transport: 'transport.ghost' }; } },
   // GAME-202: taskOpen — справа хвилі мусить існувати; наявна — коректно.
+  // GAME-341: minigame.outcome — лише good/fine/scrappy. Мутація (перевірено): `outcome: en(...)` → `str` у schema.mjs: перший запис червоніє.
+  { base: 'combo', name: '[діалог] minigame.outcome поза переліком — схема', expect: ['SCHEMA_INVALID'], patch(c) { node(c, 'help').choices[0].when = { minigame: 'mg.fixture', outcome: 'great' }; } },
+  { base: 'combo', name: '[діалог] контроль: minigame.outcome good — схема пускає', expect: [], patch(c) { node(c, 'help').choices[0].when = { minigame: 'mg.fixture', outcome: 'good' }; } },
   { base: 'combo', name: '[діалог] умова taskOpen на неіснуючу справу хвилі', expect: ['DIALOGUE_REF_MISSING'], patch(c) { node(c, 'help').choices[0].when = { taskOpen: 'ghost' }; } },
   { base: 'combo', name: '[діалог] контроль: taskOpen на справу хвилі — коректно', expect: [], patch(c) { node(c, 'help').choices[0].when = { taskOpen: 'wood' }; } },
 

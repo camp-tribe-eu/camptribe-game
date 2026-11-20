@@ -34,7 +34,7 @@ import { findWindows, patchAlpha, patchQuads } from './light-patches';
 import { HERO_LIGHT_RADIUS, heroLightAlpha } from './hero-light';
 import { LAMP_RADIUS, findLamps, lampAlpha, lampsOn } from './lamps';
 import { heroBusy } from './hero-busy';
-import { FEEDBACK_S, RING_IDLE, isAutoSpot, lifeMayAct, markHandled, pickNearest, ringMayTake, stepRing, vehicleReady, type Insets, type Ring } from './proximity';
+import { FEEDBACK_S, RING_IDLE, asksForTalk, isAutoSpot, lifeMayAct, markHandled, pickNearest, ringMayTake, stepRing, vehicleReady, type Insets, type Ring } from './proximity';
 import { IDLE_AFTER_S, LEISURE_BY_MAP, assignLeisure, leisureFromObjects, type LeisureSpot } from './leisure';
 import { Neighbours, type NeighbourProbe } from './neighbours-rig';
 import { EMOTE_FRAMES, staysOut } from './neighbours';
@@ -1666,7 +1666,9 @@ export class WorldScene extends Phaser.Scene {
     const live = [...this.spots.filter((s) => this.hooks.isLive(s.name)), ...talkers];
     // GAME-179/186: родина тупцює коло героя — говорить із нею лише тоді, коли в зоні дії нікого іншого нема; між слідувачами перевага тому, на кого дивиться герой.
     const isFollower = (n: string): boolean => (FOLLOWER_NPC as readonly string[]).includes(n);
-    const nearName = pickNearest(this.player.x, this.player.y, this.facing, live.map((s) => ({ name: s.name, x: s.x, y: s.y, follower: isFollower(s.name), request: s.kind === 'npc' && (this.hooks.talk(s.name)?.request === true || this.hooks.talk(s.name)?.mission === true) })), INTERACT_RANGE, this.hooks.target());
+    const picks = live.map((s) => ({ name: s.name, x: s.x, y: s.y, follower: isFollower(s.name), request: asksForTalk(s.kind, s.kind === 'npc' ? this.hooks.talk(s.name) : null) }));
+    const nearName = pickNearest(this.player.x, this.player.y, this.facing, picks, INTERACT_RANGE, this.hooks.target());
+    const askerWins = nearName !== null && picks.some((p) => p.name === nearName && p.request === true);   // GAME-341: просильник бере «Дію» — підказку лавки не показуємо
     const spot: Spot | null = nearName === null ? null : live.find((s) => s.name === nearName) ?? null;
     const near = spot?.name ?? null;
     // Тап: лише по цілі, що в зоні дії. Поза зоною нічого (без прокладання шляху, GAME-95).
@@ -1684,7 +1686,7 @@ export class WorldScene extends Phaser.Scene {
     else if (!woodLive && this.wood.phase !== 'idle') this.wood.reset();
     this.wood.muted = this.fish.busy;
     this.wood.update(delta);
-    this.props.update(delta, { x: this.player.x, y: this.player.y }, INTERACT_RANGE, this.hooks.isLive(REPAIR_SPOT));
+    this.props.update(delta, { x: this.player.x, y: this.player.y }, INTERACT_RANGE, this.hooks.isLive(REPAIR_SPOT) && !askerWins);
     const fireDue = inCamp && (this.hooks.fireDue?.() ?? false);
     const fireSpot = this.spots.find((x) => x.name === 'obj.campfire');
     if (fireDue && fireSpot && this.fire.phase === 'idle') this.fire.begin({ x: fireSpot.x, y: fireSpot.y }, this.fireSprite);

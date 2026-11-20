@@ -88,7 +88,7 @@ const ringDone = (s0: GameState): { state: GameState; choices: number } => {
 const clone = (): { dialogues: Record<string, DialogueDef> } => structuredClone(STORY) as unknown as { dialogues: Record<string, DialogueDef> };
 
 describe('GAME-341 · Люк реагує на результат станції, а не на вибір ремонту', () => {
-  // Мутація (перевірено): у holds() прибрати перевірку `outcome` (повернути лише «зіграно») → scrappy іде в a-test-fine, цей тест червоний.
+  // Мутація (перевірено): у holds() прибрати перевірку `outcome` (повернути лише «зіграно») → умова scrappy ловить усе, тож червоніють рядки good і fine.
   it.each([
     ['good', 'a-fix.c1', 'a-test-quick'], ['good', 'a-fix.c2', 'a-test-solid'],
     ['fine', 'a-fix.c1', 'a-test-fine'], ['fine', 'a-fix.c2', 'a-test-fine'],

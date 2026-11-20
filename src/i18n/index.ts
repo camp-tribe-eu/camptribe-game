@@ -26,3 +26,7 @@ export function t(lang: AnyLang, key: Key): string {
 export function touchWording(text: string, coarse: boolean): string {
   return coarse ? text.replace(/\bE (?:чи|or) ●|● (?:чи|or) E\b/g, '●') : text;
 }
+
+/** GAME-341: підписи для сцени світу — мова й «дотик» читаються на кожен виклик (налаштування й пристрій можуть змінитись), клавіші на дотику не називаємо. */
+export const barkTextFor = (lang: AnyLang | (() => AnyLang), coarse: () => boolean): ((key: Key) => string) =>
+  (key) => touchWording(t(typeof lang === 'function' ? lang() : lang, key), coarse());

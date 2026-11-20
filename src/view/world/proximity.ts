@@ -13,6 +13,9 @@ export const isAutoSpot = (name: string): boolean => name === 'obj.buy' || name.
 /** GAME-338 · дія на «живу річ» (сосна, кущ…) можлива лише коли ближча ціль — нічия, слідувач чи автоспрацьовувач, АЛЕ не ціль прохання сусіда (req.*): ціль Люка під сосною відкривалась лише знизу, зверху «Дія» трусила дерево. */
 export const lifeMayAct = (nearName: string | null, follower: boolean): boolean => nearName === null || follower || (isAutoSpot(nearName) && !nearName.startsWith('req.'));
 
+/** GAME-341: чи NPC «просить розмови» — прохання («!») або місія («★»); такий поруч бере верх над світовим об'єктом (лавкою, ящиком). */
+export const asksForTalk = (kind: string, talk: { readonly request?: boolean; readonly mission?: boolean } | null): boolean => kind === 'npc' && (talk?.request === true || talk?.mission === true);
+
 export interface Ring { readonly name: string | null; readonly t: number }
 export const RING_IDLE: Ring = { name: null, t: 0 };
 

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { RING_IDLE, RING_S, edgeArrow, inSafeZone, isAutoSpot, lifeMayAct, markHandled, pickNearest, ringMayTake, stepRing, vehicleReady } from './proximity';
+import { RING_IDLE, RING_S, asksForTalk, edgeArrow, inSafeZone, isAutoSpot, lifeMayAct, markHandled, pickNearest, ringMayTake, stepRing, vehicleReady } from './proximity';
 
 function run(near: string | null, armed: boolean, hold: boolean, seconds: number, dt = 1 / 60): string | null {
   let r = RING_IDLE;
@@ -120,6 +120,17 @@ describe('GAME-341 · просильник («!»/«★») проти світо
     expect(pickNearest(100, 100, 'down', [BENCH, { ...A, y: 400 }], 48)).toBe('repair.bench');
     expect(pickNearest(100, 100, 'down', [{ ...BENCH, name: 'obj.vehicle' }, A], 48)).toBe('obj.vehicle');
     expect(pickNearest(100, 100, 'down', [{ ...BENCH, name: 'npc.luc' }, A], 48)).toBe('npc.luc');
+  });
+});
+
+describe('GAME-341 · asksForTalk: «!» і «★» — просильник', () => {
+  // Мутація (перевірено): прибрати `|| talk?.mission === true` у asksForTalk → другий вираз червоний.
+  it('прохання чи місія — так; нічого — ні; не NPC — ні', () => {
+    expect(asksForTalk('npc', { request: true, mission: false })).toBe(true);
+    expect(asksForTalk('npc', { request: false, mission: true })).toBe(true);
+    expect(asksForTalk('npc', { request: false, mission: false })).toBe(false);
+    expect(asksForTalk('npc', null)).toBe(false);
+    expect(asksForTalk('obj', { request: true, mission: true })).toBe(false);
   });
 });
 

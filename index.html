@@ -527,7 +527,7 @@
       .sd-pad { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
       #app:has([data-ui="story"]) .sd-board-btn { display: none; }   /* GAME-327: при відкритій ☰ дошка — кнопка в самому меню, а не друга над ним */
       .sd-board-btn { position: fixed; left: var(--edge-left); bottom: calc(var(--edge-bottom) + var(--stick-size) + 8px); z-index: 30; min-width: 48px; min-height: 48px; }   /* GAME-326: над джойстиком, не на ньому */
-      #app:has([data-ui="drive-in"]) .ui-goal, #app:has([data-ui="drive-in"]) .ui-hud, #app:has([data-ui="summary"]) .ui-goal, #app:has([data-ui="sd-summary"]) .ui-goal { visibility: hidden; }   /* GAME-326: ціль і годинник не лягають на розмову заїзду */
+      #app:has([data-ui="drive-in"]) .ui-goal, #app:has([data-ui="drive-in"]) .ui-hud, #app:has([data-ui="summary"]) .ui-goal, #app:has([data-ui="sd-summary"]) .ui-goal { visibility: hidden; }   /* GAME-326: ціль і годинник не лягають на розмову заїзду; GAME-341: ціль — і на підсумок дня */
       .sd-cell[data-car]::after { display: grid; place-items: center; height: 100%; color: #1b1f23; font-size: 0.7rem; }
       .sd-cell[data-car='up']::after { content: '▲'; } .sd-cell[data-car='down']::after { content: '▼'; }
       .sd-cell[data-car='left']::after { content: '◀'; } .sd-cell[data-car='right']::after { content: '▶'; }
