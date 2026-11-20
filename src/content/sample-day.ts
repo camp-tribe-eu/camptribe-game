@@ -69,6 +69,9 @@ export function sampleGoal(flags: readonly string[], stormPlayed: boolean): Samp
   return missionsDone(flags) >= 2 ? 'evening' : 'day';
 }
 
+/** GAME-340 · кого називає чип цілі: видавців місій, що ще чекають, — і в «Допомогти сусідам», і в «Вечеря й порядок» (після двох місій ціль перемикалась на вечір і мовчки губила третього). Зроблені місії, ніч і вибір ділянки імен не мають. */
+export const goalNames = (goal: SampleGoal | null, open: readonly string[]): readonly string[] => (goal === 'day' || goal === 'evening' ? open : []);
+
 /** Година, на якій світ зразкового дня стоїть: опівночі гра розділу 1 засинала сама, перегортала день і відкривала свій «Підсумок дня 1» посеред місії. Ніч тут — кнопка дошки, не годинник. */
 export const SAMPLE_HOLD_MINUTE = 23 * 60 + 30;
 

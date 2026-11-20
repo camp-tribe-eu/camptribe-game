@@ -38,7 +38,7 @@ import { FEEDBACK_S, RING_IDLE, isAutoSpot, lifeMayAct, markHandled, pickNearest
 import { IDLE_AFTER_S, LEISURE_BY_MAP, assignLeisure, leisureFromObjects, type LeisureSpot } from './leisure';
 import { Neighbours, type NeighbourProbe } from './neighbours-rig';
 import { EMOTE_FRAMES, staysOut } from './neighbours';
-import { BARK_RANGE, CAST, CAST_BY_MAP, RESIDENTS, ZONES, buildTimeline, placeAt, residentGrid, type Timeline } from './ambient';
+import { BARK_RANGE, CAST, CAST_BY_MAP, RESIDENTS, ZONES, buildTimeline, tripPoint, placeAt, residentGrid, type Timeline } from './ambient';
 import type { Key } from '../../i18n';
 import { idlePose } from './idle-poses';
 import { GLYPHS, LOOK_S, idleBob, isEvening, lookAt, type Glyph } from './idle';
@@ -904,7 +904,7 @@ export class WorldScene extends Phaser.Scene {
     // GAME-335: місця справ — наявні речі табору (camp-stations); лише зразковий день, лише мапа табору. ПІСЛЯ шляхів мешканців: їхні маршрути місця не обходять (мапа й ритм табору ті самі).
     if (key === 'camp' && this.hooks.stations?.()) for (const st of Object.values(STATIONS)) { if (this.spots.some((x) => x.name === st.spot)) continue; const sp: Spot = { name: st.spot, kind: 'trigger', x: st.at.x, y: st.at.y }; this.spots.push(sp); this.markers.set(sp.name, this.marker(sp)); }
     // GAME-337: зона походу місії («Іду до колонки з ситом») — позначка в якорі зони; це лише ціль, не об'єкт дії (у spots її нема), міні-гра стартує, коли герой у зоні.
-    if (key === 'camp' && this.hooks.stations?.()) for (const z of ZONES) { if (!MISSIONS.some((m) => m.trips.some((t) => t.zone === z.id))) continue; const sp: Spot = { name: `trip.${z.id}`, kind: 'trigger', x: (z.anchor.c + 0.5) * TILE, y: (z.anchor.r + 0.5) * TILE }; this.markers.set(sp.name, this.marker(sp)); }
+    if (key === 'camp' && this.hooks.stations?.()) for (const z of ZONES) { if (!MISSIONS.some((m) => m.trips.some((t) => t.zone === z.id))) continue; const sp: Spot = { name: `trip.${z.id}`, kind: 'trigger', x: (tripPoint(z).c + 0.5) * TILE, y: (tripPoint(z).r + 0.5) * TILE }; this.markers.set(sp.name, this.marker(sp)); }
     this.neigh.setFire(key === 'camp' ? spawnFire(this.spots) : null);
     this.lastRes = CAST.map(() => ({ x: 0, y: 0 }));
     this.probe.neighbours = this.neigh.probe;

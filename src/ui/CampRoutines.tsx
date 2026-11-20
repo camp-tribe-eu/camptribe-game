@@ -397,7 +397,7 @@ export function CampRoutines({ t, weather, seed, onFrame, devices: devices0 = {}
       <p class="ui-camp-note" data-ui="camp-busy" data-away={awayIn(day, round).length}>
         {busy.length === 0 ? t('camp.alone') : `${t('camp.busy')}: ${busy.map((h) => `${t(`camp.owner.${h.member}` as Key)} — ${t(`camp.job.${h.job}` as Key)}`).join(', ')}`}
       </p>
-      <div class="ui-camp-row">
+      <div class="ui-camp-row ui-camp-foot" data-ui="camp-foot">
         <button type="button" class="ui-btn ui-camp-big" data-ui="camp-next" disabled={round === 'evening'}
           onClick={() => setRound((r) => ROUNDS[Math.min(ROUNDS.length - 1, ROUNDS.indexOf(r) + 1)] as Round)}>{t('camp.next')}</button>
         <button type="button" class="ui-btn ui-camp-big" data-ui="camp-to-night" disabled={!nightOpen(round)} onClick={() => setPhase('night')}>{t('camp.night')}</button>
