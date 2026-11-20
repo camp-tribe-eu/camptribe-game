@@ -21,3 +21,8 @@ export function pseudo(text: string): string {
 export function t(lang: AnyLang, key: Key): string {
   return lang === 'pseudo' ? pseudo(LOCALES.en[key]) : LOCALES[lang][key];
 }
+
+/** GAME-341: на дотику клавіш не називаємо — «E чи ●» / «● чи E» (uk), «E or ●» / «● or E» (en) стає просто «●». */
+export function touchWording(text: string, coarse: boolean): string {
+  return coarse ? text.replace(/\bE (?:чи|or) ●|● (?:чи|or) E\b/g, '●') : text;
+}

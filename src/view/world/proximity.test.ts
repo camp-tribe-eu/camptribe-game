@@ -107,6 +107,22 @@ describe('GAME-270 · ціль «Далі» проти мешканця на н�
   });
 });
 
+describe('GAME-341 · просильник («!»/«★») проти світового об\'єкта поруч', () => {
+  const A = { name: 'npc.amina', follower: false, x: 100, y: 140, request: true };   // Аміна за 40 px
+  const BENCH = { name: 'repair.bench', follower: false, x: 100, y: 110 };   // лавка за 10 px — ближча
+  // Мутація (перевірено): прибрати рядок `if (!follower && reqNear …) continue;` в pickNearest → перший вираз повертає лавку, тест червоний.
+  it('«Дія» поруч з Аміною й лавкою — це розмова з Аміною', () => {
+    expect(pickNearest(100, 100, 'down', [BENCH, A], 48)).toBe('npc.amina');
+    expect(pickNearest(100, 100, 'down', [BENCH, A], 48, 'repair.bench')).toBe('npc.amina');
+  });
+  it('контроль: без «★/!» лавка ближча й бере; просильник поза зоною не заважає лавці; автоспрацьовувач і інший NPC не глушаться', () => {
+    expect(pickNearest(100, 100, 'down', [BENCH, { ...A, request: false }], 48)).toBe('repair.bench');
+    expect(pickNearest(100, 100, 'down', [BENCH, { ...A, y: 400 }], 48)).toBe('repair.bench');
+    expect(pickNearest(100, 100, 'down', [{ ...BENCH, name: 'obj.vehicle' }, A], 48)).toBe('obj.vehicle');
+    expect(pickNearest(100, 100, 'down', [{ ...BENCH, name: 'npc.luc' }, A], 48)).toBe('npc.luc');
+  });
+});
+
 describe('GAME-281: ручна дія на авто-об\'єкті гасить кільце (рамка «Куди їдемо?» не відкривається вдруге сама)', () => {
   it('кільце, що вже наповнювалось, після ручної дії й паузи не спрацьовує знову', () => {
     const fired = new Set<string>();

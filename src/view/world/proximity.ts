@@ -75,7 +75,7 @@ export const inSafeZone = (view: View, p: { readonly x: number; readonly y: numb
 /** GAME-186: наскільки (px) слідувач, на якого дивиться герой, «ближчий» за того, що збоку чи позаду. */
 export const FACING_BONUS = 12;
 type Face = 'up' | 'left' | 'down' | 'right';
-export interface Pick { readonly name: string; readonly x: number; readonly y: number; readonly follower: boolean; /** NPC з проханням («!») — не поступається цілі «Далі». */ readonly request?: boolean }
+export interface Pick { readonly name: string; readonly x: number; readonly y: number; readonly follower: boolean; /** NPC з проханням («!») чи місією («★») — не поступається цілі «Далі» й світовому об'єкту (лавці, ящику): «Дія» поруч із ним — розмова з ним. */ readonly request?: boolean }
 
 /** Косинус між напрямком погляду й напрямком на (dx, dy): 1 — просто перед героєм, −1 — за спиною. */
 export function facingDot(f: Face, dx: number, dy: number): number {
@@ -95,6 +95,7 @@ export function pickNearest(px: number, py: number, facing: Face, spots: readonl
     const t = spots.find((s) => s.name === target && !s.follower);
     if (t && Math.hypot(t.x - px, t.y - py) <= range && !spots.some((s) => s.request === true && Math.hypot(s.x - px, s.y - py) <= range)) return t.name;
   }
+  const reqNear = spots.some((s) => !s.follower && s.request === true && Math.hypot(s.x - px, s.y - py) <= range);
   let pick: Pick | null = null;
   let best = range;
   for (const follower of [false, true]) {
@@ -105,6 +106,8 @@ export function pickNearest(px: number, py: number, facing: Face, spots: readonl
       if (s.follower !== follower) continue;
       const d = Math.hypot(s.x - px, s.y - py);
       if (d > range) continue;
+      // GAME-341: просильник («!»/«★») у зоні бере верх над світовим об'єктом (лавка, ящик…), що випадково ближчий; інші NPC й автоспрацьовувачі — як були.
+      if (!follower && reqNear && s.request !== true && !isAutoSpot(s.name) && !s.name.startsWith('npc.')) continue;
       const score = follower ? d - FACING_BONUS * facingDot(facing, s.x - px, s.y - py) : d;
       if (score <= best) { best = score; pick = s; }
     }

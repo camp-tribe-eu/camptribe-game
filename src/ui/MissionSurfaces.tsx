@@ -37,7 +37,8 @@ export function TuneSurface({ view, t, drag, tap }: SurfaceProps) {
   };
   return (
     <div class="mg-tune" data-ui="mg-tune" data-dial={s.dial.toFixed(3)} data-signal={s.signal.toFixed(2)} data-lock={s.lock}>
-      <div class="mg-tune-dial" data-ui="mg-tune-dial" role="slider" aria-label={t(key(view.id, 'dial'))} aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(s.dial * 100)} tabIndex={0}
+      <span class="mg-tune-label" id="mg-tune-label" data-ui="mg-tune-label">{t(key(view.id, 'dial'))}</span>   {/* GAME-341: видимий підпис повзунка (був лише aria-label) */}
+      <div class="mg-tune-dial" data-ui="mg-tune-dial" role="slider" aria-labelledby="mg-tune-label" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(s.dial * 100)} tabIndex={0}
         onPointerDown={(e) => { (e.currentTarget as HTMLElement).setPointerCapture?.(e.pointerId); drag(at(e)); }}
         onPointerMove={(e) => { if (e.buttons > 0) drag(at(e)); }}
         onPointerUp={(e) => { tap(at(e)); drag(null); }}>

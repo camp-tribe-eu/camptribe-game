@@ -2,7 +2,7 @@
 import Phaser from 'phaser';
 import { render, h } from 'preact';
 import { Shell } from './ui/Shell';
-import { t } from './i18n';
+import { t, touchWording } from './i18n';
 import { currentSettings, loadSettings, onSettingsSaved } from './platform/settings';
 import { INTRO_BEAT_QUESTS } from './content/intro-story';
 import { HINT_FLASH_MS, HintIdle, type HintMode } from './content/hint-idle';
@@ -660,7 +660,7 @@ const game = new Phaser.Game({
   // поле по ширині: вбік і на десктопі смуг з боків немає; зайве (< zoom px) ховає overflow поля. FIT із кадром 640×352 давав смуги.
   scale: { mode: Phaser.Scale.NONE, autoCenter: Phaser.Scale.NO_CENTER, zoom: frame0.zoom },
   physics: { default: 'arcade', arcade: { debug: false } },
-  scene: [new WorldScene(bridge, input, probe, worldArt, worldHooks, !switches.noDaylight, (key) => t(langOverride ?? loadSettings().language, key))],
+  scene: [new WorldScene(bridge, input, probe, worldArt, worldHooks, !switches.noDaylight, (key) => touchWording(t(langOverride ?? loadSettings().language, key), coarse()))],
 });
 // GAME-268: шлюз малювання — світ під повним екраном не малюється.
 const renderGate = installRenderGate(game);

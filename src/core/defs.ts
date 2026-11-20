@@ -140,7 +140,7 @@ export type CondDef =
   /** GAME-202: справа живої хвилі ще відкрита (не зроблена й не спізнилась) — вибір-доручення зникає, щойно справу зроблено. */
   | { readonly taskOpen: string }
   /** GAME-312: міні-гру вже зіграно (будь-який результат: «сяк-так» теж пускає далі). Місія сусіда так дізнається, що робота на місці зроблена. */
-  | { readonly minigame: string }
+  | { readonly minigame: string; /** GAME-341: лише коли останній результат саме такий (репліка просильника не бреше про «сяк-так»). */ readonly outcome?: 'good' | 'fine' | 'scrappy' }
   | { readonly all: readonly CondDef[] }
   | { readonly any: readonly CondDef[] };
 

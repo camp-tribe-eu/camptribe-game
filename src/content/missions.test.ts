@@ -87,6 +87,23 @@ const ringDone = (s0: GameState): { state: GameState; choices: number } => {
 
 const clone = (): { dialogues: Record<string, DialogueDef> } => structuredClone(STORY) as unknown as { dialogues: Record<string, DialogueDef> };
 
+describe('GAME-341 · Люк реагує на результат станції, а не на вибір ремонту', () => {
+  // Мутація (перевірено): у holds() прибрати перевірку `outcome` (повернути лише «зіграно») → scrappy іде в a-test-fine, цей тест червоний.
+  it.each([
+    ['good', 'a-fix.c1', 'a-test-quick'], ['good', 'a-fix.c2', 'a-test-solid'],
+    ['fine', 'a-fix.c1', 'a-test-fine'], ['fine', 'a-fix.c2', 'a-test-fine'],
+    ['scrappy', 'a-fix.c1', 'a-test-scrappy'], ['scrappy', 'a-fix.c2', 'a-test-scrappy'],
+  ] as const)('результат %s, ремонт %s → вузол %s', (outcome, fix, node) => {
+    const there = walk(atCamp(LUC_REQUESTS), 'npc.luc', ['hello.c4', 'a-offer.c1', 'a-hub.c2', 'a-hub.c3', 'a-hub.c6', fix, 'a-tip2.c1', 'a-go.c1']);
+    let s = walk(played(there.state, 'mg.aerial-tune', outcome), 'npc.luc', []).state;
+    for (let i = 0; i < 4 && s.dialogue && !s.dialogue.node.startsWith('a-test-'); i++) s = play([{ type: 'Continue' }], s);
+    expect(s.dialogue?.node).toBe(node);
+  });
+  it('репліка про «Самі уривки» не каже «Чисто» в жодній мові', () => {
+    for (const L of [uk, en] as Record<string, string>[]) expect(L['dlg.luc-chat.a-test-scrappy']).not.toMatch(/Чисто|Clean/);
+  });
+});
+
 describe('GAME-312 · місії сусідів: п’ять частин квесту', () => {
   it('у кожної місії всі п’ять частин, і кожна втілена вузлами справжньої розмови', () => {
     for (const m of MISSIONS) expect(checkMission(m), m.id).toEqual([]);
