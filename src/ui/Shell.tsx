@@ -278,6 +278,15 @@ export function Shell({ port, langOverride, credits, build, holdToast = false, h
   // могла ще бути старою (ефект відкладено) — і екран вибору губився б.
   useEffect(() => port.onOpenStory(() => { if (!paused && !storyOpen && !port.mission?.session()) story(true); }), [paused, storyOpen, mission]);
 
+  // GAME-337: «Не влазить» вичерпано (останнє зайве лишили) — ☰ закривається сама, а «Куди їдемо?» з'являється рамкою (раніше лишалась порожня ☰).
+  const sawOverflow = useRef(false);
+  useEffect(() => {
+    const over = (offer.packing?.overflow.length ?? 0) > 0;
+    if (!storyOpen) { sawOverflow.current = false; return; }
+    if (over) sawOverflow.current = true;
+    else if (sawOverflow.current) { sawOverflow.current = false; story(false); }
+  }, [storyOpen, offer]);
+
   // GAME-40: звук натискання кнопки UI — один делегований слухач (капча), а не виклик у кожному обробнику; вибір звуку — soundForButton.
   useEffect(() => {
     const onClick = (e: MouseEvent): void => {

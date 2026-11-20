@@ -113,6 +113,22 @@ export function StoryPanel({ offer, lang, t, act, close, portrait, children, foo
     </fieldset>
   );
 
+  // GAME-337: «Не влазить» — екран із вибором, а не частина довгої ☰: заголовок, місце, кнопки «Лишити вдома» — на першому екрані (раніше 2,9 екрана, кнопки на 1400-му px).
+  if (compact && !offer.dialogue && offer.packing && offer.packing.overflow.length > 0) {
+    return (
+      <div ref={root} onKeyDown={(e) => { if (e.repeat && (e.key === 'Enter' || e.key === ' ')) e.preventDefault(); if (root.current) trapTab(e, root.current); }} class="ui-overlay ui-story ui-story-overflow" role="dialog" aria-modal="true" aria-label={t('pack.overflow')}>
+        <h2 tabIndex={-1}>{t('pack.overflow')}</h2>
+        <fieldset data-ui="packing">
+          <p class="ui-status" data-ui="pack-space" data-used={offer.packing.used} data-capacity={offer.packing.capacity} role="status">{`${t('pack.space')}: ${offer.packing.used} / ${offer.packing.capacity} ${t('pack.units')}`}</p>
+          <div data-ui="pack-overflow" role="group" aria-label={t('pack.overflow')}>
+            {offer.packing.overflow.map((o) => <button type="button" class="ui-btn" key={o.key} data-act="leave" data-key={o.key} onClick={guarded(o.action.id)}>{`${t('pack.leave')} ${ct(lang, o.key)} · ${o.units} ${t('pack.units')}`}</button>)}
+          </div>
+          {offer.packing.noteKey && <p class="ui-status" data-ui="pack-note">{ct(lang, offer.packing.noteKey)}</p>}
+        </fieldset>
+        <button type="button" class="ui-btn" data-ui="story-close" onClick={close}>{t('ui.storyClose')}</button>
+      </div>
+    );
+  }
   return (
     // Затиснутий Enter/Space (автоповтор) не «пробігає» кроки: фокус після кожної дії стрибає на нову першу
     // кнопку, і повтор клавіші влучав би вже в неї (рецензія GAME-32). Свідомі натискання — без затримки.
