@@ -3,17 +3,11 @@
 // Знімки — лише за GAME332_SHOTS=1 (research/game-332/).
 import { expect, test, type Page } from '@playwright/test';
 import { walkIntro } from './intro-walk';
-import { core, goAndDo, installMenuObserver, loaded, menuSeen, playUntil, pressInteract, probe, route, takeFromOpenBox, walk } from './chapter-driver';
+import { core, installMenuObserver, loaded, menuSeen, playUntil, pressInteract, probe, route, takeFromOpenBox, walk } from './chapter-driver';
 
 const SETTINGS_KEY = 'camplife.settings.v1';
-const SHOTS = 'research/game-332';
-const SHOOT = process.env.GAME332_SHOTS === '1';
 const SOLO = ['box.nightstand', 'box.wardrobe', 'box.fridge', 'box.storeroom'];
 const FAMILY = [...SOLO, 'box.mia'];
-type Step = readonly [id: string, r: number, c: number];
-/** Ідеальні розкладки потрібного в порядку «глибоке першим» (знайдено пошуком у trunk.test.ts, там же доведено, що вони good). */
-const SOLO_BIKE: readonly Step[] = [['simple-dinner', 1, 0], ['tent', 1, 1], ['water', 2, 3], ['documents', 1, 3], ['wallet', 1, 4], ['sleeping-bag', 0, 0], ['lantern', 0, 2]];
-const FAMILY_CAR: readonly Step[] = [['simple-dinner', 2, 1], ['mia-bowl-food', 1, 0], ['documents', 1, 1], ['tent', 1, 2], ['water', 2, 4], ['mia-carrier', 1, 4], ['wallet', 0, 0], ['sleeping-bag', 0, 1], ['lantern', 0, 3]];
 
 async function startHome(page: Page, solo: boolean, touch: boolean): Promise<void> {
   await page.addInitScript(([k]) => { try { localStorage.setItem(k as string, JSON.stringify({ textScale: 100, language: 'uk', hintSeen: true })); } catch { /* сховища немає */ } }, [SETTINGS_KEY] as const);
@@ -54,32 +48,6 @@ async function slowEffects(page: Page, ms: number): Promise<() => Promise<void>>
     w.setTimeout = (fn: TimerHandler, d = 0, ...a: unknown[]): number => st(fn, d + ms, ...a);
   }, ms);
   return () => page.evaluate(() => { const w = window as unknown as { __st?: typeof setTimeout; setTimeout: unknown }; if (w.__st) w.setTimeout = w.__st; });
-}
-
-async function lays(page: Page, steps: readonly Step[]): Promise<void> {
-  for (const [id, r, c] of steps) {
-    await page.locator(`[data-ui="trunk-item"][data-id="item.${id}"]`).tap();
-    await page.locator(`[data-ui="trunk-cell"][data-r="${r}"][data-c="${c}"]`).tap();
-    await expect(page.locator(`[data-ui="trunk-item"][data-id="item.${id}"]`), `${id} лягло`).toHaveAttribute('data-placed', 'yes');
-  }
-}
-
-async function fitsScreen(page: Page, label: string): Promise<void> {
-  const vp = page.viewportSize() as { width: number; height: number };
-  for (const sel of ['[data-ui="trunk-cell"]', '[data-ui="trunk-item"]', '[data-ui="trunk-rotate"]', '[data-ui="trunk-done"]', '[data-ui="mg-pause"]']) {
-    for (const el of await page.locator(sel).all()) {
-      const b = await el.boundingBox();
-      expect(b, `${label}: ${sel} видно`).not.toBeNull();
-      const bb = b as { x: number; y: number; width: number; height: number };
-      expect(bb.x, `${label}: ${sel} не лівіше`).toBeGreaterThanOrEqual(-1);
-      expect(bb.y, `${label}: ${sel} не вище`).toBeGreaterThanOrEqual(-1);
-      expect(bb.x + bb.width, `${label}: ${sel} не правіше`).toBeLessThanOrEqual(vp.width + 1);
-      expect(bb.y + bb.height, `${label}: ${sel} не нижче (${Math.round(bb.y + bb.height)} > ${vp.height})`).toBeLessThanOrEqual(vp.height + 1);
-      if (sel === '[data-ui="trunk-cell"]' || sel === '[data-ui="trunk-done"]') expect(Math.min(bb.width, bb.height), `${label}: ${sel} ≥ 40 px`).toBeGreaterThanOrEqual(40);
-    }
-  }
-  const stage = await page.locator('.mg-stage').evaluate((e) => ({ sh: e.scrollHeight, ch: e.clientHeight }));
-  expect(stage.sh, `${label}: без прокрутки поля гри`).toBeLessThanOrEqual(stage.ch + 1);
 }
 
 for (const [name, vp, solo, boxes] of [['portrait', { width: 390, height: 844 }, true, SOLO], ['landscape', { width: 932, height: 430 }, false, FAMILY]] as const) {
