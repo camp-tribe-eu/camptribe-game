@@ -38,7 +38,7 @@ export function TuneSurface({ view, t, drag, tap }: SurfaceProps) {
   return (
     <div class="mg-tune" data-ui="mg-tune" data-dial={s.dial.toFixed(3)} data-signal={s.signal.toFixed(2)} data-lock={s.lock}>
       {/* GAME-341: видимий підпис повзунка (був лише aria-label) */}
-      {s.twist && <p class="mg-twist" data-ui="mg-twist" role="status">{t(key(view.id, 'twist'))}</p>}
+      <p class="mg-twist" data-ui="mg-twist" data-on={s.twist ? 'yes' : 'no'} role="status">{s.twist ? t(key(view.id, 'twist')) : ''}</p>
       <span class="mg-tune-label" id="mg-tune-label" data-ui="mg-tune-label">{t(key(view.id, 'dial'))}</span>
       <div class="mg-tune-dial" data-ui="mg-tune-dial" role="slider" aria-labelledby="mg-tune-label" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(s.dial * 100)} tabIndex={0}
         onPointerDown={(e) => { (e.currentTarget as HTMLElement).setPointerCapture?.(e.pointerId); drag(at(e)); }}
@@ -56,7 +56,7 @@ export function CrankSurface({ view, t, tap }: SurfaceProps) {
   const s = view.surface as CrankSurface;
   return (
     <div class="mg-crank" data-ui="mg-crank" data-charge={s.charge} data-jerks={s.jerks} data-beat={s.beat}>
-      {s.twist && <p class="mg-twist" data-ui="mg-twist" role="status">{t(key(view.id, 'twist'))}</p>}
+      <p class="mg-twist" data-ui="mg-twist" data-on={s.twist ? 'yes' : 'no'} role="status">{s.twist ? t(key(view.id, 'twist')) : ''}</p>
       <div class="mg-crank-ring"><div class="mg-crank-pulse" data-hint={s.hint ? 'yes' : 'no'} style={{ width: pct(0.6 + 0.4 * (1 - s.pulse)), height: pct(0.6 + 0.4 * (1 - s.pulse)) }} /></div>
       <div class="mg-meter" role="progressbar" aria-label={t(key(view.id, 'meter'))} aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round((s.charge / s.need) * 100)}><i style={{ width: pct(s.charge / s.need) }} /></div>
       <button type="button" class="ui-btn mg-btn" data-ui="mg-crank-tap" onClick={() => tap({ x: 0.5, y: 0.5 })}>{t(key(view.id, 'tap'))}</button>

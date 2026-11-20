@@ -43,10 +43,10 @@ export const RING_SIFT = defineMinigame<SiftState, SiftView>({
 
 // ───────────── Тримати в смузі: шкала, що пливе (станція / сонце / натяг мотузки) ─────────────
 // Повзунок тягнеш пальцем; ціль повільно «пливе» (вітер, хмари, порив). Тримай сигнал, поки смуга не заповниться.
-// GAME-343 · зміна темпу: на половині смуги (`twist`) станцію зносить убік, а коливання стає швидшим і ширшим. Спливає підпис `mg.<key>.twist`.
+// GAME-343 · зміна темпу: на половині смуги (`twist`) станцію зносить убік, а коливання міняє розмах і період (`swayMul`, `periodMul`: >1 — ширше/повільніше). Спливає підпис `mg.<key>.twist`.
 export interface HoldTwist { readonly jump: number; readonly swayMul: number; readonly periodMul: number }
 export interface HoldParams { readonly id: string; readonly key: string; readonly half: number; readonly sway: number; readonly periodS: number; readonly lockS: number; readonly goodS: number; readonly fineS: number; readonly limitS: number; readonly results: Results; readonly twist?: HoldTwist }
-export interface HoldState { readonly t: number; readonly dial: number; readonly base: number; readonly lock: number; readonly shift: number }
+export interface HoldState { readonly t: number; readonly dial: number; readonly base: number; readonly lock: number; readonly shift: number; readonly ts: number }
 export interface HoldView { readonly dial: number; readonly station: number | null; readonly signal: number; readonly lock: number; readonly need: number; readonly twist: boolean }
 /** Скільки секунд після зміни темпу висить підпис. */
 export const TWIST_CUE_S = 3;
@@ -63,7 +63,7 @@ export function holdGame(p: HoldParams): AnyMinigame {
     id: p.id, titleKey: `mg.${p.key}.title`, introKey: `mg.${p.key}.intro`, hintKey: `mg.${p.key}.hint`,
     limitFrames: p.limitS * FPS,
     outcomes: outcomesOf(p.key, p.results),
-    init: (_d, seed) => ({ t: 0, dial: 0.05, base: 0.3 + ((((seed * 7919) % 400) + 400) % 400) / 1000, lock: 0, shift: 0 }),
+    init: (d, seed) => ({ t: 0, dial: 0.05, base: 0.3 + ((((seed * 7919) % 400) + 400) % 400) / 1000, lock: 0, shift: 0, ts: d.timeScale }),
     step: (s: HoldState, input: FrameInput, d: Difficulty): HoldState => {
       const tapX = input.taps[0]?.x;
       const dial = input.drag ? clamp01(input.drag.x) : tapX !== undefined ? clamp01(tapX) : s.dial;
@@ -72,7 +72,7 @@ export function holdGame(p: HoldParams): AnyMinigame {
       return { ...next, lock, shift: s.shift === 0 && p.twist && lock >= Math.ceil(need / 2) ? next.t : s.shift };
     },
     done: (s) => s.lock >= need,
-    outcomeOf: (s) => (s.lock < need ? 'scrappy' : byTime(s.t, p.goodS, p.fineS)),
+    outcomeOf: (s) => (s.lock < need ? 'scrappy' : byTime(s.t, p.goodS * s.ts, p.fineS * s.ts)),
     view: (s, d) => ({ dial: s.dial, station: d.hint ? holdTarget(p, s) : null, signal: holdSignal(p, s, d), lock: s.lock, need, twist: s.shift > 0 && s.t - s.shift < TWIST_CUE_S * FPS }),
   });
 }
@@ -81,7 +81,7 @@ export function holdGame(p: HoldParams): AnyMinigame {
 // GAME-343 · зміна темпу: на половині заряду пульс міняє такт (`beat2`/`tol2`) — «перерахуй»: перший проміжок після зміни не судять.
 export interface RhythmTwist { readonly beat: number; readonly tol: number }
 export interface RhythmParams { readonly id: string; readonly key: string; readonly beat: number; readonly tol: number; readonly need: number; readonly goodS: number; readonly fineS: number; readonly limitS: number; readonly results: Results; readonly twist?: RhythmTwist }
-export interface RhythmState { readonly t: number; readonly lastTap: number | null; readonly charge: number; readonly jerks: number; readonly shift: number }
+export interface RhythmState { readonly t: number; readonly lastTap: number | null; readonly charge: number; readonly jerks: number; readonly shift: number; readonly ts: number }
 export interface RhythmView { readonly charge: number; readonly need: number; readonly pulse: number; readonly hint: boolean; readonly jerks: number; readonly beat: number; readonly twist: boolean }
 /** Такт і допуск, що діють зараз (після зміни темпу — другі). */
 export const rhythmNow = (p: RhythmParams, s: RhythmState): { readonly beat: number; readonly tol: number } => (p.twist && s.shift > 0 ? p.twist : p);
@@ -91,31 +91,31 @@ export function rhythmGame(p: RhythmParams): AnyMinigame {
     id: p.id, titleKey: `mg.${p.key}.title`, introKey: `mg.${p.key}.intro`, hintKey: `mg.${p.key}.hint`,
     limitFrames: p.limitS * FPS,
     outcomes: outcomesOf(p.key, p.results),
-    init: () => ({ t: 0, lastTap: null, charge: 0, jerks: 0, shift: 0 }),
+    init: (d) => ({ t: 0, lastTap: null, charge: 0, jerks: 0, shift: 0, ts: d.timeScale }),
     step: (s: RhythmState, input: FrameInput, d: Difficulty): RhythmState => {
       if (input.taps.length === 0) return { ...s, t: s.t + 1 };
       if (s.lastTap === null) return { ...s, t: s.t + 1, lastTap: s.t };
       const even = evenTap(p, s.t - s.lastTap, d, s);
       const charge = even ? s.charge + 1 : Math.max(0, s.charge - 1);
       const jerks = even ? s.jerks : s.jerks + 1;
-      if (s.shift === 0 && p.twist && charge >= Math.ceil(p.need / 2)) return { t: s.t + 1, lastTap: null, charge, jerks, shift: s.t + 1 };
-      return { t: s.t + 1, lastTap: s.t, charge, jerks, shift: s.shift };
+      if (s.shift === 0 && p.twist && charge >= Math.ceil(p.need / 2)) return { t: s.t + 1, lastTap: null, charge, jerks, shift: s.t + 1, ts: s.ts };
+      return { t: s.t + 1, lastTap: s.t, charge, jerks, shift: s.shift, ts: s.ts };
     },
     done: (s) => s.charge >= p.need,
-    outcomeOf: (s) => (s.charge < p.need ? 'scrappy' : byTime(s.t, p.goodS, p.fineS)),
+    outcomeOf: (s) => (s.charge < p.need ? 'scrappy' : byTime(s.t, p.goodS * s.ts, p.fineS * s.ts)),
     view: (s, d) => { const r = rhythmNow(p, s); return { charge: s.charge, need: p.need, pulse: ((s.t - s.shift) % r.beat) / r.beat, hint: d.hint, jerks: s.jerks, beat: r.beat, twist: s.shift > 0 && s.t - s.shift < TWIST_CUE_S * FPS }; },
   });
 }
 
 // Перший вихід кожної місії — робота для людини.
-export const TUNE: HoldParams = { id: 'mg.aerial-tune', key: 'aerial', half: 0.1, sway: 0.12, periodS: 3, lockS: 15, goodS: 32, fineS: 45, limitS: 60, twist: { jump: 0.2, swayMul: 1.1, periodMul: 0.9 }, results: { good: 'aerial.clear', fine: 'aerial.ok', scrappy: 'aerial.crackle' } };
-export const CRANK: RhythmParams = { id: 'mg.lantern-crank', key: 'lantern', beat: 40, tol: 8, need: 34, goodS: 30, fineS: 45, limitS: 60, twist: { beat: 28, tol: 6 }, results: { good: 'lantern.full', fine: 'lantern.half', scrappy: 'lantern.flicker' } };
+export const TUNE: HoldParams = { id: 'mg.aerial-tune', key: 'aerial', half: 0.12, sway: 0.12, periodS: 3, lockS: 18, goodS: 32, fineS: 45, limitS: 60, twist: { jump: 0.2, swayMul: 1.1, periodMul: 0.9 }, results: { good: 'aerial.clear', fine: 'aerial.ok', scrappy: 'aerial.crackle' } };
+export const CRANK: RhythmParams = { id: 'mg.lantern-crank', key: 'lantern', beat: 40, tol: 8, need: 38, goodS: 32, fineS: 45, limitS: 60, twist: { beat: 28, tol: 6 }, results: { good: 'lantern.full', fine: 'lantern.half', scrappy: 'lantern.flicker' } };
 export const AERIAL_TUNE = holdGame(TUNE);
 export const LANTERN_CRANK = rhythmGame(CRANK);
 // Другий вихід — пристрій для табору (§9а), з тим, що дала людина: сітка, панель, мотузка.
-export const WEAVE: RhythmParams = { id: 'mg.trap-weave', key: 'trap', beat: 50, tol: 10, need: 24, goodS: 28, fineS: 45, limitS: 60, twist: { beat: 72, tol: 14 }, results: { good: 'trap.tight', fine: 'trap.ok', scrappy: 'trap.loose' } };
-export const AIM: HoldParams = { id: 'mg.panel-aim', key: 'panel', half: 0.12, sway: 0.08, periodS: 5, lockS: 12, goodS: 35, fineS: 60, limitS: 85, results: { good: 'panel.full-sun', fine: 'panel.part-sun', scrappy: 'panel.shade' } };
-export const TIE: HoldParams = { id: 'mg.tarp-tie', key: 'tarp', half: 0.09, sway: 0.15, periodS: 2.5, lockS: 12, goodS: 30, fineS: 45, limitS: 60, twist: { jump: 0.2, swayMul: 0.6, periodMul: 1.8 }, results: { good: 'tarp.taut', fine: 'tarp.ok', scrappy: 'tarp.sag' } };
+export const WEAVE: RhythmParams = { id: 'mg.trap-weave', key: 'trap', beat: 50, tol: 10, need: 24, goodS: 33, fineS: 45, limitS: 60, twist: { beat: 72, tol: 14 }, results: { good: 'trap.tight', fine: 'trap.ok', scrappy: 'trap.loose' } };
+export const AIM: HoldParams = { id: 'mg.panel-aim', key: 'panel', half: 0.12, sway: 0.08, periodS: 5, lockS: 22, goodS: 35, fineS: 60, limitS: 85, results: { good: 'panel.full-sun', fine: 'panel.part-sun', scrappy: 'panel.shade' } };
+export const TIE: HoldParams = { id: 'mg.tarp-tie', key: 'tarp', half: 0.12, sway: 0.15, periodS: 2.5, lockS: 18, goodS: 30, fineS: 45, limitS: 60, twist: { jump: 0.2, swayMul: 0.6, periodMul: 1.8 }, results: { good: 'tarp.taut', fine: 'tarp.ok', scrappy: 'tarp.sag' } };
 export const TRAP_WEAVE = rhythmGame(WEAVE);
 export const PANEL_AIM = holdGame(AIM);
 export const TARP_TIE = holdGame(TIE);
