@@ -294,7 +294,9 @@ describe('GAME-342 · Люк: «★ місія» названа з першої 
     let s = there;
     for (let i = 0; i < 4 && s.dialogue && s.dialogue.node !== want; i++) s = play([{ type: 'Continue' }], s);
     if (s.dialogue?.node !== want) throw new Error(`вузол ${want} не відкрився, стоїмо на ${s.dialogue?.node}`);
-    const key = `dlg.luc-chat.${want}`;
+    const node = (CONTENT.dialogues.find((d) => d.id === there.dialogue?.id || d.id === s.dialogue?.id)?.nodes ?? []) as unknown as { id: string; textKey: string }[];
+    const key = node.find((x) => x.id === want)?.textKey;
+    if (!key) throw new Error(`у вузла ${want} немає textKey`);
     return { uk: UK[key] as string, en: EN[key] as string };
   }
   it('перше доручення (ланцюг): репліка називає «★ місію» і що спершу дві дрібні справи', () => {
@@ -310,6 +312,10 @@ describe('GAME-342 · Люк: «★ місія» названа з першої 
   it('після радіо: «заходь по ★ місію» — і саме тоді вибір місії є в hello', () => {
     const t = nodeText(atCamp(RADIO_T1), ['n', 'turnin2.c1'], 'closing2');
     expect(t.uk).toContain('★'); expect(t.en).toContain('★');
+    // До здачі радіо гравця не пускає до hello (де є вибір місії): ворота ведуть у reminder2, а на першому доручені — в offer.
+    const atNode = (flags: readonly string[]): string | undefined => play([{ type: 'Continue' }], play([{ type: 'Talk', npcId: 'npc.luc' }], { ...atCamp(flags), dialogue: null })).dialogue?.node;
+    expect(atNode(['f.req-luc-chain-taken', 'f.req-luc-chain-t1', 'f.req-luc-chain-done', 'f.req-luc-radio-taken']), 'радіо в роботі').toBe('reminder2');
+    expect(atNode([]), 'до доручень').toBe('offer');
     expect(tryChoice(atCamp([...CHAIN_DONE, 'f.req-luc-radio-taken', 'f.req-luc-radio-done']), 'npc.luc', ['n'], 'hello.c4'), 'місія Люка справді відкрита після радіо').toBeNull();
   });
 });

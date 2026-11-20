@@ -449,7 +449,7 @@ const sampleStage = (): SampleStage => {
   return 'day';
 };
 /** GAME-342: зразковий день не веде гравця через ☰ крок за кроком (герой, пролог, крамниця, збори: ~17 дотиків) — свіжий день сам проходить ті самі кроки до виїзду.
- *  Це ТІ САМІ намірі ☰ (storyOffer → intents), у тому ж порядку «що далі» (nextAction); стан виходить такий самий, як після ручного проходу. Не свіжий день (сейв, «Почати знову» вже за дорогою) не чіпається. */
+ *  Це ТІ САМІ наміри ☰ (storyOffer → intents), у тому ж порядку «що далі» (nextAction); стан виходить такий самий, як після ручного проходу. Не свіжий день (сейв, «Почати знову» вже за дорогою) не чіпається. */
 function sampleQuickStart(): void {
   const view = { ...viewOf(), mapFirst: false };
   const pick = (): string | undefined => {
@@ -458,7 +458,7 @@ function sampleQuickStart(): void {
     if (o.stage === 'create') return sampleHeroes(o.characters)[0]?.id;
     return nextAction(sampleActions(o.actions, true), o.goal?.key ?? null)?.id;
   };
-  if (storyOffer(bridge.state, GAME_DEFS, view).offer.stage !== 'create') return;
+  if (storyOffer(bridge.state, GAME_DEFS, view).offer.stage !== 'create') { probe.sampleQuickStart = 'skipped'; return; }
   for (let i = 0; i < SAMPLE_QUICK_STEPS; i++) {
     const id = pick();
     if (id === undefined) break;
@@ -466,6 +466,10 @@ function sampleQuickStart(): void {
     if (!intent) break;
     bridge.send(intent);
   }
+  // GAME-342 (закон 4): швидкий старт, що став не на дорозі, не мовчить — тест читає probe.sampleQuickStart, консоль каже де застряг.
+  const at = bridge.state.game.player?.locationId ?? null;
+  probe.sampleQuickStart = at === 'loc.road' ? 'ok' : 'stuck';
+  if (at !== 'loc.road') console.warn(`sampleQuickStart: застряг у ${String(at)} (діалог: ${String(bridge.state.game.dialogue?.node ?? null)})`);
 }
 function sampleOpenDrive(): void {
   const g = bridge.state.game;

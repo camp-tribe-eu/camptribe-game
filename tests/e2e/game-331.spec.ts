@@ -1,10 +1,10 @@
+import { readFileSync } from 'node:fs';
 // GAME-331 · скарга власника: «не можу запустити нову гру — лише табір доступний». Шлях: зразковий день (?sampleDay=1) → ‖ → «Нова гра».
 // Було: порт запускав ПОВНУ гру (екран «Хто вирушає») в адресі зразка — гравець застрявав у гібриді. Тепер: «Почати день знову» → той самий день спочатку.
 // Мутація (перевірено): прибрати рядок `if (port.sample) { void port.sample.restart(); return; }` у Shell.startNew → обидві орієнтації червоніють (екран вибору замість дороги).
 // GAME-342: свіжий день одразу на дорозі (без ☰ і підказки); прогрес — збережений табір із fixtures/sample-camp.json, «Почати день знову» повертає його на дорогу.
 const SAVE = (JSON.parse(readFileSync(new URL('./fixtures/sample-camp.json', import.meta.url), 'utf8')) as { save: string }).save;
 const where = (page: import('@playwright/test').Page): Promise<string> => page.evaluate(() => (window as unknown as { __game: { read: () => { game: { player: { locationId: string } } } } }).__game.read().game.player.locationId);
-import { readFileSync } from 'node:fs';
 import { expect, test } from '@playwright/test';
 import { waitGameReady } from './ready';
 
