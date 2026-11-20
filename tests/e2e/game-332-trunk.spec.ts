@@ -152,7 +152,8 @@ test('«Їдемо як є»: пауза → далі без цього — scra
   const buttons = page.locator('[data-ui="pack-overflow"] [data-act="leave"]');
   for (let i = 0; i < 20 && (await buttons.count()) > 0; i++) { await buttons.first().click(); await page.waitForTimeout(450); }
   expect((await core(page)).game.flags.filter((f) => f.startsWith('f.take-')), 'сумка порожня: старий екран довів до кінця').toEqual([]);
-  await page.keyboard.press('Escape');
+  // GAME-337: останнє зайве лишили — ☰ закрилась сама, «Куди їдемо?» рамкою (раніше — порожня ☰ й Escape).
+  await expect(page.locator('.ui-talk [data-ui="dialogue"] [data-act="visit"]').first(), 'після «Не влазить» — рамка «Куди їдемо?»').toBeVisible({ timeout: 10_000 });
   await playUntil(page, true, [], (k) => k.game.player?.locationId === 'loc.road', () => menuSeen(page), 30);
   await ctx.close();
 });

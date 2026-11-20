@@ -21,3 +21,13 @@ export function missionWorkDue(g: GameState, hero: { readonly px: number; readon
   }
   return null;
 }
+
+/** GAME-337: похід, на який гравця вже відправила розмова («Іду до колонки…»), але міні-гру ще не зіграно; null — жодного. Поки він є, місця справ мовчать, а ціль дня — зона походу. */
+export function pendingTrip(g: GameState, ms: readonly MissionDef[] = MISSIONS): Trip | null {
+  for (const m of ms) {
+    if (g.flags.includes(m.doneFlag)) continue;
+    const t = m.trips.find((x) => g.flags.includes(x.flag) && g.minigames?.[x.minigame] === undefined);
+    if (t) return t;
+  }
+  return null;
+}

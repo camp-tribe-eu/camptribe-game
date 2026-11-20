@@ -110,11 +110,15 @@ export function SampleDay({ port, t, lang, onBoard }: { port: SamplePort; t: (k:
   // GAME-335: запит із мапи (місце справи) відкриває дошку з потрібною рутиною — той самий вхід, що й кнопка «Дошка табору».
   const req = port.request();
   const seenReq = useRef(req.n);
+  // GAME-337: запит живе лише до першого прочитання панеллю; інакше панель, змонтована знову після розмови, відкрила б застарілу рутину замість дошки.
+  const [fresh, setFresh] = useState<typeof req>({ id: null, n: req.n });
   useEffect(() => {
     if (req.n === seenReq.current) return;
     seenReq.current = req.n;
+    setFresh(req);
     onBoard(); setMounted(true); setBoardOpen(true);
   }, [req.n]);
+  useEffect(() => { if (fresh.id !== null) setFresh({ id: null, n: fresh.n }); }, [fresh.n]);
   if (stage === 'off') return null;
   const text = (id: string): string => { const v = ct(lang, id); return v.startsWith(MISSING_MARK) ? t(id as Key) : v; };
   const lane = port.lane();
@@ -129,7 +133,7 @@ export function SampleDay({ port, t, lang, onBoard }: { port: SamplePort; t: (k:
       )}
       {mounted && !ended && (
         <div class="sd-board-wrap" data-ui="sd-board-wrap" hidden={!boardOpen}>
-          <CampRoutines live={boardOpen} t={t} weather={port.weather()} seed={port.seed()} onFrame={port.onFrame} devices={devicesFromFlags(flags)} extra={sampleExtra(flags)} text={text} focus={req} onWork={port.working}
+          <CampRoutines live={boardOpen} t={t} weather={port.weather()} seed={port.seed()} onFrame={port.onFrame} devices={devicesFromFlags(flags)} extra={sampleExtra(flags)} text={text} focus={fresh} onWork={port.working}
             onNight={setNight} saved={port.board()} onSave={port.saveBoard} onSummary={() => { setBoardOpen(false); port.stormNight(); }} />
           <button type="button" class="ui-btn sd-board-close" data-ui="sd-board-close" onClick={() => setBoardOpen(false)}>{t('sd.back')}</button>
         </div>

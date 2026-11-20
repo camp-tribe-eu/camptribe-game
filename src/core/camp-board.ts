@@ -2,7 +2,7 @@
 // Поле `game.campBoard` необов'язкове (відсутність ≡ «дошку ще не відкривали»; міграції не треба). Пише лише команда SaveCampBoard.
 // Тут лише ФОРМА і перевірка меж: що означають числа, знає дошка (src/content/camp-day.ts), ядро не залежить від контенту.
 export const BOARD_ROUNDS = ['morning', 'noon', 'afternoon', 'evening'] as const;
-export const BOARD_ROUTINES = ['water', 'firewood', 'fire', 'lanterns', 'fish', 'berries', 'tidy'] as const;
+export const BOARD_ROUTINES = ['water', 'firewood', 'fire', 'lanterns', 'fish', 'berries', 'tidy', 'knots'] as const;
 export const BOARD_DEVICES = ['rain-barrel', 'solar-station', 'woodpile', 'food-box', 'fish-trap'] as const;
 const OUTCOMES = ['good', 'fine', 'scrappy'] as const;
 /** Стеля розміру запису в сейві: дошка — це кілька десятків байтів, а не місце для чужих даних. */

@@ -124,11 +124,8 @@ test('усе взяте вдома → авто: не влізло → «що л
   expect(after.filter((f) => f.startsWith('f.take-')), 'сумка порожня').toEqual([]);
   expect(['f.pack-tent', 'f.pack-sleeping-bag', 'f.pack-water', 'f.pack-simple-dinner', 'f.pack-documents', 'f.pack-wallet'].filter((f) => !after.includes(f)), 'потрібне в авто').toEqual([]);
   // Закрити панель, відійти й підійти до авто: пропозиція «Куди їдемо?» з'являється (ГАРД: «спакував — не сісти в авто» неможливий).
-  await page.keyboard.press('Escape');
-  const q = await probe(page);
-  await walk(page, route('home', [q.playerX, q.playerY], 'step.ST-004'));
-  const q2 = await probe(page);
-  await walk(page, route('home', [q2.playerX, q2.playerY], 'obj.vehicle'));
+  // GAME-337: останнє зайве лишили — ☰ закрилась сама, і «Куди їдемо?» вже на екрані (раніше Escape, відійти й підійти до авто).
   await expect(page.locator('.ui-talk')).toBeVisible({ timeout: 10_000 });
+  await expect(page.locator('.ui-story'), '☰ закрилась').toHaveCount(0);
   await ctx.close();
 });

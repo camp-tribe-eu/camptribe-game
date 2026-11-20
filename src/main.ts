@@ -71,7 +71,8 @@ import contentEvents from '../content/events.json';
 import { rankUps, SKILL_IDS, type HandAction } from './core/skills';
 import type { SkillUp } from './ui/overlay-order';
 import { openGate } from './view/open-gate';
-import { missionWorkDue } from './view/mission-work';
+import { boardError } from './core/camp-board';
+import { missionWorkDue, pendingTrip } from './view/mission-work';
 import { createMinigameSession, type MinigameSession } from './view/minigame-session';
 import { minigameById } from './content/minigames';
 import { TRUNK_GAME, leftOf, setTrunkLoad, type TrunkState } from './content/minigames/trunk';
@@ -467,7 +468,7 @@ function sampleScenes(): void {
 let stationFor: unknown = null;
 let stationOk = false;
 const stationsLive = (): boolean => {
-  if (stationFor !== bridge.state) { stationFor = bridge.state; stationOk = sampleOn && sampleStage() === 'day' && sampleGoal(bridge.state.game.flags, playedScene(STORM_SCENE)) !== 'done'; }
+  if (stationFor !== bridge.state) { stationFor = bridge.state; stationOk = sampleOn && sampleStage() === 'day' && sampleGoal(bridge.state.game.flags, playedScene(STORM_SCENE)) !== 'done' && pendingTrip(bridge.state.game) === null; }   // GAME-337: крок місії «іду до…» — місця справ поступаються ціллі походу
   return stationOk && missionSession === null;   // GAME-335: над міні-грою (дорога, місія сусіда) місце справи мовчить
 };
 let stationReq: { id: RoutineId | null; n: number } = { id: null, n: 0 };
@@ -494,7 +495,12 @@ const samplePort: SamplePort = {
     bridge.send({ type: 'StartScene', sceneId: SCRAPE_SCENE, facts }); storyChanged();
   },
   board: () => bridge.state.game.campBoard,
-  saveBoard: (b) => { bridge.send({ type: 'SaveCampBoard', board: b }); },
+  // GAME-337 (закон 4): відхилений запис дошки не мовчить — так «knots» тихо губив день. У e2e/dev — помилка сторінки, у проді — console.error.
+  saveBoard: (b) => {
+    const why = boardError(b);
+    if (why !== null) { const msg = `SaveCampBoard rejected: ${why}`; console.error(msg); if (import.meta.env.MODE !== 'production') throw new Error(msg); return; }
+    bridge.send({ type: 'SaveCampBoard', board: b });
+  },
   stormNight: () => { if (!playedScene(STORM_SCENE)) { bridge.send(stormNightMove(bridge.state.game.flags, undefined, bridge.state.game.campBoard?.results.fire !== undefined, bridge.state.game.campBoard?.facts.dryLogs)); storyChanged(); } },
   restart: async () => { await saves.newGame(); location.reload(); },
   subscribe: (l) => { sampleListeners.add(l); return () => { sampleListeners.delete(l); }; },
@@ -563,7 +569,7 @@ const worldHooks: WorldHooks = {
   grillDue: () => fireplaceDue(bridge.state) && fishEvening(bridge.state.game.flags) === 'kept',
   onGrilled: (charred) => { grilledCharred = charred; },
   onFish,
-  isLive: (name) => (sampleOn && stationRoutine(name) !== null ? stationsLive() : !campOnly(name) && liveSpot(bridge.state, name, GAME_DEFS)),
+  isLive: (name) => (name.startsWith('trip.') ? sampleOn && sampleStage() === 'day' && sampleGoal(bridge.state.game.flags, playedScene(STORM_SCENE)) !== 'done' && missionSession === null && pendingTrip(bridge.state.game)?.zone === name.slice(5) : sampleOn && stationRoutine(name) !== null ? stationsLive() : !campOnly(name) && liveSpot(bridge.state, name, GAME_DEFS)),
   stations: () => sampleOn,
   posts: stationPosts,
   frame: (dtMs) => {
@@ -590,7 +596,8 @@ const worldHooks: WorldHooks = {
   target: () => {
     if (targetFor !== bridge.state.game || targetPack !== backpack.length || targetMin !== bridge.state.clock.minutes) { targetFor = bridge.state.game; targetPack = backpack.length; targetMin = bridge.state.clock.minutes; // GAME-183: прохання в роботі (вибір гравця) — перше; далі крок сюжету. Збірка e2e без ?mapFirst=1 табір веде як раніше (лише прохання): ☰ там ще дає кроки.
       const at = bridge.state.game.player?.locationId;
-      targetSpot = requestTarget(bridge.state.game) ?? (switches.panelActs && (at === 'loc.camp.lake' || at === 'loc.road') ? null : nextTarget(bridge.state, GAME_DEFS, backpack)?.spot ?? null);
+      const trip = sampleOn && at === MAP_LOCATION.camp && sampleGoal(bridge.state.game.flags, playedScene(STORM_SCENE)) !== 'done' ? pendingTrip(bridge.state.game) : null;   // GAME-337: крок місії веде в зону походу (позначка trip.<зона>)
+      targetSpot = (trip ? `trip.${trip.zone}` : null) ?? requestTarget(bridge.state.game) ?? (switches.panelActs && (at === 'loc.camp.lake' || at === 'loc.road') ? null : nextTarget(bridge.state, GAME_DEFS, backpack)?.spot ?? null);
     }
     return targetSpot;
   },
