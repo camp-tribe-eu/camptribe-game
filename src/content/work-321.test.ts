@@ -4,7 +4,7 @@
 import src from '../ui/CampRoutines.tsx?raw';
 import { describe, expect, it } from 'vitest';
 import { MIN_WORK, ROUTINE_IDS, addWork, canFinish, workLeft } from './camp-day';
-import { DISHES, IDLE_MS, emberOutcome, startEmbers, stepEmbers, type EmberState } from './embers';
+import { DISHES, IDLE_MS, emberOutcome, fireWhy, startEmbers, stepEmbers, type EmberState } from './embers';
 import { STEPS, startWater, stepWater } from './water-carry';
 
 const EXIT: Readonly<Record<keyof typeof MIN_WORK, string | null>> = { firewood: 'wood-done', lanterns: 'lantern-done', fish: 'fish-done', berries: 'berry-enough', tidy: 'tidy-sleep', fire: null, knots: 'knots-done' };
@@ -88,5 +88,14 @@ describe('вогонь без рук', () => {
     const cooked: EmberState = { ...startEmbers(true), done: true, quality: DISHES.map(() => 1) };
     expect(emberOutcome({ ...cooked, acts: MIN_WORK.fire[0] - 1 })).toBe('scrappy');
     expect(emberOutcome({ ...cooked, acts: MIN_WORK.fire[0] })).toBe('good');
+  });
+});
+
+// GAME-338 · причина «сяк-так» вогню. Мутації (перевірено): у fireWhy поміняти 'heat' і 'idle' місцями → червоніє; прибрати перевірку good → «добре без причини» червоніє.
+describe('GAME-338 · fireWhy', () => {
+  it('мало дій → idle; досить дій, але жар поза смугою (страви не вийшли) → heat; добре → без причини', () => {
+    expect(fireWhy({ ...startEmbers(true), done: true, quality: DISHES.map(() => 1), acts: MIN_WORK.fire[0] - 1 })).toBe('idle');
+    expect(fireWhy({ ...startEmbers(true), done: true, quality: DISHES.map(() => 0.1), acts: MIN_WORK.fire[0] })).toBe('heat');
+    expect(fireWhy({ ...startEmbers(true), done: true, quality: DISHES.map(() => 1), acts: MIN_WORK.fire[0] })).toBeNull();
   });
 });

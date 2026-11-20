@@ -11,13 +11,13 @@ import { type Difficulty, type Outcome } from '../content/minigame';
 import type { CampBoardSave } from '../core/camp-board';
 import { STEPS, needSide, startWater, stepWater, waterOutcome, waterScore, type Side, type WaterState } from '../content/water-carry';
 import { LANTERNS, SPOTS, lanternOutcome, litCount, startLanterns, stepLanterns, type LanternState } from '../content/lantern-charge';
-import { DISHES, emberOutcome, smoking, startEmbers, stepEmbers, type EmberAct, type EmberState } from '../content/embers';
+import { DISHES, FIRE_WHY_KEY, emberOutcome, fireWhy, smoking, startEmbers, stepEmbers, type EmberAct, type EmberState } from '../content/embers';
 import { BASKET, berryOutcome, berryFacts, enoughBerries, hinted, patchOf, pickBerry, startBerries, type BerryState } from '../content/berries-patch';
 import { COVER, ENOUGH_DRY, LOGS, dryLogs, finishStack, placeLog, startStack, type StackState, type WoodPlace } from '../content/firewood-stack';
 import { THINGS, foodOutside, putThing, sleepNow, startTidy, tidyOutcome, type Place, type TidyState } from '../content/night-camp';
 import { FISH_IDLE, SPECIES, ZONE, catches, fishAt, makeRng, stepFish, type FishState } from '../content/fishing';
 import { KnotsField, bandText } from './KnotsField';
-import { crossingPairs, knotsOutcome, levelOf, startKnots, tapPeg, tapRing, type KnotState } from '../content/guy-lines';
+import { KNOTS_WHY_KEY, crossingPairs, knotsOutcome, knotsWhy, levelOf, startKnots, tapPeg, tapRing, type KnotState } from '../content/guy-lines';
 import { biteCue, floatCss, speciesAt, supperFish } from '../content/fish-table';
 
 type Phase = 'board' | 'work' | 'night';
@@ -110,7 +110,10 @@ export function CampRoutines({ t, weather, seed, onFrame, devices: devices0 = {}
   // GAME-328: допомога одна на всі рутини — за останніми двома результатами дня (helpFor), а не за кожною справою окремо.
   const help: Difficulty = helpFor(day);
   const eased = help.hint && active !== 'firewood' && active !== 'tidy';   // у дров і порядку смуги немає — рядок «легше» там був би неправдою
-  const finish = (id: RoutineId, outcome: Outcome, more: Partial<typeof facts> = {}) => {
+  // GAME-338: «чому» сяк-так — рядок на дошці під результатом (лише knots і fire; решта причин не має). Живе, поки відкрита дошка: у сейв не пишемо.
+  const [reasons, setReasons] = useState<Partial<Record<RoutineId, string | undefined>>>({});
+  const finish = (id: RoutineId, outcome: Outcome, more: Partial<typeof facts> = {}, why: string | null = null) => {
+    setReasons((r) => ({ ...r, [id]: why !== null && outcome === 'scrappy' ? why : undefined }));
     setDay((d) => recordResult(d, id, outcome));
     setFacts((f) => ({ ...f, ...more }));
     setActive(null);
@@ -133,7 +136,7 @@ export function CampRoutines({ t, weather, seed, onFrame, devices: devices0 = {}
   // Робота, що завершується сама (вода донесена, вечеря зварена) — відразу в день.
   useEffect(() => {
     if (active === 'water' && water.phase === 'done') finish('water', waterOutcome(water), { water: waterScore(water) });
-    if (active === 'fire' && embers.done) finish('fire', emberOutcome(embers));
+    if (active === 'fire' && embers.done) finish('fire', emberOutcome(embers), {}, ((w) => (w === null ? null : FIRE_WHY_KEY[w]))(fireWhy(embers)));
   });
 
   const open = (id: RoutineId) => {
@@ -329,7 +332,7 @@ export function CampRoutines({ t, weather, seed, onFrame, devices: devices0 = {}
             <p class="ui-camp-note" data-ui="knots-hint" data-cross={help.hint ? crossingPairs(levelOf(knots.seed), knots.links).length : ''}>
               {help.hint ? `${bandText(t, help)}${crossingPairs(levelOf(knots.seed), knots.links).length > 0 ? ` · ${t('camp.knots.cross')}` : ''}` : t('camp.knots.hint')}
             </p>
-            <button type="button" class="ui-btn ui-camp-big" data-ui="knots-done" disabled={!ok('knots')} onClick={() => finish('knots', knotsOutcome(knots, help))}>{t('camp.knots.done')}</button>
+            <button type="button" class="ui-btn ui-camp-big" data-ui="knots-done" disabled={!ok('knots')} onClick={() => finish('knots', knotsOutcome(knots, help), {}, ((w) => (w === null ? null : KNOTS_WHY_KEY[w]))(knotsWhy(knots, help)))}>{t('camp.knots.done')}</button>
           </section>
         )}
         {active === 'tidy' && (
@@ -377,11 +380,11 @@ export function CampRoutines({ t, weather, seed, onFrame, devices: devices0 = {}
           const dev = deviceFor(id);
           return (
             <li key={id}>
-              <button type="button" class="ui-btn ui-camp-routine" data-ui="camp-routine" data-id={id} data-owner={def.owner} data-status={status} data-done={isDone(dayNow, id) ? 'yes' : 'no'} data-outcome={out ?? ''} data-blocked={no ?? ''}
+              <button type="button" class="ui-btn ui-camp-routine" data-ui="camp-routine" data-id={id} data-owner={def.owner} data-status={status} data-done={isDone(dayNow, id) ? 'yes' : 'no'} data-outcome={out ?? ''} data-why={out === 'scrappy' ? reasons[id] ?? '' : ''} data-blocked={no ?? ''}
                 disabled={no !== null} onClick={() => open(id)}>
                 <b>{`${t(`camp.routine.${id}` as Key)} · ${status === 'hands' ? t(`camp.owner.${def.owner}` as Key) : t(`camp.status.${status}` as Key)}`}</b>
                 <small>{out !== undefined
-                  ? `${t('camp.done')} · ${t(`camp.out.${out}` as Key)}`
+                  ? `${t('camp.done')} · ${t(`camp.out.${out}` as Key)}${out === 'scrappy' && reasons[id] ? ` · ${t(reasons[id] as Key)}` : ''}`
                   : `${no === null ? t(`camp.why.${id}` as Key) : t(`camp.no.${no}` as Key)} · ${def.minutes[0]} ${t('camp.min')}`}</small>
               </button>
               {status === 'low' && dev !== null && (
