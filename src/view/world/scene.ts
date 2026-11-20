@@ -34,7 +34,7 @@ import { findWindows, patchAlpha, patchQuads } from './light-patches';
 import { HERO_LIGHT_RADIUS, heroLightAlpha } from './hero-light';
 import { LAMP_RADIUS, findLamps, lampAlpha, lampsOn } from './lamps';
 import { heroBusy } from './hero-busy';
-import { FEEDBACK_S, RING_IDLE, asksForTalk, isAutoSpot, lifeMayAct, markHandled, pickNearest, ringMayTake, stepRing, vehicleReady, type Insets, type Ring } from './proximity';
+import { FEEDBACK_S, RING_IDLE, asksForTalk, givesMission, isAutoSpot, lifeMayAct, markHandled, pickNearest, ringMayTake, stepRing, vehicleReady, type Insets, type Ring } from './proximity';
 import { IDLE_AFTER_S, LEISURE_BY_MAP, assignLeisure, leisureFromObjects, type LeisureSpot } from './leisure';
 import { Neighbours, type NeighbourProbe } from './neighbours-rig';
 import { EMOTE_FRAMES, staysOut } from './neighbours';
@@ -1666,9 +1666,9 @@ export class WorldScene extends Phaser.Scene {
     const live = [...this.spots.filter((s) => this.hooks.isLive(s.name)), ...talkers];
     // GAME-179/186: родина тупцює коло героя — говорить із нею лише тоді, коли в зоні дії нікого іншого нема; між слідувачами перевага тому, на кого дивиться герой.
     const isFollower = (n: string): boolean => (FOLLOWER_NPC as readonly string[]).includes(n);
-    const picks = live.map((s) => ({ name: s.name, x: s.x, y: s.y, follower: isFollower(s.name), request: asksForTalk(s.kind, s.kind === 'npc' ? this.hooks.talk(s.name) : null) }));
+    const picks = live.map((s) => { const talk = s.kind === 'npc' ? this.hooks.talk(s.name) : null; return { name: s.name, x: s.x, y: s.y, follower: isFollower(s.name), request: asksForTalk(s.kind, talk), mission: givesMission(s.kind, talk) }; });
     const nearName = pickNearest(this.player.x, this.player.y, this.facing, picks, INTERACT_RANGE, this.hooks.target());
-    const askerWins = nearName !== null && picks.some((p) => p.name === nearName && p.request === true);   // GAME-341: просильник бере «Дію» — підказку лавки не показуємо
+    const askerWins = nearName !== null && picks.some((p) => p.name === nearName && p.mission === true);   // GAME-341: просильник бере «Дію» — підказку лавки не показуємо
     const spot: Spot | null = nearName === null ? null : live.find((s) => s.name === nearName) ?? null;
     const near = spot?.name ?? null;
     // Тап: лише по цілі, що в зоні дії. Поза зоною нічого (без прокладання шляху, GAME-95).

@@ -15,6 +15,8 @@ export const lifeMayAct = (nearName: string | null, follower: boolean): boolean 
 
 /** GAME-341: чи NPC «просить розмови» — прохання («!») або місія («★»); такий поруч бере верх над світовим об'єктом (лавкою, ящиком). */
 export const asksForTalk = (kind: string, talk: { readonly request?: boolean; readonly mission?: boolean } | null): boolean => kind === 'npc' && (talk?.request === true || talk?.mission === true);
+/** GAME-341: дає місію зразкового дня («★») — лише такий просильник бере «Дію» в світового об'єкта поруч (лавки, ящика). Звичайне «!» — як було: найближчий. */
+export const givesMission = (kind: string, talk: { readonly mission?: boolean } | null): boolean => kind === 'npc' && talk?.mission === true;
 
 export interface Ring { readonly name: string | null; readonly t: number }
 export const RING_IDLE: Ring = { name: null, t: 0 };
@@ -78,7 +80,7 @@ export const inSafeZone = (view: View, p: { readonly x: number; readonly y: numb
 /** GAME-186: наскільки (px) слідувач, на якого дивиться герой, «ближчий» за того, що збоку чи позаду. */
 export const FACING_BONUS = 12;
 type Face = 'up' | 'left' | 'down' | 'right';
-export interface Pick { readonly name: string; readonly x: number; readonly y: number; readonly follower: boolean; /** NPC з проханням («!») чи місією («★») — не поступається цілі «Далі» й світовому об'єкту (лавці, ящику): «Дія» поруч із ним — розмова з ним. */ readonly request?: boolean }
+export interface Pick { readonly name: string; readonly x: number; readonly y: number; readonly follower: boolean; /** NPC з проханням («!») чи місією («★») — не поступається цілі «Далі» й світовому об'єкту (лавці, ящику): «Дія» поруч із ним — розмова з ним. */ readonly request?: boolean; /** GAME-341: дає місію («★») — бере верх над світовим об'єктом поруч, окрім цілі «Далі». */ readonly mission?: boolean }
 
 /** Косинус між напрямком погляду й напрямком на (dx, dy): 1 — просто перед героєм, −1 — за спиною. */
 export function facingDot(f: Face, dx: number, dy: number): number {
@@ -98,7 +100,7 @@ export function pickNearest(px: number, py: number, facing: Face, spots: readonl
     const t = spots.find((s) => s.name === target && !s.follower);
     if (t && Math.hypot(t.x - px, t.y - py) <= range && !spots.some((s) => s.request === true && Math.hypot(s.x - px, s.y - py) <= range)) return t.name;
   }
-  const reqNear = spots.some((s) => !s.follower && s.request === true && Math.hypot(s.x - px, s.y - py) <= range);
+  const missionNear = spots.some((s) => !s.follower && s.mission === true && Math.hypot(s.x - px, s.y - py) <= range);
   let pick: Pick | null = null;
   let best = range;
   for (const follower of [false, true]) {
@@ -109,8 +111,9 @@ export function pickNearest(px: number, py: number, facing: Face, spots: readonl
       if (s.follower !== follower) continue;
       const d = Math.hypot(s.x - px, s.y - py);
       if (d > range) continue;
-      // GAME-341: просильник («!»/«★») у зоні бере верх над світовим об'єктом (лавка, ящик…), що випадково ближчий; інші NPC й автоспрацьовувачі — як були.
-      if (!follower && reqNear && s.request !== true && !isAutoSpot(s.name) && !s.name.startsWith('npc.')) continue;
+      // GAME-341: сусід із місією («★», зразковий день) у зоні бере верх над світовим об'єктом (лавка, ящик…), що випадково ближчий; інші NPC, автоспрацьовувачі й ціль «Далі» — як були.
+      // Звичайне «!» сюди не входить (CI #271, game-190: Нора з «!» біля вогнища забирала «Дію» з квестового вогнища).
+      if (!follower && missionNear && s.name !== target && s.mission !== true && !isAutoSpot(s.name) && !s.name.startsWith('npc.')) continue;
       const score = follower ? d - FACING_BONUS * facingDot(facing, s.x - px, s.y - py) : d;
       if (score <= best) { best = score; pick = s; }
     }

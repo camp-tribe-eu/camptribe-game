@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { RING_IDLE, RING_S, asksForTalk, edgeArrow, inSafeZone, isAutoSpot, lifeMayAct, markHandled, pickNearest, ringMayTake, stepRing, vehicleReady } from './proximity';
+import { RING_IDLE, RING_S, asksForTalk, edgeArrow, givesMission, inSafeZone, isAutoSpot, lifeMayAct, markHandled, pickNearest, ringMayTake, stepRing, vehicleReady } from './proximity';
 
 function run(near: string | null, armed: boolean, hold: boolean, seconds: number, dt = 1 / 60): string | null {
   let r = RING_IDLE;
@@ -107,16 +107,24 @@ describe('GAME-270 · ціль «Далі» проти мешканця на н�
   });
 });
 
-describe('GAME-341 · просильник («!»/«★») проти світового об\'єкта поруч', () => {
-  const A = { name: 'npc.amina', follower: false, x: 100, y: 140, request: true };   // Аміна за 40 px
+describe('GAME-341 · сусід із місією («★») проти світового об\'єкта поруч', () => {
+  const A = { name: 'npc.amina', follower: false, x: 100, y: 140, request: true, mission: true };   // Аміна за 40 px, «★»
   const BENCH = { name: 'repair.bench', follower: false, x: 100, y: 110 };   // лавка за 10 px — ближча
-  // Мутація (перевірено): прибрати рядок `if (!follower && reqNear …) continue;` в pickNearest → перший вираз повертає лавку, тест червоний.
+  // Мутація (перевірено): прибрати рядок `if (!follower && missionNear …) continue;` в pickNearest → перший вираз повертає лавку, тест червоний.
   it('«Дія» поруч з Аміною й лавкою — це розмова з Аміною', () => {
     expect(pickNearest(100, 100, 'down', [BENCH, A], 48)).toBe('npc.amina');
-    expect(pickNearest(100, 100, 'down', [BENCH, A], 48, 'repair.bench')).toBe('npc.amina');
+  });
+  // Ціль підказки «Далі» сусід із місією не ховає.
+  // Мутація (перевірено): прибрати `s.name !== target` з рядка пропуску → вогнище й лавка-ціль програють, тест червоний.
+  it('ціль «Далі» (вогнище, лавка) сусід із місією не перехоплює — вона ближча й бере', () => {
+    expect(pickNearest(100, 100, 'down', [{ ...BENCH, name: 'obj.campfire' }, A], 48, 'obj.campfire')).toBe('obj.campfire');
+    expect(pickNearest(100, 100, 'down', [BENCH, A], 48, 'repair.bench')).toBe('repair.bench');
   });
   it('контроль: без «★/!» лавка ближча й бере; просильник поза зоною не заважає лавці; автоспрацьовувач і інший NPC не глушаться', () => {
-    expect(pickNearest(100, 100, 'down', [BENCH, { ...A, request: false }], 48)).toBe('repair.bench');
+    expect(pickNearest(100, 100, 'down', [BENCH, { ...A, request: false, mission: false }], 48)).toBe('repair.bench');
+    // CI #271 (game-190): звичайне «!» без місії не глушить ближчий об'єкт — Нора біля квестового вогнища не забирає «Дію».
+    // Мутація (перевірено): у pickNearest рахувати `missionNear` за `request` замість `mission` → червоне.
+    expect(pickNearest(100, 100, 'down', [{ ...BENCH, name: 'obj.campfire' }, { ...A, name: 'npc.nora', mission: false }], 48)).toBe('obj.campfire');
     expect(pickNearest(100, 100, 'down', [BENCH, { ...A, y: 400 }], 48)).toBe('repair.bench');
     expect(pickNearest(100, 100, 'down', [{ ...BENCH, name: 'obj.vehicle' }, A], 48)).toBe('obj.vehicle');
     expect(pickNearest(100, 100, 'down', [{ ...BENCH, name: 'npc.luc' }, A], 48)).toBe('npc.luc');
@@ -165,5 +173,15 @@ describe('GAME-338 · сосна не перехоплює дію над ціл�
     expect(lifeMayAct('npc.family', true)).toBe(true);
     expect(lifeMayAct('take.item.cone', false)).toBe(true);
     expect(lifeMayAct('npc.luc', false), 'розмова з мешканцем — його ціль, не сосна').toBe(false);
+  });
+});
+
+describe('GAME-341 · givesMission: лише «★» бере верх над об\'єктом', () => {
+  // Мутація (перевірено): `talk?.mission === true` → `(talk?.mission === true || talk?.request === true)` → другий вираз червоний.
+  it('місія — так; лише прохання — ні; не NPC — ні', () => {
+    expect(givesMission('npc', { mission: true })).toBe(true);
+    expect(givesMission('npc', { request: true, mission: false } as { request: boolean; mission: boolean })).toBe(false);
+    expect(givesMission('npc', null)).toBe(false);
+    expect(givesMission('obj', { mission: true })).toBe(false);
   });
 });
