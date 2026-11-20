@@ -384,18 +384,29 @@ async function expectApart(page: Page, a: string, b: string, what: string): Prom
   expect(hit, `${what}: ${a} ${JSON.stringify(A)} перетинає ${b} ${JSON.stringify(B)}`).toBe(false);
 }
 
-/** GAME-327: кнопка «До мапи» не лягає ні на що в дошці/роботі: прокручуємо до кінця й звіряємо рамки (раніше: «Ніч» і «Під тент» під нею). */
-async function expectBoardClear(page: Page, what: string): Promise<void> {
-  const hit = await page.evaluate(() => {
+/** GAME-327/338: кнопка «До мапи» не лягає ні на що в дошці/роботі НІ на початку, НІ в кінці прокрутки (GAME-336: на початку вона закривала «Ніч»). `night` — на екрані дошки «Ніч» мусить бути і лежати поза кнопкою. */
+async function expectBoardClear(page: Page, what: string, night = false): Promise<void> {
+  const res = await page.evaluate(() => {
     const box = document.querySelector('.sd-board-wrap .ui-camp') as HTMLElement | null;
-    if (box) box.scrollTop = box.scrollHeight;
     const c = (document.querySelector('[data-ui="sd-board-close"]') as HTMLElement).getBoundingClientRect();
-    return [...document.querySelectorAll('.sd-board-wrap .ui-camp button')].filter((e) => {
-      const r = e.getBoundingClientRect();
-      return r.width > 0 && r.left < c.right && c.left < r.right && r.top < c.bottom && c.top < r.bottom;
-    }).map((e) => (e as HTMLElement).dataset.ui ?? e.textContent ?? '?');
+    const at = (top: number | 'end'): { hit: string[]; night: boolean } => {
+      if (box) box.scrollTop = top === 'end' ? box.scrollHeight : top;
+      return {
+        night: document.querySelector('.sd-board-wrap [data-ui="camp-to-night"]') !== null,
+        hit: [...document.querySelectorAll('.sd-board-wrap .ui-camp button')].filter((e) => {
+          const q = e.getBoundingClientRect();
+          const v = box?.getBoundingClientRect();   // видима частина: що прокрутка ховає за краєм дошки, гравець не бачить
+          const r = { left: q.left, right: q.right, top: Math.max(q.top, v?.top ?? q.top), bottom: Math.min(q.bottom, v?.bottom ?? q.bottom) };
+          return q.width > 0 && r.top < r.bottom && r.left < c.right && c.left < r.right && r.top < c.bottom && c.top < r.bottom;
+        }).map((e) => (e as HTMLElement).dataset.ui ?? e.textContent ?? '?'),
+      };
+    };
+    const first = at(0); const last = at('end'); at(0);
+    return { first, last };
   });
-  expect(hit, `GAME-327 ${what}: «До мапи» перекриває ${hit.join(', ')}`).toEqual([]);
+  if (night) expect(res.first.night, `GAME-338 ${what}: на дошці немає «Ніч»`).toBe(true);
+  expect(res.first.hit, `GAME-338 ${what}: на початку «До мапи» перекриває ${res.first.hit.join(', ')}`).toEqual([]);
+  expect(res.last.hit, `GAME-327 ${what}: в кінці «До мапи» перекриває ${res.last.hit.join(', ')}`).toEqual([]);
 }
 
 /** GAME-327: поки в ☰ лишаються «Зробити», рекомендовано їх; кожне виконуємо (раніше підсвічувалось «Завершити», а три «Зробити» мовчки зникали). */
@@ -508,7 +519,7 @@ for (const o of ORIENTATIONS) {
       await tapIt(page, '[data-ui="sd-board"]');
       // GAME-325: дошка відкрилась з-під «Заїхали» БЕЗ закриття ☰ вручну — світ не на паузі: кран наливає (кадри течуть), а не стоїть на 0 %.
       await expect(page.locator('[data-ui="camp-board"]')).toBeVisible();
-      await expectBoardClear(page, 'свіжа дошка (Ніч, Далі)');   // найвища: усі сім справ ще з описами в два рядки
+      await expectBoardClear(page, 'свіжа дошка (Ніч, Далі)', true);   // найвища: усі сім справ ще з описами в два рядки
       await tapIt(page, '[data-ui="camp-routine"][data-id="water"]');
       await page.locator('[data-ui="water-tap"]').dispatchEvent('pointerdown');
       await expect.poll(async () => Number(await page.locator('[data-ui="water-level"]').getAttribute('data-level')), { timeout: 6_000, message: 'GAME-325: «Тримай кран» наливає' }).toBeGreaterThan(0);
@@ -520,7 +531,7 @@ for (const o of ORIENTATIONS) {
         await tapIt(page, `[data-ui="water-step"][data-side="${side}"]`);
       }
       await expect(page.locator('[data-ui="camp-routine"][data-id="water"]')).toHaveAttribute('data-done', 'yes');
-      await expectBoardClear(page, 'дошка (Ніч, Далі)');
+      await expectBoardClear(page, 'дошка (Ніч, Далі)', true);
       // GAME-327: «Дрова» — довгий список «Під тент» унизу: кнопка «До мапи» не лягає на нього (обидві орієнтації).
       await tapIt(page, '[data-ui="camp-routine"][data-id="firewood"]');
       await tapIt(page, '[data-ui="wood-place-choice"][data-place="near"]');
@@ -641,6 +652,10 @@ for (const o of ORIENTATIONS) {
       await tapIt(page, '[data-ui="camp-routine"][data-id="knots"]');
       await expect(page.locator('[data-ui="knots-field"]')).toBeVisible();
       await shot(page, 'knots');
+      // GAME-338: кільця й кілки — площа дотику ≥ 44×44 px в обох орієнтаціях (GAME-336: було 40 і 34). Мутація (перевірено): у index.html повернути `width: 40px; height: 40px` (портрет) / 34 (ландшафт) → червоніє.
+      const taps = await page.locator('[data-ui="knot-ring"], [data-ui="knot-peg"]').evaluateAll((els) => els.map((e) => { const r = e.getBoundingClientRect(); return { n: `${(e as HTMLElement).dataset.ui}#${(e as HTMLElement).dataset.i ?? (e as HTMLElement).dataset.j}`, w: r.width, h: r.height }; }));
+      expect(taps.length, 'кільця й кілки є').toBeGreaterThanOrEqual(8);
+      for (const b of taps) { expect(b.w, `${b.n}: ширина`).toBeGreaterThanOrEqual(43.5); expect(b.h, `${b.n}: висота`).toBeGreaterThanOrEqual(43.5); }
       const kSeed = Number(await page.locator('[data-ui="knots-field"]').getAttribute('data-seed'));
       const kSol = solveKnots(levelOf(kSeed)) as readonly number[];
       expect(kSol, 'рівень дня розв\'язний').not.toBeNull();
