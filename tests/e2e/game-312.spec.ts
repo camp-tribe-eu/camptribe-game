@@ -209,20 +209,20 @@ async function playHold(page: Page): Promise<void> {
     requestAnimationFrame(tick);
   }));
 }
-/** Ритм: торкатися кожні `beat` кадрів (рівно, як радить Клер). */
-async function playRhythm(page: Page, beat: number): Promise<void> {
-  await page.evaluate((b) => new Promise<void>((resolve) => {
-    let since = b;   // GAME-343: посеред гри пульс міняє такт — читаємо поточний із поверхні
+/** Ритм: торкатися на кожному обороті пульсу (час гри, а не кількість показів): `data-pulse` — фаза 0..1, оберт = удар. */
+async function playRhythm(page: Page): Promise<void> {
+  await page.evaluate(() => new Promise<void>((resolve) => {
+    let prev = -1;   // перший дотик — одразу; далі кожен раз, коли фаза пульсу «перескочила» назад
     const tick = (): void => {
       const btn = document.querySelector<HTMLButtonElement>('[data-ui="mg-crank-tap"]');
       if (!btn) { resolve(); return; }
-      const beat = Number(document.querySelector<HTMLElement>('[data-ui="mg-crank"]')?.dataset.beat ?? b);
-      if (since >= beat) { btn.click(); since = 0; }
-      since++;
+      const pulse = Number(document.querySelector<HTMLElement>('[data-ui="mg-crank"]')?.dataset.pulse ?? 0);
+      if (prev < 0 || pulse < prev) btn.click();
+      prev = pulse;
       requestAnimationFrame(tick);
     };
     requestAnimationFrame(tick);
-  }), beat);
+  }));
 }
 /** Похід: дійти ногами в зону — міні-гра відкривається сама. */
 async function trip(page: Page, zone: string): Promise<void> {
@@ -287,8 +287,8 @@ for (const o of ORIENTATIONS) {
       await closeTalk(page);
       await trip(page, 'pier');
       await startMg(page);
-      await playRhythm(page, 50);
-      await finishMg(page, `ring-trap-result-${o.name}`);
+      await playRhythm(page);
+      expect(await finishMg(page, `ring-trap-result-${o.name}`), 'ритм за часом гри — не «зляпано»').not.toBe('scrappy');
       await talkTo(page, 'npc.amina', 'Аміна');
       await pick(page, 'Навчи, де ставити', c);
       await pick(page, 'Дякую за обручку', c);
@@ -316,9 +316,9 @@ for (const o of ORIENTATIONS) {
       await closeTalk(page);
       await trip(page, 'tents-old');
       await startMg(page);
-      await playRhythm(page, 40);
+      await playRhythm(page);
       await shot(page, `lantern-crank-${o.name}`);
-      await finishMg(page, `lantern-crank-result-${o.name}`);
+      expect(await finishMg(page, `lantern-crank-result-${o.name}`), 'ритм за часом гри — не «зляпано»').not.toBe('scrappy');
       await talkTo(page, 'npc.claire', 'Клер');
       await pick(page, 'Так. Ми посвітили разом', c);
       await pick(page, 'Тьмяно — до ранку', c);

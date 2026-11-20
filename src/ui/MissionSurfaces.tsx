@@ -55,7 +55,7 @@ export function TuneSurface({ view, t, drag, tap }: SurfaceProps) {
 export function CrankSurface({ view, t, tap }: SurfaceProps) {
   const s = view.surface as CrankSurface;
   return (
-    <div class="mg-crank" data-ui="mg-crank" data-charge={s.charge} data-jerks={s.jerks} data-beat={s.beat}>
+    <div class="mg-crank" data-ui="mg-crank" data-charge={s.charge} data-jerks={s.jerks} data-beat={s.beat} data-pulse={s.pulse}>
       <p class="mg-twist" data-ui="mg-twist" data-on={s.twist ? 'yes' : 'no'} role="status">{s.twist ? t(key(view.id, 'twist')) : ''}</p>
       <div class="mg-crank-ring"><div class="mg-crank-pulse" data-hint={s.hint ? 'yes' : 'no'} style={{ width: pct(0.6 + 0.4 * (1 - s.pulse)), height: pct(0.6 + 0.4 * (1 - s.pulse)) }} /></div>
       <div class="mg-meter" role="progressbar" aria-label={t(key(view.id, 'meter'))} aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round((s.charge / s.need) * 100)}><i style={{ width: pct(s.charge / s.need) }} /></div>

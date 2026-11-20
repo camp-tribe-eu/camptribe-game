@@ -1,10 +1,10 @@
-// GAME-308 · сесія міні-гри: тонкий шар між чистим циклом (core/minigame) і UI. Кадри дає ЗОВНІШНІЙ цикл (сцена викликає frame() раз на кадр гри; тест — скільки треба): жодного таймера тут немає.
+// GAME-308 · сесія міні-гри: тонкий шар між чистим циклом (core/minigame) і UI. Кадри дає ЗОВНІШНІЙ цикл (сцена викликає frame(n) — n фіксованих кроків за показ; тест — скільки треба): жодного таймера тут немає.
 // Результат сесія повідомляє РІВНО раз, коли гра дійшла до `result` (report) — хост шле команду FinishMinigame; закриття результату нічого не пише вдруге.
 import { closeRun, giveUp, openRun, resultOfRun, setPaused, startRun, stepRun, NO_INPUT, type AnyMinigame, type FrameInput, type MinigameGuards, type MinigameResults, type MinigameRun, type Outcome, type Point } from '../core/minigame';
 import type { MinigamePoint, MinigameSessionPort, MinigameView } from '../ui/minigame-types';
 
 export interface MinigameSession extends MinigameSessionPort {
-  /** Прожити `n` кадрів гри (за замовчуванням 1): накопичені дотики йдуть у перший. На паузі й поза грою нічого не міняє. */
+  /** Прожити `n` кадрів гри (0 — нічого, дотики лишаються в буфері) (за замовчуванням 1): накопичені дотики йдуть у перший. На паузі й поза грою нічого не міняє. */
   frame(n?: number): void;
   readonly run: MinigameRun;
 }
