@@ -17,6 +17,7 @@ import { ACTIONS, ACTION_COLS, COLS, DIR_ROW, FRAME, frameIndex, type Action as 
 import { FIRE_CORE, FIRE_GLOW, MAX_DARKNESS, ambientAt, glowAlpha, timeOfDay } from './daylight';
 import { FOLLOW_SPEED_FACTOR, HERO_STEP_S, SPEED, centerOf, findPath, gridFromWalls, isSolid, restPoints, stepFollowers, stepTo, tileOf, type Grid, type Pt, type Tile } from './follow';
 import { MAX_HELPERS } from '../../content/tent-pitch';
+import { STATIONS } from '../../content/camp-stations';
 import type { MapKey } from '../../content/map-first';
 import type { MiniFrame } from '../../content/agenda';
 import { ICON_SIZE, iconIndex, objectiveIcon } from '../../content/objective-icons';
@@ -90,7 +91,9 @@ const ACT_LOOP_FPS = 9;
  */
 type Job =
   | { readonly kind: 'errand'; readonly task: string; readonly spot: Pt; goal: Tile | null; workS: number; sent: boolean }
-  | { readonly kind: 'tent'; readonly spot: Pt; goal: Tile | null };
+  | { readonly kind: 'tent'; readonly spot: Pt; goal: Tile | null }
+  /** GAME-335: стоїть на місці своєї справи (station.*), поки та в роботі чи призначена; без завершення — його не пишемо в ядро. */
+  | { readonly kind: 'post'; readonly spot: Pt; goal: Tile | null };
 /** GAME-172: репліка мешканця висить стільки мс, і той самий мешканець озветься знову не раніше ніж за стільки. */
 const BARK_SHOW_MS = 4000;
 const BARK_COOLDOWN_MS = 25_000;
@@ -159,6 +162,10 @@ export interface WorldHooks {
   spotDone?(name: string): boolean;
   /** GAME-202: кому що доручено (факти ядра f.errand-*, лише живі справи): член родини (ключ FOLLOWERS) → об'єкт мапи справи. Немає — доручень у грі нема. */
   errands?(): readonly { readonly member: string; readonly task: string; readonly spot: string }[];
+  /** GAME-335 (лише ?sampleDay=1): на мапі табору є місця справ (station.*). Немає — нічого не додається, мапа як була. */
+  stations?(): boolean;
+  /** GAME-335: хто з родини (ключ FOLLOWERS) стоїть на якому місці справи, поки його справа в роботі чи призначена. */
+  posts?(): readonly { readonly member: string; readonly spot: string }[];
   /** GAME-202: виконавець дійшов і попрацював — ядру команда помічника закрити справу (CompleteTask, actor helper). */
   /** true — ядро прийняло (справу закрито); false — відхилило: сцена почне роботу наново. */
   onErrand?(task: string): boolean;
@@ -275,7 +282,7 @@ export interface WorldProbe {
   /** GAME-189 (лише для e2e): намет руками — фаза, кілки, шкала (позиція маркера й чи він у зеленому), чи місце придатне. */
   tent: TentProbe;
   /** GAME-202/203 (лише для e2e): що зараз робить кожен слідувач (у порядку FOLLOWERS): у строю (null), іде за дорученням / працює, чи тягне відтяжку намету. */
-  jobs: ({ kind: 'errand'; task: string; phase: 'walk' | 'work' } | { kind: 'tent'; phase: 'walk' | 'pull' } | null)[];
+  jobs: ({ kind: 'errand'; task: string; phase: 'walk' | 'work' } | { kind: 'tent'; phase: 'walk' | 'pull' } | { kind: 'post'; phase: 'walk' | 'work' } | null)[];
   /** GAME-190 (лише для e2e): дрова руками — гілки, колода, шкала ударів. */
   wood: WoodProbe;
   /** GAME-209: ящик, старий ящик і ремонт лавки (лише читання, для e2e). */
@@ -892,6 +899,8 @@ export class WorldScene extends Phaser.Scene {
     this.probe.visitors = key === 'shop' ? onMap.map((res) => ({ id: res.id, x: 0, y: 0, moving: false })) : [];
     this.residentSprites.forEach((sp, i) => sp.setVisible(this.residentLines[i] != null));
     this.neigh.begin(key === 'camp' ? RESIDENTS.map((r) => r.id) : []);
+    // GAME-335: місця справ — наявні речі табору (camp-stations); лише зразковий день, лише мапа табору. ПІСЛЯ шляхів мешканців: їхні маршрути місця не обходять (мапа й ритм табору ті самі).
+    if (key === 'camp' && this.hooks.stations?.()) for (const st of Object.values(STATIONS)) { if (this.spots.some((x) => x.name === st.spot)) continue; const sp: Spot = { name: st.spot, kind: 'trigger', x: st.at.x, y: st.at.y }; this.spots.push(sp); this.markers.set(sp.name, this.marker(sp)); }
     this.neigh.setFire(key === 'camp' ? spawnFire(this.spots) : null);
     this.lastRes = CAST.map(() => ({ x: 0, y: 0 }));
     this.probe.neighbours = this.neigh.probe;
@@ -1186,6 +1195,9 @@ export class WorldScene extends Phaser.Scene {
       const e = errands.find((x) => x.member === name);
       const at = e ? this.spots.find((x) => x.name === e.spot) : undefined;
       if (e && at) { this.jobs[i] = was?.kind === 'errand' && was.task === e.task ? was : { kind: 'errand', task: e.task, spot: { x: at.x, y: at.y }, goal: null, workS: 0, sent: false }; return; }
+      const post = this.hooks.posts?.().find((x) => x.member === name);
+      const pat = post ? this.spots.find((x) => x.name === post.spot) : undefined;
+      if (pat) { this.jobs[i] = was?.kind === 'post' && was.spot.x === pat.x && was.spot.y === pat.y ? was : { kind: 'post', spot: { x: pat.x, y: pat.y }, goal: null }; return; }
       const k = this.tentHelpers.indexOf(i);
       const hs = k >= 0 ? helperSpots[k] : undefined;
       if (hs) { this.jobs[i] = was?.kind === 'tent' ? was : { kind: 'tent', spot: hs, goal: null }; return; }
@@ -1281,7 +1293,7 @@ export class WorldScene extends Phaser.Scene {
       out.x = p.x;
       out.y = p.y;
       this.probe.leisure[i] = arrived && spot ? { kind: spot.kind, c: spot.c, r: spot.r } : null;
-      this.probe.jobs[i] = job ? (job.kind === 'errand' ? { kind: 'errand', task: job.task, phase: working ? 'work' : 'walk' } : { kind: 'tent', phase: working ? 'pull' : 'walk' }) : null;
+      this.probe.jobs[i] = job ? (job.kind === 'errand' ? { kind: 'errand', task: job.task, phase: working ? 'work' : 'walk' } : job.kind === 'post' ? { kind: 'post', phase: working ? 'work' : 'walk' } : { kind: 'tent', phase: working ? 'pull' : 'walk' }) : null;
     });
   }
 

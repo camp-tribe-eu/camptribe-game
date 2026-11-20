@@ -16,6 +16,8 @@ import { BASKET, berryOutcome, berryFacts, enoughBerries, hinted, patchOf, pickB
 import { COVER, ENOUGH_DRY, LOGS, dryLogs, finishStack, placeLog, startStack, type StackState, type WoodPlace } from '../content/firewood-stack';
 import { THINGS, foodOutside, putThing, sleepNow, startTidy, tidyOutcome, type Place, type TidyState } from '../content/night-camp';
 import { FISH_IDLE, SPECIES, ZONE, catches, fishAt, makeRng, stepFish, type FishState } from '../content/fishing';
+import { KnotsField, bandText } from './KnotsField';
+import { crossingPairs, knotsOutcome, levelOf, startKnots, tapPeg, tapRing, type KnotState } from '../content/guy-lines';
 import { biteCue, floatCss, speciesAt, supperFish } from '../content/fish-table';
 
 type Phase = 'board' | 'work' | 'night';
@@ -43,6 +45,10 @@ export interface CampRoutinesProps {
   readonly onSave?: (b: CampBoardSave) => void;
   /** GAME-321: панель видима. Прихована дошка стоїть: ні час роботи, ні вогонь, ні ліхтарі не ідуть. */
   readonly live?: boolean;
+  /** GAME-335: місце справи на мапі табору просить відкрити рутину — ТА САМА точка входу, що й кнопка дошки (open). Нове `n` — новий запит. */
+  readonly focus?: { readonly id: RoutineId | null; readonly n: number };
+  /** GAME-335: яка рутина зараз у роботі (null — жодної): виконавець стоїть на її місці на мапі. */
+  readonly onWork?: (id: RoutineId | null) => void;
 }
 
 /** GAME-319: мітка поклівки на дошці (окремий компонент — щоб тест бачив розмітку без DOM). */
@@ -68,7 +74,7 @@ export function FishSlot({ fish, t }: { readonly fish: FishState; readonly t: (k
   );
 }
 
-export function CampRoutines({ t, weather, seed, onFrame, devices: devices0 = {}, extra, onNight, onSummary, text, saved, onSave, live = true }: CampRoutinesProps) {
+export function CampRoutines({ t, weather, seed, onFrame, devices: devices0 = {}, extra, onNight, onSummary, text, saved, onSave, live = true, focus, onWork }: CampRoutinesProps) {
   const [devices, setDevices] = useState<Devices>(() => ({ ...devices0, ...((saved?.devices ?? {}) as Devices) }));
   // GAME-314: пристрій, що з'явився вже по ходу дня (місія віддала матеріал), додається, не стираючи догляд за наявними.
   const dev0Key = Object.keys(devices0).sort().join(',');
@@ -88,13 +94,14 @@ export function CampRoutines({ t, weather, seed, onFrame, devices: devices0 = {}
   const [stack, setStack] = useState<StackState | null>(null);
   const [fish, setFish] = useState<FishState>(FISH_IDLE);
   const [rod, setRod] = useState(false);
+  const [knots, setKnots] = useState<KnotState>(() => startKnots(seed));
   // GAME-321: справжня робота в поточній рутині — дії й мс кадрів; вихід («Досить», «Далі», «Назад», «Спати») відкриває canFinish.
   const [acts, setActs] = useState(0);
   const [sec, setSec] = useState(0);
   const ms = useRef(0);
   const go = () => setActs((n) => n + 1);
   const dish = DISHES[embers.dish];
-  const A = (id: Parameters<typeof canFinish>[0]) => (id === 'fish' ? catches(fish) + fish.slipped + fish.aways : id === 'fire' ? embers.acts : acts);   // риба: чесні спроби (улов, зрив, втеча)
+  const A = (id: Parameters<typeof canFinish>[0]) => (id === 'fish' ? catches(fish) + fish.slipped + fish.aways : id === 'fire' ? embers.acts : id === 'knots' ? knots.links.filter((p) => p >= 0).length : acts);   // риба: чесні спроби (улов, зрив, втеча)
   const ok = (id: Parameters<typeof canFinish>[0]) => canFinish(id, A(id), sec * 1000);
   const more = (id: Parameters<typeof canFinish>[0]) => { const w = workLeft(id, A(id), sec * 1000); return `${t('camp.more')}: ${w.acts > 0 ? `×${w.acts}` : `${w.s} ${t('camp.sec')}`}`; };
   const [facts, setFacts] = useState(() => saved?.facts ?? { water: 0, dryLogs: 0, lit: 0, fish: 0, bitter: 0, berries: undefined as number | undefined, foodOut: true });
@@ -142,7 +149,18 @@ export function CampRoutines({ t, weather, seed, onFrame, devices: devices0 = {}
     if (id === 'tidy') { setTidy(startTidy()); setThing(null); }
     if (id === 'firewood') setStack(null);
     if (id === 'fish') { setFish(FISH_IDLE); setRod(false); }
+    if (id === 'knots') setKnots(startKnots(seed));
   };
+
+  // GAME-335: запит з мапи — лише з дошки (посеред роботи чи вночі панель не перемикаємо); не можна взяти — дошка просто лишається видимою.
+  const seenFocus = useRef(0);
+  useEffect(() => {
+    if (!focus || focus.id === null || focus.n === seenFocus.current) return;
+    seenFocus.current = focus.n;
+    if (phase === 'board') open(focus.id);
+  }, [focus?.n]);
+  const working = phase === 'work' ? active : null;
+  useEffect(() => { onWork?.(working); }, [working]);
 
   // Ніч читає і ручне, і налагоджене — та сама модель фактів (camp-night), пристрої лише додають свої.
   const nightFacts: NightFacts = deviceFacts(devices, { results: dayNow.results, litLanterns: facts.lit, dryLogs: facts.dryLogs, water: facts.water, fish: facts.fish, bitterBerries: facts.bitter, berries: facts.berries, foodOutside: facts.foodOut, emptyRounds: emptyRounds(day).length, weather, ...extra });
@@ -301,6 +319,17 @@ export function CampRoutines({ t, weather, seed, onFrame, devices: devices0 = {}
               const s = enoughBerries(berries);
               finish('berries', berryOutcome(s), berryFacts(s));
             }}>{t('camp.berry.enough')}</button>
+          </section>
+        )}
+        {active === 'knots' && (
+          <section class="ui-camp-work ui-knots-work">
+            <p class="ui-camp-note" data-ui="knots-rule">{t('camp.knots.rule')}</p>
+            <KnotsField s={knots} t={t} help={help} onRing={(i) => setKnots(tapRing(knots, i).state)}
+              onPeg={(j) => setKnots(tapPeg(knots, j).state)} />
+            <p class="ui-camp-note" data-ui="knots-hint" data-cross={help.hint ? crossingPairs(levelOf(knots.seed), knots.links).length : ''}>
+              {help.hint ? `${bandText(t, help)}${crossingPairs(levelOf(knots.seed), knots.links).length > 0 ? ` · ${t('camp.knots.cross')}` : ''}` : t('camp.knots.hint')}
+            </p>
+            <button type="button" class="ui-btn ui-camp-big" data-ui="knots-done" disabled={!ok('knots')} onClick={() => finish('knots', knotsOutcome(knots, help))}>{t('camp.knots.done')}</button>
           </section>
         )}
         {active === 'tidy' && (

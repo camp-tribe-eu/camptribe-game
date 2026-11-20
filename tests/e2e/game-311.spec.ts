@@ -77,8 +77,8 @@ for (const vp of VIEWPORTS) {
     await mount(page);
     if (SHOTS) mkdirSync(SHOTS, { recursive: true });
 
-    // Дошка: сім рутин, у кожної виконавець і причина саме сьогодні; решта родини при ділі.
-    await expect(page.locator('[data-ui="camp-routine"]')).toHaveCount(7);
+    // Дошка: вісім рутин (GAME-333: +«Вузли»), у кожної виконавець і причина саме сьогодні; решта родини при ділі.
+    await expect(page.locator('[data-ui="camp-routine"]')).toHaveCount(8);
     await expect(page.locator('[data-ui="camp-busy"]')).toBeVisible();
     expect(await problems(page), 'дошка').toEqual([]);
     if (SHOTS) await page.screenshot({ path: `${SHOTS}/${vp.name}-board.png` });
@@ -141,7 +141,7 @@ for (const vp of VIEWPORTS) {
     // НІЧ: слід кожної рутини, прибраний табір — без лисиці, незроблені справи — свої наслідки, і жодного блоку.
     await tapIt(page.locator('[data-ui="camp-to-night"]'));
     await expect(page.locator('[data-ui="camp-night"]')).toHaveAttribute('data-blocked', 'no');
-    await expect(page.locator('[data-ui="night-beat"]')).toHaveCount(8);
+    await expect(page.locator('[data-ui="night-beat"]')).toHaveCount(9);
     await expect(page.locator('[data-ui="night-beat"][data-id="night.tidy.quiet"]')).toBeVisible();
     await expect(page.locator('[data-ui="night-beat"][data-id="night.light.dark"]')).toBeVisible();
     await expect(page.locator('[data-ui="night-beat"][data-id="night.wood.none"]')).toBeVisible();

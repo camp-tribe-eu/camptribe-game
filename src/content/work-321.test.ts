@@ -7,7 +7,7 @@ import { MIN_WORK, ROUTINE_IDS, addWork, canFinish, workLeft } from './camp-day'
 import { DISHES, IDLE_MS, emberOutcome, startEmbers, stepEmbers, type EmberState } from './embers';
 import { STEPS, startWater, stepWater } from './water-carry';
 
-const EXIT: Readonly<Record<keyof typeof MIN_WORK, string | null>> = { firewood: 'wood-done', lanterns: 'lantern-done', fish: 'fish-done', berries: 'berry-enough', tidy: 'tidy-sleep', fire: null };
+const EXIT: Readonly<Record<keyof typeof MIN_WORK, string | null>> = { firewood: 'wood-done', lanterns: 'lantern-done', fish: 'fish-done', berries: 'berry-enough', tidy: 'tidy-sleep', fire: null, knots: 'knots-done' };
 
 describe('мінімум роботи: вихід закритий на старті, після одного дотику, після дій без часу й часу без дій', () => {
   it.each(Object.keys(MIN_WORK) as (keyof typeof MIN_WORK)[])('%s', (id) => {

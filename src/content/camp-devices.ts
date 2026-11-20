@@ -35,7 +35,7 @@ export const DEVICES: Readonly<Record<DeviceId, DeviceDef>> = {
 };
 
 /** Лише руками, завжди. Сторож: для них немає пристрою, і збудувати його не можна. */
-export const HANDS_ONLY: readonly RoutineId[] = ['fire', 'berries'];
+export const HANDS_ONLY: readonly RoutineId[] = ['fire', 'berries', 'knots'];
 export const deviceFor = (r: RoutineId): DeviceId | null => (HANDS_ONLY.includes(r) ? null : DEVICE_IDS.find((d) => DEVICES[d].routine === r) ?? null);
 export const automatable = (r: RoutineId): boolean => deviceFor(r) !== null;
 

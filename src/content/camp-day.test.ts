@@ -9,10 +9,10 @@ import { CHEAPEST_ALL, DAY_MINUTES, MEMBERS, ROUNDS, ROUTINES, ROUTINE_IDS, addP
 const subsets = <T>(xs: readonly T[]): T[][] => xs.reduce<T[][]>((acc, x) => [...acc, ...acc.map((s) => [...s, x])], [[]]);
 
 describe('часу не вистачає на все — отже, є що обирати', () => {
-  it('навіть найдешевші варіанти всіх семи рутин не влазять у день', () => {
+  it('навіть найдешевші варіанти всіх восьми рутин не влазять у день', () => {
     expect(CHEAPEST_ALL).toBeGreaterThan(DAY_MINUTES);
   });
-  it('жоден набір із усіх семи не влазить; а шість — влазять', () => {
+  it('жоден набір із усіх восьми не влазить; а сім — влазять', () => {
     const fits = (ids: readonly RoutineId[]): boolean => ids.reduce((a, id) => a + ROUTINES[id].minutes[0], 0) <= DAY_MINUTES;
     expect(fits(ROUTINE_IDS)).toBe(false);
     const all = subsets(ROUTINE_IDS).filter(fits);

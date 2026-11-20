@@ -57,7 +57,7 @@ describe('налагодив раз — працює саме', () => {
 
 describe('лише руками — назавжди', () => {
   it('вогнище і ягоди не мають пристрою і автоматизувати їх не можна', () => {
-    expect(HANDS_ONLY).toEqual(['fire', 'berries']);
+    expect(HANDS_ONLY).toEqual(['fire', 'berries', 'knots']);
     for (const r of HANDS_ONLY) {
       expect(automatable(r)).toBe(false);
       expect(deviceFor(r)).toBeNull();
@@ -71,7 +71,7 @@ describe('лише руками — назавжди', () => {
       expect(day.results[r]).toBeUndefined();
       expect(statusOf(everything, r)).toBe('hands');
     }
-    expect(ROUTINE_IDS.filter((r) => day.results[r] === undefined)).toEqual(['fire', 'berries']);
+    expect(ROUTINE_IDS.filter((r) => day.results[r] === undefined)).toEqual(['fire', 'berries', 'knots']);
   });
   it('кожна інша рутина має свій пристрій', () => {
     for (const r of ROUTINE_IDS.filter((x) => !HANDS_ONLY.includes(x))) expect(automatable(r)).toBe(true);

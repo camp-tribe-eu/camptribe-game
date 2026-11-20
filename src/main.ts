@@ -80,6 +80,8 @@ import { ARRIVAL_SCENE, SCRAPE_SCENE, arrivalFacts } from './content/arrival-sce
 import { pitchTaken } from './content/arrival-pitch';
 import { DRIVE_FLAG, driveFlag, driveOutcome as driveInOutcome } from './content/drive-in';
 import { SAMPLE_HOLD_MINUTE, laneIdFor, sampleGoal } from './content/sample-day';
+import { postsOf, stationRoutine } from './content/camp-stations';
+import type { RoutineId } from './content/camp-day';
 import { STORM_SCENE, stormNightMove } from './content/storm-night';
 import type { SamplePort, SampleStage } from './ui/SampleDay';
 import type { RewardEvent } from './ui/port';
@@ -288,6 +290,9 @@ let heartFor: object | null = null;
 let heartMin = -1;
 const actOnMap = (name: string): void => {
   if (switches.breakSpot.includes(name)) return;
+  // GAME-335: місце справи на мапі табору (зразковий день) відкриває ту саму панель рутини, що й дошка (SampleDay → CampRoutines.focus).
+  const station = sampleOn ? stationRoutine(name) : null;
+  if (station !== null) { if (stationsLive()) { stationReq = { id: station, n: stationReq.n + 1 }; sampleChanged(); } return; }
   // GAME-175: об'єкти дня 1 удома (крок, річ, полиця, авто, багажник) — ті самі команди ядра, що були кнопками панелі (src/content/map-first.ts).
   if (isMapFirstSpot(name) && !(isPlanSpot(name) && spotMove(bridge.state, name) !== null)) {   // GAME-289: вказівники стежок (табличка плану дня 2, вставки гілок) — сцени режисера (spotMove), а не кроки зрізу 1
     // GAME-178: E/тап на авто не їде, поки рюкзак не порожній і потрібне не в багажнику (те саме, що кільце); локація лишається, HUD каже чому.
@@ -458,8 +463,25 @@ function sampleScenes(): void {
   if (!sampleOn || g.dialogue !== null || g.player?.locationId !== MAP_LOCATION.camp || g.minigames?.['mg.drive'] === undefined) return;
   if (pitchTaken(g.flags) === null && !playedScene(ARRIVAL_SCENE)) { bridge.send({ type: 'StartScene', sceneId: ARRIVAL_SCENE, facts: arrivalFacts(g.flags) }); storyChanged(); }
 }
+// GAME-335: місця справ (зразковий день) живі, поки триває день і мапа табору; запит «відкрий рутину» і та, що зараз у роботі (дошка повідомляє), — для виконавців на мапі.
+let stationFor: unknown = null;
+let stationOk = false;
+const stationsLive = (): boolean => {
+  if (stationFor !== bridge.state) { stationFor = bridge.state; stationOk = sampleOn && sampleStage() === 'day' && sampleGoal(bridge.state.game.flags, playedScene(STORM_SCENE)) !== 'done'; }
+  return stationOk && missionSession === null;   // GAME-335: над міні-грою (дорога, місія сусіда) місце справи мовчить
+};
+let stationReq: { id: RoutineId | null; n: number } = { id: null, n: 0 };
+let stationWork: RoutineId | null = null;
+const stationPosts = (): ReturnType<typeof postsOf> => {
+  if (!stationsLive()) return [];
+  const b = bridge.state.game.campBoard;
+  const assigned = (b?.picks ?? []).filter((p) => b?.results[p.id as RoutineId] === undefined).map((p) => p.id as RoutineId);
+  return postsOf(stationWork === null ? assigned : [stationWork, ...assigned]);
+};
 const samplePort: SamplePort = {
   stage: sampleStage,
+  request: () => stationReq,
+  working: (id) => { stationWork = id; },
   lane: () => laneIdFor(bridge.state.game.flags),
   goal: () => sampleGoal(bridge.state.game.flags, playedScene(STORM_SCENE)),
   flags: () => bridge.state.game.flags,
@@ -541,7 +563,9 @@ const worldHooks: WorldHooks = {
   grillDue: () => fireplaceDue(bridge.state) && fishEvening(bridge.state.game.flags) === 'kept',
   onGrilled: (charred) => { grilledCharred = charred; },
   onFish,
-  isLive: (name) => !campOnly(name) && liveSpot(bridge.state, name, GAME_DEFS),
+  isLive: (name) => (sampleOn && stationRoutine(name) !== null ? stationsLive() : !campOnly(name) && liveSpot(bridge.state, name, GAME_DEFS)),
+  stations: () => sampleOn,
+  posts: stationPosts,
   frame: (dtMs) => {
     missionTick();
     if (sampleOn) for (const cb of [...sampleFrames]) cb(dtMs);

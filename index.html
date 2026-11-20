@@ -530,6 +530,8 @@
       .sd-cell[data-car]::after { display: grid; place-items: center; height: 100%; color: #1b1f23; font-size: 0.7rem; }
       .sd-cell[data-car='up']::after { content: '▲'; } .sd-cell[data-car='down']::after { content: '▼'; }
       .sd-cell[data-car='left']::after { content: '◀'; } .sd-cell[data-car='right']::after { content: '▶'; }
+      .sd-hint { position: fixed; left: 50%; transform: translateX(-50%); top: calc(var(--edge-top, 0px) + 108px); z-index: 29; max-width: calc(100vw - 32px); margin: 0; padding: 6px 12px; border-radius: 8px; background: rgba(27, 31, 35, 0.82); color: #f4ecd2; font-size: 0.85rem; text-align: center; pointer-events: none; }   /* GAME-335: підказка про місця справ — угорі під рядом кнопок, не на джойстику й не на кнопці дії */
+      #app:has([data-ui="story"]) .sd-hint { display: none; }
       .sd-board-wrap { position: fixed; inset: 0; z-index: 40; }
       .sd-board-wrap[hidden] { display: none; }
       .sd-board-close { position: fixed; right: 8px; bottom: 8px; z-index: 41; min-width: 48px; min-height: 48px; }
@@ -566,6 +568,21 @@
       .ui-camp-night li[data-severity="good"] { border-color: #6ea84f; }
       .ui-camp-night li[data-severity="rough"] { border-color: #c96a4a; }
       @media (min-aspect-ratio: 1/1) { .ui-camp-list { grid-template-columns: 1fr 1fr; } .ui-camp-night { grid-template-columns: 1fr 1fr; } }
+      /* GAME-333 · «Вузли»: поле 100×100, мотузки в SVG, кільця й кілки — кнопки поверх (дотик). */
+      .ui-knots { position: relative; width: min(100%, 340px); aspect-ratio: 1; background: #232a2f; border: 2px solid #e8e6e3aa; border-radius: 10px; }
+      .ui-knots svg { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+      .ui-knots-tarp { fill: #4a7fb044; stroke: #4a7fb0; stroke-width: 0.8; }
+      .ui-knots-line { stroke: #e8e6e3; stroke-width: 1.2; stroke-linecap: round; }
+      .ui-knots-line[data-state="long"] { stroke: #ffd54a; stroke-dasharray: 3 2; }
+      .ui-knots-line[data-state="short"] { stroke: #4a7fb0; }
+      .ui-knots-line[data-cross="yes"] { stroke: #c96a4a; stroke-width: 2; }
+      .ui-knots-wind { stroke: #ffd54a; stroke-width: 1.4; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+      .ui-knots-len { fill: #e8e6e3; font-size: 4px; text-anchor: middle; }
+      .ui-knots .ui-btn { position: absolute; transform: translate(-50%, -50%); width: 40px; height: 40px; min-width: 0; min-height: 0; padding: 0; border-radius: 50%; background: #2a2f35; }
+      .ui-knots .ui-knots-peg { border-radius: 4px; background: #6b7280; }
+      .ui-knots-ring[data-wind="yes"] { border-color: #ffd54a; }
+      .ui-knots-ring[data-linked="yes"], .ui-knots-peg[data-used="yes"] { background: #386228; }
+      .ui-knots-ring[aria-pressed="true"] { background: #ffd54a; }
       /* GAME-320: телефон горизонтально (932×430): дошка табору — чотири колонки й тісніші відступи, щоб ціла стояла на екрані без прокрутки (була 625 px при 430). Портрет не змінюється. */
       @media (orientation: landscape) and (max-height: 500px) {
         .ui-camp { padding: 6px 12px 8px; gap: 4px; }
@@ -580,6 +597,10 @@
         .ui-camp-work { width: min(100%, 900px); }
         .ui-camp-work .ui-camp-list { width: 100%; grid-template-columns: 1fr 1fr; }
         .ui-camp-work .ui-camp-grid { width: 100%; grid-template-columns: repeat(4, 1fr); }
+        .ui-knots-work { grid-template-columns: min(60vh, 260px) 1fr; align-items: center; column-gap: 16px; }
+        .ui-knots-work > .ui-knots { grid-column: 1; grid-row: 1 / span 3; width: 100%; }
+        .ui-knots-work > :not(.ui-knots) { grid-column: 2; }
+        .ui-knots .ui-btn { width: 34px; height: 34px; }
         .ui-camp-work .ui-camp-list:has(> [data-ui="lantern"]) { grid-template-columns: 1fr; }
         .ui-camp-work .ui-camp-list:has(> [data-ui="tidy-thing"]) { grid-template-columns: repeat(4, 1fr); }
         .ui-camp-work .ui-camp-list li { flex-wrap: nowrap; gap: 6px; }

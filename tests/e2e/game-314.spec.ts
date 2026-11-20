@@ -3,10 +3,11 @@
 // день: дошка табору (рутини, пристрої) і місія сусіда ногами по мапі → ніч із бурею на ОДНІЙ моделі (camp-night) → підсумок.
 // Геро ходить лише всередині сторінки (requestAnimationFrame), як game-93/179/312; дорогу веде той самий rAF-бот із DOM (вільна смуга — data-free).
 // Знімки в research/game-314/ — за G314_SHOTS=1. Вимірений час проходу пишеться в консоль (G314 E2E ...).
-import { mkdirSync, readFileSync } from 'node:fs';
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { expect, test, type Page } from '@playwright/test';
 import { waitGameReady } from './ready';
 import { laneOf, solve } from '../../src/content/drive-in';
+import { levelOf, solve as solveKnots } from '../../src/content/guy-lines';
 interface Pt { x: number; y: number }
 interface Probe { playerX: number; playerY: number; nearObject: string | null; residents: { id: string; x: number; y: number }[]; npcMarks: Record<string, string> }
 const probe = (page: Page): Promise<Probe> => page.evaluate(() => JSON.parse(JSON.stringify((window as unknown as { __game: { probe: Probe } }).__game.probe)) as Probe);
@@ -486,6 +487,17 @@ for (const o of ORIENTATIONS) {
 
       // 4. ДЕНЬ: дошка табору (ягоди зранку), місія Клер ногами по мапі
       await expect(page.locator('[data-ui="sd-board"]')).toBeVisible({ timeout: 8_000 });
+      // GAME-335: G335_WRITE=1 — записати справжній сейв «табір, день ще не почався» для game-335 (його ГРА записала сама) і на цьому закінчити прохід.
+      if (process.env.G335_WRITE === '1') {
+        await page.waitForTimeout(600);
+        const save = await page.evaluate(() => new Promise<string>((resolve, reject) => {
+          const req = indexedDB.open('camplife-sample', 1);
+          req.onerror = () => reject(req.error);
+          req.onsuccess = () => { const r = req.result.transaction('saves').objectStore('saves').get('main'); r.onsuccess = () => { req.result.close(); resolve(String(r.result)); }; };
+        }));
+        writeFileSync(new URL('./fixtures/sample-camp.json', import.meta.url), `${JSON.stringify({ save })}\n`);
+        return;
+      }
       // GAME-317: стара гра розділу 1 мовчить — одна ціль дня (не «Прибуття»), жодної хвилі, трекера прохань і «найближчої нагороди».
       await expect(page.locator('[data-ui="goal"]'), 'одна ціль дня').toHaveCount(1);
       await expect(page.locator('[data-ui="goal"]')).not.toContainText('Прибуття');
@@ -624,6 +636,27 @@ for (const o of ORIENTATIONS) {
       await cookDinner(page);
       await expect(page.locator('[data-ui="camp-routine"][data-id="fire"]')).toHaveAttribute('data-done', 'yes', { timeout: 10_000 });
       await expect(page.locator('[data-ui="camp-routine"][data-id="fire"]'), 'GAME-321: вечерю зварено руками, не «сяк-так»').not.toHaveAttribute('data-outcome', 'scrappy');
+      // GAME-333: «Вузли» (тент перед бурею) дотиками: кільце → кілок, повторний дотик по кільцю знімає; розв'язок за правилами → «добре» → ніч «тримає».
+      const tKnots = Date.now();
+      await tapIt(page, '[data-ui="camp-routine"][data-id="knots"]');
+      await expect(page.locator('[data-ui="knots-field"]')).toBeVisible();
+      await shot(page, 'knots');
+      const kSeed = Number(await page.locator('[data-ui="knots-field"]').getAttribute('data-seed'));
+      const kSol = solveKnots(levelOf(kSeed)) as readonly number[];
+      expect(kSol, 'рівень дня розв\'язний').not.toBeNull();
+      await tapIt(page, '[data-ui="knot-ring"][data-i="0"]');
+      await tapIt(page, `[data-ui="knot-peg"][data-j="${(kSol[0] as number) === 0 ? 1 : 0}"]`);
+      await expect(page.locator('[data-ui="knot-ring"][data-i="0"]'), 'мотузку проведено').toHaveAttribute('data-linked', 'yes');
+      await tapIt(page, '[data-ui="knot-ring"][data-i="0"]');
+      await expect(page.locator('[data-ui="knot-ring"][data-i="0"]'), 'повторний дотик зняв мотузку').toHaveAttribute('data-linked', 'no');
+      await expectBoardClear(page, 'вузли (поле)');
+      for (const [i, j] of kSol.entries()) { await tapIt(page, `[data-ui="knot-ring"][data-i="${i}"]`); await tapIt(page, `[data-ui="knot-peg"][data-j="${j}"]`); }
+      await expect(page.locator('[data-ui="knots-field"]')).toHaveAttribute('data-linked', String(kSol.length));
+      await expect(page.locator('[data-ui="knots-done"]'), 'GAME-321: «Закріпити» зачинене, поки мало роботи').toBeDisabled();
+      await expect(page.locator('[data-ui="knots-done"]')).toBeEnabled({ timeout: 40_000 });
+      await tapIt(page, '[data-ui="knots-done"]');
+      await expect(page.locator('[data-ui="camp-routine"][data-id="knots"]')).toHaveAttribute('data-outcome', 'good');
+      console.log(`G314 KNOTS ${o.name}: гра «Вузли» ${Math.round((Date.now() - tKnots) / 1000)} с`);
       await tapIt(page, '[data-ui="sd-board-close"]');
 
       // 5. ВЕЧІР: порядок у таборі, і ніч — з усього разом
@@ -644,9 +677,11 @@ for (const o of ORIENTATIONS) {
       const ids = await page.locator('[data-ui="night-beat"]').evaluateAll((els) => els.map((e) => (e as HTMLElement).dataset.id ?? ''));
       expect(ids, 'ягоди дня в ночі').toContain('night.berries.sweet');
       expect(ids, 'порядок дня в ночі').toContain('night.tidy.quiet');
+      expect(ids.filter((i) => /^night\.knots\.held/.test(i)), 'вузли дня (добре) в ночі: тент тримає').toHaveLength(1);
       expect(ids, 'місія Клер у ТІЙ САМІЙ ночі').toContain('night.mission.f.storm-dry-wood');
       expect(ids, 'друга місія (Аміна) у ТІЙ САМІЙ ночі').toContain('night.mission.f.storm-fish-supper');
       expect(ids, 'місія, якої не зроблено (Люк), теж лишає слід').toContain('night.mission.mis.aerial.none');
+      expect(ids.filter((i) => /^night\.knots\.held/.test(i)), 'вузли дня (добре) в ночі: тент тримає').toHaveLength(1);
       expect(ids, 'вечеря на вогні в ночі').toContain(ids.find((i) => i.startsWith('night.fire.')) as string);
       expect(ids, 'верша місії Аміни → риба в ночі сама').not.toContain('night.fish.none');
       // Буки в бурю мають одну біду — гілка (bite), і її знімає «тент і вузли» місії Клер (prep knots): ця проба місію Клер робить, тож на букових слід порожній за задумом моделі (nightAt).
