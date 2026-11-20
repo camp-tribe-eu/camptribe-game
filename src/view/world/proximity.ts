@@ -10,6 +10,9 @@ export const FEEDBACK_S = 0.5;
 /** Об'єкти, що спрацьовують самі від наближення (GAME-190: крім дров — їх беруть руками: гілки → колода → удари); решта (NPC, багажник, справи хвиль, вогнище) — лише E/тап. */
 export const isAutoSpot = (name: string): boolean => name === 'obj.buy' || name.startsWith('step.') || (name.startsWith('take.') && name !== 'take.item.firewood') || name.startsWith('pack.') || name.startsWith('req.') || (name.startsWith('trace.') && name !== 'trace.camp-crate') || name === 'obj.vehicle';   // GAME-180: req.* — цілі прохань сусідів; GAME-215: trace.* — сліди дідуся
 
+/** GAME-338 · дія на «живу річ» (сосна, кущ…) можлива лише коли ближча ціль — нічия, слідувач чи автоспрацьовувач, АЛЕ не ціль прохання сусіда (req.*): ціль Люка під сосною відкривалась лише знизу, зверху «Дія» трусила дерево. */
+export const lifeMayAct = (nearName: string | null, follower: boolean): boolean => nearName === null || follower || (isAutoSpot(nearName) && !nearName.startsWith('req.'));
+
 export interface Ring { readonly name: string | null; readonly t: number }
 export const RING_IDLE: Ring = { name: null, t: 0 };
 

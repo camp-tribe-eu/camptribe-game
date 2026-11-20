@@ -3,7 +3,8 @@
 import type { Dir } from './world/character';
 
 /** «…» — є про що побалакати; «!» — у NPC є прохання (GAME-180: його можна взяти чи здати, src/content/requests.ts requestMarker). */
-export type NpcMarker = 'chat' | 'request';
+/** GAME-338: «★» — місія сусіда ще не зроблена (зразковий день); ціль дня називає саме їх. */
+export type NpcMarker = 'chat' | 'request' | 'mission';
 
 /** Ближче за стільки пікселів «…» видно над головою; «!» видно завжди, поки NPC у кадрі (прохання не мусить загубитись у натовпі). */
 export const CHAT_MARKER_RANGE = 200;
@@ -12,8 +13,9 @@ export const CHAT_MARKER_RANGE = 200;
  * Маркер над NPC. `canTalk` — ядро зараз прийме розмову (NPC тут, відкритий); `hasRequest` — гачок прохань (GAME-180);
  * `dist` — відстань від героя, px; `hasLine` — NPC має нову репліку (сьогодні з ним ще не говорили). Хто не готовий говорити, не має ніякого маркера: підходити нема до кого.
  */
-export function markerFor(canTalk: boolean, hasRequest: boolean, dist: number, hasLine: boolean): NpcMarker | null {
+export function markerFor(canTalk: boolean, hasRequest: boolean, dist: number, hasLine: boolean, hasMission = false): NpcMarker | null {
   if (!canTalk) return null;
+  if (hasMission) return 'mission';
   if (hasRequest) return 'request';
   // GAME-261: «…» — лише коли в NPC є що сказати (ще не говорили сьогодні); порожня вічна бульба — шум над сім'єю.
   return hasLine && dist <= CHAT_MARKER_RANGE ? 'chat' : null;

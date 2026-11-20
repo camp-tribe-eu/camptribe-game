@@ -56,6 +56,9 @@ export function sampleExtra(flags: readonly string[]): Pick<NightFacts, 'pitch' 
 /** Скільки місій дня зроблено (для підсумку). */
 export const missionsDone = (flags: readonly string[]): number => MISSIONS.filter((m) => flags.includes(m.doneFlag)).length;
 
+/** GAME-338 · хто з видавців місій ще чекає (джерело те саме, що в `missionsDone`): їх називає ціль дня, над ними на мапі «★». Зроблена місія знімає ім'я. */
+export const openMissionGivers = (flags: readonly string[]): string[] => MISSIONS.filter((m) => !flags.includes(m.doneFlag)).map((m) => m.giver);
+
 /** GAME-317 · ОДНА ціль зразкового дня на ключ i18n. Раніше після дороги в шапці лишалась «Ціль: Прибуття» зі старої гри розділу 1 і не змінювалась до кінця.
  *  null — дорогу ще не проїхано: ціль тоді стара (збори й виїзд — це й є мета дня до дороги). */
 export type SampleGoal = 'pitch' | 'day' | 'evening' | 'done';

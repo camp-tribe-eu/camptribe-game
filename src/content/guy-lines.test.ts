@@ -6,7 +6,7 @@
 //  · knotsOutcome без перевірки перетинів у 'fine' → «сяк-так при перетині» червоніє.
 import src from '../ui/CampRoutines.tsx?raw';
 import { describe, expect, it } from 'vitest';
-import { BAND, CLEAR, LEVELS, crossingPairs, crosses, faults, knotsOutcome, levelOf, lineLen, solve, startKnots, tapPeg, tapRing, tensionOf, windOk, windward, type KnotState } from './guy-lines';
+import { BAND, CLEAR, LEVELS, crossingPairs, crosses, faults, knotsOutcome, knotsWhy, levelOf, lineLen, solve, startKnots, tapPeg, tapRing, tensionOf, windOk, windward, type KnotState } from './guy-lines';
 import { MIN_WORK, canFinish } from './camp-day';
 import { NIGHT_FACTS, nightKeys, nightOf, type NightFacts } from './camp-night';
 import { RELAXED } from './minigame';
@@ -217,5 +217,40 @@ describe('вихід і ніч', () => {
     expect(n.blocked).toBe(false);
     expect(n.morning).toBe(true);
     expect(n.beats.find((b) => b.routine === 'knots')?.severity).toBe('rough');
+  });
+});
+
+// GAME-338 · рядок «чому». Мутації (перевірено): у knotsWhy поміняти місцями cross і tension → «перетин» червоніє; повернути null завжди → червоніє.
+describe('GAME-338 · причина сяк-так у «Вузлах»', () => {
+  it('розв\'язок — без причини; порожня розкладка — «не всі кільця»', () => {
+    for (const seed of [0, 1, 2]) expect(knotsWhy(solved(seed)), `насіння ${seed}`).toBeNull();
+    expect(knotsWhy(startKnots(1))).toBe('open');
+  });
+  it('перетин → cross; поза смугою без перетину → tension; лише вітер (нормально) → без причини', () => {
+    const l = levelOf(1); const sol = solve(l) as readonly number[];
+    let cross = false;
+    for (let a = 0; a < sol.length && !cross; a++) for (let b = a + 1; b < sol.length && !cross; b++) {
+      const sw = sol.map((p, i) => (i === a ? (sol[b] as number) : i === b ? (sol[a] as number) : p));
+      if (crossingPairs(l, sw).length > 0) { cross = true; expect(knotsWhy(linked(1, sw))).toBe('cross'); }
+    }
+    expect(cross).toBe(true);
+    const links = l.rings.map(() => -1); const seen: Record<string, boolean> = {};
+    const go = (i: number): void => {
+      if (i === l.rings.length) {
+        const f = faults(linked(1, links)); const w = knotsWhy(linked(1, links));
+        if (f.crossings === 0 && f.tension > 0 && knotsOutcome(linked(1, links)) === 'scrappy' && !seen.tension) { seen.tension = true; expect(w).toBe('tension'); }
+        if (f.crossings === 0 && f.tension === 0 && !f.wind && !seen.wind) { seen.wind = true; expect(w).toBeNull(); }
+        return;
+      }
+      for (let j = 0; j < l.pegs.length; j++) { if (links.includes(j)) continue; links[i] = j; go(i + 1); links[i] = -1; }
+    };
+    go(0);
+    expect(seen.tension, 'розкладка з натягом знайдена').toBe(true);
+    expect(seen.wind, 'розкладка лише з вітром знайдена').toBe(true);
+  });
+  it('дошка показує причину лише для сяк-так і передає її з обох справ', () => {
+    expect(src).toContain('knotsWhy(knots, help)');
+    expect(src).toContain('fireWhy(embers)');
+    expect(src).toMatch(/out === 'scrappy' && reasons\[id\]/);
   });
 });

@@ -253,6 +253,32 @@ test.describe('GAME-180 негативні контролі', () => {
     expect(p.npcMarks[r.giver], `${r.giver}: «!» у кадрі першої репліки`).toBe('request');
   });
 
+  // GAME-338 · ціль Люка (304,464) стоїть під сосною pine.camp (288,380, радіус 44): зверху «Дія» трусила дерево (+1 Шишка, ~1 хв) і ціль не відкривалась.
+  // Точка (298,422) — у зоні дії обох (до сосни ≈43, до цілі ≈42), далі за кільце наближення (35): спрацювати може лише ручна «Дія».
+  // Мутація (перевірено): у proximity.ts `lifeMayAct` прибрати `&& !nearName.startsWith('req.')` → тест червоніє (сосна перехоплює «Дію»).
+  test('Люк: «Дія» зверху від цілі під сосною відкриває ціль, а не трусить сосну (GAME-338)', async ({ page }) => {
+    await toCamp(page);
+    const r = REQS.luc as Req;
+    await openTalk(page, r);
+    await toCard(page, r);
+    await panel(page).locator('[data-act="choose"]', { hasText: 'Беруся' }).click();
+    await page.waitForTimeout(450);
+    await closeTalk(page);
+    const spot: Pt = { x: 298, y: 422 };
+    for (let attempt = 0; attempt < 4; attempt++) {
+      await walkInPage(page, { label: 'зверху від цілі Люка', to: spot, until: [{ within: 4 }] });
+      const p = await probe(page);
+      if (!p.playerMoving && Math.hypot(p.playerX - spot.x, p.playerY - spot.y) < 8) break;
+    }
+    const at = await probe(page);
+    expect(Math.hypot(at.playerX - 288, at.playerY - 380), 'герой у зоні сосни').toBeLessThan(44);
+    expect(at.nearObject, 'найближчий об\'єкт — ціль Люка').toBe('req.luc-chain.t1');
+    await page.keyboard.press('Space');
+    await expect.poll(async () => (await core(page)).game.flags.includes(flag(r.id, 't1')), { message: 'ціль Люка відкрилась від «Дії»', timeout: 6_000 }).toBe(true);
+    const camp = await page.evaluate(() => (window as unknown as { __game: { probe: { camp: { usedToday: string[] } } } }).__game.probe.camp.usedToday);
+    expect(camp, 'сосну не трусили').not.toContain('pine.camp');
+  });
+
   test('німий об\'єкт цілі (?breakSpot) → прохання не виконується: прохід червоніє', async ({ page }) => {
     await toCamp(page, '&breakSpot=req.luc-chain.t1');
     const r = REQS.luc as Req;

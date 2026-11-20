@@ -56,6 +56,10 @@ export const startEmbers = (dry = true): EmberState => ({ heat: 0.35, smokeMs: 0
 /** GAME-327: дрова щойно підкинуто — жар ще не росте (дим); гравець бачить це словом, а не нулем, що «не рухається». */
 export const smoking = (s: EmberState): boolean => s.smokeMs > 0;
 export const dishOf = (s: EmberState): Dish | null => DISHES[s.dish] ?? null;
+/** GAME-338 · чому вогонь «сяк-так»: 'idle' — дій майже не було (страви не готувались), 'heat' — жар здебільшого поза смугою страви. null — «добре». */
+export type FireWhy = 'idle' | 'heat';
+export const FIRE_WHY_KEY: Readonly<Record<FireWhy, string>> = { idle: 'camp.reason.fire.idle', heat: 'camp.reason.fire.heat' };
+export const fireWhy = (s: EmberState): FireWhy | null => (emberOutcome(s) === 'good' ? null : canFinish('fire', s.acts, 0) ? 'heat' : 'idle');
 export function inBand(s: EmberState, d: Difficulty = NORMAL): boolean {
   const dish = dishOf(s);
   if (!dish) return false;

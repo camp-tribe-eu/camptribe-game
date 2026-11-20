@@ -59,7 +59,7 @@ interface Spec { lang: 'uk' | 'en'; weather: Weather; seed: number; bare?: boole
   const w = window as unknown as { __restarts?: number };
   w.__restarts = 0;
   const port: SamplePort = {
-    stage: () => 'day', lane: () => null, goal: () => goal, flags: () => [], moneyCents: () => 0, seed: () => 7, weather: () => 'rain',
+    stage: () => 'day', lane: () => null, neighbours: () => [], goal: () => goal, flags: () => [], moneyCents: () => 0, seed: () => 7, weather: () => 'rain',
     onFrame: () => () => undefined, driveInDone: () => undefined, board: () => undefined, saveBoard: () => undefined, stormNight: () => undefined,
     request: () => ({ id: null, n: 0 }), working: () => undefined,
     restart: () => { w.__restarts = (w.__restarts ?? 0) + 1; return Promise.resolve(); }, subscribe: () => () => undefined,

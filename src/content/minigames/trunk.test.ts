@@ -8,6 +8,7 @@ import { dispatch, nextCommandId, type Command } from '../../core/commands';
 import { initialState, type GameState, type PlayerState } from '../../core/state';
 import { GAME_DEFS } from '../slice-defs';
 import dlgFire from '../../../content/dialogue/ch1-fire.json';
+import uk from '../../i18n/uk.json';
 import { holds } from '../../core/story';
 import { NIGHT_FACTS, nightOf, noLamp } from '../camp-night';
 import {
@@ -338,5 +339,16 @@ describe('лишене вдома → факт → ніч табору', () => {
     expect(id({ ...lit, missions: ['f.left-lantern'] })).toBe('night.light.dark');
     expect(id({ ...lit, missions: ['f.left-lantern', 'f.pack-lantern-2'] })).toBe('night.light.bright');   // другий ліхтар узяли
     expect(noLamp({})).toBe(false);
+  });
+});
+
+describe('GAME-338: рядки результату «Багажника» різні для good / fine / scrappy', () => {
+  const lines = (['good', 'fine', 'scrappy'] as const).map((o) => (TRUNK_GAME.outcomes[o].resultKey));
+  it('ключі різні, тексти різні, scrappy не докір і не «Їдемо як є»', () => {
+    expect(new Set(lines).size).toBe(3);
+    const text = lines.map((k) => (uk as Record<string, string>)[k]);
+    expect(new Set(text).size).toBe(3);
+    expect(text[2]).not.toMatch(/як є|не так|погано|винен/i);
+    expect(text[0]).not.toBe(text[2]);
   });
 });

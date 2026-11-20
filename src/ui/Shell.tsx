@@ -442,6 +442,7 @@ export function Shell({ port, langOverride, credits, build, holdToast = false, h
   // GAME-317: зразковий день — стара гра розділу 1 (хвиля «Встигнути до зливи», трекер прохань, «найближча нагорода», «Ціль: Прибуття») мовчить, а шапка
   // показує ОДНУ ціль дня (sampleGoal). До дороги (збори й виїзд) стара ціль — і є ціль дня, тож лишається.
   const sampleGoalKey = port.sample ? port.sample.goal() : null;
+  const sampleGoalText = sampleGoalKey === null ? '' : t(`sd.goal.${sampleGoalKey}` as Key) + (sampleGoalKey === 'day' && port.sample && port.sample.neighbours().length > 0 ? `: ${port.sample.neighbours().map((id) => ct(lang, id)).join(', ')}` : '');   // GAME-338: імена — лише тих, над ким «!»
   const goalShown = sampleGoalKey !== null || (!agendaOn && offer.stage !== 'create' && (offer.goal !== null || offer.stage === 'ended') && !hideUi.includes('goal'));
   const trackerShown = !sampleDay && offer.stage !== 'create' && offer.requests.length > 0 && !hideUi.includes('requests');
   // GAME-192: «Далі: …» — лише коли застряг; позначка біля об'єкта й рюкзак лишаються завжди.
@@ -487,7 +488,7 @@ export function Shell({ port, langOverride, credits, build, holdToast = false, h
             дві підказки одна на одній не стоять (картка мети — у потоці шапки вище). Не ловить дотик. */}
         {(goalShown || nextShown || trackerShown || nearestShown) && (
           <div class="ui-strip" data-agenda={agendaOn ? 'yes' : undefined}>
-            {goalShown && <div class="ui-goal" data-ui="goal" data-ended={offer.stage === 'ended' ? 'yes' : undefined}><ObjectiveIcon spot={sampleGoalKey !== null || offer.stage === 'ended' ? null : offer.hint.nextSpot} />{`${t('ui.goal')}: ${sampleGoalKey !== null ? t(`sd.goal.${sampleGoalKey}` as Key) : offer.goal ? ct(lang, offer.goal.key) : t(offer.chapterEnd === 2 ? 'ui.goal.ended.ch2' : 'ui.goal.ended')}`}</div>}
+            {goalShown && <div class="ui-goal" data-ui="goal" data-ended={offer.stage === 'ended' ? 'yes' : undefined}><ObjectiveIcon spot={sampleGoalKey !== null || offer.stage === 'ended' ? null : offer.hint.nextSpot} />{`${t('ui.goal')}: ${sampleGoalKey !== null ? sampleGoalText : offer.goal ? ct(lang, offer.goal.key) : t(offer.chapterEnd === 2 ? 'ui.goal.ended.ch2' : 'ui.goal.ended')}`}</div>}
             {/* GAME-180: трекер прийнятих прохань — «Сміття 2/3» (окремий рядок смуги: ціль · трекер · «Далі»); стрілка на мапі веде до наступної цілі, а коли все зроблено — до просильника. */}
             {nearestShown && offer.nearest && (
               <div class="ui-near-reward" data-ui="nearest" data-kind={offer.nearest.kind} data-left={offer.nearest.left} role="status">

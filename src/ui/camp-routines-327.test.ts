@@ -21,10 +21,13 @@ describe('GAME-327 дошка табору', () => {
       expect((en as Record<string, string>)[k], k).toBeTruthy();
     }
   });
-  // Мутація (перевірено): прибрати одне ім'я з sd.goal.day (або додати місію без імені) → червоніє.
-  it('GAME-327: ціль дня називає всіх сусідів-видавців місій', () => {
+  // GAME-338 (замінив GAME-327): ціль дня не вшиває імена в текст, а бере їх з `port.sample.neighbours()` — тих, над ким «!». Мутація (перевірено): повернути імена в sd.goal.day або прибрати `neighbours()` з Shell → червоніє.
+  it('GAME-338: ціль дня називає лише сусідів із «!», імена не вшито в текст', async () => {
+    const shell = (await import('./Shell.tsx?raw')).default;
+    expect(shell).toMatch(/sampleGoalKey === 'day' && port\.sample && port\.sample\.neighbours\(\)\.length > 0/);
+    expect(shell).toContain('port.sample.neighbours().map((id) => ct(lang, id))');
     for (const [goal, loc] of [[uk, ukLoc], [en, enLoc]] as const) {
-      for (const m of MISSIONS) expect((goal as Record<string, string>)['sd.goal.day'], m.giver).toContain((loc as Record<string, string>)[m.giver] as string);
+      for (const m of MISSIONS) expect((goal as Record<string, string>)['sd.goal.day'], m.giver).not.toContain((loc as Record<string, string>)[m.giver] as string);
     }
   });
   // GAME-328. Мутації (перевірено): `helpFor(day)` → `helpFor(startCampDay())`; прибрати `bite: help.timeScale`; прибрати `active !== 'firewood'` → червоніють.

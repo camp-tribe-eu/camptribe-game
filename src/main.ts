@@ -80,7 +80,7 @@ import { driveSummary, setDriveWallet, type DriveMgState } from './content/minig
 import { ARRIVAL_SCENE, SCRAPE_SCENE, arrivalFacts } from './content/arrival-scene';
 import { pitchTaken } from './content/arrival-pitch';
 import { DRIVE_FLAG, driveFlag, driveOutcome as driveInOutcome } from './content/drive-in';
-import { SAMPLE_HOLD_MINUTE, laneIdFor, sampleGoal } from './content/sample-day';
+import { SAMPLE_HOLD_MINUTE, laneIdFor, openMissionGivers, sampleGoal } from './content/sample-day';
 import { postsOf, stationRoutine } from './content/camp-stations';
 import type { RoutineId } from './content/camp-day';
 import { STORM_SCENE, stormNightMove } from './content/storm-night';
@@ -485,6 +485,7 @@ const samplePort: SamplePort = {
   working: (id) => { stationWork = id; },
   lane: () => laneIdFor(bridge.state.game.flags),
   goal: () => sampleGoal(bridge.state.game.flags, playedScene(STORM_SCENE)),
+  neighbours: () => openMissionGivers(bridge.state.game.flags),   // GAME-338: ті, чия місія ще не зроблена — і над ними «★»
   flags: () => bridge.state.game.flags,
   moneyCents: () => bridge.state.game.moneyCents,
   seed: () => bridge.state.worldSeed,
@@ -562,7 +563,7 @@ const worldHooks: WorldHooks = {
   onForage: (kind, sourceId) => { bridge.send({ type: 'Forage', itemId: kind === 'cone' ? FORAGE_ITEMS.cone : FORAGE_ITEMS.berry, sourceId }); },
   sourceUsed: (sourceId, day) => forageSpent(bridge.state.game.friend, sourceId, day),
   // GAME-179: з ким можна говорити саме зараз — те саме, що прийме ядро (NPC тут, відкритий, розмови нема); «!» — гачок прохань GAME-180.
-  talk: (id) => (npcLive(bridge.state.game, GAME_DEFS, id) ? { request: requestMarker(bridge.state.game, id), line: !chatted.has(`${dayOf(bridge.state.clock)}|${id}`) } : null),
+  talk: (id) => (npcLive(bridge.state.game, GAME_DEFS, id) ? { request: requestMarker(bridge.state.game, id), mission: sampleOn && openMissionGivers(bridge.state.game.flags).includes(id), line: !chatted.has(`${dayOf(bridge.state.clock)}|${id}`) } : null),
   onObject: actOnMap,
   onHand: handPractise,
   fireDue: () => fireplaceDue(bridge.state),
