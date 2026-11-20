@@ -193,6 +193,7 @@
         .mg-trunk-grid { width: min(100%, 260px); } .mg-trunk-cell { min-width: 40px; min-height: 40px; } .mg-trunk-cell .ui-bp-icon { transform: translate(-50%, -50%) scale(0.55); } .mg-trunk-cell[data-cool="yes"] small { font-size: 0.45rem; }
       }
       .mg-tune, .mg-crank { width: min(92%, 520px); display: grid; gap: 14px; justify-items: center; }
+      .mg-tune-label { font-size: 0.875rem; margin-bottom: -6px; text-align: center; }
       .mg-tune-dial { position: relative; width: 100%; height: 64px; box-sizing: border-box; border: 2px solid #e8e6e3aa; border-radius: 10px; background: #2a2f36; touch-action: none; }
       .mg-tune-station { position: absolute; top: 0; bottom: 0; width: 10px; margin-left: -5px; background: #ffd54a99; }
       .mg-tune-needle { position: absolute; top: -4px; bottom: -4px; width: 6px; margin-left: -3px; border-radius: 3px; background: #f4f1e8; }
@@ -526,7 +527,7 @@
       .sd-pad { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
       #app:has([data-ui="story"]) .sd-board-btn { display: none; }   /* GAME-327: при відкритій ☰ дошка — кнопка в самому меню, а не друга над ним */
       .sd-board-btn { position: fixed; left: var(--edge-left); bottom: calc(var(--edge-bottom) + var(--stick-size) + 8px); z-index: 30; min-width: 48px; min-height: 48px; }   /* GAME-326: над джойстиком, не на ньому */
-      #app:has([data-ui="drive-in"]) .ui-goal, #app:has([data-ui="drive-in"]) .ui-hud { visibility: hidden; }   /* GAME-326: ціль і годинник не лягають на розмову заїзду */
+      #app:has([data-ui="drive-in"]) .ui-goal, #app:has([data-ui="drive-in"]) .ui-hud, #app:has([data-ui="summary"]) .ui-goal, #app:has([data-ui="sd-summary"]) .ui-goal { visibility: hidden; }   /* GAME-326: ціль і годинник не лягають на розмову заїзду; GAME-341: ціль — і на підсумок дня */
       .sd-cell[data-car]::after { display: grid; place-items: center; height: 100%; color: #1b1f23; font-size: 0.7rem; }
       .sd-cell[data-car='up']::after { content: '▲'; } .sd-cell[data-car='down']::after { content: '▼'; }
       .sd-cell[data-car='left']::after { content: '◀'; } .sd-cell[data-car='right']::after { content: '▶'; }
@@ -619,6 +620,8 @@
         .ui-camp[data-ui="drive-in"] .sd-lane { grid-column: 1; grid-row: 3 / span 2; width: min(300px, calc(var(--cols) / var(--rows) * 60vh)); }
         .ui-camp[data-ui="drive-in"] > [data-ui="di-note"], .ui-camp[data-ui="drive-in"] > .sd-pad, .ui-camp[data-ui="drive-in"] > [data-ui="di-done"] { grid-column: 2; }
         .ui-camp[data-ui="drive-in"] .ui-camp-big { flex: 1 1 80px; }
+        .ui-camp[data-ui="drive-in"] > .sd-pad { display: grid; grid-template-columns: repeat(4, 1fr); }   /* GAME-341: ▲ ▼ ◀ ▶ — один ряд, «Назад» — під ними (було 3+2: ◀ і ▶ у різних рядах) */
+        .ui-camp[data-ui="drive-in"] > .sd-pad > [data-ui="di-undo"] { grid-column: 1 / -1; }
       }
       /* GAME-244 · рюкзак: накладка на все поле, ✕ праворуч угорі; рядок — іконка · назва з «звідки» · ціна · «Продати». */
       .ui-backpack { place-content: start center; align-content: start; background: #1b1f23; }

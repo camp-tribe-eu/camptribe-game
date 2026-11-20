@@ -36,7 +36,7 @@ Object.assign(cond.variants, {
   // GAME-202: справа живої хвилі ще відкрита — доручення в розмові зникає, щойно справу зроблено чи вона спізнилась.
   taskOpen: obj({ taskOpen: req(str) }),
   // GAME-312: міні-гру зіграно (реєстр міні-ігор — у src/content/minigames; наявність id звіряє missions.test).
-  minigame: obj({ minigame: req(str) }),
+  minigame: obj({ minigame: req(str), outcome: en('good', 'fine', 'scrappy') }),
   all: obj({ all: req(conds) }),
   any: obj({ any: req(conds) }),
 });

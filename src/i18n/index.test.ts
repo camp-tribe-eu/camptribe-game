@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import en from './en.json';
-import { LOCALES, pseudo, t, type Key } from './index';
+import { LOCALES, pseudo, t, barkTextFor, touchWording, type Key } from './index';
 import uk from './uk.json';
 
 describe('локалізація (GAME-26)', () => {
@@ -14,5 +14,33 @@ describe('локалізація (GAME-26)', () => {
   it('псевдолокаль позначена дужками й відрізняється від оригіналу', () => {
     expect(pseudo('Pause')).toMatch(/^\[.*\]$/);
     expect(pseudo('Pause')).not.toContain('Pause');
+  });
+});
+
+describe('GAME-341: на дотику підписи не називають клавіші', () => {
+  // Мутація (перевірено): прибрав replace в touchWording (повертає text) → цей тест червоний на «E чи ●».
+  it('жоден підпис дії не містить «E» на дотику (uk і en), а на клавіатурі лишається як є', () => {
+    for (const lang of ['uk', 'en'] as const) {
+      for (const [k, v] of Object.entries(LOCALES[lang])) {
+        if (!/[E●]/.test(v) || !v.includes('●')) continue;
+        expect(touchWording(v, true), `${lang}:${k}`).not.toMatch(/\bE\b/);
+        expect(touchWording(v, true), `${lang}:${k}`).toContain('●');
+        expect(touchWording(v, false)).toBe(v);
+      }
+    }
+    expect(touchWording('Колонка: E чи ●', true)).toBe('Колонка: ●');
+  });
+});
+
+describe('GAME-341: фабрика підписів сцени', () => {
+  // Мутація (перевірено): у barkTextFor прибрати обгортку touchWording (повернути лише t(...)) → перший вираз червоний.
+  it('на дотику «Колонка: ●», на клавіатурі — як є; мова читається на виклик', () => {
+    expect(barkTextFor('uk', () => true)('life.hint.tap')).toBe('Колонка: ●');
+    expect(barkTextFor('uk', () => false)('life.hint.tap')).toBe('Колонка: E чи ●');
+    let lang: 'uk' | 'en' = 'en';
+    const f = barkTextFor(() => lang, () => true);
+    expect(f('life.hint.tap')).toBe('Water tap: ●');
+    lang = 'uk';
+    expect(f('life.hint.tap')).toBe('Колонка: ●');
   });
 });

@@ -542,19 +542,39 @@
       "id": "a-test",
       "speaker": "npc",
       "textKey": "dlg.luc-chat.a-test",
-      "next": "a-test-solid",
+      "next": "a-test-fine",
       "branches": [
         {
           "when": {
-            "flag": "f.mis-aerial-quick"
+            "minigame": "mg.aerial-tune",
+            "outcome": "scrappy"
+          },
+          "next": "a-test-scrappy"
+        },
+        {
+          "when": {
+            "all": [
+              { "minigame": "mg.aerial-tune", "outcome": "good" },
+              { "flag": "f.mis-aerial-quick" }
+            ]
           },
           "next": "a-test-quick"
         },
         {
           "when": {
-            "flag": "f.mis-aerial-solid"
+            "all": [
+              { "minigame": "mg.aerial-tune", "outcome": "good" },
+              { "flag": "f.mis-aerial-solid" }
+            ]
           },
           "next": "a-test-solid"
+        },
+        {
+          "when": {
+            "minigame": "mg.aerial-tune",
+            "outcome": "good"
+          },
+          "next": "a-test-good"
         }
       ]
     },
@@ -568,6 +588,24 @@
       "id": "a-test-solid",
       "speaker": "npc",
       "textKey": "dlg.luc-chat.a-test-solid",
+      "next": "a-listen"
+    },
+    {
+      "id": "a-test-good",
+      "speaker": "npc",
+      "textKey": "dlg.luc-chat.a-test-good",
+      "next": "a-listen"
+    },
+    {
+      "id": "a-test-fine",
+      "speaker": "npc",
+      "textKey": "dlg.luc-chat.a-test-fine",
+      "next": "a-listen"
+    },
+    {
+      "id": "a-test-scrappy",
+      "speaker": "npc",
+      "textKey": "dlg.luc-chat.a-test-scrappy",
       "next": "a-listen"
     },
     {
