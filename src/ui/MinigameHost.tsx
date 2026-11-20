@@ -2,10 +2,9 @@
 // який передає сцена/реєстр: оболонка про правила гри не знає. Лише дотик (кнопки ≥ 48 px), обидві орієнтації (CSS .mg у index.html), жодних таймерів: кадри рахує сесія.
 import { useEffect, useState } from 'preact/hooks';
 import { money } from './money';
-import type { AnyLang } from '../i18n';
 import type { ComponentType } from 'preact';
 import { playMinigameResult } from '../audio/minigame-sounds';
-import type { Key } from '../i18n';
+import type { AnyLang, Key } from '../i18n';
 import type { MinigamePoint, MinigameSessionPort, MinigameView } from './minigame-types';
 
 export interface SurfaceProps {

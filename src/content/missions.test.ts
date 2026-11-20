@@ -218,21 +218,30 @@ describe('GAME-312 · прохід місії ядром: робота, вибі
   });
 
   // GAME-346 · Клер після слабкого тенту не каже «тент тримає, дрова сухі самі» (як Люк після GAME-341 не каже «чисто, мов у кімнаті»).
-  // Мутація (перевірено): прибрати гілку scrappy з вузла l-wood1 → рядок «scrappy» червоніє (вузол l-wood2 замість l-wood-s).
+  // Мутація (перевірено): прибрати scrappy-гілку з вузла gate → червоніє (шлях іде через l-wood1).
   it('GAME-346 · реакція Клер на тент залежить від результату: scrappy — окрема гілка без «тримає»', () => {
     const t1 = walk(atCamp(), 'npc.claire', ['hello.c4', 'l-offer.c1', 'l-hub.c1', 'l-hub.c2', 'l-hub.c5', 'l-choice.c2', 'l-go.c1']);
     const t2 = walk(played(t1.state, 'mg.lantern-crank'), 'npc.claire', ['l-story2.c2', 'l-mode.c2', 'l-done.c1', 'l-payoff-end.c1']);
-    const table: Record<'good' | 'fine' | 'scrappy', string> = { good: 'l-wood2', fine: 'l-wood2', scrappy: 'l-wood-s' };
-    for (const [outcome, node] of Object.entries(table) as ['good' | 'fine' | 'scrappy', string][]) {
-      const at = walk(played(t2.state, 'mg.tarp-tie', outcome), 'npc.claire', []).state;
-      const afterGate = play([{ type: 'Continue' }], at);
-      expect(afterGate.dialogue?.node, `${outcome}: після воріт`).toBe('l-wood1');
-      expect(play([{ type: 'Continue' }], afterGate).dialogue?.node, outcome).toBe(node);
-    }
+    // Гілка — на воротах (гілки спрацьовують на «Далі» З вузла): слабкий тент не показує попереду «l-wood1 … Не піддається».
+    const table: Record<'good' | 'fine' | 'scrappy', string[]> = { good: ['l-wood1', 'l-wood2'], fine: ['l-wood1', 'l-wood2'], scrappy: ['l-wood-s', 'l-setup-s'] };
+    const visited = (outcome: 'good' | 'fine' | 'scrappy'): string[] => {
+      let s = walk(played(t2.state, 'mg.tarp-tie', outcome), 'npc.claire', []).state;
+      const out: string[] = [];
+      for (let i = 0; i < 8 && s.dialogue; i++) {
+        s = play([{ type: 'Continue' }], s);
+        if (!s.dialogue) break;
+        out.push(s.dialogue.node);
+        if (rawChoices(s.dialogue.id, s.dialogue.node).length > 0) break;
+      }
+      return out;
+    };
+    for (const [outcome, nodes] of Object.entries(table) as ['good' | 'fine' | 'scrappy', string[]][]) expect(visited(outcome), outcome).toEqual(nodes);
+    expect(visited('scrappy'), 'слабкий тент не проходить через l-wood1').not.toContain('l-wood1');
     for (const lang of ['uk', 'en'] as const) {
       const text = (k: string): string => ({ uk, en }[lang] as Record<string, string>)[k] ?? '';
       expect(text('dlg.claire-chat.l-setup-s'), lang).not.toBe(text('dlg.claire-chat.l-setup'));
-      expect(text('dlg.claire-chat.l-setup-s') + text('dlg.claire-chat.l-wood-s'), `${lang}: слабкий тент не названо надійним`).not.toMatch(/Тент тримає|Дрова тепер сухі самі|The tarp holds|stays dry now/);
+      const said = visited('scrappy').map((n) => text(`dlg.claire-chat.${n}`)).join(' | ');
+      expect(said, `${lang}: слабкий тент не названо надійним на жодному вузлі шляху`).not.toMatch(/Тент тримає|Не піддається|Дрова тепер сухі самі|The tarp holds|does not give|stays dry now/);
     }
     // Здача після слабкого тенту зараховує місію одразу в наступній розмові.
     const done = walk(played(t2.state, 'mg.tarp-tie', 'scrappy'), 'npc.claire', ['l-setup-s.c1']);

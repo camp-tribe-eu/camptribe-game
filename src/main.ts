@@ -73,7 +73,7 @@ import { rankUps, SKILL_IDS, type HandAction } from './core/skills';
 import type { SkillUp } from './ui/overlay-order';
 import { openGate } from './view/open-gate';
 import { boardError } from './core/camp-board';
-import { missionWorkDue, pendingTrip, guideLive, reportBack, missionTarget } from './view/mission-work';
+import { missionWorkDue, pendingTrip, guideLive, sampleReportGiver, sampleMissionTarget } from './view/mission-work';
 import { createMinigameSession, type MinigameSession } from './view/minigame-session';
 import { createFixedStep } from './view/fixed-step';
 import { minigameById } from './content/minigames';
@@ -505,7 +505,7 @@ const stationPosts = (): ReturnType<typeof postsOf> => {
   return postsOf(stationWork === null ? assigned : [stationWork, ...assigned]);
 };
 /** GAME-346: видавець місії, до якого треба повернутись після міні-гри (лише в зразковому дні, поки він триває). */
-const reportGiver = (): string | null => (sampleOn && sampleGoal(bridge.state.game.flags, playedScene(STORM_SCENE)) !== 'done' ? reportBack(bridge.state.game)?.giver ?? null : null);
+const reportGiver = (): string | null => sampleReportGiver(bridge.state.game, sampleOn && sampleGoal(bridge.state.game.flags, playedScene(STORM_SCENE)) !== 'done');
 const samplePort: SamplePort = {
   stage: sampleStage,
   request: () => stationReq,
@@ -627,7 +627,7 @@ const worldHooks: WorldHooks = {
   target: () => {
     if (targetFor !== bridge.state.game || targetPack !== backpack.length || targetMin !== bridge.state.clock.minutes) { targetFor = bridge.state.game; targetPack = backpack.length; targetMin = bridge.state.clock.minutes; // GAME-183: прохання в роботі (вибір гравця) — перше; далі крок сюжету. Збірка e2e без ?mapFirst=1 табір веде як раніше (лише прохання): ☰ там ще дає кроки.
       const at = bridge.state.game.player?.locationId;
-      const trip = sampleOn && at === MAP_LOCATION.camp && sampleGoal(bridge.state.game.flags, playedScene(STORM_SCENE)) !== 'done' ? missionTarget(bridge.state.game) : null;   // GAME-337: крок місії веде в зону походу (trip.<зона>); GAME-346: після гри — до видавця
+      const trip = sampleMissionTarget(bridge.state.game, sampleOn && at === MAP_LOCATION.camp && sampleGoal(bridge.state.game.flags, playedScene(STORM_SCENE)) !== 'done');   // GAME-337: крок місії веде в зону походу (trip.<зона>); GAME-346: після гри — до видавця
       targetSpot = trip ?? requestTarget(bridge.state.game) ?? (switches.panelActs && (at === 'loc.camp.lake' || at === 'loc.road') ? null : nextTarget(bridge.state, GAME_DEFS, backpack)?.spot ?? null);
     }
     return targetSpot;

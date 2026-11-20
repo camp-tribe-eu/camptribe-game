@@ -10,7 +10,6 @@ import type { Credits, UiPort } from './port';
 import { BigItemIcon, ObjectiveIcon } from './ObjectiveIcon';
 import { t as tr, type AnyLang, type Key } from '../i18n';
 import { ct } from '../i18n/content';
-import { goalNames } from '../content/sample-day';
 import { Notebook, Radar } from './Agenda';
 import { StoryPanel, money } from './StoryPanel';
 import { receiptItems } from './receipt';
@@ -29,7 +28,7 @@ import { EpisodeCard } from './EpisodeCard';
 import { startHintOn } from './story-focus';
 import { MinigameHost } from './MinigameHost';
 import { missionSurface } from './MissionSurfaces';
-import { SampleDay } from './SampleDay';
+import { SampleDay, sampleGoalLine } from './SampleDay';
 import { episodeStep } from './episode-beats';
 import { trapTab } from './focus-trap';
 import { remindArmed, remindDue } from './remind';
@@ -443,9 +442,7 @@ export function Shell({ port, langOverride, credits, build, holdToast = false, h
   // GAME-317: зразковий день — стара гра розділу 1 (хвиля «Встигнути до зливи», трекер прохань, «найближча нагорода», «Ціль: Прибуття») мовчить, а шапка
   // показує ОДНУ ціль дня (sampleGoal). До дороги (збори й виїзд) стара ціль — і є ціль дня, тож лишається.
   const sampleGoalKey = port.sample ? port.sample.goal() : null;
-  const goalBack = port.sample?.report?.() ?? null;   // GAME-346: міні-гру місії зіграно — чип цілі веде назад до видавця
-  const goalWho = port.sample ? goalNames(sampleGoalKey, port.sample.neighbours(), goalBack) : [];   // GAME-338: імена — лише тих, чия місія ще чекає; GAME-340: і ввечері, доки не зроблено кожну
-  const sampleGoalText = sampleGoalKey === null ? '' : t(goalBack !== null && (sampleGoalKey === 'day' || sampleGoalKey === 'evening') ? 'sd.goal.back' : `sd.goal.${sampleGoalKey}` as Key) + (goalWho.length > 0 ? `${sampleGoalKey === 'evening' && goalBack === null ? `. ${t('sd.goal.wait')}` : ''}: ${goalWho.map((id) => ct(lang, id)).join(', ')}` : '');
+  const sampleGoalText = port.sample ? sampleGoalLine(port.sample, t, lang) : '';   // GAME-346: текст чипа — одна функція (імена сусідів, а після міні-гри «Повернутись до: …»)
   const goalShown = sampleGoalKey !== null || (!agendaOn && offer.stage !== 'create' && (offer.goal !== null || offer.stage === 'ended') && !hideUi.includes('goal'));
   const trackerShown = !sampleDay && offer.stage !== 'create' && offer.requests.length > 0 && !hideUi.includes('requests');
   // GAME-192: «Далі: …» — лише коли застряг; позначка біля об'єкта й рюкзак лишаються завжди.

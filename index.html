@@ -147,6 +147,8 @@
       .mg-text { margin: 0; max-width: 34em; font-size: 0.95rem; line-height: 1.4; }
       .mg-hint { color: #ffd54a; }
       .mg-paused { position: absolute; inset: 0; z-index: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; padding: 12px; background: #101418f7; }
+      .mg-sure { display: flex; flex-direction: column; align-items: center; gap: 10px; }   /* GAME-346: «Точно пропустити?» — кнопки не злипаються й стоять по центру */
+      @media (orientation: landscape) and (max-height: 500px) { .mg-sure { flex-direction: row; flex-wrap: wrap; justify-content: center; } .mg-sure > .mg-text { flex: 1 0 100%; } }
       .mg-ref { width: min(92%, 520px); display: grid; gap: 12px; }
       .mg-ref-track { position: relative; height: 48px; box-sizing: border-box; border: 2px solid #e8e6e3aa; border-radius: 10px; background: #2a2f36; }
       .mg-ref-band { position: absolute; top: 0; bottom: 0; background: #4a7a4a99; }

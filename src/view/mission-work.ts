@@ -55,6 +55,17 @@ export function missionTarget(g: GameState, ms: readonly MissionDef[] = MISSIONS
   return reportBack(g, ms)?.giver ?? null;
 }
 
+/** GAME-346 · куди веде ціль зразкового дня в таборі: `live` — день іде й герой у таборі (main.ts дає умову); інакше null. */
+export const sampleMissionTarget = (g: GameState, live: boolean, ms: readonly MissionDef[] = MISSIONS): string | null => (live ? missionTarget(g, ms) : null);
+
+/** GAME-346 · видавець, до якого вертатись (чип «Повернутись до», стрілка). Поки гравець уже говорить із ним (його діалог відкритий), «повернутись» нікуди — null. */
+export function sampleReportGiver(g: GameState, live: boolean, ms: readonly MissionDef[] = MISSIONS): string | null {
+  if (!live) return null;
+  const m = reportBack(g, ms);
+  if (m === null || g.dialogue?.id === m.dialogue) return null;
+  return m.giver;
+}
+
 /** GAME-340 · ціль походу («trip.<зона>») — така сама ціль, як інші: стрілка веде до неї весь час, а не лише в навчанні й не лише коли гравець завис (Аміна: позначка за краєм екрана, стрілки нема). */
 export const tripGuide = (target: string | null): boolean => target !== null && target.startsWith('trip.');
 

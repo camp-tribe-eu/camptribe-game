@@ -23,3 +23,15 @@ describe('barkAvoiding', () => {
     expect(b - 30).toBeGreaterThanOrEqual(hint.y1);
   });
 });
+
+// Проводка: сцена справді ставить репліку через barkAvoiding і дає їй рамку підпису з CampProps.hintBox (лише видимого підпису). Phaser у юніт-тесті не піднімається, тож — договір по тексту.
+// Мутація (перевірено): у scene.ts прибрати виклик barkAvoiding (або hintBox()) → червоніє.
+import scene from './scene.ts?raw';
+import crate from './crate.ts?raw';
+describe('проводка barkAvoiding (GAME-346)', () => {
+  it('scene.updateBark → barkY → barkAvoiding(…, this.props.hintBox(), …); hintBox дивиться на видимий підпис', () => {
+    expect(scene).toContain('this.barkY(s.y - 52, view.y, bark.text,');
+    expect(scene).toContain('const raw = Math.round(Math.max(anchor, viewTop + text.height + 2));\n    return barkAvoiding(raw, x - text.width / 2, x + text.width / 2, text.height, this.props.hintBox(), viewTop);');
+    expect(crate).toContain('if (!h || !h.visible) return null;');
+  });
+});

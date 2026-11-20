@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from 'preact/hooks';
 import { money as fmtMoney } from './money';
 import type { Key } from '../i18n';
 import { ct, MISSING_MARK } from '../i18n/content';
+import { goalNames } from '../content/sample-day';
 import type { AnyLang } from '../i18n';
 import type { Weather } from '../core/weather';
 import { CampRoutines } from './CampRoutines';
@@ -24,8 +25,8 @@ export interface SamplePort {
   goal(): 'pitch' | 'day' | 'evening' | 'done' | null;
   /** GAME-338: сусіди, над якими зараз «!» (ціль дня називає саме їх). */
   neighbours(): readonly string[];
-  /** GAME-346: видавець місії, до якого треба повернутись після міні-гри (чип цілі називає його); немає — null. Необов'язковий: стенди без місій його не мають. */
-  report?(): string | null;
+  /** GAME-346: видавець місії, до якого треба повернутись після міні-гри (чип цілі називає його); немає — null.  */
+  report(): string | null;
   flags(): readonly string[];
   moneyCents(): number;
   seed(): number;
@@ -88,6 +89,17 @@ export function DriveInCard({ laneId, t, done }: { laneId: string; t: (k: Key) =
 
 /** GAME-323: кінець зразкового дня — підсумок і ЄДИНА дія «Почати знову». Після перезавантаження сторінки фактів ночі нема — тоді лише картка кінця. */
 /** Рядок гаманця в підсумку дня; гроші — тим самим форматером, що й усюди (GAME-346). */
+/** GAME-346 · текст чипа цілі зразкового дня: «Допомогти сусідам: Аміна, Люк», а після міні-гри місії — «Повернутись до: Клер». Єдине місце, звідки Shell бере цей текст. */
+export function sampleGoalLine(sample: SamplePort, t: (k: Key) => string, lang: AnyLang): string {
+  const goal = sample.goal();
+  if (goal === null) return '';
+  const back = sample.report();
+  const who = goalNames(goal, sample.neighbours(), back);
+  const head = t(back !== null && (goal === 'day' || goal === 'evening') ? 'sd.goal.back' : (`sd.goal.${goal}` as Key));
+  if (who.length === 0) return head;
+  return `${head}${goal === 'evening' && back === null ? `. ${t('sd.goal.wait')}` : ''}: ${who.map((id) => ct(lang, id)).join(', ')}`;
+}
+
 export const walletLine = (t: (k: Key) => string, lang: AnyLang, cents: number): string => `${t('sd.sum.wallet')}: ${fmtMoney(lang, cents)}`;
 
 function Summary({ facts, flags, money, t, lang, again }: { facts: NightFacts | null; flags: readonly string[]; money: number; t: (k: Key) => string; lang: AnyLang; again: () => void }) {

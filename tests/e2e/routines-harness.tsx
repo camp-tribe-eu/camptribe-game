@@ -65,7 +65,7 @@ interface Spec { lang: 'uk' | 'en'; weather: Weather; seed: number; bare?: boole
   const w = window as unknown as { __restarts?: number };
   w.__restarts = 0;
   const port: SamplePort = {
-    stage: () => 'day', lane: () => null, neighbours: () => [], goal: () => goal, flags: () => [], moneyCents: () => 0, seed: () => 7, weather: () => 'rain',
+    stage: () => 'day', lane: () => null, neighbours: () => [], report: () => null, goal: () => goal, flags: () => [], moneyCents: () => 0, seed: () => 7, weather: () => 'rain',
     onFrame: () => () => undefined, driveInDone: () => undefined, board: () => undefined, saveBoard: () => undefined, stormNight: () => undefined,
     request: () => ({ id: null, n: 0 }), working: () => undefined,
     restart: () => { w.__restarts = (w.__restarts ?? 0) + 1; return Promise.resolve(); }, subscribe: () => () => undefined,
@@ -87,7 +87,7 @@ interface Spec { lang: 'uk' | 'en'; weather: Weather; seed: number; bare?: boole
   host.style.cssText = 'position:absolute;inset:0;z-index:40;background:#1b1f23;--edge-left:0px;--edge-right:0px;--edge-bottom:0px;--edge-top:0px';
   app.append(host);
   const port: SamplePort = {
-    stage: () => 'day', lane: () => null, neighbours: () => [], goal: () => 'done', flags: () => [], moneyCents: () => 0, seed: () => 7, weather: () => 'rain',
+    stage: () => 'day', lane: () => null, neighbours: () => [], report: () => null, goal: () => 'done', flags: () => [], moneyCents: () => 0, seed: () => 7, weather: () => 'rain',
     onFrame: () => () => undefined, driveInDone: () => undefined, board: () => undefined, saveBoard: () => undefined, stormNight: () => undefined,
     request: () => ({ id: null, n: 0 }), working: () => undefined, restart: () => Promise.resolve(), subscribe: () => () => undefined,
   };
@@ -108,7 +108,7 @@ interface Spec { lang: 'uk' | 'en'; weather: Weather; seed: number; bare?: boole
   host.style.cssText = 'position:absolute;inset:0;z-index:40;pointer-events:none;--edge-left:0px;--edge-right:0px;--edge-bottom:0px;--edge-top:0px';
   app.append(host);
   const port: SamplePort = {
-    stage: () => 'day', lane: () => null, neighbours: () => [], goal: () => 'day', flags: () => [], moneyCents: () => 0, seed: () => 7, weather: () => 'rain',
+    stage: () => 'day', lane: () => null, neighbours: () => [], report: () => null, goal: () => 'day', flags: () => [], moneyCents: () => 0, seed: () => 7, weather: () => 'rain',
     onFrame: () => () => undefined, driveInDone: () => undefined, board: () => undefined, saveBoard: () => undefined, stormNight: () => undefined,
     request: () => ({ id: null, n: 0 }), working: () => undefined, restart: () => Promise.resolve(), subscribe: () => () => undefined,
   };
