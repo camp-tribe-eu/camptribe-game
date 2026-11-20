@@ -72,7 +72,7 @@ import { rankUps, SKILL_IDS, type HandAction } from './core/skills';
 import type { SkillUp } from './ui/overlay-order';
 import { openGate } from './view/open-gate';
 import { boardError } from './core/camp-board';
-import { missionWorkDue, pendingTrip, tripGuide } from './view/mission-work';
+import { missionWorkDue, pendingTrip, guideLive } from './view/mission-work';
 import { createMinigameSession, type MinigameSession } from './view/minigame-session';
 import { minigameById } from './content/minigames';
 import { TRUNK_GAME, leftOf, setTrunkLoad, type TrunkState } from './content/minigames/trunk';
@@ -531,7 +531,7 @@ function missionTick(): void {
 const worldHooks: WorldHooks = {
   hintTick: (dt) => {
     if (bridge.state.game.dialogue !== null) hintIdle.poke();
-    const v = hintIdle.tick(dt, worldHooks.target(), bridge.state.game) || tripGuide(worldHooks.target());   // GAME-340: ціль походу не гасне
+    const v = guideLive(hintIdle.tick(dt, worldHooks.target(), bridge.state.game), worldHooks.target());   // GAME-340: ціль походу не гасне
     if (v !== hintLast) { hintLast = v; for (const l of storyListeners) l(); }
     return v;
   },
@@ -540,7 +540,7 @@ const worldHooks: WorldHooks = {
   guide: () => {
     if (switches.panelActs) return true;
     if (guideFor !== bridge.state) { guideFor = bridge.state; guideOn = onboarding(bridge.state); }
-    return guideOn || tripGuide(worldHooks.target());   // GAME-340: стрілка до цілі походу — завжди
+    return guideLive(guideOn, worldHooks.target());   // GAME-340: стрілка до цілі походу — завжди
   },
   agendaSpots: () => {
     if (switches.panelActs) return [];

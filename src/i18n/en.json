@@ -132,7 +132,7 @@
   "ui.remind.done": "Code copied. Keep it wherever suits you — nothing in the game changed.",
   "ui.remind.manual": "Copying did not work here. Here is the code — select and copy it yourself whenever you like:",
   "pack.title": "Did we pack everything?",
-  "pack.stillOut": "Still doesn't fit",
+  "pack.stillOut": "Still to leave",
   "pack.space": "Space",
   "pack.take": "Take:",
   "pack.load": "Load the car",

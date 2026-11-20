@@ -68,7 +68,6 @@ test(`речі лишились: «Не влазить» — кнопки на �
   await page.locator('[data-ui="mg-close"]').tap();
   const overflow = page.locator('[data-ui="pack-overflow"]');
   await expect(overflow, 'екран «Не влазить»').toBeVisible({ timeout: 10_000 });
-  await restore();
   const vh = (page.viewportSize() as { height: number }).height;
   const first = page.locator('[data-ui="pack-overflow"] [data-act="leave"]').first();
   const b = await first.boundingBox();
@@ -85,6 +84,7 @@ test(`речі лишились: «Не влазить» — кнопки на �
     await buttons.first().click(); await page.waitForTimeout(450);
     if (before > 1) await expect(counter, `GAME-340: після кроку ${i + 1} лічильник зменшився`).toHaveAttribute('data-left', String(before - 1));
   }
+  await restore();   // GAME-340: ефекти оболонки запізнюються й під час «Лишити вдома» — «Куди їдемо?» не мусить залежати від їхнього порядку
   expect((await core(page)).game.flags.filter((f) => f.startsWith('f.take-')), 'сумка порожня').toEqual([]);
   await expect(page.locator('.ui-talk [data-ui="dialogue"] [data-act="visit"]').first(), 'після останнього — рамка «Куди їдемо?»').toBeVisible({ timeout: 10_000 });
   await expect(page.locator('.ui-story'), '☰ закрилась').toHaveCount(0);
