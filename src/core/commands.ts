@@ -8,7 +8,7 @@ import type { CommandRecord, GameState, RejectCode } from './state';
 import { HAND_ACTIONS, isHandAction, practise, rankOf, SKILL_IDS, type SkillId } from './skills';
 import { gearOf, pruneGear, sellPriceOf } from './gear';
 import { bookLeave, cancelLeave } from './life';
-import { autoPack, capacityOf, carriedOf, loadCarSet, packFlag, packingOpen, packItemsFor, takeFlag, usedUnits, withLoaded, withPacked } from './packing';
+import { autoPack, capacityOf, carriedOf, loadCarSet, leftFlag, packFlag, packingOpen, packItemsFor, takeFlag, usedUnits, withLoaded, withPacked } from './packing';
 import type { Weather } from './weather';
 import { applyStory, CHAPTER2_START, chapter2Startable, canRestNow, canSleepNow, REST_SCENE, questNeedsItem, questOpen, sleepCap, type StoryCommand, type StoryDraft } from './story';
 import { basketFlag, basketOf, basketTotal, canPay } from './basket';
@@ -453,7 +453,7 @@ function apply(cmd: Command, d: Draft, defs: CoreDefs, guard: Safeguards, today:
       }
       if (packed || d.flags.includes(takeFlag(item.itemId))) return 'PACK_ALREADY';
       if (usedUnits(d.flags, pk, d.player) + item.units > capacityOf(pk, d.player.transportId)) return 'PACK_FULL';
-      d.flags = [...d.flags, flag].sort();
+      d.flags = [...d.flags.filter((f) => f !== leftFlag(item.itemId)), flag].sort();
       return null;
     }
     case 'TakeItem':
@@ -467,12 +467,14 @@ function apply(cmd: Command, d: Draft, defs: CoreDefs, guard: Safeguards, today:
       if (!packingOpen(pk, d)) return 'PACK_CLOSED';
       const tf = takeFlag(item.itemId);
       if (cmd.type === 'LeaveItem') {
-        if (!d.flags.includes(tf)) return 'PACK_NOT_PACKED';
-        d.flags = d.flags.filter((f) => f !== tf);
+        // GAME-332: лишити можна і з сумки, і з багажника; лишене вдома лягає прапорцем `f.left-*` (його читає ніч табору).
+        const pf = packFlag(item.itemId);
+        if (!d.flags.includes(tf) && !d.flags.includes(pf)) return 'PACK_NOT_PACKED';
+        d.flags = [...d.flags.filter((f) => f !== tf && f !== pf), leftFlag(item.itemId)].sort();
         return null;
       }
       if (d.flags.includes(tf) || d.flags.includes(packFlag(item.itemId))) return 'PACK_ALREADY';
-      d.flags = [...d.flags, tf].sort();
+      d.flags = [...d.flags.filter((f) => f !== leftFlag(item.itemId)), tf].sort();
       return null;
     }
     case 'LoadCar': {

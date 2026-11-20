@@ -63,7 +63,7 @@ import { agendaOf, minimapTargets, onboarding, type MiniFrame } from './content/
 import type { MapKey } from './content/map-first';
 import { taskGate } from './core/wave';
 import { MAP_LOCATION, MAP_SPOTS, departBlock, isBulky, isMapFirstSpot, mapKeyFor, moveKey, needsLeft, nextTarget, npcLive, resolveSpot, sameMove, spotLook, unpackMoves } from './content/map-first';
-import { carriedOf, takeFlag } from './core/packing';
+import { capacityOf, carriedOf, packItemsFor, takenOf, takeFlag } from './core/packing';
 import type { GameState } from './core/state';
 import { progressOf, titleOf } from './core/progress';
 import { grantCentsMap, isEmptySum, rewardDelta, type CoreSnap, type RawRewardRow } from './ui/reward-sticker';
@@ -74,6 +74,7 @@ import { openGate } from './view/open-gate';
 import { missionWorkDue } from './view/mission-work';
 import { createMinigameSession, type MinigameSession } from './view/minigame-session';
 import { minigameById } from './content/minigames';
+import { TRUNK_GAME, leftOf, setTrunkLoad, type TrunkState } from './content/minigames/trunk';
 import { driveSummary, setDriveWallet, type DriveMgState } from './content/minigames/drive';
 import { ARRIVAL_SCENE, SCRAPE_SCENE, arrivalFacts } from './content/arrival-scene';
 import { pitchTaken } from './content/arrival-pitch';
@@ -129,8 +130,12 @@ const syncBackpack = (): void => {
   const pk = GAME_DEFS.packing;
   backpack.length = 0;
   if (pk && g.player) backpack.push(...carriedOf(g.flags, pk, g.player));
-  if (backpack.length === 0) overflowShown = false;
+  if (backpack.length === 0) { overflowShown = false; trunkPlayed = false; }
 };
+// GAME-332: «Багажник» зіграно для цієї партії речей (до наступного порожнього рюкзака); після закриття результату — звичайне завантаження й питання «Куди їдемо?».
+let trunkPlayed = false;
+let afterMission: (() => void) | null = null;
+let afterGo = false;
 // GAME-245: «Не влазить» уже показано (екран вибору відкрито; доки нічого не змінилось, авто не завантажує вдруге) і велика картка щойно взятої речі (мс, покадрово).
 let overflowShown = false;
 let cardItem: string | null = null;
@@ -326,9 +331,31 @@ const actOnMap = (name: string): void => {
  * Завантаження авто (GAME-245): ОДНА дія — усе взяте лягає в багажник за пріоритетом. Не влізло — один екран «Не влазить: що лишимо вдома?» (панель, кнопки LeaveItem);
  * доки вибору не зроблено, авто не завантажує вдруге (auto), а E/тап (manual) відкриває екран знову.
  */
+/** GAME-332: міні-гра «Багажник» перед завантаженням (лише в мапі-першій грі). true — гру відкрито. */
+function openTrunk(): boolean {
+  const g = bridge.state.game;
+  const pk = GAME_DEFS.packing;
+  const p = g.player;
+  if (switches.panelActs || missionSession || !pk || !p) return false;
+  const all = packItemsFor(pk, p);
+  const taken = new Set(takenOf(g.flags, pk, p));
+  setTrunkLoad({ transport: p.transportId, cat: all.some((i) => i.itemId === 'item.mia-carrier'), capacity: capacityOf(pk, p.transportId), items: all.filter((i) => taken.has(i.itemId)).map((i) => ({ id: i.itemId, needed: i.group === 'needed', units: i.units })) });
+  missionSession = createMinigameSession(TRUNK_GAME, {
+    results: g.minigames, seed: bridge.state.worldSeed,
+    report: (r) => {
+      bridge.send({ type: 'FinishMinigame', minigameId: TRUNK_GAME.id, outcome: r.outcome });
+      for (const itemId of leftOf((missionSession as MinigameSession).run.state as TrunkState)) bridge.send({ type: 'LeaveItem', itemId });
+      syncBackpack(); trunkPlayed = true; storyChanged();
+      afterMission = () => { unloadOne(true); };
+    },
+  });
+  missionChanged();
+  return true;
+}
 const unloadOne = (manual = false): 'ok' | 'full' | 'none' => {
   syncBackpack();
-  if (backpack.length === 0) return 'none';
+  if (backpack.length === 0 || missionSession) return 'none';
+  if (!trunkPlayed && !overflowShown && openTrunk()) return 'full';
   if (overflowShown) {
     if (!manual || trunkOpen) return 'none';
     trunkOpen = true; storyChanged(); for (const l of openListeners) l();
@@ -451,9 +478,11 @@ const samplePort: SamplePort = {
   subscribe: (l) => { sampleListeners.add(l); return () => { sampleListeners.delete(l); }; },
 };
 function missionTick(): void {
+  // GAME-332: після закритого результату оболонка вже знята (Shell побачив missionChanged) — лише тепер завантажуємо авто: інакше екран «Не влазить» не відкрився б.
+  if (afterGo && !missionSession) { const after = afterMission; afterMission = null; afterGo = false; after?.(); }
   if (sampleOn) { sampleScenes(); if (!missionSession) sampleOpenDrive(); }
   if (missionSession) {
-    if (missionSession.run.phase === 'closed') { missionSession = null; missionChanged(); return; }
+    if (missionSession.run.phase === 'closed') { missionSession = null; missionChanged(); afterGo = afterMission !== null; return; }
     missionSession.frame(1);
     input.held.clear();   // під міні-грою герой стоїть: стрілки не водять його з місця роботи
     return;

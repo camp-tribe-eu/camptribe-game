@@ -162,6 +162,36 @@
       .mg-sift-cell[data-state="empty"] { background: #3a3326; }
       .mg-sift-cell[data-state="glint"] { background: #3a3326; box-shadow: inset 0 0 14px #ffd54acc; }
       .mg-sift-cell[data-state="ring"] { background: #ffd54a; }
+      /* GAME-332: «Багажник». Сітка зліва (двері праворуч), лоток і кнопки справа; у вузькому вікні — стовпчиком. Клітинки й кнопки ≥ 44 px. */
+      .mg-trunk { width: min(96%, 880px); display: flex; flex-direction: column; align-items: center; gap: 8px; }
+      .mg-trunk-left, .mg-trunk-right { display: flex; flex-direction: column; align-items: center; gap: 6px; width: 100%; min-width: 0; }
+      .mg-trunk-grid { width: min(100%, 360px); display: grid; gap: 0; grid-template-columns: repeat(var(--cols), 1fr); grid-template-rows: repeat(var(--rows), 1fr); border: 3px solid #8a6a45; border-right-style: dashed; border-radius: 6px; background: #2d2219; }
+      .mg-trunk-cell { aspect-ratio: 1; min-width: 44px; min-height: 44px; padding: 0; display: grid; place-items: center; border: 1px solid #e8e6e322; background: transparent; color: #f4f1e8; cursor: pointer; position: relative; }
+      .mg-trunk-cell[data-door="yes"] { background: #ffffff0a; }
+      .mg-trunk-cell[data-cool="yes"] { background: #3c5a66; border-color: #9fb4bd; } .mg-trunk-cell[data-cool="yes"] small { font-size: 0.55rem; line-height: 1; }
+      .mg-trunk-cell[data-item]:not([data-item=""]) { background: #8a7350; border: 2px solid #f4f1e8; }
+      .mg-trunk-cell[data-top="join"] { border-top-color: #8a7350; } .mg-trunk-cell[data-bottom="join"] { border-bottom-color: #8a7350; }
+      .mg-trunk-cell[data-left="join"] { border-left-color: #8a7350; } .mg-trunk-cell[data-right="join"] { border-right-color: #8a7350; }
+      .mg-trunk-cell[data-bad="yes"] { background: #a0603a; }
+      .mg-trunk-cell[data-hint="yes"] { outline: 3px solid #ffd54a; outline-offset: -3px; }
+      .mg-trunk-cell { overflow: hidden; } .mg-trunk-cell .ui-bp-icon { position: absolute; left: 50%; top: 50%; margin: 0; transform: translate(-50%, -50%) scale(0.85); }
+      .mg-trunk-door { margin: 0; font-size: 0.7rem; color: #e8e6e3aa; align-self: flex-end; }
+      .mg-trunk-balance { position: relative; width: min(100%, 360px); }
+      .mg-trunk-balance > i { position: absolute; top: 0; width: 6px; height: 14px; margin-left: -3px; background: #f4f1e8; border-radius: 3px; }
+      .mg-trunk-balance[data-tilt="yes"] > i { background: #e0a060; }
+      .mg-trunk-tray { width: 100%; display: flex; flex-wrap: wrap; justify-content: center; gap: 4px; }
+      .mg-trunk-item { width: 48px; height: 48px; padding: 0; display: grid; place-items: center; border: 2px solid #e8e6e344; border-radius: 8px; background: #3a3326; cursor: pointer; }
+      .mg-trunk-item[data-needed="yes"] { border-color: #ffd54a88; }
+      .mg-trunk-item[data-placed="yes"] { opacity: 0.35; }
+      .mg-trunk-item[data-selected="yes"] { border-color: #ffd54a; background: #5a4a30; }
+      .mg-trunk-item { position: relative; } .mg-trunk-item .ui-bp-icon { position: absolute; left: 50%; top: 50%; margin: 0; transform: translate(-50%, -50%) scale(0.65); }
+      .mg-trunk-note, .mg-trunk-rules { font-size: 0.8rem; min-height: 1.2em; } .mg-trunk-rules { color: #ffd54a; }
+      .mg-trunk-btns { display: flex; gap: 8px; align-items: center; justify-content: center; flex-wrap: wrap; }
+      .mg-trunk-shape { display: grid; grid-template-columns: repeat(var(--sc), 14px); grid-auto-rows: 14px; gap: 1px; } .mg-trunk-shape i { background: #8a7350; border: 1px solid #f4f1e8; }
+      @media (orientation: landscape) and (max-height: 500px) {
+        .mg-trunk { flex-direction: row; align-items: flex-start; gap: 16px; } .mg-trunk-left { flex: 0 0 48%; } .mg-trunk-right { flex: 1 1 0; }
+        .mg-trunk-grid { width: min(100%, 260px); } .mg-trunk-cell { min-width: 40px; min-height: 40px; } .mg-trunk-cell .ui-bp-icon { transform: translate(-50%, -50%) scale(0.55); } .mg-trunk-cell[data-cool="yes"] small { font-size: 0.45rem; }
+      }
       .mg-tune, .mg-crank { width: min(92%, 520px); display: grid; gap: 14px; justify-items: center; }
       .mg-tune-dial { position: relative; width: 100%; height: 64px; box-sizing: border-box; border: 2px solid #e8e6e3aa; border-radius: 10px; background: #2a2f36; touch-action: none; }
       .mg-tune-station { position: absolute; top: 0; bottom: 0; width: 10px; margin-left: -5px; background: #ffd54a99; }
