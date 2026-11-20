@@ -5,7 +5,7 @@ import { MEMBERS, ROUTINE_IDS, ROUTINES, type Member, type RoutineId } from './c
 
 export interface Station {
   /** Імʼя цілі на мапі (spot), за яким її знаходять scene і main. */
-  readonly spot: string;
+  readonly spot: string;   // вогнище — САМЕ наявна ціль табору (не друга поверх неї): її дія в зразку відкриває «Вогонь»
   /** Точка (ноги), px мапи camp-lake.tmj: герой стає поруч, виконавець — на сусідній клітинці. */
   readonly at: { readonly x: number; readonly y: number };
   /** Яка наявна річ табору тут стоїть (для людини-рецензента й тесту). */
@@ -18,9 +18,9 @@ export const STATIONS: Readonly<Record<RoutineId, Station>> = {
   water: { spot: 'station.water', at: { x: 656, y: 240 }, object: 'tap.camp', icon: 'water' },
   firewood: { spot: 'station.firewood', at: { x: 720, y: 592 }, object: 'obj.firewood-pile', icon: 'firewood' },
   berries: { spot: 'station.berries', at: { x: 144, y: 336 }, object: 'bush.camp.2', icon: 'apple' },
-  lanterns: { spot: 'station.lanterns', at: { x: 272, y: 208 }, object: 'leisure.bench.1', icon: 'lantern' },
-  fire: { spot: 'station.fire', at: { x: 112, y: 176 }, object: 'obj.campfire', icon: 'dinner' },
-  fish: { spot: 'station.fish', at: { x: 880, y: 400 }, object: 'fish.shore', icon: 'bowl' },
+  lanterns: { spot: 'station.lanterns', at: { x: 80, y: 528 }, object: 'obj.pitch-1', icon: 'lantern' },
+  fire: { spot: 'obj.campfire', at: { x: 112, y: 144 }, object: 'obj.campfire', icon: 'dinner' },
+  fish: { spot: 'station.fish', at: { x: 848, y: 272 }, object: 'leisure.shore.2', icon: 'bowl' },
   knots: { spot: 'station.knots', at: { x: 144, y: 80 }, object: 'task.pitch-tent', icon: 'line' },
   tidy: { spot: 'station.tidy', at: { x: 528, y: 592 }, object: 'obj.vehicle', icon: 'litter' },
 };

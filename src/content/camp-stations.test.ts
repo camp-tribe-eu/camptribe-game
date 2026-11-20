@@ -22,6 +22,11 @@ export const blockedStations = (table: Partial<Record<RoutineId, Station>>): Rou
   const c = Math.floor(s.at.x / TILE); const r = Math.floor(s.at.y / TILE);
   return c < 0 || r < 0 || c >= MAP.width || r >= MAP.height || (WALLS[r * MAP.width + c] ?? 0) > 0;
 });
+/** Місце справи на березі глушило б риболовлю руками (scene: spot !== null забирає дію): між ними лишаємо дві зони дії. */
+export const shoreClash = (table: Record<RoutineId, Station>): boolean => {
+  const shore = OBJECTS.find((o) => o.name === 'fish.shore');
+  return !shore || ROUTINE_IDS.some((id) => Math.hypot(table[id].at.x - shore.x, table[id].at.y - shore.y) <= INTERACT_RANGE * 2);
+};
 const objectAt = (name: string): { x: number; y: number } | null => {
   const o = OBJECTS.find((x) => x.name === name) ?? REACTIONS.find((x) => x.id === name)?.at;
   return o ? { x: o.x, y: o.y } : null;
@@ -52,6 +57,13 @@ describe('GAME-335 · місця справ табору', () => {
     }
   });
 
+  it('місце рибалки не накриває берег, де рибалять руками: далі за двічі зону дії від fish.shore', () => {
+    expect(shoreClash(STATIONS)).toBe(false);
+  });
+  it('мутація: місце «Риба» на самому березі → сторож червоніє', () => {
+    expect(shoreClash({ ...STATIONS, fish: { ...STATIONS.fish, at: { x: 880, y: 400 } } })).toBe(true);
+  });
+
   it('місце стоїть на прохідній клітинці в межах мапи', () => {
     expect(blockedStations(STATIONS)).toEqual([]);
   });
@@ -70,11 +82,12 @@ describe('GAME-335 · місця справ табору', () => {
   it('імена цілей унікальні, зворотний пошук знаходить рутину, а чужа ціль — ні', () => {
     expect(new Set(ROUTINE_IDS.map((id) => STATIONS[id].spot)).size).toBe(ROUTINE_IDS.length);
     for (const id of ROUTINE_IDS) expect(stationRoutine(STATIONS[id].spot)).toBe(id);
-    expect(stationRoutine('obj.campfire')).toBeNull();
+    expect(stationRoutine('obj.campfire')).toBe('fire');   // вогнище — сама наявна ціль табору
+    expect(stationRoutine('obj.litter')).toBeNull();
   });
 
   it('кожне місце має справжню піктограму з атласу (не запасну «зірку»)', () => {
-    for (const id of ROUTINE_IDS) {
+    for (const id of ROUTINE_IDS.filter((r) => STATIONS[r].spot.startsWith('station.'))) {   // вогнище має спрайт, а не позначку
       const ic = objectiveIcon(STATIONS[id].spot);
       expect(ic.fallback, id).toBe(false);
       expect(ic.key, id).toBe(STATIONS[id].icon);

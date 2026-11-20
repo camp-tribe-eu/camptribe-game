@@ -19,6 +19,9 @@ if (SHOTS) mkdirSync(SHOT_DIR, { recursive: true });
 const shot = async (page: Page, name: string): Promise<void> => { if (SHOTS) await page.screenshot({ path: `${SHOT_DIR}/${name}-${(page.viewportSize()?.width ?? 0) < (page.viewportSize()?.height ?? 0) ? 'portrait' : 'landscape'}.png` }); };
 const SAVE = (JSON.parse(readFileSync(new URL('./fixtures/sample-camp.json', import.meta.url), 'utf8')) as { save: string }).save;
 const TILE = 32;
+interface TiledMap { width: number; layers: { name: string; data?: number[] }[] }
+const MAP = JSON.parse(readFileSync(new URL('../../public/maps/camp-lake.tmj', import.meta.url), 'utf8')) as TiledMap;
+const WALLS = MAP.layers.find((l) => l.name === 'walls')?.data ?? [];
 /** Ходьба в зоні дії (INTERACT_RANGE = 1,5 клітинки), але виконавець стає на сусідню клітинку. */
 const NEAR = TILE * 2.2;
 
@@ -63,7 +66,7 @@ for (const o of ORIENTATIONS) {
       await shot(page, 'hint');
       // 1. Кожна ручна рутина має місце з власною піктограмою на мапі табору.
       const icons = (await probe(page)).markerIcons;
-      for (const id of ROUTINE_IDS) expect(icons[STATIONS[id].spot], `піктограма місця «${id}»`).toBe(STATIONS[id].icon);
+      for (const id of ROUTINE_IDS.filter((r) => STATIONS[r].spot.startsWith('station.'))) expect(icons[STATIONS[id].spot], `піктограма місця «${id}»`).toBe(STATIONS[id].icon);
       expect(await page.locator('[data-ui="camp-work"], [data-ui="camp-board"]').count(), 'до дії панелі рутин не відкриті').toBe(0);
       // Мама — власниця «Вогню»: у строю, не на посту.
       expect((await probe(page)).jobs.every((j) => j === null), 'до справи ніхто не стоїть на посту').toBe(true);
@@ -91,6 +94,26 @@ for (const o of ORIENTATIONS) {
       await page.locator('[data-ui="sd-board"]').tap();
       await expect(page.locator('[data-ui="camp-work"][data-kind="fire"]')).toHaveCount(1);
       expect(errors, 'помилок сторінки нема').toEqual([]);
+    });
+
+    test('на кожному місці найближча ціль — саме воно (серед УСІХ живих об\'єктів табору); на березі риболовля руками не заглушена', async ({ page }) => {
+      const errors = await openCamp(page);
+      // Стоїмо НА місці й поруч (колом 24 px, лише прохідні клітинки): найближчою ціллю має бути місце, а не чужий живий об'єкт (сміття, намет, сусід-ціль…).
+      // Мешканець (npc.*) ходить сам — його випадкову появу поруч не рахуємо збоєм місця.
+      for (const id of ROUTINE_IDS) {
+        const st = STATIONS[id];
+        for (const [dx, dy] of [[0, 0], [24, 0], [-24, 0], [0, 24], [0, -24]] as const) {
+          const to = { x: st.at.x + dx, y: st.at.y + dy };
+          if ((WALLS[Math.floor(to.y / TILE) * MAP.width + Math.floor(to.x / TILE)] ?? 0) > 0) continue;
+          await walkInPage(page, { label: `біля місця «${id}» (${dx},${dy})`, to, until: [{ within: 3 }] });
+          const near = (await probe(page)).nearObject;
+          if (near?.startsWith('npc.')) continue;
+          expect(near, `біля місця «${id}» (${dx},${dy}) дія — його, а не чужого об'єкта`).toBe(st.spot);
+        }
+      }
+      await walkInPage(page, { label: 'на берег рибалки', to: { x: 880, y: 400 }, until: [{ within: 3 }] });
+      expect((await probe(page)).nearObject ?? '', 'біля fish.shore місця справи нема — риболовля руками вільна (поруч може стояти лише родина)').not.toMatch(/^station\./);
+      expect(errors).toEqual([]);
     });
 
     test('місце справи тата (він — герой): дія відкриває «Вузли», виконавців на мапі не додається', async ({ page }) => {

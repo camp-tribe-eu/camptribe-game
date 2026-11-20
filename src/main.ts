@@ -291,7 +291,7 @@ let heartMin = -1;
 const actOnMap = (name: string): void => {
   if (switches.breakSpot.includes(name)) return;
   // GAME-335: місце справи на мапі табору (зразковий день) відкриває ту саму панель рутини, що й дошка (SampleDay → CampRoutines.focus).
-  const station = stationRoutine(name);
+  const station = sampleOn ? stationRoutine(name) : null;
   if (station !== null) { if (stationsLive()) { stationReq = { id: station, n: stationReq.n + 1 }; sampleChanged(); } return; }
   // GAME-175: об'єкти дня 1 удома (крок, річ, полиця, авто, багажник) — ті самі команди ядра, що були кнопками панелі (src/content/map-first.ts).
   if (isMapFirstSpot(name) && !(isPlanSpot(name) && spotMove(bridge.state, name) !== null)) {   // GAME-289: вказівники стежок (табличка плану дня 2, вставки гілок) — сцени режисера (spotMove), а не кроки зрізу 1
@@ -468,7 +468,7 @@ let stationFor: unknown = null;
 let stationOk = false;
 const stationsLive = (): boolean => {
   if (stationFor !== bridge.state) { stationFor = bridge.state; stationOk = sampleOn && sampleStage() === 'day' && sampleGoal(bridge.state.game.flags, playedScene(STORM_SCENE)) !== 'done'; }
-  return stationOk;
+  return stationOk && missionSession === null;   // GAME-335: над міні-грою (дорога, місія сусіда) місце справи мовчить
 };
 let stationReq: { id: RoutineId | null; n: number } = { id: null, n: 0 };
 let stationWork: RoutineId | null = null;
@@ -563,7 +563,7 @@ const worldHooks: WorldHooks = {
   grillDue: () => fireplaceDue(bridge.state) && fishEvening(bridge.state.game.flags) === 'kept',
   onGrilled: (charred) => { grilledCharred = charred; },
   onFish,
-  isLive: (name) => (stationRoutine(name) !== null ? stationsLive() : !campOnly(name) && liveSpot(bridge.state, name, GAME_DEFS)),
+  isLive: (name) => (sampleOn && stationRoutine(name) !== null ? stationsLive() : !campOnly(name) && liveSpot(bridge.state, name, GAME_DEFS)),
   stations: () => sampleOn,
   posts: stationPosts,
   frame: (dtMs) => {

@@ -900,7 +900,7 @@ export class WorldScene extends Phaser.Scene {
     this.residentSprites.forEach((sp, i) => sp.setVisible(this.residentLines[i] != null));
     this.neigh.begin(key === 'camp' ? RESIDENTS.map((r) => r.id) : []);
     // GAME-335: місця справ — наявні речі табору (camp-stations); лише зразковий день, лише мапа табору. ПІСЛЯ шляхів мешканців: їхні маршрути місця не обходять (мапа й ритм табору ті самі).
-    if (key === 'camp' && this.hooks.stations?.()) for (const st of Object.values(STATIONS)) { const sp: Spot = { name: st.spot, kind: 'trigger', x: st.at.x, y: st.at.y }; this.spots.push(sp); this.markers.set(sp.name, this.marker(sp)); }
+    if (key === 'camp' && this.hooks.stations?.()) for (const st of Object.values(STATIONS)) { if (this.spots.some((x) => x.name === st.spot)) continue; const sp: Spot = { name: st.spot, kind: 'trigger', x: st.at.x, y: st.at.y }; this.spots.push(sp); this.markers.set(sp.name, this.marker(sp)); }
     this.neigh.setFire(key === 'camp' ? spawnFire(this.spots) : null);
     this.lastRes = CAST.map(() => ({ x: 0, y: 0 }));
     this.probe.neighbours = this.neigh.probe;
