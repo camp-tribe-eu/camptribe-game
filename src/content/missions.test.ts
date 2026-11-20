@@ -283,6 +283,37 @@ describe('GAME-312 · розмови без тупиків і бюджет те�
 
 });
 
+// GAME-342 · шосте приймання: місія Люка ховалась за двома дорученнями, і гравець не бачив, що вона є. Тепер кожен вузол доручень прямо каже про «★ місію».
+// Мутація (перевірено): прибрати «★» з dlg.luc-chat.offer у uk.json (або з en) → перший рядок червоніє; з offer2 / closing2 — відповідні рядки.
+describe('GAME-342 · Люк: «★ місія» названа з першої розмови', () => {
+  const CHAIN_DONE = ['f.req-luc-chain-taken', 'f.req-luc-chain-t1', 'f.req-luc-chain-done'];
+  const RADIO_T1 = [...CHAIN_DONE, 'f.req-luc-radio-taken', 'f.req-luc-radio-t1'];
+  /** Справжня розмова ядром: Talk → «Далі» крізь ворота, доки не стане потрібний вузол (до 4 кроків), і так — до вибору c1 за потреби. */
+  function nodeText(from: GameState, steps: readonly string[], want: string): { uk: string; en: string } {
+    const there = walk(from, 'npc.luc', steps).state;
+    let s = there;
+    for (let i = 0; i < 4 && s.dialogue && s.dialogue.node !== want; i++) s = play([{ type: 'Continue' }], s);
+    if (s.dialogue?.node !== want) throw new Error(`вузол ${want} не відкрився, стоїмо на ${s.dialogue?.node}`);
+    const key = `dlg.luc-chat.${want}`;
+    return { uk: UK[key] as string, en: EN[key] as string };
+  }
+  it('перше доручення (ланцюг): репліка називає «★ місію» і що спершу дві дрібні справи', () => {
+    const t = nodeText(atCamp(), [], 'offer');
+    expect(t.uk).toContain('★'); expect(t.en).toContain('★');
+    expect(t.uk).toMatch(/Дві дрібні справи/); expect(t.en).toMatch(/Two small jobs/);
+  });
+  it('друге доручення (радіо): «остання дрібниця перед ★ місією»', () => {
+    const t = nodeText(atCamp(CHAIN_DONE), [], 'offer2');
+    expect(t.uk).toContain('★'); expect(t.en).toContain('★');
+    expect(t.uk).toMatch(/остання дрібниця/); expect(t.en).toMatch(/[Ll]ast small job/);
+  });
+  it('після радіо: «заходь по ★ місію» — і саме тоді вибір місії є в hello', () => {
+    const t = nodeText(atCamp(RADIO_T1), ['n', 'turnin2.c1'], 'closing2');
+    expect(t.uk).toContain('★'); expect(t.en).toContain('★');
+    expect(tryChoice(atCamp([...CHAIN_DONE, 'f.req-luc-radio-taken', 'f.req-luc-radio-done']), 'npc.luc', ['n'], 'hello.c4'), 'місія Люка справді відкрита після радіо').toBeNull();
+  });
+});
+
 /** Межа типів: тести вище працюють із тим самим каталогом, що й гра. */
 const _defs: CoreDefs = GAME_DEFS;
 void _defs;

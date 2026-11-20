@@ -75,6 +75,8 @@ export const goalNames = (goal: SampleGoal | null, open: readonly string[]): rea
 /** Година, на якій світ зразкового дня стоїть: опівночі гра розділу 1 засинала сама, перегортала день і відкривала свій «Підсумок дня 1» посеред місії. Ніч тут — кнопка дошки, не годинник. */
 export const SAMPLE_HOLD_MINUTE = 23 * 60 + 30;
 
+/** GAME-342: стеля кроків швидкого старту (ціль — ~14; запас на справи «Зробити»), щоб збій не зациклив завантаження. */
+export const SAMPLE_QUICK_STEPS = 40;
 /** GAME-329 · у виборі героя зразка — лише той, кого день справді грає: родина, авто (дорога — міні-гра авто) і без тварини (її день не показує). Решта суперечила б дню. */
 export const SAMPLE_PROFILE = 'profile.family-teen';
 export const SAMPLE_TRANSPORT = 'transport.car';
