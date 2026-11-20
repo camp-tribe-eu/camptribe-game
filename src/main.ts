@@ -469,7 +469,7 @@ function sampleQuickStart(): void {
   // GAME-342 (закон 4): швидкий старт, що став не на дорозі, не мовчить — тест читає probe.sampleQuickStart, консоль каже де застряг.
   const at = bridge.state.game.player?.locationId ?? null;
   probe.sampleQuickStart = at === 'loc.road' ? 'ok' : 'stuck';
-  if (at !== 'loc.road') console.warn(`sampleQuickStart: застряг у ${String(at)} (діалог: ${String(bridge.state.game.dialogue?.node ?? null)})`);
+  if (at !== 'loc.road') console.warn(`sampleQuickStart: stuck at ${String(at)} (dialogue: ${String(bridge.state.game.dialogue?.node ?? null)})`);
 }
 function sampleOpenDrive(): void {
   const g = bridge.state.game;
