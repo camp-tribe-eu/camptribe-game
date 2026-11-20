@@ -10,6 +10,7 @@ import type { Credits, UiPort } from './port';
 import { BigItemIcon, ObjectiveIcon } from './ObjectiveIcon';
 import { t as tr, type AnyLang, type Key } from '../i18n';
 import { ct } from '../i18n/content';
+import { goalNames } from '../content/sample-day';
 import { Notebook, Radar } from './Agenda';
 import { StoryPanel, money } from './StoryPanel';
 import { receiptItems } from './receipt';
@@ -442,7 +443,8 @@ export function Shell({ port, langOverride, credits, build, holdToast = false, h
   // GAME-317: зразковий день — стара гра розділу 1 (хвиля «Встигнути до зливи», трекер прохань, «найближча нагорода», «Ціль: Прибуття») мовчить, а шапка
   // показує ОДНУ ціль дня (sampleGoal). До дороги (збори й виїзд) стара ціль — і є ціль дня, тож лишається.
   const sampleGoalKey = port.sample ? port.sample.goal() : null;
-  const sampleGoalText = sampleGoalKey === null ? '' : t(`sd.goal.${sampleGoalKey}` as Key) + (sampleGoalKey === 'day' && port.sample && port.sample.neighbours().length > 0 ? `: ${port.sample.neighbours().map((id) => ct(lang, id)).join(', ')}` : '');   // GAME-338: імена — лише тих, над ким «!»
+  const goalWho = port.sample ? goalNames(sampleGoalKey, port.sample.neighbours()) : [];   // GAME-338: імена — лише тих, чия місія ще чекає; GAME-340: і ввечері, доки не зроблено кожну
+  const sampleGoalText = sampleGoalKey === null ? '' : t(`sd.goal.${sampleGoalKey}` as Key) + (goalWho.length > 0 ? `${sampleGoalKey === 'evening' ? `. ${t('sd.goal.wait')}` : ''}: ${goalWho.map((id) => ct(lang, id)).join(', ')}` : '');
   const goalShown = sampleGoalKey !== null || (!agendaOn && offer.stage !== 'create' && (offer.goal !== null || offer.stage === 'ended') && !hideUi.includes('goal'));
   const trackerShown = !sampleDay && offer.stage !== 'create' && offer.requests.length > 0 && !hideUi.includes('requests');
   // GAME-192: «Далі: …» — лише коли застряг; позначка біля об'єкта й рюкзак лишаються завжди.

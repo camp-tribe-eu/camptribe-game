@@ -76,7 +76,15 @@ test(`речі лишились: «Не влазить» — кнопки на �
   if (name === 'portrait') expect(await page.locator('.ui-story').evaluate((e) => e.scrollHeight - e.clientHeight), 'екран без прокрутки').toBeLessThanOrEqual(1);
   await expect(page.locator('[data-act="load"]'), 'кнопки «Завантажити речі», що мовчить, нема').toHaveCount(0);
   const buttons = page.locator('[data-ui="pack-overflow"] [data-act="leave"]');
-  for (let i = 0; i < 20 && (await buttons.count()) > 0; i++) { await buttons.first().click(); await page.waitForTimeout(450); }
+  // GAME-340: «Ще не влазить: N» живе — після кожної лишеної речі лічильник = кількість кнопок, що лишились (раніше «16 / 16» не рухалось, гравець не знав, скільки ще).
+  const counter = page.locator('[data-ui="pack-left"]');
+  const total = await buttons.count();
+  await expect(counter, 'GAME-340: лічильник до першого кроку').toHaveAttribute('data-left', String(total));
+  for (let i = 0; i < 20 && (await buttons.count()) > 0; i++) {
+    const before = await buttons.count();
+    await buttons.first().click(); await page.waitForTimeout(450);
+    if (before > 1) await expect(counter, `GAME-340: після кроку ${i + 1} лічильник зменшився`).toHaveAttribute('data-left', String(before - 1));
+  }
   expect((await core(page)).game.flags.filter((f) => f.startsWith('f.take-')), 'сумка порожня').toEqual([]);
   await expect(page.locator('.ui-talk [data-ui="dialogue"] [data-act="visit"]').first(), 'після останнього — рамка «Куди їдемо?»').toBeVisible({ timeout: 10_000 });
   await expect(page.locator('.ui-story'), '☰ закрилась').toHaveCount(0);

@@ -121,6 +121,7 @@ export function StoryPanel({ offer, lang, t, act, close, portrait, children, foo
         {children}
         <fieldset data-ui="packing">
           <p class="ui-status" data-ui="pack-space" data-used={offer.packing.used} data-capacity={offer.packing.capacity} role="status">{`${t('pack.space')}: ${offer.packing.used} / ${offer.packing.capacity} ${t('pack.units')}`}</p>
+          <p class="ui-status" data-ui="pack-left" data-left={offer.packing.overflow.length} role="status">{`${t('pack.stillOut')}: ${offer.packing.overflow.length}`}</p>
           <div data-ui="pack-overflow" role="group" aria-label={t('pack.overflow')}>
             <h4>{t('pack.overflow')}</h4>
             {offer.packing.overflow.map((o) => <button type="button" class="ui-btn" key={o.key} data-act="leave" data-key={o.key} onClick={guarded(o.action.id)}>{`${t('pack.leave')} ${ct(lang, o.key)} · ${o.units} ${t('pack.units')}`}</button>)}

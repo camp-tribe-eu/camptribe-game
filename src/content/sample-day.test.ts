@@ -21,7 +21,7 @@ import { deviceFacts, withDevices } from './camp-devices';
 import { MISSIONS } from './missions';
 import { characterChoices } from '../view/story-offer';
 import { GAME_DEFS } from './slice-defs';
-import { SAMPLE_PROFILE, SAMPLE_TRANSPORT, devicesFromFlags, sampleHeroes, laneIdFor, missionsDone, openMissionGivers, pitchChoices, prepOf, sampleExtra, sampleGoal } from './sample-day';
+import { SAMPLE_PROFILE, SAMPLE_TRANSPORT, devicesFromFlags, goalNames, sampleHeroes, laneIdFor, missionsDone, openMissionGivers, pitchChoices, prepOf, sampleExtra, sampleGoal } from './sample-day';
 import { PREP_FLAGS } from './arrival-pitch';
 import { boardError, BOARD_MAX_BYTES, type CampBoardSave } from '../core/camp-board';
 import { stormNightMove } from './storm-night';
@@ -280,5 +280,22 @@ describe('GAME-338 · openMissionGivers', () => {
     expect(openMissionGivers([first.doneFlag])).toEqual(MISSIONS.slice(1).map((m) => m.giver));
     expect(openMissionGivers(MISSIONS.map((m) => m.doneFlag))).toEqual([]);
     expect(missionsDone([first.doneFlag])).toBe(1);   // те саме джерело, що веде ціль дня
+  });
+});
+
+// GAME-340 · після двох зроблених місій ціль стає «Вечеря й порядок» і губила третього (Люка). Мутація (перевірено): goalNames повертає [] для 'evening' → червоніє.
+describe('GAME-340 · чип цілі називає недороблених видавців', () => {
+  const base = ['f.arrival-early', 'f.spot-beeches'];
+  it('Аміна й Клер зроблені, Люк ні: ціль «evening», і Люк названий', () => {
+    const flags = [...base, ...MISSIONS.filter((m) => m.giver !== 'npc.luc').map((m) => m.doneFlag)];
+    expect(sampleGoal(flags, false)).toBe('evening');
+    expect(goalNames(sampleGoal(flags, false), openMissionGivers(flags))).toEqual(['npc.luc']);
+  });
+  it('усе зроблено, ніч і вибір ділянки — імен нема; «day» називає всіх, хто чекає', () => {
+    const all = [...base, ...MISSIONS.map((m) => m.doneFlag)];
+    expect(goalNames(sampleGoal(all, false), openMissionGivers(all))).toEqual([]);
+    expect(goalNames('done', ['npc.luc'])).toEqual([]);
+    expect(goalNames('pitch', ['npc.luc'])).toEqual([]);
+    expect(goalNames('day', ['npc.amina', 'npc.luc'])).toEqual(['npc.amina', 'npc.luc']);
   });
 });

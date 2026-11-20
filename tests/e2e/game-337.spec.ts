@@ -86,6 +86,8 @@ for (const o of [{ name: 'portrait', viewport: { width: 390, height: 844 } }, { 
       await close(page);
       const icons = await page.evaluate(() => (window as unknown as { __game: { probe: { markerIcons: Record<string, string> } } }).__game.probe.markerIcons);
       expect(icons['trip.sanitary'], 'у зоні походу є позначка цілі').toBe('compass');
+      // GAME-340: ціль походу має стрілку (раніше її давало лише навчання дня 1 — до Аміни стрілка вже гасла). Мутація (перевірено): у main.ts guide() і hintTick без tripGuide → червоніє.
+      await expect.poll(async () => page.evaluate(() => { const f = (window as unknown as { __game: { probe: { fx: { target: string | null; guide: string } } } }).__game.probe.fx; return `${f.target}:${f.guide === 'none' ? 'none' : 'arrow'}`; }), { message: 'GAME-340: до цілі походу є стрілка', timeout: 5_000 }).toBe('trip.sanitary:arrow');
       await walkInPage(page, { label: 'до колонки (місце «Вода»)', to: STATIONS.water.at, until: [{ within: 3 }] });
       await page.keyboard.press('Space');
       await page.waitForTimeout(500);

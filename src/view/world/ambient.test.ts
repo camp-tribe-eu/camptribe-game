@@ -6,10 +6,11 @@
 //  4) чиста функція часу: без Math.random / Date / performance; репліки 4–15 слів, uk і en, без дублів.
 import { describe, expect, it } from 'vitest';
 import bible from '../../../docs/NARRATIVE_BIBLE.md?raw';
+import { REACTIONS } from './camp-alive';
 import ambientSource from './ambient.ts?raw';
 import uk from '../../i18n/uk.json';
 import en from '../../i18n/en.json';
-import { BARK_RANGE, CAST, CAST_BY_MAP, RESIDENTS, SHOP_VISITOR, TILES_PER_MIN, ZONES, buildTimeline, placeAt, residentGrid, walkableAt, type Zone } from './ambient';
+import { BARK_RANGE, CAST, CAST_BY_MAP, RESIDENTS, SHOP_VISITOR, TILES_PER_MIN, TRIP_AT, ZONES, tripPoint, buildTimeline, placeAt, residentGrid, walkableAt, type Zone } from './ambient';
 import { DIALOGUE_LINE_MAX } from '../../../scripts/validator/codes.mjs';
 import { findPath, gridFromWalls, isSolid, tileOf, type Grid, type Pt, type Tile } from './follow';
 
@@ -279,5 +280,23 @@ describe('покупець у крамниці (shop.tmj)', () => {
     }
     expect(moved).toBeGreaterThan(0);
     expect(SHOP_VISITOR.barks.length, 'GAME-221: покупець має >= 2 реплік').toBeGreaterThanOrEqual(2);
+  });
+});
+
+// GAME-340 · позначка походу Аміни стоїть біля колонки, а не за три клітинки. Мутація (перевірено): TRIP_AT.sanitary → { c: 23, r: 6 } (якір) → «у межах дотику до колонки» червоніє.
+describe('GAME-340 · позначка походу біля справи', () => {
+  it('санблок: позначка в зоні, прохідна й у межах дотику до колонки', () => {
+    const z = ZONES.find((x) => x.id === 'sanitary') as Zone;
+    const p = tripPoint(z);
+    expect(p).toEqual(TRIP_AT.sanitary);
+    expect(p.c >= z.c0 && p.c <= z.c1 && p.r >= z.r0 && p.r <= z.r1, 'позначка поза прямокутником зони: місія там не стартує').toBe(true);
+    expect(isSolid(grid, p), 'позначка в стіні').toBe(false);
+    const tap = REACTIONS.find((r) => r.id === 'tap.camp') as (typeof REACTIONS)[number];
+    expect(Math.hypot((p.c + 0.5) * TILE - tap.at.x, (p.r + 0.5) * TILE - tap.at.y), 'позначка далі від колонки, ніж сягає дотик').toBeLessThanOrEqual(tap.range);
+    expect(findPath(grid, tileOf(grid, spawn), p), 'до позначки не дійти пішки').not.toBeNull();
+  });
+  it('зона без окремої точки — якір', () => {
+    const z = ZONES.find((x) => x.id === 'pier') as Zone;
+    expect(tripPoint(z)).toEqual(z.anchor);
   });
 });

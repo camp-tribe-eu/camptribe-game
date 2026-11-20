@@ -31,3 +31,6 @@ export function pendingTrip(g: GameState, ms: readonly MissionDef[] = MISSIONS):
   }
   return null;
 }
+
+/** GAME-340 · ціль походу («trip.<зона>») — така сама ціль, як інші: стрілка веде до неї весь час, а не лише в навчанні й не лише коли гравець завис (Аміна: позначка за краєм екрана, стрілки нема). */
+export const tripGuide = (target: string | null): boolean => target !== null && target.startsWith('trip.');
