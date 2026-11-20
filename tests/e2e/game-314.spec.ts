@@ -404,6 +404,7 @@ async function expectBoardClear(page: Page, what: string, night = false): Promis
     const first = at(0); const last = at('end'); at(0);
     // GAME-340: «Далі» й «Ніч» ЦІЛІ в екрані БЕЗ прокрутки (scrollTop 0) і не прикриті нічим (elementFromPoint — сама кнопка).
     // Список разом із «Чому:» і зробленими справами вищий за екран (приймання 5: 860 при 790): роздуваємо його на 400 px і дивимось, що кнопки лишаються на місці, не лише на сьогоднішній висоті.
+    // Мутація (перевірено рецензентом): прибрати `position: sticky` з .ui-camp-foot → червоніє (camp-next: 1225…1281 з 844).
     const list = document.querySelector('.sd-board-wrap .ui-camp-list') as HTMLElement | null;
     const pad = list?.style.paddingBottom ?? '';
     if (list) list.style.paddingBottom = '400px';

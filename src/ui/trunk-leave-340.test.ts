@@ -1,15 +1,11 @@
-// GAME-340 · «Не влазить»: остання зайва річ лишена → ☰ закривається і ТОЙ САМИЙ крок відкриває «Куди їдемо?» (setPaused(false) → actOnMap('obj.vehicle')), без другої «Дії».
-// Чесно: e2e game-337-trunk цей шлях проходить і без цього гачка (рамка вже з'являється іншим шляхом), тож гачок — страховка від порядку ефектів; тут його тримає сторож за текстом.
-// Мутація (перевірено): прибрати з setPaused рядок `if (vehicleAfterClose) …` → червоніє.
+// GAME-340 · «Не влазить»: живий лічильник «Лишити ще: N».
+// Окрему «Куди їдемо?» одразу після останньої лишеної речі (без другої «Дії») в e2e відтворити не вдалося:
+// рамка вже відкривається звичайним шляхом (авто поруч), тож гачка для цього немає (рецензія GAME-340).
+// Мутація (перевірено): статичне значення замість довжини списку → червоніє (і e2e game-337-trunk теж).
 import { describe, expect, it } from 'vitest';
-import mainSource from '../main.ts?raw';
 import panelSource from './StoryPanel.tsx?raw';
 
-describe('GAME-340 · «Не влазить»: лічильник і продовження', () => {
-  it('остання лишена річ готує «Куди їдемо?», а закриття ☰ її відкриває', () => {
-    expect(mainSource).toContain("vehicleAfterClose = backpack.length === 0 && !switches.panelActs;");
-    expect(mainSource).toContain("if (vehicleAfterClose) { vehicleAfterClose = false; actOnMap('obj.vehicle'); }");
-  });
+describe('GAME-340 · «Не влазить»: лічильник', () => {
   it('екран показує живий лічильник із довжини списку «лишити»', () => {
     expect(panelSource).toContain('data-ui="pack-left" data-left={offer.packing.overflow.length}');
   });

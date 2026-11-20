@@ -141,8 +141,6 @@ let afterMission: (() => void) | null = null;
 let afterGo = false;
 // GAME-245: «Не влазить» уже показано (екран вибору відкрито; доки нічого не змінилось, авто не завантажує вдруге) і велика картка щойно взятої речі (мс, покадрово).
 let overflowShown = false;
-// GAME-340: останню зайву річ лишили — ☰ «Не влазить» закриється сама, і в ту ж мить має відкритись «Куди їдемо?» (без другої «Дії»). Стан ПОКАЗУ: виконується в setPaused(false).
-let vehicleAfterClose = false;
 let cardItem: string | null = null;
 let cardLeftMs = 0;
 const CARD_MS = 1500;
@@ -361,7 +359,6 @@ function openTrunk(): boolean {
   return true;
 }
 const unloadOne = (manual = false): 'ok' | 'full' | 'none' => {
-  vehicleAfterClose = false;
   syncBackpack();
   if (backpack.length === 0 || missionSession) return 'none';
   if (!trunkPlayed && !overflowShown && openTrunk()) return 'full';
@@ -757,9 +754,7 @@ render(h(Shell, {
       choiceSpot = null;
       // GAME-304 (раніше GAME-245: дотик до речі): узяти річ — одна команда TakeItem з вікна контейнера; вікно показує велику картку щойно взятої речі (назва + репліка), «Завантажити» знову може показати «не влізло».
       const before = bridge.state.game.friend?.gift;
-      const wasOverflow = overflowShown;
       for (const m of seq) bridge.send(m);
-      if (intent.type === 'LeaveItem' && wasOverflow) { syncBackpack(); vehicleAfterClose = backpack.length === 0 && !switches.panelActs; }   // GAME-340: остання зайва лишена — далі «Куди їдемо?»
       // GAME-304: картка — лише коли ядро справді прийняло TakeItem (прапорець взято), а не від самого наміру.
       if (intent.type === 'TakeItem' && bridge.state.game.flags.includes(takeFlag(intent.itemId))) { overflowShown = false; cardItem = intent.itemId; cardLeftMs = CARD_MS; }
       // GAME-230: подарунок прийнято ядром (день подарунка змінився) — показати реакцію; відмова нічого не показує.
@@ -824,7 +819,7 @@ render(h(Shell, {
       // інакше клавіша «залипає» і персонаж іде сам (рецензія PR #13).
       input.held.clear();
       input.tapped.clear();
-      if (!paused) { trunkOpen = false; choiceSpot = null; boxOpen = null; if (vehicleAfterClose) { vehicleAfterClose = false; actOnMap('obj.vehicle'); } }   // екран подорожі (і багажник) закрито — наступного разу ☰ без багажника; рамка вибору (GAME-183) закрита
+      if (!paused) { trunkOpen = false; choiceSpot = null; boxOpen = null; }   // екран подорожі (і багажник) закрито — наступного разу ☰ без багажника; рамка вибору (GAME-183) закрита
       (game.scene.getScene('world') as WorldScene | null)?.haltPlayer();
       bridge.setPaused(paused);
       if (paused) saves.autosave(); // автозбереження на паузі
