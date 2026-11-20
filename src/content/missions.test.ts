@@ -212,9 +212,42 @@ describe('GAME-312 · прохід місії ядром: робота, вибі
     expect(taught.choices).toBeGreaterThanOrEqual(CHOICES_TO_PAYOFF_MIN);
     const f1 = walk(s0, 'npc.claire', ['hello.c4', 'l-offer.c1', 'l-hub.c1', 'l-hub.c2', 'l-hub.c5', 'l-choice.c1', 'l-go.c1']);
     const f2 = walk(played(f1.state, 'mg.lantern-crank', 'scrappy'), 'npc.claire', ['l-story2.c1', 'l-mode.c1', 'l-done.c1', 'l-payoff-end.c1']);
-    const fast = walk(played(f2.state, 'mg.tarp-tie', 'scrappy'), 'npc.claire', ['l-wood2.c1', 'l-setup.c1']);
+    const fast = walk(played(f2.state, 'mg.tarp-tie', 'scrappy'), 'npc.claire', ['l-setup-s.c1']);
     expect(fast.state.flags).toContain('f.mis-lantern-done');
     expect(fast.state.flags).not.toContain('f.mis-lantern-taught');
+  });
+
+  // GAME-346 · Клер після слабкого тенту не каже «тент тримає, дрова сухі самі» (як Люк після GAME-341 не каже «чисто, мов у кімнаті»).
+  // Мутація (перевірено): прибрати гілку scrappy з вузла l-wood1 → рядок «scrappy» червоніє (вузол l-wood2 замість l-wood-s).
+  it('GAME-346 · реакція Клер на тент залежить від результату: scrappy — окрема гілка без «тримає»', () => {
+    const t1 = walk(atCamp(), 'npc.claire', ['hello.c4', 'l-offer.c1', 'l-hub.c1', 'l-hub.c2', 'l-hub.c5', 'l-choice.c2', 'l-go.c1']);
+    const t2 = walk(played(t1.state, 'mg.lantern-crank'), 'npc.claire', ['l-story2.c2', 'l-mode.c2', 'l-done.c1', 'l-payoff-end.c1']);
+    const table: Record<'good' | 'fine' | 'scrappy', string> = { good: 'l-wood2', fine: 'l-wood2', scrappy: 'l-wood-s' };
+    for (const [outcome, node] of Object.entries(table) as ['good' | 'fine' | 'scrappy', string][]) {
+      const at = walk(played(t2.state, 'mg.tarp-tie', outcome), 'npc.claire', []).state;
+      const afterGate = play([{ type: 'Continue' }], at);
+      expect(afterGate.dialogue?.node, `${outcome}: після воріт`).toBe('l-wood1');
+      expect(play([{ type: 'Continue' }], afterGate).dialogue?.node, outcome).toBe(node);
+    }
+    for (const lang of ['uk', 'en'] as const) {
+      const text = (k: string): string => ({ uk, en }[lang] as Record<string, string>)[k] ?? '';
+      expect(text('dlg.claire-chat.l-setup-s'), lang).not.toBe(text('dlg.claire-chat.l-setup'));
+      expect(text('dlg.claire-chat.l-setup-s') + text('dlg.claire-chat.l-wood-s'), `${lang}: слабкий тент не названо надійним`).not.toMatch(/Тент тримає|Дрова тепер сухі самі|The tarp holds|stays dry now/);
+    }
+    // Здача після слабкого тенту зараховує місію одразу в наступній розмові.
+    const done = walk(played(t2.state, 'mg.tarp-tie', 'scrappy'), 'npc.claire', ['l-setup-s.c1']);
+    expect(done.state.flags).toContain('f.mis-lantern-done');
+  });
+
+  // GAME-346 · вхід у місію в розмові позначено «★» (як і над головою сусіда) — однаково в усіх трьох і в обох мовах.
+  // Мутація (перевірено): прибрати «★ » з dlg.luc-chat.hello.c4 в uk → рядок цієї мови червоніє.
+  it('GAME-346 · вибір, що веде до пропозиції місії, починається з «★»', () => {
+    for (const m of MISSIONS) {
+      const dlg = CONTENT.dialogues.find((d) => d.id === m.dialogue) as unknown as { nodes: { id: string; choices?: { textKey: string; next: string }[] }[] };
+      const entries = dlg.nodes.flatMap((n) => (n.choices ?? []).filter((c) => c.next === m.offer));
+      expect(entries.length, `${m.id}: вхід у місію`).toBe(1);
+      for (const [lang, loc] of [['uk', uk], ['en', en]] as const) expect((loc as Record<string, string>)[entries[0]?.textKey ?? ''], `${m.id} ${lang}`).toMatch(/^★ \S/);
+    }
   });
 
   it('відмова безкоштовна: «пізніше» нічого не ставить і нічого не коштує', () => {

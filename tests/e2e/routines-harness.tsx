@@ -94,6 +94,27 @@ interface Spec { lang: 'uk' | 'en'; weather: Weather; seed: number; bare?: boole
   render(<SampleDay port={port} t={(k: Key) => t('uk', k)} lang="uk" onBoard={() => undefined} />, host);
 };
 
+/** GAME-346 (A03): шапка з чипами «Ціль» і «Далі:» (ті самі класи, що в Shell) + справжній SampleDay із підказкою про місця справ — щоб виміряти, чи лягають вони одне на одне. */
+(window as unknown as { __mountChips: () => void }).__mountChips = () => {
+  const app = document.getElementById('app') as HTMLElement;
+  document.getElementById('harness')?.remove();
+  document.getElementById('chips-fake')?.remove();
+  const head = document.createElement('header');
+  head.id = 'chips-fake'; head.className = 'ui-header'; head.style.minHeight = '64px';
+  head.innerHTML = '<div class="ui-strip"><div class="ui-goal" data-ui="goal">Ціль: Допомогти сусідам: Аміна, Люк, Клер</div><div class="ui-next" data-ui="next-hint" data-kind="next">Далі: поверни прохання тому, хто просив</div></div>';
+  app.prepend(head);
+  const host = document.createElement('div');
+  host.id = 'harness';
+  host.style.cssText = 'position:absolute;inset:0;z-index:40;pointer-events:none;--edge-left:0px;--edge-right:0px;--edge-bottom:0px;--edge-top:0px';
+  app.append(host);
+  const port: SamplePort = {
+    stage: () => 'day', lane: () => null, neighbours: () => [], goal: () => 'day', flags: () => [], moneyCents: () => 0, seed: () => 7, weather: () => 'rain',
+    onFrame: () => () => undefined, driveInDone: () => undefined, board: () => undefined, saveBoard: () => undefined, stormNight: () => undefined,
+    request: () => ({ id: null, n: 0 }), working: () => undefined, restart: () => Promise.resolve(), subscribe: () => () => undefined,
+  };
+  render(<SampleDay port={port} t={(k: Key) => t('uk', k)} lang="uk" onBoard={() => undefined} />, host);
+};
+
 /** GAME-341: справжня міні-гра «Тент над дровами» (TarpSurface = TuneSurface) уже в фазі гри — для перевірки видимого підпису повзунка. */
 (window as unknown as { __mountTarp: () => void }).__mountTarp = () => {
   let host = document.getElementById('harness');
@@ -106,13 +127,13 @@ interface Spec { lang: 'uk' | 'en'; weather: Weather; seed: number; bare?: boole
   render(null, host);
   const session = createMinigameSession(TARP_TIE, { results: undefined, seed: 1, report: () => undefined });
   session.start();
-  render(<MinigameHost session={session} t={(k: Key) => t('uk', k)} Surface={missionSurface('mg.tarp-tie') as never} />, host);
+  render(<MinigameHost session={session} t={(k: Key) => t('uk', k)} lang="uk" Surface={missionSurface('mg.tarp-tie') as never} />, host);
 };
 
 /** GAME-343: справжня міні-гра місії за id у фазі гри + ручний ведучий кадрів: ідеальний гравець грає до зміни темпу й далі. */
 interface MgHandle { session: ReturnType<typeof createMinigameSession>; def: AnyMinigame; since: number }
 let mgHandle: MgHandle | null = null;
-(window as unknown as { __mountMission: (id: string) => void }).__mountMission = (id) => {
+(window as unknown as { __mountMission: (id: string, lang?: 'uk' | 'en') => void }).__mountMission = (id, lang = 'uk') => {
   let host = document.getElementById('harness');
   if (!host) {
     host = document.createElement('div');
@@ -125,7 +146,7 @@ let mgHandle: MgHandle | null = null;
   const session = createMinigameSession(def, { results: undefined, seed: 1, report: () => undefined });
   session.start();
   mgHandle = { session, def, since: 1000 };
-  render(<MinigameHost session={session} t={(k: Key) => t('uk', k)} Surface={missionSurface(id) as never} />, host);
+  render(<MinigameHost session={session} t={(k: Key) => t(lang, k)} lang={lang} Surface={missionSurface(id) as never} />, host);
 };
 /** Грає `frames` кадрів (або до початку підпису зміни темпу, якщо `untilCue`); повертає, чи підпис зараз увімкнений. */
 (window as unknown as { __mgPlay: (frames: number, untilCue: boolean) => boolean }).__mgPlay = (frames, untilCue) => {

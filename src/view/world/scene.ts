@@ -5,6 +5,7 @@
 // яких валідатор довів досяжність пішки (а не числа, вписані в код окремо від мапи).
 // GAME-93: графіка LPC (OD-013) — тайли 32 px, персонаж із шарів (ходьба 9 кадрів × 4 напрямки), анімоване вогнище,
 // 3/4-глибина: верхівки дерев і дах намету малюються над персонажем, коли той стоїть ПОЗАД об'єктом (див. `bands`).
+import { barkAvoiding } from './bark-place';
 import { stickerPlace } from '../../ui/reward-sticker';
 import Phaser from 'phaser';
 import { ambient, bindPhaser, isIntroOpen, ambientMix, music, musicFor, getMusicScreen } from '../../audio';
@@ -1346,6 +1347,12 @@ export class WorldScene extends Phaser.Scene {
     if (this.player) this.updateBark(time);   // в create героя ще нема — лише розставляємо мешканців
   }
 
+  /** GAME-346: куди ставити репліку мешканця, щоб вона не лягла на підпис дії біля героя («Хитка лавка: …»). */
+  private barkY(anchor: number, viewTop: number, text: Phaser.GameObjects.Text, x: number): number {
+    const raw = Math.round(Math.max(anchor, viewTop + text.height + 2));
+    return barkAvoiding(raw, x - text.width / 2, x + text.width / 2, text.height, this.props.hintBox(), viewTop);
+  }
+
   private hideBark(): void {
     this.residentBark?.text.destroy();
     this.residentBark = null;
@@ -1361,7 +1368,7 @@ export class WorldScene extends Phaser.Scene {
       if (!s || time >= bark.until || Math.hypot(this.player.x - s.x, this.player.y - s.y) > BARK_RANGE * 1.6) { this.hideBark(); return; }
       const view = this.cameras.main.worldView;
       const half = bark.text.width / 2 + 2;
-      bark.text.setPosition(Math.round(Phaser.Math.Clamp(s.x, view.x + half, view.right - half)), Math.round(Math.max(s.y - 52, view.y + bark.text.height + 2)));
+      bark.text.setPosition(Math.round(Phaser.Math.Clamp(s.x, view.x + half, view.right - half)), this.barkY(s.y - 52, view.y, bark.text, Phaser.Math.Clamp(s.x, view.x + half, view.right - half)));   // GAME-346: не на підпис дії біля героя (L05)
       return;
     }
     for (let i = 0; i < CAST.length; i++) {

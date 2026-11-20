@@ -73,7 +73,7 @@ import { rankUps, SKILL_IDS, type HandAction } from './core/skills';
 import type { SkillUp } from './ui/overlay-order';
 import { openGate } from './view/open-gate';
 import { boardError } from './core/camp-board';
-import { missionWorkDue, pendingTrip, guideLive } from './view/mission-work';
+import { missionWorkDue, pendingTrip, guideLive, reportBack, missionTarget } from './view/mission-work';
 import { createMinigameSession, type MinigameSession } from './view/minigame-session';
 import { createFixedStep } from './view/fixed-step';
 import { minigameById } from './content/minigames';
@@ -504,12 +504,15 @@ const stationPosts = (): ReturnType<typeof postsOf> => {
   const assigned = (b?.picks ?? []).filter((p) => b?.results[p.id as RoutineId] === undefined).map((p) => p.id as RoutineId);
   return postsOf(stationWork === null ? assigned : [stationWork, ...assigned]);
 };
+/** GAME-346: видавець місії, до якого треба повернутись після міні-гри (лише в зразковому дні, поки він триває). */
+const reportGiver = (): string | null => (sampleOn && sampleGoal(bridge.state.game.flags, playedScene(STORM_SCENE)) !== 'done' ? reportBack(bridge.state.game)?.giver ?? null : null);
 const samplePort: SamplePort = {
   stage: sampleStage,
   request: () => stationReq,
   working: (id) => { stationWork = id; },
   lane: () => laneIdFor(bridge.state.game.flags),
   goal: () => sampleGoal(bridge.state.game.flags, playedScene(STORM_SCENE)),
+  report: reportGiver,
   neighbours: () => openMissionGivers(bridge.state.game.flags),   // GAME-338: ті, чия місія ще не зроблена — і над ними «★»
   flags: () => bridge.state.game.flags,
   moneyCents: () => bridge.state.game.moneyCents,
@@ -555,7 +558,7 @@ function missionTick(dtMs: number): void {
 const worldHooks: WorldHooks = {
   hintTick: (dt) => {
     if (bridge.state.game.dialogue !== null) hintIdle.poke();
-    const v = guideLive(hintIdle.tick(dt, worldHooks.target(), bridge.state.game), worldHooks.target());   // GAME-340: ціль походу не гасне
+    const v = guideLive(hintIdle.tick(dt, worldHooks.target(), bridge.state.game), worldHooks.target(), reportGiver());   // GAME-340: ціль походу не гасне
     if (v !== hintLast) { hintLast = v; for (const l of storyListeners) l(); }
     return v;
   },
@@ -564,7 +567,7 @@ const worldHooks: WorldHooks = {
   guide: () => {
     if (switches.panelActs) return true;
     if (guideFor !== bridge.state) { guideFor = bridge.state; guideOn = onboarding(bridge.state); }
-    return guideLive(guideOn, worldHooks.target());   // GAME-340: стрілка до цілі походу — завжди
+    return guideLive(guideOn, worldHooks.target(), reportGiver());   // GAME-340: стрілка до цілі походу — завжди
   },
   agendaSpots: () => {
     if (switches.panelActs) return [];
@@ -624,8 +627,8 @@ const worldHooks: WorldHooks = {
   target: () => {
     if (targetFor !== bridge.state.game || targetPack !== backpack.length || targetMin !== bridge.state.clock.minutes) { targetFor = bridge.state.game; targetPack = backpack.length; targetMin = bridge.state.clock.minutes; // GAME-183: прохання в роботі (вибір гравця) — перше; далі крок сюжету. Збірка e2e без ?mapFirst=1 табір веде як раніше (лише прохання): ☰ там ще дає кроки.
       const at = bridge.state.game.player?.locationId;
-      const trip = sampleOn && at === MAP_LOCATION.camp && sampleGoal(bridge.state.game.flags, playedScene(STORM_SCENE)) !== 'done' ? pendingTrip(bridge.state.game) : null;   // GAME-337: крок місії веде в зону походу (позначка trip.<зона>)
-      targetSpot = (trip ? `trip.${trip.zone}` : null) ?? requestTarget(bridge.state.game) ?? (switches.panelActs && (at === 'loc.camp.lake' || at === 'loc.road') ? null : nextTarget(bridge.state, GAME_DEFS, backpack)?.spot ?? null);
+      const trip = sampleOn && at === MAP_LOCATION.camp && sampleGoal(bridge.state.game.flags, playedScene(STORM_SCENE)) !== 'done' ? missionTarget(bridge.state.game) : null;   // GAME-337: крок місії веде в зону походу (trip.<зона>); GAME-346: після гри — до видавця
+      targetSpot = trip ?? requestTarget(bridge.state.game) ?? (switches.panelActs && (at === 'loc.camp.lake' || at === 'loc.road') ? null : nextTarget(bridge.state, GAME_DEFS, backpack)?.spot ?? null);
     }
     return targetSpot;
   },

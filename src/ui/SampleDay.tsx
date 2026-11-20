@@ -2,6 +2,7 @@
 //   заїзд на ділянку (drive-in, GAME-310) → дошка табору (рутини й пристрої, GAME-311) → ніч (ОДНА модель camp-night) → підсумок.
 // Дорога (mg.drive) і місії йдуть через каркас міні-ігор (MinigameHost у Shell), ділянку обирає сцена приїзду — тут їх немає.
 import { useEffect, useRef, useState } from 'preact/hooks';
+import { money as fmtMoney } from './money';
 import type { Key } from '../i18n';
 import { ct, MISSING_MARK } from '../i18n/content';
 import type { AnyLang } from '../i18n';
@@ -23,6 +24,8 @@ export interface SamplePort {
   goal(): 'pitch' | 'day' | 'evening' | 'done' | null;
   /** GAME-338: сусіди, над якими зараз «!» (ціль дня називає саме їх). */
   neighbours(): readonly string[];
+  /** GAME-346: видавець місії, до якого треба повернутись після міні-гри (чип цілі називає його); немає — null. Необов'язковий: стенди без місій його не мають. */
+  report?(): string | null;
   flags(): readonly string[];
   moneyCents(): number;
   seed(): number;
@@ -84,6 +87,9 @@ export function DriveInCard({ laneId, t, done }: { laneId: string; t: (k: Key) =
 }
 
 /** GAME-323: кінець зразкового дня — підсумок і ЄДИНА дія «Почати знову». Після перезавантаження сторінки фактів ночі нема — тоді лише картка кінця. */
+/** Рядок гаманця в підсумку дня; гроші — тим самим форматером, що й усюди (GAME-346). */
+export const walletLine = (t: (k: Key) => string, lang: AnyLang, cents: number): string => `${t('sd.sum.wallet')}: ${fmtMoney(lang, cents)}`;
+
 function Summary({ facts, flags, money, t, lang, again }: { facts: NightFacts | null; flags: readonly string[]; money: number; t: (k: Key) => string; lang: AnyLang; again: () => void }) {
   const pitch = pitchTaken(flags);
   return (
@@ -93,7 +99,7 @@ function Summary({ facts, flags, money, t, lang, again }: { facts: NightFacts | 
         <li data-ui="sd-sum-arrival">{`${t('sd.sum.arrival')}: ${t(`sd.arrival.${arrivalOf(flags)}` as Key)}`}</li>
         <li data-ui="sd-sum-pitch">{`${t('sd.sum.pitch')}: ${pitch === null ? '-' : ct(lang, `pitch.${pitch}.name`)}`}</li>
         <li data-ui="sd-sum-missions">{`${t('sd.sum.missions')}: ${missionsDone(flags)}`}</li>
-        <li data-ui="sd-sum-wallet">{`${t('sd.sum.wallet')}: ${(money / 100).toFixed(2)} €`}</li>
+        <li data-ui="sd-sum-wallet">{walletLine(t, lang, money)}</li>
         {facts && <li data-ui="sd-sum-night">{`${t('sd.sum.rough')}: ${roughCount(facts)}`}</li>}
       </ul>
       <p class="ui-camp-note">{t('sd.summary.end')}</p>

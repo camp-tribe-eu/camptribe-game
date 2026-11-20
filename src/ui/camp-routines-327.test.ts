@@ -24,7 +24,7 @@ describe('GAME-327 дошка табору', () => {
   // GAME-338 (замінив GAME-327): ціль дня не вшиває імена в текст, а бере їх з `port.sample.neighbours()` — тих, над ким «!». Мутація (перевірено): повернути імена в sd.goal.day або прибрати `neighbours()` з Shell → червоніє.
   it('GAME-338: ціль дня називає лише сусідів із «!», імена не вшито в текст', async () => {
     const shell = (await import('./Shell.tsx?raw')).default;
-    expect(shell).toContain('goalNames(sampleGoalKey, port.sample.neighbours())');   // GAME-340: імена дає чиста goalNames (тест — у sample-day.test.ts)
+    expect(shell).toContain('goalNames(sampleGoalKey, port.sample.neighbours(), goalBack)');   // GAME-340: імена дає чиста goalNames (тест — у sample-day.test.ts)
     expect(shell).toContain('goalWho.map((id) => ct(lang, id))');
     for (const [goal, loc] of [[uk, ukLoc], [en, enLoc]] as const) {
       for (const m of MISSIONS) expect((goal as Record<string, string>)['sd.goal.day'], m.giver).not.toContain((loc as Record<string, string>)[m.giver] as string);

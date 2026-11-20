@@ -443,8 +443,9 @@ export function Shell({ port, langOverride, credits, build, holdToast = false, h
   // GAME-317: зразковий день — стара гра розділу 1 (хвиля «Встигнути до зливи», трекер прохань, «найближча нагорода», «Ціль: Прибуття») мовчить, а шапка
   // показує ОДНУ ціль дня (sampleGoal). До дороги (збори й виїзд) стара ціль — і є ціль дня, тож лишається.
   const sampleGoalKey = port.sample ? port.sample.goal() : null;
-  const goalWho = port.sample ? goalNames(sampleGoalKey, port.sample.neighbours()) : [];   // GAME-338: імена — лише тих, чия місія ще чекає; GAME-340: і ввечері, доки не зроблено кожну
-  const sampleGoalText = sampleGoalKey === null ? '' : t(`sd.goal.${sampleGoalKey}` as Key) + (goalWho.length > 0 ? `${sampleGoalKey === 'evening' ? `. ${t('sd.goal.wait')}` : ''}: ${goalWho.map((id) => ct(lang, id)).join(', ')}` : '');
+  const goalBack = port.sample?.report?.() ?? null;   // GAME-346: міні-гру місії зіграно — чип цілі веде назад до видавця
+  const goalWho = port.sample ? goalNames(sampleGoalKey, port.sample.neighbours(), goalBack) : [];   // GAME-338: імена — лише тих, чия місія ще чекає; GAME-340: і ввечері, доки не зроблено кожну
+  const sampleGoalText = sampleGoalKey === null ? '' : t(goalBack !== null && (sampleGoalKey === 'day' || sampleGoalKey === 'evening') ? 'sd.goal.back' : `sd.goal.${sampleGoalKey}` as Key) + (goalWho.length > 0 ? `${sampleGoalKey === 'evening' && goalBack === null ? `. ${t('sd.goal.wait')}` : ''}: ${goalWho.map((id) => ct(lang, id)).join(', ')}` : '');
   const goalShown = sampleGoalKey !== null || (!agendaOn && offer.stage !== 'create' && (offer.goal !== null || offer.stage === 'ended') && !hideUi.includes('goal'));
   const trackerShown = !sampleDay && offer.stage !== 'create' && offer.requests.length > 0 && !hideUi.includes('requests');
   // GAME-192: «Далі: …» — лише коли застряг; позначка біля об'єкта й рюкзак лишаються завжди.
@@ -556,7 +557,7 @@ export function Shell({ port, langOverride, credits, build, holdToast = false, h
       {backpackOpen && <BackpackPanel backpack={offer.backpack} lang={lang} t={t} sell={storyAct} close={closeBackpack} />}
       {offer.box && <BoxPanel box={offer.box} card={offer.hint.card} lang={lang} t={t} take={storyAct} close={() => closeBox()} />}
       {atlasOpen && <AtlasPanel atlas={offer.atlas} lang={lang} t={t} close={closeAtlas} />}
-      {mission && MissionSurface && <MinigameHost session={mission} t={t} Surface={MissionSurface} />}
+      {mission && MissionSurface && <MinigameHost session={mission} t={t} lang={lang} Surface={MissionSurface} />}
       {port.sample && !intro && <SampleDay port={port.sample} t={t} lang={lang} onBoard={() => { if (storyOpen) story(false); }} />}
       {intro && cold && <ColdOpen paint={port.coldOpenScene} t={t} onDone={() => setCold(false)} />}
       {episode && !intro && port.episodeFlags && <EpisodeCard flags={port.episodeFlags()} chapter={offer.chapterEnd ?? 1} t={t} onDone={() => { setEpisode(false); focusStage(); if (teaserSleep.current) { teaserSleep.current = false; summaryEnd(); } /* GAME-264: після тизера — збережена гра й меню паузи, а не мертва мапа */ }} />}

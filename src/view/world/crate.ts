@@ -185,6 +185,14 @@ export class CampProps {
   get repairHits(): number { return this.repair.hits; }
   get repairDone(): boolean { return this.repair.done; }
 
+  /** GAME-346: рамка підпису дії зараз (світові одиниці); null — його не видно. Репліки мешканців обходять її. */
+  hintBox(): { x0: number; y0: number; x1: number; y1: number } | null {
+    const h = this.hint;
+    if (!h || !h.visible) return null;
+    const b = h.getBounds();
+    return { x0: b.x, y0: b.y, x1: b.right, y1: b.bottom };
+  }
+
   update(dtMs: number, player: Pt, range: number, repairLive: boolean): void {
     this.fx.update(dtMs);
     this.hintLeft = Math.max(0, this.hintLeft - dtMs);
