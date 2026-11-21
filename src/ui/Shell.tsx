@@ -55,6 +55,9 @@ function creditGroups<F extends { file: string; authors: readonly string[]; lice
 
 export function Shell({ port, langOverride, credits, build, holdToast = false, hideUi = [], intro: introOn = true, levelUps: levelUpsOn = true }: { port: UiPort; langOverride?: AnyLang; credits: Credits; build: string; holdToast?: boolean; hideUi?: readonly string[]; intro?: boolean; levelUps?: boolean }) {
   const sampleDay = port.sample !== undefined;
+  // GAME-349: Shell має знати про заїзд (банер чекає, поки картка відкрита) — стан зразка не в його стані, тож підписка.
+  const [, bumpSample] = useState(0);
+  useEffect(() => (port.sample ? port.sample.subscribe(() => bumpSample((n) => n + 1)) : undefined), [port]);
   const [paused, setPaused] = useState(false);
   // Підтвердження «Нової гри» (GAME-82): окремий діалог замість меню паузи; Escape — «Ні», а не закрити паузу.
   const [confirmNew, setConfirmNew] = useState(false);
@@ -419,7 +422,7 @@ export function Shell({ port, langOverride, credits, build, holdToast = false, h
   const nowAbs = offer.day * 1440 + offer.timeMinutes;
   useEffect(() => { if (offer.rest.bedtime !== null && bark?.night !== offer.rest.bedtime) setBark({ night: offer.rest.bedtime, at: nowAbs }); }, [offer.rest.bedtime]);
   // GAME-260: усі банери — в одній черзі за екранами (banner-queue.ts): ні поверх рамки розмови, ні поверх панелей.
-  const bannerSlot = bannersOpen({ paused, storyOpen, talk, summary: summary !== null, atlasOpen, backpackOpen: backpackOpen || boxId !== null, episode, intro });
+  const bannerSlot = bannersOpen({ paused, storyOpen, talk, summary: summary !== null, atlasOpen, backpackOpen: backpackOpen || boxId !== null, episode, intro, driveIn: port.sample?.stage() === 'drivein' });
   const barkShown = bark !== null && offer.rest.bedtime === bark.night && nowAbs - bark.at < 10 && bannerSlot;
   // GAME-277: дія, що перестрибнула годинник (сон, кінець дня), не губить наклейку: поки її не бачили, життя відлічується від першого показу — на мапі після підсумку/пробудження.
   const stickerFrom = sticker ? stickerAt(sticker, nowAbs) : 0;

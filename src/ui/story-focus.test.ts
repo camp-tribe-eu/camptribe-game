@@ -1,7 +1,7 @@
 // GAME-280 · offerFocusKey: той самий вміст у новому об'єкті — той самий ключ (фокус не стрибає); змінилось, що натискати, — інший (GAME-80 лишається).
 // Закон 1: мутація «ключ = випадкове/ідентичність об'єкта» червонить перший рядок; «ключ без actions / без репліки» — відповідні рядки нижче.
 import { describe, expect, it } from 'vitest';
-import { boardRec, inSampleCamp, nextAction, offerFocusKey, sampleActionsFirst, sampleMenuActions, startHintOn, type FocusOffer } from './story-focus';
+import { boardRec, inSampleCamp, inSampleRoad, nextAction, offerFocusKey, sampleActionsFirst, sampleMenuActions, startHintOn, type FocusOffer } from './story-focus';
 
 const base = (): FocusOffer => ({
   stage: 'play', locationKey: 'loc.home',
@@ -96,5 +96,27 @@ describe('GAME-327 рекомендація', () => {
     expect(boardRec(true, undefined)).toBe(true);
     expect(boardRec(true, A('c', 'complete'))).toBe(false);
     expect(boardRec(false, undefined)).toBe(false);
+  });
+});
+
+// GAME-349 · зразок, зупинка на дорозі: ☰ без «Піти», «Висушити» і «Зробити» — «Завершити: У дорогу» перша й єдина реальна.
+// Мутації (перевірено; до 'v3' — «Піти» у табір мусить лишитись, інакше шлях далі зникає): sampleMenuActions без гілки sampleRoad → «лишається лише завершення» червоніє; прибрати 'task' зі SAMPLE_ROAD_HIDDEN → «після пропуску дороги рекомендація — Завершити» червоніє.
+describe('GAME-349: ☰ на дорозі зразкового дня', () => {
+  const A = (id: string, kind: string, key: string | null = null) => ({ id, kind, key }) as unknown as Parameters<typeof nextAction>[0][number];
+  const road = [A('t1', 'task', 'baggage'), A('t2', 'task', 'route'), A('v1', 'visit', 'loc.home'), A('v2', 'visit', 'loc.shop'), A('v3', 'visit', 'loc.camp.lake'), A('c', 'complete', 'q.st-004'), A('d1', 'dry', 'item.sleeping-bag'), A('d2', 'dry', 'item.tent')];
+  it('лишаються «Завершити» і шлях у табір', () => {
+    expect(sampleMenuActions(road, false, true).map((a) => a.id)).toEqual(['v3', 'c']);   // «Піти: Табір» лишається — без нього після «Завершити» нема кроку далі (game-314)
+  });
+  it('після пропуску дороги (справи «Зробити» ще є) рекомендація — «Завершити», і вона перша', () => {
+    const shown = sampleMenuActions(road, false, true);
+    expect(nextAction(shown, 'q.st-004')?.id).toBe('c');
+    expect(shown.map((a) => a.id)).not.toContain('v1');
+  });
+  it('поза дорогою зразка — усе як було; табір має своє правило', () => {
+    expect(sampleMenuActions(road, false, false)).toHaveLength(road.length);
+    expect(inSampleRoad(true, 'loc.road')).toBe(true);
+    expect(inSampleRoad(false, 'loc.road')).toBe(false);
+    expect(inSampleRoad(true, 'loc.camp.lake')).toBe(false);
+    expect(inSampleRoad(true, null)).toBe(false);
   });
 });
