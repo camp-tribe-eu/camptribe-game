@@ -121,6 +121,33 @@ describe('GAME-351 · втомлена родина, гроші, наслідо�
     expect(swerve(home, h0), 'спад комфорту від різких перестроювань').toBeGreaterThan(swerve(out, o0));
     expect(swerve(out, o0), 'контроль: до озера різкі перестроювання теж коштують').toBeGreaterThan(0);
   });
+  // За рецензією (закон 1): жвава їзда й близький об'їзд велосипедиста теж множаться на втому, не лише перестроювання.
+  // Мутація (перевірено): прибрати `* scale` у BRISK_COMFORT_PER_M чи в CLOSE_PASS_COST (drive.ts) → відповідний тест червоніє.
+  const bare = (c: Course): Course => ({ ...c, hazards: [], cameras: [], adventures: [] });
+  const briskDrop = (c: Course): number => {
+    let s = startDrive(c, 0);
+    const c0 = s.comfort;
+    s = stepDrive(s, c, { kind: 'pace', pace: 'brisk' }).state;
+    for (let i = 0; i < 300; i++) s = stepDrive(s, c, { kind: 'tick', dtMs: 100 }).state;
+    return c0 - s.comfort;
+  };
+  it('втома: жвава їзда їсть комфорт швидше, ніж до озера', () => {
+    const home = bare(buildCourse(7, undefined, 'homebound'));
+    const out = bare(buildCourse(7));
+    expect(briskDrop(out), 'контроль: жвава їзда до озера теж коштує').toBeGreaterThan(0);
+    expect(briskDrop(home)).toBeGreaterThan(briskDrop(out));
+  });
+  it('втома: близький об\'їзд велосипедиста коштує дужче, ніж до озера', () => {
+    const passDrop = (c0: Course): number => {
+      const c: Course = { ...bare(c0), hazards: [{ id: 'cy', kind: 'cyclist', at: 200, lane: startDrive(c0, 0).lane }] };
+      const flat = briskDrop(bare(c0));
+      return briskDrop(c) - flat;
+    };
+    const home = buildCourse(7, undefined, 'homebound');
+    const out = buildCourse(7);
+    expect(passDrop(out), 'контроль: близький об\'їзд до озера теж коштує').toBeGreaterThan(0);
+    expect(passDrop(home)).toBeGreaterThan(passDrop(out));
+  });
   it('гроші тягнуться з табору: гаманець після ночі — старт дороги додому; до озера — типовий', () => {
     setDriveWallet(12_345);
     try {
