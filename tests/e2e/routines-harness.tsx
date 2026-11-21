@@ -5,6 +5,7 @@ import { CampRoutines } from '../../src/ui/CampRoutines';
 import { t } from '../../src/i18n';
 import type { Key } from '../../src/i18n';
 import type { Weather } from '../../src/core/weather';
+import type { Devices } from '../../src/content/camp-devices';
 import { DriveInCard, SampleDay, type SamplePort } from '../../src/ui/SampleDay';
 import { MinigameHost } from '../../src/ui/MinigameHost';
 import { missionSurface } from '../../src/ui/MissionSurfaces';
@@ -13,7 +14,7 @@ import { TARP_TIE } from '../../src/content/minigames/missions';
 import { minigameById } from '../../src/content/minigames';
 import { NORMAL, type AnyMinigame } from '../../src/core/minigame';
 
-interface Spec { lang: 'uk' | 'en'; weather: Weather; seed: number; bare?: boolean }
+interface Spec { lang: 'uk' | 'en'; weather: Weather; seed: number; bare?: boolean; devices?: Devices }
 (window as unknown as { __mount: (s: Spec) => void }).__mount = (s) => {
   let host = document.getElementById('harness');
   if (!host) {
@@ -36,7 +37,7 @@ interface Spec { lang: 'uk' | 'en'; weather: Weather; seed: number; bare?: boole
     return () => { live = false; };
   };
   // Табір, де вже стоїть верша, але її давно не переносили: дошка має показати «ось-ось закінчиться» і «Доглянути».
-  const draw = (live: boolean) => render(<CampRoutines t={(k: Key) => t(s.lang, k)} weather={s.weather} seed={s.seed} onFrame={onFrame} live={live} devices={s.bare ? {} : { 'fish-trap': { care: 0.3 } }} />, host);
+  const draw = (live: boolean) => render(<CampRoutines t={(k: Key) => t(s.lang, k)} weather={s.weather} seed={s.seed} onFrame={onFrame} live={live} devices={s.devices ?? (s.bare ? {} : { 'fish-trap': { care: 0.3 } })} />, host);
   draw(true);
   // GAME-346: дошку знову показано (у грі — після розмови чи «Дошка табору»): live false→true.
   (window as unknown as { __live: (v: boolean) => void }).__live = draw;

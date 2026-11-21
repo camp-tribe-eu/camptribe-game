@@ -92,19 +92,24 @@ export function withDevices(day: CampDay, devs: Devices): CampDay {
   return d;
 }
 
+/** GAME-348: сухі дрова, які бачить УСЕ (вогонь і ніч): ручна рутина «Дрова» та пристрій-поліно — що більше. Одне джерело правди. */
+export function effectiveDryLogs(devs: Devices, manual: number): number {
+  const wood = devs.woodpile?.care;
+  return wood !== undefined ? Math.max(manual, Math.round(6 * wood)) : manual;
+}
+
 /** Що пристрої дають ночі: та сама модель фактів, що й ручні рутини (camp-night). */
 export function deviceFacts(devs: Devices, f: NightFacts): NightFacts {
   const care = (id: DeviceId): number | undefined => devs[id]?.care;
   const water = care('rain-barrel');
   const solar = care('solar-station');
-  const wood = care('woodpile');
   const box = care('food-box');
   const trap = care('fish-trap');
   return {
     ...f,
     water: water !== undefined ? Math.max(f.water, water) : f.water,
     litLanterns: solar !== undefined ? Math.max(f.litLanterns, solar >= 0.7 ? 3 : solar >= 0.4 ? 2 : 1) : f.litLanterns,
-    dryLogs: wood !== undefined ? Math.max(f.dryLogs, Math.round(6 * wood)) : f.dryLogs,
+    dryLogs: effectiveDryLogs(devs, f.dryLogs),
     // ящик із засувкою: доглянутий — їжа сховано; занедбаний — засувку заїло, і лисиця таки дістала
     foodOutside: box !== undefined ? box < 0.4 : f.foodOutside,
     fish: trap !== undefined ? Math.max(f.fish, trap >= 0.7 ? 2 : 1) : f.fish,

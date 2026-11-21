@@ -60,4 +60,5 @@ export function foodOutside(s: TidyState): boolean {
 }
 export const rightCount = (s: TidyState): number => THINGS.filter((t) => { const p = s.put[t.id]; return p !== undefined && rightPlace(t, p); }).length;
 export const tidyScore = (s: TidyState): number => rightCount(s) / THINGS.length;
-export const tidyOutcome = (s: TidyState): Outcome => grade(tidyScore(s));
+/** GAME-348: їжа надворі — це лисиця вночі, тож результат не може бути кращим за «сяк-так», хоч би скільки решти прибрано: дошка не каже «Добре», коли ніч каже «лисиця». */
+export const tidyOutcome = (s: TidyState): Outcome => (foodOutside(s) ? 'scrappy' : grade(tidyScore(s)));
