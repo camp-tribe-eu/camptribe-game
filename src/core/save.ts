@@ -19,6 +19,7 @@ import { REJECT_CODES } from './state';
 import { paydaysThrough, type LifeDefs } from './life';
 import { DAY_MINUTES } from './weather';
 import { boardError } from './camp-board';
+import { strikeError } from './camp-strike';
 import { COUNT_CAP, isOutcome } from './minigame';
 
 export const SAVE_FORMAT = 'camplife-save';
@@ -166,6 +167,8 @@ function shapeError(sim: unknown): string | null {
     || !isInt(r.scrappyStreak) || (r.scrappyStreak as number) > (r.plays as number) || ((r.last === 'scrappy') !== ((r.scrappyStreak as number) > 0))))) return 'game: minigames';
   // Дошка табору (GAME-314): необов'язкове поле; є — форма й межі з camp-board (розмір ≤ 2 КБ).
   if (game.campBoard !== undefined && boardError(game.campBoard) !== null) return 'game: campBoard';
+  // Ранок «згортаємо табір» (GAME-350): необов'язкове поле; є — форма й межі з camp-strike.
+  if (game.strike !== undefined && strikeError(game.strike) !== null) return 'game: strike';
   // Дружба (GAME-230): поле необов'язкове (сейви до GAME-230 його не мають); є — очки й дні цілі ≥ 0 (очки ≤ стелі), `seen` — відсортовані рядки без повторів (так пише лише ядро).
   const fr = game.friend;
   if (fr !== undefined && (!isObj(fr) || !isObj(fr.pts) || !isObj(fr.gift) || !sortedUniq(fr.seen)

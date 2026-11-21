@@ -710,10 +710,17 @@ for (const o of ORIENTATIONS) {
       expect(storm.join(' | '), 'вогонь був — «не палили» немає').not.toContain('Вогню сьогодні не палили');
       expect(storm.join(' | '), 'сцена бурі знає про окуня Аміни').toContain('Окунь');
       await shot(page, 'storm-after');
+      // GAME-350: після ночі — ранок «згортаємо табір» (справжня гра: команда SaveStrike, сейв), і лише тоді підсумок з рядком чистоти.
+      await expect(page.locator('[data-ui="camp-strike"]'), 'після ночі ранок, не підсумок').toBeVisible();
+      await expect(page.locator('[data-ui="sd-summary"]')).toHaveCount(0);
+      for (const id of ['peg1', 'peg2', 'peg3', 'peg4', 'fold', 'bag', 'tin', 'wrap', 'bottle', 'cap', 'pour1', 'pour2', 'pour3', 'stir', 'feel', 'bags', 'cooler', 'chairs', 'boots', 'shut']) await tapIt(page, `[data-ui="strike-t-${id}"]`);
+      await expect.poll(async () => ((await core2(page)).game as unknown as { strike?: { results: Record<string, string> } }).strike?.results, { message: 'усі справи ранку в сейві гри' }).toEqual({ tent: 'good', litter: 'good', fire: 'good', car: 'good' });
+      await tapIt(page, '[data-ui="strike-finish"]');
       const sum = page.locator('[data-ui="sd-summary"]');
       await expect(sum).toBeVisible();
       await expect(sum).toHaveAttribute('data-arrival', arrival);
       await expect(sum).toHaveAttribute('data-pitch', pitch);
+      await expect(page.locator('[data-ui="sd-sum-clean"]'), 'рядок чистоти табору в підсумку').toContainText('Чистота табору: Добре');
       await expect(sum).toHaveAttribute('data-missions', '2');
       await expect(sum).toHaveAttribute('data-money', String((await core2(page)).game.moneyCents));
       await shot(page, 'summary');
