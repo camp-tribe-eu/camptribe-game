@@ -1,7 +1,7 @@
 // GAME-351 · дорога ДОДОМУ після «згортаємо табір»: та сама міні-гра дороги (варіант homebound) між ранком і підсумком дня.
 // Стенд — справжні SampleDay + MinigameHost + поверхня дороги зі справжнім CSS (roadhome-harness.tsx). Справжню проводку main.ts веде game-314 (повний день).
 // Мутації (прогнано руками, див. звіт картки): рядок дороги додому прибрано з Summary (SampleDay) → тести фініш/пропуск/перезавантаження червоніють на «Дорога додому»;
-// `if (session !== null && …) ? null :` у порті стенда → undefined-перевірка «підсумок не вискакує поверх результату» червоніє; `.mg-btn { min-height: 48px }` → `min-height: 300px` в index.html → «кнопки поза екраном».
+// `roadHome` порту стенда без `session !== null … ? null :` → undefined-перевірка «підсумок не вискакує поверх результату» червоніє; `.mg-drive-road { min-height: 120px }` → `1200px` в index.html → «кнопки поза екраном» (правило `.mg-btn` для цього не годиться: його перекриває пізніше `.ui-btn`).
 import { fileURLToPath } from 'node:url';
 import { build } from 'vite';
 import { expect, test, type Locator, type Page } from '@playwright/test';
