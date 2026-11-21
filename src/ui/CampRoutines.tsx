@@ -6,7 +6,7 @@ import type { Key } from '../i18n';
 import type { Weather } from '../core/weather';
 import { BOARD_LOCK_MS, nextRound, stepBoardLock, ROUTINES, ROUTINE_IDS, MIN_WORK, addPick, awayIn, campBusy, canFinish, addWork, workLeft, emptyRounds, isDone, minutesLeft, nightOpen, helpFor, recordResult, startCampDay, whyNot, type CampDay, type Round, type RoutineId } from '../content/camp-day';
 import { nightOf, type NightBeat, type NightFacts } from '../content/camp-night';
-import { deviceFacts, deviceFor, statusOf, tend, withDevices, type Devices } from '../content/camp-devices';
+import { deviceFacts, deviceFor, effectiveDryLogs, statusOf, tend, withDevices, type Devices } from '../content/camp-devices';
 import { type Difficulty, type Outcome } from '../content/minigame';
 import type { CampBoardSave } from '../core/camp-board';
 import { STEPS, needSide, startWater, stepWater, waterOutcome, waterScore, type Side, type WaterState } from '../content/water-carry';
@@ -101,6 +101,7 @@ export function CampRoutines({ t, weather, seed, onFrame, devices: devices0 = {}
   const [berries, setBerries] = useState<BerryState>(() => startBerries(seed));
   const [tidy, setTidy] = useState<TidyState>(startTidy);
   const [thing, setThing] = useState<string | null>(null);
+  const [tidyFull, setTidyFull] = useState(false);   // GAME-348: «В авто» відмовило — кажемо чому, а не мовчимо
   const [stack, setStack] = useState<StackState | null>(null);
   const [fish, setFish] = useState<FishState>(FISH_IDLE);
   const [rod, setRod] = useState(false);
@@ -151,6 +152,8 @@ export function CampRoutines({ t, weather, seed, onFrame, devices: devices0 = {}
     if (active === 'fire' && embers.done) finish('fire', emberOutcome(embers), {}, ((w) => (w === null ? null : FIRE_WHY_KEY[w]))(fireWhy(embers)));
   });
 
+  // GAME-348: ті самі сухі дрова, що бачить ніч (deviceFacts) — вогонь не сперечається з нею.
+  const logsDry = effectiveDryLogs(devices, facts.dryLogs) >= ENOUGH_DRY;
   const open = (id: RoutineId) => {
     if (whyNot(dayNow, id, round) !== null) return;
     setDay((d) => addPick(d, id, round));
@@ -160,9 +163,9 @@ export function CampRoutines({ t, weather, seed, onFrame, devices: devices0 = {}
     setActs(0); setSec(0); ms.current = 0;
     if (id === 'water') { setWater(startWater(seed)); setTap(false); }
     if (id === 'lanterns') setLanterns(startLanterns());
-    if (id === 'fire') setEmbers(startEmbers(facts.dryLogs >= ENOUGH_DRY));   // сухі дрова з рутини «дрова» — інший вогонь
+    if (id === 'fire') setEmbers(startEmbers(logsDry));   // сухі дрова (рутина «дрова» або пристрій місії) — інший вогонь
     if (id === 'berries') setBerries(startBerries(seed));
-    if (id === 'tidy') { setTidy(startTidy()); setThing(null); }
+    if (id === 'tidy') { setTidy(startTidy()); setThing(null); setTidyFull(false); }
     if (id === 'firewood') setStack(null);
     if (id === 'fish') { setFish(FISH_IDLE); setRod(false); }
     if (id === 'knots') setKnots(startKnots(seed));
@@ -242,6 +245,7 @@ export function CampRoutines({ t, weather, seed, onFrame, devices: devices0 = {}
               </div>
             ) : (
               <>
+                <p class="ui-camp-note" data-ui="wood-rule">{t('camp.wood.rule')}</p>
                 <p data-ui="wood-room">{`${t('camp.wood.room')}: ${COVER - stack.under.length}`}</p>
                 <ul class="ui-camp-list">
                   {LOGS.map((size, i) => {
@@ -267,6 +271,7 @@ export function CampRoutines({ t, weather, seed, onFrame, devices: devices0 = {}
         {active === 'fire' && (
           <section class="ui-camp-work">
             <p class="ui-camp-note" data-ui="fire-rule">{t('camp.fire.rule')}</p>
+            {!embers.dry && <p class="ui-camp-note" data-ui="fire-wet" role="status">{t('camp.fire.wet')}</p>}
             <p data-ui="fire-heat" data-heat={Math.round(embers.heat * 100)}>{`${t('camp.fire.heat')}: ${Math.round(embers.heat * 100)} %${smoking(embers) ? ` · ${t('camp.fire.smoke')}` : ''}`}</p>
             <p data-ui="fire-dish" data-dish={dish?.id ?? ''}>{dish ? `${t(`camp.fire.dish.${dish.id}` as Key)} · ${dish.band.from * 100}-${dish.band.to * 100} %` : ''}</p>
             <div class="ui-camp-row">
@@ -362,10 +367,11 @@ export function CampRoutines({ t, weather, seed, onFrame, devices: devices0 = {}
                 );
               })}
             </ul>
+            {tidyFull && <p class="ui-camp-note" data-ui="tidy-car-full" role="status">{t('camp.tidy.carFull')}</p>}
             <div class="ui-camp-row">
               {PLACES.map((p) => (
                 <button key={p} type="button" class="ui-btn ui-camp-big" data-ui="tidy-place" data-place={p} disabled={thing === null}
-                  onClick={() => { if (thing !== null) { const r = putThing(tidy, thing, p).state; if (r.put[thing] !== tidy.put[thing]) go(); setTidy(r); setThing(null); } }}>{t(`camp.tidy.${p}` as Key)}</button>
+                  onClick={() => { if (thing !== null) { const o = putThing(tidy, thing, p); const r = o.state; if (r.put[thing] !== tidy.put[thing]) go(); setTidyFull(o.event === 'carFull'); setTidy(r); setThing(null); } }}>{t(`camp.tidy.${p}` as Key)}</button>
               ))}
             </div>
             <button type="button" class="ui-btn ui-camp-big" data-ui="tidy-sleep" disabled={!ok('tidy')} onClick={() => {

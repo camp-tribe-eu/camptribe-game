@@ -80,14 +80,17 @@ export function nightOf(f: NightFacts): { readonly beats: readonly NightBeat[]; 
   // GAME-319: «Дров немає — вечеря холодна» суперечить вогню, що горів (хай і димів): дрова й вогонь не суперечать: слід дров стоїть лише поруч зі слідом вогню того ж роду (обидва були або обидва ні).
   const fire = did(f, 'fire');
   const wood = did(f, 'firewood');
+  // GAME-348: сусідові сухі дрова (місія) і «наші вогкі/розкидані» не суперечать, якщо слід дров це визнає: тоді ключ із `.shared`.
+  const sharedDry = fire !== undefined && MISSIONS.some((m) => m.night.some((l) => l.fact === 'f.storm-dry-wood' && f.missions?.includes(l.flag) === true));
+  const sh = (id: string): string => (sharedDry ? `${id}.shared` : id);
   if ((wood === undefined) === (fire === undefined)) {
     beats.push(wood === undefined
       ? { routine: 'firewood', id: 'night.wood.none', severity: 'rough' }
       : f.dryLogs >= 4
         ? tarpFailed
-          ? { routine: 'firewood', id: rain ? 'night.wood.soaked' : 'night.wood.scattered', severity: 'plain' }
+          ? { routine: 'firewood', id: sh(rain ? 'night.wood.soaked' : 'night.wood.scattered'), severity: 'plain' }
           : { routine: 'firewood', id: 'night.wood.dry', severity: 'good' }
-        : { routine: 'firewood', id: 'night.wood.damp', severity: 'plain' });
+        : { routine: 'firewood', id: sh('night.wood.damp'), severity: 'plain' });
   }
 
   // ВОГОНЬ: вечеря й вечір біля вогню. Без вогню — холодна вечеря з банки, і це не покарання, а просто інший вечір.

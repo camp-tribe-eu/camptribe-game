@@ -558,6 +558,11 @@
       .ui-camp-col { display: grid; gap: 8px; width: min(100%, 560px); }
       .ui-camp-work { display: grid; justify-items: center; gap: 8px; width: min(100%, 560px); }
       .ui-camp-big { min-height: 56px; flex: 1 1 140px; }
+      /* GAME-348: дрова — вісім полін в один рядок кожне (назва · «Під тент» · «Надворі»), щоб у портреті 390×844 влізли всі вісім, правило й «Далі» без прокрутки. */
+      .ui-camp-work .ui-camp-list:has(> [data-ui="wood-log"]) { gap: 4px; }
+      .ui-camp-work .ui-camp-list:has(> [data-ui="wood-log"]) li { flex-wrap: nowrap; gap: 6px; }
+      .ui-camp-work .ui-camp-list:has(> [data-ui="wood-log"]) li > span { flex: 1 1 0; min-width: 0; }
+      .ui-camp-work .ui-camp-list:has(> [data-ui="wood-log"]) li > .ui-btn { flex: 0 0 auto; padding: 4px 10px; font-size: 0.65rem; }
       .ui-camp-bar { width: min(100%, 320px); height: 14px; border: 2px solid #e8e6e3aa; border-radius: 7px; overflow: hidden; }
       .ui-camp-bar i { display: block; height: 100%; background: #4a7fb0; }
       .ui-camp-tilt { position: relative; width: min(100%, 320px); height: 14px; border-bottom: 2px solid #e8e6e3aa; }
