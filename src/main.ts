@@ -554,6 +554,8 @@ const samplePort: SamplePort = {
   saveStrike: (s) => { bridge.send({ type: 'SaveStrike', strike: s }); storyChanged(); },   // GAME-350
   // GAME-351: поки міні-гра дороги додому відкрита (вступ, їзда, екран результату), результату «ще нема» — підсумок не вискакує поверх неї; закрили — запис із сейву.
   roadHome: () => (missionSession?.run.id === ROAD_HOME_ID ? null : roadHomeResult(bridge.state.game.minigames)),
+  homeSeen: () => bridge.state.game.homeSeen === true,
+  seeHome: () => { bridge.send({ type: 'SeeHome' }); storyChanged(); },   // GAME-352
   restart: async () => { await saves.newGame(); location.reload(); },
   subscribe: (l) => { sampleListeners.add(l); return () => { sampleListeners.delete(l); }; },
 };

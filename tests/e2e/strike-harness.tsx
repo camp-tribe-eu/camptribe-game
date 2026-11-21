@@ -29,7 +29,7 @@ w.__mountStrike = (o = {}) => {
     roadHome: () => 'fine',   // GAME-351: у цьому стенді дорога додому вже пройдена — тут перевіряється лише ранок і підсумок (дорога — game-351)
     strike: () => w.__strike,
     saveStrike: (s) => { const why = strikeError(s); if (why !== null) throw new Error(`SaveStrike rejected: ${why}`); w.__strike = s; w.__saves++; for (const l of [...ls]) l(); },
-    restart: () => Promise.resolve(), subscribe: (l) => { ls.add(l); return () => { ls.delete(l); }; },
+    homeSeen: () => true, seeHome: () => undefined, restart: () => Promise.resolve(), subscribe: (l) => { ls.add(l); return () => { ls.delete(l); }; },
   };
   render(<SampleDay port={port} t={(k: Key) => t(lang, k)} lang={lang} onBoard={() => undefined} />, host);
 };

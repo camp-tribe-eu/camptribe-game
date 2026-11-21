@@ -16,8 +16,8 @@ import { arrivalOf, pitchTaken } from '../content/arrival-pitch';
 import type { CampBoardSave } from '../core/camp-board';
 import { roughCount, type NightFacts } from '../content/camp-night';
 import { CampStrike } from './CampStrike';
-import { strikeResult, type StrikeSave } from '../content/camp-strike';
-import { ROAD_HOME_OUTCOMES } from '../content/road-home';
+import type { StrikeSave } from '../content/camp-strike';
+import { homeBeats, recapLines } from '../content/episode-end';
 
 export type SampleStage = 'off' | 'drivein' | 'day';
 export interface SamplePort {
@@ -47,6 +47,9 @@ export interface SamplePort {
   saveStrike(s: StrikeSave): void;
   /** GAME-351: результат дороги додому (good/fine/scrappy); null — ще їдемо чи міні-гра ще відкрита (підсумок не перекриває її результат). */
   roadHome(): string | null;
+  /** GAME-352: сцену «вдома» пройдено (game.homeSeen) і запис цього в сейв. */
+  homeSeen(): boolean;
+  seeHome(): void;
   /** GAME-323: «Почати знову» — нова гра й перезавантаження ?sampleDay=1 (день не продовжується в старому меню). */
   restart(): Promise<void>;
   /** GAME-335: місце справи на мапі табору просить відкрити рутину (нове `n` — новий запит). */
@@ -124,23 +127,39 @@ export function sampleGoalLine(sample: SamplePort, t: (k: Key) => string, lang: 
 
 export const walletLine = (t: (k: Key) => string, lang: AnyLang, cents: number): string => `${t('sd.sum.wallet')}: ${fmtMoney(lang, cents)}`;
 
-function Summary({ facts, flags, money, strike, road, t, lang, again }: { facts: NightFacts | null; flags: readonly string[]; money: number; strike: StrikeSave | undefined; road: string | null; t: (k: Key) => string; lang: AnyLang; again: () => void }) {
-  const pitch = pitchTaken(flags);
-  const clean = strike?.closed === true ? strikeResult(strike.results) : null;
+/** GAME-352: прихід додому — два дотики «Далі» (без нового рушія: картка в стилі зразка). Останній дотик пише «вдома» в сейв (SeeHome) і відкриває кінцеву картку. */
+function HomeArrival({ road, t, done }: { road: string | null; t: (k: Key) => string; done: () => void }) {
+  const beats = homeBeats(road);
+  const [at, setAt] = useState(0);
+  const last = at >= beats.length - 1;
   return (
-    <div class="ui-overlay ui-camp" data-ui="sd-summary" data-money={money} data-missions={missionsDone(flags)} data-arrival={arrivalOf(flags)} data-pitch={pitch ?? ''} data-rough={facts ? roughCount(facts) : ''} data-clean={clean?.outcome ?? ''} data-road={road ?? ''}>
-      <h2>{t('sd.summary.title')}</h2>
+    <div class="ui-overlay ui-camp" style={{ zIndex: 60 }} data-ui="sd-home" data-beat={at} role="dialog" aria-labelledby="sd-home-title">
+      <h2 id="sd-home-title">{t('sd.home.title')}</h2>
+      <p class="ui-camp-note" data-ui="sd-home-text" role="status">{t(beats[at] as Key)}</p>
+      <div class="ui-camp-foot">
+        <button type="button" class="ui-btn ui-camp-big" data-ui="sd-home-next" onClick={() => (last ? done() : setAt(at + 1))}>{t('ep.continue')}</button>
+      </div>
+    </div>
+  );
+}
+
+/** GAME-352: кінець епізоду — картка підсумку з усіма ланками ланцюга й ЄДИНОЮ дією «Почати знову» (наступного кроку в зразку нема, тож «Продовжити» не вигадуємо). Після перезавантаження фактів ночі нема — тоді без рядка ночі. */
+function EpisodeEnd({ facts, flags, money, strike, road, t, lang, again }: { facts: NightFacts | null; flags: readonly string[]; money: number; strike: StrikeSave | undefined; road: string | null; t: (k: Key) => string; lang: AnyLang; again: () => void }) {
+  const pitch = pitchTaken(flags);
+  const lines = recapLines({ flags, pitchName: pitch === null ? null : ct(lang, `pitch.${pitch}.name`), night: facts, strike, road, walletText: walletLine(t, lang, money) }, t);
+  const clean = lines.find((l) => l.id === 'clean');
+  return (
+    <div class="ui-overlay ui-camp" style={{ zIndex: 60 }} data-ui="sd-summary" data-money={money} data-missions={missionsDone(flags)} data-arrival={arrivalOf(flags)} data-pitch={pitch ?? ''} data-rough={facts ? roughCount(facts) : ''} data-clean={clean?.outcome ?? ''} data-road={road ?? ''} role="dialog" aria-labelledby="sd-end-title">
+      <h2 id="sd-end-title" data-ui="sd-end-title">{t('sd.summary.title')}</h2>
       <ul class="ui-camp-list">
-        <li data-ui="sd-sum-arrival">{`${t('sd.sum.arrival')}: ${t(`sd.arrival.${arrivalOf(flags)}` as Key)}`}</li>
-        <li data-ui="sd-sum-pitch">{`${t('sd.sum.pitch')}: ${pitch === null ? '-' : ct(lang, `pitch.${pitch}.name`)}`}</li>
-        <li data-ui="sd-sum-missions">{`${t('sd.sum.missions')}: ${missionsDone(flags)}`}</li>
-        <li data-ui="sd-sum-wallet">{walletLine(t, lang, money)}</li>
-        {facts && <li data-ui="sd-sum-night">{`${t('sd.sum.rough')}: ${roughCount(facts)}`}</li>}
-        {clean && <li data-ui="sd-sum-clean" data-outcome={clean.outcome}>{`${t('strike.result')}: ${t(`strike.res.${clean.outcome}` as Key)}`}{clean.whyKey !== null && <span data-ui="sd-sum-clean-why">{`${t('strike.why')}: ${t(clean.whyKey as Key)}`}</span>}</li>}
-        {road !== null && ROAD_HOME_OUTCOMES.some((o) => o === road) && <li data-ui="sd-sum-road" data-outcome={road}>{`${t('road.home.result')}: ${t(`road.home.res.${road}` as Key)}`}</li>}
+        {lines.map((l) => (
+          <li key={l.id} data-ui={`sd-sum-${l.id}`} {...(l.outcome !== undefined ? { 'data-outcome': l.outcome } : {})}>{l.text}{l.why !== undefined && <span data-ui="sd-sum-clean-why">{l.why}</span>}</li>
+        ))}
       </ul>
-      <p class="ui-camp-note">{t('sd.summary.end')}</p>
-      <button type="button" class="ui-btn ui-camp-big" data-ui="sd-restart" onClick={again}>{t('sd.restart')}</button>
+      <p class="ui-camp-note" data-ui="sd-end-note">{t('sd.summary.end')}</p>
+      <div class="ui-camp-foot">
+        <button type="button" class="ui-btn ui-camp-big" data-ui="sd-restart" onClick={again}>{t('sd.restart')}</button>
+      </div>
     </div>
   );
 }
@@ -170,7 +189,7 @@ export function SampleDay({ port, t, lang, onBoard }: { port: SamplePort; t: (k:
   const lane = port.lane();
   if (stage === 'drivein' && lane !== null) return <DriveInCard laneId={lane} t={t} done={port.driveInDone} />;
   const flags = port.flags();
-  const stageNow = dayStage(port.goal(), port.strike(), port.roadHome());   // GAME-350: ніч → ранок «згортаємо табір» → підсумок
+  const stageNow = dayStage(port.goal(), port.strike(), port.roadHome(), port.homeSeen());   // GAME-350/352: ніч → ранок «згортаємо табір» → дорога додому → вдома → кінець епізоду
   const ended = stageNow !== 'day';   // GAME-323: сцену бурі зіграно — день скінчено; ☰ і дошка вже не відкриваються
   return (
     <>
@@ -186,7 +205,8 @@ export function SampleDay({ port, t, lang, onBoard }: { port: SamplePort; t: (k:
         </div>
       )}
       {stageNow === 'strike' && <CampStrike t={t} saved={port.strike()} onSave={port.saveStrike} />}
-      {stageNow === 'summary' && <Summary facts={night} flags={flags} money={port.moneyCents()} strike={port.strike()} road={port.roadHome()} t={t} lang={lang} again={() => void port.restart()} />}
+      {stageNow === 'home' && <HomeArrival road={port.roadHome()} t={t} done={port.seeHome} />}
+      {stageNow === 'summary' && <EpisodeEnd facts={night} flags={flags} money={port.moneyCents()} strike={port.strike()} road={port.roadHome()} t={t} lang={lang} again={() => void port.restart()} />}
     </>
   );
 }
