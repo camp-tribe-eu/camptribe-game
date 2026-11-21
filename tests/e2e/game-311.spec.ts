@@ -145,8 +145,9 @@ for (const vp of VIEWPORTS) {
     await expect(page.locator('[data-ui="night-beat"][data-id="night.tidy.quiet"]')).toBeVisible();
     await expect(page.locator('[data-ui="night-beat"][data-id="night.light.dark"]')).toBeVisible();
     await expect(page.locator('[data-ui="night-beat"][data-id="night.wood.none"]')).toBeVisible();
-    // Рибу дала доглянута верша — без вудки й без хвилин дня.
-    await expect(page.locator('[data-ui="night-beat"][data-id="night.fish.supper"]')).toBeVisible();
+    // Рибу дала доглянута верша — без вудки й без хвилин дня. GAME-349: вогню в цьому дні не було («Вогонь» не робили) — риба не «на вогні», а «на завтра».
+    await expect(page.locator('[data-ui="night-beat"][data-id="night.fish.supper.cold"]')).toBeVisible();
+    await expect(page.locator('[data-ui="night-beat"][data-id="night.fish.supper"]')).toHaveCount(0);
     await expect(page.locator('[data-ui="night-morning"]')).toBeVisible();
     const over = await page.evaluate(() => {
       const root = document.querySelector<HTMLElement>('.ui-camp');
