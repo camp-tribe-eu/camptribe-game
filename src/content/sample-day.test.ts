@@ -246,7 +246,7 @@ describe('рецензія tech-lead: зшивка без розбіжносте
     const aerial = MISSIONS.find((m) => m.id === 'mis.aerial')?.doneFlag as string;
     expect(stormNightMove([aerial]).facts).toContain('f.storm-warned');
     const uk = JSON.parse(read('content/locales/uk.json')) as Record<string, string>;
-    expect(uk['dlg.storm-night.open']).toContain('пів на дев’яту');
+    expect(uk['dlg.storm-night.open'], 'GAME-349: сцена бурі зразка не називає години (годинник шапки стоїть на 23:30)').not.toMatch(/пів на дев/);
     expect(uk['dlg.ch1-fire.night-open']).toContain('пів на дев’яту');
     expect(Object.values(uk).filter((v) => /^Опівночі щось ляскає/.test(v))).toEqual([]);
   });
@@ -299,5 +299,33 @@ describe('GAME-340 · чип цілі називає недороблених в
     expect(goalNames('done', ['npc.luc'])).toEqual([]);
     expect(goalNames('pitch', ['npc.luc'])).toEqual([]);
     expect(goalNames('day', ['npc.amina', 'npc.luc'])).toEqual(['npc.amina', 'npc.luc']);
+  });
+});
+
+
+// GAME-349 · години й положення сонця в текстах зразка. Годинник у шапці зразка біжить до 23:30 і там стоїть, а частина дня на дошці міняється лише за «Далі»,
+// тож текст, що вголос каже «о сьомій», «пів на дев'яту», «сонце ще високо» чи «повне сонце», суперечить годиннику на екрані (дев'яте приймання №8).
+// Мутація (перевірено): повернути «Сонце ще високо» в mg.ring.result.good (uk чи en) або «о пів на дев'яту» в dlg.storm-night.open → відповідний рядок червоніє.
+describe('GAME-349 · тексти зразка не суперечать годиннику', () => {
+  const read = (p: string): string => readFileSync(new URL(`../../${p}`, import.meta.url), 'utf8');
+  const uk = { ...(JSON.parse(read('src/i18n/uk.json')) as Record<string, string>), ...(JSON.parse(read('content/locales/uk.json')) as Record<string, string>) };
+  const en = { ...(JSON.parse(read('src/i18n/en.json')) as Record<string, string>), ...(JSON.parse(read('content/locales/en.json')) as Record<string, string>) };
+  // Усе, що гравець читає у зразку після полудня: Люк і його місії, пісок, панель, ніч із бурею.
+  const KEY = /^(dlg\.luc-chat\.|dlg\.claire-chat\.|dlg\.storm-night\.|mg\.ring\.result|mg\.panel\.result)/;
+  const UK_CLOCK = /сонце (ще )?високо|повне сонце|сонце до вечора|примружу\S* на сонце|(?:^|\s)о (пів на )?(сьом|дев.ят|восьм)|(?:^|\s)о (першій|другій)(?![а-яіїє])|до (третьої|четвертої|п.ятої|шостої)/i;
+  const EN_CLOCK = /sun is still high|full sun|sun stays till evening|squints at the sun|\bat (seven|half past eight|nine)\b|every evening at seven/i;
+  // Прогноз диктора («близько дев'ятої») і розклад майстерні («Обід о першій») — розмова про майбутнє чи звичку, а не стан неба й години зараз; їх не чіпаємо.
+  const FORECAST = new Set(['dlg.luc-chat.a-forecast', 'dlg.luc-chat.bye', 'dlg.storm-night.close']);
+  it('uk: жодного рядка з годиною чи станом сонця, якого годинник не підтвердить', () => {
+    const bad = Object.entries(uk).filter(([k, v]) => KEY.test(k) && !FORECAST.has(k) && UK_CLOCK.test(v)).map(([k, v]) => `${k}: ${v}`);
+    expect(bad).toEqual([]);
+  });
+  it('en: так само', () => {
+    const bad = Object.entries(en).filter(([k, v]) => KEY.test(k) && !FORECAST.has(k) && EN_CLOCK.test(v)).map(([k, v]) => `${k}: ${v}`);
+    expect(bad).toEqual([]);
+  });
+  it('контроль: перевірка справді бачить такі фрази (інакше «зелене» нічого не доводить)', () => {
+    for (const v of ['Сонце ще високо.', 'Панель ловить повне сонце.', 'о пів на дев’яту', 'Прогноз о сьомій', 'примружується на сонце', 'Біля вогнища сонце до вечора', 'де сонце стоїть до четвертої']) expect(UK_CLOCK.test(v), v).toBe(true);
+    for (const v of ['The sun is still high.', 'full sun', 'at half past eight', 'The forecast is at seven']) expect(EN_CLOCK.test(v), v).toBe(true);
   });
 });

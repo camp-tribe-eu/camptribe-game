@@ -11,6 +11,8 @@ export interface BannerBlockers {
   readonly backpackOpen: boolean;
   readonly episode: boolean;
   readonly intro: boolean;
+  /** GAME-349: заїзд на ділянку (зразок) — картка на все поле з сіткою; банер нагороди лежав на її верхніх рядках. */
+  readonly driveIn: boolean;
 }
 
-export const bannersOpen = (b: BannerBlockers): boolean => !(b.paused || b.storyOpen || b.talk || b.summary || b.atlasOpen || b.backpackOpen || b.episode || b.intro);
+export const bannersOpen = (b: BannerBlockers): boolean => !(b.paused || b.storyOpen || b.talk || b.summary || b.atlasOpen || b.backpackOpen || b.episode || b.intro || b.driveIn);
