@@ -19,6 +19,7 @@ import {
   type JobRun, type StrikeJob, type StrikeSave,
 } from './camp-strike';
 import { dayStage } from './sample-day';
+import { SHOWN_ORDER, shownTargets } from './camp-strike';
 import type { Outcome } from './minigame';
 
 /** Правильний прохід справи: цілі в порядку списку, лісове пропускаємо. */
@@ -58,6 +59,11 @@ describe('справи ранку', () => {
     expect([0, 1, 2, 3, 9].map((n) => jobOutcome(miss(n)))).toEqual(['good', 'fine', 'fine', 'scrappy', 'scrappy']);
     expect(jobOutcome(null)).toBe('scrappy');
   });
+  it('дотик по вже зробленій цілі повертає той самий хід (не лічиться хибним)', () => {
+    const r = tap('tent', startJob(), 'peg1');
+    expect(r.done).toEqual(['peg1']);
+    expect(tap('tent', r, 'peg1')).toBe(r);
+  });
   it('невідомий дотик і дотик після кінця справи нічого не змінюють', () => {
     const r = startJob();
     expect(tap('tent', r, 'nope')).toBe(r);
@@ -68,6 +74,34 @@ describe('справи ранку', () => {
     const keys = STRIKE_JOBS.flatMap((j) => { const d = STRIKE_DEFS[j]; return [d.nameKey, d.hintKey, d.whyKey, ...d.targets.map((t) => t.labelKey)]; });
     for (const k of new Set(keys)) { expect(uk[k], `uk ${k}`).toBeTruthy(); expect(en[k], `en ${k}`).toBeTruthy(); }
     for (const k of ['strike.title', 'strike.note', 'strike.skip', 'strike.finish', 'strike.result', 'strike.why', 'strike.res.good', 'strike.res.fine', 'strike.res.scrappy', 'strike.step.order', 'strike.step.nature', 'strike.step.ok', 'strike.job.done', 'strike.job.left']) { expect(uk[k], k).toBeTruthy(); expect(en[k], k).toBeTruthy(); }
+  });
+});
+
+describe('порядок показу кнопок (рев\'ю GAME-350)', () => {
+  const required = (j: StrikeJob): string[] => STRIKE_DEFS[j].targets.map((t) => t.id);
+  it('показ — та сама множина кнопок, але не в порядку дій: тент, вогнище, авто', () => {
+    for (const j of ['tent', 'fire', 'car'] as const) {
+      const shown = shownTargets(j).map((t) => t.id);
+      expect([...shown].sort(), j).toEqual(required(j).sort());
+      expect(shown, j).not.toEqual(required(j));
+    }
+  });
+  it('тап по порядку показу дає хоч один хибний дотик', () => {
+    for (const j of ['tent', 'fire', 'car'] as const) {
+      const run = shownTargets(j).reduce((r, t) => tap(j, r, t.id), startJob());
+      expect(run.mistakes, j).toBeGreaterThanOrEqual(1);
+    }
+  });
+  it('перша показана кнопка завжди хибна, тож «зліва направо» не проходить', () => {
+    for (const j of ['tent', 'fire', 'car'] as const) expect(tap(j, startJob(), (shownTargets(j)[0] as { id: string }).id).mistakes, j).toBe(1);
+  });
+  it('порядок фіксований (без випадку): два виклики однакові; справа без порядку показується як є', () => {
+    expect(shownTargets('car')).toEqual(shownTargets('car'));
+    expect(SHOWN_ORDER.litter).toBeUndefined();
+    expect(shownTargets('litter')).toBe(STRIKE_DEFS.litter.targets);
+  });
+  it('авто: порядок збігається з підказкою — важке (термосумка, рюкзаки) раніше за легке (стільці, чоботи)', () => {
+    expect(required('car')).toEqual(['cooler', 'bags', 'chairs', 'boots', 'shut']);
   });
 });
 

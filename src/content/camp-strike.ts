@@ -61,13 +61,26 @@ export const STRIKE_DEFS: Readonly<Record<StrikeJob, StrikeJobDef>> = {
   car: {
     id: 'car', nameKey: 'strike.job.car', hintKey: 'strike.hint.car', whyKey: 'strike.why.car',
     targets: [
-      { id: 'bags', labelKey: 'strike.t.bags' },
-      { id: 'cooler', labelKey: 'strike.t.cooler', needs: ['bags'] },
-      { id: 'chairs', labelKey: 'strike.t.chairs', needs: ['cooler'] },
+      { id: 'cooler', labelKey: 'strike.t.cooler' },
+      { id: 'bags', labelKey: 'strike.t.bags', needs: ['cooler'] },
+      { id: 'chairs', labelKey: 'strike.t.chairs', needs: ['bags'] },
       { id: 'boots', labelKey: 'strike.t.boots', needs: ['chairs'] },
-      { id: 'shut', labelKey: 'strike.t.shut', needs: ['bags', 'cooler', 'chairs', 'boots'] },
+      { id: 'shut', labelKey: 'strike.t.shut', needs: ['cooler', 'bags', 'chairs', 'boots'] },
     ],
   },
+};
+
+/** Порядок, у якому кнопки ПОКАЗАНО (GAME-350, рев'ю): навмисно не збігається з потрібним (інакше гравець просто йде зліва направо). Фіксований, без часу й випадку:
+ *  однаковий у кожному запуску й у кожного гравця; правило порядку каже підказка справи. Справа без `needs` (сміття) показується як є. */
+export const SHOWN_ORDER: Readonly<Partial<Record<StrikeJob, readonly string[]>>> = {
+  tent: ['bag', 'peg2', 'fold', 'peg4', 'peg1', 'peg3'],
+  fire: ['feel', 'pour2', 'stir', 'pour1', 'pour3'],
+  car: ['shut', 'chairs', 'bags', 'boots', 'cooler'],
+};
+export const shownTargets = (job: StrikeJob): readonly StrikeTarget[] => {
+  const order = SHOWN_ORDER[job];
+  const all = STRIKE_DEFS[job].targets;
+  return order ? order.map((id) => all.find((t) => t.id === id) as StrikeTarget) : all;
 };
 
 /** Хід однієї справи: що вже зроблено, скільки хибних дотиків і про що сказати гравцеві. */

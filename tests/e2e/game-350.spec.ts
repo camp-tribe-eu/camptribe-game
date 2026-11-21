@@ -38,7 +38,7 @@ async function onScreen(page: Page, vp: { w: number; h: number }, what: string):
   expect(bad, `${what}: кнопки поза екраном`).toEqual([]);
 }
 const doJob = async (page: Page, ids: string[]): Promise<void> => { for (const id of ids) await tapIt(page.locator(`[data-ui="strike-t-${id}"]`)); };
-const GOOD = { tent: ['peg1', 'peg2', 'peg3', 'peg4', 'fold', 'bag'], litter: ['tin', 'wrap', 'bottle', 'cap'], fire: ['pour1', 'pour2', 'pour3', 'stir', 'feel'], car: ['bags', 'cooler', 'chairs', 'boots', 'shut'] };
+const GOOD = { tent: ['peg1', 'peg2', 'peg3', 'peg4', 'fold', 'bag'], litter: ['tin', 'wrap', 'bottle', 'cap'], fire: ['pour1', 'pour2', 'pour3', 'stir', 'feel'], car: ['cooler', 'bags', 'chairs', 'boots', 'shut'] };
 
 for (const vp of VIEWPORTS) {
   test(`GAME-350 · ніч → ранок → усі справи → підсумок з чистотою — ${vp.name}`, async ({ page }) => {
@@ -109,6 +109,18 @@ test('GAME-350 · хибні дотики нічого не ламають, сп
   await tapIt(page.locator('[data-ui="strike-t-cone"]'));
   await expect(page.locator('[data-ui="strike-note"]')).toContainText('лісове');
   await expect(page.locator('[data-ui="strike-t-cone"]')).toBeEnabled();
+});
+
+test('GAME-350 · кнопки показано не в порядку дій: тап по порядку показу дає хибний дотик', async ({ page }) => {
+  await open(page, VIEWPORTS[0] as (typeof VIEWPORTS)[number]);
+  for (const job of ['tent', 'fire', 'car'] as const) {
+    await page.locator(`[data-ui="strike-job-${job}"]`).tap();
+    const shown = await page.$$eval('[data-ui="strike-targets"] button', (bs) => bs.map((b) => (b as HTMLElement).dataset.ui?.replace('strike-t-', '') ?? ''));
+    expect(shown, `${job}: показ ≠ потрібний порядок`).not.toEqual(GOOD[job]);
+    await tapIt(page.locator(`[data-ui="strike-t-${shown[0]}"]`));
+    await expect(page.locator('[data-ui="strike-note"]'), `${job}: перша показана кнопка — хибна`).toContainText('Спершу інше');
+  }
+  expect(await saves(page)).toBe(0);
 });
 
 test('GAME-350 · закритий ранок після перезавантаження одразу веде до підсумку (англійською теж)', async ({ page }) => {
