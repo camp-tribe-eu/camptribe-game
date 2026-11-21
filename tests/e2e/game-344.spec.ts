@@ -3,7 +3,7 @@
 // Мутація (перевірено): у main.ts `missionSession.frame(missionStep.advance(dtMs))` → `frame(1)` — співвідношення 2,000 (120 Гц) і 0,500 (30 Гц), обидва тести червоні.
 import { expect, test, type Page } from '@playwright/test';
 import { DRIVE_LIMIT_FRAMES } from '../../src/content/minigames/drive';
-import { waitGameReady } from './ready';
+import { skipSampleIntro, waitGameReady } from './ready';
 
 const sample = (page: Page): Promise<{ vt: number; progress: number; phase: string }> => page.evaluate(() => {
   const w = window as unknown as { __vt: number };
@@ -22,6 +22,7 @@ for (const hz of [120, 30]) {
     }, hz);
     await page.goto('/?seed=7&sampleDay=1');
     await waitGameReady(page);
+    await skipSampleIntro(page);
     const mg = page.locator('[data-ui="minigame"]');
     await expect(mg).toHaveAttribute('data-phase', 'open', { timeout: 15_000 });
     await page.locator('[data-ui="mg-start"]').click();

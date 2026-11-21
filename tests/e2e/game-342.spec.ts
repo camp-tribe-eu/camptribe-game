@@ -1,6 +1,7 @@
 // GAME-342 · зразковий день: від відкриття сторінки до керованого героя (дорога їде) — не більше 5 справжніх дотиків (було ~17 у ☰).
 // Дотики рахує сама сторінка: слухач pointerdown (touch) у фазі захоплення на window — тап Playwright (CDP) тут справжній, не click().
 // Два випадки: seed=7 (1 дотик) і сід за замовчуванням (подія в дорозі: 2 дотики діалогу + «Старт» = 3). Бюджет 1–3, межа ≤ 5.
+// GAME-346: +1 дотик на вступ (3→4, 4→5), межа лишається ≤ 5; вступ видно до події. Мутація (перевірено): у samplePort `intro: () => sampleIntroOpen` → `() => false` → «вступ зразка видно до першої події» червоніє.
 // Мутація (перевірено): прибрати виклик `if (sampleOn) sampleQuickStart();` у src/main.ts, або SAMPLE_QUICK_STEPS 40 → 3 (знову «не пройдено крок») → обидві орієнтації червоніють:
 //   «після відкриття сторінки одразу вступ дороги, без ☰» (гравець мусив би водити ☰ до дороги).
 import { expect, test, type Page } from '@playwright/test';
@@ -28,6 +29,12 @@ for (const o of [{ name: 'portrait', viewport: { width: 390, height: 844 } }, { 
         await page.goto(url);
         await waitGameReady(page);
         expect(await page.evaluate(() => (window as unknown as { __game: { probe: { sampleQuickStart?: string } } }).__game.probe.sampleQuickStart), 'швидкий старт дійшов до дороги (не застряг)').toBe('ok');
+        // GAME-346: перед першою подією дороги — кадр «хто ми й куди їдемо» (+1 дотик); без нього зразок відкривався подією з невідомими людьми.
+        const intro = page.locator('[data-ui="sample-intro"]');
+        await expect(intro, 'вступ зразка видно до першої події').toBeVisible();
+        await expect(page.locator('[data-ui="sample-intro-text"]')).not.toBeEmpty();
+        await page.locator('[data-ui="sample-intro-go"]').tap();
+        await expect(intro).toBeHidden();
         const mg = page.locator('[data-ui="minigame"]');
         // Подія в дорозі (діалог) — справжні дотики по кнопці діалогу, доки не відкриється вступ дороги.
         for (let i = 0; i < 8 && !(await mg.isVisible().catch(() => false)); i++) {

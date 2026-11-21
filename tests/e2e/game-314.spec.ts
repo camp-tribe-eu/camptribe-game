@@ -5,7 +5,7 @@
 // Знімки в research/game-314/ — за G314_SHOTS=1. Вимірений час проходу пишеться в консоль (G314 E2E ...).
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { expect, test, type Page } from '@playwright/test';
-import { waitGameReady } from './ready';
+import { skipSampleIntro, waitGameReady } from './ready';
 import { laneOf, solve } from '../../src/content/drive-in';
 import { levelOf, solve as solveKnots } from '../../src/content/guy-lines';
 interface Pt { x: number; y: number }
@@ -286,6 +286,7 @@ async function depart(page: Page): Promise<string[]> {
   await page.addInitScript(WATCH_TOAST);
   await page.goto('/?seed=7&sampleDay=1');
   await waitGameReady(page);
+  await skipSampleIntro(page);
   // GAME-342: ☰, вибір героя, пролог, крамниця й збори свіжий день проходить сам (sampleQuickStart) — одразу вступ дороги; дотики рахує game-342.spec.
   await expect(page.locator('[data-ui="minigame"]'), 'GAME-342: після відкриття — вступ дороги, без ☰').toHaveAttribute('data-phase', 'open', { timeout: 15_000 });
   // GAME-324: зразок пише лише у свій слот — звичайна база сейву (власника) не створюється й не зачіпається.

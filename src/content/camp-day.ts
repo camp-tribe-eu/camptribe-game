@@ -22,6 +22,10 @@ export type RoutineId = (typeof ROUTINE_IDS)[number];
 export const ROUNDS = ['morning', 'noon', 'afternoon', 'evening'] as const;
 export type Round = (typeof ROUNDS)[number];
 /** GAME-320: «Ніч» — після вечора (DAY-DESIGN §7: ранок → полудень → пополудні → вечір → ніч); зранку кнопка зачинена, інакше день з однією справою закривався за мить. */
+/** GAME-346: після повернення на дошку «Далі» ще мить зачинене — запізнілий дотик, що закривав роботу, не перегортає частину дня сам (кадри, не годинник). */
+export const BOARD_LOCK_MS = 500;
+export const stepBoardLock = (leftMs: number, dtMs: number): number => Math.max(0, leftMs - Math.min(Math.max(0, dtMs), 100));
+export const nextRound = (r: Round): Round => ROUNDS[Math.min(ROUNDS.length - 1, ROUNDS.indexOf(r) + 1)] as Round;
 export const nightOpen = (r: Round): boolean => r === 'evening';
 
 export interface RoutineDef {
