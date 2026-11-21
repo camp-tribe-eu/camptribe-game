@@ -20,6 +20,7 @@ import { tradeDoneToday, tradeIsFair, traded } from './friendship';
 import { joinRecipe, joined } from './join';
 import { isOutcome, recordResult, type MinigameGuards } from './minigame';
 import { boardError, type CampBoardSave } from './camp-board';
+import { strikeError, type StrikeSave } from './camp-strike';
 import { forageKindOf, forageLeft, foraged, FORAGE_SOURCE_ITEM } from './forage';
 import { addPoints, canGiftToday, giveGift, heartEventDue, markHeartSeen, reactionOf, REQUEST_POINTS } from './friendship';
 
@@ -78,7 +79,9 @@ export type Command =
    */
   | { readonly type: 'FinishMinigame'; readonly commandId: string; readonly minigameId: string; readonly outcome: string; /** GAME-314: штраф, який гра взяла в родини (дорога: камера), у центах. Іде з гаманця. */ readonly fineCents?: number }
   /** GAME-314: стан дошки рутин табору (src/core/camp-board.ts) у сейв — дошка не губиться, коли панель закрито. Не хід бота. */
-  | { readonly type: 'SaveCampBoard'; readonly commandId: string; readonly board: CampBoardSave };
+  | { readonly type: 'SaveCampBoard'; readonly commandId: string; readonly board: CampBoardSave }
+  /** GAME-350: ранок «згортаємо табір» (src/core/camp-strike.ts) у сейв — результати справ і «закрито». Не хід бота. */
+  | { readonly type: 'SaveStrike'; readonly commandId: string; readonly strike: StrikeSave };
 
 /** Підтверджений факт (CR-031). Причина — commandId команди, що його спричинила. */
 export type GameEvent =
@@ -264,6 +267,12 @@ function apply(cmd: Command, d: Draft, defs: CoreDefs, guard: Safeguards, today:
       if (boardError(cmd.board) !== null) return 'INVALID_COMMAND';
       if (!d.player) return 'NO_CHARACTER';
       d.campBoard = cmd.board;
+      return null;
+    }
+    case 'SaveStrike': {
+      if (strikeError(cmd.strike) !== null) return 'INVALID_COMMAND';
+      if (!d.player) return 'NO_CHARACTER';
+      d.strike = cmd.strike;
       return null;
     }
     case 'RestUntilEvening': {
@@ -645,6 +654,7 @@ export function dispatch(state: GameState, cmd: Command, defs: CoreDefs, guard: 
     ...(state.chapterStart !== undefined ? { chapterStart: state.chapterStart } : {}),
     ...(state.minigames !== undefined ? { minigames: state.minigames } : {}),
     ...(state.campBoard !== undefined ? { campBoard: state.campBoard } : {}),
+    ...(state.strike !== undefined ? { strike: state.strike } : {}),
   };
   const code = apply(cmd, draft, defs, guard, today, weather, now);
   // Стан спорядження — лише для того, що в руках (продали останній — запис зникає), і лише відхилення від нового.

@@ -15,6 +15,7 @@ interface DriveSurfaceData {
   readonly kmDone: number;
   readonly kmLeft: number;
   readonly inTime: boolean;
+  readonly homebound: boolean;
   readonly fuel: number;
   readonly comfort: number;
   readonly finesCents: number;
@@ -60,7 +61,7 @@ export function DriveSurface({ view, t, tap, drag }: SurfaceProps) {
       <div class="mg-drive-strip">
         <span data-ui="mg-drive-done">{`${t('ui.drive.done')}: ${s.kmDone} ${t('ui.drive.km')}`}</span>
         <span data-ui="mg-drive-left">{`${t('ui.drive.left')}: ${s.kmLeft} ${t('ui.drive.km')}`}</span>
-        <span class="mg-drive-eta" data-ui="mg-drive-eta" data-ok={s.inTime ? 'yes' : 'no'}>{s.inTime ? t('ui.drive.etaOk') : t('ui.drive.etaLate')}</span>
+        <span class="mg-drive-eta" data-ui="mg-drive-eta" data-ok={s.inTime ? 'yes' : 'no'}>{s.inTime ? t(s.homebound ? 'ui.drive.home.etaOk' : 'ui.drive.etaOk') : t(s.homebound ? 'ui.drive.home.etaLate' : 'ui.drive.etaLate')}</span>
       </div>
       <div class="mg-drive-gauges">
         <div class="mg-drive-gauge mg-drive-fuel" role="progressbar" aria-label={t('ui.drive.fuel')} aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(s.fuel * 100)}><i style={{ width: pct(s.fuel) }} /></div>

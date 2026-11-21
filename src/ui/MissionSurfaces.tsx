@@ -66,4 +66,4 @@ export function CrankSurface({ view, t, tap }: SurfaceProps) {
 
 /** Поверхня за id міні-гри місії; null — не місійна гра. */
 export const missionSurface = (id: string): ComponentType<SurfaceProps> | null =>
-  id === 'mg.drive' ? DriveSurface : id === 'mg.trunk' ? TrunkSurface : id === 'mg.ring-sift' ? SiftSurface : ['mg.aerial-tune', 'mg.panel-aim', 'mg.tarp-tie'].includes(id) ? TuneSurface : ['mg.lantern-crank', 'mg.trap-weave'].includes(id) ? CrankSurface : null;
+  id === 'mg.drive' || id === 'mg.drive-home' ? DriveSurface : id === 'mg.trunk' ? TrunkSurface : id === 'mg.ring-sift' ? SiftSurface : ['mg.aerial-tune', 'mg.panel-aim', 'mg.tarp-tie'].includes(id) ? TuneSurface : ['mg.lantern-crank', 'mg.trap-weave'].includes(id) ? CrankSurface : null;

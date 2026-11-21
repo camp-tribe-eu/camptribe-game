@@ -851,6 +851,19 @@
         .ui-cine-title { grid-auto-flow: column; justify-content: space-between; align-items: center; padding-top: 8px; }
       }
       @media (prefers-reduced-motion: reduce) { .ui-panel[data-state="shown"], .ui-panel-zzz, .ui-cine-zzz, .ui-cine-layer, .ui-cine-dreamcap, .ui-cine-shot .ui-scene-canvas { animation: none; } }
+      /* ===== GAME-350: ранок «згортаємо табір» (CampStrike) і рядок чистоти в підсумку — окремий блок ===== */
+      .sk-board { place-content: start center; }
+      #app:has([data-ui="camp-strike"]) .ui-goal { visibility: hidden; }   /* як у підсумку: чип «Ціль» не лягає на дошку ранку */
+      .sk-jobs, .sk-targets { width: min(100%, 620px); }
+      .sk-job { flex: 1 1 96px; min-height: 48px; display: grid; gap: 0; align-content: center; }
+      .sk-job small { font-size: 0.6rem; color: #cfcbc7; line-height: 1.3; }
+      .sk-job[data-active="yes"] { outline: 2px solid #e6c36a; }
+      .sk-job[data-state="closed"] { background: #386228; }
+      .sk-target { flex: 1 1 130px; min-height: 48px; }
+      .sk-target[data-taken="yes"] { background: #386228; opacity: 0.8; }
+      .sk-foot { width: min(100%, 560px); }
+      [data-ui="sd-sum-clean"] > span { flex-basis: 100%; font-size: 0.65rem; color: #cfcbc7; text-align: left; }
+      /* ===== /GAME-350 ===== */
     </style>
   </head>
   <body>

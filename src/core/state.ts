@@ -7,6 +7,7 @@ import type { ProgressState } from './progress';
 import type { FriendState } from './friendship';
 import type { MinigameResults } from './minigame';
 import type { CampBoardSave } from './camp-board';
+import type { StrikeSave } from './camp-strike';
 import { zeroSkills } from './skills';
 
 export interface CommandRecord {
@@ -117,6 +118,8 @@ export interface GameState {
   readonly minigames?: MinigameResults;
   /** GAME-314: стан дошки рутин табору (раунд, вибір, результати, лічильники, пристрої). Поля немає — дошку ще не відкривали (тотожно, міграції не треба). Пише лише команда SaveCampBoard. */
   readonly campBoard?: CampBoardSave;
+  /** GAME-350: ранок «згортаємо табір» — результати справ і «закрито». Поля немає — ранку ще не грали (тотожно, міграції не треба). Пише лише команда SaveStrike. */
+  readonly strike?: StrikeSave;
 }
 
 export const REJECT_CODES = [

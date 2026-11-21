@@ -712,10 +712,31 @@ for (const o of ORIENTATIONS) {
       expect(storm.join(' | '), 'вогонь був — «не палили» немає').not.toContain('Вогню сьогодні не палили');
       expect(storm.join(' | '), 'сцена бурі знає про окуня Аміни').toContain('Окунь');
       await shot(page, 'storm-after');
+      // GAME-350: після ночі — ранок «згортаємо табір» (справжня гра: команда SaveStrike, сейв), і лише тоді підсумок з рядком чистоти.
+      await expect(page.locator('[data-ui="camp-strike"]'), 'після ночі ранок, не підсумок').toBeVisible();
+      await expect(page.locator('[data-ui="sd-summary"]')).toHaveCount(0);
+      for (const id of ['peg1', 'peg2', 'peg3', 'peg4', 'fold', 'bag', 'tin', 'wrap', 'bottle', 'cap', 'pour1', 'pour2', 'pour3', 'stir', 'feel', 'cooler', 'bags', 'chairs', 'boots', 'shut']) await tapIt(page, `[data-ui="strike-t-${id}"]`);
+      await expect.poll(async () => ((await core2(page)).game as unknown as { strike?: { results: Record<string, string> } }).strike?.results, { message: 'усі справи ранку в сейві гри' }).toEqual({ tent: 'good', litter: 'good', fire: 'good', car: 'good' });
+      await tapIt(page, '[data-ui="strike-finish"]');
+      // GAME-351: після ранку — дорога додому (справжня проводка main.ts: sampleOpenRoadHome → міні-гра → FinishMinigame), пропуск із підтвердженням; і лише тоді підсумок.
+      await expect(page.locator('[data-ui="minigame"]'), 'після ранку — дорога додому').toBeVisible();
+      await expect(page.locator('[data-ui="sd-summary"]')).toHaveCount(0);
+      await expect(page.locator('.mg-title')).toHaveText('Дорога додому');
+      await tapIt(page, '[data-ui="mg-start"]');
+      await tapIt(page, '[data-ui="mg-pause"]');
+      await tapIt(page, '[data-ui="mg-move-on"]');
+      await tapIt(page, '[data-ui="mg-sure-yes"]');
+      await expect(page.locator('[data-ui="mg-result"]')).toHaveAttribute('data-outcome', 'scrappy');
+      await expect(page.locator('[data-ui="sd-summary"]'), 'підсумок не вискакує поверх результату дороги').toHaveCount(0);
+      await tapIt(page, '[data-ui="mg-close"]');
+      await expect.poll(async () => ((await core2(page)).game as unknown as { minigames?: Record<string, { last: string; consequence: string }> }).minigames?.['mg.drive-home'], { message: 'дорогу додому записано в сейв гри' }).toMatchObject({ last: 'scrappy', consequence: 'home.late' });
+      expect(((await core2(page)).game.flags as string[]).filter((f) => f.startsWith('f.arrival-')), 'дорога додому не чіпає f.arrival-*').toEqual([`f.arrival-${arrival}`]);
       const sum = page.locator('[data-ui="sd-summary"]');
       await expect(sum).toBeVisible();
       await expect(sum).toHaveAttribute('data-arrival', arrival);
       await expect(sum).toHaveAttribute('data-pitch', pitch);
+      await expect(page.locator('[data-ui="sd-sum-clean"]'), 'рядок чистоти табору в підсумку').toContainText('Чистота табору: Добре');
+      await expect(page.locator('[data-ui="sd-sum-road"]'), 'рядок дороги додому в підсумку').toContainText('Дорога додому: пізно й сонні, зате вдома');
       await expect(sum).toHaveAttribute('data-missions', '2');
       await expect(sum).toHaveAttribute('data-money', String((await core2(page)).game.moneyCents));
       await shot(page, 'summary');

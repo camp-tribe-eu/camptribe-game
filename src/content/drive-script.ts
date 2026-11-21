@@ -55,6 +55,22 @@ export const DRIVE_BEATS: readonly DriveBeat[] = [
   beat('arrived', 'victoria', { on: 'arrived' }),
 ];
 
+// GAME-351 · репліки дороги ДОДОМУ: втомлена родина, табір позаду. Події (камера, прокол, затор…) ті самі, що й до озера, — крім «приїхали обрати місце» і кішки (у зразку її немає).
+const homeBeat = (id: string, speaker: Speaker, where: { at?: number; on?: DriveEventKind }): DriveBeat => ({ id: `home-${id}`, speaker, key: `ui.drive.home.${id}`, ...where });
+export const HOME_BEATS: readonly DriveBeat[] = [
+  homeBeat('start', 'victoria', { at: 0.0 }),
+  homeBeat('sleepy', 'matthew', { at: 0.12 }),
+  homeBeat('fields', 'george', { at: 0.25 }),
+  homeBeat('biscuits', 'victoria', { at: 0.4 }),
+  homeBeat('halfway', 'george', { at: 0.5 }),
+  homeBeat('radio', 'radio', { at: 0.62 }),
+  homeBeat('street', 'matthew', { at: 0.78 }),
+  homeBeat('almost', 'george', { at: 0.92 }),
+  ...DRIVE_BEATS.filter((b) => b.on !== undefined && b.id !== 'arrived' && b.id !== 'cat-frets'),
+  homeBeat('arrived', 'victoria', { on: 'arrived' }),
+];
+export const HOME_BEAT_KEYS: readonly string[] = [...new Set(HOME_BEATS.map((b) => b.key))];
+
 /** Усі ключі сценарію — щоб сторож локалізації і тест мали один список. */
 export const DRIVE_BEAT_KEYS: readonly string[] = DRIVE_BEATS.map((b) => b.key);
 
@@ -65,5 +81,5 @@ export const DRIVE_BEAT_KEYS: readonly string[] = DRIVE_BEATS.map((b) => b.key);
 export function nextBeats(s: DriveState, c: Course, events: readonly DriveEvent[], said: ReadonlySet<string>): readonly DriveBeat[] {
   const p = progressOf(s, c);
   const kinds = new Set(events.map((e) => e.kind));
-  return DRIVE_BEATS.filter((b) => !said.has(b.id) && (b.on !== undefined ? kinds.has(b.on) : b.at !== undefined && p >= b.at));
+  return (c.variant === 'homebound' ? HOME_BEATS : DRIVE_BEATS).filter((b) => !said.has(b.id) && (b.on !== undefined ? kinds.has(b.on) : b.at !== undefined && p >= b.at));
 }
