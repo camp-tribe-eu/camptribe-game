@@ -79,6 +79,7 @@ import { createFixedStep } from './view/fixed-step';
 import { minigameById } from './content/minigames';
 import { TRUNK_GAME, leftOf, setTrunkLoad, type TrunkState } from './content/minigames/trunk';
 import { driveSummary, setDriveWallet, type DriveMgState } from './content/minigames/drive';
+import { ROAD_HOME_ID, roadHomeResult } from './content/road-home';
 import { ARRIVAL_SCENE, SCRAPE_SCENE, arrivalFacts } from './content/arrival-scene';
 import { pitchTaken } from './content/arrival-pitch';
 import { DRIVE_FLAG, driveFlag, driveOutcome as driveInOutcome } from './content/drive-in';
@@ -229,7 +230,7 @@ const sampleOn = switches.sampleDay === true;
 let sampleBusy = false;
 const sampleChanged = (): void => {
   // Кроки дня виводяться зі стану ядра на КОЖНУ зміну історії (не лише на кадр сцени): сцена, поки відкрита панель, стоїть на паузі.
-  if (sampleOn && !sampleBusy) { sampleBusy = true; try { sampleScenes(); if (!missionSession) sampleOpenDrive(); } finally { sampleBusy = false; } }
+  if (sampleOn && !sampleBusy) { sampleBusy = true; try { sampleScenes(); if (!missionSession) { sampleOpenDrive(); if (!missionSession) sampleOpenRoadHome(); } } finally { sampleBusy = false; } }
   for (const l of [...sampleListeners]) l();
 };
 const storyChanged = (): void => {
@@ -487,6 +488,19 @@ function sampleOpenDrive(): void {
   });
   missionChanged();
 }
+/** GAME-351: після ранку «згортаємо табір» (стан ядра: ніч зіграно, ранок закрито, дорогу додому ще не їхали) відкриваємо ту саму міні-гру дороги, варіант homebound. Гроші — що лишилось після табору. */
+function sampleOpenRoadHome(): void {
+  const g = bridge.state.game;
+  const def = minigameById(ROAD_HOME_ID);
+  if (!sampleOn || !def || g.dialogue !== null || g.player === null || g.strike?.closed !== true || roadHomeResult(g.minigames) !== null) return;
+  if (sampleGoal(g.flags, playedScene(STORM_SCENE)) !== 'done') return;
+  setDriveWallet(g.moneyCents);
+  missionSession = createMinigameSession(def, {
+    results: g.minigames, seed: bridge.state.worldSeed,
+    report: (r) => { const fine = driveSummary((missionSession as MinigameSession).run.state as DriveMgState).finesCents; bridge.send({ type: 'FinishMinigame', minigameId: def.id, outcome: r.outcome, ...(fine > 0 ? { fineCents: fine } : {}) }); storyChanged(); },
+  });
+  missionChanged();
+}
 function sampleScenes(): void {
   const g = bridge.state.game;
   if (!sampleOn || g.dialogue !== null || g.player?.locationId !== MAP_LOCATION.camp || g.minigames?.['mg.drive'] === undefined) return;
@@ -538,6 +552,8 @@ const samplePort: SamplePort = {
   stormNight: () => { if (!playedScene(STORM_SCENE)) { bridge.send(stormNightMove(bridge.state.game.flags, undefined, bridge.state.game.campBoard?.results.fire !== undefined, bridge.state.game.campBoard?.facts.dryLogs)); storyChanged(); } },
   strike: () => bridge.state.game.strike,
   saveStrike: (s) => { bridge.send({ type: 'SaveStrike', strike: s }); storyChanged(); },   // GAME-350
+  // GAME-351: поки міні-гра дороги додому відкрита (вступ, їзда, екран результату), результату «ще нема» — підсумок не вискакує поверх неї; закрили — запис із сейву.
+  roadHome: () => (missionSession?.run.id === ROAD_HOME_ID ? null : roadHomeResult(bridge.state.game.minigames)),
   restart: async () => { await saves.newGame(); location.reload(); },
   subscribe: (l) => { sampleListeners.add(l); return () => { sampleListeners.delete(l); }; },
 };
@@ -546,7 +562,7 @@ const missionStep = createFixedStep();
 function missionTick(dtMs: number): void {
   // GAME-332: після закритого результату оболонка вже знята (Shell побачив missionChanged) — лише тепер завантажуємо авто: інакше екран «Не влазить» не відкрився б.
   if (afterGo && !missionSession) { const after = afterMission; afterMission = null; afterGo = false; after?.(); }
-  if (sampleOn) { sampleScenes(); if (!missionSession) sampleOpenDrive(); }
+  if (sampleOn) { sampleScenes(); if (!missionSession) { sampleOpenDrive(); if (!missionSession) sampleOpenRoadHome(); } }
   if (missionSession) {
     if (missionSession.run.phase === 'closed') { missionSession = null; missionStep.reset(); missionChanged(); afterGo = afterMission !== null; return; }
     missionSession.frame(missionStep.advance(dtMs));

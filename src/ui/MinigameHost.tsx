@@ -61,7 +61,7 @@ export function MinigameHost({ session, t, lang, Surface }: { session: MinigameS
         <div class="mg-paused" data-ui="mg-paused" role="group" aria-label={t('mg.paused')}>
           <p class="mg-text">{t('mg.paused')}</p>
           <button type="button" class="ui-btn mg-btn" data-ui="mg-resume" onClick={() => session.resume()}>{t('mg.resume')}</button>
-          {view.phase !== 'result' && !sure && <button type="button" class="ui-btn mg-btn" data-ui="mg-move-on" onClick={() => (view.id === 'mg.drive' ? setSure(true) : session.moveOn())}>{t('mg.moveOn')}</button>}
+          {view.phase !== 'result' && !sure && <button type="button" class="ui-btn mg-btn" data-ui="mg-move-on" onClick={() => (view.id === 'mg.drive' || view.id === 'mg.drive-home' ? setSure(true) : session.moveOn())}>{t('mg.moveOn')}</button>}
           {view.phase !== 'result' && sure && (
             <div class="mg-sure" data-ui="mg-sure" role="group" aria-label={t('mg.sure')}>
               <p class="mg-text">{t('mg.sure')}</p>

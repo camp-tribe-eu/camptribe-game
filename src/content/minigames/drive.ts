@@ -11,8 +11,8 @@
 import { FPS, defineMinigame, type Difficulty, type FrameInput, type Outcome } from '../../core/minigame';
 import {
   COMFORT_MAX, FRAME_ROAD_MS, HAZARD_LEN_M, LANES, SHARP_COST, TANK_MAX_L, VIEW_M,
-  arrivalConsequence, buildCourse, driveOutcome, driveResult, etaSec, kmDone, kmLeft, progressOf, speedOf, startDrive, stepDrive, willMakeReception,
-  type Course, type DriveEvent, type DriveState, type Lane, type Pace,
+  ARRIVAL_BY_DRIVE, arrivalConsequence, buildCourse, driveOutcome, driveResult, etaSec, kmDone, kmLeft, progressOf, speedOf, startDrive, stepDrive, willMakeReception,
+  type Course, type DriveEvent, type DriveState, type DriveVariant, type Lane, type Pace,
 } from '../drive';
 import { nextBeats, type DriveBeat } from '../drive-script';
 
@@ -44,6 +44,8 @@ export interface DriveView {
   readonly kmDone: number;
   readonly kmLeft: number;
   readonly inTime: boolean;
+  /** GAME-351: дорога додому — поверхня підписує смугу прогресу «до вечері», а не «до рецепції». */
+  readonly homebound: boolean;
   readonly fuel: number;
   readonly comfort: number;
   readonly moneyCents: number;
@@ -103,43 +105,54 @@ export function stepDriveMg(s: DriveMgState, input: FrameInput, d: Difficulty): 
 
 /** Подорож, а не спринт: межа 3 хв живої гри (kind journey, GAME-309). */
 export const DRIVE_LIMIT_FRAMES = 180 * FPS;
+/** GAME-351: дорога додому коротша — межа 2,5 хв живої гри (звичайний темп 90–120 с). */
+export const HOME_LIMIT_FRAMES = 150 * FPS;
 
-export const DRIVE = defineMinigame<DriveMgState, DriveView>({
-  id: 'mg.drive',
-  titleKey: 'mg.drive.title',
-  introKey: 'mg.drive.intro',
-  hintKey: 'mg.drive.hint',
-  kind: 'journey',
-  limitFrames: DRIVE_LIMIT_FRAMES,
-  outcomes: {
-    good: { consequence: arrivalConsequence('good'), resultKey: 'mg.drive.result.good' },
-    fine: { consequence: arrivalConsequence('fine'), resultKey: 'mg.drive.result.fine' },
-    scrappy: { consequence: arrivalConsequence('scrappy'), resultKey: 'mg.drive.result.scrappy' },
-  },
-  init: (d: Difficulty, seed: number): DriveMgState => {
-    // Допомога каркаса: ширша смуга огляду (видно далі) і довший запас часу до рецепції.
-    const help = { extraFuelL: d.bandScale > 1 ? 1.6 : 0, extraSec: d.timeScale > 1 ? 30 : 0, comfortShield: d.hint };
-    const course = buildCourse(seed, help);
-    return { wallet: walletCents, course, drive: startDrive(course, DEFAULT_WALLET_CENTS, help), said: [], line: null, events: [] };
-  },
-  step: stepDriveMg,
-  done: (s: DriveMgState) => s.drive.phase === 'arrived',
-  outcomeOf: (s: DriveMgState): Outcome => driveOutcome(s.drive, s.course),
-  view: (s: DriveMgState, d: Difficulty): DriveView => {
-    const { drive: v, course: c } = s;
-    const look = VIEW_M * d.bandScale;
-    return {
-      lane: v.lane, laneAt: v.changing > 0 ? v.lane + (v.toLane - v.lane) * (1 - v.changing / 420) : v.lane,
-      pace: v.pace, progress: progressOf(v, c), kmDone: kmDone(v), kmLeft: kmLeft(v, c), inTime: willMakeReception(v, c),
-      fuel: Math.min(1, v.fuelL / TANK_MAX_L), comfort: v.comfort / COMFORT_MAX, moneyCents: v.moneyCents, finesCents: v.finesCents, paidCents: Math.min(v.finesCents, s.wallet),
-      cameraAhead: v.cameraAhead, stopOffer: v.offer?.kind ?? null, waiting: v.stoppedWhy,
-      hazards: c.hazards.filter((h) => h.at - v.metres > -HAZARD_LEN_M[h.kind] - 30 && h.at - v.metres < look)
-        .map((h) => ({ id: h.id, kind: h.kind, lane: h.lane, depth: Math.max(0, Math.min(1, (h.at - v.metres) / look)), len: HAZARD_LEN_M[h.kind] / look })),
-      beatKey: s.line?.key ?? null, beatSpeaker: s.line?.speaker ?? null,
-      freeLane: d.hint ? freeLaneOf(v, c, look * 0.5) : null,
-    };
-  },
-});
+/** Одна оболонка на обидві дороги (GAME-351): `variant` міняє лише трасу (довжина, втома, час «рано» й «до вечері»), тексти й межу; правила поїздки ті самі. */
+function makeDrive(variant: DriveVariant) {
+  const home = variant === 'homebound';
+  const id = home ? 'mg.drive-home' : 'mg.drive';
+  const p = id;
+  const outcome = (o: Outcome) => ({ consequence: home ? `home.${ARRIVAL_BY_DRIVE[o]}` : arrivalConsequence(o), resultKey: `${p}.result.${o}` });
+  return defineMinigame<DriveMgState, DriveView>({
+    id,
+    titleKey: `${p}.title`,
+    introKey: `${p}.intro`,
+    hintKey: `${p}.hint`,
+    kind: 'journey',
+    limitFrames: home ? HOME_LIMIT_FRAMES : DRIVE_LIMIT_FRAMES,
+    outcomes: { good: outcome('good'), fine: outcome('fine'), scrappy: outcome('scrappy') },
+    init: (d: Difficulty, seed: number): DriveMgState => {
+      // Допомога каркаса: ширша смуга огляду (видно далі) і довший запас часу до рецепції.
+      const help = { extraFuelL: d.bandScale > 1 ? 1.6 : 0, extraSec: d.timeScale > 1 ? 30 : 0, comfortShield: d.hint };
+      const course = buildCourse(seed, help, variant);
+      // Гроші: дорога до озера стартує з типовим гаманцем моделі (як і було), додому — з тим, що лишилось після табору (GAME-351).
+      return { wallet: walletCents, course, drive: startDrive(course, home ? walletCents : DEFAULT_WALLET_CENTS, help), said: [], line: null, events: [] };
+    },
+    step: stepDriveMg,
+    done: (s: DriveMgState) => s.drive.phase === 'arrived',
+    outcomeOf: (s: DriveMgState): Outcome => driveOutcome(s.drive, s.course),
+    view: (s: DriveMgState, d: Difficulty): DriveView => {
+      const { drive: v, course: c } = s;
+      const look = VIEW_M * d.bandScale;
+      return {
+        lane: v.lane, laneAt: v.changing > 0 ? v.lane + (v.toLane - v.lane) * (1 - v.changing / 420) : v.lane,
+        pace: v.pace, progress: progressOf(v, c), kmDone: kmDone(v), kmLeft: kmLeft(v, c), inTime: willMakeReception(v, c), homebound: home,
+        fuel: Math.min(1, v.fuelL / TANK_MAX_L), comfort: v.comfort / COMFORT_MAX, moneyCents: v.moneyCents, finesCents: v.finesCents, paidCents: Math.min(v.finesCents, s.wallet),
+        cameraAhead: v.cameraAhead, stopOffer: v.offer?.kind ?? null, waiting: v.stoppedWhy,
+        hazards: c.hazards.filter((h) => h.at - v.metres > -HAZARD_LEN_M[h.kind] - 30 && h.at - v.metres < look)
+          .map((h) => ({ id: h.id, kind: h.kind, lane: h.lane, depth: Math.max(0, Math.min(1, (h.at - v.metres) / look)), len: HAZARD_LEN_M[h.kind] / look })),
+        beatKey: s.line?.key ?? null, beatSpeaker: s.line?.speaker ?? null,
+        freeLane: d.hint ? freeLaneOf(v, c, look * 0.5) : null,
+      };
+    },
+  });
+}
+
+export const DRIVE = makeDrive('outbound');
+/** GAME-351 · дорога додому після «згортаємо табір» (?sampleDay=1). Результат — наслідок `home.early|ontime|late`; прапорця `f.arrival-*` не чіпає. */
+export const DRIVE_HOME = makeDrive('homebound');
+export const DRIVE_HOME_ID = 'mg.drive-home';
 
 /** Підсумок поїздки для сцени приїзду (GAME-310): штраф, пальне, комфорт і значення `f.arrival`. */
 export const driveSummary = (s: DriveMgState): ReturnType<typeof driveResult> => driveResult(s.drive, s.course);

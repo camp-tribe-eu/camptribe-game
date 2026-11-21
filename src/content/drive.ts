@@ -112,7 +112,18 @@ export type StopKind = 'fuel' | 'rest';
 export const STOP_WINDOW_M = 900;
 export interface StopPoint { readonly id: string; readonly kind: StopKind; readonly at: number }
 
+/** GAME-351 · дорога ДОДОМУ — та сама модель, інші параметри (коротша, втомлена родина). Без поля `variant` траса — до озера, як була. */
+export type DriveVariant = 'outbound' | 'homebound';
+
 export interface Course {
+  /** GAME-351: яка це дорога. Немає — до озера. */
+  readonly variant?: DriveVariant;
+  /** GAME-351: комфорт на старті (втомлена родина — нижче за повний). Немає — COMFORT_MAX. */
+  readonly startComfort?: number;
+  /** GAME-351: у скільки разів швидше падає комфорт (різке перестроювання, жвава їзда, близький об'їзд велосипедиста). Немає — 1. */
+  readonly comfortScale?: number;
+  /** GAME-351: до якої секунди приїзд «рано й спокійно». Немає — EARLY_SEC. */
+  readonly earlySec?: number;
   readonly routeM: number;
   readonly hazards: readonly Hazard[];
   readonly cameras: readonly CameraPost[];
@@ -121,6 +132,20 @@ export interface Course {
   readonly receptionSec: number;
   readonly startFuelL: number;
 }
+
+// ── Дорога додому (GAME-351) ─────────────────────────────────────────────────────────────────────
+// Коротша за дорогу до озера: ~90–120 с гри за рівної їзди (темп ROAD_SPEEDUP). Родина втомилась: комфорт стартує нижче й падає швидше.
+// Рецепції вдома немає — `receptionSec` тут означає «до вечері»: пізніше — «пізно й сонні», але нічого не блокує.
+export const HOME_ROUTE_M = 5400;
+export const HOME_START_COMFORT = 86;
+export const HOME_COMFORT_SCALE = 1.25;
+/** Пальне після табору: дорога сюди бак не спорожнила, а в стані гри пального нема — стартуємо з трохи меншим за новий. */
+export const HOME_START_FUEL_L = 3.6;
+/** Перешкод на кожен вид (до озера — по 4). */
+export const HOME_HAZARDS_PER_KIND = 3;
+/** Секунди ДОРОГИ (не гри: гра вдвічі швидша). */
+export const HOME_EARLY_SEC = 215;
+export const HOME_BY_SEC = 270;
 
 // ── Допомога після двох «сяк-так» поспіль (договір каркасу міні-ігор) ──────────────────────────
 export interface DriveHelp { readonly extraFuelL: number; readonly extraSec: number; readonly comfortShield: boolean }
@@ -144,18 +169,22 @@ const roll = (seed: number, salt: number, span: number): number => (span <= 0 ? 
 
 /** Скільки перешкод на трасі: по чотири кожного виду — щоб на 2–3 хв дороги завжди щось було попереду. */
 export const HAZARD_SLOTS = HAZARD_KINDS.length * 4;
+const slotsOf = (variant: DriveVariant): number => HAZARD_KINDS.length * (variant === 'homebound' ? HOME_HAZARDS_PER_KIND : 4);
 
 /**
  * Траса з зерна світу. Місця перешкод, камер і пригод — у фіксованих комірках із невеликим зсувом від
  * зерна: той самий сейв дає ту саму дорогу, а дві різні поїздки не однакові. Перша перешкода стоїть не
  * раніше ніж за `VIEW_M` від старту — інакше гравець побачив би її вже «на собі».
  */
-export function buildCourse(seed: number, help: DriveHelp = NO_HELP): Course {
+export function buildCourse(seed: number, help: DriveHelp = NO_HELP, variant: DriveVariant = 'outbound'): Course {
+  const home = variant === 'homebound';
+  const route = home ? HOME_ROUTE_M : ROUTE_M;
+  const slots = slotsOf(variant);
   const first = VIEW_M + 120;
-  const span = ROUTE_M - 200 - first;
-  const cell = span / HAZARD_SLOTS;
+  const span = route - 200 - first;
+  const cell = span / slots;
   const hazards: Hazard[] = [];
-  for (let i = 0; i < HAZARD_SLOTS; i++) {
+  for (let i = 0; i < slots; i++) {
     const kind = HAZARD_KINDS[i % HAZARD_KINDS.length] as HazardKind;
     const at = Math.round(first + cell * i + roll(seed, i, Math.floor(cell * 0.5)));
     // Ремонт дороги ЗАВЖДИ в середній смузі — тій, із якої починає авто. Нічого не робити — це теж
@@ -166,19 +195,20 @@ export function buildCourse(seed: number, help: DriveHelp = NO_HELP): Course {
     hazards.push({ id: `hz-${i}`, kind, at, lane });
   }
   const cameras: CameraPost[] = [
-    { id: 'cam-1', at: Math.round(ROUTE_M * 0.33) + roll(seed, 11, 120) },
-    { id: 'cam-2', at: Math.round(ROUTE_M * 0.74) + roll(seed, 12, 120) },
+    { id: 'cam-1', at: Math.round(route * 0.33) + roll(seed, 11, 120) },
+    { id: 'cam-2', at: Math.round(route * 0.74) + roll(seed, 12, 120) },
   ];
   // Пригода на поїздку РІВНО ОДНА: три за раз зжерли б увесь запас часу, і «вчасно» стало б недосяжним.
   // Яка саме — з зерна; коштує лише час (докладно — ADVENTURE_SEC, JAM_MPS).
   const kind = ADVENTURE_KINDS[roll(seed, 20, ADVENTURE_KINDS.length)] as AdventureKind;
-  const adventures: Adventure[] = [{ id: `adv-${kind}`, kind, at: Math.round(ROUTE_M * 0.47) + roll(seed, 21, 400) }];
+  const adventures: Adventure[] = [{ id: `adv-${kind}`, kind, at: Math.round(route * 0.47) + roll(seed, 21, 400) }];
   const stops: StopPoint[] = [
-    { id: 'stop-fuel-1', kind: 'fuel', at: Math.round(ROUTE_M * 0.28) },
-    { id: 'stop-rest', kind: 'rest', at: Math.round(ROUTE_M * 0.52) },
-    { id: 'stop-fuel-2', kind: 'fuel', at: Math.round(ROUTE_M * 0.80) },
+    { id: 'stop-fuel-1', kind: 'fuel', at: Math.round(route * 0.28) },
+    { id: 'stop-rest', kind: 'rest', at: Math.round(route * 0.52) },
+    { id: 'stop-fuel-2', kind: 'fuel', at: Math.round(route * 0.80) },
   ];
-  return { routeM: ROUTE_M, hazards, cameras, adventures, stops, receptionSec: RECEPTION_SEC + help.extraSec, startFuelL: TANK_START_L + help.extraFuelL };
+  const base = { routeM: route, hazards, cameras, adventures, stops, receptionSec: (home ? HOME_BY_SEC : RECEPTION_SEC) + help.extraSec, startFuelL: (home ? HOME_START_FUEL_L : TANK_START_L) + help.extraFuelL };
+  return home ? { ...base, variant, startComfort: HOME_START_COMFORT, comfortScale: HOME_COMFORT_SCALE, earlySec: HOME_EARLY_SEC } : base;
 }
 
 // ── Стан ───────────────────────────────────────────────────────────────────────────────────────
@@ -225,7 +255,7 @@ export type DriveInput =
 export function startDrive(course: Course, moneyCents: number, help: DriveHelp = NO_HELP): DriveState {
   return {
     phase: 'drive', sec: 0, metres: 0, lane: START_LANE, toLane: START_LANE, changing: 0, pace: 'steady',
-    fuelL: course.startFuelL, comfort: COMFORT_MAX, moneyCents, finesCents: 0,
+    fuelL: course.startFuelL, comfort: course.startComfort ?? COMFORT_MAX, moneyCents, finesCents: 0,
     stoppedFor: 0, stoppedWhy: null, offer: null, cameraAhead: false, recent: [], done: [], help,
   };
 }
@@ -279,18 +309,18 @@ export interface StepResult { readonly state: DriveState; readonly events: reado
 export function stepDrive(s: DriveState, c: Course, input: DriveInput): StepResult {
   if (s.phase === 'arrived') return { state: s, events: [] };
   if (input.kind === 'pace') return { state: s.phase === 'drive' ? { ...s, pace: input.pace } : s, events: [] };
-  if (input.kind === 'lane') return laneInput(s, input.to);
+  if (input.kind === 'lane') return laneInput(s, input.to, c.comfortScale ?? 1);
   if (input.kind === 'stop') return stopInput(s);
   return tick(s, c, input.dtMs);
 }
 
-function laneInput(s: DriveState, to: Lane): StepResult {
+function laneInput(s: DriveState, to: Lane, scale: number): StepResult {
   const at = s.sec;
   if (s.phase !== 'drive' || s.changing > 0 || to === s.lane) return { state: s, events: [{ kind: 'lane-busy', at }] };
   const ms = s.sec * 1000;
   const recent = [...s.recent.filter((t) => ms - t <= SHARP_WINDOW_MS), ms];
   const sharp = recent.length >= SHARP_CHANGES;
-  const cost = sharp ? (s.help.comfortShield ? SHARP_COST / 2 : SHARP_COST) : 0;
+  const cost = (sharp ? (s.help.comfortShield ? SHARP_COST / 2 : SHARP_COST) : 0) * scale;
   const comfort = clamp(s.comfort - cost, 0, COMFORT_MAX);
   const events: DriveEvent[] = [{ kind: 'lane', at }];
   if (sharp) events.push({ kind: 'sharp', at });
@@ -342,7 +372,8 @@ function tick(s: DriveState, c: Course, dtMsRaw: number): StepResult {
 
   // пальне й комфорт
   let fuelL = s.fuelL - moved * LITRES_PER_M[s.pace];
-  let comfort = s.comfort - (s.pace === 'brisk' ? moved * BRISK_COMFORT_PER_M : 0);
+  const scale = c.comfortScale ?? 1;
+  let comfort = s.comfort - (s.pace === 'brisk' ? moved * BRISK_COMFORT_PER_M * scale : 0);
   let moneyCents = s.moneyCents; let finesCents = s.finesCents;
   let done = s.done; let cameraAhead = s.cameraAhead;
   const crossed = (x: number): boolean => from < x && metres >= x;
@@ -358,7 +389,7 @@ function tick(s: DriveState, c: Course, dtMsRaw: number): StepResult {
   for (const h of c.hazards) {
     if (h.kind !== 'cyclist' || !crossed(h.at)) continue;
     const near = Math.abs(lane - h.lane) <= 1;
-    if (near && s.pace === 'brisk' && !done.includes(`pass-${h.id}`)) { comfort -= CLOSE_PASS_COST; done = [...done, `pass-${h.id}`]; events.push({ kind: 'close-pass', at }); }
+    if (near && s.pace === 'brisk' && !done.includes(`pass-${h.id}`)) { comfort -= CLOSE_PASS_COST * scale; done = [...done, `pass-${h.id}`]; events.push({ kind: 'close-pass', at }); }
   }
   let phase: Phase = 'drive'; let stoppedFor = 0; let stoppedWhy: StoppedWhy | null = null;
   for (const a of c.adventures) {
@@ -425,7 +456,7 @@ export function driveOutcome(s: DriveState, c: Course): Outcome {
   const comfort = Math.round(s.comfort);
   if (s.phase !== 'arrived') return 'scrappy';   // кадри скінчились раніше за дорогу — це «пізно», не глухий кут
   if (lateSec > 0 || comfort < FRAZZLED_COMFORT) return 'scrappy';
-  return s.sec <= EARLY_SEC && comfort >= CALM_COMFORT && s.finesCents === 0 ? 'good' : 'fine';
+  return s.sec <= (c.earlySec ?? EARLY_SEC) && comfort >= CALM_COMFORT && s.finesCents === 0 ? 'good' : 'fine';
 }
 
 export function driveResult(s: DriveState, c: Course): DriveResult {

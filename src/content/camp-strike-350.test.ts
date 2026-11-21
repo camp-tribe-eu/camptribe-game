@@ -131,12 +131,14 @@ describe('ранок закривається, коли розв’язано В
 });
 
 describe('етап дня після ночі', () => {
-  it('до ночі — день; після ночі — ранок, поки не закрито; тоді підсумок', () => {
+  it('до ночі — день; після ночі — ранок, поки не закрито; тоді (GAME-351) дорога додому і підсумок', () => {
     expect(dayStage('evening', undefined)).toBe('day');
     expect(dayStage(null, undefined)).toBe('day');
     expect(dayStage('done', undefined)).toBe('strike');
     expect(dayStage('done', { closed: false, results: { tent: 'good' } })).toBe('strike');
-    expect(dayStage('done', { closed: true, results: all('good') })).toBe('summary');
+    // GAME-351: після закритого ранку йде дорога додому, і лише потім підсумок (повний порядок — drive-home-351.test.ts).
+    expect(dayStage('done', { closed: true, results: all('good') })).toBe('road-home');
+    expect(dayStage('done', { closed: true, results: all('good') }, 'fine')).toBe('summary');
   });
 });
 
