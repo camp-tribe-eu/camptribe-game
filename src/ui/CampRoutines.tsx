@@ -121,8 +121,8 @@ export function CampRoutines({ t, weather, seed, onFrame, devices: devices0 = {}
   // GAME-328: допомога одна на всі рутини — за останніми двома результатами дня (helpFor), а не за кожною справою окремо.
   const help: Difficulty = helpFor(day);
   const eased = help.hint && active !== 'firewood' && active !== 'tidy';   // у дров і порядку смуги немає — рядок «легше» там був би неправдою
-  // GAME-338: «чому» сяк-так — рядок на дошці під результатом (лише knots і fire; решта причин не має). Живе, поки відкрита дошка: у сейв не пишемо.
-  const [reasons, setReasons] = useState<Partial<Record<RoutineId, string | undefined>>>({});
+  // GAME-338: «чому» сяк-так — рядок на дошці під результатом (лише knots і fire; решта причин не має). GAME-354: тепер пишемо в сейв (reasons) — інакше після місії сусіда «Чому» зникало.
+  const [reasons, setReasons] = useState<Partial<Record<RoutineId, string | undefined>>>(() => (saved?.reasons ?? {}) as Partial<Record<RoutineId, string>>);   // GAME-354: «Чому» — із сейву, бо дошка перемонтується після місії сусіда
   const finish = (id: RoutineId, outcome: Outcome, more: Partial<typeof facts> = {}, why: string | null = null) => {
     setReasons((r) => ({ ...r, [id]: why !== null && outcome === 'scrappy' ? why : undefined }));
     setDay((d) => recordResult(d, id, outcome));
@@ -185,7 +185,8 @@ export function CampRoutines({ t, weather, seed, onFrame, devices: devices0 = {}
   const nightFacts: NightFacts = deviceFacts(devices, { results: dayNow.results, litLanterns: facts.lit, dryLogs: facts.dryLogs, water: facts.water, fish: facts.fish, bitterBerries: facts.bitter, berries: facts.berries, foodOutside: facts.foodOut, emptyRounds: emptyRounds(day).length, weather, ...extra });
 
   // GAME-314: на дошці (не посеред роботи) і в ніч — у сейв; так результати переживають закриту панель і перезавантаження.
-  const boardJson = JSON.stringify({ round, picks: day.picks, results: day.results, facts, devices });
+  const keptReasons = Object.fromEntries(Object.entries(reasons).filter(([id, v]) => v !== undefined && dayNow.results[id as RoutineId] === 'scrappy'));   // лише для чинного «сяк-так»
+  const boardJson = JSON.stringify({ round, picks: day.picks, results: day.results, facts, devices, ...(Object.keys(keptReasons).length > 0 ? { reasons: keptReasons } : {}) });
   useEffect(() => { if (phase !== 'work') onSave?.(JSON.parse(boardJson) as CampBoardSave); }, [boardJson, phase]);
 
   const nightNow = phase === 'night';
@@ -201,7 +202,7 @@ export function CampRoutines({ t, weather, seed, onFrame, devices: devices0 = {}
           ))}
         </ul>
         <p class="ui-camp-note" data-ui="night-morning">{t('night.morning')}</p>
-        {onSummary && <button type="button" class="ui-btn ui-camp-big" data-ui="camp-summary" onClick={onSummary}>{t('sd.toSummary')}</button>}
+        {onSummary && <div class="ui-camp-row ui-camp-foot" data-ui="camp-summary-foot"><button type="button" class="ui-btn ui-camp-big" data-ui="camp-summary" onClick={onSummary}>{t('sd.toSummary')}</button></div>}   {/* GAME-354: липкий низ — при багатьох слідах кнопка не тікає за екран */}
       </div>
     );
   }
@@ -212,6 +213,7 @@ export function CampRoutines({ t, weather, seed, onFrame, devices: devices0 = {}
         <h2>{t(`camp.routine.${active}` as Key)}</h2>
         {eased && <p class="ui-camp-note" data-ui="camp-help">{t('camp.help')}</p>}
         {active in MIN_WORK && !ok(active as keyof typeof MIN_WORK) && <p class="ui-camp-note" data-ui="camp-more">{more(active as keyof typeof MIN_WORK)}</p>}
+        {active === 'fish' && ok('fish') && <p class="ui-camp-note" data-ui="camp-more-slot" aria-hidden="true" style={{ visibility: 'hidden' }}>{t('camp.more')}</p>}   {/* GAME-354: місце рядка лишається — «Тримай вудку» не стрибає, коли рядок зникає */}
         {active === 'water' && (
           <section class="ui-camp-work">
             <p data-ui="water-level" data-level={Math.round(water.level * 100)}>{`${t('camp.water.level')}: ${Math.round(water.level * 100)} %`}</p>
