@@ -85,17 +85,18 @@ export const SAMPLE_TRANSPORT = 'transport.car';
 export const sampleHeroes = <T extends { readonly profileKey: string; readonly transportKey: string; readonly animalKey: string | null }>(all: readonly T[]): readonly T[] =>
   all.filter((c) => c.profileKey === SAMPLE_PROFILE && c.transportKey === SAMPLE_TRANSPORT && c.animalKey === null);
 
-/** GAME-350/351 · що показує зразковий день ПІСЛЯ ночі: ранок «згортаємо табір» (strike) → дорога додому (road-home) → підсумок (summary). 'day' — ніч ще не зіграно.
- *  Порядок етапів — ЄДИНЕ місце, що його знає: масив `AFTER_NIGHT`. Етап R3 (прихід додому, `home`) вставляється ПІСЛЯ 'road-home' одним рядком у цей масив. */
-export type DayStage = 'day' | 'strike' | 'road-home' | 'summary';
+/** GAME-350/351/352 · що показує зразковий день ПІСЛЯ ночі: ранок «згортаємо табір» (strike) → дорога додому (road-home) → прихід додому (home) → кінець епізоду (summary). 'day' — ніч ще не зіграно.
+ *  Порядок етапів — ЄДИНЕ місце, що його знає: масив `AFTER_NIGHT`. */
+export type DayStage = 'day' | 'strike' | 'road-home' | 'home' | 'summary';
 /** Що вже відомо про етапи після ночі: ранок (game.strike) і результат дороги додому (останній `last` міні-гри mg.drive-home; немає — не їхали). */
-export interface AfterNight { readonly strike: StrikeSave | undefined; readonly roadHome: string | null | undefined }
+export interface AfterNight { readonly strike: StrikeSave | undefined; readonly roadHome: string | null | undefined; readonly home?: boolean | undefined }
 const AFTER_NIGHT: readonly { readonly stage: Exclude<DayStage, 'day' | 'summary'>; readonly done: (a: AfterNight) => boolean }[] = [
   { stage: 'strike', done: (a) => a.strike?.closed === true },
   { stage: 'road-home', done: (a) => typeof a.roadHome === 'string' },
+  { stage: 'home', done: (a) => a.home === true },
 ];
-export const dayStage = (goal: SampleGoal | null, strike: StrikeSave | undefined, roadHome?: string | null): DayStage =>
-  goal !== 'done' ? 'day' : (AFTER_NIGHT.find((s) => !s.done({ strike, roadHome }))?.stage ?? 'summary');
+export const dayStage = (goal: SampleGoal | null, strike: StrikeSave | undefined, roadHome?: string | null, home?: boolean): DayStage =>
+  goal !== 'done' ? 'day' : (AFTER_NIGHT.find((s) => !s.done({ strike, roadHome, home }))?.stage ?? 'summary');
 
 /**
  * GAME-353 · зразковий день ПОЧИНАЄТЬСЯ вдома: ранок (речі з контейнерів), крамниця (намет, спальник, ліхтар за гроші), «Багажник» — і лише потім дорога.

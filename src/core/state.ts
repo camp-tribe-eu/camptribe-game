@@ -120,6 +120,8 @@ export interface GameState {
   readonly campBoard?: CampBoardSave;
   /** GAME-350: ранок «згортаємо табір» — результати справ і «закрито». Поля немає — ранку ще не грали (тотожно, міграції не треба). Пише лише команда SaveStrike. */
   readonly strike?: StrikeSave;
+  /** GAME-352: родина дійшла додому (сцена «вдома» пройдена) — далі лише кінцева картка епізоду. Поля немає — ще в дорозі (тотожно, міграції не треба). Пише лише команда SeeHome. */
+  readonly homeSeen?: boolean;
 }
 
 export const REJECT_CODES = [

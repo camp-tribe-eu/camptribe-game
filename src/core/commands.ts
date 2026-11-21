@@ -81,7 +81,9 @@ export type Command =
   /** GAME-314: стан дошки рутин табору (src/core/camp-board.ts) у сейв — дошка не губиться, коли панель закрито. Не хід бота. */
   | { readonly type: 'SaveCampBoard'; readonly commandId: string; readonly board: CampBoardSave }
   /** GAME-350: ранок «згортаємо табір» (src/core/camp-strike.ts) у сейв — результати справ і «закрито». Не хід бота. */
-  | { readonly type: 'SaveStrike'; readonly commandId: string; readonly strike: StrikeSave };
+  | { readonly type: 'SaveStrike'; readonly commandId: string; readonly strike: StrikeSave }
+  /** GAME-352: сцену «вдома» пройдено — запам'ятати, щоб перезавантаження після приходу вело на кінцеву картку, а не назад у дорогу. Не хід бота. */
+  | { readonly type: 'SeeHome'; readonly commandId: string };
 
 /** Підтверджений факт (CR-031). Причина — commandId команди, що його спричинила. */
 export type GameEvent =
@@ -273,6 +275,11 @@ function apply(cmd: Command, d: Draft, defs: CoreDefs, guard: Safeguards, today:
       if (strikeError(cmd.strike) !== null) return 'INVALID_COMMAND';
       if (!d.player) return 'NO_CHARACTER';
       d.strike = cmd.strike;
+      return null;
+    }
+    case 'SeeHome': {
+      if (!d.player) return 'NO_CHARACTER';
+      d.homeSeen = true;
       return null;
     }
     case 'RestUntilEvening': {
@@ -655,6 +662,7 @@ export function dispatch(state: GameState, cmd: Command, defs: CoreDefs, guard: 
     ...(state.minigames !== undefined ? { minigames: state.minigames } : {}),
     ...(state.campBoard !== undefined ? { campBoard: state.campBoard } : {}),
     ...(state.strike !== undefined ? { strike: state.strike } : {}),
+    ...(state.homeSeen !== undefined ? { homeSeen: state.homeSeen } : {}),
   };
   const code = apply(cmd, draft, defs, guard, today, weather, now);
   // Стан спорядження — лише для того, що в руках (продали останній — запис зникає), і лише відхилення від нового.

@@ -731,6 +731,12 @@ for (const o of ORIENTATIONS) {
       await tapIt(page, '[data-ui="mg-close"]');
       await expect.poll(async () => ((await core2(page)).game as unknown as { minigames?: Record<string, { last: string; consequence: string }> }).minigames?.['mg.drive-home'], { message: 'дорогу додому записано в сейв гри' }).toMatchObject({ last: 'scrappy', consequence: 'home.late' });
       expect(((await core2(page)).game.flags as string[]).filter((f) => f.startsWith('f.arrival-')), 'дорога додому не чіпає f.arrival-*').toEqual([`f.arrival-${arrival}`]);
+      // GAME-352: після дороги — сцена «вдома» (два дотики), «вдома» лягає в сейв ядра, і лише тоді кінцева картка епізоду.
+      await expect(page.locator('[data-ui="sd-home"]'), 'GAME-352: після дороги додому — сцена вдома').toBeVisible();
+      await expect(page.locator('[data-ui="sd-summary"]')).toHaveCount(0);
+      await tapIt(page, '[data-ui="sd-home-next"]');
+      await tapIt(page, '[data-ui="sd-home-next"]');
+      await expect.poll(async () => ((await core2(page)).game as unknown as { homeSeen?: boolean }).homeSeen, { message: 'GAME-352: «вдома» записано в сейв ядра' }).toBe(true);
       const sum = page.locator('[data-ui="sd-summary"]');
       await expect(sum).toBeVisible();
       await expect(sum).toHaveAttribute('data-arrival', arrival);

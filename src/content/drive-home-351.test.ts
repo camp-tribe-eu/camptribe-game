@@ -202,10 +202,11 @@ describe('GAME-351 · порядок етапів і сейв', () => {
     expect(dayStage('done', { closed: false, results: { tent: 'good' } }, 'good')).toBe('strike');
     expect(dayStage('done', closed, null)).toBe('road-home');
     expect(dayStage('done', closed)).toBe('road-home');
-    for (const o of ['good', 'fine', 'scrappy']) expect(dayStage('done', closed, o), `результат ${o}`).toBe('summary');
+    // GAME-352: після дороги тепер сцена «вдома», і лише після неї (home=true) кінцева картка.
+    for (const o of ['good', 'fine', 'scrappy']) { expect(dayStage('done', closed, o), `результат ${o}`).toBe('home'); expect(dayStage('done', closed, o, true), `результат ${o}, вдома`).toBe('summary'); }
   });
   it('поганий результат (пізно й сонні) не блокує: scrappy веде в підсумок так само, як good', () => {
-    expect(dayStage('done', closed, 'scrappy')).toBe(dayStage('done', closed, 'good'));
+    expect(dayStage('done', closed, 'scrappy', true)).toBe(dayStage('done', closed, 'good', true));
   });
   const DEFS = { ...SKILL_DEFS, minigames: MINIGAME_DEFS };
   const start = () => playStory([DRIVER], initialState(50_000), SKILL_DEFS);

@@ -169,6 +169,8 @@ function shapeError(sim: unknown): string | null {
   if (game.campBoard !== undefined && boardError(game.campBoard) !== null) return 'game: campBoard';
   // Ранок «згортаємо табір» (GAME-350): необов'язкове поле; є — форма й межі з camp-strike.
   if (game.strike !== undefined && strikeError(game.strike) !== null) return 'game: strike';
+  // Прихід додому (GAME-352): необов'язковий прапорець «сцену пройдено»; є — лише `true` (так пише лише ядро).
+  if (game.homeSeen !== undefined && game.homeSeen !== true) return 'game: homeSeen';
   // Дружба (GAME-230): поле необов'язкове (сейви до GAME-230 його не мають); є — очки й дні цілі ≥ 0 (очки ≤ стелі), `seen` — відсортовані рядки без повторів (так пише лише ядро).
   const fr = game.friend;
   if (fr !== undefined && (!isObj(fr) || !isObj(fr.pts) || !isObj(fr.gift) || !sortedUniq(fr.seen)
