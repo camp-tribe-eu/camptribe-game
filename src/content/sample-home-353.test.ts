@@ -170,3 +170,10 @@ describe('GAME-353: ?skipHome=1 (лише e2e) — як до картки', () =
     expect(g(b).inventory['item.tent']).toBe(1);
   });
 });
+
+// За рецензією: до створення героя (холодний старт) — це вже фаза дому, а не табір. Мутація (перевірено): прибрати `g.player === null ||` → червоне.
+describe('GAME-353 · фаза дому до героя', () => {
+  it('без героя й без дороги — фаза дому', () => {
+    expect(sampleHomePhase({ player: null, minigames: {} } as never)).toBe(true);
+  });
+});
