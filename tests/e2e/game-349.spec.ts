@@ -46,6 +46,9 @@ test('GAME-349 · «Вогонь» на дошці каже про вогкі д
   await mount(page, { woodpile: { care: 1 } });   // сухі
   await expect(page.locator('[data-ui="camp-routine"][data-id="fire"]')).toBeVisible();
   await expect(page.locator('[data-ui="fire-wet-board"]')).toHaveCount(0);
+  // Сам текст рядка теж: із сухими — звичайний підпис, без «вогкі» (мітка й текст мають різні умови — перевіряємо обидва).
+  await expect(page.locator('[data-ui="camp-routine"][data-id="fire"]')).not.toContainText('вогкі');
+  await expect(page.locator('[data-ui="camp-routine"][data-id="fire"]')).toContainText('Вечеря й вечір біля вогню');
 });
 
 for (const vp of VIEWPORTS) {
