@@ -14,3 +14,11 @@ export const waitGameReady = (page: Page, timeout = 30_000): Promise<unknown> =>
     null,
     { timeout },
   );
+
+/** GAME-346: свіжий зразок спершу показує кадр «хто ми й куди їдемо»; тести, що йдуть далі, закривають його одним дотиком (його наявність доводить game-342). */
+export const skipSampleIntro = async (page: Page): Promise<void> => {
+  const go = page.locator('[data-ui="sample-intro-go"]');
+  await go.waitFor({ state: 'visible', timeout: 15_000 });
+  await go.click();
+  await go.waitFor({ state: 'hidden' });
+};

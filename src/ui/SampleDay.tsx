@@ -46,6 +46,20 @@ export interface SamplePort {
   /** GAME-335: яка рутина зараз у роботі — виконавець стоїть на її місці на мапі. */
   working(id: RoutineId | null): void;
   subscribe(l: () => void): () => void;
+  /** GAME-346: холодний старт — кадр «хто ми й куди їдемо» перед першою подією дороги, поки гравець його не закрив (+1 дотик). */
+  intro?(): boolean;
+  introDone?(): void;
+}
+
+/** GAME-346: один кадр контексту перед першою подією дороги — без нього зразок відкривався подією «Подорож» із невідомими людьми. */
+export function SampleIntro({ t, done }: { t: (k: Key) => string; done: () => void }) {
+  return (
+    <div class="ui-overlay ui-camp" style={{ zIndex: 60 }} data-ui="sample-intro" role="dialog" aria-labelledby="sd-intro-title">
+      <h2 id="sd-intro-title">{t('sd.intro.title')}</h2>
+      <p class="ui-camp-note" data-ui="sample-intro-text">{t('sd.intro.text')}</p>
+      <button type="button" class="ui-btn ui-camp-big" data-ui="sample-intro-go" onClick={done}>{t('sd.intro.go')}</button>
+    </div>
+  );
 }
 
 const ARROWS: Readonly<Record<DriveStep, string>> = { forward: '▲', back: '▼', left: '◀', right: '▶' };
@@ -139,6 +153,7 @@ export function SampleDay({ port, t, lang, onBoard }: { port: SamplePort; t: (k:
     onBoard(); setMounted(true); setBoardOpen(true);
   }, [req.n]);
   useEffect(() => { if (fresh.id !== null) setFresh({ id: null, n: fresh.n }); }, [fresh.n]);
+  if (port.intro?.() === true) return <SampleIntro t={t} done={() => port.introDone?.()} />;
   if (stage === 'off') return null;
   const text = (id: string): string => { const v = ct(lang, id); return v.startsWith(MISSING_MARK) ? t(id as Key) : v; };
   const lane = port.lane();

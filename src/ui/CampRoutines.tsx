@@ -4,7 +4,7 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
 import type { Key } from '../i18n';
 import type { Weather } from '../core/weather';
-import { ROUNDS, ROUTINES, ROUTINE_IDS, MIN_WORK, addPick, awayIn, campBusy, canFinish, addWork, workLeft, emptyRounds, isDone, minutesLeft, nightOpen, helpFor, recordResult, startCampDay, whyNot, type CampDay, type Round, type RoutineId } from '../content/camp-day';
+import { BOARD_LOCK_MS, nextRound, stepBoardLock, ROUTINES, ROUTINE_IDS, MIN_WORK, addPick, awayIn, campBusy, canFinish, addWork, workLeft, emptyRounds, isDone, minutesLeft, nightOpen, helpFor, recordResult, startCampDay, whyNot, type CampDay, type Round, type RoutineId } from '../content/camp-day';
 import { nightOf, type NightBeat, type NightFacts } from '../content/camp-night';
 import { deviceFacts, deviceFor, statusOf, tend, withDevices, type Devices } from '../content/camp-devices';
 import { type Difficulty, type Outcome } from '../content/minigame';
@@ -82,6 +82,10 @@ export function CampRoutines({ t, weather, seed, onFrame, devices: devices0 = {}
   const [day, setDay] = useState<CampDay>(() => (saved ? { picks: saved.picks as CampDay['picks'], results: saved.results as CampDay['results'] } : startCampDay()));
   const dayNow = withDevices(day, devices);
   const [round, setRound] = useState<Round>(saved?.round ?? 'morning');
+  // GAME-346: частина дня змінюється лише дотиком «Далі»; після повернення з роботи кнопка мить зачинена (кадри), а після кроку дошка пише, що саме сталось.
+  const [locked, setLocked] = useState(true);
+  const lock = useRef(BOARD_LOCK_MS);
+  const [cue, setCue] = useState<Round | null>(null);
   const [phase, setPhase] = useState<Phase>('board');
   const [active, setActive] = useState<RoutineId | null>(null);
   const [water, setWater] = useState<WaterState>(() => startWater(seed));
@@ -118,11 +122,13 @@ export function CampRoutines({ t, weather, seed, onFrame, devices: devices0 = {}
     setFacts((f) => ({ ...f, ...more }));
     setActive(null);
     setPhase('board');
+    lock.current = BOARD_LOCK_MS; setLocked(true);
   };
 
   // Крок кадру: тільки активна робота, і лише та, що справді йде від часу.
   const tick = useRef<(dtMs: number) => void>(() => undefined);
   tick.current = (dtMs: number) => {
+    if (lock.current > 0) { lock.current = stepBoardLock(lock.current, dtMs); if (lock.current === 0) setLocked(false); }
     if (phase !== 'work' || active === null || !live) return;
     ms.current = addWork(ms.current, dtMs);
     setSec(Math.floor(ms.current / 1000));
@@ -142,6 +148,7 @@ export function CampRoutines({ t, weather, seed, onFrame, devices: devices0 = {}
   const open = (id: RoutineId) => {
     if (whyNot(dayNow, id, round) !== null) return;
     setDay((d) => addPick(d, id, round));
+    setCue(null);
     setActive(id);
     setPhase('work');
     setActs(0); setSec(0); ms.current = 0;
@@ -370,6 +377,7 @@ export function CampRoutines({ t, weather, seed, onFrame, devices: devices0 = {}
     <div class="ui-overlay ui-camp" data-ui="camp-board" data-round={round} data-left={minutesLeft(day)}>
       <h2>{t('camp.title')}</h2>
       <p class="ui-camp-note" data-ui="camp-left">{`${t(`camp.round.${round}` as Key)} · ${t('camp.left')}: ${minutesLeft(day)}`}</p>
+      {cue !== null && <p class="ui-camp-note" data-ui="camp-round-cue" data-round={cue} role="status">{`${t('camp.round.cue')} ${t(`camp.round.${cue}` as Key)}`}</p>}
       <p class="ui-camp-note" data-ui="camp-skip">{t('camp.skip')}</p>
       <ul class="ui-camp-list">
         {ROUTINE_IDS.map((id) => {
@@ -398,8 +406,8 @@ export function CampRoutines({ t, weather, seed, onFrame, devices: devices0 = {}
         {busy.length === 0 ? t('camp.alone') : `${t('camp.busy')}: ${busy.map((h) => `${t(`camp.owner.${h.member}` as Key)} — ${t(`camp.job.${h.job}` as Key)}`).join(', ')}`}
       </p>
       <div class="ui-camp-row ui-camp-foot" data-ui="camp-foot">
-        <button type="button" class="ui-btn ui-camp-big" data-ui="camp-next" disabled={round === 'evening'}
-          onClick={() => setRound((r) => ROUNDS[Math.min(ROUNDS.length - 1, ROUNDS.indexOf(r) + 1)] as Round)}>{t('camp.next')}</button>
+        <button type="button" class="ui-btn ui-camp-big" data-ui="camp-next" disabled={round === 'evening' || locked}
+          onClick={() => { if (locked) return; setRound(nextRound(round)); setCue(nextRound(round)); }}>{t('camp.next')}</button>
         <button type="button" class="ui-btn ui-camp-big" data-ui="camp-to-night" disabled={!nightOpen(round)} onClick={() => setPhase('night')}>{t('camp.night')}</button>
       </div>
     </div>

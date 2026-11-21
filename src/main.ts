@@ -451,6 +451,8 @@ const sampleStage = (): SampleStage => {
 };
 /** GAME-342: зразковий день не веде гравця через ☰ крок за кроком (герой, пролог, крамниця, збори: ~17 дотиків) — свіжий день сам проходить ті самі кроки до виїзду.
  *  Це ТІ САМІ наміри ☰ (storyOffer → intents), у тому ж порядку «що далі» (nextAction); стан виходить такий самий, як після ручного проходу. Не свіжий день (сейв, «Почати знову» вже за дорогою) не чіпається. */
+/** GAME-346: кадр «хто ми й куди їдемо» ще не закрито (лише свіжий холодний старт; перезавантаження посеред дороги покаже його ще раз — це дешево й чесно). */
+let sampleIntroOpen = false;
 function sampleQuickStart(): void {
   const view = { ...viewOf(), mapFirst: false };
   const pick = (): string | undefined => {
@@ -470,6 +472,7 @@ function sampleQuickStart(): void {
   // GAME-342 (закон 4): швидкий старт, що став не на дорозі, не мовчить — тест читає probe.sampleQuickStart, консоль каже де застряг.
   const at = bridge.state.game.player?.locationId ?? null;
   probe.sampleQuickStart = at === 'loc.road' ? 'ok' : 'stuck';
+  if (at === 'loc.road') { sampleIntroOpen = true; storyChanged(); }   // GAME-346: кадр контексту перед першою подією дороги
   if (at !== 'loc.road') console.warn(`sampleQuickStart: stuck at ${String(at)} (dialogue: ${String(bridge.state.game.dialogue?.node ?? null)})`);
 }
 function sampleOpenDrive(): void {
@@ -508,6 +511,8 @@ const stationPosts = (): ReturnType<typeof postsOf> => {
 const reportGiver = (): string | null => sampleReportGiver(bridge.state.game, sampleOn && sampleGoal(bridge.state.game.flags, playedScene(STORM_SCENE)) !== 'done');
 const samplePort: SamplePort = {
   stage: sampleStage,
+  intro: () => sampleIntroOpen,
+  introDone: () => { sampleIntroOpen = false; storyChanged(); },
   request: () => stationReq,
   working: (id) => { stationWork = id; },
   lane: () => laneIdFor(bridge.state.game.flags),

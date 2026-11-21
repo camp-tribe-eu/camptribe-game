@@ -72,6 +72,8 @@ export function stepEmbers(s0: EmberState, i: EmberInput, d: Difficulty = NORMAL
   const s = i.kind === 'act' ? { ...s0, acts: s0.acts + 1 } : s0;
   if (i.kind === 'act') {
     const gain = s.dry ? 1 : WET_WOOD;
+    // GAME-346: дрова, підкинуті, поки попередні ще димлять, нічого не збивають і дим не подовжують — нетерплячий тап не гасить вогонь у нуль.
+    if (i.act === 'wood' && s.smokeMs > 0) return { state: s, event: 'wood' };
     if (i.act === 'wood') return { state: { ...s, heat: Math.min(1, Math.max(0, s.heat - SMOKE_DROP)), smokeMs: SMOKE_MS * (s.dry ? 1 : 2), }, event: 'wood' };
     if (i.act === 'blow') return { state: { ...s, heat: Math.min(1, s.heat + BLOW_GAIN * gain) }, event: 'blow' };
     return { state: { ...s, heat: s.heat + (RAKE_TO - s.heat) * RAKE_PULL }, event: 'rake' };
