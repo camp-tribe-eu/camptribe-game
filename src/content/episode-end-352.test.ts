@@ -46,13 +46,13 @@ describe('кінцева картка: рядок від кожної ланки
   });
   it('ланка залежить від свого входу: змінили вхід — змінився саме її рядок', () => {
     expect(roughCount(CALM), 'вхід ночі справді різний').toBeLessThan(roughCount(NIGHT_FACTS));
-    const base = new Map(recapLines(FULL, tu).map((l) => [l.id, l.text]));
+    const base = new Map<string, string>(recapLines(FULL, tu).map((l) => [l.id, l.text]));
     const changed: Record<string, Partial<RecapInput>> = {
       arrival: { flags: ['f.arrival-late'] }, pitch: { pitchName: 'Берег' }, missions: { flags: ['f.arrival-early', ...MISSIONS.map((m) => m.doneFlag)] },
       night: { night: NIGHT_FACTS }, clean: { strike: CLOSED('scrappy') }, road: { road: 'scrappy' }, wallet: { walletText: 'Гаманець: 7' },
     };
     for (const [id, over] of Object.entries(changed)) {
-      const now = new Map(recapLines({ ...FULL, ...over }, tu).map((l) => [l.id, l.text]));
+      const now = new Map<string, string>(recapLines({ ...FULL, ...over }, tu).map((l) => [l.id, l.text]));
       expect(now.get(id), `${id} реагує на свій вхід`).not.toBe(base.get(id));
     }
   });
