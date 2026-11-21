@@ -48,7 +48,7 @@ w.__mountRoadHome = (o = {}) => {
     request: () => ({ id: null, n: 0 }), working: () => undefined,
     strike: () => CLOSED, saveStrike: () => undefined,
     roadHome: () => (session !== null && session.run.phase !== 'closed' ? null : roadHomeResult(w.__results)),
-    restart: () => Promise.resolve(), subscribe: (l) => { ls.add(l); return () => { ls.delete(l); }; },
+    homeSeen: () => true, seeHome: () => undefined, restart: () => Promise.resolve(), subscribe: (l) => { ls.add(l); return () => { ls.delete(l); }; },
   };
   const paint = (): void => {
     if (session !== null && session.run.phase === 'closed') session = null;

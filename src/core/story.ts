@@ -87,6 +87,8 @@ export interface StoryDraft {
   campBoard?: CampBoardSave;
   /** GAME-350: див. GameState.strike. */
   strike?: StrikeSave;
+  /** GAME-352: див. GameState.homeSeen. */
+  homeSeen?: boolean;
 }
 
 const own = <T>(o: Readonly<Record<string, T>>, k: string): T | undefined => (Object.hasOwn(o, k) ? o[k] : undefined);

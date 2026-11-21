@@ -172,7 +172,8 @@ describe('етап дня після ночі', () => {
     expect(dayStage('done', { closed: false, results: { tent: 'good' } })).toBe('strike');
     // GAME-351: після закритого ранку йде дорога додому, і лише потім підсумок (повний порядок — drive-home-351.test.ts).
     expect(dayStage('done', { closed: true, results: all('good') })).toBe('road-home');
-    expect(dayStage('done', { closed: true, results: all('good') }, 'fine')).toBe('summary');
+    expect(dayStage('done', { closed: true, results: all('good') }, 'fine')).toBe('home');   // GAME-352: між дорогою і підсумком — «вдома»
+    expect(dayStage('done', { closed: true, results: all('good') }, 'fine', true)).toBe('summary');
   });
 });
 
