@@ -14,4 +14,8 @@ describe('GAME-354 · camp-board reasons', () => {
     expect(boardError({ ...base, reasons: { knots: 7 } })).toBe('reasons');
     expect(boardError({ ...base, reasons: 'x' })).toBe('reasons');
   });
+  // За рецензією: причина належить своїй справі. Мутація (перевірено): прибрати перевірку префікса в boardError → червоне.
+  it('причина чужої справи (порядок біля «Вузлів») — відхилено', () => {
+    expect(boardError({ ...base, reasons: { knots: 'camp.reason.tidy.food' } })).toBe('reasons');
+  });
 });
