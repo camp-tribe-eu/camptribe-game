@@ -32,7 +32,17 @@ const SAMPLE_CAMP_HIDDEN: readonly OfferAction['kind'][] = ['visit', 'sleep', 'w
 const SAMPLE_SKIPS: readonly OfferAction['kind'][] = ['sleep', 'wait', 'rest'];
 export const sampleActions = (actions: readonly OfferAction[], sample: boolean): readonly OfferAction[] => (sample ? actions.filter((a) => !SAMPLE_SKIPS.includes(a.kind)) : actions);
 export const inSampleCamp = (sample: boolean, locationKey: string | null): boolean => sample && locationKey === SAMPLE_CAMP_LOCATION;
-export const sampleMenuActions = (actions: readonly OfferAction[], sampleCamp: boolean): readonly OfferAction[] => (sampleCamp ? actions.filter((a) => !SAMPLE_CAMP_HIDDEN.includes(a.kind)) : actions);
+export const sampleMenuActions = (actions: readonly OfferAction[], sampleCamp: boolean, sampleRoad = false): readonly OfferAction[] =>
+  (sampleCamp ? actions.filter((a) => !SAMPLE_CAMP_HIDDEN.includes(a.kind)) : sampleRoad ? actions.filter((a) => !SAMPLE_ROAD_HIDDEN.includes(a.kind) && !(a.kind === 'visit' && a.key !== SAMPLE_CAMP_LOCATION)) : actions);
+
+/**
+ * GAME-349 · зразковий день, зупинка на дорозі (після міні-гри чи пропуску): ☰ показує лише наступний справжній крок — «Завершити: У дорогу».
+ * «Піти: Дім/Крамниця» (у табір — лишається, це крок після «Завершити») і «Висушити: …» тут нічого не ведуть (день уже в дорозі), а «Зробити» старої хвилі розділу 1 («Поправити багаж», «Звірити маршрут»)
+ * після пропуску дороги ставало рекомендованою дією й відсувало «Завершити» на п'яте місце (у ландшафті — під згин). «Завершити» закриває ці справи саме.
+ */
+export const SAMPLE_ROAD_LOCATION = 'loc.road';
+const SAMPLE_ROAD_HIDDEN: readonly OfferAction['kind'][] = ['dry', 'task'];   // «Піти» — окремо: лишається лише в табір (єдиний шлях далі)
+export const inSampleRoad = (sample: boolean, locationKey: string | null): boolean => sample && locationKey === SAMPLE_ROAD_LOCATION;
 
 /** GAME-325 · зразковий день: підказка «Відкрий ☰, щоб почати» — поки день не почався (етап create), а не лише поки не вперше відкрито ☰ (прапор hintSeen переживає перезавантаження й «Почати знову»). */
 export const startHintOn = (sample: boolean, hintSeen: boolean): boolean => sample || !hintSeen;

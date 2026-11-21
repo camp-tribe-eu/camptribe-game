@@ -9,7 +9,7 @@ import { trapTab } from './focus-trap';
 import { EntriesBook, JournalBook, SkillsBook, TravelerCard } from './JournalBook';
 import { Portrait, type PortraitLookup } from './Portrait';
 import { sampleHeroes } from '../content/sample-day';
-import { boardRec, inSampleCamp, nextAction, offerFocusKey, sampleActions, sampleActionsFirst, sampleMenuActions } from './story-focus';
+import { boardRec, inSampleCamp, inSampleRoad, nextAction, offerFocusKey, sampleActions, sampleActionsFirst, sampleMenuActions } from './story-focus';
 import type { OfferAction, StoryOffer } from './story-types';
 
 const ACT: Readonly<Record<Exclude<OfferAction['kind'], 'choose' | 'continue' | 'cancel'>, Key>> = {
@@ -62,7 +62,7 @@ export function StoryPanel({ offer, lang, t, act, close, portrait, children, foo
   const sceneOnly = focus && !!offer.dialogue;
   // GAME-320: у таборі зразкового дня ☰ без стрибків часу й без цілей/квестів старої гри (story-focus.ts).
   const sampleCamp = inSampleCamp(sceneFocus === true, offer.locationKey);
-  const shown = sampleMenuActions(sampleActions(offer.actions, sceneFocus === true), sampleCamp);
+  const shown = sampleMenuActions(sampleActions(offer.actions, sceneFocus === true), sampleCamp, inSampleRoad(sceneFocus === true, offer.locationKey));
   // GAME-326: у зразку ОДНА рекомендована дія (та, що веде день далі) — перша в списку й підсвічена.
   const rec = focus ? nextAction(shown, offer.goal?.key ?? null) : undefined;
   const menuActions = rec ? [rec, ...shown.filter((a) => a !== rec)] : shown;
