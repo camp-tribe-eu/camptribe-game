@@ -713,7 +713,7 @@ for (const o of ORIENTATIONS) {
       // GAME-350: після ночі — ранок «згортаємо табір» (справжня гра: команда SaveStrike, сейв), і лише тоді підсумок з рядком чистоти.
       await expect(page.locator('[data-ui="camp-strike"]'), 'після ночі ранок, не підсумок').toBeVisible();
       await expect(page.locator('[data-ui="sd-summary"]')).toHaveCount(0);
-      for (const id of ['peg1', 'peg2', 'peg3', 'peg4', 'fold', 'bag', 'tin', 'wrap', 'bottle', 'cap', 'pour1', 'pour2', 'pour3', 'stir', 'feel', 'bags', 'cooler', 'chairs', 'boots', 'shut']) await tapIt(page, `[data-ui="strike-t-${id}"]`);
+      for (const id of ['peg1', 'peg2', 'peg3', 'peg4', 'fold', 'bag', 'tin', 'wrap', 'bottle', 'cap', 'pour1', 'pour2', 'pour3', 'stir', 'feel', 'cooler', 'bags', 'chairs', 'boots', 'shut']) await tapIt(page, `[data-ui="strike-t-${id}"]`);
       await expect.poll(async () => ((await core2(page)).game as unknown as { strike?: { results: Record<string, string> } }).strike?.results, { message: 'усі справи ранку в сейві гри' }).toEqual({ tent: 'good', litter: 'good', fire: 'good', car: 'good' });
       await tapIt(page, '[data-ui="strike-finish"]');
       // GAME-351: після ранку — дорога додому (справжня проводка main.ts: sampleOpenRoadHome → міні-гра → FinishMinigame), пропуск із підтвердженням; і лише тоді підсумок.

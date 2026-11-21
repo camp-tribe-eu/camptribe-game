@@ -4,7 +4,7 @@
 import { useState } from 'preact/hooks';
 import type { Key } from '../i18n';
 import {
-  STRIKE_DEFS, STRIKE_JOBS, allResolved, closeStrike, jobComplete, jobOutcome, startJob, tap, withResult,
+  STRIKE_DEFS, STRIKE_JOBS, allResolved, shownTargets, closeStrike, jobComplete, jobOutcome, startJob, tap, withResult,
   type JobRun, type StrikeJob, type StrikeSave,
 } from '../content/camp-strike';
 
@@ -53,7 +53,7 @@ export function CampStrike({ t, saved, onSave }: CampStrikeProps) {
       </div>
       <p class="ui-camp-note" data-ui="strike-hint">{t(def.hintKey as Key)}</p>
       <div class="ui-camp-row sk-targets" data-ui="strike-targets" data-job={active}>
-        {def.targets.map((tg) => {
+        {shownTargets(active).map((tg) => {
           const taken = run.done.includes(tg.id) || (resolved && tg.decoy !== true);
           return (
             <button key={tg.id} type="button" class="ui-btn sk-target" data-ui={`strike-t-${tg.id}`} data-taken={taken ? 'yes' : 'no'} disabled={taken || resolved} onClick={() => press(tg.id)}>{t(tg.labelKey as Key)}</button>
