@@ -6,6 +6,7 @@ import { PREP_FLAGS, arrivalOf, freePitches, pitchDef, pitchTaken, type NightWea
 import { MISSIONS } from './missions';
 import type { Devices } from './camp-devices';
 import type { NightFacts } from './camp-night';
+import type { StrikeSave } from '../core/camp-strike';
 
 /** Режим зразкового дня вмикає ?sampleDay=1 (test-switches); без нього гра поводиться як раніше. */
 export const STORM: NightWeather = 'storm';
@@ -82,3 +83,8 @@ export const SAMPLE_PROFILE = 'profile.family-teen';
 export const SAMPLE_TRANSPORT = 'transport.car';
 export const sampleHeroes = <T extends { readonly profileKey: string; readonly transportKey: string; readonly animalKey: string | null }>(all: readonly T[]): readonly T[] =>
   all.filter((c) => c.profileKey === SAMPLE_PROFILE && c.transportKey === SAMPLE_TRANSPORT && c.animalKey === null);
+
+/** GAME-350 · що показує зразковий день ПІСЛЯ ночі: ранок «згортаємо табір» (strike) → підсумок (summary). 'day' — ніч ще не зіграно.
+ *  Етапи R2/R3 (дорога додому, прихід додому) вставляються між 'strike' і 'summary': тут єдине місце, що знає порядок. */
+export type DayStage = 'day' | 'strike' | 'summary';
+export const dayStage = (goal: SampleGoal | null, strike: StrikeSave | undefined): DayStage => (goal !== 'done' ? 'day' : strike?.closed === true ? 'summary' : 'strike');

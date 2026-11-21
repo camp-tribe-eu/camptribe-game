@@ -10,7 +10,9 @@ describe('після зразкового дня', () => {
     expect(shell).toContain("{sampleGoalKey !== 'done' && <button type=\"button\" class=\"ui-story-btn\"");
   });
   it('кінець = goal «done»: дошка зникає, підсумок лишається, єдина дія — «Почати знову»', () => {
-    expect(sample).toContain("const ended = port.goal() === 'done';");
+    // GAME-350: «день скінчено» тепер = ніч зіграно (goal «done», його дає dayStage), а далі ранок «згортаємо табір» і лише потім підсумок.
+    expect(sample).toContain('const stageNow = dayStage(port.goal(), port.strike());');
+    expect(sample).toContain("const ended = stageNow !== 'day';");
     expect(sample).toContain('{!boardOpen && !ended && (');
     expect(sample).toContain('{mounted && !ended && (');
     expect(sample).toContain('data-ui="sd-restart" onClick={again}');
