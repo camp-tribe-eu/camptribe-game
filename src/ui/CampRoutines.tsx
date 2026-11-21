@@ -10,7 +10,7 @@ import { deviceFacts, deviceFor, effectiveDryLogs, statusOf, tend, withDevices, 
 import { type Difficulty, type Outcome } from '../content/minigame';
 import type { CampBoardSave } from '../core/camp-board';
 import { STEPS, needSide, startWater, stepWater, waterOutcome, waterScore, type Side, type WaterState } from '../content/water-carry';
-import { LANTERNS, SPOTS, lanternOutcome, litCount, startLanterns, stepLanterns, type LanternState } from '../content/lantern-charge';
+import { LANTERNS, SPOTS, lanternOutcome, sunRate, litCount, startLanterns, stepLanterns, type LanternState } from '../content/lantern-charge';
 import { DISHES, FIRE_WHY_KEY, emberOutcome, fireWhy, smoking, startEmbers, stepEmbers, type EmberAct, type EmberState } from '../content/embers';
 import { BASKET, berryOutcome, berryFacts, enoughBerries, hinted, patchOf, pickBerry, startBerries, type BerryState } from '../content/berries-patch';
 import { COVER, ENOUGH_DRY, LOGS, dryLogs, finishStack, placeLog, startStack, type StackState, type WoodPlace } from '../content/firewood-stack';
@@ -283,8 +283,17 @@ export function CampRoutines({ t, weather, seed, onFrame, devices: devices0 = {}
         )}
         {active === 'lanterns' && (
           <section class="ui-camp-work">
-            <p class="ui-camp-note" data-ui="lantern-rule">{t('camp.lantern.rule')}</p>
-            <p data-ui="lantern-sun" data-spot={lanterns.sun}>{`${t('camp.lantern.sun')}: ${t('camp.lantern.spot')} ${lanterns.sun + 1}`}</p>
+            {sunRate(weather) > 0 ? (
+              <>
+                <p class="ui-camp-note" data-ui="lantern-rule">{t('camp.lantern.rule')}</p>
+                <p data-ui="lantern-sun" data-spot={lanterns.sun}>{`${t('camp.lantern.sun')}: ${t('camp.lantern.spot')} ${lanterns.sun + 1}`}</p>
+              </>
+            ) : (
+              <>
+                <p class="ui-camp-note" data-ui="lantern-rule">{t('camp.lantern.ruleDynamo')}</p>
+                <p data-ui="lantern-nosun">{t('camp.lantern.noSun')}</p>
+              </>
+            )}
             <ul class="ui-camp-list">
               {Array.from({ length: LANTERNS }, (_, l) => (
                 <li key={l} data-ui="lantern" data-i={l} data-charge={Math.round((lanterns.charge[l] ?? 0) * 100)}>
@@ -403,9 +412,9 @@ export function CampRoutines({ t, weather, seed, onFrame, devices: devices0 = {}
               <button type="button" class="ui-btn ui-camp-routine" data-ui="camp-routine" data-id={id} data-owner={def.owner} data-status={status} data-done={isDone(dayNow, id) ? 'yes' : 'no'} data-outcome={out ?? ''} data-why={out === 'scrappy' ? reasons[id] ?? '' : ''} data-blocked={no ?? ''}
                 disabled={no !== null} onClick={() => open(id)}>
                 <b>{`${t(`camp.routine.${id}` as Key)} · ${status === 'hands' ? t(`camp.owner.${def.owner}` as Key) : t(`camp.status.${status}` as Key)}`}</b>
-                <small>{out !== undefined
+                <small data-ui={id === 'fire' && out === undefined && no === null && !logsDry ? 'fire-wet-board' : undefined}>{out !== undefined
                   ? `${t('camp.done')} · ${t(`camp.out.${out}` as Key)}${out === 'scrappy' && reasons[id] ? ` · ${t(reasons[id] as Key)}` : ''}`
-                  : `${no === null ? t(`camp.why.${id}` as Key) : t(`camp.no.${no}` as Key)} · ${def.minutes[0]} ${t('camp.min')}`}</small>
+                  : `${no === null ? t(id === 'fire' && !logsDry ? 'camp.fire.wetBoard' : (`camp.why.${id}` as Key)) : t(`camp.no.${no}` as Key)} · ${def.minutes[0]} ${t('camp.min')}`}</small>   {/* GAME-349: порада про вогкі дрова — ДО входу («Вогонь» одразу записує вибір, назад не вийти); у тому ж рядку, дошка не росте */}
               </button>
               {status === 'low' && dev !== null && (
                 <button type="button" class="ui-btn" data-ui="camp-tend" data-id={id} onClick={() => setDevices((d) => tend(d, dev))}>{t('camp.tend')}</button>

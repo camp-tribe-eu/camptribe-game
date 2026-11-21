@@ -565,6 +565,13 @@
       .ui-camp-work .ui-camp-list:has(> [data-ui="wood-log"]) li > .ui-btn { flex: 0 0 auto; padding: 4px 10px; font-size: 0.65rem; }
       /* GAME-348: у квадраті (1:1) список був би у два стовпчики по 278 px — підпис стискався до нуля; тут дрова в один стовпчик (низький альбом лишає свої два). */
       @media (min-aspect-ratio: 1/1) and (min-height: 501px) { .ui-camp-work .ui-camp-list:has(> [data-ui="wood-log"]) { grid-template-columns: 1fr; } }
+      /* GAME-349: ліхтарі — назва заряду над рядком «4 плями + динамо», щоб у портреті 390×844 влізли всі три ліхтарі й «Далі» без прокрутки. Лише список ліхтарів. */
+      @media (orientation: portrait), (min-height: 501px) {   /* низький альбом (932×430) і так вміщається однією лінією — його не чіпаємо */
+        .ui-camp-work .ui-camp-list:has(> [data-ui="lantern"]) { gap: 4px; }
+        .ui-camp-work .ui-camp-list:has(> [data-ui="lantern"]) li { gap: 4px; }
+        .ui-camp-work .ui-camp-list:has(> [data-ui="lantern"]) li > span { flex: 1 1 100%; }
+        .ui-camp-work .ui-camp-list:has(> [data-ui="lantern"]) li > .ui-btn { flex: 1 1 0; min-width: 0; padding: 4px 6px; font-size: 0.6rem; }
+      }
       .ui-camp-bar { width: min(100%, 320px); height: 14px; border: 2px solid #e8e6e3aa; border-radius: 7px; overflow: hidden; }
       .ui-camp-bar i { display: block; height: 100%; background: #4a7fb0; }
       .ui-camp-tilt { position: relative; width: min(100%, 320px); height: 14px; border-bottom: 2px solid #e8e6e3aa; }

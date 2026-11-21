@@ -102,8 +102,9 @@ export function nightOf(f: NightFacts): { readonly beats: readonly NightBeat[]; 
 
   // РИБА: краща вечеря. Нема — вечеря проста, але вечеря є.
   const fish = did(f, 'fish');
+  // GAME-349: без вогню риба не «на вогні» — окремий слід (лишили на завтра), щоб ніч не сперечалась із «Вогню не було».
   beats.push(fish !== undefined && f.fish >= 2
-    ? { routine: 'fish', id: 'night.fish.supper', severity: 'good' }
+    ? { routine: 'fish', id: fire === undefined ? 'night.fish.supper.cold' : 'night.fish.supper', severity: 'good' }
     : fish !== undefined && f.fish >= 1
       ? { routine: 'fish', id: 'night.fish.one', severity: 'plain' }
       : { routine: 'fish', id: 'night.fish.none', severity: 'plain' });
