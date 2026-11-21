@@ -13,6 +13,8 @@ const VIEWS = [{ side: 'portrait', w: 390, h: 844 }, { side: 'landscape', w: 932
 const SETTINGS_KEY = 'camplife.settings.v1';
 const SHOTS = process.env.GAME_SHOTS === '1' ? 'research/game-291' : '';
 const SCENE = 'dlg.ch2-schengen';
+/** Рамка глуха ~350 мс від появи (ACT_COOLDOWN_MS, GAME-237): дотик у цю мить мовчки губиться — гра так задумана, гравець не тапає за 350 мс. Тест теж не тапає раніше (GAME-356). */
+const DEAF_MS = 450;
 const TAIL = ['wave', 'w1', 'george', 'bottle', 'join', 'j1', 'joined', 'micro', 'trail', 't1', 'mark', 'close-m'];
 const NODES = { sunny: ['open', 'arrive', 'three', ...TAIL], rain: ['open', 'open-rain', 'three', ...TAIL] } as const;
 const PLACEMENT = JSON.parse(readFileSync(new URL('../../art/placement/schengen.json', import.meta.url), 'utf8')) as { objects: { id: string; x: number; y: number; w: number; h: number }[] };
@@ -90,6 +92,8 @@ for (const v of VIEWS) {
       await expect(talk(page)).toBeVisible({ timeout: 6_000 });
       const answers = await talk(page).locator('[data-act]').evaluateAll((els) => els.filter((e) => e.getAttribute('data-act') !== 'cancel').map((e) => e.getAttribute('data-key') ?? ''));
       expect(answers, 'єдина відповідь поїздки').toEqual(['loc.schengen']);
+      // GAME-356: коренева причина перебою на CI — дотик по відповіді в «глухі» 350 мс від появи рамки губиться без сліду (відтворено: дотик у мить появи — 3/3 лишаються в таборі, через 400 мс — 3/3 їдуть).
+      await page.waitForTimeout(DEAF_MS);
       await talk(page).locator('[data-act][data-key="loc.schengen"]').click({ timeout: 5_000 });
       // герой на набережній, мапа Шенгену, сцену відкриває режисер сам
       await expect.poll(async () => (await core(page)).game.player?.locationId, { timeout: 8_000, message: 'поїздка кінчається на набережній' }).toBe('loc.schengen');

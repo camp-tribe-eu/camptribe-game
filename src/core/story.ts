@@ -11,7 +11,7 @@
 // * `requires` квесту-цілі перевіряється в мить переходу.
 import type { FriendState } from './friendship';
 import type { LifeState } from './life';
-import { isNight, minuteOfDay } from './clock';
+import { EVENING, isNight, minuteOfDay } from './clock';
 import { canSleep } from './rest';
 import type { CondDef, EffectDef, GateDef, QuestDef, RewardDef, StoryDefs, WayDef, WhenDef } from './defs';
 import type { GameEvent } from './commands';
@@ -145,12 +145,15 @@ export const eveningPending = (st: Pick<StoryDefs, 'quests'> | undefined, d: { r
 export const canSleepNow = (st: Pick<StoryDefs, 'quests'> | undefined, d: Parameters<typeof canSleep>[0] & { readonly quests: StoryDraft['quests']; readonly slept?: number; readonly chapterStart?: number }, now: number): boolean =>
   canSleep(d, now) && (isNight(now) || !eveningPending(st, d, now));
 
-/** GAME-269 · хвилина доби, до якої «Відпочити до вечора» перемотує час (17:30: ще пів години до 18:00, коли збираються на вечір). */
-export const REST_TO = 17 * 60 + 30;
+/**
+ * GAME-269 · хвилина доби, до якої «Відпочити до вечора» перемотує час. GAME-356: рівно 18:00 (було 17:30) — з 18:00 відчиняється сон і вечірні кроки, тож вікно відпочинку
+ * закінчується там, де починається вечір, і між ними немає «мертвих» пів години (17:30–18:00), коли стрілка вела до вогнища, яке нічого не робить.
+ */
+export const REST_TO = EVENING;
 /** Сцена «Відпочити до вечора» (content/dialogue/rest-evening.json): коротка родинна розмова після перемотування. */
 export const REST_SCENE = 'dlg.rest-evening';
 /**
- * GAME-269 · мертве вікно: у таборі, намет стоїть, до 17:30, жодного обов'язкового кроку, що вже чекає на гравця (відкритий квест без `optional`) чи відкритої справи хвилі,
+ * GAME-269 · мертве вікно: у таборі, намет стоїть, до 18:00 (REST_TO), жодного обов'язкового кроку, що вже чекає на гравця (відкритий квест без `optional`) чи відкритої справи хвилі,
  * і є обов'язковий крок, що чекає свого дня чи вечора (інакше відпочивати нема до чого). Розмова чи сцена в ході — ні.
  */
 export const canRestNow = (st: Pick<StoryDefs, 'quests'> | undefined, d: { readonly player: { readonly locationId: string | null } | null; readonly flags: readonly string[]; readonly quests: StoryDraft['quests']; readonly slept?: number; readonly dialogue?: unknown; readonly wave?: { readonly active?: { readonly tasks: Readonly<Record<string, { readonly outcome: string }>> } | null } | null }, now: number): boolean => {

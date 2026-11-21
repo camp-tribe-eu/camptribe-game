@@ -68,7 +68,7 @@ export type Command =
   | { readonly type: 'Sleep'; readonly commandId: string }
   /** Дочекатися відчинення крамниці (GAME-242): лише в зачиненій крамниці; симуляція перемотує час до 08:00. */
   | { readonly type: 'WaitForShop'; readonly commandId: string }
-  /** Відпочити до вечора (GAME-269): у мертвому вікні дня в таборі; симуляція перемотує час до 17:30, ядро відкриває коротку родинну сцену. Без штрафів. */
+  /** Відпочити до вечора (GAME-269): у мертвому вікні дня в таборі; симуляція перемотує час до 18:00, ядро відкриває коротку родинну сцену. Без штрафів. */
   | { readonly type: 'RestUntilEvening'; readonly commandId: string }
   /** Почати розділ 2 (GAME-286): лише після завершення розділу 1; ставить маркер дня розділу й запускає CH2-ARRIVAL-001. Не хід бота (поза moves()). */
   | { readonly type: 'StartChapter2'; readonly commandId: string }
