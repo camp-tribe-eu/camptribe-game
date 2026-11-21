@@ -151,7 +151,9 @@ describe('ланка 4: пристрій з місії → рутина → ні
     const trap = nightKeys(nightFor(withFlags(a, 'f.camp-fishtrap')));
     expect(Object.keys(devicesFromFlags(['f.camp-fishtrap']))).toEqual(['fish-trap']);
     expect(noTrap).not.toContain('night.fish.supper');
-    expect(trap).toContain('night.fish.supper');
+    expect(noTrap).not.toContain('night.fish.supper.cold');
+    expect(trap).toContain('night.fish.supper.cold');   // GAME-349: у цьому дні вогню не було — риба «на завтра», а не «на вогні»
+    expect(trap).not.toContain('night.fish.supper');
   });
 });
 

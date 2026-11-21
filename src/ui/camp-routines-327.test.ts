@@ -13,7 +13,9 @@ describe('GAME-327 дошка табору', () => {
     expect(src).toMatch(/data-ui="fire-heat"[^\n]*smoking\(embers\)/);
   });
   it('ліхтарі мають правило першим рядком роботи (як ягоди й вогонь)', () => {
-    expect(src).toMatch(/<section class="ui-camp-work">\s*<p class="ui-camp-note" data-ui="lantern-rule">\{t\('camp\.lantern\.rule'\)\}<\/p>\s*<p data-ui="lantern-sun"/);
+    // GAME-349: правило лишається першим рядком роботи в обох гілках (є сонце / сонця немає — дощ)
+    expect(src).toMatch(/<section class="ui-camp-work">\s*\{sunRate\(weather\) > 0 \? \(\s*<>\s*<p class="ui-camp-note" data-ui="lantern-rule">\{t\('camp\.lantern\.rule'\)\}<\/p>\s*<p data-ui="lantern-sun"/);
+    expect(src).toMatch(/\) : \(\s*<>\s*<p class="ui-camp-note" data-ui="lantern-rule">\{t\('camp\.lantern\.ruleDynamo'\)\}<\/p>\s*<p data-ui="lantern-nosun"/);
   });
   it('ключі є в обох мовах', () => {
     for (const k of ['camp.fire.smoke', 'camp.lantern.rule', 'mg.drive.fine', 'sd.goal.wait']) {
