@@ -24,7 +24,11 @@ interface Spec { lang: 'uk' | 'en'; weather: Weather; seed: number; bare?: boole
     document.body.append(host);
   }
   render(null, host);
+  const manual = ((window as unknown as { __cbs?: Set<(dtMs: number) => void> }).__cbs ??= new Set());
+  // GAME-354: ті самі кадрові виклики можна прокрутити з тесту (__frames) — «60 секунд риби» без 60 секунд очікування. Це той самий договір кадру, не окремий таймер.
+  (window as unknown as { __frames: (n: number, dtMs: number) => void }).__frames = (n, dtMs) => { for (let i = 0; i < n; i++) for (const f of [...manual]) f(dtMs); };
   const onFrame = (cb: (dtMs: number) => void): (() => void) => {
+    manual.add(cb);
     let live = true;
     let prev = 0;
     const loop = (now: number) => {
@@ -34,7 +38,7 @@ interface Spec { lang: 'uk' | 'en'; weather: Weather; seed: number; bare?: boole
       requestAnimationFrame(loop);
     };
     requestAnimationFrame(loop);
-    return () => { live = false; };
+    return () => { live = false; manual.delete(cb); };
   };
   // Табір, де вже стоїть верша, але її давно не переносили: дошка має показати «ось-ось закінчиться» і «Доглянути».
   const draw = (live: boolean) => render(<CampRoutines t={(k: Key) => t(s.lang, k)} weather={s.weather} seed={s.seed} onFrame={onFrame} live={live} devices={s.devices ?? (s.bare ? {} : { 'fish-trap': { care: 0.3 } })} />, host);
@@ -57,7 +61,7 @@ interface Spec { lang: 'uk' | 'en'; weather: Weather; seed: number; bare?: boole
 };
 
 /** GAME-323: кінець зразкового дня — справжній SampleDay із портом-пустушкою: goal 'done' → підсумок з єдиною дією «Почати знову» (її виклики лічить window.__restarts). */
-(window as unknown as { __mountSample: (goal: 'day' | 'done') => void }).__mountSample = (goal) => {
+(window as unknown as { __mountSample: (goal: 'day' | 'done', board?: unknown) => void }).__mountSample = (goal, savedBoard) => {
   let host = document.getElementById('harness');
   if (!host) {
     host = document.createElement('div');
@@ -70,7 +74,7 @@ interface Spec { lang: 'uk' | 'en'; weather: Weather; seed: number; bare?: boole
   w.__restarts = 0;
   const port: SamplePort = {
     stage: () => 'day', lane: () => null, neighbours: () => [], report: () => null, goal: () => goal, flags: () => [], moneyCents: () => 0, seed: () => 7, weather: () => 'rain',
-    onFrame: () => () => undefined, driveInDone: () => undefined, board: () => undefined, saveBoard: () => undefined, stormNight: () => undefined,
+    onFrame: () => () => undefined, driveInDone: () => undefined, board: () => savedBoard as never, saveBoard: (b) => { (window as unknown as { __saved?: unknown }).__saved = b; }, stormNight: () => undefined,
     request: () => ({ id: null, n: 0 }), working: () => undefined,
     restart: () => { w.__restarts = (w.__restarts ?? 0) + 1; return Promise.resolve(); }, subscribe: () => () => undefined,
   };

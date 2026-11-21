@@ -14,7 +14,10 @@ export interface CampBoardSave {
   readonly results: Readonly<Record<string, string>>;
   readonly facts: { readonly water: number; readonly dryLogs: number; readonly lit: number; readonly fish: number; readonly bitter: number; readonly berries?: number | undefined; readonly foodOut: boolean };
   readonly devices: Readonly<Record<string, { readonly care: number }>>;
+  /** GAME-354: ключі підписів «Чому:» до «сяк-так» (camp.reason.*) — переживають закриту дошку й місію сусіда; необов'язкове (старий сейв без поля чинний). */
+  readonly reasons?: Readonly<Record<string, string>>;
 }
+const REASON_KEY = /^camp\.reason\.[a-z]+\.[a-z]+$/;
 
 const isObj = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null && !Array.isArray(v);
 const isNum = (v: unknown, max: number): v is number => typeof v === 'number' && Number.isFinite(v) && v >= 0 && v <= max;
@@ -30,5 +33,6 @@ export function boardError(b: unknown): string | null {
   const f = b.facts;
   if (!isObj(f) || !isNum(f.water, 1) || !isNum(f.dryLogs, 64) || !isNum(f.lit, 16) || !isNum(f.fish, 64) || !isNum(f.bitter, 64) || (f.berries !== undefined && !(isNum(f.berries, 64) && Number.isInteger(f.berries))) || typeof f.foodOut !== 'boolean') return 'facts';
   if (!isObj(b.devices) || Object.entries(b.devices).some(([k, v]) => !inList(BOARD_DEVICES, k) || !isObj(v) || !isNum(v.care, 1))) return 'devices';
+  if (b.reasons !== undefined && (!isObj(b.reasons) || Object.entries(b.reasons).some(([k, v]) => !inList(BOARD_ROUTINES, k) || typeof v !== 'string' || !REASON_KEY.test(v)))) return 'reasons';
   return JSON.stringify(b).length > BOARD_MAX_BYTES ? 'size' : null;
 }
