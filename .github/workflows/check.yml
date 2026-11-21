@@ -97,11 +97,16 @@ jobs:
           - { project: e2e-heavy, shard: 10, total: 10 }
           # 05.11: легкий шард 3 із 3 ріс до > 40 хв (розділені story/world GAME-255, нові specs 243/259) і обривався за лімітом job —
           # ліміт не піднімаємо, ділимо на 5 шардів.
-          - { project: e2e, shard: 1, total: 5 }
-          - { project: e2e, shard: 2, total: 5 }
-          - { project: e2e, shard: 3, total: 5 }
-          - { project: e2e, shard: 4, total: 5 }
-          - { project: e2e, shard: 5, total: 5 }
+          # 21.11 (GAME-353): шард 5 із 5 на main ішов уже 35 хв із 40 (story/world/hud), з новими specs епізоду — обрив за лімітом.
+          # Ліміт знову не піднімаємо — 8 шардів.
+          - { project: e2e, shard: 1, total: 8 }
+          - { project: e2e, shard: 2, total: 8 }
+          - { project: e2e, shard: 3, total: 8 }
+          - { project: e2e, shard: 4, total: 8 }
+          - { project: e2e, shard: 5, total: 8 }
+          - { project: e2e, shard: 6, total: 8 }
+          - { project: e2e, shard: 7, total: 8 }
+          - { project: e2e, shard: 8, total: 8 }
     container:
       image: mcr.microsoft.com/playwright:v1.64.1-noble
     steps:
