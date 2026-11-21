@@ -99,4 +99,9 @@ describe('перемикачі у звичайній збірці (GAME-324)', (
     expect(s.seed).toBeUndefined();
     expect(s.sampleDay).toBeUndefined();
   });
+  it('GAME-353: ?skipHome=1 — лише в збірці e2e; у звичайній зразок завжди починається вдома', () => {
+    expect(testSwitches('?sampleDay=1&skipHome=1', 'e2e').skipHome).toBe(true);
+    expect(testSwitches('?sampleDay=1', 'e2e').skipHome).toBeUndefined();
+    expect(testSwitches('?sampleDay=1&skipHome=1', 'production').skipHome).toBeUndefined();
+  });
 });

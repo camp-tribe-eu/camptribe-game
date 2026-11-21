@@ -7,6 +7,7 @@ import { MISSIONS } from './missions';
 import type { Devices } from './camp-devices';
 import type { NightFacts } from './camp-night';
 import type { StrikeSave } from '../core/camp-strike';
+import type { GameState } from '../core/state';
 
 /** Режим зразкового дня вмикає ?sampleDay=1 (test-switches); без нього гра поводиться як раніше. */
 export const STORM: NightWeather = 'storm';
@@ -96,3 +97,18 @@ const AFTER_NIGHT: readonly { readonly stage: Exclude<DayStage, 'day' | 'summary
 ];
 export const dayStage = (goal: SampleGoal | null, strike: StrikeSave | undefined, roadHome?: string | null, home?: boolean): DayStage =>
   goal !== 'done' ? 'day' : (AFTER_NIGHT.find((s) => !s.done({ strike, roadHome, home }))?.stage ?? 'summary');
+
+/**
+ * GAME-353 · зразковий день ПОЧИНАЄТЬСЯ вдома: ранок (речі з контейнерів), крамниця (намет, спальник, ліхтар за гроші), «Багажник» — і лише потім дорога.
+ * Ця фаза живе за СТАНОМ ядра (а не за пам'яттю сторінки), тож перезавантаження посеред дому/крамниці її не скидає: гравець у loc.home / loc.shop (або героя ще нема),
+ * дорогу (mg.drive) ще не їхано. У ній гра поводиться як звичайна мапа-перша (мапи дому й крамниці, об'єкти, багажник); з виїздом на дорогу — як раніше (панель ☰ і табір).
+ */
+export const SAMPLE_HOME_LOCATIONS: readonly string[] = ['loc.home', 'loc.shop'];
+export const SAMPLE_DRIVE_ID = 'mg.drive';
+export const sampleHomePhase = (g: Pick<GameState, 'player' | 'minigames'>): boolean =>
+  g.minigames?.[SAMPLE_DRIVE_ID] === undefined && (g.player === null || SAMPLE_HOME_LOCATIONS.includes(g.player.locationId ?? ''));
+
+/** GAME-353 · швидкий старт тепер доходить лише до порога дому: герой, пролог (три розмовні кроки) — і ST-003 «Крамниця» активний. Решта — руками. */
+export const SAMPLE_HOME_READY_QUEST = 'ST-003';
+export const sampleHomeReady = (g: Pick<GameState, 'player' | 'quests'>): boolean =>
+  g.player?.locationId === 'loc.home' && g.quests[SAMPLE_HOME_READY_QUEST]?.status === 'active';

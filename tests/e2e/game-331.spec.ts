@@ -12,7 +12,7 @@ for (const [name, viewport] of [['portrait', { width: 390, height: 844 }], ['lan
   test.describe(name, () => {
     test.use({ viewport, hasTouch: true });
     test(`зразок: «Нова гра» з паузи = день спочатку (${name})`, async ({ page }) => {
-      await page.goto('/?seed=7&sampleDay=1');
+      await page.goto('/?seed=7&sampleDay=1&skipHome=1');
       await waitGameReady(page);
       expect(await where(page), 'GAME-342: свіжий день одразу на дорозі').toBe('loc.road');
       await page.evaluate((json) => new Promise<void>((resolve, reject) => {

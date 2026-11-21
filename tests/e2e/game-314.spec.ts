@@ -284,7 +284,7 @@ async function depart(page: Page): Promise<string[]> {
   page.on('pageerror', (e) => errors.push(e.message));
   page.on('console', (m) => { if (m.type() === 'error') errors.push(m.text()); });
   await page.addInitScript(WATCH_TOAST);
-  await page.goto('/?seed=7&sampleDay=1');
+  await page.goto('/?seed=7&sampleDay=1&skipHome=1');
   await waitGameReady(page);
   await skipSampleIntro(page);
   // GAME-342: ☰, вибір героя, пролог, крамниця й збори свіжий день проходить сам (sampleQuickStart) — одразу вступ дороги; дотики рахує game-342.spec.
