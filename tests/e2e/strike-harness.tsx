@@ -26,6 +26,7 @@ w.__mountStrike = (o = {}) => {
     stage: () => 'day', lane: () => null, neighbours: () => [], report: () => null, goal: () => 'done', flags: () => [], moneyCents: () => 0, seed: () => 7, weather: () => 'rain',
     onFrame: () => () => undefined, driveInDone: () => undefined, board: () => undefined, saveBoard: () => undefined, stormNight: () => undefined,
     request: () => ({ id: null, n: 0 }), working: () => undefined,
+    roadHome: () => 'fine',   // GAME-351: у цьому стенді дорога додому вже пройдена — тут перевіряється лише ранок і підсумок (дорога — game-351)
     strike: () => w.__strike,
     saveStrike: (s) => { const why = strikeError(s); if (why !== null) throw new Error(`SaveStrike rejected: ${why}`); w.__strike = s; w.__saves++; for (const l of [...ls]) l(); },
     restart: () => Promise.resolve(), subscribe: (l) => { ls.add(l); return () => { ls.delete(l); }; },
