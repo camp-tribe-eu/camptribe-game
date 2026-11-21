@@ -88,6 +88,18 @@ describe('прихід додому', () => {
 describe('сейв несе «вдома»', () => {
   const DEFS = { ...SKILL_DEFS };
   const start = () => play([DRIVER], initialState(50_000), DEFS);
+  // За рецензією: без героя «вдома» не пишеться; нова гра (як після «Почати знову») — без «вдома», ранку й дороги додому.
+  // Мутації (перевірено): прибрати перевірку героя в SeeHome → червоне; newSim із homeSeen:true → червоне.
+  it('SeeHome без героя — відмова, поле не пишеться', () => {
+    const r = dispatch(initialState(50_000), { type: 'SeeHome', commandId: 'h0' } as Command, DEFS);
+    expect(r.ok).toBe(false);
+  });
+  it('нова гра — без «вдома», ранку й дороги додому', () => {
+    const g = newSim(7, 0).game;
+    expect(g.homeSeen).toBeUndefined();
+    expect(g.strike).toBeUndefined();
+    expect(g.minigames?.['mg.drive-home']).toBeUndefined();
+  });
   it('команда пише поле, збереження й завантаження повертають його', () => {
     const r = dispatch(start(), { type: 'SeeHome', commandId: 'h1' } as Command, DEFS);
     expect(r.ok).toBe(true);
