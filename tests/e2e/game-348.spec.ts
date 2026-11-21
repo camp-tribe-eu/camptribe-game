@@ -10,6 +10,7 @@ test.use({ hasTouch: true });
 const VIEWPORTS = [
   { name: 'portrait', w: 390, h: 844 },
   { name: 'landscape', w: 932, h: 430 },
+  { name: 'square', w: 600, h: 600 },
 ];
 
 let bundle = '';
@@ -46,11 +47,21 @@ for (const vp of VIEWPORTS) {
     const next = await box('[data-ui="wood-done"]');
     const logs = await page.locator('[data-ui="wood-log"]').evaluateAll((els) => els.map((e) => { const r = e.getBoundingClientRect(); return { top: r.top, bottom: r.bottom }; }));
     expect(rule.y + rule.height, `правило «товсті першими» на екрані (${Math.round(rule.y)}..${Math.round(rule.y + rule.height)} при ${vp.h})`).toBeLessThanOrEqual(vp.h);
-    expect(next.y + next.height, `«Далі» на екрані (${Math.round(next.y + next.height)} при ${vp.h})`).toBeLessThanOrEqual(vp.h);
     expect(next.height).toBeGreaterThanOrEqual(44);
-    for (const [i, l] of logs.entries()) expect(l.bottom, `поліно ${i + 1} на екрані`).toBeLessThanOrEqual(vp.h);
+    if (vp.name !== 'square') {
+      expect(next.y + next.height, `«Далі» на екрані (${Math.round(next.y + next.height)} при ${vp.h})`).toBeLessThanOrEqual(vp.h);
+      for (const [i, l] of logs.entries()) expect(l.bottom, `поліно ${i + 1} на екрані`).toBeLessThanOrEqual(vp.h);
+    } else {   // у квадраті панель може прокручуватись, але «Далі» має бути досяжною: після прокрутки — на екрані
+      await page.locator('[data-ui="wood-done"]').scrollIntoViewIfNeeded();
+      const after = await box('[data-ui="wood-done"]');
+      expect(after.y + after.height, '«Далі» досяжна прокруткою').toBeLessThanOrEqual(vp.h + 1);   // +1: піксельне округлення
+      expect(after.y).toBeGreaterThanOrEqual(0);
+    }
     const over = await page.evaluate(() => { const e = document.querySelector<HTMLElement>('.ui-camp'); return e ? e.scrollHeight - e.clientHeight : -1; });
-    expect(over, 'панель не прокручується').toBeLessThanOrEqual(0);
+    // 1:1 — найвужче місце для підпису: кожна назва полін має лишатись читабельною (не стискатись до літери в рядку)
+    const labels = await page.locator('[data-ui="wood-log"] > span').evaluateAll((els) => els.map((e) => e.getBoundingClientRect().width));
+    for (const [i, w] of labels.entries()) expect(w, `підпис поліна ${i + 1} має ширину ${Math.round(w)} px`).toBeGreaterThanOrEqual(60);
+    if (vp.name !== 'square') expect(over, 'панель не прокручується').toBeLessThanOrEqual(0);
   });
 }
 
@@ -89,3 +100,21 @@ test('GAME-348 · порядок: третя їжа «В авто» не ляг�
   await expect(page.locator('[data-ui="tidy-car-full"]')).toHaveCount(0);
   await expect(page.locator('[data-ui="tidy-thing"][data-id="berries"]')).toHaveAttribute('data-place', 'hung');
 });
+
+test('GAME-348 · порядок: «Сяк-так» через їжу надворі має «Чому:» на дошці', async ({ page }) => {
+  test.setTimeout(90_000);   // справжні 20 с кадрів мінімальної роботи (MIN_WORK.tidy), як у game-311
+  await boot(page, VIEWPORTS[0] as { w: number; h: number });
+  await mount(page, {});
+  for (let k = 0; k < 3; k++) await tapIt(page.locator('[data-ui="camp-next"]'));
+  await open(page, 'tidy');
+  for (const [id, place] of [['pot', 'car'], ['bread', 'car'], ['berries', 'car'], ['tins', 'bin'], ['wrap', 'bin'], ['chairs', 'tarp']] as const) {
+    await tapIt(page.locator(`[data-ui="tidy-pick"][data-id="${id}"]`));
+    await tapIt(page.locator(`[data-ui="tidy-place"][data-place="${place}"]`));
+  }
+  const sleep = page.locator('[data-ui="tidy-sleep"]');
+  await expect(sleep).toBeEnabled({ timeout: 40_000 });
+  await tapIt(sleep);
+  const row = page.locator('[data-ui="camp-routine"][data-id="tidy"]');
+  await expect(row).toContainText('Чому: їжа лишилась надворі');
+}
+);

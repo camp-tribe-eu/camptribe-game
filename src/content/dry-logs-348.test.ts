@@ -57,7 +57,7 @@ describe('GAME-348 · порядок у таборі: результат зго�
     }
     s = sleepNow(s);
     expect(foodOutside(s)).toBe(true);
-    expect(tidyOutcome(s)).not.toBe('good');
+    expect(tidyOutcome(s)).toBe('scrappy');
     const night = nightKeys({ ...NIGHT_FACTS, results: { tidy: tidyOutcome(s) as Outcome }, foodOutside: foodOutside(s) });
     expect(night).toContain('night.tidy.fox');
   });
@@ -67,6 +67,8 @@ describe('GAME-348 · порядок у таборі: результат зго�
     expect(tidyOutcome(sleepNow(s))).toBe('good');
   });
   it('панель показує, чому «В авто» відмовило', () => {
+    expect(src).toContain("foodOutside(s) ? 'camp.reason.tidy.food' : null");
+    for (const k of ['camp.reason.tidy.food']) { expect((uk as Record<string, string>)[k], k).toBeTruthy(); expect((en as Record<string, string>)[k], k).toBeTruthy(); }
     expect(src).toMatch(/setTidyFull\(o\.event === 'carFull'\)/);
     expect(src).toMatch(/tidyFull && <p[^>]*data-ui="tidy-car-full"/);
   });

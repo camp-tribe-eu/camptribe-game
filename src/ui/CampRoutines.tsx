@@ -376,7 +376,7 @@ export function CampRoutines({ t, weather, seed, onFrame, devices: devices0 = {}
             </div>
             <button type="button" class="ui-btn ui-camp-big" data-ui="tidy-sleep" disabled={!ok('tidy')} onClick={() => {
               const s = sleepNow(tidy);
-              finish('tidy', tidyOutcome(s), { foodOut: foodOutside(s) });
+              finish('tidy', tidyOutcome(s), { foodOut: foodOutside(s) }, foodOutside(s) ? 'camp.reason.tidy.food' : null);
             }}>{t('camp.tidy.sleep')}</button>
           </section>
         )}

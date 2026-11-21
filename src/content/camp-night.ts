@@ -81,7 +81,7 @@ export function nightOf(f: NightFacts): { readonly beats: readonly NightBeat[]; 
   const fire = did(f, 'fire');
   const wood = did(f, 'firewood');
   // GAME-348: сусідові сухі дрова (місія) і «наші вогкі/розкидані» не суперечать, якщо слід дров це визнає: тоді ключ із `.shared`.
-  const sharedDry = fire !== undefined && MISSIONS.some((m) => m.night.some((l) => l.fact === 'f.storm-dry-wood' && f.missions?.includes(l.flag) === true));
+  const sharedDry = MISSIONS.some((m) => m.night.some((l) => l.fact === 'f.storm-dry-wood' && f.missions?.includes(l.flag) === true));
   const sh = (id: string): string => (sharedDry ? `${id}.shared` : id);
   if ((wood === undefined) === (fire === undefined)) {
     beats.push(wood === undefined
