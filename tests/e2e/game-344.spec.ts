@@ -20,7 +20,7 @@ for (const hz of [120, 30]) {
       let last = -1; w.__vt = 0;
       window.requestAnimationFrame = (cb) => raf((real) => { if (real !== last) { last = real; w.__vt += 1000 / rate; } cb(w.__vt); });
     }, hz);
-    await page.goto('/?seed=7&sampleDay=1');
+    await page.goto('/?seed=7&sampleDay=1&skipHome=1');
     await waitGameReady(page);
     await skipSampleIntro(page);
     const mg = page.locator('[data-ui="minigame"]');

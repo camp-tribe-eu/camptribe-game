@@ -36,7 +36,6 @@ import { SWIM_PROBE_IDLE } from './view/world/swim-rig';
 import { CAMP_PROBE_IDLE } from './view/world/camp-alive-rig';
 import { mountTouchControls, setActionTarget } from './view/world/touch';
 import { frameSize, zoomSteps, type MapPx } from './view/world/frame';
-import { nextAction, sampleActions } from './ui/story-focus';
 import { CHOICE_CANCEL_ID, storyOffer, type StoryView } from './view/story-offer';
 import { basketOf, basketTotal, hasBasket } from './core/basket';
 import { BOX_CLOSE_ID } from './view/box-offer';
@@ -83,7 +82,8 @@ import { ROAD_HOME_ID, roadHomeResult } from './content/road-home';
 import { ARRIVAL_SCENE, SCRAPE_SCENE, arrivalFacts } from './content/arrival-scene';
 import { pitchTaken } from './content/arrival-pitch';
 import { DRIVE_FLAG, driveFlag, driveOutcome as driveInOutcome } from './content/drive-in';
-import { SAMPLE_QUICK_STEPS, sampleHeroes, SAMPLE_HOLD_MINUTE, laneIdFor, openMissionGivers, sampleGoal } from './content/sample-day';
+import { SAMPLE_HOLD_MINUTE, laneIdFor, openMissionGivers, sampleGoal, sampleHomePhase } from './content/sample-day';
+import { runSampleQuickStart } from './view/sample-quick-start';
 import { postsOf, stationRoutine } from './content/camp-stations';
 import type { RoutineId } from './content/camp-day';
 import { STORM_SCENE, stormNightMove } from './content/storm-night';
@@ -157,9 +157,14 @@ let choiceSpot: string | null = null;
 let boxOpen: string | null = null;
 // GAME-178: спроба рушити, коли авто не готове (бракує речей / рюкзак повний): HUD пояснює причину, поки гравець не відійде від об'єкта. Стан ПОКАЗУ (без таймера).
 let departNote = false;
-const viewOf = (): StoryView => ({ mapFirst: !switches.panelActs, trunk: trunkOpen, near: nearSpot, backpack, choice: choiceSpot, departNote, overflow: overflowShown, card: cardItem, receipt, box: boxOpen });
+// GAME-353: зразок починається вдома — доки гравець у домі чи крамниці й дорогу не їхано, гра поводиться як мапа-перша (мапи дому й крамниці, об'єкти, «Багажник»);
+// з виїздом на дорогу — панель ☰ й табір, як було. Стан виводиться з ядра (sampleHomePhase), тож перезавантаження посеред дому фазу не губить.
+// ?skipHome=1 (лише e2e): швидкий старт проходить дім сам, фази вдома нема.
+const homeNow = (): boolean => seedSwitches.sampleDay === true && seedSwitches.skipHome !== true && sampleHomePhase(bridge.state.game);
+const panelNow = (): boolean => switches.panelActs === true && !homeNow();
+const viewOf = (): StoryView => ({ mapFirst: !panelNow(), trunk: trunkOpen, near: nearSpot, backpack, choice: choiceSpot, departNote, overflow: overflowShown, card: cardItem, receipt, box: boxOpen });
 /** Об'єкти табору (GAME-183) живуть лише в мапі-першій грі: збірка e2e без ?mapFirst=1 (старі e2e) бачить табір, як до них — кнопки ☰, а не об'єкти. */
-const campOnly = (name: string): boolean => switches.panelActs === true && (MAP_SPOTS.camp as readonly string[]).includes(name);
+const campOnly = (name: string): boolean => panelNow() && (MAP_SPOTS.camp as readonly string[]).includes(name);
 // GAME-170 зріз 2 · режисер: перед кожним оновленням екрана — ходи СЮЖЕТУ (StartWave на етапі хвилі). Ядро — сторож законності;
 // режисер шле лише те, що ядро прийме, і рівно раз (після прийняття pendingWave порожній; відмова видна в processed).
 // Завантаження збереження на CH1-D2-CAMP-001 без хвилі стартує її тут же, строки — від годинника завантаження (прийнято, див. director.ts).
@@ -224,7 +229,7 @@ const takeReward = (): string | null => {
   return [r.xp > 0 ? `+${r.xp} ${t(lang, 'ui.xp')}` : '', r.om > 0 ? `+${r.om} ${t(lang, 'ui.om')}` : ''].filter(Boolean).join(' ');
 };
 let pendingFrame = false;
-const fireFrame = (): void => { for (const l of switches.panelActs ? openListeners : talkListeners) l(); };
+const fireFrame = (): void => { for (const l of panelNow() ? openListeners : talkListeners) l(); };
 const sampleListeners = new Set<() => void>();
 const sampleOn = switches.sampleDay === true;
 let sampleBusy = false;
@@ -239,7 +244,7 @@ const storyChanged = (): void => {
   syncRewards();
   syncRanks();
   // GAME-175: мапа-перша гра — спакований «за порадою» набір розкладається, коли гравець удома; речі він переносить ногами (раз за гру).
-  if (!switches.panelActs && !unpackedOnce) {
+  if (!panelNow() && !unpackedOnce) {
     const moves = unpackMoves(bridge.state, GAME_DEFS);
     if (moves.length > 0) { unpackedOnce = true; for (const m of moves) bridge.send(m); }
   }
@@ -287,7 +292,7 @@ const onFish = (keep: boolean): void => {
   if (!m) return;
   mapTalk = true;
   try { bridge.send(m); storyChanged(); } finally { mapTalk = false; }
-  for (const l of switches.panelActs ? openListeners : talkListeners) l();
+  for (const l of panelNow() ? openListeners : talkListeners) l();
 };
 let giftFx: { npc: string; reaction: GiftReaction } | null = null;
 let heartFor: object | null = null;
@@ -300,7 +305,7 @@ const actOnMap = (name: string): void => {
   // GAME-175: об'єкти дня 1 удома (крок, річ, полиця, авто, багажник) — ті самі команди ядра, що були кнопками панелі (src/content/map-first.ts).
   if (isMapFirstSpot(name) && !(isPlanSpot(name) && spotMove(bridge.state, name) !== null)) {   // GAME-289: вказівники стежок (табличка плану дня 2, вставки гілок) — сцени режисера (spotMove), а не кроки зрізу 1
     // GAME-178: E/тап на авто не їде, поки рюкзак не порожній і потрібне не в багажнику (те саме, що кільце); локація лишається, HUD каже чому.
-    if (name === 'obj.vehicle' && !switches.panelActs && departBlock(bridge.state, GAME_DEFS, backpack)) {
+    if (name === 'obj.vehicle' && !panelNow() && departBlock(bridge.state, GAME_DEFS, backpack)) {
       departNote = true;
       storyChanged();
       return;
@@ -331,7 +336,7 @@ const actOnMap = (name: string): void => {
   if (m.type === 'StartScene' && m.sceneId === FIREPLACE_SCENE && grilledCharred) m = { ...m, facts: [...(m.facts ?? []), FISH_FACTS.charred] };
   if (m.type === 'StartScene') grilledCharred = false;
   // Сцена біля вогнища: у мапі-першій грі — рамка розмови (як розмова з NPC; mapTalk глушить автовідкриття ☰), а не екран ☰.
-  const asTalk = m.type === 'StartScene' && !switches.panelActs;
+  const asTalk = m.type === 'StartScene' && !panelNow();
   if (asTalk) mapTalk = true;
   try { bridge.send(m); storyChanged(); } finally { mapTalk = false; }
   if (m.type === 'StartScene') for (const l of asTalk ? talkListeners : openListeners) l();
@@ -345,7 +350,7 @@ function openTrunk(): boolean {
   const g = bridge.state.game;
   const pk = GAME_DEFS.packing;
   const p = g.player;
-  if (switches.panelActs || missionSession || !pk || !p) return false;
+  if (panelNow() || missionSession || !pk || !p) return false;
   const all = packItemsFor(pk, p);
   const taken = new Set(takenOf(g.flags, pk, p));
   setTrunkLoad({ transport: p.transportId, cat: all.some((i) => i.itemId === 'item.mia-carrier'), capacity: capacityOf(pk, p.transportId), items: all.filter((i) => taken.has(i.itemId)).map((i) => ({ id: i.itemId, needed: i.group === 'needed', units: i.units })) });
@@ -373,7 +378,7 @@ const unloadOne = (manual = false): 'ok' | 'full' | 'none' => {
   bridge.send({ type: 'LoadCar' });
   syncBackpack();
   // Усе влізло: завантажили — і одразу питання «Куди їдемо?» (тим самим дотиком), без другого заходу до авто.
-  if (backpack.length === 0) { storyChanged(); if (!switches.panelActs) actOnMap('obj.vehicle'); return 'ok'; }
+  if (backpack.length === 0) { storyChanged(); if (!panelNow()) actOnMap('obj.vehicle'); return 'ok'; }
   overflowShown = true; trunkOpen = true;
   storyChanged();
   for (const l of openListeners) l();
@@ -455,26 +460,11 @@ const sampleStage = (): SampleStage => {
 /** GAME-346: кадр «хто ми й куди їдемо» ще не закрито (лише свіжий холодний старт; після перезавантаження посеред дороги стадія вже не «create», тож вступ не повторюється). */
 let sampleIntroOpen = false;
 function sampleQuickStart(): void {
-  const view = { ...viewOf(), mapFirst: false };
-  const pick = (): string | undefined => {
-    const o = storyOffer(bridge.state, GAME_DEFS, view).offer;
-    if (o.dialogue !== null || bridge.state.game.player?.locationId === 'loc.road') return undefined;
-    if (o.stage === 'create') return sampleHeroes(o.characters)[0]?.id;
-    return nextAction(sampleActions(o.actions, true), o.goal?.key ?? null)?.id;
-  };
-  if (storyOffer(bridge.state, GAME_DEFS, view).offer.stage !== 'create') { probe.sampleQuickStart = 'skipped'; return; }
-  for (let i = 0; i < SAMPLE_QUICK_STEPS; i++) {
-    const id = pick();
-    if (id === undefined) break;
-    const intent = storyOffer(bridge.state, GAME_DEFS, view).intents.get(id);
-    if (!intent) break;
-    bridge.send(intent);
-  }
-  // GAME-342 (закон 4): швидкий старт, що став не на дорозі, не мовчить — тест читає probe.sampleQuickStart, консоль каже де застряг.
-  const at = bridge.state.game.player?.locationId ?? null;
-  probe.sampleQuickStart = at === 'loc.road' ? 'ok' : 'stuck';
-  if (at === 'loc.road') { sampleIntroOpen = true; storyChanged(); }   // GAME-346: кадр контексту перед першою подією дороги
-  if (at !== 'loc.road') console.warn(`sampleQuickStart: stuck at ${String(at)} (dialogue: ${String(bridge.state.game.dialogue?.node ?? null)})`);
+  const r = runSampleQuickStart(bridge, GAME_DEFS, viewOf(), switches.skipHome === true);
+  // GAME-342 (закон 4): швидкий старт, що став не там, де мав, не мовчить — тест читає probe.sampleQuickStart, консоль каже де застряг.
+  probe.sampleQuickStart = r.result;
+  if (r.result === 'ok') { sampleIntroOpen = true; storyChanged(); }   // GAME-346: кадр контексту перед першим кроком (GAME-353: удома; ?skipHome=1 — перед першою подією дороги)
+  else if (r.result === 'stuck') console.warn(`sampleQuickStart: stuck at ${String(r.at)} (dialogue: ${String(bridge.state.game.dialogue?.node ?? null)})`);
 }
 function sampleOpenDrive(): void {
   const g = bridge.state.game;
@@ -588,12 +578,12 @@ const worldHooks: WorldHooks = {
   hintPoke: () => hintIdle.poke(),
   // GAME-243: стрілка — лише навчання (день 1, перші пункти нотатника); у збірці e2e без ?mapFirst=1 — як раніше. Раз на стан ядра, а не на кадр.
   guide: () => {
-    if (switches.panelActs) return true;
+    if (panelNow()) return true;
     if (guideFor !== bridge.state) { guideFor = bridge.state; guideOn = onboarding(bridge.state); }
     return guideLive(guideOn, worldHooks.target(), reportGiver());   // GAME-340: стрілка до цілі походу — завжди
   },
   agendaSpots: () => {
-    if (switches.panelActs) return [];
+    if (panelNow()) return [];
     if (spotsFor !== bridge.state.game || spotsMap !== worldHooks.mapKey()) { spotsFor = bridge.state.game; spotsMap = worldHooks.mapKey(); spotsMemo = minimapTargets(agendaOf(bridge.state, GAME_DEFS), spotsMap); }
     return spotsMemo;
   },
@@ -651,13 +641,13 @@ const worldHooks: WorldHooks = {
     if (targetFor !== bridge.state.game || targetPack !== backpack.length || targetMin !== bridge.state.clock.minutes) { targetFor = bridge.state.game; targetPack = backpack.length; targetMin = bridge.state.clock.minutes; // GAME-183: прохання в роботі (вибір гравця) — перше; далі крок сюжету. Збірка e2e без ?mapFirst=1 табір веде як раніше (лише прохання): ☰ там ще дає кроки.
       const at = bridge.state.game.player?.locationId;
       const trip = sampleMissionTarget(bridge.state.game, sampleOn && at === MAP_LOCATION.camp && sampleGoal(bridge.state.game.flags, playedScene(STORM_SCENE)) !== 'done');   // GAME-337: крок місії веде в зону походу (trip.<зона>); GAME-346: після гри — до видавця
-      targetSpot = trip ?? requestTarget(bridge.state.game) ?? (switches.panelActs && (at === 'loc.camp.lake' || at === 'loc.road') ? null : nextTarget(bridge.state, GAME_DEFS, backpack)?.spot ?? null);
+      targetSpot = trip ?? requestTarget(bridge.state.game) ?? (panelNow() && (at === 'loc.camp.lake' || at === 'loc.road') ? null : nextTarget(bridge.state, GAME_DEFS, backpack)?.spot ?? null);
     }
     return targetSpot;
   },
   // Збірка e2e без ?mapFirst=1 — як до GAME-175: завжди табір (старі e2e ходять по ньому й перевіряють не прохід дня 1).
   mapEntered: () => { if (pendingFrame) { pendingFrame = false; fireFrame(); } },
-  mapKey: () => switches.map ?? (switches.panelActs ? 'camp' : mapKeyFor(bridge.state.game.player?.locationId)),
+  mapKey: () => switches.map ?? (panelNow() ? 'camp' : mapKeyFor(bridge.state.game.player?.locationId)),
   transport: () => bridge.state.game.player?.transportId ?? null,
   takeReward,
   spotDone: (name) => { const f = bridge.state.game.flags; const t = traceOfSpot(name); return t ? f.includes(t.flag) : name === REPAIR_SPOT && f.includes(REPAIR_FLAG); },
@@ -917,4 +907,4 @@ window.addEventListener('pagehide', () => saves.autosave());
 
 // Старт: підхопити останній цілий сейв. Позиція в пікселях не зберігається (DC-042):
 // після завантаження персонаж з'являється в точці появи. Правила гонок — у save-session.ts.
-void saves.start().then(() => { if (seedSwitches.skipMinutes) bridge.load(step(bridge.state, { kind: 'advance', minutes: seedSwitches.skipMinutes })); if (sampleOn) sampleQuickStart(); probe.saveLoaded = true; rebaseRewards(); rebaseRanks(); storyChanged(); });
+void saves.start().then(() => { if (seedSwitches.skipMinutes) bridge.load(step(bridge.state, { kind: 'advance', minutes: seedSwitches.skipMinutes })); if (sampleOn) { unpackedOnce = bridge.state.journal.some((e) => e.type === 'UnpackItem' || e.type === 'TakeItem' || e.type === 'LoadCar' || e.type === 'LeaveItem'); sampleQuickStart(); }   /* GAME-353: збір речей уже починали (журнал сейву) — після перезавантаження удома їх не «розпаковують» знову */ probe.saveLoaded = true; rebaseRewards(); rebaseRanks(); storyChanged(); });

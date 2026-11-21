@@ -10,7 +10,7 @@ const panel = (page: Page) => page.locator('[data-ui="story"]');
 
 /** Пропуск дороги: «Пауза» → «Далі без цього» → «Так» → «Закрити»; ☰ відкривається сама. */
 async function skipRoad(page: Page): Promise<void> {
-  await page.goto('/?seed=7&sampleDay=1');
+  await page.goto('/?seed=7&sampleDay=1&skipHome=1');
   await waitGameReady(page);
   await skipSampleIntro(page);
   const mg = page.locator('[data-ui="minigame"]');
