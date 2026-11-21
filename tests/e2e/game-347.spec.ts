@@ -1,7 +1,7 @@
 // GAME-346 (leftovers, файл game-347) · «Частина 2» не перегортається сама. Єдиний шлях до наступної частини — дотик «Далі», і він (а) зачинений першу мить після повернення на дошку
-// (запізнілий дотик, що закривав роботу, не має гортати день), (б) пише рядок-причину «Ти натиснув «Далі» — тепер: Частина 3».
+// (запізнілий дотик, що закривав роботу, не має гортати день), (б) пише рядок-причину «Після «Далі» — тепер: Частина 3».
 // Мутація (перевірено): у finish() CampRoutines прибрати `setLocked(true)` → «дотик одразу після роботи не має гортати частину» червоніє;
-// прибрати рядок camp-round-cue → «рядок-причина» червоніє.
+// прибрати рядок camp-round-cue → «рядок-причина» червоніє; прибрати useEffect на live → «повторна поява дошки» червоніє.
 import { fileURLToPath } from 'node:url';
 import { build } from 'vite';
 import { expect, test } from '@playwright/test';
@@ -47,5 +47,11 @@ test('GAME-346 · (leftovers) частина дня змінюється лиш�
   expect(await next.isDisabled(), 'дотик одразу після роботи не має гортати частину').toBe(true);
   await next.dispatchEvent('click');
   await expect(board, 'клік по зачиненому «Далі» нічого не робить').toHaveAttribute('data-round', 'noon');
+  await expect(next).toBeEnabled({ timeout: 5_000 });
+
+  // Дошку сховали й показали знову (live false→true): «Далі» знову мить зачинене. Мутація: прибрати useEffect на live у CampRoutines → червоне.
+  await page.evaluate(() => { const w = window as unknown as { __live: (v: boolean) => void }; w.__live(false); w.__live(true); });
+  await next.dispatchEvent('click');
+  await expect(board, 'дотик одразу після повторної появи дошки не гортає частину').toHaveAttribute('data-round', 'noon');
   await expect(next).toBeEnabled({ timeout: 5_000 });
 });

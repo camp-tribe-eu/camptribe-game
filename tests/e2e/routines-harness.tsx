@@ -36,7 +36,10 @@ interface Spec { lang: 'uk' | 'en'; weather: Weather; seed: number; bare?: boole
     return () => { live = false; };
   };
   // Табір, де вже стоїть верша, але її давно не переносили: дошка має показати «ось-ось закінчиться» і «Доглянути».
-  render(<CampRoutines t={(k: Key) => t(s.lang, k)} weather={s.weather} seed={s.seed} onFrame={onFrame} devices={s.bare ? {} : { 'fish-trap': { care: 0.3 } }} />, host);
+  const draw = (live: boolean) => render(<CampRoutines t={(k: Key) => t(s.lang, k)} weather={s.weather} seed={s.seed} onFrame={onFrame} live={live} devices={s.bare ? {} : { 'fish-trap': { care: 0.3 } }} />, host);
+  draw(true);
+  // GAME-346: дошку знову показано (у грі — після розмови чи «Дошка табору»): live false→true.
+  (window as unknown as { __live: (v: boolean) => void }).__live = draw;
 };
 
 /** GAME-323: заїзд на ділянку (картка зразкового дня) на тому самому стенді — щоб перевірити, що в альбомі вона стоїть на екрані без прокрутки. */

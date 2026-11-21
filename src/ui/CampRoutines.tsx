@@ -83,9 +83,15 @@ export function CampRoutines({ t, weather, seed, onFrame, devices: devices0 = {}
   const dayNow = withDevices(day, devices);
   const [round, setRound] = useState<Round>(saved?.round ?? 'morning');
   // GAME-346: частина дня змінюється лише дотиком «Далі»; після повернення з роботи кнопка мить зачинена (кадри), а після кроку дошка пише, що саме сталось.
-  const [locked, setLocked] = useState(true);
+  // Джерело правди — лічильник кадрів lock (ref, щоб і дотик у ту саму мить бачив блокаду); стан лише перемальовує кнопку.
   const lock = useRef(BOARD_LOCK_MS);
+  const [, redraw] = useState(0);
   const [cue, setCue] = useState<Round | null>(null);
+  // Дошка, що знову з'явилась (live false→true: після розмови чи «Дошка табору»), теж мить зачинена — той самий запізнілий дотик. Ще в цьому ж малюванні, не в ефекті.
+  const wasLive = useRef(live);
+  if (live && !wasLive.current) lock.current = BOARD_LOCK_MS;
+  wasLive.current = live;
+  const locked = lock.current > 0;
   const [phase, setPhase] = useState<Phase>('board');
   const [active, setActive] = useState<RoutineId | null>(null);
   const [water, setWater] = useState<WaterState>(() => startWater(seed));
@@ -122,13 +128,13 @@ export function CampRoutines({ t, weather, seed, onFrame, devices: devices0 = {}
     setFacts((f) => ({ ...f, ...more }));
     setActive(null);
     setPhase('board');
-    lock.current = BOARD_LOCK_MS; setLocked(true);
+    lock.current = BOARD_LOCK_MS; redraw((n) => n + 1);
   };
 
   // Крок кадру: тільки активна робота, і лише та, що справді йде від часу.
   const tick = useRef<(dtMs: number) => void>(() => undefined);
   tick.current = (dtMs: number) => {
-    if (lock.current > 0) { lock.current = stepBoardLock(lock.current, dtMs); if (lock.current === 0) setLocked(false); }
+    if (lock.current > 0) { lock.current = stepBoardLock(lock.current, dtMs); if (lock.current === 0) redraw((n) => n + 1); }
     if (phase !== 'work' || active === null || !live) return;
     ms.current = addWork(ms.current, dtMs);
     setSec(Math.floor(ms.current / 1000));
@@ -407,7 +413,7 @@ export function CampRoutines({ t, weather, seed, onFrame, devices: devices0 = {}
       </p>
       <div class="ui-camp-row ui-camp-foot" data-ui="camp-foot">
         <button type="button" class="ui-btn ui-camp-big" data-ui="camp-next" disabled={round === 'evening' || locked}
-          onClick={() => { if (locked) return; setRound(nextRound(round)); setCue(nextRound(round)); }}>{t('camp.next')}</button>
+          onClick={(e) => { if (lock.current > 0) return; (e.currentTarget as HTMLButtonElement).blur(); setRound(nextRound(round)); setCue(nextRound(round)); }}>{t('camp.next')}</button>
         <button type="button" class="ui-btn ui-camp-big" data-ui="camp-to-night" disabled={!nightOpen(round)} onClick={() => setPhase('night')}>{t('camp.night')}</button>
       </div>
     </div>
