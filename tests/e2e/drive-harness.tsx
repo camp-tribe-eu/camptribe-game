@@ -24,7 +24,7 @@ const api = {
     let host = document.getElementById('mg-root');
     if (!host) { host = document.createElement('div'); host.id = 'mg-root'; document.body.append(host); }
     render(null, host);
-    render(<MinigameHost session={session} t={(k: Key) => t(o.lang, k)} Surface={DriveSurface} />, host);
+    render(<MinigameHost session={session} t={(k: Key) => t(o.lang, k)} lang={o.lang} Surface={DriveSurface} />, host);
   },
   frame(n: number): void { session?.frame(n); },
   /** Яка смуга вільна попереду; null — у своїй чисто або вільної немає. */

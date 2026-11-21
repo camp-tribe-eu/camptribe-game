@@ -16,6 +16,23 @@
                 "flag": "f.mis-lantern-go2"
               },
               {
+                "minigame": "mg.tarp-tie",
+                "outcome": "scrappy"
+              },
+              {
+                "notFlag": "f.mis-lantern-done"
+              }
+            ]
+          },
+          "next": "l-wood-s"
+        },
+        {
+          "when": {
+            "all": [
+              {
+                "flag": "f.mis-lantern-go2"
+              },
+              {
                 "minigame": "mg.tarp-tie"
               },
               {
@@ -532,6 +549,28 @@
       "speaker": "npc",
       "textKey": "dlg.claire-chat.l-wood1",
       "next": "l-wood2"
+    },
+    {
+      "id": "l-wood-s",
+      "speaker": "npc",
+      "textKey": "dlg.claire-chat.l-wood-s",
+      "next": "l-setup-s"
+    },
+    {
+      "id": "l-setup-s",
+      "speaker": "npc",
+      "textKey": "dlg.claire-chat.l-setup-s",
+      "choices": [
+        {
+          "textKey": "dlg.claire-chat.l-setup-s.c1",
+          "next": "l-final",
+          "effects": [
+            {
+              "setFlag": "f.mis-lantern-done"
+            }
+          ]
+        }
+      ]
     },
     {
       "id": "l-wood2",

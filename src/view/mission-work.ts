@@ -32,8 +32,42 @@ export function pendingTrip(g: GameState, ms: readonly MissionDef[] = MISSIONS):
   return null;
 }
 
+/**
+ * GAME-346 · міні-гру місії зіграно, а просильник про це ще не знає: гравець мусить повернутись до нього. Раніше після гри стрілка й чип цілі мовчали
+ * («Допомогти сусідам» без жодного імені), і Клер доводилось шукати самому. Повертає видавця місії; null — вертатись нікуди.
+ * Перший похід: гру зіграно, а «друга частина» (`trips[1].flag`) ще не відкрита розмовою. Другий: гру зіграно, а місію не здано.
+ */
+export function reportBack(g: GameState, ms: readonly MissionDef[] = MISSIONS): MissionDef | null {
+  for (const m of ms) {
+    if (g.flags.includes(m.doneFlag)) continue;
+    const [first, second] = m.trips;
+    const firstPlayed = g.minigames?.[first.minigame] !== undefined && g.flags.includes(first.flag) && !g.flags.includes(second.flag);
+    const secondPlayed = g.minigames?.[second.minigame] !== undefined && g.flags.includes(second.flag);
+    if (firstPlayed || secondPlayed) return m;
+  }
+  return null;
+}
+
+/** GAME-346 · куди веде ціль місії: на місце походу, а коли гру зіграно — назад до видавця. null — місія нічого не вимагає. */
+export function missionTarget(g: GameState, ms: readonly MissionDef[] = MISSIONS): string | null {
+  const trip = pendingTrip(g, ms);
+  if (trip) return `trip.${trip.zone}`;
+  return reportBack(g, ms)?.giver ?? null;
+}
+
+/** GAME-346 · куди веде ціль зразкового дня в таборі: `live` — день іде й герой у таборі (main.ts дає умову); інакше null. */
+export const sampleMissionTarget = (g: GameState, live: boolean, ms: readonly MissionDef[] = MISSIONS): string | null => (live ? missionTarget(g, ms) : null);
+
+/** GAME-346 · видавець, до якого вертатись (чип «Повернутись до», стрілка). Поки гравець уже говорить із ним (його діалог відкритий), «повернутись» нікуди — null. */
+export function sampleReportGiver(g: GameState, live: boolean, ms: readonly MissionDef[] = MISSIONS): string | null {
+  if (!live) return null;
+  const m = reportBack(g, ms);
+  if (m === null || g.dialogue?.id === m.dialogue) return null;
+  return m.giver;
+}
+
 /** GAME-340 · ціль походу («trip.<зона>») — така сама ціль, як інші: стрілка веде до неї весь час, а не лише в навчанні й не лише коли гравець завис (Аміна: позначка за краєм екрана, стрілки нема). */
 export const tripGuide = (target: string | null): boolean => target !== null && target.startsWith('trip.');
 
 /** GAME-340 · стрілка/підказка цілі: те, що вже вирішило навчання чи простій, АБО ціль походу. Одне місце для обох гачків main.ts (guide, hintTick). */
-export const guideLive = (base: boolean, target: string | null): boolean => base || tripGuide(target);
+export const guideLive = (base: boolean, target: string | null, report: string | null = null): boolean => base || tripGuide(target) || (report !== null && target === report);   // GAME-346: і до видавця, коли гру зіграно

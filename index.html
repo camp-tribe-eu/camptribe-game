@@ -147,6 +147,8 @@
       .mg-text { margin: 0; max-width: 34em; font-size: 0.95rem; line-height: 1.4; }
       .mg-hint { color: #ffd54a; }
       .mg-paused { position: absolute; inset: 0; z-index: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; padding: 12px; background: #101418f7; }
+      .mg-sure { display: flex; flex-direction: column; align-items: center; gap: 10px; }   /* GAME-346: «Точно пропустити?» — кнопки не злипаються й стоять по центру */
+      @media (orientation: landscape) and (max-height: 500px) { .mg-sure { flex-direction: row; flex-wrap: wrap; justify-content: center; } .mg-sure > .mg-text { flex: 1 0 100%; } }
       .mg-ref { width: min(92%, 520px); display: grid; gap: 12px; }
       .mg-ref-track { position: relative; height: 48px; box-sizing: border-box; border: 2px solid #e8e6e3aa; border-radius: 10px; background: #2a2f36; }
       .mg-ref-band { position: absolute; top: 0; bottom: 0; background: #4a7a4a99; }
@@ -197,7 +199,8 @@
       .mg-tune-dial { position: relative; width: 100%; height: 64px; box-sizing: border-box; border: 2px solid #e8e6e3aa; border-radius: 10px; background: #2a2f36; touch-action: none; }
       .mg-tune-station { position: absolute; top: 0; bottom: 0; width: 10px; margin-left: -5px; background: #ffd54a99; }
       .mg-tune-needle { position: absolute; top: -4px; bottom: -4px; width: 6px; margin-left: -3px; border-radius: 3px; background: #f4f1e8; }
-      .mg-twist { margin: 0; width: 100%; min-height: 3.2em; box-sizing: border-box; display: grid; align-items: center; text-align: center; font-size: 0.875rem; line-height: 1.6; font-weight: 600; color: #ffd166; }   /* місце під підпис зарезервоване завжди: кнопка не їде з-під пальця */
+      .mg-twist { margin: 0; width: 100%; min-height: 4.8em; box-sizing: border-box; display: grid; align-items: center; text-align: center; font-size: 0.875rem; line-height: 1.6; font-weight: 600; color: #ffd166; }   /* місце під підпис зарезервоване завжди: кнопка не їде з-під пальця. GAME-346: 3 рядки — найдовший підпис (uk/en) на 360 px */
+      @media (orientation: landscape) and (max-height: 500px) { .mg-twist { min-height: 3.2em; } }   /* широкий екран: 2 рядки вистачає, висоти мало */
       .mg-meter { width: 100%; height: 14px; border-radius: 7px; background: #2a2f36; overflow: hidden; }
       .mg-meter i { display: block; height: 100%; background: #6fbf73; }
       .mg-crank-ring { width: 72px; height: 72px; display: grid; place-items: center; }
@@ -534,6 +537,7 @@
       .sd-cell[data-car='left']::after { content: '◀'; } .sd-cell[data-car='right']::after { content: '▶'; }
       .sd-hint { position: fixed; left: 50%; transform: translateX(-50%); top: calc(var(--edge-top, 0px) + 108px); z-index: 29; max-width: calc(100vw - 32px); margin: 0; padding: 6px 12px; border-radius: 8px; background: rgba(27, 31, 35, 0.82); color: #f4ecd2; font-size: 0.85rem; text-align: center; pointer-events: none; }   /* GAME-335: підказка про місця справ — угорі під рядом кнопок, не на джойстику й не на кнопці дії */
       #app:has([data-ui="story"]) .sd-hint { display: none; }
+      #app:has(.ui-strip .ui-next) .sd-hint { display: none; }   /* GAME-346 (A03): «Далі: …» — дія зараз, одноразова підказка про місця справ їй поступається, а не лягає зверху */
       .sd-board-wrap { position: fixed; inset: 0; z-index: 40; }
       .sd-board-wrap[hidden] { display: none; }
       .sd-board-close { position: fixed; right: 8px; bottom: 8px; z-index: 41; min-width: 48px; min-height: 48px; }

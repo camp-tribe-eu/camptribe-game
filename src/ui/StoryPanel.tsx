@@ -4,6 +4,7 @@ import type { ComponentChildren } from 'preact';
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { ct } from '../i18n/content';
 import type { AnyLang, Key } from '../i18n';
+import { money } from './money';
 import { trapTab } from './focus-trap';
 import { EntriesBook, JournalBook, SkillsBook, TravelerCard } from './JournalBook';
 import { Portrait, type PortraitLookup } from './Portrait';
@@ -35,11 +36,7 @@ export const WEATHER_LABELS = WX;
 /** Скільки після прийнятої дії панель глуха до нових активацій (мс між event.timeStamp). */
 export const ACT_COOLDOWN_MS = 350;
 
-export function money(lang: AnyLang, cents: number): string {
-  // GAME-84 №7: Intl ставить між числом і валютою нерозривний пробіл. Коли «249,00 EUR» не вміщується в рядок (текст 200 %),
-  // браузер різав її посеред слова («EU R»). Звичайний пробіл — рядок рветься між числом і валютою, а слово лишається цілим.
-  return new Intl.NumberFormat(lang === 'uk' ? 'uk-UA' : 'en-IE', { style: 'currency', currency: 'EUR' }).format(cents / 100).replace(/[\u00a0\u202f]/g, ' ');
-}
+export { money } from './money';
 
 /** Підпис дії-кнопки (панель подорожі й рамка розмови, GAME-179): однаково скрізь. */
 export function actionLabel(lang: AnyLang, t: (k: Key) => string, a: OfferAction): string {
